@@ -22,6 +22,8 @@ from learning_resources.constants import (
 )
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.utils import (
+    parse_resource_commitment,
+    parse_resource_duration,
     transform_delivery,
     transform_price,
     transform_topics,
@@ -254,6 +256,8 @@ def transform_run(run_data, course_data):
         "pace": [parse_pace(run_data)],
         "format": parse_format(run_data),
         "location": parse_location(run_data),
+        "duration": parse_resource_duration(run_data["Duration"]),
+        "time_commitment": parse_resource_commitment(run_data["Time_Commitment"]),
     }
 
 

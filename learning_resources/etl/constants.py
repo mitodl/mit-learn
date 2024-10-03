@@ -123,3 +123,5 @@ class ResourceNextRunConfig:
     resource_prices: list[LearningResourcePrice] = field(default_factory=list)
     availability: str = None
     location: str = None
+    duration: str = None
+    time_commitment: str = None

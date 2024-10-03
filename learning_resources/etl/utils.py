@@ -767,3 +767,79 @@ def transform_price(amount: Decimal, currency: str = CURRENCY_USD) -> dict:
         # Use pycountry.currencies to ensure the code is valid, default to USD
         "currency": currency if currencies.get(alpha_3=currency) else CURRENCY_USD,
     }
+
+
+def translate_interval(interval_txt: str) -> str:
+    """
+    Translate any interval units to English
+    Only supports Spanish at the moment
+
+    Args:
+        interval_txt (str): the interval text
+
+    Returns:
+        str: the interval text with intervals translated to English
+    """
+    for alt_week in ("semana",):
+        interval_txt = interval_txt.replace(alt_week, "week")
+    for alt_month in ("mes",):
+        interval_txt = interval_txt.replace(alt_month, "month")
+    for alt_day in ("dia",):
+        interval_txt = interval_txt.replace(alt_day, "day")
+    for alt_hour in ("hora",):
+        interval_txt = interval_txt.replace(alt_hour, "hour")
+    return interval_txt
+
+
+def parse_resource_duration(duration_str: str) -> str:
+    """
+    Validate duration value and return it if it is valid,
+    otherwise return an empty string
+
+    Args:
+        course_data (str): the course data
+
+    Returns:
+        str: the duration
+    """
+    if not duration_str:
+        return ""
+    duration_regex = re.compile(
+        r"\d+(\s*-\s*\d+)?\s*(days?|weeks?|months?|semanas?)", re.IGNORECASE
+    )
+    match = duration_regex.match(duration_str.lower().strip())
+    if match:
+        duration = re.sub(r"\s*-\s*", "-", match.group())
+        return translate_interval(duration)
+    else:
+        log.warning("Invalid duration: %s", duration_str)
+        return ""
+
+
+def parse_resource_commitment(commitment_str: str) -> str:
+    """
+    Validate duration value and return it if it is valid,
+    otherwise return an empty string
+
+    Args:
+        course_data (str): the course data
+
+    Returns:
+        str: the duration
+    """
+    if not commitment_str:
+        return ""
+    commitment_regex = re.compile(
+        r"\d+(\s*-\s*\d+)?\s*(hours?|hrs?|horas?)?(\s*/\s*|\s+per\s+)?(day|week|dia|semana)?",
+        re.IGNORECASE,
+    )
+    match = commitment_regex.match(commitment_str.lower().strip())
+    if match:
+        # Remove extra spaces and replace " per " with "/"
+        commitment = re.sub(r"\s*-\s*", "-", re.sub(r"\s+per\s+", "/", match.group()))
+        if "hour" not in commitment:
+            commitment += " hour" if commitment == "1" else " hours"
+        return commitment
+    else:
+        log.warning("Invalid commitment: %s", commitment_str)
+        return ""

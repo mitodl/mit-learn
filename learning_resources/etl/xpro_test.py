@@ -19,9 +19,15 @@ from learning_resources.constants import (
 from learning_resources.etl import xpro
 from learning_resources.etl.constants import CourseNumberType, ETLSource
 from learning_resources.etl.utils import (
+    parse_resource_commitment,
+    parse_resource_duration,
     transform_delivery,
 )
-from learning_resources.etl.xpro import _parse_datetime, parse_topics
+from learning_resources.etl.xpro import (
+    _parse_datetime,
+    parse_program_duration,
+    parse_topics,
+)
 from learning_resources.factories import (
     LearningResourceOfferorFactory,
     LearningResourceTopicFactory,
@@ -117,6 +123,10 @@ def test_xpro_transform_programs(mock_xpro_programs_data):
             "continuing_ed_credits": program_data.get("credits"),
             "pace": [Pace.self_paced.name],
             "format": [Format.asynchronous.name],
+            "duration": parse_program_duration(program_data),
+            "time_commitment": parse_resource_commitment(
+                program_data["time_commitment"]
+            ),
             "runs": [
                 {
                     "run_id": program_data["readable_id"],
@@ -143,6 +153,10 @@ def test_xpro_transform_programs(mock_xpro_programs_data):
                     "availability": Availability.dated.name,
                     "pace": [Pace.self_paced.name],
                     "format": [Format.asynchronous.name],
+                    "duration": parse_program_duration(program_data),
+                    "time_commitment": parse_resource_commitment(
+                        program_data["time_commitment"]
+                    ),
                 }
             ],
             "courses": [
@@ -167,6 +181,10 @@ def test_xpro_transform_programs(mock_xpro_programs_data):
                     "continuing_ed_credits": course_data.get("credits"),
                     "pace": [Pace.self_paced.name],
                     "format": [Format.asynchronous.name],
+                    "duration": parse_resource_duration(course_data["duration"]),
+                    "time_commitment": parse_resource_commitment(
+                        course_data["time_commitment"]
+                    ),
                     "runs": [
                         {
                             "run_id": course_run_data["courseware_id"],
@@ -194,6 +212,12 @@ def test_xpro_transform_programs(mock_xpro_programs_data):
                             "availability": Availability.dated.name,
                             "pace": [Pace.self_paced.name],
                             "format": [Format.asynchronous.name],
+                            "duration": parse_resource_duration(
+                                course_data["duration"]
+                            ),
+                            "time_commitment": parse_resource_commitment(
+                                course_data["time_commitment"]
+                            ),
                         }
                         for course_run_data in course_data["courseruns"]
                     ],
@@ -273,6 +297,10 @@ def test_xpro_transform_courses(mock_xpro_courses_data):
                     "availability": Availability.dated.name,
                     "pace": [Pace.self_paced.name],
                     "format": [Format.asynchronous.name],
+                    "duration": parse_resource_duration(course_data["duration"]),
+                    "time_commitment": parse_resource_commitment(
+                        course_data["time_commitment"]
+                    ),
                 }
                 for course_run_data in course_data["courseruns"]
             ],
@@ -292,6 +320,10 @@ def test_xpro_transform_courses(mock_xpro_courses_data):
             "continuing_ed_credits": course_data.get("credits"),
             "pace": [Pace.self_paced.name],
             "format": [Format.asynchronous.name],
+            "duration": parse_resource_duration(course_data["duration"]),
+            "time_commitment": parse_resource_commitment(
+                course_data["time_commitment"]
+            ),
         }
         for course_data in mock_xpro_courses_data
     ]
@@ -368,3 +400,22 @@ def test_parse_topics_data():
         {"name": "Machine Learning"},
         {"name": "Management"},
     ]
+
+
+@pytest.mark.parametrize(
+    ("duration", "num_courses", "expected_duration"),
+    [
+        ("10 weeks", 3, "10 weeks"),
+        ("20 weeks", 2, "20 weeks"),
+        ("10 weeks Per Course", 3, "30 weeks"),
+        ("20 weeks per course", 2, "40 weeks"),
+        ("2 weeks per course", 1, "2 weeks"),
+    ],
+)
+def test_parse_program_duration(duration, num_courses, expected_duration):
+    """Duration should be multiplied by the number of courses if it is per course"""
+    program_data = {
+        "duration": duration,
+        "courses": [{"readable_id": f"mit_{i}"} for i in range(num_courses)],
+    }
+    assert parse_program_duration(program_data) == expected_duration

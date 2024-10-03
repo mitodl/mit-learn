@@ -264,6 +264,8 @@ def test_transform_course(  # noqa: PLR0913
                         "availability": Availability.dated.name,
                         "format": [Format.asynchronous.name],
                         "pace": [Pace.instructor_paced.name],
+                        "duration": "13 weeks",
+                        "time_commitment": "10-15 hours/week",
                     }
                 ]
             ),
@@ -409,6 +411,7 @@ def test_transform_program(
             offered_by=offeror,
             is_course=True,
             create_runs=False,
+            time_commitment="3-4 hours/week",
         )
         topics.extend([topic.name for topic in course.topics.all()])
         LearningResourceRunFactory.create(learning_resource=course)
@@ -469,6 +472,8 @@ def test_transform_program(
                     "availability": Availability.anytime.name,
                     "format": [Format.asynchronous.name],
                     "pace": [Pace.self_paced.name],
+                    "duration": "4 months",
+                    "time_commitment": "3-4 hours/week",
                 }
             ]
         ),
