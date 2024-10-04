@@ -6,6 +6,7 @@ import json
 import logging
 import re
 from collections import namedtuple
+from dataclasses import asdict
 from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
@@ -25,7 +26,11 @@ from learning_resources.constants import (
     PlatformType,
     RunStatus,
 )
-from learning_resources.etl.constants import COMMON_HEADERS
+from learning_resources.etl.constants import (
+    COMMON_HEADERS,
+    CommitmentConfig,
+    DurationConfig,
+)
 from learning_resources.etl.utils import (
     extract_valid_department_from_id,
     generate_course_numbers_json,
@@ -312,8 +317,12 @@ def _transform_course_duration(course_run):
     """
     duration = course_run.get("weeks_to_complete")
     if duration:
-        return f"{duration} weeks"
-    return ""
+        return asdict(
+            DurationConfig(
+                duration=f"{duration} weeks", min_weeks=duration, max_weeks=duration
+            )
+        )
+    return None
 
 
 def _transform_program_duration(program_data):
@@ -326,7 +335,6 @@ def _transform_program_duration(program_data):
     Returns:
         str: the duration of the program in weeks
     """
-    weeks_cutoff = 8
     duration_weeks = [
         course_run.get("weeks_to_complete", 0)
         for course in program_data.get("courses", [])
@@ -334,15 +342,9 @@ def _transform_program_duration(program_data):
         if _get_run_published(course_run)
     ]
     duration_weeks = sum(duration_weeks)
-    if not duration_weeks:
-        return ""
-    elif duration_weeks < weeks_cutoff:
-        return f"{duration_weeks} weeks"
-    else:
-        # Add a small value to round up .5 to the next whole number
-        # because apparently this is how edx program durations are
-        # calculated, ie 4.5 => 5 instead of 4
-        return f"{round((duration_weeks / 4) + 0.00000001)} months"
+    if duration_weeks:
+        return _transform_course_duration({"weeks_to_complete": duration_weeks})
+    return None
 
 
 def _transform_program_commitment(program_data):
@@ -359,28 +361,26 @@ def _transform_program_commitment(program_data):
     courses = LearningResource.objects.filter(
         published=True, readable_id__in=course_ids, platform__code=PlatformType.edx.name
     ).only("time_commitment")
-    min_efforts = []
-    max_efforts = []
-    for course in courses:
-        commitment_hours = re.match(r"(\d+)-?(\d+)? hours/week", course.time_commitment)
-        if commitment_hours:
-            if commitment_hours.group(2):
-                max_efforts.append(int(commitment_hours.group(2)))
-                min_efforts.append(int(commitment_hours.group(1)))
-            elif commitment_hours.group(1):
-                max_efforts.append(int(commitment_hours.group(1)))
-    if min_efforts or max_efforts:
-        return _transform_course_commitment(
-            {
-                "min_effort": round(sum(min_efforts) / len(min_efforts))
-                if min_efforts
-                else None,
-                "max_effort": round(sum(max_efforts) / len(max_efforts))
-                if max_efforts
-                else None,
-            }
-        )
-    return ""
+    min_efforts = [
+        course.time_commitment["min_hours"]
+        for course in courses
+        if course.time_commitment
+    ]
+    max_efforts = [
+        course.time_commitment["min_hours"]
+        for course in courses
+        if course.time_commitment
+    ]
+    return _transform_course_commitment(
+        {
+            "min_effort": round(sum(min_efforts) / len(min_efforts))
+            if min_efforts
+            else None,
+            "max_effort": round(sum(max_efforts) / len(max_efforts))
+            if max_efforts
+            else None,
+        }
+    )
 
 
 def _transform_course_commitment(course_run):
@@ -394,15 +394,21 @@ def _transform_course_commitment(course_run):
         str: the time commitment of the course run in hours per week
     """
 
-    min_effort = course_run.get("min_effort")
-    max_effort = course_run.get("max_effort")
+    min_effort = course_run.get("min_effort") or 0
+    max_effort = course_run.get("max_effort") or 0
     if min_effort and max_effort and min_effort != max_effort:
-        min_effort = f"{str(min_effort) + '-'}"
+        commit_str_prefix = f"{min_effort}-"
     else:
-        min_effort = ""
+        commit_str_prefix = ""
     if min_effort or max_effort:
-        return f"{min_effort}{max_effort} hours/week"
-    return ""
+        return asdict(
+            CommitmentConfig(
+                commitment=f"{commit_str_prefix}{max_effort or min_effort} hours/week",
+                min_hours=min(min_effort, max_effort),
+                max_hours=max(min_effort, max_effort),
+            )
+        )
+    return None
 
 
 def _sum_course_prices(program: dict) -> Decimal:
