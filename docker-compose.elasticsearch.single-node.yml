@@ -1,0 +1,25 @@
+services:
+  elasticsearch-node-mitopen-1:
+    extends:
+      file: docker-compose.elasticsearch.base.yml
+      service: elasticsearch
+    hostname: elasticsearch-node-mitopen-1
+    environment:
+      - network.host=0.0.0.0
+      - http.cors.enabled= true
+      - http.cors.allow-origin="*"
+      - http.max_content_length=10mb
+      - rest.action.multi.allow_explicit_index=false
+      - "ES_JAVA_OPTS=-Xms1024m -Xmx1024m"
+      - discovery.type=single-node
+
+    volumes:
+      - elasticsearch-data1:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200 # REST API
+      - 9500:9600 # Performance Analyzer
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  elasticsearch-data1:

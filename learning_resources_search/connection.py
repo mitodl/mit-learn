@@ -6,7 +6,7 @@ import uuid
 from functools import partial
 
 from django.conf import settings
-from opensearch_dsl.connections import connections
+from elasticsearch_dsl.connections import connections
 
 from learning_resources_search.constants import (
     ALL_INDEX_TYPES,
@@ -22,17 +22,15 @@ def configure_connections():
     """
     # this is the default connection
     http_auth = settings.OPENSEARCH_HTTP_AUTH
-    use_ssl = http_auth is not None
     # configure() lazily creates connections when get_connection() is called
     connections.configure(
         default={
             "hosts": [settings.OPENSEARCH_URL],
             "http_auth": http_auth,
-            "use_ssl": use_ssl,
+            "verify_certs": False,
             "timeout": settings.OPENSEARCH_DEFAULT_TIMEOUT,
             "connections_per_node": settings.OPENSEARCH_CONNECTIONS_PER_NODE,
             # make sure we verify SSL certificates (off by default)
-            "verify_certs": use_ssl,
         }
     )
 
@@ -108,20 +106,20 @@ def get_active_aliases(
                 for obj in object_types
             ]
             for alias in alias_tuple
-            if conn.indices.exists(alias)
+            if conn.indices.exists(index=alias)
         ]
 
     elif index_types == IndexestoUpdate.current_index.value:
         return [
             alias
             for alias in [get_default_alias_name(obj) for obj in object_types]
-            if conn.indices.exists(alias)
+            if conn.indices.exists(index=alias)
         ]
     elif index_types == IndexestoUpdate.reindexing_index.value:
         return [
             alias
             for alias in [get_reindexing_alias_name(obj) for obj in object_types]
-            if conn.indices.exists(alias)
+            if conn.indices.exists(index=alias)
         ]
     return None
 
@@ -134,4 +132,4 @@ def refresh_index(index):
         index (str): The opensearch index to refresh
     """
     conn = get_conn()
-    conn.indices.refresh(index)
+    conn.indices.refresh(index=index)

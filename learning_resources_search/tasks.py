@@ -15,7 +15,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django.template.defaultfilters import pluralize
-from opensearchpy.exceptions import NotFoundError, RequestError
+from elasticsearch.exceptions import NotFoundError, RequestError
 from requests.models import PreparedRequest
 
 from learning_resources.constants import LearningResourceType
@@ -626,30 +626,6 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
                     chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
                 )
             ]
-
-            for course in (
-                Course.objects.filter(learning_resource__published=True)
-                .filter(learning_resource__etl_source__in=RESOURCE_FILE_ETL_SOURCES)
-                .exclude(learning_resource__readable_id=blocklisted_ids)
-                .order_by("learning_resource_id")
-            ):
-                index_tasks = index_tasks + [
-                    index_content_files.si(
-                        ids,
-                        course.learning_resource_id,
-                        index_types=IndexestoUpdate.reindexing_index.value,
-                    )
-                    for ids in chunks(
-                        ContentFile.objects.filter(
-                            run__learning_resource_id=course.learning_resource_id,
-                            published=True,
-                            run__published=True,
-                        )
-                        .order_by("id")
-                        .values_list("id", flat=True),
-                        chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
-                    )
-                ]
 
         for resource_type in [
             PROGRAM_TYPE,

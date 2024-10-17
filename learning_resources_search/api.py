@@ -6,9 +6,9 @@ from collections import Counter
 from datetime import UTC, datetime
 
 from django.conf import settings
-from opensearch_dsl import Search
-from opensearch_dsl.query import MoreLikeThis, Percolate
-from opensearchpy.exceptions import NotFoundError
+from elasticsearch.exceptions import NotFoundError
+from elasticsearch_dsl import Search
+from elasticsearch_dsl.query import MoreLikeThis, Percolate
 
 from learning_resources.models import LearningResource
 from learning_resources_search.connection import (
@@ -206,7 +206,7 @@ def generate_content_file_text_clause(text):
 
 
 def generate_learning_resources_text_clause(
-    text, search_mode, slop, content_file_score_weight, min_score
+    text, search_mode, slop, content_file_score_weight, min_score, use_semantic
 ):
     """
     Return text clause for the query
@@ -327,6 +327,25 @@ def generate_learning_resources_text_clause(
                 },
             ]
         }
+
+        if use_semantic:
+            text_query = {"should": []}
+            for field in [
+                "title_embedding",
+                "description_embedding",
+                "full_description_embedding",
+            ]:
+                text_query["should"].append(
+                    {
+                        "text_expansion": {
+                            field: {
+                                "model_id": ".elser_model_2",
+                                "model_text": text,
+                            }
+                        }
+                    },
+                )
+
     else:
         text_query = {}
 
@@ -578,6 +597,7 @@ def add_text_query_to_search(search, text, search_params, query_type_query):
             search_params.get("slop"),
             search_params.get("content_file_score_weight"),
             search_params.get("min_score"),
+            search_params.get("use_semantic"),
         )
 
     yearly_decay_percent = search_params.get("yearly_decay_percent")

@@ -311,6 +311,13 @@ paths:
             type: string
             minLength: 1
         description: The topic name. To see a list of options go to api/v1/topics/
+      - in: query
+        name: use_semantic
+        schema:
+          type: boolean
+          nullable: true
+          default: false
+        description: If true use vector search
       tags:
       - content_file_search
       responses:
@@ -3512,6 +3519,13 @@ paths:
             minLength: 1
         description: The topic name. To see a list of options go to api/v1/topics/
       - in: query
+        name: use_semantic
+        schema:
+          type: boolean
+          nullable: true
+          default: false
+        description: If true use vector search
+      - in: query
         name: yearly_decay_percent
         schema:
           type: number
@@ -4009,6 +4023,13 @@ paths:
             type: string
             minLength: 1
         description: The topic name. To see a list of options go to api/v1/topics/
+      - in: query
+        name: use_semantic
+        schema:
+          type: boolean
+          nullable: true
+          default: false
+        description: If true use vector search
       - in: query
         name: yearly_decay_percent
         schema:
@@ -4547,6 +4568,13 @@ paths:
             minLength: 1
         description: The topic name. To see a list of options go to api/v1/topics/
       - in: query
+        name: use_semantic
+        schema:
+          type: boolean
+          nullable: true
+          default: false
+        description: If true use vector search
+      - in: query
         name: yearly_decay_percent
         schema:
           type: number
@@ -5060,6 +5088,13 @@ paths:
             type: string
             minLength: 1
         description: The topic name. To see a list of options go to api/v1/topics/
+      - in: query
+        name: use_semantic
+        schema:
+          type: boolean
+          nullable: true
+          default: false
+        description: If true use vector search
       - in: query
         name: yearly_decay_percent
         schema:
@@ -11099,6 +11134,11 @@ components:
           nullable: true
           default: false
           description: If true return raw open search results with score explanations
+        use_semantic:
+          type: boolean
+          nullable: true
+          default: false
+          description: If true use vector search
         id:
           type: array
           items:

@@ -9,9 +9,9 @@ from math import ceil
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from opensearchpy.exceptions import ConflictError, NotFoundError
-from opensearchpy.helpers import BulkIndexError, bulk
 from qdrant_client import QdrantClient, models
+from elasticsearch.exceptions import ConflictError, NotFoundError
+from elasticsearch.helpers import BulkIndexError, bulk
 
 from learning_resources.models import ContentFile, LearningResourceRun
 from learning_resources_search.connection import (
@@ -221,6 +221,57 @@ def _update_document_by_id(doc_id, body, object_type, *, retry_on_conflict=0, **
             )
 
 
+def make_elser_pipeline():
+    conn = get_conn()
+
+    conn.ingest.put_pipeline(
+        id="elser-ingest-pipeline",
+        description="Ingest pipeline for ELSER",
+        processors=[
+            {
+                "inference": {
+                    "model_id": ".elser_model_2",
+                    "input_output": [
+                        {
+                            "input_field": "description",
+                            "output_field": "description_embedding",
+                        },
+                        {
+                            "input_field": "full_description",
+                            "output_field": "full_description_embedding",
+                        },
+                        {"input_field": "title", "output_field": "title_embedding"},
+                    ],
+                }
+            }
+        ],
+    )
+
+
+def make_elser_pipeline_content_file():
+    conn = get_conn()
+
+    conn.ingest.put_pipeline(
+        id="elser-ingest-pipeline-content",
+        description="Ingest pipeline for ELSER",
+        processors=[
+            {
+                "inference": {
+                    "model_id": ".elser_model_2",
+                    "input_output": [
+                        {
+                            "input_field": "description",
+                            "output_field": "description_embedding",
+                        },
+                        {"input_field": "content", "output_field": "content_embedding"},
+                        {"input_field": "title", "output_field": "title_embedding"},
+                    ],
+                }
+            }
+        ],
+    )
+
+
 def clear_and_create_index(*, index_name=None, skip_mapping=False, object_type=None):
     """
     Wipe and recreate index and mapping. No indexing is done.
@@ -236,8 +287,8 @@ def clear_and_create_index(*, index_name=None, skip_mapping=False, object_type=N
         )
         raise ValueError(msg)
     conn = get_conn()
-    if conn.indices.exists(index_name):
-        conn.indices.delete(index_name)
+    if conn.indices.exists(index=index_name):
+        conn.indices.delete(index=index_name)
     index_create_data = {
         "settings": {
             "index": {
@@ -286,10 +337,19 @@ def clear_and_create_index(*, index_name=None, skip_mapping=False, object_type=N
             },
         }
     }
+
+    if object_type != CONTENT_FILE_TYPE:
+        index_create_data["settings"]["default_pipeline"] = "elser-ingest-pipeline"
+
     if not skip_mapping:
-        index_create_data["mappings"] = {"properties": MAPPING[object_type]}
+        mapping = MAPPING[object_type]
+        mapping["description_embedding"] = {"type": "sparse_vector"}
+        mapping["title_embedding"] = {"type": "sparse_vector"}
+        mapping["full_description_embedding"] = {"type": "sparse_vector"}
+
+        index_create_data["mappings"] = {"properties": mapping}
     # from https://www.elastic.co/guide/en/elasticsearch/guide/current/asciifolding-token-filter.html
-    conn.indices.create(index_name, body=index_create_data)
+    conn.indices.create(index=index_name, body=index_create_data)
 
 
 def upsert_document(doc_id, doc, object_type, *, retry_on_conflict=0, **kwargs):
@@ -400,6 +460,7 @@ def index_items(documents, object_type, index_types, **kwargs):
                     chunk,
                     index=alias,
                     chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
+                    request_timeout=60 * 5,
                     **kwargs,
                 )
                 if len(errors) > 0:
@@ -673,10 +734,10 @@ def switch_indices(backing_index, object_type):
             {"add": {"index": backing_index, "alias": global_alias}},
         ]
     )
-    conn.indices.update_aliases({"actions": actions})
+    conn.indices.update_aliases(actions=actions)
     refresh_index(backing_index)
     for index in old_backing_indexes:
-        conn.indices.delete(index)
+        conn.indices.delete(index=index)
 
     # Finally, remove the link to the reindexing alias
     try:
@@ -708,7 +769,7 @@ def delete_orphaned_indexes(obj_types, delete_reindexing_tags):
             for object_type in obj_types:
                 if object_type in index:
                     log.info("Deleting orphaned index %s", index)
-                    conn.indices.delete(index)
+                    conn.indices.delete(index=index)
                     break
 
 
