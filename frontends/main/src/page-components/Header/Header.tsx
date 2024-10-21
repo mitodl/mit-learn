@@ -54,8 +54,9 @@ const Bar = styled(AppBar)(({ theme }) => ({
   ".MuiToolbar-root": {
     minHeight: "auto",
   },
+  height: theme.custom.dimensions.headerHeight,
   [theme.breakpoints.down("sm")]: {
-    height: "60px",
+    height: theme.custom.dimensions.headerHeightSm,
     padding: "0",
   },
 }))

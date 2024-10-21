@@ -3,13 +3,13 @@ import styled from "@emotion/styled"
 import React, { ReactElement } from "react"
 
 const DrawerContent = styled.div(({ theme }) => ({
-  paddingTop: "72px",
+  paddingTop: theme.custom.dimensions.headerHeight,
   width: "366px",
   height: "100%",
   background: theme.custom.colors.white,
   borderRight: `1px solid ${theme.custom.colors.lightGray2}`,
   [theme.breakpoints.down("sm")]: {
-    height: "60px",
+    paddingTop: theme.custom.dimensions.headerHeightSm,
   },
 }))
 
