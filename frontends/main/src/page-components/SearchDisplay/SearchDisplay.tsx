@@ -631,20 +631,20 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
   }
 
   const setParamValue = (value: string, prev: string | string[]) => {
-    captureSearchEvent()
     actuallySetParamValue(value, prev)
+    captureSearchEvent()
   }
 
   const clearAllFacets = () => {
-    captureSearchEvent()
     actuallyClearAllFacets()
+    captureSearchEvent()
   }
 
   const setSearchParams = (
     value: URLSearchParams | ((prev: URLSearchParams) => URLSearchParams),
   ) => {
-    captureSearchEvent()
     actuallySetSearchParams(value)
+    captureSearchEvent()
   }
 
   const toggleParamValue = (
@@ -652,8 +652,8 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     rawValue: string,
     checked: boolean,
   ) => {
-    captureSearchEvent()
     actuallyToggleParamValue(name, rawValue, checked)
+    captureSearchEvent()
   }
 
   const sortDropdown = (
