@@ -1,6 +1,21 @@
 Release Notes
 =============
 
+Version 0.23.0
+--------------
+
+- Fixed issue with full name not being pulled in (#1682)
+- fix textarea placeholder color (#1712)
+- Capture the search_update event after making the adjustments to search terms (#1709)
+- synonyms in analyzer (#1697)
+- Update dependency @ckeditor/ckeditor5-react to v9 (#1532)
+- Update dependency @ckeditor/ckeditor5-dev-utils to v43 (#1552)
+- Update dependency @ckeditor/ckeditor5-dev-translations to v43 (#1551)
+- Shanbady/improve bookmark button label (#1699)
+- Shanbady/xpro logo for all xpro offerings (#1695)
+- search facet accessibility fixes (#1698)
+- exclude topics with no associated channel from Topic querySets (#1693)
+
 Version 0.22.1 (Released October 15, 2024)
 --------------
 

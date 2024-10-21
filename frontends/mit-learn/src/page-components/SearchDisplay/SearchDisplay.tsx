@@ -119,7 +119,7 @@ const FacetStyles = styled.div`
     margin-bottom: 14px;
 
     i {
-      color: ${({ theme }) => theme.custom.colors.silverGrayLight};
+      color: ${({ theme }) => theme.custom.colors.silverGrayDark};
     }
 
     &:hover i {
@@ -213,6 +213,16 @@ const FacetStyles = styled.div`
       color: ${({ theme }) => theme.palette.text.secondary};
       font-size: ${({ theme }) => theme.typography.body2.fontSize};
       text-align: right;
+    }
+  }
+
+  .facets:not(.facets-expanded, .facets-transitioning):has(
+      button.filter-section-button
+    ) {
+    div.facet-visible,
+    div.facet-list,
+    div.input-wrapper {
+      visibility: hidden;
     }
   }
 
@@ -600,20 +610,20 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
   }
 
   const setParamValue = (value: string, prev: string | string[]) => {
-    captureSearchEvent()
     actuallySetParamValue(value, prev)
+    captureSearchEvent()
   }
 
   const clearAllFacets = () => {
-    captureSearchEvent()
     actuallyClearAllFacets()
+    captureSearchEvent()
   }
 
   const setSearchParams = (
     value: URLSearchParams | ((prev: URLSearchParams) => URLSearchParams),
   ) => {
-    captureSearchEvent()
     actuallySetSearchParams(value)
+    captureSearchEvent()
   }
 
   const toggleParamValue = (
@@ -621,8 +631,8 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     rawValue: string,
     checked: boolean,
   ) => {
-    captureSearchEvent()
     actuallyToggleParamValue(name, rawValue, checked)
+    captureSearchEvent()
   }
 
   const sortDropdown = (
