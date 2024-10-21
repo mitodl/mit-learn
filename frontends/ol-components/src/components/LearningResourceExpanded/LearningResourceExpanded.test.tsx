@@ -10,6 +10,7 @@ import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
 import invariant from "tiny-invariant"
 import type { LearningResource } from "api"
 import { PLATFORMS } from "../Logo/Logo"
+import _ from "lodash"
 
 const IMG_CONFIG: LearningResourceExpandedProps["imgConfig"] = {
   key: "fake-key",
@@ -226,7 +227,9 @@ describe("Learning Resource Expanded", () => {
 
     const section = screen.getByTestId("drawer-info-items")
 
-    within(section).getByText("English, Spanish, French")
+    within(section).getByText((_content, node) => {
+      return node?.textContent === "English | Spanish | French" || false
+    })
   })
 
   test("Renders info section video duration correctly", () => {

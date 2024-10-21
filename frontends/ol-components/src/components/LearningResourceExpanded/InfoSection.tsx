@@ -14,7 +14,7 @@ import {
   RiPresentationLine,
   RiAwardFill,
 } from "@remixicon/react"
-import { LearningResource, LearningResourceRun, ResourceTypeEnum } from "api"
+import { LearningResource, ResourceTypeEnum } from "api"
 import {
   formatDurationClockTime,
   formatRunDate,
@@ -91,15 +91,10 @@ const Certificate = styled.div({
   },
 })
 
-type InfoSelector = (
-  resource: LearningResource,
-  run?: LearningResourceRun,
-) => React.ReactNode
+type InfoSelector = (resource: LearningResource) => React.ReactNode
 
 type InfoItemConfig = {
-  label:
-    | string
-    | ((resource: LearningResource, run?: LearningResourceRun) => string)
+  label: string | ((resource: LearningResource) => string)
   Icon: RemixiconComponentType | null
   selector: InfoSelector
 }[]
@@ -128,13 +123,13 @@ const INFO_ITEMS: InfoItemConfig = [
     },
   },
   {
-    label: (resource: LearningResource, _run?: LearningResourceRun) => {
+    label: (resource: LearningResource) => {
       const asTaughtIn = resource ? showStartAnytime(resource) : false
       const label = asTaughtIn ? "As taught in:" : "Start Date:"
       return label
     },
     Icon: RiCalendarLine,
-    selector: (resource: LearningResource, _run?: LearningResourceRun) => {
+    selector: (resource: LearningResource) => {
       const asTaughtIn = resource ? showStartAnytime(resource) : false
       if (
         [ResourceTypeEnum.Course, ResourceTypeEnum.Program].includes(
@@ -150,7 +145,7 @@ const INFO_ITEMS: InfoItemConfig = [
               return 0
             })
             .map((run, index) => {
-              const totalRuns = resource.runs?.length ?? 0
+              const totalRuns = resource.runs?.length || 0
               return (
                 <React.Fragment key={`run-${run.id}`}>
                   {formatRunDate(run, asTaughtIn)}
@@ -184,40 +179,79 @@ const INFO_ITEMS: InfoItemConfig = [
   {
     label: "Level:",
     Icon: RiDashboard3Line,
-    selector: (resource: LearningResource, run?: LearningResourceRun) => {
-      return run?.level?.[0]?.name || null
+    selector: (resource: LearningResource) => {
+      const totalRuns = resource.runs?.length || 0
+      const levels = resource.runs?.map((run, index) => {
+        const level = run?.level?.[0]?.name
+        if (!level) {
+          return null
+        }
+        return (
+          <React.Fragment key={`level-${index}`}>
+            {run?.level?.[0]?.name}
+            {index < totalRuns - 1 && <Separator />}
+          </React.Fragment>
+        )
+      })
+      if (levels?.every((level) => level === null)) {
+        return null
+      }
+      return levels
     },
   },
 
   {
     label: "Instructors:",
     Icon: RiGraduationCapLine,
-    selector: (resource: LearningResource, run?: LearningResourceRun) => {
-      const totalInstructors = run?.instructors?.length || 0
-      return (
-        run?.instructors
-          ?.filter((instructor) => instructor.full_name)
-          .map((instructor, index) => {
-            return (
-              <React.Fragment key={`instructor-${index}`}>
-                {instructor.full_name}
-                {index < totalInstructors - 1 && <Separator />}
-              </React.Fragment>
-            )
-          }) || null
-      )
+    selector: (resource: LearningResource) => {
+      const instructorNames: string[] = []
+      resource.runs?.forEach((run) => {
+        run.instructors?.forEach((instructor) => {
+          if (instructor.full_name) {
+            instructorNames.push(instructor.full_name)
+          }
+        })
+      })
+      const uniqueInstructors = Array.from(new Set(instructorNames))
+      if (uniqueInstructors.length === 0) {
+        return null
+      }
+      const totalInstructors = uniqueInstructors.length
+      const instructors = uniqueInstructors.map((instructor, index) => {
+        return (
+          <React.Fragment key={`instructor-${index}`}>
+            {instructor}
+            {index < totalInstructors - 1 && <Separator />}
+          </React.Fragment>
+        )
+      })
+      return instructors
     },
   },
 
   {
     label: "Languages:",
     Icon: RiTranslate2,
-    selector: (resource: LearningResource, run?: LearningResourceRun) => {
-      return run?.languages?.length
-        ? run.languages
-            .map((language) => ISO6391.getName(language.substring(0, 2)))
-            .join(", ")
-        : null
+    selector: (resource: LearningResource) => {
+      const runLanguages: string[] = []
+      resource.runs?.forEach((run) => {
+        run.languages?.forEach((language) => {
+          runLanguages.push(language)
+        })
+      })
+      const uniqueLanguages = Array.from(new Set(runLanguages))
+      if (uniqueLanguages.length === 0) {
+        return null
+      }
+      const totalLanguages = uniqueLanguages.length
+      return uniqueLanguages.map((language, index) => {
+        return (
+          <React.Fragment key={`language-${index}`}>
+            {ISO6391.getName(language.substring(0, 2))}
+            {index < totalLanguages - 1 && <Separator />}
+          </React.Fragment>
+        )
+      })
     },
   },
 
@@ -287,21 +321,15 @@ const InfoItem = ({ label, Icon, value }: InfoItemProps) => {
   )
 }
 
-const InfoSection = ({
-  resource,
-  run,
-}: {
-  resource?: LearningResource
-  run?: LearningResourceRun
-}) => {
+const InfoSection = ({ resource }: { resource?: LearningResource }) => {
   if (!resource) {
     return null
   }
 
   const infoItems = INFO_ITEMS.map(({ label, Icon, selector }) => ({
-    label: typeof label === "function" ? label(resource, run) : label,
+    label: typeof label === "function" ? label(resource) : label,
     Icon,
-    value: selector(resource, run),
+    value: selector(resource),
   })).filter(({ value }) => value !== null && value !== "")
 
   if (infoItems.length === 0) {
