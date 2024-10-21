@@ -12,9 +12,11 @@ from learning_resources import factories, serializers, utils
 from learning_resources.constants import (
     LEARNING_MATERIAL_RESOURCE_CATEGORY,
     CertificationType,
-    LearningResourceFormat,
+    Format,
+    LearningResourceDelivery,
     LearningResourceRelationTypes,
     LearningResourceType,
+    Pace,
     PlatformType,
 )
 from learning_resources.models import ContentFile, LearningResource
@@ -208,6 +210,7 @@ def test_learning_resource_serializer(  # noqa: PLR0913
         ).data,
         "prices": sorted([f"{price:.2f}" for price in resource.prices]),
         "professional": resource.professional,
+        "position": None,
         "certification": resource.certification,
         "certification_type": {
             "code": resource.certification_type,
@@ -252,18 +255,30 @@ def test_learning_resource_serializer(  # noqa: PLR0913
             serializers.LearningResourceTopicSerializer(topic).data
             for topic in resource.topics.all()
         ],
+        "ocw_topics": sorted(resource.ocw_topics),
         "runs": [
             serializers.LearningResourceRunSerializer(instance=run).data
             for run in resource.runs.all()
         ],
         detail_key: detail_serializer_cls(instance=getattr(resource, detail_key)).data,
         "views": resource.views.count(),
-        "learning_format": [
-            {"code": lr_format, "name": LearningResourceFormat[lr_format].value}
-            for lr_format in resource.learning_format
+        "delivery": [
+            {"code": lr_delivery, "name": LearningResourceDelivery[lr_delivery].value}
+            for lr_delivery in resource.delivery
         ],
+        "format": [
+            {"code": lr_format, "name": Format[lr_format].value}
+            for lr_format in resource.format
+        ],
+        "pace": [
+            {"code": lr_pace, "name": Pace[lr_pace].value} for lr_pace in resource.pace
+        ],
+        "location": resource.location,
         "next_start_date": resource.next_start_date,
         "availability": resource.availability,
+        "completeness": 1.0,
+        "continuing_ed_credits": resource.continuing_ed_credits,
+        "license_cc": resource.license_cc,
     }
 
 

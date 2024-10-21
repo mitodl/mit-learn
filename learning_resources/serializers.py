@@ -15,9 +15,11 @@ from learning_resources import constants, models
 from learning_resources.constants import (
     LEARNING_MATERIAL_RESOURCE_CATEGORY,
     CertificationType,
-    LearningResourceFormat,
+    Format,
+    LearningResourceDelivery,
     LearningResourceType,
     LevelType,
+    Pace,
 )
 from learning_resources.etl.loaders import update_index
 from main.serializers import COMMON_IGNORED_FIELDS, WriteableSerializerMethodField
@@ -225,15 +227,45 @@ class LearningResourceLevelSerializer(serializers.Field):
     {
         "type": "object",
         "properties": {
-            "code": {"enum": LearningResourceFormat.names()},
+            "code": {"enum": LearningResourceDelivery.names()},
             "name": {"type": "string"},
         },
         "required": ["code", "name"],
     }
 )
-class LearningResourceFormatSerializer(serializers.Field):
+class LearningResourceDeliverySerializer(serializers.Field):
     def to_representation(self, value):
-        return {"code": value, "name": LearningResourceFormat[value].value}
+        return {"code": value, "name": LearningResourceDelivery[value].value}
+
+
+@extend_schema_field(
+    {
+        "type": "object",
+        "properties": {
+            "code": {"enum": Format.names()},
+            "name": {"type": "string"},
+        },
+        "required": ["code", "name"],
+    }
+)
+class FormatSerializer(serializers.Field):
+    def to_representation(self, value):
+        return {"code": value, "name": Format[value].value}
+
+
+@extend_schema_field(
+    {
+        "type": "object",
+        "properties": {
+            "code": {"enum": Pace.names()},
+            "name": {"type": "string"},
+        },
+        "required": ["code", "name"],
+    }
+)
+class PaceSerializer(serializers.Field):
+    def to_representation(self, value):
+        return {"code": value, "name": Pace[value].value}
 
 
 class LearningResourceRunSerializer(serializers.ModelSerializer):
@@ -245,10 +277,15 @@ class LearningResourceRunSerializer(serializers.ModelSerializer):
     image = LearningResourceImageSerializer(read_only=True, allow_null=True)
 
     level = serializers.ListField(child=LearningResourceLevelSerializer())
+    delivery = serializers.ListField(
+        child=LearningResourceDeliverySerializer(), read_only=True
+    )
+    format = serializers.ListField(child=FormatSerializer(), read_only=True)
+    pace = serializers.ListField(child=PaceSerializer(), read_only=True)
 
     class Meta:
         model = models.LearningResourceRun
-        exclude = ["learning_resource", "availability", *COMMON_IGNORED_FIELDS]
+        exclude = ["learning_resource", *COMMON_IGNORED_FIELDS]
 
 
 class ResourceListMixin(serializers.Serializer):
@@ -386,6 +423,7 @@ class MicroUserListRelationshipSerializer(serializers.ModelSerializer):
 class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopicsMixin):
     """Serializer for LearningResource, minus program"""
 
+    position = serializers.IntegerField(read_only=True, allow_null=True)
     offered_by = LearningResourceOfferorSerializer(read_only=True, allow_null=True)
     platform = LearningResourcePlatformSerializer(read_only=True, allow_null=True)
     course_feature = LearningResourceContentTagField(
@@ -407,11 +445,13 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
     )
     user_list_parents = MicroUserListRelationshipSerializer(many=True, read_only=True)
     views = serializers.IntegerField(source="views_count", read_only=True)
-    learning_format = serializers.ListField(
-        child=LearningResourceFormatSerializer(), read_only=True
+    delivery = serializers.ListField(
+        child=LearningResourceDeliverySerializer(), read_only=True
     )
     free = serializers.SerializerMethodField()
     resource_category = serializers.SerializerMethodField()
+    format = serializers.ListField(child=FormatSerializer(), read_only=True)
+    pace = serializers.ListField(child=PaceSerializer(), read_only=True)
 
     def get_resource_category(self, instance) -> str:
         """Return the resource category of the resource"""

@@ -3,7 +3,7 @@ import styled from "@emotion/styled"
 import React, { ReactElement } from "react"
 
 const DrawerContent = styled.div(({ theme }) => ({
-  paddingTop: "60px",
+  paddingTop: "72px",
   width: "366px",
   height: "100%",
   background: theme.custom.colors.white,
@@ -108,7 +108,7 @@ export interface NavItem {
   title: string
   icon?: string | ReactElement
   description?: string
-  href?: string
+  href: string
 }
 
 const NavItem: React.FC<NavItem> = (props) => {
@@ -127,7 +127,7 @@ const NavItem: React.FC<NavItem> = (props) => {
       </NavIconContainer>
       <NavTextContainer>
         <NavLinkText className="nav-link-text" data-testid="nav-link-text">
-          {title} {href ? "" : "(Coming Soon)"}
+          {title}
         </NavLinkText>
         {description ? (
           <NavLinkDescription data-testid="nav-link-description">
@@ -137,12 +137,10 @@ const NavItem: React.FC<NavItem> = (props) => {
       </NavTextContainer>
     </NavItemContainer>
   )
-  return href ? (
+  return (
     <NavItemLink href={href} data-testid="nav-link">
       {navItem}
     </NavItemLink>
-  ) : (
-    navItem
   )
 }
 

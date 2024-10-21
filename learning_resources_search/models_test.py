@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from urllib.parse import urlencode
 
 import pytest
 
@@ -11,11 +12,12 @@ from learning_resources_search.factories import PercolateQueryFactory
 from learning_resources_search.indexing_api import (
     get_reindexing_alias_name,
 )
+from learning_resources_search.models import PercolateQuery
 
 pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("mocked_es")]
 
 
-@pytest.fixture()
+@pytest.fixture
 def mocked_es(mocker, settings):
     """ES client objects/functions mock"""
     index_name = "test"
@@ -39,7 +41,7 @@ def mocked_es(mocker, settings):
     )
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_percolate_query_unit_labels(mocker, mocked_es):
     mocker.patch(
         "learning_resources_search.indexing_api.index_percolators", autospec=True
@@ -62,14 +64,16 @@ def test_percolate_query_unit_labels(mocker, mocked_es):
         "yearly_decay_percent": None,
     }
     query = PercolateQueryFactory.create(
-        original_query=original_query, query=original_query
+        original_query=original_query,
+        query=original_query,
+        source_type=PercolateQuery.CHANNEL_SUBSCRIPTION_TYPE,
     )
     assert query.original_url_params() == "offered_by=mitx"
     assert query.source_label() == "unit"
     assert query.source_description() == unit_channel.title
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_percolate_query_topic_labels(mocker, mocked_es):
     mocker.patch(
         "learning_resources_search.indexing_api.index_percolators", autospec=True
@@ -90,14 +94,16 @@ def test_percolate_query_topic_labels(mocker, mocked_es):
         "yearly_decay_percent": None,
     }
     query = PercolateQueryFactory.create(
-        original_query=original_query, query=original_query
+        original_query=original_query,
+        query=original_query,
+        source_type=PercolateQuery.CHANNEL_SUBSCRIPTION_TYPE,
     )
     assert query.original_url_params() == "topic=Math"
     assert query.source_label() == "topic"
     assert query.source_description() == topic_channel.title
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_percolate_query_department_labels(mocker, mocked_es):
     mocker.patch(
         "learning_resources_search.indexing_api.index_percolators", autospec=True
@@ -117,14 +123,16 @@ def test_percolate_query_department_labels(mocker, mocked_es):
         "yearly_decay_percent": None,
     }
     query = PercolateQueryFactory.create(
-        original_query=original_query, query=original_query
+        original_query=original_query,
+        query=original_query,
+        source_type=PercolateQuery.CHANNEL_SUBSCRIPTION_TYPE,
     )
     assert query.original_url_params() == "department=physics"
     assert query.source_label() == "department"
     assert query.source_description() == department_channel.title
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_percolate_query_search_labels(mocker, mocked_es):
     mocker.patch(
         "learning_resources_search.indexing_api.index_percolators", autospec=True
@@ -152,3 +160,60 @@ def test_percolate_query_search_labels(mocker, mocked_es):
         == "q=testing+search+filter&department=physics&topic=math"
     )
     assert query.source_label() == "saved_search"
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("is_channel_query", [True, False])
+@pytest.mark.parametrize("test_label", ["new courses about cats", ""])
+def test_percolate_query_display_labels(
+    mocker, mocked_es, test_label, is_channel_query
+):
+    """
+    Test that makes sure we display the display label for a percolate query if it is defined
+    """
+
+    def encode_params(oparams):
+        ignore_params = ["endpoint"]
+        query = oparams
+        defined_params = {
+            key: query[key] for key in query if query[key] and key not in ignore_params
+        }
+        return urlencode(defined_params, doseq=True)
+
+    mocker.patch(
+        "learning_resources_search.indexing_api.index_percolators", autospec=True
+    )
+    mocker.patch(
+        "learning_resources_search.indexing_api._update_document_by_id", autospec=True
+    )
+
+    if is_channel_query:
+        original_query = {"department": ["physics"]}
+        channel = ChannelFactory.create(
+            search_filter=encode_params(original_query), channel_type="unit"
+        )
+    else:
+        original_query = {
+            "q": "testing search filter",
+            "certification": None,
+            "yearly_decay_percent": None,
+        }
+
+    query = PercolateQueryFactory.create(
+        original_query=original_query,
+        query=original_query,
+        display_label=test_label,
+        source_type=PercolateQuery.CHANNEL_SUBSCRIPTION_TYPE
+        if is_channel_query
+        else PercolateQuery.SEARCH_SUBSCRIPTION_TYPE,
+    )
+    assert query.original_url_params() == encode_params(original_query)
+    if not is_channel_query:
+        assert query.source_label() == "saved_search"
+    assert query.source_description() == (
+        test_label
+        if test_label
+        else channel.title
+        if is_channel_query
+        else query.original_url_params()
+    )

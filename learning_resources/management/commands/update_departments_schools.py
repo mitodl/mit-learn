@@ -2,11 +2,11 @@
 
 from django.core.management import BaseCommand
 
-from learning_resources.utils import (
+from data_fixtures.utils import (
     upsert_department_data,
     upsert_school_data,
 )
-from main.utils import now_in_utc
+from main.utils import clear_search_cache, now_in_utc
 
 
 class Command(BaseCommand):
@@ -26,3 +26,4 @@ class Command(BaseCommand):
             f"Update of {len(schools)} schools & {len(departments)} "
             f"departments finished, took {total_seconds} seconds"
         )
+        clear_search_cache()

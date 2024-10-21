@@ -11,7 +11,7 @@ import ClickAwayListener from "@mui/material/ClickAwayListener"
  * https://github.com/mui/material-ui/blob/d3ef60158ba066779102fba775dda6765e2cc0f5/docs/data/material/components/popper/ScrollPlayground.js#L175
  */
 const StyledPopper = styled(MuiPopper)(({ theme }) => ({
-  zIndex: 1,
+  zIndex: theme.zIndex.drawer + 1,
   "& > div": {
     position: "relative",
   },
@@ -128,6 +128,7 @@ const Arrow = styled("div")({
 const Content = styled.div(({ theme }) => ({
   padding: "16px",
   backgroundColor: theme.custom.colors.white,
+  borderRadius: "8px",
   boxShadow:
     "0px 2px 4px 0px rgba(37, 38, 43, 0.10), 0px 6px 24px 0px rgba(37, 38, 43, 0.24)",
 }))

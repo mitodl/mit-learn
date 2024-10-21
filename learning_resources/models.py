@@ -8,7 +8,7 @@ from typing import Optional
 from django.contrib.auth.models import User
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
-from django.db.models import Count, JSONField, OuterRef, Prefetch, Q
+from django.db.models import CharField, Count, JSONField, OuterRef, Prefetch, Q
 from django.db.models.functions import Lower
 from django.utils import timezone
 
@@ -16,17 +16,29 @@ from learning_resources import constants
 from learning_resources.constants import (
     Availability,
     CertificationType,
-    LearningResourceFormat,
+    Format,
+    LearningResourceDelivery,
     LearningResourceRelationTypes,
     LearningResourceType,
+    Pace,
     PrivacyLevel,
 )
 from main.models import TimestampedModel, TimestampedModelQuerySet
 
 
-def default_learning_format():
-    """Return the default learning format list"""
-    return [LearningResourceFormat.online.name]
+def default_delivery():
+    """Return the default delivery as a list"""
+    return [LearningResourceDelivery.online.name]
+
+
+def default_pace():
+    """Return the default pace as a list"""
+    return [Pace.self_paced.name]
+
+
+def default_format():
+    """Return the default format as a list"""
+    return [Format.asynchronous.name]
 
 
 class LearningResourcePlatform(TimestampedModel):
@@ -358,6 +370,9 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
             .annotate(views_count=Count("views"))
         )
 
+    def for_search_serialization(self):
+        return self.annotate(in_featured_lists=Count("parents__parent__channel"))
+
 
 class LearningResource(TimestampedModel):
     """Core model for all learning resources"""
@@ -374,10 +389,6 @@ class LearningResource(TimestampedModel):
     url = models.URLField(null=True, max_length=2048)  # noqa: DJ001
     image = models.ForeignKey(
         LearningResourceImage, null=True, blank=True, on_delete=models.deletion.SET_NULL
-    )
-    learning_format = ArrayField(
-        models.CharField(max_length=24, db_index=True),
-        default=default_learning_format,
     )
     platform = models.ForeignKey(
         LearningResourcePlatform,
@@ -400,6 +411,7 @@ class LearningResource(TimestampedModel):
         choices=((member.name, member.value) for member in LearningResourceType),
     )
     topics = models.ManyToManyField(LearningResourceTopic)
+    ocw_topics = ArrayField(models.CharField(max_length=128), default=list, blank=True)
     offered_by = models.ForeignKey(
         LearningResourceOfferor, null=True, on_delete=models.SET_NULL
     )
@@ -418,6 +430,32 @@ class LearningResource(TimestampedModel):
         null=True,
         choices=((member.name, member.value) for member in Availability),
     )
+    completeness = models.FloatField(default=1.0)
+    delivery = ArrayField(
+        models.CharField(
+            max_length=24, db_index=True, choices=LearningResourceDelivery.as_tuple()
+        ),
+        default=default_delivery,
+    )
+    license_cc = models.BooleanField(default=False)
+    continuing_ed_credits = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True
+    )
+    pace = ArrayField(
+        models.CharField(
+            max_length=24,
+            choices=Pace.as_tuple(),
+        ),
+        default=default_pace,
+    )
+    format = ArrayField(
+        models.CharField(
+            max_length=24,
+            choices=Format.as_tuple(),
+        ),
+        default=default_format,
+    )
+    location = models.CharField(max_length=256, blank=True)
 
     @property
     def audience(self) -> str | None:
@@ -531,9 +569,6 @@ class LearningResourceRun(TimestampedModel):
         models.CharField(max_length=128), null=False, blank=False, default=list
     )
     slug = models.CharField(max_length=1024, null=True, blank=True)  # noqa: DJ001
-    availability = models.CharField(  # noqa: DJ001
-        max_length=128, null=True, blank=True
-    )
     semester = models.CharField(max_length=20, null=True, blank=True)  # noqa: DJ001
     year = models.IntegerField(null=True, blank=True)
     start_date = models.DateTimeField(null=True, blank=True)
@@ -547,6 +582,32 @@ class LearningResourceRun(TimestampedModel):
         models.DecimalField(decimal_places=2, max_digits=12), null=True, blank=True
     )
     checksum = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
+    delivery = ArrayField(
+        models.CharField(
+            max_length=24, db_index=True, choices=LearningResourceDelivery.as_tuple()
+        ),
+        default=default_delivery,
+    )
+    availability = models.CharField(  # noqa: DJ001
+        max_length=24,
+        null=True,
+        choices=Availability.as_tuple(),
+    )
+    pace = ArrayField(
+        models.CharField(
+            max_length=24,
+            choices=Pace.as_tuple(),
+        ),
+        default=default_pace,
+    )
+    format = ArrayField(
+        models.CharField(
+            max_length=24,
+            choices=Format.as_tuple(),
+        ),
+        default=default_format,
+    )
+    location = CharField(max_length=256, blank=True)
 
     def __str__(self):
         return f"LearningResourceRun platform={self.learning_resource.platform} run_id={self.run_id}"  # noqa: E501

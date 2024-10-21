@@ -3,6 +3,8 @@
 import logging
 from itertools import chain
 
+from django.conf import settings
+from django.http import JsonResponse
 from django.utils.decorators import method_decorator
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from opensearchpy.exceptions import TransportError
@@ -30,6 +32,7 @@ from learning_resources_search.serializers import (
     PercolateQuerySerializer,
     PercolateQuerySubscriptionRequestSerializer,
 )
+from main.utils import cache_page_for_anonymous_users
 
 log = logging.getLogger(__name__)
 
@@ -63,6 +66,11 @@ class LearningResourcesSearchView(ESView):
 
     permission_classes = ()
 
+    @method_decorator(
+        cache_page_for_anonymous_users(
+            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+        )
+    )
     @extend_schema(summary="Search")
     def get(self, request):
         request_data = LearningResourcesSearchRequestSerializer(data=request.GET)
@@ -75,11 +83,11 @@ class LearningResourcesSearchView(ESView):
             if request_data.data.get("dev_mode"):
                 return Response(response)
             else:
-                return Response(
-                    LearningResourcesSearchResponseSerializer(
-                        response, context={"request": request}
-                    ).data
-                )
+                response = LearningResourcesSearchResponseSerializer(
+                    response, context={"request": request}
+                ).data
+                response["results"] = list(response["results"])
+                return Response(response)
         else:
             errors = {}
             for key, errors_obj in request_data.errors.items():
@@ -258,3 +266,29 @@ class ContentFileSearchView(ESView):
                     errors[key] = list(set(chain(*errors_obj.values())))
 
             return Response(errors, status=400)
+
+
+@action(methods=["GET"], detail=False, name="Search Defaults")
+@extend_schema_view(
+    get=extend_schema(
+        parameters=None,
+    ),
+)
+class LearningResourceSearchDefaultsView(APIView):
+    """Learning resource search default admin param values"""
+
+    authentication_classes = []
+    permission_classes = []
+    serializer_class = None
+
+    def get(self, _):
+        return JsonResponse(
+            {
+                "search_mode": settings.DEFAULT_SEARCH_MODE,
+                "slop": settings.DEFAULT_SEARCH_SLOP,
+                "yearly_decay_percent": settings.DEFAULT_SEARCH_STALENESS_PENALTY,
+                "min_score": settings.DEFAULT_SEARCH_MINIMUM_SCORE_CUTOFF,
+                "max_incompleteness_penalty": settings.DEFAULT_SEARCH_MAX_INCOMPLETENESS_PENALTY,  # noqa: E501
+                "content_file_score_weight": settings.DEFAULT_SEARCH_CONTENT_FILE_SCORE_WEIGHT,  # noqa: E501
+            }
+        )

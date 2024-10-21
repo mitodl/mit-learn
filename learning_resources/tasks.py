@@ -17,14 +17,14 @@ from learning_resources.etl.edx_shared import (
     get_most_recent_course_archives,
     sync_edx_course_files,
 )
-from learning_resources.etl.loaders import load_next_start_date_and_prices
+from learning_resources.etl.loaders import load_run_dependent_values
 from learning_resources.etl.pipelines import ocw_courses_etl
 from learning_resources.etl.utils import get_learning_course_bucket_name
 from learning_resources.models import LearningResource
 from learning_resources.utils import load_course_blocklist
 from main.celery import app
 from main.constants import ISOFORMAT
-from main.utils import chunks
+from main.utils import chunks, clear_search_cache
 
 log = logging.getLogger(__name__)
 
@@ -34,7 +34,8 @@ def update_next_start_date_and_prices():
     """Update expired next start dates and prices"""
     resources = LearningResource.objects.filter(next_start_date__lt=timezone.now())
     for resource in resources:
-        load_next_start_date_and_prices(resource)
+        load_run_dependent_values(resource)
+    clear_search_cache()
     return len(resources)
 
 
@@ -42,19 +43,29 @@ def update_next_start_date_and_prices():
 def get_micromasters_data():
     """Execute the MicroMasters ETL pipeline"""
     programs = pipelines.micromasters_etl()
+    clear_search_cache()
     return len(programs)
 
 
 @app.task
-def get_mit_edx_data(api_datafile=None) -> int:
+def get_mit_edx_data(
+    api_course_datafile: str | None = None, api_program_datafile: str | None = None
+) -> int:
     """Task to sync MIT edX data with the database
 
     Args:
-        api_datafile (str): If provided, use this file as the source of API data
+        api_course_datafile (str): If provided, use file as source of course API data
             Otherwise, the API is queried directly.
+        api_program_datafile (str): If provided, use file as source of program API data.
+            Otherwise, the API is queried directly.
+
+    Returns:
+        int: The number of results that were fetched
     """
-    courses = pipelines.mit_edx_etl(api_datafile)
-    return len(courses)
+    courses = pipelines.mit_edx_courses_etl(api_course_datafile)
+    programs = pipelines.mit_edx_programs_etl(api_program_datafile)
+    clear_search_cache()
+    return len(courses) + len(programs)
 
 
 @app.task
@@ -62,19 +73,21 @@ def get_mitxonline_data() -> int:
     """Execute the MITX Online ETL pipeline"""
     courses = pipelines.mitxonline_courses_etl()
     programs = pipelines.mitxonline_programs_etl()
-    return len(courses + programs)
+    clear_search_cache()
+    return len(courses) + len(programs)
 
 
 @app.task
-def get_oll_data(api_datafile=None):
+def get_oll_data(sheets_id=None):
     """Execute the OLL ETL pipeline.
 
     Args:
-        api_datafile (str): If provided, use this file as the source of API data
-            Otherwise, the API is queried directly.
+        sheets_id (str): If provided, retrieved data from the
+        google spreadsheet with this id.
 
     """
-    courses = pipelines.oll_etl(api_datafile)
+    courses = pipelines.oll_etl(sheets_id)
+    clear_search_cache()
     return len(courses)
 
 
@@ -83,7 +96,15 @@ def get_prolearn_data():
     """Execute the ProLearn ETL pipelines"""
     courses = pipelines.prolearn_courses_etl()
     programs = pipelines.prolearn_programs_etl()
-    return len(programs + courses)
+    clear_search_cache()
+    return len(courses) + len(programs)
+
+
+@app.task
+def get_sloan_data():
+    """Execute the ProLearn ETL pipelines"""
+    courses = pipelines.sloan_courses_etl()
+    return len(courses)
 
 
 @app.task
@@ -91,7 +112,8 @@ def get_xpro_data():
     """Execute the xPro ETL pipeline"""
     courses = pipelines.xpro_courses_etl()
     programs = pipelines.xpro_programs_etl()
-    return len(courses + programs)
+    clear_search_cache()
+    return len(courses) + len(programs)
 
 
 @app.task
@@ -109,6 +131,7 @@ def get_content_files(
         log.warning("Required settings missing for %s files", etl_source)
         return
     sync_edx_course_files(etl_source, ids, keys, s3_prefix=s3_prefix)
+    clear_search_cache()
 
 
 def get_content_tasks(
@@ -147,7 +170,7 @@ def get_content_tasks(
 @app.task(bind=True)
 def import_all_mit_edx_files(self, chunk_size=None):
     """Ingest MIT edX files from an S3 bucket"""
-    raise self.replace(
+    return self.replace(
         get_content_tasks(
             ETLSource.mit_edx.name,
             chunk_size=chunk_size,
@@ -159,7 +182,7 @@ def import_all_mit_edx_files(self, chunk_size=None):
 @app.task(bind=True)
 def import_all_oll_files(self, chunk_size=None):
     """Ingest MIT edX files from an S3 bucket"""
-    raise self.replace(
+    return self.replace(
         get_content_tasks(
             ETLSource.oll.name,
             chunk_size=chunk_size,
@@ -172,7 +195,7 @@ def import_all_oll_files(self, chunk_size=None):
 @app.task(bind=True)
 def import_all_mitxonline_files(self, chunk_size=None):
     """Ingest MITx Online files from an S3 bucket"""
-    raise self.replace(
+    return self.replace(
         get_content_tasks(
             ETLSource.mitxonline.name,
             chunk_size=chunk_size,
@@ -184,7 +207,7 @@ def import_all_mitxonline_files(self, chunk_size=None):
 def import_all_xpro_files(self, chunk_size=None):
     """Ingest xPRO OLX files from an S3 bucket"""
 
-    raise self.replace(
+    return self.replace(
         get_content_tasks(
             ETLSource.xpro.name,
             chunk_size=chunk_size,
@@ -202,7 +225,7 @@ def get_podcast_data():
             The number of results that were fetched
     """
     results = pipelines.podcast_etl()
-
+    clear_search_cache()
     return len(list(results))
 
 
@@ -229,6 +252,7 @@ def get_ocw_courses(
         start_timestamp=utc_start_timestamp,
         skip_content_files=skip_content_files,
     )
+    clear_search_cache()
 
 
 @app.task(bind=True, acks_late=True)
@@ -250,7 +274,7 @@ def get_ocw_data(  # noqa: PLR0913
         and settings.OCW_LIVE_BUCKET
     ):
         log.warning("Required settings missing for get_ocw_data")
-        return
+        return None
 
     # get all the courses prefixes we care about
     raw_data_bucket = boto3.resource(
@@ -276,7 +300,7 @@ def get_ocw_data(  # noqa: PLR0913
 
     if len(ocw_courses) == 0:
         log.info("No courses matching url substring")
-        return
+        return None
 
     log.info("Backpopulating %d OCW courses...", len(ocw_courses))
 
@@ -293,7 +317,7 @@ def get_ocw_data(  # noqa: PLR0913
             )
         ]
     )
-    raise self.replace(ocw_tasks)
+    return self.replace(ocw_tasks)
 
 
 @app.task
@@ -310,7 +334,7 @@ def get_youtube_data(*, channel_ids=None):
             The number of results that were fetched
     """
     results = pipelines.youtube_etl(channel_ids=channel_ids)
-
+    clear_search_cache()
     return len(list(results))
 
 
@@ -338,6 +362,7 @@ def get_youtube_transcripts(
 
     log.info("Updating transcripts for %i videos", videos.count())
     youtube.get_youtube_transcripts(videos)
+    clear_search_cache()
 
 
 @app.task

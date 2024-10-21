@@ -11,9 +11,11 @@ import pytest
 
 from learning_resources.constants import (
     CertificationType,
+    Format,
     LearningResourceType,
+    Pace,
     PlatformType,
-    RunAvailability,
+    RunStatus,
 )
 from learning_resources.etl.constants import CourseNumberType, ETLSource
 from learning_resources.etl.mitxonline import (
@@ -41,21 +43,21 @@ from main.utils import clean_data
 pytestmark = pytest.mark.django_db
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_mitxonline_programs_data():
     """Mock mitxonline data"""
     with open("./test_json/mitxonline_programs.json") as f:  # noqa: PTH123
         return json.loads(f.read())
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_mitxonline_courses_data():
     """Mock mitxonline data"""
     with open("./test_json/mitxonline_courses.json") as f:  # noqa: PTH123
         return json.loads(f.read())
 
 
-@pytest.fixture()
+@pytest.fixture
 def mocked_mitxonline_programs_responses(
     mocked_responses, settings, mock_mitxonline_programs_data
 ):
@@ -69,7 +71,7 @@ def mocked_mitxonline_programs_responses(
     return mocked_responses
 
 
-@pytest.fixture()
+@pytest.fixture
 def mocked_mitxonline_courses_responses(
     mocked_responses, settings, mock_mitxonline_courses_data
 ):
@@ -150,6 +152,8 @@ def test_mitxonline_transform_programs(
             "url": parse_page_attribute(program_data, "page_url", is_url=True),
             "availability": program_data["availability"],
             "topics": transform_topics(program_data["topics"], OFFERED_BY["code"]),
+            "format": [Format.asynchronous.name],
+            "pace": [Pace.self_paced.name],
             "runs": [
                 {
                     "run_id": program_data["readable_id"],
@@ -167,9 +171,12 @@ def test_mitxonline_transform_programs(
                         program_data.get("page", {}).get("description", None)
                     ),
                     "url": parse_page_attribute(program_data, "page_url", is_url=True),
-                    "availability": RunAvailability.current.value
+                    "status": RunStatus.current.value
                     if parse_page_attribute(program_data, "page_url")
-                    else RunAvailability.archived.value,
+                    else RunStatus.archived.value,
+                    "availability": program_data["availability"],
+                    "format": [Format.asynchronous.name],
+                    "pace": [Pace.self_paced.name],
                 }
             ],
             "courses": [
@@ -204,6 +211,8 @@ def test_mitxonline_transform_programs(
                     "certification_type": CertificationType.completion.name,
                     "url": parse_page_attribute(course_data, "page_url", is_url=True),
                     "availability": course_data["availability"],
+                    "format": [Format.asynchronous.name],
+                    "pace": [Pace.self_paced.name],
                     "topics": transform_topics(
                         course_data["topics"], OFFERED_BY["code"]
                     ),
@@ -245,9 +254,12 @@ def test_mitxonline_transform_programs(
                                     course_run_data, "instructors", is_list=True
                                 )
                             ],
-                            "availability": RunAvailability.current.value
+                            "status": RunStatus.current.value
                             if parse_page_attribute(course_data, "page_url")
-                            else RunAvailability.archived.value,
+                            else RunStatus.archived.value,
+                            "availability": course_data["availability"],
+                            "format": [Format.asynchronous.name],
+                            "pace": [Pace.self_paced.name],
                         }
                         for course_run_data in course_data["courseruns"]
                     ],
@@ -373,9 +385,12 @@ def test_mitxonline_transform_courses(settings, mock_mitxonline_courses_data):
                             course_run_data, "instructors", is_list=True
                         )
                     ],
-                    "availability": RunAvailability.current.value
+                    "status": RunStatus.current.value
                     if parse_page_attribute(course_data, "page_url")
-                    else RunAvailability.archived.value,
+                    else RunStatus.archived.value,
+                    "availability": course_data["availability"],
+                    "format": [Format.asynchronous.name],
+                    "pace": [Pace.self_paced.name],
                 }
                 for course_run_data in course_data["courseruns"]
             ],
@@ -391,6 +406,8 @@ def test_mitxonline_transform_courses(settings, mock_mitxonline_courses_data):
                 ]
             },
             "availability": course_data["availability"],
+            "format": [Format.asynchronous.name],
+            "pace": [Pace.self_paced.name],
         }
         for course_data in mock_mitxonline_courses_data["results"]
         if "PROCTORED EXAM" not in course_data["title"]
@@ -398,7 +415,7 @@ def test_mitxonline_transform_courses(settings, mock_mitxonline_courses_data):
     assert expected == result
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 @pytest.mark.parametrize(
     ("start_dt", "enrollment_dt", "expected_dt"),
     [
@@ -433,7 +450,7 @@ def test_course_run_start_date_value(
     )
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 @pytest.mark.parametrize(
     ("start_dt", "enrollment_dt", "expected_dt"),
     [
@@ -460,7 +477,9 @@ def test_program_run_start_date_value(  # noqa: PLR0913
     mock_mitxonline_programs_data["results"][0]["start_date"] = start_dt
     mock_mitxonline_programs_data["results"][0]["enrollment_start"] = enrollment_dt
 
-    transformed_programs = transform_programs(mock_mitxonline_programs_data["results"])
+    transformed_programs = list(
+        transform_programs(mock_mitxonline_programs_data["results"])
+    )
 
     assert transformed_programs[0]["runs"][0]["start_date"] == _parse_datetime(
         expected_dt

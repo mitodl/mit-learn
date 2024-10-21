@@ -1,9 +1,13 @@
 import React from "react"
 import { BrowserRouter } from "react-router-dom"
-import { screen, render, act } from "@testing-library/react"
+import { screen, render } from "@testing-library/react"
 import { LearningResourceListCard } from "./LearningResourceListCard"
 import type { LearningResourceListCardProps } from "./LearningResourceListCard"
-import { DEFAULT_RESOURCE_IMG, embedlyCroppedImage } from "ol-utilities"
+import {
+  DEFAULT_RESOURCE_IMG,
+  embedlyCroppedImage,
+  getReadableResourceType,
+} from "ol-utilities"
 import { ResourceTypeEnum, PlatformEnum, AvailabilityEnum } from "api"
 import { factories } from "api/test-utils"
 import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
@@ -11,10 +15,7 @@ import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
 const setup = (props: LearningResourceListCardProps) => {
   return render(
     <BrowserRouter>
-      <LearningResourceListCard
-        resource={props.resource}
-        href={`?resource=${props.resource?.id}`}
-      />
+      <LearningResourceListCard {...props} />
     </BrowserRouter>,
     { wrapper: ThemeProvider },
   )
@@ -30,7 +31,7 @@ describe("Learning Resource List Card", () => {
     setup({ resource })
 
     screen.getByText("Course")
-    screen.getByRole("heading", { name: resource.title })
+    screen.getByText(resource.title)
     screen.getByText("Starts:")
     screen.getByText("January 01, 2026")
   })
@@ -92,14 +93,13 @@ describe("Learning Resource List Card", () => {
       platform: { code: PlatformEnum.Ocw },
     })
 
-    setup({ resource })
+    setup({ resource, href: "/path/to/thing" })
 
-    const heading = screen.getByRole("heading", { name: resource.title })
-    await act(async () => {
-      await heading.click()
+    const card = screen.getByRole("link", {
+      name: new RegExp(resource.title),
     })
 
-    expect(window.location.search).toBe(`?resource=${resource.id}`)
+    expect(card).toHaveAttribute("href", "/path/to/thing")
   })
 
   test("Click action buttons", async () => {
@@ -127,7 +127,9 @@ describe("Learning Resource List Card", () => {
     )
     await addToLearningPathButton.click()
 
-    const addToUserListButton = screen.getByLabelText("Add to User List")
+    const addToUserListButton = screen.getByLabelText(
+      `Bookmark ${getReadableResourceType(resource.resource_type)}`,
+    )
     await addToUserListButton.click()
 
     expect(onAddToLearningPathClick).toHaveBeenCalledWith(

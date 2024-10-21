@@ -28,6 +28,10 @@ import type {
   VideoResource,
 } from "api"
 import {
+  AvailabilityEnum,
+  DeliveryEnum,
+  CourseResourcePaceInnerCodeEnum,
+  CourseResourceFormatInnerCodeEnum,
   ResourceTypeEnum,
   LearningResourceRunLevelInnerCodeEnum,
   PlatformEnum,
@@ -177,6 +181,29 @@ const learningResourceRun: Factory<LearningResourceRun> = (overrides = {}) => {
     languages: maybe(() => repeat(language, { min: 0, max: 3 })),
     start_date: start.toISOString(),
     end_date: end.toISOString(),
+    availability: faker.helpers.arrayElement(Object.values(AvailabilityEnum)),
+    delivery: [
+      {
+        code: faker.helpers.arrayElement(Object.values(DeliveryEnum)),
+        name: uniqueEnforcerWords.enforce(() => faker.lorem.words()),
+      },
+    ],
+    pace: [
+      {
+        code: faker.helpers.arrayElement(
+          Object.values(CourseResourcePaceInnerCodeEnum),
+        ),
+        name: uniqueEnforcerWords.enforce(() => faker.lorem.words()),
+      },
+    ],
+    format: [
+      {
+        code: faker.helpers.arrayElement(
+          Object.values(CourseResourceFormatInnerCodeEnum),
+        ),
+        name: uniqueEnforcerWords.enforce(() => faker.lorem.words()),
+      },
+    ],
     level: [
       {
         code: faker.helpers.arrayElement(
@@ -231,6 +258,7 @@ const _learningResourceShared = (): Partial<
     certification: false,
     departments: [learningResourceDepartment()],
     description: faker.lorem.paragraph(),
+    position: faker.number.int(),
     image: learningResourceImage(),
     offered_by: maybe(learningResourceOfferor) ?? null,
     platform: maybe(learningResourcePlatform) ?? null,

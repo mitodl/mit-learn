@@ -6,7 +6,9 @@ import pytest
 from learning_resources.constants import (
     Availability,
     CertificationType,
+    Format,
     LearningResourceType,
+    Pace,
     PlatformType,
 )
 from learning_resources.etl import micromasters
@@ -15,7 +17,7 @@ from learning_resources.etl.micromasters import READABLE_ID_PREFIX
 from learning_resources.factories import LearningResourceFactory
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_micromasters_data():
     """Mock micromasters data"""
     return [
@@ -79,7 +81,7 @@ def mock_micromasters_data():
     ]
 
 
-@pytest.fixture()
+@pytest.fixture
 def mocked_catalog_responses(mocked_responses, settings, mock_micromasters_data):
     """Mock the catalog response"""
     settings.MICROMASTERS_CATALOG_API_URL = "http://localhost/test/catalog/api"
@@ -103,7 +105,7 @@ def test_micromasters_extract_disabled(settings):
     assert micromasters.extract() == []
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 @pytest.mark.parametrize("missing_url", [True, False])
 def test_micromasters_transform(mock_micromasters_data, missing_url):
     """Test that micromasters data is correctly transformed into our normalized structure"""
@@ -111,6 +113,7 @@ def test_micromasters_transform(mock_micromasters_data, missing_url):
         readable_id="1",
         resource_type=LearningResourceType.course.name,
         etl_source=ETLSource.mit_edx.name,
+        pace=[Pace.instructor_paced.name],
     )
     if missing_url:
         mock_micromasters_data[0]["programpage_url"] = None
@@ -129,6 +132,8 @@ def test_micromasters_transform(mock_micromasters_data, missing_url):
                 "certification": True,
                 "certification_type": CertificationType.micromasters.name,
                 "availability": Availability.dated.name,
+                "pace": [Pace.instructor_paced.name],
+                "format": [Format.asynchronous.name],
                 "courses": [
                     {
                         "readable_id": "1",
@@ -140,6 +145,7 @@ def test_micromasters_transform(mock_micromasters_data, missing_url):
                                 "run_id": "course_key_1",
                             }
                         ],
+                        "pace": [Pace.instructor_paced.name],
                     },
                     {
                         "readable_id": "2",
@@ -147,6 +153,7 @@ def test_micromasters_transform(mock_micromasters_data, missing_url):
                         "offered_by": micromasters.OFFERED_BY,
                         "published": False,
                         "runs": [],
+                        "pace": [Pace.self_paced.name],
                     },
                 ],
                 "runs": [
@@ -161,6 +168,9 @@ def test_micromasters_transform(mock_micromasters_data, missing_url):
                         "start_date": "2019-10-04T20:13:26.367297Z",
                         "end_date": None,
                         "enrollment_start": "2019-09-29T20:13:26.367297Z",
+                        "availability": Availability.dated.name,
+                        "pace": [Pace.instructor_paced.name],
+                        "format": [Format.asynchronous.name],
                     }
                 ],
                 "topics": [{"name": "program"}, {"name": "first"}],
@@ -169,7 +179,7 @@ def test_micromasters_transform(mock_micromasters_data, missing_url):
     )
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 @pytest.mark.parametrize(
     ("start_dt", "enrollment_dt", "expected_dt"),
     [

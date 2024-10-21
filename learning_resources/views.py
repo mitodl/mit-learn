@@ -2,7 +2,6 @@
 
 import logging
 from hmac import compare_digest
-from random import shuffle
 
 import rapidjson
 from django.conf import settings
@@ -15,6 +14,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework import views, viewsets
+from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter
 from rest_framework.generics import get_object_or_404
 from rest_framework.pagination import LimitOffsetPagination
@@ -26,6 +26,7 @@ from channels.constants import ChannelType
 from channels.models import Channel
 from learning_resources import permissions
 from learning_resources.constants import (
+    LearningResourceRelationTypes,
     LearningResourceType,
     PlatformType,
     PrivacyLevel,
@@ -52,6 +53,7 @@ from learning_resources.models import (
     UserListRelationship,
 )
 from learning_resources.permissions import (
+    HasLearningPathPermissions,
     HasUserListItemPermissions,
     HasUserListPermissions,
     is_learning_path_editor,
@@ -88,7 +90,7 @@ from main.permissions import (
     AnonymousAccessReadonlyPermission,
     is_admin_user,
 )
-from main.utils import chunks
+from main.utils import cache_page_for_all_users, cache_page_for_anonymous_users, chunks
 
 log = logging.getLogger(__name__)
 
@@ -141,8 +143,8 @@ class BaseLearningResourceViewSet(viewsets.ReadOnlyModelViewSet):
             QuerySet of LearningResource objects matching the query parameters
         """
         # Valid fields to filter by, just resource_type for now
-
-        lr_query = LearningResource.objects.for_serialization(user=self.request.user)
+        user = self.request.user if hasattr(self, "request") else None
+        lr_query = LearningResource.objects.for_serialization(user=user)
         if resource_type:
             lr_query = lr_query.filter(resource_type=resource_type)
         return lr_query.distinct()
@@ -155,6 +157,14 @@ class BaseLearningResourceViewSet(viewsets.ReadOnlyModelViewSet):
             QuerySet of LearningResource objects
         """
         return self._get_base_queryset().filter(published=True)
+
+    @method_decorator(
+        cache_page_for_anonymous_users(
+            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+        )
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
 
 @extend_schema_view(
@@ -376,6 +386,144 @@ class ResourceListItemsViewSet(NestedViewSetMixin, viewsets.ReadOnlyModelViewSet
     ordering = ["position", "-child__last_modified"]
 
 
+@extend_schema(
+    parameters=[
+        OpenApiParameter(
+            name="id",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.PATH,
+            description="id of the learning resource",
+        ),
+    ],
+)
+class LearningResourceListRelationshipViewSet(viewsets.GenericViewSet):
+    """
+    Viewset for managing relationships between Learning Resources
+    and User Lists / Learning Paths
+    """
+
+    permission_classes = (AnonymousAccessReadonlyPermission,)
+    filter_backends = [MultipleOptionsFilterBackend]
+    queryset = LearningResourceRelationship.objects.select_related("parent", "child")
+    http_method_names = ["patch"]
+
+    def get_serializer_class(self):
+        if self.action == "userlists":
+            return UserListRelationshipSerializer
+        elif self.action == "learning_paths":
+            return LearningResourceRelationshipSerializer
+        return super().get_serializer_class()
+
+    @extend_schema(
+        summary="Set User List Relationships",
+        description="Set User List Relationships on a given Learning Resource.",
+        parameters=[
+            OpenApiParameter(
+                name="userlist_id",
+                type=OpenApiTypes.INT,
+                many=True,
+                location=OpenApiParameter.QUERY,
+                description="id of the parent user list",
+            ),
+        ],
+        responses={200: UserListRelationshipSerializer(many=True)},
+    )
+    @action(detail=True, methods=["patch"], name="Set User List Relationships")
+    def userlists(self, request, *args, **kwargs):  # noqa: ARG002
+        """
+        Set User List relationships for a given Learning Resource
+        """
+        learning_resource_id = kwargs.get("pk")
+        user_list_ids = request.query_params.getlist("userlist_id")
+        if (
+            UserList.objects.filter(pk__in=user_list_ids)
+            .exclude(author=request.user)
+            .exists()
+        ):
+            msg = "User does not have permission to add to the selected user list(s)"
+            raise PermissionError(msg)
+        current_relationships = UserListRelationship.objects.filter(
+            parent__author=request.user, child_id=learning_resource_id
+        )
+        current_relationships.exclude(parent_id__in=user_list_ids).delete()
+        for userlist_id in user_list_ids:
+            last_index = 0
+            for index, relationship in enumerate(
+                UserListRelationship.objects.filter(
+                    parent__author=request.user, parent__id=userlist_id
+                ).order_by("position")
+            ):
+                relationship.position = index
+                relationship.save()
+                last_index = index
+            UserListRelationship.objects.create(
+                parent_id=userlist_id,
+                child_id=learning_resource_id,
+                position=last_index + 1,
+            )
+        SerializerClass = self.get_serializer_class()
+        serializer = SerializerClass(current_relationships, many=True)
+        return Response(serializer.data)
+
+    @extend_schema(
+        summary="Set Learning Path Relationships",
+        description="Set Learning Path Relationships on a given Learning Resource.",
+        parameters=[
+            OpenApiParameter(
+                name="learning_path_id",
+                type=OpenApiTypes.INT,
+                many=True,
+                location=OpenApiParameter.QUERY,
+                description="id of the parent learning path",
+            ),
+        ],
+        responses={200: LearningResourceRelationshipSerializer(many=True)},
+    )
+    @action(
+        detail=True,
+        methods=["patch"],
+        permission_classes=[HasLearningPathPermissions],
+        name="Set Learning Path Relationships",
+    )
+    def learning_paths(self, request, *args, **kwargs):  # noqa: ARG002
+        """
+        Set Learning Path relationships for a given Learning Resource
+        """
+        learning_resource_id = kwargs.get("pk")
+        learning_path_ids = request.query_params.getlist("learning_path_id")
+        current_relationships = LearningResourceRelationship.objects.filter(
+            child_id=learning_resource_id
+        )
+        current_relationships.exclude(parent_id__in=learning_path_ids).delete()
+        for learning_path_id in learning_path_ids:
+            last_index = 0
+            for index, relationship in enumerate(
+                LearningResourceRelationship.objects.filter(
+                    parent__id=learning_path_id
+                ).order_by("position")
+            ):
+                relationship.position = index
+                relationship.save()
+                last_index = index
+            LearningResourceRelationship.objects.create(
+                parent_id=learning_path_id,
+                child_id=learning_resource_id,
+                relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS,
+                position=last_index + 1,
+            )
+        SerializerClass = self.get_serializer_class()
+        serializer = SerializerClass(current_relationships, many=True)
+        return Response(serializer.data)
+
+    @method_decorator(
+        cache_page_for_anonymous_users(
+            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+        )
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+
 @extend_schema_view(
     create=extend_schema(summary="Learning Path Resource Relationship Add"),
     destroy=extend_schema(summary="Learning Path Resource Relationship Remove"),
@@ -399,6 +547,14 @@ class LearningPathItemsViewSet(ResourceListItemsViewSet, viewsets.ModelViewSet):
     serializer_class = LearningPathRelationshipSerializer
     permission_classes = (permissions.HasLearningPathItemPermissions,)
     http_method_names = VALID_HTTP_METHODS
+
+    @method_decorator(
+        cache_page_for_anonymous_users(
+            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+        )
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
     def create(self, request, *args, **kwargs):
         request.data["parent"] = request.data.get("parent_id")
@@ -434,6 +590,18 @@ class TopicViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = (AnonymousAccessReadonlyPermission,)
     filter_backends = [DjangoFilterBackend]
     filterset_class = TopicFilter
+
+    def filter_queryset(self, queryset):
+        queryset = queryset.exclude(channel_url__isnull=True)
+        return super().filter_queryset(queryset)
+
+    @method_decorator(
+        cache_page_for_all_users(
+            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+        )
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
 
 @extend_schema_view(
@@ -686,6 +854,14 @@ class ContentTagViewSet(viewsets.ReadOnlyModelViewSet):
     pagination_class = LargePagination
     permission_classes = (AnonymousAccessReadonlyPermission,)
 
+    @method_decorator(
+        cache_page_for_all_users(
+            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+        )
+    )
+    def list(self, *args, **kwargs):
+        return super().list(*args, **kwargs)
+
 
 @extend_schema_view(
     list=extend_schema(summary="List"),
@@ -705,6 +881,14 @@ class DepartmentViewSet(viewsets.ReadOnlyModelViewSet):
     lookup_url_kwarg = "department_id"
     lookup_field = "department_id__iexact"
 
+    @method_decorator(
+        cache_page_for_all_users(
+            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+        )
+    )
+    def list(self, *args, **kwargs):
+        return super().list(*args, **kwargs)
+
 
 @extend_schema_view(
     list=extend_schema(summary="List"),
@@ -719,6 +903,14 @@ class SchoolViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = LearningResourceSchoolSerializer
     pagination_class = LargePagination
     permission_classes = (AnonymousAccessReadonlyPermission,)
+
+    @method_decorator(
+        cache_page_for_all_users(
+            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+        )
+    )
+    def list(self, *args, **kwargs):
+        return super().list(*args, **kwargs)
 
 
 @extend_schema_view(
@@ -735,6 +927,14 @@ class PlatformViewSet(viewsets.ReadOnlyModelViewSet):
     pagination_class = LargePagination
     permission_classes = (AnonymousAccessReadonlyPermission,)
 
+    @method_decorator(
+        cache_page_for_all_users(
+            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+        )
+    )
+    def list(self, *args, **kwargs):
+        return super().list(*args, **kwargs)
+
 
 @extend_schema_view(
     list=extend_schema(summary="List"),
@@ -750,6 +950,14 @@ class OfferedByViewSet(viewsets.ReadOnlyModelViewSet):
     pagination_class = LargePagination
     permission_classes = (AnonymousAccessReadonlyPermission,)
     lookup_field = "code"
+
+    @method_decorator(
+        cache_page_for_anonymous_users(
+            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+        )
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
 
 @extend_schema_view(
@@ -826,20 +1034,6 @@ class FeaturedViewSet(
     resource_type_name_plural = "Featured Resources"
     serializer_class = LearningResourceSerializer
 
-    @staticmethod
-    def _randomize_results(results):
-        """Randomize the results within each position"""
-        if len(results) > 0:
-            results_by_position = {}
-            randomized_results = []
-            for result in results:
-                results_by_position.setdefault(result.position, []).append(result)
-            for position in sorted(results_by_position.keys()):
-                shuffle(results_by_position[position])
-                randomized_results.extend(results_by_position[position])
-            return randomized_results
-        return results
-
     def get_queryset(self) -> QuerySet:
         """
         Generate a QuerySet for fetching featured LearningResource objects
@@ -861,6 +1055,11 @@ class FeaturedViewSet(
             .distinct()
         )
 
+    @method_decorator(
+        cache_page_for_anonymous_users(
+            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+        )
+    )
     @extend_schema(
         summary="List",
         description="Get a paginated list of featured resources",
@@ -870,8 +1069,8 @@ class FeaturedViewSet(
         queryset = self.filter_queryset(self.get_queryset())
         page = self.paginate_queryset(queryset)
         if page is not None:
-            serializer = self.get_serializer(self._randomize_results(page), many=True)
+            serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
 
-        serializer = self.get_serializer(self._randomize_results(queryset), many=True)
+        serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)

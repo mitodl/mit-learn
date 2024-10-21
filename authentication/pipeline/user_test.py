@@ -28,7 +28,7 @@ def test_forbid_hijack(mocker, hijacked):
         assert user_actions.forbid_hijack(**kwargs) == {}
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 @pytest.mark.parametrize("is_new", [True, False])
 def test_user_created_actions(mocker, is_new):
     """
@@ -38,6 +38,7 @@ def test_user_created_actions(mocker, is_new):
     kwargs = {
         "user": user,
         "is_new": is_new,
+        "details": {},
     }
 
     user_actions.user_created_actions(**kwargs)

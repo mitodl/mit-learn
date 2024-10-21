@@ -3,6 +3,7 @@
 import logging
 from collections import OrderedDict, defaultdict
 from datetime import UTC, datetime
+from random import random
 from typing import TypedDict
 
 from django.conf import settings
@@ -17,10 +18,9 @@ from learning_resources.constants import (
     DEPARTMENTS,
     GROUP_STAFF_LISTS_EDITORS,
     LEARNING_MATERIAL_RESOURCE_CATEGORY,
-    LEARNING_RESOURCE_SORTBY_OPTIONS,
     RESOURCE_CATEGORY_VALUES,
     CertificationType,
-    LearningResourceFormat,
+    LearningResourceDelivery,
     LearningResourceRelationTypes,
     LearningResourceType,
     LevelType,
@@ -42,6 +42,7 @@ from learning_resources.serializers import (
 from learning_resources_search.api import gen_content_file_id
 from learning_resources_search.constants import (
     CONTENT_FILE_TYPE,
+    LEARNING_RESOURCE_SEARCH_SORTBY_OPTIONS,
 )
 from learning_resources_search.models import PercolateQuery
 from learning_resources_search.utils import remove_child_queries
@@ -117,12 +118,16 @@ def serialize_learning_resource_for_update(
     Add any special search-related fields to the serializer data here
 
     Args:
-        learning_resource_obj(LearningResource): The learning resource object
+        learning_resource_obj(LearningResource): The learning resource object.
+        Must have a in_featured_lists annotated property
 
     Returns:
         dict: The serialized and transformed resource data
 
     """
+    STALENESS_CUTOFF = 2010
+    COMPLETENESS_CUTOFF = 0.5
+
     serialized_data = LearningResourceSerializer(instance=learning_resource_obj).data
 
     if learning_resource_obj.resource_type == LearningResourceType.course.name:
@@ -130,14 +135,36 @@ def serialize_learning_resource_for_update(
             SearchCourseNumberSerializer(instance=num).data
             for num in learning_resource_obj.course.course_numbers
         ]
+
+    if learning_resource_obj.in_featured_lists > 0:
+        featured_rank = (
+            LearningResourceRelationship.objects.filter(
+                child_id=learning_resource_obj.id, parent__channel__isnull=False
+            )
+            .order_by("position")
+            .first()
+            .position
+            + random()  # noqa: S311
+        )
+    else:
+        featured_rank = None
+
+    resource_age_date = get_resource_age_date(
+        learning_resource_obj, serialized_data["resource_category"]
+    )
+
+    is_incomplete_or_stale = (
+        resource_age_date and resource_age_date.year <= STALENESS_CUTOFF
+    ) or (learning_resource_obj.completeness < COMPLETENESS_CUTOFF)
+
     return {
         "resource_relations": {"name": "resource"},
         "created_on": learning_resource_obj.created_on,
         "is_learning_material": serialized_data["resource_category"]
         == LEARNING_MATERIAL_RESOURCE_CATEGORY,
-        "resource_age_date": get_resource_age_date(
-            learning_resource_obj, serialized_data["resource_category"]
-        ),
+        "resource_age_date": resource_age_date,
+        "featured_rank": featured_rank,
+        "is_incomplete_or_stale": is_incomplete_or_stale,
         **serialized_data,
     }
 
@@ -221,7 +248,7 @@ LEARNING_RESOURCE_AGGREGATIONS = [
     "course_feature",
     "professional",
     "free",
-    "learning_format",
+    "delivery",
     "resource_category",
 ]
 
@@ -259,6 +286,11 @@ class SearchRequestSerializer(serializers.Serializer):
         child=serializers.CharField(),
         help_text="The topic name. To see a list of options go to api/v1/topics/",
     )
+    ocw_topic = serializers.ListField(
+        required=False,
+        child=serializers.CharField(),
+        help_text="The ocw topic name.",
+    )
     dev_mode = serializers.BooleanField(
         required=False,
         allow_null=True,
@@ -283,8 +315,8 @@ class LearningResourcesSearchRequestSerializer(SearchRequestSerializer):
     sortby = serializers.ChoiceField(
         required=False,
         choices=[
-            (key, LEARNING_RESOURCE_SORTBY_OPTIONS[key]["title"])
-            for key in LEARNING_RESOURCE_SORTBY_OPTIONS
+            (key, LEARNING_RESOURCE_SEARCH_SORTBY_OPTIONS[key]["title"])
+            for key in LEARNING_RESOURCE_SEARCH_SORTBY_OPTIONS
         ],
         help_text="If the parameter starts with '-' the sort is in descending order",
     )
@@ -314,7 +346,6 @@ class LearningResourcesSearchRequestSerializer(SearchRequestSerializer):
         min_value=0,
         required=False,
         allow_null=True,
-        default=2.5,
         help_text=(
             "Relevance score penalty percent per year for for resources without "
             "upcoming runs. Only affects results if there is a search term."
@@ -363,13 +394,13 @@ class LearningResourcesSearchRequestSerializer(SearchRequestSerializer):
         help_text="Show resource counts by category",
         child=serializers.ChoiceField(choices=LEARNING_RESOURCE_AGGREGATIONS),
     )
-    learning_format_choices = LearningResourceFormat.as_list()
-    learning_format = serializers.ListField(
+    delivery_choices = LearningResourceDelivery.as_list()
+    delivery = serializers.ListField(
         required=False,
-        child=serializers.ChoiceField(choices=learning_format_choices),
+        child=serializers.ChoiceField(choices=delivery_choices),
         help_text=(
-            f"The format(s) in which the learning resource is offered \
-            \n\n{build_choice_description_list(learning_format_choices)}"
+            f"The delivery options in which the learning resource is offered \
+            \n\n{build_choice_description_list(delivery_choices)}"
         ),
     )
     resource_category_choices = [
@@ -383,6 +414,56 @@ class LearningResourcesSearchRequestSerializer(SearchRequestSerializer):
         help_text=(
             f"The category of learning resource \
             \n\n{build_choice_description_list(resource_category_choices)}"
+        ),
+    )
+    search_mode_choices = [
+        ("best_fields", "best_fields"),
+        ("most_fields", "most_fields"),
+        ("phrase", "phrase"),
+    ]
+    search_mode = serializers.ChoiceField(
+        required=False,
+        choices=search_mode_choices,
+        help_text=(
+            f"The open search search type for text queries \
+            \n\n{build_choice_description_list(search_mode_choices)}"
+        ),
+    )
+    slop = serializers.IntegerField(
+        required=False,
+        allow_null=True,
+        help_text=("Allowed distance for phrase search"),
+    )
+    min_score = serializers.FloatField(
+        max_value=50,
+        min_value=0,
+        required=False,
+        allow_null=True,
+        help_text=(
+            "Minimum score value a text query result needs to have to be displayed"
+        ),
+    )
+    max_incompleteness_penalty = serializers.FloatField(
+        max_value=100,
+        min_value=0,
+        required=False,
+        allow_null=True,
+        help_text=(
+            "Maximum score penalty for incomplete OCW courses in percent. "
+            "An OCW course with completeness = 0 will have this score penalty. "
+            "Partially complete courses have a linear penalty proportional to "
+            "the degree of incompleteness. Only affects results if there is a "
+            "search term."
+        ),
+    )
+    content_file_score_weight = serializers.FloatField(
+        max_value=1,
+        min_value=0,
+        required=False,
+        allow_null=True,
+        help_text=(
+            "Score weight for content file data.  1 is the default."
+            " 0 means content files are ignored"
         ),
     )
 
@@ -681,9 +762,11 @@ def serialize_bulk_learning_resources(ids):
     Args:
         ids(list of int): List of learning_resource id's
     """
-    for learning_resource in LearningResource.objects.filter(
-        id__in=ids
-    ).for_serialization():
+    for learning_resource in (
+        LearningResource.objects.filter(id__in=ids)
+        .for_serialization()
+        .for_search_serialization()
+    ):
         yield serialize_learning_resource_for_bulk(learning_resource)
 
 

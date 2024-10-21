@@ -9,12 +9,13 @@ from django.contrib.auth.models import User
 from django.urls import reverse
 from rest_framework import status
 
-from learning_resources.constants import LearningResourceFormat
+from learning_resources.constants import LearningResourceDelivery
 from learning_resources.factories import LearningResourceTopicFactory
 from learning_resources.serializers import LearningResourceTopicSerializer
 from learning_resources_search.serializers_test import get_request_object
+from main.utils import frontend_absolute_url
 from profiles.factories import ProgramCertificateFactory, ProgramLetterFactory
-from profiles.models import Profile
+from profiles.models import Profile, ProgramLetter
 from profiles.serializers import (
     ProfileSerializer,
     ProgramCertificateSerializer,
@@ -135,9 +136,9 @@ def test_get_profile(logged_in, user, user_client):
         "current_education": profile.current_education,
         "certificate_desired": profile.certificate_desired,
         "time_commitment": profile.time_commitment,
-        "learning_format": profile.learning_format,
+        "delivery": profile.delivery,
         "preference_search_filters": {
-            "learning_format": profile.learning_format,
+            "delivery": profile.delivery,
             "certification": (
                 profile.certificate_desired == Profile.CertificateDesired.YES.value
             ),
@@ -296,10 +297,10 @@ def test_patch_topic_interests(client, logged_in_profile):
             Profile.TimeCommitment.ZERO_TO_FIVE_HOURS,
         ),
         (
-            "learning_format",
+            "delivery",
             [],
-            [LearningResourceFormat.hybrid.name],
-            [LearningResourceFormat.hybrid.name],
+            [LearningResourceDelivery.hybrid.name],
+            [LearningResourceDelivery.hybrid.name],
         ),
     ],
 )
@@ -390,6 +391,49 @@ def test_get_user_by_me(mocker, client, user, is_anonymous):
             "is_article_editor": False,
             "profile": ProfileSerializer(user.profile).data,
         }
+
+
+@pytest.mark.parametrize("is_anonymous", [True, False])
+def test_letter_intercept_view_generates_program_letter(
+    mocker, client, user, is_anonymous, settings
+):
+    """
+    Test that the letter intercept view generates a
+    ProgramLetter and then passes the user along to the display.
+    Also test that anonymous users do not generate letters and cant access this page
+    """
+    settings.DATABASE_ROUTERS = []
+    micromasters_program_id = 1
+    if not is_anonymous:
+        client.force_login(user)
+        cert = ProgramCertificateFactory(
+            user_email=user.email, micromasters_program_id=micromasters_program_id
+        )
+        assert ProgramLetter.objects.filter(user=user).count() == 0
+
+        response = client.get(
+            reverse(
+                "profile:program-letter-intercept",
+                kwargs={"program_id": micromasters_program_id},
+            )
+        )
+        assert ProgramLetter.objects.filter(user=user).count() == 1
+        letter_id = ProgramLetter.objects.get(user=user, certificate=cert).id
+        assert response.url == frontend_absolute_url(
+            f"/program_letter/{letter_id}/view"
+        )
+    else:
+        cert = ProgramCertificateFactory(
+            user_email=user.email, micromasters_program_id=micromasters_program_id
+        )
+        ProgramLetterFactory(user=user, certificate=cert)
+        response = client.get(
+            reverse(
+                "profile:program-letter-intercept",
+                kwargs={"program_id": micromasters_program_id},
+            )
+        )
+        assert response.status_code == 302
 
 
 @pytest.mark.parametrize("is_anonymous", [True, False])

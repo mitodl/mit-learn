@@ -24,6 +24,7 @@ interface CustomTheme {
     silverGrayLight: string
     lightGray2: string
     lightGray1: string
+    navGray: string
     darkPink: string
     pink: string
     lightPink: string
@@ -71,7 +72,7 @@ declare module "@mui/material/Button" {
 declare module "@mui/material/InputBase" {
   interface InputBasePropsSizeOverrides {
     hero: true
-    small: false
+    large: true
   }
 }
 
@@ -87,6 +88,7 @@ declare module "@mui/material/Chip" {
     outlined: true
     outlinedWhite: true
     dark: true
+    darker: true
     gray: true
   }
 }

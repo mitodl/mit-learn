@@ -30,7 +30,37 @@ import type {
   UserListRelationship,
   MicroUserListRelationship,
 } from "../../generated/v1"
+
 import { createQueryKeys } from "@lukemorales/query-key-factory"
+
+const shuffle = ([...arr]) => {
+  let m = arr.length
+  while (m) {
+    const i = Math.floor(Math.random() * m--)
+    ;[arr[m], arr[i]] = [arr[i], arr[m]]
+  }
+  return arr
+}
+
+const randomizeResults = ([...results]) => {
+  const resultsByPosition: {
+    [position: string]: (LearningResource & { position?: string })[] | undefined
+  } = {}
+  const randomizedResults: LearningResource[] = []
+  results.forEach((result) => {
+    if (!resultsByPosition[result?.position]) {
+      resultsByPosition[result?.position] = []
+    }
+    resultsByPosition[result?.position ?? ""]?.push(result)
+  })
+  Object.keys(resultsByPosition)
+    .sort()
+    .forEach((position) => {
+      const shuffled = shuffle(resultsByPosition[position] ?? [])
+      randomizedResults.push(...shuffled)
+    })
+  return randomizedResults
+}
 
 const learningResources = createQueryKeys("learningResources", {
   detail: (id: number) => ({
@@ -49,7 +79,17 @@ const learningResources = createQueryKeys("learningResources", {
   }),
   featured: (params: FeaturedListParams = {}) => ({
     queryKey: [params],
-    queryFn: () => featuredApi.featuredList(params).then((res) => res.data),
+    queryFn: () => {
+      return featuredApi.featuredList(params).then((res) => {
+        res.data.results = randomizeResults(res.data?.results)
+        return res.data
+      })
+    },
+  }),
+  topic: (id: number | undefined) => ({
+    queryKey: [id],
+    queryFn: () =>
+      id ? topicsApi.topicsRetrieve({ id }).then((res) => res.data) : null,
   }),
   topics: (params: TopicsListRequest) => ({
     queryKey: [params],
@@ -331,6 +371,41 @@ const updateListParentsOnDestroy = (
   }
 }
 
+/**
+ * Given
+ *  - a LearningResource ID
+ *  - a paginated list of current resources
+ *  - a list of new relationships
+ *  - the type of list
+ * Update the resources' user_list_parents field to include the new relationships
+ */
+const updateListParents = (
+  resourceId: number,
+  staleResources?: PaginatedLearningResourceList,
+  newRelationships?: MicroUserListRelationship[],
+  listType?: "userlist" | "learningpath",
+) => {
+  if (!resourceId || !staleResources || !newRelationships || !listType)
+    return staleResources
+  const matchIndex = staleResources.results.findIndex(
+    (res) => res.id === resourceId,
+  )
+  if (matchIndex === -1) return staleResources
+  const updatedResults = [...staleResources.results]
+  const newResource = { ...updatedResults[matchIndex] }
+  if (listType === "userlist") {
+    newResource.user_list_parents = newRelationships
+  }
+  if (listType === "learningpath") {
+    newResource.learning_path_parents = newRelationships
+  }
+  updatedResults[matchIndex] = newResource
+  return {
+    ...staleResources,
+    results: updatedResults,
+  }
+}
+
 export default learningResources
 export {
   invalidateResourceQueries,
@@ -338,4 +413,5 @@ export {
   invalidateResourceWithUserListQueries,
   updateListParentsOnAdd,
   updateListParentsOnDestroy,
+  updateListParents,
 }

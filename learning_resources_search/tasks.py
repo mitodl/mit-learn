@@ -5,6 +5,8 @@ import itertools
 import logging
 from collections import OrderedDict
 from contextlib import contextmanager
+from itertools import groupby
+from random import random
 from urllib.parse import urlencode
 
 import celery
@@ -16,6 +18,7 @@ from django.template.defaultfilters import pluralize
 from opensearchpy.exceptions import NotFoundError, RequestError
 from requests.models import PreparedRequest
 
+from learning_resources.constants import LearningResourceType
 from learning_resources.etl.constants import RESOURCE_FILE_ETL_SOURCES
 from learning_resources.models import (
     ContentFile,
@@ -25,6 +28,7 @@ from learning_resources.models import (
     LearningResourceOfferor,
 )
 from learning_resources.utils import load_course_blocklist
+from learning_resources.views import FeaturedViewSet
 from learning_resources_search import indexing_api as api
 from learning_resources_search.api import (
     gen_content_file_id,
@@ -52,7 +56,13 @@ from learning_resources_search.serializers import (
     serialize_percolate_query_for_update,
 )
 from main.celery import app
-from main.utils import chunks, frontend_absolute_url, merge_strings, now_in_utc
+from main.utils import (
+    chunks,
+    clear_search_cache,
+    frontend_absolute_url,
+    merge_strings,
+    now_in_utc,
+)
 from profiles.utils import send_template_email
 
 User = get_user_model()
@@ -68,6 +78,28 @@ PARTIAL_UPDATE_TASK_SETTINGS = {
     "retry_kwargs": {"max_retries": 5},
     "default_retry_delay": 2,
 }
+
+
+@app.task(**PARTIAL_UPDATE_TASK_SETTINGS)
+def update_featured_rank():
+    featured_view_set = FeaturedViewSet()
+    featured_resources = featured_view_set.get_queryset()
+    for position, resources_with_position in groupby(
+        featured_resources, key=lambda x: x.position
+    ):
+        api.clear_featured_rank(position, clear_all_greater_than=False)
+        for resource in resources_with_position:
+            api.update_document_with_partial(
+                resource.id,
+                {"featured_rank": position + random()},  # noqa: S311
+                resource.resource_type,
+            )
+
+    api.clear_featured_rank(
+        featured_resources.values_list("position", flat=True).distinct().count(),
+        clear_all_greater_than=True,
+    )
+    clear_search_cache()
 
 
 @app.task(**PARTIAL_UPDATE_TASK_SETTINGS)
@@ -107,7 +139,10 @@ def deindex_document(doc_id, object_type, **kwargs):
 @app.task(**PARTIAL_UPDATE_TASK_SETTINGS)
 def upsert_learning_resource(learning_resource_id):
     """Upsert learning resource based on stored database information"""
-    resource_obj = LearningResource.objects.get(id=learning_resource_id)
+    resource_obj = LearningResource.objects.for_search_serialization().get(
+        id=learning_resource_id
+    )
+
     resource_data = serialize_learning_resource_for_update(resource_obj)
     api.upsert_document(
         learning_resource_id,
@@ -133,7 +168,7 @@ def _infer_percolate_group(percolate_query):
             elif key == "offered_by":
                 return LearningResourceOfferor.objects.get(code=val[0]).name
             return val[0]
-    return None
+    return percolate_query.original_url_params()
 
 
 def _infer_percolate_group_url(percolate_query):
@@ -147,6 +182,8 @@ def _infer_percolate_group_url(percolate_query):
     query_string_params = {k: v for k, v in original_query.items() if v}
     if "endpoint" in query_string_params:
         query_string_params.pop("endpoint")
+    if "sortby" not in query_string_params:
+        query_string_params["sortby"] = "new"
     query_string = urlencode(query_string_params, doseq=True)
     return frontend_absolute_url(f"/search?{query_string}")
 
@@ -198,7 +235,9 @@ def _get_percolated_rows(resources, subscription_type):
                         "resource_image_url": resource.image.url
                         if resource.image
                         else "",
-                        "resource_type": resource.resource_type,
+                        "resource_type": LearningResourceType[
+                            resource.resource_type
+                        ].value,
                         "user_id": user,
                         "source_label": query.source_label(),
                         "source_channel_type": source_channel.channel_type
@@ -238,10 +277,16 @@ def send_subscription_emails(self, subscription_type, period="daily"):
             )
         ]
     )
-    raise self.replace(email_tasks)
+    return self.replace(email_tasks)
 
 
-@app.task(autoretry_for=(RetryError,), retry_backoff=True, rate_limit="600/m")
+@app.task(
+    acks_late=True,
+    reject_on_worker_lost=True,
+    autoretry_for=(RetryError,),
+    retry_backoff=True,
+    rate_limit="600/m",
+)
 def index_learning_resources(ids, resource_type, index_types):
     """
     Index courses
@@ -258,6 +303,8 @@ def index_learning_resources(ids, resource_type, index_types):
             api.index_learning_resources(ids, resource_type, index_types)
     except (RetryError, Ignore):
         raise
+    except SystemExit as err:
+        raise RetryError(SystemExit.__name__) from err
     except:  # noqa: E722
         error = "index_courses threw an error"
         log.exception(error)
@@ -314,7 +361,13 @@ def bulk_deindex_percolators(ids):
         return error
 
 
-@app.task(autoretry_for=(RetryError,), retry_backoff=True, rate_limit="600/m")
+@app.task(
+    acks_late=True,
+    reject_on_worker_lost=True,
+    autoretry_for=(RetryError,),
+    retry_backoff=True,
+    rate_limit="600/m",
+)
 def bulk_index_percolate_queries(percolate_ids, index_types):
     """
     Bulk index percolate queries for provided percolate query Ids
@@ -334,6 +387,8 @@ def bulk_index_percolate_queries(percolate_ids, index_types):
         )
     except (RetryError, Ignore):
         raise
+    except SystemExit as err:
+        raise RetryError(SystemExit.__name__) from err
     except:  # noqa: E722
         error = "bulk_index_percolate_queries threw an error"
         log.exception(error)
@@ -363,7 +418,13 @@ def index_course_content_files(course_ids, index_types):
         return error
 
 
-@app.task(autoretry_for=(RetryError,), retry_backoff=True, rate_limit="600/m")
+@app.task(
+    acks_late=True,
+    reject_on_worker_lost=True,
+    autoretry_for=(RetryError,),
+    retry_backoff=True,
+    rate_limit="600/m",
+)
 def index_content_files(
     content_file_ids,
     learning_resource_id,
@@ -386,6 +447,8 @@ def index_content_files(
             )
     except (RetryError, Ignore):
         raise
+    except SystemExit as err:
+        raise RetryError(SystemExit.__name__) from err
     except:  # noqa: E722
         error = "index_content_files threw an error"
         log.exception(error)
@@ -591,9 +654,14 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
 
     # Use self.replace so that code waiting on this task will also wait on the indexing
     #  and finish tasks
-    raise self.replace(
+    return self.replace(
         celery.chain(index_tasks, finish_recreate_index.s(new_backing_indices))
     )
+
+
+@app.task(autoretry_for=(RetryError,), retry_backoff=True, rate_limit="600/m")
+def finish_update_index(results):  # noqa: ARG001
+    clear_search_cache()
 
 
 @app.task(bind=True)
@@ -602,7 +670,7 @@ def start_update_index(self, indexes, etl_source):
     Wipe and recreate index and mapping, and index all items.
     """
     try:
-        log.info("starting to index %s objects...", ", ".join(indexes))
+        log.info("starting to UPDATE index %s objects...", ", ".join(indexes))
 
         index_tasks = []
 
@@ -639,8 +707,7 @@ def start_update_index(self, indexes, etl_source):
         error = "start_update_index threw an error"
         log.exception(error)
         return [error]
-
-    raise self.replace(index_tasks)
+    return self.replace(celery.chain(index_tasks, finish_update_index.s()))
 
 
 def get_update_resource_files_tasks(blocklisted_ids, etl_source):
@@ -803,7 +870,11 @@ def get_update_learning_resource_tasks(resource_type):
 
 
 @app.task(
-    acks_late=True, autoretry_for=(RetryError,), retry_backoff=True, rate_limit="600/m"
+    acks_late=True,
+    reject_on_worker_lost=True,
+    autoretry_for=(RetryError, SystemExit),
+    retry_backoff=True,
+    rate_limit="600/m",
 )
 def finish_recreate_index(results, backing_indices):
     """
@@ -833,28 +904,41 @@ def finish_recreate_index(results, backing_indices):
         except RequestError as ex:
             raise RetryError(str(ex)) from ex
     log.info("recreate_index has finished successfully!")
+    clear_search_cache()
 
 
 def _generate_subscription_digest_subject(
     sample_course, source_name, unique_resource_types, total_count, shortform
 ):
-    prefix = "" if shortform else "MIT Learn: "
+    """
+    Generate the subject line and/or content header for subscription emails
+    Args:
+        sample_course (a learning resource): A sample resource to reference
+        source_name (string): the subscription type (saved_search etc)
+        unique_resource_types (list): set of unique resource types in the email
+        total_count (int): total number of resources in the email
+        shortform (bool): if False return the (longer) email subject
+                          otherwise short content header
 
+    """
+    prefix = "" if shortform else "MIT Learn: "
+    resource_type = unique_resource_types.pop()
     if sample_course["source_channel_type"] == "saved_search":
+        if shortform:
+            return f"New {resource_type}{pluralize(total_count)} from MIT Learn"
         return (
             f"{prefix}New"
-            f' "{source_name}" '
-            f"{unique_resource_types.pop().capitalize()}{pluralize(total_count)}"
+            f" {resource_type}{pluralize(total_count)}: "
+            f"{sample_course['resource_title']}"
         )
     preposition = "from"
     if sample_course["source_channel_type"] == "topic":
         preposition = "in"
 
     suffix = "" if shortform else f": {sample_course['resource_title']}"
-
     return (
         f"{prefix}New"
-        f" {unique_resource_types.pop().capitalize()}{pluralize(total_count)} "
+        f" {resource_type}{pluralize(total_count)} "
         f"{preposition} {source_name}{suffix}"
     )
 

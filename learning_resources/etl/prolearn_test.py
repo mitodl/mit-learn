@@ -7,18 +7,23 @@ from urllib.parse import urljoin, urlparse
 
 import pytest
 
+from data_fixtures.utils import upsert_topic_data_file
 from learning_resources.constants import (
     Availability,
     CertificationType,
-    LearningResourceFormat,
+    Format,
+    LearningResourceDelivery,
     OfferedBy,
+    Pace,
     PlatformType,
 )
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.prolearn import (
     PROLEARN_BASE_URL,
+    SEE_EXCLUSION,
     UNIQUE_FIELD,
     extract_courses,
+    extract_data,
     extract_programs,
     parse_date,
     parse_image,
@@ -28,15 +33,14 @@ from learning_resources.etl.prolearn import (
     parse_topic,
     transform_courses,
     transform_programs,
-    update_format,
+    update_delivery,
 )
-from learning_resources.etl.utils import transform_format
+from learning_resources.etl.utils import transform_delivery
 from learning_resources.factories import (
     LearningResourceOfferorFactory,
     LearningResourcePlatformFactory,
 )
 from learning_resources.models import LearningResourceOfferor, LearningResourcePlatform
-from learning_resources.utils import upsert_topic_data_file
 from main.test_utils import assert_json_equal
 from main.utils import clean_data
 
@@ -62,21 +66,21 @@ def mock_prolearn_api_setting(settings):  # noqa: PT004
     settings.PROLEARN_CATALOG_API_URL = "http://localhost/test/programs/api"
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_csail_programs_data():
     """Mock prolearn CSAIL programs data"""
     with open("./test_json/prolearn_csail_programs.json") as f:  # noqa: PTH123
         return json.loads(f.read())
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_mitpe_courses_data():
     """Mock prolearn MIT Professional Education courses data"""
     with open("./test_json/prolearn_mitpe_courses.json") as f:  # noqa: PTH123
         return json.loads(f.read())
 
 
-@pytest.fixture()
+@pytest.fixture
 def mocked_prolearn_programs_responses(
     mocked_responses, settings, mock_csail_programs_data
 ):
@@ -90,7 +94,7 @@ def mocked_prolearn_programs_responses(
     return mocked_responses
 
 
-@pytest.fixture()
+@pytest.fixture
 def mocked_prolearn_courses_responses(
     mocked_responses, settings, mock_mitpe_courses_data
 ):
@@ -155,7 +159,7 @@ def test_prolearn_transform_programs(mock_csail_programs_data):
             else None,
             "etl_source": ETLSource.prolearn.name,
             "professional": True,
-            "learning_format": transform_format(program["format_name"]),
+            "delivery": transform_delivery(program["format_name"]),
             "certification": True,
             "certification_type": CertificationType.professional.name,
             "runs": [
@@ -173,6 +177,10 @@ def test_prolearn_transform_programs(mock_csail_programs_data):
                         or program["course_application_url"]
                         or urljoin(PROLEARN_BASE_URL, program["url"])
                     ),
+                    "availability": Availability.dated.name,
+                    "delivery": transform_delivery(program["format_name"]),
+                    "pace": [Pace.instructor_paced.name],
+                    "format": [Format.asynchronous.name],
                 }
                 for (start_val, end_val) in zip(
                     program["start_value"], program["end_value"]
@@ -197,10 +205,14 @@ def test_prolearn_transform_programs(mock_csail_programs_data):
                         }
                     ],
                     "unique_field": UNIQUE_FIELD,
+                    "pace": [Pace.instructor_paced.name],
+                    "format": [Format.asynchronous.name],
                 }
                 for course_id in sorted(program["field_related_courses_programs"])
             ],
             "unique_field": UNIQUE_FIELD,
+            "pace": [Pace.instructor_paced.name],
+            "format": [Format.asynchronous.name],
         }
         for program in extracted_data[1:]
     ]
@@ -224,7 +236,7 @@ def test_prolearn_transform_courses(mock_mitpe_courses_data):
             "professional": True,
             "certification": True,
             "certification_type": CertificationType.professional.name,
-            "learning_format": transform_format(course["format_name"]),
+            "delivery": transform_delivery(course["format_name"]),
             "topics": parse_topic(course, "mitpe"),
             "url": course["course_link"]
             if urlparse(course["course_link"]).path
@@ -248,6 +260,10 @@ def test_prolearn_transform_courses(mock_mitpe_courses_data):
                         or course["course_application_url"]
                         or urljoin(PROLEARN_BASE_URL, course["url"])
                     ),
+                    "availability": Availability.dated.name,
+                    "delivery": transform_delivery(course["format_name"]),
+                    "pace": [Pace.instructor_paced.name],
+                    "format": [Format.asynchronous.name],
                 }
                 for (start_val, end_val) in zip(
                     course["start_value"], course["end_value"]
@@ -255,6 +271,8 @@ def test_prolearn_transform_courses(mock_mitpe_courses_data):
             ],
             "course": {"course_numbers": []},
             "unique_field": UNIQUE_FIELD,
+            "pace": [Pace.instructor_paced.name],
+            "format": [Format.asynchronous.name],
         }
         for course in extracted_data[2:]
     ]
@@ -361,35 +379,52 @@ def test_parse_image(featured_image_url, expected_url):
 
 
 @pytest.mark.parametrize(
-    ("old_format", "new_format", "expected_format"),
+    ("old_delivery", "new_delivery", "expected_delivery"),
     [
         (
-            [LearningResourceFormat.online.name],
-            [LearningResourceFormat.online.name],
-            [LearningResourceFormat.online.name],
+            [LearningResourceDelivery.online.name],
+            [LearningResourceDelivery.online.name],
+            [LearningResourceDelivery.online.name],
         ),
         (
-            [LearningResourceFormat.online.name],
-            [LearningResourceFormat.hybrid.name],
-            [LearningResourceFormat.online.name, LearningResourceFormat.hybrid.name],
+            [LearningResourceDelivery.online.name],
+            [LearningResourceDelivery.hybrid.name],
+            [
+                LearningResourceDelivery.online.name,
+                LearningResourceDelivery.hybrid.name,
+            ],
         ),
         (
             [
-                LearningResourceFormat.online.name,
-                LearningResourceFormat.in_person.name,
+                LearningResourceDelivery.online.name,
+                LearningResourceDelivery.in_person.name,
             ],
-            [LearningResourceFormat.hybrid.name],
-            list(LearningResourceFormat.names()),
+            [
+                LearningResourceDelivery.hybrid.name,
+                LearningResourceDelivery.offline.name,
+            ],
+            list(LearningResourceDelivery.names()),
         ),
     ],
 )
-def test_update_format(
-    mock_mitpe_courses_data, old_format, new_format, expected_format
+def test_update_delivery(
+    mock_mitpe_courses_data, old_delivery, new_delivery, expected_delivery
 ):
-    """update_format should combine old format and new format appropriately"""
+    """update_delivery should combine old delivery and new delivery appropriately"""
     first_course = transform_courses(
         mock_mitpe_courses_data["data"]["searchAPISearch"]["documents"]
     )[0]
-    first_course["learning_format"] = old_format
-    update_format(first_course, new_format)
-    assert first_course["learning_format"] == sorted(expected_format)
+    first_course["delivery"] = old_delivery
+    update_delivery(first_course, new_delivery)
+    assert first_course["delivery"] == sorted(expected_delivery)
+
+
+@pytest.mark.parametrize("sloan_api_enabled", [True, False])
+def test_sloan_exclusion(settings, mocker, sloan_api_enabled):
+    """Slaon exclusion should be included if sloan api enabled"""
+    settings.SEE_API_ENABLED = sloan_api_enabled
+    mock_post = mocker.patch("learning_resources.etl.sloan.requests.post")
+    extract_data("course")
+    assert (
+        SEE_EXCLUSION in mock_post.call_args[1]["json"]["query"]
+    ) is sloan_api_enabled

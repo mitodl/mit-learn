@@ -85,18 +85,19 @@
     "Exams with Solutions"
   ],
   "topics": [
-    ["Engineering", "Aerospace Engineering", "Materials Selection"],
-    ["Engineering", "Aerospace Engineering", "Propulsion Systems"],
-    ["Science", "Physics", "Thermodynamics"],
-    ["Engineering", "Mechanical Engineering", "Fluid Mechanics"],
-    ["Engineering", "Aerospace Engineering"],
-    ["Business", "Project Management"]
+    ["Social Science", "Anthropology", "Ethnography"],
+    ["Humanities", "Philosophy", "Political Philosophy"]
+  ],
+  "mit_learn_topics": [
+    ["Social Sciences", "Anthropology"],
+    ["Social Sciences", "Political Science"]
   ],
   "primary_course_number": "16.01",
   "extra_course_numbers": "16.02, 16.03, 16.04",
   "term": "Fall",
   "year": "2005",
   "level": ["Undergraduate", "High School"],
+  "hide_download": false,
   "image_src": "/courses/16-01-unified-engineering-i-ii-iii-iv-fall-2005-spring-2006/8f56bbb35d0e456dc8b70911bec7cd0d_16-01f05.jpg",
   "course_image_metadata": {
     "content_type": "resource",

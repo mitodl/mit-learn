@@ -1,11 +1,16 @@
 """Views for news_events"""
 
+from django.conf import settings
+from django.db.models import Q
+from django.utils.decorators import method_decorator
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import viewsets
 from rest_framework.pagination import LimitOffsetPagination
 
 from main.filters import MultipleOptionsFilterBackend
 from main.permissions import AnonymousAccessReadonlyPermission
+from main.utils import cache_page_for_all_users, now_in_utc
+from news_events.constants import FeedType
 from news_events.filters import FeedItemFilter, FeedSourceFilter
 from news_events.models import FeedItem, FeedSource
 from news_events.serializers import FeedItemSerializer, FeedSourceSerializer
@@ -42,12 +47,23 @@ class FeedItemViewSet(viewsets.ReadOnlyModelViewSet):
     filterset_class = FeedItemFilter
     queryset = (
         FeedItem.objects.select_related(*FeedItem.related_selects)
-        .all()
+        .filter(
+            Q(source__feed_type=FeedType.news.name)
+            | Q(event_details__event_datetime__gte=now_in_utc())
+        )
         .order_by(
             "-news_details__publish_date",
             "-event_details__event_datetime",
         )
     )
+
+    @method_decorator(
+        cache_page_for_all_users(
+            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+        )
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
 
 @extend_schema_view(
@@ -70,3 +86,11 @@ class FeedSourceViewSet(viewsets.ReadOnlyModelViewSet):
     filter_backends = [MultipleOptionsFilterBackend]
     filterset_class = FeedSourceFilter
     queryset = FeedSource.objects.all().order_by("id")
+
+    @method_decorator(
+        cache_page_for_all_users(
+            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+        )
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)

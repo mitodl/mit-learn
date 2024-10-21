@@ -26,6 +26,7 @@ from learning_resources_search.constants import (
     COURSE_TYPE,
     MAPPING,
     PERCOLATE_INDEX_TYPE,
+    SYNONYMS,
     IndexestoUpdate,
 )
 from learning_resources_search.exceptions import ReindexError
@@ -43,17 +44,60 @@ log = logging.getLogger(__name__)
 User = get_user_model()
 
 
-def _update_document_by_id(doc_id, body, object_type, *, retry_on_conflict=0, **kwargs):
+def clear_featured_rank(rank, clear_all_greater_than):
     """
-    Makes a request to ES to update an existing document
+    Make a request to ES to set featured_rank to null for documents with rank
+
+    If clear_all_greater_than is true it clears all featured_rank values greater
+        than rank
+    If clear_all_greater_than is false it clears all featured_rank values with
+        the integer part equal to rank. The decimal part of featured_rank is randomized
 
     Args:
-        doc_id (str): The ES document id
-        body (dict): ES update operation body
+        rank (int): the rank
+        clear_all_greater_than (boolean) : Whether to clear all featurend_rank values
+            greater than rank
+    """
+
+    conn = get_conn()
+    query = {
+        "range": {
+            "featured_rank": {
+                "gte": rank,
+            }
+        }
+    }
+
+    if not clear_all_greater_than:
+        query["range"]["featured_rank"]["lt"] = rank + 1
+
+    for alias in get_active_aliases(conn):
+        conn.update_by_query(
+            index=alias,
+            conflicts="proceed",
+            body={
+                "script": {
+                    "source": "ctx._source.featured_rank = params.newValue",
+                    "lang": "painless",
+                    "params": {"newValue": None},
+                },
+                "query": query,
+            },
+        )
+
+
+def _update_document_by_id(doc_id, body, object_type, *, retry_on_conflict=0, **kwargs):
+    """
+    Make a request to Open Search to update an existing document
+
+    Args:
+        doc_id (str): The Open Search document id
+        body (dict): Open Search update operation body
         object_type (str): The object type to update.
-        retry_on_conflict (int): Number of times to retry if there's a conflict (default=0)
+        retry_on_conflict (int): Number of times to retry if there's a
+            conflict (default=0)
         kwargs (dict): Optional kwargs to be passed to opensearch
-    """  # noqa: E501, D401
+    """
     conn = get_conn()
     for alias in get_active_aliases(conn, object_types=[object_type]):
         try:
@@ -63,8 +107,8 @@ def _update_document_by_id(doc_id, body, object_type, *, retry_on_conflict=0, **
                 id=doc_id,
                 params={"retry_on_conflict": retry_on_conflict, **kwargs},
             )
-        # Our policy for document update-related version conflicts right now is to log them  # noqa: E501
-        # and allow the app to continue as normal.
+        # Our policy for document update-related version conflicts right now is to
+        # log them and allow the app to continue as normal.
         except ConflictError:
             log.error(  # noqa: TRY400
                 "Update API request resulted in a version conflict (alias: %s, doc"
@@ -100,18 +144,21 @@ def clear_and_create_index(*, index_name=None, skip_mapping=False, object_type=N
             },
             "analysis": {
                 "analyzer": {
-                    "folding": {
-                        "type": "custom",
-                        "tokenizer": "standard",
-                        "filter": [
-                            "lowercase",
-                            "asciifolding",  # remove accents if we use folding analyzer
-                        ],
-                    },
                     "trigram": {
                         "type": "custom",
                         "tokenizer": "standard",
-                        "filter": ["lowercase", "shingle"],
+                        "filter": ["lowercase", "synonyms_filter", "shingle"],
+                    },
+                    "custom_english": {
+                        "tokenizer": "standard",
+                        "filter": [
+                            "english_possessive_stemmer",
+                            "lowercase",
+                            "synonyms_filter",
+                            "english_stop",
+                            "english_keywords",
+                            "english_stemmer",
+                        ],
                     },
                 },
                 "filter": {
@@ -119,7 +166,19 @@ def clear_and_create_index(*, index_name=None, skip_mapping=False, object_type=N
                         "type": "shingle",
                         "min_shingle_size": 2,
                         "max_shingle_size": 3,
-                    }
+                    },
+                    "english_stop": {"type": "stop", "stopwords": "_english_"},
+                    "english_keywords": {"type": "keyword_marker", "keywords": []},
+                    "english_stemmer": {"type": "stemmer", "language": "english"},
+                    "english_possessive_stemmer": {
+                        "type": "stemmer",
+                        "language": "possessive_english",
+                    },
+                    "synonyms_filter": {
+                        "type": "synonym_graph",
+                        "synonyms": SYNONYMS,
+                        "expand": "true",
+                    },
                 },
             },
         }
@@ -148,6 +207,22 @@ def upsert_document(doc_id, doc, object_type, *, retry_on_conflict=0, **kwargs):
         object_type,
         retry_on_conflict=retry_on_conflict,
         **kwargs,
+    )
+
+
+def update_document_with_partial(doc_id, doc, object_type, *, retry_on_conflict=0):
+    """
+    Make a request to Open Search to update an existing document
+
+    Args:
+        doc_id (str): The ES document id
+        doc (dict): Full or partial ES document
+        object_type (str): The object type to update (post, comment, etc)
+        retry_on_conflict (int): Number of times to retry if there's a
+            conflict (default=0)
+    """
+    _update_document_by_id(
+        doc_id, {"doc": doc}, object_type, retry_on_conflict=retry_on_conflict
     )
 
 
@@ -501,9 +576,12 @@ def switch_indices(backing_index, object_type):
         conn.indices.delete(index)
 
     # Finally, remove the link to the reindexing alias
-    conn.indices.delete_alias(
-        name=get_reindexing_alias_name(object_type), index=backing_index
-    )
+    try:
+        conn.indices.delete_alias(
+            name=get_reindexing_alias_name(object_type), index=backing_index
+        )
+    except NotFoundError:
+        log.warning("Reindex alias not found for %s", object_type)
 
 
 def delete_orphaned_indexes(obj_types, delete_reindexing_tags):

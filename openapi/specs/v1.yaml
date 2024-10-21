@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: MIT Open API
+  title: MIT Learn API
   version: 0.0.1 (v1)
   description: MIT public API
 paths:
@@ -175,6 +175,14 @@ paths:
         schema:
           type: integer
         description: Number of results to return per page
+      - in: query
+        name: ocw_topic
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        description: The ocw topic name.
       - in: query
         name: offered_by
         schema:
@@ -560,6 +568,38 @@ paths:
         explode: false
         style: form
       - in: query
+        name: delivery
+        schema:
+          type: array
+          items:
+            type: array
+            items:
+              enum:
+              - online
+              - hybrid
+              - in_person
+              - offline
+              type: string
+              description: |-
+                * `online` - Online
+                * `hybrid` - Hybrid
+                * `in_person` - In person
+                * `offline` - Offline
+            enum:
+            - hybrid
+            - in_person
+            - offline
+            - online
+        description: |-
+          The delivery of course/program resources
+
+          * `online` - Online
+          * `hybrid` - Hybrid
+          * `in_person` - In person
+          * `offline` - Offline
+        explode: true
+        style: form
+      - in: query
         name: department
         schema:
           type: array
@@ -600,7 +640,7 @@ paths:
             - IDS
             - MAS
             - PE
-            - RES
+            - SP
             - STS
             - WGS
         description: |-
@@ -640,7 +680,7 @@ paths:
           * `IDS` - Data, Systems, and Society
           * `MAS` - Media Arts and Sciences
           * `PE` - Athletics, Physical Education and Recreation
-          * `RES` - Supplemental Resources
+          * `SP` - Special Programs
           * `STS` - Science, Technology, and Society
           * `WGS` - Women's and Gender Studies
         explode: true
@@ -650,27 +690,6 @@ paths:
         schema:
           type: boolean
         description: The course/program is offered for free
-      - in: query
-        name: learning_format
-        schema:
-          type: array
-          items:
-            type: array
-            items:
-              type: string
-              maxLength: 24
-            enum:
-            - hybrid
-            - in_person
-            - online
-        description: |-
-          The learning format of course/program resources
-
-          * `online` - Online
-          * `hybrid` - Hybrid
-          * `in_person` - In person
-        explode: true
-        style: form
       - in: query
         name: level
         schema:
@@ -1160,6 +1179,38 @@ paths:
         explode: false
         style: form
       - in: query
+        name: delivery
+        schema:
+          type: array
+          items:
+            type: array
+            items:
+              enum:
+              - online
+              - hybrid
+              - in_person
+              - offline
+              type: string
+              description: |-
+                * `online` - Online
+                * `hybrid` - Hybrid
+                * `in_person` - In person
+                * `offline` - Offline
+            enum:
+            - hybrid
+            - in_person
+            - offline
+            - online
+        description: |-
+          The delivery of course/program resources
+
+          * `online` - Online
+          * `hybrid` - Hybrid
+          * `in_person` - In person
+          * `offline` - Offline
+        explode: true
+        style: form
+      - in: query
         name: department
         schema:
           type: array
@@ -1200,7 +1251,7 @@ paths:
             - IDS
             - MAS
             - PE
-            - RES
+            - SP
             - STS
             - WGS
         description: |-
@@ -1240,7 +1291,7 @@ paths:
           * `IDS` - Data, Systems, and Society
           * `MAS` - Media Arts and Sciences
           * `PE` - Athletics, Physical Education and Recreation
-          * `RES` - Supplemental Resources
+          * `SP` - Special Programs
           * `STS` - Science, Technology, and Society
           * `WGS` - Women's and Gender Studies
         explode: true
@@ -1250,27 +1301,6 @@ paths:
         schema:
           type: boolean
         description: The course/program is offered for free
-      - in: query
-        name: learning_format
-        schema:
-          type: array
-          items:
-            type: array
-            items:
-              type: string
-              maxLength: 24
-            enum:
-            - hybrid
-            - in_person
-            - online
-        description: |-
-          The learning format of course/program resources
-
-          * `online` - Online
-          * `hybrid` - Hybrid
-          * `in_person` - In person
-        explode: true
-        style: form
       - in: query
         name: level
         schema:
@@ -1553,6 +1583,38 @@ paths:
         explode: false
         style: form
       - in: query
+        name: delivery
+        schema:
+          type: array
+          items:
+            type: array
+            items:
+              enum:
+              - online
+              - hybrid
+              - in_person
+              - offline
+              type: string
+              description: |-
+                * `online` - Online
+                * `hybrid` - Hybrid
+                * `in_person` - In person
+                * `offline` - Offline
+            enum:
+            - hybrid
+            - in_person
+            - offline
+            - online
+        description: |-
+          The delivery of course/program resources
+
+          * `online` - Online
+          * `hybrid` - Hybrid
+          * `in_person` - In person
+          * `offline` - Offline
+        explode: true
+        style: form
+      - in: query
         name: department
         schema:
           type: array
@@ -1593,7 +1655,7 @@ paths:
             - IDS
             - MAS
             - PE
-            - RES
+            - SP
             - STS
             - WGS
         description: |-
@@ -1633,7 +1695,7 @@ paths:
           * `IDS` - Data, Systems, and Society
           * `MAS` - Media Arts and Sciences
           * `PE` - Athletics, Physical Education and Recreation
-          * `RES` - Supplemental Resources
+          * `SP` - Special Programs
           * `STS` - Science, Technology, and Society
           * `WGS` - Women's and Gender Studies
         explode: true
@@ -1643,27 +1705,6 @@ paths:
         schema:
           type: boolean
         description: The course/program is offered for free
-      - in: query
-        name: learning_format
-        schema:
-          type: array
-          items:
-            type: array
-            items:
-              type: string
-              maxLength: 24
-            enum:
-            - hybrid
-            - in_person
-            - online
-        description: |-
-          The learning format of course/program resources
-
-          * `online` - Online
-          * `hybrid` - Hybrid
-          * `in_person` - In person
-        explode: true
-        style: form
       - in: query
         name: level
         schema:
@@ -2131,6 +2172,88 @@ paths:
               schema:
                 $ref: '#/components/schemas/LearningResourceRelationship'
           description: ''
+  /api/v1/learning_resources/{id}/learning_paths/:
+    patch:
+      operationId: learning_resources_learning_paths_partial_update
+      description: Set Learning Path Relationships on a given Learning Resource.
+      summary: Set Learning Path Relationships
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: id of the learning resource
+        required: true
+      - in: query
+        name: learning_path_id
+        schema:
+          type: array
+          items:
+            type: integer
+        description: id of the parent learning path
+      tags:
+      - learning_resources
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedLearningResourceRelationshipRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedLearningResourceRelationshipRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedLearningResourceRelationshipRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LearningResourceRelationship'
+          description: ''
+  /api/v1/learning_resources/{id}/userlists/:
+    patch:
+      operationId: learning_resources_userlists_partial_update
+      description: Set User List Relationships on a given Learning Resource.
+      summary: Set User List Relationships
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: id of the learning resource
+        required: true
+      - in: query
+        name: userlist_id
+        schema:
+          type: array
+          items:
+            type: integer
+        description: id of the parent user list
+      tags:
+      - learning_resources
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserListRelationshipRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUserListRelationshipRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUserListRelationshipRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserListRelationship'
+          description: ''
   /api/v1/learning_resources_search/:
     get:
       operationId: learning_resources_search_retrieve
@@ -2154,7 +2277,7 @@ paths:
             - course_feature
             - professional
             - free
-            - learning_format
+            - delivery
             - resource_category
             type: string
             description: |-
@@ -2169,7 +2292,7 @@ paths:
               * `course_feature` - course_feature
               * `professional` - professional
               * `free` - free
-              * `learning_format` - learning_format
+              * `delivery` - delivery
               * `resource_category` - resource_category
         description: Show resource counts by category
       - in: query
@@ -2198,6 +2321,16 @@ paths:
           \ Credential\n* `professional` - Professional Certificate\n* `completion`\
           \ - Certificate of Completion\n* `none` - No Certificate"
       - in: query
+        name: content_file_score_weight
+        schema:
+          type: number
+          format: double
+          maximum: 1
+          minimum: 0
+          nullable: true
+        description: Score weight for content file data.  1 is the default. 0 means
+          content files are ignored
+      - in: query
         name: course_feature
         schema:
           type: array
@@ -2205,6 +2338,25 @@ paths:
             type: string
             minLength: 1
         description: The course feature. Possible options are at api/v1/course_features/
+      - in: query
+        name: delivery
+        schema:
+          type: array
+          items:
+            enum:
+            - online
+            - hybrid
+            - in_person
+            - offline
+            type: string
+            description: |-
+              * `online` - Online
+              * `hybrid` - Hybrid
+              * `in_person` - In person
+              * `offline` - Offline
+        description: "The delivery options in which the learning resource is offered\
+          \             \n\n* `online` - Online\n* `hybrid` - Hybrid\n* `in_person`\
+          \ - In person\n* `offline` - Offline"
       - in: query
         name: department
         schema:
@@ -2245,7 +2397,7 @@ paths:
             - IDS
             - MAS
             - PE
-            - RES
+            - SP
             - STS
             - WGS
             type: string
@@ -2284,7 +2436,7 @@ paths:
               * `IDS` - Data, Systems, and Society
               * `MAS` - Media Arts and Sciences
               * `PE` - Athletics, Physical Education and Recreation
-              * `RES` - Supplemental Resources
+              * `SP` - Special Programs
               * `STS` - Science, Technology, and Society
               * `WGS` - Women's and Gender Studies
         description: "The department that offers the learning resource           \
@@ -2303,8 +2455,8 @@ paths:
           * `ES` - Experimental Study Group\n* `ESD` - Engineering Systems Division\n\
           * `HST` - Medical Engineering and Science\n* `IDS` - Data, Systems, and\
           \ Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics, Physical\
-          \ Education and Recreation\n* `RES` - Supplemental Resources\n* `STS` -\
-          \ Science, Technology, and Society\n* `WGS` - Women's and Gender Studies"
+          \ Education and Recreation\n* `SP` - Special Programs\n* `STS` - Science,\
+          \ Technology, and Society\n* `WGS` - Women's and Gender Studies"
       - in: query
         name: dev_mode
         schema:
@@ -2324,23 +2476,6 @@ paths:
           items:
             type: integer
         description: The id value for the learning resource
-      - in: query
-        name: learning_format
-        schema:
-          type: array
-          items:
-            enum:
-            - online
-            - hybrid
-            - in_person
-            type: string
-            description: |-
-              * `online` - Online
-              * `hybrid` - Hybrid
-              * `in_person` - In person
-        description: "The format(s) in which the learning resource is offered    \
-          \         \n\n* `online` - Online\n* `hybrid` - Hybrid\n* `in_person` -\
-          \ In person"
       - in: query
         name: level
         schema:
@@ -2368,6 +2503,35 @@ paths:
         schema:
           type: integer
         description: Number of results to return per page
+      - in: query
+        name: max_incompleteness_penalty
+        schema:
+          type: number
+          format: double
+          maximum: 100
+          minimum: 0
+          nullable: true
+        description: Maximum score penalty for incomplete OCW courses in percent.
+          An OCW course with completeness = 0 will have this score penalty. Partially
+          complete courses have a linear penalty proportional to the degree of incompleteness.
+          Only affects results if there is a search term.
+      - in: query
+        name: min_score
+        schema:
+          type: number
+          format: double
+          maximum: 50
+          minimum: 0
+          nullable: true
+        description: Minimum score value a text query result needs to have to be displayed
+      - in: query
+        name: ocw_topic
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        description: The ocw topic name.
       - in: query
         name: offered_by
         schema:
@@ -2504,9 +2668,29 @@ paths:
           \ podcast\n* `podcast_episode` - podcast episode\n* `video` - video\n* `video_playlist`\
           \ - video playlist"
       - in: query
+        name: search_mode
+        schema:
+          enum:
+          - best_fields
+          - most_fields
+          - phrase
+          type: string
+          minLength: 1
+        description: "The open search search type for text queries             \n\n\
+          * `best_fields` - best_fields\n* `most_fields` - most_fields\n* `phrase`\
+          \ - phrase\n\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n\
+          * `phrase` - phrase"
+      - in: query
+        name: slop
+        schema:
+          type: integer
+          nullable: true
+        description: Allowed distance for phrase search
+      - in: query
         name: sortby
         schema:
           enum:
+          - featured
           - id
           - -id
           - readable_id
@@ -2526,6 +2710,7 @@ paths:
         description: |-
           If the parameter starts with '-' the sort is in descending order
 
+          * `featured` - Featured
           * `id` - Object ID ascending
           * `-id` - Object ID descending
           * `readable_id` - Readable ID ascending
@@ -2556,7 +2741,6 @@ paths:
           maximum: 10
           minimum: 0
           nullable: true
-          default: 2.5
         description: Relevance score penalty percent per year for for resources without
           upcoming runs. Only affects results if there is a search term.
       tags:
@@ -2591,7 +2775,7 @@ paths:
             - course_feature
             - professional
             - free
-            - learning_format
+            - delivery
             - resource_category
             type: string
             description: |-
@@ -2606,7 +2790,7 @@ paths:
               * `course_feature` - course_feature
               * `professional` - professional
               * `free` - free
-              * `learning_format` - learning_format
+              * `delivery` - delivery
               * `resource_category` - resource_category
         description: Show resource counts by category
       - in: query
@@ -2635,6 +2819,16 @@ paths:
           \ Credential\n* `professional` - Professional Certificate\n* `completion`\
           \ - Certificate of Completion\n* `none` - No Certificate"
       - in: query
+        name: content_file_score_weight
+        schema:
+          type: number
+          format: double
+          maximum: 1
+          minimum: 0
+          nullable: true
+        description: Score weight for content file data.  1 is the default. 0 means
+          content files are ignored
+      - in: query
         name: course_feature
         schema:
           type: array
@@ -2642,6 +2836,25 @@ paths:
             type: string
             minLength: 1
         description: The course feature. Possible options are at api/v1/course_features/
+      - in: query
+        name: delivery
+        schema:
+          type: array
+          items:
+            enum:
+            - online
+            - hybrid
+            - in_person
+            - offline
+            type: string
+            description: |-
+              * `online` - Online
+              * `hybrid` - Hybrid
+              * `in_person` - In person
+              * `offline` - Offline
+        description: "The delivery options in which the learning resource is offered\
+          \             \n\n* `online` - Online\n* `hybrid` - Hybrid\n* `in_person`\
+          \ - In person\n* `offline` - Offline"
       - in: query
         name: department
         schema:
@@ -2682,7 +2895,7 @@ paths:
             - IDS
             - MAS
             - PE
-            - RES
+            - SP
             - STS
             - WGS
             type: string
@@ -2721,7 +2934,7 @@ paths:
               * `IDS` - Data, Systems, and Society
               * `MAS` - Media Arts and Sciences
               * `PE` - Athletics, Physical Education and Recreation
-              * `RES` - Supplemental Resources
+              * `SP` - Special Programs
               * `STS` - Science, Technology, and Society
               * `WGS` - Women's and Gender Studies
         description: "The department that offers the learning resource           \
@@ -2740,8 +2953,8 @@ paths:
           * `ES` - Experimental Study Group\n* `ESD` - Engineering Systems Division\n\
           * `HST` - Medical Engineering and Science\n* `IDS` - Data, Systems, and\
           \ Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics, Physical\
-          \ Education and Recreation\n* `RES` - Supplemental Resources\n* `STS` -\
-          \ Science, Technology, and Society\n* `WGS` - Women's and Gender Studies"
+          \ Education and Recreation\n* `SP` - Special Programs\n* `STS` - Science,\
+          \ Technology, and Society\n* `WGS` - Women's and Gender Studies"
       - in: query
         name: dev_mode
         schema:
@@ -2761,23 +2974,6 @@ paths:
           items:
             type: integer
         description: The id value for the learning resource
-      - in: query
-        name: learning_format
-        schema:
-          type: array
-          items:
-            enum:
-            - online
-            - hybrid
-            - in_person
-            type: string
-            description: |-
-              * `online` - Online
-              * `hybrid` - Hybrid
-              * `in_person` - In person
-        description: "The format(s) in which the learning resource is offered    \
-          \         \n\n* `online` - Online\n* `hybrid` - Hybrid\n* `in_person` -\
-          \ In person"
       - in: query
         name: level
         schema:
@@ -2805,6 +3001,35 @@ paths:
         schema:
           type: integer
         description: Number of results to return per page
+      - in: query
+        name: max_incompleteness_penalty
+        schema:
+          type: number
+          format: double
+          maximum: 100
+          minimum: 0
+          nullable: true
+        description: Maximum score penalty for incomplete OCW courses in percent.
+          An OCW course with completeness = 0 will have this score penalty. Partially
+          complete courses have a linear penalty proportional to the degree of incompleteness.
+          Only affects results if there is a search term.
+      - in: query
+        name: min_score
+        schema:
+          type: number
+          format: double
+          maximum: 50
+          minimum: 0
+          nullable: true
+        description: Minimum score value a text query result needs to have to be displayed
+      - in: query
+        name: ocw_topic
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        description: The ocw topic name.
       - in: query
         name: offered_by
         schema:
@@ -2941,9 +3166,29 @@ paths:
           \ podcast\n* `podcast_episode` - podcast episode\n* `video` - video\n* `video_playlist`\
           \ - video playlist"
       - in: query
+        name: search_mode
+        schema:
+          enum:
+          - best_fields
+          - most_fields
+          - phrase
+          type: string
+          minLength: 1
+        description: "The open search search type for text queries             \n\n\
+          * `best_fields` - best_fields\n* `most_fields` - most_fields\n* `phrase`\
+          \ - phrase\n\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n\
+          * `phrase` - phrase"
+      - in: query
+        name: slop
+        schema:
+          type: integer
+          nullable: true
+        description: Allowed distance for phrase search
+      - in: query
         name: sortby
         schema:
           enum:
+          - featured
           - id
           - -id
           - readable_id
@@ -2963,6 +3208,7 @@ paths:
         description: |-
           If the parameter starts with '-' the sort is in descending order
 
+          * `featured` - Featured
           * `id` - Object ID ascending
           * `-id` - Object ID descending
           * `readable_id` - Readable ID ascending
@@ -2993,7 +3239,6 @@ paths:
           maximum: 10
           minimum: 0
           nullable: true
-          default: 2.5
         description: Relevance score penalty percent per year for for resources without
           upcoming runs. Only affects results if there is a search term.
       tags:
@@ -3053,7 +3298,7 @@ paths:
             - course_feature
             - professional
             - free
-            - learning_format
+            - delivery
             - resource_category
             type: string
             description: |-
@@ -3068,7 +3313,7 @@ paths:
               * `course_feature` - course_feature
               * `professional` - professional
               * `free` - free
-              * `learning_format` - learning_format
+              * `delivery` - delivery
               * `resource_category` - resource_category
         description: Show resource counts by category
       - in: query
@@ -3097,6 +3342,16 @@ paths:
           \ Credential\n* `professional` - Professional Certificate\n* `completion`\
           \ - Certificate of Completion\n* `none` - No Certificate"
       - in: query
+        name: content_file_score_weight
+        schema:
+          type: number
+          format: double
+          maximum: 1
+          minimum: 0
+          nullable: true
+        description: Score weight for content file data.  1 is the default. 0 means
+          content files are ignored
+      - in: query
         name: course_feature
         schema:
           type: array
@@ -3104,6 +3359,25 @@ paths:
             type: string
             minLength: 1
         description: The course feature. Possible options are at api/v1/course_features/
+      - in: query
+        name: delivery
+        schema:
+          type: array
+          items:
+            enum:
+            - online
+            - hybrid
+            - in_person
+            - offline
+            type: string
+            description: |-
+              * `online` - Online
+              * `hybrid` - Hybrid
+              * `in_person` - In person
+              * `offline` - Offline
+        description: "The delivery options in which the learning resource is offered\
+          \             \n\n* `online` - Online\n* `hybrid` - Hybrid\n* `in_person`\
+          \ - In person\n* `offline` - Offline"
       - in: query
         name: department
         schema:
@@ -3144,7 +3418,7 @@ paths:
             - IDS
             - MAS
             - PE
-            - RES
+            - SP
             - STS
             - WGS
             type: string
@@ -3183,7 +3457,7 @@ paths:
               * `IDS` - Data, Systems, and Society
               * `MAS` - Media Arts and Sciences
               * `PE` - Athletics, Physical Education and Recreation
-              * `RES` - Supplemental Resources
+              * `SP` - Special Programs
               * `STS` - Science, Technology, and Society
               * `WGS` - Women's and Gender Studies
         description: "The department that offers the learning resource           \
@@ -3202,8 +3476,8 @@ paths:
           * `ES` - Experimental Study Group\n* `ESD` - Engineering Systems Division\n\
           * `HST` - Medical Engineering and Science\n* `IDS` - Data, Systems, and\
           \ Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics, Physical\
-          \ Education and Recreation\n* `RES` - Supplemental Resources\n* `STS` -\
-          \ Science, Technology, and Society\n* `WGS` - Women's and Gender Studies"
+          \ Education and Recreation\n* `SP` - Special Programs\n* `STS` - Science,\
+          \ Technology, and Society\n* `WGS` - Women's and Gender Studies"
       - in: query
         name: dev_mode
         schema:
@@ -3223,23 +3497,6 @@ paths:
           items:
             type: integer
         description: The id value for the learning resource
-      - in: query
-        name: learning_format
-        schema:
-          type: array
-          items:
-            enum:
-            - online
-            - hybrid
-            - in_person
-            type: string
-            description: |-
-              * `online` - Online
-              * `hybrid` - Hybrid
-              * `in_person` - In person
-        description: "The format(s) in which the learning resource is offered    \
-          \         \n\n* `online` - Online\n* `hybrid` - Hybrid\n* `in_person` -\
-          \ In person"
       - in: query
         name: level
         schema:
@@ -3267,6 +3524,35 @@ paths:
         schema:
           type: integer
         description: Number of results to return per page
+      - in: query
+        name: max_incompleteness_penalty
+        schema:
+          type: number
+          format: double
+          maximum: 100
+          minimum: 0
+          nullable: true
+        description: Maximum score penalty for incomplete OCW courses in percent.
+          An OCW course with completeness = 0 will have this score penalty. Partially
+          complete courses have a linear penalty proportional to the degree of incompleteness.
+          Only affects results if there is a search term.
+      - in: query
+        name: min_score
+        schema:
+          type: number
+          format: double
+          maximum: 50
+          minimum: 0
+          nullable: true
+        description: Minimum score value a text query result needs to have to be displayed
+      - in: query
+        name: ocw_topic
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        description: The ocw topic name.
       - in: query
         name: offered_by
         schema:
@@ -3403,9 +3689,29 @@ paths:
           \ podcast\n* `podcast_episode` - podcast episode\n* `video` - video\n* `video_playlist`\
           \ - video playlist"
       - in: query
+        name: search_mode
+        schema:
+          enum:
+          - best_fields
+          - most_fields
+          - phrase
+          type: string
+          minLength: 1
+        description: "The open search search type for text queries             \n\n\
+          * `best_fields` - best_fields\n* `most_fields` - most_fields\n* `phrase`\
+          \ - phrase\n\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n\
+          * `phrase` - phrase"
+      - in: query
+        name: slop
+        schema:
+          type: integer
+          nullable: true
+        description: Allowed distance for phrase search
+      - in: query
         name: sortby
         schema:
           enum:
+          - featured
           - id
           - -id
           - readable_id
@@ -3425,6 +3731,7 @@ paths:
         description: |-
           If the parameter starts with '-' the sort is in descending order
 
+          * `featured` - Featured
           * `id` - Object ID ascending
           * `-id` - Object ID descending
           * `readable_id` - Readable ID ascending
@@ -3469,7 +3776,6 @@ paths:
           maximum: 10
           minimum: 0
           nullable: true
-          default: 2.5
         description: Relevance score penalty percent per year for for resources without
           upcoming runs. Only affects results if there is a search term.
       tags:
@@ -3506,7 +3812,7 @@ paths:
             - course_feature
             - professional
             - free
-            - learning_format
+            - delivery
             - resource_category
             type: string
             description: |-
@@ -3521,7 +3827,7 @@ paths:
               * `course_feature` - course_feature
               * `professional` - professional
               * `free` - free
-              * `learning_format` - learning_format
+              * `delivery` - delivery
               * `resource_category` - resource_category
         description: Show resource counts by category
       - in: query
@@ -3550,6 +3856,16 @@ paths:
           \ Credential\n* `professional` - Professional Certificate\n* `completion`\
           \ - Certificate of Completion\n* `none` - No Certificate"
       - in: query
+        name: content_file_score_weight
+        schema:
+          type: number
+          format: double
+          maximum: 1
+          minimum: 0
+          nullable: true
+        description: Score weight for content file data.  1 is the default. 0 means
+          content files are ignored
+      - in: query
         name: course_feature
         schema:
           type: array
@@ -3557,6 +3873,25 @@ paths:
             type: string
             minLength: 1
         description: The course feature. Possible options are at api/v1/course_features/
+      - in: query
+        name: delivery
+        schema:
+          type: array
+          items:
+            enum:
+            - online
+            - hybrid
+            - in_person
+            - offline
+            type: string
+            description: |-
+              * `online` - Online
+              * `hybrid` - Hybrid
+              * `in_person` - In person
+              * `offline` - Offline
+        description: "The delivery options in which the learning resource is offered\
+          \             \n\n* `online` - Online\n* `hybrid` - Hybrid\n* `in_person`\
+          \ - In person\n* `offline` - Offline"
       - in: query
         name: department
         schema:
@@ -3597,7 +3932,7 @@ paths:
             - IDS
             - MAS
             - PE
-            - RES
+            - SP
             - STS
             - WGS
             type: string
@@ -3636,7 +3971,7 @@ paths:
               * `IDS` - Data, Systems, and Society
               * `MAS` - Media Arts and Sciences
               * `PE` - Athletics, Physical Education and Recreation
-              * `RES` - Supplemental Resources
+              * `SP` - Special Programs
               * `STS` - Science, Technology, and Society
               * `WGS` - Women's and Gender Studies
         description: "The department that offers the learning resource           \
@@ -3655,8 +3990,8 @@ paths:
           * `ES` - Experimental Study Group\n* `ESD` - Engineering Systems Division\n\
           * `HST` - Medical Engineering and Science\n* `IDS` - Data, Systems, and\
           \ Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics, Physical\
-          \ Education and Recreation\n* `RES` - Supplemental Resources\n* `STS` -\
-          \ Science, Technology, and Society\n* `WGS` - Women's and Gender Studies"
+          \ Education and Recreation\n* `SP` - Special Programs\n* `STS` - Science,\
+          \ Technology, and Society\n* `WGS` - Women's and Gender Studies"
       - in: query
         name: dev_mode
         schema:
@@ -3676,23 +4011,6 @@ paths:
           items:
             type: integer
         description: The id value for the learning resource
-      - in: query
-        name: learning_format
-        schema:
-          type: array
-          items:
-            enum:
-            - online
-            - hybrid
-            - in_person
-            type: string
-            description: |-
-              * `online` - Online
-              * `hybrid` - Hybrid
-              * `in_person` - In person
-        description: "The format(s) in which the learning resource is offered    \
-          \         \n\n* `online` - Online\n* `hybrid` - Hybrid\n* `in_person` -\
-          \ In person"
       - in: query
         name: level
         schema:
@@ -3720,6 +4038,35 @@ paths:
         schema:
           type: integer
         description: Number of results to return per page
+      - in: query
+        name: max_incompleteness_penalty
+        schema:
+          type: number
+          format: double
+          maximum: 100
+          minimum: 0
+          nullable: true
+        description: Maximum score penalty for incomplete OCW courses in percent.
+          An OCW course with completeness = 0 will have this score penalty. Partially
+          complete courses have a linear penalty proportional to the degree of incompleteness.
+          Only affects results if there is a search term.
+      - in: query
+        name: min_score
+        schema:
+          type: number
+          format: double
+          maximum: 50
+          minimum: 0
+          nullable: true
+        description: Minimum score value a text query result needs to have to be displayed
+      - in: query
+        name: ocw_topic
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        description: The ocw topic name.
       - in: query
         name: offered_by
         schema:
@@ -3856,9 +4203,29 @@ paths:
           \ podcast\n* `podcast_episode` - podcast episode\n* `video` - video\n* `video_playlist`\
           \ - video playlist"
       - in: query
+        name: search_mode
+        schema:
+          enum:
+          - best_fields
+          - most_fields
+          - phrase
+          type: string
+          minLength: 1
+        description: "The open search search type for text queries             \n\n\
+          * `best_fields` - best_fields\n* `most_fields` - most_fields\n* `phrase`\
+          \ - phrase\n\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n\
+          * `phrase` - phrase"
+      - in: query
+        name: slop
+        schema:
+          type: integer
+          nullable: true
+        description: Allowed distance for phrase search
+      - in: query
         name: sortby
         schema:
           enum:
+          - featured
           - id
           - -id
           - readable_id
@@ -3878,6 +4245,7 @@ paths:
         description: |-
           If the parameter starts with '-' the sort is in descending order
 
+          * `featured` - Featured
           * `id` - Object ID ascending
           * `-id` - Object ID descending
           * `readable_id` - Readable ID ascending
@@ -3922,7 +4290,6 @@ paths:
           maximum: 10
           minimum: 0
           nullable: true
-          default: 2.5
         description: Relevance score penalty percent per year for for resources without
           upcoming runs. Only affects results if there is a search term.
       tags:
@@ -3985,6 +4352,38 @@ paths:
         explode: false
         style: form
       - in: query
+        name: delivery
+        schema:
+          type: array
+          items:
+            type: array
+            items:
+              enum:
+              - online
+              - hybrid
+              - in_person
+              - offline
+              type: string
+              description: |-
+                * `online` - Online
+                * `hybrid` - Hybrid
+                * `in_person` - In person
+                * `offline` - Offline
+            enum:
+            - hybrid
+            - in_person
+            - offline
+            - online
+        description: |-
+          The delivery of course/program resources
+
+          * `online` - Online
+          * `hybrid` - Hybrid
+          * `in_person` - In person
+          * `offline` - Offline
+        explode: true
+        style: form
+      - in: query
         name: department
         schema:
           type: array
@@ -4025,7 +4424,7 @@ paths:
             - IDS
             - MAS
             - PE
-            - RES
+            - SP
             - STS
             - WGS
         description: |-
@@ -4065,7 +4464,7 @@ paths:
           * `IDS` - Data, Systems, and Society
           * `MAS` - Media Arts and Sciences
           * `PE` - Athletics, Physical Education and Recreation
-          * `RES` - Supplemental Resources
+          * `SP` - Special Programs
           * `STS` - Science, Technology, and Society
           * `WGS` - Women's and Gender Studies
         explode: true
@@ -4075,27 +4474,6 @@ paths:
         schema:
           type: boolean
         description: The course/program is offered for free
-      - in: query
-        name: learning_format
-        schema:
-          type: array
-          items:
-            type: array
-            items:
-              type: string
-              maxLength: 24
-            enum:
-            - hybrid
-            - in_person
-            - online
-        description: |-
-          The learning format of course/program resources
-
-          * `online` - Online
-          * `hybrid` - Hybrid
-          * `in_person` - In person
-        explode: true
-        style: form
       - in: query
         name: level
         schema:
@@ -4413,8 +4791,7 @@ paths:
   /api/v1/learningpaths/{learning_resource_id}/items/:
     get:
       operationId: learningpaths_items_list
-      description: Get a list of related learning resources for a learning resource.
-      summary: Nested Learning Resource List
+      description: Viewset for LearningPath related resources
       parameters:
       - in: path
         name: learning_resource_id
@@ -4703,6 +5080,38 @@ paths:
         explode: false
         style: form
       - in: query
+        name: delivery
+        schema:
+          type: array
+          items:
+            type: array
+            items:
+              enum:
+              - online
+              - hybrid
+              - in_person
+              - offline
+              type: string
+              description: |-
+                * `online` - Online
+                * `hybrid` - Hybrid
+                * `in_person` - In person
+                * `offline` - Offline
+            enum:
+            - hybrid
+            - in_person
+            - offline
+            - online
+        description: |-
+          The delivery of course/program resources
+
+          * `online` - Online
+          * `hybrid` - Hybrid
+          * `in_person` - In person
+          * `offline` - Offline
+        explode: true
+        style: form
+      - in: query
         name: department
         schema:
           type: array
@@ -4743,7 +5152,7 @@ paths:
             - IDS
             - MAS
             - PE
-            - RES
+            - SP
             - STS
             - WGS
         description: |-
@@ -4783,7 +5192,7 @@ paths:
           * `IDS` - Data, Systems, and Society
           * `MAS` - Media Arts and Sciences
           * `PE` - Athletics, Physical Education and Recreation
-          * `RES` - Supplemental Resources
+          * `SP` - Special Programs
           * `STS` - Science, Technology, and Society
           * `WGS` - Women's and Gender Studies
         explode: true
@@ -4793,27 +5202,6 @@ paths:
         schema:
           type: boolean
         description: The course/program is offered for free
-      - in: query
-        name: learning_format
-        schema:
-          type: array
-          items:
-            type: array
-            items:
-              type: string
-              maxLength: 24
-            enum:
-            - hybrid
-            - in_person
-            - online
-        description: |-
-          The learning format of course/program resources
-
-          * `online` - Online
-          * `hybrid` - Hybrid
-          * `in_person` - In person
-        explode: true
-        style: form
       - in: query
         name: level
         schema:
@@ -5096,6 +5484,38 @@ paths:
         explode: false
         style: form
       - in: query
+        name: delivery
+        schema:
+          type: array
+          items:
+            type: array
+            items:
+              enum:
+              - online
+              - hybrid
+              - in_person
+              - offline
+              type: string
+              description: |-
+                * `online` - Online
+                * `hybrid` - Hybrid
+                * `in_person` - In person
+                * `offline` - Offline
+            enum:
+            - hybrid
+            - in_person
+            - offline
+            - online
+        description: |-
+          The delivery of course/program resources
+
+          * `online` - Online
+          * `hybrid` - Hybrid
+          * `in_person` - In person
+          * `offline` - Offline
+        explode: true
+        style: form
+      - in: query
         name: department
         schema:
           type: array
@@ -5136,7 +5556,7 @@ paths:
             - IDS
             - MAS
             - PE
-            - RES
+            - SP
             - STS
             - WGS
         description: |-
@@ -5176,7 +5596,7 @@ paths:
           * `IDS` - Data, Systems, and Society
           * `MAS` - Media Arts and Sciences
           * `PE` - Athletics, Physical Education and Recreation
-          * `RES` - Supplemental Resources
+          * `SP` - Special Programs
           * `STS` - Science, Technology, and Society
           * `WGS` - Women's and Gender Studies
         explode: true
@@ -5186,27 +5606,6 @@ paths:
         schema:
           type: boolean
         description: The course/program is offered for free
-      - in: query
-        name: learning_format
-        schema:
-          type: array
-          items:
-            type: array
-            items:
-              type: string
-              maxLength: 24
-            enum:
-            - hybrid
-            - in_person
-            - online
-        description: |-
-          The learning format of course/program resources
-
-          * `online` - Online
-          * `hybrid` - Hybrid
-          * `in_person` - In person
-        explode: true
-        style: form
       - in: query
         name: level
         schema:
@@ -5576,6 +5975,38 @@ paths:
         explode: false
         style: form
       - in: query
+        name: delivery
+        schema:
+          type: array
+          items:
+            type: array
+            items:
+              enum:
+              - online
+              - hybrid
+              - in_person
+              - offline
+              type: string
+              description: |-
+                * `online` - Online
+                * `hybrid` - Hybrid
+                * `in_person` - In person
+                * `offline` - Offline
+            enum:
+            - hybrid
+            - in_person
+            - offline
+            - online
+        description: |-
+          The delivery of course/program resources
+
+          * `online` - Online
+          * `hybrid` - Hybrid
+          * `in_person` - In person
+          * `offline` - Offline
+        explode: true
+        style: form
+      - in: query
         name: department
         schema:
           type: array
@@ -5616,7 +6047,7 @@ paths:
             - IDS
             - MAS
             - PE
-            - RES
+            - SP
             - STS
             - WGS
         description: |-
@@ -5656,7 +6087,7 @@ paths:
           * `IDS` - Data, Systems, and Society
           * `MAS` - Media Arts and Sciences
           * `PE` - Athletics, Physical Education and Recreation
-          * `RES` - Supplemental Resources
+          * `SP` - Special Programs
           * `STS` - Science, Technology, and Society
           * `WGS` - Women's and Gender Studies
         explode: true
@@ -5666,27 +6097,6 @@ paths:
         schema:
           type: boolean
         description: The course/program is offered for free
-      - in: query
-        name: learning_format
-        schema:
-          type: array
-          items:
-            type: array
-            items:
-              type: string
-              maxLength: 24
-            enum:
-            - hybrid
-            - in_person
-            - online
-        description: |-
-          The learning format of course/program resources
-
-          * `online` - Online
-          * `hybrid` - Hybrid
-          * `in_person` - In person
-        explode: true
-        style: form
       - in: query
         name: level
         schema:
@@ -6010,11 +6420,11 @@ paths:
         schema:
           type: integer
       - in: query
-        name: parent_topic_name
+        name: parent_topic_id
         schema:
           type: array
           items:
-            type: string
+            type: number
         description: Multiple values may be separated by commas.
         explode: false
         style: form
@@ -6359,6 +6769,38 @@ paths:
         explode: false
         style: form
       - in: query
+        name: delivery
+        schema:
+          type: array
+          items:
+            type: array
+            items:
+              enum:
+              - online
+              - hybrid
+              - in_person
+              - offline
+              type: string
+              description: |-
+                * `online` - Online
+                * `hybrid` - Hybrid
+                * `in_person` - In person
+                * `offline` - Offline
+            enum:
+            - hybrid
+            - in_person
+            - offline
+            - online
+        description: |-
+          The delivery of course/program resources
+
+          * `online` - Online
+          * `hybrid` - Hybrid
+          * `in_person` - In person
+          * `offline` - Offline
+        explode: true
+        style: form
+      - in: query
         name: department
         schema:
           type: array
@@ -6399,7 +6841,7 @@ paths:
             - IDS
             - MAS
             - PE
-            - RES
+            - SP
             - STS
             - WGS
         description: |-
@@ -6439,7 +6881,7 @@ paths:
           * `IDS` - Data, Systems, and Society
           * `MAS` - Media Arts and Sciences
           * `PE` - Athletics, Physical Education and Recreation
-          * `RES` - Supplemental Resources
+          * `SP` - Special Programs
           * `STS` - Science, Technology, and Society
           * `WGS` - Women's and Gender Studies
         explode: true
@@ -6449,27 +6891,6 @@ paths:
         schema:
           type: boolean
         description: The course/program is offered for free
-      - in: query
-        name: learning_format
-        schema:
-          type: array
-          items:
-            type: array
-            items:
-              type: string
-              maxLength: 24
-            enum:
-            - hybrid
-            - in_person
-            - online
-        description: |-
-          The learning format of course/program resources
-
-          * `online` - Online
-          * `hybrid` - Hybrid
-          * `in_person` - In person
-        explode: true
-        style: form
       - in: query
         name: level
         schema:
@@ -6818,6 +7239,38 @@ paths:
         explode: false
         style: form
       - in: query
+        name: delivery
+        schema:
+          type: array
+          items:
+            type: array
+            items:
+              enum:
+              - online
+              - hybrid
+              - in_person
+              - offline
+              type: string
+              description: |-
+                * `online` - Online
+                * `hybrid` - Hybrid
+                * `in_person` - In person
+                * `offline` - Offline
+            enum:
+            - hybrid
+            - in_person
+            - offline
+            - online
+        description: |-
+          The delivery of course/program resources
+
+          * `online` - Online
+          * `hybrid` - Hybrid
+          * `in_person` - In person
+          * `offline` - Offline
+        explode: true
+        style: form
+      - in: query
         name: department
         schema:
           type: array
@@ -6858,7 +7311,7 @@ paths:
             - IDS
             - MAS
             - PE
-            - RES
+            - SP
             - STS
             - WGS
         description: |-
@@ -6898,7 +7351,7 @@ paths:
           * `IDS` - Data, Systems, and Society
           * `MAS` - Media Arts and Sciences
           * `PE` - Athletics, Physical Education and Recreation
-          * `RES` - Supplemental Resources
+          * `SP` - Special Programs
           * `STS` - Science, Technology, and Society
           * `WGS` - Women's and Gender Studies
         explode: true
@@ -6908,27 +7361,6 @@ paths:
         schema:
           type: boolean
         description: The course/program is offered for free
-      - in: query
-        name: learning_format
-        schema:
-          type: array
-          items:
-            type: array
-            items:
-              type: string
-              maxLength: 24
-            enum:
-            - hybrid
-            - in_person
-            - online
-        description: |-
-          The learning format of course/program resources
-
-          * `online` - Online
-          * `hybrid` - Hybrid
-          * `in_person` - In person
-        explode: true
-        style: form
       - in: query
         name: level
         schema:
@@ -7186,7 +7618,7 @@ components:
       - course_feature
       - professional
       - free
-      - learning_format
+      - delivery
       - resource_category
       type: string
       description: |-
@@ -7201,7 +7633,7 @@ components:
         * `course_feature` - course_feature
         * `professional` - professional
         * `free` - free
-        * `learning_format` - learning_format
+        * `delivery` - delivery
         * `resource_category` - resource_category
       x-enum-descriptions:
       - resource_type
@@ -7215,7 +7647,7 @@ components:
       - course_feature
       - professional
       - free
-      - learning_format
+      - delivery
       - resource_category
     Article:
       type: object
@@ -7508,6 +7940,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LearningResourceTopic'
+        position:
+          type: integer
+          readOnly: true
+          nullable: true
         offered_by:
           allOf:
           - $ref: '#/components/schemas/LearningResourceOfferor'
@@ -7579,7 +8015,7 @@ components:
         views:
           type: integer
           readOnly: true
-        learning_format:
+        delivery:
           type: array
           items:
             type: object
@@ -7589,6 +8025,7 @@ components:
                 - online
                 - hybrid
                 - in_person
+                - offline
               name:
                 type: string
             required:
@@ -7602,6 +8039,36 @@ components:
         resource_category:
           type: string
           description: Return the resource category of the resource
+          readOnly: true
+        format:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                enum:
+                - synchronous
+                - asynchronous
+              name:
+                type: string
+            required:
+            - code
+            - name
+          readOnly: true
+        pace:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                enum:
+                - self_paced
+                - instructor_paced
+              name:
+                type: string
+            required:
+            - code
+            - name
           readOnly: true
         resource_type:
           allOf:
@@ -7641,6 +8108,11 @@ components:
           format: uri
           nullable: true
           maxLength: 2048
+        ocw_topics:
+          type: array
+          items:
+            type: string
+            maxLength: 128
         professional:
           type: boolean
           readOnly: true
@@ -7653,19 +8125,35 @@ components:
           oneOf:
           - $ref: '#/components/schemas/AvailabilityEnum'
           - $ref: '#/components/schemas/NullEnum'
+        completeness:
+          type: number
+          format: double
+        license_cc:
+          type: boolean
+        continuing_ed_credits:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        location:
+          type: string
+          maxLength: 256
       required:
       - certification
       - certification_type
       - course
       - course_feature
+      - delivery
       - departments
+      - format
       - free
       - id
       - image
-      - learning_format
       - learning_path_parents
       - offered_by
+      - pace
       - platform
+      - position
       - prices
       - professional
       - readable_id
@@ -7716,6 +8204,12 @@ components:
           nullable: true
           minLength: 1
           maxLength: 2048
+        ocw_topics:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 128
         next_start_date:
           type: string
           format: date-time
@@ -7725,6 +8219,19 @@ components:
           oneOf:
           - $ref: '#/components/schemas/AvailabilityEnum'
           - $ref: '#/components/schemas/NullEnum'
+        completeness:
+          type: number
+          format: double
+        license_cc:
+          type: boolean
+        continuing_ed_credits:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        location:
+          type: string
+          maxLength: 256
       required:
       - readable_id
       - title
@@ -7732,6 +8239,23 @@ components:
       type: string
       enum:
       - course
+    DeliveryEnum:
+      enum:
+      - online
+      - hybrid
+      - in_person
+      - offline
+      type: string
+      description: |-
+        * `online` - Online
+        * `hybrid` - Hybrid
+        * `in_person` - In person
+        * `offline` - Offline
+      x-enum-descriptions:
+      - Online
+      - Hybrid
+      - In person
+      - Offline
     DepartmentEnum:
       enum:
       - '1'
@@ -7768,7 +8292,7 @@ components:
       - IDS
       - MAS
       - PE
-      - RES
+      - SP
       - STS
       - WGS
       type: string
@@ -7807,7 +8331,7 @@ components:
         * `IDS` - Data, Systems, and Society
         * `MAS` - Media Arts and Sciences
         * `PE` - Athletics, Physical Education and Recreation
-        * `RES` - Supplemental Resources
+        * `SP` - Special Programs
         * `STS` - Science, Technology, and Society
         * `WGS` - Women's and Gender Studies
       x-enum-descriptions:
@@ -7845,23 +8369,9 @@ components:
       - Data, Systems, and Society
       - Media Arts and Sciences
       - Athletics, Physical Education and Recreation
-      - Supplemental Resources
+      - Special Programs
       - Science, Technology, and Society
       - Women's and Gender Studies
-    LearningFormatEnum:
-      enum:
-      - online
-      - hybrid
-      - in_person
-      type: string
-      description: |-
-        * `online` - Online
-        * `hybrid` - Hybrid
-        * `in_person` - In person
-      x-enum-descriptions:
-      - Online
-      - Hybrid
-      - In person
     LearningPath:
       type: object
       description: Serializer for the LearningPath model
@@ -7926,6 +8436,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LearningResourceTopic'
+        position:
+          type: integer
+          readOnly: true
+          nullable: true
         offered_by:
           allOf:
           - $ref: '#/components/schemas/LearningResourceOfferor'
@@ -7997,7 +8511,7 @@ components:
         views:
           type: integer
           readOnly: true
-        learning_format:
+        delivery:
           type: array
           items:
             type: object
@@ -8007,6 +8521,7 @@ components:
                 - online
                 - hybrid
                 - in_person
+                - offline
               name:
                 type: string
             required:
@@ -8020,6 +8535,36 @@ components:
         resource_category:
           type: string
           description: Return the resource category of the resource
+          readOnly: true
+        format:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                enum:
+                - synchronous
+                - asynchronous
+              name:
+                type: string
+            required:
+            - code
+            - name
+          readOnly: true
+        pace:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                enum:
+                - self_paced
+                - instructor_paced
+              name:
+                type: string
+            required:
+            - code
+            - name
           readOnly: true
         resource_type:
           allOf:
@@ -8059,6 +8604,11 @@ components:
           format: uri
           nullable: true
           maxLength: 2048
+        ocw_topics:
+          type: array
+          items:
+            type: string
+            maxLength: 128
         professional:
           type: boolean
         next_start_date:
@@ -8070,19 +8620,35 @@ components:
           oneOf:
           - $ref: '#/components/schemas/AvailabilityEnum'
           - $ref: '#/components/schemas/NullEnum'
+        completeness:
+          type: number
+          format: double
+        license_cc:
+          type: boolean
+        continuing_ed_credits:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        location:
+          type: string
+          maxLength: 256
       required:
       - certification
       - certification_type
       - course_feature
+      - delivery
       - departments
+      - format
       - free
       - id
       - image
-      - learning_format
       - learning_path
       - learning_path_parents
       - offered_by
+      - pace
       - platform
+      - position
       - prices
       - readable_id
       - resource_category
@@ -8128,6 +8694,12 @@ components:
           nullable: true
           minLength: 1
           maxLength: 2048
+        ocw_topics:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 128
         professional:
           type: boolean
         next_start_date:
@@ -8139,6 +8711,19 @@ components:
           oneOf:
           - $ref: '#/components/schemas/AvailabilityEnum'
           - $ref: '#/components/schemas/NullEnum'
+        completeness:
+          type: number
+          format: double
+        license_cc:
+          type: boolean
+        continuing_ed_credits:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        location:
+          type: string
+          maxLength: 256
       required:
       - title
     LearningPathResourceResourceTypeEnum:
@@ -8550,6 +9135,53 @@ components:
             required:
             - code
             - name
+        delivery:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                enum:
+                - online
+                - hybrid
+                - in_person
+                - offline
+              name:
+                type: string
+            required:
+            - code
+            - name
+          readOnly: true
+        format:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                enum:
+                - synchronous
+                - asynchronous
+              name:
+                type: string
+            required:
+            - code
+            - name
+          readOnly: true
+        pace:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                enum:
+                - self_paced
+                - instructor_paced
+              name:
+                type: string
+            required:
+            - code
+            - name
+          readOnly: true
         run_id:
           type: string
           maxLength: 128
@@ -8619,11 +9251,22 @@ components:
           type: string
           nullable: true
           maxLength: 32
+        availability:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/AvailabilityEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        location:
+          type: string
+          maxLength: 256
       required:
+      - delivery
+      - format
       - id
       - image
       - instructors
       - level
+      - pace
       - run_id
       - title
     LearningResourceRunRequest:
@@ -8722,6 +9365,14 @@ components:
           type: string
           nullable: true
           maxLength: 32
+        availability:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/AvailabilityEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        location:
+          type: string
+          maxLength: 256
       required:
       - level
       - run_id
@@ -9437,6 +10088,12 @@ components:
           nullable: true
           minLength: 1
           maxLength: 2048
+        ocw_topics:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 128
         professional:
           type: boolean
         next_start_date:
@@ -9448,6 +10105,33 @@ components:
           oneOf:
           - $ref: '#/components/schemas/AvailabilityEnum'
           - $ref: '#/components/schemas/NullEnum'
+        completeness:
+          type: number
+          format: double
+        license_cc:
+          type: boolean
+        continuing_ed_credits:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        location:
+          type: string
+          maxLength: 256
+    PatchedLearningResourceRelationshipRequest:
+      type: object
+      description: CRUD serializer for LearningResourceRelationship
+      properties:
+        position:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        relation_type:
+          $ref: '#/components/schemas/RelationTypeEnum'
+        parent:
+          type: integer
+        child:
+          type: integer
     PatchedUserListRelationshipRequest:
       type: object
       description: Serializer for UserListRelationship model
@@ -9493,6 +10177,10 @@ components:
         query: {}
         source_type:
           $ref: '#/components/schemas/SourceTypeEnum'
+        display_label:
+          type: string
+          description: Friendly display label for the query
+          maxLength: 255
       required:
       - id
       - original_query
@@ -9543,6 +10231,12 @@ components:
             type: string
             minLength: 1
           description: The topic name. To see a list of options go to api/v1/topics/
+        ocw_topic:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          description: The ocw topic name.
         dev_mode:
           type: boolean
           nullable: true
@@ -9559,6 +10253,7 @@ components:
           description: |-
             If the parameter starts with '-' the sort is in descending order
 
+            * `featured` - Featured
             * `id` - Object ID ascending
             * `-id` - Object ID descending
             * `readable_id` - Readable ID ascending
@@ -9593,7 +10288,6 @@ components:
           maximum: 10
           minimum: 0
           nullable: true
-          default: 2.5
           description: Relevance score penalty percent per year for for resources
             without upcoming runs. Only affects results if there is a search term.
         certification:
@@ -9627,8 +10321,8 @@ components:
             * `ES` - Experimental Study Group\n* `ESD` - Engineering Systems Division\n\
             * `HST` - Medical Engineering and Science\n* `IDS` - Data, Systems, and\
             \ Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics, Physical\
-            \ Education and Recreation\n* `RES` - Supplemental Resources\n* `STS`\
-            \ - Science, Technology, and Society\n* `WGS` - Women's and Gender Studies"
+            \ Education and Recreation\n* `SP` - Special Programs\n* `STS` - Science,\
+            \ Technology, and Society\n* `WGS` - Women's and Gender Studies"
         level:
           type: array
           items:
@@ -9644,19 +10338,56 @@ components:
           items:
             $ref: '#/components/schemas/AggregationsEnum'
           description: Show resource counts by category
-        learning_format:
+        delivery:
           type: array
           items:
-            $ref: '#/components/schemas/LearningFormatEnum'
-          description: "The format(s) in which the learning resource is offered  \
-            \           \n\n* `online` - Online\n* `hybrid` - Hybrid\n* `in_person`\
-            \ - In person"
+            $ref: '#/components/schemas/DeliveryEnum'
+          description: "The delivery options in which the learning resource is offered\
+            \             \n\n* `online` - Online\n* `hybrid` - Hybrid\n* `in_person`\
+            \ - In person\n* `offline` - Offline"
         resource_category:
           type: array
           items:
             $ref: '#/components/schemas/ResourceCategoryEnum'
           description: "The category of learning resource             \n\n* `course`\
             \ - Course\n* `program` - Program\n* `learning_material` - Learning Material"
+        search_mode:
+          allOf:
+          - $ref: '#/components/schemas/SearchModeEnum'
+          description: "The open search search type for text queries             \n\
+            \n* `best_fields` - best_fields\n* `most_fields` - most_fields\n* `phrase`\
+            \ - phrase\n\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n\
+            * `phrase` - phrase"
+        slop:
+          type: integer
+          nullable: true
+          description: Allowed distance for phrase search
+        min_score:
+          type: number
+          format: double
+          maximum: 50
+          minimum: 0
+          nullable: true
+          description: Minimum score value a text query result needs to have to be
+            displayed
+        max_incompleteness_penalty:
+          type: number
+          format: double
+          maximum: 100
+          minimum: 0
+          nullable: true
+          description: Maximum score penalty for incomplete OCW courses in percent.
+            An OCW course with completeness = 0 will have this score penalty. Partially
+            complete courses have a linear penalty proportional to the degree of incompleteness.
+            Only affects results if there is a search term.
+        content_file_score_weight:
+          type: number
+          format: double
+          maximum: 1
+          minimum: 0
+          nullable: true
+          description: Score weight for content file data.  1 is the default. 0 means
+            content files are ignored
         source_type:
           allOf:
           - $ref: '#/components/schemas/SourceTypeEnum'
@@ -9831,6 +10562,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LearningResourceTopic'
+        position:
+          type: integer
+          readOnly: true
+          nullable: true
         offered_by:
           allOf:
           - $ref: '#/components/schemas/LearningResourceOfferor'
@@ -9902,7 +10637,7 @@ components:
         views:
           type: integer
           readOnly: true
-        learning_format:
+        delivery:
           type: array
           items:
             type: object
@@ -9912,6 +10647,7 @@ components:
                 - online
                 - hybrid
                 - in_person
+                - offline
               name:
                 type: string
             required:
@@ -9925,6 +10661,36 @@ components:
         resource_category:
           type: string
           description: Return the resource category of the resource
+          readOnly: true
+        format:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                enum:
+                - synchronous
+                - asynchronous
+              name:
+                type: string
+            required:
+            - code
+            - name
+          readOnly: true
+        pace:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                enum:
+                - self_paced
+                - instructor_paced
+              name:
+                type: string
+            required:
+            - code
+            - name
           readOnly: true
         resource_type:
           allOf:
@@ -9964,6 +10730,11 @@ components:
           format: uri
           nullable: true
           maxLength: 2048
+        ocw_topics:
+          type: array
+          items:
+            type: string
+            maxLength: 128
         professional:
           type: boolean
           readOnly: true
@@ -9976,19 +10747,35 @@ components:
           oneOf:
           - $ref: '#/components/schemas/AvailabilityEnum'
           - $ref: '#/components/schemas/NullEnum'
+        completeness:
+          type: number
+          format: double
+        license_cc:
+          type: boolean
+        continuing_ed_credits:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        location:
+          type: string
+          maxLength: 256
       required:
       - certification
       - certification_type
       - course_feature
+      - delivery
       - departments
+      - format
       - free
       - id
       - image
-      - learning_format
       - learning_path_parents
       - offered_by
+      - pace
       - platform
       - podcast_episode
+      - position
       - prices
       - professional
       - readable_id
@@ -10039,6 +10826,12 @@ components:
           nullable: true
           minLength: 1
           maxLength: 2048
+        ocw_topics:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 128
         next_start_date:
           type: string
           format: date-time
@@ -10048,6 +10841,19 @@ components:
           oneOf:
           - $ref: '#/components/schemas/AvailabilityEnum'
           - $ref: '#/components/schemas/NullEnum'
+        completeness:
+          type: number
+          format: double
+        license_cc:
+          type: boolean
+        continuing_ed_credits:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        location:
+          type: string
+          maxLength: 256
       required:
       - readable_id
       - title
@@ -10092,6 +10898,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LearningResourceTopic'
+        position:
+          type: integer
+          readOnly: true
+          nullable: true
         offered_by:
           allOf:
           - $ref: '#/components/schemas/LearningResourceOfferor'
@@ -10163,7 +10973,7 @@ components:
         views:
           type: integer
           readOnly: true
-        learning_format:
+        delivery:
           type: array
           items:
             type: object
@@ -10173,6 +10983,7 @@ components:
                 - online
                 - hybrid
                 - in_person
+                - offline
               name:
                 type: string
             required:
@@ -10186,6 +10997,36 @@ components:
         resource_category:
           type: string
           description: Return the resource category of the resource
+          readOnly: true
+        format:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                enum:
+                - synchronous
+                - asynchronous
+              name:
+                type: string
+            required:
+            - code
+            - name
+          readOnly: true
+        pace:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                enum:
+                - self_paced
+                - instructor_paced
+              name:
+                type: string
+            required:
+            - code
+            - name
           readOnly: true
         resource_type:
           allOf:
@@ -10225,6 +11066,11 @@ components:
           format: uri
           nullable: true
           maxLength: 2048
+        ocw_topics:
+          type: array
+          items:
+            type: string
+            maxLength: 128
         professional:
           type: boolean
           readOnly: true
@@ -10237,19 +11083,35 @@ components:
           oneOf:
           - $ref: '#/components/schemas/AvailabilityEnum'
           - $ref: '#/components/schemas/NullEnum'
+        completeness:
+          type: number
+          format: double
+        license_cc:
+          type: boolean
+        continuing_ed_credits:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        location:
+          type: string
+          maxLength: 256
       required:
       - certification
       - certification_type
       - course_feature
+      - delivery
       - departments
+      - format
       - free
       - id
       - image
-      - learning_format
       - learning_path_parents
       - offered_by
+      - pace
       - platform
       - podcast
+      - position
       - prices
       - professional
       - readable_id
@@ -10300,6 +11162,12 @@ components:
           nullable: true
           minLength: 1
           maxLength: 2048
+        ocw_topics:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 128
         next_start_date:
           type: string
           format: date-time
@@ -10309,6 +11177,19 @@ components:
           oneOf:
           - $ref: '#/components/schemas/AvailabilityEnum'
           - $ref: '#/components/schemas/NullEnum'
+        completeness:
+          type: number
+          format: double
+        license_cc:
+          type: boolean
+        continuing_ed_credits:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        location:
+          type: string
+          maxLength: 256
       required:
       - readable_id
       - title
@@ -10341,6 +11222,12 @@ components:
       description: Serializer for Program Certificates
       properties:
         record_hash:
+          type: string
+          readOnly: true
+        program_letter_generate_url:
+          type: string
+          readOnly: true
+        program_letter_share_url:
           type: string
           readOnly: true
         program_title:
@@ -10416,6 +11303,8 @@ components:
           format: date-time
           nullable: true
       required:
+      - program_letter_generate_url
+      - program_letter_share_url
       - program_title
       - record_hash
       - user_email
@@ -10483,6 +11372,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LearningResourceTopic'
+        position:
+          type: integer
+          readOnly: true
+          nullable: true
         offered_by:
           allOf:
           - $ref: '#/components/schemas/LearningResourceOfferor'
@@ -10554,7 +11447,7 @@ components:
         views:
           type: integer
           readOnly: true
-        learning_format:
+        delivery:
           type: array
           items:
             type: object
@@ -10564,6 +11457,7 @@ components:
                 - online
                 - hybrid
                 - in_person
+                - offline
               name:
                 type: string
             required:
@@ -10577,6 +11471,36 @@ components:
         resource_category:
           type: string
           description: Return the resource category of the resource
+          readOnly: true
+        format:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                enum:
+                - synchronous
+                - asynchronous
+              name:
+                type: string
+            required:
+            - code
+            - name
+          readOnly: true
+        pace:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                enum:
+                - self_paced
+                - instructor_paced
+              name:
+                type: string
+            required:
+            - code
+            - name
           readOnly: true
         resource_type:
           allOf:
@@ -10616,6 +11540,11 @@ components:
           format: uri
           nullable: true
           maxLength: 2048
+        ocw_topics:
+          type: array
+          items:
+            type: string
+            maxLength: 128
         professional:
           type: boolean
           readOnly: true
@@ -10628,18 +11557,34 @@ components:
           oneOf:
           - $ref: '#/components/schemas/AvailabilityEnum'
           - $ref: '#/components/schemas/NullEnum'
+        completeness:
+          type: number
+          format: double
+        license_cc:
+          type: boolean
+        continuing_ed_credits:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        location:
+          type: string
+          maxLength: 256
       required:
       - certification
       - certification_type
       - course_feature
+      - delivery
       - departments
+      - format
       - free
       - id
       - image
-      - learning_format
       - learning_path_parents
       - offered_by
+      - pace
       - platform
+      - position
       - prices
       - professional
       - program
@@ -10691,6 +11636,12 @@ components:
           nullable: true
           minLength: 1
           maxLength: 2048
+        ocw_topics:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 128
         next_start_date:
           type: string
           format: date-time
@@ -10700,6 +11651,19 @@ components:
           oneOf:
           - $ref: '#/components/schemas/AvailabilityEnum'
           - $ref: '#/components/schemas/NullEnum'
+        completeness:
+          type: number
+          format: double
+        license_cc:
+          type: boolean
+        continuing_ed_credits:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        location:
+          type: string
+          maxLength: 256
       required:
       - readable_id
       - title
@@ -10764,8 +11728,27 @@ components:
       - podcast_episode
       - video
       - video_playlist
+    SearchModeEnum:
+      enum:
+      - best_fields
+      - most_fields
+      - phrase
+      type: string
+      description: |-
+        * `best_fields` - best_fields
+        * `most_fields` - most_fields
+        * `phrase` - phrase
+
+        * `best_fields` - best_fields
+        * `most_fields` - most_fields
+        * `phrase` - phrase
+      x-enum-descriptions:
+      - best_fields
+      - most_fields
+      - phrase
     SortbyEnum:
       enum:
+      - featured
       - id
       - -id
       - readable_id
@@ -10782,6 +11765,7 @@ components:
       - upcoming
       type: string
       description: |-
+        * `featured` - Featured
         * `id` - Object ID ascending
         * `-id` - Object ID descending
         * `readable_id` - Readable ID ascending
@@ -10797,6 +11781,7 @@ components:
         * `-views` - Popularity descending
         * `upcoming` - Next start date ascending
       x-enum-descriptions:
+      - Featured
       - Object ID ascending
       - Object ID descending
       - Readable ID ascending
@@ -10995,6 +11980,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LearningResourceTopic'
+        position:
+          type: integer
+          readOnly: true
+          nullable: true
         offered_by:
           allOf:
           - $ref: '#/components/schemas/LearningResourceOfferor'
@@ -11066,7 +12055,7 @@ components:
         views:
           type: integer
           readOnly: true
-        learning_format:
+        delivery:
           type: array
           items:
             type: object
@@ -11076,6 +12065,7 @@ components:
                 - online
                 - hybrid
                 - in_person
+                - offline
               name:
                 type: string
             required:
@@ -11089,6 +12079,36 @@ components:
         resource_category:
           type: string
           description: Return the resource category of the resource
+          readOnly: true
+        format:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                enum:
+                - synchronous
+                - asynchronous
+              name:
+                type: string
+            required:
+            - code
+            - name
+          readOnly: true
+        pace:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                enum:
+                - self_paced
+                - instructor_paced
+              name:
+                type: string
+            required:
+            - code
+            - name
           readOnly: true
         resource_type:
           allOf:
@@ -11128,6 +12148,11 @@ components:
           format: uri
           nullable: true
           maxLength: 2048
+        ocw_topics:
+          type: array
+          items:
+            type: string
+            maxLength: 128
         professional:
           type: boolean
           readOnly: true
@@ -11140,18 +12165,34 @@ components:
           oneOf:
           - $ref: '#/components/schemas/AvailabilityEnum'
           - $ref: '#/components/schemas/NullEnum'
+        completeness:
+          type: number
+          format: double
+        license_cc:
+          type: boolean
+        continuing_ed_credits:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        location:
+          type: string
+          maxLength: 256
       required:
       - certification
       - certification_type
       - course_feature
+      - delivery
       - departments
+      - format
       - free
       - id
       - image
-      - learning_format
       - learning_path_parents
       - offered_by
+      - pace
       - platform
+      - position
       - prices
       - professional
       - readable_id
@@ -11203,6 +12244,12 @@ components:
           nullable: true
           minLength: 1
           maxLength: 2048
+        ocw_topics:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 128
         next_start_date:
           type: string
           format: date-time
@@ -11212,6 +12259,19 @@ components:
           oneOf:
           - $ref: '#/components/schemas/AvailabilityEnum'
           - $ref: '#/components/schemas/NullEnum'
+        completeness:
+          type: number
+          format: double
+        license_cc:
+          type: boolean
+        continuing_ed_credits:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        location:
+          type: string
+          maxLength: 256
       required:
       - readable_id
       - title
@@ -11242,6 +12302,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LearningResourceTopic'
+        position:
+          type: integer
+          readOnly: true
+          nullable: true
         offered_by:
           allOf:
           - $ref: '#/components/schemas/LearningResourceOfferor'
@@ -11313,7 +12377,7 @@ components:
         views:
           type: integer
           readOnly: true
-        learning_format:
+        delivery:
           type: array
           items:
             type: object
@@ -11323,6 +12387,7 @@ components:
                 - online
                 - hybrid
                 - in_person
+                - offline
               name:
                 type: string
             required:
@@ -11336,6 +12401,36 @@ components:
         resource_category:
           type: string
           description: Return the resource category of the resource
+          readOnly: true
+        format:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                enum:
+                - synchronous
+                - asynchronous
+              name:
+                type: string
+            required:
+            - code
+            - name
+          readOnly: true
+        pace:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                enum:
+                - self_paced
+                - instructor_paced
+              name:
+                type: string
+            required:
+            - code
+            - name
           readOnly: true
         resource_type:
           allOf:
@@ -11375,6 +12470,11 @@ components:
           format: uri
           nullable: true
           maxLength: 2048
+        ocw_topics:
+          type: array
+          items:
+            type: string
+            maxLength: 128
         professional:
           type: boolean
           readOnly: true
@@ -11387,18 +12487,34 @@ components:
           oneOf:
           - $ref: '#/components/schemas/AvailabilityEnum'
           - $ref: '#/components/schemas/NullEnum'
+        completeness:
+          type: number
+          format: double
+        license_cc:
+          type: boolean
+        continuing_ed_credits:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        location:
+          type: string
+          maxLength: 256
       required:
       - certification
       - certification_type
       - course_feature
+      - delivery
       - departments
+      - format
       - free
       - id
       - image
-      - learning_format
       - learning_path_parents
       - offered_by
+      - pace
       - platform
+      - position
       - prices
       - professional
       - readable_id
@@ -11450,6 +12566,12 @@ components:
           nullable: true
           minLength: 1
           maxLength: 2048
+        ocw_topics:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 128
         next_start_date:
           type: string
           format: date-time
@@ -11459,6 +12581,19 @@ components:
           oneOf:
           - $ref: '#/components/schemas/AvailabilityEnum'
           - $ref: '#/components/schemas/NullEnum'
+        completeness:
+          type: number
+          format: double
+        license_cc:
+          type: boolean
+        continuing_ed_credits:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        location:
+          type: string
+          maxLength: 256
       required:
       - readable_id
       - title

@@ -114,6 +114,7 @@ const LearningResourceListCardCondensed: React.FC<
       </ListCardCondensed>
     )
   }
+
   if (!resource) {
     return null
   }
@@ -130,16 +131,20 @@ const LearningResourceListCardCondensed: React.FC<
             aria-label="Add to Learning Path"
             onClick={(event) => onAddToLearningPathClick(event, resource.id)}
           >
-            <RiMenuAddLine />
+            <RiMenuAddLine aria-hidden />
           </CardActionButton>
         )}
         {onAddToUserListClick && (
           <CardActionButton
             filled={inUserList}
-            aria-label="Add to User List"
+            aria-label={`Bookmark ${getReadableResourceType(resource.resource_type)}`}
             onClick={(event) => onAddToUserListClick(event, resource.id)}
           >
-            {inUserList ? <RiBookmarkFill /> : <RiBookmarkLine />}
+            {inUserList ? (
+              <RiBookmarkFill aria-hidden />
+            ) : (
+              <RiBookmarkLine aria-hidden />
+            )}
           </CardActionButton>
         )}
         {editMenu}

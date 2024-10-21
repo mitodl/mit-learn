@@ -20,10 +20,13 @@ from learning_resources.constants import (
     CONTENT_TYPE_VIDEO,
     VALID_TEXT_FILE_TYPES,
     Availability,
+    Format,
+    LearningResourceDelivery,
     LearningResourceType,
     OfferedBy,
+    Pace,
     PlatformType,
-    RunAvailability,
+    RunStatus,
 )
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.utils import (
@@ -33,7 +36,11 @@ from learning_resources.etl.utils import (
     transform_levels,
     transform_topics,
 )
-from learning_resources.models import ContentFile, LearningResource
+from learning_resources.models import (
+    ContentFile,
+    LearningResource,
+    default_delivery,
+)
 from learning_resources.utils import (
     get_s3_object_and_read,
     parse_instructors,
@@ -46,6 +53,56 @@ log = logging.getLogger(__name__)
 OFFERED_BY = {"code": OfferedBy.ocw.name}
 PRIMARY_COURSE_ID = "primary_course_number"
 UNIQUE_FIELD = "url"
+
+
+def parse_delivery(course_data: dict) -> list[str]:
+    """
+    Parse delivery methods
+
+    Args:
+        url (str): The course url
+
+    Returns:
+        list[str]: The delivery method(s)
+    """
+    delivery = default_delivery()
+    if settings.OCW_OFFLINE_DELIVERY and not course_data.get("hide_download"):
+        delivery.append(LearningResourceDelivery.offline.name)
+    return delivery
+
+
+def parse_learn_topics(course_data: dict) -> list[dict]:
+    """
+    Parse topics. Use the "mit_learn_topics" field if it exists and isn't empty,
+    otherwise use and transform the "topics" field values.
+
+    Args:
+        course_data (dict): The course data
+
+    Returns:
+        list[dict]: The topics
+    """
+    mitlearn_topics = course_data.get("mit_learn_topics") or []
+    ocw_topics = course_data.get("topics") or []
+    if mitlearn_topics:
+        # Should already be in the correct format
+        return [
+            {"name": topic_name}
+            for topic_name in sorted(
+                {topic for topics in mitlearn_topics for topic in topics}
+            )
+        ]
+    else:
+        # Topics need to be transformed
+        return transform_topics(
+            [
+                {"name": topic_name}
+                for topic_name in sorted(
+                    {topic for topics in ocw_topics for topic in topics}
+                )
+            ],
+            OFFERED_BY["code"],
+        )
 
 
 def transform_content_files(
@@ -204,7 +261,7 @@ def transform_contentfile(
 
     title = contentfile_data.get("title")
 
-    if title == "3play caption file" or title == "3play pdf file" or not file_s3_path:
+    if title in ("3play caption file", "3play pdf file") or not file_s3_path:
         return None
 
     contentfile_data = {
@@ -245,7 +302,7 @@ def transform_run(course_data: dict) -> dict:
         "description": clean_data(course_data.get("course_description_html")),
         "year": year,
         "semester": semester,
-        "availability": RunAvailability.current.value,
+        "status": RunStatus.current.value,
         "image": {
             "url": urljoin(settings.OCW_BASE_URL, image_src) if image_src else None,
             "description": course_data.get("course_image_metadata", {}).get(
@@ -262,6 +319,10 @@ def transform_run(course_data: dict) -> dict:
         "title": course_data.get("course_title"),
         "slug": course_data.get("slug"),
         "url": course_data["url"],
+        "availability": Availability.anytime.name,
+        "delivery": parse_delivery(course_data),
+        "format": [Format.asynchronous.name],
+        "pace": [Pace.self_paced.name],
     }
 
 
@@ -302,10 +363,6 @@ def transform_course(course_data: dict) -> dict:
     readable_term = f"+{slugify(term)}" if term else ""
     readable_year = f"_{course_data.get('year')}" if year else ""
     readable_id = f"{course_data[PRIMARY_COURSE_ID]}{readable_term}{readable_year}"
-    topics = transform_topics(
-        [{"name": topic} for topics in course_data.get("topics") for topic in topics],
-        OFFERED_BY["code"],
-    )
     image_src = course_data.get("image_src")
 
     return {
@@ -338,11 +395,22 @@ def transform_course(course_data: dict) -> dict:
                 is_ocw=True,
             ),
         },
-        "topics": topics,
+        "topics": parse_learn_topics(course_data),
+        "ocw_topics": sorted(
+            {
+                topic_name
+                for topic_sublist in course_data.get("topics", [])
+                for topic_name in topic_sublist
+            }
+        ),
         "runs": [transform_run(course_data)],
         "resource_type": LearningResourceType.course.name,
         "unique_field": UNIQUE_FIELD,
         "availability": Availability.anytime.name,
+        "delivery": parse_delivery(course_data),
+        "license_cc": True,
+        "format": [Format.asynchronous.name],
+        "pace": [Pace.self_paced.name],
     }
 
 

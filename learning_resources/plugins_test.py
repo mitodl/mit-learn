@@ -8,7 +8,7 @@ from learning_resources.plugins import FavoritesListPlugin
 from main.factories import UserFactory
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 @pytest.mark.parametrize("existing_list", [True, False])
 def test_favorites_plugin_user_created(existing_list):
     """A UserList with title favorites should be created if it doesn't exist"""
@@ -17,6 +17,6 @@ def test_favorites_plugin_user_created(existing_list):
         UserListFactory.create(
             author=user, title=FAVORITES_TITLE, description="My Favorites"
         )
-    FavoritesListPlugin().user_created(user)
+    FavoritesListPlugin().user_created(user, user_data={})
     user.refresh_from_db()
     assert user.user_lists.count() == 1

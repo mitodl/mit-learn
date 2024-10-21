@@ -7,6 +7,7 @@ import re
 import ulid
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.urls import reverse
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -75,14 +76,13 @@ class PreferencesSearchSerializer(serializers.Serializer):
 
     certification = serializers.BooleanField(required=False)
     topic = serializers.ListField(child=serializers.CharField(), required=False)
-    learning_format = serializers.ListField(
-        child=serializers.CharField(), required=False
-    )
+    delivery = serializers.ListField(child=serializers.CharField(), required=False)
 
 
 class ProfileSerializer(serializers.ModelSerializer):
     """Serializer for Profile"""
 
+    name = serializers.SerializerMethodField(read_only=True)
     email_optin = serializers.BooleanField(write_only=True, required=False)
     toc_optin = serializers.BooleanField(write_only=True, required=False)
     username = serializers.SerializerMethodField(read_only=True)
@@ -91,6 +91,12 @@ class ProfileSerializer(serializers.ModelSerializer):
     placename = serializers.SerializerMethodField(read_only=True)
     topic_interests = TopicInterestsField(default=list)
     preference_search_filters = serializers.SerializerMethodField(read_only=True)
+
+    def get_name(self, obj) -> str:
+        """Get the user's name"""
+        return obj.name or " ".join(
+            filter(lambda name: name, [obj.user.first_name, obj.user.last_name])
+        )
 
     def get_username(self, obj) -> str:
         """Custom getter for the username"""  # noqa: D401
@@ -123,8 +129,8 @@ class ProfileSerializer(serializers.ModelSerializer):
             )
         if obj.topic_interests and obj.topic_interests.count() > 0:
             filters["topic"] = obj.topic_interests.values_list("name", flat=True)
-        if obj.learning_format:
-            filters["learning_format"] = obj.learning_format
+        if obj.delivery:
+            filters["delivery"] = obj.delivery
         return PreferencesSearchSerializer(instance=filters).data
 
     def validate_location(self, location):
@@ -187,7 +193,7 @@ class ProfileSerializer(serializers.ModelSerializer):
             "current_education",
             "certificate_desired",
             "time_commitment",
-            "learning_format",
+            "delivery",
             "preference_search_filters",
         )
         read_only_fields = (
@@ -271,7 +277,7 @@ class UserWebsiteSerializer(serializers.ModelSerializer):
             return super().run_validators(value)
         except ValidationError as e:
             if e.get_codes() == ["unique"]:
-                raise ValidationError(  # noqa: B904, TRY200
+                raise ValidationError(  # noqa: B904
                     {"url": ["A website of this type has already been saved."]},
                     code="unique",
                 )
@@ -362,6 +368,31 @@ class ProgramCertificateSerializer(serializers.ModelSerializer):
     """
     Serializer for Program Certificates
     """
+
+    program_letter_generate_url = serializers.SerializerMethodField()
+    program_letter_share_url = serializers.SerializerMethodField()
+
+    def get_program_letter_generate_url(self, instance) -> str:
+        request = self.context.get("request")
+        letter_url = reverse(
+            "profile:program-letter-intercept",
+            kwargs={"program_id": instance.micromasters_program_id},
+        )
+        if request:
+            return request.build_absolute_uri(letter_url)
+        return letter_url
+
+    def get_program_letter_share_url(self, instance) -> str:
+        request = self.context.get("request")
+
+        user = User.objects.get(email=instance.user_email)
+        letter, created = ProgramLetter.objects.get_or_create(
+            user=user, certificate=instance
+        )
+        letter_url = letter.get_absolute_url()
+        if request:
+            return request.build_absolute_uri(letter_url)
+        return letter_url
 
     class Meta:
         model = ProgramCertificate

@@ -12,19 +12,37 @@ import {
   RiGraduationCapLine,
   RiTranslate2,
   RiAwardLine,
+  RiPresentationLine,
+  RiMenuAddLine,
+  RiBookmarkLine,
 } from "@remixicon/react"
 import { LearningResource, LearningResourceRun, ResourceTypeEnum } from "api"
 import {
   formatDurationClockTime,
   getLearningResourcePrices,
+  getReadableResourceType,
 } from "ol-utilities"
 import { theme } from "../ThemeProvider/ThemeProvider"
 import Typography from "@mui/material/Typography"
+import type { User } from "api/hooks/user"
+import { CardActionButton } from "../LearningResourceCard/LearningResourceListCard"
+import { LearningResourceCardProps } from "../LearningResourceCard/LearningResourceCard"
 
 const InfoItems = styled.section`
   display: flex;
   flex-direction: column;
   gap: 16px;
+`
+
+const InfoHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`
+
+const ListButtonContainer = styled.div`
+  display: flex;
+  gap: 8px;
 `
 
 const InfoItemContainer = styled.div`
@@ -108,7 +126,18 @@ const INFO_ITEMS: InfoItemConfig = [
       )
     },
   },
+  {
+    label: "Topics:",
+    Icon: RiPresentationLine,
+    selector: (resource: LearningResource) => {
+      const { topics } = resource
+      if (!topics?.length) {
+        return null
+      }
 
+      return topics.map((topic) => topic.name).join(", ")
+    },
+  },
   {
     label: "Level:",
     Icon: RiDashboard3Line,
@@ -211,13 +240,22 @@ const InfoItem = ({ label, Icon, value }: InfoItemProps) => {
 const InfoSection = ({
   resource,
   run,
+  user,
+  onAddToLearningPathClick,
+  onAddToUserListClick,
 }: {
   resource?: LearningResource
   run?: LearningResourceRun
+  user?: User
+  onAddToLearningPathClick?: LearningResourceCardProps["onAddToLearningPathClick"]
+  onAddToUserListClick?: LearningResourceCardProps["onAddToUserListClick"]
 }) => {
   if (!resource) {
     return null
   }
+
+  const inUserList = !!resource?.user_list_parents?.length
+  const inLearningPath = !!resource?.learning_path_parents?.length
 
   const infoItems = INFO_ITEMS.map(({ label, Icon, selector }) => ({
     label,
@@ -231,9 +269,37 @@ const InfoSection = ({
 
   return (
     <InfoItems>
-      <Typography variant="subtitle2" component="h3">
-        Info
-      </Typography>
+      <InfoHeader>
+        <Typography variant="subtitle2" component="h3">
+          Info
+        </Typography>
+        <ListButtonContainer>
+          {user?.is_learning_path_editor && (
+            <CardActionButton
+              filled={inLearningPath}
+              aria-label="Add to Learning Path"
+              onClick={(event) =>
+                onAddToLearningPathClick
+                  ? onAddToLearningPathClick(event, resource.id)
+                  : null
+              }
+            >
+              <RiMenuAddLine aria-hidden />
+            </CardActionButton>
+          )}
+          <CardActionButton
+            filled={inUserList}
+            aria-label={`Bookmark ${getReadableResourceType(resource.resource_type)}`}
+            onClick={
+              onAddToUserListClick
+                ? (event) => onAddToUserListClick?.(event, resource.id)
+                : undefined
+            }
+          >
+            <RiBookmarkLine aria-hidden />
+          </CardActionButton>
+        </ListButtonContainer>
+      </InfoHeader>
       {infoItems.map((props, index) => (
         <InfoItem key={index} {...props} />
       ))}

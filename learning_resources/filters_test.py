@@ -9,7 +9,7 @@ from learning_resources.constants import (
     LEARNING_MATERIAL_RESOURCE_CATEGORY,
     LEARNING_RESOURCE_SORTBY_OPTIONS,
     CertificationType,
-    LearningResourceFormat,
+    LearningResourceDelivery,
     LearningResourceType,
     LevelType,
     OfferedBy,
@@ -42,7 +42,7 @@ CONTENT_API_URL = "/api/v1/contentfiles/"
 VIDEO_PLAYLISTS_API_URL = "/api/v1/video_playlists/"
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_courses():
     """Mock courses"""
     ocw_course = CourseFactory.create(
@@ -72,7 +72,7 @@ def mock_courses():
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_content_files():
     content_files = []
     for platform, offeror in [
@@ -483,31 +483,31 @@ def test_learning_resource_filter_level(client):
     assert len(results) == 2
 
 
-def test_learning_resource_filter_formats(mock_courses, client):
-    """Test that the learning_format filter works"""
+def test_learning_resource_filter_delivery(mock_courses, client):
+    """Test that the delivery filter works"""
     LearningResource.objects.filter(id=mock_courses.ocw_course.id).update(
-        learning_format=[LearningResourceFormat.online.name]
+        delivery=[LearningResourceDelivery.online.name]
     )
     LearningResource.objects.filter(id=mock_courses.mitx_course.id).update(
-        learning_format=[
-            LearningResourceFormat.online.name,
-            LearningResourceFormat.hybrid.name,
+        delivery=[
+            LearningResourceDelivery.online.name,
+            LearningResourceDelivery.hybrid.name,
         ]
     )
     LearningResource.objects.filter(id=mock_courses.mitpe_course.id).update(
-        learning_format=[
-            LearningResourceFormat.hybrid.name,
-            LearningResourceFormat.in_person.name,
+        delivery=[
+            LearningResourceDelivery.hybrid.name,
+            LearningResourceDelivery.in_person.name,
         ]
     )
 
     results = client.get(
-        f"{RESOURCE_API_URL}?learning_format={LearningResourceFormat.in_person.name}"
+        f"{RESOURCE_API_URL}?delivery={LearningResourceDelivery.in_person.name}"
     ).json()["results"]
     assert len(results) == 1
     assert results[0]["id"] == mock_courses.mitpe_course.id
 
-    multiformats_filter = f"learning_format={LearningResourceFormat.in_person.name}&learning_format={LearningResourceFormat.hybrid.name}"
+    multiformats_filter = f"delivery={LearningResourceDelivery.in_person.name}&delivery={LearningResourceDelivery.hybrid.name}"
     results = client.get(f"{RESOURCE_API_URL}?{multiformats_filter}").json()["results"]
     assert len(results) == 2
     assert sorted([result["readable_id"] for result in results]) == sorted(

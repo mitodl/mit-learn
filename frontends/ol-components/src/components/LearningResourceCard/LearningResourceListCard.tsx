@@ -171,7 +171,7 @@ export const StartDate: React.FC<{ resource: LearningResource }> = ({
 }
 
 export const Format = ({ resource }: { resource: LearningResource }) => {
-  const format = resource.learning_format?.[0]?.name
+  const format = resource.delivery?.[0]?.name
   if (!format) return null
   return (
     <div>
@@ -295,7 +295,6 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
   if (!resource) {
     return null
   }
-
   return (
     <ListCard href={href} className={className} draggable={draggable}>
       <ListCard.Image
@@ -317,16 +316,20 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
             aria-label="Add to Learning Path"
             onClick={(event) => onAddToLearningPathClick(event, resource.id)}
           >
-            <RiMenuAddLine />
+            <RiMenuAddLine aria-hidden />
           </CardActionButton>
         )}
         {onAddToUserListClick && (
           <CardActionButton
             filled={inUserList}
-            aria-label="Add to User List"
+            aria-label={`Bookmark ${getReadableResourceType(resource.resource_type)}`}
             onClick={(event) => onAddToUserListClick(event, resource.id)}
           >
-            {inUserList ? <RiBookmarkFill /> : <RiBookmarkLine />}
+            {inUserList ? (
+              <RiBookmarkFill aria-hidden />
+            ) : (
+              <RiBookmarkLine aria-hidden />
+            )}
           </CardActionButton>
         )}
         {editMenu}

@@ -6,6 +6,8 @@ from enum import Enum
 from opensearchpy.exceptions import ConnectionError as ESConnectionError
 from urllib3.exceptions import TimeoutError as UrlTimeoutError
 
+from learning_resources.constants import LEARNING_RESOURCE_SORTBY_OPTIONS
+
 ALIAS_ALL_INDICES = "all"
 COURSE_TYPE = "course"
 PROGRAM_TYPE = "program"
@@ -69,11 +71,12 @@ SEARCH_FILTERS = {
     "run_id": FilterConfig("run_id", case_sensitive=True),
     "resource_id": FilterConfig("resource_id", case_sensitive=True),
     "topic": FilterConfig("topics.name"),
+    "ocw_topic": FilterConfig("ocw_topics"),
     "level": FilterConfig("runs.level.code"),
     "department": FilterConfig("departments.department_id"),
     "platform": FilterConfig("platform.code"),
     "offered_by": FilterConfig("offered_by.code"),
-    "learning_format": FilterConfig("learning_format.code"),
+    "delivery": FilterConfig("delivery.code"),
     "resource_category": FilterConfig("resource_category"),
 }
 
@@ -87,13 +90,13 @@ SEARCH_NESTED_FILTERS = {
 
 ENGLISH_TEXT_FIELD = {
     "type": "text",
-    "fields": {"english": {"type": "text", "analyzer": "english"}},
+    "fields": {"english": {"type": "text", "analyzer": "custom_english"}},
 }
 
 ENGLISH_TEXT_FIELD_WITH_SUGGEST = {
     "type": "text",
     "fields": {
-        "english": {"type": "text", "analyzer": "english"},
+        "english": {"type": "text", "analyzer": "custom_english"},
         "trigram": {"type": "text", "analyzer": "trigram"},
     },
 }
@@ -112,7 +115,22 @@ LEARNING_RESOURCE_MAP = {
     },
     "free": {"type": "boolean"},
     "is_learning_material": {"type": "boolean"},
-    "learning_format": {
+    "is_incomplete_or_stale": {"type": "boolean"},
+    "delivery": {
+        "type": "nested",
+        "properties": {
+            "code": {"type": "keyword"},
+            "name": {"type": "keyword"},
+        },
+    },
+    "pace": {
+        "type": "nested",
+        "properties": {
+            "code": {"type": "keyword"},
+            "name": {"type": "keyword"},
+        },
+    },
+    "format": {
         "type": "nested",
         "properties": {
             "code": {"type": "keyword"},
@@ -168,6 +186,7 @@ LEARNING_RESOURCE_MAP = {
             "channel_url": {"type": "keyword"},
         },
     },
+    "ocw_topics": {"type": "keyword"},
     "offered_by": {
         "type": "nested",
         "properties": {
@@ -222,6 +241,27 @@ LEARNING_RESOURCE_MAP = {
             "languages": {"type": "keyword"},
             "slug": {"type": "keyword"},
             "availability": {"type": "keyword"},
+            "delivery": {
+                "type": "nested",
+                "properties": {
+                    "code": {"type": "keyword"},
+                    "name": {"type": "keyword"},
+                },
+            },
+            "pace": {
+                "type": "nested",
+                "properties": {
+                    "code": {"type": "keyword"},
+                    "name": {"type": "keyword"},
+                },
+            },
+            "format": {
+                "type": "nested",
+                "properties": {
+                    "code": {"type": "keyword"},
+                    "name": {"type": "keyword"},
+                },
+            },
             "semester": {"type": "keyword"},
             "year": {"type": "keyword"},
             "start_date": {"type": "date"},
@@ -245,10 +285,16 @@ LEARNING_RESOURCE_MAP = {
                 },
             },
             "prices": {"type": "scaled_float", "scaling_factor": 100},
+            "location": {"type": "keyword"},
         },
     },
     "next_start_date": {"type": "date"},
     "resource_age_date": {"type": "date"},
+    "featured_rank": {"type": "float"},
+    "completeness": {"type": "float"},
+    "license_cc": {"type": "boolean"},
+    "continuing_ed_credits": {"type": "float"},
+    "location": {"type": "keyword"},
 }
 
 
@@ -315,17 +361,15 @@ LEARNING_RESOURCE_QUERY_FIELDS = [
     "title.english^3",
     "description.english^2",
     "full_description.english",
-    "topics",
-    "platform",
+    "platform.name",
     "readable_id",
     "offered_by",
     "course_feature",
-    "course",
     "video.transcript.english",
 ]
 
 TOPICS_QUERY_FIELDS = ["topics.name"]
-DEPARTMENT_QUERY_FIELDS = ["departments.department_id"]
+DEPARTMENT_QUERY_FIELDS = ["departments.department_id", "departments.name"]
 
 COURSE_QUERY_FIELDS = [
     "course.course_numbers.value",
@@ -338,15 +382,15 @@ RUNS_QUERY_FIELDS = [
 ]
 
 RUN_INSTRUCTORS_QUERY_FIELDS = [
-    "runs.instructors.first_name",
     "runs.instructors.last_name^5",
     "runs.instructors.full_name^5",
 ]
 
 RESOURCEFILE_QUERY_FIELDS = [
-    "content",
-    "title.english^3",
-    "short_description.english^2",
+    "content.english",
+    "title.english",
+    "content_title.english",
+    "description.english",
     "content_feature_type",
 ]
 
@@ -374,4 +418,24 @@ SOURCE_EXCLUDED_FIELDS = [
     "resource_relations",
     "is_learning_material",
     "resource_age_date",
+    "featured_rank",
+    "is_incomplete_or_stale",
+]
+
+LEARNING_RESOURCE_SEARCH_SORTBY_OPTIONS = {
+    "featured": {
+        "title": "Featured",
+        "sort": "featured_rank",
+    },
+    **LEARNING_RESOURCE_SORTBY_OPTIONS,
+}
+
+SYNONYMS = [
+    "ai, ml, artificial intelligence, machine learning",
+    "math, mathematics",
+    "chem, chemistry",
+    "bio, biology",
+    "econ, economics",
+    "natural language processing, nlp",
+    "large language model, llm",
 ]

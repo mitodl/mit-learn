@@ -17,5 +17,11 @@ python $MANAGE_FILE showmigrations --list 2>&1 | indent
 python $MANAGE_FILE migrate --noinput 2>&1 | indent
 RUN_DATA_MIGRATIONS=true python $MANAGE_FILE migrate --noinput 2>&1 | indent
 
+# consolidate user subscriptions and remove duplicate percolate instances
+python $MANAGE_FILE prune_subscription_queries 2>&1 | indent
+
 echo "-----> Generating cache tables"
 python $MANAGE_FILE createcachetable 2>&1 | indent
+
+# clear cache entries
+python $MANAGE_FILE clear_cache 2>&1 | indent

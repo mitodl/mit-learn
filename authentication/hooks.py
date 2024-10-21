@@ -17,7 +17,7 @@ class AuthenticationHooks:
     """Pluggy hooks specs for authentication"""
 
     @hookspec
-    def user_created(self, user):
+    def user_created(self, user, user_data):
         """Trigger actions after a user is created"""
 
 
@@ -25,7 +25,7 @@ def get_plugin_manager():
     """Return the plugin manager for authentication hooks"""
     pm = pluggy.PluginManager(app_config.name)
     pm.add_hookspecs(AuthenticationHooks)
-    for module in settings.MITOPEN_AUTHENTICATION_PLUGINS.split(","):
+    for module in settings.MITOL_AUTHENTICATION_PLUGINS.split(","):
         if module:
             plugin_cls = import_string(module)
             pm.register(plugin_cls())

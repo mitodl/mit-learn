@@ -4,7 +4,6 @@ import random
 from datetime import timedelta
 
 import pytest
-from _pytest.fixtures import fixture
 from django.utils import timezone
 from rest_framework.reverse import reverse
 
@@ -20,7 +19,6 @@ from learning_resources.exceptions import WebhookException
 from learning_resources.factories import (
     ContentFileFactory,
     CourseFactory,
-    LearningPathFactory,
     LearningResourceDepartmentFactory,
     LearningResourceFactory,
     LearningResourceOfferorFactory,
@@ -37,7 +35,6 @@ from learning_resources.factories import (
 from learning_resources.models import (
     LearningResourceOfferor,
     LearningResourceRelationship,
-    LearningResourceRun,
 )
 from learning_resources.serializers import (
     ContentFileSerializer,
@@ -53,33 +50,6 @@ from learning_resources.serializers import (
 )
 
 pytestmark = [pytest.mark.django_db]
-
-
-@fixture()
-def offeror_featured_lists():
-    """Generate featured offeror lists for testing"""
-    for offered_by in OfferedBy.names():
-        offeror = LearningResourceOfferorFactory.create(code=offered_by)
-        featured_path = LearningPathFactory.create(resources=[]).learning_resource
-        for i in range(3):
-            resource = LearningResourceFactory.create(
-                offered_by=offeror,
-                is_course=True,
-            )
-            if offered_by == OfferedBy.ocw.name:
-                LearningResourceRun.objects.filter(
-                    learning_resource=resource.id
-                ).update(prices=[])
-            featured_path.resources.add(
-                resource,
-                through_defaults={
-                    "relation_type": LearningResourceRelationTypes.LEARNING_PATH_ITEMS,
-                    "position": i,
-                },
-            )
-        channel = ChannelUnitDetailFactory.create(unit=offeror).channel
-        channel.featured_list = featured_path
-        channel.save()
 
 
 @pytest.mark.parametrize(
@@ -577,6 +547,8 @@ def test_topics_list_endpoint(client, django_assert_num_queries):
         LearningResourceTopicFactory.create_batch(100),
         key=lambda topic: topic.name,
     )
+    for topic in topics:
+        ChannelTopicDetailFactory.create(topic=topic)
 
     with django_assert_num_queries(2):
         resp = client.get(reverse("lr:v1:topics_api-list"))
@@ -594,6 +566,7 @@ def test_topics_list_endpoint(client, django_assert_num_queries):
 def test_topics_detail_endpoint(client):
     """Test topics detail endpoint"""
     topic = LearningResourceTopicFactory.create()
+    ChannelTopicDetailFactory.create(topic=topic)
     resp = client.get(reverse("lr:v1:topics_api-detail", args=[topic.pk]))
     assert resp.data == LearningResourceTopicSerializer(instance=topic).data
 
@@ -601,11 +574,8 @@ def test_topics_detail_endpoint(client):
 @pytest.mark.parametrize("published", [True, False])
 def test_topic_channel_url(client, published):
     """
-    Check that the topic API returns 'None' for channel_url of unpublished channels.
-
-    Note: The channel_url being None is also tested on the Channel model itself,
-    but the API may generate the channel_url in a slightly different manner (for
-    example, queryset annotation)
+    Test that topics with published channels return the channel_url,
+    and unpublished channels are not included in the response
     """
     topic = LearningResourceTopicFactory.create()
     channel = ChannelTopicDetailFactory.create(
@@ -613,9 +583,10 @@ def test_topic_channel_url(client, published):
     ).channel
     resp = client.get(reverse("lr:v1:topics_api-detail", args=[topic.pk]))
 
-    assert resp.data["channel_url"] == channel.channel_url
-    if not published:
-        assert resp.data["channel_url"] is None
+    if published:
+        assert resp.data["channel_url"] == channel.channel_url
+    else:
+        assert resp.status_code == 404
 
 
 def test_departments_list_endpoint(client):
@@ -963,7 +934,6 @@ def test_featured_view(client, offeror_featured_lists):
     resp_2 = client.get(f"{url}?limit=12")
     resp_1_ids = [resource["id"] for resource in resp_1.data.get("results")]
     resp_2_ids = [resource["id"] for resource in resp_2.data.get("results")]
-    assert resp_1_ids != resp_2_ids
     assert sorted(resp_1_ids) == sorted(resp_2_ids)
 
     for resp in [resp_1, resp_2]:

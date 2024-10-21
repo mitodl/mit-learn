@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: MIT Open API
+  title: MIT Learn API
   version: 0.0.1 (v0)
   description: MIT public API
 paths:
@@ -225,6 +225,29 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v0/channels/counts/{channel_type}/:
+    get:
+      operationId: channels_counts_list
+      description: View for retrieving an individual channel by type and name
+      summary: Channel Detail Lookup by channel type and name
+      parameters:
+      - in: path
+        name: channel_type
+        schema:
+          type: string
+          pattern: ^[A-Za-z0-9_\-]+$
+        required: true
+      tags:
+      - channels
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ChannelCounts'
+          description: ''
   /api/v0/channels/type/{channel_type}/{name}/:
     get:
       operationId: channels_type_retrieve
@@ -265,6 +288,15 @@ paths:
               schema:
                 $ref: '#/components/schemas/CKEditorSettings'
           description: ''
+  /api/v0/learning_resources_search_admin_params/:
+    get:
+      operationId: learning_resources_search_admin_params_retrieve
+      description: Learning resource search default admin param values
+      tags:
+      - learning_resources_search_admin_params
+      responses:
+        '200':
+          description: No response body
   /api/v0/news_events/:
     get:
       operationId: news_events_list
@@ -303,12 +335,12 @@ paths:
         schema:
           type: string
           enum:
-          - -created
           - -event_date
           - -id
-          - created
+          - -news_date
           - event_date
           - id
+          - news_date
         description: |-
           Sort By
 
@@ -316,8 +348,8 @@ paths:
           * `-id` - Object ID descending
           * `event_date` - Event date ascending
           * `-event_date` - Event date  descending
-          * `created` - Creation date ascending
-          * `-created` - Creation date descending
+          * `news_date` - Creation date ascending
+          * `-news_date` - Creation date descending
       tags:
       - news_events
       responses:
@@ -982,6 +1014,50 @@ components:
           department: '#/components/schemas/DepartmentChannel'
           unit: '#/components/schemas/UnitChannel'
           pathway: '#/components/schemas/PathwayChannel'
+    ChannelCounts:
+      type: object
+      description: Serializer for resource counts associated with Channel
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        counts:
+          allOf:
+          - $ref: '#/components/schemas/Counts'
+          readOnly: true
+        channel_url:
+          type: string
+          description: Get the URL for the channel
+          readOnly: true
+        created_on:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_on:
+          type: string
+          format: date-time
+          readOnly: true
+        name:
+          type: string
+          pattern: ^[A-Za-z0-9_-]+$
+          maxLength: 100
+        title:
+          type: string
+          maxLength: 100
+        channel_type:
+          $ref: '#/components/schemas/ChannelTypeEnum'
+        search_filter:
+          type: string
+          maxLength: 2048
+      required:
+      - channel_type
+      - channel_url
+      - counts
+      - created_on
+      - id
+      - name
+      - title
+      - updated_on
     ChannelCreateRequest:
       type: object
       description: |-
@@ -1125,6 +1201,16 @@ components:
           readOnly: true
       required:
       - unit
+    Counts:
+      type: object
+      properties:
+        courses:
+          type: integer
+        programs:
+          type: integer
+      required:
+      - courses
+      - programs
     CurrentEducationEnum:
       enum:
       - Doctorate
@@ -1133,7 +1219,6 @@ components:
       - Associate degree
       - Secondary/high school
       - Junior secondary/junior high/middle school
-      - Elementary/primary school
       - No formal education
       - Other education
       type: string
@@ -1145,7 +1230,6 @@ components:
         * `Associate degree` - Associate degree
         * `Secondary/high school` - Secondary/high school
         * `Junior secondary/junior high/middle school` - Junior secondary/junior high/middle school
-        * `Elementary/primary school` - Elementary/primary school
         * `No formal education` - No formal education
         * `Other education` - Other education
       x-enum-descriptions:
@@ -1155,9 +1239,25 @@ components:
       - Associate degree
       - Secondary/high school
       - Junior secondary/junior high/middle school
-      - Elementary/primary school
       - No formal education
       - Other education
+    DeliveryEnum:
+      enum:
+      - online
+      - hybrid
+      - in_person
+      - offline
+      type: string
+      description: |-
+        * `online` - Online
+        * `hybrid` - Hybrid
+        * `in_person` - In-Person
+        * `offline` - Offline
+      x-enum-descriptions:
+      - Online
+      - Hybrid
+      - In-Person
+      - Offline
     DepartmentChannel:
       type: object
       description: Serializer for Channel model of type department
@@ -1337,6 +1437,10 @@ components:
         event_datetime:
           type: string
           format: date-time
+        event_end_datetime:
+          type: string
+          format: date-time
+          nullable: true
       required:
       - audience
       - event_datetime
@@ -1444,20 +1548,6 @@ components:
       - Academic Boost
       - Career Growth
       - Lifelong Learning
-    LearningFormatEnum:
-      enum:
-      - online
-      - hybrid
-      - in_person
-      type: string
-      description: |-
-        * `online` - Online
-        * `hybrid` - Hybrid
-        * `in_person` - In-Person
-      x-enum-descriptions:
-      - Online
-      - Hybrid
-      - In-Person
     LearningPathPreview:
       type: object
       description: Serializer for a minimal preview of Learning Paths
@@ -1812,9 +1902,6 @@ components:
       type: object
       description: Serializer for Profile
       properties:
-        name:
-          type: string
-          nullable: true
         image:
           type: string
           nullable: true
@@ -1866,10 +1953,10 @@ components:
           oneOf:
           - $ref: '#/components/schemas/TimeCommitmentEnum'
           - $ref: '#/components/schemas/BlankEnum'
-        learning_format:
+        delivery:
           type: array
           items:
-            $ref: '#/components/schemas/LearningFormatEnum'
+            $ref: '#/components/schemas/DeliveryEnum'
     PatchedUserRequest:
       type: object
       description: Serializer for User
@@ -2005,7 +2092,7 @@ components:
           type: array
           items:
             type: string
-        learning_format:
+        delivery:
           type: array
           items:
             type: string
@@ -2015,7 +2102,8 @@ components:
       properties:
         name:
           type: string
-          nullable: true
+          description: Get the user's name
+          readOnly: true
         image:
           type: string
           nullable: true
@@ -2086,10 +2174,10 @@ components:
           oneOf:
           - $ref: '#/components/schemas/TimeCommitmentEnum'
           - $ref: '#/components/schemas/BlankEnum'
-        learning_format:
+        delivery:
           type: array
           items:
-            $ref: '#/components/schemas/LearningFormatEnum'
+            $ref: '#/components/schemas/DeliveryEnum'
         preference_search_filters:
           allOf:
           - $ref: '#/components/schemas/PreferencesSearch'
@@ -2098,6 +2186,7 @@ components:
       - image_file
       - image_medium_file
       - image_small_file
+      - name
       - placename
       - preference_search_filters
       - profile_image_medium
@@ -2107,9 +2196,6 @@ components:
       type: object
       description: Serializer for Profile
       properties:
-        name:
-          type: string
-          nullable: true
         image:
           type: string
           nullable: true
@@ -2161,15 +2247,21 @@ components:
           oneOf:
           - $ref: '#/components/schemas/TimeCommitmentEnum'
           - $ref: '#/components/schemas/BlankEnum'
-        learning_format:
+        delivery:
           type: array
           items:
-            $ref: '#/components/schemas/LearningFormatEnum'
+            $ref: '#/components/schemas/DeliveryEnum'
     ProgramCertificate:
       type: object
       description: Serializer for Program Certificates
       properties:
         record_hash:
+          type: string
+          readOnly: true
+        program_letter_generate_url:
+          type: string
+          readOnly: true
+        program_letter_share_url:
           type: string
           readOnly: true
         program_title:
@@ -2245,6 +2337,8 @@ components:
           format: date-time
           nullable: true
       required:
+      - program_letter_generate_url
+      - program_letter_share_url
       - program_title
       - record_hash
       - user_email
