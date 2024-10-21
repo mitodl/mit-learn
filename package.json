@@ -1,5 +1,5 @@
 {
-  "name": "mit-learn-frontend",
+  "name": "mit-learn",
   "version": "1.0.0",
   "repository": "https://github.com/mitodl/mit-learn.git",
   "license": "MIT",
@@ -13,16 +13,20 @@
   ],
   "scripts": {
     "build": "yarn workspace mit-learn run build",
-    "watch": "yarn workspace mit-learn run watch",
+    "watch": "yarn workspace main dev",
     "style-lint": "yarn workspace frontends run style-lint",
     "test": "MITOL_API_BASE_URL=https://api.test.learn.mit.edu yarn workspace frontends global:test",
     "test-watch": "MITOL_API_BASE_URL=https://api.test.learn.mit.edu yarn workspace frontends test-watch",
-    "storybook": "yarn workspace frontends storybook",
+    "storybook": "yarn workspace ol-components storybook",
     "lint-check": "yarn workspace frontends run lint-check",
     "typecheck": "yarn workspace frontends run typecheck"
   },
   "packageManager": "yarn@4.5.0",
   "devDependencies": {
     "syncpack": "^12.4.0"
+  },
+  "resolutions": {
+    "@types/react": "^18",
+    "@types/react-dom": "^18"
   }
 }

@@ -18,7 +18,7 @@ const SizedPlatformLogo = styled(PlatformLogo)<StoryProps>(
 )
 
 const meta: Meta<StoryProps> = {
-  title: "smoot-design/PlatformLogo",
+  title: "smoot-design/Logo",
   render: ({ showIconBackground, iconHeight }) => {
     return (
       <Grid container rowSpacing="12px">
@@ -37,6 +37,7 @@ const meta: Meta<StoryProps> = {
             </Grid>
             <Grid item xs={8}>
               <SizedPlatformLogo
+                height={27}
                 iconHeight={iconHeight}
                 showIconBackground={showIconBackground}
                 platformCode={platformCode as PlatformEnum}

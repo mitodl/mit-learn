@@ -1,4 +1,6 @@
+"use client"
 /// <reference types="./types/theme.d.ts" />
+/// <reference types="./types/typography.d.ts" />
 
 /**
  * Re-exports from MUI.
@@ -27,17 +29,13 @@ export type {
 
 export {
   Button,
+  ButtonLink,
   ActionButton,
   ActionButtonLink,
-  ButtonLink,
 } from "./components/Button/Button"
 export { ListCard, ListCardActionButton } from "./components/Card/ListCard"
 
-export type {
-  ButtonProps,
-  ButtonLinkProps,
-  ButtonStyleProps,
-} from "./components/Button/Button"
+export type { ButtonProps, ButtonLinkProps } from "./components/Button/Button"
 
 export { default as MuiCard } from "@mui/material/Card"
 export type { CardProps as MuiCardProps } from "@mui/material/Card"
@@ -226,9 +224,10 @@ export type {
 export { Link, linkStyles } from "./components/Link/Link"
 export type { LinkProps } from "./components/Link/Link"
 
-export * from "./hooks/useBreakpoint"
-
 export { pxToRem } from "./components/ThemeProvider/typography"
+export { MITLearnGlobalStyles } from "./components/ThemeProvider/MITLearnGlobalStyles"
 
 export { default as styled } from "@emotion/styled"
 export { css, Global } from "@emotion/react"
+
+export { AppRouterCacheProvider as NextJsAppRouterCacheProvider } from "@mui/material-nextjs/v13-appRouter"

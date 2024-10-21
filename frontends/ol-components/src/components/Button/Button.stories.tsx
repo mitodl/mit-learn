@@ -1,6 +1,6 @@
 import React from "react"
 import type { Meta, StoryObj } from "@storybook/react"
-import { Button, ActionButton, ButtonLink } from "./Button"
+import { Button, ActionButton, ButtonLink, ActionButtonLink } from "./Button"
 import Grid from "@mui/material/Grid"
 import Stack from "@mui/material/Stack"
 import {
@@ -12,7 +12,6 @@ import {
   RiMailLine,
 } from "@remixicon/react"
 
-import { withRouter } from "storybook-addon-react-router-v6"
 import { fn } from "@storybook/test"
 import { capitalize } from "ol-utilities"
 
@@ -70,7 +69,6 @@ type Story = StoryObj<typeof Button>
 export const Simple: Story = {
   args: {
     variant: "primary",
-    color: "action",
   },
   render: (args) => <Button {...args}>Button</Button>,
 }
@@ -235,7 +233,6 @@ const EXTRA_PROPS = [
 ]
 
 export const LinkStory: Story = {
-  decorators: [withRouter],
   render: () => (
     <Stack direction="row" gap={2} sx={{ my: 2 }}>
       <ButtonLink href="#fake" variant="primary">
@@ -326,17 +323,61 @@ export const ActionButtonsShowcase: Story = {
             </pre>
             {SIZES.map((size) => (
               <React.Fragment key={size}>
-                {Object.entries(ICONS).map(([key, icon]) => (
-                  <ActionButton
-                    key={key}
-                    variant={variant}
-                    edge={edge}
-                    size={size}
-                    {...args}
-                  >
-                    {icon}
-                  </ActionButton>
-                ))}
+                {Object.entries(ICONS)
+                  .filter(([_key, icon]) => icon)
+                  .map(([key, icon]) => (
+                    <ActionButton
+                      key={key}
+                      variant={variant}
+                      edge={edge}
+                      size={size}
+                      {...args}
+                    >
+                      {icon}
+                    </ActionButton>
+                  ))}
+              </React.Fragment>
+            ))}
+          </Stack>
+        )),
+      )}
+    </>
+  ),
+}
+
+export const ActionButtonLinkShowcase: StoryObj<typeof ActionButtonLink> = {
+  render: (args) => (
+    <>
+      {VARIANTS.flatMap((variant) =>
+        EDGES.flatMap((edge) => (
+          <Stack
+            direction="row"
+            gap={2}
+            key={`${variant}-${edge}`}
+            alignItems="center"
+            sx={{ my: 2 }}
+          >
+            <pre>
+              variant={variant}
+              <br />
+              edge={edge}
+            </pre>
+            {SIZES.map((size) => (
+              <React.Fragment key={size}>
+                {Object.entries(ICONS)
+                  .filter(([_key, icon]) => icon)
+                  .map(([key, icon]) => (
+                    <ActionButtonLink
+                      key={key}
+                      variant={variant}
+                      edge={edge}
+                      size={size}
+                      {...args}
+                      href="#fake"
+                    >
+                      {icon}
+                    </ActionButtonLink>
+                  ))}
               </React.Fragment>
             ))}
           </Stack>

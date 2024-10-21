@@ -1,6 +1,7 @@
 import React, { useCallback } from "react"
-import { useNavigate, useLocation, useParams } from "react-router"
-import { Link } from "react-router-dom"
+// import { useNavigate, useLocation, useParams } from "react-router"
+import { useRouter, useLocation, useParams } from "next/navigation"
+import Link from "next/link"
 import { Container, TabList, Tab, TabContext, TabPanel } from "ol-components"
 
 import { GridColumn, GridContainer } from "@/components/GridLayout/GridLayout"
@@ -8,6 +9,7 @@ import { useChannelDetail } from "api/hooks/channels"
 import EditChannelAppearanceForm from "./EditChannelAppearanceForm"
 import { ChannelPageTemplate } from "./ChannelPageTemplate"
 import MetaTags from "@/page-components/MetaTags/MetaTags"
+
 type RouteParams = {
   channelType: string
   name: string
@@ -21,13 +23,14 @@ const keyFromHash = (hash: string) => {
 
 const EditChannelPage: React.FC = () => {
   const { channelType, name } = useParams<RouteParams>()
-  const navigate = useNavigate()
+  const router = useRouter()
   const { hash } = useLocation()
   const tabValue = keyFromHash(hash)
   const channel = useChannelDetail(String(channelType), String(name))
+
   const handleChange = useCallback(
     (event: React.SyntheticEvent, newValue: string) => {
-      navigate({ hash: newValue }, { replace: true })
+      router.push({ hash: newValue }, { replace: true })
     },
     [navigate],
   )
