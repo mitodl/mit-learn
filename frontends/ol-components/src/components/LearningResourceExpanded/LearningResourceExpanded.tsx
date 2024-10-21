@@ -25,17 +25,16 @@ import type { User } from "api/hooks/user"
 import { LearningResourceCardProps } from "../LearningResourceCard/LearningResourceCard"
 import { CardActionButton } from "../LearningResourceCard/LearningResourceListCard"
 
-const Container = styled.div<{ padTop?: boolean }>((padTop) => ({
+const Container = styled.div({
   display: "flex",
   flexDirection: "column",
   padding: "0 32px 160px",
   width: "900px",
-  paddingTop: padTop ? "64px" : "0",
   [theme.breakpoints.down("md")]: {
     width: "auto",
     padding: "0 16px 160px",
   },
-}))
+})
 
 const TitleSectionContainer = styled.div({
   display: "flex",
