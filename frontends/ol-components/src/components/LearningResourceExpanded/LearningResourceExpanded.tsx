@@ -42,8 +42,11 @@ const TitleSectionContainer = styled.div({
   position: "sticky",
   justifyContent: "space-between",
   top: "0",
-  padding: "24px 0",
+  padding: "24px 32px",
   backgroundColor: theme.custom.colors.white,
+  [theme.breakpoints.down("md")]: {
+    padding: "24px 16px",
+  },
 })
 
 const ContentContainer = styled.div({
@@ -433,27 +436,29 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
   }, [resource])
 
   return (
-    <Container>
+    <>
       <TitleSection
         resource={resource}
         closeDrawer={closeDrawer ?? (() => {})}
       />
-      <ContentContainer>
-        <LeftContainer>
-          <DetailSection resource={resource} />
-          <InfoSection resource={resource} run={selectedRun} />
-        </LeftContainer>
-        <RightContainer>
-          <CallToActionSection
-            imgConfig={imgConfig}
-            resource={resource}
-            user={user}
-            onAddToLearningPathClick={onAddToLearningPathClick}
-            onAddToUserListClick={onAddToUserListClick}
-          />
-        </RightContainer>
-      </ContentContainer>
-    </Container>
+      <Container>
+        <ContentContainer>
+          <LeftContainer>
+            <DetailSection resource={resource} />
+            <InfoSection resource={resource} run={selectedRun} />
+          </LeftContainer>
+          <RightContainer>
+            <CallToActionSection
+              imgConfig={imgConfig}
+              resource={resource}
+              user={user}
+              onAddToLearningPathClick={onAddToLearningPathClick}
+              onAddToUserListClick={onAddToUserListClick}
+            />
+          </RightContainer>
+        </ContentContainer>
+      </Container>
+    </>
   )
 }
 
