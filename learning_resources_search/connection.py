@@ -27,6 +27,7 @@ def configure_connections():
         default={
             "hosts": [settings.OPENSEARCH_URL],
             "http_auth": http_auth,
+            "verify_certs": False,
             "timeout": settings.OPENSEARCH_DEFAULT_TIMEOUT,
             "connections_per_node": settings.OPENSEARCH_CONNECTIONS_PER_NODE,
             # make sure we verify SSL certificates (off by default)
@@ -105,20 +106,20 @@ def get_active_aliases(
                 for obj in object_types
             ]
             for alias in alias_tuple
-            if conn.indices.exists(alias)
+            if conn.indices.exists(index=alias)
         ]
 
     elif index_types == IndexestoUpdate.current_index.value:
         return [
             alias
             for alias in [get_default_alias_name(obj) for obj in object_types]
-            if conn.indices.exists(alias)
+            if conn.indices.exists(index=alias)
         ]
     elif index_types == IndexestoUpdate.reindexing_index.value:
         return [
             alias
             for alias in [get_reindexing_alias_name(obj) for obj in object_types]
-            if conn.indices.exists(alias)
+            if conn.indices.exists(index=alias)
         ]
     return None
 
@@ -131,4 +132,4 @@ def refresh_index(index):
         index (str): The opensearch index to refresh
     """
     conn = get_conn()
-    conn.indices.refresh(index)
+    conn.indices.refresh(index=index)

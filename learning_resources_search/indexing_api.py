@@ -132,8 +132,8 @@ def clear_and_create_index(*, index_name=None, skip_mapping=False, object_type=N
         )
         raise ValueError(msg)
     conn = get_conn()
-    if conn.indices.exists(index_name):
-        conn.indices.delete(index_name)
+    if conn.indices.exists(index=index_name):
+        conn.indices.delete(index=index_name)
     index_create_data = {
         "settings": {
             "index": {
@@ -170,7 +170,7 @@ def clear_and_create_index(*, index_name=None, skip_mapping=False, object_type=N
     if not skip_mapping:
         index_create_data["mappings"] = {"properties": MAPPING[object_type]}
     # from https://www.elastic.co/guide/en/elasticsearch/guide/current/asciifolding-token-filter.html
-    conn.indices.create(index_name, body=index_create_data)
+    conn.indices.create(index=index_name, body=index_create_data)
 
 
 def upsert_document(doc_id, doc, object_type, *, retry_on_conflict=0, **kwargs):
@@ -554,10 +554,10 @@ def switch_indices(backing_index, object_type):
             {"add": {"index": backing_index, "alias": global_alias}},
         ]
     )
-    conn.indices.update_aliases({"actions": actions})
+    conn.indices.update_aliases(actions=actions)
     refresh_index(backing_index)
     for index in old_backing_indexes:
-        conn.indices.delete(index)
+        conn.indices.delete(index=index)
 
     # Finally, remove the link to the reindexing alias
     try:
@@ -589,7 +589,7 @@ def delete_orphaned_indexes(obj_types, delete_reindexing_tags):
             for object_type in obj_types:
                 if object_type in index:
                     log.info("Deleting orphaned index %s", index)
-                    conn.indices.delete(index)
+                    conn.indices.delete(index=index)
                     break
 
 

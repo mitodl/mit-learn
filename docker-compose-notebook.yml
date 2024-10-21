@@ -8,7 +8,7 @@ x-environment: &py-environment
   MITOL_SECURE_SSL_REDIRECT: "False"
   MITOL_DB_DISABLE_SSL: "True"
   MITOL_FEATURES_DEFAULT: "True"
-  OPENSEARCH_URL: elastic:9200
+  OPENSEARCH_URL: http://elasticsearch-node-mitopen-1:9200/
   CELERY_TASK_ALWAYS_EAGER: "False"
   CELERY_BROKER_URL: redis://redis:6379/4
   CELERY_RESULT_BACKEND: redis://redis:6379/4
