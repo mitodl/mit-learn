@@ -4,7 +4,7 @@
   "runServices": [
     "watch",
     "web",
-    "elasticsearch-node-mitopen-1",
+    "opensearch-node-mitopen-1",
     "db",
     "tika",
     "celery",
