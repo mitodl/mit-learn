@@ -77,6 +77,11 @@ const RightContainer = styled.div({
   gap: "24px",
 })
 
+const EmbedlyContainer = styled.div({
+  width: "100%",
+  overflow: "hidden",
+})
+
 const Image = styled.img<{ aspect: number }>((aspect) => ({
   aspectRatio: aspect.aspect,
   borderRadius: "8px",
@@ -237,11 +242,13 @@ const ImageSection: React.FC<{
 }> = ({ resource, config }) => {
   if (resource?.resource_type === "video" && resource?.url) {
     return (
-      <EmbedlyCard
-        aspectRatio={config.width / config.height}
-        url={resource?.url}
-        embedlyKey={config.key}
-      />
+      <EmbedlyContainer>
+        <EmbedlyCard
+          aspectRatio={config.width / config.height}
+          url={resource?.url}
+          embedlyKey={config.key}
+        />
+      </EmbedlyContainer>
     )
   } else if (resource?.image) {
     return (
