@@ -143,7 +143,7 @@ LEARNING_RESOURCE_MAP = {
     "full_description": ENGLISH_TEXT_FIELD,
     "embedding": {
         "type": "knn_vector",
-        "dimension": 1536,
+        "dimension": 384,
         "method": {"name": "hnsw", "engine": "faiss"},
     },
     "text": {"type": "keyword"},
