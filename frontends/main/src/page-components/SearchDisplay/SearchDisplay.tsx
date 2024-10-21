@@ -893,7 +893,13 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
               Search Results
             </VisuallyHidden>
             <VisuallyHidden aria-live="polite" aria-atomic aria-relevant="all">
-              {/* This could be just isLoading, except we set keepPreviousData to true */}
+              {/* This could be just isLoading, except we set keepPreviousData
+               * to true
+               *
+               * Reset to empty string with `aria-relevant="all"` to announce
+               * the count when data is loaded even if count is same as previous
+               * count.
+               */}
               {isFetching || isLoading ? "" : `${data?.count} results`}
             </VisuallyHidden>
             <DesktopSortContainer>{sortDropdown}</DesktopSortContainer>
