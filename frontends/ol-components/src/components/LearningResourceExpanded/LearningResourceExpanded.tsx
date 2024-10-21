@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react"
+import React from "react"
 import styled from "@emotion/styled"
 import Skeleton from "@mui/material/Skeleton"
 import Typography from "@mui/material/Typography"
@@ -417,24 +417,6 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
   onAddToUserListClick,
   closeDrawer,
 }) => {
-  const [selectedRun, setSelectedRun] = useState(resource?.runs?.[0])
-
-  useEffect(() => {
-    if (resource) {
-      const closest = resource?.runs?.reduce(function (prev, current) {
-        const now = Date.now()
-        return prev.start_date &&
-          current.start_date &&
-          Date.parse(prev.start_date) > now &&
-          Date.parse(prev.start_date) - now <
-            Date.parse(current.start_date) - now
-          ? prev
-          : current
-      }, resource!.runs![0])
-      setSelectedRun(closest)
-    }
-  }, [resource])
-
   return (
     <>
       <TitleSection
@@ -445,7 +427,7 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
         <ContentContainer>
           <LeftContainer>
             <DetailSection resource={resource} />
-            <InfoSection resource={resource} run={selectedRun} />
+            <InfoSection resource={resource} />
           </LeftContainer>
           <RightContainer>
             <CallToActionSection
