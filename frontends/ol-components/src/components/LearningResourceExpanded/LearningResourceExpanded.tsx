@@ -25,17 +25,17 @@ import type { User } from "api/hooks/user"
 import { LearningResourceCardProps } from "../LearningResourceCard/LearningResourceCard"
 import { CardActionButton } from "../LearningResourceCard/LearningResourceListCard"
 
-const Container = styled.div<{ padTop?: boolean }>`
-  display: flex;
-  flex-direction: column;
-  padding: 0 32px 160px;
-  ${({ padTop }) => (padTop ? "padding-top: 64px;" : "")}
-  width: 900px;
-  ${({ theme }) => theme.breakpoints.down("md")} {
-    width: auto;
-    padding: 0 16px 160px;
-  }
-`
+const Container = styled.div<{ padTop?: boolean }>((padTop) => ({
+  display: "flex",
+  flexDirection: "column",
+  padding: "0 32px 160px",
+  width: "900px",
+  paddingTop: padTop ? "64px" : "0",
+  [theme.breakpoints.down("md")]: {
+    width: "auto",
+    padding: "0 16px 160px",
+  },
+}))
 
 const TitleSectionContainer = styled.div({
   display: "flex",
@@ -77,17 +77,17 @@ const RightContainer = styled.div({
   gap: "24px",
 })
 
-const Image = styled.img<{ aspect: number }>`
-  aspect-ratio: ${({ aspect }) => aspect};
-  border-radius: 8px;
-  width: 100%;
-  object-fit: cover;
-`
+const Image = styled.img<{ aspect: number }>((aspect) => ({
+  aspectRatio: aspect.aspect,
+  borderRadius: "8px",
+  width: "100%",
+  objectFit: "cover",
+}))
 
-const SkeletonImage = styled(Skeleton)<{ aspect: number }>`
-  border-radius: 8px;
-  padding-bottom: ${({ aspect }) => 100 / aspect}%;
-`
+const SkeletonImage = styled(Skeleton)<{ aspect: number }>((aspect) => ({
+  borderRadius: "8px",
+  paddingBottom: `${100 / aspect.aspect}%`,
+}))
 
 const CallToAction = styled.div({
   display: "flex",
@@ -116,50 +116,50 @@ const PlatformContainer = styled.div({
   alignSelf: "stretch",
 })
 
-const StyledLink = styled(ButtonLink)`
-  text-align: center;
-  width: 100%;
-  ${({ theme }) => theme.breakpoints.down("sm")} {
-    margin-top: 10px;
-    margin-bottom: 10px;
-  }
-`
+const StyledLink = styled(ButtonLink)({
+  textAlign: "center",
+  width: "100%",
+  [theme.breakpoints.down("sm")]: {
+    marginTop: "10px",
+    marginBottom: "10px",
+  },
+})
 
-const Platform = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 16px;
-`
+const Platform = styled.div({
+  display: "flex",
+  justifyContent: "flex-end",
+  alignItems: "center",
+  gap: "16px",
+})
 
-const Detail = styled.section`
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-`
+const Detail = styled.section({
+  display: "flex",
+  flexDirection: "column",
+  gap: "8px",
+})
 
-const Description = styled.p`
-  ${{ ...theme.typography.body2 }}
-  lineHeight: "20px";
-  color: ${theme.custom.colors.black};
-  margin: 0;
-  white-space: pre-line;
-`
+const Description = styled.p({
+  ...theme.typography.body2,
+  lineHeight: "20px",
+  color: theme.custom.colors.black,
+  margin: 0,
+  whiteSpace: "pre-line",
+})
 
-const StyledPlatformLogo = styled(PlatformLogo)`
-  height: 26px;
-  max-width: 180px;
-`
+const StyledPlatformLogo = styled(PlatformLogo)({
+  height: "26px",
+  maxWidth: "180px",
+})
 
-const OnPlatform = styled.span`
-  ${{ ...theme.typography.body2 }}
-  color: ${theme.custom.colors.black};
-`
+const OnPlatform = styled.span({
+  ...theme.typography.body2,
+  color: theme.custom.colors.black,
+})
 
-const ListButtonContainer = styled.div`
-  display: flex;
-  gap: 8px;
-`
+const ListButtonContainer = styled.div({
+  display: "flex",
+  gap: "8px",
+})
 
 type LearningResourceExpandedProps = {
   resource?: LearningResource
