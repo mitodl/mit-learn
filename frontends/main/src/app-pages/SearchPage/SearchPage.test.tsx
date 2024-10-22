@@ -157,8 +157,10 @@ describe("SearchPage", () => {
 
     const clearAll = await screen.findByRole("button", { name: /clear all/i })
 
-    const physics = await screen.findByRole("checkbox", { name: "Physics" })
-    const chemistry = await screen.findByRole("checkbox", { name: "Chemistry" })
+    const physics = await screen.findByRole("checkbox", { name: "Physics 100" })
+    const chemistry = await screen.findByRole("checkbox", {
+      name: "Chemistry 200",
+    })
     // initial
     expect(physics).toBeChecked()
     expect(chemistry).toBeChecked()
@@ -554,9 +556,9 @@ test("Facet 'Offered By' uses API response for names", async () => {
     search: {
       metadata: {
         aggregations: {
-          offered_by: offerors.results.map((o) => ({
+          offered_by: offerors.results.map((o, i) => ({
             key: o.code,
-            doc_count: 10,
+            doc_count: 10 + i,
           })),
         },
         suggestions: [],
@@ -571,13 +573,13 @@ test("Facet 'Offered By' uses API response for names", async () => {
   await user.click(showFacetButton)
 
   const offeror0 = await screen.findByRole("checkbox", {
-    name: offerors.results[0].name,
+    name: `${offerors.results[0].name} 10`,
   })
   const offeror1 = await screen.findByRole("checkbox", {
-    name: offerors.results[1].name,
+    name: `${offerors.results[1].name} 11`,
   })
   const offeror2 = await screen.findByRole("checkbox", {
-    name: offerors.results[2].name,
+    name: `${offerors.results[2].name} 12`,
   })
   expect(offeror0).toBeVisible()
   expect(offeror1).toBeVisible()

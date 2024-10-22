@@ -140,7 +140,7 @@ const FacetStyles = styled.div`
     width: 100%;
     align-items: baseline;
 
-    label {
+    .facet-text {
       ${truncateText(1)};
       color: ${({ theme }) => theme.custom.colors.silverGrayDark};
     }
@@ -193,7 +193,7 @@ const FacetStyles = styled.div`
       margin-left: -2px;
 
       input,
-      label {
+      .facet-label {
         cursor: pointer;
       }
 
@@ -205,12 +205,13 @@ const FacetStyles = styled.div`
         color: ${({ theme }) => theme.custom.colors.silverGrayDark};
         float: right;
       }
-    }
 
-    .facet-visible.checked .facet-label label,
-    .facet-visible .facet-label label:hover,
-    .facet-visible input:hover + .facet-label label {
-      color: ${({ theme }) => theme.custom.colors.darkGray2};
+      &.chcked,
+      &:hover {
+        .facet-label .facet-text {
+          color: ${({ theme }) => theme.custom.colors.darkGray2};
+        }
+      }
     }
 
     .facet-more-less {
@@ -294,12 +295,10 @@ const FacetStyles = styled.div`
     padding-top: 5px;
 
     /* stylelint-disable no-descending-specificity */
-    .facet-visible {
-      .facet-label {
-        label,
-        .facet-count {
-          color: ${({ theme }) => theme.custom.colors.darkGray2};
-        }
+    .facet-visible .facet-label {
+      .facet-text,
+      .facet-count {
+        color: ${({ theme }) => theme.custom.colors.darkGray2};
       }
 
       margin-bottom: 0;
