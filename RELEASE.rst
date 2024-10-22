@@ -1,6 +1,84 @@
 Release Notes
 =============
 
+Version 0.23.0
+--------------
+
+- Revert "Fixed issue with full name not being pulled in (#1682)" (#1723)
+- Fix path to Storybook build (#1722)
+- Update for Storybook's new home in ol-components (#1721)
+- bundle analyzer, fix search page + channel page JS sizes (#1707)
+- Update ckeditor monorepo to v43 (major) (#1204)
+- Update actions/setup-node digest to 0a44ba7 (#1623)
+- Read Sentry rates from the Actions secrets
+- Fixed issue with full name not being pulled in (#1682)
+- Remove unnecessary Heroku vars
+- fix textarea placeholder color (#1712)
+- Reinstate backend release steps
+- Capture the search_update event after making the adjustments to search terms (#1709)
+- Move deploy jobs to respective workflow. Docker build for dry run
+- Appzi env vars and Sentry config
+- NextJS Sentry Integration (#1701)
+- Increase cache duration (#1705)
+- remove unnecessary webpack customizations (#1704)
+- NextJS - re-enable program letter tests (#1696)
+- Copy yarn releases to the Docker container (fixes build) (#1703)
+- Config to set cache control headers (#1700)
+- restoring up and down chevrons (#1690)
+- synonyms in analyzer (#1697)
+- NextJS Sentry Integration (#1701)
+- Prod deployment. Add Posthog vars
+- Increase cache duration (#1705)
+- Update dependency @ckeditor/ckeditor5-react to v9 (#1532)
+- remove unnecessary webpack customizations (#1704)
+- NextJS - re-enable program letter tests (#1696)
+- Update dependency @ckeditor/ckeditor5-dev-utils to v43 (#1552)
+- Copy yarn releases to the Docker container (fixes build) (#1703)
+- Update dependency @ckeditor/ckeditor5-dev-translations to v43 (#1551)
+- Config to set cache control headers (#1700)
+- Shanbady/improve bookmark button label (#1699)
+- Shanbady/xpro logo for all xpro offerings (#1695)
+- search facet accessibility fixes (#1698)
+- exclude topics with no associated channel from Topic querySets (#1693)
+- restoring up and down chevrons (#1690)
+- Merge `main` into `nextjs` (#1687)
+- Reinstate background steps image
+- Handle 404 errors from API during server render (#1678)
+- Fix search page history stack (#1680)
+- fix spacing issues on nextjs branch (#1685)
+- Make metadataBase apply to all pages, not just homepage (#1677)
+- Positioning for search utils input close button (#1617)
+- fix tests
+- bump course search utils
+- fix metadata baseurl
+- switch search page to dynamic render
+- Next.js Migration Bug Fixes  (#1626)
+- adding new og-image
+- Various post-merge bug fixes:
+- Adds PostHog back into the NextJS build (#1644)
+- Restore nextjs main workspace tests (#1639)
+- Migrate remaining images to Next.js (#1614)
+- Add error handling (#1613)
+- adding env vars (#1609)
+- Merge latest from main (#1602)
+- Fix homepage image hydration errors (#1605)
+- Migrate useMediaQuery hooks (#1563)
+- [NextJS] configure query client like on `main` (#1591)
+- [NextJS] Make noindex tag opt-out (like main) rather than opt-in (#1592)
+- CI to push to Heroku (#1569)
+- [NextJS] Load correct font and a few other global things (#1583)
+- Reinstate head metadata (#1572)
+- set single react types resolution (#1586)
+- Dockerfile for the Next.js frontend and Action to build and publish (#1542)
+- [NextJS] Fix tests, re-enable on CI (#1560)
+- fix carousel initial positioning (#1546)
+- [NextJS] Local docker setup (#1538)
+- [NextJS] fix frontend tests outside of `main` workspace (#1527)
+- Migrate Storybook for Next.js (#1525)
+- Fixes for successful build (#1516)
+- Fix linting on nextjs branch (#1509)
+- Next.js Initial Migration (#1505)
+
 Version 0.22.1 (Released October 15, 2024)
 --------------
 
