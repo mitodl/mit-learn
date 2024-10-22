@@ -38,7 +38,6 @@ def test_user_created_actions(mocker, is_new):
     kwargs = {
         "user": user,
         "is_new": is_new,
-        "details": {},
     }
 
     user_actions.user_created_actions(**kwargs)

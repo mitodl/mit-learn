@@ -17,7 +17,7 @@ class AuthenticationHooks:
     """Pluggy hooks specs for authentication"""
 
     @hookspec
-    def user_created(self, user, user_data):
+    def user_created(self, user):
         """Trigger actions after a user is created"""
 
 
