@@ -21,7 +21,7 @@ services:
       - pgdata:/var/lib/postgresql
 
   chroma:
-    image: ghcr.io/chroma-core/chroma:latest
+    image: chromadb/chroma:latest
     volumes:
       - index_data:/chroma/.chroma/index
     ports:

@@ -63,3 +63,4 @@ services:
     volumes:
       - .:/src
       - django_media:/var/media
+      - ./chroma:/home/mitodl/.cache/chroma

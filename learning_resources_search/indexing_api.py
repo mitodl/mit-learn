@@ -2,10 +2,13 @@
 Functions and constants for OpenSearch indexing
 """
 
+import asyncio
 import json
 import logging
 from math import ceil
 
+import chromadb
+from chromadb.config import Settings
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from opensearchpy.exceptions import ConflictError, NotFoundError
@@ -372,6 +375,42 @@ def index_percolators(ids, index_types):
     )
 
 
+async def async_chroma_embed_content_files(contentfiles):
+    chroma_client = await chromadb.AsyncHttpClient(
+        host="chroma",
+        port=8000,
+        settings=Settings(allow_reset=True, anonymized_telemetry=False),
+    )
+    collection = await chroma_client.get_or_create_collection(name="content_files")
+    ids = []
+    docs = []
+    for cf in contentfiles:
+        title = cf["title"] or ""
+        description = cf["description"] or ""
+        content = cf["content"] or ""
+        ids.append(str(cf["id"]))
+        docs.append(f"{title} {description} {content}")
+    await collection.add(documents=docs, ids=ids)
+
+
+def chroma_embed_content_files(contentfiles):
+    chroma_client = chromadb.HttpClient(
+        host="chroma",
+        port=8000,
+        settings=Settings(allow_reset=True, anonymized_telemetry=False),
+    )
+    collection = chroma_client.get_or_create_collection(name="content_files")
+    ids = []
+    docs = []
+    for cf in contentfiles:
+        title = cf["title"] or ""
+        description = cf["description"] or ""
+        content = cf["content"] or ""
+        ids.append(str(cf["id"]))
+        docs.append(f"{title} {description} {content}")
+    collection.add(documents=docs, ids=ids)
+
+
 def index_course_content_files(learning_resource_ids, index_types):
     """
     Index a list of content files by course ids
@@ -418,14 +457,23 @@ def index_content_files(content_file_ids, learning_resource_id, index_types):
         index_types (string): one of the values IndexestoUpdate. Whether the default
             index, the reindexing index or both need to be updated
     """
+    contentfiles = ContentFile.objects.filter(
+        pk__in=content_file_ids
+    ).for_serialization()
 
     documents = (
-        serialize_content_file_for_bulk(content_file)
-        for content_file in ContentFile.objects.filter(
-            pk__in=content_file_ids
-        ).for_serialization()
+        serialize_content_file_for_bulk(content_file) for content_file in contentfiles
     )
-
+    chroma_docs = [
+        {
+            "id": doc.id,
+            "title": doc.title,
+            "content": doc.content,
+            "description": doc.description,
+        }
+        for doc in contentfiles
+    ]
+    asyncio.run(async_chroma_embed_content_files(chroma_docs))
     index_items(
         documents,
         COURSE_TYPE,
