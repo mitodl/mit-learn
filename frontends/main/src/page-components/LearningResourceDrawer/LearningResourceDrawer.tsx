@@ -122,6 +122,7 @@ const LearningResourceDrawer = () => {
         anchor="right"
         requiredParams={RESOURCE_DRAWER_PARAMS}
         PaperProps={PAPER_PROPS}
+        hideCloseButton={true}
       >
         {({ params, closeDrawer }) => {
           return (
