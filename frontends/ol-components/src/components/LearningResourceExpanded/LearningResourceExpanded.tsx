@@ -143,7 +143,7 @@ const Detail = styled.section({
 
 const Description = styled.p({
   ...theme.typography.body2,
-  lineHeight: "20px",
+  lineHeight: "1.2rem",
   color: theme.custom.colors.black,
   margin: 0,
   whiteSpace: "pre-line",
