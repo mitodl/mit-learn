@@ -205,7 +205,7 @@ describe("Learning Resource Expanded", () => {
     const section = screen.getByTestId("drawer-info-items")
 
     within(section).getByText((_content, node) => {
-      return node?.textContent === "Topic 1 | Topic 2 | Topic 3" || false
+      return node?.textContent === "Topic 1|Topic 2|Topic 3" || false
     })
   })
 
@@ -224,7 +224,7 @@ describe("Learning Resource Expanded", () => {
     const section = screen.getByTestId("drawer-info-items")
 
     within(section).getByText((_content, node) => {
-      return node?.textContent === "English | Spanish | French" || false
+      return node?.textContent === "English|Spanish|French" || false
     })
   })
 
