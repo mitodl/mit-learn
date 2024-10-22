@@ -7,7 +7,6 @@ import {
   AppBar,
   NavDrawer,
   Toolbar,
-  ClickAwayListener,
   ActionButtonLink,
 } from "ol-components"
 import {
@@ -270,10 +269,8 @@ const Header: FunctionComponent = () => {
     event.nativeEvent.stopImmediatePropagation() // Prevent clicking on "Explore MIT" button from triggering the ClickAwayHandler
     toggleDrawer(!drawerOpen)
   }
-  const closeDrawer = (event: MouseEvent | TouchEvent) => {
-    if (drawerOpen && event.type !== "touchstart") {
-      toggleDrawer(false)
-    }
+  const closeDrawer = () => {
+    toggleDrawer(false)
   }
 
   return (
@@ -283,14 +280,10 @@ const Header: FunctionComponent = () => {
           <DesktopOnly>
             <StyledMITLogoLink logo="learn" />
             <LeftSpacer />
-            <MenuButton
-              text="Explore MIT"
-              onClick={toggler}
-              drawerOpen={drawerOpen}
-            />
+            <MenuButton text="Explore MIT" onClick={toggler} />
           </DesktopOnly>
           <MobileOnly>
-            <MenuButton onClick={toggler} drawerOpen={drawerOpen} />
+            <MenuButton onClick={toggler} />
             <LeftSpacer />
             <StyledMITLogoLink logo="learn" />
           </MobileOnly>
@@ -298,15 +291,8 @@ const Header: FunctionComponent = () => {
           <UserView />
         </StyledToolbar>
       </Bar>
-      <ClickAwayListener
-        onClickAway={closeDrawer}
-        mouseEvent="onPointerDown"
-        touchEvent="onTouchStart"
-      >
-        <div role="presentation">
-          <NavDrawer navdata={navData} open={drawerOpen} />
-        </div>
-      </ClickAwayListener>
+
+      <NavDrawer navdata={navData} open={drawerOpen} onClose={closeDrawer} />
     </div>
   )
 }
