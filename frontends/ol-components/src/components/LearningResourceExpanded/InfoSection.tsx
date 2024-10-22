@@ -24,10 +24,11 @@ import {
 import { theme } from "../ThemeProvider/ThemeProvider"
 
 const SeparatorContainer = styled.span({
+  padding: "0 8px",
   color: theme.custom.colors.silverGray,
 })
 
-const Separator: React.FC = () => <SeparatorContainer> | </SeparatorContainer>
+const Separator: React.FC = () => <SeparatorContainer>|</SeparatorContainer>
 
 const InfoItems = styled.section`
   display: flex;

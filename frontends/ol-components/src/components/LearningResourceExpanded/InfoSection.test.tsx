@@ -135,7 +135,7 @@ describe("Learning resource info section start date", () => {
         return 0
       })
       .map((run) => formatRunDate(run, false))
-      .join(" | ")
+      .join("|")
     invariant(expectedDateText)
     render(<InfoSection resource={course} />, {
       wrapper: ThemeProvider,
