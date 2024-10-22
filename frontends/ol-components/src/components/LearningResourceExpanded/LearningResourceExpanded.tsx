@@ -283,6 +283,37 @@ const getCallToActionUrl = (resource: LearningResource) => {
   }
 }
 
+const getCallToActionText = (resource: LearningResource): string => {
+  const accessCourseMaterials = "Access Course Materials"
+  const watchOnYouTube = "Watch on YouTube"
+  const listenToPodcast = "Listen to Podcast"
+  const learnMore = "Learn More"
+  const callsToAction = {
+    [ResourceTypeEnum.Course]: accessCourseMaterials,
+    [ResourceTypeEnum.Program]: learnMore,
+    [ResourceTypeEnum.LearningPath]: learnMore,
+    [ResourceTypeEnum.Video]: watchOnYouTube,
+    [ResourceTypeEnum.VideoPlaylist]: watchOnYouTube,
+    [ResourceTypeEnum.Podcast]: listenToPodcast,
+    [ResourceTypeEnum.PodcastEpisode]: listenToPodcast,
+  }
+  if (
+    resource?.resource_type === ResourceTypeEnum.Video ||
+    resource?.resource_type === ResourceTypeEnum.VideoPlaylist
+  ) {
+    // Video resources should always show "Watch on YouTube" as the CTA
+    return watchOnYouTube
+  } else {
+    if (resource?.platform?.code === PlatformEnum.Ocw) {
+      // Non-video OCW resources should show "Access Course Materials" as the CTA
+      return accessCourseMaterials
+    } else {
+      // Return the default CTA for the resource type
+      return callsToAction[resource?.resource_type] || learnMore
+    }
+  }
+}
+
 const CallToActionSection = ({
   imgConfig,
   resource,
@@ -319,19 +350,6 @@ const CallToActionSection = ({
       ? (offeredBy?.code as PlatformEnum)
       : (platform?.code as PlatformEnum)
   const platformImage = PLATFORMS[platformCode]?.image
-
-  const getCallToActionText = (resource: LearningResource): string => {
-    if (resource?.platform?.code === PlatformEnum.Ocw) {
-      return "Access Course Materials"
-    } else if (
-      resource?.resource_type === ResourceTypeEnum.Podcast ||
-      resource?.resource_type === ResourceTypeEnum.PodcastEpisode
-    ) {
-      return "Listen to Podcast"
-    }
-    return "Learn More"
-  }
-
   const cta = getCallToActionText(resource)
   return (
     <CallToAction data-testid="drawer-cta">
@@ -449,5 +467,5 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
   )
 }
 
-export { LearningResourceExpanded }
+export { LearningResourceExpanded, getCallToActionText }
 export type { LearningResourceExpandedProps }
