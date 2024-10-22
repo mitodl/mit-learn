@@ -17,6 +17,6 @@ def test_favorites_plugin_user_created(existing_list):
         UserListFactory.create(
             author=user, title=FAVORITES_TITLE, description="My Favorites"
         )
-    FavoritesListPlugin().user_created(user, user_data={})
+    FavoritesListPlugin().user_created(user)
     user.refresh_from_db()
     assert user.user_lists.count() == 1

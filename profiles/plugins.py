@@ -2,20 +2,18 @@
 
 from django.apps import apps
 
-from profiles.api import ensure_profile
+from profiles.models import Profile
 
 
 class CreateProfilePlugin:
     hookimpl = apps.get_app_config("authentication").hookimpl
 
     @hookimpl
-    def user_created(self, user, user_data):
+    def user_created(self, user):
         """
         Perform functions on a newly created user
 
         Args:
-            user(User): the user that was created
-            user_data(dict): the user data
+            user(User): The user to create the list for
         """
-        profile_data = user_data.get("profile", {})
-        ensure_profile(user, profile_data)
+        Profile.objects.get_or_create(user=user)
