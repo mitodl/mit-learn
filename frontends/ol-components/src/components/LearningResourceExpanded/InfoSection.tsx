@@ -37,6 +37,7 @@ const InfoItems = styled.section({
 })
 
 const InfoItemValue = styled.span({
+  display: "flex",
   whiteSpace: "nowrap",
 })
 
@@ -64,16 +65,18 @@ const IconContainer = styled.div({
   },
 })
 
-const InfoLabel = styled.div`
-  width: 85px;
-  flex-shrink: 0;
-`
+const InfoLabel = styled.div({
+  width: "85px",
+  flexShrink: 0,
+})
 
-const InfoValue = styled.div`
-  ${{ ...theme.typography.body3 }}
-  color: ${theme.custom.colors.darkGray2};
-  flex-grow: 1;
-`
+const InfoValue = styled.div({
+  display: "flex",
+  flexWrap: "wrap",
+  flexGrow: 1,
+  color: theme.custom.colors.darkGray2,
+  ...theme.typography.body3,
+})
 
 const PriceDisplay = styled.div({
   display: "flex",
