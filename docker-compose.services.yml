@@ -5,7 +5,7 @@ services:
   db:
     profiles:
       - backend
-    image: postgres:12.20
+    image: pgvector/pgvector:pg12
     healthcheck:
       test: ["CMD", "pg_isready"]
       interval: 3s
@@ -19,6 +19,13 @@ services:
       - POSTGRES_PASSWORD=postgres
     volumes:
       - pgdata:/var/lib/postgresql
+
+  chroma:
+    image: ghcr.io/chroma-core/chroma:latest
+    volumes:
+      - index_data:/chroma/.chroma/index
+    ports:
+      - 8000:1811
 
   redis:
     profiles:
@@ -81,3 +88,4 @@ volumes:
   # note: these are here instead of docker-compose.apps.yml because `extends` doesn't pull them in
   django_media:
   yarn-cache:
+  index_data:

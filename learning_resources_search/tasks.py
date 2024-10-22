@@ -1,5 +1,6 @@
 """Indexing tasks"""
 
+import asyncio
 import datetime
 import itertools
 import logging
@@ -10,7 +11,9 @@ from random import random
 from urllib.parse import urlencode
 
 import celery
+import chromadb
 from celery.exceptions import Ignore
+from chromadb.config import Settings
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db.models import Q
@@ -130,6 +133,45 @@ def upsert_percolate_query(percolate_id):
     )
 
 
+async def chroma_embed_resource(resource):
+    chroma_client = await chromadb.AsyncHttpClient(
+        host="chroma",
+        port=8000,
+        settings=Settings(allow_reset=True, anonymized_telemetry=False),
+    )
+
+    collection = await chroma_client.get_or_create_collection(name="learning_resources")
+    ids = []
+    docs = []
+    description = resource.description or ""
+    title = resource.title or " "
+    full_description = resource.full_description or ""
+    ids.append(str(resource.id))
+    docs.append(f"{title} {description} {full_description}")
+    await collection.add(documents=docs, ids=ids)
+
+
+@app.task
+def chroma_embed_resources():
+    chroma_client = chromadb.HttpClient(
+        host="chroma",
+        port=8000,
+        settings=Settings(allow_reset=True, anonymized_telemetry=False),
+    )
+
+    collection = chroma_client.get_or_create_collection(name="learning_resources")
+    resources = LearningResource.objects.for_search_serialization().all()
+    ids = []
+    docs = []
+    for resource in resources:
+        description = resource.description or ""
+        title = resource.title or " "
+        full_description = resource.full_description or ""
+        ids.append(str(resource.id))
+        docs.append(f"{title} {description} {full_description}")
+    collection.add(documents=docs, ids=ids)
+
+
 @app.task
 def deindex_document(doc_id, object_type, **kwargs):
     """Task that makes a request to remove an ES document"""
@@ -144,12 +186,14 @@ def upsert_learning_resource(learning_resource_id):
     )
 
     resource_data = serialize_learning_resource_for_update(resource_obj)
+
     api.upsert_document(
         learning_resource_id,
         resource_data,
         resource_obj.resource_type,
         retry_on_conflict=settings.INDEXING_ERROR_RETRIES,
     )
+    asyncio.run(chroma_embed_resource(resource_obj))
 
 
 def _infer_percolate_group(percolate_query):
