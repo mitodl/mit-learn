@@ -59,8 +59,11 @@ const InfoItemContainer = styled.div({
   },
 })
 
-const IconContainer = styled.div({
+const IconContainer = styled.span({
   transform: "translateY(25%)",
+  svg: {
+    display: "block",
+  },
   [theme.breakpoints.down("sm")]: {
     display: "none",
   },
