@@ -101,28 +101,6 @@ type InfoItemConfig = {
 
 const INFO_ITEMS: InfoItemConfig = [
   {
-    label: "Price:",
-    Icon: RiPriceTag3Line,
-    selector: (resource: LearningResource) => {
-      const prices = getLearningResourcePrices(resource)
-
-      return (
-        <PriceDisplay>
-          <div>{prices.course.display}</div>
-          {resource.certification && (
-            <Certificate>
-              <RiAwardFill />
-              {prices.certificate.display
-                ? "Earn a certificate:"
-                : "Certificate included"}
-              <span>{prices.certificate.display}</span>
-            </Certificate>
-          )}
-        </PriceDisplay>
-      )
-    },
-  },
-  {
     label: (resource: LearningResource) => {
       const asTaughtIn = resource ? showStartAnytime(resource) : false
       const label = asTaughtIn ? "As taught in:" : "Start Date:"
@@ -155,6 +133,28 @@ const INFO_ITEMS: InfoItemConfig = [
             }) ?? []
         return runDates
       } else return null
+    },
+  },
+  {
+    label: "Price:",
+    Icon: RiPriceTag3Line,
+    selector: (resource: LearningResource) => {
+      const prices = getLearningResourcePrices(resource)
+
+      return (
+        <PriceDisplay>
+          <div>{prices.course.display}</div>
+          {resource.certification && (
+            <Certificate>
+              <RiAwardFill />
+              {prices.certificate.display
+                ? "Earn a certificate:"
+                : "Certificate included"}
+              <span>{prices.certificate.display}</span>
+            </Certificate>
+          )}
+        </PriceDisplay>
+      )
     },
   },
   {
