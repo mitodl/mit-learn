@@ -111,6 +111,7 @@ def upsert_content_file(file_id):
 
     content_file_obj = ContentFile.objects.get(id=file_id)
     content_file_data = serialize_content_file_for_update(content_file_obj)
+
     api.upsert_document(
         gen_content_file_id(content_file_obj.id),
         content_file_data,
@@ -118,6 +119,7 @@ def upsert_content_file(file_id):
         retry_on_conflict=settings.INDEXING_ERROR_RETRIES,
         routing=content_file_obj.run.learning_resource_id,
     )
+    asyncio.run(chroma_embed_content_file(content_file_obj))
 
 
 @app.task
@@ -131,6 +133,21 @@ def upsert_percolate_query(percolate_id):
         PERCOLATE_INDEX_TYPE,
         retry_on_conflict=settings.INDEXING_ERROR_RETRIES,
     )
+
+
+async def chroma_embed_content_file(contentfile):
+    chroma_client = await chromadb.AsyncHttpClient(
+        host="chroma",
+        port=8000,
+        settings=Settings(allow_reset=True, anonymized_telemetry=False),
+    )
+    collection = await chroma_client.get_or_create_collection(name="content_files")
+    ids = []
+    docs = []
+    description = contentfile.content or ""
+    ids.append(str(contentfile.id))
+    docs.append(description)
+    await collection.add(documents=docs, ids=ids)
 
 
 async def chroma_embed_resource(resource):
