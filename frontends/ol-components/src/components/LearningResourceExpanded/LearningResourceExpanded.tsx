@@ -289,7 +289,7 @@ const getCallToActionText = (resource: LearningResource): string => {
   const listenToPodcast = "Listen to Podcast"
   const learnMore = "Learn More"
   const callsToAction = {
-    [ResourceTypeEnum.Course]: accessCourseMaterials,
+    [ResourceTypeEnum.Course]: learnMore,
     [ResourceTypeEnum.Program]: learnMore,
     [ResourceTypeEnum.LearningPath]: learnMore,
     [ResourceTypeEnum.Video]: watchOnYouTube,
