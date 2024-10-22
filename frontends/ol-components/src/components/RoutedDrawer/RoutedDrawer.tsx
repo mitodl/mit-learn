@@ -4,7 +4,11 @@ import styled from "@emotion/styled"
 import type { DrawerProps } from "@mui/material/Drawer"
 import { ActionButton } from "../Button/Button"
 import { RiCloseLargeLine } from "@remixicon/react"
-import { useLocation, useNavigate } from "react-router-dom"
+import {
+  useSearchParams,
+  useRouter,
+  ReadonlyURLSearchParams,
+} from "next/navigation"
 import { useToggle } from "ol-utilities"
 
 const closeSx: React.CSSProperties = {
@@ -40,16 +44,25 @@ const RoutedDrawer = <K extends string, R extends K = K>(
   const { params = requiredParams } = props
 
   const [open, setOpen] = useToggle(false)
-  const location = useLocation()
-  const navigate = useNavigate()
+  const searchParams = useSearchParams()
+  const router = useRouter()
 
   const childParams = useMemo(() => {
-    const searchParams = new URLSearchParams(location.search)
     return Object.fromEntries(
       params.map((name) => [name, searchParams.get(name)] as const),
     ) as Record<K, string | null>
-  }, [location, params])
+  }, [searchParams, params])
 
+  /**
+   * `requiredArePresnet` and `open` are usually the same, except when the
+   * drawer is in the process of closing.
+   *  - `open` changes to false when the drawer begins closing
+   *  - URL Params are updated when the drawer finishes closing, changing the
+   *   value of `requiredArePresent`
+   *
+   * This means that if content within the drawer depends on the search params,
+   * then the content will remain visible during the closing animation.
+   */
   const requiredArePresent = requiredParams.every(
     (name) => childParams[name] !== null,
   )
@@ -63,19 +76,26 @@ const RoutedDrawer = <K extends string, R extends K = K>(
   }, [requiredArePresent, setOpen, requiredParams])
 
   const removeUrlParams = useCallback(() => {
-    const getNewParams = (current: string) => {
+    const getNewParams = (current: ReadonlyURLSearchParams) => {
       const newSearchParams = new URLSearchParams(current)
       params.forEach((param) => {
         newSearchParams.delete(param)
       })
+
       return newSearchParams
     }
-    const newParams = getNewParams(location.search)
-    navigate({
-      ...location,
-      search: newParams.toString(),
-    })
-  }, [params, navigate, location])
+    const newParams = getNewParams(searchParams)
+
+    const hash = window?.location.hash
+
+    // Note that { scroll: true } and { scroll: false } both remove the hash fragment
+    if (hash) {
+      router.push(`?${newParams}${hash}`)
+    } else {
+      // Prevent scroll to top of page
+      router.push(`?${newParams}`, { scroll: false })
+    }
+  }, [router, searchParams, params])
 
   return (
     <Drawer

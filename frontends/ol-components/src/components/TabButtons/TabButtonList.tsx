@@ -14,6 +14,7 @@ const defaultTabListProps = {
   allowScrollButtonsMobile: true,
   scrollButtons: "auto",
 } as const
+
 const TabButtonList: React.FC<TabListProps> = styled((props: TabListProps) => (
   <MuiTabList {...defaultTabListProps} {...props} />
 ))([
@@ -66,10 +67,12 @@ const TabLinkInner = React.forwardRef<HTMLAnchorElement, ButtonLinkProps>(
   },
 )
 
-const TabButton = (props: TabProps<"button">) => (
+type TabButtonProps = Omit<TabProps<"button">, "color">
+const TabButton = (props: TabButtonProps) => (
   <MuiTab {...props} component={TabButtonInner} />
 )
-const TabButtonLink = (props: TabProps<"a">) => (
+
+const TabButtonLink = ({ ...props }: TabProps<typeof TabLinkInner>) => (
   <MuiTab {...props} component={TabLinkInner} />
 )
 

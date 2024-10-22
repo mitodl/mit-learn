@@ -3,7 +3,7 @@
   "private": true,
   "workspaces": [
     "api",
-    "mit-learn",
+    "main",
     "ol-ckeditor",
     "ol-common",
     "ol-components",
@@ -31,12 +31,13 @@
     "global:typecheck": "cd $INIT_CWD && tsc --noEmit",
     "global:test-watch": "cd $INIT_CWD && NODE_ENV=test jest --watch",
     "create-package": "yarn workspace ol-template plop package",
-    "storybook": "yarn workspace mit-learn storybook",
-    "build-storybook": "yarn workspace mit-learn build-storybook",
+    "storybook": "yarn workspace main storybook",
+    "build-storybook": "yarn workspace main build-storybook",
     "in-workspaces": "yarn workspaces foreach -A --exclude . --exclude frontends"
   },
   "version": "0.0.0",
   "devDependencies": {
+    "@next/eslint-plugin-next": "^14.2.7",
     "@swc/core": "^1.4.11",
     "@swc/jest": "^0.2.26",
     "@testing-library/jest-dom": "^6.4.2",
@@ -49,7 +50,7 @@
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/typescript-estree": "^5.59.2",
     "cross-fetch": "^4.0.0",
-    "eslint": "8",
+    "eslint": "8.57.0",
     "eslint-config-mitodl": "^2.1.0",
     "eslint-config-prettier": "^9.0.0",
     "eslint-import-resolver-typescript": "^3.6.1",

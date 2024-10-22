@@ -2,20 +2,7 @@ import React, { useCallback, useMemo, useState } from "react"
 import Menu, { MenuProps } from "@mui/material/Menu"
 import { MenuItem } from "../MenuItem/MenuItem"
 import ListItemIcon from "@mui/material/ListItemIcon"
-import { Link as RouterLink } from "react-router-dom"
-import type { LinkProps as RouterLinkProps } from "react-router-dom"
-
-/**
- * See https://mui.com/material-ui/guides/routing/#global-theme-link
- */
-const LinkBehavior = React.forwardRef<
-  HTMLAnchorElement,
-  Omit<RouterLinkProps, "to"> & { href: RouterLinkProps["to"] }
->((props, ref) => {
-  const { href, ...other } = props
-  // Map href (Material UI) -> to (react-router)
-  return <RouterLink ref={ref} to={href} {...other} />
-})
+import { default as RouterLink } from "next/link"
 
 interface SimpleMenuItemBase {
   key: string
@@ -107,7 +94,7 @@ const SimpleMenu: React.FC<SimpleMenuProps> = ({
                  *  - https://www.w3.org/WAI/ARIA/apg/patterns/menu-button/examples/menu-button-links/
                  *    shows a more correct implementation.
                  */
-                component: item.LinkComponent ?? LinkBehavior,
+                component: item.LinkComponent ?? RouterLink,
                 href: item.href,
               }
             : {}

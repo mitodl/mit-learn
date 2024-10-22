@@ -1,3 +1,5 @@
+"use client"
+
 import React, { useEffect } from "react"
 import styled from "@emotion/styled"
 import { default as MuiAlert, AlertColor } from "@mui/material/Alert"
@@ -5,7 +7,7 @@ import { theme } from "../ThemeProvider/ThemeProvider"
 import type { AlertProps as MuiAlertProps } from "@mui/material/Alert"
 
 type Colors = {
-  [Severity in AlertColor]: string
+  [_Severity in AlertColor]: string
 }
 
 const COLORS: Colors = {
