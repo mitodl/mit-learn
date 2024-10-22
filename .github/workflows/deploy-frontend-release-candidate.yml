@@ -1,10 +1,10 @@
-name: Production Deploy
+name: Release Candidate Deploy (Frontend)
 
 on:
   workflow_run:
     workflows: [CI]
     types: [completed]
-    branches: [release]
+    branches: [release-candidate]
   workflow_dispatch: # manual trigger
 
 jobs:
@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
         with:
-          ref: release
+          ref: release-candidate
 
       - name: Set VERSION
         run: echo "VERSION=$(./scripts/get_version.sh)" >> $GITHUB_ENV
@@ -25,38 +25,25 @@ jobs:
       - name: Write commit SHA to file
         run: echo $GITHUB_SHA > frontends/main/public/hash.txt
 
-      - name: Heroku login
-        env:
-          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
-        run: heroku container:login
-
-      - name: Release Backend on Heroku
-        uses: akhileshns/heroku-deploy@581dd286c962b6972d427fcf8980f60755c15520
-        with:
-          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
-          heroku_app_name: mitopen-production
-          heroku_email: ${{ secrets.HEROKU_EMAIL }}
-          branch: release
-
       - name: Build and push the Docker image
         env:
-          HEROKU_APP_NAME: mitopen-production-nextjs
+          HEROKU_APP_NAME: mitopen-rc-nextjs
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
-          ORIGIN: https://learn.mit.edu
-          MITOL_API_BASE_URL: https://api.learn.mit.edu
+          ORIGIN: https://next.rc.learn.mit.edu
+          MITOL_API_BASE_URL: https://api.rc.learn.mit.edu
           SITE_NAME: MIT Learn
           SUPPORT_EMAIL: mitlearn-support@mit.edu
-          EMBEDLY_KEY: ${{ secrets.EMBEDLY_KEY_PROD }}
+          EMBEDLY_KEY: ${{ secrets.EMBEDLY_KEY_RC }}
           MITOL_AXIOS_WITH_CREDENTIALS: true
-          CSRF_COOKIE_NAME: ${{ secrets.CSRF_COOKIE_NAME_PROD }}
+          CSRF_COOKIE_NAME: ${{ secrets.CSRF_COOKIE_NAME_RC }}
           POSTHOG_API_HOST: https://app.posthog.com
-          POSTHOG_PROJECT_ID: ${{ secrets.POSTHOG_PROJECT_ID_PROD }}
-          POSTHOG_API_KEY: ${{ secrets.POSTHOG_PROJECT_API_KEY_PROD }}
-          SENTRY_DSN: ${{ secrets.SENTRY_DSN_PROD }}
-          SENTRY_ENV: ${{ secrets.MITOL_ENVIRONMENT_PROD }}
-          SENTRY_PROFILES_SAMPLE_RATE: ${{ secrets.SENTRY_PROFILES_SAMPLE_RATE_PROD }}
-          SENTRY_TRACES_SAMPLE_RATE: ${{ secrets.SENTRY_TRACES_SAMPLE_RATE_PROD }}
-          APPZI_URL: ${{ secrets.APPZI_URL_PROD }}
+          POSTHOG_PROJECT_ID: ${{ secrets.POSTHOG_PROJECT_ID_RC }}
+          POSTHOG_API_KEY: ${{ secrets.POSTHOG_PROJECT_API_KEY_RC }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN_RC }}
+          SENTRY_ENV: ${{ secrets.MITOL_ENVIRONMENT_RC }}
+          SENTRY_PROFILES_SAMPLE_RATE: ${{ secrets.SENTRY_PROFILES_SAMPLE_RATE_RC }}
+          SENTRY_TRACES_SAMPLE_RATE: ${{ secrets.SENTRY_TRACES_SAMPLE_RATE_RC }}
+          APPZI_URL: ${{ secrets.APPZI_URL_RC }}
           VERSION: ${{ github.sha }}
         run: |
           heroku container:push web \
@@ -82,15 +69,15 @@ jobs:
 
       - name: Release Frontend on Heroku
         env:
-          HEROKU_APP_NAME: mitopen-production-nextjs
+          HEROKU_APP_NAME: mitopen-rc-nextjs
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
         run: heroku container:release --app $HEROKU_APP_NAME web
 
       - name: Purge Fastly cache
         uses: jcoene/fastly-purge-action@master
         with:
-          api_key: "${{ secrets.FASTLY_API_KEY_PROD_NEXTJS }}"
-          service_id: "${{ secrets.FASTLY_SERVICE_ID_PROD_NEXTJS }}"
+          api_key: "${{ secrets.FASTLY_API_KEY_RC_NEXTJS }}"
+          service_id: "${{ secrets.FASTLY_SERVICE_ID_RC_NEXTJS }}"
 
   # runs ONLY on a failure of the CI workflow
   on-failure:

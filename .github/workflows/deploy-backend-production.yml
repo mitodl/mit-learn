@@ -1,0 +1,48 @@
+name: Production Deploy (Backend)
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [release]
+  workflow_dispatch: # manual trigger
+
+jobs:
+  # runs if CI workflow was successful OR if this was manually triggered
+  on-success:
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    steps:
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+        with:
+          ref: release
+
+      - name: Set VERSION
+        run: echo "VERSION=$(./scripts/get_version.sh)" >> $GITHUB_ENV
+
+      - name: Write commit SHA to file
+        run: echo $GITHUB_SHA > frontends/main/public/hash.txt
+
+      - name: Heroku login
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: heroku container:login
+
+      - name: Release Backend on Heroku
+        uses: akhileshns/heroku-deploy@581dd286c962b6972d427fcf8980f60755c15520
+        with:
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+          heroku_app_name: mitopen-production
+          heroku_email: ${{ secrets.HEROKU_EMAIL }}
+          branch: release
+
+  # runs ONLY on a failure of the CI workflow
+  on-failure:
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'failure'
+    steps:
+      - run: echo 'The triggering workflow failed'
