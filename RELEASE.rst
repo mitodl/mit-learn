@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.23.0
+Version 0.23.0 (Released October 22, 2024)
 --------------
 
 - Revert "Fixed issue with full name not being pulled in (#1682)" (#1723)
