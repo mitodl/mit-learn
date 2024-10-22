@@ -123,8 +123,13 @@ const LearningResourceDrawer = () => {
         requiredParams={RESOURCE_DRAWER_PARAMS}
         PaperProps={PAPER_PROPS}
       >
-        {({ params }) => {
-          return <DrawerContent resourceId={Number(params.resource)} closeDrawer={closeDrawer} />
+        {({ params, closeDrawer }) => {
+          return (
+            <DrawerContent
+              resourceId={Number(params.resource)}
+              closeDrawer={closeDrawer}
+            />
+          )
         }}
       </RoutedDrawer>
     </Suspense>
