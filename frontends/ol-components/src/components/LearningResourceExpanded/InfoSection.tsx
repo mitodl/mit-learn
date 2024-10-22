@@ -30,11 +30,15 @@ const SeparatorContainer = styled.span({
 
 const Separator: React.FC = () => <SeparatorContainer>|</SeparatorContainer>
 
-const InfoItems = styled.section`
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-`
+const InfoItems = styled.section({
+  display: "flex",
+  flexDirection: "column",
+  gap: "16px",
+})
+
+const InfoItemValue = styled.span({
+  whiteSpace: "nowrap",
+})
 
 const InfoItemContainer = styled.div({
   display: "flex",
@@ -126,10 +130,10 @@ const INFO_ITEMS: InfoItemConfig = [
             .map((run, index) => {
               const totalRuns = resource.runs?.length || 0
               return (
-                <React.Fragment key={`run-${run.id}`}>
+                <InfoItemValue key={`run-${run.id}`}>
                   {formatRunDate(run, asTaughtIn)}
                   {index < totalRuns - 1 && <Separator />}
-                </React.Fragment>
+                </InfoItemValue>
               )
             }) ?? []
         return runDates
@@ -169,10 +173,10 @@ const INFO_ITEMS: InfoItemConfig = [
 
       return topics.map((topic, index) => {
         return (
-          <React.Fragment key={`topic-${index}`}>
+          <InfoItemValue key={`topic-${index}`}>
             {topic.name}
             {index < topics.length - 1 && <Separator />}
-          </React.Fragment>
+          </InfoItemValue>
         )
       })
     },
@@ -188,10 +192,10 @@ const INFO_ITEMS: InfoItemConfig = [
           return null
         }
         return (
-          <React.Fragment key={`level-${index}`}>
+          <InfoItemValue key={`level-${index}`}>
             {run?.level?.[0]?.name}
             {index < totalRuns - 1 && <Separator />}
-          </React.Fragment>
+          </InfoItemValue>
         )
       })
       if (levels?.every((level) => level === null)) {
@@ -220,10 +224,10 @@ const INFO_ITEMS: InfoItemConfig = [
       const totalInstructors = uniqueInstructors.length
       const instructors = uniqueInstructors.map((instructor, index) => {
         return (
-          <React.Fragment key={`instructor-${index}`}>
+          <InfoItemValue key={`instructor-${index}`}>
             {instructor}
             {index < totalInstructors - 1 && <Separator />}
-          </React.Fragment>
+          </InfoItemValue>
         )
       })
       return instructors
@@ -247,10 +251,10 @@ const INFO_ITEMS: InfoItemConfig = [
       const totalLanguages = uniqueLanguages.length
       return uniqueLanguages.map((language, index) => {
         return (
-          <React.Fragment key={`language-${index}`}>
+          <InfoItemValue key={`language-${index}`}>
             {ISO6391.getName(language.substring(0, 2))}
             {index < totalLanguages - 1 && <Separator />}
-          </React.Fragment>
+          </InfoItemValue>
         )
       })
     },
