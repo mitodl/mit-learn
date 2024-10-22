@@ -79,6 +79,7 @@ const InfoValue = styled.div({
   flexWrap: "wrap",
   flexGrow: 1,
   color: theme.custom.colors.darkGray2,
+  rowGap: ".2rem",
   ...theme.typography.body3,
 })
 
