@@ -23,6 +23,7 @@ from learning_resources_search.connection import (
 from learning_resources_search.constants import (
     ALIAS_ALL_INDICES,
     ALL_INDEX_TYPES,
+    CONTENT_FILE_TYPE,
     COURSE_TYPE,
     MAPPING,
     PERCOLATE_INDEX_TYPE,
@@ -117,6 +118,57 @@ def _update_document_by_id(doc_id, body, object_type, *, retry_on_conflict=0, **
             )
 
 
+def make_elser_pipeline():
+    conn = get_conn()
+
+    conn.ingest.put_pipeline(
+        id="elser-ingest-pipeline",
+        description="Ingest pipeline for ELSER",
+        processors=[
+            {
+                "inference": {
+                    "model_id": ".elser_model_2",
+                    "input_output": [
+                        {
+                            "input_field": "description",
+                            "output_field": "description_embedding",
+                        },
+                        {
+                            "input_field": "full_description",
+                            "output_field": "full_description_embedding",
+                        },
+                        {"input_field": "title", "output_field": "title_embedding"},
+                    ],
+                }
+            }
+        ],
+    )
+
+
+def make_elser_pipeline_content_file():
+    conn = get_conn()
+
+    conn.ingest.put_pipeline(
+        id="elser-ingest-pipeline-content",
+        description="Ingest pipeline for ELSER",
+        processors=[
+            {
+                "inference": {
+                    "model_id": ".elser_model_2",
+                    "input_output": [
+                        {
+                            "input_field": "description",
+                            "output_field": "description_embedding",
+                        },
+                        {"input_field": "content", "output_field": "content_embedding"},
+                        {"input_field": "title", "output_field": "title_embedding"},
+                    ],
+                }
+            }
+        ],
+    )
+
+
 def clear_and_create_index(*, index_name=None, skip_mapping=False, object_type=None):
     """
     Wipe and recreate index and mapping. No indexing is done.
@@ -140,6 +192,9 @@ def clear_and_create_index(*, index_name=None, skip_mapping=False, object_type=N
                 "number_of_shards": settings.OPENSEARCH_SHARD_COUNT,
                 "number_of_replicas": settings.OPENSEARCH_REPLICA_COUNT,
                 "refresh_interval": "60s",
+                "default_pipeline": "elser-ingest-pipeline-content"
+                if object_type == CONTENT_FILE_TYPE
+                else "elser-ingest-pipeline",
             },
             "analysis": {
                 "analyzer": {
@@ -168,7 +223,17 @@ def clear_and_create_index(*, index_name=None, skip_mapping=False, object_type=N
         }
     }
     if not skip_mapping:
-        index_create_data["mappings"] = {"properties": MAPPING[object_type]}
+        mapping = MAPPING[object_type]
+        mapping["description_embedding"] = {"type": "sparse_vector"}
+        mapping["title_embedding"] = {"type": "sparse_vector"}
+
+        if object_type in (CONTENT_FILE_TYPE, COURSE_TYPE):
+            mapping["content_embedding"] = {"type": "sparse_vector"}
+
+        if object_type != CONTENT_FILE_TYPE:
+            mapping["full_description_embedding"] = {"type": "sparse_vector"}
+
+        index_create_data["mappings"] = {"properties": mapping}
     # from https://www.elastic.co/guide/en/elasticsearch/guide/current/asciifolding-token-filter.html
     conn.indices.create(index=index_name, body=index_create_data)
 
