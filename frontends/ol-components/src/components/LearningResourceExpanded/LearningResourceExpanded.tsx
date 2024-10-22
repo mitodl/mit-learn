@@ -102,8 +102,7 @@ const CallToAction = styled.div({
   gap: "10px",
   borderRadius: "8px",
   border: `1px solid ${theme.custom.colors.lightGray2}`,
-  boxShadow:
-    "0px 2px 4px 0px rgba(37, 38, 43, 0.10), 0px 2px 4px 0px rgba(37, 38, 43, 0.10)",
+  boxShadow: "0px 2px 10px 0px rgba(37, 38, 43, 0.10)",
   [theme.breakpoints.down("md")]: {
     width: "100%",
     padding: "0",
