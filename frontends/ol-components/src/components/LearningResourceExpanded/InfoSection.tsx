@@ -44,7 +44,7 @@ const InfoItemValue = styled.span({
 const InfoItemContainer = styled.div({
   display: "flex",
   alignSelf: "stretch",
-  alignItems: "center",
+  alignItems: "baseline",
   gap: "16px",
   ...theme.typography.subtitle3,
   color: theme.custom.colors.black,
@@ -60,6 +60,7 @@ const InfoItemContainer = styled.div({
 })
 
 const IconContainer = styled.div({
+  transform: "translateY(25%)",
   [theme.breakpoints.down("sm")]: {
     display: "none",
   },
