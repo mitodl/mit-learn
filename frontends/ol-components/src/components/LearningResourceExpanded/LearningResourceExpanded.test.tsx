@@ -2,7 +2,10 @@ import React from "react"
 import { BrowserRouter } from "react-router-dom"
 import { render, screen, within } from "@testing-library/react"
 
-import { LearningResourceExpanded } from "./LearningResourceExpanded"
+import {
+  getCallToActionText,
+  LearningResourceExpanded,
+} from "./LearningResourceExpanded"
 import type { LearningResourceExpandedProps } from "./LearningResourceExpanded"
 import { ResourceTypeEnum, PodcastEpisodeResource } from "api"
 import { factories } from "api/test-utils"
@@ -54,11 +57,7 @@ describe("Learning Resource Expanded", () => {
 
       screen.getByText(resource.title)
 
-      const linkName =
-        resource.resource_type === ResourceTypeEnum.Podcast ||
-        resource.resource_type === ResourceTypeEnum.PodcastEpisode
-          ? "Listen to Podcast"
-          : "Learn More"
+      const linkName = getCallToActionText(resource)
 
       const url =
         resource.resource_type === ResourceTypeEnum.PodcastEpisode
