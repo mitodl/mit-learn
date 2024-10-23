@@ -217,7 +217,6 @@ TEMPLATES = [
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         "DIRS": [
             BASE_DIR + "/templates/",
-            BASE_DIR + "/frontends/mit-learn/build",
         ],
         "APP_DIRS": True,
         "OPTIONS": {
