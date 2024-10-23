@@ -7984,12 +7984,10 @@ components:
           - code
           - name
           readOnly: true
-        prices:
+        resource_prices:
           type: array
           items:
-            type: string
-            format: decimal
-            pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+            $ref: '#/components/schemas/LearningResourcePrice'
           readOnly: true
         runs:
           type: array
@@ -8154,10 +8152,10 @@ components:
       - pace
       - platform
       - position
-      - prices
       - professional
       - readable_id
       - resource_category
+      - resource_prices
       - resource_type
       - runs
       - title
@@ -8480,12 +8478,10 @@ components:
           - code
           - name
           readOnly: true
-        prices:
+        resource_prices:
           type: array
           items:
-            type: string
-            format: decimal
-            pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+            $ref: '#/components/schemas/LearningResourcePrice'
           readOnly: true
         runs:
           type: array
@@ -8649,9 +8645,9 @@ components:
       - pace
       - platform
       - position
-      - prices
       - readable_id
       - resource_category
+      - resource_prices
       - resource_type
       - runs
       - title
@@ -9053,6 +9049,35 @@ components:
           maxLength: 256
       required:
       - code
+    LearningResourcePrice:
+      type: object
+      description: Serializer for LearningResourcePrice model
+      properties:
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        currency:
+          type: string
+          maxLength: 3
+      required:
+      - amount
+      - currency
+    LearningResourcePriceRequest:
+      type: object
+      description: Serializer for LearningResourcePrice model
+      properties:
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        currency:
+          type: string
+          minLength: 1
+          maxLength: 3
+      required:
+      - amount
+      - currency
     LearningResourceRelationship:
       type: object
       description: CRUD serializer for LearningResourceRelationship
@@ -9182,6 +9207,11 @@ components:
             - code
             - name
           readOnly: true
+        resource_prices:
+          type: array
+          items:
+            $ref: '#/components/schemas/LearningResourcePrice'
+          readOnly: true
         run_id:
           type: string
           maxLength: 128
@@ -9240,13 +9270,6 @@ components:
           type: string
           format: date-time
           nullable: true
-        prices:
-          type: array
-          items:
-            type: string
-            format: decimal
-            pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
-          nullable: true
         checksum:
           type: string
           nullable: true
@@ -9267,6 +9290,7 @@ components:
       - instructors
       - level
       - pace
+      - resource_prices
       - run_id
       - title
     LearningResourceRunRequest:
@@ -9353,13 +9377,6 @@ components:
         enrollment_end:
           type: string
           format: date-time
-          nullable: true
-        prices:
-          type: array
-          items:
-            type: string
-            format: decimal
-            pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
           nullable: true
         checksum:
           type: string
@@ -10606,12 +10623,10 @@ components:
           - code
           - name
           readOnly: true
-        prices:
+        resource_prices:
           type: array
           items:
-            type: string
-            format: decimal
-            pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+            $ref: '#/components/schemas/LearningResourcePrice'
           readOnly: true
         runs:
           type: array
@@ -10776,10 +10791,10 @@ components:
       - platform
       - podcast_episode
       - position
-      - prices
       - professional
       - readable_id
       - resource_category
+      - resource_prices
       - resource_type
       - runs
       - title
@@ -10942,12 +10957,10 @@ components:
           - code
           - name
           readOnly: true
-        prices:
+        resource_prices:
           type: array
           items:
-            type: string
-            format: decimal
-            pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+            $ref: '#/components/schemas/LearningResourcePrice'
           readOnly: true
         runs:
           type: array
@@ -11112,10 +11125,10 @@ components:
       - platform
       - podcast
       - position
-      - prices
       - professional
       - readable_id
       - resource_category
+      - resource_prices
       - resource_type
       - runs
       - title
@@ -11416,12 +11429,10 @@ components:
           - code
           - name
           readOnly: true
-        prices:
+        resource_prices:
           type: array
           items:
-            type: string
-            format: decimal
-            pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+            $ref: '#/components/schemas/LearningResourcePrice'
           readOnly: true
         runs:
           type: array
@@ -11585,11 +11596,11 @@ components:
       - pace
       - platform
       - position
-      - prices
       - professional
       - program
       - readable_id
       - resource_category
+      - resource_prices
       - resource_type
       - runs
       - title
@@ -12024,12 +12035,10 @@ components:
           - code
           - name
           readOnly: true
-        prices:
+        resource_prices:
           type: array
           items:
-            type: string
-            format: decimal
-            pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+            $ref: '#/components/schemas/LearningResourcePrice'
           readOnly: true
         runs:
           type: array
@@ -12193,10 +12202,10 @@ components:
       - pace
       - platform
       - position
-      - prices
       - professional
       - readable_id
       - resource_category
+      - resource_prices
       - resource_type
       - runs
       - title
@@ -12346,12 +12355,10 @@ components:
           - code
           - name
           readOnly: true
-        prices:
+        resource_prices:
           type: array
           items:
-            type: string
-            format: decimal
-            pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+            $ref: '#/components/schemas/LearningResourcePrice'
           readOnly: true
         runs:
           type: array
@@ -12515,10 +12522,10 @@ components:
       - pace
       - platform
       - position
-      - prices
       - professional
       - readable_id
       - resource_category
+      - resource_prices
       - resource_type
       - runs
       - title

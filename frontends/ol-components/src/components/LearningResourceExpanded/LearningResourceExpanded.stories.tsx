@@ -139,7 +139,10 @@ export const PricingVariant1: Story = {
     resource: makeResource({
       resource_type: LRT.Course,
       title: "Free course with paid certificate option",
-      prices: ["0", "49"],
+      resource_prices: [
+        { amount: "0", currency: "USD" },
+        { amount: "49", currency: "USD" },
+      ],
       free: true,
       certification: true,
     }),
@@ -177,7 +180,10 @@ export const PricingVariant2: Story = {
     resource: makeResource({
       resource_type: LRT.Course,
       title: "Certificated course with range of prices",
-      prices: ["950", "999"],
+      resource_prices: [
+        { amount: "950", currency: "USD" },
+        { amount: "999", currency: "USD" },
+      ],
       free: false,
       certification: true,
     }),
@@ -189,7 +195,10 @@ export const PricingVariant3: Story = {
     resource: makeResource({
       resource_type: LRT.Course,
       title: "Course with range of prices, not certificated",
-      prices: ["950", "999"],
+      resource_prices: [
+        { amount: "950", currency: "USD" },
+        { amount: "999", currency: "USD" },
+      ],
       free: false,
       certification: false,
     }),
@@ -202,7 +211,10 @@ export const PricingVariant4: Story = {
       resource_type: LRT.Course,
       title:
         "The course has a zero price option, but is marked not free (prices not ingested correctly)",
-      prices: ["0", "999"],
+      resource_prices: [
+        { amount: "0", currency: "USD" },
+        { amount: "999", currency: "USD" },
+      ],
       free: false,
       certification: false,
     }),
@@ -214,7 +226,7 @@ export const PricingVariant5: Story = {
     resource: makeResource({
       resource_type: LRT.Course,
       title: "Zero price returned, but free flag is false",
-      prices: ["0"],
+      resource_prices: [{ amount: "0", currency: "USD" }],
       free: false,
       certification: false,
     }),
@@ -226,7 +238,7 @@ export const PricingVariant6: Story = {
     resource: makeResource({
       resource_type: LRT.Course,
       title: "Free course, no certificate",
-      prices: ["0"],
+      resource_prices: [{ amount: "0", currency: "USD" }],
       free: true,
       certification: false,
     }),
@@ -238,7 +250,7 @@ export const PricingVariant7: Story = {
     resource: makeResource({
       resource_type: LRT.Course,
       title: "Course with no certificate, not free",
-      prices: ["500"],
+      resource_prices: [{ amount: "500", currency: "USD" }],
       free: false,
       certification: false,
     }),
@@ -250,7 +262,7 @@ export const PricingVariant8: Story = {
     resource: makeResource({
       resource_type: LRT.Course,
       title: "No prices available, no certificate, not free",
-      prices: [],
+      resource_prices: [],
       free: false,
       certification: false,
     }),
@@ -262,7 +274,7 @@ export const PricingVariant9: Story = {
     resource: makeResource({
       resource_type: LRT.Course,
       title: "No prices available, no certificate, free",
-      prices: [],
+      resource_prices: [],
       free: true,
       certification: false,
     }),

@@ -2,6 +2,7 @@
 
 import logging
 from datetime import UTC
+from decimal import Decimal
 from urllib.parse import urljoin
 from zoneinfo import ZoneInfo
 
@@ -10,6 +11,7 @@ from dateparser import parse
 from django.conf import settings
 
 from learning_resources.constants import (
+    CURRENCY_USD,
     Availability,
     CertificationType,
     Format,
@@ -21,6 +23,7 @@ from learning_resources.constants import (
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.utils import (
     transform_delivery,
+    transform_price,
     transform_topics,
 )
 from learning_resources.models import default_format
@@ -243,7 +246,11 @@ def transform_run(run_data, course_data):
         "delivery": transform_delivery(run_data["Delivery"]),
         "availability": parse_availability(run_data),
         "published": True,
-        "prices": [run_data["Price"]],
+        "prices": [
+            transform_price(
+                Decimal(run_data["Price"]), run_data["Currency"] or CURRENCY_USD
+            )
+        ],
         "instructors": [{"full_name": name.strip()} for name in faculty_names],
         "pace": [parse_pace(run_data)],
         "format": parse_format(run_data),

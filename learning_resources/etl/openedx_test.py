@@ -8,6 +8,7 @@ from urllib.parse import urlencode
 import pytest
 
 from learning_resources.constants import (
+    CURRENCY_USD,
     Availability,
     CertificationType,
     Format,
@@ -249,7 +250,10 @@ def test_transform_course(  # noqa: PLR0913
                         "languages": ["en-us"],
                         "last_modified": any_instance_of(datetime),
                         "level": ["intermediate"],
-                        "prices": ["0.00", "150.00"],
+                        "prices": [
+                            {"amount": Decimal("0.00"), "currency": CURRENCY_USD},
+                            {"amount": Decimal("150.00"), "currency": CURRENCY_USD},
+                        ],
                         "semester": "Spring",
                         "description": "short_description",
                         "start_date": expected_dt,
@@ -458,7 +462,7 @@ def test_transform_program(
                     ],
                     "last_modified": any_instance_of(datetime),
                     "level": [],
-                    "prices": [Decimal("567.00")],
+                    "prices": [{"amount": Decimal("567.00"), "currency": CURRENCY_USD}],
                     "title": extracted[0]["title"],
                     "url": extracted[0]["marketing_url"],
                     "published": True,

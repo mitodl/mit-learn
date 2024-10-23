@@ -11,6 +11,7 @@ from django.forms.models import model_to_dict
 from django.utils import timezone
 
 from learning_resources.constants import (
+    CURRENCY_USD,
     Availability,
     LearningResourceDelivery,
     LearningResourceRelationTypes,
@@ -58,6 +59,7 @@ from learning_resources.factories import (
     LearningResourceInstructorFactory,
     LearningResourceOfferorFactory,
     LearningResourcePlatformFactory,
+    LearningResourcePriceFactory,
     LearningResourceRunFactory,
     LearningResourceTopicFactory,
     PodcastEpisodeFactory,
@@ -91,6 +93,7 @@ non_transformable_attributes = (
     "content_tags",
     "resources",
     "delivery",
+    "resource_prices",
 )
 
 
@@ -398,7 +401,7 @@ def test_load_course(  # noqa: PLR0913,PLR0912,PLR0915
         start_date if has_upcoming_run and is_run_published else None
     )
     assert result.next_start_date == expected_next_start_date
-    assert result.prices == (
+    assert [price.amount for price in result.resource_prices.all()] == (
         [Decimal(0.00), Decimal(49.00)]
         if is_run_published and result.certification
         else []
@@ -656,16 +659,16 @@ def test_load_run(run_exists, status, certification):
         if run_exists
         else LearningResourceRunFactory.build()
     )
+    prices = [Decimal(70.00), Decimal(20.00)]
     props = model_to_dict(
-        LearningResourceRunFactory.build(
-            run_id=learning_resource_run.run_id,
-            prices=["70.00", "20.00"],
-        )
+        LearningResourceRunFactory.build(run_id=learning_resource_run.run_id)
     )
     props["status"] = status
+    props["prices"] = [{"amount": price, "currency": CURRENCY_USD} for price in prices]
 
     del props["id"]
     del props["learning_resource"]
+    del props["resource_prices"]
 
     assert LearningResourceRun.objects.count() == (1 if run_exists else 0)
     assert course.certification == certification
@@ -678,12 +681,11 @@ def test_load_run(run_exists, status, certification):
 
     assert isinstance(result, LearningResourceRun)
 
-    assert result.prices == (
+    assert [price.amount for price in result.resource_prices.all()] == (
         []
         if (status == RunStatus.archived.value or certification is False)
-        else sorted(props["prices"])
+        else sorted(prices)
     )
-    props.pop("prices")
     for key, value in props.items():
         assert getattr(result, key) == value, f"Property {key} should equal {value}"
 
@@ -1461,7 +1463,7 @@ def test_load_run_dependent_values(certification):
         learning_resource=course,
         published=True,
         availability=Availability.dated.name,
-        prices=[Decimal("0.00"), Decimal("20.00")],
+        resource_prices=LearningResourcePriceFactory.create_batch(2),
         start_date=closest_date,
         location="Portland, ME",
     )
@@ -1469,13 +1471,17 @@ def test_load_run_dependent_values(certification):
         learning_resource=course,
         published=True,
         availability=Availability.dated.name,
-        prices=[Decimal("0.00"), Decimal("50.00")],
+        resource_prices=LearningResourcePriceFactory.create_batch(2),
         start_date=furthest_date,
         location="Portland, OR",
     )
     result = load_run_dependent_values(course)
     assert result.next_start_date == course.next_start_date == closest_date
-    assert result.prices == course.prices == ([] if not certification else run.prices)
+    assert (
+        list(result.resource_prices)
+        == list(course.resource_prices.all())
+        == ([] if not certification else list(run.resource_prices.all()))
+    )
     assert result.availability == course.availability == Availability.dated.name
     assert result.location == course.location == run.location
 

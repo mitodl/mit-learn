@@ -32,6 +32,7 @@ from learning_resources.models import (
     LearningResourceInstructor,
     LearningResourceOfferor,
     LearningResourcePlatform,
+    LearningResourcePrice,
     LearningResourceRelationship,
     LearningResourceRun,
     LearningResourceTopic,
@@ -140,16 +141,16 @@ def load_run_dependent_values(
     )
     if best_run:
         resource.availability = best_run.availability
-        resource.prices = (
-            best_run.prices
-            if resource.certification and best_run and best_run.prices
+        resource.resource_prices.set(
+            best_run.resource_prices.all()
+            if resource.certification and best_run and best_run.resource_prices
             else []
         )
         resource.location = best_run.location
     resource.save()
     return ResourceNextRunConfig(
         next_start_date=resource.next_start_date,
-        prices=resource.prices,
+        resource_prices=resource.resource_prices.all(),
         availability=resource.availability,
         location=resource.location,
     )
@@ -180,6 +181,23 @@ def load_instructors(
     run.instructors.set(instructors)
     run.save()
     return instructors
+
+
+def load_prices(
+    run: LearningResourceRun, prices_data: list[dict]
+) -> list[LearningResourcePrice]:
+    """Load the prices for a resource run into the database"""
+    prices = []
+    for price in prices_data:
+        lr_price, _ = LearningResourcePrice.objects.get_or_create(
+            amount=price["amount"],
+            currency=price["currency"],
+        )
+        prices.append(lr_price)
+
+    run.resource_prices.set(prices)
+    run.save()
+    return prices
 
 
 def load_image(resource: LearningResource, image_data: dict) -> LearningResourceImage:
@@ -252,15 +270,11 @@ def load_run(
     image_data = run_data.pop("image", None)
     status = run_data.pop("status", None)
     instructors_data = run_data.pop("instructors", [])
+    prices = run_data.pop("prices", [])
 
     if status == RunStatus.archived.value or learning_resource.certification is False:
         # Archived runs or runs of resources w/out certificates should not have prices
-        run_data["prices"] = []
-    else:
-        # Make sure any prices are unique and sorted in ascending order
-        run_data["prices"] = sorted(
-            set(run_data.get("prices", [])), key=lambda x: float(x)
-        )
+        prices = []
 
     with transaction.atomic():
         (
@@ -273,6 +287,7 @@ def load_run(
         )
 
         load_instructors(learning_resource_run, instructors_data)
+        load_prices(learning_resource_run, prices)
         load_image(learning_resource_run, image_data)
     return learning_resource_run
 

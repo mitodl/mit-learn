@@ -640,10 +640,10 @@ export interface CourseResource {
   certification_type: CourseResourceCertificationType
   /**
    *
-   * @type {Array<string>}
+   * @type {Array<LearningResourcePrice>}
    * @memberof CourseResource
    */
-  prices: Array<string>
+  resource_prices: Array<LearningResourcePrice>
   /**
    *
    * @type {Array<LearningResourceRun>}
@@ -1428,10 +1428,10 @@ export interface LearningPathResource {
   certification_type: CourseResourceCertificationType
   /**
    *
-   * @type {Array<string>}
+   * @type {Array<LearningResourcePrice>}
    * @memberof LearningPathResource
    */
-  prices: Array<string>
+  resource_prices: Array<LearningResourcePrice>
   /**
    *
    * @type {Array<LearningResourceRun>}
@@ -2148,6 +2148,44 @@ export interface LearningResourcePlatformRequest {
   name?: string
 }
 /**
+ * Serializer for LearningResourcePrice model
+ * @export
+ * @interface LearningResourcePrice
+ */
+export interface LearningResourcePrice {
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourcePrice
+   */
+  amount: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourcePrice
+   */
+  currency: string
+}
+/**
+ * Serializer for LearningResourcePrice model
+ * @export
+ * @interface LearningResourcePriceRequest
+ */
+export interface LearningResourcePriceRequest {
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourcePriceRequest
+   */
+  amount: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourcePriceRequest
+   */
+  currency: string
+}
+/**
  * CRUD serializer for LearningResourceRelationship
  * @export
  * @interface LearningResourceRelationship
@@ -2254,6 +2292,12 @@ export interface LearningResourceRun {
   pace: Array<CourseResourcePaceInner>
   /**
    *
+   * @type {Array<LearningResourcePrice>}
+   * @memberof LearningResourceRun
+   */
+  resource_prices: Array<LearningResourcePrice>
+  /**
+   *
    * @type {string}
    * @memberof LearningResourceRun
    */
@@ -2342,12 +2386,6 @@ export interface LearningResourceRun {
    * @memberof LearningResourceRun
    */
   enrollment_end?: string | null
-  /**
-   *
-   * @type {Array<string>}
-   * @memberof LearningResourceRun
-   */
-  prices?: Array<string> | null
   /**
    *
    * @type {string}
@@ -2503,12 +2541,6 @@ export interface LearningResourceRunRequest {
    * @memberof LearningResourceRunRequest
    */
   enrollment_end?: string | null
-  /**
-   *
-   * @type {Array<string>}
-   * @memberof LearningResourceRunRequest
-   */
-  prices?: Array<string> | null
   /**
    *
    * @type {string}
@@ -4197,10 +4229,10 @@ export interface PodcastEpisodeResource {
   certification_type: CourseResourceCertificationType
   /**
    *
-   * @type {Array<string>}
+   * @type {Array<LearningResourcePrice>}
    * @memberof PodcastEpisodeResource
    */
-  prices: Array<string>
+  resource_prices: Array<LearningResourcePrice>
   /**
    *
    * @type {Array<LearningResourceRun>}
@@ -4585,10 +4617,10 @@ export interface PodcastResource {
   certification_type: CourseResourceCertificationType
   /**
    *
-   * @type {Array<string>}
+   * @type {Array<LearningResourcePrice>}
    * @memberof PodcastResource
    */
-  prices: Array<string>
+  resource_prices: Array<LearningResourcePrice>
   /**
    *
    * @type {Array<LearningResourceRun>}
@@ -5205,10 +5237,10 @@ export interface ProgramResource {
   certification_type: CourseResourceCertificationType
   /**
    *
-   * @type {Array<string>}
+   * @type {Array<LearningResourcePrice>}
    * @memberof ProgramResource
    */
-  prices: Array<string>
+  resource_prices: Array<LearningResourcePrice>
   /**
    *
    * @type {Array<LearningResourceRun>}
@@ -6072,10 +6104,10 @@ export interface VideoPlaylistResource {
   certification_type: CourseResourceCertificationType
   /**
    *
-   * @type {Array<string>}
+   * @type {Array<LearningResourcePrice>}
    * @memberof VideoPlaylistResource
    */
-  prices: Array<string>
+  resource_prices: Array<LearningResourcePrice>
   /**
    *
    * @type {Array<LearningResourceRun>}
@@ -6448,10 +6480,10 @@ export interface VideoResource {
   certification_type: CourseResourceCertificationType
   /**
    *
-   * @type {Array<string>}
+   * @type {Array<LearningResourcePrice>}
    * @memberof VideoResource
    */
-  prices: Array<string>
+  resource_prices: Array<LearningResourcePrice>
   /**
    *
    * @type {Array<LearningResourceRun>}

@@ -296,6 +296,19 @@ class LearningResourceContentTag(TimestampedModel):
         return self.name
 
 
+class LearningResourcePrice(TimestampedModel):
+    """Represents the price of a learning resource"""
+
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    currency = models.CharField(max_length=3)
+
+    def __str__(self):
+        return f"{self.amount} {self.currency}"
+
+    class Meta:
+        ordering = ["amount"]
+
+
 class LearningResourceInstructor(TimestampedModel):
     """
     Instructors for learning resources
@@ -323,6 +336,7 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
                     "topics",
                     queryset=LearningResourceTopic.objects.for_serialization(),
                 ),
+                Prefetch("resource_prices"),
                 Prefetch(
                     "offered_by",
                     queryset=LearningResourceOfferor.objects.for_serialization(),
@@ -422,9 +436,7 @@ class LearningResource(TimestampedModel):
     etl_source = models.CharField(max_length=12, default="")
     professional = models.BooleanField(default=False)
     next_start_date = models.DateTimeField(null=True, blank=True, db_index=True)
-    prices = ArrayField(
-        models.DecimalField(decimal_places=2, max_digits=12), default=list
-    )
+    resource_prices = models.ManyToManyField(LearningResourcePrice, null=True)
     availability = models.CharField(  # noqa: DJ001
         max_length=24,
         null=True,
@@ -541,7 +553,9 @@ class LearningResourceRunQuerySet(TimestampedModelQuerySet):
 
     def for_serialization(self):
         """QuerySet for serialization"""
-        return self.select_related("image").prefetch_related("instructors")
+        return self.select_related("image").prefetch_related(
+            "instructors", "resource_prices"
+        )
 
 
 class LearningResourceRun(TimestampedModel):
@@ -578,9 +592,7 @@ class LearningResourceRun(TimestampedModel):
     instructors = models.ManyToManyField(
         LearningResourceInstructor, blank=True, related_name="runs"
     )
-    prices = ArrayField(
-        models.DecimalField(decimal_places=2, max_digits=12), null=True, blank=True
-    )
+    resource_prices = models.ManyToManyField(LearningResourcePrice, null=True)
     checksum = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
     delivery = ArrayField(
         models.CharField(

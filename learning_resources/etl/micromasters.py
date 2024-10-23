@@ -1,6 +1,7 @@
 """MicroMasters ETL"""
 
 import logging
+from decimal import Decimal
 
 import requests
 from django.conf import settings
@@ -14,6 +15,7 @@ from learning_resources.constants import (
     PlatformType,
 )
 from learning_resources.etl.constants import COMMON_HEADERS, ETLSource
+from learning_resources.etl.utils import transform_price
 from learning_resources.models import LearningResource, default_pace
 
 OFFERED_BY = {"code": OfferedBy.mitx.name}
@@ -136,7 +138,9 @@ def transform(programs_data):
                                 {"full_name": instructor["name"]}
                                 for instructor in program["instructors"]
                             ],
-                            "prices": [program["total_price"]],
+                            "prices": [
+                                transform_price(Decimal(program["total_price"]))
+                            ],
                             "start_date": program["start_date"]
                             or program["enrollment_start"],
                             "end_date": program["end_date"],

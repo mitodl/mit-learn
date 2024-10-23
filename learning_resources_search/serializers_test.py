@@ -27,6 +27,7 @@ from learning_resources.factories import (
     CourseFactory,
     LearningPathFactory,
     LearningPathRelationshipFactory,
+    LearningResourcePriceFactory,
     LearningResourceRunFactory,
     UserListFactory,
     UserListRelationshipFactory,
@@ -88,7 +89,7 @@ response_test_raw_data_1 = {
                     "license_cc": False,
                     "professional": True,
                     "certification": "Certificates",
-                    "prices": [2250.0],
+                    "resource_prices": [{"amount": 2250.0, "currency": "USD"}],
                     "learning_path": None,
                     "podcast": None,
                     "podcast_episode": None,
@@ -117,7 +118,7 @@ response_test_raw_data_1 = {
                             "end_date": None,
                             "enrollment_start": None,
                             "enrollment_end": None,
-                            "prices": ["2250.00"],
+                            "resource_prices": [{"amount": 2250.0, "currency": "USD"}],
                             "checksum": None,
                         }
                     ],
@@ -236,7 +237,7 @@ response_test_response_1 = {
             "license_cc": False,
             "professional": True,
             "certification": "Certificates",
-            "prices": [2250.0],
+            "resource_prices": [{"amount": 2250.0, "currency": "USD"}],
             "learning_path": None,
             "podcast": None,
             "podcast_episode": None,
@@ -262,7 +263,7 @@ response_test_response_1 = {
                     "end_date": None,
                     "enrollment_start": None,
                     "enrollment_end": None,
-                    "prices": ["2250.00"],
+                    "resource_prices": [{"amount": 2250.0, "currency": "USD"}],
                     "checksum": None,
                 }
             ],
@@ -366,7 +367,7 @@ response_test_raw_data_2 = {
                     ],
                     "continuing_ed_credits": None,
                     "license_cc": True,
-                    "prices": [0.00],
+                    "resource_prices": [{"amount": 0.0, "currency": "USD"}],
                     "last_modified": None,
                     "runs": [],
                     "course_feature": [],
@@ -539,7 +540,7 @@ response_test_response_2 = {
             ],
             "continuing_ed_credits": None,
             "license_cc": True,
-            "prices": [0.00],
+            "resource_prices": [{"amount": 0.0, "currency": "USD"}],
             "last_modified": None,
             "runs": [],
             "course_feature": [],
@@ -661,8 +662,13 @@ def test_serialize_learning_resource_for_bulk(  # noqa: PLR0913
         completeness=completeness,
     )
 
-    LearningResourceRunFactory.create(
-        learning_resource=resource, prices=[Decimal(0.00 if no_price else 1.00)]
+    run = LearningResourceRunFactory.create(learning_resource=resource)
+    run.resource_prices.set(
+        [
+            LearningResourcePriceFactory.create(
+                amount=Decimal(0.00 if no_price else 1.00)
+            )
+        ]
     )
 
     resource_age_date = datetime(

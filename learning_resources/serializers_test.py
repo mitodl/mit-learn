@@ -1,5 +1,7 @@
 """Tests for learning_resources serializers"""
 
+from decimal import Decimal
+
 import pytest
 
 from channels.factories import (
@@ -10,6 +12,7 @@ from channels.factories import (
 from channels.models import Channel
 from learning_resources import factories, serializers, utils
 from learning_resources.constants import (
+    CURRENCY_USD,
     LEARNING_MATERIAL_RESOURCE_CATEGORY,
     CertificationType,
     Format,
@@ -208,7 +211,13 @@ def test_learning_resource_serializer(  # noqa: PLR0913
         "platform": serializers.LearningResourcePlatformSerializer(
             instance=resource.platform
         ).data,
-        "prices": sorted([f"{price:.2f}" for price in resource.prices]),
+        "resource_prices": sorted(
+            [
+                {"amount": f"{price:.2f}", "currency": CURRENCY_USD}
+                for price in resource.resource_prices.all()
+            ],
+            key=lambda price: price.amount,
+        ),
         "professional": resource.professional,
         "position": None,
         "certification": resource.certification,
@@ -222,7 +231,11 @@ def test_learning_resource_serializer(  # noqa: PLR0913
             or (
                 not resource.professional
                 and (
-                    not resource.prices or all(price == 0 for price in resource.prices)
+                    not resource.resource_prices.all()
+                    or all(
+                        price.amount == Decimal(0.00)
+                        for price in resource.resource_prices.all()
+                    )
                 )
             )
         ),
@@ -364,8 +377,8 @@ def test_serialize_run_related_models():
     """
     run = factories.LearningResourceRunFactory()
     serializer = serializers.LearningResourceRunSerializer(run)
-    assert len(serializer.data["prices"]) > 0
-    assert str(serializer.data["prices"][0].replace(".", "")).isnumeric()
+    assert len(serializer.data["resource_prices"]) > 0
+    assert serializer.data["resource_prices"][0]["amount"].replace(".", "").isnumeric()
     assert len(serializer.data["instructors"]) > 0
     for attr in ("first_name", "last_name", "full_name"):
         assert attr in serializer.data["instructors"][0]

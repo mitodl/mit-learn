@@ -1,17 +1,17 @@
 """Factories for making test data"""
 
 import datetime
-import decimal
 import random
 from datetime import UTC, timedelta
 
 import factory
 from factory import Faker
 from factory.django import DjangoModelFactory
-from factory.fuzzy import FuzzyChoice, FuzzyText
+from factory.fuzzy import FuzzyChoice, FuzzyDecimal, FuzzyText
 
 from learning_resources import constants, models
 from learning_resources.constants import (
+    CURRENCY_USD,
     DEPARTMENTS,
     Availability,
     LearningResourceDelivery,
@@ -470,6 +470,16 @@ class CourseFactory(DjangoModelFactory):
         has_certification = factory.Trait(learning_resource__certification=True)
 
 
+class LearningResourcePriceFactory(DjangoModelFactory):
+    """Factory for LearningResourcePrice"""
+
+    amount = FuzzyDecimal(100, 200)
+    currency = CURRENCY_USD
+
+    class Meta:
+        model = models.LearningResourcePrice
+
+
 class LearningResourceRunFactory(DjangoModelFactory):
     """Factory for LearningResourceRuns"""
 
@@ -506,12 +516,19 @@ class LearningResourceRunFactory(DjangoModelFactory):
     end_date = factory.LazyAttribute(
         lambda obj: obj.start_date + timedelta(days=90) if obj.start_date else None
     )
-    prices = sorted(
-        [
-            decimal.Decimal(random.uniform(100, 200))  # noqa: S311
-            for _ in range(random.randint(1, 3))  # noqa: S311
-        ]
-    )
+
+    @factory.post_generation
+    def resource_prices(self, create, extracted, **kwargs):  # noqa: ARG002
+        """Create resource prices for course"""
+        if not create:
+            return
+
+        if extracted is None:
+            extracted = LearningResourcePriceFactory.create_batch(
+                random.randint(1, 3)  # noqa: S311
+            )
+
+        self.resource_prices.set(extracted)
 
     @factory.post_generation
     def instructors(self, create, extracted, **kwargs):  # noqa: ARG002
@@ -531,7 +548,7 @@ class LearningResourceRunFactory(DjangoModelFactory):
         skip_postgeneration_save = True
 
     class Params:
-        no_prices = factory.Trait(prices=[])
+        no_prices = factory.Trait(resource_prices=[])
         no_instructors = factory.Trait(instructors=[])
 
         is_unpublished = factory.Trait(learning_resource__published=False)

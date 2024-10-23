@@ -284,7 +284,13 @@ LEARNING_RESOURCE_MAP = {
                     "full_name": ENGLISH_TEXT_FIELD,
                 },
             },
-            "prices": {"type": "scaled_float", "scaling_factor": 100},
+            "resource_prices": {
+                "type": "nested",
+                "properties": {
+                    "amount": {"type": "scaled_float", "scaling_factor": 100},
+                    "currency": {"type": "keyword"},
+                },
+            },
             "location": {"type": "keyword"},
         },
     },
@@ -295,6 +301,13 @@ LEARNING_RESOURCE_MAP = {
     "license_cc": {"type": "boolean"},
     "continuing_ed_credits": {"type": "float"},
     "location": {"type": "keyword"},
+    "resource_prices": {
+        "type": "nested",
+        "properties": {
+            "amount": {"type": "scaled_float", "scaling_factor": 100},
+            "currency": {"type": "keyword"},
+        },
+    },
 }
 
 

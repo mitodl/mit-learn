@@ -37,6 +37,16 @@ class LearningResourceInstructorSerializer(serializers.ModelSerializer):
         exclude = COMMON_IGNORED_FIELDS
 
 
+class LearningResourcePriceSerializer(serializers.ModelSerializer):
+    """
+    Serializer for LearningResourcePrice model
+    """
+
+    class Meta:
+        model = models.LearningResourcePrice
+        exclude = "id", *COMMON_IGNORED_FIELDS
+
+
 class LearningResourceTopicSerializer(serializers.ModelSerializer):
     """
     Serializer for LearningResourceTopic model
@@ -282,6 +292,7 @@ class LearningResourceRunSerializer(serializers.ModelSerializer):
     )
     format = serializers.ListField(child=FormatSerializer(), read_only=True)
     pace = serializers.ListField(child=PaceSerializer(), read_only=True)
+    resource_prices = LearningResourcePriceSerializer(read_only=True, many=True)
 
     class Meta:
         model = models.LearningResourceRun
@@ -434,10 +445,7 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
     )
     certification = serializers.ReadOnlyField(read_only=True)
     certification_type = CertificateTypeField(read_only=True)
-    prices = serializers.ListField(
-        child=serializers.DecimalField(max_digits=12, decimal_places=2),
-        read_only=True,
-    )
+    resource_prices = LearningResourcePriceSerializer(read_only=True, many=True)
     runs = LearningResourceRunSerializer(read_only=True, many=True, allow_null=True)
     image = serializers.SerializerMethodField()
     learning_path_parents = MicroLearningPathRelationshipSerializer(
@@ -469,7 +477,7 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
             LearningResourceType.course.name,
             LearningResourceType.program.name,
         ]:
-            prices = instance.prices
+            prices = [price.amount for price in instance.resource_prices.all()]
             return not instance.professional and (
                 Decimal(0.00) in prices or not prices or prices == []
             )
@@ -499,7 +507,7 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
         model = models.LearningResource
         read_only_fields = [
             "free",
-            "prices",
+            "resource_prices",
             "resource_category",
             "certification",
             "certification_type",

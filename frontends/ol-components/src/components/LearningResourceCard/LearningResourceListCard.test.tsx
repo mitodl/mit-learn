@@ -201,7 +201,7 @@ describe("Learning Resource List Card", () => {
       const resource = factories.learningResources.resource({
         certification: false,
         free: true,
-        prices: ["0"],
+        resource_prices: [{ amount: "0", currency: "USD" }],
       })
       setup({ resource })
       screen.getByText("Free")
@@ -211,7 +211,10 @@ describe("Learning Resource List Card", () => {
       const resource = factories.learningResources.resource({
         certification: true,
         free: true,
-        prices: ["0", "49"],
+        resource_prices: [
+          { amount: "0", currency: "USD" },
+          { amount: "49", currency: "USD" },
+        ],
       })
       setup({ resource })
       screen.getByText("Certificate")
@@ -223,7 +226,11 @@ describe("Learning Resource List Card", () => {
       const resource = factories.learningResources.resource({
         certification: true,
         free: true,
-        prices: ["0", "99", "49"],
+        resource_prices: [
+          { amount: "0", currency: "USD" },
+          { amount: "99", currency: "USD" },
+          { amount: "49", currency: "USD" },
+        ],
       })
       setup({ resource })
       screen.getByText("Certificate")
@@ -235,7 +242,7 @@ describe("Learning Resource List Card", () => {
       const resource = factories.learningResources.resource({
         certification: false,
         free: false,
-        prices: ["49"],
+        resource_prices: [{ amount: "49", currency: "USD" }],
       })
       setup({ resource })
       screen.getByText("$49")
@@ -245,7 +252,7 @@ describe("Learning Resource List Card", () => {
       const resource = factories.learningResources.resource({
         certification: false,
         free: false,
-        prices: ["49.50"],
+        resource_prices: [{ amount: "49.50", currency: "USD" }],
       })
       setup({ resource })
       screen.getByText("$49.50")
@@ -255,7 +262,7 @@ describe("Learning Resource List Card", () => {
       const resource = factories.learningResources.resource({
         certification: false,
         free: true,
-        prices: [],
+        resource_prices: [],
       })
       setup({ resource })
       screen.getByText("Free")
@@ -265,7 +272,7 @@ describe("Learning Resource List Card", () => {
       const resource = factories.learningResources.resource({
         certification: false,
         free: false,
-        prices: ["0"],
+        resource_prices: [{ amount: "0", currency: "USD" }],
       })
       setup({ resource })
       screen.getByText("Paid")

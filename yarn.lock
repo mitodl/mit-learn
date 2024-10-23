@@ -9357,6 +9357,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"currency-symbol-map@npm:^5.1.0":
+  version: 5.1.0
+  resolution: "currency-symbol-map@npm:5.1.0"
+  checksum: 10/7f6a4c58af8dc0150568a32bc5baa5dd8481abe6ae28918c2d7ccd86e8bd7e9dfa08e3bdeeb256da5dffb9974a91c11ce430023bf47fd9a19ea6f126668a4a20
+  languageName: node
+  linkType: hard
+
 "damerau-levenshtein@npm:^1.0.8":
   version: 1.0.8
   resolution: "damerau-levenshtein@npm:1.0.8"
@@ -16564,6 +16571,7 @@ __metadata:
     casual-browserify: "npm:^1.5.19-2"
     classnames: "npm:^2.3.2"
     css-mediaquery: "npm:^0.1.2"
+    currency-symbol-map: "npm:^5.1.0"
     decimal.js-light: "npm:^2.5.1"
     html-entities: "npm:^2.4.0"
     iso-639-1: "npm:^3.1.0"
