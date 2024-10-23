@@ -346,6 +346,7 @@ def index_items(documents, object_type, index_types, **kwargs):
                     chunk,
                     index=alias,
                     chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
+                    request_timeout=60 * 5,
                     **kwargs,
                 )
                 if len(errors) > 0:

@@ -297,6 +297,12 @@ class SearchRequestSerializer(serializers.Serializer):
         default=False,
         help_text="If true return raw open search results with score explanations",
     )
+    use_semantic = serializers.BooleanField(
+        required=False,
+        allow_null=True,
+        default=False,
+        help_text="If true use vector search",
+    )
 
     def validate(self, attrs):
         unknown = set(self.initial_data) - set(self.fields)
