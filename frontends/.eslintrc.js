@@ -72,7 +72,6 @@ module.exports = {
           "**/*.stories.ts",
           "**/*.stories.tsx",
           "**/*.mdx",
-          "e2e_testing/**/*.ts",
         ],
       },
     ],

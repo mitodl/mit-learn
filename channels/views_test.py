@@ -187,7 +187,7 @@ def test_patch_channel_image(client, channel, attribute):
         os.path.dirname(__file__),  # noqa: PTH120
         "..",
         "frontends",
-        "mit-learn",
+        "main",
         "public",
         "images",
         "blank.png",
