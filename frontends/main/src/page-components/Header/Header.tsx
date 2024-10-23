@@ -265,13 +265,8 @@ const navData: NavData = {
 
 const Header: FunctionComponent = () => {
   const [drawerOpen, toggleDrawer] = useToggle(false)
-  const toggler = (event: React.MouseEvent) => {
-    event.nativeEvent.stopImmediatePropagation() // Prevent clicking on "Explore MIT" button from triggering the ClickAwayHandler
-    toggleDrawer(!drawerOpen)
-  }
-  const closeDrawer = () => {
-    toggleDrawer(false)
-  }
+  const desktopTrigger = React.useRef<HTMLButtonElement>(null)
+  const mobileTrigger = React.useRef<HTMLButtonElement>(null)
 
   return (
     <div>
@@ -280,10 +275,14 @@ const Header: FunctionComponent = () => {
           <DesktopOnly>
             <StyledMITLogoLink logo="learn" />
             <LeftSpacer />
-            <MenuButton text="Explore MIT" onClick={toggler} />
+            <MenuButton
+              ref={desktopTrigger}
+              text="Explore MIT"
+              onClick={toggleDrawer.toggle}
+            />
           </DesktopOnly>
           <MobileOnly>
-            <MenuButton onClick={toggler} />
+            <MenuButton ref={mobileTrigger} onClick={toggleDrawer.toggle} />
             <LeftSpacer />
             <StyledMITLogoLink logo="learn" />
           </MobileOnly>
@@ -292,7 +291,15 @@ const Header: FunctionComponent = () => {
         </StyledToolbar>
       </Bar>
 
-      <NavDrawer navdata={navData} open={drawerOpen} onClose={closeDrawer} />
+      <NavDrawer
+        getClickAwayExcluded={() => [
+          desktopTrigger.current,
+          mobileTrigger.current,
+        ]}
+        navdata={navData}
+        open={drawerOpen}
+        onClose={toggleDrawer.off}
+      />
     </div>
   )
 }

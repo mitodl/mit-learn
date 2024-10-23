@@ -89,18 +89,31 @@ describe("NavDrawer", () => {
     expect(onClose).toHaveBeenCalled()
   })
 
-  test("click away calls onClose", async () => {
+  test("click away calls onClose if target is not excluded", async () => {
     const onClose = jest.fn()
-    render(
-      <div>
-        <NavDrawer onClose={onClose} navdata={NAV_DATA} open={true} />
-        <button type="button">Outside</button>
-      </div>,
-      {
-        wrapper: ThemeProvider,
-      },
-    )
+    const Component = () => {
+      const excluded = React.useRef<HTMLButtonElement>(null)
+      return (
+        <div>
+          <NavDrawer
+            getClickAwayExcluded={() => [excluded.current]}
+            onClose={onClose}
+            navdata={NAV_DATA}
+            open={true}
+          />
+          <button type="button">Outside</button>
+          <button ref={excluded} type="button">
+            Excluded
+          </button>
+        </div>
+      )
+    }
+    render(<Component />, { wrapper: ThemeProvider })
     await user.click(screen.getByRole("button", { name: "Outside" }))
     expect(onClose).toHaveBeenCalled()
+    onClose.mockReset()
+
+    await user.click(screen.getByRole("button", { name: "Excluded" }))
+    expect(onClose).not.toHaveBeenCalled()
   })
 })

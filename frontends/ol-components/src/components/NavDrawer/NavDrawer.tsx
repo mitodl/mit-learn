@@ -165,9 +165,19 @@ const NavItem: React.FC<NavItem> = (props) => {
 type NavDrawerProps = {
   navdata: NavData
   onClose: () => void
+  /**
+   * Returns a list of HTMLElements that should not trigger the drawer to close
+   * on click-away
+   */
+  getClickAwayExcluded?: () => (HTMLElement | null)[]
 } & DrawerProps
 
-const NavDrawer = ({ navdata, onClose, ...others }: NavDrawerProps) => {
+const NavDrawer = ({
+  navdata,
+  onClose,
+  getClickAwayExcluded = () => [],
+  ...others
+}: NavDrawerProps) => {
   const navSections = navdata.sections.map((section, i) => {
     const navItemElements = section.items.map((item) => (
       <NavItem
@@ -208,7 +218,20 @@ const NavDrawer = ({ navdata, onClose, ...others }: NavDrawerProps) => {
      *  - Events (clicks, scrolls) outside the drawer fire on the underlying
      *    content, not on an overlay element.
      */
-    <ClickAwayListener onClickAway={onClose}>
+    <ClickAwayListener
+      onClickAway={(e) => {
+        if (!others.open) return
+        const excluded = getClickAwayExcluded()
+        const target = e.target
+        if (
+          target instanceof HTMLElement &&
+          excluded?.some((el) => el?.contains(target))
+        ) {
+          return
+        }
+        onClose()
+      }}
+    >
       <div role="presentation">
         <Drawer
           anchor="left"

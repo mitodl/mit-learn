@@ -51,13 +51,15 @@ interface MenuButtonProps {
   onClick: React.MouseEventHandler<HTMLButtonElement> | undefined
 }
 
-const MenuButton: React.FC<MenuButtonProps> = ({ text, onClick }) => (
-  <StyledMenuButton onClick={onClick}>
-    <MenuButtonInner>
-      <MenuIcon />
-      {text ? <MenuButtonText>{text}</MenuButtonText> : ""}
-    </MenuButtonInner>
-  </StyledMenuButton>
+const MenuButton = React.forwardRef<HTMLButtonElement, MenuButtonProps>(
+  ({ onClick, text }, ref) => (
+    <StyledMenuButton ref={ref} onClick={onClick}>
+      <MenuButtonInner>
+        <MenuIcon />
+        {text ? <MenuButtonText>{text}</MenuButtonText> : ""}
+      </MenuButtonInner>
+    </StyledMenuButton>
+  ),
 )
 
 export { MenuButton }
