@@ -870,3 +870,45 @@ def get_similar_topics(
 
     counter = Counter(topics)
     return list(dict(counter.most_common(num_topics)).keys())
+
+
+def get_similar_resources(
+    value_doc: dict, num_resources: int, min_term_freq: int, min_doc_freq: int
+) -> list[str]:
+    """
+    Get a list of similar resources based on another resource
+
+    Args:
+        value_doc (dict):
+            a document representing the data fields we want to search with
+        num_topics (int):
+            number of resources to return
+        min_term_freq (int):
+            minimum times a term needs to show up in input
+        min_doc_freq (int):
+            minimum times a term needs to show up in docs
+
+    Returns:
+        list of str:
+            list of topic values
+    """
+    indexes = relevant_indexes([COURSE_TYPE], [], endpoint=LEARNING_RESOURCE)
+    search = Search(index=",".join(indexes))
+    if num_resources:
+        search = search.extra(size=num_resources)
+    search = search.filter("term", resource_type=COURSE_TYPE)
+    search = search.query(
+        MoreLikeThis(
+            like=[{"doc": value_doc, "fields": list(value_doc.keys())}],
+            fields=[
+                "course.course_numbers.value",
+                "title",
+                "description",
+                "full_description",
+            ],
+            min_term_freq=min_term_freq,
+            min_doc_freq=min_doc_freq,
+        )
+    )
+    response = search.execute()
+    return response.to_dict()

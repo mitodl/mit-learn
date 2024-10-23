@@ -16,9 +16,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from authentication.decorators import blocked_ip_exempt
+from learning_resources.models import LearningResource
 from learning_resources_search.api import (
     adjust_original_query_for_percolate,
     execute_learn_search,
+    get_similar_resources,
     subscribe_user_to_search_query,
     unsubscribe_user_from_percolate_query,
 )
@@ -27,6 +29,7 @@ from learning_resources_search.models import PercolateQuery
 from learning_resources_search.serializers import (
     ContentFileSearchRequestSerializer,
     ContentFileSearchResponseSerializer,
+    LearningResourceSerializer,
     LearningResourcesSearchRequestSerializer,
     LearningResourcesSearchResponseSerializer,
     PercolateQuerySerializer,
@@ -266,6 +269,42 @@ class ContentFileSearchView(ESView):
                     errors[key] = list(set(chain(*errors_obj.values())))
 
             return Response(errors, status=400)
+
+
+@method_decorator(blocked_ip_exempt, name="dispatch")
+class SimilarResourcesView(ESView):
+    """
+    Retrieve similar learning resources
+
+    """
+
+    permission_classes = ()
+
+    @extend_schema(
+        summary="Get similar learning resources",
+        parameters=[
+            OpenApiParameter(name="id", type=int, location=OpenApiParameter.PATH),
+        ],
+        responses=LearningResourcesSearchResponseSerializer(),
+    )
+    @action(
+        detail=True,
+        methods=["GET"],
+        name="Get similar learning resources",
+    )
+    def get(self, request):
+        resource_id = request.GET["id"]
+        count = request.GET.get("count", 10)
+        learning_resource = get_object_or_404(LearningResource, id=resource_id)
+        similar = get_similar_resources(
+            LearningResourceSerializer(instance=learning_resource).data, count, 2, 3
+        )
+        return Response(
+            LearningResourcesSearchResponseSerializer(
+                similar, context={"request": request}
+            ).data,
+            status=200,
+        )
 
 
 @action(methods=["GET"], detail=False, name="Search Defaults")
