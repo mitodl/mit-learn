@@ -6387,6 +6387,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/LearningResourceSchool'
           description: ''
+  /api/v1/similar_learning_resources/:
+    get:
+      operationId: similar_learning_resources_retrieve
+      description: Retrieve similar learning resources
+      summary: Get similar learning resources
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - similar_learning_resources
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LearningResourcesSearchResponse'
+          description: ''
   /api/v1/topics/:
     get:
       operationId: topics_list

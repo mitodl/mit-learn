@@ -22020,6 +22020,178 @@ export class SchoolsApi extends BaseAPI {
 }
 
 /**
+ * SimilarLearningResourcesApi - axios parameter creator
+ * @export
+ */
+export const SimilarLearningResourcesApiAxiosParamCreator = function (
+  configuration?: Configuration,
+) {
+  return {
+    /**
+     * Retrieve similar learning resources
+     * @summary Get similar learning resources
+     * @param {number} id
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    similarLearningResourcesRetrieve: async (
+      id: number,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'id' is not null or undefined
+      assertParamExists("similarLearningResourcesRetrieve", "id", id)
+      const localVarPath = `/api/v1/similar_learning_resources/`.replace(
+        `{${"id"}}`,
+        encodeURIComponent(String(id)),
+      )
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+  }
+}
+
+/**
+ * SimilarLearningResourcesApi - functional programming interface
+ * @export
+ */
+export const SimilarLearningResourcesApiFp = function (
+  configuration?: Configuration,
+) {
+  const localVarAxiosParamCreator =
+    SimilarLearningResourcesApiAxiosParamCreator(configuration)
+  return {
+    /**
+     * Retrieve similar learning resources
+     * @summary Get similar learning resources
+     * @param {number} id
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async similarLearningResourcesRetrieve(
+      id: number,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<LearningResourcesSearchResponse>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.similarLearningResourcesRetrieve(
+          id,
+          options,
+        )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap[
+          "SimilarLearningResourcesApi.similarLearningResourcesRetrieve"
+        ]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+  }
+}
+
+/**
+ * SimilarLearningResourcesApi - factory interface
+ * @export
+ */
+export const SimilarLearningResourcesApiFactory = function (
+  configuration?: Configuration,
+  basePath?: string,
+  axios?: AxiosInstance,
+) {
+  const localVarFp = SimilarLearningResourcesApiFp(configuration)
+  return {
+    /**
+     * Retrieve similar learning resources
+     * @summary Get similar learning resources
+     * @param {SimilarLearningResourcesApiSimilarLearningResourcesRetrieveRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    similarLearningResourcesRetrieve(
+      requestParameters: SimilarLearningResourcesApiSimilarLearningResourcesRetrieveRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<LearningResourcesSearchResponse> {
+      return localVarFp
+        .similarLearningResourcesRetrieve(requestParameters.id, options)
+        .then((request) => request(axios, basePath))
+    },
+  }
+}
+
+/**
+ * Request parameters for similarLearningResourcesRetrieve operation in SimilarLearningResourcesApi.
+ * @export
+ * @interface SimilarLearningResourcesApiSimilarLearningResourcesRetrieveRequest
+ */
+export interface SimilarLearningResourcesApiSimilarLearningResourcesRetrieveRequest {
+  /**
+   *
+   * @type {number}
+   * @memberof SimilarLearningResourcesApiSimilarLearningResourcesRetrieve
+   */
+  readonly id: number
+}
+
+/**
+ * SimilarLearningResourcesApi - object-oriented interface
+ * @export
+ * @class SimilarLearningResourcesApi
+ * @extends {BaseAPI}
+ */
+export class SimilarLearningResourcesApi extends BaseAPI {
+  /**
+   * Retrieve similar learning resources
+   * @summary Get similar learning resources
+   * @param {SimilarLearningResourcesApiSimilarLearningResourcesRetrieveRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof SimilarLearningResourcesApi
+   */
+  public similarLearningResourcesRetrieve(
+    requestParameters: SimilarLearningResourcesApiSimilarLearningResourcesRetrieveRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return SimilarLearningResourcesApiFp(this.configuration)
+      .similarLearningResourcesRetrieve(requestParameters.id, options)
+      .then((request) => request(this.axios, this.basePath))
+  }
+}
+
+/**
  * TopicsApi - axios parameter creator
  * @export
  */
