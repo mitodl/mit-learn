@@ -104,6 +104,7 @@ describe("NavDrawer", () => {
           <button type="button">Outside</button>
           <button ref={excluded} type="button">
             Excluded
+            <svg data-testid="foo" />
           </button>
         </div>
       )
@@ -114,6 +115,7 @@ describe("NavDrawer", () => {
     onClose.mockReset()
 
     await user.click(screen.getByRole("button", { name: "Excluded" }))
+    await user.click(screen.getByTestId("foo"))
     expect(onClose).not.toHaveBeenCalled()
   })
 })

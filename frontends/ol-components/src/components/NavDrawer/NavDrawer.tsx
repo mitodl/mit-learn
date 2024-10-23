@@ -169,7 +169,7 @@ type NavDrawerProps = {
    * Returns a list of HTMLElements that should not trigger the drawer to close
    * on click-away
    */
-  getClickAwayExcluded?: () => (HTMLElement | null)[]
+  getClickAwayExcluded?: () => (Element | null)[]
 } & DrawerProps
 
 const NavDrawer = ({
@@ -224,7 +224,7 @@ const NavDrawer = ({
         const excluded = getClickAwayExcluded()
         const target = e.target
         if (
-          target instanceof HTMLElement &&
+          target instanceof Element &&
           excluded?.some((el) => el?.contains(target))
         ) {
           return
