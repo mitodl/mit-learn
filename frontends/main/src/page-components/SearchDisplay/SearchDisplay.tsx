@@ -206,7 +206,7 @@ const FacetStyles = styled.div`
         float: right;
       }
 
-      &.chcked,
+      &.checked,
       &:hover {
         .facet-label .facet-text {
           color: ${({ theme }) => theme.custom.colors.darkGray2};
