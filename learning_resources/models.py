@@ -439,9 +439,7 @@ class LearningResource(TimestampedModel):
     prices = ArrayField(
         models.DecimalField(decimal_places=2, max_digits=12), default=list
     )
-    resource_prices = models.ManyToManyField(
-        LearningResourcePrice, blank=True, related_name="resources"
-    )
+    resource_prices = models.ManyToManyField(LearningResourcePrice, blank=True)
     availability = models.CharField(  # noqa: DJ001
         max_length=24,
         null=True,
@@ -600,9 +598,7 @@ class LearningResourceRun(TimestampedModel):
     prices = ArrayField(
         models.DecimalField(decimal_places=2, max_digits=12), null=True, blank=True
     )
-    resource_prices = models.ManyToManyField(
-        LearningResourcePrice, blank=True, related_name="runs"
-    )
+    resource_prices = models.ManyToManyField(LearningResourcePrice, blank=True)
     checksum = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
     delivery = ArrayField(
         models.CharField(

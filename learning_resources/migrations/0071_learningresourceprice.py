@@ -62,7 +62,6 @@ class Migration(migrations.Migration):
             name="resource_prices",
             field=models.ManyToManyField(
                 blank=True,
-                related_name="runs",
                 to="learning_resources.learningresourceprice",
             ),
         ),
@@ -71,7 +70,6 @@ class Migration(migrations.Migration):
             name="resource_prices",
             field=models.ManyToManyField(
                 blank=True,
-                related_name="resources",
                 to="learning_resources.learningresourceprice",
             ),
         ),
