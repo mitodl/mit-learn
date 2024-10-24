@@ -61,14 +61,18 @@ class Migration(migrations.Migration):
             model_name="learningresourcerun",
             name="resource_prices",
             field=models.ManyToManyField(
-                null=True, to="learning_resources.learningresourceprice"
+                blank=True,
+                related_name="runs",
+                to="learning_resources.learningresourceprice",
             ),
         ),
         migrations.AddField(
             model_name="learningresource",
             name="resource_prices",
             field=models.ManyToManyField(
-                null=True, to="learning_resources.learningresourceprice"
+                blank=True,
+                related_name="resources",
+                to="learning_resources.learningresourceprice",
             ),
         ),
         migrations.RunPython(
