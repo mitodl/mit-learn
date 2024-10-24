@@ -139,7 +139,10 @@ export const PricingVariant1: Story = {
     resource: makeResource({
       resource_type: LRT.Course,
       title: "Free course with paid certificate option",
-      prices: ["0", "49"],
+      resource_prices: [
+        { amount: "0", currency: "USD" },
+        { amount: "49", currency: "USD" },
+      ],
       free: true,
       certification: true,
     }),

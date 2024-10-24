@@ -169,10 +169,14 @@ describe("Learning Resource Expanded", () => {
         .getByRole("heading", { name: "Info" })!
         .closest("section")!
 
-      const price = run.prices?.[0]
+      const price = run.resource_prices?.[0]
 
       const displayPrice =
-        parseFloat(price!) === 0 ? "Free" : price ? `$${price}` : null
+        parseFloat(price.amount!) === 0
+          ? "Free"
+          : price.amount
+            ? `$${price.amount}`
+            : null
       if (displayPrice) {
         within(section).getByText(displayPrice)
       }

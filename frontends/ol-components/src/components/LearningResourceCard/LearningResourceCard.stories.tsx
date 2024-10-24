@@ -48,7 +48,7 @@ export default meta
 type Story = StoryObj<StoryProps>
 
 const priceArgs: Partial<Story["args"]> = {
-  excerpt: ["certification", "free", "prices"],
+  excerpt: ["certification", "free", "resource_prices"],
 }
 
 export const FreeCourseNoCertificate: Story = {
