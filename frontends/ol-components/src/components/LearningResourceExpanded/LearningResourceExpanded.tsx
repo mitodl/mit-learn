@@ -1,142 +1,167 @@
-import React, { useEffect, useState } from "react"
+import React from "react"
 import styled from "@emotion/styled"
 import Skeleton from "@mui/material/Skeleton"
 import Typography from "@mui/material/Typography"
-import { ButtonLink } from "../Button/Button"
-import type { LearningResource, LearningResourceRun } from "api"
+import { ActionButton, ButtonLink } from "../Button/Button"
+import type { LearningResource } from "api"
 import { ResourceTypeEnum, PlatformEnum } from "api"
 import {
-  formatDate,
-  capitalize,
   resourceThumbnailSrc,
   DEFAULT_RESOURCE_IMG,
-  showStartAnytime,
+  getReadableResourceType,
 } from "ol-utilities"
-import { RiExternalLinkLine } from "@remixicon/react"
+import {
+  RiBookmarkLine,
+  RiCloseLargeLine,
+  RiExternalLinkLine,
+  RiMenuAddLine,
+} from "@remixicon/react"
 import type { EmbedlyConfig } from "ol-utilities"
 import { theme } from "../ThemeProvider/ThemeProvider"
-import { SimpleSelect } from "../SimpleSelect/SimpleSelect"
-import type { SimpleSelectProps } from "../SimpleSelect/SimpleSelect"
 import { EmbedlyCard } from "../EmbedlyCard/EmbedlyCard"
 import { PlatformLogo, PLATFORMS } from "../Logo/Logo"
 import InfoSection from "./InfoSection"
 import type { User } from "api/hooks/user"
 import { LearningResourceCardProps } from "../LearningResourceCard/LearningResourceCard"
+import { CardActionButton } from "../LearningResourceCard/LearningResourceListCard"
 
-const Container = styled.div<{ padTop?: boolean }>`
-  display: flex;
-  flex-direction: column;
-  padding: 18px 32px 160px;
-  gap: 20px;
-  ${({ padTop }) => (padTop ? "padding-top: 64px;" : "")}
-  width: 516px;
-  ${({ theme }) => theme.breakpoints.down("sm")} {
-    width: auto;
-  }
-`
+const Container = styled.div({
+  display: "flex",
+  flexDirection: "column",
+  padding: "0 32px 160px",
+  width: "900px",
+  [theme.breakpoints.down("md")]: {
+    width: "auto",
+    padding: "0 16px 160px",
+  },
+})
 
-const DateContainer = styled.div`
-  display: flex;
-  justify-content: start;
-  align-self: stretch;
-  align-items: center;
-  ${{ ...theme.typography.body2 }}
-  color: ${theme.custom.colors.black};
-  margin: 0;
+const TitleSectionContainer = styled.div({
+  display: "flex",
+  position: "sticky",
+  justifyContent: "space-between",
+  top: "0",
+  padding: "24px 32px",
+  backgroundColor: theme.custom.colors.white,
+  [theme.breakpoints.down("md")]: {
+    padding: "24px 16px",
+  },
+})
 
-  .MuiInputBase-root {
-    margin-bottom: 0;
-    border-color: ${theme.custom.colors.mitRed};
-    border-width: 1.5px;
-    color: ${theme.custom.colors.mitRed};
-    ${{ ...theme.typography.button }}
-    line-height: ${theme.typography.pxToRem(20)};
+const ContentContainer = styled.div({
+  display: "flex",
+  alignItems: "flex-start",
+  gap: "32px",
+  alignSelf: "stretch",
+  [theme.breakpoints.down("md")]: {
+    alignItems: "center",
+    flexDirection: "column-reverse",
+    gap: "16px",
+  },
+})
 
-    label {
-      display: none;
-    }
+const LeftContainer = styled.div({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-start",
+  gap: "24px",
+  flex: "1 0 0",
+})
 
-    svg {
-      color: ${theme.custom.colors.mitRed};
-    }
-  }
-`
+const RightContainer = styled.div({
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "center",
+  alignItems: "flex-start",
+  gap: "24px",
+})
 
-const DateSingle = styled(DateContainer)`
-  margin-top: 10px;
-`
+const EmbedlyContainer = styled.div({
+  width: "100%",
+  overflow: "hidden",
+})
 
-const NoDateSpacer = styled.div`
-  height: 34px;
-`
+const Image = styled.img<{ aspect: number }>((aspect) => ({
+  aspectRatio: aspect.aspect,
+  borderRadius: "8px",
+  width: "100%",
+  objectFit: "cover",
+}))
 
-const DateLabel = styled.span`
-  ${{ ...theme.typography.body2 }}
-  color: ${theme.custom.colors.darkGray1};
-  margin-right: 16px;
-`
+const SkeletonImage = styled(Skeleton)<{ aspect: number }>((aspect) => ({
+  borderRadius: "8px",
+  paddingBottom: `${100 / aspect.aspect}%`,
+}))
 
-const Image = styled.img<{ aspect: number }>`
-  aspect-ratio: ${({ aspect }) => aspect};
-  border-radius: 8px;
-  width: 100%;
-  object-fit: cover;
-`
+const CallToAction = styled.div({
+  display: "flex",
+  width: "350px",
+  padding: "16px",
+  flexDirection: "column",
+  alignItems: "center",
+  gap: "10px",
+  borderRadius: "8px",
+  border: `1px solid ${theme.custom.colors.lightGray2}`,
+  boxShadow: "0px 2px 10px 0px rgba(37, 38, 43, 0.10)",
+  [theme.breakpoints.down("md")]: {
+    width: "100%",
+    padding: "0",
+    border: "none",
+    boxShadow: "none",
+  },
+})
 
-const SkeletonImage = styled(Skeleton)<{ aspect: number }>`
-  border-radius: 8px;
-  padding-bottom: ${({ aspect }) => 100 / aspect}%;
-`
+const PlatformContainer = styled.div({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: "16px",
+  alignSelf: "stretch",
+})
 
-const CallToAction = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  ${({ theme }) => theme.breakpoints.down("sm")} {
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-`
+const StyledLink = styled(ButtonLink)({
+  textAlign: "center",
+  width: "100%",
+  [theme.breakpoints.down("sm")]: {
+    marginTop: "10px",
+    marginBottom: "10px",
+  },
+})
 
-const StyledLink = styled(ButtonLink)`
-  text-align: center;
-  width: 224px;
-  ${({ theme }) => theme.breakpoints.down("sm")} {
-    width: 100%;
-    margin-top: 10px;
-    margin-bottom: 10px;
-  }
-`
+const Platform = styled.div({
+  display: "flex",
+  justifyContent: "flex-end",
+  alignItems: "center",
+  gap: "16px",
+})
 
-const Platform = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 16px;
-`
+const Detail = styled.section({
+  display: "flex",
+  flexDirection: "column",
+  gap: "8px",
+})
 
-const Detail = styled.section`
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-`
+const Description = styled.p({
+  ...theme.typography.body2,
+  color: theme.custom.colors.black,
+  margin: 0,
+  whiteSpace: "pre-line",
+})
 
-const Description = styled.p`
-  ${{ ...theme.typography.body2 }}
-  color: ${theme.custom.colors.darkGray2};
-  margin: 0;
-  white-space: pre-line;
-`
+const StyledPlatformLogo = styled(PlatformLogo)({
+  height: "26px",
+  maxWidth: "180px",
+})
 
-const StyledPlatformLogo = styled(PlatformLogo)`
-  height: 26px;
-  max-width: 180px;
-`
+const OnPlatform = styled.span({
+  ...theme.typography.body2,
+  color: theme.custom.colors.black,
+})
 
-const OnPlatform = styled.span`
-  ${{ ...theme.typography.body2 }}
-  color: ${theme.custom.colors.black};
-`
+const ListButtonContainer = styled.div({
+  display: "flex",
+  gap: "8px",
+})
 
 type LearningResourceExpandedProps = {
   resource?: LearningResource
@@ -144,6 +169,68 @@ type LearningResourceExpandedProps = {
   imgConfig: EmbedlyConfig
   onAddToLearningPathClick?: LearningResourceCardProps["onAddToLearningPathClick"]
   onAddToUserListClick?: LearningResourceCardProps["onAddToUserListClick"]
+  closeDrawer?: () => void
+}
+
+const CloseButton = styled(ActionButton)(({ theme }) => ({
+  "&&&": {
+    flexShrink: 0,
+    backgroundColor: theme.custom.colors.lightGray2,
+    color: theme.custom.colors.black,
+    ["&:hover"]: {
+      backgroundColor: theme.custom.colors.red,
+      color: theme.custom.colors.white,
+    },
+  },
+}))
+
+const CloseIcon = styled(RiCloseLargeLine)`
+  &&& {
+    width: 18px;
+    height: 18px;
+  }
+`
+
+const TitleSection: React.FC<{
+  resource?: LearningResource
+  closeDrawer: () => void
+}> = ({ resource, closeDrawer }) => {
+  const closeButton = (
+    <CloseButton
+      variant="text"
+      size="medium"
+      onClick={() => closeDrawer()}
+      aria-label="Close"
+    >
+      <CloseIcon />
+    </CloseButton>
+  )
+  if (resource) {
+    return (
+      <TitleSectionContainer>
+        <div>
+          <Typography
+            variant="subtitle2"
+            color={theme.custom.colors.silverGrayDark}
+          >
+            {getReadableResourceType(resource?.resource_type)}
+          </Typography>
+          <Typography variant="h4" color={theme.custom.colors.darkGray2}>
+            {resource?.title}
+          </Typography>
+        </div>
+        {closeButton}
+      </TitleSectionContainer>
+    )
+  } else {
+    return (
+      <TitleSectionContainer>
+        <Skeleton variant="text" height={20} width="66%" />
+        <Skeleton variant="text" height={20} width="100%" />
+        {closeButton}
+      </TitleSectionContainer>
+    )
+  }
 }
 
 const ImageSection: React.FC<{
@@ -152,11 +239,13 @@ const ImageSection: React.FC<{
 }> = ({ resource, config }) => {
   if (resource?.resource_type === "video" && resource?.url) {
     return (
-      <EmbedlyCard
-        aspectRatio={config.width / config.height}
-        url={resource?.url}
-        embedlyKey={config.key}
-      />
+      <EmbedlyContainer>
+        <EmbedlyCard
+          aspectRatio={config.width / config.height}
+          url={resource?.url}
+          embedlyKey={config.key}
+        />
+      </EmbedlyContainer>
     )
   } else if (resource?.image) {
     return (
@@ -193,12 +282,51 @@ const getCallToActionUrl = (resource: LearningResource) => {
   }
 }
 
+const getCallToActionText = (resource: LearningResource): string => {
+  const accessCourseMaterials = "Access Course Materials"
+  const watchOnYouTube = "Watch on YouTube"
+  const listenToPodcast = "Listen to Podcast"
+  const learnMore = "Learn More"
+  const callsToAction = {
+    [ResourceTypeEnum.Course]: learnMore,
+    [ResourceTypeEnum.Program]: learnMore,
+    [ResourceTypeEnum.LearningPath]: learnMore,
+    [ResourceTypeEnum.Video]: watchOnYouTube,
+    [ResourceTypeEnum.VideoPlaylist]: watchOnYouTube,
+    [ResourceTypeEnum.Podcast]: listenToPodcast,
+    [ResourceTypeEnum.PodcastEpisode]: listenToPodcast,
+  }
+  if (
+    resource?.resource_type === ResourceTypeEnum.Video ||
+    resource?.resource_type === ResourceTypeEnum.VideoPlaylist
+  ) {
+    // Video resources should always show "Watch on YouTube" as the CTA
+    return watchOnYouTube
+  } else {
+    if (resource?.platform?.code === PlatformEnum.Ocw) {
+      // Non-video OCW resources should show "Access Course Materials" as the CTA
+      return accessCourseMaterials
+    } else {
+      // Return the default CTA for the resource type
+      return callsToAction[resource?.resource_type] || learnMore
+    }
+  }
+}
+
 const CallToActionSection = ({
+  imgConfig,
   resource,
   hide,
+  user,
+  onAddToLearningPathClick,
+  onAddToUserListClick,
 }: {
+  imgConfig: EmbedlyConfig
   resource?: LearningResource
   hide?: boolean
+  user?: User
+  onAddToLearningPathClick?: LearningResourceCardProps["onAddToLearningPathClick"]
+  onAddToUserListClick?: LearningResourceCardProps["onAddToUserListClick"]
 }) => {
   if (hide) {
     return null
@@ -206,12 +334,14 @@ const CallToActionSection = ({
 
   if (!resource) {
     return (
-      <CallToAction>
+      <PlatformContainer>
         <Skeleton height={70} width="50%" />
         <Skeleton height={50} width="25%" />
-      </CallToAction>
+      </PlatformContainer>
     )
   }
+  const inUserList = !!resource?.user_list_parents?.length
+  const inLearningPath = !!resource?.learning_path_parents?.length
   const { platform } = resource!
   const offeredBy = resource?.offered_by
   const platformCode =
@@ -219,22 +349,10 @@ const CallToActionSection = ({
       ? (offeredBy?.code as PlatformEnum)
       : (platform?.code as PlatformEnum)
   const platformImage = PLATFORMS[platformCode]?.image
-
-  const getCallToActionText = (resource: LearningResource): string => {
-    if (resource?.platform?.code === PlatformEnum.Ocw) {
-      return "Access Course Materials"
-    } else if (
-      resource?.resource_type === ResourceTypeEnum.Podcast ||
-      resource?.resource_type === ResourceTypeEnum.PodcastEpisode
-    ) {
-      return "Listen to Podcast"
-    }
-    return "Learn More"
-  }
-
   const cta = getCallToActionText(resource)
   return (
-    <CallToAction>
+    <CallToAction data-testid="drawer-cta">
+      <ImageSection resource={resource} config={imgConfig} />
       <StyledLink
         target="_blank"
         size="medium"
@@ -243,12 +361,40 @@ const CallToActionSection = ({
       >
         {cta}
       </StyledLink>
-      {platformImage ? (
-        <Platform>
-          <OnPlatform>on</OnPlatform>
-          <StyledPlatformLogo platformCode={platformCode} height={26} />
-        </Platform>
-      ) : null}
+      <PlatformContainer>
+        {platformImage ? (
+          <Platform>
+            <OnPlatform>on</OnPlatform>
+            <StyledPlatformLogo platformCode={platformCode} height={26} />
+          </Platform>
+        ) : null}
+        <ListButtonContainer>
+          {user?.is_learning_path_editor && (
+            <CardActionButton
+              filled={inLearningPath}
+              aria-label="Add to Learning Path"
+              onClick={(event) =>
+                onAddToLearningPathClick
+                  ? onAddToLearningPathClick(event, resource.id)
+                  : null
+              }
+            >
+              <RiMenuAddLine aria-hidden />
+            </CardActionButton>
+          )}
+          <CardActionButton
+            filled={inUserList}
+            aria-label={`Bookmark ${getReadableResourceType(resource.resource_type)}`}
+            onClick={
+              onAddToUserListClick
+                ? (event) => onAddToUserListClick?.(event, resource.id)
+                : undefined
+            }
+          >
+            <RiBookmarkLine aria-hidden />
+          </CardActionButton>
+        </ListButtonContainer>
+      </PlatformContainer>
     </CallToAction>
   )
 }
@@ -256,20 +402,8 @@ const CallToActionSection = ({
 const DetailSection = ({ resource }: { resource?: LearningResource }) => {
   return (
     <Detail>
-      <ResourceTitle resource={resource} />
       <ResourceDescription resource={resource} />
     </Detail>
-  )
-}
-
-const ResourceTitle = ({ resource }: { resource?: LearningResource }) => {
-  if (!resource) {
-    return <Skeleton variant="text" height={20} width="66%" />
-  }
-  return (
-    <Typography variant="h5" component="h2">
-      {resource.title}
-    </Typography>
   )
 }
 
@@ -297,140 +431,40 @@ const ResourceDescription = ({ resource }: { resource?: LearningResource }) => {
   )
 }
 
-const formatRunDate = (
-  run: LearningResourceRun,
-  asTaughtIn: boolean,
-): string | null => {
-  if (asTaughtIn) {
-    const semester = capitalize(run.semester ?? "")
-    if (semester && run.year) {
-      return `${semester} ${run.year}`
-    }
-    if (semester && run.start_date) {
-      return `${semester} ${formatDate(run.start_date, "YYYY")}`
-    }
-    if (run.start_date) {
-      return formatDate(run.start_date, "MMMM, YYYY")
-    }
-  }
-  if (run.start_date) {
-    return formatDate(run.start_date, "MMMM DD, YYYY")
-  }
-  return null
-}
-
 const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
   resource,
-  user,
   imgConfig,
+  user,
   onAddToLearningPathClick,
   onAddToUserListClick,
+  closeDrawer,
 }) => {
-  const [selectedRun, setSelectedRun] = useState(resource?.runs?.[0])
-
-  const multipleRuns = resource?.runs && resource.runs.length > 1
-  const asTaughtIn = resource ? showStartAnytime(resource) : false
-  const label = asTaughtIn ? "As taught in:" : "Start Date:"
-
-  useEffect(() => {
-    if (resource) {
-      const closest = resource?.runs?.reduce(function (prev, current) {
-        const now = Date.now()
-        return prev.start_date &&
-          current.start_date &&
-          Date.parse(prev.start_date) > now &&
-          Date.parse(prev.start_date) - now <
-            Date.parse(current.start_date) - now
-          ? prev
-          : current
-      }, resource!.runs![0])
-      setSelectedRun(closest)
-    }
-  }, [resource])
-
-  const onDateChange: SimpleSelectProps["onChange"] = (event) => {
-    const run = resource?.runs?.find(
-      (run) => run.id === Number(event.target.value),
-    )
-    if (run) setSelectedRun(run)
-  }
-
-  const DateSection = ({ hide }: { hide?: boolean }) => {
-    if (hide) {
-      return null
-    }
-    if (!resource) {
-      return <Skeleton height={40} style={{ marginTop: 0, width: "60%" }} />
-    }
-
-    const dateOptions: SimpleSelectProps["options"] =
-      resource.runs
-        ?.sort((a, b) => {
-          if (a?.start_date && b?.start_date) {
-            return Date.parse(a.start_date) - Date.parse(b.start_date)
-          }
-          return 0
-        })
-        .map((run) => {
-          return {
-            value: run.id.toString(),
-            label: formatRunDate(run, asTaughtIn),
-          }
-        }) ?? []
-
-    if (
-      [ResourceTypeEnum.Course, ResourceTypeEnum.Program].includes(
-        resource.resource_type as "course" | "program",
-      ) &&
-      multipleRuns
-    ) {
-      return (
-        <DateContainer>
-          <DateLabel>{label}</DateLabel>
-          <SimpleSelect
-            value={selectedRun?.id.toString() ?? ""}
-            onChange={onDateChange}
-            options={dateOptions}
-          />
-        </DateContainer>
-      )
-    }
-
-    if (!selectedRun) return <NoDateSpacer />
-
-    const formatted = formatRunDate(selectedRun, asTaughtIn)
-    if (!formatted) {
-      return <NoDateSpacer />
-    }
-    return (
-      <DateSingle>
-        <DateLabel>{label}</DateLabel>
-        {formatted ?? ""}
-      </DateSingle>
-    )
-  }
-
-  const isVideo =
-    resource &&
-    (resource.resource_type === ResourceTypeEnum.Video ||
-      resource.resource_type === ResourceTypeEnum.VideoPlaylist)
-
   return (
-    <Container padTop={isVideo}>
-      <DateSection hide={isVideo} />
-      <ImageSection resource={resource} config={imgConfig} />
-      <CallToActionSection resource={resource} hide={isVideo} />
-      <DetailSection resource={resource} />
-      <InfoSection
+    <>
+      <TitleSection
         resource={resource}
-        run={selectedRun}
-        user={user}
-        onAddToLearningPathClick={onAddToLearningPathClick}
-        onAddToUserListClick={onAddToUserListClick}
+        closeDrawer={closeDrawer ?? (() => {})}
       />
-    </Container>
+      <Container>
+        <ContentContainer>
+          <LeftContainer>
+            <DetailSection resource={resource} />
+            <InfoSection resource={resource} />
+          </LeftContainer>
+          <RightContainer>
+            <CallToActionSection
+              imgConfig={imgConfig}
+              resource={resource}
+              user={user}
+              onAddToLearningPathClick={onAddToLearningPathClick}
+              onAddToUserListClick={onAddToUserListClick}
+            />
+          </RightContainer>
+        </ContentContainer>
+      </Container>
+    </>
   )
 }
 
-export { LearningResourceExpanded }
+export { LearningResourceExpanded, getCallToActionText }
 export type { LearningResourceExpandedProps }

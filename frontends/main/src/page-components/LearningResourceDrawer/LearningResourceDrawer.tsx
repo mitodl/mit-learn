@@ -63,7 +63,8 @@ const useCapturePageView = (resourceId: number) => {
 
 const DrawerContent: React.FC<{
   resourceId: number
-}> = ({ resourceId }) => {
+  closeDrawer: () => void
+}> = ({ resourceId, closeDrawer }) => {
   const resource = useLearningResourcesDetail(Number(resourceId))
   const [signupEl, setSignupEl] = React.useState<HTMLElement | null>(null)
   const { data: user } = useUserMe()
@@ -96,6 +97,7 @@ const DrawerContent: React.FC<{
         user={user}
         onAddToLearningPathClick={handleAddToLearningPathClick}
         onAddToUserListClick={handleAddToUserListClick}
+        closeDrawer={closeDrawer}
       />
       <SignupPopover anchorEl={signupEl} onClose={() => setSignupEl(null)} />
     </>
@@ -104,9 +106,9 @@ const DrawerContent: React.FC<{
 
 const PAPER_PROPS: RoutedDrawerProps["PaperProps"] = {
   sx: {
-    maxWidth: (theme) => theme.breakpoints.values.sm,
+    maxWidth: (theme) => theme.breakpoints.values.md,
     minWidth: (theme) => ({
-      [theme.breakpoints.down("sm")]: {
+      [theme.breakpoints.down("md")]: {
         minWidth: "100%",
       },
     }),
@@ -120,9 +122,15 @@ const LearningResourceDrawer = () => {
         anchor="right"
         requiredParams={RESOURCE_DRAWER_PARAMS}
         PaperProps={PAPER_PROPS}
+        hideCloseButton={true}
       >
-        {({ params }) => {
-          return <DrawerContent resourceId={Number(params.resource)} />
+        {({ params, closeDrawer }) => {
+          return (
+            <DrawerContent
+              resourceId={Number(params.resource)}
+              closeDrawer={closeDrawer}
+            />
+          )
         }}
       </RoutedDrawer>
     </Suspense>

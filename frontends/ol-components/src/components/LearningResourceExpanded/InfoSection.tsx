@@ -11,99 +11,143 @@ import {
   RiDashboard3Line,
   RiGraduationCapLine,
   RiTranslate2,
-  RiAwardLine,
   RiPresentationLine,
-  RiMenuAddLine,
-  RiBookmarkLine,
+  RiAwardFill,
 } from "@remixicon/react"
-import { LearningResource, LearningResourceRun, ResourceTypeEnum } from "api"
+import { LearningResource, ResourceTypeEnum } from "api"
 import {
   formatDurationClockTime,
+  formatRunDate,
   getLearningResourcePrices,
-  getReadableResourceType,
+  showStartAnytime,
 } from "ol-utilities"
 import { theme } from "../ThemeProvider/ThemeProvider"
-import Typography from "@mui/material/Typography"
-import type { User } from "api/hooks/user"
-import { CardActionButton } from "../LearningResourceCard/LearningResourceListCard"
-import { LearningResourceCardProps } from "../LearningResourceCard/LearningResourceCard"
 
-const InfoItems = styled.section`
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-`
+const SeparatorContainer = styled.span({
+  padding: "0 8px",
+  color: theme.custom.colors.silverGray,
+})
 
-const InfoHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-`
+const Separator: React.FC = () => <SeparatorContainer>|</SeparatorContainer>
 
-const ListButtonContainer = styled.div`
-  display: flex;
-  gap: 8px;
-`
+const InfoItems = styled.section({
+  display: "flex",
+  flexDirection: "column",
+  gap: "16px",
+})
 
-const InfoItemContainer = styled.div`
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  align-self: stretch;
-  ${{ ...theme.typography.body2 }}
-  color: ${theme.custom.colors.silverGrayDark};
+const InfoItemValue = styled.span({
+  display: "flex",
+  whiteSpace: "nowrap",
+})
 
-  svg {
-    width: 20px;
-    height: 20px;
-    flex-shrink: 0;
-  }
-`
+const InfoItemContainer = styled.div({
+  display: "flex",
+  alignSelf: "stretch",
+  alignItems: "baseline",
+  gap: "16px",
+  ...theme.typography.subtitle3,
+  color: theme.custom.colors.black,
+  svg: {
+    color: theme.custom.colors.silverGrayDark,
+    width: "20px",
+    height: "20px",
+    flexShrink: 0,
+  },
+  [theme.breakpoints.down("sm")]: {
+    gap: "12px",
+  },
+})
 
-const InfoLabel = styled.div`
-  width: 85px;
-  flex-shrink: 0;
-`
+const IconContainer = styled.span({
+  transform: "translateY(25%)",
+  svg: {
+    display: "block",
+  },
+  [theme.breakpoints.down("sm")]: {
+    display: "none",
+  },
+})
 
-const InfoValue = styled.div`
-  ${{ ...theme.typography.body2 }}
-  color: ${theme.custom.colors.black};
-  flex-grow: 1;
-`
+const InfoLabel = styled.div({
+  width: "85px",
+  flexShrink: 0,
+})
 
-const Certificate = styled.div`
-  display: flex;
-  gap: 4px;
-  border-radius: 8px;
-  padding: 12px 16px;
-  margin-top: 8px;
-  background-color: ${theme.custom.colors.lightGray1};
-  color: ${theme.custom.colors.darkGray2};
+const InfoValue = styled.div({
+  display: "flex",
+  flexWrap: "wrap",
+  flexGrow: 1,
+  color: theme.custom.colors.darkGray2,
+  rowGap: ".2rem",
+  ...theme.typography.body3,
+})
 
-  ${{ ...theme.typography.subtitle2 }}
+const PriceDisplay = styled.div({
+  display: "flex",
+  alignItems: "center",
+  gap: "8px",
+})
 
-  svg {
-    width: 16px;
-    height: 16px;
-  }
-`
+const Certificate = styled.div({
+  display: "flex",
+  gap: "4px",
+  borderRadius: "4px",
+  padding: "4px 8px",
+  border: `1px solid ${theme.custom.colors.lightGray2}`,
+  backgroundColor: theme.custom.colors.lightGray1,
+  color: theme.custom.colors.silverGrayDark,
+  ...theme.typography.subtitle3,
+  svg: {
+    width: "16px",
+    height: "16px",
+  },
+})
 
-const CertificatePrice = styled.span`
-  ${{ ...theme.typography.body2 }}
-`
-
-type InfoSelector = (
-  resource: LearningResource,
-  run?: LearningResourceRun,
-) => React.ReactNode
+type InfoSelector = (resource: LearningResource) => React.ReactNode
 
 type InfoItemConfig = {
-  label: string
+  label: string | ((resource: LearningResource) => string)
   Icon: RemixiconComponentType | null
   selector: InfoSelector
 }[]
 
 const INFO_ITEMS: InfoItemConfig = [
+  {
+    label: (resource: LearningResource) => {
+      const asTaughtIn = resource ? showStartAnytime(resource) : false
+      const label = asTaughtIn ? "As taught in:" : "Start Date:"
+      return label
+    },
+    Icon: RiCalendarLine,
+    selector: (resource: LearningResource) => {
+      const asTaughtIn = resource ? showStartAnytime(resource) : false
+      if (
+        [ResourceTypeEnum.Course, ResourceTypeEnum.Program].includes(
+          resource.resource_type as "course" | "program",
+        )
+      ) {
+        const runDates =
+          resource.runs
+            ?.sort((a, b) => {
+              if (a?.start_date && b?.start_date) {
+                return Date.parse(a.start_date) - Date.parse(b.start_date)
+              }
+              return 0
+            })
+            .map((run, index) => {
+              const totalRuns = resource.runs?.length || 0
+              return (
+                <InfoItemValue key={`run-${run.id}`}>
+                  {formatRunDate(run, asTaughtIn)}
+                  {index < totalRuns - 1 && <Separator />}
+                </InfoItemValue>
+              )
+            }) ?? []
+        return runDates
+      } else return null
+    },
+  },
   {
     label: "Price:",
     Icon: RiPriceTag3Line,
@@ -111,18 +155,18 @@ const INFO_ITEMS: InfoItemConfig = [
       const prices = getLearningResourcePrices(resource)
 
       return (
-        <>
-          {prices.course.display}
+        <PriceDisplay>
+          <div>{prices.course.display}</div>
           {resource.certification && (
             <Certificate>
-              <RiAwardLine />
+              <RiAwardFill />
               {prices.certificate.display
                 ? "Earn a certificate:"
                 : "Certificate included"}
-              <CertificatePrice>{prices.certificate.display}</CertificatePrice>
+              <span>{prices.certificate.display}</span>
             </Certificate>
           )}
-        </>
+        </PriceDisplay>
       )
     },
   },
@@ -135,39 +179,92 @@ const INFO_ITEMS: InfoItemConfig = [
         return null
       }
 
-      return topics.map((topic) => topic.name).join(", ")
+      return topics.map((topic, index) => {
+        return (
+          <InfoItemValue key={`topic-${index}`}>
+            {topic.name}
+            {index < topics.length - 1 && <Separator />}
+          </InfoItemValue>
+        )
+      })
     },
   },
   {
     label: "Level:",
     Icon: RiDashboard3Line,
-    selector: (resource: LearningResource, run?: LearningResourceRun) => {
-      return run?.level?.[0]?.name || null
+    selector: (resource: LearningResource) => {
+      const totalRuns = resource.runs?.length || 0
+      const levels = resource.runs?.map((run, index) => {
+        const level = run?.level?.[0]?.name
+        if (!level) {
+          return null
+        }
+        return (
+          <InfoItemValue key={`level-${index}`}>
+            {run?.level?.[0]?.name}
+            {index < totalRuns - 1 && <Separator />}
+          </InfoItemValue>
+        )
+      })
+      if (levels?.every((level) => level === null)) {
+        return null
+      }
+      return levels
     },
   },
 
   {
     label: "Instructors:",
     Icon: RiGraduationCapLine,
-    selector: (resource: LearningResource, run?: LearningResourceRun) => {
-      return (
-        run?.instructors
-          ?.filter((instructor) => instructor.full_name)
-          .map(({ full_name: name }) => name)
-          .join(", ") || null
-      )
+    selector: (resource: LearningResource) => {
+      const instructorNames: string[] = []
+      resource.runs?.forEach((run) => {
+        run.instructors?.forEach((instructor) => {
+          if (instructor.full_name) {
+            instructorNames.push(instructor.full_name)
+          }
+        })
+      })
+      const uniqueInstructors = Array.from(new Set(instructorNames))
+      if (uniqueInstructors.length === 0) {
+        return null
+      }
+      const totalInstructors = uniqueInstructors.length
+      const instructors = uniqueInstructors.map((instructor, index) => {
+        return (
+          <InfoItemValue key={`instructor-${index}`}>
+            {instructor}
+            {index < totalInstructors - 1 && <Separator />}
+          </InfoItemValue>
+        )
+      })
+      return instructors
     },
   },
 
   {
     label: "Languages:",
     Icon: RiTranslate2,
-    selector: (resource: LearningResource, run?: LearningResourceRun) => {
-      return run?.languages?.length
-        ? run.languages
-            .map((language) => ISO6391.getName(language.substring(0, 2)))
-            .join(", ")
-        : null
+    selector: (resource: LearningResource) => {
+      const runLanguages: string[] = []
+      resource.runs?.forEach((run) => {
+        run.languages?.forEach((language) => {
+          runLanguages.push(language)
+        })
+      })
+      const uniqueLanguages = Array.from(new Set(runLanguages))
+      if (uniqueLanguages.length === 0) {
+        return null
+      }
+      const totalLanguages = uniqueLanguages.length
+      return uniqueLanguages.map((language, index) => {
+        return (
+          <InfoItemValue key={`language-${index}`}>
+            {ISO6391.getName(language.substring(0, 2))}
+            {index < totalLanguages - 1 && <Separator />}
+          </InfoItemValue>
+        )
+      })
     },
   },
 
@@ -230,37 +327,22 @@ const InfoItem = ({ label, Icon, value }: InfoItemProps) => {
   }
   return (
     <InfoItemContainer>
-      {Icon && <Icon />}
+      <IconContainer>{Icon && <Icon />}</IconContainer>
       <InfoLabel>{label}</InfoLabel>
       <InfoValue>{value}</InfoValue>
     </InfoItemContainer>
   )
 }
 
-const InfoSection = ({
-  resource,
-  run,
-  user,
-  onAddToLearningPathClick,
-  onAddToUserListClick,
-}: {
-  resource?: LearningResource
-  run?: LearningResourceRun
-  user?: User
-  onAddToLearningPathClick?: LearningResourceCardProps["onAddToLearningPathClick"]
-  onAddToUserListClick?: LearningResourceCardProps["onAddToUserListClick"]
-}) => {
+const InfoSection = ({ resource }: { resource?: LearningResource }) => {
   if (!resource) {
     return null
   }
 
-  const inUserList = !!resource?.user_list_parents?.length
-  const inLearningPath = !!resource?.learning_path_parents?.length
-
   const infoItems = INFO_ITEMS.map(({ label, Icon, selector }) => ({
-    label,
+    label: typeof label === "function" ? label(resource) : label,
     Icon,
-    value: selector(resource, run),
+    value: selector(resource),
   })).filter(({ value }) => value !== null && value !== "")
 
   if (infoItems.length === 0) {
@@ -268,38 +350,7 @@ const InfoSection = ({
   }
 
   return (
-    <InfoItems>
-      <InfoHeader>
-        <Typography variant="subtitle2" component="h3">
-          Info
-        </Typography>
-        <ListButtonContainer>
-          {user?.is_learning_path_editor && (
-            <CardActionButton
-              filled={inLearningPath}
-              aria-label="Add to Learning Path"
-              onClick={(event) =>
-                onAddToLearningPathClick
-                  ? onAddToLearningPathClick(event, resource.id)
-                  : null
-              }
-            >
-              <RiMenuAddLine aria-hidden />
-            </CardActionButton>
-          )}
-          <CardActionButton
-            filled={inUserList}
-            aria-label={`Bookmark ${getReadableResourceType(resource.resource_type)}`}
-            onClick={
-              onAddToUserListClick
-                ? (event) => onAddToUserListClick?.(event, resource.id)
-                : undefined
-            }
-          >
-            <RiBookmarkLine aria-hidden />
-          </CardActionButton>
-        </ListButtonContainer>
-      </InfoHeader>
+    <InfoItems data-testid="drawer-info-items">
       {infoItems.map((props, index) => (
         <InfoItem key={index} {...props} />
       ))}
