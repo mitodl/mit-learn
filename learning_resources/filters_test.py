@@ -1,5 +1,6 @@
 """Tests for learning_resources Filters"""
 
+from decimal import Decimal
 from types import SimpleNamespace
 
 import pytest
@@ -22,6 +23,7 @@ from learning_resources.factories import (
     LearningResourceFactory,
     LearningResourceOfferorFactory,
     LearningResourcePlatformFactory,
+    LearningResourcePriceFactory,
     LearningResourceRunFactory,
     PodcastEpisodeFactory,
     PodcastFactory,
@@ -233,24 +235,38 @@ def test_learning_resource_filter_free(client):
     free_course = LearningResourceFactory.create(
         is_course=True, runs=[], professional=False
     )
-    LearningResourceRunFactory.create(learning_resource=free_course, prices=[0.00])
+    LearningResourceRunFactory.create(
+        learning_resource=free_course
+    ).resource_prices.set([LearningResourcePriceFactory.create(amount=Decimal(0.00))])
 
     paid_course = LearningResourceFactory.create(is_course=True, runs=[])
     LearningResourceRunFactory.create(
-        learning_resource=paid_course, prices=[50.00, 100.00]
+        learning_resource=paid_course
+    ).resource_prices.set(
+        [
+            LearningResourcePriceFactory.create(amount=Decimal(50.00)),
+            LearningResourcePriceFactory.create(amount=Decimal(100.00)),
+        ]
     )
 
     free2pay_course = LearningResourceFactory(
         is_course=True, runs=[], professional=False
     )
     LearningResourceRunFactory.create(
-        learning_resource=free2pay_course, prices=[0.00, 100.00]
+        learning_resource=free2pay_course
+    ).resource_prices.set(
+        [
+            LearningResourcePriceFactory.create(amount=Decimal(0.00)),
+            LearningResourcePriceFactory.create(amount=Decimal(100.00)),
+        ]
     )
 
     priceless_pro_course = LearningResourceFactory(
         is_course=True, runs=[], professional=True
     )
-    LearningResourceRunFactory.create(learning_resource=priceless_pro_course, prices=[])
+    LearningResourceRunFactory.create(
+        learning_resource=priceless_pro_course, no_prices=True
+    )
 
     always_free_podcast_episode = LearningResourceFactory.create(
         is_podcast_episode=True, professional=False

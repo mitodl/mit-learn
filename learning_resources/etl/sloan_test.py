@@ -1,6 +1,7 @@
 """Tests for prolearn etl functions"""
 
 import json
+from decimal import Decimal
 from urllib.parse import urljoin
 
 import pytest
@@ -127,7 +128,7 @@ def test_transform_run(
         "delivery": transform_delivery(run_data["Delivery"]),
         "availability": parse_availability(run_data),
         "published": True,
-        "prices": [run_data["Price"]],
+        "prices": [{"amount": Decimal(run_data["Price"]), "currency": "USD"}],
         "instructors": [{"full_name": name.strip()} for name in faculty_names],
         "pace": [Pace.instructor_paced.name],
         "format": [Format.synchronous.name],

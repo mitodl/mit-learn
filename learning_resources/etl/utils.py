@@ -10,6 +10,7 @@ import uuid
 from collections import Counter
 from collections.abc import Generator
 from datetime import UTC, datetime
+from decimal import Decimal
 from hashlib import md5
 from pathlib import Path
 from subprocess import check_call
@@ -21,6 +22,7 @@ import requests
 from django.conf import settings
 from django.utils.dateparse import parse_duration
 from django.utils.text import slugify
+from pycountry import currencies
 from tika import parser as tika_parser
 from xbundle import XBundle
 
@@ -29,6 +31,7 @@ from learning_resources.constants import (
     CONTENT_TYPE_PDF,
     CONTENT_TYPE_VERTICAL,
     CONTENT_TYPE_VIDEO,
+    CURRENCY_USD,
     DEPARTMENTS,
     VALID_TEXT_FILE_TYPES,
     LearningResourceDelivery,
@@ -746,3 +749,21 @@ def iso8601_duration(duration_str: str) -> str or None:
         second_duration = f"{int(seconds)}S" if seconds else ""
         return f"PT{hour_duration}{minute_duration}{second_duration}"
     return "PT0S"
+
+
+def transform_price(amount: Decimal, currency: str = CURRENCY_USD) -> dict:
+    """
+    Transform the price data into a dict
+
+    Args:
+        amount (Decimal): The price amount
+        currency (str): The currency code
+
+    Returns:
+        dict: The price data
+    """
+    return {
+        "amount": amount,
+        # Use pycountry.currencies to ensure the code is valid, default to USD
+        "currency": currency if currencies.get(alpha_3=currency) else CURRENCY_USD,
+    }

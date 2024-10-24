@@ -1,7 +1,6 @@
 """Tests for the OLL ETL functions"""
 
 # pylint: disable=redefined-outer-name
-
 import pytest
 
 from learning_resources.etl.oll import extract, transform
@@ -63,7 +62,6 @@ def test_oll_transform(mocker, oll_course_data):
                     "url": "https://openlearninglibrary.mit.edu/asset-v1:MITx+18.05r_10+2022_Summer+type@asset+block@mit18_05_s22_chp.jpg",
                     "alt": "Introduction to Probability and Statistics",
                 },
-                "prices": [0.00],
                 "level": ["undergraduate"],
                 "instructors": [
                     {"full_name": "Jeremy Orloff"},
@@ -81,7 +79,6 @@ def test_oll_transform(mocker, oll_course_data):
             "url": "https://openlearninglibrary.mit.edu/asset-v1:MITx+18.05r_10+2022_Summer+type@asset+block@mit18_05_s22_chp.jpg",
             "alt": "Introduction to Probability and Statistics",
         },
-        "prices": [0.00],
         "etl_source": "oll",
         "availability": "anytime",
         "pace": ["self_paced"],
@@ -119,7 +116,6 @@ def test_oll_transform(mocker, oll_course_data):
                     "url": "https://openlearninglibrary.mit.edu/asset-v1:MITx+0.502x+1T2019+type@asset+block@course_image.png",
                     "alt": "Competency-Based Education",
                 },
-                "prices": [0.00],
                 "level": ["undergraduate"],
                 "instructors": [
                     {"full_name": "Justin Reich"},
@@ -137,7 +133,6 @@ def test_oll_transform(mocker, oll_course_data):
             "url": "https://openlearninglibrary.mit.edu/asset-v1:MITx+0.502x+1T2019+type@asset+block@course_image.png",
             "alt": "Competency-Based Education",
         },
-        "prices": [0.00],
         "etl_source": "oll",
         "availability": "anytime",
         "pace": ["self_paced"],

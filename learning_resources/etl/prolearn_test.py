@@ -9,6 +9,7 @@ import pytest
 
 from data_fixtures.utils import upsert_topic_data_file
 from learning_resources.constants import (
+    CURRENCY_USD,
     Availability,
     CertificationType,
     Format,
@@ -292,18 +293,20 @@ def test_parse_date(date_int, expected_dt):
 
 
 @pytest.mark.parametrize(
-    ("price_str", "price_list"),
+    ("price_str", "expected_price"),
     [
-        ["$5,342", [round(Decimal(5342), 2)]],  # noqa: PT007
-        ["5.34", [round(Decimal(5.34), 2)]],  # noqa: PT007
-        [None, []],  # noqa: PT007
-        ["", []],  # noqa: PT007
+        ["$5,342", round(Decimal(5342), 2)],  # noqa: PT007
+        ["5.34", round(Decimal(5.34), 2)],  # noqa: PT007
+        [None, None],  # noqa: PT007
+        ["", None],  # noqa: PT007
     ],
 )
-def test_parse_price(price_str, price_list):
+def test_parse_price(price_str, expected_price):
     """Price string should be parsed into correct Decimal list"""
     document = {"field_price": price_str}
-    assert parse_price(document) == price_list
+    assert parse_price(document) == (
+        [{"amount": expected_price, "currency": CURRENCY_USD}] if expected_price else []
+    )
 
 
 @pytest.mark.parametrize(

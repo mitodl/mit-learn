@@ -16,6 +16,7 @@ from django.conf import settings
 from toolz import compose
 
 from learning_resources.constants import (
+    CURRENCY_USD,
     Availability,
     CertificationType,
     Format,
@@ -30,6 +31,7 @@ from learning_resources.etl.utils import (
     generate_course_numbers_json,
     parse_certification,
     transform_levels,
+    transform_price,
     without_none,
 )
 from learning_resources.models import LearningResource
@@ -298,7 +300,7 @@ def _parse_course_dates(program, date_field):
     return dates
 
 
-def _sum_course_prices(program: dict) -> Decimal:
+def _sum_course_prices(program: dict) -> dict:
     """
     Sum all the course run price values for the program
 
@@ -306,7 +308,7 @@ def _sum_course_prices(program: dict) -> Decimal:
         program (dict): the program data
 
     Returns:
-        Decimal: the sum of all the course prices
+        Decimal, str: the sum of all the course prices and the currency code
     """
 
     def _get_course_price(course):
@@ -321,10 +323,17 @@ def _sum_course_prices(program: dict) -> Decimal:
                             for seat in run["seats"]
                             if seat["price"] != "0.00"
                         ]
-                    )
-        return Decimal(0.00)
+                    ), run.get("seats", [{}])[0].get("currency", CURRENCY_USD)
+        return Decimal(0.00), CURRENCY_USD
 
-    return sum(_get_course_price(course) for course in program.get("courses", []))
+    prices_currencies = [
+        _get_course_price(course) for course in program.get("courses", [])
+    ]
+    total, currency = (
+        Decimal(sum(price_currency[0] for price_currency in prices_currencies)),
+        (prices_currencies[0][1] or CURRENCY_USD),
+    )
+    return transform_price(total, currency)
 
 
 def _transform_course_run(config, course_run, course_last_modified, marketing_url):
@@ -362,9 +371,19 @@ def _transform_course_run(config, course_run, course_last_modified, marketing_ur
         "pace": [course_run.get("pacing_type") or Pace.self_paced.name],
         "url": marketing_url
         or "{}{}/course/".format(config.alt_url, course_run.get("key")),
-        "prices": sorted(
-            {"0.00", *[seat.get("price") for seat in course_run.get("seats", [])]}
-        ),
+        "prices": [
+            transform_price(price, currency)
+            for (price, currency) in sorted(
+                {
+                    (Decimal(0.00), CURRENCY_USD),
+                    *[
+                        (Decimal(seat.get("price")), seat.get("currency"))
+                        for seat in course_run.get("seats", [])
+                    ],
+                },
+                key=lambda x: x[0],
+            )
+        ],
         "instructors": [
             {
                 "first_name": person.get("given_name"),
