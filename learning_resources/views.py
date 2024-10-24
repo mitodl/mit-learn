@@ -377,8 +377,7 @@ class ResourceListItemsViewSet(NestedViewSetMixin, viewsets.ReadOnlyModelViewSet
     queryset = (
         LearningResourceRelationship.objects.select_related("child")
         .prefetch_related(
-            "child__runs",
-            "child__runs__instructors",
+            "child__runs", "child__runs__instructors", "child__runs__resource_prices"
         )
         .filter(child__published=True)
     )

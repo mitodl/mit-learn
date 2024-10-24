@@ -301,3 +301,6 @@ class Format(ExtendedEnum):
 
     synchronous = "Synchronous"
     asynchronous = "Asynchronous"
+
+
+CURRENCY_USD = "USD"

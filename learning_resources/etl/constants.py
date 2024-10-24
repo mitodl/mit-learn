@@ -10,6 +10,7 @@ from django.conf import settings
 from named_enum import ExtendedEnum
 
 from learning_resources.constants import LearningResourceDelivery
+from learning_resources.models import LearningResourcePrice
 
 # A custom UA so that operators of OpenEdx will know who is pinging their service
 COMMON_HEADERS = {
@@ -115,5 +116,6 @@ CONTENT_TAG_CATEGORIES = {
 class ResourceNextRunConfig:
     next_start_date: datetime = None
     prices: list[Decimal] = field(default_factory=list)
+    resource_prices: list[LearningResourcePrice] = field(default_factory=list)
     availability: str = None
     location: str = None

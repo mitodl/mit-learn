@@ -3,6 +3,7 @@
 import copy
 import logging
 from datetime import UTC
+from decimal import Decimal
 
 import requests
 from dateutil.parser import parse
@@ -20,6 +21,7 @@ from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.utils import (
     generate_course_numbers_json,
     transform_delivery,
+    transform_price,
     transform_topics,
 )
 from main.utils import clean_data
@@ -111,7 +113,9 @@ def _transform_run(course_run: dict, course: dict) -> dict:
         "enrollment_end": _parse_datetime(course_run["enrollment_end"]),
         "published": bool(course_run["current_price"]),
         "prices": (
-            [course_run["current_price"]] if course_run.get("current_price") else []
+            [transform_price(Decimal(course_run["current_price"]))]
+            if course_run.get("current_price")
+            else []
         ),
         "instructors": [
             {"full_name": instructor["name"]}
@@ -204,7 +208,7 @@ def transform_programs(programs):
             "runs": [
                 {
                     "prices": (
-                        [program["current_price"]]
+                        [transform_price(Decimal(program["current_price"]))]
                         if program.get("current_price", None)
                         else []
                     ),

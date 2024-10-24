@@ -106,9 +106,12 @@ def offeror_featured_lists():  # noqa: PT004
                 is_course=True,
             )
             if offered_by == OfferedBy.ocw.name:
-                LearningResourceRun.objects.filter(
-                    learning_resource=resource.id
-                ).update(prices=[])
+                for run in LearningResourceRun.objects.filter(
+                    learning_resource__id=resource.id
+                ):
+                    run.resource_prices.set([])
+                    run.prices = []
+                    run.save()
             featured_path.resources.add(
                 resource,
                 through_defaults={

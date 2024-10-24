@@ -2,6 +2,7 @@
 
 import datetime
 import pathlib
+from decimal import Decimal
 from random import randrange
 from subprocess import check_call
 from tempfile import TemporaryDirectory
@@ -13,6 +14,7 @@ from lxml import etree
 from learning_resources.constants import (
     CONTENT_TYPE_FILE,
     CONTENT_TYPE_VERTICAL,
+    CURRENCY_USD,
     LearningResourceDelivery,
     LearningResourceType,
     OfferedBy,
@@ -482,3 +484,19 @@ def test_parse_duration(mocker, duration_str, expected):
     mock_warn = mocker.patch("learning_resources.etl.utils.log.warning")
     assert utils.iso8601_duration(duration_str) == expected
     assert mock_warn.call_count == (1 if duration_str and expected is None else 0)
+
+
+@pytest.mark.parametrize(
+    ("amount", "currency", "valid_currency"),
+    [
+        (410.52, "EUR", True),
+        (100.00, "USD", True),
+        (200.00, "YYY", False),
+    ],
+)
+def test_transform_price(amount, currency, valid_currency):
+    """Test that transform_price returns the expected price"""
+    assert utils.transform_price(Decimal(amount), currency) == {
+        "amount": amount,
+        "currency": currency if valid_currency else CURRENCY_USD,
+    }

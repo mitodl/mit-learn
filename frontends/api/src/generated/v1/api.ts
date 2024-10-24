@@ -646,6 +646,12 @@ export interface CourseResource {
   prices: Array<string>
   /**
    *
+   * @type {Array<LearningResourcePrice>}
+   * @memberof CourseResource
+   */
+  resource_prices: Array<LearningResourcePrice>
+  /**
+   *
    * @type {Array<LearningResourceRun>}
    * @memberof CourseResource
    */
@@ -1434,6 +1440,12 @@ export interface LearningPathResource {
   prices: Array<string>
   /**
    *
+   * @type {Array<LearningResourcePrice>}
+   * @memberof LearningPathResource
+   */
+  resource_prices: Array<LearningResourcePrice>
+  /**
+   *
    * @type {Array<LearningResourceRun>}
    * @memberof LearningPathResource
    */
@@ -2148,6 +2160,44 @@ export interface LearningResourcePlatformRequest {
   name?: string
 }
 /**
+ * Serializer for LearningResourcePrice model
+ * @export
+ * @interface LearningResourcePrice
+ */
+export interface LearningResourcePrice {
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourcePrice
+   */
+  amount: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourcePrice
+   */
+  currency: string
+}
+/**
+ * Serializer for LearningResourcePrice model
+ * @export
+ * @interface LearningResourcePriceRequest
+ */
+export interface LearningResourcePriceRequest {
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourcePriceRequest
+   */
+  amount: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourcePriceRequest
+   */
+  currency: string
+}
+/**
  * CRUD serializer for LearningResourceRelationship
  * @export
  * @interface LearningResourceRelationship
@@ -2252,6 +2302,12 @@ export interface LearningResourceRun {
    * @memberof LearningResourceRun
    */
   pace: Array<CourseResourcePaceInner>
+  /**
+   *
+   * @type {Array<LearningResourcePrice>}
+   * @memberof LearningResourceRun
+   */
+  resource_prices: Array<LearningResourcePrice>
   /**
    *
    * @type {string}
@@ -4203,6 +4259,12 @@ export interface PodcastEpisodeResource {
   prices: Array<string>
   /**
    *
+   * @type {Array<LearningResourcePrice>}
+   * @memberof PodcastEpisodeResource
+   */
+  resource_prices: Array<LearningResourcePrice>
+  /**
+   *
    * @type {Array<LearningResourceRun>}
    * @memberof PodcastEpisodeResource
    */
@@ -4589,6 +4651,12 @@ export interface PodcastResource {
    * @memberof PodcastResource
    */
   prices: Array<string>
+  /**
+   *
+   * @type {Array<LearningResourcePrice>}
+   * @memberof PodcastResource
+   */
+  resource_prices: Array<LearningResourcePrice>
   /**
    *
    * @type {Array<LearningResourceRun>}
@@ -5209,6 +5277,12 @@ export interface ProgramResource {
    * @memberof ProgramResource
    */
   prices: Array<string>
+  /**
+   *
+   * @type {Array<LearningResourcePrice>}
+   * @memberof ProgramResource
+   */
+  resource_prices: Array<LearningResourcePrice>
   /**
    *
    * @type {Array<LearningResourceRun>}
@@ -6078,6 +6152,12 @@ export interface VideoPlaylistResource {
   prices: Array<string>
   /**
    *
+   * @type {Array<LearningResourcePrice>}
+   * @memberof VideoPlaylistResource
+   */
+  resource_prices: Array<LearningResourcePrice>
+  /**
+   *
    * @type {Array<LearningResourceRun>}
    * @memberof VideoPlaylistResource
    */
@@ -6452,6 +6532,12 @@ export interface VideoResource {
    * @memberof VideoResource
    */
   prices: Array<string>
+  /**
+   *
+   * @type {Array<LearningResourcePrice>}
+   * @memberof VideoResource
+   */
+  resource_prices: Array<LearningResourcePrice>
   /**
    *
    * @type {Array<LearningResourceRun>}

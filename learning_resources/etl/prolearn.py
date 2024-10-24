@@ -9,9 +9,18 @@ from urllib.parse import urljoin, urlparse
 import requests
 from django.conf import settings
 
-from learning_resources.constants import Availability, CertificationType, Format, Pace
+from learning_resources.constants import (
+    Availability,
+    CertificationType,
+    Format,
+    Pace,
+)
 from learning_resources.etl.constants import ETLSource
-from learning_resources.etl.utils import transform_delivery, transform_topics
+from learning_resources.etl.utils import (
+    transform_delivery,
+    transform_price,
+    transform_topics,
+)
 from learning_resources.models import LearningResourceOfferor, LearningResourcePlatform
 from main.utils import clean_data, now_in_utc
 
@@ -109,7 +118,7 @@ def parse_date(num) -> datetime:
     return None
 
 
-def parse_price(document: dict) -> Decimal:
+def parse_price(document: dict) -> list[dict]:
     """
     Get a Decimal value for a course/program price
 
@@ -117,14 +126,14 @@ def parse_price(document: dict) -> Decimal:
         document: course or program data
 
     Returns:
-        Decimal: price of the course/program
+        list of dict: price/currency of the course/program
     """
     price_str = (
         re.sub(r"[^\d.]", "", document["field_price"])
         if document.get("field_price") is not None
         else ""
     )
-    return [round(Decimal(price_str), 2)] if price_str else []
+    return [transform_price(round(Decimal(price_str), 2))] if price_str else []
 
 
 def parse_topic(document: dict, offeror_code: str) -> list[dict]:
