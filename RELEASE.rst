@@ -1,6 +1,23 @@
 Release Notes
 =============
 
+Version 0.23.1
+--------------
+
+- Update dependency urllib3 to v2 (#1741)
+- ol-template is not used (#1738)
+- Update dependency @faker-js/faker to v9 (#1735)
+- Update dependency faker to v30 (#1732)
+- Update dependency toolz to v1 (#1733)
+- Fixes to make learn work with scim-for-keycloak (#1727)
+- Navigation Accessibility (#1726)
+- Middleware for SSL redirect (#1729)
+- Clean out the static frontend (#1731)
+- Update Yarn to v4.5.1 (#1716)
+- Search count inside label (#1730)
+- Announce search count for screen readers (#1713)
+- Update actions/checkout digest to eef6144 (#1686)
+
 Version 0.23.0 (Released October 22, 2024)
 --------------
 
