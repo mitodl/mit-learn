@@ -172,7 +172,7 @@ describe("Learning Resource Expanded", () => {
       const price = run.resource_prices?.[0]
 
       const displayPrice =
-        parseFloat(price.amount!) === 0
+        parseFloat(price.amount) === 0
           ? "Free"
           : price.amount
             ? `$${price.amount}`
