@@ -1,9 +1,12 @@
 """Tests for MicroMasters ETL functions"""
 
+from decimal import Decimal
+
 # pylint: disable=redefined-outer-name
 import pytest
 
 from learning_resources.constants import (
+    CURRENCY_USD,
     Availability,
     CertificationType,
     Format,
@@ -164,7 +167,9 @@ def test_micromasters_transform(mock_micromasters_data, missing_url):
                             {"full_name": "Dr. Doofenshmirtz"},
                             {"full_name": "Joey Jo Jo Shabadoo"},
                         ],
-                        "prices": ["123.45"],
+                        "prices": [
+                            {"amount": Decimal("123.45"), "currency": CURRENCY_USD}
+                        ],
                         "start_date": "2019-10-04T20:13:26.367297Z",
                         "end_date": None,
                         "enrollment_start": "2019-09-29T20:13:26.367297Z",
