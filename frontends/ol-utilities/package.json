@@ -16,6 +16,7 @@
     "@faker-js/faker": "^9.0.0",
     "api": "workspace:*",
     "classnames": "^2.3.2",
+    "currency-symbol-map": "^5.1.0",
     "decimal.js-light": "^2.5.1",
     "html-entities": "^2.4.0",
     "iso-639-1": "^3.1.0",
