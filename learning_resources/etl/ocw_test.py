@@ -6,7 +6,7 @@ from pathlib import Path
 
 import boto3
 import pytest
-from moto import mock_s3
+from moto import mock_aws
 
 from learning_resources.conftest import OCW_TEST_PREFIX, setup_s3_ocw
 from learning_resources.constants import (
@@ -37,7 +37,7 @@ from main.utils import clean_data, now_in_utc
 pytestmark = pytest.mark.django_db
 
 
-@mock_s3
+@mock_aws
 @pytest.mark.parametrize("base_ocw_url", ["http://test.edu/", "http://test.edu"])
 def test_transform_content_files(settings, mocker, base_ocw_url):
     """
@@ -111,7 +111,7 @@ def test_transform_content_files(settings, mocker, base_ocw_url):
     }
 
 
-@mock_s3
+@mock_aws
 def test_transform_content_files_exceptions(settings, mocker):
     """
     Test transform_content_files
@@ -130,7 +130,7 @@ def test_transform_content_files_exceptions(settings, mocker):
     assert mock_log.call_count == 5
 
 
-@mock_s3
+@mock_aws
 @pytest.mark.parametrize("overwrite", [True, False])
 @pytest.mark.parametrize("modified_after_last_import", [True, False])
 def test_transform_content_file_needs_text_update(
@@ -174,7 +174,7 @@ def test_transform_content_file_needs_text_update(
         assert "content" not in content_data
 
 
-@mock_s3
+@mock_aws
 @pytest.mark.parametrize(
     (
         "legacy_uid",

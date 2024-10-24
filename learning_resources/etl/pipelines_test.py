@@ -6,7 +6,7 @@ from importlib import reload
 from unittest.mock import patch
 
 import pytest
-from moto import mock_s3
+from moto import mock_aws
 
 from learning_resources.conftest import OCW_TEST_PREFIX, setup_s3_ocw
 from learning_resources.constants import OfferedBy, PlatformType
@@ -222,7 +222,7 @@ def test_podcast_etl():
     assert result == mock_load_podcasts.return_value
 
 
-@mock_s3
+@mock_aws
 @pytest.mark.django_db
 @pytest.mark.parametrize("skip_content_files", [True, False])
 def test_ocw_courses_etl(settings, mocker, skip_content_files):
@@ -268,7 +268,7 @@ def test_ocw_courses_etl(settings, mocker, skip_content_files):
     assert mock_calc_score.call_count == (0 if skip_content_files else 1)
 
 
-@mock_s3
+@mock_aws
 @pytest.mark.django_db
 def test_ocw_courses_etl_no_data(settings, mocker):
     """Test ocw_courses_etl when no S3 data is present"""
@@ -285,7 +285,7 @@ def test_ocw_courses_etl_no_data(settings, mocker):
     mock_log.assert_called_once_with("No course data found for %s", s3_path)
 
 
-@mock_s3
+@mock_aws
 @pytest.mark.django_db
 def test_ocw_courses_etl_exception(settings, mocker):
     """Test ocw_courses_etl when bad data raises an exception"""

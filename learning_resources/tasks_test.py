@@ -8,7 +8,7 @@ from unittest.mock import ANY
 import pytest
 from decorator import contextmanager
 from django.utils import timezone
-from moto import mock_s3
+from moto import mock_aws
 
 from learning_resources import factories, models, tasks
 from learning_resources.conftest import OCW_TEST_PREFIX, setup_s3, setup_s3_ocw
@@ -129,7 +129,7 @@ def test_get_xpro_data(mocker):
     mock_pipelines.xpro_courses_etl.assert_called_once_with()
 
 
-@mock_s3
+@mock_aws
 def test_import_all_mit_edx_files(settings, mocker, mocked_celery, mock_blocklist):
     """import_all_mit_edx_files should start chunked tasks with correct bucket, platform"""
     setup_s3(settings)
@@ -145,7 +145,7 @@ def test_import_all_mit_edx_files(settings, mocker, mocked_celery, mock_blocklis
     )
 
 
-@mock_s3
+@mock_aws
 def test_import_all_mitxonline_files(settings, mocker, mocked_celery, mock_blocklist):
     """import_all_mitxonline_files should be replaced with get_content_tasks"""
     setup_s3(settings)
@@ -161,7 +161,7 @@ def test_import_all_mitxonline_files(settings, mocker, mocked_celery, mock_block
     )
 
 
-@mock_s3
+@mock_aws
 def test_import_all_xpro_files(settings, mocker, mocked_celery, mock_blocklist):
     """import_all_xpro_files should start chunked tasks with correct bucket, platform"""
     setup_s3(settings)
@@ -173,7 +173,7 @@ def test_import_all_xpro_files(settings, mocker, mocked_celery, mock_blocklist):
     get_content_tasks_mock.assert_called_once_with(PlatformType.xpro.name, chunk_size=3)
 
 
-@mock_s3
+@mock_aws
 def test_import_all_oll_files(settings, mocker, mocked_celery, mock_blocklist):
     """import_all_oll_files should start chunked tasks with correct bucket, platform"""
     setup_s3(settings)
@@ -190,7 +190,7 @@ def test_import_all_oll_files(settings, mocker, mocked_celery, mock_blocklist):
     )
 
 
-@mock_s3
+@mock_aws
 def test_get_content_tasks(settings, mocker, mocked_celery, mock_xpro_learning_bucket):
     """Test that get_content_tasks calls get_content_files with the correct args"""
     mock_get_content_files = mocker.patch(
@@ -260,7 +260,7 @@ def test_get_podcast_data(mocker):
     mock_pipelines.podcast_etl.assert_called_once()
 
 
-@mock_s3
+@mock_aws
 @pytest.mark.parametrize(
     ("force_overwrite", "skip_content_files"), [(True, False), (False, True)]
 )
@@ -313,7 +313,7 @@ def test_get_ocw_data_no_settings(settings, mocker):
     mock_log.assert_called_once_with("Required settings missing for get_ocw_data")
 
 
-@mock_s3
+@mock_aws
 @pytest.mark.parametrize("timestamp", [None, "2020-12-15T00:00:00Z"])
 @pytest.mark.parametrize("overwrite", [True, False])
 def test_get_ocw_courses(settings, mocker, mocked_celery, timestamp, overwrite):
