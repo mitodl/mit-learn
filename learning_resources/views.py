@@ -84,6 +84,10 @@ from learning_resources.utils import (
     resource_delete_actions,
     resource_unpublished_actions,
 )
+from learning_resources_search.api import get_similar_resources
+from learning_resources_search.serializers import (
+    serialize_learning_resource_for_update,
+)
 from main.constants import VALID_HTTP_METHODS
 from main.filters import MultipleOptionsFilterBackend
 from main.permissions import (
@@ -184,6 +188,40 @@ class LearningResourceViewSet(
 
     resource_type_name_plural = "Learning Resources"
     serializer_class = LearningResourceSerializer
+    pagination_class = LimitOffsetPagination
+
+    @extend_schema(
+        summary="Get similar resources",
+        parameters=[
+            OpenApiParameter(name="id", type=int, location=OpenApiParameter.PATH),
+            OpenApiParameter(name="limit", type=int, location=OpenApiParameter.QUERY),
+        ],
+        responses=LearningResourceSerializer(many=True),
+    )
+    @action(
+        detail=True,
+        methods=["GET"],
+        name="Unsubscribe user from query by id",
+    )
+    def similar(self, request, pk: int):
+        """
+        Fetch similar learning resources
+
+        Args:
+        id (integer): The id of the learning resource
+
+        Returns:
+        QuerySet of similar LearningResource for the resource matching the id parameter
+        """
+        limit = request.GET.get("limit", 10)
+
+        learning_resource = get_object_or_404(LearningResource, id=pk)
+        learning_resource = LearningResource.objects.for_search_serialization().get(
+            id=id
+        )
+        resource_data = serialize_learning_resource_for_update(learning_resource)
+        similar = get_similar_resources(resource_data, limit, 2, 3)
+        return Response(LearningResourceSerializer(list(similar), many=True).data)
 
 
 @extend_schema_view(

@@ -911,4 +911,8 @@ def get_similar_resources(
         )
     )
     response = search.execute()
-    return response.to_dict()
+    return LearningResource.objects.for_search_serialization().filter(
+        id__in=[
+            resource.id for resource in response.hits if resource.id != value_doc["id"]
+        ]
+    )
