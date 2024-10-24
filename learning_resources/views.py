@@ -454,11 +454,14 @@ class LearningResourceListRelationshipViewSet(viewsets.GenericViewSet):
         current_relationships = UserListRelationship.objects.filter(
             parent__author=request.user, child_id=learning_resource_id
         )
+
+        # Remove the resource from lists it WAS in before but is not in now
         current_relationships.exclude(parent_id__in=user_list_ids).delete()
         current_parent_lists = current_relationships.values_list("parent_id", flat=True)
 
         for userlist_id in user_list_ids:
             last_index = 0
+            # re-number the positions for surviving items
             for index, relationship in enumerate(
                 UserListRelationship.objects.filter(
                     parent__author=request.user, parent__id=userlist_id
@@ -467,6 +470,7 @@ class LearningResourceListRelationshipViewSet(viewsets.GenericViewSet):
                 relationship.position = index
                 relationship.save()
                 last_index = index
+            # Add new items as necessary
             if userlist_id not in list(current_parent_lists):
                 UserListRelationship.objects.create(
                     parent_id=userlist_id,
@@ -512,12 +516,14 @@ class LearningResourceListRelationshipViewSet(viewsets.GenericViewSet):
         current_relationships = LearningResourceRelationship.objects.filter(
             child_id=learning_resource_id
         )
+        # Remove the resource from lists it WAS in before but is not in now
         current_relationships.exclude(parent_id__in=learning_path_ids).delete()
         current_parent_lists = current_relationships.values_list("parent_id", flat=True)
 
         for learning_path_id_str in learning_path_ids:
             learning_path_id = int(learning_path_id_str)
             last_index = 0
+            # re-number the positions for surviving items
             for index, relationship in enumerate(
                 LearningResourceRelationship.objects.filter(
                     parent__id=learning_path_id
@@ -527,6 +533,7 @@ class LearningResourceListRelationshipViewSet(viewsets.GenericViewSet):
                 relationship.save()
                 last_index = index
 
+            # Add new items as necessary
             if learning_path_id not in list(current_parent_lists):
                 LearningResourceRelationship.objects.create(
                     parent_id=learning_path_id,
