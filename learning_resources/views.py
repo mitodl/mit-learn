@@ -202,6 +202,11 @@ class LearningResourceViewSet(
         methods=["GET"],
         name="Fetch similar learning resources for a resource by id",
     )
+    @method_decorator(
+        cache_page_for_all_users(
+            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+        )
+    )
     def similar(self, request, *_, **kwargs):
         """
         Fetch similar learning resources
