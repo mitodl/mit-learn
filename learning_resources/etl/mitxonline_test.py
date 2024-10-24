@@ -4,12 +4,14 @@ import json
 
 # pylint: disable=redefined-outer-name
 from datetime import datetime
+from decimal import Decimal
 from unittest.mock import ANY
 from urllib.parse import urljoin
 
 import pytest
 
 from learning_resources.constants import (
+    CURRENCY_USD,
     CertificationType,
     Format,
     LearningResourceType,
@@ -234,19 +236,23 @@ def test_mitxonline_transform_programs(
                                 and course_data["page"]["live"]
                             ),
                             "prices": sorted(
-                                {
-                                    "0.00",
-                                    *[
-                                        price
-                                        for price in [
-                                            product.get("price")
-                                            for product in course_run_data.get(
-                                                "products", []
-                                            )
-                                        ]
-                                        if price is not None
-                                    ],
-                                }
+                                [
+                                    {"amount": Decimal(i), "currency": CURRENCY_USD}
+                                    for i in {
+                                        0.00,
+                                        *[
+                                            price
+                                            for price in [
+                                                product.get("price")
+                                                for product in course_run_data.get(
+                                                    "products", []
+                                                )
+                                            ]
+                                            if price is not None
+                                        ],
+                                    }
+                                ],
+                                key=lambda x: x["amount"],
                             ),
                             "instructors": [
                                 {"full_name": instructor["name"]}
@@ -367,17 +373,23 @@ def test_mitxonline_transform_courses(settings, mock_mitxonline_courses_data):
                         course_run_data["is_enrollable"] and course_data["page"]["live"]
                     ),
                     "prices": sorted(
-                        {
-                            "0.00",
-                            *[
-                                price
-                                for price in [
-                                    product.get("price")
-                                    for product in course_run_data.get("products", [])
-                                ]
-                                if price is not None
-                            ],
-                        }
+                        [
+                            {"amount": Decimal(i), "currency": CURRENCY_USD}
+                            for i in {
+                                0.00,
+                                *[
+                                    price
+                                    for price in [
+                                        product.get("price")
+                                        for product in course_run_data.get(
+                                            "products", []
+                                        )
+                                    ]
+                                    if price is not None
+                                ],
+                            }
+                        ],
+                        key=lambda x: x["amount"],
                     ),
                     "instructors": [
                         {"full_name": instructor["name"]}
@@ -500,7 +512,8 @@ def test_parse_prices(current_price, page_price, expected):
     """Test that the prices are correctly parsed from the page data"""
     program_data = {"current_price": current_price, "page": {"price": page_price}}
     assert parse_program_prices(program_data) == sorted(
-        [float(price) for price in expected]
+        [{"amount": float(price), "currency": CURRENCY_USD} for price in expected],
+        key=lambda x: x["amount"],
     )
 
 
