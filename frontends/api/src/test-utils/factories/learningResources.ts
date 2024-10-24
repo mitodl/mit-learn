@@ -16,6 +16,7 @@ import type {
   LearningResourceInstructor,
   LearningResourceOfferorDetail,
   LearningResourcePlatform,
+  LearningResourcePrice,
   LearningResourceRun,
   LearningResourceSchool,
   LearningResourceTopic,
@@ -82,6 +83,17 @@ const learningResourceInstructor: Factory<LearningResourceInstructor> = (
     ...overrides,
   }
   return instructor
+}
+
+const learningResourcePrice: Factory<LearningResourcePrice> = (
+  overrides = {},
+) => {
+  const resourcePrice: LearningResourcePrice = {
+    amount: faker.finance.amount({ min: 0, max: 200 }),
+    currency: "USD",
+    ...overrides,
+  }
+  return resourcePrice
 }
 
 const learningResourceBaseSchool: Factory<LearningResourceBaseSchool> = (
@@ -212,6 +224,7 @@ const learningResourceRun: Factory<LearningResourceRun> = (overrides = {}) => {
         name: uniqueEnforcerWords.enforce(() => faker.lorem.words()),
       },
     ],
+    resource_prices: repeat(learningResourcePrice, { min: 0, max: 5 }),
     ...overrides,
   }
   return run
@@ -264,6 +277,14 @@ const _learningResourceShared = (): Partial<
     platform: maybe(learningResourcePlatform) ?? null,
     free,
     prices: free ? ["0"] : [faker.finance.amount({ min: 0, max: 100 })],
+    resource_prices: free
+      ? [{ amount: "0", currency: "USD" }]
+      : [
+          {
+            amount: faker.finance.amount({ min: 0, max: 100 }).toString(),
+            currency: "USD",
+          },
+        ],
     readable_id: faker.lorem.slug(),
     course_feature: repeat(faker.lorem.word),
     runs: [],
