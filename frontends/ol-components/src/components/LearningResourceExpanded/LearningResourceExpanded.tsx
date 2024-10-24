@@ -2,18 +2,17 @@ import React, { useEffect, useState } from "react"
 import styled from "@emotion/styled"
 import Skeleton from "@mui/material/Skeleton"
 import Typography from "@mui/material/Typography"
+import { default as NextImage } from "next/image"
 import { ButtonLink } from "../Button/Button"
 import type { LearningResource, LearningResourceRun } from "api"
 import { ResourceTypeEnum, PlatformEnum } from "api"
 import {
   formatDate,
   capitalize,
-  resourceThumbnailSrc,
   DEFAULT_RESOURCE_IMG,
   showStartAnytime,
 } from "ol-utilities"
 import { RiExternalLinkLine } from "@remixicon/react"
-import type { EmbedlyConfig } from "ol-utilities"
 import { theme } from "../ThemeProvider/ThemeProvider"
 import { SimpleSelect } from "../SimpleSelect/SimpleSelect"
 import type { SimpleSelectProps } from "../SimpleSelect/SimpleSelect"
@@ -22,6 +21,7 @@ import { PlatformLogo, PLATFORMS } from "../Logo/Logo"
 import InfoSection from "./InfoSection"
 import type { User } from "api/hooks/user"
 import { LearningResourceCardProps } from "../LearningResourceCard/LearningResourceCard"
+import type { ImageConfig } from "../../constants/imgConfigs"
 
 const Container = styled.div<{ padTop?: boolean }>`
   display: flex;
@@ -76,8 +76,13 @@ const DateLabel = styled.span`
   margin-right: 16px;
 `
 
-const Image = styled.img<{ aspect: number }>`
-  aspect-ratio: ${({ aspect }) => aspect};
+const ImageContainer = styled.div<{ aspect: number }>`
+  position: relative;
+  width: 100%;
+  padding-bottom: ${({ aspect }) => 100 / aspect}%;
+`
+
+const Image = styled(NextImage)`
   border-radius: 8px;
   width: 100%;
   object-fit: cover;
@@ -141,38 +146,41 @@ const OnPlatform = styled.span`
 type LearningResourceExpandedProps = {
   resource?: LearningResource
   user?: User
-  imgConfig: EmbedlyConfig
+  imgConfig: ImageConfig
   onAddToLearningPathClick?: LearningResourceCardProps["onAddToLearningPathClick"]
   onAddToUserListClick?: LearningResourceCardProps["onAddToUserListClick"]
 }
 
 const ImageSection: React.FC<{
   resource?: LearningResource
-  config: EmbedlyConfig
+  config: ImageConfig
 }> = ({ resource, config }) => {
   if (resource?.resource_type === "video" && resource?.url) {
     return (
       <EmbedlyCard
         aspectRatio={config.width / config.height}
         url={resource?.url}
-        embedlyKey={config.key}
       />
     )
   } else if (resource?.image) {
     return (
-      <Image
-        src={resourceThumbnailSrc(resource?.image, config)}
-        aspect={config.width / config.height}
-        alt={resource?.image.alt ?? ""}
-      />
+      <ImageContainer aspect={config.width / config.height}>
+        <Image
+          src={resource.image?.url ?? DEFAULT_RESOURCE_IMG}
+          fill={true}
+          alt={resource?.image.alt ?? ""}
+        />
+      </ImageContainer>
     )
   } else if (resource) {
     return (
-      <Image
-        src={DEFAULT_RESOURCE_IMG}
-        alt={resource.image?.alt ?? ""}
-        aspect={config.width / config.height}
-      />
+      <ImageContainer aspect={config.width / config.height}>
+        <Image
+          src={DEFAULT_RESOURCE_IMG}
+          alt={resource.image?.alt ?? ""}
+          fill={true}
+        />
+      </ImageContainer>
     )
   } else {
     return (

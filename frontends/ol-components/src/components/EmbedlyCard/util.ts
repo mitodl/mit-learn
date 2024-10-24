@@ -1,3 +1,5 @@
+const EMBEDLY_KEY = process.env.NEXT_PUBLIC_EMBEDLY_KEY as string
+
 /**
  * Embedly's events
  */
@@ -81,19 +83,11 @@ const createStylesheet = (doc: Document, css: string) => {
   head.appendChild(style)
 }
 
-const getEmbedlyKey = (): string | null => {
-  const key = process.env.NEXT_PUBLIC_EMBEDLY_KEY
-  if (typeof key === "string") return key
-  console.warn("process.env.NEXT_PUBLIC_EMBEDLY_KEY should be a string.")
-  return null
-}
-
 const embedlyCardHtml = (url: string) => {
-  const embedlyKey = getEmbedlyKey()
   return `<a
   data-card-chrome="0"
   data-card-controls="0"
-  data-card-key=${embedlyKey}
+  data-card-key=${EMBEDLY_KEY}
   class="embedly-card"
   href="${url}"></a>`
 }
@@ -101,7 +95,6 @@ const embedlyCardHtml = (url: string) => {
 export {
   createStylesheet,
   ensureEmbedlyPlatform,
-  getEmbedlyKey,
   EmbedlyEventTypes,
   dispatchCardCreated,
   embedlyCardHtml,
