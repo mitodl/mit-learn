@@ -227,6 +227,7 @@ def _get_percolated_rows(resources, subscription_type):
             req.prepare_url(search_url, {"resource": resource.id})
             resource_url = req.url
             source_channel = query.source_channel()
+
             rows.extend(
                 [
                     {
@@ -234,7 +235,7 @@ def _get_percolated_rows(resources, subscription_type):
                         "resource_title": resource.title,
                         "resource_image_url": resource.image.url
                         if resource.image
-                        else "",
+                        else frontend_absolute_url("/images/default_resource.jpg"),
                         "resource_type": LearningResourceType[
                             resource.resource_type
                         ].value,
