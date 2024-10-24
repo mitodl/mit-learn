@@ -6,7 +6,7 @@ from types import SimpleNamespace
 
 import boto3
 import pytest
-from moto import mock_s3
+from moto import mock_aws
 
 
 @pytest.fixture(autouse=True)
@@ -18,7 +18,7 @@ def silence_s3_logging():  # noqa: PT004
 @pytest.fixture
 def mock_s3_fixture():  # noqa: PT004
     """Mock the S3 fixture for the duration of the test"""
-    with mock_s3():
+    with mock_aws():
         yield
 
 
