@@ -188,7 +188,6 @@ class LearningResourceViewSet(
 
     resource_type_name_plural = "Learning Resources"
     serializer_class = LearningResourceSerializer
-    pagination_class = LimitOffsetPagination
 
     @extend_schema(
         summary="Get similar resources",
@@ -201,9 +200,9 @@ class LearningResourceViewSet(
     @action(
         detail=True,
         methods=["GET"],
-        name="Unsubscribe user from query by id",
+        name="Fetch similar learning resources for a resource by id",
     )
-    def similar(self, request, pk: int):
+    def similar(self, request, *_, **kwargs):
         """
         Fetch similar learning resources
 
@@ -214,10 +213,10 @@ class LearningResourceViewSet(
         QuerySet of similar LearningResource for the resource matching the id parameter
         """
         limit = request.GET.get("limit", 10)
-
+        pk = int(kwargs.get("id"))
         learning_resource = get_object_or_404(LearningResource, id=pk)
         learning_resource = LearningResource.objects.for_search_serialization().get(
-            id=id
+            id=pk
         )
         resource_data = serialize_learning_resource_for_update(learning_resource)
         similar = get_similar_resources(resource_data, limit, 2, 3)
