@@ -2917,13 +2917,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@faker-js/faker@npm:^8.0.0, @faker-js/faker@npm:^8.4.1":
-  version: 8.4.1
-  resolution: "@faker-js/faker@npm:8.4.1"
-  checksum: 10/5983c2ea64f26055ad6648de748878e11ebe2fb751e3c7435ae141cdffabc2dccfe4c4f49da69a3d2add71e21b415c683ac5fba196fab0d5ed6779fbec436c80
-  languageName: node
-  linkType: hard
-
 "@faker-js/faker@npm:^9.0.0":
   version: 9.0.3
   resolution: "@faker-js/faker@npm:9.0.3"
@@ -14504,7 +14497,7 @@ __metadata:
   dependencies:
     "@ebay/nice-modal-react": "npm:^1.2.13"
     "@emotion/cache": "npm:^11.13.1"
-    "@faker-js/faker": "npm:^8.4.1"
+    "@faker-js/faker": "npm:^9.0.0"
     "@mitodl/course-search-utils": "npm:^3.3.1"
     "@next/bundle-analyzer": "npm:^14.2.15"
     "@remixicon/react": "npm:^4.2.0"
@@ -16455,7 +16448,7 @@ __metadata:
     "@ckeditor/ckeditor5-theme-lark": "npm:^43.0.0"
     "@ckeditor/ckeditor5-ui": "npm:^43.0.0"
     "@ckeditor/ckeditor5-utils": "npm:^43.0.0"
-    "@faker-js/faker": "npm:^8.0.0"
+    "@faker-js/faker": "npm:^9.0.0"
     "@testing-library/react": "npm:16.0.1"
     axios: "npm:^1.6.3"
     classnames: "npm:^2.3.2"
