@@ -43,6 +43,10 @@ interface CustomTheme {
     orange: string
     yellow: string
   }
+  dimensions: {
+    headerHeight: string
+    headerHeightSm: string
+  }
 }
 
 /* https://mui.com/material-ui/customization/theming/#typescript */

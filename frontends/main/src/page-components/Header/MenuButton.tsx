@@ -1,14 +1,10 @@
 "use client"
 
 import { styled } from "ol-components"
-import { RiMenuLine, RiCloseLargeLine } from "@remixicon/react"
+import { RiMenuLine } from "@remixicon/react"
 import React from "react"
 
 const MenuIcon = styled(RiMenuLine)(({ theme }) => ({
-  color: theme.custom.colors.darkGray1,
-}))
-
-const CloseMenuIcon = styled(RiCloseLargeLine)(({ theme }) => ({
   color: theme.custom.colors.darkGray1,
 }))
 
@@ -53,20 +49,17 @@ const StyledMenuButton = styled.button(({ theme }) => ({
 interface MenuButtonProps {
   text?: string
   onClick: React.MouseEventHandler<HTMLButtonElement> | undefined
-  drawerOpen: boolean
 }
 
-const MenuButton: React.FC<MenuButtonProps> = ({
-  text,
-  onClick,
-  drawerOpen,
-}) => (
-  <StyledMenuButton onPointerDown={onClick}>
-    <MenuButtonInner>
-      {drawerOpen ? <CloseMenuIcon /> : <MenuIcon />}
-      {text ? <MenuButtonText>{text}</MenuButtonText> : ""}
-    </MenuButtonInner>
-  </StyledMenuButton>
+const MenuButton = React.forwardRef<HTMLButtonElement, MenuButtonProps>(
+  ({ onClick, text }, ref) => (
+    <StyledMenuButton ref={ref} onClick={onClick}>
+      <MenuButtonInner>
+        <MenuIcon />
+        {text ? <MenuButtonText>{text}</MenuButtonText> : ""}
+      </MenuButtonInner>
+    </StyledMenuButton>
+  ),
 )
 
 export { MenuButton }

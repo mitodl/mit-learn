@@ -1,5 +1,6 @@
 import { NavData, NavDrawer } from "./NavDrawer"
 import { render, screen } from "@testing-library/react"
+import user from "@testing-library/user-event"
 import React from "react"
 import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
 
@@ -29,7 +30,7 @@ describe("NavDrawer", () => {
         },
       ],
     }
-    render(<NavDrawer navdata={navData} open={true} />, {
+    render(<NavDrawer onClose={jest.fn()} navdata={navData} open={true} />, {
       wrapper: ThemeProvider,
     })
     const links = screen.getAllByTestId("nav-link")
@@ -40,5 +41,81 @@ describe("NavDrawer", () => {
     expect(icons).toHaveLength(1)
     expect(titles).toHaveLength(3)
     expect(descriptions).toHaveLength(2)
+  })
+
+  const NAV_DATA: NavData = {
+    sections: [
+      {
+        title: "TEST 1",
+        items: [
+          {
+            title: "Title 1",
+            description: "Description 1",
+            href: "https://link.one",
+          },
+        ],
+      },
+      {
+        title: "TEST 2",
+        items: [
+          {
+            title: "Title 2",
+            description: "Description 2",
+            href: "https://link.two",
+          },
+        ],
+      },
+    ],
+  }
+
+  test("close button calls onClose", async () => {
+    const onClose = jest.fn()
+    render(<NavDrawer onClose={onClose} navdata={NAV_DATA} open={true} />, {
+      wrapper: ThemeProvider,
+    })
+    const close = screen.getByRole("button", { name: "Close Navigation" })
+    await user.click(close)
+    expect(onClose).toHaveBeenCalled()
+  })
+
+  test("escape calls onClose", async () => {
+    const onClose = jest.fn()
+    render(<NavDrawer onClose={onClose} navdata={NAV_DATA} open={true} />, {
+      wrapper: ThemeProvider,
+    })
+    const links = screen.getAllByRole("link")
+    links[0].focus()
+    await user.keyboard("{Escape}")
+    expect(onClose).toHaveBeenCalled()
+  })
+
+  test("click away calls onClose if target is not excluded", async () => {
+    const onClose = jest.fn()
+    const Component = () => {
+      const excluded = React.useRef<HTMLButtonElement>(null)
+      return (
+        <div>
+          <NavDrawer
+            getClickAwayExcluded={() => [excluded.current]}
+            onClose={onClose}
+            navdata={NAV_DATA}
+            open={true}
+          />
+          <button type="button">Outside</button>
+          <button ref={excluded} type="button">
+            Excluded
+            <svg data-testid="foo" />
+          </button>
+        </div>
+      )
+    }
+    render(<Component />, { wrapper: ThemeProvider })
+    await user.click(screen.getByRole("button", { name: "Outside" }))
+    expect(onClose).toHaveBeenCalled()
+    onClose.mockReset()
+
+    await user.click(screen.getByRole("button", { name: "Excluded" }))
+    await user.click(screen.getByTestId("foo"))
+    expect(onClose).not.toHaveBeenCalled()
   })
 })

@@ -8,8 +8,8 @@ Each subdirectory of `/frontends` is a yarn workspace:
 
 ```
 frontends/
-├─ mit-learn/                 ... built by webpack and served by django
-├─ package1/                 ... a dependency of app/
+├─ main/                     ... Next.js frontend
+├─ package1/                 ... a dependency of main/
 ├─ package2/
 ├─ etc...
 ```

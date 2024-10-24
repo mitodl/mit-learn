@@ -24,13 +24,13 @@ const nextConfig = {
   productionBrowserSourceMaps: true,
   async rewrites() {
     return [
-      /* Images moved from /static, though image paths are sometimes
+      /* Static assets moved from /static, though image paths are sometimes
        * returned on the API, e.g. /api/v0/channels/type/unit/ocw/
-       * TODO update API paths and remove the rewrite.
+       * Also rewrites requests for /static/hash.txt
        */
       {
-        source: "/static/images/:path*",
-        destination: "/images/:path*",
+        source: "/static/:path*",
+        destination: "/:path*",
       },
     ]
   },

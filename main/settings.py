@@ -33,7 +33,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.23.0"
+VERSION = "0.23.1"
 
 log = logging.getLogger()
 
@@ -136,8 +136,9 @@ SCIM_SERVICE_PROVIDER = {
             "documentationUri": "",
         },
     ],
-    "USER_ADAPTER": "profiles.adapters.SCIMProfile",
-    "USER_MODEL_GETTER": "profiles.adapters.get_user_model_for_scim",
+    "USER_ADAPTER": "profiles.scim.adapters.LearnSCIMUser",
+    "USER_MODEL_GETTER": "profiles.scim.adapters.get_user_model_for_scim",
+    "USER_FILTER_PARSER": "profiles.scim.filters.LearnUserFilterQuery",
 }
 
 
@@ -217,7 +218,6 @@ TEMPLATES = [
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         "DIRS": [
             BASE_DIR + "/templates/",
-            BASE_DIR + "/frontends/mit-learn/build",
         ],
         "APP_DIRS": True,
         "OPTIONS": {
@@ -296,6 +296,9 @@ SOCIAL_AUTH_ALLOWED_REDIRECT_HOSTS = [
         default=[],
     ),
     urlparse(APP_BASE_URL).netloc,
+]
+SOCIAL_AUTH_PROTECTED_USER_FIELDS = [
+    "profile",  # this avoids an error because profile is a related model
 ]
 
 SOCIAL_AUTH_PIPELINE = (

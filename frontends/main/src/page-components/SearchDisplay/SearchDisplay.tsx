@@ -140,7 +140,7 @@ const FacetStyles = styled.div`
     width: 100%;
     align-items: baseline;
 
-    label {
+    .facet-text {
       ${truncateText(1)};
       color: ${({ theme }) => theme.custom.colors.silverGrayDark};
     }
@@ -193,7 +193,7 @@ const FacetStyles = styled.div`
       margin-left: -2px;
 
       input,
-      label {
+      .facet-label {
         cursor: pointer;
       }
 
@@ -205,12 +205,13 @@ const FacetStyles = styled.div`
         color: ${({ theme }) => theme.custom.colors.silverGrayDark};
         float: right;
       }
-    }
 
-    .facet-visible.checked .facet-label label,
-    .facet-visible .facet-label label:hover,
-    .facet-visible input:hover + .facet-label label {
-      color: ${({ theme }) => theme.custom.colors.darkGray2};
+      &.checked,
+      &:hover {
+        .facet-label .facet-text {
+          color: ${({ theme }) => theme.custom.colors.darkGray2};
+        }
+      }
     }
 
     .facet-more-less {
@@ -294,12 +295,10 @@ const FacetStyles = styled.div`
     padding-top: 5px;
 
     /* stylelint-disable no-descending-specificity */
-    .facet-visible {
-      .facet-label {
-        label,
-        .facet-count {
-          color: ${({ theme }) => theme.custom.colors.darkGray2};
-        }
+    .facet-visible .facet-label {
+      .facet-text,
+      .facet-count {
+        color: ${({ theme }) => theme.custom.colors.darkGray2};
       }
 
       margin-bottom: 0;
@@ -606,7 +605,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     page,
   ])
 
-  const { data, isLoading } = useLearningResourcesSearch(
+  const { data, isLoading, isFetching } = useLearningResourcesSearch(
     allParams as LRSearchRequest,
     { keepPreviousData: true },
   )
@@ -891,6 +890,16 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
           <StyledMainColumn component="section" variant="main-2">
             <VisuallyHidden as={resultsHeadingEl}>
               Search Results
+            </VisuallyHidden>
+            <VisuallyHidden aria-live="polite" aria-atomic aria-relevant="all">
+              {/* This could be just isLoading, except we set keepPreviousData
+               * to true
+               *
+               * Reset to empty string with `aria-relevant="all"` to announce
+               * the count when data is loaded even if count is same as previous
+               * count.
+               */}
+              {isFetching || isLoading ? "" : `${data?.count} results`}
             </VisuallyHidden>
             <DesktopSortContainer>{sortDropdown}</DesktopSortContainer>
             <StyledResourceTabs

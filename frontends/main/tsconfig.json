@@ -37,5 +37,5 @@
     ".next/types/**/*.ts",
     "../jest.jsdom.config"
   ],
-  "exclude": ["node_modules", "../mit-learn/**/*.tsx"]
+  "exclude": ["node_modules"]
 }

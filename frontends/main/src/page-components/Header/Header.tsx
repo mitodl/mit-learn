@@ -7,7 +7,6 @@ import {
   AppBar,
   NavDrawer,
   Toolbar,
-  ClickAwayListener,
   ActionButtonLink,
 } from "ol-components"
 import {
@@ -54,8 +53,9 @@ const Bar = styled(AppBar)(({ theme }) => ({
   ".MuiToolbar-root": {
     minHeight: "auto",
   },
+  height: theme.custom.dimensions.headerHeight,
   [theme.breakpoints.down("sm")]: {
-    height: "60px",
+    height: theme.custom.dimensions.headerHeightSm,
     padding: "0",
   },
 }))
@@ -265,15 +265,8 @@ const navData: NavData = {
 
 const Header: FunctionComponent = () => {
   const [drawerOpen, toggleDrawer] = useToggle(false)
-  const toggler = (event: React.MouseEvent) => {
-    event.nativeEvent.stopImmediatePropagation() // Prevent clicking on "Explore MIT" button from triggering the ClickAwayHandler
-    toggleDrawer(!drawerOpen)
-  }
-  const closeDrawer = (event: MouseEvent | TouchEvent) => {
-    if (drawerOpen && event.type !== "touchstart") {
-      toggleDrawer(false)
-    }
-  }
+  const desktopTrigger = React.useRef<HTMLButtonElement>(null)
+  const mobileTrigger = React.useRef<HTMLButtonElement>(null)
 
   return (
     <div>
@@ -283,13 +276,13 @@ const Header: FunctionComponent = () => {
             <StyledMITLogoLink logo="learn" />
             <LeftSpacer />
             <MenuButton
+              ref={desktopTrigger}
               text="Explore MIT"
-              onClick={toggler}
-              drawerOpen={drawerOpen}
+              onClick={toggleDrawer.toggle}
             />
           </DesktopOnly>
           <MobileOnly>
-            <MenuButton onClick={toggler} drawerOpen={drawerOpen} />
+            <MenuButton ref={mobileTrigger} onClick={toggleDrawer.toggle} />
             <LeftSpacer />
             <StyledMITLogoLink logo="learn" />
           </MobileOnly>
@@ -297,15 +290,16 @@ const Header: FunctionComponent = () => {
           <UserView />
         </StyledToolbar>
       </Bar>
-      <ClickAwayListener
-        onClickAway={closeDrawer}
-        mouseEvent="onPointerDown"
-        touchEvent="onTouchStart"
-      >
-        <div role="presentation">
-          <NavDrawer navdata={navData} open={drawerOpen} />
-        </div>
-      </ClickAwayListener>
+
+      <NavDrawer
+        getClickAwayExcluded={() => [
+          desktopTrigger.current,
+          mobileTrigger.current,
+        ]}
+        navdata={navData}
+        open={drawerOpen}
+        onClose={toggleDrawer.off}
+      />
     </div>
   )
 }

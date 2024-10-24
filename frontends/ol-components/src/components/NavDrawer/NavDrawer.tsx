@@ -1,15 +1,19 @@
 import Drawer, { DrawerProps } from "@mui/material/Drawer"
+import ClickAwayListener from "@mui/material/ClickAwayListener"
+import { FocusTrap } from "@mui/base/FocusTrap"
 import styled from "@emotion/styled"
 import React, { ReactElement } from "react"
+import { RiCloseLargeLine } from "@remixicon/react"
+import { ActionButton } from "../Button/Button"
 
 const DrawerContent = styled.div(({ theme }) => ({
-  paddingTop: "72px",
+  paddingTop: theme.custom.dimensions.headerHeight,
   width: "366px",
   height: "100%",
   background: theme.custom.colors.white,
   borderRight: `1px solid ${theme.custom.colors.lightGray2}`,
   [theme.breakpoints.down("sm")]: {
-    height: "60px",
+    paddingTop: theme.custom.dimensions.headerHeightSm,
   },
 }))
 
@@ -22,13 +26,21 @@ const NavSection = styled.div({
   gap: "12px",
 })
 
-const NavSectionHeader = styled.div(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  alignSelf: "stretch",
-  color: theme.custom.colors.darkGray1,
-  ...theme.typography.subtitle3,
-}))
+const NavSectionHeader = styled.div<{ hasButton: boolean }>(
+  ({ theme, hasButton }) => [
+    {
+      display: "flex",
+      alignItems: "center",
+      alignSelf: "stretch",
+      color: theme.custom.colors.darkGray1,
+      ...theme.typography.subtitle3,
+    },
+    hasButton && {
+      justifyContent: "space-between",
+      height: "16px",
+    },
+  ],
+)
 
 const NavItemsContainer = styled.div(({ theme }) => ({
   display: "flex",
@@ -84,6 +96,12 @@ const NavTextContainer = styled.div({
   alignSelf: "center",
   gap: "4px",
 })
+
+const CloseButton = styled(ActionButton)(({ theme }) => ({
+  svg: { fontSize: "18px" },
+  color: theme.custom.colors.darkGray1,
+  transform: "translateX(12px)",
+}))
 
 const NavLinkText = styled.div(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
@@ -146,11 +164,21 @@ const NavItem: React.FC<NavItem> = (props) => {
 
 type NavDrawerProps = {
   navdata: NavData
+  onClose: () => void
+  /**
+   * Returns a list of HTMLElements that should not trigger the drawer to close
+   * on click-away
+   */
+  getClickAwayExcluded?: () => (Element | null)[]
 } & DrawerProps
 
-const NavDrawer = (props: NavDrawerProps) => {
-  const { navdata } = props
-  const navSections = navdata.sections.map((section) => {
+const NavDrawer = ({
+  navdata,
+  onClose,
+  getClickAwayExcluded = () => [],
+  ...others
+}: NavDrawerProps) => {
+  const navSections = navdata.sections.map((section, i) => {
     const navItemElements = section.items.map((item) => (
       <NavItem
         key={item.title}
@@ -162,30 +190,79 @@ const NavDrawer = (props: NavDrawerProps) => {
     ))
     return (
       <NavSection key={section.title}>
-        <NavSectionHeader>{section.title}</NavSectionHeader>
+        <NavSectionHeader hasButton={i === 0}>
+          {section.title}
+          {i === 0 && (
+            <CloseButton
+              aria-label="Close Navigation"
+              onClick={onClose}
+              variant="text"
+              size="small"
+            >
+              <RiCloseLargeLine aria-hidden />
+            </CloseButton>
+          )}
+        </NavSectionHeader>
         <NavItemsContainer>{navItemElements}</NavItemsContainer>
       </NavSection>
     )
   })
 
   return (
-    <Drawer
-      anchor="left"
-      variant="persistent"
-      elevation={0}
-      hideBackdrop={true}
-      PaperProps={{
-        sx: {
-          borderRight: "none",
-          boxShadow: "0px 6px 24px 0px rgba(37, 38, 43, 0.10)",
-          zIndex: (theme) => theme.zIndex.appBar - 1,
-          overscrollBehavior: "contain",
-        },
+    /**
+     * ClickAwayListner + FocusTrap ensure the drawer behaves like a modal:
+     *  - clicking outside the drawer closes it
+     *  - the drawer traps focus
+     *
+     * But the drawer is persistent in that:
+     *  - Events (clicks, scrolls) outside the drawer fire on the underlying
+     *    content, not on an overlay element.
+     */
+    <ClickAwayListener
+      onClickAway={(e) => {
+        if (!others.open) return
+        const excluded = getClickAwayExcluded()
+        const target = e.target
+        if (
+          target instanceof Element &&
+          excluded?.some((el) => el?.contains(target))
+        ) {
+          return
+        }
+        onClose()
       }}
-      {...props}
     >
-      <DrawerContent>{navSections}</DrawerContent>
-    </Drawer>
+      <div role="presentation">
+        <Drawer
+          anchor="left"
+          variant="persistent"
+          elevation={0}
+          hideBackdrop={true}
+          PaperProps={{
+            sx: {
+              borderRight: "none",
+              boxShadow: "0px 6px 24px 0px rgba(37, 38, 43, 0.10)",
+              zIndex: (theme) => theme.zIndex.appBar - 1,
+              overscrollBehavior: "contain",
+            },
+          }}
+          {...others}
+        >
+          <FocusTrap open={!!others.open}>
+            <DrawerContent
+              onKeyUp={(e) => {
+                if (e.key === "Escape") {
+                  onClose()
+                }
+              }}
+              tabIndex={-1}
+            >
+              {navSections}
+            </DrawerContent>
+          </FocusTrap>
+        </Drawer>
+      </div>
+    </ClickAwayListener>
   )
 }
 

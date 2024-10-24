@@ -23,6 +23,10 @@ const custom: ThemeOptions["custom"] = {
   transitionDuration: "300ms",
   shadow: `${shadow.shadowOffsetX} ${shadow.shadowOffsetY} ${shadow.shadowBlurRadius} ${shadow.shadowColor}`,
   colors,
+  dimensions: {
+    headerHeight: "72px",
+    headerHeightSm: "60px",
+  },
 }
 
 const BREAKPOINTS = {
