@@ -4,6 +4,7 @@ import { Container, styled } from "ol-components"
 import MITLogoLink from "@/components/MITLogoLink/MITLogoLink"
 import * as urls from "@/common/urls"
 import React, { FunctionComponent } from "react"
+import Link from "next/link"
 
 const FooterContainer = styled.div(({ theme }) => ({
   display: "flex",
@@ -96,7 +97,7 @@ const FooterLinkContainer = styled.div(({ theme }) => ({
   },
 }))
 
-const FooterLink = styled.a(({ theme }) => ({
+const FooterLink = styled(Link)(({ theme }) => ({
   color: theme.custom.colors.black,
   textDecoration: "none",
   textAlign: "center",
@@ -108,8 +109,8 @@ const FooterLink = styled.a(({ theme }) => ({
 }))
 
 interface FooterLinkComponentProps {
-  href?: string
-  text?: string
+  href: string
+  text: string
 }
 
 const FooterLinkComponent: FunctionComponent<FooterLinkComponentProps> = (

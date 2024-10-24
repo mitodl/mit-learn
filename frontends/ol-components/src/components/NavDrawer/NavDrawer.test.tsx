@@ -51,7 +51,7 @@ describe("NavDrawer", () => {
           {
             title: "Title 1",
             description: "Description 1",
-            href: "https://link.one",
+            href: "#hash-1",
           },
         ],
       },
@@ -61,7 +61,7 @@ describe("NavDrawer", () => {
           {
             title: "Title 2",
             description: "Description 2",
-            href: "https://link.two",
+            href: "#hash-2",
           },
         ],
       },
@@ -117,5 +117,18 @@ describe("NavDrawer", () => {
     await user.click(screen.getByRole("button", { name: "Excluded" }))
     await user.click(screen.getByTestId("foo"))
     expect(onClose).not.toHaveBeenCalled()
+  })
+
+  test("clicking a link navigates and closes the drawer", async () => {
+    const onClose = jest.fn()
+    render(<NavDrawer onClose={onClose} navdata={NAV_DATA} open={true} />, {
+      wrapper: ThemeProvider,
+    })
+
+    const link = screen.getByRole("link", { name: "Title 1 Description 1" })
+    await user.click(link)
+
+    expect(window.location.hash).toBe("#hash-1")
+    expect(onClose).toHaveBeenCalled()
   })
 })

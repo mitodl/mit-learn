@@ -141,7 +141,6 @@ const SearchButton: FunctionComponent = () => {
     <StyledSearchButton
       edge="circular"
       variant="text"
-      rawAnchor={true}
       href={SEARCH}
       aria-label="Search"
     >
