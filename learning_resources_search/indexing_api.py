@@ -5,6 +5,7 @@ Functions and constants for OpenSearch indexing
 import json
 import logging
 from math import ceil
+from time import sleep
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -42,6 +43,45 @@ from main.utils import chunks
 
 log = logging.getLogger(__name__)
 User = get_user_model()
+
+
+def setup_embedding_pipeline():
+    conn = get_conn()
+    response = conn.plugins.ml.register_model(
+        body={
+            "name": "huggingface/sentence-transformers/all-MiniLM-L12-v2",
+            "version": "1.0.1",
+            "model_format": "TORCH_SCRIPT",
+        },
+        params={"deploy": "true"},
+    )
+    task_id = response["task_id"]
+    embedding_model_id = None
+    while not embedding_model_id:
+        model_response = conn.plugins.ml.get_task(task_id)
+        embedding_model_id = model_response.get("model_id")
+        sleep(1)
+    state = "DEPLOYING"
+    while state != "DEPLOYED":
+        state = conn.plugins.ml.search_models(
+            body={"query": {"match": {"_id": embedding_model_id}}, "size": 10}
+        )["hits"]["hits"][0]["_source"]["model_state"]
+        sleep(1)
+
+    conn.ingest.put_pipeline(
+        id="embedding-pipeline",
+        body={
+            "description": "learning resource embedding pipeline",
+            "processors": [
+                {
+                    "text_embedding": {
+                        "model_id": embedding_model_id,
+                        "field_map": {"embedding_text": "embedding"},
+                    }
+                }
+            ],
+        },
+    )
 
 
 def clear_featured_rank(rank, clear_all_greater_than):
