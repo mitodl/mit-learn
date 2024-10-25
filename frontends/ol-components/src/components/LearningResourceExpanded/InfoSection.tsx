@@ -39,7 +39,6 @@ const InfoItems = styled.section({
 
 const InfoItemValueLabel = styled.span({
   display: "flex",
-  whiteSpace: "nowrap",
 })
 
 const InfoItemContainer = styled.div({
