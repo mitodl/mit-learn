@@ -74,6 +74,8 @@ from learning_resources.serializers import (
     PodcastEpisodeResourceSerializer,
     PodcastResourceSerializer,
     ProgramResourceSerializer,
+    SetLearningPathsRequestSerializer,
+    SetUserListsRequestSerializer,
     UserListRelationshipSerializer,
     UserListSerializer,
     VideoPlaylistResourceSerializer,
@@ -433,10 +435,16 @@ class LearningResourceListRelationshipViewSet(viewsets.GenericViewSet):
         """
         Set User List relationships for a given Learning Resource
         """
-        learning_resource_id = kwargs.get("pk")
-        user_list_ids = request.query_params.getlist("userlist_id")
+        req_data = SetUserListsRequestSerializer().to_internal_value(
+            {
+                "userlist_ids": request.query_params.getlist("userlist_id"),
+                "learning_resource_id": kwargs.get("pk"),
+            }
+        )
+        learning_resource_id = req_data["learning_resource_id"]
+        userlist_ids = req_data["userlist_ids"]
         if (
-            UserList.objects.filter(pk__in=user_list_ids)
+            UserList.objects.filter(pk__in=userlist_ids)
             .exclude(author=request.user)
             .exists()
         ):
@@ -445,9 +453,14 @@ class LearningResourceListRelationshipViewSet(viewsets.GenericViewSet):
         current_relationships = UserListRelationship.objects.filter(
             parent__author=request.user, child_id=learning_resource_id
         )
-        current_relationships.exclude(parent_id__in=user_list_ids).delete()
-        for userlist_id in user_list_ids:
+
+        # Remove the resource from lists it WAS in before but is not in now
+        current_relationships.exclude(parent_id__in=userlist_ids).delete()
+        current_parent_lists = current_relationships.values_list("parent_id", flat=True)
+
+        for userlist_id in userlist_ids:
             last_index = 0
+            # re-number the positions for surviving items
             for index, relationship in enumerate(
                 UserListRelationship.objects.filter(
                     parent__author=request.user, parent__id=userlist_id
@@ -456,11 +469,13 @@ class LearningResourceListRelationshipViewSet(viewsets.GenericViewSet):
                 relationship.position = index
                 relationship.save()
                 last_index = index
-            UserListRelationship.objects.create(
-                parent_id=userlist_id,
-                child_id=learning_resource_id,
-                position=last_index + 1,
-            )
+            # Add new items as necessary
+            if userlist_id not in list(current_parent_lists):
+                UserListRelationship.objects.create(
+                    parent_id=userlist_id,
+                    child_id=learning_resource_id,
+                    position=last_index + 1,
+                )
         SerializerClass = self.get_serializer_class()
         serializer = SerializerClass(current_relationships, many=True)
         return Response(serializer.data)
@@ -489,14 +504,25 @@ class LearningResourceListRelationshipViewSet(viewsets.GenericViewSet):
         """
         Set Learning Path relationships for a given Learning Resource
         """
-        learning_resource_id = kwargs.get("pk")
-        learning_path_ids = request.query_params.getlist("learning_path_id")
+        req_data = SetLearningPathsRequestSerializer().to_internal_value(
+            {
+                "learning_path_ids": request.query_params.getlist("learning_path_id"),
+                "learning_resource_id": kwargs.get("pk"),
+            }
+        )
+        learning_resource_id = req_data["learning_resource_id"]
+        learning_path_ids = req_data["learning_path_ids"]
         current_relationships = LearningResourceRelationship.objects.filter(
             child_id=learning_resource_id
         )
+        # Remove the resource from lists it WAS in before but is not in now
         current_relationships.exclude(parent_id__in=learning_path_ids).delete()
-        for learning_path_id in learning_path_ids:
+        current_parent_lists = current_relationships.values_list("parent_id", flat=True)
+
+        for learning_path_id_str in learning_path_ids:
+            learning_path_id = int(learning_path_id_str)
             last_index = 0
+            # re-number the positions for surviving items
             for index, relationship in enumerate(
                 LearningResourceRelationship.objects.filter(
                     parent__id=learning_path_id
@@ -505,12 +531,15 @@ class LearningResourceListRelationshipViewSet(viewsets.GenericViewSet):
                 relationship.position = index
                 relationship.save()
                 last_index = index
-            LearningResourceRelationship.objects.create(
-                parent_id=learning_path_id,
-                child_id=learning_resource_id,
-                relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS,
-                position=last_index + 1,
-            )
+
+            # Add new items as necessary
+            if learning_path_id not in list(current_parent_lists):
+                LearningResourceRelationship.objects.create(
+                    parent_id=learning_path_id,
+                    child_id=learning_resource_id,
+                    relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS,
+                    position=last_index + 1,
+                )
         SerializerClass = self.get_serializer_class()
         serializer = SerializerClass(current_relationships, many=True)
         return Response(serializer.data)

@@ -888,3 +888,68 @@ class UserListRelationshipSerializer(serializers.ModelSerializer):
         model = models.UserListRelationship
         extra_kwargs = {"position": {"required": False}}
         exclude = COMMON_IGNORED_FIELDS
+
+
+class BaseRelationshipRequestSerializer(serializers.Serializer):
+    """
+    Base class for validating requests that set relationships between
+    learning resources
+    """
+
+    learning_resource_id = serializers.IntegerField()
+
+    def validate_learning_resource_id(self, learning_resource_id):
+        """Ensure that the learning resource exists"""
+        try:
+            models.LearningResource.objects.get(id=learning_resource_id)
+        except models.LearningResource.DoesNotExist as dne:
+            msg = f"Invalid learning resource id: {learning_resource_id}"
+            raise ValidationError(msg) from dne
+        return learning_resource_id
+
+
+class SetLearningPathsRequestSerializer(BaseRelationshipRequestSerializer):
+    """
+    Validate request parameters for setting learning paths for a learning resource
+    """
+
+    learning_path_ids = serializers.ListField(
+        child=serializers.IntegerField(), allow_empty=True
+    )
+
+    def validate_learning_path_ids(self, learning_path_ids):
+        """Ensure that the learning paths exist"""
+        valid_learning_path_ids = set(
+            models.LearningResource.objects.filter(
+                id__in=learning_path_ids,
+                resource_type=LearningResourceType.learning_path.name,
+            ).values_list("id", flat=True)
+        )
+        missing = set(learning_path_ids).difference(valid_learning_path_ids)
+        if missing:
+            msg = f"Invalid learning path ids: {missing}"
+            raise ValidationError(msg)
+        return learning_path_ids
+
+
+class SetUserListsRequestSerializer(BaseRelationshipRequestSerializer):
+    """
+    Validate request parameters for setting userlist for a learning resource
+    """
+
+    userlist_ids = serializers.ListField(
+        child=serializers.IntegerField(), allow_empty=True
+    )
+
+    def validate_userlist_ids(self, userlist_ids):
+        """Ensure that the learning paths exist"""
+        valid_userlist_ids = set(
+            models.UserList.objects.filter(
+                id__in=userlist_ids,
+            ).values_list("id", flat=True)
+        )
+        missing = set(userlist_ids).difference(valid_userlist_ids)
+        if missing:
+            msg = f"Invalid learning path ids: {missing}"
+            raise ValidationError(msg)
+        return userlist_ids
