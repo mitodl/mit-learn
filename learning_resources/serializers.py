@@ -896,7 +896,7 @@ class SetLearningPathsRequestSerializer(serializers.Serializer):
     """
 
     learning_path_ids = serializers.ListField(
-        child=serializers.IntegerField(), allow_empty=False
+        child=serializers.IntegerField(), allow_empty=True
     )
     learning_resource_id = serializers.IntegerField()
 
@@ -929,8 +929,8 @@ class SetUserListsRequestSerializer(serializers.Serializer):
     Validate request parameters for setting learning paths for a learning resource
     """
 
-    user_list_ids = serializers.ListField(
-        child=serializers.IntegerField(), allow_empty=False
+    userlist_ids = serializers.ListField(
+        child=serializers.IntegerField(), allow_empty=True
     )
     learning_resource_id = serializers.IntegerField()
 
@@ -943,15 +943,15 @@ class SetUserListsRequestSerializer(serializers.Serializer):
             raise ValidationError(msg) from dne
         return learning_resource_id
 
-    def validate_user_list_ids(self, user_list_ids):
+    def validate_userlist_ids(self, userlist_ids):
         """Ensure that the learning paths exist"""
-        valid_user_list_ids = set(
+        valid_userlist_ids = set(
             models.UserList.objects.filter(
-                id__in=user_list_ids,
+                id__in=userlist_ids,
             ).values_list("id", flat=True)
         )
-        missing = set(user_list_ids).difference(valid_user_list_ids)
+        missing = set(userlist_ids).difference(valid_userlist_ids)
         if missing:
             msg = f"Invalid learning path ids: {missing}"
             raise ValidationError(msg)
-        return user_list_ids
+        return userlist_ids

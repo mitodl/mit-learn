@@ -588,17 +588,17 @@ def test_set_userlist_request_serializer():
     serializer = serializers.SetUserListsRequestSerializer()
 
     data1 = {
-        "user_list_ids": [str(lists[0].id), lists[1].id],
+        "userlist_ids": [str(lists[0].id), lists[1].id],
         "learning_resource_id": str(resource.id),
     }
     assert serializer.to_internal_value(data1) == {
-        "user_list_ids": [lists[0].id, lists[1].id],
+        "userlist_ids": [lists[0].id, lists[1].id],
         "learning_resource_id": resource.id,
     }
 
     invalid = serializers.SetUserListsRequestSerializer(
-        data={"user_list_ids": [1, 2], "learning_resource_id": 3}
+        data={"userlist_ids": [1, 2], "learning_resource_id": 3}
     )
     assert invalid.is_valid() is False
-    assert "user_list_ids" in invalid.errors
+    assert "userlist_ids" in invalid.errors
     assert "learning_resource_id" in invalid.errors

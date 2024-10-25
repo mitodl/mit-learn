@@ -437,15 +437,14 @@ class LearningResourceListRelationshipViewSet(viewsets.GenericViewSet):
         """
         req_data = SetUserListsRequestSerializer().to_internal_value(
             {
-                "user_list_ids": request.query_params.getlist("user_list_id"),
+                "userlist_ids": request.query_params.getlist("userlist_id"),
                 "learning_resource_id": kwargs.get("pk"),
             }
         )
         learning_resource_id = req_data["learning_resource_id"]
-        user_list_ids = req_data["user_list_ids"]
-
+        userlist_ids = req_data["userlist_ids"]
         if (
-            UserList.objects.filter(pk__in=user_list_ids)
+            UserList.objects.filter(pk__in=userlist_ids)
             .exclude(author=request.user)
             .exists()
         ):
@@ -456,10 +455,10 @@ class LearningResourceListRelationshipViewSet(viewsets.GenericViewSet):
         )
 
         # Remove the resource from lists it WAS in before but is not in now
-        current_relationships.exclude(parent_id__in=user_list_ids).delete()
+        current_relationships.exclude(parent_id__in=userlist_ids).delete()
         current_parent_lists = current_relationships.values_list("parent_id", flat=True)
 
-        for userlist_id in user_list_ids:
+        for userlist_id in userlist_ids:
             last_index = 0
             # re-number the positions for surviving items
             for index, relationship in enumerate(

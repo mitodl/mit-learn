@@ -371,7 +371,7 @@ def test_adding_to_userlist_not_effect_existing_membership(client, user):
     client.force_login(user)
     lists = [existing_parent, new_additional_parent]
     resp = client.patch(
-        f"{url}?{"".join([f"user_list_id={userlist.id}&" for userlist in lists])}"
+        f"{url}?{"".join([f"userlist_id={userlist.id}&" for userlist in lists])}"
     )
 
     assert resp.status_code == 200
