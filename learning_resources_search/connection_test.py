@@ -50,8 +50,6 @@ def test_get_active_aliases(mocker, index_types, indexes_exist, object_types):
                 "testindex_podcast_reindexing",
                 "testindex_podcast_episode_default",
                 "testindex_podcast_episode_reindexing",
-                "testindex_learning_path_default",
-                "testindex_learning_path_reindexing",
                 "testindex_video_default",
                 "testindex_video_reindexing",
                 "testindex_video_playlist_default",
@@ -64,7 +62,6 @@ def test_get_active_aliases(mocker, index_types, indexes_exist, object_types):
                 "testindex_program_default",
                 "testindex_podcast_default",
                 "testindex_podcast_episode_default",
-                "testindex_learning_path_default",
                 "testindex_video_default",
                 "testindex_video_playlist_default",
             ]
@@ -75,7 +72,6 @@ def test_get_active_aliases(mocker, index_types, indexes_exist, object_types):
                 "testindex_program_reindexing",
                 "testindex_podcast_reindexing",
                 "testindex_podcast_episode_reindexing",
-                "testindex_learning_path_reindexing",
                 "testindex_video_reindexing",
                 "testindex_video_playlist_reindexing",
             ]

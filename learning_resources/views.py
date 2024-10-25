@@ -83,7 +83,6 @@ from learning_resources.serializers import (
 )
 from learning_resources.tasks import get_ocw_courses
 from learning_resources.utils import (
-    resource_delete_actions,
     resource_unpublished_actions,
 )
 from learning_resources_search.api import get_similar_resources
@@ -383,9 +382,6 @@ class LearningPathViewSet(BaseLearningResourceViewSet, viewsets.ModelViewSet):
         if not (is_learning_path_editor(self.request) or is_admin_user(self.request)):
             queryset = queryset.filter(published=True)
         return queryset
-
-    def perform_destroy(self, instance):
-        resource_delete_actions(instance)
 
 
 @extend_schema_view(
