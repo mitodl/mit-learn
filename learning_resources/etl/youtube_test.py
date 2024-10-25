@@ -203,6 +203,7 @@ def extracted_and_transformed_values(youtube_api_responses):
                     "etl_source": ETLSource.youtube.name,
                     "image": {
                         "url": playlist["snippet"]["thumbnails"]["high"]["url"],
+                        "alt": playlist["snippet"]["title"],
                     },
                     "offered_by": {"code": offered_by}
                     if offered_by != "csail"
@@ -465,6 +466,7 @@ def test_transform_playlist(
     )
     assert result["image"] == {
         "url": extracted[0][2][0][0]["snippet"]["thumbnails"]["high"]["url"],
+        "alt": extracted[0][2][0][0]["snippet"]["title"],
     }
 
 
