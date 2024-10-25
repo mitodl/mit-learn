@@ -990,6 +990,7 @@ def load_playlist(video_channel: VideoChannel, playlist_data: dict) -> LearningR
     playlist_id = playlist_data.pop("playlist_id")
     videos_data = playlist_data.pop("videos", [])
     offered_bys_data = playlist_data.pop("offered_by", None)
+    playlist_data["url"] = f"https://www.youtube.com/playlist?list={playlist_id}"
 
     with transaction.atomic():
         playlist_resource, created = LearningResource.objects.update_or_create(
