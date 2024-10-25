@@ -1318,6 +1318,11 @@ def test_load_playlist(mocker):
         "platform": PlatformType.youtube.name,
         "offered_by": {"code": LearningResourceOfferorFactory.create().code},
         "playlist_id": playlist.readable_id,
+        "url": f"https://youtube.com/playlist?list={playlist.readable_id}",
+        "image": {
+            "url": f"https://i.ytimg.com/vi/{playlist.readable_id}/hqdefault.jpg",
+            "alt": playlist.title,
+        },
         "videos": videos_data,
     }
 
@@ -1328,7 +1333,6 @@ def test_load_playlist(mocker):
 
     assert result.resources.count() == len(video_resources)
     assert result.video_playlist.channel == channel
-    assert result.url == f"https://www.youtube.com/playlist?list={playlist.readable_id}"
     assert list(result.topics.values_list("name", flat=True).order_by("name")) == [
         topic["name"] for topic in expected_topics
     ]
@@ -1343,10 +1347,17 @@ def test_load_playlists_unpublish(mocker):
         VideoPlaylistFactory.create_batch(4, channel=channel),
         key=lambda playlist: playlist.id,
     )
+    playlist_id = playlists[0].learning_resource.readable_id
+    playlist_title = playlists[0].learning_resource.title
     assert playlists[0].learning_resource.published is True
     playlists_data = [
         {
-            "playlist_id": playlists[0].learning_resource.readable_id,
+            "playlist_id": playlist_id,
+            "url": f"https://youtube.com/playlist?list={playlist_id}",
+            "image": {
+                "url": f"https://i.ytimg.com/vi/{playlist_id}/hqdefault.jpg",
+                "alt": playlist_title,
+            },
             "published": True,
             "videos": [],
         }
