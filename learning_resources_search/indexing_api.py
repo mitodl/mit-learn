@@ -141,6 +141,8 @@ def clear_and_create_index(*, index_name=None, skip_mapping=False, object_type=N
                 "number_of_shards": settings.OPENSEARCH_SHARD_COUNT,
                 "number_of_replicas": settings.OPENSEARCH_REPLICA_COUNT,
                 "refresh_interval": "60s",
+                "knn": True,
+                "default_pipeline": "embedding-pipeline",
             },
             "analysis": {
                 "analyzer": {

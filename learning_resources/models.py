@@ -382,6 +382,7 @@ class LearningResource(TimestampedModel):
     readable_id = models.CharField(max_length=512, null=False, blank=False)
     title = models.CharField(max_length=256)
     description = models.TextField(null=True, blank=True)  # noqa: DJ001
+    embedding_text = models.TextField(null=True, blank=True)  # noqa: DJ001
     full_description = models.TextField(null=True, blank=True)  # noqa: DJ001
     last_modified = models.DateTimeField(null=True, blank=True)
     published = models.BooleanField(default=True, db_index=True)
@@ -456,6 +457,10 @@ class LearningResource(TimestampedModel):
         default=default_format,
     )
     location = models.CharField(max_length=256, blank=True)
+
+    def save(self, **kwargs):
+        self.embedding_text = f"{self.title} {self.description} {self.full_description}"
+        super().save(**kwargs)
 
     @property
     def audience(self) -> str | None:

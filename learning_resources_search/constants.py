@@ -103,6 +103,12 @@ ENGLISH_TEXT_FIELD_WITH_SUGGEST = {
 
 
 LEARNING_RESOURCE_MAP = {
+    "embedding_text": {"type": "text"},
+    "embedding": {
+        "type": "knn_vector",
+        "dimension": 384,
+        "method": {"name": "hnsw", "engine": "faiss"},
+    },
     "resource_relations": {"type": "join", "relations": {"resource": "content_file"}},
     "id": {"type": "long"},
     "certification": {"type": "boolean"},
