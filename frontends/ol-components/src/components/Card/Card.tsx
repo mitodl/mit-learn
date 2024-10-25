@@ -39,26 +39,24 @@ export const containerStyles = `
   overflow: hidden;
 `
 
-const LinkContainer = styled(Link)`
-  ${containerStyles}
-  display: block;
-  position: relative;
-
-  :hover {
-    text-decoration: none;
-    border-color: ${theme.custom.colors.silverGrayLight};
-    box-shadow:
-      0 2px 4px 0 rgb(37 38 43 / 10%),
-      0 2px 4px 0 rgb(37 38 43 / 10%);
-    cursor: pointer;
-  }
-`
-
-const Container = styled.div`
-  ${containerStyles}
-  display: block;
-  position: relative;
-`
+const Container = styled.div(({ theme, onClick }) => [
+  {
+    borderRadius: "8px",
+    border: `1px solid ${theme.custom.colors.lightGray2}`,
+    background: theme.custom.colors.white,
+    overflow: "hidden",
+    display: "block",
+    position: "relative",
+  },
+  onClick && {
+    "&:hover": {
+      borderColor: theme.custom.colors.silverGrayLight,
+      boxShadow:
+        "0 2px 4px 0 rgb(37 38 43 / 10%), 0 2px 4px 0 rgb(37 38 43 / 10%)",
+      cursor: "pointer",
+    },
+  },
+])
 
 const Content = () => <></>
 
@@ -140,6 +138,7 @@ type CardProps = {
   className?: string
   size?: Size
   href?: string
+  onClick?: React.MouseEventHandler<HTMLElement>
 }
 
 export type ImageProps = NextImageProps & {
@@ -151,6 +150,7 @@ type TitleProps = {
   children?: ReactNode
   lines?: number
   style?: CSSProperties
+  "aria-label"?: string
 }
 type SlotProps = { children?: ReactNode; style?: CSSProperties }
 
@@ -163,15 +163,13 @@ type Card = FC<CardProps> & {
   Actions: FC<SlotProps>
 }
 
-const Card: Card = ({ children, className, size, href }) => {
+const Card: Card = ({ children, className, size, href, onClick }) => {
   let content,
     image: ImageProps | null = null,
     info: SlotProps = {},
     title: TitleProps = {},
     footer: SlotProps = {},
     actions: SlotProps = {}
-
-  const _Container = href ? LinkContainer : Container
 
   /*
    * Allows rendering child elements to specific "slots":
@@ -196,21 +194,33 @@ const Card: Card = ({ children, className, size, href }) => {
     else if (child.type === Actions) actions = child.props
   })
 
+  const linkRef = React.useRef<HTMLAnchorElement>(null)
+  const handleLinkClick: React.MouseEventHandler = React.useCallback(() => {
+    linkRef.current?.click()
+  }, [])
   const allClassNames = ["MitCard-root", className ?? ""].join(" ")
 
   if (content) {
     return (
       <Wrapper className={allClassNames} size={size}>
-        <_Container className={className} href={href!}>
+        <Container onClick={onClick} className={className}>
           {content}
-        </_Container>
+        </Container>
       </Wrapper>
     )
   }
 
+  const titleNode = (
+    <Title className="MitCard-title" size={size} {...title}>
+      {title.children}
+    </Title>
+  )
+
+  const hasHref = typeof href === "string"
+
   return (
     <Wrapper className={allClassNames} size={size}>
-      <_Container href={href!} scroll={!href?.startsWith("?")}>
+      <Container onClick={hasHref ? handleLinkClick : onClick}>
         {image && (
           // alt text will be checked on Card.Image
           // eslint-disable-next-line styled-components-a11y/alt-text
@@ -228,16 +238,20 @@ const Card: Card = ({ children, className, size, href }) => {
               {info.children}
             </Info>
           )}
-          <Title className="MitCard-title" size={size} {...title}>
-            {title.children}
-          </Title>
+          {hasHref ? (
+            <Link ref={linkRef} href={href} scroll={!href?.startsWith("?")}>
+              {titleNode}
+            </Link>
+          ) : (
+            titleNode
+          )}
         </Body>
         <Bottom>
           <Footer className="MitCard-footer" {...footer}>
             {footer.children}
           </Footer>
         </Bottom>
-      </_Container>
+      </Container>
       {actions.children && (
         <Actions className="MitCard-actions" {...actions}>
           {actions.children}
