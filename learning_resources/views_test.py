@@ -5,6 +5,7 @@ from datetime import timedelta
 
 import pytest
 from django.utils import timezone
+from opensearch_dsl import response
 from rest_framework.reverse import reverse
 
 from channels.factories import ChannelTopicDetailFactory, ChannelUnitDetailFactory
@@ -48,6 +49,8 @@ from learning_resources.serializers import (
     VideoResourceSerializer,
     VideoSerializer,
 )
+from learning_resources_search.api import Search
+from learning_resources_search.serializers import serialize_learning_resource_for_update
 
 pytestmark = [pytest.mark.django_db]
 
@@ -959,3 +962,77 @@ def test_featured_view_filter(client, offeror_featured_lists, parameter):
         else:
             for run in resource["runs"]:
                 assert run["prices"] == []
+
+
+def test_similar_resources_endpoint_does_not_return_self(mocker, client):
+    """Test similar learning_resources endpoint does not return initial resource"""
+    from learning_resources.models import LearningResource
+
+    resources = LearningResourceFactory.create_batch(5)
+
+    resource_ids = [learning_resource.id for learning_resource in resources]
+    mocker.patch.object(Search, "execute")
+
+    Search.execute.return_value = response.Response(
+        Search().query(),
+        {
+            "_shards": {"failed": 0, "successful": 10, "total": 10},
+            "hits": {
+                "hits": [
+                    serialize_learning_resource_for_update(lr)
+                    for lr in LearningResource.objects.for_search_serialization().filter(
+                        id__in=resource_ids
+                    )
+                ],
+                "max_score": 12.0,
+                "total": 123,
+            },
+            "timed_out": False,
+            "took": 123,
+        },
+    ).hits
+    similar_for = resource_ids[0]
+    resp = client.get(
+        reverse("lr:v1:learning_resources_api-similar", args=[similar_for])
+    )
+    response_ids = [hit["id"] for hit in resp.json()]
+    assert similar_for not in response_ids
+
+
+def test_similar_resources_endpoint_only_returns_published(mocker, client):
+    """Test similar learning_resources endpoint only returns published items"""
+    from learning_resources.models import LearningResource
+
+    resources = LearningResourceFactory.create_batch(5)
+
+    resource_ids = [learning_resource.id for learning_resource in resources]
+    mocker.patch.object(Search, "execute")
+    response_resources = LearningResource.objects.for_search_serialization().filter(
+        id__in=resource_ids
+    )
+    response_hits = []
+    for lr in response_resources:
+        serialized_resource = serialize_learning_resource_for_update(lr)
+        serialized_resource["published"] = False
+        response_hits.append(serialized_resource)
+    # set one item to published
+    response_hits[-1]["published"] = True
+    Search.execute.return_value = response.Response(
+        Search().query(),
+        {
+            "_shards": {"failed": 0, "successful": 10, "total": 10},
+            "hits": {
+                "hits": response_hits,
+                "max_score": 12.0,
+                "total": 123,
+            },
+            "timed_out": False,
+            "took": 123,
+        },
+    ).hits
+    similar_for = resource_ids[0]
+    resp = client.get(
+        reverse("lr:v1:learning_resources_api-similar", args=[similar_for])
+    )
+    response_ids = [hit["id"] for hit in resp.json()]
+    assert len(response_ids) == 1
