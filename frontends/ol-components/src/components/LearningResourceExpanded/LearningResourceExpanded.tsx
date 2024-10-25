@@ -63,6 +63,7 @@ const ContentContainer = styled.div({
 const LeftContainer = styled.div({
   display: "flex",
   flexDirection: "column",
+  flexGrow: 1,
   alignItems: "flex-start",
   gap: "24px",
 })
