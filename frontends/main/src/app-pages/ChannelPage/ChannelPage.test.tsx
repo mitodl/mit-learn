@@ -316,8 +316,8 @@ describe.each(NON_UNIT_CHANNEL_TYPES)(
         assertHeadings([
           { level: 1, name: channel.title },
           { level: 2, name: `Search within ${channel.title}` },
-          { level: 3, name: "Filter" },
           { level: 3, name: "Search Results" },
+          { level: 3, name: "Filter" },
         ])
       })
     }, 10000)
@@ -436,8 +436,8 @@ describe("Channel Pages, Unit only", () => {
         { level: 2, name: "Featured Courses" },
         { level: 2, name: "What Learners Say" },
         { level: 2, name: `Search within ${channel.title}` },
-        { level: 3, name: "Filter" },
         { level: 3, name: "Search Results" },
+        { level: 3, name: "Filter" },
       ])
     })
   })
