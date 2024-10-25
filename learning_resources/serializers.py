@@ -890,14 +890,12 @@ class UserListRelationshipSerializer(serializers.ModelSerializer):
         exclude = COMMON_IGNORED_FIELDS
 
 
-class SetLearningPathsRequestSerializer(serializers.Serializer):
+class BaseRelationshipRequestSerializer(serializers.Serializer):
     """
-    Validate request parameters for setting learning paths for a learning resource
+    Base class for validating requests that set relationships between
+    learning resources
     """
 
-    learning_path_ids = serializers.ListField(
-        child=serializers.IntegerField(), allow_empty=True
-    )
     learning_resource_id = serializers.IntegerField()
 
     def validate_learning_resource_id(self, learning_resource_id):
@@ -908,6 +906,16 @@ class SetLearningPathsRequestSerializer(serializers.Serializer):
             msg = f"Invalid learning resource id: {learning_resource_id}"
             raise ValidationError(msg) from dne
         return learning_resource_id
+
+
+class SetLearningPathsRequestSerializer(BaseRelationshipRequestSerializer):
+    """
+    Validate request parameters for setting learning paths for a learning resource
+    """
+
+    learning_path_ids = serializers.ListField(
+        child=serializers.IntegerField(), allow_empty=True
+    )
 
     def validate_learning_path_ids(self, learning_path_ids):
         """Ensure that the learning paths exist"""
@@ -924,24 +932,14 @@ class SetLearningPathsRequestSerializer(serializers.Serializer):
         return learning_path_ids
 
 
-class SetUserListsRequestSerializer(serializers.Serializer):
+class SetUserListsRequestSerializer(BaseRelationshipRequestSerializer):
     """
-    Validate request parameters for setting learning paths for a learning resource
+    Validate request parameters for setting userlist for a learning resource
     """
 
     userlist_ids = serializers.ListField(
         child=serializers.IntegerField(), allow_empty=True
     )
-    learning_resource_id = serializers.IntegerField()
-
-    def validate_learning_resource_id(self, learning_resource_id):
-        """Ensure that the learning resource exists"""
-        try:
-            models.LearningResource.objects.get(id=learning_resource_id)
-        except models.LearningResource.DoesNotExist as dne:
-            msg = f"Invalid learning resource id: {learning_resource_id}"
-            raise ValidationError(msg) from dne
-        return learning_resource_id
 
     def validate_userlist_ids(self, userlist_ids):
         """Ensure that the learning paths exist"""

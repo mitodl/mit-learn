@@ -553,6 +553,7 @@ def test_content_file_serializer(settings, expected_types, has_channels):
 
 
 def test_set_learning_path_request_serializer():
+    """Test serializer for setting learning path relationships"""
     lists = factories.LearningPathFactory.create_batch(2)
     resource = factories.LearningResourceFactory.create()
 
@@ -582,6 +583,7 @@ def test_set_learning_path_request_serializer():
 
 
 def test_set_userlist_request_serializer():
+    """Test serializer for setting userlist relationships"""
     lists = factories.UserListFactory.create_batch(2)
     resource = factories.LearningResourceFactory.create()
 

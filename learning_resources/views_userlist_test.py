@@ -353,6 +353,10 @@ def test_set_userlist_relationships_empty_list(client, user):
 
 
 def test_adding_to_userlist_not_effect_existing_membership(client, user):
+    """
+    Given L1 (existing parent), L2 (new parent), and R (resource),
+    test that adding R to L2 does not affect L1.
+    """
     course = factories.CourseFactory.create()
 
     existing_parent = factories.UserListFactory.create(author=user)

@@ -428,6 +428,10 @@ def test_set_learning_path_relationships(client, staff_user):
 
 
 def test_adding_to_learning_path_not_effect_existing_membership(client, staff_user):
+    """
+    Given L1 (existing parent), L2 (new parent), and R (resource),
+    test that adding R to L2 does not affect L1.
+    """
     course = factories.CourseFactory.create()
 
     existing_parent = factories.LearningPathFactory.create(author=staff_user)
