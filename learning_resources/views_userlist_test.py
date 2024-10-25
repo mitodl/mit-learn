@@ -350,3 +350,34 @@ def test_set_userlist_relationships_empty_list(client, user):
     assert (
         UserListRelationship.objects.filter(child=course.learning_resource).count() == 3
     )
+
+
+def test_adding_to_userlist_not_effect_existing_membership(client, user):
+    """
+    Given L1 (existing parent), L2 (new parent), and R (resource),
+    test that adding R to L2 does not affect L1.
+    """
+    course = factories.CourseFactory.create()
+
+    existing_parent = factories.UserListFactory.create(author=user)
+    factories.UserListRelationshipFactory.create(
+        parent=existing_parent, child=course.learning_resource
+    )
+    new_additional_parent = factories.UserListFactory.create(author=user)
+
+    prev_parent_count = existing_parent.resources.count()
+    new_additional_parent_count = new_additional_parent.resources.count()
+
+    url = reverse(
+        "lr:v1:learning_resource_relationships_api-userlists",
+        args=[course.learning_resource.id],
+    )
+    client.force_login(user)
+    lists = [existing_parent, new_additional_parent]
+    resp = client.patch(
+        f"{url}?{"".join([f"userlist_id={userlist.id}&" for userlist in lists])}"
+    )
+
+    assert resp.status_code == 200
+    assert prev_parent_count == existing_parent.resources.count()
+    assert new_additional_parent_count + 1 == new_additional_parent.resources.count()

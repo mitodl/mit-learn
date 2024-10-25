@@ -425,3 +425,39 @@ def test_set_learning_path_relationships(client, staff_user):
     assert not course.learning_resource.learning_path_parents.filter(
         parent__id=previous_learning_path.learning_resource.id
     ).exists()
+
+
+def test_adding_to_learning_path_not_effect_existing_membership(client, staff_user):
+    """
+    Given L1 (existing parent), L2 (new parent), and R (resource),
+    test that adding R to L2 does not affect L1.
+    """
+    course = factories.CourseFactory.create()
+
+    existing_parent = factories.LearningPathFactory.create(author=staff_user)
+    factories.LearningPathRelationshipFactory.create(
+        parent=existing_parent.learning_resource, child=course.learning_resource
+    )
+    new_additional_parent = factories.LearningPathFactory.create(author=staff_user)
+
+    prev_parent_count = existing_parent.learning_resource.resources.count()
+    new_additional_parent_count = (
+        new_additional_parent.learning_resource.resources.count()
+    )
+
+    url = reverse(
+        "lr:v1:learning_resource_relationships_api-learning-paths",
+        args=[course.learning_resource.id],
+    )
+    client.force_login(staff_user)
+    lps = [existing_parent, new_additional_parent]
+    resp = client.patch(
+        f"{url}?{"".join([f"learning_path_id={lp.learning_resource.id}&" for lp in lps])}"
+    )
+
+    assert resp.status_code == 200
+    assert prev_parent_count == existing_parent.learning_resource.resources.count()
+    assert (
+        new_additional_parent_count + 1
+        == new_additional_parent.learning_resource.resources.count()
+    )

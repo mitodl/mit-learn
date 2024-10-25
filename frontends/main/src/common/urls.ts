@@ -95,17 +95,17 @@ export const PROFILE = "/dashboard/profile"
 
 export const SETTINGS = "/dashboard/settings"
 
-export const SEARCH = "/search/"
+export const SEARCH = "/search"
 
-export const ABOUT = "/about/"
+export const ABOUT = "/about"
 
 export const ACCESSIBILITY = "https://accessibility.mit.edu/"
 
-export const PRIVACY = "/privacy/"
+export const PRIVACY = "/privacy"
 
-export const TERMS = "/terms/"
+export const TERMS = "/terms"
 
-export const UNITS = "/units/"
+export const UNITS = "/units"
 
 export const CONTACT = "mailto:mitlearn-support@mit.edu"
 

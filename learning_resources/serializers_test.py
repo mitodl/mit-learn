@@ -550,3 +550,57 @@ def test_content_file_serializer(settings, expected_types, has_channels):
             ),
         },
     )
+
+
+def test_set_learning_path_request_serializer():
+    """Test serializer for setting learning path relationships"""
+    lists = factories.LearningPathFactory.create_batch(2)
+    resource = factories.LearningResourceFactory.create()
+
+    serializer = serializers.SetLearningPathsRequestSerializer()
+
+    data1 = {
+        "learning_path_ids": [
+            str(lists[0].learning_resource.id),
+            lists[1].learning_resource.id,
+        ],
+        "learning_resource_id": str(resource.id),
+    }
+    assert serializer.to_internal_value(data1) == {
+        "learning_path_ids": [
+            lists[0].learning_resource.id,
+            lists[1].learning_resource.id,
+        ],
+        "learning_resource_id": resource.id,
+    }
+
+    invalid = serializers.SetLearningPathsRequestSerializer(
+        data={"learning_path_ids": [1, 2], "learning_resource_id": 3}
+    )
+    assert invalid.is_valid() is False
+    assert "learning_path_ids" in invalid.errors
+    assert "learning_resource_id" in invalid.errors
+
+
+def test_set_userlist_request_serializer():
+    """Test serializer for setting userlist relationships"""
+    lists = factories.UserListFactory.create_batch(2)
+    resource = factories.LearningResourceFactory.create()
+
+    serializer = serializers.SetUserListsRequestSerializer()
+
+    data1 = {
+        "userlist_ids": [str(lists[0].id), lists[1].id],
+        "learning_resource_id": str(resource.id),
+    }
+    assert serializer.to_internal_value(data1) == {
+        "userlist_ids": [lists[0].id, lists[1].id],
+        "learning_resource_id": resource.id,
+    }
+
+    invalid = serializers.SetUserListsRequestSerializer(
+        data={"userlist_ids": [1, 2], "learning_resource_id": 3}
+    )
+    assert invalid.is_valid() is False
+    assert "userlist_ids" in invalid.errors
+    assert "learning_resource_id" in invalid.errors

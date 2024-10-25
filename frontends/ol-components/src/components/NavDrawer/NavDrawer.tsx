@@ -2,6 +2,7 @@ import Drawer, { DrawerProps } from "@mui/material/Drawer"
 import ClickAwayListener from "@mui/material/ClickAwayListener"
 import { FocusTrap } from "@mui/base/FocusTrap"
 import styled from "@emotion/styled"
+import Link from "next/link"
 import React, { ReactElement } from "react"
 import { RiCloseLargeLine } from "@remixicon/react"
 import { ActionButton } from "../Button/Button"
@@ -51,7 +52,7 @@ const NavItemsContainer = styled.div(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
 }))
 
-const NavItemLink = styled.a({
+const NavItemLink = styled(Link)({
   display: "flex",
   alignItems: "flex-start",
   alignSelf: "stretch",
@@ -127,10 +128,11 @@ export interface NavItem {
   icon?: string | ReactElement
   description?: string
   href: string
+  onClick?: () => void
 }
 
 const NavItem: React.FC<NavItem> = (props) => {
-  const { title, icon, description, href } = props
+  const { title, icon, description, href, onClick } = props
   const navItem = (
     <NavItemContainer>
       <NavIconContainer style={{ paddingTop: description ? "4px" : "" }}>
@@ -156,7 +158,7 @@ const NavItem: React.FC<NavItem> = (props) => {
     </NavItemContainer>
   )
   return (
-    <NavItemLink href={href} data-testid="nav-link">
+    <NavItemLink href={href} onClick={onClick} data-testid="nav-link">
       {navItem}
     </NavItemLink>
   )
@@ -186,6 +188,7 @@ const NavDrawer = ({
         icon={item.icon}
         description={item.description}
         href={item.href}
+        onClick={onClose}
       />
     ))
     return (
