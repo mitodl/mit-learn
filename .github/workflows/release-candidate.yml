@@ -22,9 +22,6 @@ jobs:
       - name: Set VERSION
         run: echo "VERSION=$(./scripts/get_version.sh)" >> $GITHUB_ENV
 
-      - name: Write commit SHA to file
-        run: echo $GITHUB_SHA > frontends/main/public/hash.txt
-
       - name: Heroku login
         env:
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
@@ -38,7 +35,10 @@ jobs:
           heroku_email: ${{ secrets.HEROKU_EMAIL }}
           branch: release-candidate
 
-      - name: Build and push the Docker image
+      - name: Write commit SHA to file
+        run: echo $GITHUB_SHA > frontends/main/public/hash.txt
+
+      - name: Build and push the NextJS Docker image
         env:
           HEROKU_APP_NAME: mitopen-rc-nextjs
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
