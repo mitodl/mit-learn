@@ -161,6 +161,8 @@ const OnPlatform = styled.span({
 const ListButtonContainer = styled.div({
   display: "flex",
   gap: "8px",
+  flexGrow: 1,
+  justifyContent: "flex-end",
 })
 
 type LearningResourceExpandedProps = {
