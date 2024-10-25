@@ -1288,6 +1288,7 @@ def test_load_playlist(mocker):
 
     assert result.resources.count() == len(video_resources)
     assert result.video_playlist.channel == channel
+    assert result.url == f"https://www.youtube.com/playlist?list={playlist.readable_id}"
     assert list(result.topics.values_list("name", flat=True).order_by("name")) == [
         topic["name"] for topic in expected_topics
     ]
