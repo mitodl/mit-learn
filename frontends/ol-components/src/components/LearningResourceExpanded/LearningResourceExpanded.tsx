@@ -65,7 +65,6 @@ const LeftContainer = styled.div({
   flexDirection: "column",
   alignItems: "flex-start",
   gap: "24px",
-  flex: "1 0 0",
 })
 
 const RightContainer = styled.div({
@@ -135,17 +134,12 @@ const Platform = styled.div({
   gap: "16px",
 })
 
-const Detail = styled.section({
-  display: "flex",
-  flexDirection: "column",
-  gap: "8px",
-})
-
 const Description = styled.p({
   ...theme.typography.body2,
   color: theme.custom.colors.black,
   margin: 0,
-  whiteSpace: "pre-line",
+  whiteSpace: "pre-wrap",
+  wordBreak: "break-word",
 })
 
 const StyledPlatformLogo = styled(PlatformLogo)({
@@ -401,14 +395,6 @@ const CallToActionSection = ({
   )
 }
 
-const DetailSection = ({ resource }: { resource?: LearningResource }) => {
-  return (
-    <Detail>
-      <ResourceDescription resource={resource} />
-    </Detail>
-  )
-}
-
 const ResourceDescription = ({ resource }: { resource?: LearningResource }) => {
   if (!resource) {
     return (
@@ -450,7 +436,7 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
       <Container>
         <ContentContainer>
           <LeftContainer>
-            <DetailSection resource={resource} />
+            <ResourceDescription resource={resource} />
             <InfoSection resource={resource} />
           </LeftContainer>
           <RightContainer>
