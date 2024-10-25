@@ -75,6 +75,10 @@ const RightContainer = styled.div({
   justifyContent: "center",
   alignItems: "flex-start",
   gap: "24px",
+  [theme.breakpoints.down("md")]: {
+    width: "100%",
+    alignItems: "center",
+  },
 })
 
 const EmbedlyContainer = styled.div({
