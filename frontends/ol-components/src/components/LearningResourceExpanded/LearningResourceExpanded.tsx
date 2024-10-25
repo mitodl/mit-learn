@@ -66,6 +66,7 @@ const LeftContainer = styled.div({
   flexGrow: 1,
   alignItems: "flex-start",
   gap: "24px",
+  maxWidth: "100%",
 })
 
 const RightContainer = styled.div({

@@ -34,9 +34,10 @@ const InfoItems = styled.section({
   display: "flex",
   flexDirection: "column",
   gap: "16px",
+  maxWidth: "100%",
 })
 
-const InfoItemValue = styled.span({
+const InfoItemValueLabel = styled.span({
   display: "flex",
   whiteSpace: "nowrap",
 })
@@ -102,6 +103,9 @@ const Certificate = styled.div({
     width: "16px",
     height: "16px",
   },
+  [theme.breakpoints.down("sm")]: {
+    padding: "1px 2px",
+  },
 })
 
 type InfoSelector = (resource: LearningResource) => React.ReactNode
@@ -111,6 +115,27 @@ type InfoItemConfig = {
   Icon: RemixiconComponentType | null
   selector: InfoSelector
 }[]
+
+type InfoItemValueProps = {
+  key: string
+  label: string | null
+  index: number
+  total: number
+}
+
+const InfoItemValue: React.FC<InfoItemValueProps> = ({
+  key,
+  label,
+  index,
+  total,
+}) => {
+  return (
+    <>
+      <InfoItemValueLabel key={key}>{label}</InfoItemValueLabel>
+      {index < total - 1 && <Separator />}
+    </>
+  )
+}
 
 const INFO_ITEMS: InfoItemConfig = [
   {
@@ -138,10 +163,12 @@ const INFO_ITEMS: InfoItemConfig = [
             .map((run, index) => {
               const totalRuns = resource.runs?.length || 0
               return (
-                <InfoItemValue key={`run-${run.id}`}>
-                  {formatRunDate(run, asTaughtIn)}
-                  {index < totalRuns - 1 && <Separator />}
-                </InfoItemValue>
+                <InfoItemValue
+                  key={`run-${run.id}`}
+                  label={formatRunDate(run, asTaughtIn)}
+                  index={index}
+                  total={totalRuns}
+                />
               )
             }) ?? []
         return runDates
@@ -181,10 +208,12 @@ const INFO_ITEMS: InfoItemConfig = [
 
       return topics.map((topic, index) => {
         return (
-          <InfoItemValue key={`topic-${index}`}>
-            {topic.name}
-            {index < topics.length - 1 && <Separator />}
-          </InfoItemValue>
+          <InfoItemValue
+            key={`topic-${index}`}
+            label={topic.name}
+            index={index}
+            total={topics.length}
+          />
         )
       })
     },
@@ -200,10 +229,12 @@ const INFO_ITEMS: InfoItemConfig = [
           return null
         }
         return (
-          <InfoItemValue key={`level-${index}`}>
-            {run?.level?.[0]?.name}
-            {index < totalRuns - 1 && <Separator />}
-          </InfoItemValue>
+          <InfoItemValue
+            key={`level-${index}`}
+            label={run?.level?.[0]?.name}
+            index={index}
+            total={totalRuns}
+          />
         )
       })
       if (levels?.every((level) => level === null)) {
@@ -232,10 +263,12 @@ const INFO_ITEMS: InfoItemConfig = [
       const totalInstructors = uniqueInstructors.length
       const instructors = uniqueInstructors.map((instructor, index) => {
         return (
-          <InfoItemValue key={`instructor-${index}`}>
-            {instructor}
-            {index < totalInstructors - 1 && <Separator />}
-          </InfoItemValue>
+          <InfoItemValue
+            key={`instructor-${index}`}
+            label={instructor}
+            index={index}
+            total={totalInstructors}
+          />
         )
       })
       return instructors
@@ -259,10 +292,12 @@ const INFO_ITEMS: InfoItemConfig = [
       const totalLanguages = uniqueLanguages.length
       return uniqueLanguages.map((language, index) => {
         return (
-          <InfoItemValue key={`language-${index}`}>
-            {ISO6391.getName(language.substring(0, 2))}
-            {index < totalLanguages - 1 && <Separator />}
-          </InfoItemValue>
+          <InfoItemValue
+            key={`language-${index}`}
+            label={ISO6391.getName(language.substring(0, 2))}
+            index={index}
+            total={totalLanguages}
+          />
         )
       })
     },
