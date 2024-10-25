@@ -1390,7 +1390,13 @@ def test_load_video_channels():
 
         playlist = VideoPlaylistFactory.build()
         playlist_data = model_to_dict(playlist)
-        playlist_data["playlist_id"] = playlist.learning_resource.readable_id
+        playlist_id = playlist.learning_resource.readable_id
+        playlist_data["playlist_id"] = playlist_id
+        playlist_data["url"] = f"https://youtube.com/playlist?list={playlist_id}"
+        playlist_data["image"] = {
+            "url": f"https://i.ytimg.com/vi/{playlist_id}/hqdefault.jpg",
+            "alt": playlist.learning_resource.title,
+        }
         del playlist_data["id"]
         del playlist_data["channel"]
         del playlist_data["learning_resource"]
