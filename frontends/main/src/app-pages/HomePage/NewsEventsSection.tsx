@@ -15,6 +15,7 @@ import {
 import type { NewsFeedItem, EventFeedItem } from "api/v0"
 import { formatDate } from "ol-utilities"
 import { RiArrowRightSLine } from "@remixicon/react"
+import Link from "next/link"
 
 const Section = styled.section`
   background: ${theme.custom.colors.white};
@@ -111,10 +112,7 @@ const EventCard = styled(Card)`
   align-self: stretch;
   justify-content: space-between;
   overflow: visible;
-
-  > a {
-    padding: 16px;
-  }
+  padding: 16px;
 `
 
 const EventDate = styled.div`
@@ -225,7 +223,16 @@ const NewsEventsSection: React.FC = () => {
 
   const EventCards =
     events!.results?.map((item) => (
-      <EventCard key={item.id} href={item.url}>
+      <EventCard
+        key={item.id}
+        href={item.url}
+        onClick={(e) => {
+          const anchor = e.currentTarget.querySelector<HTMLAnchorElement>(
+            `a[href="${item.url}"]`,
+          )
+          anchor?.click()
+        }}
+      >
         <Card.Content>
           <EventDate>
             <EventDay>
@@ -241,7 +248,9 @@ const NewsEventsSection: React.FC = () => {
               )}
             </EventMonth>
           </EventDate>
-          <EventTitle>{item.title}</EventTitle>
+          <Link href={item.url}>
+            <EventTitle>{item.title}</EventTitle>
+          </Link>
           <Chevron />
         </Card.Content>
       </EventCard>

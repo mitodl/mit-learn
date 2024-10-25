@@ -3,6 +3,7 @@ import { Card } from "./Card"
 import React from "react"
 import { getOriginalSrc } from "ol-test-utilities"
 import invariant from "tiny-invariant"
+import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
 
 describe("Card", () => {
   test("has class MitCard-root on root element", () => {
@@ -14,6 +15,7 @@ describe("Card", () => {
         <Card.Footer>Footer</Card.Footer>
         <Card.Actions>Actions</Card.Actions>
       </Card>,
+      { wrapper: ThemeProvider },
     )
     const card = container.firstChild as HTMLElement
     const title = card.querySelector(".MitCard-title")
