@@ -1,6 +1,13 @@
 import React from "react"
 import { LearningResourceOfferorDetail, OfferedByEnum } from "api"
-import { Card, Skeleton, Typography, styled, theme } from "ol-components"
+import {
+  Card,
+  Skeleton,
+  Typography,
+  styled,
+  theme,
+  UNIT_LOGOS,
+} from "ol-components"
 import { useChannelDetail } from "api/hooks/channels"
 
 const CardStyled = styled(Card)({
@@ -108,15 +115,6 @@ const CountsText = styled(Typography)(({ theme }) => ({
   },
 }))
 
-const unitLogos = {
-  [OfferedByEnum.Mitx]: "/images/unit_logos/mitx.svg",
-  [OfferedByEnum.Ocw]: "/images/unit_logos/ocw.svg",
-  [OfferedByEnum.Bootcamps]: "/images/unit_logos/bootcamps.svg",
-  [OfferedByEnum.Xpro]: "/images/unit_logos/xpro.svg",
-  [OfferedByEnum.Mitpe]: "/images/unit_logos/mitpe.svg",
-  [OfferedByEnum.See]: "/images/unit_logos/see.svg",
-}
-
 interface UnitCardsProps {
   units: LearningResourceOfferorDetail[] | undefined
   courseCounts: Record<string, number>
@@ -198,7 +196,7 @@ export const UnitCards: React.FC<UnitCardsProps> = (props) => {
         const courseCount = courseCounts[unit.code] || 0
         const programCount = programCounts[unit.code] || 0
         const logo =
-          unitLogos[unit.code as OfferedByEnum] ||
+          UNIT_LOGOS[unit.code as OfferedByEnum]?.image ||
           `/images/unit_logos/${unit.code}.svg`
         return unit.value_prop ? (
           <UnitCard

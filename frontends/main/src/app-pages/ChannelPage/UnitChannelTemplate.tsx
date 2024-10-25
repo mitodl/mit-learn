@@ -8,7 +8,9 @@ import {
   BannerBackground,
   Typography,
   VisuallyHidden,
+  PlatformLogo,
 } from "ol-components"
+import { OfferedByEnum, SourceTypeEnum } from "api"
 import { SearchSubscriptionToggle } from "@/page-components/SearchSubscriptionToggle/SearchSubscriptionToggle"
 import { ChannelDetails } from "@/page-components/ChannelDetails/ChannelDetails"
 import { useChannelDetail } from "api/hooks/channels"
@@ -16,7 +18,6 @@ import ChannelMenu from "@/components/ChannelMenu/ChannelMenu"
 import ResourceCarousel, {
   ResourceCarouselProps,
 } from "@/page-components/ResourceCarousel/ResourceCarousel"
-import { SourceTypeEnum } from "api"
 import { getSearchParamMap } from "@/common/utils"
 import { HOME as HOME_URL, UNITS as UNITS_URL } from "../../common/urls"
 import { ChannelTypeEnum } from "api/v0"
@@ -38,15 +39,23 @@ const FeaturedCoursesCarousel = styled(ResourceCarousel)(({ theme }) => ({
   },
 }))
 
-const UnitLogo = styled.img(({ theme }) => ({
-  filter: "saturate(0%) invert(100%)",
-  maxWidth: "100%",
-  width: "auto",
-  height: "50px",
-  [theme.breakpoints.down("md")]: {
-    height: "40px",
+const MobileOnly = styled.div(({ theme }) => ({
+  display: "contents",
+  [theme.breakpoints.up("md")]: {
+    display: "none",
   },
 }))
+
+const DesktopOnly = styled.div(({ theme }) => ({
+  display: "contents",
+  [theme.breakpoints.down("md")]: {
+    display: "none",
+  },
+}))
+
+const PlatformLogoInverted = styled(PlatformLogo)({
+  filter: "saturate(0%) invert(100%)",
+})
 
 const BannerContent = styled.div(({ theme }) => ({
   display: "flex",
@@ -126,7 +135,20 @@ const UnitChannelTemplate: React.FC<UnitChannelTemplateProps> = ({
               <ChannelHeader>
                 <VisuallyHidden>{channel.data?.title}</VisuallyHidden>
                 {channel.data ? (
-                  <UnitLogo alt="" src={displayConfiguration.logo} />
+                  <>
+                    <DesktopOnly>
+                      <PlatformLogoInverted
+                        unitCode={name as OfferedByEnum}
+                        height={50}
+                      />
+                    </DesktopOnly>
+                    <MobileOnly>
+                      <PlatformLogoInverted
+                        unitCode={name as OfferedByEnum}
+                        height={40}
+                      />
+                    </MobileOnly>
+                  </>
                 ) : null}
               </ChannelHeader>
               <Stack gap={{ xs: "16px", lg: "32px" }}>
