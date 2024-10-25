@@ -117,21 +117,19 @@ type InfoItemConfig = {
 }[]
 
 type InfoItemValueProps = {
-  key: string
   label: string | null
   index: number
   total: number
 }
 
 const InfoItemValue: React.FC<InfoItemValueProps> = ({
-  key,
   label,
   index,
   total,
 }) => {
   return (
     <>
-      <InfoItemValueLabel key={key}>{label}</InfoItemValueLabel>
+      <InfoItemValueLabel>{label}</InfoItemValueLabel>
       {index < total - 1 && <Separator />}
     </>
   )
