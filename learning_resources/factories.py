@@ -616,6 +616,7 @@ class LearningPathFactory(DjangoModelFactory):
 
     class Params:
         is_unpublished = factory.Trait(learning_resource__published=False)
+        no_resources = factory.Trait(learning_resource__resources=None)
 
 
 class ProgramFactory(DjangoModelFactory):

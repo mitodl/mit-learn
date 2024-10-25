@@ -22,6 +22,7 @@ from learning_resources.constants import (
     Pace,
 )
 from main.serializers import COMMON_IGNORED_FIELDS, WriteableSerializerMethodField
+from rest_framework_transforms.serializers import BaseVersioningSerializer
 
 log = logging.getLogger(__name__)
 
@@ -430,8 +431,12 @@ class MicroUserListRelationshipSerializer(serializers.ModelSerializer):
         fields = ("id", "parent", "child")
 
 
-class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopicsMixin):
+class LearningResourceBaseSerializer(
+    BaseVersioningSerializer, serializers.ModelSerializer, WriteableTopicsMixin
+):
     """Serializer for LearningResource, minus program"""
+
+    transform_base = "learning_resources.transforms.LearningResourceTransform"
 
     position = serializers.IntegerField(read_only=True, allow_null=True)
     offered_by = LearningResourceOfferorSerializer(read_only=True, allow_null=True)
@@ -476,6 +481,8 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
 
     def get_free(self, instance) -> bool:
         """Return true if the resource is free/has a free option"""
+        request = self.context.get("request")
+        log.error(f"REQUEST VERSION: {request.version}")
         if instance.resource_type in [
             LearningResourceType.course.name,
             LearningResourceType.program.name,

@@ -1,0 +1,2 @@
+class TransformBaseNotDeclaredException(Exception):
+    pass
