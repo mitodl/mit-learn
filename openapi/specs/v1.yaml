@@ -8088,6 +8088,9 @@ components:
         description:
           type: string
           nullable: true
+        embedding_text:
+          type: string
+          nullable: true
         full_description:
           type: string
           nullable: true
@@ -8180,6 +8183,9 @@ components:
           minLength: 1
           maxLength: 256
         description:
+          type: string
+          nullable: true
+        embedding_text:
           type: string
           nullable: true
         full_description:
@@ -8584,6 +8590,9 @@ components:
         description:
           type: string
           nullable: true
+        embedding_text:
+          type: string
+          nullable: true
         full_description:
           type: string
           nullable: true
@@ -8670,6 +8679,9 @@ components:
           minLength: 1
           maxLength: 256
         description:
+          type: string
+          nullable: true
+        embedding_text:
           type: string
           nullable: true
         full_description:
@@ -10066,6 +10078,9 @@ components:
         description:
           type: string
           nullable: true
+        embedding_text:
+          type: string
+          nullable: true
         full_description:
           type: string
           nullable: true
@@ -10710,6 +10725,9 @@ components:
         description:
           type: string
           nullable: true
+        embedding_text:
+          type: string
+          nullable: true
         full_description:
           type: string
           nullable: true
@@ -10802,6 +10820,9 @@ components:
           minLength: 1
           maxLength: 256
         description:
+          type: string
+          nullable: true
+        embedding_text:
           type: string
           nullable: true
         full_description:
@@ -11046,6 +11067,9 @@ components:
         description:
           type: string
           nullable: true
+        embedding_text:
+          type: string
+          nullable: true
         full_description:
           type: string
           nullable: true
@@ -11138,6 +11162,9 @@ components:
           minLength: 1
           maxLength: 256
         description:
+          type: string
+          nullable: true
+        embedding_text:
           type: string
           nullable: true
         full_description:
@@ -11520,6 +11547,9 @@ components:
         description:
           type: string
           nullable: true
+        embedding_text:
+          type: string
+          nullable: true
         full_description:
           type: string
           nullable: true
@@ -11612,6 +11642,9 @@ components:
           minLength: 1
           maxLength: 256
         description:
+          type: string
+          nullable: true
+        embedding_text:
           type: string
           nullable: true
         full_description:
@@ -12128,6 +12161,9 @@ components:
         description:
           type: string
           nullable: true
+        embedding_text:
+          type: string
+          nullable: true
         full_description:
           type: string
           nullable: true
@@ -12220,6 +12256,9 @@ components:
           minLength: 1
           maxLength: 256
         description:
+          type: string
+          nullable: true
+        embedding_text:
           type: string
           nullable: true
         full_description:
@@ -12450,6 +12489,9 @@ components:
         description:
           type: string
           nullable: true
+        embedding_text:
+          type: string
+          nullable: true
         full_description:
           type: string
           nullable: true
@@ -12542,6 +12584,9 @@ components:
           minLength: 1
           maxLength: 256
         description:
+          type: string
+          nullable: true
+        embedding_text:
           type: string
           nullable: true
         full_description:
