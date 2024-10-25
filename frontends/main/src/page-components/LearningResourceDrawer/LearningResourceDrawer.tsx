@@ -107,7 +107,7 @@ const DrawerContent: React.FC<{
 const PAPER_PROPS: RoutedDrawerProps["PaperProps"] = {
   sx: {
     maxWidth: (theme) => ({
-      [theme.breakpoints.down("md")]: {
+      [theme.breakpoints.up("md")]: {
         maxWidth: theme.breakpoints.values.md,
       },
       [theme.breakpoints.down("sm")]: {
