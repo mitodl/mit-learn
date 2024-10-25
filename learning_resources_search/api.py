@@ -895,7 +895,8 @@ def get_similar_resources(
     indexes = relevant_indexes([COURSE_TYPE], [], endpoint=LEARNING_RESOURCE)
     search = Search(index=",".join(indexes))
     if num_resources:
-        search = search.extra(size=num_resources)
+        # adding +1 to num_resources since we filter out existing resource.id
+        search = search.extra(size=num_resources + 1)
     search = search.filter("term", resource_type=COURSE_TYPE)
     search = search.query(
         MoreLikeThis(
