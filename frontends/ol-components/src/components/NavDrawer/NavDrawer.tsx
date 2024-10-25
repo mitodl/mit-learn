@@ -118,20 +118,23 @@ export interface NavData {
   sections: NavSection[]
 }
 
-export interface NavSection {
+interface NavSection {
   title: string
   items: NavItem[]
 }
 
-export interface NavItem {
+interface NavItem {
   title: string
   icon?: string | ReactElement
   description?: string
   href: string
+}
+
+type NavItemProps = NavItem & {
   onClick?: () => void
 }
 
-const NavItem: React.FC<NavItem> = (props) => {
+const NavItem: React.FC<NavItemProps> = (props) => {
   const { title, icon, description, href, onClick } = props
   const navItem = (
     <NavItemContainer>
