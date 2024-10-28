@@ -112,6 +112,9 @@ def get_resource_age_date(learning_resource_obj, resource_category):
 
 
 def generate_embedding_text(resource_obj):
+    """
+    Combine attributes that will be used for vector embeddings
+    """
     return (
         f"{resource_obj.title} {resource_obj.description} "
         f"{resource_obj.full_description}"
