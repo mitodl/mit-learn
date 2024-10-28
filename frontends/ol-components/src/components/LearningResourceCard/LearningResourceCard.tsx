@@ -229,6 +229,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
     return null
   }
 
+  const readableType = getReadableResourceType(resource.resource_type)
   return (
     <StyledCard href={href} className={className} size={size}>
       <Card.Image
@@ -239,7 +240,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
       <Card.Info>
         <Info resource={resource} size={size} />
       </Card.Info>
-      <Card.Title>
+      <Card.Title aria-label={`${readableType}: ${resource.title}`}>
         <EllipsisTitle lineClamp={size === "small" ? 2 : 3}>
           {resource.title}
         </EllipsisTitle>
@@ -257,7 +258,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
         {onAddToUserListClick && (
           <CardActionButton
             filled={inUserList}
-            aria-label={`Bookmark ${getReadableResourceType(resource.resource_type)}`}
+            aria-label={`Bookmark ${readableType}`}
             onClick={(event) => onAddToUserListClick(event, resource.id)}
           >
             {inUserList ? (

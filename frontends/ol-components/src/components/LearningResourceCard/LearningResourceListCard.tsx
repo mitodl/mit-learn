@@ -307,6 +307,7 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
   if (!resource) {
     return null
   }
+  const readableType = getReadableResourceType(resource.resource_type)
   return (
     <ListCard href={href} className={className} draggable={draggable}>
       <ListCard.Image
@@ -317,7 +318,9 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
       <ListCard.Info>
         <Info resource={resource} />
       </ListCard.Info>
-      <ListCard.Title>{resource.title}</ListCard.Title>
+      <ListCard.Title aria-label={`${readableType}: ${resource.title}`}>
+        {resource.title}
+      </ListCard.Title>
       <ListCard.Actions>
         {onAddToLearningPathClick && (
           <CardActionButton
@@ -331,7 +334,7 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
         {onAddToUserListClick && (
           <CardActionButton
             filled={inUserList}
-            aria-label={`Bookmark ${getReadableResourceType(resource.resource_type)}`}
+            aria-label={`Bookmark ${readableType}`}
             onClick={(event) => onAddToUserListClick(event, resource.id)}
           >
             {inUserList ? (

@@ -5,6 +5,7 @@ import React, {
   isValidElement,
   CSSProperties,
   useCallback,
+  AriaAttributes,
 } from "react"
 import styled from "@emotion/styled"
 import { theme } from "../ThemeProvider/ThemeProvider"
@@ -18,7 +19,7 @@ type LinkableProps = {
   href?: string
   children?: ReactNode
   className?: string
-}
+} & Pick<AriaAttributes, "aria-label">
 /**
  * Render a NextJS link if href is provided, otherwise a span.
  * Does not scroll if the href is a query string.
@@ -27,10 +28,16 @@ export const Linkable: React.FC<LinkableProps> = ({
   href,
   children,
   className,
+  "aria-label": ariaLabel,
 }) => {
   if (href) {
     return (
-      <Link className={className} href={href} scroll={!href.startsWith("?")}>
+      <Link
+        aria-label={ariaLabel}
+        className={className}
+        href={href}
+        scroll={!href.startsWith("?")}
+      >
         {children}
       </Link>
     )
@@ -206,7 +213,8 @@ type TitleProps = {
   children?: ReactNode
   lines?: number
   style?: CSSProperties
-}
+} & Pick<AriaAttributes, "aria-label">
+
 type SlotProps = { children?: ReactNode; style?: CSSProperties }
 
 type Card = FC<CardProps> & {

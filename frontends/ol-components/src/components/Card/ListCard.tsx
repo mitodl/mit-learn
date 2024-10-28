@@ -1,4 +1,10 @@
-import React, { FC, ReactNode, Children, isValidElement } from "react"
+import React, {
+  FC,
+  ReactNode,
+  Children,
+  isValidElement,
+  AriaAttributes,
+} from "react"
 import styled from "@emotion/styled"
 import { RiDraggable } from "@remixicon/react"
 import { theme } from "../ThemeProvider/ThemeProvider"
@@ -154,19 +160,23 @@ type CardProps = {
   draggable?: boolean
   onClick?: () => void
 }
+type TitleProps = {
+  children?: ReactNode
+} & Pick<AriaAttributes, "aria-label">
+
 export type Card = FC<CardProps> & {
   Content: FC<{ children: ReactNode }>
   Image: FC<ImageProps>
   Info: FC<{ children: ReactNode }>
-  Title: FC<{ children: ReactNode }>
+  Title: FC<TitleProps>
   Footer: FC<{ children: ReactNode }>
   Actions: FC<{ children: ReactNode }>
   Action: FC<ActionButtonProps>
 }
 
 const ListCard: Card = ({ children, className, href, draggable, onClick }) => {
-  let content, imageProps, info, title, footer, actions
-
+  let content, imageProps, info, footer, actions
+  let title: TitleProps = {}
   const hasHref = typeof href === "string"
   const handleHrefClick = useClickChildHref(href, onClick)
   const handleClick = hasHref ? handleHrefClick : onClick
@@ -176,7 +186,7 @@ const ListCard: Card = ({ children, className, href, draggable, onClick }) => {
     if (child.type === Content) content = child.props.children
     else if (child.type === Image) imageProps = child.props
     else if (child.type === Info) info = child.props.children
-    else if (child.type === Title) title = child.props.children
+    else if (child.type === Title) title = child.props
     else if (child.type === Footer) footer = child.props.children
     else if (child.type === Actions) actions = child.props.children
   })
@@ -200,9 +210,11 @@ const ListCard: Card = ({ children, className, href, draggable, onClick }) => {
         )}
         <Body>
           <Info>{info}</Info>
-          <Title href={href}>
-            <TruncateText lineClamp={2}>{title}</TruncateText>
-          </Title>
+          {title && (
+            <Title {...title} href={href}>
+              <TruncateText lineClamp={2}>{title.children}</TruncateText>
+            </Title>
+          )}
           <Bottom>
             <Footer>{footer}</Footer>
           </Bottom>
