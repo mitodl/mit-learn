@@ -37,10 +37,6 @@ const InfoItems = styled.section({
   maxWidth: "100%",
 })
 
-const InfoItemValueLabel = styled.span({
-  display: "flex",
-})
-
 const InfoItemContainer = styled.div({
   display: "flex",
   alignSelf: "stretch",
@@ -75,9 +71,7 @@ const InfoLabel = styled.div({
 })
 
 const InfoValue = styled.div({
-  display: "flex",
-  flexWrap: "wrap",
-  flexGrow: 1,
+  display: "inline-block",
   color: theme.custom.colors.darkGray2,
   rowGap: ".2rem",
   ...theme.typography.body3,
@@ -128,7 +122,7 @@ const InfoItemValue: React.FC<InfoItemValueProps> = ({
 }) => {
   return (
     <>
-      <InfoItemValueLabel>{label}</InfoItemValueLabel>
+      {label}
       {index < total - 1 && <Separator />}
     </>
   )
@@ -157,17 +151,19 @@ const INFO_ITEMS: InfoItemConfig = [
               }
               return 0
             })
-            .map((run, index) => {
-              const totalRuns = resource.runs?.length || 0
-              return (
-                <InfoItemValue
-                  key={`run-${run.id}`}
-                  label={formatRunDate(run, asTaughtIn)}
-                  index={index}
-                  total={totalRuns}
-                />
-              )
-            }) ?? []
+            .map((run) => formatRunDate(run, asTaughtIn)) ??
+          [].map((run, index) => {
+            const totalRuns = resource.runs?.length || 0
+            return (
+              <InfoItemValue
+                key={`run-${index}`}
+                label={formatRunDate(run, asTaughtIn)}
+                index={index}
+                total={totalRuns}
+              />
+            )
+          }) ??
+          []
         return runDates
       } else return null
     },
@@ -202,7 +198,6 @@ const INFO_ITEMS: InfoItemConfig = [
       if (!topics?.length) {
         return null
       }
-
       return topics.map((topic, index) => {
         return (
           <InfoItemValue
