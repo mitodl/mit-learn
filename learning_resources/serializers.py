@@ -21,7 +21,6 @@ from learning_resources.constants import (
     LevelType,
     Pace,
 )
-from learning_resources.etl.loaders import update_index
 from main.serializers import COMMON_IGNORED_FIELDS, WriteableSerializerMethodField
 
 log = logging.getLogger(__name__)
@@ -592,7 +591,6 @@ class LearningPathResourceSerializer(LearningResourceBaseSerializer):
             models.LearningPath.objects.create(
                 learning_resource=path_resource, author=request.user
             )
-        update_index(path_resource, True)  # noqa: FBT003
         return path_resource
 
     def update(self, instance, validated_data):
@@ -604,7 +602,6 @@ class LearningPathResourceSerializer(LearningResourceBaseSerializer):
                 resource.topics.set(
                     models.LearningResourceTopic.objects.filter(id__in=topics_data)
                 )
-        update_index(resource, False)  # noqa: FBT003
         return resource
 
     class Meta:
