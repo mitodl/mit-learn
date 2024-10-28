@@ -27,7 +27,7 @@ import {
   RiTerminalBoxLine,
 } from "@remixicon/react"
 import { HOME } from "@/common/urls"
-
+import backgroundSteps from "@/public/images/backgrounds/background_steps.jpg"
 import { aggregateProgramCounts, aggregateCourseCounts } from "@/common/utils"
 import { useChannelCounts } from "api/hooks/channels"
 
@@ -201,7 +201,6 @@ const DepartmentListingPage: React.FC = () => {
   return (
     <>
       <Banner
-        backgroundUrl="/images/backgrounds/background_steps.jpg"
         title="Browse by Academic Department"
         header="At MIT, academic departments span a wide range of disciplines, from science and engineering to humanities. Select a department below to explore all of its non-degree learning offerings."
         navText={
@@ -211,6 +210,7 @@ const DepartmentListingPage: React.FC = () => {
             current="Departments"
           />
         }
+        backgroundUrl={backgroundSteps.src}
       />
       <Container>
         <Grid container>

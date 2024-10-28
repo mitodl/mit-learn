@@ -11,7 +11,7 @@ import {
   theme,
   Breadcrumbs,
 } from "ol-components"
-
+import backgroundSteps from "@/public/images/backgrounds/background_steps.jpg"
 import { RiBookOpenLine, RiSuitcaseLine } from "@remixicon/react"
 import { LearningResourceOfferorDetail } from "api"
 import { HOME } from "@/common/urls"
@@ -248,6 +248,7 @@ const UnitsListingPage: React.FC = () => {
         }
         title="Academic & Professional Learning"
         header="Non-degree learning resources tailored to the needs of students and working professionals."
+        backgroundUrl={backgroundSteps.src}
       />
       <Container>
         <PageContent>

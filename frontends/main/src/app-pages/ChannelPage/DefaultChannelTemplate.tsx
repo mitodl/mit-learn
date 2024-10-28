@@ -10,6 +10,7 @@ import {
   CHANNEL_TYPE_BREADCRUMB_TARGETS,
   ChannelControls,
 } from "./ChannelPageTemplate"
+import backgroundSteps from "@/public/images/backgrounds/background_steps.jpg"
 
 const ChildrenContainer = styled.div(({ theme }) => ({
   paddingTop: "40px",
@@ -57,6 +58,7 @@ const DefaultChannelTemplate: React.FC<DefaultChannelTemplateProps> = ({
   const channel = useChannelDetail(String(channelType), String(name))
   const urlParams = new URLSearchParams(channel.data?.search_filter)
   const displayConfiguration = channel.data?.configuration
+
   return (
     <>
       <Banner
@@ -87,7 +89,9 @@ const DefaultChannelTemplate: React.FC<DefaultChannelTemplateProps> = ({
         title={channel.data?.title}
         header={displayConfiguration?.heading}
         subHeader={displayConfiguration?.sub_heading}
-        backgroundUrl={displayConfiguration?.banner_background}
+        backgroundUrl={
+          displayConfiguration?.banner_background ?? backgroundSteps
+        }
         extraActions={
           <ChannelControlsContainer>
             <ChannelControls>
