@@ -739,12 +739,6 @@ export interface CourseResource {
    * @type {string}
    * @memberof CourseResource
    */
-  embedding_text?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof CourseResource
-   */
   full_description?: string | null
   /**
    *
@@ -966,12 +960,6 @@ export interface CourseResourceRequest {
    * @memberof CourseResourceRequest
    */
   description?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof CourseResourceRequest
-   */
-  embedding_text?: string | null
   /**
    *
    * @type {string}
@@ -1539,12 +1527,6 @@ export interface LearningPathResource {
    * @type {string}
    * @memberof LearningPathResource
    */
-  embedding_text?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof LearningPathResource
-   */
   full_description?: string | null
   /**
    *
@@ -1644,12 +1626,6 @@ export interface LearningPathResourceRequest {
    * @memberof LearningPathResourceRequest
    */
   description?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof LearningPathResourceRequest
-   */
-  embedding_text?: string | null
   /**
    *
    * @type {string}
@@ -3510,12 +3486,6 @@ export interface PatchedLearningPathResourceRequest {
    * @type {string}
    * @memberof PatchedLearningPathResourceRequest
    */
-  embedding_text?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof PatchedLearningPathResourceRequest
-   */
   full_description?: string | null
   /**
    *
@@ -4326,12 +4296,6 @@ export interface PodcastEpisodeResource {
    * @type {string}
    * @memberof PodcastEpisodeResource
    */
-  embedding_text?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof PodcastEpisodeResource
-   */
   full_description?: string | null
   /**
    *
@@ -4437,12 +4401,6 @@ export interface PodcastEpisodeResourceRequest {
    * @memberof PodcastEpisodeResourceRequest
    */
   description?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof PodcastEpisodeResourceRequest
-   */
-  embedding_text?: string | null
   /**
    *
    * @type {string}
@@ -4726,12 +4684,6 @@ export interface PodcastResource {
    * @type {string}
    * @memberof PodcastResource
    */
-  embedding_text?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof PodcastResource
-   */
   full_description?: string | null
   /**
    *
@@ -4837,12 +4789,6 @@ export interface PodcastResourceRequest {
    * @memberof PodcastResourceRequest
    */
   description?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof PodcastResourceRequest
-   */
-  embedding_text?: string | null
   /**
    *
    * @type {string}
@@ -5358,12 +5304,6 @@ export interface ProgramResource {
    * @type {string}
    * @memberof ProgramResource
    */
-  embedding_text?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof ProgramResource
-   */
   full_description?: string | null
   /**
    *
@@ -5469,12 +5409,6 @@ export interface ProgramResourceRequest {
    * @memberof ProgramResourceRequest
    */
   description?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof ProgramResourceRequest
-   */
-  embedding_text?: string | null
   /**
    *
    * @type {string}
@@ -6237,12 +6171,6 @@ export interface VideoPlaylistResource {
    * @type {string}
    * @memberof VideoPlaylistResource
    */
-  embedding_text?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof VideoPlaylistResource
-   */
   full_description?: string | null
   /**
    *
@@ -6348,12 +6276,6 @@ export interface VideoPlaylistResourceRequest {
    * @memberof VideoPlaylistResourceRequest
    */
   description?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof VideoPlaylistResourceRequest
-   */
-  embedding_text?: string | null
   /**
    *
    * @type {string}
@@ -6625,12 +6547,6 @@ export interface VideoResource {
    * @type {string}
    * @memberof VideoResource
    */
-  embedding_text?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof VideoResource
-   */
   full_description?: string | null
   /**
    *
@@ -6736,12 +6652,6 @@ export interface VideoResourceRequest {
    * @memberof VideoResourceRequest
    */
   description?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof VideoResourceRequest
-   */
-  embedding_text?: string | null
   /**
    *
    * @type {string}

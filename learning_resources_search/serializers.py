@@ -111,6 +111,13 @@ def get_resource_age_date(learning_resource_obj, resource_category):
     return resource_age_date
 
 
+def generate_embedding_text(resource_obj):
+    return (
+        f"{resource_obj.title} {resource_obj.description} "
+        f"{resource_obj.full_description}"
+    )
+
+
 def serialize_learning_resource_for_update(
     learning_resource_obj: LearningResource,
 ) -> dict:
@@ -156,10 +163,11 @@ def serialize_learning_resource_for_update(
     is_incomplete_or_stale = (
         resource_age_date and resource_age_date.year <= STALENESS_CUTOFF
     ) or (learning_resource_obj.completeness < COMPLETENESS_CUTOFF)
-
+    embedding_text = generate_embedding_text(learning_resource_obj)
     return {
         "resource_relations": {"name": "resource"},
         "created_on": learning_resource_obj.created_on,
+        "embedding_text": embedding_text,
         "is_learning_material": serialized_data["resource_category"]
         == LEARNING_MATERIAL_RESOURCE_CATEGORY,
         "resource_age_date": resource_age_date,
