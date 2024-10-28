@@ -1,6 +1,42 @@
 Release Notes
 =============
 
+Version 0.24.0
+--------------
+
+- Add the ol-profile openid scope to auth (#1765)
+- remove learning_path from search (#1753)
+- Update dependency @mui/base to v5.0.0-beta.60 (#1758)
+- New LearningResourcePrice model (#1736)
+- Update codecov/codecov-action action to v4.6.0 (#1763)
+- Update Node.js to v20.18.0 (#1762)
+- Update redis Docker tag to v7.4.1 (#1761)
+- Update nginx Docker tag to v1.27.2 (#1760)
+- Update dependency eslint to v8.57.1 (#1759)
+- move nextjs hash.txt generation after heroku deploy (#1752)
+- Replace plain <a> tags with Next.js <Link> components (#1739)
+- Shanbady/similar resources endpoint (#1743)
+- restore images in subscription emails (#1747)
+- fix list duplication when editing lists (#1749)
+- remove elasticsearch (#1734)
+- Update dependency pygithub to v2 (#1748)
+- Update dependency ruff to v0.7.1 (#1745)
+- Update opensearchproject/opensearch Docker tag to v2.17.1 (#1746)
+- Update dependency moto to v5 (#1740)
+- Update dependency urllib3 to v2 (#1741)
+- ol-template is not used (#1738)
+- Update dependency @faker-js/faker to v9 (#1735)
+- Update dependency faker to v30 (#1732)
+- Update dependency toolz to v1 (#1733)
+- Fixes to make learn work with scim-for-keycloak (#1727)
+- Navigation Accessibility (#1726)
+- Middleware for SSL redirect (#1729)
+- Clean out the static frontend (#1731)
+- Update Yarn to v4.5.1 (#1716)
+- Search count inside label (#1730)
+- Announce search count for screen readers (#1713)
+- Update actions/checkout digest to eef6144 (#1686)
+
 Version 0.23.0 (Released October 22, 2024)
 --------------
 
