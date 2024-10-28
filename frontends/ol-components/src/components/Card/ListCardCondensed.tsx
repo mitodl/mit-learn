@@ -2,14 +2,11 @@ import React, { FC, ReactNode, Children, isValidElement } from "react"
 import styled from "@emotion/styled"
 import { RiDraggable } from "@remixicon/react"
 import { theme } from "../ThemeProvider/ThemeProvider"
-import { Wrapper } from "./Card"
+import { Wrapper, Container, useClickChildHref } from "./Card"
 import { TruncateText } from "../TruncateText/TruncateText"
 import {
   ListCard,
   Body as BaseBody,
-  LinkContainer,
-  Container,
-  DraggableContainer,
   DragArea as BaseDragArea,
   Info as BaseInfo,
   Title as BaseTitle,
@@ -73,18 +70,23 @@ type CardProps = {
   className?: string
   href?: string
   draggable?: boolean
+  onClick?: () => void
 }
 
 type Card = FC<CardProps> & Omit<BaseCard, "Image">
 
-const ListCardCondensed: Card = ({ children, className, href, draggable }) => {
-  const _Container = draggable
-    ? DraggableContainer
-    : href
-      ? LinkContainer
-      : Container
-
+const ListCardCondensed: Card = ({
+  children,
+  className,
+  href,
+  draggable,
+  onClick,
+}) => {
   let content, info, title, footer, actions
+
+  const hasHref = typeof href === "string"
+  const handleHrefClick = useClickChildHref(href, onClick)
+  const handleClick = hasHref ? handleHrefClick : onClick
 
   Children.forEach(children, (child) => {
     if (!isValidElement(child)) return
@@ -97,15 +99,15 @@ const ListCardCondensed: Card = ({ children, className, href, draggable }) => {
 
   if (content) {
     return (
-      <_Container className={className} href={href!}>
+      <Container onClick={handleClick} className={className}>
         {content}
-      </_Container>
+      </Container>
     )
   }
 
   return (
     <Wrapper className={className}>
-      <_Container href={href!} scroll={!href?.startsWith("?")}>
+      <Container onClick={handleClick}>
         {draggable && (
           <DragArea>
             <RiDraggable />
@@ -113,14 +115,14 @@ const ListCardCondensed: Card = ({ children, className, href, draggable }) => {
         )}
         <Body>
           <Info>{info}</Info>
-          <Title>
+          <Title href={href}>
             <TruncateText lineClamp={4}>{title}</TruncateText>
           </Title>
           <Bottom>
             <Footer>{footer}</Footer>
           </Bottom>
         </Body>
-      </_Container>
+      </Container>
       {actions && <Actions>{actions}</Actions>}
     </Wrapper>
   )

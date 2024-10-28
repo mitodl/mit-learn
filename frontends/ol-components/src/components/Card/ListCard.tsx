@@ -1,35 +1,17 @@
 import React, { FC, ReactNode, Children, isValidElement } from "react"
-import Link from "next/link"
 import styled from "@emotion/styled"
 import { RiDraggable } from "@remixicon/react"
 import { theme } from "../ThemeProvider/ThemeProvider"
-import { Wrapper, containerStyles, ImageProps } from "./Card"
+import {
+  Wrapper,
+  Container,
+  ImageProps,
+  useClickChildHref,
+  Linkable,
+} from "./Card"
 import { TruncateText } from "../TruncateText/TruncateText"
 import { ActionButton, ActionButtonProps } from "../Button/Button"
 import { default as NextImage } from "next/image"
-
-export const LinkContainer = styled(Link)`
-  ${containerStyles}
-  display: flex;
-
-  :hover {
-    text-decoration: none;
-    border-color: ${theme.custom.colors.silverGrayLight};
-    box-shadow:
-      0 2px 4px 0 rgb(37 38 43 / 10%),
-      0 2px 4px 0 rgb(37 38 43 / 10%);
-    cursor: pointer;
-  }
-`
-
-export const Container = styled.div`
-  ${containerStyles}
-`
-
-export const DraggableContainer = styled.div`
-  ${containerStyles}
-  display: flex;
-`
 
 const Content = () => <></>
 
@@ -102,7 +84,7 @@ export const Info = styled.div`
   align-items: center;
 `
 
-export const Title = styled.span`
+export const Title = styled(Linkable)`
   flex-grow: 1;
   color: ${theme.custom.colors.darkGray2};
   text-overflow: ellipsis;
@@ -170,6 +152,7 @@ type CardProps = {
   className?: string
   href?: string
   draggable?: boolean
+  onClick?: () => void
 }
 export type Card = FC<CardProps> & {
   Content: FC<{ children: ReactNode }>
@@ -181,14 +164,12 @@ export type Card = FC<CardProps> & {
   Action: FC<ActionButtonProps>
 }
 
-const ListCard: Card = ({ children, className, href, draggable }) => {
-  const _Container = draggable
-    ? DraggableContainer
-    : href
-      ? LinkContainer
-      : Container
-
+const ListCard: Card = ({ children, className, href, draggable, onClick }) => {
   let content, imageProps, info, title, footer, actions
+
+  const hasHref = typeof href === "string"
+  const handleHrefClick = useClickChildHref(href, onClick)
+  const handleClick = hasHref ? handleHrefClick : onClick
 
   Children.forEach(children, (child) => {
     if (!isValidElement(child)) return
@@ -203,15 +184,15 @@ const ListCard: Card = ({ children, className, href, draggable }) => {
   const classNames = ["MitListCard-root", className ?? ""].join(" ")
   if (content) {
     return (
-      <_Container className={classNames} href={href!}>
+      <Container onClick={handleClick} className={classNames}>
         {content}
-      </_Container>
+      </Container>
     )
   }
 
   return (
     <Wrapper className={classNames}>
-      <_Container href={href!} scroll={!href?.startsWith("?")}>
+      <Container display="flex" onClick={handleClick}>
         {draggable && (
           <DragArea>
             <RiDraggable />
@@ -219,7 +200,7 @@ const ListCard: Card = ({ children, className, href, draggable }) => {
         )}
         <Body>
           <Info>{info}</Info>
-          <Title>
+          <Title href={href}>
             <TruncateText lineClamp={2}>{title}</TruncateText>
           </Title>
           <Bottom>
@@ -231,7 +212,7 @@ const ListCard: Card = ({ children, className, href, draggable }) => {
           // eslint-disable-next-line styled-components-a11y/alt-text
           <Image {...(imageProps as ImageProps)} />
         )}
-      </_Container>
+      </Container>
       {actions && <Actions hasImage={!!imageProps}>{actions}</Actions>}
     </Wrapper>
   )

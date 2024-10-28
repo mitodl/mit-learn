@@ -4,6 +4,7 @@ import React, {
   Children,
   isValidElement,
   CSSProperties,
+  useCallback,
 } from "react"
 import styled from "@emotion/styled"
 import { theme } from "../ThemeProvider/ThemeProvider"
@@ -12,6 +13,30 @@ import Link from "next/link"
 import { default as NextImage, ImageProps as NextImageProps } from "next/image"
 
 export type Size = "small" | "medium"
+
+type LinkableProps = {
+  href?: string
+  children?: ReactNode
+  className?: string
+}
+/**
+ * Render a NextJS link if href is provided, otherwise a span.
+ * Does not scroll if the href is a query string.
+ */
+export const Linkable: React.FC<LinkableProps> = ({
+  href,
+  children,
+  className,
+}) => {
+  if (href) {
+    return (
+      <Link className={className} href={href} scroll={!href.startsWith("?")}>
+        {children}
+      </Link>
+    )
+  }
+  return <span className={className}>{children}</span>
+}
 
 /*
  *The relative positioned wrapper allows the action buttons to live adjacent to the
@@ -32,31 +57,25 @@ export const Wrapper = styled.div<{ size?: Size }>`
   }}
 `
 
-export const containerStyles = `
-  border-radius: 8px;
-  border: 1px solid ${theme.custom.colors.lightGray2};
-  background: ${theme.custom.colors.white};
-  overflow: hidden;
-`
-
-const Container = styled.div(({ theme, onClick }) => [
-  {
-    borderRadius: "8px",
-    border: `1px solid ${theme.custom.colors.lightGray2}`,
-    background: theme.custom.colors.white,
-    overflow: "hidden",
-    display: "block",
-    position: "relative",
-  },
-  onClick && {
-    "&:hover": {
-      borderColor: theme.custom.colors.silverGrayLight,
-      boxShadow:
-        "0 2px 4px 0 rgb(37 38 43 / 10%), 0 2px 4px 0 rgb(37 38 43 / 10%)",
-      cursor: "pointer",
+export const Container = styled.div<{ display?: CSSProperties["display"] }>(
+  ({ theme, onClick, display = "block" }) => [
+    {
+      borderRadius: "8px",
+      border: `1px solid ${theme.custom.colors.lightGray2}`,
+      background: theme.custom.colors.white,
+      display,
+      position: "relative",
     },
-  },
-])
+    onClick && {
+      "&:hover": {
+        borderColor: theme.custom.colors.silverGrayLight,
+        boxShadow:
+          "0 2px 4px 0 rgb(37 38 43 / 10%), 0 2px 4px 0 rgb(37 38 43 / 10%)",
+        cursor: "pointer",
+      },
+    },
+  ],
+)
 
 const Content = () => <></>
 
@@ -81,7 +100,7 @@ const Info = styled.div<{ size?: Size }>`
   margin-bottom: ${({ size }) => (size === "small" ? 4 : 8)}px;
 `
 
-const Title = styled.span<{ lines?: number; size?: Size }>`
+const Title = styled(Linkable)<{ lines?: number; size?: Size }>`
   text-overflow: ellipsis;
   height: ${({ lines, size }) => {
     const lineHeightPx = size === "small" ? 18 : 20
@@ -133,10 +152,47 @@ const Actions = styled.div`
   right: 16px;
 `
 
+/**
+ * Click the child anchor element if the click event target is not the anchor itself.
+ *
+ * Allows making a whole region clickable as a link, even if the link is not the
+ * direct target of the click event.
+ */
+export const useClickChildHref = (
+  href?: string,
+  onClick?: React.MouseEventHandler<HTMLElement>,
+): React.MouseEventHandler<HTMLElement> => {
+  return useCallback(
+    (e) => {
+      onClick?.(e)
+      const anchor = e.currentTarget.querySelector<HTMLAnchorElement>(
+        `a[href="${href}"]`,
+      )
+      const target = e.target as HTMLElement
+      if (!anchor || target.closest("a, button")) return
+      if (e.metaKey || e.ctrlKey) {
+        const opts: PointerEventInit = {
+          bubbles: false,
+          metaKey: e.metaKey,
+          ctrlKey: e.ctrlKey,
+        }
+        anchor.dispatchEvent(new PointerEvent("click", opts))
+      } else {
+        anchor.click()
+      }
+    },
+    [href, onClick],
+  )
+}
+
 type CardProps = {
   children: ReactNode[] | ReactNode
   className?: string
   size?: Size
+  /**
+   * If provided, the card will render its title as a link. The entire card will
+   * be clickable, activating the link.
+   */
   href?: string
   onClick?: React.MouseEventHandler<HTMLElement>
 }
@@ -150,7 +206,6 @@ type TitleProps = {
   children?: ReactNode
   lines?: number
   style?: CSSProperties
-  "aria-label"?: string
 }
 type SlotProps = { children?: ReactNode; style?: CSSProperties }
 
@@ -194,33 +249,25 @@ const Card: Card = ({ children, className, size, href, onClick }) => {
     else if (child.type === Actions) actions = child.props
   })
 
-  const linkRef = React.useRef<HTMLAnchorElement>(null)
-  const handleLinkClick: React.MouseEventHandler = React.useCallback(() => {
-    linkRef.current?.click()
-  }, [])
+  const hasHref = typeof href === "string"
+  const handleHrefClick = useClickChildHref(href, onClick)
+  const handleClick = hasHref ? handleHrefClick : onClick
+
   const allClassNames = ["MitCard-root", className ?? ""].join(" ")
 
   if (content) {
     return (
       <Wrapper className={allClassNames} size={size}>
-        <Container onClick={onClick} className={className}>
+        <Container onClick={handleClick} className={className}>
           {content}
         </Container>
       </Wrapper>
     )
   }
 
-  const titleNode = (
-    <Title className="MitCard-title" size={size} {...title}>
-      {title.children}
-    </Title>
-  )
-
-  const hasHref = typeof href === "string"
-
   return (
     <Wrapper className={allClassNames} size={size}>
-      <Container onClick={hasHref ? handleLinkClick : onClick}>
+      <Container onClick={handleClick}>
         {image && (
           // alt text will be checked on Card.Image
           // eslint-disable-next-line styled-components-a11y/alt-text
@@ -238,13 +285,9 @@ const Card: Card = ({ children, className, size, href, onClick }) => {
               {info.children}
             </Info>
           )}
-          {hasHref ? (
-            <Link ref={linkRef} href={href} scroll={!href?.startsWith("?")}>
-              {titleNode}
-            </Link>
-          ) : (
-            titleNode
-          )}
+          <Title href={href} className="MitCard-title" size={size} {...title}>
+            {title.children}
+          </Title>
         </Body>
         <Bottom>
           <Footer className="MitCard-footer" {...footer}>

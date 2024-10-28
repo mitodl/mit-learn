@@ -219,42 +219,32 @@ const NewsEventsSection: React.FC = () => {
     return null
   }
 
-  const stories = news!.results?.slice(0, 6) || []
+  const stories = news.results.slice(0, 6)
 
-  const EventCards =
-    events!.results?.map((item) => (
-      <EventCard
-        key={item.id}
-        href={item.url}
-        onClick={(e) => {
-          const anchor = e.currentTarget.querySelector<HTMLAnchorElement>(
-            `a[href="${item.url}"]`,
-          )
-          anchor?.click()
-        }}
-      >
-        <Card.Content>
-          <EventDate>
-            <EventDay>
-              {formatDate(
-                (item as EventFeedItem).event_details?.event_datetime,
-                "D",
-              )}
-            </EventDay>
-            <EventMonth>
-              {formatDate(
-                (item as EventFeedItem).event_details?.event_datetime,
-                "MMM",
-              )}
-            </EventMonth>
-          </EventDate>
-          <Link href={item.url}>
-            <EventTitle>{item.title}</EventTitle>
-          </Link>
-          <Chevron />
-        </Card.Content>
-      </EventCard>
-    )) || []
+  const EventCards = events.results.map((item) => (
+    <EventCard key={item.id} href={item.url}>
+      <Card.Content>
+        <EventDate>
+          <EventDay>
+            {formatDate(
+              (item as EventFeedItem).event_details?.event_datetime,
+              "D",
+            )}
+          </EventDay>
+          <EventMonth>
+            {formatDate(
+              (item as EventFeedItem).event_details?.event_datetime,
+              "MMM",
+            )}
+          </EventMonth>
+        </EventDate>
+        <Link href={item.url}>
+          <EventTitle>{item.title}</EventTitle>
+        </Link>
+        <Chevron />
+      </Card.Content>
+    </EventCard>
+  ))
 
   return (
     <Section>
