@@ -166,7 +166,7 @@ def test_program_endpoint(client, url, params):
 def test_program_detail_endpoint(client, django_assert_num_queries, url):
     """Test program endpoint"""
     program = ProgramFactory.create()
-    with django_assert_num_queries(14):
+    with django_assert_num_queries(16):
         resp = client.get(reverse(url, args=[program.learning_resource.id]))
     assert resp.data.get("title") == program.learning_resource.title
     assert resp.data.get("resource_type") == LearningResourceType.program.name
@@ -211,7 +211,7 @@ def test_no_excess_queries(rf, user, mocker, django_assert_num_queries, course_c
     request = rf.get("/")
     request.user = user
 
-    with django_assert_num_queries(16):
+    with django_assert_num_queries(18):
         view = CourseViewSet(request=request)
         results = view.get_queryset().all()
         assert len(results) == course_count
@@ -962,6 +962,7 @@ def test_featured_view_filter(client, offeror_featured_lists, parameter):
         else:
             for run in resource["runs"]:
                 assert run["prices"] == []
+                assert run["resource_prices"] == []
 
 
 def test_similar_resources_endpoint_does_not_return_self(mocker, client):

@@ -3,7 +3,6 @@
 import logging
 from _csv import QUOTE_MINIMAL
 from csv import DictReader
-from decimal import Decimal
 from io import StringIO
 from pathlib import Path
 
@@ -130,7 +129,6 @@ def transform_run(course_data: dict) -> list[dict]:
             "published": course_data["published"] == "YES",
             "description": course_data["description"],
             "image": transform_image(course_data),
-            "prices": [Decimal(0.00)],
             "level": transform_levels([course_data["Level"]])
             if course_data["Level"]
             else [],
@@ -184,7 +182,6 @@ def transform_course(course_data: dict) -> dict:
         },
         "runs": runs,
         "image": transform_image(course_data),
-        "prices": [Decimal(0.00)],
         "etl_source": ETLSource.oll.name,
         "availability": Availability.anytime.name,
         "pace": [Pace.self_paced.name],
