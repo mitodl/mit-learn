@@ -45,13 +45,13 @@ log = logging.getLogger(__name__)
 User = get_user_model()
 
 
-def setup_embedding_pipeline():
+def _register_opensearch_model(model_name, model_version, model_format):
     conn = get_conn()
     response = conn.plugins.ml.register_model(
         body={
-            "name": settings.EMBEDDING_MODEL_NAME,
-            "version": "1.0.1",
-            "model_format": "TORCH_SCRIPT",
+            "name": model_name,
+            "version": model_version,
+            "model_format": model_format,
         },
         params={"deploy": "true"},
     )
@@ -64,9 +64,26 @@ def setup_embedding_pipeline():
     state = "DEPLOYING"
     while state != "DEPLOYED":
         state = conn.plugins.ml.search_models(
-            body={"query": {"match": {"_id": embedding_model_id}}, "size": 10}
+            body={"query": {"match": {"_id": embedding_model_id}}, "size": 1}
         )["hits"]["hits"][0]["_source"]["model_state"]
         sleep(1)
+    return embedding_model_id
+
+
+def setup_embedding_pipeline():
+    conn = get_conn()
+
+    embedding_model_id = _register_opensearch_model(
+        settings.EMBEDDING_MODEL_NAME,
+        settings.EMBEDDING_MODEL_VERSION,
+        settings.EMBEDDING_MODEL_FORMAT,
+    )
+    if settings.SEARCH_TOKENIZER_MODEL_NAME:
+        _register_opensearch_model(
+            settings.SEARCH_TOKENIZER_MODEL_NAME,
+            settings.SEARCH_TOKENIZER_MODEL_VERSION,
+            settings.SEARCH_TOKENIZER_MODEL_FORMAT,
+        )
 
     conn.ingest.put_pipeline(
         id=settings.EMBEDDING_PIPELINE_NAME,
@@ -74,10 +91,11 @@ def setup_embedding_pipeline():
             "description": "learning resource embedding pipeline",
             "processors": [
                 {
-                    "text_embedding": {
+                    "sparse_encoding": {
                         "model_id": embedding_model_id,
-                        "field_map": {"embedding_text": "embedding"},
-                        "ignore_failure": True,
+                        "field_map": {
+                            "description": "description_embedding",
+                        },
                     }
                 }
             ],
