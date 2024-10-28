@@ -8,7 +8,7 @@ services:
       - node.name=opensearch-node-mitopen-1
       - discovery.type=single-node # disables bootstrap checks that are enabled when network.host is set to a non-loopback address
       - plugins.ml_commons.only_run_on_ml_node=false
-      - plugins.ml_commons.native_memory_threshold=100
+      - plugins.ml_commons.native_memory_threshold=99
       - plugins.ml_commons.ml_task_timeout_in_seconds=600
 
     volumes:
