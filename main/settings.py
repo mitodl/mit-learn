@@ -795,5 +795,26 @@ EMBEDDING_PIPELINE_NAME = get_string(
 # name of embeddings pipeline
 EMBEDDING_MODEL_NAME = get_string(
     name="OPENSEARCH_EMBEDDING_MODEL_NAME",
-    default="huggingface/sentence-transformers/all-MiniLM-L12-v2",
+    default="amazon/neural-sparse/opensearch-neural-sparse-encoding-doc-v2-distill",
+)
+EMBEDDING_MODEL_VERSION = get_string(
+    name="OPENSEARCH_EMBEDDING_MODEL_VERSION",
+    default="1.0.0",
+)
+EMBEDDING_MODEL_FORMAT = get_string(
+    name="OPENSEARCH_EMBEDDING_MODEL_FORMAT",
+    default="TORCH_SCRIPT",
+)
+
+SEARCH_TOKENIZER_MODEL_NAME = get_string(
+    name="OPENSEARCH_SEARCH_TOKENIZER_MODEL_NAME",
+    default="amazon/neural-sparse/opensearch-neural-sparse-tokenizer-v1",
+)
+SEARCH_TOKENIZER_MODEL_VERSION = get_string(
+    name="OPENSEARCH_SEARCH_TOKENIZER_MODEL_VERSION",
+    default="1.0.1",
+)
+SEARCH_TOKENIZER_MODEL_FORMAT = get_string(
+    name="OPENSEARCH_SEARCH_TOKENIZER_MODEL_FORMAT",
+    default="TORCH_SCRIPT",
 )
