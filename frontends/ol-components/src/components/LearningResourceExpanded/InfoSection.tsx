@@ -99,6 +99,7 @@ const PriceDisplay = styled.div({
 
 const Certificate = styled.div({
   display: "flex",
+  alignItems: "center",
   gap: "4px",
   borderRadius: "4px",
   padding: "4px 8px",
@@ -112,6 +113,7 @@ const Certificate = styled.div({
   },
   [theme.breakpoints.down("sm")]: {
     padding: "1px 2px",
+    ...theme.typography.subtitle4,
   },
 })
 
