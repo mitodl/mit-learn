@@ -81,10 +81,13 @@ const InfoValue = styled.div({
 
 const PriceDisplay = styled.div({
   display: "flex",
-  flexDirection: "column",
-  flexWrap: "wrap",
   alignItems: "center",
   gap: "8px",
+  [theme.breakpoints.down("sm")]: {
+    flexDirection: "column",
+    flexWrap: "wrap",
+    alignItems: "flex-start",
+  },
 })
 
 const Certificate = styled.div({
