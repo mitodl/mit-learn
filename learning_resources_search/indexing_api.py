@@ -49,7 +49,7 @@ def setup_embedding_pipeline():
     conn = get_conn()
     response = conn.plugins.ml.register_model(
         body={
-            "name": "huggingface/sentence-transformers/all-MiniLM-L12-v2",
+            "name": settings.EMBEDDING_MODEL_NAME,
             "version": "1.0.1",
             "model_format": "TORCH_SCRIPT",
         },
@@ -69,7 +69,7 @@ def setup_embedding_pipeline():
         sleep(1)
 
     conn.ingest.put_pipeline(
-        id="embedding-pipeline",
+        id=settings.EMBEDDING_PIPELINE_NAME,
         body={
             "description": "learning resource embedding pipeline",
             "processors": [
@@ -77,6 +77,7 @@ def setup_embedding_pipeline():
                     "text_embedding": {
                         "model_id": embedding_model_id,
                         "field_map": {"embedding_text": "embedding"},
+                        "ignore_failure": True,
                     }
                 }
             ],
@@ -158,6 +159,16 @@ def _update_document_by_id(doc_id, body, object_type, *, retry_on_conflict=0, **
             )
 
 
+def _embedding_pipeline_exists():
+    # return True if the embedding pipeline has been setup
+    conn = get_conn()
+    try:
+        conn.ingest.get_pipeline(settings.EMBEDDING_PIPELINE_NAME)
+    except NotFoundError:
+        return False
+    return True
+
+
 def clear_and_create_index(*, index_name=None, skip_mapping=False, object_type=None):
     """
     Wipe and recreate index and mapping. No indexing is done.
@@ -182,7 +193,6 @@ def clear_and_create_index(*, index_name=None, skip_mapping=False, object_type=N
                 "number_of_replicas": settings.OPENSEARCH_REPLICA_COUNT,
                 "refresh_interval": "60s",
                 "knn": True,
-                "default_pipeline": "embedding-pipeline",
             },
             "analysis": {
                 "analyzer": {
@@ -225,6 +235,10 @@ def clear_and_create_index(*, index_name=None, skip_mapping=False, object_type=N
             },
         }
     }
+    if _embedding_pipeline_exists():
+        index_create_data["settings"]["index"]["default_pipeline"] = (
+            settings.EMBEDDING_PIPELINE_NAME
+        )
     if not skip_mapping:
         index_create_data["mappings"] = {"properties": MAPPING[object_type]}
     # from https://www.elastic.co/guide/en/elasticsearch/guide/current/asciifolding-token-filter.html

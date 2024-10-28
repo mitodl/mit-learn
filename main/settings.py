@@ -785,3 +785,15 @@ DEFAULT_SEARCH_MAX_INCOMPLETENESS_PENALTY = get_float(
 DEFAULT_SEARCH_CONTENT_FILE_SCORE_WEIGHT = get_float(
     name="DEFAULT_SEARCH_CONTENT_FILE_SCORE_WEIGHT", default=1
 )
+
+# name of embeddings pipeline
+EMBEDDING_PIPELINE_NAME = get_string(
+    name="OPENSEARCH_EMBEDDING_PIPELINE_NAME",
+    default="embedding-pipeline",
+)
+
+# name of embeddings pipeline
+EMBEDDING_MODEL_NAME = get_string(
+    name="OPENSEARCH_EMBEDDING_MODEL_NAME",
+    default="huggingface/sentence-transformers/all-MiniLM-L12-v2",
+)
