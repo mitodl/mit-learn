@@ -6,7 +6,7 @@ import {
   Typography,
   styled,
   theme,
-  UNIT_LOGOS,
+  PlatformLogo,
 } from "ol-components"
 import { useChannelDetail } from "api/hooks/channels"
 
@@ -41,14 +41,12 @@ const LogoContainer = styled.div({
       margin: "0 auto",
     },
   },
-})
-
-const UnitLogo = styled.img({
-  height: "50px",
-  display: "block",
-  [theme.breakpoints.down("md")]: {
-    height: "40px",
-    margin: "0 auto",
+  img: {
+    display: "block",
+    [theme.breakpoints.down("md")]: {
+      height: "40px",
+      margin: "0 auto",
+    },
   },
 })
 
@@ -123,13 +121,12 @@ interface UnitCardsProps {
 
 interface UnitCardProps {
   unit: LearningResourceOfferorDetail
-  logo: string
   courseCount: number
   programCount: number
 }
 
 const UnitCard: React.FC<UnitCardProps> = (props) => {
-  const { unit, logo, courseCount, programCount } = props
+  const { unit, courseCount, programCount } = props
   const channelDetailQuery = useChannelDetail("unit", unit.code)
   const channelDetail = channelDetailQuery.data
   const unitUrl = channelDetail?.channel_url
@@ -142,7 +139,7 @@ const UnitCard: React.FC<UnitCardProps> = (props) => {
         <UnitCardContainer>
           <UnitCardContent>
             <LogoContainer>
-              <UnitLogo src={logo} alt={unit.name} />
+              <PlatformLogo unitCode={unit.code as OfferedByEnum} height={50} />
             </LogoContainer>
             <CardBottom>
               <ValuePropContainer>
@@ -195,14 +192,14 @@ export const UnitCards: React.FC<UnitCardsProps> = (props) => {
       {units?.map((unit) => {
         const courseCount = courseCounts[unit.code] || 0
         const programCount = programCounts[unit.code] || 0
-        const logo =
-          UNIT_LOGOS[unit.code as OfferedByEnum]?.image ||
-          `/images/unit_logos/${unit.code}.svg`
+        // const logo =
+        //   UNIT_LOGOS[unit.code as OfferedByEnum]?.image ||
+        //   `/images/unit_logos/${unit.code}.svg`
         return unit.value_prop ? (
           <UnitCard
             key={unit.code}
             unit={unit}
-            logo={logo}
+            // logo={logo}
             courseCount={courseCount}
             programCount={programCount}
           />

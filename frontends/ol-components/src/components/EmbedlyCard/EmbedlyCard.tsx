@@ -89,7 +89,7 @@ const EmbedlyCard: React.FC<EmbedlyCardProps> = ({
     a.href = url
     a.classList.add("embedly-card")
     container.appendChild(a)
-  }, [EMBEDLY_KEY, container, url])
+  }, [container, url])
 
   return (
     <Container
