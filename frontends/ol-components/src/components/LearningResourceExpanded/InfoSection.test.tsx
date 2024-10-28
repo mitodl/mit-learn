@@ -6,6 +6,9 @@ import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
 import { formatRunDate } from "ol-utilities"
 import invariant from "tiny-invariant"
 
+// This is a pipe followed by a zero-width space
+const SEPARATOR = "|​"
+
 describe("Learning resource info section pricing", () => {
   test("Free course, no certificate", () => {
     render(<InfoSection resource={courses.free.noCertificate} />, {
@@ -135,7 +138,7 @@ describe("Learning resource info section start date", () => {
         return 0
       })
       .map((run) => formatRunDate(run, false))
-      .join("|")
+      .join(SEPARATOR)
     invariant(expectedDateText)
     render(<InfoSection resource={course} />, {
       wrapper: ThemeProvider,
@@ -143,6 +146,7 @@ describe("Learning resource info section start date", () => {
 
     const section = screen.getByTestId("drawer-info-items")
     within(section).getByText((_content, node) => {
+      console.log(node?.textContent)
       return node?.textContent === expectedDateText || false
     })
   })

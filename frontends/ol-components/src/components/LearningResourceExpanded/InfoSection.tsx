@@ -147,7 +147,7 @@ const INFO_ITEMS: InfoItemConfig = [
           resource.resource_type as "course" | "program",
         )
       ) {
-        const runDates =
+        const sortedDates =
           resource.runs
             ?.sort((a, b) => {
               if (a?.start_date && b?.start_date) {
@@ -155,19 +155,18 @@ const INFO_ITEMS: InfoItemConfig = [
               }
               return 0
             })
-            .map((run) => formatRunDate(run, asTaughtIn)) ??
-          [].map((run, index) => {
-            const totalRuns = resource.runs?.length || 0
+            .map((run) => formatRunDate(run, asTaughtIn)) ?? []
+        const runDates =
+          sortedDates.map((runDate, index) => {
             return (
               <InfoItemValue
                 key={`run-${index}`}
-                label={formatRunDate(run, asTaughtIn)}
+                label={runDate}
                 index={index}
-                total={totalRuns}
+                total={sortedDates.length}
               />
             )
-          }) ??
-          []
+          }) ?? []
         return runDates
       } else return null
     },
