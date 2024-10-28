@@ -21,6 +21,9 @@ const IMG_CONFIG: LearningResourceExpandedProps["imgConfig"] = {
   height: 200,
 }
 
+// This is a pipe followed by a zero-width space
+const SEPARATOR = "|​"
+
 const setup = (resource: LearningResource) => {
   return render(
     <BrowserRouter>
@@ -208,7 +211,10 @@ describe("Learning Resource Expanded", () => {
     const section = screen.getByTestId("drawer-info-items")
 
     within(section).getByText((_content, node) => {
-      return node?.textContent === "Topic 1|Topic 2|Topic 3" || false
+      return (
+        node?.textContent ===
+          ["Topic 1", "Topic 2", "Topic 3"].join(SEPARATOR) || false
+      )
     })
   })
 
@@ -227,7 +233,10 @@ describe("Learning Resource Expanded", () => {
     const section = screen.getByTestId("drawer-info-items")
 
     within(section).getByText((_content, node) => {
-      return node?.textContent === "English|Spanish|French" || false
+      return (
+        node?.textContent ===
+          ["English", "Spanish", "French"].join(SEPARATOR) || false
+      )
     })
   })
 
