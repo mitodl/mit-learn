@@ -18,6 +18,6 @@ echo "Loading fixtures!"
 python3 manage.py loaddata platforms schools departments offered_by
 
 # consolidate user subscriptions and remove duplicate percolate instances
-python $MANAGE_FILE prune_subscription_queries 2>&1 | indent
+python manage.py prune_subscription_queries 2>&1
 
 uwsgi uwsgi.ini --honour-stdin
