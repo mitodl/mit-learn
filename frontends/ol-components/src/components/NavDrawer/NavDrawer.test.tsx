@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react"
 import user from "@testing-library/user-event"
 import React from "react"
 import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
+import Image from "next/image"
 
 describe("NavDrawer", () => {
   it("Renders the expected drawer contents", () => {
@@ -13,7 +14,15 @@ describe("NavDrawer", () => {
           items: [
             {
               title: "Link and description with icon",
-              icon: "/path/to/image.svg",
+              icon: (
+                <Image
+                  src="/path/to/image.svg"
+                  alt=""
+                  width={22}
+                  height={22}
+                  data-testid="nav-link-icon"
+                />
+              ),
               description: "This item has a link, description and icon",
               href: "https://mit.edu",
             },
@@ -30,7 +39,7 @@ describe("NavDrawer", () => {
         },
       ],
     }
-    render(<NavDrawer onClose={jest.fn()} navdata={navData} open={true} />, {
+    render(<NavDrawer onClose={jest.fn()} navData={navData} open={true} />, {
       wrapper: ThemeProvider,
     })
     const links = screen.getAllByTestId("nav-link")
@@ -70,7 +79,7 @@ describe("NavDrawer", () => {
 
   test("close button calls onClose", async () => {
     const onClose = jest.fn()
-    render(<NavDrawer onClose={onClose} navdata={NAV_DATA} open={true} />, {
+    render(<NavDrawer onClose={onClose} navData={NAV_DATA} open={true} />, {
       wrapper: ThemeProvider,
     })
     const close = screen.getByRole("button", { name: "Close Navigation" })
@@ -80,7 +89,7 @@ describe("NavDrawer", () => {
 
   test("escape calls onClose", async () => {
     const onClose = jest.fn()
-    render(<NavDrawer onClose={onClose} navdata={NAV_DATA} open={true} />, {
+    render(<NavDrawer onClose={onClose} navData={NAV_DATA} open={true} />, {
       wrapper: ThemeProvider,
     })
     const links = screen.getAllByRole("link")
@@ -98,7 +107,7 @@ describe("NavDrawer", () => {
           <NavDrawer
             getClickAwayExcluded={() => [excluded.current]}
             onClose={onClose}
-            navdata={NAV_DATA}
+            navData={NAV_DATA}
             open={true}
           />
           <button type="button">Outside</button>
@@ -121,7 +130,7 @@ describe("NavDrawer", () => {
 
   test("clicking a link navigates and closes the drawer", async () => {
     const onClose = jest.fn()
-    render(<NavDrawer onClose={onClose} navdata={NAV_DATA} open={true} />, {
+    render(<NavDrawer onClose={onClose} navData={NAV_DATA} open={true} />, {
       wrapper: ThemeProvider,
     })
 

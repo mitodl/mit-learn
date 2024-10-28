@@ -17,7 +17,7 @@ import { theme } from "../ThemeProvider/ThemeProvider"
 import { SimpleSelect } from "../SimpleSelect/SimpleSelect"
 import type { SimpleSelectProps } from "../SimpleSelect/SimpleSelect"
 import { EmbedlyCard } from "../EmbedlyCard/EmbedlyCard"
-import { PlatformLogo, PLATFORMS } from "../Logo/Logo"
+import { PlatformLogo, PLATFORM_LOGOS } from "../Logo/Logo"
 import InfoSection from "./InfoSection"
 import type { User } from "api/hooks/user"
 import { LearningResourceCardProps } from "../LearningResourceCard/LearningResourceCard"
@@ -226,7 +226,7 @@ const CallToActionSection = ({
     (offeredBy?.code as PlatformEnum) === PlatformEnum.Xpro
       ? (offeredBy?.code as PlatformEnum)
       : (platform?.code as PlatformEnum)
-  const platformImage = PLATFORMS[platformCode]?.image
+  const platformImage = PLATFORM_LOGOS[platformCode]?.image
 
   const getCallToActionText = (resource: LearningResource): string => {
     if (resource?.platform?.code === PlatformEnum.Ocw) {

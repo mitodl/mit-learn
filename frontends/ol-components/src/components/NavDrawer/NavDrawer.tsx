@@ -83,12 +83,6 @@ const NavIconContainer = styled.div({
   alignItems: "flex-start",
 })
 
-const NavIcon = styled.img({
-  width: "22px",
-  height: "22px",
-  opacity: ".7",
-})
-
 const NavTextContainer = styled.div({
   display: "flex",
   flex: "1 0 0",
@@ -125,7 +119,7 @@ interface NavSection {
 
 interface NavItem {
   title: string
-  icon?: string | ReactElement
+  icon?: ReactElement
   description?: string
   href: string
 }
@@ -136,17 +130,11 @@ type NavItemProps = NavItem & {
 
 const NavItem: React.FC<NavItemProps> = (props) => {
   const { title, icon, description, href, onClick } = props
+
   const navItem = (
     <NavItemContainer>
       <NavIconContainer style={{ paddingTop: description ? "4px" : "" }}>
-        {typeof icon === "string" ? (
-          <NavIcon
-            src={icon}
-            className="nav-link-icon"
-            data-testid="nav-link-icon"
-          />
-        ) : null}
-        {typeof icon !== "string" ? icon : null}
+        {icon}
       </NavIconContainer>
       <NavTextContainer>
         <NavLinkText className="nav-link-text" data-testid="nav-link-text">
@@ -168,7 +156,7 @@ const NavItem: React.FC<NavItemProps> = (props) => {
 }
 
 type NavDrawerProps = {
-  navdata: NavData
+  navData: NavData
   onClose: () => void
   /**
    * Returns a list of HTMLElements that should not trigger the drawer to close
@@ -178,12 +166,12 @@ type NavDrawerProps = {
 } & DrawerProps
 
 const NavDrawer = ({
-  navdata,
+  navData,
   onClose,
   getClickAwayExcluded = () => [],
   ...others
 }: NavDrawerProps) => {
-  const navSections = navdata.sections.map((section, i) => {
+  const navSections = navData.sections.map((section, i) => {
     const navItemElements = section.items.map((item) => (
       <NavItem
         key={item.title}
@@ -216,7 +204,7 @@ const NavDrawer = ({
 
   return (
     /**
-     * ClickAwayListner + FocusTrap ensure the drawer behaves like a modal:
+     * ClickAwayListener + FocusTrap ensure the drawer behaves like a modal:
      *  - clicking outside the drawer closes it
      *  - the drawer traps focus
      *

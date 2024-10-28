@@ -295,7 +295,7 @@ const Header: FunctionComponent = () => {
           desktopTrigger.current,
           mobileTrigger.current,
         ]}
-        navdata={navData}
+        navData={navData}
         open={drawerOpen}
         onClose={toggleDrawer.off}
       />
