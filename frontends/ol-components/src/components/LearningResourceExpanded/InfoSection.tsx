@@ -28,6 +28,13 @@ const SeparatorContainer = styled.span({
   color: theme.custom.colors.silverGray,
 })
 
+/*
+ * Pipe followed by zero-width space, ZWSP.
+ * By doing
+ * <ITEM><PIPE><ZWSP><ITEM><PIPE><ZWSP>...
+ * without whitespace between <ITEM> and <PIPE>, we allow line
+ * breaks after the pipe but not before it.
+ */
 const Separator: React.FC = () => (
   <SeparatorContainer>|&#8203;</SeparatorContainer>
 )
