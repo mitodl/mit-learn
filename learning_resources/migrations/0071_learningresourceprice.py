@@ -16,13 +16,13 @@ def migrate_price_values(apps, schema_editor):
     )
 
     for resource in LearningResource.objects.exclude(prices=[]):
-        for price in resource.prices:
+        for price in set(resource.prices):
             resource_price, _ = LearningResourcePrice.objects.get_or_create(
                 amount=price, currency=CURRENCY_USD
             )
             resource.resource_prices.add(resource_price)
         for run in resource.runs.exclude(prices=[]).exclude(prices__isnull=True):
-            for price in run.prices:
+            for price in set(run.prices):
                 resource_price, _ = LearningResourcePrice.objects.get_or_create(
                     amount=price, currency=CURRENCY_USD
                 )
