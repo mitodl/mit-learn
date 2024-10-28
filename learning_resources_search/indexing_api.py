@@ -94,6 +94,7 @@ def setup_embedding_pipeline():
                     "sparse_encoding": {
                         "model_id": embedding_model_id,
                         "field_map": {
+                            "title": "title_embedding",
                             "description": "description_embedding",
                         },
                     }
