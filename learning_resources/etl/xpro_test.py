@@ -8,6 +8,7 @@ from datetime import datetime
 import pytest
 
 from learning_resources.constants import (
+    CURRENCY_USD,
     Availability,
     CertificationType,
     Format,
@@ -124,7 +125,12 @@ def test_xpro_transform_programs(mock_xpro_programs_data):
                     "end_date": any_instance_of(datetime, type(None)),
                     "enrollment_start": any_instance_of(datetime, type(None)),
                     "prices": (
-                        [program_data["current_price"]]
+                        [
+                            {
+                                "amount": program_data["current_price"],
+                                "currency": CURRENCY_USD,
+                            }
+                        ]
                         if program_data["current_price"]
                         else []
                     ),
@@ -171,7 +177,12 @@ def test_xpro_transform_programs(mock_xpro_programs_data):
                             "enrollment_end": any_instance_of(datetime, type(None)),
                             "published": bool(course_run_data["current_price"]),
                             "prices": (
-                                [course_run_data["current_price"]]
+                                [
+                                    {
+                                        "amount": course_run_data["current_price"],
+                                        "currency": CURRENCY_USD,
+                                    }
+                                ]
                                 if course_run_data["current_price"]
                                 else []
                             ),
@@ -245,7 +256,12 @@ def test_xpro_transform_courses(mock_xpro_courses_data):
                     "enrollment_end": any_instance_of(datetime, type(None)),
                     "published": bool(course_run_data["current_price"]),
                     "prices": (
-                        [course_run_data["current_price"]]
+                        [
+                            {
+                                "amount": course_run_data["current_price"],
+                                "currency": CURRENCY_USD,
+                            }
+                        ]
                         if course_run_data["current_price"]
                         else []
                     ),

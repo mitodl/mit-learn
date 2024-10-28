@@ -4,6 +4,7 @@ import copy
 import logging
 import re
 from datetime import UTC
+from decimal import Decimal
 from urllib.parse import urljoin
 
 import requests
@@ -24,6 +25,7 @@ from learning_resources.etl.utils import (
     generate_course_numbers_json,
     get_department_id_by_name,
     parse_certification,
+    transform_price,
     transform_topics,
 )
 from main.utils import clean_data
@@ -148,7 +150,7 @@ def extract_courses():
     return []
 
 
-def parse_program_prices(program_data: dict) -> list[float]:
+def parse_program_prices(program_data: dict) -> list[dict]:
     """Return a list of unique prices for a program"""
     prices = [program_data.get("current_price") or 0.00]
     price_string = parse_page_attribute(program_data, "price")
@@ -159,7 +161,7 @@ def parse_program_prices(program_data: dict) -> list[float]:
                 for price in re.findall(r"[\d\.,]+", price_string)
             ]
         )
-    return sorted(set(prices))
+    return [transform_price(Decimal(price)) for price in sorted(set(prices))]
 
 
 def parse_departments(departments_data: list[dict or str]) -> list[str]:
@@ -218,19 +220,22 @@ def _transform_run(course_run: dict, course: dict) -> dict:
         "published": bool(course_run["is_enrollable"] and course["page"]["live"]),
         "description": clean_data(parse_page_attribute(course_run, "description")),
         "image": _transform_image(course_run),
-        "prices": sorted(
-            {
-                "0.00",
-                *[
-                    price
-                    for price in [
-                        product.get("price")
-                        for product in course_run.get("products", [])
-                    ]
-                    if price is not None
-                ],
-            }
-        ),
+        "prices": [
+            transform_price(price)
+            for price in sorted(
+                {
+                    Decimal(0.00),
+                    *[
+                        Decimal(price)
+                        for price in [
+                            product.get("price")
+                            for product in course_run.get("products", [])
+                        ]
+                        if price is not None
+                    ],
+                }
+            )
+        ],
         "instructors": [
             {"full_name": instructor["name"]}
             for instructor in parse_page_attribute(course, "instructors", is_list=True)

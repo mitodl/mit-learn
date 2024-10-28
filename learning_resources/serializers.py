@@ -21,7 +21,6 @@ from learning_resources.constants import (
     LevelType,
     Pace,
 )
-from learning_resources.etl.loaders import update_index
 from main.serializers import COMMON_IGNORED_FIELDS, WriteableSerializerMethodField
 
 log = logging.getLogger(__name__)
@@ -35,6 +34,16 @@ class LearningResourceInstructorSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.LearningResourceInstructor
         exclude = COMMON_IGNORED_FIELDS
+
+
+class LearningResourcePriceSerializer(serializers.ModelSerializer):
+    """
+    Serializer for LearningResourcePrice model
+    """
+
+    class Meta:
+        model = models.LearningResourcePrice
+        exclude = "id", *COMMON_IGNORED_FIELDS
 
 
 class LearningResourceTopicSerializer(serializers.ModelSerializer):
@@ -282,6 +291,7 @@ class LearningResourceRunSerializer(serializers.ModelSerializer):
     )
     format = serializers.ListField(child=FormatSerializer(), read_only=True)
     pace = serializers.ListField(child=PaceSerializer(), read_only=True)
+    resource_prices = LearningResourcePriceSerializer(read_only=True, many=True)
 
     class Meta:
         model = models.LearningResourceRun
@@ -438,6 +448,7 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
         child=serializers.DecimalField(max_digits=12, decimal_places=2),
         read_only=True,
     )
+    resource_prices = LearningResourcePriceSerializer(read_only=True, many=True)
     runs = LearningResourceRunSerializer(read_only=True, many=True, allow_null=True)
     image = serializers.SerializerMethodField()
     learning_path_parents = MicroLearningPathRelationshipSerializer(
@@ -469,7 +480,7 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
             LearningResourceType.course.name,
             LearningResourceType.program.name,
         ]:
-            prices = instance.prices
+            prices = [price.amount for price in instance.resource_prices.all()]
             return not instance.professional and (
                 Decimal(0.00) in prices or not prices or prices == []
             )
@@ -500,6 +511,7 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
         read_only_fields = [
             "free",
             "prices",
+            "resource_prices",
             "resource_category",
             "certification",
             "certification_type",
@@ -579,7 +591,6 @@ class LearningPathResourceSerializer(LearningResourceBaseSerializer):
             models.LearningPath.objects.create(
                 learning_resource=path_resource, author=request.user
             )
-        update_index(path_resource, True)  # noqa: FBT003
         return path_resource
 
     def update(self, instance, validated_data):
@@ -591,7 +602,6 @@ class LearningPathResourceSerializer(LearningResourceBaseSerializer):
                 resource.topics.set(
                     models.LearningResourceTopic.objects.filter(id__in=topics_data)
                 )
-        update_index(resource, False)  # noqa: FBT003
         return resource
 
     class Meta:

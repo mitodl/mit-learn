@@ -131,9 +131,8 @@ class LearningResourceFilter(FilterSet):
         """Free cost filter for learning resources"""
         free_filter = (
             Q(runs__isnull=True)
-            | Q(runs__prices__isnull=True)
-            | Q(runs__prices=[])
-            | Q(runs__prices__contains=[Decimal(0.00)])
+            | Q(runs__resource_prices__isnull=True)
+            | Q(runs__resource_prices__amount=Decimal(0.00))
         ) & Q(professional=False)
         if value:
             # Free resources

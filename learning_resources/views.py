@@ -83,7 +83,6 @@ from learning_resources.serializers import (
 )
 from learning_resources.tasks import get_ocw_courses
 from learning_resources.utils import (
-    resource_delete_actions,
     resource_unpublished_actions,
 )
 from learning_resources_search.api import get_similar_resources
@@ -384,9 +383,6 @@ class LearningPathViewSet(BaseLearningResourceViewSet, viewsets.ModelViewSet):
             queryset = queryset.filter(published=True)
         return queryset
 
-    def perform_destroy(self, instance):
-        resource_delete_actions(instance)
-
 
 @extend_schema_view(
     list=extend_schema(
@@ -421,8 +417,7 @@ class ResourceListItemsViewSet(NestedViewSetMixin, viewsets.ReadOnlyModelViewSet
     queryset = (
         LearningResourceRelationship.objects.select_related("child")
         .prefetch_related(
-            "child__runs",
-            "child__runs__instructors",
+            "child__runs", "child__runs__instructors", "child__runs__resource_prices"
         )
         .filter(child__published=True)
     )

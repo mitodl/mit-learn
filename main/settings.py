@@ -356,6 +356,8 @@ SOCIAL_AUTH_OL_OIDC_SECRET = get_string(
     default="some super secret key",
 )
 
+SOCIAL_AUTH_OL_OIDC_SCOPE = ["ol-profile"]
+
 USERINFO_URL = get_string(
     name="USERINFO_URL",
     default=None,

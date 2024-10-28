@@ -40,7 +40,6 @@ LEARNING_RESOURCE_TYPES = (
     PROGRAM_TYPE,
     PODCAST_TYPE,
     PODCAST_EPISODE_TYPE,
-    LEARNING_PATH_TYPE,
     VIDEO_TYPE,
     VIDEO_PLAYLIST_TYPE,
 )
@@ -285,6 +284,13 @@ LEARNING_RESOURCE_MAP = {
                 },
             },
             "prices": {"type": "scaled_float", "scaling_factor": 100},
+            "resource_prices": {
+                "type": "nested",
+                "properties": {
+                    "amount": {"type": "scaled_float", "scaling_factor": 100},
+                    "currency": {"type": "keyword"},
+                },
+            },
             "location": {"type": "keyword"},
         },
     },
@@ -295,6 +301,13 @@ LEARNING_RESOURCE_MAP = {
     "license_cc": {"type": "boolean"},
     "continuing_ed_credits": {"type": "float"},
     "location": {"type": "keyword"},
+    "resource_prices": {
+        "type": "nested",
+        "properties": {
+            "amount": {"type": "scaled_float", "scaling_factor": 100},
+            "currency": {"type": "keyword"},
+        },
+    },
 }
 
 

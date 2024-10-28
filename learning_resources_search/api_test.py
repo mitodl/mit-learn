@@ -54,7 +54,6 @@ def os_topic(topic_name) -> Mock:
                 "testindex_program_default",
                 "testindex_podcast_default",
                 "testindex_podcast_episode_default",
-                "testindex_learning_path_default",
                 "testindex_video_default",
                 "testindex_video_playlist_default",
             ],
