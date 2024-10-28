@@ -795,7 +795,7 @@ EMBEDDING_PIPELINE_NAME = get_string(
 # name of embeddings pipeline
 EMBEDDING_MODEL_NAME = get_string(
     name="OPENSEARCH_EMBEDDING_MODEL_NAME",
-    default="amazon/neural-sparse/opensearch-neural-sparse-encoding-doc-v2-distill",
+    default="amazon/neural-sparse/opensearch-neural-sparse-encoding-doc-v2-mini",
 )
 EMBEDDING_MODEL_VERSION = get_string(
     name="OPENSEARCH_EMBEDDING_MODEL_VERSION",
