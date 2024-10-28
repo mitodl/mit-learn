@@ -1373,6 +1373,21 @@ files = [
 django = ">=4.2"
 
 [[package]]
+name = "djangorestframework-version-transforms"
+version = "0.5.0"
+description = "A library to enable the use of delta transformations for versioning of Django Rest Framwork API representations."
+optional = false
+python-versions = "*"
+files = []
+develop = false
+
+[package.source]
+type = "git"
+url = "https://github.com/mbertrand/django-rest-framework-version-transforms.git"
+reference = "HEAD"
+resolved_reference = "ed5e8a5061c94a102a3a9571927ec3e814fd2d0f"
+
+[[package]]
 name = "docopt"
 version = "0.6.2"
 description = "Pythonic argument parser, that will make you smile"
@@ -4923,4 +4938,4 @@ testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.0"
 python-versions = "3.12.6"
-content-hash = "0fabc0a67d9edf71d548ceb67d51bc5c42fb8e77ac60c1aaad4e67a47cbbf6d3"
+content-hash = "1c5a792f3bd92b6263664c4678d60bd9b76aeb0e40d9afaa19078b9622dcda09"

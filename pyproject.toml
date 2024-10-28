@@ -81,7 +81,7 @@ dateparser = "^1.2.0"
 uwsgitop = "^0.12"
 pytest-lazy-fixtures = "^1.1.1"
 pycountry = "^24.6.1"
-
+djangorestframework-version-transforms = {git = "https://github.com/mbertrand/django-rest-framework-version-transforms.git"}
 
 [tool.poetry.group.dev.dependencies]
 bpython = "^0.24"
