@@ -1,2 +1,0 @@
-class TransformBaseNotDeclaredException(Exception):
-    pass
