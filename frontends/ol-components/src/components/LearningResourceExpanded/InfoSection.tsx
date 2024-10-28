@@ -28,7 +28,9 @@ const SeparatorContainer = styled.span({
   color: theme.custom.colors.silverGray,
 })
 
-const Separator: React.FC = () => <SeparatorContainer>|</SeparatorContainer>
+const Separator: React.FC = () => (
+  <SeparatorContainer>|&#8203;</SeparatorContainer>
+)
 
 const InfoItems = styled.section({
   display: "flex",
@@ -79,6 +81,8 @@ const InfoValue = styled.div({
 
 const PriceDisplay = styled.div({
   display: "flex",
+  flexDirection: "column",
+  flexWrap: "wrap",
   alignItems: "center",
   gap: "8px",
 })
