@@ -544,7 +544,6 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
     """
     Wipe and recreate index and mapping, and index all items.
     """
-    api.setup_embedding_pipeline()
     try:
         if not remove_existing_reindexing_tags:
             existing_reindexing_indexes = api.get_existing_reindexing_indexes(indexes)
