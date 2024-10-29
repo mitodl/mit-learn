@@ -143,6 +143,13 @@ const OnPlatform = styled.span`
   color: ${theme.custom.colors.black};
 `
 
+const VideoFrame = styled.iframe<{ aspectRatio: string }>`
+  border-radius: 8px;
+  border: none;
+  width: 100%;
+  aspect-ratio: ${({ aspectRatio }) => aspectRatio}%;
+`
+
 type LearningResourceExpandedProps = {
   resource?: LearningResource
   user?: User
@@ -155,16 +162,27 @@ const ImageSection: React.FC<{
   resource?: LearningResource
   config: ImageConfig
 }> = ({ resource, config }) => {
+  const aspect = config.width / config.height
   if (resource?.resource_type === "video" && resource?.url) {
-    return (
-      <EmbedlyCard
-        aspectRatio={config.width / config.height}
-        url={resource?.url}
-      />
-    )
+    if (resource?.url?.startsWith("https://www.youtube.com/watch?v=")) {
+      const videoId = resource?.url?.split("v=")[1]
+      return (
+        <VideoFrame
+          aspectRatio={`${config.width} / ${config.height}`}
+          width="452"
+          height={452 / aspect}
+          src={`http://www.youtube.com/embed/${videoId}`}
+          title={resource?.title}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerPolicy="strict-origin-when-cross-origin"
+          allowFullScreen
+        />
+      )
+    }
+    return <EmbedlyCard aspectRatio={aspect} url={resource?.url} />
   } else if (resource?.image) {
     return (
-      <ImageContainer aspect={config.width / config.height}>
+      <ImageContainer aspect={aspect}>
         <Image
           src={resource.image?.url ?? DEFAULT_RESOURCE_IMG}
           fill={true}
@@ -174,7 +192,7 @@ const ImageSection: React.FC<{
     )
   } else if (resource) {
     return (
-      <ImageContainer aspect={config.width / config.height}>
+      <ImageContainer aspect={aspect}>
         <Image
           src={DEFAULT_RESOURCE_IMG}
           alt={resource.image?.alt ?? ""}
