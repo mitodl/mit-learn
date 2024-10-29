@@ -92,11 +92,14 @@ describe("Learning Resource List Card", () => {
 
     setup({ resource, href: "/path/to/thing" })
 
-    const card = screen.getByRole("link", {
-      name: new RegExp(resource.title),
+    const link = screen.getByRole<HTMLAnchorElement>("link", {
+      // Accessible name has resource type prepended
+      name: `Course: ${resource.title}`,
     })
+    // Visual title does not have resource name prepended
+    expect(link.textContent).toBe(resource.title)
 
-    expect(card).toHaveAttribute("href", "/path/to/thing")
+    expect(link).toHaveAttribute("href", "/path/to/thing")
   })
 
   test("Click action buttons", async () => {
