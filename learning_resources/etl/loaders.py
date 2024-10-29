@@ -301,7 +301,7 @@ def load_run(
     return learning_resource_run
 
 
-def upsert_course_or_program(
+def upsert_course_or_program(  # noqa: C901
     resource_data: dict,
     blocklist: list[str],
     duplicates: list[dict],
@@ -388,9 +388,31 @@ def upsert_course_or_program(
             platform=platform,
             resource_type=LearningResourceType.course.name,
         ).order_by("-updated_on")
-        if existing_courses.count() > 1:
+        if existing_courses.count() > 0:
             for course in existing_courses[1:]:
                 resource_delete_actions(course)
+        else:
+            # does a resource with the same readable id already exist?
+            # if so, update it with the new unique field value
+            existing_id = LearningResource.objects.filter(
+                readable_id=resource_data["readable_id"],
+                platform=platform,
+                resource_type=LearningResourceType.course.name,
+            ).exists()
+            if existing_id:
+                resource_data[unique_field_name] = unique_field_value
+                return LearningResource.objects.select_for_update().update_or_create(
+                    readable_id=resource_data.pop("readable_id"),
+                    platform=platform,
+                    resource_type=resource_type,
+                    defaults=resource_data,
+                )
+        return LearningResource.objects.select_for_update().update_or_create(
+            **{unique_field_name: unique_field_value},
+            platform=platform,
+            resource_type=resource_type,
+            defaults=resource_data,
+        )
     else:
         unique_field_value = resource_id
     return LearningResource.objects.select_for_update().update_or_create(
