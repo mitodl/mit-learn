@@ -8,13 +8,7 @@ import React, {
 import styled from "@emotion/styled"
 import { RiDraggable } from "@remixicon/react"
 import { theme } from "../ThemeProvider/ThemeProvider"
-import {
-  Wrapper,
-  BaseContainer,
-  ImageProps,
-  useClickChildHref,
-  Linkable,
-} from "./Card"
+import { BaseContainer, ImageProps, useClickChildHref, Linkable } from "./Card"
 import { TruncateText } from "../TruncateText/TruncateText"
 import { ActionButton, ActionButtonProps } from "../Button/Button"
 import { default as NextImage } from "next/image"
@@ -123,19 +117,12 @@ export const Bottom = styled.div`
 /**
  * Slot intended to contain ListCardAction buttons.
  */
-export const Actions = styled.div<{ hasImage?: boolean }>`
+export const Actions = styled.div`
   display: flex;
   gap: 8px;
-  position: absolute;
-  bottom: 24px;
-  right: ${({ hasImage }) => (hasImage ? "284px" : "24px")};
   ${theme.breakpoints.down("md")} {
-    bottom: 8px;
     gap: 4px;
-    right: ${({ hasImage }) => (hasImage ? "120px" : "8px")};
   }
-
-  background-color: ${theme.custom.colors.white};
 `
 
 const ListCardActionButton = styled(ActionButton)<{ isMobile?: boolean }>(
@@ -200,32 +187,30 @@ const ListCard: Card = ({ children, className, href, draggable, onClick }) => {
   }
 
   return (
-    <Wrapper className={classNames}>
-      <BaseContainer display="flex" onClick={handleClick}>
-        {draggable && (
-          <DragArea>
-            <RiDraggable />
-          </DragArea>
+    <BaseContainer className={classNames} display="flex" onClick={handleClick}>
+      {draggable && (
+        <DragArea>
+          <RiDraggable />
+        </DragArea>
+      )}
+      <Body>
+        <Info>{info}</Info>
+        {title && (
+          <Title {...title} href={href}>
+            <TruncateText lineClamp={2}>{title.children}</TruncateText>
+          </Title>
         )}
-        <Body>
-          <Info>{info}</Info>
-          {title && (
-            <Title {...title} href={href}>
-              <TruncateText lineClamp={2}>{title.children}</TruncateText>
-            </Title>
-          )}
-          <Bottom>
-            <Footer>{footer}</Footer>
-          </Bottom>
-        </Body>
-        {imageProps && (
-          // alt text will be checked on ListCard.Image
-          // eslint-disable-next-line styled-components-a11y/alt-text
-          <Image {...(imageProps as ImageProps)} />
-        )}
-      </BaseContainer>
-      {actions && <Actions hasImage={!!imageProps}>{actions}</Actions>}
-    </Wrapper>
+        <Bottom>
+          <Footer>{footer}</Footer>
+          {actions && <Actions>{actions}</Actions>}
+        </Bottom>
+      </Body>
+      {imageProps && (
+        // alt text will be checked on ListCard.Image
+        // eslint-disable-next-line styled-components-a11y/alt-text
+        <Image {...(imageProps as ImageProps)} />
+      )}
+    </BaseContainer>
   )
 }
 

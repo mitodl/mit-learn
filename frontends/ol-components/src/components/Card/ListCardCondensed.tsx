@@ -2,7 +2,7 @@ import React, { FC, ReactNode, Children, isValidElement } from "react"
 import styled from "@emotion/styled"
 import { RiDraggable } from "@remixicon/react"
 import { theme } from "../ThemeProvider/ThemeProvider"
-import { Wrapper, BaseContainer, useClickChildHref } from "./Card"
+import { BaseContainer, useClickChildHref } from "./Card"
 import { TruncateText } from "../TruncateText/TruncateText"
 import {
   ListCard,
@@ -11,7 +11,6 @@ import {
   Info as BaseInfo,
   Title as BaseTitle,
   Footer,
-  Actions as BaseActions,
   Bottom as BaseBottom,
 } from "./ListCard"
 import type { Card as BaseCard } from "./ListCard"
@@ -53,15 +52,9 @@ const Bottom = styled(BaseBottom)`
     height: auto;
   }
 `
-const Actions = styled(BaseActions)`
-  bottom: 16px;
-  right: 16px;
+const Actions = styled.div`
+  display: flex;
   gap: 16px;
-  ${theme.breakpoints.down("md")} {
-    bottom: 16px;
-    right: 16px;
-    gap: 16px;
-  }
 `
 const Content = () => <></>
 
@@ -106,25 +99,23 @@ const ListCardCondensed: Card = ({
   }
 
   return (
-    <Wrapper className={className}>
-      <BaseContainer onClick={handleClick}>
-        {draggable && (
-          <DragArea>
-            <RiDraggable />
-          </DragArea>
-        )}
-        <Body>
-          <Info>{info}</Info>
-          <Title href={href}>
-            <TruncateText lineClamp={4}>{title}</TruncateText>
-          </Title>
-          <Bottom>
-            <Footer>{footer}</Footer>
-          </Bottom>
-        </Body>
-      </BaseContainer>
-      {actions && <Actions>{actions}</Actions>}
-    </Wrapper>
+    <BaseContainer className={className} onClick={handleClick}>
+      {draggable && (
+        <DragArea>
+          <RiDraggable />
+        </DragArea>
+      )}
+      <Body>
+        <Info>{info}</Info>
+        <Title href={href}>
+          <TruncateText lineClamp={4}>{title}</TruncateText>
+        </Title>
+        <Bottom>
+          <Footer>{footer}</Footer>
+          {actions && <Actions>{actions}</Actions>}
+        </Bottom>
+      </Body>
+    </BaseContainer>
   )
 }
 
