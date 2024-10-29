@@ -391,22 +391,16 @@ def upsert_course_or_program(  # noqa: C901
         if existing_courses.count() > 0:
             for course in existing_courses[1:]:
                 resource_delete_actions(course)
-        else:
-            # does a resource with the same readable id already exist?
-            # if so, update it with the new unique field value
-            existing_id = LearningResource.objects.filter(
-                readable_id=resource_data["readable_id"],
-                platform=platform,
-                resource_type=LearningResourceType.course.name,
-            ).exists()
-            if existing_id:
-                resource_data[unique_field_name] = unique_field_value
-                return LearningResource.objects.select_for_update().update_or_create(
-                    readable_id=resource_data.pop("readable_id"),
-                    platform=platform,
-                    resource_type=resource_type,
-                    defaults=resource_data,
-                )
+        # does a resource with the same readable id already exist?
+        # if so, update it with the new unique field value
+        elif LearningResource.objects.filter(
+            readable_id=resource_data["readable_id"],
+            platform=platform,
+            resource_type=LearningResourceType.course.name,
+        ).exists():
+            resource_data[unique_field_name] = unique_field_value
+            unique_field_name = READABLE_ID_FIELD
+            unique_field_value = resource_data.pop(READABLE_ID_FIELD)
         return LearningResource.objects.select_for_update().update_or_create(
             **{unique_field_name: unique_field_value},
             platform=platform,
