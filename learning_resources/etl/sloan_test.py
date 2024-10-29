@@ -39,7 +39,6 @@ def mock_sloan_api_setting(settings):  # noqa: PT004
     settings.SEE_API_CLIENT_ID = "test"
     settings.SEE_API_CLIENT_SECRET = "test"  # noqa: S105
     settings.SEE_API_ACCESS_TOKEN_URL = "http://localhost/test/access-token"  # noqa: S105
-    settings.SEE_API_ENABLED = True
 
 
 @pytest.fixture
@@ -232,12 +231,6 @@ def test_parse_availability(delivery, run_format, availability):
     }
     assert parse_availability(run_data) == availability
     assert parse_availability(None) == Availability.dated.name
-
-
-def test_enabled_flag(mock_sloan_api_setting, settings):
-    """Extract should return empty lists if the SEE_API_ENABLED flag is False"""
-    settings.SEE_API_ENABLED = False
-    assert extract() == ([], [])
 
 
 @pytest.mark.parametrize(

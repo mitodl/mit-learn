@@ -35,7 +35,9 @@ def prune_channel_subscriptions():
         actual_query, _ = PercolateQuery.objects.get_or_create(
             source_type=PercolateQuery.CHANNEL_SUBSCRIPTION_TYPE,
             original_query=adjusted_original_query,
-            query=adjust_query_for_percolator(adjusted_original_query),
+            defaults={
+                "query": adjust_query_for_percolator(adjusted_original_query),
+            },
         )
         queries = PercolateQuery.objects.filter(
             original_query__contains=urllib.parse.parse_qs(query_string),
