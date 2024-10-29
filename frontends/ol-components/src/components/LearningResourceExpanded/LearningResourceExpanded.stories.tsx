@@ -21,7 +21,6 @@ const meta: Meta<typeof LearningResourceExpanded> = {
   component: LearningResourceExpanded,
   args: {
     imgConfig: {
-      key: "",
       width: 385,
       height: 200,
     },
