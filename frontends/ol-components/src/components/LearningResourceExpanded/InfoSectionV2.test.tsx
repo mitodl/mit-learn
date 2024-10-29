@@ -1,7 +1,7 @@
 import React from "react"
 import { render, screen, within } from "@testing-library/react"
 import { courses } from "../LearningResourceCard/testUtils"
-import InfoSection from "./InfoSection"
+import InfoSectionV2 from "./InfoSectionV2"
 import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
 import { formatRunDate } from "ol-utilities"
 import invariant from "tiny-invariant"
@@ -11,7 +11,7 @@ const SEPARATOR = "|​"
 
 describe("Learning resource info section pricing", () => {
   test("Free course, no certificate", () => {
-    render(<InfoSection resource={courses.free.noCertificate} />, {
+    render(<InfoSectionV2 resource={courses.free.noCertificate} />, {
       wrapper: ThemeProvider,
     })
 
@@ -22,7 +22,7 @@ describe("Learning resource info section pricing", () => {
   })
 
   test("Free course, with certificate, one price", () => {
-    render(<InfoSection resource={courses.free.withCertificateOnePrice} />, {
+    render(<InfoSectionV2 resource={courses.free.withCertificateOnePrice} />, {
       wrapper: ThemeProvider,
     })
 
@@ -33,9 +33,12 @@ describe("Learning resource info section pricing", () => {
   })
 
   test("Free course, with certificate, price range", () => {
-    render(<InfoSection resource={courses.free.withCertificatePriceRange} />, {
-      wrapper: ThemeProvider,
-    })
+    render(
+      <InfoSectionV2 resource={courses.free.withCertificatePriceRange} />,
+      {
+        wrapper: ThemeProvider,
+      },
+    )
 
     screen.getByText("Free")
     expect(screen.queryByText("Paid")).toBeNull()
@@ -44,7 +47,7 @@ describe("Learning resource info section pricing", () => {
   })
 
   test("Unknown price, no certificate", () => {
-    render(<InfoSection resource={courses.unknownPrice.noCertificate} />, {
+    render(<InfoSectionV2 resource={courses.unknownPrice.noCertificate} />, {
       wrapper: ThemeProvider,
     })
 
@@ -55,7 +58,7 @@ describe("Learning resource info section pricing", () => {
   })
 
   test("Unknown price, with certificate", () => {
-    render(<InfoSection resource={courses.unknownPrice.withCertificate} />, {
+    render(<InfoSectionV2 resource={courses.unknownPrice.withCertificate} />, {
       wrapper: ThemeProvider,
     })
 
@@ -65,7 +68,7 @@ describe("Learning resource info section pricing", () => {
   })
 
   test("Paid course, no certificate", () => {
-    render(<InfoSection resource={courses.paid.withoutCertificate} />, {
+    render(<InfoSectionV2 resource={courses.paid.withoutCertificate} />, {
       wrapper: ThemeProvider,
     })
 
@@ -77,7 +80,7 @@ describe("Learning resource info section pricing", () => {
   })
 
   test("Paid course, with certificate, one price", () => {
-    render(<InfoSection resource={courses.paid.withCerticateOnePrice} />, {
+    render(<InfoSectionV2 resource={courses.paid.withCerticateOnePrice} />, {
       wrapper: ThemeProvider,
     })
 
@@ -87,9 +90,12 @@ describe("Learning resource info section pricing", () => {
   })
 
   test("Paid course, with certificate, price range", () => {
-    render(<InfoSection resource={courses.paid.withCertificatePriceRange} />, {
-      wrapper: ThemeProvider,
-    })
+    render(
+      <InfoSectionV2 resource={courses.paid.withCertificatePriceRange} />,
+      {
+        wrapper: ThemeProvider,
+      },
+    )
 
     screen.getByText("$49 – $99")
     expect(screen.queryByText("Paid")).toBeNull()
@@ -104,7 +110,7 @@ describe("Learning resource info section start date", () => {
     invariant(run)
     const runDate = formatRunDate(run, false)
     invariant(runDate)
-    render(<InfoSection resource={course} />, {
+    render(<InfoSectionV2 resource={course} />, {
       wrapper: ThemeProvider,
     })
 
@@ -119,7 +125,7 @@ describe("Learning resource info section start date", () => {
     invariant(run)
     const runDate = formatRunDate(run, true)
     invariant(runDate)
-    render(<InfoSection resource={course} />, {
+    render(<InfoSectionV2 resource={course} />, {
       wrapper: ThemeProvider,
     })
 
@@ -140,7 +146,7 @@ describe("Learning resource info section start date", () => {
       .map((run) => formatRunDate(run, false))
       .join(SEPARATOR)
     invariant(expectedDateText)
-    render(<InfoSection resource={course} />, {
+    render(<InfoSectionV2 resource={course} />, {
       wrapper: ThemeProvider,
     })
 

@@ -6,7 +6,7 @@ import {
   waitFor,
   within,
 } from "@/test-utils"
-import LearningResourceDrawer from "./LearningResourceDrawer"
+import LearningResourceDrawerV2 from "./LearningResourceDrawerV2"
 import { urls, factories, setMockResponse } from "api/test-utils"
 import { LearningResourceExpanded } from "ol-components"
 import { RESOURCE_DRAWER_QUERY_PARAM } from "@/common/urls"
@@ -32,7 +32,7 @@ jest.mock("posthog-js/react", () => ({
   },
 }))
 
-describe("LearningResourceDrawer", () => {
+describe("LearningResourceDrawerV2", () => {
   it.each([
     { descriptor: "is enabled", enablePostHog: true },
     { descriptor: "is not enabled", enablePostHog: false },
@@ -49,7 +49,7 @@ describe("LearningResourceDrawer", () => {
         resource,
       )
 
-      renderWithProviders(<LearningResourceDrawer />, {
+      renderWithProviders(<LearningResourceDrawerV2 />, {
         url: `?dog=woof&${RESOURCE_DRAWER_QUERY_PARAM}=${resource.id}`,
       })
       expect(LearningResourceExpanded).toHaveBeenCalled()
@@ -67,7 +67,7 @@ describe("LearningResourceDrawer", () => {
   )
 
   it("Does not render drawer content when resource=id is NOT in the URL", async () => {
-    renderWithProviders(<LearningResourceDrawer />, {
+    renderWithProviders(<LearningResourceDrawerV2 />, {
       url: "?dog=woof",
     })
     expect(LearningResourceExpanded).not.toHaveBeenCalled()
@@ -117,7 +117,7 @@ describe("LearningResourceDrawer", () => {
         setMockResponse.get(urls.userMe.get(), null, { code: 403 })
       }
 
-      renderWithProviders(<LearningResourceDrawer />, {
+      renderWithProviders(<LearningResourceDrawerV2 />, {
         url: `?resource=${resource.id}`,
       })
 
