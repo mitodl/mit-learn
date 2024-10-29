@@ -787,3 +787,6 @@ DEFAULT_SEARCH_MAX_INCOMPLETENESS_PENALTY = get_float(
 DEFAULT_SEARCH_CONTENT_FILE_SCORE_WEIGHT = get_float(
     name="DEFAULT_SEARCH_CONTENT_FILE_SCORE_WEIGHT", default=1
 )
+
+QDRANT_API_KEY = get_string(name="QDRANT_API_KEY", default="")
+QDRANT_HOST = get_string(name="QDRANT_HOST", default="http://qdrant:6333")
