@@ -1,6 +1,6 @@
 "use client"
 
-import React, { Suspense } from "react"
+import React from "react"
 import { Container, styled, theme } from "ol-components"
 import HeroSearch from "@/page-components/HeroSearch/HeroSearch"
 import BrowseTopicsSection from "./BrowseTopicsSection"
@@ -46,25 +46,21 @@ const HomePage: React.FC = () => {
         <Container style={{ overflow: "hidden" }}>
           <HeroSearch />
           <section>
-            <Suspense>
-              <FeaturedCoursesCarousel
-                titleComponent="h2"
-                title="Featured Courses"
-                config={carousels.FEATURED_RESOURCES_CAROUSEL}
-              />
-            </Suspense>
+            <FeaturedCoursesCarousel
+              titleComponent="h2"
+              title="Featured Courses"
+              config={carousels.FEATURED_RESOURCES_CAROUSEL}
+            />
           </section>
         </Container>
       </FullWidthBackground>
       <PersonalizeSection />
       <Container component="section">
-        <Suspense>
-          <MediaCarousel
-            titleComponent="h2"
-            title="Media"
-            config={carousels.MEDIA_CAROUSEL}
-          />
-        </Suspense>
+        <MediaCarousel
+          titleComponent="h2"
+          title="Media"
+          config={carousels.MEDIA_CAROUSEL}
+        />
       </Container>
       <BrowseTopicsSection />
       <TestimonialsSection />
