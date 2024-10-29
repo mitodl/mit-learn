@@ -169,7 +169,6 @@ EXPECTED_PROGRAMS = [
 @pytest.fixture
 def prof_ed_settings(settings):
     """Fixture to set Professional Education API URL"""
-    settings.MITPE_BASE_API_URL = "http://pro_edu_api.com"
     settings.MITPE_API_ENABLED = True
     return settings
 
@@ -195,7 +194,7 @@ def mock_fetch_data(mocker):
 @pytest.mark.parametrize("prof_ed_api_url", ["http://pro_edd_api.com", None])
 def test_extract(settings, mock_fetch_data, prof_ed_api_url):
     """Test extract function"""
-    settings.MITPE_BASE_API_URL = prof_ed_api_url
+    settings.MITPE_BASE_URL = prof_ed_api_url
     settings.MITPE_API_ENABLED = True
     expected = []
     for page in range(3):
@@ -213,9 +212,8 @@ def test_extract(settings, mock_fetch_data, prof_ed_api_url):
 
 
 @pytest.mark.django_db
-def test_transform(settings, mock_fetch_data, prof_ed_settings):
+def test_transform(mock_fetch_data, prof_ed_settings):
     """Test transform function, and effectively most other functions"""
-    settings.MITPE_BASE_API_URL = "http://pro_edu_api.edu"
     offeror = LearningResourceOfferorFactory.create(code="mitpe")
     LearningResourceTopicMappingFactory.create(
         offeror=offeror,

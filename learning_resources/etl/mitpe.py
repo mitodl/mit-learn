@@ -28,7 +28,6 @@ from main.utils import clean_data, now_in_utc
 
 log = logging.getLogger(__name__)
 
-BASE_URL = "https://professional.mit.edu/"
 OFFERED_BY = {"code": OfferedBy.mitpe.name}
 
 
@@ -61,14 +60,14 @@ def extract() -> list[dict]:
         list[dict]: list of raw course or program data
     """
     required_settings = [
-        "MITPE_BASE_API_URL",
+        "MITPE_BASE_URL",
         "MITPE_API_ENABLED",
     ]
     for setting in required_settings:
         if not getattr(settings, setting):
             log.warning("Missing required setting %s", setting)
             return []
-    return list(_fetch_data(urljoin(settings.MITPE_BASE_API_URL, "/feeds/courses/")))
+    return list(_fetch_data(urljoin(settings.MITPE_BASE_URL, "/feeds/courses/")))
 
 
 def parse_topics(resource_data: dict) -> list[dict]:
@@ -116,7 +115,7 @@ def parse_image(resource_data: dict) -> dict or None:
     if img_src:
         return {
             "alt": resource_data["image__alt"],
-            "url": urljoin(BASE_URL, img_src),
+            "url": urljoin(settings.MITPE_BASE_URL, img_src),
         }
     return None
 
@@ -150,7 +149,7 @@ def parse_resource_url(resource_data: dict) -> str:
     Returns:
         str: url for the resource
     """
-    return urljoin(BASE_URL, resource_data["url"])
+    return urljoin(settings.MITPE_BASE_URL, resource_data["url"])
 
 
 def clean_title(title: str) -> str:
