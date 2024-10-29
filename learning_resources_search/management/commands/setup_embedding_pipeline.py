@@ -1,4 +1,4 @@
-"""Management command to update learning resource content"""
+"""Management command to setup pipeline for vector embedding"""
 
 from django.core.management.base import BaseCommand
 
