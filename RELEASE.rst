@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.24.0
+Version 0.24.0 (Released October 29, 2024)
 --------------
 
 - adding fix for pruning percolate queries (#1770)
