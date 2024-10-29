@@ -143,11 +143,11 @@ const OnPlatform = styled.span`
   color: ${theme.custom.colors.black};
 `
 
-const VideoFrame = styled.iframe<{ aspectRatio: string }>`
+const VideoFrame = styled.iframe`
   border-radius: 8px;
   border: none;
   width: 100%;
-  aspect-ratio: ${({ aspectRatio }) => aspectRatio}%;
+  aspect-ratio: 16 / 9;
 `
 
 type LearningResourceExpandedProps = {
@@ -168,9 +168,8 @@ const ImageSection: React.FC<{
       const videoId = resource?.url?.split("v=")[1]
       return (
         <VideoFrame
-          aspectRatio={`${config.width} / ${config.height}`}
           width="452"
-          height={452 / aspect}
+          height={452 / (16 / 9)}
           src={`http://www.youtube.com/embed/${videoId}`}
           title={resource?.title}
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
