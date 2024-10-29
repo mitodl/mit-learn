@@ -5,10 +5,6 @@ import { ChannelTypeEnum } from "api/v0"
 import { getMetadataAsync } from "@/common/metadata"
 import handleNotFound from "@/common/handleNotFound"
 
-type SearchParams = {
-  [key: string]: string | string[] | undefined
-}
-
 type RouteParams = {
   channelType: ChannelTypeEnum
   name: string
@@ -18,10 +14,10 @@ export async function generateMetadata({
   searchParams,
   params,
 }: {
-  searchParams: Promise<SearchParams>
-  params: Promise<RouteParams>
+  searchParams: { [key: string]: string | string[] | undefined }
+  params: RouteParams
 }) {
-  const { channelType, name } = await params
+  const { channelType, name } = params
 
   const { data } = await handleNotFound(
     channelsApi.channelsTypeRetrieve({ channel_type: channelType, name: name }),

@@ -10,7 +10,7 @@ type MetadataAsyncProps = {
   description?: string
   image?: string
   imageAlt?: string
-  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>
+  searchParams?: { [key: string]: string | string[] | undefined }
   social?: boolean
 } & Metadata
 
@@ -28,7 +28,7 @@ export const getMetadataAsync = async ({
   ...otherMeta
 }: MetadataAsyncProps) => {
   // The learning resource drawer is open
-  const learningResourceId = (await searchParams)?.[RESOURCE_DRAWER_QUERY_PARAM]
+  const learningResourceId = searchParams?.[RESOURCE_DRAWER_QUERY_PARAM]
   if (learningResourceId) {
     const { data } = await handleNotFound(
       learningResourcesApi.learningResourcesRetrieve({

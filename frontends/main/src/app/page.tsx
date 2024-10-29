@@ -3,14 +3,10 @@ import type { Metadata } from "next"
 import HomePage from "@/app-pages/HomePage/HomePage"
 import { getMetadataAsync } from "@/common/metadata"
 
-type SearchParams = {
-  [key: string]: string | string[] | undefined
-}
-
 export async function generateMetadata({
   searchParams,
 }: {
-  searchParams: Promise<SearchParams>
+  searchParams: { [key: string]: string | string[] | undefined }
 }): Promise<Metadata> {
   return await getMetadataAsync({
     title: "Learn with MIT",
