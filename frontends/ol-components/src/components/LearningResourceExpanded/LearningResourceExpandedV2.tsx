@@ -20,7 +20,7 @@ import type { EmbedlyConfig } from "ol-utilities"
 import { theme } from "../ThemeProvider/ThemeProvider"
 import { EmbedlyCard } from "../EmbedlyCard/EmbedlyCard"
 import { PlatformLogo, PLATFORMS } from "../Logo/Logo"
-import InfoSection from "./InfoSection"
+import InfoSectionV2 from "./InfoSectionV2"
 import type { User } from "api/hooks/user"
 import { LearningResourceCardProps } from "../LearningResourceCard/LearningResourceCard"
 import { CardActionButton } from "../LearningResourceCard/LearningResourceListCard"
@@ -165,7 +165,7 @@ const ListButtonContainer = styled.div({
   justifyContent: "flex-end",
 })
 
-type LearningResourceExpandedProps = {
+type LearningResourceExpandedV2Props = {
   resource?: LearningResource
   user?: User
   imgConfig: EmbedlyConfig
@@ -425,7 +425,7 @@ const ResourceDescription = ({ resource }: { resource?: LearningResource }) => {
   )
 }
 
-const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
+const LearningResourceExpandedV2: React.FC<LearningResourceExpandedV2Props> = ({
   resource,
   imgConfig,
   user,
@@ -443,7 +443,7 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
         <ContentContainer>
           <LeftContainer>
             <ResourceDescription resource={resource} />
-            <InfoSection resource={resource} />
+            <InfoSectionV2 resource={resource} />
           </LeftContainer>
           <RightContainer>
             <CallToActionSection
@@ -460,5 +460,5 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
   )
 }
 
-export { LearningResourceExpanded, getCallToActionText }
-export type { LearningResourceExpandedProps }
+export { LearningResourceExpandedV2, getCallToActionText }
+export type { LearningResourceExpandedV2Props }

@@ -11,27 +11,11 @@ import {
 } from "next/navigation"
 import { useToggle } from "ol-utilities"
 
-const CloseButton = styled(ActionButton)(({ theme }) => ({
-  "&&&": {
-    position: "absolute",
-    top: "24px",
-    right: "32px",
-    backgroundColor: theme.custom.colors.lightGray2,
-    color: theme.custom.colors.black,
-    ["&:hover"]: {
-      opacity: 1,
-      backgroundColor: theme.custom.colors.red,
-      color: theme.custom.colors.white,
-    },
-  },
-}))
-
-const CloseIcon = styled(RiCloseLargeLine)`
-  &&& {
-    width: 18px;
-    height: 18px;
-  }
-`
+const CloseButton = styled(ActionButton)({
+  position: "absolute",
+  top: "16px",
+  right: "22px",
+})
 
 type ChildParams<K extends string, R extends K> = Record<K, string | null> &
   Record<R, string>
@@ -128,7 +112,7 @@ const RoutedDrawer = <K extends string, R extends K = K>(
               onClick={setOpen.off}
               aria-label="Close"
             >
-              <CloseIcon />
+              <RiCloseLargeLine />
             </CloseButton>
           )}
         </>

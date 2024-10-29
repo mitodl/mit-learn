@@ -376,7 +376,7 @@ const InfoItem = ({ label, Icon, value }: InfoItemProps) => {
   )
 }
 
-const InfoSection = ({ resource }: { resource?: LearningResource }) => {
+const InfoSectionV2 = ({ resource }: { resource?: LearningResource }) => {
   if (!resource) {
     return null
   }
@@ -400,4 +400,4 @@ const InfoSection = ({ resource }: { resource?: LearningResource }) => {
   )
 }
 
-export default InfoSection
+export default InfoSectionV2

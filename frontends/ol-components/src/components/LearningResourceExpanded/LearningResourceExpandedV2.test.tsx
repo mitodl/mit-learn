@@ -4,9 +4,9 @@ import { render, screen, within } from "@testing-library/react"
 
 import {
   getCallToActionText,
-  LearningResourceExpanded,
-} from "./LearningResourceExpanded"
-import type { LearningResourceExpandedProps } from "./LearningResourceExpanded"
+  LearningResourceExpandedV2,
+} from "./LearningResourceExpandedV2"
+import type { LearningResourceExpandedV2Props } from "./LearningResourceExpandedV2"
 import { ResourceTypeEnum, PodcastEpisodeResource } from "api"
 import { factories } from "api/test-utils"
 import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
@@ -15,7 +15,7 @@ import type { LearningResource } from "api"
 import { PLATFORMS } from "../Logo/Logo"
 import _ from "lodash"
 
-const IMG_CONFIG: LearningResourceExpandedProps["imgConfig"] = {
+const IMG_CONFIG: LearningResourceExpandedV2Props["imgConfig"] = {
   key: "fake-key",
   width: 385,
   height: 200,
@@ -27,7 +27,7 @@ const SEPARATOR = "|​"
 const setup = (resource: LearningResource) => {
   return render(
     <BrowserRouter>
-      <LearningResourceExpanded resource={resource} imgConfig={IMG_CONFIG} />
+      <LearningResourceExpandedV2 resource={resource} imgConfig={IMG_CONFIG} />
     </BrowserRouter>,
     { wrapper: ThemeProvider },
   )
