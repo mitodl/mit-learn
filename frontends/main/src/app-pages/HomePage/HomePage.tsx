@@ -43,7 +43,7 @@ const HomePage: React.FC = () => {
     <>
       <LearningResourceDrawer />
       <FullWidthBackground>
-        <Container style={{ overflow: "hidden" }}>
+        <Container>
           <HeroSearch />
           <section>
             <FeaturedCoursesCarousel
