@@ -10,7 +10,7 @@ import { RiDraggable } from "@remixicon/react"
 import { theme } from "../ThemeProvider/ThemeProvider"
 import {
   Wrapper,
-  Container,
+  BaseContainer,
   ImageProps,
   useClickChildHref,
   Linkable,
@@ -193,15 +193,15 @@ const ListCard: Card = ({ children, className, href, draggable, onClick }) => {
   const classNames = ["MitListCard-root", className ?? ""].join(" ")
   if (content) {
     return (
-      <Container onClick={handleClick} className={classNames}>
+      <BaseContainer onClick={handleClick} className={classNames}>
         {content}
-      </Container>
+      </BaseContainer>
     )
   }
 
   return (
     <Wrapper className={classNames}>
-      <Container display="flex" onClick={handleClick}>
+      <BaseContainer display="flex" onClick={handleClick}>
         {draggable && (
           <DragArea>
             <RiDraggable />
@@ -223,7 +223,7 @@ const ListCard: Card = ({ children, className, href, draggable, onClick }) => {
           // eslint-disable-next-line styled-components-a11y/alt-text
           <Image {...(imageProps as ImageProps)} />
         )}
-      </Container>
+      </BaseContainer>
       {actions && <Actions hasImage={!!imageProps}>{actions}</Actions>}
     </Wrapper>
   )

@@ -50,21 +50,11 @@ export const Linkable: React.FC<LinkableProps> = ({
  * Link container in the DOM structure. They cannot be a descendent of it as
  * buttons inside anchors are not valid HTML.
  */
-export const Wrapper = styled.div<{ size?: Size }>`
+export const Wrapper = styled.div`
   position: relative;
-  ${({ size }) => {
-    let width
-    if (!size) return ""
-    if (size === "medium") width = 300
-    if (size === "small") width = 192
-    return `
-      min-width: ${width}px;
-      max-width: ${width}px;
-    `
-  }}
 `
 
-export const Container = styled.div<{ display?: CSSProperties["display"] }>(
+export const BaseContainer = styled.div<{ display?: CSSProperties["display"] }>(
   ({ theme, onClick, display = "block" }) => [
     {
       borderRadius: "8px",
@@ -84,6 +74,16 @@ export const Container = styled.div<{ display?: CSSProperties["display"] }>(
     },
   ],
 )
+const CONTAINER_WIDTHS: Record<Size, number> = {
+  small: 192,
+  medium: 300,
+}
+const Container = styled(BaseContainer)<{ size?: Size }>(({ size }) => [
+  size && {
+    minWidth: CONTAINER_WIDTHS[size],
+    maxWidth: CONTAINER_WIDTHS[size],
+  },
+])
 
 const Content = () => <></>
 
@@ -155,9 +155,6 @@ const Bottom = styled.div`
 const Actions = styled.div`
   display: flex;
   gap: 8px;
-  position: absolute;
-  bottom: 16px;
-  right: 16px;
 `
 
 /**
@@ -266,50 +263,46 @@ const Card: Card = ({ children, className, size, href, onClick }) => {
 
   if (content) {
     return (
-      <Wrapper className={allClassNames} size={size}>
-        <Container onClick={handleClick} className={className}>
-          {content}
-        </Container>
-      </Wrapper>
+      <Container className={allClassNames} size={size} onClick={handleClick}>
+        {content}
+      </Container>
     )
   }
 
   return (
-    <Wrapper className={allClassNames} size={size}>
-      <Container onClick={handleClick}>
-        {image && (
-          // alt text will be checked on Card.Image
-          // eslint-disable-next-line styled-components-a11y/alt-text
-          <Image
-            className="MitCard-image"
-            size={size}
-            height={170}
-            width={298}
-            {...(image as ImageProps)}
-          />
-        )}
-        <Body>
-          {info.children && (
-            <Info className="MitCard-info" size={size} {...info}>
-              {info.children}
-            </Info>
-          )}
-          <Title href={href} className="MitCard-title" size={size} {...title}>
-            {title.children}
-          </Title>
-        </Body>
-        <Bottom>
-          <Footer className="MitCard-footer" {...footer}>
-            {footer.children}
-          </Footer>
-        </Bottom>
-      </Container>
-      {actions.children && (
-        <Actions className="MitCard-actions" {...actions}>
-          {actions.children}
-        </Actions>
+    <Container className={allClassNames} size={size} onClick={handleClick}>
+      {image && (
+        // alt text will be checked on Card.Image
+        // eslint-disable-next-line styled-components-a11y/alt-text
+        <Image
+          className="MitCard-image"
+          size={size}
+          height={170}
+          width={298}
+          {...(image as ImageProps)}
+        />
       )}
-    </Wrapper>
+      <Body>
+        {info.children && (
+          <Info className="MitCard-info" size={size} {...info}>
+            {info.children}
+          </Info>
+        )}
+        <Title href={href} className="MitCard-title" size={size} {...title}>
+          {title.children}
+        </Title>
+      </Body>
+      <Bottom>
+        <Footer className="MitCard-footer" {...footer}>
+          {footer.children}
+        </Footer>
+        {actions.children && (
+          <Actions className="MitCard-actions" {...actions}>
+            {actions.children}
+          </Actions>
+        )}
+      </Bottom>
+    </Container>
   )
 }
 

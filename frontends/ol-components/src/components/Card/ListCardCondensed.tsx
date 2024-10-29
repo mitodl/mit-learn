@@ -2,7 +2,7 @@ import React, { FC, ReactNode, Children, isValidElement } from "react"
 import styled from "@emotion/styled"
 import { RiDraggable } from "@remixicon/react"
 import { theme } from "../ThemeProvider/ThemeProvider"
-import { Wrapper, Container, useClickChildHref } from "./Card"
+import { Wrapper, BaseContainer, useClickChildHref } from "./Card"
 import { TruncateText } from "../TruncateText/TruncateText"
 import {
   ListCard,
@@ -99,15 +99,15 @@ const ListCardCondensed: Card = ({
 
   if (content) {
     return (
-      <Container onClick={handleClick} className={className}>
+      <BaseContainer onClick={handleClick} className={className}>
         {content}
-      </Container>
+      </BaseContainer>
     )
   }
 
   return (
     <Wrapper className={className}>
-      <Container onClick={handleClick}>
+      <BaseContainer onClick={handleClick}>
         {draggable && (
           <DragArea>
             <RiDraggable />
@@ -122,7 +122,7 @@ const ListCardCondensed: Card = ({
             <Footer>{footer}</Footer>
           </Bottom>
         </Body>
-      </Container>
+      </BaseContainer>
       {actions && <Actions>{actions}</Actions>}
     </Wrapper>
   )
