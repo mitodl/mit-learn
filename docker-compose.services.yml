@@ -31,7 +31,10 @@ services:
       retries: 10
     ports:
       - "6379"
-
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
   nginx:
     profiles:
       - backend
