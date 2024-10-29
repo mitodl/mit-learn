@@ -38,12 +38,18 @@ const MediaCarousel = styled(ResourceCarousel)(({ theme }) => ({
   },
 }))
 
+const StyledContainer = styled(Container)({
+  "@media (max-width: 1365px)": {
+    overflow: "hidden",
+  },
+})
+
 const HomePage: React.FC = () => {
   return (
     <>
       <LearningResourceDrawer />
       <FullWidthBackground>
-        <Container>
+        <StyledContainer>
           <HeroSearch />
           <section>
             <FeaturedCoursesCarousel
@@ -52,7 +58,7 @@ const HomePage: React.FC = () => {
               config={carousels.FEATURED_RESOURCES_CAROUSEL}
             />
           </section>
-        </Container>
+        </StyledContainer>
       </FullWidthBackground>
       <PersonalizeSection />
       <Container component="section">
