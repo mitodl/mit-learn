@@ -23,7 +23,6 @@ const Content = () => <></>
 
 export const Body = styled.div`
   flex-grow: 1;
-  overflow: hidden;
   margin: 24px;
   ${theme.breakpoints.down("md")} {
     margin: 12px;

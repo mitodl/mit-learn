@@ -72,6 +72,7 @@ export const Container = styled.div<{ display?: CSSProperties["display"] }>(
       background: theme.custom.colors.white,
       display,
       position: "relative",
+      overflow: "hidden", // to clip image so they match border radius
     },
     onClick && {
       "&:hover": {
