@@ -589,6 +589,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
         "max_incompleteness_penalty",
       ),
       content_file_score_weight: searchParams.get("content_file_score_weight"),
+      use_semantic: searchParams.get("use_semantic"),
       ...requestParams,
       aggregations: (facetNames || []).concat([
         "resource_category",

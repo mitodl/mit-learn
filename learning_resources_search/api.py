@@ -200,7 +200,7 @@ def generate_content_file_text_clause(text):
 
 
 def generate_learning_resources_text_clause(
-    text, search_mode, slop, content_file_score_weight
+    text, search_mode, slop, content_file_score_weight, use_semantic
 ):
     """
     Return text clause for the query
@@ -321,6 +321,24 @@ def generate_learning_resources_text_clause(
                 },
             ]
         }
+
+        if use_semantic:
+            text_query = {"should": []}
+            for field in [
+                "title_embedding",
+                "description_embedding",
+                "full_description_embedding",
+            ]:
+                text_query["should"].append(
+                    {
+                        "text_expansion": {
+                            field: {
+                                "model_id": ".elser_model_2",
+                                "model_text": text,
+                            }
+                        }
+                    },
+                )
     else:
         text_query = {}
 
@@ -571,6 +589,7 @@ def add_text_query_to_search(search, text, search_params, query_type_query):
             search_params.get("search_mode"),
             search_params.get("slop"),
             search_params.get("content_file_score_weight"),
+            search_params.get("use_semantic"),
         )
 
     yearly_decay_percent = search_params.get("yearly_decay_percent")
