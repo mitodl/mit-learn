@@ -197,7 +197,6 @@ def extract():
         "SEE_API_CLIENT_SECRET",
         "SEE_API_ACCESS_TOKEN_URL",
         "SEE_API_URL",
-        "SEE_API_ENABLED",
     ]
     for setting in required_settings:
         if not getattr(settings, setting):

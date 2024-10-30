@@ -23,12 +23,12 @@ def extract() -> list[dict]:
     Returns:
         list[dict]: News data in JSON format.
     """
-    if settings.MITPE_BASE_API_URL:
+    if settings.MITPE_BASE_URL:
         return list(
-            fetch_data_by_page(urljoin(settings.MITPE_BASE_API_URL, "/feeds/news/"))
+            fetch_data_by_page(urljoin(settings.MITPE_BASE_URL, "/feeds/news/"))
         )
     else:
-        log.warning("Missing required setting MITPE_BASE_API_URL")
+        log.warning("Missing required setting MITPE_BASE_URL")
     return []
 
 
