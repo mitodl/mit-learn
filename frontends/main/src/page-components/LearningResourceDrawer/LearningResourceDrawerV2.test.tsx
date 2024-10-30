@@ -8,7 +8,7 @@ import {
 } from "@/test-utils"
 import LearningResourceDrawerV2 from "./LearningResourceDrawerV2"
 import { urls, factories, setMockResponse } from "api/test-utils"
-import { LearningResourceExpanded } from "ol-components"
+import { LearningResourceExpandedV2 } from "ol-components"
 import { RESOURCE_DRAWER_QUERY_PARAM } from "@/common/urls"
 import { ResourceTypeEnum } from "api"
 
@@ -16,7 +16,7 @@ jest.mock("ol-components", () => {
   const actual = jest.requireActual("ol-components")
   return {
     ...actual,
-    LearningResourceExpanded: jest.fn(actual.LearningResourceExpanded),
+    LearningResourceExpandedV2: jest.fn(actual.LearningResourceExpandedV2),
   }
 })
 
@@ -52,9 +52,9 @@ describe("LearningResourceDrawerV2", () => {
       renderWithProviders(<LearningResourceDrawerV2 />, {
         url: `?dog=woof&${RESOURCE_DRAWER_QUERY_PARAM}=${resource.id}`,
       })
-      expect(LearningResourceExpanded).toHaveBeenCalled()
+      expect(LearningResourceExpandedV2).toHaveBeenCalled()
       await waitFor(() => {
-        expectProps(LearningResourceExpanded, { resource })
+        expectProps(LearningResourceExpandedV2, { resource })
       })
       await screen.findByText(resource.title)
 
@@ -70,7 +70,7 @@ describe("LearningResourceDrawerV2", () => {
     renderWithProviders(<LearningResourceDrawerV2 />, {
       url: "?dog=woof",
     })
-    expect(LearningResourceExpanded).not.toHaveBeenCalled()
+    expect(LearningResourceExpandedV2).not.toHaveBeenCalled()
   })
 
   test.each([
@@ -121,10 +121,10 @@ describe("LearningResourceDrawerV2", () => {
         url: `?resource=${resource.id}`,
       })
 
-      expect(LearningResourceExpanded).toHaveBeenCalled()
+      expect(LearningResourceExpandedV2).toHaveBeenCalled()
 
       await waitFor(() => {
-        expectProps(LearningResourceExpanded, { resource })
+        expectProps(LearningResourceExpandedV2, { resource })
       })
 
       const section = screen.getByTestId("drawer-cta")
