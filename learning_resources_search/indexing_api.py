@@ -10,6 +10,8 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from opensearchpy.exceptions import ConflictError, NotFoundError
 from opensearchpy.helpers import BulkIndexError, bulk
+from qdrant_client import QdrantClient, models
+from sentence_transformers import SentenceTransformer
 
 from learning_resources.models import ContentFile, LearningResourceRun
 from learning_resources_search.connection import (
@@ -86,6 +88,41 @@ def clear_featured_rank(rank, clear_all_greater_than):
         )
 
 
+def qdrant_client():
+    return QdrantClient(url=settings.QDRANT_HOST, api_key=settings.QDRANT_API_KEY)
+
+
+def embed_learning_resources(ids, resource_type):  # noqa: ARG001
+    # update embeddings
+    client = qdrant_client()
+    encoder = SentenceTransformer("all-MiniLM-L6-v2")
+    serialized_resources = serialize_bulk_learning_resources(ids)
+    collection_name = settings.QDRANT_COLLECTION_NAME
+    if not client.collection_exists(collection_name=collection_name):
+        client.create_collection(
+            collection_name=collection_name,
+            on_disk_payload=True,
+            vectors_config=models.VectorParams(
+                # Vector size is defined by used model
+                size=encoder.get_sentence_embedding_dimension(),
+                distance=models.Distance.COSINE,
+            ),
+        )
+    client.upload_points(
+        collection_name=collection_name,
+        points=[
+            models.PointStruct(
+                id=doc["id"],
+                vector=encoder.encode(
+                    f'{doc["title"]} {doc["description"]} {doc["full_description"]}'
+                ).tolist(),
+                payload=doc,
+            )
+            for doc in serialized_resources
+        ],
+    )
+
+
 def _update_document_by_id(doc_id, body, object_type, *, retry_on_conflict=0, **kwargs):
     """
     Make a request to Open Search to update an existing document
@@ -99,6 +136,7 @@ def _update_document_by_id(doc_id, body, object_type, *, retry_on_conflict=0, **
         kwargs (dict): Optional kwargs to be passed to opensearch
     """
     conn = get_conn()
+
     for alias in get_active_aliases(conn, object_types=[object_type]):
         try:
             conn.update(

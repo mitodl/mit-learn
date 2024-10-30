@@ -790,3 +790,6 @@ DEFAULT_SEARCH_CONTENT_FILE_SCORE_WEIGHT = get_float(
 
 QDRANT_API_KEY = get_string(name="QDRANT_API_KEY", default="")
 QDRANT_HOST = get_string(name="QDRANT_HOST", default="http://qdrant:6333")
+QDRANT_COLLECTION_NAME = get_string(
+    name="QDRANT_COLLECTION_NAME", default="learning_resources"
+)
