@@ -142,13 +142,31 @@ const ListCardActionButton = styled(ActionButton)<{ isMobile?: boolean }>(
 type CardProps = {
   children: ReactNode[] | ReactNode
   className?: string
+  /**
+   * If provided, the card will render its title as a link.
+   *
+   * Clicks on the entire card can be forwarded to the link via `forwardClicksToLink`.
+   */
   href?: string
+  /**
+   * Defaults to `false`. If `true`, clicking the whole card will click the
+   * href link as well.
+   *
+   * NOTES:
+   *  - If using Card.Content to customize, you must ensure the content includes
+   *  an anchor with the card's href.
+   *  - Clicks will NOT be forwarded if:
+   *    - The click target is a child of Card.Actions OR an element with
+   *    - The click target is a child of any element with data-card-actions attribute
+   */
+  forwardClicksToLink?: boolean
   draggable?: boolean
   onClick?: () => void
-}
+  as?: React.ElementType
+} & AriaAttributes
 type TitleProps = {
   children?: ReactNode
-} & Pick<AriaAttributes, "aria-label">
+}
 
 export type Card = FC<CardProps> & {
   Content: FC<{ children: ReactNode }>
@@ -160,12 +178,20 @@ export type Card = FC<CardProps> & {
   Action: FC<ActionButtonProps>
 }
 
-const ListCard: Card = ({ children, className, href, draggable, onClick }) => {
+const ListCard: Card = ({
+  children,
+  className,
+  href,
+  forwardClicksToLink = false,
+  draggable,
+  onClick,
+  ...others
+}) => {
   let content, imageProps, info, footer, actions
   let title: TitleProps = {}
   const hasHref = typeof href === "string"
   const handleHrefClick = useClickChildHref(href, onClick)
-  const handleClick = hasHref ? handleHrefClick : onClick
+  const handleClick = hasHref && forwardClicksToLink ? handleHrefClick : onClick
 
   Children.forEach(children, (child) => {
     if (!isValidElement(child)) return
@@ -180,14 +206,19 @@ const ListCard: Card = ({ children, className, href, draggable, onClick }) => {
   const classNames = ["MitListCard-root", className ?? ""].join(" ")
   if (content) {
     return (
-      <BaseContainer onClick={handleClick} className={classNames}>
+      <BaseContainer {...others} onClick={handleClick} className={classNames}>
         {content}
       </BaseContainer>
     )
   }
 
   return (
-    <BaseContainer className={classNames} display="flex" onClick={handleClick}>
+    <BaseContainer
+      {...others}
+      className={classNames}
+      display="flex"
+      onClick={handleClick}
+    >
       {draggable && (
         <DragArea>
           <RiDraggable />
@@ -202,7 +233,7 @@ const ListCard: Card = ({ children, className, href, draggable, onClick }) => {
         )}
         <Bottom>
           <Footer>{footer}</Footer>
-          {actions && <Actions>{actions}</Actions>}
+          {actions && <Actions data-card-actions>{actions}</Actions>}
         </Bottom>
       </Body>
       {imageProps && (

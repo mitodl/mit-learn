@@ -19,7 +19,7 @@ type LinkableProps = {
   href?: string
   children?: ReactNode
   className?: string
-} & Pick<AriaAttributes, "aria-label">
+}
 /**
  * Render a NextJS link if href is provided, otherwise a span.
  * Does not scroll if the href is a query string.
@@ -28,31 +28,16 @@ export const Linkable: React.FC<LinkableProps> = ({
   href,
   children,
   className,
-  "aria-label": ariaLabel,
 }) => {
   if (href) {
     return (
-      <Link
-        aria-label={ariaLabel}
-        className={className}
-        href={href}
-        scroll={!href.startsWith("?")}
-      >
+      <Link className={className} href={href} scroll={!href.startsWith("?")}>
         {children}
       </Link>
     )
   }
   return <span className={className}>{children}</span>
 }
-
-/*
- *The relative positioned wrapper allows the action buttons to live adjacent to the
- * Link container in the DOM structure. They cannot be a descendent of it as
- * buttons inside anchors are not valid HTML.
- */
-export const Wrapper = styled.div`
-  position: relative;
-`
 
 export const BaseContainer = styled.div<{ display?: CSSProperties["display"] }>(
   ({ theme, onClick, display = "block" }) => [
@@ -61,7 +46,6 @@ export const BaseContainer = styled.div<{ display?: CSSProperties["display"] }>(
       border: `1px solid ${theme.custom.colors.lightGray2}`,
       background: theme.custom.colors.white,
       display,
-      position: "relative",
       overflow: "hidden", // to clip image so they match border radius
     },
     onClick && {
@@ -170,11 +154,17 @@ export const useClickChildHref = (
   return useCallback(
     (e) => {
       onClick?.(e)
+      if (!e.currentTarget.contains(e.target as Node)) {
+        // This happens if click target is a child in React tree but not DOM tree
+        // This can happen with portals.
+        // In such cases, data-card-actions won't be a parent of the target.
+        return
+      }
       const anchor = e.currentTarget.querySelector<HTMLAnchorElement>(
         `a[href="${href}"]`,
       )
       const target = e.target as HTMLElement
-      if (!anchor || target.closest("a, button")) return
+      if (!anchor || target.closest("a, button, [data-card-action]")) return
       if (e.metaKey || e.ctrlKey) {
         const opts: PointerEventInit = {
           bubbles: false,
@@ -195,12 +185,26 @@ type CardProps = {
   className?: string
   size?: Size
   /**
-   * If provided, the card will render its title as a link. The entire card will
-   * be clickable, activating the link.
+   * If provided, the card will render its title as a link.
+   *
+   * Clicks on the entire card can be forwarded to the link via `forwardClicksToLink`.
    */
   href?: string
+  /**
+   * Defaults to `false`. If `true`, clicking the whole card will click the
+   * href link as well.
+   *
+   * NOTES:
+   *  - If using Card.Content to customize, you must ensure the content includes
+   *  an anchor with the card's href.
+   *  - Clicks will NOT be forwarded if it is (or is a child of):
+   *    - an anchor or button element
+   *    - OR an element with data-card-action
+   */
+  forwardClicksToLink?: boolean
   onClick?: React.MouseEventHandler<HTMLElement>
-}
+  as?: React.ElementType
+} & AriaAttributes
 
 export type ImageProps = NextImageProps & {
   size?: Size
@@ -211,7 +215,7 @@ type TitleProps = {
   children?: ReactNode
   lines?: number
   style?: CSSProperties
-} & Pick<AriaAttributes, "aria-label">
+}
 
 type SlotProps = { children?: ReactNode; style?: CSSProperties }
 
@@ -224,7 +228,15 @@ type Card = FC<CardProps> & {
   Actions: FC<SlotProps>
 }
 
-const Card: Card = ({ children, className, size, href, onClick }) => {
+const Card: Card = ({
+  children,
+  className,
+  size,
+  href,
+  onClick,
+  forwardClicksToLink = false,
+  ...others
+}) => {
   let content,
     image: ImageProps | null = null,
     info: SlotProps = {},
@@ -257,20 +269,30 @@ const Card: Card = ({ children, className, size, href, onClick }) => {
 
   const hasHref = typeof href === "string"
   const handleHrefClick = useClickChildHref(href, onClick)
-  const handleClick = hasHref ? handleHrefClick : onClick
+  const handleClick = hasHref && forwardClicksToLink ? handleHrefClick : onClick
 
   const allClassNames = ["MitCard-root", className ?? ""].join(" ")
 
   if (content) {
     return (
-      <Container className={allClassNames} size={size} onClick={handleClick}>
+      <Container
+        {...others}
+        className={allClassNames}
+        size={size}
+        onClick={handleClick}
+      >
         {content}
       </Container>
     )
   }
 
   return (
-    <Container className={allClassNames} size={size} onClick={handleClick}>
+    <Container
+      {...others}
+      className={allClassNames}
+      size={size}
+      onClick={handleClick}
+    >
       {image && (
         // alt text will be checked on Card.Image
         // eslint-disable-next-line styled-components-a11y/alt-text
@@ -297,7 +319,7 @@ const Card: Card = ({ children, className, size, href, onClick }) => {
           {footer.children}
         </Footer>
         {actions.children && (
-          <Actions className="MitCard-actions" {...actions}>
+          <Actions className="MitCard-actions" data-card-actions {...actions}>
             {actions.children}
           </Actions>
         )}

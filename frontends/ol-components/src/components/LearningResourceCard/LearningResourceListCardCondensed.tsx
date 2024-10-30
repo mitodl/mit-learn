@@ -115,8 +115,16 @@ const LearningResourceListCardCondensed: React.FC<
   if (!resource) {
     return null
   }
+  const readableType = getReadableResourceType(resource.resource_type)
   return (
-    <ListCardCondensed href={href} className={className} draggable={draggable}>
+    <ListCardCondensed
+      as="article"
+      aria-label={`${readableType}: ${resource.title}`}
+      href={href}
+      forwardClicksToLink
+      className={className}
+      draggable={draggable}
+    >
       <ListCardCondensed.Info>
         <Info resource={resource} />
       </ListCardCondensed.Info>
@@ -134,7 +142,7 @@ const LearningResourceListCardCondensed: React.FC<
         {onAddToUserListClick && (
           <CardActionButton
             filled={inUserList}
-            aria-label={`Bookmark ${getReadableResourceType(resource.resource_type)}`}
+            aria-label={`Bookmark ${readableType}`}
             onClick={(event) => onAddToUserListClick(event, resource.id)}
           >
             {inUserList ? (

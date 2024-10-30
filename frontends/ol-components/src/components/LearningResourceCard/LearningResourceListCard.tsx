@@ -309,7 +309,14 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
   }
   const readableType = getReadableResourceType(resource.resource_type)
   return (
-    <ListCard href={href} className={className} draggable={draggable}>
+    <ListCard
+      as="article"
+      aria-label={`${readableType}: ${resource.title}`}
+      href={href}
+      forwardClicksToLink
+      className={className}
+      draggable={draggable}
+    >
       <ListCard.Image
         src={resource.image?.url || DEFAULT_RESOURCE_IMG}
         alt={resource.image?.alt ?? ""}
@@ -318,9 +325,7 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
       <ListCard.Info>
         <Info resource={resource} />
       </ListCard.Info>
-      <ListCard.Title aria-label={`${readableType}: ${resource.title}`}>
-        {resource.title}
-      </ListCard.Title>
+      <ListCard.Title>{resource.title}</ListCard.Title>
       <ListCard.Actions>
         {onAddToLearningPathClick && (
           <CardActionButton

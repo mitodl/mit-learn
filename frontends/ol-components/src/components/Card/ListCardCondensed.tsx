@@ -1,4 +1,10 @@
-import React, { FC, ReactNode, Children, isValidElement } from "react"
+import React, {
+  FC,
+  ReactNode,
+  Children,
+  isValidElement,
+  AriaAttributes,
+} from "react"
 import styled from "@emotion/styled"
 import { RiDraggable } from "@remixicon/react"
 import { theme } from "../ThemeProvider/ThemeProvider"
@@ -61,10 +67,28 @@ const Content = () => <></>
 type CardProps = {
   children: ReactNode[] | ReactNode
   className?: string
+  /**
+   * If provided, the card will render its title as a link.
+   *
+   * Clicks on the entire card can be forwarded to the link via `forwardClicksToLink`.
+   */
   href?: string
+  /**
+   * Defaults to `false`. If `true`, clicking the whole card will click the
+   * href link as well.
+   *
+   * NOTES:
+   *  - If using Card.Content to customize, you must ensure the content includes
+   *  an anchor with the card's href.
+   *  - Clicks will NOT be forwarded if:
+   *    - The click target is a child of Card.Actions OR an element with
+   *    - The click target is a child of any element with data-card-actions attribute
+   */
+  forwardClicksToLink?: boolean
   draggable?: boolean
   onClick?: () => void
-}
+  as?: React.ElementType
+} & AriaAttributes
 
 type Card = FC<CardProps> & Omit<BaseCard, "Image">
 
@@ -74,12 +98,14 @@ const ListCardCondensed: Card = ({
   href,
   draggable,
   onClick,
+  forwardClicksToLink = false,
+  ...others
 }) => {
   let content, info, title, footer, actions
 
   const hasHref = typeof href === "string"
   const handleHrefClick = useClickChildHref(href, onClick)
-  const handleClick = hasHref ? handleHrefClick : onClick
+  const handleClick = hasHref && forwardClicksToLink ? handleHrefClick : onClick
 
   Children.forEach(children, (child) => {
     if (!isValidElement(child)) return
@@ -92,14 +118,14 @@ const ListCardCondensed: Card = ({
 
   if (content) {
     return (
-      <BaseContainer onClick={handleClick} className={className}>
+      <BaseContainer {...others} onClick={handleClick} className={className}>
         {content}
       </BaseContainer>
     )
   }
 
   return (
-    <BaseContainer className={className} onClick={handleClick}>
+    <BaseContainer {...others} className={className} onClick={handleClick}>
       {draggable && (
         <DragArea>
           <RiDraggable />
@@ -112,7 +138,7 @@ const ListCardCondensed: Card = ({
         </Title>
         <Bottom>
           <Footer>{footer}</Footer>
-          {actions && <Actions>{actions}</Actions>}
+          {actions && <Actions data-card-actions>{actions}</Actions>}
         </Bottom>
       </Body>
     </BaseContainer>

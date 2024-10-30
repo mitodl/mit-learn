@@ -188,7 +188,7 @@ const Story: React.FC<{ item: NewsFeedItem; mobile: boolean }> = ({
   mobile,
 }) => {
   return (
-    <StoryCard mobile={mobile} href={item.url}>
+    <StoryCard mobile={mobile} href={item.url} forwardClicksToLink>
       {item.image.url ? (
         <Card.Image src={item.image.url} alt={item.image.alt || ""} />
       ) : null}
@@ -222,7 +222,7 @@ const NewsEventsSection: React.FC = () => {
   const stories = news.results.slice(0, 6)
 
   const EventCards = events.results.map((item) => (
-    <EventCard key={item.id} href={item.url}>
+    <EventCard key={item.id} href={item.url} forwardClicksToLink>
       <Card.Content>
         <EventDate>
           <EventDay>

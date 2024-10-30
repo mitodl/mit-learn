@@ -1,5 +1,5 @@
 import React from "react"
-import { screen, render } from "@testing-library/react"
+import { screen, render, within } from "@testing-library/react"
 import { LearningResourceCard } from "./LearningResourceCard"
 import type { LearningResourceCardProps } from "./LearningResourceCard"
 import { DEFAULT_RESOURCE_IMG, getReadableResourceType } from "ol-utilities"
@@ -14,19 +14,29 @@ const setup = (props: LearningResourceCardProps) => {
 }
 
 describe("Learning Resource Card", () => {
-  test("Renders resource type, title and start date", () => {
-    const resource = factories.learningResources.resource({
-      resource_type: ResourceTypeEnum.Course,
-      next_start_date: "2026-01-01",
-    })
+  test.each([
+    { resourceType: ResourceTypeEnum.Course, expectedLabel: "Course" },
+    { resourceType: ResourceTypeEnum.Program, expectedLabel: "Program" },
+  ])(
+    "Renders resource type, title and start date as a labeled article",
+    ({ resourceType, expectedLabel }) => {
+      const resource = factories.learningResources.resource({
+        resource_type: resourceType,
+        next_start_date: "2026-01-01",
+      })
 
-    setup({ resource })
+      setup({ resource })
 
-    screen.getByText("Course")
-    screen.getByText(resource.title)
-    screen.getByText("Starts:")
-    screen.getByText("January 01, 2026")
-  })
+      const card = screen.getByRole("article", {
+        name: `${expectedLabel}: ${resource.title}`,
+      })
+
+      within(card).getByText(expectedLabel)
+      within(card).getByText(resource.title)
+      within(card).getByText("Starts:")
+      within(card).getByText("January 01, 2026")
+    },
+  )
 
   test("Displays run start date", () => {
     const resource = factories.learningResources.resource({
@@ -96,11 +106,8 @@ describe("Learning Resource Card", () => {
     setup({ resource, href: "/path/to/thing" })
 
     const link = screen.getByRole<HTMLAnchorElement>("link", {
-      // Accessible name has resource type prepended
-      name: `Course: ${resource.title}`,
+      name: resource.title,
     })
-    // Visual title does not have resource name prepended
-    expect(link.textContent).toBe(resource.title)
     expect(new URL(link.href).pathname).toBe("/path/to/thing")
   })
 

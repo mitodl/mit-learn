@@ -231,7 +231,14 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
 
   const readableType = getReadableResourceType(resource.resource_type)
   return (
-    <StyledCard href={href} className={className} size={size}>
+    <StyledCard
+      as="article"
+      aria-label={`${readableType}: ${resource.title}`}
+      href={href}
+      forwardClicksToLink
+      className={className}
+      size={size}
+    >
       <Card.Image
         src={resource.image?.url ? resource.image?.url : DEFAULT_RESOURCE_IMG}
         alt={resource.image?.alt ?? ""}
@@ -240,7 +247,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
       <Card.Info>
         <Info resource={resource} size={size} />
       </Card.Info>
-      <Card.Title aria-label={`${readableType}: ${resource.title}`}>
+      <Card.Title>
         <EllipsisTitle lineClamp={size === "small" ? 2 : 3}>
           {resource.title}
         </EllipsisTitle>
