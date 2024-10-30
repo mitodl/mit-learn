@@ -15,6 +15,7 @@ import {
   Drawer,
   Checkbox,
   VisuallyHidden,
+  Stack,
 } from "ol-components"
 
 import {
@@ -60,8 +61,6 @@ const StyledResourceTabs = styled(ResourceCategoryTabs.TabList)`
 `
 
 const DesktopSortContainer = styled.div`
-  float: right;
-
   ${({ theme }) => theme.breakpoints.down("md")} {
     display: none;
   }
@@ -439,10 +438,17 @@ const MobileFacetsTitleContainer = styled.div`
   }
 `
 
-const StyledGridContainer = styled(GridContainer)`
+const ReversedGridContainer = styled(GridContainer)`
   max-width: 1272px !important;
   margin-left: 0 !important;
   width: 100% !important;
+
+  /**
+  We want the facets to be visually on left, but occur second in the DOM / tab
+  order. This makes it easier for keyboard navigators to get directly to the
+  search results.
+  */
+  flex-direction: row-reverse;
 `
 
 const ExplanationContainer = styled.div`
@@ -860,33 +866,8 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
 
   return (
     <Container>
-      <StyledGridContainer>
+      <ReversedGridContainer>
         <ResourceCategoryTabs.Context activeTabName={activeTab.name}>
-          <DesktopFiltersColumn
-            component="section"
-            variant="sidebar-2"
-            data-testid="facets-container"
-          >
-            <FacetsTitleContainer>
-              <FilterTitle>
-                <Typography component={filterHeadingEl} variant="subtitle1">
-                  Filter
-                </Typography>
-                <RiEqualizerLine fontSize="medium" />
-              </FilterTitle>
-              {hasFacets ? (
-                <Button
-                  variant="text"
-                  color="secondary"
-                  size="small"
-                  onClick={clearAllFacets}
-                >
-                  Clear all
-                </Button>
-              ) : null}
-            </FacetsTitleContainer>
-            {filterContents}
-          </DesktopFiltersColumn>
           <StyledMainColumn component="section" variant="main-2">
             <VisuallyHidden as={resultsHeadingEl}>
               Search Results
@@ -901,13 +882,15 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                */}
               {isFetching || isLoading ? "" : `${data?.count} results`}
             </VisuallyHidden>
-            <DesktopSortContainer>{sortDropdown}</DesktopSortContainer>
-            <StyledResourceTabs
-              setSearchParams={setSearchParams}
-              tabs={TABS}
-              aggregations={data?.metadata.aggregations}
-              onTabChange={() => setPage(1)}
-            />
+            <Stack direction="row" justifyContent="space-between">
+              <StyledResourceTabs
+                setSearchParams={setSearchParams}
+                tabs={TABS}
+                aggregations={data?.metadata.aggregations}
+                onTabChange={() => setPage(1)}
+              />
+              <DesktopSortContainer>{sortDropdown}</DesktopSortContainer>
+            </Stack>
             <ResourceCategoryTabs.TabPanels tabs={TABS}>
               <MobileFilter>
                 <Button variant="text" onClick={toggleMobileDrawer(true)}>
@@ -1011,8 +994,33 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
               </PaginationContainer>
             </ResourceCategoryTabs.TabPanels>
           </StyledMainColumn>
+          <DesktopFiltersColumn
+            component="section"
+            variant="sidebar-2"
+            data-testid="facets-container"
+          >
+            <FacetsTitleContainer>
+              <FilterTitle>
+                <Typography component={filterHeadingEl} variant="subtitle1">
+                  Filter
+                </Typography>
+                <RiEqualizerLine fontSize="medium" />
+              </FilterTitle>
+              {hasFacets ? (
+                <Button
+                  variant="text"
+                  color="secondary"
+                  size="small"
+                  onClick={clearAllFacets}
+                >
+                  Clear all
+                </Button>
+              ) : null}
+            </FacetsTitleContainer>
+            {filterContents}
+          </DesktopFiltersColumn>
         </ResourceCategoryTabs.Context>
-      </StyledGridContainer>
+      </ReversedGridContainer>
     </Container>
   )
 }
