@@ -14,7 +14,7 @@ import {
   Breadcrumbs,
 } from "ol-components"
 import Link from "next/link"
-import { propsNotNil } from "ol-utilities"
+import { propsNotNil, backgroundSrcSetCSS } from "ol-utilities"
 import { useLearningResourceTopics } from "api/hooks/learningResources"
 import { LearningResourceTopic } from "api"
 import RootTopicIcon from "@/components/RootTopicIcon/RootTopicIcon"
@@ -275,7 +275,7 @@ const TopicsListingPage: React.FC = () => {
         }
         title="Browse by Topic"
         header="Select a topic below to explore relevant learning resources across all Academic and Professional units."
-        backgroundUrl={backgroundSteps.src}
+        backgroundUrl={backgroundSrcSetCSS(backgroundSteps)}
       />
       <Container>
         <Grid container>
