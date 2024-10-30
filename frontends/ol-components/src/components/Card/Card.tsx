@@ -166,6 +166,10 @@ export const useClickChildHref = (
       const target = e.target as HTMLElement
       if (!anchor || target.closest("a, button, [data-card-action]")) return
       if (e.metaKey || e.ctrlKey) {
+        /**
+         * Enables ctrl+click to open card's link in new tab.
+         * Without this, ctrl+click only works on the anchor itself.
+         */
         const opts: PointerEventInit = {
           bubbles: false,
           metaKey: e.metaKey,
