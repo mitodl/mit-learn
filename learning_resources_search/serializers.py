@@ -28,6 +28,7 @@ from learning_resources.constants import (
     PlatformType,
 )
 from learning_resources.models import (
+    ContentFile,
     LearningResource,
     LearningResourceRelationship,
     UserListRelationship,
@@ -768,6 +769,17 @@ def serialize_bulk_learning_resources(ids):
         .for_search_serialization()
     ):
         yield serialize_learning_resource_for_bulk(learning_resource)
+
+
+def serialize_bulk_content_files(ids):
+    """
+    Serialize content files for bulk indexing
+
+    Args:
+        ids(list of int): List of learning_resource id's
+    """
+    for content_file in ContentFile.objects.filter(id__in=ids).for_serialization():
+        yield serialize_content_file_for_bulk(content_file)
 
 
 def serialize_bulk_percolators(ids):

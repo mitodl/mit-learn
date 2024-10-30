@@ -25,6 +25,7 @@ from learning_resources_search.connection import (
 from learning_resources_search.constants import (
     ALIAS_ALL_INDICES,
     ALL_INDEX_TYPES,
+    CONTENT_FILE_TYPE,
     COURSE_TYPE,
     MAPPING,
     PERCOLATE_INDEX_TYPE,
@@ -33,6 +34,7 @@ from learning_resources_search.constants import (
 )
 from learning_resources_search.exceptions import ReindexError
 from learning_resources_search.serializers import (
+    serialize_bulk_content_files,
     serialize_bulk_learning_resources,
     serialize_bulk_learning_resources_for_deletion,
     serialize_bulk_percolators,
@@ -92,29 +94,63 @@ def qdrant_client():
     return QdrantClient(url=settings.QDRANT_HOST, api_key=settings.QDRANT_API_KEY)
 
 
-def embed_learning_resources(ids, resource_type):  # noqa: ARG001
+def embed_learning_resources(ids, resource_type):
     # update embeddings
     client = qdrant_client()
     encoder = SentenceTransformer("all-MiniLM-L6-v2")
-    serialized_resources = serialize_bulk_learning_resources(ids)
-    collection_name = settings.QDRANT_COLLECTION_NAME
-    if not client.collection_exists(collection_name=collection_name):
+    if resource_type == CONTENT_FILE_TYPE:
+        serialized_resources = serialize_bulk_content_files(ids)
+    else:
+        serialized_resources = serialize_bulk_learning_resources(ids)
+    resources_collection_name = f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources"
+    content_files_collection_name = (
+        f"{settings.QDRANT_BASE_COLLECTION_NAME}.content_files"
+    )
+    if not client.collection_exists(collection_name=resources_collection_name):
         client.create_collection(
-            collection_name=collection_name,
+            collection_name=resources_collection_name,
             on_disk_payload=True,
             vectors_config=models.VectorParams(
-                # Vector size is defined by used model
                 size=encoder.get_sentence_embedding_dimension(),
                 distance=models.Distance.COSINE,
             ),
+            quantization_config=models.ScalarQuantization(
+                scalar=models.ScalarQuantizationConfig(
+                    type=models.ScalarType.INT8,
+                    always_ram=True,
+                ),
+            ),
         )
+    if not client.collection_exists(collection_name=content_files_collection_name):
+        client.create_collection(
+            collection_name=content_files_collection_name,
+            on_disk_payload=True,
+            vectors_config=models.VectorParams(
+                size=encoder.get_sentence_embedding_dimension(),
+                distance=models.Distance.COSINE,
+            ),
+            quantization_config=models.ScalarQuantization(
+                scalar=models.ScalarQuantizationConfig(
+                    type=models.ScalarType.INT8,
+                    always_ram=True,
+                ),
+            ),
+        )
+    if resource_type != CONTENT_FILE_TYPE:
+        collection_name = resources_collection_name
+    else:
+        collection_name = content_files_collection_name
     client.upload_points(
         collection_name=collection_name,
+        wait=False,
+        batch_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
+        max_retries=settings.INDEXING_ERROR_RETRIES,
         points=[
             models.PointStruct(
                 id=doc["id"],
                 vector=encoder.encode(
-                    f'{doc["title"]} {doc["description"]} {doc["full_description"]}'
+                    f'{doc.get("title")} {doc.get("description")} '
+                    f'{doc.get("full_description")} {doc.get("content")}'
                 ).tolist(),
                 payload=doc,
             )

@@ -715,7 +715,7 @@ def start_embed_resources(self, indexes):
                 index_tasks = index_tasks + [
                     generate_embeddings.si(
                         ids,
-                        course.learning_resource_id,
+                        CONTENT_FILE_TYPE,
                     )
                     for ids in chunks(
                         ContentFile.objects.filter(
