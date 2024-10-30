@@ -473,6 +473,12 @@ class LearningResourcesSearchRequestSerializer(SearchRequestSerializer):
             " 0 means content files are ignored"
         ),
     )
+    use_semantic = serializers.BooleanField(
+        required=False,
+        allow_null=True,
+        default=False,
+        help_text="If true use semantic search to complete the request",
+    )
 
 
 class ContentFileSearchRequestSerializer(SearchRequestSerializer):

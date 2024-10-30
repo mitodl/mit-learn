@@ -323,22 +323,14 @@ def generate_learning_resources_text_clause(
         }
 
         if use_semantic:
-            text_query = {"should": []}
-            for field in [
-                "title_embedding",
-                "description_embedding",
-                "full_description_embedding",
-            ]:
-                text_query["should"].append(
-                    {
-                        "text_expansion": {
-                            field: {
-                                "model_id": ".elser_model_2",
-                                "model_text": text,
-                            }
-                        }
-                    },
-                )
+            text_query = {
+            "neural_sparse": {
+                "description_embedding": {
+                    "query_text": text,
+                    "model_id":  '8FeV3pIB7laiDXlXl1MG'
+                }
+            }
+        }
     else:
         text_query = {}
 
@@ -598,7 +590,7 @@ def add_text_query_to_search(search, text, search_params, query_type_query):
         search_params.get("max_incompleteness_penalty", 0) / 100
     )
 
-    if yearly_decay_percent or min_score or max_incompleteness_penalty:
+    if (yearly_decay_percent or min_score or max_incompleteness_penalty) and not search_params.get("use_semantic"):
         script_query = {
             "script_score": {
                 "query": {"bool": {"must": [text_query], "filter": query_type_query}}
@@ -638,9 +630,9 @@ def add_text_query_to_search(search, text, search_params, query_type_query):
         if min_score:
             script_query["script_score"]["min_score"] = min_score
 
-        search = search.query(script_query)
+        search = search.extra(query=script_query)
     else:
-        search = search.query("bool", must=[text_query], filter=query_type_query)
+        search = search.extra(query=text_query)
 
     return search
 
@@ -700,9 +692,6 @@ def construct_search(search_params):
             search_params,
             query_type_query,
         )
-
-        suggest = generate_suggest_clause(text)
-        search = search.extra(suggest=suggest)
     else:
         search = search.query(query_type_query)
 
@@ -749,7 +738,9 @@ def execute_learn_search(search_params):
             search_params["max_incompleteness_penalty"] = (
                 settings.DEFAULT_SEARCH_MAX_INCOMPLETENESS_PENALTY
             )
+    
     search = construct_search(search_params)
+    print(search.to_dict())
     return search.execute().to_dict()
 
 

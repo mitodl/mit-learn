@@ -2734,6 +2734,13 @@ paths:
             minLength: 1
         description: The topic name. To see a list of options go to api/v1/topics/
       - in: query
+        name: use_semantic
+        schema:
+          type: boolean
+          nullable: true
+          default: false
+        description: If true use semantic search to complete the request
+      - in: query
         name: yearly_decay_percent
         schema:
           type: number
@@ -3231,6 +3238,13 @@ paths:
             type: string
             minLength: 1
         description: The topic name. To see a list of options go to api/v1/topics/
+      - in: query
+        name: use_semantic
+        schema:
+          type: boolean
+          nullable: true
+          default: false
+        description: If true use semantic search to complete the request
       - in: query
         name: yearly_decay_percent
         schema:
@@ -3769,6 +3783,13 @@ paths:
             minLength: 1
         description: The topic name. To see a list of options go to api/v1/topics/
       - in: query
+        name: use_semantic
+        schema:
+          type: boolean
+          nullable: true
+          default: false
+        description: If true use semantic search to complete the request
+      - in: query
         name: yearly_decay_percent
         schema:
           type: number
@@ -4282,6 +4303,13 @@ paths:
             type: string
             minLength: 1
         description: The topic name. To see a list of options go to api/v1/topics/
+      - in: query
+        name: use_semantic
+        schema:
+          type: boolean
+          nullable: true
+          default: false
+        description: If true use semantic search to complete the request
       - in: query
         name: yearly_decay_percent
         schema:
@@ -10388,6 +10416,11 @@ components:
           nullable: true
           description: Score weight for content file data.  1 is the default. 0 means
             content files are ignored
+        use_semantic:
+          type: boolean
+          nullable: true
+          default: false
+          description: If true use semantic search to complete the request
         source_type:
           allOf:
           - $ref: '#/components/schemas/SourceTypeEnum'
