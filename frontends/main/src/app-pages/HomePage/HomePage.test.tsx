@@ -57,7 +57,7 @@ const setupAPIs = () => {
       limit: 6,
       sortby: "-news_date",
     }),
-    {},
+    newsEvents.newsItems({ count: 0 }),
   )
   setMockResponse.get(
     urls.newsEvents.list({
@@ -65,7 +65,7 @@ const setupAPIs = () => {
       limit: 5,
       sortby: "event_date",
     }),
-    {},
+    newsEvents.eventItems({ count: 0 }),
   )
 
   setMockResponse.get(urls.topics.list({ is_toplevel: true }), {

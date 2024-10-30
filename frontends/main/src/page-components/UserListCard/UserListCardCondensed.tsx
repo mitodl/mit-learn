@@ -3,6 +3,7 @@ import { UserList } from "api"
 import { pluralize } from "ol-utilities"
 import { RiListCheck3 } from "@remixicon/react"
 import { ListCardCondensed, styled, theme, Typography } from "ol-components"
+import Link from "next/link"
 
 const StyledCard = styled(ListCardCondensed)({
   display: "flex",
@@ -37,24 +38,29 @@ const IconContainer = styled.div(({ theme }) => ({
   },
 }))
 
-type UserListCardCondensedProps<U extends UserList = UserList> = {
-  userList: U
-  href?: string
+type UserListCardCondensedProps = {
+  userList: UserList
+  href: string
   className?: string
 }
 
-const UserListCardCondensed = <U extends UserList>({
+const UserListCardCondensed = ({
   userList,
   href,
   className,
-}: UserListCardCondensedProps<U>) => {
+}: UserListCardCondensedProps) => {
   return (
     <StyledCard href={href} className={className}>
       <ListCardCondensed.Content>
         <TextContainer>
-          <Typography variant="subtitle1" color={theme.custom.colors.darkGray2}>
-            {userList.title}
-          </Typography>
+          <Link href={href}>
+            <Typography
+              variant="subtitle1"
+              color={theme.custom.colors.darkGray2}
+            >
+              {userList.title}
+            </Typography>
+          </Link>
           <ItemsText variant="body3">
             {userList.item_count} {pluralize("item", userList.item_count)}
           </ItemsText>
