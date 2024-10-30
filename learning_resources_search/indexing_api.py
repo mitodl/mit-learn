@@ -24,7 +24,6 @@ from learning_resources_search.connection import (
 from learning_resources_search.constants import (
     ALIAS_ALL_INDICES,
     ALL_INDEX_TYPES,
-    CONTENT_FILE_TYPE,
     COURSE_TYPE,
     MAPPING,
     PERCOLATE_INDEX_TYPE,
@@ -255,7 +254,7 @@ def clear_and_create_index(*, index_name=None, skip_mapping=False, object_type=N
             },
         }
     }
-    if _embedding_pipeline_exists() and object_type != CONTENT_FILE_TYPE:
+    if _embedding_pipeline_exists():
         index_create_data["settings"]["index"]["default_pipeline"] = (
             settings.EMBEDDING_PIPELINE_NAME
         )
