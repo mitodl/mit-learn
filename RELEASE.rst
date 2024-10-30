@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.24.1
+Version 0.24.1 (Released October 30, 2024)
 --------------
 
 - Fix prolearn bug for existing resources whose urls have changed (#1775)
