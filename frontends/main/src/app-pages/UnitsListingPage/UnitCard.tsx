@@ -192,14 +192,10 @@ export const UnitCards: React.FC<UnitCardsProps> = (props) => {
       {units?.map((unit) => {
         const courseCount = courseCounts[unit.code] || 0
         const programCount = programCounts[unit.code] || 0
-        // const logo =
-        //   UNIT_LOGOS[unit.code as OfferedByEnum]?.image ||
-        //   `/images/unit_logos/${unit.code}.svg`
         return unit.value_prop ? (
           <UnitCard
             key={unit.code}
             unit={unit}
-            // logo={logo}
             courseCount={courseCount}
             programCount={programCount}
           />
