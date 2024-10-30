@@ -101,18 +101,15 @@ export const PLATFORM_LOGOS: Record<PlatformEnum, LogoObject> = {
 
 const DEFAULT_WIDTH = 200
 
-export const PlatformLogo: React.FC<{
-  unitCode?: OfferedByEnum
-  platformCode?: PlatformEnum
+const Logo: React.FC<{
+  name: string
+  image: string
+  aspect: number
   className?: string
   width?: number
   height?: number
-}> = ({ unitCode, platformCode, className, width, height }) => {
-  const platform = unitCode
-    ? UNIT_LOGOS[unitCode]
-    : PLATFORM_LOGOS[platformCode!]
-
-  if (!platform?.image) {
+}> = ({ name, image, aspect, className, width, height }) => {
+  if (!image) {
     return null
   }
 
@@ -124,21 +121,63 @@ export const PlatformLogo: React.FC<{
    * not actually applying - "Using `<img>` could result in slower LCP and higher bandwidth.".
    */
   if (width && !height) {
-    height = width / platform.aspect
+    height = width / aspect
   }
   if (!width && height) {
-    width = height * platform.aspect
+    width = height * aspect
   }
   if (!width) {
     width = DEFAULT_WIDTH
-    height = width / platform.aspect
+    height = width / aspect
   }
 
   return (
     <Image
-      src={platform?.image}
+      src={image}
       className={className}
-      alt={platform.name}
+      alt={name}
+      width={width}
+      height={height}
+    />
+  )
+}
+
+export const UnitLogo: React.FC<{
+  unitCode: OfferedByEnum
+  className?: string
+  width?: number
+  height?: number
+}> = ({ unitCode, className, width, height }) => {
+  const unit = UNIT_LOGOS[unitCode]
+  if (!unit?.image) return null
+  const { name, image, aspect } = unit
+  return (
+    <Logo
+      name={name}
+      image={image}
+      aspect={aspect}
+      className={className}
+      width={width}
+      height={height}
+    />
+  )
+}
+
+export const PlatformLogo: React.FC<{
+  platformCode: PlatformEnum
+  className?: string
+  width?: number
+  height?: number
+}> = ({ platformCode, className, width, height }) => {
+  const platform = PLATFORM_LOGOS[platformCode]
+  if (!platform?.image) return null
+  const { name, image, aspect } = platform
+  return (
+    <Logo
+      name={name}
+      image={image}
+      aspect={aspect}
+      className={className}
       width={width}
       height={height}
     />

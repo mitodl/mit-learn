@@ -6,7 +6,7 @@ import {
   Typography,
   styled,
   theme,
-  PlatformLogo,
+  UnitLogo,
 } from "ol-components"
 import { useChannelDetail } from "api/hooks/channels"
 
@@ -139,7 +139,7 @@ const UnitCard: React.FC<UnitCardProps> = (props) => {
         <UnitCardContainer>
           <UnitCardContent>
             <LogoContainer>
-              <PlatformLogo unitCode={unit.code as OfferedByEnum} height={50} />
+              <UnitLogo unitCode={unit.code as OfferedByEnum} height={50} />
             </LogoContainer>
             <CardBottom>
               <ValuePropContainer>

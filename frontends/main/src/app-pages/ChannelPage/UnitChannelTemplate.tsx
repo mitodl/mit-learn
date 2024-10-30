@@ -8,7 +8,7 @@ import {
   BannerBackground,
   Typography,
   VisuallyHidden,
-  PlatformLogo,
+  UnitLogo,
 } from "ol-components"
 import { OfferedByEnum, SourceTypeEnum } from "api"
 import { SearchSubscriptionToggle } from "@/page-components/SearchSubscriptionToggle/SearchSubscriptionToggle"
@@ -53,7 +53,7 @@ const DesktopOnly = styled.div(({ theme }) => ({
   },
 }))
 
-const PlatformLogoInverted = styled(PlatformLogo)({
+const UnitLogoInverted = styled(UnitLogo)({
   filter: "saturate(0%) invert(100%)",
 })
 
@@ -137,13 +137,13 @@ const UnitChannelTemplate: React.FC<UnitChannelTemplateProps> = ({
                 {channel.data ? (
                   <>
                     <DesktopOnly>
-                      <PlatformLogoInverted
+                      <UnitLogoInverted
                         unitCode={name as OfferedByEnum}
                         height={50}
                       />
                     </DesktopOnly>
                     <MobileOnly>
-                      <PlatformLogoInverted
+                      <UnitLogoInverted
                         unitCode={name as OfferedByEnum}
                         height={40}
                       />
