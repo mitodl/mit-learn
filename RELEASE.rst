@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+Version 0.24.1 (Released October 30, 2024)
+--------------
+
+- Fix prolearn bug for existing resources whose urls have changed (#1775)
+- [pre-commit.ci] pre-commit autoupdate (#1629)
+- Update typescript-eslint monorepo to v8 (#1534)
+- fixing intermittent test failure (#1773)
+- Professional Education ETL Pipeline (#1210)
+
 Version 0.24.0 (Released October 29, 2024)
 --------------
 
