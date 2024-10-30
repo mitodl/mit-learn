@@ -23,5 +23,5 @@ export const backgroundSrcSetCSS = (image: ImageProps["src"]) => {
     })
     .join(", ")
 
-  return imageSet ? `image-set(${imageSet})` : ""
+  return `image-set(${imageSet})`
 }
