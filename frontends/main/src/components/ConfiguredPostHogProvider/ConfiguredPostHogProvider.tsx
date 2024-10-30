@@ -16,10 +16,6 @@ const ConfiguredPostHogProvider: React.FC<{ children: React.ReactNode }> = ({
     },
   }
 
-  console.log({
-    postHogOptions,
-  })
-
   return apiKey ? (
     <PostHogProvider apiKey={apiKey} options={postHogOptions}>
       {children}
