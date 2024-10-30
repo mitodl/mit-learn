@@ -8,10 +8,6 @@ import { FeatureFlags } from "@/common/feature_flags"
 
 const LearningResourceDrawer = () => {
   const drawerV2 = useFeatureFlagEnabled(FeatureFlags.DrawerV2Enabled)
-  // console.log(`LearningResourceDrawer: drawerV2=${drawerV2}`)
-  if (drawerV2 === undefined) {
-    return null
-  }
   return drawerV2 ? <LearningResourceDrawerV2 /> : <LearningResourceDrawerV1 />
 }
 
