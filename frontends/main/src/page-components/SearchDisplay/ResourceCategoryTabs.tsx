@@ -94,6 +94,9 @@ const ResourceCategoryTabList: React.FC<ResourceCategoryTabsProps> = ({
         const tab = tabs.find((t) => t.name === value)
         setSearchParams((prev) => {
           const next = new URLSearchParams(prev)
+          if (prev.get("resource_category") === "learning_material") {
+            next.delete("resource_type")
+          }
           if (tab?.resource_category) {
             next.set("resource_category", tab.resource_category)
           } else {
