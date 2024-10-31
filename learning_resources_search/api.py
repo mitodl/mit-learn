@@ -200,7 +200,7 @@ def generate_content_file_text_clause(text):
 
 
 def generate_learning_resources_text_clause(
-    text, search_mode, slop, content_file_score_weight, use_semantic
+    text, search_mode, slop, content_file_score_weight
 ):
     """
     Return text clause for the query
@@ -320,16 +320,6 @@ def generate_learning_resources_text_clause(
                     }
                 },
             ]
-        }
-
-        if use_semantic:
-            text_query = {
-            "neural_sparse": {
-                "description_embedding": {
-                    "query_text": text,
-                    "model_id":  '8FeV3pIB7laiDXlXl1MG'
-                }
-            }
         }
     else:
         text_query = {}
@@ -575,13 +565,23 @@ def percolate_matches_for_document(document_id):
 def add_text_query_to_search(search, text, search_params, query_type_query):
     if search_params.get("endpoint") == CONTENT_FILE_TYPE:
         text_query = generate_content_file_text_clause(text)
+    elif search_params.get("use_semantic"):
+        text_query = {
+                "neural_sparse": {
+                "description_embedding": {
+                        "query_text": text,
+                        "model_id": "8FeV3pIB7laiDXlXl1MG",
+                    }
+                }
+            }
+    
+
     else:
         text_query = generate_learning_resources_text_clause(
             text,
             search_params.get("search_mode"),
             search_params.get("slop"),
             search_params.get("content_file_score_weight"),
-            search_params.get("use_semantic"),
         )
 
     yearly_decay_percent = search_params.get("yearly_decay_percent")
@@ -590,7 +590,9 @@ def add_text_query_to_search(search, text, search_params, query_type_query):
         search_params.get("max_incompleteness_penalty", 0) / 100
     )
 
-    if (yearly_decay_percent or min_score or max_incompleteness_penalty) and not search_params.get("use_semantic"):
+    if (
+        yearly_decay_percent or min_score or max_incompleteness_penalty
+    ) and not search_params.get("use_semantic"):
         script_query = {
             "script_score": {
                 "query": {"bool": {"must": [text_query], "filter": query_type_query}}
@@ -738,7 +740,7 @@ def execute_learn_search(search_params):
             search_params["max_incompleteness_penalty"] = (
                 settings.DEFAULT_SEARCH_MAX_INCOMPLETENESS_PENALTY
             )
-    
+
     search = construct_search(search_params)
     print(search.to_dict())
     return search.execute().to_dict()
