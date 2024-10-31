@@ -94,20 +94,19 @@ def qdrant_client():
     return QdrantClient(url=settings.QDRANT_HOST, api_key=settings.QDRANT_API_KEY)
 
 
-def embed_learning_resources(ids, resource_type):
-    # update embeddings
+def create_qdrand_collections(force_recreate):
     client = qdrant_client()
     encoder = SentenceTransformer("all-MiniLM-L6-v2")
-    if resource_type == CONTENT_FILE_TYPE:
-        serialized_resources = serialize_bulk_content_files(ids)
-    else:
-        serialized_resources = serialize_bulk_learning_resources(ids)
     resources_collection_name = f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources"
     content_files_collection_name = (
         f"{settings.QDRANT_BASE_COLLECTION_NAME}.content_files"
     )
-    if not client.collection_exists(collection_name=resources_collection_name):
-        client.create_collection(
+    if (
+        not client.collection_exists(collection_name=resources_collection_name)
+        or force_recreate
+    ):
+        client.delete_collection(resources_collection_name)
+        client.recreate_collection(
             collection_name=resources_collection_name,
             on_disk_payload=True,
             vectors_config=models.VectorParams(
@@ -121,8 +120,12 @@ def embed_learning_resources(ids, resource_type):
                 ),
             ),
         )
-    if not client.collection_exists(collection_name=content_files_collection_name):
-        client.create_collection(
+    if (
+        not client.collection_exists(collection_name=content_files_collection_name)
+        or force_recreate
+    ):
+        client.delete_collection(content_files_collection_name)
+        client.recreate_collection(
             collection_name=content_files_collection_name,
             on_disk_payload=True,
             vectors_config=models.VectorParams(
@@ -136,6 +139,21 @@ def embed_learning_resources(ids, resource_type):
                 ),
             ),
         )
+
+
+def embed_learning_resources(ids, resource_type):
+    # update embeddings
+    client = qdrant_client()
+    encoder = SentenceTransformer("all-MiniLM-L6-v2")
+    resources_collection_name = f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources"
+    content_files_collection_name = (
+        f"{settings.QDRANT_BASE_COLLECTION_NAME}.content_files"
+    )
+    if resource_type == CONTENT_FILE_TYPE:
+        serialized_resources = serialize_bulk_content_files(ids)
+    else:
+        serialized_resources = serialize_bulk_learning_resources(ids)
+    create_qdrand_collections()
     if resource_type != CONTENT_FILE_TYPE:
         collection_name = resources_collection_name
     else:
