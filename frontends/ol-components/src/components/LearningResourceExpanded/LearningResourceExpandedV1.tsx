@@ -19,7 +19,7 @@ import { SimpleSelect } from "../SimpleSelect/SimpleSelect"
 import type { SimpleSelectProps } from "../SimpleSelect/SimpleSelect"
 import { EmbedlyCard } from "../EmbedlyCard/EmbedlyCard"
 import { PlatformLogo, PLATFORMS } from "../Logo/Logo"
-import InfoSection from "./InfoSection"
+import InfoSectionV1 from "./InfoSectionV1"
 import type { User } from "api/hooks/user"
 import { LearningResourceCardProps } from "../LearningResourceCard/LearningResourceCard"
 
@@ -138,7 +138,7 @@ const OnPlatform = styled.span`
   color: ${theme.custom.colors.black};
 `
 
-type LearningResourceExpandedProps = {
+type LearningResourceExpandedV1Props = {
   resource?: LearningResource
   user?: User
   imgConfig: EmbedlyConfig
@@ -319,7 +319,7 @@ const formatRunDate = (
   return null
 }
 
-const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
+const LearningResourceExpandedV1: React.FC<LearningResourceExpandedV1Props> = ({
   resource,
   user,
   imgConfig,
@@ -421,7 +421,7 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
       <ImageSection resource={resource} config={imgConfig} />
       <CallToActionSection resource={resource} hide={isVideo} />
       <DetailSection resource={resource} />
-      <InfoSection
+      <InfoSectionV1
         resource={resource}
         run={selectedRun}
         user={user}
@@ -432,5 +432,5 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
   )
 }
 
-export { LearningResourceExpanded }
-export type { LearningResourceExpandedProps }
+export { LearningResourceExpandedV1 }
+export type { LearningResourceExpandedV1Props }

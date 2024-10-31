@@ -11,18 +11,11 @@ import {
 } from "next/navigation"
 import { useToggle } from "ol-utilities"
 
-const closeSx: React.CSSProperties = {
+const CloseButton = styled(ActionButton)({
   position: "absolute",
   top: "16px",
   right: "22px",
-}
-
-const CloseIcon = styled(RiCloseLargeLine)`
-  &&& {
-    width: 18px;
-    height: 18px;
-  }
-`
+})
 
 type ChildParams<K extends string, R extends K> = Record<K, string | null> &
   Record<R, string>
@@ -31,6 +24,7 @@ type RoutedDrawerProps<K extends string = string, R extends K = K> = {
   params?: readonly K[]
   requiredParams: readonly R[]
   onView?: () => void
+  hideCloseButton?: boolean
   children: (childProps: {
     params: ChildParams<K, R>
     closeDrawer: () => void
@@ -40,7 +34,7 @@ type RoutedDrawerProps<K extends string = string, R extends K = K> = {
 const RoutedDrawer = <K extends string, R extends K = K>(
   props: RoutedDrawerProps<K, R>,
 ) => {
-  const { requiredParams, children, onView, ...others } = props
+  const { requiredParams, children, onView, hideCloseButton, ...others } = props
   const { params = requiredParams } = props
 
   const [open, setOpen] = useToggle(false)
@@ -111,15 +105,16 @@ const RoutedDrawer = <K extends string, R extends K = K>(
               params: childParams as Record<K, string>,
               closeDrawer: setOpen.off,
             })}
-          <ActionButton
-            style={closeSx}
-            variant="text"
-            size="medium"
-            onClick={setOpen.off}
-            aria-label="Close"
-          >
-            <CloseIcon />
-          </ActionButton>
+          {!hideCloseButton && (
+            <CloseButton
+              variant="text"
+              size="medium"
+              onClick={setOpen.off}
+              aria-label="Close"
+            >
+              <RiCloseLargeLine />
+            </CloseButton>
+          )}
         </>
       }
     </Drawer>

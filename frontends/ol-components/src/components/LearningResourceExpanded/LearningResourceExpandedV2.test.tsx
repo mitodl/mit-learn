@@ -1,28 +1,33 @@
 import React from "react"
 import { BrowserRouter } from "react-router-dom"
 import { render, screen, within } from "@testing-library/react"
-import user from "@testing-library/user-event"
-import { LearningResourceExpanded } from "./LearningResourceExpanded"
-import type { LearningResourceExpandedProps } from "./LearningResourceExpanded"
-import { ResourceTypeEnum, PodcastEpisodeResource, AvailabilityEnum } from "api"
+
+import {
+  getCallToActionText,
+  LearningResourceExpandedV2,
+} from "./LearningResourceExpandedV2"
+import type { LearningResourceExpandedV2Props } from "./LearningResourceExpandedV2"
+import { ResourceTypeEnum, PodcastEpisodeResource } from "api"
 import { factories } from "api/test-utils"
-import { formatDate } from "ol-utilities"
 import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
 import invariant from "tiny-invariant"
 import type { LearningResource } from "api"
-import { faker } from "@faker-js/faker/locale/en"
 import { PLATFORMS } from "../Logo/Logo"
+import _ from "lodash"
 
-const IMG_CONFIG: LearningResourceExpandedProps["imgConfig"] = {
+const IMG_CONFIG: LearningResourceExpandedV2Props["imgConfig"] = {
   key: "fake-key",
   width: 385,
   height: 200,
 }
 
+// This is a pipe followed by a zero-width space
+const SEPARATOR = "|​"
+
 const setup = (resource: LearningResource) => {
   return render(
     <BrowserRouter>
-      <LearningResourceExpanded resource={resource} imgConfig={IMG_CONFIG} />
+      <LearningResourceExpandedV2 resource={resource} imgConfig={IMG_CONFIG} />
     </BrowserRouter>,
     { wrapper: ThemeProvider },
   )
@@ -53,13 +58,9 @@ describe("Learning Resource Expanded", () => {
       invariant(image)
       expect(image).toHaveAttribute("alt", resource.image?.alt ?? "")
 
-      screen.getByRole("heading", { name: resource.title })
+      screen.getByText(resource.title)
 
-      const linkName =
-        resource.resource_type === ResourceTypeEnum.Podcast ||
-        resource.resource_type === ResourceTypeEnum.PodcastEpisode
-          ? "Listen to Podcast"
-          : "Learn More"
+      const linkName = getCallToActionText(resource)
 
       const url =
         resource.resource_type === ResourceTypeEnum.PodcastEpisode
@@ -82,11 +83,11 @@ describe("Learning Resource Expanded", () => {
 
     setup(resource)
 
-    const embedlyCard = document.querySelector(".embedly-card")
+    const embedlyCard = screen.getByTestId("embedly-card")
     invariant(embedlyCard)
     expect(embedlyCard).toHaveAttribute("href", resource.url)
 
-    screen.getByRole("heading", { name: resource.title })
+    screen.getByText(resource.title)
   })
 
   test.each([ResourceTypeEnum.Program, ResourceTypeEnum.LearningPath])(
@@ -195,160 +196,6 @@ describe("Learning Resource Expanded", () => {
     }
   })
 
-  test.each([
-    {
-      run: factories.learningResources.run({ semester: "Fall", year: 2001 }),
-      expectedDate: "Fall 2001",
-    },
-    {
-      run: factories.learningResources.run({
-        semester: "Fall",
-        year: null,
-        start_date: "2002-09-01",
-      }),
-      expectedDate: "Fall 2002",
-    },
-    {
-      run: factories.learningResources.run({
-        semester: "fall",
-        year: null,
-        start_date: "2002-09-01",
-      }),
-      expectedDate: "Fall 2002", // capitalized
-    },
-    {
-      run: factories.learningResources.run({
-        semester: null,
-        year: null,
-        start_date: "2003-09-01",
-      }),
-      expectedDate: "September, 2003",
-    },
-  ])(
-    "Renders 'As taught in' and Month+Year for availability: anytime",
-    ({ run, expectedDate }) => {
-      const resource = factories.learningResources.resource({
-        resource_type: faker.helpers.arrayElement([
-          ResourceTypeEnum.Course,
-          ResourceTypeEnum.Program,
-        ]),
-        runs: [run],
-        availability: "anytime",
-      })
-
-      setup(resource)
-
-      const dateSection = screen.getByText("As taught in:")!.closest("div")!
-
-      within(dateSection).getByText(expectedDate)
-    },
-  )
-
-  test.each([
-    {
-      expectedLabel: "Start Date:",
-      resource: factories.learningResources.resource({
-        resource_type: ResourceTypeEnum.Course,
-        availability: AvailabilityEnum.Dated,
-        runs: [
-          factories.learningResources.run({ start_date: "2024-02-03" }),
-          factories.learningResources.run({ start_date: "2024-04-05" }),
-        ],
-      }),
-      expectedDates: ["February 03, 2024", "April 05, 2024"],
-    },
-    {
-      expectedLabel: "As taught in:",
-      resource: factories.learningResources.resource({
-        resource_type: ResourceTypeEnum.Course,
-        availability: AvailabilityEnum.Anytime,
-        runs: [
-          factories.learningResources.run({ semester: "Fall", year: 2020 }),
-          factories.learningResources.run({
-            semester: "Spring",
-            year: null,
-            start_date: "2021-02-03",
-          }),
-          factories.learningResources.run({
-            semester: null,
-            year: null,
-            start_date: "2022-05-06",
-          }),
-        ],
-      }),
-      expectedDates: ["Spring 2021", "May, 2022", "Fall 2020"],
-    },
-  ])(
-    "Renders a dropdown for run picker",
-    async ({ resource, expectedDates, expectedLabel }) => {
-      setup(resource)
-
-      screen.getByText(expectedLabel)
-      const select = screen.getByRole("combobox")
-      await user.click(select)
-
-      const options = screen.getAllByRole("option")
-
-      expectedDates.forEach((date, index) => {
-        expect(options[index]).toHaveTextContent(date)
-      })
-    },
-  )
-
-  test("Dates are ordered in dropdown and closest is selected", async () => {
-    const nextFutureDate = new Date(
-      new Date().getFullYear(),
-      new Date().getMonth() + 1,
-      1,
-    ).toISOString()
-    const farFutureDate = new Date(
-      new Date().getFullYear(),
-      new Date().getMonth() + 8,
-      1,
-    ).toISOString()
-    const resource = factories.learningResources.resource({
-      resource_type: ResourceTypeEnum.Course,
-      runs: [
-        factories.learningResources.run({
-          semester: "Spring",
-          year: null,
-          start_date: "2021-02-03",
-        }),
-        factories.learningResources.run({
-          semester: null,
-          year: null,
-          start_date: "2022-05-06",
-        }),
-        factories.learningResources.run({
-          semester: "Spring",
-          year: null,
-          start_date: formatDate(nextFutureDate, "YYYY-MM-DD"),
-        }),
-        factories.learningResources.run({
-          semester: "Spring",
-          year: null,
-          start_date: formatDate(farFutureDate, "YYYY-MM-DD"),
-        }),
-      ],
-    })
-    setup(resource)
-    const select = screen.getByRole("combobox")
-    await user.click(select)
-
-    const options = screen.getAllByRole("option")
-    expect(options[0]).toHaveTextContent(
-      formatDate("2021-02-03", "MMMM DD, YYYY"),
-    )
-    expect(options[3]).toHaveTextContent(
-      formatDate(farFutureDate, "MMMM DD, YYYY"),
-    )
-
-    const selected = screen.getByRole("option", { selected: true })
-    expect(selected).toHaveTextContent(
-      formatDate(nextFutureDate, "MMMM DD, YYYY"),
-    )
-  })
-
   test("Renders info section topics correctly", () => {
     const resource = factories.learningResources.resource({
       resource_type: ResourceTypeEnum.Course,
@@ -361,11 +208,14 @@ describe("Learning Resource Expanded", () => {
 
     setup(resource)
 
-    const section = screen
-      .getByRole("heading", { name: "Info" })!
-      .closest("section")!
+    const section = screen.getByTestId("drawer-info-items")
 
-    within(section).getByText("Topic 1, Topic 2, Topic 3")
+    within(section).getByText((_content, node) => {
+      return (
+        node?.textContent ===
+          ["Topic 1", "Topic 2", "Topic 3"].join(SEPARATOR) || false
+      )
+    })
   })
 
   test("Renders info section languages correctly", () => {
@@ -380,11 +230,14 @@ describe("Learning Resource Expanded", () => {
 
     setup(resource)
 
-    const section = screen
-      .getByRole("heading", { name: "Info" })!
-      .closest("section")!
+    const section = screen.getByTestId("drawer-info-items")
 
-    within(section).getByText("English, Spanish, French")
+    within(section).getByText((_content, node) => {
+      return (
+        node?.textContent ===
+          ["English", "Spanish", "French"].join(SEPARATOR) || false
+      )
+    })
   })
 
   test("Renders info section video duration correctly", () => {
@@ -395,9 +248,7 @@ describe("Learning Resource Expanded", () => {
 
     setup(resource)
 
-    const section = screen
-      .getByRole("heading", { name: "Info" })!
-      .closest("section")!
+    const section = screen.getByTestId("drawer-info-items")
 
     within(section).getByText("1:13:44")
   })
@@ -410,9 +261,7 @@ describe("Learning Resource Expanded", () => {
 
     setup(resource)
 
-    const section = screen
-      .getByRole("heading", { name: "Info" })!
-      .closest("section")!
+    const section = screen.getByTestId("drawer-info-items")
 
     within(section).getByText("13:44")
   })

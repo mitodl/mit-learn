@@ -1318,6 +1318,11 @@ def test_load_playlist(mocker):
         "platform": PlatformType.youtube.name,
         "offered_by": {"code": LearningResourceOfferorFactory.create().code},
         "playlist_id": playlist.readable_id,
+        "url": f"https://youtube.com/playlist?list={playlist.readable_id}",
+        "image": {
+            "url": f"https://i.ytimg.com/vi/{playlist.readable_id}/hqdefault.jpg",
+            "alt": playlist.title,
+        },
         "videos": videos_data,
     }
 
@@ -1342,10 +1347,17 @@ def test_load_playlists_unpublish(mocker):
         VideoPlaylistFactory.create_batch(4, channel=channel),
         key=lambda playlist: playlist.id,
     )
+    playlist_id = playlists[0].learning_resource.readable_id
+    playlist_title = playlists[0].learning_resource.title
     assert playlists[0].learning_resource.published is True
     playlists_data = [
         {
-            "playlist_id": playlists[0].learning_resource.readable_id,
+            "playlist_id": playlist_id,
+            "url": f"https://youtube.com/playlist?list={playlist_id}",
+            "image": {
+                "url": f"https://i.ytimg.com/vi/{playlist_id}/hqdefault.jpg",
+                "alt": playlist_title,
+            },
             "published": True,
             "videos": [],
         }
@@ -1378,7 +1390,13 @@ def test_load_video_channels():
 
         playlist = VideoPlaylistFactory.build()
         playlist_data = model_to_dict(playlist)
-        playlist_data["playlist_id"] = playlist.learning_resource.readable_id
+        playlist_id = playlist.learning_resource.readable_id
+        playlist_data["playlist_id"] = playlist_id
+        playlist_data["url"] = f"https://youtube.com/playlist?list={playlist_id}"
+        playlist_data["image"] = {
+            "url": f"https://i.ytimg.com/vi/{playlist_id}/hqdefault.jpg",
+            "alt": playlist.learning_resource.title,
+        }
         del playlist_data["id"]
         del playlist_data["channel"]
         del playlist_data["learning_resource"]

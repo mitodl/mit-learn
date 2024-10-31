@@ -988,10 +988,16 @@ def load_playlist(video_channel: VideoChannel, playlist_data: dict) -> LearningR
     """
 
     playlist_id = playlist_data.pop("playlist_id")
+    thumbnail_data = playlist_data.pop("image", None)
     videos_data = playlist_data.pop("videos", [])
     offered_bys_data = playlist_data.pop("offered_by", None)
 
     with transaction.atomic():
+        image, _ = LearningResourceImage.objects.update_or_create(
+            url=thumbnail_data.get("url"),
+            alt=thumbnail_data.get("alt"),
+        )
+        playlist_data["image"] = image
         playlist_resource, created = LearningResource.objects.update_or_create(
             readable_id=playlist_id,
             resource_type=LearningResourceType.video_playlist.name,

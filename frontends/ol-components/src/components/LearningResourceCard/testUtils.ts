@@ -71,6 +71,34 @@ const courses = {
         { amount: "49", currency: "USD" },
       ],
     }),
+    multipleRuns: makeResource({
+      resource_type: ResourceTypeEnum.Course,
+      runs: [
+        factories.learningResources.run(),
+        factories.learningResources.run(),
+        factories.learningResources.run(),
+        factories.learningResources.run(),
+      ],
+      free: true,
+      certification: false,
+      prices: ["0"],
+    }),
+    anytime: makeResource({
+      resource_type: ResourceTypeEnum.Course,
+      runs: [factories.learningResources.run()],
+      free: true,
+      certification: false,
+      prices: ["0"],
+      availability: "anytime",
+    }),
+    dated: makeResource({
+      resource_type: ResourceTypeEnum.Course,
+      runs: [factories.learningResources.run()],
+      free: true,
+      certification: false,
+      prices: ["0"],
+      availability: "dated",
+    }),
   },
   unknownPrice: {
     noCertificate: makeResource({
