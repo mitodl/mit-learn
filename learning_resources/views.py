@@ -225,7 +225,48 @@ class LearningResourceViewSet(
             id=pk
         )
         resource_data = serialize_learning_resource_for_update(learning_resource)
-        similar = get_similar_resources(resource_data, limit, 2, 3)
+        similar = get_similar_resources(
+            resource_data, limit, 2, 3, use_embeddings=False
+        )
+        return Response(LearningResourceSerializer(list(similar), many=True).data)
+
+    @extend_schema(
+        summary="Get similar resources using vector embeddings",
+        parameters=[
+            OpenApiParameter(name="id", type=int, location=OpenApiParameter.PATH),
+            OpenApiParameter(name="limit", type=int, location=OpenApiParameter.QUERY),
+        ],
+        responses=LearningResourceSerializer(many=True),
+    )
+    @action(
+        detail=True,
+        methods=["GET"],
+        name="Fetch similar resources using embeddings for a resource",
+    )
+    @method_decorator(
+        cache_page_for_all_users(
+            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+        )
+    )
+    def vector_similar(self, request, *_, **kwargs):
+        """
+        Fetch similar learning resources
+
+        Args:
+        id (integer): The id of the learning resource
+
+        Returns:
+        QuerySet of similar LearningResource for the resource matching the id parameter
+        """
+        limit = request.GET.get("limit", 10)
+        pk = int(kwargs.get("id"))
+
+        learning_resource = get_object_or_404(LearningResource, id=pk)
+        learning_resource = LearningResource.objects.for_search_serialization().get(
+            id=pk
+        )
+        resource_data = serialize_learning_resource_for_update(learning_resource)
+        similar = get_similar_resources(resource_data, limit, 2, 3, use_embeddings=True)
         return Response(LearningResourceSerializer(list(similar), many=True).data)
 
 
