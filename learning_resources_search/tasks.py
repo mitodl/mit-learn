@@ -690,7 +690,7 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
 
 
 @app.task(bind=True)
-def start_embed_resources(self, indexes):
+def start_embed_resources(self, indexes, skip_content_files):
     index_tasks = []
     try:
         if COURSE_TYPE in indexes:
@@ -706,28 +706,29 @@ def start_embed_resources(self, indexes):
                     chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
                 )
             ]
-            for course in (
-                Course.objects.filter(learning_resource__published=True)
-                .filter(learning_resource__etl_source__in=RESOURCE_FILE_ETL_SOURCES)
-                .exclude(learning_resource__readable_id=blocklisted_ids)
-                .order_by("learning_resource_id")
-            ):
-                index_tasks = index_tasks + [
-                    generate_embeddings.si(
-                        ids,
-                        CONTENT_FILE_TYPE,
-                    )
-                    for ids in chunks(
-                        ContentFile.objects.filter(
-                            run__learning_resource_id=course.learning_resource_id,
-                            published=True,
-                            run__published=True,
+            if not skip_content_files:
+                for course in (
+                    Course.objects.filter(learning_resource__published=True)
+                    .filter(learning_resource__etl_source__in=RESOURCE_FILE_ETL_SOURCES)
+                    .exclude(learning_resource__readable_id=blocklisted_ids)
+                    .order_by("learning_resource_id")
+                ):
+                    index_tasks = index_tasks + [
+                        generate_embeddings.si(
+                            ids,
+                            CONTENT_FILE_TYPE,
                         )
-                        .order_by("id")
-                        .values_list("id", flat=True),
-                        chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
-                    )
-                ]
+                        for ids in chunks(
+                            ContentFile.objects.filter(
+                                run__learning_resource_id=course.learning_resource_id,
+                                published=True,
+                                run__published=True,
+                            )
+                            .order_by("id")
+                            .values_list("id", flat=True),
+                            chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
+                        )
+                    ]
         for resource_type in [
             PROGRAM_TYPE,
             PODCAST_TYPE,
