@@ -1,12 +1,12 @@
 import React from "react"
 import { render, screen } from "@testing-library/react"
 import { courses } from "../LearningResourceCard/testUtils"
-import InfoSection from "./InfoSection"
+import InfoSectionV1 from "./InfoSectionV1"
 import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
 
 describe("Learning resource info section pricing", () => {
   test("Free course, no certificate", () => {
-    render(<InfoSection resource={courses.free.noCertificate} />, {
+    render(<InfoSectionV1 resource={courses.free.noCertificate} />, {
       wrapper: ThemeProvider,
     })
 
@@ -17,7 +17,7 @@ describe("Learning resource info section pricing", () => {
   })
 
   test("Free course, with certificate, one price", () => {
-    render(<InfoSection resource={courses.free.withCertificateOnePrice} />, {
+    render(<InfoSectionV1 resource={courses.free.withCertificateOnePrice} />, {
       wrapper: ThemeProvider,
     })
 
@@ -28,9 +28,12 @@ describe("Learning resource info section pricing", () => {
   })
 
   test("Free course, with certificate, price range", () => {
-    render(<InfoSection resource={courses.free.withCertificatePriceRange} />, {
-      wrapper: ThemeProvider,
-    })
+    render(
+      <InfoSectionV1 resource={courses.free.withCertificatePriceRange} />,
+      {
+        wrapper: ThemeProvider,
+      },
+    )
 
     screen.getByText("Free")
     expect(screen.queryByText("Paid")).toBeNull()
@@ -39,7 +42,7 @@ describe("Learning resource info section pricing", () => {
   })
 
   test("Unknown price, no certificate", () => {
-    render(<InfoSection resource={courses.unknownPrice.noCertificate} />, {
+    render(<InfoSectionV1 resource={courses.unknownPrice.noCertificate} />, {
       wrapper: ThemeProvider,
     })
 
@@ -50,7 +53,7 @@ describe("Learning resource info section pricing", () => {
   })
 
   test("Unknown price, with certificate", () => {
-    render(<InfoSection resource={courses.unknownPrice.withCertificate} />, {
+    render(<InfoSectionV1 resource={courses.unknownPrice.withCertificate} />, {
       wrapper: ThemeProvider,
     })
 
@@ -60,7 +63,7 @@ describe("Learning resource info section pricing", () => {
   })
 
   test("Paid course, no certificate", () => {
-    render(<InfoSection resource={courses.paid.withoutCertificate} />, {
+    render(<InfoSectionV1 resource={courses.paid.withoutCertificate} />, {
       wrapper: ThemeProvider,
     })
 
@@ -72,7 +75,7 @@ describe("Learning resource info section pricing", () => {
   })
 
   test("Paid course, with certificate, one price", () => {
-    render(<InfoSection resource={courses.paid.withCerticateOnePrice} />, {
+    render(<InfoSectionV1 resource={courses.paid.withCerticateOnePrice} />, {
       wrapper: ThemeProvider,
     })
 
@@ -82,9 +85,12 @@ describe("Learning resource info section pricing", () => {
   })
 
   test("Paid course, with certificate, price range", () => {
-    render(<InfoSection resource={courses.paid.withCertificatePriceRange} />, {
-      wrapper: ThemeProvider,
-    })
+    render(
+      <InfoSectionV1 resource={courses.paid.withCertificatePriceRange} />,
+      {
+        wrapper: ThemeProvider,
+      },
+    )
 
     screen.getByText("$49 – $99")
     expect(screen.queryByText("Paid")).toBeNull()

@@ -9,7 +9,7 @@ ci:
     - style-lint
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v5.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -41,7 +41,7 @@ repos:
             html,
           ]
   - repo: https://github.com/scop/pre-commit-shfmt
-    rev: v3.9.0-1
+    rev: v3.10.0-1
     hooks:
       - id: shfmt
   - repo: https://github.com/adrienverge/yamllint.git
@@ -74,7 +74,7 @@ repos:
           - ".*/generated/"
         additional_dependencies: ["gibberish-detector"]
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: "v0.6.7"
+    rev: "v0.7.1"
     hooks:
       - id: ruff-format
       - id: ruff

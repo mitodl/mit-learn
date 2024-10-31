@@ -458,6 +458,11 @@ def transform_playlist(
             transform_video(extracted_video, offered_by_code)
             for extracted_video in videos
         ),
+        "url": f"https://www.youtube.com/playlist?list={playlist_data['id']}",
+        "image": {
+            "url": playlist_data["snippet"]["thumbnails"]["high"]["url"],
+            "alt": playlist_data["snippet"]["title"],
+        },
         "availability": Availability.anytime.name,
     }
 

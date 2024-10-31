@@ -10,13 +10,6 @@ from news_events.etl.mitpe_news import extract, transform
 
 
 @pytest.fixture
-def mitpe_news_settings(settings):
-    """Assign the required MITPE settings"""
-    settings.MITPE_BASE_API_URL = "https://api.example.com"
-    return settings
-
-
-@pytest.fixture
 def mitpe_news_json_data():
     """Return the raw content of the MITPE news json response"""
     with Path.open(Path("test_json/mitpe_news.json")) as in_file:
@@ -30,12 +23,12 @@ def _mock_get_json(mocker, mitpe_news_json_data):
     mock_get.side_effect = [mitpe_news_json_data, []]
 
 
-def test_extract(settings, mitpe_news_json_data, mitpe_news_settings):
+def test_extract(settings, mitpe_news_json_data):
     """Extract function should return raw json data for MITPE news"""
     assert extract() == mitpe_news_json_data
 
 
-def test_transform(mitpe_news_json_data, mitpe_news_settings):
+def test_transform(mitpe_news_json_data):
     """Assert that the transform function returns the expected data"""
     source_and_items = transform(extract())
     assert len(source_and_items) == 1

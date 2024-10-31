@@ -15,6 +15,7 @@ import {
 import type { NewsFeedItem, EventFeedItem } from "api/v0"
 import { formatDate } from "ol-utilities"
 import { RiArrowRightSLine } from "@remixicon/react"
+import Link from "next/link"
 
 const Section = styled.section`
   background: ${theme.custom.colors.white};
@@ -111,10 +112,7 @@ const EventCard = styled(Card)`
   align-self: stretch;
   justify-content: space-between;
   overflow: visible;
-
-  > a {
-    padding: 16px;
-  }
+  padding: 16px;
 `
 
 const EventDate = styled.div`
@@ -190,7 +188,7 @@ const Story: React.FC<{ item: NewsFeedItem; mobile: boolean }> = ({
   mobile,
 }) => {
   return (
-    <StoryCard mobile={mobile} href={item.url}>
+    <StoryCard mobile={mobile} href={item.url} forwardClicksToLink>
       {item.image.url ? (
         <Card.Image src={item.image.url} alt={item.image.alt || ""} />
       ) : null}
@@ -221,31 +219,32 @@ const NewsEventsSection: React.FC = () => {
     return null
   }
 
-  const stories = news!.results?.slice(0, 6) || []
+  const stories = news.results.slice(0, 6)
 
-  const EventCards =
-    events!.results?.map((item) => (
-      <EventCard key={item.id} href={item.url}>
-        <Card.Content>
-          <EventDate>
-            <EventDay>
-              {formatDate(
-                (item as EventFeedItem).event_details?.event_datetime,
-                "D",
-              )}
-            </EventDay>
-            <EventMonth>
-              {formatDate(
-                (item as EventFeedItem).event_details?.event_datetime,
-                "MMM",
-              )}
-            </EventMonth>
-          </EventDate>
+  const EventCards = events.results.map((item) => (
+    <EventCard key={item.id} href={item.url} forwardClicksToLink>
+      <Card.Content>
+        <EventDate>
+          <EventDay>
+            {formatDate(
+              (item as EventFeedItem).event_details?.event_datetime,
+              "D",
+            )}
+          </EventDay>
+          <EventMonth>
+            {formatDate(
+              (item as EventFeedItem).event_details?.event_datetime,
+              "MMM",
+            )}
+          </EventMonth>
+        </EventDate>
+        <Link href={item.url}>
           <EventTitle>{item.title}</EventTitle>
-          <Chevron />
-        </Card.Content>
-      </EventCard>
-    )) || []
+        </Link>
+        <Chevron />
+      </Card.Content>
+    </EventCard>
+  ))
 
   return (
     <Section>

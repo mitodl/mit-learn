@@ -627,19 +627,27 @@ test("Set sort", async () => {
 test("The professional toggle updates the professional setting", async () => {
   setMockApiResponses({ search: { count: 137 } })
   const { location } = renderWithProviders(<SearchPage />)
-  const professionalToggle = await screen.getAllByText("Professional")[0]
+  const facets = screen.getByTestId("facets-container")
+  const professionalToggle = await within(facets).findByRole("button", {
+    name: "Professional",
+  })
   await user.click(professionalToggle)
   await waitFor(() => {
     const params = new URLSearchParams(location.current.search)
     expect(params.get("professional")).toBe("true")
   })
-  const academicToggle = await screen.getAllByText("Academic")[0]
+  const academicToggle = await within(facets).findByRole("button", {
+    name: "Academic",
+  })
   await user.click(academicToggle)
   await waitFor(() => {
     const params = new URLSearchParams(location.current.search)
     expect(params.get("professional")).toBe("false")
   })
-  const viewAllToggle = await screen.getAllByText("All")[0]
+  const viewAllToggle = await within(facets).findByRole("button", {
+    name: "All",
+  })
+
   await user.click(viewAllToggle)
   await waitFor(() => {
     const params = new URLSearchParams(location.current.search)
@@ -709,8 +717,8 @@ describe("Search Page pagination controls", () => {
 
     assertHeadings([
       { level: 1, name: "Search" },
-      { level: 2, name: "Filter" },
       { level: 2, name: "Search Results" },
+      { level: 2, name: "Filter" },
     ])
   })
 })

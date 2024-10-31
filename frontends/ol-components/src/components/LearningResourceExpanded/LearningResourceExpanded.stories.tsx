@@ -1,6 +1,6 @@
 import React from "react"
 import type { Meta, StoryObj } from "@storybook/react"
-import { LearningResourceExpanded } from "./LearningResourceExpanded"
+import { LearningResourceExpandedV1 } from "./LearningResourceExpandedV1"
 import { factories } from "api/test-utils"
 import { ResourceTypeEnum as LRT } from "api"
 import invariant from "tiny-invariant"
@@ -16,9 +16,9 @@ const makeResource: typeof _makeResource = (overrides) => {
   return resource
 }
 
-const meta: Meta<typeof LearningResourceExpanded> = {
-  title: "smoot-design/LearningResourceExpanded",
-  component: LearningResourceExpanded,
+const meta: Meta<typeof LearningResourceExpandedV1> = {
+  title: "smoot-design/LearningResourceExpandedV1",
+  component: LearningResourceExpandedV1,
   args: {
     imgConfig: {
       key: "",
@@ -54,7 +54,7 @@ const meta: Meta<typeof LearningResourceExpanded> = {
     return (
       <BrowserRouter>
         <Drawer open={true} anchor="right">
-          <LearningResourceExpanded {...args} />
+          <LearningResourceExpandedV1 {...args} />
         </Drawer>
       </BrowserRouter>
     )
@@ -63,7 +63,7 @@ const meta: Meta<typeof LearningResourceExpanded> = {
 
 export default meta
 
-type Story = StoryObj<typeof LearningResourceExpanded>
+type Story = StoryObj<typeof LearningResourceExpandedV1>
 
 export const Course: Story = {
   args: {
@@ -139,7 +139,10 @@ export const PricingVariant1: Story = {
     resource: makeResource({
       resource_type: LRT.Course,
       title: "Free course with paid certificate option",
-      prices: ["0", "49"],
+      resource_prices: [
+        { amount: "0", currency: "USD" },
+        { amount: "49", currency: "USD" },
+      ],
       free: true,
       certification: true,
     }),

@@ -4,6 +4,8 @@ import React, {
   Children,
   isValidElement,
   CSSProperties,
+  useCallback,
+  AriaAttributes,
 } from "react"
 import styled from "@emotion/styled"
 import { theme } from "../ThemeProvider/ThemeProvider"
@@ -13,52 +15,59 @@ import { default as NextImage, ImageProps as NextImageProps } from "next/image"
 
 export type Size = "small" | "medium"
 
-/*
- *The relative positioned wrapper allows the action buttons to live adjacent to the
- * Link container in the DOM structure. They cannot be a descendent of it as
- * buttons inside anchors are not valid HTML.
+type LinkableProps = {
+  href?: string
+  children?: ReactNode
+  className?: string
+}
+/**
+ * Render a NextJS link if href is provided, otherwise a span.
+ * Does not scroll if the href is a query string.
  */
-export const Wrapper = styled.div<{ size?: Size }>`
-  position: relative;
-  ${({ size }) => {
-    let width
-    if (!size) return ""
-    if (size === "medium") width = 300
-    if (size === "small") width = 192
-    return `
-      min-width: ${width}px;
-      max-width: ${width}px;
-    `
-  }}
-`
-
-export const containerStyles = `
-  border-radius: 8px;
-  border: 1px solid ${theme.custom.colors.lightGray2};
-  background: ${theme.custom.colors.white};
-  overflow: hidden;
-`
-
-const LinkContainer = styled(Link)`
-  ${containerStyles}
-  display: block;
-  position: relative;
-
-  :hover {
-    text-decoration: none;
-    border-color: ${theme.custom.colors.silverGrayLight};
-    box-shadow:
-      0 2px 4px 0 rgb(37 38 43 / 10%),
-      0 2px 4px 0 rgb(37 38 43 / 10%);
-    cursor: pointer;
+export const Linkable: React.FC<LinkableProps> = ({
+  href,
+  children,
+  className,
+}) => {
+  if (href) {
+    return (
+      <Link className={className} href={href} scroll={!href.startsWith("?")}>
+        {children}
+      </Link>
+    )
   }
-`
+  return <span className={className}>{children}</span>
+}
 
-const Container = styled.div`
-  ${containerStyles}
-  display: block;
-  position: relative;
-`
+export const BaseContainer = styled.div<{ display?: CSSProperties["display"] }>(
+  ({ theme, onClick, display = "block" }) => [
+    {
+      borderRadius: "8px",
+      border: `1px solid ${theme.custom.colors.lightGray2}`,
+      background: theme.custom.colors.white,
+      display,
+      overflow: "hidden", // to clip image so they match border radius
+    },
+    onClick && {
+      "&:hover": {
+        borderColor: theme.custom.colors.silverGrayLight,
+        boxShadow:
+          "0 2px 4px 0 rgb(37 38 43 / 10%), 0 2px 4px 0 rgb(37 38 43 / 10%)",
+        cursor: "pointer",
+      },
+    },
+  ],
+)
+const CONTAINER_WIDTHS: Record<Size, number> = {
+  small: 192,
+  medium: 300,
+}
+const Container = styled(BaseContainer)<{ size?: Size }>(({ size }) => [
+  size && {
+    minWidth: CONTAINER_WIDTHS[size],
+    maxWidth: CONTAINER_WIDTHS[size],
+  },
+])
 
 const Content = () => <></>
 
@@ -83,7 +92,7 @@ const Info = styled.div<{ size?: Size }>`
   margin-bottom: ${({ size }) => (size === "small" ? 4 : 8)}px;
 `
 
-const Title = styled.span<{ lines?: number; size?: Size }>`
+const Title = styled(Linkable)<{ lines?: number; size?: Size }>`
   text-overflow: ellipsis;
   height: ${({ lines, size }) => {
     const lineHeightPx = size === "small" ? 18 : 20
@@ -130,17 +139,76 @@ const Bottom = styled.div`
 const Actions = styled.div`
   display: flex;
   gap: 8px;
-  position: absolute;
-  bottom: 16px;
-  right: 16px;
 `
+
+/**
+ * Click the child anchor element if the click event target is not the anchor itself.
+ *
+ * Allows making a whole region clickable as a link, even if the link is not the
+ * direct target of the click event.
+ */
+export const useClickChildHref = (
+  href?: string,
+  onClick?: React.MouseEventHandler<HTMLElement>,
+): React.MouseEventHandler<HTMLElement> => {
+  return useCallback(
+    (e) => {
+      onClick?.(e)
+      if (!e.currentTarget.contains(e.target as Node)) {
+        // This happens if click target is a child in React tree but not DOM tree
+        // This can happen with portals.
+        // In such cases, data-card-actions won't be a parent of the target.
+        return
+      }
+      const anchor = e.currentTarget.querySelector<HTMLAnchorElement>(
+        `a[href="${href}"]`,
+      )
+      const target = e.target as HTMLElement
+      if (!anchor || target.closest("a, button, [data-card-action]")) return
+      if (e.metaKey || e.ctrlKey) {
+        /**
+         * Enables ctrl+click to open card's link in new tab.
+         * Without this, ctrl+click only works on the anchor itself.
+         */
+        const opts: PointerEventInit = {
+          bubbles: false,
+          metaKey: e.metaKey,
+          ctrlKey: e.ctrlKey,
+        }
+        anchor.dispatchEvent(new PointerEvent("click", opts))
+      } else {
+        anchor.click()
+      }
+    },
+    [href, onClick],
+  )
+}
 
 type CardProps = {
   children: ReactNode[] | ReactNode
   className?: string
   size?: Size
+  /**
+   * If provided, the card will render its title as a link.
+   *
+   * Clicks on the entire card can be forwarded to the link via `forwardClicksToLink`.
+   */
   href?: string
-}
+  /**
+   * Defaults to `false`. If `true`, clicking the whole card will click the
+   * href link as well.
+   *
+   * NOTES:
+   *  - If using Card.Content to customize, you must ensure the content includes
+   *  an anchor with the card's href.
+   *  - Clicks will NOT be forwarded if it is (or is a child of):
+   *    - an anchor or button element
+   *    - OR an element with data-card-action
+   */
+  forwardClicksToLink?: boolean
+  onClick?: React.MouseEventHandler<HTMLElement>
+  as?: React.ElementType
+} & AriaAttributes
 
 export type ImageProps = NextImageProps & {
   size?: Size
@@ -152,6 +220,7 @@ type TitleProps = {
   lines?: number
   style?: CSSProperties
 }
+
 type SlotProps = { children?: ReactNode; style?: CSSProperties }
 
 type Card = FC<CardProps> & {
@@ -163,15 +232,21 @@ type Card = FC<CardProps> & {
   Actions: FC<SlotProps>
 }
 
-const Card: Card = ({ children, className, size, href }) => {
+const Card: Card = ({
+  children,
+  className,
+  size,
+  href,
+  onClick,
+  forwardClicksToLink = false,
+  ...others
+}) => {
   let content,
     image: ImageProps | null = null,
     info: SlotProps = {},
     title: TitleProps = {},
     footer: SlotProps = {},
     actions: SlotProps = {}
-
-  const _Container = href ? LinkContainer : Container
 
   /*
    * Allows rendering child elements to specific "slots":
@@ -196,54 +271,64 @@ const Card: Card = ({ children, className, size, href }) => {
     else if (child.type === Actions) actions = child.props
   })
 
+  const hasHref = typeof href === "string"
+  const handleHrefClick = useClickChildHref(href, onClick)
+  const handleClick = hasHref && forwardClicksToLink ? handleHrefClick : onClick
+
   const allClassNames = ["MitCard-root", className ?? ""].join(" ")
 
   if (content) {
     return (
-      <Wrapper className={allClassNames} size={size}>
-        <_Container className={className} href={href!}>
-          {content}
-        </_Container>
-      </Wrapper>
+      <Container
+        {...others}
+        className={allClassNames}
+        size={size}
+        onClick={handleClick}
+      >
+        {content}
+      </Container>
     )
   }
 
   return (
-    <Wrapper className={allClassNames} size={size}>
-      <_Container href={href!} scroll={!href?.startsWith("?")}>
-        {image && (
-          // alt text will be checked on Card.Image
-          // eslint-disable-next-line styled-components-a11y/alt-text
-          <Image
-            className="MitCard-image"
-            size={size}
-            height={170}
-            width={298}
-            {...(image as ImageProps)}
-          />
-        )}
-        <Body>
-          {info.children && (
-            <Info className="MitCard-info" size={size} {...info}>
-              {info.children}
-            </Info>
-          )}
-          <Title className="MitCard-title" size={size} {...title}>
-            {title.children}
-          </Title>
-        </Body>
-        <Bottom>
-          <Footer className="MitCard-footer" {...footer}>
-            {footer.children}
-          </Footer>
-        </Bottom>
-      </_Container>
-      {actions.children && (
-        <Actions className="MitCard-actions" {...actions}>
-          {actions.children}
-        </Actions>
+    <Container
+      {...others}
+      className={allClassNames}
+      size={size}
+      onClick={handleClick}
+    >
+      {image && (
+        // alt text will be checked on Card.Image
+        // eslint-disable-next-line styled-components-a11y/alt-text
+        <Image
+          className="MitCard-image"
+          size={size}
+          height={170}
+          width={298}
+          {...(image as ImageProps)}
+        />
       )}
-    </Wrapper>
+      <Body>
+        {info.children && (
+          <Info className="MitCard-info" size={size} {...info}>
+            {info.children}
+          </Info>
+        )}
+        <Title href={href} className="MitCard-title" size={size} {...title}>
+          {title.children}
+        </Title>
+      </Body>
+      <Bottom>
+        <Footer className="MitCard-footer" {...footer}>
+          {footer.children}
+        </Footer>
+        {actions.children && (
+          <Actions className="MitCard-actions" data-card-actions {...actions}>
+            {actions.children}
+          </Actions>
+        )}
+      </Bottom>
+    </Container>
   )
 }
 
