@@ -1,41 +1,22 @@
-import React, { FC, ReactNode, Children, isValidElement } from "react"
-import Link from "next/link"
+import React, {
+  FC,
+  ReactNode,
+  Children,
+  isValidElement,
+  AriaAttributes,
+} from "react"
 import styled from "@emotion/styled"
 import { RiDraggable } from "@remixicon/react"
 import { theme } from "../ThemeProvider/ThemeProvider"
-import { Wrapper, containerStyles, ImageProps } from "./Card"
+import { BaseContainer, ImageProps, useClickChildHref, Linkable } from "./Card"
 import { TruncateText } from "../TruncateText/TruncateText"
 import { ActionButton, ActionButtonProps } from "../Button/Button"
 import { default as NextImage } from "next/image"
-
-export const LinkContainer = styled(Link)`
-  ${containerStyles}
-  display: flex;
-
-  :hover {
-    text-decoration: none;
-    border-color: ${theme.custom.colors.silverGrayLight};
-    box-shadow:
-      0 2px 4px 0 rgb(37 38 43 / 10%),
-      0 2px 4px 0 rgb(37 38 43 / 10%);
-    cursor: pointer;
-  }
-`
-
-export const Container = styled.div`
-  ${containerStyles}
-`
-
-export const DraggableContainer = styled.div`
-  ${containerStyles}
-  display: flex;
-`
 
 const Content = () => <></>
 
 export const Body = styled.div`
   flex-grow: 1;
-  overflow: hidden;
   margin: 24px;
   ${theme.breakpoints.down("md")} {
     margin: 12px;
@@ -102,7 +83,7 @@ export const Info = styled.div`
   align-items: center;
 `
 
-export const Title = styled.span`
+export const Title = styled(Linkable)`
   flex-grow: 1;
   color: ${theme.custom.colors.darkGray2};
   text-overflow: ellipsis;
@@ -136,19 +117,12 @@ export const Bottom = styled.div`
 /**
  * Slot intended to contain ListCardAction buttons.
  */
-export const Actions = styled.div<{ hasImage?: boolean }>`
+export const Actions = styled.div`
   display: flex;
   gap: 8px;
-  position: absolute;
-  bottom: 24px;
-  right: ${({ hasImage }) => (hasImage ? "284px" : "24px")};
   ${theme.breakpoints.down("md")} {
-    bottom: 8px;
     gap: 4px;
-    right: ${({ hasImage }) => (hasImage ? "120px" : "8px")};
   }
-
-  background-color: ${theme.custom.colors.white};
 `
 
 const ListCardActionButton = styled(ActionButton)<{ isMobile?: boolean }>(
@@ -168,34 +142,63 @@ const ListCardActionButton = styled(ActionButton)<{ isMobile?: boolean }>(
 type CardProps = {
   children: ReactNode[] | ReactNode
   className?: string
+  /**
+   * If provided, the card will render its title as a link.
+   *
+   * Clicks on the entire card can be forwarded to the link via `forwardClicksToLink`.
+   */
   href?: string
+  /**
+   * Defaults to `false`. If `true`, clicking the whole card will click the
+   * href link as well.
+   *
+   * NOTES:
+   *  - If using Card.Content to customize, you must ensure the content includes
+   *  an anchor with the card's href.
+   *  - Clicks will NOT be forwarded if:
+   *    - The click target is a child of Card.Actions OR an element with
+   *    - The click target is a child of any element with data-card-actions attribute
+   */
+  forwardClicksToLink?: boolean
   draggable?: boolean
+  onClick?: () => void
+  as?: React.ElementType
+} & AriaAttributes
+type TitleProps = {
+  children?: ReactNode
 }
+
 export type Card = FC<CardProps> & {
   Content: FC<{ children: ReactNode }>
   Image: FC<ImageProps>
   Info: FC<{ children: ReactNode }>
-  Title: FC<{ children: ReactNode }>
+  Title: FC<TitleProps>
   Footer: FC<{ children: ReactNode }>
   Actions: FC<{ children: ReactNode }>
   Action: FC<ActionButtonProps>
 }
 
-const ListCard: Card = ({ children, className, href, draggable }) => {
-  const _Container = draggable
-    ? DraggableContainer
-    : href
-      ? LinkContainer
-      : Container
-
-  let content, imageProps, info, title, footer, actions
+const ListCard: Card = ({
+  children,
+  className,
+  href,
+  forwardClicksToLink = false,
+  draggable,
+  onClick,
+  ...others
+}) => {
+  let content, imageProps, info, footer, actions
+  let title: TitleProps = {}
+  const hasHref = typeof href === "string"
+  const handleHrefClick = useClickChildHref(href, onClick)
+  const handleClick = hasHref && forwardClicksToLink ? handleHrefClick : onClick
 
   Children.forEach(children, (child) => {
     if (!isValidElement(child)) return
     if (child.type === Content) content = child.props.children
     else if (child.type === Image) imageProps = child.props
     else if (child.type === Info) info = child.props.children
-    else if (child.type === Title) title = child.props.children
+    else if (child.type === Title) title = child.props
     else if (child.type === Footer) footer = child.props.children
     else if (child.type === Actions) actions = child.props.children
   })
@@ -203,37 +206,42 @@ const ListCard: Card = ({ children, className, href, draggable }) => {
   const classNames = ["MitListCard-root", className ?? ""].join(" ")
   if (content) {
     return (
-      <_Container className={classNames} href={href!}>
+      <BaseContainer {...others} onClick={handleClick} className={classNames}>
         {content}
-      </_Container>
+      </BaseContainer>
     )
   }
 
   return (
-    <Wrapper className={classNames}>
-      <_Container href={href!} scroll={!href?.startsWith("?")}>
-        {draggable && (
-          <DragArea>
-            <RiDraggable />
-          </DragArea>
-        )}
-        <Body>
-          <Info>{info}</Info>
-          <Title>
-            <TruncateText lineClamp={2}>{title}</TruncateText>
+    <BaseContainer
+      {...others}
+      className={classNames}
+      display="flex"
+      onClick={handleClick}
+    >
+      {draggable && (
+        <DragArea>
+          <RiDraggable />
+        </DragArea>
+      )}
+      <Body>
+        <Info>{info}</Info>
+        {title && (
+          <Title {...title} href={href}>
+            <TruncateText lineClamp={2}>{title.children}</TruncateText>
           </Title>
-          <Bottom>
-            <Footer>{footer}</Footer>
-          </Bottom>
-        </Body>
-        {imageProps && (
-          // alt text will be checked on ListCard.Image
-          // eslint-disable-next-line styled-components-a11y/alt-text
-          <Image {...(imageProps as ImageProps)} />
         )}
-      </_Container>
-      {actions && <Actions hasImage={!!imageProps}>{actions}</Actions>}
-    </Wrapper>
+        <Bottom>
+          <Footer>{footer}</Footer>
+          {actions && <Actions data-card-actions>{actions}</Actions>}
+        </Bottom>
+      </Body>
+      {imageProps && (
+        // alt text will be checked on ListCard.Image
+        // eslint-disable-next-line styled-components-a11y/alt-text
+        <Image {...(imageProps as ImageProps)} />
+      )}
+    </BaseContainer>
   )
 }
 

@@ -301,7 +301,7 @@ def load_run(
     return learning_resource_run
 
 
-def upsert_course_or_program(
+def upsert_course_or_program(  # noqa: C901
     resource_data: dict,
     blocklist: list[str],
     duplicates: list[dict],
@@ -388,9 +388,25 @@ def upsert_course_or_program(
             platform=platform,
             resource_type=LearningResourceType.course.name,
         ).order_by("-updated_on")
-        if existing_courses.count() > 1:
+        if existing_courses.count() > 0:
             for course in existing_courses[1:]:
                 resource_delete_actions(course)
+        # does a resource with the same readable id already exist?
+        # if so, update it with the new unique field value
+        elif LearningResource.objects.filter(
+            readable_id=resource_data["readable_id"],
+            platform=platform,
+            resource_type=LearningResourceType.course.name,
+        ).exists():
+            resource_data[unique_field_name] = unique_field_value
+            unique_field_name = READABLE_ID_FIELD
+            unique_field_value = resource_data.pop(READABLE_ID_FIELD)
+        return LearningResource.objects.select_for_update().update_or_create(
+            **{unique_field_name: unique_field_value},
+            platform=platform,
+            resource_type=resource_type,
+            defaults=resource_data,
+        )
     else:
         unique_field_value = resource_id
     return LearningResource.objects.select_for_update().update_or_create(
@@ -972,10 +988,16 @@ def load_playlist(video_channel: VideoChannel, playlist_data: dict) -> LearningR
     """
 
     playlist_id = playlist_data.pop("playlist_id")
+    thumbnail_data = playlist_data.pop("image", None)
     videos_data = playlist_data.pop("videos", [])
     offered_bys_data = playlist_data.pop("offered_by", None)
 
     with transaction.atomic():
+        image, _ = LearningResourceImage.objects.update_or_create(
+            url=thumbnail_data.get("url"),
+            alt=thumbnail_data.get("alt"),
+        )
+        playlist_data["image"] = image
         playlist_resource, created = LearningResource.objects.update_or_create(
             readable_id=playlist_id,
             resource_type=LearningResourceType.video_playlist.name,

@@ -201,11 +201,16 @@ def extracted_and_transformed_values(youtube_api_responses):
                     "title": playlist["snippet"]["title"],
                     "platform": PlatformType.youtube.name,
                     "etl_source": ETLSource.youtube.name,
+                    "image": {
+                        "url": playlist["snippet"]["thumbnails"]["high"]["url"],
+                        "alt": playlist["snippet"]["title"],
+                    },
                     "offered_by": {"code": offered_by}
                     if offered_by != "csail"
                     else None,
                     "availability": Availability.anytime.name,
                     "published": True,
+                    "url": f"https://www.youtube.com/playlist?list={playlist['id']}",
                     "videos": [
                         {
                             "readable_id": video["id"],
@@ -454,6 +459,14 @@ def test_transform_playlist(
     )
     assert {**result, "videos": list(result["videos"])} == {
         **transformed[0]["playlists"][0],
+    }
+    assert (
+        result["url"]
+        == f"https://www.youtube.com/playlist?list={extracted[0][2][0][0]['id']}"
+    )
+    assert result["image"] == {
+        "url": extracted[0][2][0][0]["snippet"]["thumbnails"]["high"]["url"],
+        "alt": extracted[0][2][0][0]["snippet"]["title"],
     }
 
 

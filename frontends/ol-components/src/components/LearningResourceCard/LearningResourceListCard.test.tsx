@@ -1,6 +1,6 @@
 import React from "react"
 import { BrowserRouter } from "react-router-dom"
-import { screen, render } from "@testing-library/react"
+import { screen, render, within } from "@testing-library/react"
 import { LearningResourceListCard } from "./LearningResourceListCard"
 import type { LearningResourceListCardProps } from "./LearningResourceListCard"
 import { DEFAULT_RESOURCE_IMG, getReadableResourceType } from "ol-utilities"
@@ -19,19 +19,29 @@ const setup = (props: LearningResourceListCardProps) => {
 }
 
 describe("Learning Resource List Card", () => {
-  test("Renders resource type, title and start date", () => {
-    const resource = factories.learningResources.resource({
-      resource_type: ResourceTypeEnum.Course,
-      next_start_date: "2026-01-01",
-    })
+  test.each([
+    { resourceType: ResourceTypeEnum.Course, expectedLabel: "Course" },
+    { resourceType: ResourceTypeEnum.Program, expectedLabel: "Program" },
+  ])(
+    "Renders resource type, title and start date as a labeled article",
+    ({ resourceType, expectedLabel }) => {
+      const resource = factories.learningResources.resource({
+        resource_type: resourceType,
+        next_start_date: "2026-01-01",
+      })
 
-    setup({ resource })
+      setup({ resource })
 
-    screen.getByText("Course")
-    screen.getByText(resource.title)
-    screen.getByText("Starts:")
-    screen.getByText("January 01, 2026")
-  })
+      const card = screen.getByRole("article", {
+        name: `${expectedLabel}: ${resource.title}`,
+      })
+
+      within(card).getByText(expectedLabel)
+      within(card).getByText(resource.title)
+      within(card).getByText("Starts:")
+      within(card).getByText("January 01, 2026")
+    },
+  )
 
   test("Displays run start date", () => {
     const resource = factories.learningResources.resource({
@@ -92,11 +102,11 @@ describe("Learning Resource List Card", () => {
 
     setup({ resource, href: "/path/to/thing" })
 
-    const card = screen.getByRole("link", {
-      name: new RegExp(resource.title),
+    const link = screen.getByRole<HTMLAnchorElement>("link", {
+      name: resource.title,
     })
 
-    expect(card).toHaveAttribute("href", "/path/to/thing")
+    expect(link).toHaveAttribute("href", "/path/to/thing")
   })
 
   test("Click action buttons", async () => {
@@ -201,7 +211,7 @@ describe("Learning Resource List Card", () => {
       const resource = factories.learningResources.resource({
         certification: false,
         free: true,
-        prices: ["0"],
+        resource_prices: [{ amount: "0", currency: "USD" }],
       })
       setup({ resource })
       screen.getByText("Free")
@@ -211,7 +221,10 @@ describe("Learning Resource List Card", () => {
       const resource = factories.learningResources.resource({
         certification: true,
         free: true,
-        prices: ["0", "49"],
+        resource_prices: [
+          { amount: "0", currency: "USD" },
+          { amount: "49", currency: "USD" },
+        ],
       })
       setup({ resource })
       screen.getByText("Certificate")
@@ -223,7 +236,11 @@ describe("Learning Resource List Card", () => {
       const resource = factories.learningResources.resource({
         certification: true,
         free: true,
-        prices: ["0", "99", "49"],
+        resource_prices: [
+          { amount: "0", currency: "USD" },
+          { amount: "99", currency: "USD" },
+          { amount: "49", currency: "USD" },
+        ],
       })
       setup({ resource })
       screen.getByText("Certificate")
@@ -235,7 +252,7 @@ describe("Learning Resource List Card", () => {
       const resource = factories.learningResources.resource({
         certification: false,
         free: false,
-        prices: ["49"],
+        resource_prices: [{ amount: "49", currency: "USD" }],
       })
       setup({ resource })
       screen.getByText("$49")
@@ -245,7 +262,7 @@ describe("Learning Resource List Card", () => {
       const resource = factories.learningResources.resource({
         certification: false,
         free: false,
-        prices: ["49.50"],
+        resource_prices: [{ amount: "49.50", currency: "USD" }],
       })
       setup({ resource })
       screen.getByText("$49.50")
@@ -255,7 +272,7 @@ describe("Learning Resource List Card", () => {
       const resource = factories.learningResources.resource({
         certification: false,
         free: true,
-        prices: [],
+        resource_prices: [],
       })
       setup({ resource })
       screen.getByText("Free")
@@ -265,7 +282,7 @@ describe("Learning Resource List Card", () => {
       const resource = factories.learningResources.resource({
         certification: false,
         free: false,
-        prices: ["0"],
+        resource_prices: [{ amount: "0", currency: "USD" }],
       })
       setup({ resource })
       screen.getByText("Paid")
