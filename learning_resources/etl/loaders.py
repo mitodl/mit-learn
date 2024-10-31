@@ -39,6 +39,7 @@ from learning_resources.models import (
     Podcast,
     PodcastEpisode,
     Program,
+    RunInstructorRelationship,
     Video,
     VideoChannel,
     VideoPlaylist,
@@ -168,7 +169,8 @@ def load_instructors(
     """Load the instructors for a resource run into the database"""
     instructors = []
     valid_attributes = ["first_name", "last_name"]
-    for prof in instructors_data:
+    relations = []
+    for idx, prof in enumerate(instructors_data):
         full_name = (
             prof.get("full_name", "")
             or f"{prof.get('first_name') or ''} {prof.get('last_name') or ''}"
@@ -182,9 +184,15 @@ def load_instructors(
                     if value and key in valid_attributes
                 },
             )
-            instructors.append(instructor)
-
-    run.instructors.set(instructors)
+            relation, _ = RunInstructorRelationship.objects.update_or_create(
+                run=run,
+                instructor=instructor,
+                defaults={
+                    "position": idx,
+                },
+            )
+            relations.append(relation.id)
+    RunInstructorRelationship.objects.filter(run=run).exclude(id__in=relations).delete()
     run.save()
     return instructors
 
