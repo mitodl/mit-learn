@@ -153,10 +153,6 @@ def wrap_text_clause(text_query):
 
     return {
         "bool": {
-            "filter": {
-                "bool": {"must": text_bool_clause},
-            },
-            # Add multimatch text query here again to score results based on match
             **text_query,
         }
     }
@@ -567,14 +563,27 @@ def add_text_query_to_search(search, text, search_params, query_type_query):
         text_query = generate_content_file_text_clause(text)
     elif search_params.get("use_semantic"):
         text_query = {
-                "neural_sparse": {
-                "description_embedding": {
-                        "query_text": text,
-                        "model_id": "8FeV3pIB7laiDXlXl1MG",
+            "bool": {
+                "should": [
+                    {
+                        "neural_sparse": {
+                            "description_embedding": {
+                                "query_text": text,
+                                "model_id": "8FeV3pIB7laiDXlXl1MG",
+                            }
+                        }
+                    },
+                    {
+                        "neural_sparse": {
+                            "title_embedding": {
+                                "query_text": text,
+                                "model_id": "8FeV3pIB7laiDXlXl1MG",
+                            }
+                        }
                     }
-                }
+                ]
             }
-    
+        }
 
     else:
         text_query = generate_learning_resources_text_clause(
