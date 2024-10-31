@@ -39,6 +39,39 @@ const Separator: React.FC = () => (
   <SeparatorContainer>|&#8203;</SeparatorContainer>
 )
 
+const DifferingRuns = styled.div({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-start",
+  alignSelf: "stretch",
+  borderRadius: "4px",
+  border: `1px solid ${theme.custom.colors.silverGrayLight}`,
+  borderBottom: "none",
+})
+
+const DifferingRun = styled.div({
+  display: "flex",
+  flexWrap: "wrap",
+  alignItems: "center",
+  gap: "16px",
+  padding: "12px",
+  alignSelf: "stretch",
+  borderBottom: `1px solid ${theme.custom.colors.silverGrayLight}`,
+})
+
+const DifferingRunData = styled.div({
+  display: "flex",
+  flexShrink: 0,
+  flex: "1 0 0",
+  color: theme.custom.colors.darkGray2,
+  ...theme.typography.body3,
+})
+
+const DifferingRunLocation = styled(DifferingRunData)({
+  flex: "1 0 100%",
+  alignSelf: "stretch",
+})
+
 const InfoItems = styled.section({
   display: "flex",
   flexDirection: "column",
@@ -376,6 +409,65 @@ const InfoItem = ({ label, Icon, value }: InfoItemProps) => {
   )
 }
 
+const DifferingRunsTable: React.FC<{ resource: LearningResource }> = ({
+  resource,
+}) => {
+  if (!resource.runs) {
+    return null
+  }
+  if (resource.runs.length === 1) {
+    return null
+  }
+  const asTaughtIn = resource ? showStartAnytime(resource) : false
+  const prices = []
+  const deliveryMethods = []
+  for (const run of resource.runs) {
+    if (run.prices) {
+      prices.push(run.prices)
+    }
+    if (run.delivery) {
+      deliveryMethods.push(run.delivery)
+    }
+  }
+  const distinctPrices = [...new Set(prices.flat())]
+  const distinctDeliveryMethods = [
+    ...new Set(deliveryMethods.flat().map((dm) => dm?.code)),
+  ]
+  if (distinctPrices.length > 1 || distinctDeliveryMethods.length > 1) {
+    return (
+      <DifferingRuns>
+        {resource.runs.map((run, index) => (
+          <DifferingRun key={index}>
+            <DifferingRunData>
+              {formatRunDate(run, asTaughtIn)}
+            </DifferingRunData>
+            {run.prices && (
+              <DifferingRunData>
+                <strong>Price:&nbsp;</strong>
+                <span>{run.prices.map((p) => `$${p}`).join(", ")}</span>
+              </DifferingRunData>
+            )}
+            {run.delivery && (
+              <DifferingRunData>
+                <strong>Format:&nbsp;</strong>
+                <span>{run.delivery?.map((dm) => dm?.name).join(", ")}</span>
+              </DifferingRunData>
+            )}
+            {run.delivery.filter((d) => d.code === "in_person").length > 0 &&
+              resource.location && (
+                <DifferingRunLocation>
+                  <strong>Location:&nbsp;</strong>
+                  <span>{resource.location}</span>
+                </DifferingRunLocation>
+              )}
+          </DifferingRun>
+        ))}
+      </DifferingRuns>
+    )
+  }
+  return null
+}
+
 const InfoSectionV2 = ({ resource }: { resource?: LearningResource }) => {
   if (!resource) {
     return null
@@ -392,11 +484,14 @@ const InfoSectionV2 = ({ resource }: { resource?: LearningResource }) => {
   }
 
   return (
-    <InfoItems data-testid="drawer-info-items">
-      {infoItems.map((props, index) => (
-        <InfoItem key={index} {...props} />
-      ))}
-    </InfoItems>
+    <>
+      <DifferingRunsTable resource={resource} />
+      <InfoItems data-testid="drawer-info-items">
+        {infoItems.map((props, index) => (
+          <InfoItem key={index} {...props} />
+        ))}
+      </InfoItems>
+    </>
   )
 }
 
