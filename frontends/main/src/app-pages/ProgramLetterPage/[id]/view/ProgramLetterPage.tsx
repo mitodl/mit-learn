@@ -130,7 +130,11 @@ const ProgramLetterPage: React.FC = () => {
     <ProgramLetterPageContainer className="letter">
       <ProgramLetterHeader>
         <div className="header-text">
-          {templateFields?.program_letter_header_text}
+          <div
+            dangerouslySetInnerHTML={{
+              __html: templateFields?.program_letter_header_text ?? "",
+            }}
+          />
         </div>
         <div className="letter-logo">
           <ImageContainer
@@ -141,7 +145,13 @@ const ProgramLetterPage: React.FC = () => {
       </ProgramLetterHeader>
       <div className="letter-content">
         <strong>Dear {certificateInfo?.user_full_name},</strong>
-        <div className="letter-text">{templateFields?.program_letter_text}</div>
+        <div className="letter-text">
+          <div
+            dangerouslySetInnerHTML={{
+              __html: templateFields?.program_letter_text ?? "",
+            }}
+          />
+        </div>
         <ProgramLetterSignatures>
           {templateFields?.program_letter_signatories?.map((signatory) => (
             <div key={signatory.id} className="signatory">
@@ -175,7 +185,11 @@ const ProgramLetterPage: React.FC = () => {
           )}
         </div>
         <div className="footer-text">
-          {templateFields?.program_letter_footer_text}
+          <div
+            dangerouslySetInnerHTML={{
+              __html: templateFields?.program_letter_footer_text ?? "",
+            }}
+          />
         </div>
       </ProgramLetterFooter>
     </ProgramLetterPageContainer>
