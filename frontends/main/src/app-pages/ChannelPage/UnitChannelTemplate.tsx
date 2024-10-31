@@ -39,23 +39,15 @@ const FeaturedCoursesCarousel = styled(ResourceCarousel)(({ theme }) => ({
   },
 }))
 
-const MobileOnly = styled.div(({ theme }) => ({
-  display: "contents",
-  [theme.breakpoints.up("md")]: {
-    display: "none",
-  },
-}))
-
-const DesktopOnly = styled.div(({ theme }) => ({
-  display: "contents",
-  [theme.breakpoints.down("md")]: {
-    display: "none",
-  },
-}))
-
-const UnitLogoInverted = styled(UnitLogo)({
+const UnitLogoInverted = styled(UnitLogo)(({ theme }) => ({
   filter: "saturate(0%) invert(100%)",
-})
+  height: 50,
+  maxWidth: "100%",
+  [theme.breakpoints.down("md")]: {
+    height: 40,
+    width: "auto",
+  },
+}))
 
 const BannerContent = styled.div(({ theme }) => ({
   display: "flex",
@@ -135,20 +127,10 @@ const UnitChannelTemplate: React.FC<UnitChannelTemplateProps> = ({
               <ChannelHeader>
                 <VisuallyHidden>{channel.data?.title}</VisuallyHidden>
                 {channel.data ? (
-                  <>
-                    <DesktopOnly>
-                      <UnitLogoInverted
-                        unitCode={name as OfferedByEnum}
-                        height={50}
-                      />
-                    </DesktopOnly>
-                    <MobileOnly>
-                      <UnitLogoInverted
-                        unitCode={name as OfferedByEnum}
-                        height={40}
-                      />
-                    </MobileOnly>
-                  </>
+                  <UnitLogoInverted
+                    unitCode={name as OfferedByEnum}
+                    height={50}
+                  />
                 ) : null}
               </ChannelHeader>
               <Stack gap={{ xs: "16px", lg: "32px" }}>
