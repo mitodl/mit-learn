@@ -67,6 +67,12 @@ const DifferingRunData = styled.div({
   ...theme.typography.body3,
 })
 
+const DifferingRunLabel = styled.strong({
+  [theme.breakpoints.down("sm")]: {
+    display: "none",
+  },
+})
+
 const DifferingRunLocation = styled(DifferingRunData)({
   flex: "1 0 100%",
   alignSelf: "stretch",
@@ -443,13 +449,13 @@ const DifferingRunsTable: React.FC<{ resource: LearningResource }> = ({
             </DifferingRunData>
             {run.prices && (
               <DifferingRunData>
-                <strong>Price:&nbsp;</strong>
+                <DifferingRunLabel>Price:&nbsp;</DifferingRunLabel>
                 <span>{run.prices.map((p) => `$${p}`).join(", ")}</span>
               </DifferingRunData>
             )}
             {run.delivery && (
               <DifferingRunData>
-                <strong>Format:&nbsp;</strong>
+                <DifferingRunLabel>Format:&nbsp;</DifferingRunLabel>
                 <span>{run.delivery?.map((dm) => dm?.name).join(", ")}</span>
               </DifferingRunData>
             )}
