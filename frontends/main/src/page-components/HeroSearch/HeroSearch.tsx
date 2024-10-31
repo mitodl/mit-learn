@@ -101,7 +101,6 @@ const ImageContainer = styled.div(({ theme }) => ({
   alignItems: "center",
   justifyContent: "center",
   marginTop: "44px",
-  transform: "translateX(48px)",
   width: "513px",
   aspectRatio: "513 / 522",
   [theme.breakpoints.down("md")]: {
@@ -109,6 +108,7 @@ const ImageContainer = styled.div(({ theme }) => ({
   },
   img: {
     width: "100%",
+    transform: "translateX(48px)",
   },
   position: "relative",
 }))
@@ -209,13 +209,7 @@ const HeroImage: React.FC = () => {
 
   return (
     <ImageContainer>
-      <Image
-        alt=""
-        src={`/images/hero/hero-${imageIndex}.png`}
-        fill
-        priority
-        sizes="513px"
-      />
+      <Image alt="" src={`/images/hero/hero-${imageIndex}.png`} fill priority />
     </ImageContainer>
   )
 }
