@@ -1,5 +1,6 @@
-import { LearningResource, ResourceTypeEnum } from "api"
+import { LearningResource, LearningResourcePrice, ResourceTypeEnum } from "api"
 import { findBestRun } from "ol-utilities"
+import getSymbolFromCurrency from "currency-symbol-map"
 
 /*
  * This constant represents the value displayed when a course is free.
@@ -16,24 +17,28 @@ type Prices = {
    * The price of the course, which can be a number or a range of numbers.
    * If the course is free, the value is 0. If the course is paid, the value is "Paid".
    *
-   * @type {null | number[] | typeof PAID}
+   * @type {null | LearningResourcePrice[] | typeof PAID}
    * @memberof Prices
    */
-  course: null | number[] | typeof PAID
+  course: null | LearningResourcePrice[] | typeof PAID
   /**
    * The price of the certificate, which can be a number or a range of numbers.
    *
    * @type {null | number[]}
    * @memberof Prices
    */
-  certificate: null | number[]
+  certificate: null | LearningResourcePrice[]
 }
 
 const getPrices = (resource: LearningResource): Prices => {
-  const sortedNonzero = resource.prices
-    .map((price) => Number(price))
-    .sort((a, b) => a - b)
-    .filter((price) => price > 0)
+  const sortedNonzero = resource.resource_prices
+    ? resource.resource_prices
+        .sort(
+          (a: LearningResourcePrice, b: LearningResourcePrice) =>
+            Number(a.amount) - Number(b.amount),
+        )
+        .filter((price: LearningResourcePrice) => Number(price.amount) > 0)
+    : []
 
   const priceRange = sortedNonzero.filter(
     (price, index, arr) => index === 0 || index === arr.length - 1,
@@ -42,8 +47,8 @@ const getPrices = (resource: LearningResource): Prices => {
 
   if (resource.free) {
     return resource.certification
-      ? { course: [0], certificate: prices }
-      : { course: [0], certificate: null }
+      ? { course: [{ amount: "0", currency: "USD" }], certificate: prices }
+      : { course: [{ amount: "0", currency: "USD" }], certificate: null }
   }
   return {
     course: prices ?? PAID,
@@ -66,12 +71,12 @@ const getDisplayPrice = (price: Prices["course"] | Prices["certificate"]) => {
     return PAID
   }
   if (price.length > 1) {
-    return `$${getDisplayPrecision(price[0])} – $${getDisplayPrecision(price[1])}`
+    return `${getCurrencySymbol(price[0].currency)}${getDisplayPrecision(Number(price[0].amount))} – ${getCurrencySymbol(price[0].currency)}${getDisplayPrecision(Number(price[1].amount))}`
   } else if (price.length === 1) {
-    if (price[0] === 0) {
+    if (Number(price[0].amount) === 0) {
       return FREE
     }
-    return `$${getDisplayPrecision(price[0])}`
+    return `${getCurrencySymbol(price[0].currency)}${getDisplayPrecision(Number(price[0].amount))}`
   }
   return null
 }
@@ -104,4 +109,11 @@ export const getResourceDate = (resource: LearningResource): string | null => {
     resource.next_start_date ?? findBestRun(resource.runs ?? [])?.start_date
 
   return startDate ?? null
+}
+
+export const getCurrencySymbol = (currencyCode: string) => {
+  const symbol = getSymbolFromCurrency(currencyCode) ?? "$"
+  // Some currency symbols are just chars (like CHF). In that case,
+  // append a space to separate the symbol from the amount.
+  return !symbol.match(/^[0-9A-Za-z]+$/) ? symbol : `${symbol} `
 }
