@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+Version 0.24.2
+--------------
+
+- Fix issue with hero image causing horizontal scroll (#1777)
+- add new learning resource drawer layout (#1711)
+- Change frontend to use resource_prices field instead of prices field (#1737)
+- move facets first in tab order (#1751)
+- Card Accessibility Improvements (#1778)
+
 Version 0.24.1 (Released October 30, 2024)
 --------------
 
