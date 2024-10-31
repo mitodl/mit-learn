@@ -1,5 +1,6 @@
 import React from "react"
 import { styled, Breadcrumbs, Banner } from "ol-components"
+import { backgroundSrcSetCSS } from "ol-utilities"
 import { SearchSubscriptionToggle } from "@/page-components/SearchSubscriptionToggle/SearchSubscriptionToggle"
 import { useChannelDetail } from "api/hooks/channels"
 import ChannelMenu from "@/components/ChannelMenu/ChannelMenu"
@@ -90,7 +91,8 @@ const DefaultChannelTemplate: React.FC<DefaultChannelTemplateProps> = ({
         header={displayConfiguration?.heading}
         subHeader={displayConfiguration?.sub_heading}
         backgroundUrl={
-          displayConfiguration?.banner_background ?? backgroundSteps
+          displayConfiguration?.banner_background ??
+          backgroundSrcSetCSS(backgroundSteps)
         }
         extraActions={
           <ChannelControlsContainer>

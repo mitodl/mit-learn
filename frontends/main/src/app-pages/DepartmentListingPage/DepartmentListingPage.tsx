@@ -13,7 +13,7 @@ import {
   Banner,
   Breadcrumbs,
 } from "ol-components"
-import { pluralize } from "ol-utilities"
+import { pluralize, backgroundSrcSetCSS } from "ol-utilities"
 import type { LearningResourceSchool } from "api"
 import { useSchoolsList } from "api/hooks/learningResources"
 import {
@@ -210,7 +210,7 @@ const DepartmentListingPage: React.FC = () => {
             current="Departments"
           />
         }
-        backgroundUrl={backgroundSteps.src}
+        backgroundUrl={backgroundSrcSetCSS(backgroundSteps)}
       />
       <Container>
         <Grid container>

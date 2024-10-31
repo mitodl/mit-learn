@@ -23,7 +23,7 @@ import {
   useLearningResourceTopic,
   useLearningResourceTopics,
 } from "api/hooks/learningResources"
-import { propsNotNil } from "ol-utilities"
+import { propsNotNil, backgroundSrcSetCSS } from "ol-utilities"
 import invariant from "tiny-invariant"
 import backgroundSteps from "@/public/images/backgrounds/background_steps.jpg"
 
@@ -250,7 +250,8 @@ const TopicChannelTemplateInternal: React.FC<
         subHeader={displayConfiguration?.sub_heading}
         extraHeader={<TopicChips topic={topic} />}
         backgroundUrl={
-          displayConfiguration?.banner_background ?? backgroundSteps.src
+          displayConfiguration?.banner_background ??
+          backgroundSrcSetCSS(backgroundSteps)
         }
         extraActions={
           <ChannelControlsContainer>

@@ -35,7 +35,7 @@ const BannerBackground = styled.div<BannerBackgroundProps>(
     return {
       backgroundAttachment: "fixed",
       backgroundImage: backgroundDim
-        ? `linear-gradient(rgba(0 0 0 / ${backgroundDim}%), rgba(0 0 0 / ${backgroundDim}%)), ${backgroundUrlFn}')`
+        ? `linear-gradient(rgba(0 0 0 / ${backgroundDim}%), rgba(0 0 0 / ${backgroundDim}%)), ${backgroundUrlFn}`
         : backgroundUrlFn,
       backgroundSize: backgroundSize,
       backgroundPosition: "center top",
