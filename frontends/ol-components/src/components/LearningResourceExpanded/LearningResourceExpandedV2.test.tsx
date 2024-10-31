@@ -12,11 +12,10 @@ import { factories } from "api/test-utils"
 import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
 import invariant from "tiny-invariant"
 import type { LearningResource } from "api"
-import { PLATFORMS } from "../Logo/Logo"
+import { PLATFORM_LOGOS } from "../Logo/Logo"
 import _ from "lodash"
 
 const IMG_CONFIG: LearningResourceExpandedV2Props["imgConfig"] = {
-  key: "fake-key",
   width: 385,
   height: 200,
 }
@@ -152,7 +151,7 @@ describe("Learning Resource Expanded", () => {
         .find((img) => img.getAttribute("alt")?.includes("xPRO"))
 
       expect(xproImage).toBeInTheDocument()
-      expect(xproImage).toHaveAttribute("alt", PLATFORMS["xpro"].name)
+      expect(xproImage).toHaveAttribute("alt", PLATFORM_LOGOS["xpro"].name)
     },
   )
 
