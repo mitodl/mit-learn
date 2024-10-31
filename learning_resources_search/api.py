@@ -873,7 +873,11 @@ def get_similar_topics(
 
 
 def get_similar_resources(
-    value_doc: dict, num_resources: int, min_term_freq: int, min_doc_freq: int
+    value_doc: dict,
+    num_resources: int,
+    min_term_freq: int,
+    min_doc_freq: int,
+    use_embeddings,
 ) -> list[str]:
     """
     Get a list of similar resources based on another resource
@@ -887,10 +891,83 @@ def get_similar_resources(
             minimum times a term needs to show up in input
         min_doc_freq (int):
             minimum times a term needs to show up in docs
+        use_embeddings (bool):
+            use vector embeddings to retrieve results
 
     Returns:
         list of str:
             list of topic values
+    """
+    if use_embeddings:
+        return get_similar_resources_qdrant(value_doc, num_resources)
+    return get_similar_resources_opensearch(
+        value_doc, num_resources, min_term_freq, min_doc_freq
+    )
+
+
+def _qdrant_similar_results(doc, num_resources):
+    from sentence_transformers import SentenceTransformer
+
+    from learning_resources_search.indexing_api import qdrant_client
+
+    client = qdrant_client()
+    encoder = SentenceTransformer("all-MiniLM-L6-v2")
+    return [
+        hit.payload
+        for hit in client.query_points(
+            collection_name="resource_embeddings.resources",
+            query=encoder.encode(
+                f'{doc.get("title")} {doc.get("description")} '
+                f'{doc.get("full_description")} {doc.get("content")}'
+            ).tolist(),
+            limit=num_resources,
+        ).points
+    ]
+
+
+def get_similar_resources_qdrant(value_doc: dict, num_resources: int):
+    """
+    Get a list of similar resources from qdrant
+
+    Args:
+        value_doc (dict):
+            a document representing the data fields we want to search with
+        num_topics (int):
+            number of resources to return
+
+    Returns:
+        list of str:
+            list of learning resources
+    """
+    hits = _qdrant_similar_results(value_doc, num_resources)
+    return LearningResource.objects.for_search_serialization().filter(
+        id__in=[
+            resource["id"]
+            for resource in hits
+            if resource["id"] != value_doc["id"] and resource["published"]
+        ]
+    )
+
+
+def get_similar_resources_opensearch(
+    value_doc: dict, num_resources: int, min_term_freq: int, min_doc_freq: int
+) -> list[str]:
+    """
+    Get a list of similar resources from opensearch
+
+    Args:
+        value_doc (dict):
+            a document representing the data fields we want to search with
+        num_topics (int):
+            number of resources to return
+        min_term_freq (int):
+            minimum times a term needs to show up in input
+        min_doc_freq (int):
+            minimum times a term needs to show up in docs
+
+    Returns:
+        list of str:
+            list of learning resources
     """
     indexes = relevant_indexes([COURSE_TYPE], [], endpoint=LEARNING_RESOURCE)
     search = Search(index=",".join(indexes))
