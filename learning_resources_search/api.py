@@ -149,8 +149,6 @@ def wrap_text_clause(text_query):
     Returns:
         dict: dictionary with the opensearch text clause
     """
-    text_bool_clause = [{"bool": text_query}] if text_query else []
-
     return {
         "bool": {
             **text_query,
@@ -580,7 +578,7 @@ def add_text_query_to_search(search, text, search_params, query_type_query):
                                 "model_id": "8FeV3pIB7laiDXlXl1MG",
                             }
                         }
-                    }
+                    },
                 ]
             }
         }
