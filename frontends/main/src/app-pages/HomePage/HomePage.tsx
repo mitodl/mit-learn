@@ -41,20 +41,20 @@ const MediaCarousel = styled(ResourceCarousel)(({ theme }) => ({
 const HomePage: React.FC = () => {
   return (
     <>
-      <Container>
-        <LearningResourceDrawer />
-      </Container>
+      <LearningResourceDrawer />
       <FullWidthBackground>
-        <HeroSearch />
-        <section>
-          <Suspense>
-            <FeaturedCoursesCarousel
-              titleComponent="h2"
-              title="Featured Courses"
-              config={carousels.FEATURED_RESOURCES_CAROUSEL}
-            />
-          </Suspense>
-        </section>
+        <Container>
+          <HeroSearch />
+          <section>
+            <Suspense>
+              <FeaturedCoursesCarousel
+                titleComponent="h2"
+                title="Featured Courses"
+                config={carousels.FEATURED_RESOURCES_CAROUSEL}
+              />
+            </Suspense>
+          </section>
+        </Container>
       </FullWidthBackground>
       <PersonalizeSection />
       <Container component="section">
