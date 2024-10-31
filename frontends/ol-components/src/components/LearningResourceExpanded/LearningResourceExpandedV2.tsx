@@ -2,28 +2,25 @@ import React from "react"
 import styled from "@emotion/styled"
 import Skeleton from "@mui/material/Skeleton"
 import Typography from "@mui/material/Typography"
+import { default as NextImage } from "next/image"
 import { ActionButton, ButtonLink } from "../Button/Button"
 import type { LearningResource } from "api"
 import { ResourceTypeEnum, PlatformEnum } from "api"
-import {
-  resourceThumbnailSrc,
-  DEFAULT_RESOURCE_IMG,
-  getReadableResourceType,
-} from "ol-utilities"
+import { DEFAULT_RESOURCE_IMG, getReadableResourceType } from "ol-utilities"
 import {
   RiBookmarkLine,
   RiCloseLargeLine,
   RiExternalLinkLine,
   RiMenuAddLine,
 } from "@remixicon/react"
-import type { EmbedlyConfig } from "ol-utilities"
+import type { ImageConfig } from "../../constants/imgConfigs"
 import { theme } from "../ThemeProvider/ThemeProvider"
-import { EmbedlyCard } from "../EmbedlyCard/EmbedlyCard"
-import { PlatformLogo, PLATFORMS } from "../Logo/Logo"
+import { PlatformLogo, PLATFORM_LOGOS } from "../Logo/Logo"
 import InfoSectionV2 from "./InfoSectionV2"
 import type { User } from "api/hooks/user"
 import { LearningResourceCardProps } from "../LearningResourceCard/LearningResourceCard"
 import { CardActionButton } from "../LearningResourceCard/LearningResourceListCard"
+import VideoFrame from "./VideoFrame"
 
 const Container = styled.div({
   display: "flex",
@@ -81,17 +78,17 @@ const RightContainer = styled.div({
   },
 })
 
-const EmbedlyContainer = styled.div({
-  width: "100%",
-  overflow: "hidden",
-})
+const ImageContainer = styled.div<{ aspect: number }>`
+  position: relative;
+  width: 100%;
+  padding-bottom: ${({ aspect }) => 100 / aspect}%;
+`
 
-const Image = styled.img<{ aspect: number }>((aspect) => ({
-  aspectRatio: aspect.aspect,
+const Image = styled(NextImage)({
   borderRadius: "8px",
   width: "100%",
   objectFit: "cover",
-}))
+})
 
 const SkeletonImage = styled(Skeleton)<{ aspect: number }>((aspect) => ({
   borderRadius: "8px",
@@ -168,7 +165,7 @@ const ListButtonContainer = styled.div({
 type LearningResourceExpandedV2Props = {
   resource?: LearningResource
   user?: User
-  imgConfig: EmbedlyConfig
+  imgConfig: ImageConfig
   onAddToLearningPathClick?: LearningResourceCardProps["onAddToLearningPathClick"]
   onAddToUserListClick?: LearningResourceCardProps["onAddToUserListClick"]
   closeDrawer?: () => void
@@ -237,33 +234,32 @@ const TitleSection: React.FC<{
 
 const ImageSection: React.FC<{
   resource?: LearningResource
-  config: EmbedlyConfig
+  config: ImageConfig
 }> = ({ resource, config }) => {
+  const aspect = config.width / config.height
   if (resource?.resource_type === "video" && resource?.url) {
     return (
-      <EmbedlyContainer>
-        <EmbedlyCard
-          aspectRatio={config.width / config.height}
-          url={resource?.url}
-          embedlyKey={config.key}
-        />
-      </EmbedlyContainer>
+      <VideoFrame src={resource.url} title={resource.title} aspect={aspect} />
     )
   } else if (resource?.image) {
     return (
-      <Image
-        src={resourceThumbnailSrc(resource?.image, config)}
-        aspect={config.width / config.height}
-        alt={resource?.image.alt ?? ""}
-      />
+      <ImageContainer aspect={aspect}>
+        <Image
+          src={resource.image?.url ?? DEFAULT_RESOURCE_IMG}
+          alt={resource?.image.alt ?? ""}
+          fill
+        />
+      </ImageContainer>
     )
   } else if (resource) {
     return (
-      <Image
-        src={DEFAULT_RESOURCE_IMG}
-        alt={resource.image?.alt ?? ""}
-        aspect={config.width / config.height}
-      />
+      <ImageContainer aspect={aspect}>
+        <Image
+          src={DEFAULT_RESOURCE_IMG}
+          alt={resource.image?.alt ?? ""}
+          fill
+        />
+      </ImageContainer>
     )
   } else {
     return (
@@ -323,7 +319,7 @@ const CallToActionSection = ({
   onAddToLearningPathClick,
   onAddToUserListClick,
 }: {
-  imgConfig: EmbedlyConfig
+  imgConfig: ImageConfig
   resource?: LearningResource
   hide?: boolean
   user?: User
@@ -350,7 +346,7 @@ const CallToActionSection = ({
     (offeredBy?.code as PlatformEnum) === PlatformEnum.Xpro
       ? (offeredBy?.code as PlatformEnum)
       : (platform?.code as PlatformEnum)
-  const platformImage = PLATFORMS[platformCode]?.image
+  const platformImage = PLATFORM_LOGOS[platformCode]?.image
   const cta = getCallToActionText(resource)
   return (
     <CallToAction data-testid="drawer-cta">

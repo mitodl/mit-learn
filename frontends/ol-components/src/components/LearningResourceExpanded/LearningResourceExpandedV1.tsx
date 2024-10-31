@@ -16,12 +16,12 @@ import { RiExternalLinkLine } from "@remixicon/react"
 import { theme } from "../ThemeProvider/ThemeProvider"
 import { SimpleSelect } from "../SimpleSelect/SimpleSelect"
 import type { SimpleSelectProps } from "../SimpleSelect/SimpleSelect"
-import { EmbedlyCard } from "../EmbedlyCard/EmbedlyCard"
 import { PlatformLogo, PLATFORM_LOGOS } from "../Logo/Logo"
 import InfoSectionV1 from "./InfoSectionV1"
 import type { User } from "api/hooks/user"
 import { LearningResourceCardProps } from "../LearningResourceCard/LearningResourceCard"
 import type { ImageConfig } from "../../constants/imgConfigs"
+import VideoFrame from "./VideoFrame"
 
 const Container = styled.div<{ padTop?: boolean }>`
   display: flex;
@@ -143,13 +143,6 @@ const OnPlatform = styled.span`
   color: ${theme.custom.colors.black};
 `
 
-const VideoFrame = styled.iframe`
-  border-radius: 8px;
-  border: none;
-  width: 100%;
-  aspect-ratio: 16 / 9;
-`
-
 type LearningResourceExpandedV1Props = {
   resource?: LearningResource
   user?: User
@@ -164,28 +157,16 @@ const ImageSection: React.FC<{
 }> = ({ resource, config }) => {
   const aspect = config.width / config.height
   if (resource?.resource_type === "video" && resource?.url) {
-    if (resource?.url?.startsWith("https://www.youtube.com/watch?v=")) {
-      const videoId = resource?.url?.split("v=")[1]
-      return (
-        <VideoFrame
-          width="452"
-          height={452 / (16 / 9)}
-          src={`http://www.youtube.com/embed/${videoId}`}
-          title={resource?.title}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          referrerPolicy="strict-origin-when-cross-origin"
-          allowFullScreen
-        />
-      )
-    }
-    return <EmbedlyCard aspectRatio={aspect} url={resource?.url} />
+    return (
+      <VideoFrame src={resource.url} title={resource.title} aspect={aspect} />
+    )
   } else if (resource?.image) {
     return (
       <ImageContainer aspect={aspect}>
         <Image
           src={resource.image?.url ?? DEFAULT_RESOURCE_IMG}
-          fill={true}
           alt={resource?.image.alt ?? ""}
+          fill
         />
       </ImageContainer>
     )
@@ -195,7 +176,7 @@ const ImageSection: React.FC<{
         <Image
           src={DEFAULT_RESOURCE_IMG}
           alt={resource.image?.alt ?? ""}
-          fill={true}
+          fill
         />
       </ImageContainer>
     )
