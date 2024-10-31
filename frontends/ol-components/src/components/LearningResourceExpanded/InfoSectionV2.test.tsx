@@ -152,7 +152,6 @@ describe("Learning resource info section start date", () => {
 
     const section = screen.getByTestId("drawer-info-items")
     within(section).getByText((_content, node) => {
-      console.log(node?.textContent)
       return node?.textContent === expectedDateText || false
     })
   })
