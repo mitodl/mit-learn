@@ -231,4 +231,4 @@ export { MITLearnGlobalStyles } from "./components/ThemeProvider/MITLearnGlobalS
 export { default as styled } from "@emotion/styled"
 export { css, Global } from "@emotion/react"
 
-export { AppRouterCacheProvider as NextJsAppRouterCacheProvider } from "@mui/material-nextjs/v14-appRouter"
+export { AppRouterCacheProvider as NextJsAppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter"

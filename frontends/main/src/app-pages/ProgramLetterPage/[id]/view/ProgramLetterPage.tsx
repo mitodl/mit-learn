@@ -4,7 +4,6 @@ import React from "react"
 import { styled } from "ol-components"
 import { useProgramLettersDetail } from "api/hooks/programLetters"
 import { useParams } from "next/navigation"
-import { CkeditorDisplay } from "ol-ckeditor"
 
 type RouteParams = {
   id: string
@@ -131,10 +130,10 @@ const ProgramLetterPage: React.FC = () => {
     <ProgramLetterPageContainer className="letter">
       <ProgramLetterHeader>
         <div className="header-text">
-          <CkeditorDisplay
-            dangerouslySetInnerHTML={
-              templateFields?.program_letter_header_text ?? ""
-            }
+          <div
+            dangerouslySetInnerHTML={{
+              __html: templateFields?.program_letter_header_text ?? "",
+            }}
           />
         </div>
         <div className="letter-logo">
@@ -147,8 +146,10 @@ const ProgramLetterPage: React.FC = () => {
       <div className="letter-content">
         <strong>Dear {certificateInfo?.user_full_name},</strong>
         <div className="letter-text">
-          <CkeditorDisplay
-            dangerouslySetInnerHTML={templateFields?.program_letter_text ?? ""}
+          <div
+            dangerouslySetInnerHTML={{
+              __html: templateFields?.program_letter_text ?? "",
+            }}
           />
         </div>
         <ProgramLetterSignatures>
@@ -184,10 +185,10 @@ const ProgramLetterPage: React.FC = () => {
           )}
         </div>
         <div className="footer-text">
-          <CkeditorDisplay
-            dangerouslySetInnerHTML={
-              templateFields?.program_letter_footer_text ?? ""
-            }
+          <div
+            dangerouslySetInnerHTML={{
+              __html: templateFields?.program_letter_footer_text ?? "",
+            }}
           />
         </div>
       </ProgramLetterFooter>
