@@ -194,7 +194,7 @@ def generate_content_file_text_clause(text):
 
 
 def generate_learning_resources_text_clause(
-    text, search_mode, slop, content_file_score_weight
+    text, search_mode, slop, content_file_score_weight, use_semantic
 ):
     """
     Return text clause for the query
@@ -315,7 +315,33 @@ def generate_learning_resources_text_clause(
                 },
             ]
         }
+
+        if use_semantic:
+            
+            semantic_query = { "should": [] }
+            
+            for field in ["title_embedding", "description_embedding"]:
+                semantic_query["should"].append(
+                    {
+                        "neural_sparse": {
+                            field: {
+                                "query_text": text,
+                                "model_id": "8FeV3pIB7laiDXlXl1MG",
+                            }
+                        }
+                    },
+                )
+            
+            return {"hybrid": {
+                "queries": [
+                    {"bool": text_query},
+                    {"bool": semantic_query}
+                ]
+            }}
+
     else:
+
+        
         text_query = {}
 
     return wrap_text_clause(text_query)
@@ -559,29 +585,6 @@ def percolate_matches_for_document(document_id):
 def add_text_query_to_search(search, text, search_params, query_type_query):
     if search_params.get("endpoint") == CONTENT_FILE_TYPE:
         text_query = generate_content_file_text_clause(text)
-    elif search_params.get("use_semantic"):
-        text_query = {
-            "bool": {
-                "should": [
-                    {
-                        "neural_sparse": {
-                            "description_embedding": {
-                                "query_text": text,
-                                "model_id": "8FeV3pIB7laiDXlXl1MG",
-                            }
-                        }
-                    },
-                    {
-                        "neural_sparse": {
-                            "title_embedding": {
-                                "query_text": text,
-                                "model_id": "8FeV3pIB7laiDXlXl1MG",
-                            }
-                        }
-                    },
-                ]
-            }
-        }
 
     else:
         text_query = generate_learning_resources_text_clause(
@@ -589,6 +592,7 @@ def add_text_query_to_search(search, text, search_params, query_type_query):
             search_params.get("search_mode"),
             search_params.get("slop"),
             search_params.get("content_file_score_weight"),
+            search_params.get("use_semantic")
         )
 
     yearly_decay_percent = search_params.get("yearly_decay_percent")
@@ -642,6 +646,26 @@ def add_text_query_to_search(search, text, search_params, query_type_query):
         search = search.extra(query=script_query)
     else:
         search = search.extra(query=text_query)
+
+    if search_params.get("use_semantic"):
+        search = search.extra(search_pipeline = {
+				"phase_results_processors": [
+					{
+						"normalization-processor": {
+							"normalization": {
+								"technique": "min_max"
+							}
+							, "combination": {
+									"technique": "arithmetic_mean"
+								, "parameters": {
+									"weights": [0.7, 0.3]
+								}
+							}
+							, "ignore_failure": False
+						}
+					}
+				]
+			})
 
     return search
 
