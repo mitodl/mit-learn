@@ -192,9 +192,6 @@ def clear_and_create_index(*, index_name=None, skip_mapping=False, object_type=N
                 "number_of_shards": settings.OPENSEARCH_SHARD_COUNT,
                 "number_of_replicas": settings.OPENSEARCH_REPLICA_COUNT,
                 "refresh_interval": "60s",
-                "default_pipeline": "elser-ingest-pipeline-content"
-                if object_type == CONTENT_FILE_TYPE
-                else "elser-ingest-pipeline",
             },
             "analysis": {
                 "analyzer": {
@@ -222,6 +219,10 @@ def clear_and_create_index(*, index_name=None, skip_mapping=False, object_type=N
             },
         }
     }
+
+    if object_type != CONTENT_FILE_TYPE:
+        index_create_data["settings"]["default_pipeline"] = "elser-ingest-pipeline"
+
     if not skip_mapping:
         mapping = MAPPING[object_type]
         mapping["description_embedding"] = {"type": "sparse_vector"}
