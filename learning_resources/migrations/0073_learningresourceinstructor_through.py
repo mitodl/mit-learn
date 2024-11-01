@@ -9,7 +9,11 @@ def create_through_relations(apps, schema_editor):
     RunInstructorRelationship = apps.get_model(
         "learning_resources", "RunInstructorRelationship"
     )
-    for idx, run in enumerate(LearningResourceRun.objects.all()):
+    for idx, run in enumerate(
+        LearningResourceRun.objects.filter(
+            learning_resource__published=True, published=True
+        ).only("id", "instructors")
+    ):
         for instructor in run.instructors.iterator():
             RunInstructorRelationship.objects.update_or_create(
                 run=run, instructor=instructor, defaults={"position": idx}
