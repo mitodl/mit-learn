@@ -42,12 +42,12 @@ class Command(BaseCommand):
                 f"--{object_type}s",
                 dest=object_type,
                 action="store_true",
-                help=f"Recreate the {object_type} index",
+                help=f"Recreate the {object_type} embeddings",
             )
         super().add_arguments(parser)
 
     def handle(self, *args, **options):  # noqa: ARG002
-        """Index all LEARNING_RESOURCE_TYPES"""
+        """Embed all LEARNING_RESOURCE_TYPES"""
 
         if options["all"]:
             indexes_to_update = list(ALL_INDEX_TYPES)
@@ -56,8 +56,8 @@ class Command(BaseCommand):
                 filter(lambda object_type: options[object_type], ALL_INDEX_TYPES)
             )
             if not indexes_to_update:
-                self.stdout.write("Must select at least one index to update")
-                self.stdout.write("The following are valid index options:")
+                self.stdout.write("Must select at least one type to update")
+                self.stdout.write("The following are valid options:")
                 self.stdout.write("  --all")
                 for object_type in sorted(ALL_INDEX_TYPES):
                     self.stdout.write(f"  --{object_type}s")
@@ -70,15 +70,17 @@ class Command(BaseCommand):
             create_qdrand_collections(force_recreate=True)
         self.stdout.write(
             f"Started celery task {task} to index content for the following"
-            f" indexes: {indexes_to_update}"
+            f" Types to embed: {indexes_to_update}"
         )
 
         self.stdout.write("Waiting on task...")
         start = now_in_utc()
         error = task.get()
         if error:
-            msg = f"Recreate index errored: {error}"
+            msg = f"Geenerate embeddings errored: {error}"
             raise CommandError(msg)
 
         total_seconds = (now_in_utc() - start).total_seconds()
-        self.stdout.write(f"Recreate index finished, took {total_seconds} seconds")
+        self.stdout.write(
+            f"Embeddings generated and stored, took {total_seconds} seconds"
+        )
