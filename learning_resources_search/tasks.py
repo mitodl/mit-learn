@@ -753,11 +753,11 @@ def start_embed_resources(self, indexes, skip_content_files):
                         )
                     )
     except:  # noqa: E722
-        error = "start_recreate_index threw an error"
+        error = "start_embed_resources threw an error"
         log.exception(error)
         return error
 
-    # Use self.replace so that code waiting on this task will also wait on the indexing
+    # Use self.replace so that code waiting on this task will also wait on the embedding
     #  and finish tasks
     return self.replace(celery.chain(*index_tasks))
 
