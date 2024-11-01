@@ -906,22 +906,19 @@ def get_similar_resources(
 
 
 def _qdrant_similar_results(doc, num_resources):
-    from sentence_transformers import SentenceTransformer
-
     from learning_resources_search.indexing_api import qdrant_client
 
     client = qdrant_client()
-    encoder = SentenceTransformer("all-MiniLM-L6-v2")
     return [
-        hit.payload
-        for hit in client.query_points(
-            collection_name="resource_embeddings.resources",
-            query=encoder.encode(
+        hit.metadata
+        for hit in client.query(
+            collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
+            query_text=(
                 f'{doc.get("title")} {doc.get("description")} '
                 f'{doc.get("full_description")} {doc.get("content")}'
-            ).tolist(),
+            ),
             limit=num_resources,
-        ).points
+        )
     ]
 
 

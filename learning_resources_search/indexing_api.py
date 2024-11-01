@@ -11,7 +11,6 @@ from django.contrib.auth import get_user_model
 from opensearchpy.exceptions import ConflictError, NotFoundError
 from opensearchpy.helpers import BulkIndexError, bulk
 from qdrant_client import QdrantClient, models
-from sentence_transformers import SentenceTransformer
 
 from learning_resources.models import ContentFile, LearningResourceRun
 from learning_resources_search.connection import (
@@ -91,12 +90,14 @@ def clear_featured_rank(rank, clear_all_greater_than):
 
 
 def qdrant_client():
-    return QdrantClient(url=settings.QDRANT_HOST, api_key=settings.QDRANT_API_KEY)
+    client = QdrantClient(url=settings.QDRANT_HOST, api_key=settings.QDRANT_API_KEY)
+    client.set_model(settings.QDRANT_DENSE_MODEL)
+    client.set_sparse_model(settings.QDRANT_SPARSE_MODEL)
+    return client
 
 
 def create_qdrand_collections(force_recreate):
     client = qdrant_client()
-    encoder = SentenceTransformer("all-MiniLM-L6-v2")
     resources_collection_name = f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources"
     content_files_collection_name = (
         f"{settings.QDRANT_BASE_COLLECTION_NAME}.content_files"
@@ -109,10 +110,8 @@ def create_qdrand_collections(force_recreate):
         client.recreate_collection(
             collection_name=resources_collection_name,
             on_disk_payload=True,
-            vectors_config=models.VectorParams(
-                size=encoder.get_sentence_embedding_dimension(),
-                distance=models.Distance.COSINE,
-            ),
+            vectors_config=client.get_fastembed_vector_params(),
+            sparse_vectors_config=client.get_fastembed_sparse_vector_params(),
             quantization_config=models.ScalarQuantization(
                 scalar=models.ScalarQuantizationConfig(
                     type=models.ScalarType.INT8,
@@ -120,6 +119,7 @@ def create_qdrand_collections(force_recreate):
                 ),
             ),
         )
+
     if (
         not client.collection_exists(collection_name=content_files_collection_name)
         or force_recreate
@@ -128,10 +128,8 @@ def create_qdrand_collections(force_recreate):
         client.recreate_collection(
             collection_name=content_files_collection_name,
             on_disk_payload=True,
-            vectors_config=models.VectorParams(
-                size=encoder.get_sentence_embedding_dimension(),
-                distance=models.Distance.COSINE,
-            ),
+            vectors_config=client.get_fastembed_vector_params(),
+            sparse_vectors_config=client.get_fastembed_sparse_vector_params(),
             quantization_config=models.ScalarQuantization(
                 scalar=models.ScalarQuantizationConfig(
                     type=models.ScalarType.INT8,
@@ -144,7 +142,6 @@ def create_qdrand_collections(force_recreate):
 def embed_learning_resources(ids, resource_type):
     # update embeddings
     client = qdrant_client()
-    encoder = SentenceTransformer("all-MiniLM-L6-v2")
     resources_collection_name = f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources"
     content_files_collection_name = (
         f"{settings.QDRANT_BASE_COLLECTION_NAME}.content_files"
@@ -153,27 +150,23 @@ def embed_learning_resources(ids, resource_type):
         serialized_resources = serialize_bulk_content_files(ids)
     else:
         serialized_resources = serialize_bulk_learning_resources(ids)
-    create_qdrand_collections()
+    create_qdrand_collections(force_recreate=False)
     if resource_type != CONTENT_FILE_TYPE:
         collection_name = resources_collection_name
     else:
         collection_name = content_files_collection_name
-    client.upload_points(
+    docs = []
+    metadata = []
+    for doc in serialized_resources:
+        docs.append(
+            f'{doc.get("title")} {doc.get("description")} '
+            f'{doc.get("full_description")} {doc.get("content")}'
+        )
+        metadata.append(doc)
+    client.add(
         collection_name=collection_name,
-        wait=False,
-        batch_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
-        max_retries=settings.INDEXING_ERROR_RETRIES,
-        points=[
-            models.PointStruct(
-                id=doc["id"],
-                vector=encoder.encode(
-                    f'{doc.get("title")} {doc.get("description")} '
-                    f'{doc.get("full_description")} {doc.get("content")}'
-                ).tolist(),
-                payload=doc,
-            )
-            for doc in serialized_resources
-        ],
+        documents=docs,
+        metadata=metadata,
     )
 
 
