@@ -1,11 +1,14 @@
 import React from "react"
 import { Typography, styled, Container, ButtonLink } from "ol-components"
+import { backgroundSrcSetCSS } from "ol-utilities"
 import { useUserMe } from "api/hooks/user"
 import * as urls from "@/common/urls"
+import personalizeImage from "@/public/images/homepage/personalize-image.png"
+import personalizeBgImage from "@/public/images/homepage/personalize-bg.png"
 
 const FullWidthBackground = styled.div(({ theme }) => ({
   padding: "80px 0",
-  background: 'url("/images/homepage/personalize-bg.png") center top no-repeat',
+  background: `${backgroundSrcSetCSS(personalizeBgImage)} center top no-repeat`,
   backgroundSize: "cover",
   [theme.breakpoints.down("md")]: {
     padding: "40px 0",
@@ -108,7 +111,7 @@ const PersonalizeSection = () => {
   return (
     <FullWidthBackground>
       <PersonalizeContainer>
-        <ImageContainer src="/images/homepage/personalize-image.png" alt="" />
+        <ImageContainer src={personalizeImage.src} alt="" />
         <PersonalizeContent />
       </PersonalizeContainer>
     </FullWidthBackground>

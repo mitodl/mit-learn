@@ -11,7 +11,6 @@ import { ResourceTypeEnum, LearningResource } from "api"
 import {
   formatDate,
   getReadableResourceType,
-  // embedlyCroppedImage,
   DEFAULT_RESOURCE_IMG,
   pluralize,
   getLearningResourcePrices,
@@ -105,14 +104,6 @@ type ResourceIdCallback = (
   event: React.MouseEvent<HTMLButtonElement>,
   resourceId: number,
 ) => void
-
-// TODO confirm use of Next.js image optimizer in place of Embedly
-// const getEmbedlyUrl = (url: string, isMobile: boolean) => {
-//   return embedlyCroppedImage(url, {
-//     key: process.env.NEXT_PUBLIC_EMBEDLY_KEY!,
-//     ...IMAGE_SIZES[isMobile ? "mobile" : "desktop"],
-//   })
-// }
 
 /* This displays a single price for courses with no free option
  * (price includes the certificate). For free courses with the

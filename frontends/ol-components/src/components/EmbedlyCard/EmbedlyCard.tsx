@@ -6,8 +6,9 @@ import {
   embedlyCardHtml,
   EmbedlyEventTypes,
   ensureEmbedlyPlatform,
-  getEmbedlyKey,
 } from "./util"
+
+const EMBEDLY_KEY = process.env.NEXT_PUBLIC_EMBEDLY_KEY as string
 
 type EmbedlyCardProps = {
   url: string
@@ -51,7 +52,6 @@ const Container = styled.div<{ aspectRatio?: number }>`
 const EmbedlyCard: React.FC<EmbedlyCardProps> = ({
   className,
   url,
-  embedlyKey,
   aspectRatio,
 }) => {
   const [container, setContainer] = useState<HTMLElement | null>(null)
@@ -85,12 +85,12 @@ const EmbedlyCard: React.FC<EmbedlyCardProps> = ({
     const a = document.createElement("a")
     a.dataset.cardChrome = "0"
     a.dataset.cardControls = "0"
-    a.dataset.cardKey = embedlyKey ?? getEmbedlyKey() ?? ""
+    a.dataset.cardKey = EMBEDLY_KEY
     a.href = url
     a.classList.add("embedly-card")
     a.dataset["testid"] = "embedly-card"
     container.appendChild(a)
-  }, [embedlyKey, container, url])
+  }, [container, url])
 
   return (
     <Container

@@ -27,26 +27,32 @@ const BannerBackground = styled.div<BannerBackgroundProps>(
     backgroundUrl = DEFAULT_BACKGROUND_IMAGE_URL,
     backgroundSize = "cover",
     backgroundDim = 0,
-  }) => ({
-    backgroundAttachment: "fixed",
-    backgroundImage: backgroundDim
-      ? `linear-gradient(rgba(0 0 0 / ${backgroundDim}%), rgba(0 0 0 / ${backgroundDim}%)), url('${backgroundUrl}')`
-      : `url(${backgroundUrl})`,
-    backgroundSize: backgroundSize,
-    backgroundPosition: "center top",
-    backgroundRepeat: "no-repeat",
-    color: theme.custom.colors.white,
-    padding: "48px 0 48px 0",
-    [theme.breakpoints.up("lg")]: {
-      backgroundSize:
-        backgroundUrl === DEFAULT_BACKGROUND_IMAGE_URL
-          ? "140%"
-          : backgroundSize,
-    },
-    [theme.breakpoints.down("sm")]: {
-      padding: "32px 0 32px 0",
-    },
-  }),
+  }) => {
+    const backgroundUrlFn = backgroundUrl.startsWith("image-set(")
+      ? backgroundUrl
+      : `url('${backgroundUrl}')`
+
+    return {
+      backgroundAttachment: "fixed",
+      backgroundImage: backgroundDim
+        ? `linear-gradient(rgba(0 0 0 / ${backgroundDim}%), rgba(0 0 0 / ${backgroundDim}%)), ${backgroundUrlFn}`
+        : backgroundUrlFn,
+      backgroundSize: backgroundSize,
+      backgroundPosition: "center top",
+      backgroundRepeat: "no-repeat",
+      color: theme.custom.colors.white,
+      padding: "48px 0 48px 0",
+      [theme.breakpoints.up("lg")]: {
+        backgroundSize:
+          backgroundUrl === DEFAULT_BACKGROUND_IMAGE_URL
+            ? "140%"
+            : backgroundSize,
+      },
+      [theme.breakpoints.down("sm")]: {
+        padding: "32px 0 32px 0",
+      },
+    }
+  },
 )
 
 const InnerContainer = styled.div(({ theme }) => ({

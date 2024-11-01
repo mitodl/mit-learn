@@ -1,5 +1,5 @@
 import React from "react"
-import { PlatformEnum } from "api"
+import { PlatformEnum, OfferedByEnum } from "api"
 import Image from "next/image"
 
 type WithImage = {
@@ -13,50 +13,61 @@ type WithoutImage = {
   image?: null
 }
 
-type PlatformObject = WithImage | WithoutImage
+type LogoObject = WithImage | WithoutImage
 
-export const PLATFORMS: Record<PlatformEnum, PlatformObject> = {
-  [PlatformEnum.Ocw]: {
-    name: "MIT OpenCourseWare",
-    image: "/unit_logos/ocw.svg",
-    aspect: 6.03,
-  },
-  [PlatformEnum.Edx]: {
-    name: "edX",
-    image: "/platform_logos/edx.svg",
-    aspect: 1.77,
-  },
-  [PlatformEnum.Mitxonline]: {
+export const UNIT_LOGOS: Record<OfferedByEnum, LogoObject> = {
+  [OfferedByEnum.Mitx]: {
     name: "MITx Online",
-    image: "/unit_logos/mitx.svg",
+    image: "/images/unit_logos/mitx.svg",
     aspect: 3.32,
   },
-  [PlatformEnum.Bootcamps]: {
+  [OfferedByEnum.Ocw]: {
+    name: "MIT OpenCourseWare",
+    image: "/images/unit_logos/ocw.svg",
+    aspect: 6.03,
+  },
+  [OfferedByEnum.Bootcamps]: {
     name: "Bootcamps",
-    image: "/platform_logos/bootcamps.svg",
+    image: "/images/platform_logos/bootcamps.svg",
     aspect: 5.25,
   },
-  [PlatformEnum.Xpro]: {
+  [OfferedByEnum.Xpro]: {
     name: "MIT xPRO",
-    image: "/unit_logos/xpro.svg",
+    image: "/images/unit_logos/xpro.svg",
     aspect: 3.56,
   },
+  [OfferedByEnum.Mitpe]: {
+    name: "MIT Professional Education",
+    image: "/images/unit_logos/mitpe.svg",
+    aspect: 5.23,
+  },
+  [OfferedByEnum.See]: {
+    name: "MIT Sloan Executive Education",
+    image: "/images/unit_logos/see.svg",
+    aspect: 7.61,
+  },
+}
+
+export const PLATFORM_LOGOS: Record<PlatformEnum, LogoObject> = {
+  [PlatformEnum.Ocw]: UNIT_LOGOS[OfferedByEnum.Ocw],
+  [PlatformEnum.Edx]: {
+    name: "edX",
+    image: "/images/platform_logos/edx.svg",
+    aspect: 1.77,
+  },
+  [PlatformEnum.Mitxonline]: UNIT_LOGOS[OfferedByEnum.Mitx],
+  [PlatformEnum.Bootcamps]: UNIT_LOGOS[OfferedByEnum.Bootcamps],
+  [PlatformEnum.Xpro]: UNIT_LOGOS[OfferedByEnum.Xpro],
   [PlatformEnum.Podcast]: {
     name: "Podcast",
   },
   [PlatformEnum.Csail]: {
     name: "CSAIL",
-    image: "/platform_logos/csail.svg",
+    image: "/images/platform_logos/csail.svg",
     aspect: 1.76,
   },
-  [PlatformEnum.Mitpe]: {
-    name: "MIT Professional Education",
-  },
-  [PlatformEnum.See]: {
-    name: "MIT Sloan Executive Education",
-    image: "/unit_logos/see.svg",
-    aspect: 7.73,
-  },
+  [PlatformEnum.Mitpe]: UNIT_LOGOS[OfferedByEnum.Mitpe],
+  [PlatformEnum.See]: UNIT_LOGOS[OfferedByEnum.See],
   [PlatformEnum.Scc]: {
     name: "Schwarzman College of Computing",
   },
@@ -80,7 +91,7 @@ export const PLATFORMS: Record<PlatformEnum, PlatformObject> = {
   },
   [PlatformEnum.Oll]: {
     name: "Open Learning Library",
-    image: "/platform_logos/oll.svg",
+    image: "/images/platform_logos/oll.svg",
     aspect: 5.25,
   },
   [PlatformEnum.Youtube]: {
@@ -90,14 +101,15 @@ export const PLATFORMS: Record<PlatformEnum, PlatformObject> = {
 
 const DEFAULT_WIDTH = 200
 
-export const PlatformLogo: React.FC<{
-  platformCode?: PlatformEnum
+const Logo: React.FC<{
+  name: string
+  image: string
+  aspect: number
   className?: string
   width?: number
   height?: number
-}> = ({ platformCode, className, width, height }) => {
-  const platform = PLATFORMS[platformCode!]
-  if (!platform?.image) {
+}> = ({ name, image, aspect, className, width, height }) => {
+  if (!image) {
     return null
   }
 
@@ -109,21 +121,63 @@ export const PlatformLogo: React.FC<{
    * not actually applying - "Using `<img>` could result in slower LCP and higher bandwidth.".
    */
   if (width && !height) {
-    height = width / platform.aspect
+    height = width / aspect
   }
   if (!width && height) {
-    width = height * platform.aspect
+    width = height * aspect
   }
   if (!width) {
     width = DEFAULT_WIDTH
-    height = width / platform.aspect
+    height = width / aspect
   }
 
   return (
     <Image
-      src={`/images${platform?.image}`}
+      src={image}
       className={className}
-      alt={platform.name}
+      alt={name}
+      width={width}
+      height={height}
+    />
+  )
+}
+
+export const UnitLogo: React.FC<{
+  unitCode: OfferedByEnum
+  className?: string
+  width?: number
+  height?: number
+}> = ({ unitCode, className, width, height }) => {
+  const unit = UNIT_LOGOS[unitCode]
+  if (!unit?.image) return null
+  const { name, image, aspect } = unit
+  return (
+    <Logo
+      name={name}
+      image={image}
+      aspect={aspect}
+      className={className}
+      width={width}
+      height={height}
+    />
+  )
+}
+
+export const PlatformLogo: React.FC<{
+  platformCode: PlatformEnum
+  className?: string
+  width?: number
+  height?: number
+}> = ({ platformCode, className, width, height }) => {
+  const platform = PLATFORM_LOGOS[platformCode]
+  if (!platform?.image) return null
+  const { name, image, aspect } = platform
+  return (
+    <Logo
+      name={name}
+      image={image}
+      aspect={aspect}
+      className={className}
       width={width}
       height={height}
     />

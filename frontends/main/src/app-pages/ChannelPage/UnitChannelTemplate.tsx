@@ -8,7 +8,9 @@ import {
   BannerBackground,
   Typography,
   VisuallyHidden,
+  UnitLogo,
 } from "ol-components"
+import { OfferedByEnum, SourceTypeEnum } from "api"
 import { SearchSubscriptionToggle } from "@/page-components/SearchSubscriptionToggle/SearchSubscriptionToggle"
 import { ChannelDetails } from "@/page-components/ChannelDetails/ChannelDetails"
 import { useChannelDetail } from "api/hooks/channels"
@@ -16,7 +18,6 @@ import ChannelMenu from "@/components/ChannelMenu/ChannelMenu"
 import ResourceCarousel, {
   ResourceCarouselProps,
 } from "@/page-components/ResourceCarousel/ResourceCarousel"
-import { SourceTypeEnum } from "api"
 import { getSearchParamMap } from "@/common/utils"
 import { HOME as HOME_URL, UNITS as UNITS_URL } from "../../common/urls"
 import { ChannelTypeEnum } from "api/v0"
@@ -38,13 +39,13 @@ const FeaturedCoursesCarousel = styled(ResourceCarousel)(({ theme }) => ({
   },
 }))
 
-const UnitLogo = styled.img(({ theme }) => ({
+const UnitLogoInverted = styled(UnitLogo)(({ theme }) => ({
   filter: "saturate(0%) invert(100%)",
+  height: 50,
   maxWidth: "100%",
-  width: "auto",
-  height: "50px",
   [theme.breakpoints.down("md")]: {
-    height: "40px",
+    height: 40,
+    width: "auto",
   },
 }))
 
@@ -126,7 +127,10 @@ const UnitChannelTemplate: React.FC<UnitChannelTemplateProps> = ({
               <ChannelHeader>
                 <VisuallyHidden>{channel.data?.title}</VisuallyHidden>
                 {channel.data ? (
-                  <UnitLogo alt="" src={displayConfiguration.logo} />
+                  <UnitLogoInverted
+                    unitCode={name as OfferedByEnum}
+                    height={50}
+                  />
                 ) : null}
               </ChannelHeader>
               <Stack gap={{ xs: "16px", lg: "32px" }}>

@@ -84,11 +84,6 @@ const LearningPathListingPage: React.FC = () => {
       src="/images/backgrounds/course_search_banner.png"
       className="learningpaths-page"
     >
-      {/* TODO <MetaTags title="Learning Paths" social={false} />
-      <Helmet>
-        <meta name="robots" content="noindex,noarchive" />
-      </Helmet>
-       */}
       <Container maxWidth="md" style={{ paddingBottom: 100 }}>
         <GridContainer>
           <GridColumn variant="single-full">
