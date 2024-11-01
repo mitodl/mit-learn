@@ -1,3 +1,4 @@
+import json
 import logging
 from typing import Optional, Union
 
@@ -123,6 +124,7 @@ class LearnSCIMUser(SCIMUser):
             scim_user.from_dict(d)
             scim_user.save()
         """
+        print(d)
         self.parse_emails(d.get("emails"))
 
         self.obj.is_active = d.get("active", True)
@@ -176,17 +178,32 @@ class LearnSCIMUser(SCIMUser):
             self.obj.profile.scim_external_id = value
             self.obj.save()
 
+    def parse_path_and_values(
+        self, path: Optional[str], value: Union[str, list, dict]
+    ) -> list:
+        if not path and isinstance(value, str):
+            # scim-for-keycloak sends the operation as a JSON-encoded string for some reason
+            value = json.loads(value)
+            value.pop("schema", None)  # part of the spec, not a user prop
+
+        print((path, value))
+
+        return super().parse_path_and_values(path, value)
+
     def handle_replace(
         self,
         path: Optional[AttrPath],
         value: Union[str, list, dict],
-        operation: dict,  # noqa: ARG002
+        operation: dict,
     ):
         """
         Handle the replace operations.
 
         All operations happen within an atomic transaction.
         """
+        print("handle_replace")
+        print((path, value, operation))
+
         if not isinstance(value, dict):
             # Restructure for use in loop below.
             value = {path: value}

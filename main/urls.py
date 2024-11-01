@@ -14,6 +14,8 @@ Including another URLconf
     2. Add a URL to urlpatterns:  url(r'^blog/', include(blog_urls))
 """
 
+from urllib.parse import urljoin
+
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
@@ -21,7 +23,7 @@ from django.urls import include, path, re_path
 from django.views.generic.base import RedirectView
 from rest_framework.routers import DefaultRouter
 
-from main.views import FeaturesViewSet
+from main.views import ErrorMessageRedirectView, FeaturesViewSet
 
 # Post slugs can contain unicode characters, so a letter-matching pattern like [A-Za-z] doesn't work.  # noqa: E501
 # "[^\W]" Matches any character that is NOT a non-alphanumeric character, including underscores.  # noqa: E501
@@ -55,6 +57,12 @@ urlpatterns = (
         re_path(r"", include("news_events.urls")),
         re_path(r"", include(features_router.urls)),
         re_path(r"^app", RedirectView.as_view(url=settings.APP_BASE_URL)),
+        re_path(
+            r"^app-error",
+            ErrorMessageRedirectView.as_view(
+                url=urljoin(settings.APP_BASE_URL, "/show-error")
+            ),
+        ),
         # Hijack
         re_path(r"^hijack/", include("hijack.urls", namespace="hijack")),
     ]

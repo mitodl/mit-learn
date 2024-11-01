@@ -202,8 +202,8 @@ if DEBUG:
 SESSION_ENGINE = "django.contrib.sessions.backends.signed_cookies"
 
 LOGIN_REDIRECT_URL = "/app"
-LOGIN_URL = "/login"
-LOGIN_ERROR_URL = "/login"
+LOGIN_URL = "/app"
+LOGIN_ERROR_URL = "/app-error"
 LOGOUT_URL = "/logout"
 LOGOUT_REDIRECT_URL = "/app"
 

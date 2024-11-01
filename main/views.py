@@ -2,6 +2,9 @@
 Base utility views. Handles errors and feature list views.
 """
 
+from urllib.parse import parse_qs, urlencode
+
+from django.views.generic.base import RedirectView
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -48,3 +51,18 @@ class FeaturesViewSet(ViewSet):
         Return a single feature_flag, specified by its ID.
         """
         return Response(is_enabled(pk))
+
+
+class ErrorMessageRedirectView(RedirectView):
+    """RedirectView that passes along an optional error message"""
+
+    def get_redirect_url(self, *args, **kwargs):
+        url = super().get_redirect_url(*args, **kwargs)
+
+        qs = filter_dict_keys(
+            parse_qs(self.request.META.get("QUERY_STRING", "")), ["message"]
+        )
+        if qs:
+            url = f"{url}?{urlencode(qs)}"
+
+        return url
