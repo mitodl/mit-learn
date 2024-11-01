@@ -90,7 +90,12 @@ def clear_featured_rank(rank, clear_all_greater_than):
 
 
 def qdrant_client():
-    client = QdrantClient(url=settings.QDRANT_HOST, api_key=settings.QDRANT_API_KEY)
+    client = QdrantClient(
+        url=settings.QDRANT_HOST,
+        api_key=settings.QDRANT_API_KEY,
+        grpc_port=6334,
+        prefer_grpc=True,
+    )
     client.set_model(settings.QDRANT_DENSE_MODEL)
     client.set_sparse_model(settings.QDRANT_SPARSE_MODEL)
     return client
@@ -157,14 +162,17 @@ def embed_learning_resources(ids, resource_type):
         collection_name = content_files_collection_name
     docs = []
     metadata = []
+    ids = []
     for doc in serialized_resources:
         docs.append(
             f'{doc.get("title")} {doc.get("description")} '
             f'{doc.get("full_description")} {doc.get("content")}'
         )
         metadata.append(doc)
+        ids.append(doc["id"])
     client.add(
         collection_name=collection_name,
+        ids=ids,
         documents=docs,
         metadata=metadata,
     )
