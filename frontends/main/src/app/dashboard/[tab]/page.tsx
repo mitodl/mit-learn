@@ -10,6 +10,7 @@ export const metadata: Metadata = standardizeMetadata({
   title: "Your MIT Learning Journey",
   social: false,
 })
+
 const Page: React.FC = () => {
   return (
     <RestrictedRoute requires={Permissions.Authenticated}>
