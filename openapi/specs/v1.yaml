@@ -12901,6 +12901,12 @@ components:
             - code
             - name
           readOnly: true
+        playlists:
+          type: array
+          items:
+            type: string
+          description: Get the playlist id(s) the video belongs to
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/VideoResourceResourceTypeEnum'
@@ -12983,6 +12989,7 @@ components:
       - offered_by
       - pace
       - platform
+      - playlists
       - position
       - prices
       - professional

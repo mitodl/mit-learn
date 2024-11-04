@@ -6599,6 +6599,12 @@ export interface VideoResource {
    */
   pace: Array<CourseResourcePaceInner>
   /**
+   * Get the playlist id(s) the video belongs to
+   * @type {Array<string>}
+   * @memberof VideoResource
+   */
+  playlists: Array<string>
+  /**
    *
    * @type {VideoResourceResourceTypeEnum}
    * @memberof VideoResource
