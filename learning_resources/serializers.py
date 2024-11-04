@@ -633,11 +633,21 @@ class PodcastEpisodeResourceSerializer(LearningResourceBaseSerializer):
 class VideoResourceSerializer(LearningResourceBaseSerializer):
     """Serializer for video resources"""
 
+    playlists = serializers.SerializerMethodField()
+
     resource_type = LearningResourceTypeField(
         default=constants.LearningResourceType.video.name
     )
 
     video = VideoSerializer(read_only=True)
+
+    def get_playlists(self, instance) -> list[str]:
+        """Get the playlist id(s) the video belongs to"""
+        return list(
+            instance.parents.filter(
+                relation_type=constants.LearningResourceRelationTypes.PLAYLIST_VIDEOS.value
+            ).values_list("parent__id", flat=True)
+        )
 
 
 class VideoPlaylistResourceSerializer(LearningResourceBaseSerializer):
