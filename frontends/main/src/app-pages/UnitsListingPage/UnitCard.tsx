@@ -1,6 +1,13 @@
 import React from "react"
 import { LearningResourceOfferorDetail, OfferedByEnum } from "api"
-import { Card, Skeleton, Typography, styled, theme } from "ol-components"
+import {
+  Card,
+  Skeleton,
+  Typography,
+  styled,
+  theme,
+  UnitLogo,
+} from "ol-components"
 import { useChannelDetail } from "api/hooks/channels"
 
 const CardStyled = styled(Card)({
@@ -34,14 +41,12 @@ const LogoContainer = styled.div({
       margin: "0 auto",
     },
   },
-})
-
-const UnitLogo = styled.img({
-  height: "50px",
-  display: "block",
-  [theme.breakpoints.down("md")]: {
-    height: "40px",
-    margin: "0 auto",
+  img: {
+    display: "block",
+    [theme.breakpoints.down("md")]: {
+      height: "40px",
+      margin: "0 auto",
+    },
   },
 })
 
@@ -108,15 +113,6 @@ const CountsText = styled(Typography)(({ theme }) => ({
   },
 }))
 
-const unitLogos = {
-  [OfferedByEnum.Mitx]: "/images/unit_logos/mitx.svg",
-  [OfferedByEnum.Ocw]: "/images/unit_logos/ocw.svg",
-  [OfferedByEnum.Bootcamps]: "/images/unit_logos/bootcamps.svg",
-  [OfferedByEnum.Xpro]: "/images/unit_logos/xpro.svg",
-  [OfferedByEnum.Mitpe]: "/images/unit_logos/mitpe.svg",
-  [OfferedByEnum.See]: "/images/unit_logos/see.svg",
-}
-
 interface UnitCardsProps {
   units: LearningResourceOfferorDetail[] | undefined
   courseCounts: Record<string, number>
@@ -125,13 +121,12 @@ interface UnitCardsProps {
 
 interface UnitCardProps {
   unit: LearningResourceOfferorDetail
-  logo: string
   courseCount: number
   programCount: number
 }
 
 const UnitCard: React.FC<UnitCardProps> = (props) => {
-  const { unit, logo, courseCount, programCount } = props
+  const { unit, courseCount, programCount } = props
   const channelDetailQuery = useChannelDetail("unit", unit.code)
   const channelDetail = channelDetailQuery.data
   const unitUrl = channelDetail?.channel_url
@@ -144,7 +139,7 @@ const UnitCard: React.FC<UnitCardProps> = (props) => {
         <UnitCardContainer>
           <UnitCardContent>
             <LogoContainer>
-              <UnitLogo src={logo} alt={unit.name} />
+              <UnitLogo unitCode={unit.code as OfferedByEnum} height={50} />
             </LogoContainer>
             <CardBottom>
               <ValuePropContainer>
@@ -197,14 +192,10 @@ export const UnitCards: React.FC<UnitCardsProps> = (props) => {
       {units?.map((unit) => {
         const courseCount = courseCounts[unit.code] || 0
         const programCount = programCounts[unit.code] || 0
-        const logo =
-          unitLogos[unit.code as OfferedByEnum] ||
-          `/images/unit_logos/${unit.code}.svg`
         return unit.value_prop ? (
           <UnitCard
             key={unit.code}
             unit={unit}
-            logo={logo}
             courseCount={courseCount}
             programCount={programCount}
           />

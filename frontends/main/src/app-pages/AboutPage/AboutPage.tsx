@@ -10,6 +10,7 @@ import {
 import * as urls from "@/common/urls"
 import React from "react"
 import domeImage from "@/public/mit-dome-2.jpg"
+import Image from "next/image"
 
 const WHAT_IS_MIT_OPEN_FRAGMENT_IDENTIFIER = "what-is-mit-learn"
 const NON_DEGREE_LEARNING_FRAGMENT_IDENTIFIER = "non-degree-learning"
@@ -81,13 +82,15 @@ const SubHeaderTextContainer = styled.div({
   alignSelf: "flex-start",
 })
 
-const SubHeaderImage = styled.img({
+const SubHeaderImageContainer = styled.div({
   flexGrow: 1,
   alignSelf: "stretch",
+  position: "relative",
+})
+
+const SubHeaderImage = styled(Image)({
   borderRadius: "8px",
-  backgroundSize: "cover",
-  backgroundPosition: "center",
-  backgroundImage: `url(${domeImage.src})`,
+  objectFit: "cover",
   [theme.breakpoints.down("md")]: {
     height: "300px",
   },
@@ -165,7 +168,13 @@ const AboutPage: React.FC = () => {
               <li>Continue your education at your own pace</li>
             </List>
           </SubHeaderTextContainer>
-          <SubHeaderImage />
+          <SubHeaderImageContainer>
+            <SubHeaderImage
+              src={domeImage}
+              alt="A view of the entablature of MIT's Great Dome"
+              fill
+            />
+          </SubHeaderImageContainer>
         </SubHeaderContainer>
         <BodySection>
           <HighlightContainer>

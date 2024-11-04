@@ -38,34 +38,36 @@ PROLEARN_BASE_URL = "https://prolearn.mit.edu"
 # List of query fields for prolearn, deduced from its website api calls
 PROLEARN_QUERY_FIELDS = "title\nnid\nurl\ncertificate_name\ncourse_application_url\ncourse_link\nfield_course_or_program\nstart_value\nend_value\ndepartment\ndepartment_url\nbody\nbody_override\nfield_time_commitment\nfield_duration\nfeatured_image_url\nfield_featured_video\nfield_non_degree_credits\nfield_price\nfield_related_courses_programs\nrelated_courses_programs_title\nfield_time_commitment\nucc_hot_topic\nucc_name\nucc_tid\napplication_process\napplication_process_override\nformat_name\nimage_override_url\nvideo_override_url\nfield_new_course_program\nfield_tooltip"  # noqa: E501
 
-SEE_EXCLUSION = (
-    '{operator: "<>", name: "department", value: "MIT Sloan Executive Education"}'
+MITPE_EXCLUSION = (
+    '{operator: "<>", name: "department", value: "MIT Professional Education"}'
 )
+
 
 # Performs the query made on https://prolearn.mit.edu/graphql, with a filter for program or course  # noqa: E501
 PROLEARN_QUERY = """
-query {
+query {{
     searchAPISearch(
         index_id:\"default_solr_index\",
-        range:{limit: 999, offset: 0},
-        condition_group: {
+        range:{{limit: 999, offset: 0}},
+        condition_group: {{
             conjunction: AND,
             groups: [
-                {
+                {{
                     conjunction: AND,
                     conditions: [
-                        {operator: \"=\", name: \"field_course_or_program\", value: \"%s\"},
-                        {operator: \"<>\", name: \"department\", value: \"MIT xPRO\"}
-                        %s
+                        {{operator: \"=\", name: \"field_course_or_program\", value: \"{course_or_program}\"}},
+                        {{operator: \"<>\", name: \"department\", value: \"MIT xPRO\"}},
+                        {{operator: \"<>\", name: \"department\", value: \"MIT Sloan Executive Education\"}}
+                        {mitpe_exclusion}
                     ]
-                }
+                }}
             ]
-        }
-    ) {
+        }}
+    ) {{
         result_count
-         documents {... on DefaultSolrIndexDoc {%s}}
-    }
-}
+         documents {{... on DefaultSolrIndexDoc {{{query_fields}}}}}
+    }}
+}}
 """  # noqa: E501
 
 UNIQUE_FIELD = "url"
@@ -209,12 +211,15 @@ def extract_data(course_or_program: str) -> list[dict]:
         list of dict: courses or programs
     """  # noqa: D401, E501
     if settings.PROLEARN_CATALOG_API_URL:
-        sloan_filter = SEE_EXCLUSION if settings.SEE_API_ENABLED else ""
+        mitpe_filter = MITPE_EXCLUSION if settings.MITPE_API_ENABLED else ""
         response = requests.post(
             settings.PROLEARN_CATALOG_API_URL,
             json={
-                "query": PROLEARN_QUERY
-                % (course_or_program, sloan_filter, PROLEARN_QUERY_FIELDS)
+                "query": PROLEARN_QUERY.format(
+                    course_or_program=course_or_program,
+                    mitpe_exclusion=mitpe_filter,
+                    query_fields=PROLEARN_QUERY_FIELDS,
+                )
             },
             timeout=30,
         ).json()

@@ -2,26 +2,26 @@ import React, { useEffect, useState } from "react"
 import styled from "@emotion/styled"
 import Skeleton from "@mui/material/Skeleton"
 import Typography from "@mui/material/Typography"
+import { default as NextImage } from "next/image"
 import { ButtonLink } from "../Button/Button"
 import type { LearningResource, LearningResourceRun } from "api"
 import { ResourceTypeEnum, PlatformEnum } from "api"
 import {
   formatDate,
   capitalize,
-  resourceThumbnailSrc,
   DEFAULT_RESOURCE_IMG,
   showStartAnytime,
 } from "ol-utilities"
 import { RiExternalLinkLine } from "@remixicon/react"
-import type { EmbedlyConfig } from "ol-utilities"
 import { theme } from "../ThemeProvider/ThemeProvider"
 import { SimpleSelect } from "../SimpleSelect/SimpleSelect"
 import type { SimpleSelectProps } from "../SimpleSelect/SimpleSelect"
-import { EmbedlyCard } from "../EmbedlyCard/EmbedlyCard"
-import { PlatformLogo, PLATFORMS } from "../Logo/Logo"
-import InfoSection from "./InfoSection"
+import { PlatformLogo, PLATFORM_LOGOS } from "../Logo/Logo"
+import InfoSectionV1 from "./InfoSectionV1"
 import type { User } from "api/hooks/user"
 import { LearningResourceCardProps } from "../LearningResourceCard/LearningResourceCard"
+import type { ImageConfig } from "../../constants/imgConfigs"
+import VideoFrame from "./VideoFrame"
 
 const Container = styled.div<{ padTop?: boolean }>`
   display: flex;
@@ -76,8 +76,13 @@ const DateLabel = styled.span`
   margin-right: 16px;
 `
 
-const Image = styled.img<{ aspect: number }>`
-  aspect-ratio: ${({ aspect }) => aspect};
+const ImageContainer = styled.div<{ aspect: number }>`
+  position: relative;
+  width: 100%;
+  padding-bottom: ${({ aspect }) => 100 / aspect}%;
+`
+
+const Image = styled(NextImage)`
   border-radius: 8px;
   width: 100%;
   object-fit: cover;
@@ -138,41 +143,42 @@ const OnPlatform = styled.span`
   color: ${theme.custom.colors.black};
 `
 
-type LearningResourceExpandedProps = {
+type LearningResourceExpandedV1Props = {
   resource?: LearningResource
   user?: User
-  imgConfig: EmbedlyConfig
+  imgConfig: ImageConfig
   onAddToLearningPathClick?: LearningResourceCardProps["onAddToLearningPathClick"]
   onAddToUserListClick?: LearningResourceCardProps["onAddToUserListClick"]
 }
 
 const ImageSection: React.FC<{
   resource?: LearningResource
-  config: EmbedlyConfig
+  config: ImageConfig
 }> = ({ resource, config }) => {
+  const aspect = config.width / config.height
   if (resource?.resource_type === "video" && resource?.url) {
     return (
-      <EmbedlyCard
-        aspectRatio={config.width / config.height}
-        url={resource?.url}
-        embedlyKey={config.key}
-      />
+      <VideoFrame src={resource.url} title={resource.title} aspect={aspect} />
     )
   } else if (resource?.image) {
     return (
-      <Image
-        src={resourceThumbnailSrc(resource?.image, config)}
-        aspect={config.width / config.height}
-        alt={resource?.image.alt ?? ""}
-      />
+      <ImageContainer aspect={aspect}>
+        <Image
+          src={resource.image?.url ?? DEFAULT_RESOURCE_IMG}
+          alt={resource?.image.alt ?? ""}
+          fill
+        />
+      </ImageContainer>
     )
   } else if (resource) {
     return (
-      <Image
-        src={DEFAULT_RESOURCE_IMG}
-        alt={resource.image?.alt ?? ""}
-        aspect={config.width / config.height}
-      />
+      <ImageContainer aspect={aspect}>
+        <Image
+          src={DEFAULT_RESOURCE_IMG}
+          alt={resource.image?.alt ?? ""}
+          fill
+        />
+      </ImageContainer>
     )
   } else {
     return (
@@ -218,7 +224,7 @@ const CallToActionSection = ({
     (offeredBy?.code as PlatformEnum) === PlatformEnum.Xpro
       ? (offeredBy?.code as PlatformEnum)
       : (platform?.code as PlatformEnum)
-  const platformImage = PLATFORMS[platformCode]?.image
+  const platformImage = PLATFORM_LOGOS[platformCode]?.image
 
   const getCallToActionText = (resource: LearningResource): string => {
     if (resource?.platform?.code === PlatformEnum.Ocw) {
@@ -319,7 +325,7 @@ const formatRunDate = (
   return null
 }
 
-const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
+const LearningResourceExpandedV1: React.FC<LearningResourceExpandedV1Props> = ({
   resource,
   user,
   imgConfig,
@@ -421,7 +427,7 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
       <ImageSection resource={resource} config={imgConfig} />
       <CallToActionSection resource={resource} hide={isVideo} />
       <DetailSection resource={resource} />
-      <InfoSection
+      <InfoSectionV1
         resource={resource}
         run={selectedRun}
         user={user}
@@ -432,5 +438,5 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
   )
 }
 
-export { LearningResourceExpanded }
-export type { LearningResourceExpandedProps }
+export { LearningResourceExpandedV1 }
+export type { LearningResourceExpandedV1Props }

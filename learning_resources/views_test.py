@@ -1008,6 +1008,7 @@ def test_similar_resources_endpoint_only_returns_published(mocker, client):
     resources = LearningResourceFactory.create_batch(5)
 
     resource_ids = [learning_resource.id for learning_resource in resources]
+    similar_for = resource_ids.pop()
     mocker.patch.object(Search, "execute")
     response_resources = LearningResource.objects.for_search_serialization().filter(
         id__in=resource_ids
@@ -1032,7 +1033,6 @@ def test_similar_resources_endpoint_only_returns_published(mocker, client):
             "took": 123,
         },
     ).hits
-    similar_for = resource_ids[0]
     resp = client.get(
         reverse("lr:v1:learning_resources_api-similar", args=[similar_for])
     )

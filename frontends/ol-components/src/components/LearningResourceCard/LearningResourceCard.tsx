@@ -229,8 +229,16 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
     return null
   }
 
+  const readableType = getReadableResourceType(resource.resource_type)
   return (
-    <StyledCard href={href} className={className} size={size}>
+    <StyledCard
+      as="article"
+      aria-label={`${readableType}: ${resource.title}`}
+      href={href}
+      forwardClicksToLink
+      className={className}
+      size={size}
+    >
       <Card.Image
         src={resource.image?.url ? resource.image?.url : DEFAULT_RESOURCE_IMG}
         alt={resource.image?.alt ?? ""}
@@ -257,7 +265,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
         {onAddToUserListClick && (
           <CardActionButton
             filled={inUserList}
-            aria-label={`Bookmark ${getReadableResourceType(resource.resource_type)}`}
+            aria-label={`Bookmark ${readableType}`}
             onClick={(event) => onAddToUserListClick(event, resource.id)}
           >
             {inUserList ? (

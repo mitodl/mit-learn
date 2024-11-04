@@ -316,8 +316,8 @@ describe.each(NON_UNIT_CHANNEL_TYPES)(
         assertHeadings([
           { level: 1, name: channel.title },
           { level: 2, name: `Search within ${channel.title}` },
-          { level: 3, name: "Filter" },
           { level: 3, name: "Search Results" },
+          { level: 3, name: "Filter" },
         ])
       })
     }, 10000)
@@ -379,7 +379,7 @@ describe("Channel Pages, Topic only", () => {
 })
 
 describe("Channel Pages, Unit only", () => {
-  it("Displays the channel title, banner, and avatar", async () => {
+  it("Displays the channel title, banner", async () => {
     const { channel } = setupApis({
       search_filter: "offered_by=ocw",
       channel_type: "unit",
@@ -388,9 +388,24 @@ describe("Channel Pages, Unit only", () => {
       url: `/c/${channel.channel_type}/${channel.name}`,
     })
 
-    const title = await screen.findByRole("heading", { name: channel.title })
-    getByImageSrc(title, `${window.origin}${channel.configuration.logo}`)
+    await screen.findByRole("heading", { name: channel.title })
   })
+
+  it("Displays the channel logo", async () => {
+    const { channel } = setupApis({
+      name: "ocw",
+      channel_type: "unit",
+    })
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+
+    const images = await screen.findAllByRole("img", {
+      name: "MIT OpenCourseWare",
+    })
+    expect(images[0]).toHaveAttribute("src", "/images/unit_logos/ocw.svg")
+  })
+
   it("Displays a featured carousel if the channel type is 'unit'", async () => {
     const { channel } = setupApis({
       search_filter: "offered_by=ocw",
@@ -436,8 +451,8 @@ describe("Channel Pages, Unit only", () => {
         { level: 2, name: "Featured Courses" },
         { level: 2, name: "What Learners Say" },
         { level: 2, name: `Search within ${channel.title}` },
-        { level: 3, name: "Filter" },
         { level: 3, name: "Search Results" },
+        { level: 3, name: "Filter" },
       ])
     })
   })

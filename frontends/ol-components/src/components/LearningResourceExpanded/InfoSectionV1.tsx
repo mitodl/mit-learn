@@ -237,7 +237,7 @@ const InfoItem = ({ label, Icon, value }: InfoItemProps) => {
   )
 }
 
-const InfoSection = ({
+const InfoSectionV1 = ({
   resource,
   run,
   user,
@@ -307,4 +307,4 @@ const InfoSection = ({
   )
 }
 
-export default InfoSection
+export default InfoSectionV1

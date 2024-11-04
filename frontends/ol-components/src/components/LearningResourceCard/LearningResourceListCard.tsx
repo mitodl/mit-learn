@@ -11,7 +11,6 @@ import { ResourceTypeEnum, LearningResource } from "api"
 import {
   formatDate,
   getReadableResourceType,
-  // embedlyCroppedImage,
   DEFAULT_RESOURCE_IMG,
   pluralize,
   getLearningResourcePrices,
@@ -105,14 +104,6 @@ type ResourceIdCallback = (
   event: React.MouseEvent<HTMLButtonElement>,
   resourceId: number,
 ) => void
-
-// TODO confirm use of Next.js image optimizer in place of Embedly
-// const getEmbedlyUrl = (url: string, isMobile: boolean) => {
-//   return embedlyCroppedImage(url, {
-//     key: process.env.NEXT_PUBLIC_EMBEDLY_KEY!,
-//     ...IMAGE_SIZES[isMobile ? "mobile" : "desktop"],
-//   })
-// }
 
 /* This displays a single price for courses with no free option
  * (price includes the certificate). For free courses with the
@@ -307,8 +298,16 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
   if (!resource) {
     return null
   }
+  const readableType = getReadableResourceType(resource.resource_type)
   return (
-    <ListCard href={href} className={className} draggable={draggable}>
+    <ListCard
+      as="article"
+      aria-label={`${readableType}: ${resource.title}`}
+      href={href}
+      forwardClicksToLink
+      className={className}
+      draggable={draggable}
+    >
       <ListCard.Image
         src={resource.image?.url || DEFAULT_RESOURCE_IMG}
         alt={resource.image?.alt ?? ""}
@@ -331,7 +330,7 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
         {onAddToUserListClick && (
           <CardActionButton
             filled={inUserList}
-            aria-label={`Bookmark ${getReadableResourceType(resource.resource_type)}`}
+            aria-label={`Bookmark ${readableType}`}
             onClick={(event) => onAddToUserListClick(event, resource.id)}
           >
             {inUserList ? (

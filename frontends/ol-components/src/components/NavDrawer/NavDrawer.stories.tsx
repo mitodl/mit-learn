@@ -1,28 +1,43 @@
-import React from "react"
+import React, { MouseEvent } from "react"
 import type { Meta, StoryObj } from "@storybook/react"
 import { NavData, NavDrawer } from "./NavDrawer"
 import MuiButton from "@mui/material/Button"
 import styled from "@emotion/styled"
+import { RiPencilRulerLine } from "@remixicon/react"
 import { useToggle } from "ol-utilities"
 
 const NavDrawerDemo = () => {
   const [open, setOpen] = useToggle(false)
 
-  const handleClickOpen = () => setOpen(!open)
+  const handleClickOpen = (event: MouseEvent) => {
+    setOpen(true)
+    event.stopPropagation()
+  }
 
   const navData: NavData = {
     sections: [
       {
-        title: "TEST",
+        title: "Nav Drawer Title",
         items: [
           {
-            title: "Link and description",
-            description: "This item has a link and a description",
+            title: "Link with description",
+            description: "This link has a description",
             href: "https://mit.edu",
           },
           {
-            title: "Link but no description",
+            title: "Link with no description",
             href: "https://ocw.mit.edu",
+          },
+          {
+            title: "Link with icon",
+            icon: <RiPencilRulerLine />,
+            href: "https://mit.edu",
+          },
+          {
+            title: "Link with icon and description",
+            description: "This link has an icon and a description",
+            icon: <RiPencilRulerLine />,
+            href: "https://mit.edu",
           },
         ],
       },
@@ -39,7 +54,7 @@ const NavDrawerDemo = () => {
       <StyledButton variant="outlined" onClick={handleClickOpen}>
         Toggle drawer
       </StyledButton>
-      <NavDrawer navdata={navData} open={open} onClose={setOpen.off} />
+      <NavDrawer navData={navData} open={open} onClose={setOpen.off} />
     </div>
   )
 }

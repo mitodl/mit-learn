@@ -6,9 +6,9 @@ import {
   waitFor,
   within,
 } from "@/test-utils"
-import LearningResourceDrawer from "./LearningResourceDrawer"
+import LearningResourceDrawerV1 from "./LearningResourceDrawerV1"
 import { urls, factories, setMockResponse } from "api/test-utils"
-import { LearningResourceExpanded } from "ol-components"
+import { LearningResourceExpandedV1 } from "ol-components"
 import { RESOURCE_DRAWER_QUERY_PARAM } from "@/common/urls"
 import { ResourceTypeEnum } from "api"
 import invariant from "tiny-invariant"
@@ -17,7 +17,7 @@ jest.mock("ol-components", () => {
   const actual = jest.requireActual("ol-components")
   return {
     ...actual,
-    LearningResourceExpanded: jest.fn(actual.LearningResourceExpanded),
+    LearningResourceExpandedV1: jest.fn(actual.LearningResourceExpandedV1),
   }
 })
 
@@ -33,7 +33,7 @@ jest.mock("posthog-js/react", () => ({
   },
 }))
 
-describe("LearningResourceDrawer", () => {
+describe("LearningResourceDrawerV1", () => {
   it.each([
     { descriptor: "is enabled", enablePostHog: true },
     { descriptor: "is not enabled", enablePostHog: false },
@@ -50,12 +50,12 @@ describe("LearningResourceDrawer", () => {
         resource,
       )
 
-      renderWithProviders(<LearningResourceDrawer />, {
+      renderWithProviders(<LearningResourceDrawerV1 />, {
         url: `?dog=woof&${RESOURCE_DRAWER_QUERY_PARAM}=${resource.id}`,
       })
-      expect(LearningResourceExpanded).toHaveBeenCalled()
+      expect(LearningResourceExpandedV1).toHaveBeenCalled()
       await waitFor(() => {
-        expectProps(LearningResourceExpanded, { resource })
+        expectProps(LearningResourceExpandedV1, { resource })
       })
       await screen.findByRole("heading", { name: resource.title })
 
@@ -68,10 +68,10 @@ describe("LearningResourceDrawer", () => {
   )
 
   it("Does not render drawer content when resource=id is NOT in the URL", async () => {
-    renderWithProviders(<LearningResourceDrawer />, {
+    renderWithProviders(<LearningResourceDrawerV1 />, {
       url: "?dog=woof",
     })
-    expect(LearningResourceExpanded).not.toHaveBeenCalled()
+    expect(LearningResourceExpandedV1).not.toHaveBeenCalled()
   })
 
   test.each([
@@ -118,14 +118,14 @@ describe("LearningResourceDrawer", () => {
         setMockResponse.get(urls.userMe.get(), null, { code: 403 })
       }
 
-      renderWithProviders(<LearningResourceDrawer />, {
+      renderWithProviders(<LearningResourceDrawerV1 />, {
         url: `?resource=${resource.id}`,
       })
 
-      expect(LearningResourceExpanded).toHaveBeenCalled()
+      expect(LearningResourceExpandedV1).toHaveBeenCalled()
 
       await waitFor(() => {
-        expectProps(LearningResourceExpanded, { resource })
+        expectProps(LearningResourceExpandedV1, { resource })
       })
 
       const section = screen
