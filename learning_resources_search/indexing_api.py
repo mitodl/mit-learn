@@ -117,6 +117,7 @@ def create_qdrand_collections(force_recreate):
             on_disk_payload=True,
             vectors_config=client.get_fastembed_vector_params(),
             sparse_vectors_config=client.get_fastembed_sparse_vector_params(),
+            optimizers_config=models.OptimizersConfigDiff(default_segment_number=2),
             quantization_config=models.ScalarQuantization(
                 scalar=models.ScalarQuantizationConfig(
                     type=models.ScalarType.INT8,
