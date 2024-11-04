@@ -121,6 +121,7 @@ def parse_date(text_date: str) -> datetime:
         datetime: The parsed datetime object
     """
     dt_utc = None
+    log.error(text_date)
     if text_date:
         try:
             dt_utc = (
