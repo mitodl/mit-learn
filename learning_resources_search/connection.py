@@ -57,6 +57,18 @@ def make_backing_index_name(object_type):
     """
     return f"{settings.OPENSEARCH_INDEX}_{object_type}_{uuid.uuid4().hex}"
 
+def make_index_with_embeddings_name(object_type):
+    """
+    Make a unique name for use for a backing index
+
+    Args:
+        object_type(str): The object type (post, comment, profile)
+
+    Returns:
+        str: A new name for a backing index
+    """
+    return f"{settings.OPENSEARCH_INDEX}_{object_type}_embeddings_{uuid.uuid4().hex}"
+
 
 def make_alias_name(is_reindexing, object_type):
     """
@@ -73,6 +85,22 @@ def make_alias_name(is_reindexing, object_type):
         prefix=settings.OPENSEARCH_INDEX,
         object_type=object_type,
         suffix="reindexing" if is_reindexing else "default",
+    )
+
+def make_embeddings_alias_name( object_type):
+    """
+    Make the name used for the Opensearch alias
+
+    Args:
+        object_type(str): The object type of the index (post, comment, etc)
+        is_reindexing (bool): If true, use the alias name meant for reindexing
+
+    Returns:
+        str: The name of the alias
+    """
+    return "{prefix}_{object_type}_{suffix}_w_embeddings".format(
+        prefix=settings.OPENSEARCH_INDEX,
+        object_type=object_type,
     )
 
 

@@ -17,7 +17,9 @@ from learning_resources_search.connection import (
     get_conn,
     get_default_alias_name,
     get_reindexing_alias_name,
+    make_embeddings_alias_name,
     make_backing_index_name,
+    make_index_with_embeddings_name,
     refresh_index,
 )
 from learning_resources_search.constants import (
@@ -128,6 +130,7 @@ def make_elser_pipeline():
             {
                 "inference": {
                     "model_id": ".elser_model_2",
+                    "ignore_missing": True,
                     "input_output": [
                         {
                             "input_field": "description",
@@ -155,6 +158,8 @@ def make_elser_pipeline_content_file():
             {
                 "inference": {
                     "model_id": ".elser_model_2",
+                    "ignore_missing": True,
+
                     "input_output": [
                         {
                             "input_field": "description",
@@ -169,7 +174,7 @@ def make_elser_pipeline_content_file():
     )
 
 
-def clear_and_create_index(*, index_name=None, skip_mapping=False, object_type=None):
+def clear_and_create_index(*, index_name=None, skip_mapping=False, object_type=None, embedding_mapping=False):
     """
     Wipe and recreate index and mapping. No indexing is done.
 
@@ -219,25 +224,40 @@ def clear_and_create_index(*, index_name=None, skip_mapping=False, object_type=N
             },
         }
     }
-
-    if object_type != CONTENT_FILE_TYPE:
-        index_create_data["settings"]["default_pipeline"] = "elser-ingest-pipeline"
+    #index_create_data["settings"]["default_pipeline"] = "elser-ingest-pipeline"
 
     if not skip_mapping:
         mapping = MAPPING[object_type]
-        mapping["description_embedding"] = {"type": "sparse_vector"}
-        mapping["title_embedding"] = {"type": "sparse_vector"}
-
-        if object_type in (CONTENT_FILE_TYPE, COURSE_TYPE):
-            mapping["content_embedding"] = {"type": "sparse_vector"}
-
-        if object_type != CONTENT_FILE_TYPE:
-            mapping["full_description_embedding"] = {"type": "sparse_vector"}
+        if embedding_mapping:
+            mapping["description_embedding"] = {"type": "sparse_vector"}
+            mapping["title_embedding"] = {"type": "sparse_vector"}
+            if object_type in (CONTENT_FILE_TYPE, COURSE_TYPE):
+                mapping["content_embedding"] = {"type": "sparse_vector"}
 
         index_create_data["mappings"] = {"properties": mapping}
     # from https://www.elastic.co/guide/en/elasticsearch/guide/current/asciifolding-token-filter.html
     conn.indices.create(index=index_name, body=index_create_data)
 
+def create_index_with_embeddings(resource_type):
+    name = make_index_with_embeddings_name(resource_type)
+    clear_and_create_index(index_name=name, skip_mapping=False, object_type=resource_type, embedding_mapping=True)
+    pipeline = "elser-ingest-pipeline-content" if resource_type == COURSE_TYPE else "elser-ingest-pipeline"
+    conn = get_conn()
+    default_alias = get_default_alias_name(resource_type)
+    index_without_embeddings = list(conn.indices.get_alias(name=default_alias).keys())[0]
+    conn.reindex(
+        wait_for_completion=False,
+        source={
+            "index": index_without_embeddings,
+            "size": 30
+        },
+        dest={
+            "index": name,
+            "pipeline": pipeline,
+        },
+    )
+    alias = make_embeddings_alias_name(resource_type)
+    conn.indices.put_alias(index=name, name=alias)
 
 def upsert_document(doc_id, doc, object_type, *, retry_on_conflict=0, **kwargs):
     """
