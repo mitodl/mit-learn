@@ -28,15 +28,16 @@ def test_extract(mitpe_events_json_data):
     assert extract() == mitpe_events_json_data
 
 
+@pytest.mark.freeze_time("2020-05-21")
 def test_transform(mitpe_events_json_data):
     """Assert that the transform function returns the expected data"""
     source_and_items = transform(extract())
     assert len(source_and_items) == 1
     source = source_and_items[0]
     items = source["items"]
-    assert len(items) == 4
+    assert len(items) == 5
     assert (
-        items[2]["title"]
+        items[3]["title"]
         == "OnDemand Open House: Professional Certificate Program Design & Manufacturing"
     )
     assert items[0]["image"] == {
@@ -48,21 +49,23 @@ def test_transform(mitpe_events_json_data):
         "MIT Technology Review's flagship event on emerging technology and global trends."
     )
     assert items[0]["summary"] == items[0]["content"]
+    # EST
     assert items[0]["detail"]["event_datetime"] == datetime(
-        2123, 11, 14, 13, 0, 0, tzinfo=UTC
+        2023, 11, 14, 14, 0, 0, tzinfo=UTC
     )
     assert items[0]["detail"]["event_end_datetime"] == datetime(
-        2123, 11, 15, 21, 0, 0, tzinfo=UTC
+        2023, 11, 15, 22, 0, 0, tzinfo=UTC
     )
+    # EDT
     assert items[1]["detail"]["event_datetime"] == datetime(
-        2123, 4, 25, 16, 0, 0, tzinfo=UTC
+        2024, 8, 14, 13, 0, 0, tzinfo=UTC
     )
     assert items[1]["detail"]["event_end_datetime"] == datetime(
-        2123, 4, 25, 17, 0, 0, tzinfo=UTC
+        2024, 8, 15, 21, 0, 0, tzinfo=UTC
     )
-    assert items[2]["detail"]["event_datetime"] == datetime(
-        2123, 5, 12, 4, 0, 0, tzinfo=UTC
+    assert items[3]["detail"]["event_datetime"] == datetime(
+        2023, 5, 12, 4, 0, 0, tzinfo=UTC
     )
-    assert items[2]["detail"]["event_end_datetime"] == datetime(
-        2123, 5, 12, 4, 0, 0, tzinfo=UTC
+    assert items[3]["detail"]["event_end_datetime"] == datetime(
+        2023, 5, 12, 4, 0, 0, tzinfo=UTC
     )
