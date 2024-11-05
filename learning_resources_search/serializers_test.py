@@ -713,11 +713,7 @@ def test_serialize_learning_resource_for_bulk(  # noqa: PLR0913
         channel.featured_list = featured_path
         channel.save()
 
-    resource = (
-        LearningResource.objects.for_serialization()
-        .for_search_serialization()
-        .get(pk=resource.pk)
-    )
+    resource = LearningResource.objects.for_search_serialization().get(pk=resource.pk)
 
     assert serializers.serialize_learning_resource_for_bulk(resource) == {
         "_id": resource.id,
@@ -832,11 +828,7 @@ def test_serialize_course_numbers_for_bulk(
     resource = factories.CourseFactory.create(
         course_numbers=course_numbers
     ).learning_resource
-    resource = (
-        LearningResource.objects.for_serialization()
-        .for_search_serialization()
-        .get(pk=resource.pk)
-    )
+    resource = LearningResource.objects.for_search_serialization().get(pk=resource.pk)
     assert resource.course.course_numbers == course_numbers
 
     mocker.patch(
