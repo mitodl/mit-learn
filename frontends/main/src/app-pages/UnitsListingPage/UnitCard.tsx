@@ -78,23 +78,10 @@ const LoadingContent = styled.div({
   padding: "24px",
 })
 
-const HeadingText = styled(Typography)(({ theme }) => ({
+const HeadingText = styled.span(({ theme }) => ({
   alignSelf: "stretch",
   color: theme.custom.colors.darkGray2,
   ...theme.typography.body2,
-  [theme.breakpoints.down("md")]: {
-    display: "none",
-  },
-}))
-
-const SubHeadingText = styled(HeadingText)(({ theme }) => ({
-  alignSelf: "stretch",
-  color: theme.custom.colors.darkGray2,
-  ...theme.typography.body2,
-  display: "none",
-  [theme.breakpoints.down("md")]: {
-    display: "block",
-  },
 }))
 
 const CountsTextContainer = styled.div({
@@ -150,9 +137,6 @@ const UnitCard: React.FC<UnitCardProps> = (props) => {
                 <HeadingText>
                   {channelDetail?.configuration?.heading}
                 </HeadingText>
-                <SubHeadingText>
-                  {channelDetail?.configuration?.sub_heading}
-                </SubHeadingText>
               </ValuePropContainer>
               <CountsTextContainer>
                 <CountsText data-testid={`course-count-${unit.code}`}>
