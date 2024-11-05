@@ -1,6 +1,24 @@
 Release Notes
 =============
 
+Version 0.24.2
+--------------
+
+- Card bug fixes (#1793)
+- upgrade stories & events grid to grid2 (#1792)
+- Fixes to address scim-form-keycloak weirdness (#1789)
+- Maintain API instructor order (#1783)
+- Fix DST issue (#1788)
+- Update Node.js to v22 (#1786)
+- Update dependency ruff to v0.7.2 (#1785)
+- Image and video optimizations (#1769)
+- Upgrade to Next.js v15 (#1776)
+- Fix issue with hero image causing horizontal scroll (#1777)
+- add new learning resource drawer layout (#1711)
+- Change frontend to use resource_prices field instead of prices field (#1737)
+- move facets first in tab order (#1751)
+- Card Accessibility Improvements (#1778)
+
 Version 0.24.1 (Released October 30, 2024)
 --------------
 
