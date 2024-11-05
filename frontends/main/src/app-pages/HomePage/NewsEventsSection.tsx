@@ -188,11 +188,11 @@ const Story: React.FC<{ item: NewsFeedItem; mobile: boolean }> = ({
   mobile,
 }) => {
   return (
-    <StoryCard mobile={mobile} href={item.url} forwardClicksToLink>
+    <StoryCard mobile={mobile} forwardClicksToLink>
       {item.image.url ? (
         <Card.Image src={item.image.url} alt={item.image.alt || ""} />
       ) : null}
-      <Card.Title lines={2} style={{ marginBottom: -13 }}>
+      <Card.Title href={item.url} lines={2} style={{ marginBottom: -13 }}>
         {item.title}
       </Card.Title>
       <Card.Footer>
@@ -238,7 +238,7 @@ const NewsEventsSection: React.FC = () => {
             )}
           </EventMonth>
         </EventDate>
-        <Link href={item.url}>
+        <Link href={item.url} data-card-link>
           <EventTitle>{item.title}</EventTitle>
         </Link>
         <Chevron />

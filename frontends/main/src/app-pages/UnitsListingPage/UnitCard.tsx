@@ -9,6 +9,7 @@ import {
   UnitLogo,
 } from "ol-components"
 import { useChannelDetail } from "api/hooks/channels"
+import Link from "next/link"
 
 const CardStyled = styled(Card)({
   height: "100%",
@@ -131,15 +132,18 @@ const UnitCard: React.FC<UnitCardProps> = (props) => {
   const channelDetail = channelDetailQuery.data
   const unitUrl = channelDetail?.channel_url
 
-  return channelDetailQuery.isLoading ? (
-    <UnitCardLoading />
-  ) : (
-    <CardStyled href={unitUrl && new URL(unitUrl!).pathname}>
+  if (!unitUrl) return null
+  const href = unitUrl && new URL(unitUrl).pathname
+
+  return (
+    <CardStyled forwardClicksToLink data-testid={`unit-card-${unit.code}`}>
       <Card.Content>
         <UnitCardContainer>
           <UnitCardContent>
             <LogoContainer>
-              <UnitLogo unitCode={unit.code as OfferedByEnum} height={50} />
+              <Link href={href} data-card-link>
+                <UnitLogo unitCode={unit.code as OfferedByEnum} height={50} />
+              </Link>
             </LogoContainer>
             <CardBottom>
               <ValuePropContainer>
@@ -192,6 +196,7 @@ export const UnitCards: React.FC<UnitCardsProps> = (props) => {
       {units?.map((unit) => {
         const courseCount = courseCounts[unit.code] || 0
         const programCount = programCounts[unit.code] || 0
+
         return unit.value_prop ? (
           <UnitCard
             key={unit.code}
