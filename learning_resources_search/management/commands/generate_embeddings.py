@@ -2,7 +2,7 @@
 
 from django.core.management.base import BaseCommand, CommandError
 
-from learning_resources_search.constants import ALL_INDEX_TYPES
+from learning_resources_search.constants import LEARNING_RESOURCE_TYPES
 from learning_resources_search.indexing_api import (
     create_qdrand_collections,
 )
@@ -37,7 +37,7 @@ class Command(BaseCommand):
             help="Skip embedding content files",
         )
 
-        for object_type in sorted(ALL_INDEX_TYPES):
+        for object_type in sorted(LEARNING_RESOURCE_TYPES):
             parser.add_argument(
                 f"--{object_type}s",
                 dest=object_type,
@@ -50,16 +50,18 @@ class Command(BaseCommand):
         """Embed all LEARNING_RESOURCE_TYPES"""
 
         if options["all"]:
-            indexes_to_update = list(ALL_INDEX_TYPES)
+            indexes_to_update = list(LEARNING_RESOURCE_TYPES)
         else:
             indexes_to_update = list(
-                filter(lambda object_type: options[object_type], ALL_INDEX_TYPES)
+                filter(
+                    lambda object_type: options[object_type], LEARNING_RESOURCE_TYPES
+                )
             )
             if not indexes_to_update:
                 self.stdout.write("Must select at least one type to update")
                 self.stdout.write("The following are valid options:")
                 self.stdout.write("  --all")
-                for object_type in sorted(ALL_INDEX_TYPES):
+                for object_type in sorted(LEARNING_RESOURCE_TYPES):
                     self.stdout.write(f"  --{object_type}s")
                 return
 
