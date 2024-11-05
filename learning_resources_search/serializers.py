@@ -157,6 +157,15 @@ def serialize_learning_resource_for_update(
         resource_age_date and resource_age_date.year <= STALENESS_CUTOFF
     ) or (learning_resource_obj.completeness < COMPLETENESS_CUTOFF)
 
+    description_text = serialized_data.get("description", "")
+    if description_text:
+        description_text = description_text.strip()
+    serialized_data["description"] = description_text or None
+    title_text = serialized_data.get("title", "")
+    if title_text:
+        title_text = title_text.strip()
+    serialized_data["title"] = title_text or None
+    
     return {
         "resource_relations": {"name": "resource"},
         "created_on": learning_resource_obj.created_on,
@@ -751,6 +760,20 @@ class PercolateQuerySubscriptionRequestSerializer(
 
 def serialize_content_file_for_update(content_file_obj):
     """Serialize a content file for API request"""
+
+    serialized_data = ContentFileSerializer(content_file_obj).data
+    description_text = serialized_data.get("description", "")
+    if description_text:
+        description_text = description_text.strip()
+    serialized_data["description"] = description_text or None
+    title_text = serialized_data.get("title", "")
+    if title_text:
+        title_text = title_text.strip()
+    serialized_data["title"] = title_text or None
+    content_text = serialized_data.get("content", "")
+    if content_text:
+        content_text = content_text.strip()
+    serialized_data["content"] = content_text or None
 
     return {
         "resource_relations": {

@@ -17,8 +17,8 @@ from learning_resources_search.connection import (
     get_conn,
     get_default_alias_name,
     get_reindexing_alias_name,
-    make_embeddings_alias_name,
     make_backing_index_name,
+    make_embeddings_alias_name,
     make_index_with_embeddings_name,
     refresh_index,
 )
@@ -39,9 +39,12 @@ from learning_resources_search.serializers import (
     serialize_bulk_percolators_for_deletion,
     serialize_content_file_for_bulk,
     serialize_content_file_for_bulk_deletion,
+    serialize_content_file_for_update
+)
+from learning_resources_search.api import (
+    gen_content_file_id,
 )
 from main.utils import chunks
-
 log = logging.getLogger(__name__)
 User = get_user_model()
 
@@ -159,7 +162,6 @@ def make_elser_pipeline_content_file():
                 "inference": {
                     "model_id": ".elser_model_2",
                     "ignore_missing": True,
-
                     "input_output": [
                         {
                             "input_field": "description",
@@ -173,8 +175,36 @@ def make_elser_pipeline_content_file():
         ],
     )
 
+def make_elser_inference_endpoint():
+    client = get_conn()
+    try:
+        client.inference.delete(inference_id="my-elser-endpoint")
+    except exceptions.NotFoundError:
+        # Inference endpoint does not exist
+        pass
 
-def clear_and_create_index(*, index_name=None, skip_mapping=False, object_type=None, embedding_mapping=False):
+    try:
+        client.options(
+            request_timeout=160, max_retries=3, retry_on_timeout=True
+        ).inference.put(
+            task_type="sparse_embedding",
+            inference_id="my-elser-endpoint",
+            body={
+                "service": "elser",
+                "service_settings": {"num_allocations": 1, "num_threads": 1},
+            },
+        )
+        print("Inference endpoint created successfully")
+    except exceptions.BadRequestError as e:
+        if e.error == "resource_already_exists_exception":
+            print("Inference endpoint created successfully")
+        else:
+            raise e
+    
+
+def clear_and_create_index(
+    *, index_name=None, skip_mapping=False, object_type=None, embedding_mapping=False
+):
     """
     Wipe and recreate index and mapping. No indexing is done.
 
@@ -224,33 +254,61 @@ def clear_and_create_index(*, index_name=None, skip_mapping=False, object_type=N
             },
         }
     }
-    #index_create_data["settings"]["default_pipeline"] = "elser-ingest-pipeline"
+    # index_create_data["settings"]["default_pipeline"] = "elser-ingest-pipeline"
 
     if not skip_mapping:
-        mapping = MAPPING[object_type]
+        mapping = MAPPING[object_type].copy()
         if embedding_mapping:
-            mapping["description_embedding"] = {"type": "sparse_vector"}
-            mapping["title_embedding"] = {"type": "sparse_vector"}
-            if object_type in (CONTENT_FILE_TYPE, COURSE_TYPE):
-                mapping["content_embedding"] = {"type": "sparse_vector"}
+            #mapping["description_embedding"] = {"type": "sparse_vector"}
+            #mapping["title_embedding"] = {"type": "sparse_vector"}
+            mapping["description"] = mapping["description"].copy()
+            mapping["description"]["copy_to"] = "description_embedding"
+            mapping["description_embedding"] = {
+                "type": "semantic_text",
+                "inference_id": "my-elser-endpoint",
+            }
+            mapping["title"]=mapping["title"].copy()
+            mapping["title"]["copy_to"] = "title_embedding"
+            mapping["title_embedding"] = {
+                "type": "semantic_text",
+                "inference_id": "my-elser-endpoint",
+            }
+                        
+            if object_type in (CONTENT_FILE_TYPE, COURSE_TYPE): 
+                mapping["content"] = mapping["content"].copy()
+                mapping["content"]["copy_to"] = "content_embedding"
+                mapping["content_embedding"] = {
+                    "type": "semantic_text",
+                    "inference_id": "my-elser-endpoint",
+                }
 
+        print(mapping)
         index_create_data["mappings"] = {"properties": mapping}
     # from https://www.elastic.co/guide/en/elasticsearch/guide/current/asciifolding-token-filter.html
     conn.indices.create(index=index_name, body=index_create_data)
 
+
 def create_index_with_embeddings(resource_type):
     name = make_index_with_embeddings_name(resource_type)
-    clear_and_create_index(index_name=name, skip_mapping=False, object_type=resource_type, embedding_mapping=True)
-    pipeline = "elser-ingest-pipeline-content" if resource_type == COURSE_TYPE else "elser-ingest-pipeline"
+    clear_and_create_index(
+        index_name=name,
+        skip_mapping=False,
+        object_type=resource_type,
+        embedding_mapping=True,
+    )
+    pipeline = (
+        "elser-ingest-pipeline-content"
+        if resource_type == COURSE_TYPE
+        else "elser-ingest-pipeline"
+    )
     conn = get_conn()
     default_alias = get_default_alias_name(resource_type)
-    index_without_embeddings = list(conn.indices.get_alias(name=default_alias).keys())[0]
+    index_without_embeddings = list(conn.indices.get_alias(name=default_alias).keys())[
+        0
+    ]
     conn.reindex(
         wait_for_completion=False,
-        source={
-            "index": index_without_embeddings,
-            "size": 30
-        },
+        source={"index": index_without_embeddings, "size": 30},
         dest={
             "index": name,
             "pipeline": pipeline,
@@ -258,6 +316,7 @@ def create_index_with_embeddings(resource_type):
     )
     alias = make_embeddings_alias_name(resource_type)
     conn.indices.put_alias(index=name, name=alias)
+
 
 def upsert_document(doc_id, doc, object_type, *, retry_on_conflict=0, **kwargs):
     """
@@ -362,18 +421,33 @@ def index_items(documents, object_type, index_types, **kwargs):
             for alias in get_active_aliases(
                 conn, object_types=[object_type], index_types=index_types
             ):
-                _, errors = bulk(
-                    conn,
-                    chunk,
-                    index=alias,
-                    chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
-                    request_timeout=60 * 5,
-                    **kwargs,
-                )
-                if len(errors) > 0:
-                    log.error(errors)
-                    msg = f"Error during bulk {object_type} insert: {errors}"
-                    raise ReindexError(msg)
+                try:
+                    _, errors = bulk(
+                        conn,
+                        chunk,
+                        index=alias,
+                        chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
+                        request_timeout=60 * 5,
+                        **kwargs,
+                    )
+                except BulkIndexError as error:
+                    print("ERROR!")
+                    for item in chunk:
+                        content_file_obj = ContentFile.objects.get(id=item["id"])
+                        content_file_data = serialize_content_file_for_update(content_file_obj)
+                        upsert_document(
+                            gen_content_file_id(content_file_obj.id),
+                            content_file_data,
+                            COURSE_TYPE,
+                            retry_on_conflict=settings.INDEXING_ERROR_RETRIES,
+                            routing=content_file_obj.run.learning_resource_id,
+                        )
+
+                    if len(errors) > 0:
+                        print(errors)
+                        log.error(errors)
+                        msg = f"Error during bulk {object_type} insert: {errors}"
+                        raise ReindexError(msg)
 
 
 def index_learning_resources(ids, resource_type, index_types):
@@ -598,7 +672,7 @@ def create_backing_index(object_type):
     new_backing_index = make_backing_index_name(object_type)
 
     # Clear away temp alias so we can reuse it, and create mappings
-    clear_and_create_index(index_name=new_backing_index, object_type=object_type)
+    clear_and_create_index(index_name=new_backing_index, object_type=object_type, embedding_mapping=True)
     temp_alias = get_reindexing_alias_name(object_type)
     if conn.indices.exists_alias(name=temp_alias):
         # Deletes both alias and backing indexes

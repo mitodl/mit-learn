@@ -616,6 +616,8 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
                             run__published=True,
                         )
                         .order_by("id")
+                        .exclude(content="")
+                        .exclude(content__isnull=True)
                         .values_list("id", flat=True),
                         chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
                     )
