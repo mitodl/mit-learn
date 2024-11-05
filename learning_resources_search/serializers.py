@@ -165,7 +165,7 @@ def serialize_learning_resource_for_update(
     if title_text:
         title_text = title_text.strip()
     serialized_data["title"] = title_text or None
-    
+
     return {
         "resource_relations": {"name": "resource"},
         "created_on": learning_resource_obj.created_on,

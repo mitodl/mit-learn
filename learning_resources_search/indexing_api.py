@@ -12,6 +12,9 @@ from elasticsearch.exceptions import ConflictError, NotFoundError
 from elasticsearch.helpers import BulkIndexError, bulk
 
 from learning_resources.models import ContentFile, LearningResourceRun
+from learning_resources_search.api import (
+    gen_content_file_id,
+)
 from learning_resources_search.connection import (
     get_active_aliases,
     get_conn,
@@ -39,12 +42,10 @@ from learning_resources_search.serializers import (
     serialize_bulk_percolators_for_deletion,
     serialize_content_file_for_bulk,
     serialize_content_file_for_bulk_deletion,
-    serialize_content_file_for_update
-)
-from learning_resources_search.api import (
-    gen_content_file_id,
+    serialize_content_file_for_update,
 )
 from main.utils import chunks
+
 log = logging.getLogger(__name__)
 User = get_user_model()
 
@@ -175,6 +176,7 @@ def make_elser_pipeline_content_file():
         ],
     )
 
+
 def make_elser_inference_endpoint():
     client = get_conn()
     try:
@@ -200,7 +202,7 @@ def make_elser_inference_endpoint():
             print("Inference endpoint created successfully")
         else:
             raise e
-    
+
 
 def clear_and_create_index(
     *, index_name=None, skip_mapping=False, object_type=None, embedding_mapping=False
@@ -259,22 +261,22 @@ def clear_and_create_index(
     if not skip_mapping:
         mapping = MAPPING[object_type].copy()
         if embedding_mapping:
-            #mapping["description_embedding"] = {"type": "sparse_vector"}
-            #mapping["title_embedding"] = {"type": "sparse_vector"}
+            # mapping["description_embedding"] = {"type": "sparse_vector"}
+            # mapping["title_embedding"] = {"type": "sparse_vector"}
             mapping["description"] = mapping["description"].copy()
             mapping["description"]["copy_to"] = "description_embedding"
             mapping["description_embedding"] = {
                 "type": "semantic_text",
                 "inference_id": "my-elser-endpoint",
             }
-            mapping["title"]=mapping["title"].copy()
+            mapping["title"] = mapping["title"].copy()
             mapping["title"]["copy_to"] = "title_embedding"
             mapping["title_embedding"] = {
                 "type": "semantic_text",
                 "inference_id": "my-elser-endpoint",
             }
-                        
-            if object_type in (CONTENT_FILE_TYPE, COURSE_TYPE): 
+
+            if object_type in (CONTENT_FILE_TYPE, COURSE_TYPE):
                 mapping["content"] = mapping["content"].copy()
                 mapping["content"]["copy_to"] = "content_embedding"
                 mapping["content_embedding"] = {
@@ -430,11 +432,13 @@ def index_items(documents, object_type, index_types, **kwargs):
                         request_timeout=60 * 5,
                         **kwargs,
                     )
-                except BulkIndexError as error:
+                except BulkIndexError:
                     print("ERROR!")
                     for item in chunk:
                         content_file_obj = ContentFile.objects.get(id=item["id"])
-                        content_file_data = serialize_content_file_for_update(content_file_obj)
+                        content_file_data = serialize_content_file_for_update(
+                            content_file_obj
+                        )
                         upsert_document(
                             gen_content_file_id(content_file_obj.id),
                             content_file_data,
@@ -672,7 +676,9 @@ def create_backing_index(object_type):
     new_backing_index = make_backing_index_name(object_type)
 
     # Clear away temp alias so we can reuse it, and create mappings
-    clear_and_create_index(index_name=new_backing_index, object_type=object_type, embedding_mapping=True)
+    clear_and_create_index(
+        index_name=new_backing_index, object_type=object_type, embedding_mapping=True
+    )
     temp_alias = get_reindexing_alias_name(object_type)
     if conn.indices.exists_alias(name=temp_alias):
         # Deletes both alias and backing indexes
