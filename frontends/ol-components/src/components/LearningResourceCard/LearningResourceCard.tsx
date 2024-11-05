@@ -234,7 +234,6 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
     <StyledCard
       as="article"
       aria-label={`${readableType}: ${resource.title}`}
-      href={href}
       forwardClicksToLink
       className={className}
       size={size}
@@ -247,7 +246,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
       <Card.Info>
         <Info resource={resource} size={size} />
       </Card.Info>
-      <Card.Title>
+      <Card.Title href={href}>
         <EllipsisTitle lineClamp={size === "small" ? 2 : 3}>
           {resource.title}
         </EllipsisTitle>

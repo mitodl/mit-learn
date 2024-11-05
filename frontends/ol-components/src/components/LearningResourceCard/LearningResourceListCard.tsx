@@ -303,7 +303,6 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
     <ListCard
       as="article"
       aria-label={`${readableType}: ${resource.title}`}
-      href={href}
       forwardClicksToLink
       className={className}
       draggable={draggable}
@@ -316,7 +315,7 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
       <ListCard.Info>
         <Info resource={resource} />
       </ListCard.Info>
-      <ListCard.Title>{resource.title}</ListCard.Title>
+      <ListCard.Title href={href}>{resource.title}</ListCard.Title>
       <ListCard.Actions>
         {onAddToLearningPathClick && (
           <CardActionButton

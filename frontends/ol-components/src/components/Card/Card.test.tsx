@@ -47,10 +47,9 @@ describe("Card", () => {
   ])(
     "The whole card is clickable as a link if forwardClicksToLink ($forwardClicksToLink)",
     async ({ forwardClicksToLink, finalHref }) => {
-      const href = "#woof"
       render(
-        <Card href={href} forwardClicksToLink={forwardClicksToLink}>
-          <Card.Title>Title</Card.Title>
+        <Card forwardClicksToLink={forwardClicksToLink}>
+          <Card.Title href="#woof">Title</Card.Title>
           <Card.Image src="https://via.placeholder.com/150" alt="placeholder" />
           <Card.Info>Info</Card.Info>
           <Card.Footer>Footer</Card.Footer>
@@ -75,13 +74,15 @@ describe("Card", () => {
       const href = "#meow"
       const onClick = jest.fn()
       render(
-        <Card href={href} forwardClicksToLink={forwardClicksToLink}>
+        <Card forwardClicksToLink={forwardClicksToLink}>
           <Card.Content>
             <div>Hello!</div>
             <div data-card-actions>
               <button onClick={onClick}>Button</button>
             </div>
-            <a href={href}>Link</a>
+            <a data-card-link="true" href={href}>
+              Link
+            </a>
           </Card.Content>
         </Card>,
         { wrapper: ThemeProvider },
@@ -104,8 +105,8 @@ describe("Card", () => {
     const btnOnClick = jest.fn()
     const divOnClick = jest.fn()
     render(
-      <Card href={"#one"} forwardClicksToLink>
-        <Card.Title>Title</Card.Title>
+      <Card forwardClicksToLink>
+        <Card.Title href="#one">Title</Card.Title>
         <Card.Image src="https://via.placeholder.com/150" alt="placeholder" />
         <Card.Info>Info</Card.Info>
         <Card.Footer>
@@ -122,12 +123,13 @@ describe("Card", () => {
       { wrapper: ThemeProvider },
     )
     const button = screen.getByRole("button", { name: "Button" })
-    const link = screen.getByRole("link", { name: "Link Two" })
+    screen.getByRole("link", { name: "Title" })
+    const link2 = screen.getByRole("link", { name: "Link Two" })
     const div = screen.getByText("Interactive Div")
     await user.click(button)
     expect(btnOnClick).toHaveBeenCalled()
     expect(window.location.hash).toBe("")
-    await user.click(link)
+    await user.click(link2)
     expect(window.location.hash).toBe("#two")
     await user.click(div)
     expect(divOnClick).toHaveBeenCalled()

@@ -27,8 +27,8 @@ describe("ListCard", () => {
     async ({ forwardClicksToLink, finalHref }) => {
       const href = "#woof"
       render(
-        <ListCard href={href} forwardClicksToLink={forwardClicksToLink}>
-          <ListCard.Title>Title</ListCard.Title>
+        <ListCard forwardClicksToLink={forwardClicksToLink}>
+          <ListCard.Title href={href}>Title</ListCard.Title>
           <ListCard.Info>Info</ListCard.Info>
           <ListCard.Footer>Footer</ListCard.Footer>
           <ListCard.Actions>Actions</ListCard.Actions>
@@ -50,14 +50,16 @@ describe("ListCard", () => {
   ])(
     "The whole card is clickable as a link when using Content, except buttons and links",
     async ({ forwardClicksToLink, finalHref }) => {
-      const href = "#meow"
       const onClick = jest.fn()
+      const href = "#meow"
       render(
-        <ListCard forwardClicksToLink={forwardClicksToLink} href={href}>
+        <ListCard forwardClicksToLink={forwardClicksToLink}>
           <ListCard.Content>
             <div>Hello!</div>
             <button onClick={onClick}>Button</button>
-            <a href={href}>Link</a>
+            <a data-card-link="true" href={href}>
+              Link
+            </a>
           </ListCard.Content>
         </ListCard>,
         { wrapper: ThemeProvider },
@@ -80,8 +82,8 @@ describe("ListCard", () => {
     const btnOnClick = jest.fn()
     const divOnClick = jest.fn()
     render(
-      <ListCard href={"#one"} forwardClicksToLink>
-        <ListCard.Title>Title</ListCard.Title>
+      <ListCard forwardClicksToLink>
+        <ListCard.Title href="#one">Title</ListCard.Title>
         <ListCard.Info>Info</ListCard.Info>
         <ListCard.Footer>
           <button onClick={btnOnClick}>Button</button>
@@ -97,12 +99,13 @@ describe("ListCard", () => {
       { wrapper: ThemeProvider },
     )
     const button = screen.getByRole("button", { name: "Button" })
-    const link = screen.getByRole("link", { name: "Link Two" })
+    screen.getByRole("link", { name: "Title" })
+    const link2 = screen.getByRole("link", { name: "Link Two" })
     const div = screen.getByText("Interactive Div")
     await user.click(button)
     expect(btnOnClick).toHaveBeenCalled()
     expect(window.location.hash).toBe("")
-    await user.click(link)
+    await user.click(link2)
     expect(window.location.hash).toBe("#two")
     await user.click(div)
     expect(divOnClick).toHaveBeenCalled()

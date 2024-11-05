@@ -168,6 +168,7 @@ const UnitSection: React.FC<UnitSectionProps> = (props) => {
     programCounts,
     isLoading,
   } = props
+
   return (
     <UnitContainer data-testid={`UnitSection-${id}`}>
       <div>

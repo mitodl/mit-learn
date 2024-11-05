@@ -8,7 +8,7 @@ import React, {
 import styled from "@emotion/styled"
 import { RiDraggable } from "@remixicon/react"
 import { theme } from "../ThemeProvider/ThemeProvider"
-import { BaseContainer, useClickChildHref } from "./Card"
+import { BaseContainer, useClickChildLink } from "./Card"
 import { TruncateText } from "../TruncateText/TruncateText"
 import {
   ListCard,
@@ -19,7 +19,16 @@ import {
   Footer,
   Bottom as BaseBottom,
 } from "./ListCard"
-import type { Card as BaseCard } from "./ListCard"
+import type { Card as BaseCard, TitleProps } from "./ListCard"
+
+const Container = styled(BaseContainer)<{ draggable?: boolean }>(
+  ({ draggable }) => [
+    draggable && {
+      display: "flex",
+      flexDirection: "row",
+    },
+  ],
+)
 
 const DragArea = styled(BaseDragArea)`
   padding-right: 4px;
@@ -68,18 +77,13 @@ type CardProps = {
   children: ReactNode[] | ReactNode
   className?: string
   /**
-   * If provided, the card will render its title as a link.
-   *
-   * Clicks on the entire card can be forwarded to the link via `forwardClicksToLink`.
-   */
-  href?: string
-  /**
    * Defaults to `false`. If `true`, clicking the whole card will click the
-   * href link as well.
+   * child anchor with data-card-link.
    *
    * NOTES:
+   *  - By default, Card.Title has `data-card-link="true"`.
    *  - If using Card.Content to customize, you must ensure the content includes
-   *  an anchor with the card's href.
+   *  an anchor with data-card-link attribute. Its value is irrelevant.
    *  - Clicks will NOT be forwarded if:
    *    - The click target is a child of Card.Actions OR an element with
    *    - The click target is a child of any element with data-card-actions attribute
@@ -90,28 +94,44 @@ type CardProps = {
   as?: React.ElementType
 } & AriaAttributes
 
+/**
+ * Condensed row-like card component with slots for info, title, footer, and actions:
+ * ```tsx
+ * <ListCardCondensed>
+ *   <ListCardCondensed.Info>Info</ListCardCondensed.Info>
+ *   <ListCardCondensed.Title href="link-url">Title</ListCardCondensed.Title>
+ *   <ListCardCondensed.Footer>Footer</ListCardCondensed.Footer>
+ *   <ListCardCondensed.Actions>Actions</ListCardCondensed.Actions>
+ * </ListCardCondensed>
+ * ```
+ *
+ * **Links:** Card.Title will be a link if `href` is supplied; the entire card
+ * will be clickable if `forwardClicksToLink` is `true`.
+ *
+ * **Custom Layout:** Use ListCard.Content to create a custom layout.
+ */
 type Card = FC<CardProps> & Omit<BaseCard, "Image">
 
 const ListCardCondensed: Card = ({
   children,
   className,
-  href,
   draggable,
   onClick,
   forwardClicksToLink = false,
   ...others
 }) => {
-  let content, info, title, footer, actions
+  let content, info, footer, actions
+  let title: TitleProps = {}
 
-  const hasHref = typeof href === "string"
-  const handleHrefClick = useClickChildHref(href, onClick)
-  const handleClick = hasHref && forwardClicksToLink ? handleHrefClick : onClick
+  const handleHrefClick = useClickChildLink(onClick)
+  const handleClick =
+    forwardClicksToLink && !draggable ? handleHrefClick : onClick
 
   Children.forEach(children, (child) => {
     if (!isValidElement(child)) return
     if (child.type === Content) content = child.props.children
     else if (child.type === Info) info = child.props.children
-    else if (child.type === Title) title = child.props.children
+    else if (child.type === Title) title = child.props
     else if (child.type === Footer) footer = child.props.children
     else if (child.type === Actions) actions = child.props.children
   })
@@ -125,7 +145,12 @@ const ListCardCondensed: Card = ({
   }
 
   return (
-    <BaseContainer {...others} className={className} onClick={handleClick}>
+    <Container
+      draggable={draggable}
+      {...others}
+      className={className}
+      onClick={handleClick}
+    >
       {draggable && (
         <DragArea>
           <RiDraggable />
@@ -133,15 +158,15 @@ const ListCardCondensed: Card = ({
       )}
       <Body>
         <Info>{info}</Info>
-        <Title href={href}>
-          <TruncateText lineClamp={4}>{title}</TruncateText>
+        <Title data-card-link={!!title.href} href={title.href}>
+          <TruncateText lineClamp={4}>{title.children}</TruncateText>
         </Title>
         <Bottom>
           <Footer>{footer}</Footer>
           {actions && <Actions data-card-actions>{actions}</Actions>}
         </Bottom>
       </Body>
-    </BaseContainer>
+    </Container>
   )
 }
 

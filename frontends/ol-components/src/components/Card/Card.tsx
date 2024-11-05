@@ -28,15 +28,25 @@ export const Linkable: React.FC<LinkableProps> = ({
   href,
   children,
   className,
+  ...others
 }) => {
   if (href) {
     return (
-      <Link className={className} href={href} scroll={!href.startsWith("?")}>
+      <Link
+        {...others}
+        className={className}
+        href={href}
+        scroll={!href.startsWith("?")}
+      >
         {children}
       </Link>
     )
   }
-  return <span className={className}>{children}</span>
+  return (
+    <span {...others} className={className}>
+      {children}
+    </span>
+  )
 }
 
 export const BaseContainer = styled.div<{ display?: CSSProperties["display"] }>(
@@ -92,7 +102,10 @@ const Info = styled.div<{ size?: Size }>`
   margin-bottom: ${({ size }) => (size === "small" ? 4 : 8)}px;
 `
 
-const Title = styled(Linkable)<{ lines?: number; size?: Size }>`
+const titleOpts = {
+  shouldForwardProp: (prop: string) => prop !== "lines" && prop !== "size",
+}
+const Title = styled(Linkable, titleOpts)<{ lines?: number; size?: Size }>`
   text-overflow: ellipsis;
   height: ${({ lines, size }) => {
     const lineHeightPx = size === "small" ? 18 : 20
@@ -147,8 +160,7 @@ const Actions = styled.div`
  * Allows making a whole region clickable as a link, even if the link is not the
  * direct target of the click event.
  */
-export const useClickChildHref = (
-  href?: string,
+export const useClickChildLink = (
   onClick?: React.MouseEventHandler<HTMLElement>,
 ): React.MouseEventHandler<HTMLElement> => {
   return useCallback(
@@ -161,7 +173,7 @@ export const useClickChildHref = (
         return
       }
       const anchor = e.currentTarget.querySelector<HTMLAnchorElement>(
-        `a[href="${href}"]`,
+        'a[data-card-link="true"]',
       )
       const target = e.target as HTMLElement
       if (!anchor || target.closest("a, button, [data-card-action]")) return
@@ -180,7 +192,7 @@ export const useClickChildHref = (
         anchor.click()
       }
     },
-    [href, onClick],
+    [onClick],
   )
 }
 
@@ -189,18 +201,13 @@ type CardProps = {
   className?: string
   size?: Size
   /**
-   * If provided, the card will render its title as a link.
-   *
-   * Clicks on the entire card can be forwarded to the link via `forwardClicksToLink`.
-   */
-  href?: string
-  /**
    * Defaults to `false`. If `true`, clicking the whole card will click the
-   * href link as well.
+   * child anchor with data-card-link="true".
    *
    * NOTES:
+   *  - By default, Card.Title has `data-card-link="true"`.
    *  - If using Card.Content to customize, you must ensure the content includes
-   *  an anchor with the card's href.
+   *  an anchor with data-card-link attribute. Its value is irrelevant.
    *  - Clicks will NOT be forwarded if it is (or is a child of):
    *    - an anchor or button element
    *    - OR an element with data-card-action
@@ -217,16 +224,37 @@ export type ImageProps = NextImageProps & {
 }
 type TitleProps = {
   children?: ReactNode
+  href?: string
   lines?: number
   style?: CSSProperties
 }
 
 type SlotProps = { children?: ReactNode; style?: CSSProperties }
 
+/**
+ * Card component with slots for image, info, title, footer, and actions:
+ * ```tsx
+ * <Card>
+ *  <Card.Image src="image-url" />
+ * <Card.Info>Info</Card.Info>
+ * <Card.Title href="link-url">Title</Card.Title>
+ * <Card.Footer>Footer</Card.Footer>
+ * <Card.Actions>Actions</Card.Actions>
+ * </Card>
+ * ```
+ *
+ * **Links:** Card.Title will be a link if `href` is supplied; the entire card
+ * will be clickable if `forwardClicksToLink` is `true`.
+ *
+ * **Custom Layout:** Use Card.Content to create a custom layout.
+ */
 type Card = FC<CardProps> & {
   Content: FC<{ children: ReactNode }>
   Image: FC<ImageProps>
   Info: FC<SlotProps>
+  /**
+   * Card title with optional `href`.
+   */
   Title: FC<TitleProps>
   Footer: FC<SlotProps>
   Actions: FC<SlotProps>
@@ -236,7 +264,6 @@ const Card: Card = ({
   children,
   className,
   size,
-  href,
   onClick,
   forwardClicksToLink = false,
   ...others
@@ -271,9 +298,8 @@ const Card: Card = ({
     else if (child.type === Actions) actions = child.props
   })
 
-  const hasHref = typeof href === "string"
-  const handleHrefClick = useClickChildHref(href, onClick)
-  const handleClick = hasHref && forwardClicksToLink ? handleHrefClick : onClick
+  const handleHrefClick = useClickChildLink(onClick)
+  const handleClick = forwardClicksToLink ? handleHrefClick : onClick
 
   const allClassNames = ["MitCard-root", className ?? ""].join(" ")
 
@@ -314,7 +340,12 @@ const Card: Card = ({
             {info.children}
           </Info>
         )}
-        <Title href={href} className="MitCard-title" size={size} {...title}>
+        <Title
+          data-card-link={!!title.href}
+          className="MitCard-title"
+          size={size}
+          {...title}
+        >
           {title.children}
         </Title>
       </Body>
@@ -340,3 +371,4 @@ Card.Footer = Footer
 Card.Actions = Actions
 
 export { Card }
+export type { CardProps }
