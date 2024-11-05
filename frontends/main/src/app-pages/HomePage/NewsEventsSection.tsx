@@ -222,7 +222,7 @@ const NewsEventsSection: React.FC = () => {
   const stories = news.results.slice(0, 6)
 
   const EventCards = events.results.map((item) => (
-    <EventCard key={item.id} href={item.url} forwardClicksToLink>
+    <EventCard key={item.id} forwardClicksToLink>
       <Card.Content>
         <EventDate>
           <EventDay>

@@ -351,3 +351,4 @@ Card.Footer = Footer
 Card.Actions = Actions
 
 export { Card }
+export type { CardProps }
