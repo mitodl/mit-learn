@@ -30,4 +30,7 @@ class ProfileForm(forms.ModelForm):
             "current_education",
             "time_commitment",
             "delivery",
+            "scim_id",
+            "scim_username",
+            "scim_external_id",
         ]

@@ -26,7 +26,8 @@ def test_scim_post_user(staff_client):
                     "familyName": "Doe",
                     "givenName": "John",
                 },
-                "displayName": "John Smith Doe",
+                "fullName": "John Smith Doe",
+                "emailOptIn": 1,
             }
         ),
     )
@@ -41,6 +42,7 @@ def test_scim_post_user(staff_client):
     assert user.first_name == "John"
     assert user.last_name == "Doe"
     assert user.profile.name == "John Smith Doe"
+    assert user.profile.email_optin is True
 
     # test an update
     resp = staff_client.put(
@@ -57,7 +59,8 @@ def test_scim_post_user(staff_client):
                     "familyName": "Smith",
                     "givenName": "Jimmy",
                 },
-                "displayName": "Jimmy Smith",
+                "fullName": "Jimmy Smith",
+                "emailOptIn": 0,
             }
         ),
     )
@@ -72,3 +75,39 @@ def test_scim_post_user(staff_client):
     assert user.first_name == "Jimmy"
     assert user.last_name == "Smith"
     assert user.profile.name == "Jimmy Smith"
+    assert user.profile.email_optin is False
+
+    resp = staff_client.patch(
+        f"{reverse('scim:users')}/{user.profile.scim_id}",
+        content_type="application/scim+json",
+        data=json.dumps(
+            {
+                "schemas": [constants.SchemaURI.PATCH_OP],
+                "Operations": [
+                    {
+                        "op": "replace",
+                        # yes, the value we get from scim-for-keycloak is a JSON encoded string...inside JSON...
+                        "value": json.dumps(
+                            {
+                                "schemas": [constants.SchemaURI.USER],
+                                "emailOptIn": 1,
+                                "fullName": "Billy Bob",
+                            }
+                        ),
+                    }
+                ],
+            }
+        ),
+    )
+
+    assert resp.status_code == 200, f"Error response: {resp.content}"
+
+    user = user_q.first()
+
+    assert user is not None
+    assert user.email == "jsmith@example.com"
+    assert user.username == "jsmith"
+    assert user.first_name == "Jimmy"
+    assert user.last_name == "Smith"
+    assert user.profile.name == "Billy Bob"
+    assert user.profile.email_optin is True

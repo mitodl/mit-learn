@@ -27,6 +27,9 @@ class ProfileAdmin(admin.ModelAdmin):
         "image_small_file",
         "image_medium_file",
         "updated_at",
+        "scim_id",
+        "scim_username",
+        "scim_external_id",
     )
 
 
