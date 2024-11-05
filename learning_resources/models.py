@@ -319,7 +319,7 @@ class LearningResourceInstructor(TimestampedModel):
     full_name = models.CharField(max_length=256, null=True, blank=True, unique=True)
 
     class Meta:
-        ordering = ["last_name", "first_name"]
+        ordering = ["run_relationships__position", "last_name", "first_name"]
 
     def __str__(self):
         return self.full_name or f"{self.first_name} {self.last_name}"
@@ -595,7 +595,10 @@ class LearningResourceRun(TimestampedModel):
     enrollment_start = models.DateTimeField(null=True, blank=True)
     enrollment_end = models.DateTimeField(null=True, blank=True)
     instructors = models.ManyToManyField(
-        LearningResourceInstructor, blank=True, related_name="runs"
+        LearningResourceInstructor,
+        blank=True,
+        related_name="runs",
+        through="learning_resources.RunInstructorRelationship",
     )
     prices = ArrayField(
         models.DecimalField(decimal_places=2, max_digits=12), null=True, blank=True
@@ -634,6 +637,25 @@ class LearningResourceRun(TimestampedModel):
 
     class Meta:
         unique_together = (("learning_resource", "run_id"),)
+
+
+class RunInstructorRelationship(TimestampedModel):
+    """Model for the relationship between a run and an instructor"""
+
+    run = models.ForeignKey(
+        LearningResourceRun,
+        on_delete=models.deletion.CASCADE,
+        related_name="instructor_relationships",
+    )
+    instructor = models.ForeignKey(
+        LearningResourceInstructor,
+        on_delete=models.deletion.CASCADE,
+        related_name="run_relationships",
+    )
+    position = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["position"]
 
 
 class CourseQuerySet(LearningResourceDetailQuerySet):

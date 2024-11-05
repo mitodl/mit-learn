@@ -4,7 +4,7 @@ import {
   styled,
   theme,
   Typography,
-  Grid,
+  Grid2,
   Card,
   TypographyProps,
 } from "ol-components"
@@ -286,9 +286,12 @@ const NewsEventsSection: React.FC = () => {
               <Typography component="h3" variant="h4">
                 Stories
               </Typography>
-              <Grid container columnSpacing="24px" rowSpacing="28px">
+              <Grid2 container columnSpacing="24px" rowSpacing="28px">
                 {stories.map((item, index) => (
-                  <Grid item key={item.id} xs={12} sm={12} md={6} lg={4} xl={4}>
+                  <Grid2
+                    key={item.id}
+                    size={{ xs: 12, sm: 12, md: 6, lg: 4, xl: 4 }}
+                  >
                     {index >= 4 ? (
                       <AboveLgOnly>
                         <Story item={item as NewsFeedItem} mobile={false} />
@@ -296,9 +299,9 @@ const NewsEventsSection: React.FC = () => {
                     ) : (
                       <Story item={item as NewsFeedItem} mobile={false} />
                     )}
-                  </Grid>
+                  </Grid2>
                 ))}
-              </Grid>
+              </Grid2>
             </StoriesContainer>
             <EventsContainer>
               <Typography component="h3" variant="h4">

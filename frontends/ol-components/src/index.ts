@@ -77,6 +77,8 @@ export type { DrawerProps } from "@mui/material/Drawer"
 
 export { default as Grid } from "@mui/material/Grid"
 export type { GridProps } from "@mui/material/Grid"
+export { default as Grid2 } from "@mui/material/Grid2"
+export type { Grid2Props } from "@mui/material/Grid2"
 export { default as InputLabel } from "@mui/material/InputLabel"
 
 export { default as List } from "@mui/material/List"
