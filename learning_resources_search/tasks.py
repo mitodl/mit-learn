@@ -708,10 +708,12 @@ def start_embed_resources(self, indexes, skip_content_files):
             ]
             if not skip_content_files:
                 for course in (
-                    Course.objects.filter(learning_resource__published=True)
-                    .filter(learning_resource__etl_source__in=RESOURCE_FILE_ETL_SOURCES)
-                    .exclude(learning_resource__readable_id=blocklisted_ids)
-                    .order_by("learning_resource_id")
+                    LearningResource.objects.filter(
+                        resource_type=COURSE_TYPE, published=True
+                    )
+                    .filter(etl_source__in=RESOURCE_FILE_ETL_SOURCES)
+                    .exclude(readable_id=blocklisted_ids)
+                    .order_by("id")
                 ):
                     index_tasks = index_tasks + [
                         generate_embeddings.si(
@@ -720,7 +722,7 @@ def start_embed_resources(self, indexes, skip_content_files):
                         )
                         for ids in chunks(
                             ContentFile.objects.filter(
-                                run__learning_resource_id=course.learning_resource_id,
+                                run__learning_resource_id=course.id,
                                 published=True,
                                 run__published=True,
                             )
