@@ -45,7 +45,7 @@ const DifferingRuns = styled.div({
   alignItems: "flex-start",
   alignSelf: "stretch",
   borderRadius: "4px",
-  border: `1px solid ${theme.custom.colors.silverGrayLight}`,
+  border: `1px solid ${theme.custom.colors.lightGray2}`,
   borderBottom: "none",
 })
 
@@ -56,7 +56,19 @@ const DifferingRun = styled.div({
   gap: "16px",
   padding: "12px",
   alignSelf: "stretch",
-  borderBottom: `1px solid ${theme.custom.colors.silverGrayLight}`,
+  borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
+})
+
+const DifferingRunHeader = styled.div({
+  display: "flex",
+  alignSelf: "stretch",
+  alignItems: "center",
+  flex: "1 0 0",
+  gap: "16px",
+  padding: "12px",
+  color: theme.custom.colors.darkGray2,
+  backgroundColor: theme.custom.colors.lightGray1,
+  ...theme.typography.subtitle3,
 })
 
 const DifferingRunData = styled.div({
@@ -68,9 +80,8 @@ const DifferingRunData = styled.div({
 })
 
 const DifferingRunLabel = styled.strong({
-  [theme.breakpoints.down("sm")]: {
-    display: "none",
-  },
+  display: "flex",
+  flex: "1 0 0",
 })
 
 const DifferingRunLocation = styled(DifferingRunData)({
@@ -442,6 +453,11 @@ const DifferingRunsTable: React.FC<{ resource: LearningResource }> = ({
   if (distinctPrices.length > 1 || distinctDeliveryMethods.length > 1) {
     return (
       <DifferingRuns>
+        <DifferingRunHeader>
+          <DifferingRunLabel>Date</DifferingRunLabel>
+          <DifferingRunLabel>Price</DifferingRunLabel>
+          <DifferingRunLabel>Format</DifferingRunLabel>
+        </DifferingRunHeader>
         {resource.runs.map((run, index) => (
           <DifferingRun key={index}>
             <DifferingRunData>
@@ -449,13 +465,11 @@ const DifferingRunsTable: React.FC<{ resource: LearningResource }> = ({
             </DifferingRunData>
             {run.prices && (
               <DifferingRunData>
-                <DifferingRunLabel>Price:&nbsp;</DifferingRunLabel>
                 <span>{run.prices.map((p) => `$${p}`).join(", ")}</span>
               </DifferingRunData>
             )}
             {run.delivery && (
               <DifferingRunData>
-                <DifferingRunLabel>Format:&nbsp;</DifferingRunLabel>
                 <span>{run.delivery?.map((dm) => dm?.name).join(", ")}</span>
               </DifferingRunData>
             )}
