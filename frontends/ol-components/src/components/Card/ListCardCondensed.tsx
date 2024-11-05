@@ -21,6 +21,15 @@ import {
 } from "./ListCard"
 import type { Card as BaseCard, TitleProps } from "./ListCard"
 
+const Container = styled(BaseContainer)<{ draggable?: boolean }>(
+  ({ draggable }) => [
+    draggable && {
+      display: "flex",
+      flexDirection: "row",
+    },
+  ],
+)
+
 const DragArea = styled(BaseDragArea)`
   padding-right: 4px;
   margin-right: -4px;
@@ -99,7 +108,8 @@ const ListCardCondensed: Card = ({
   let title: TitleProps = {}
 
   const handleHrefClick = useClickChildLink(onClick)
-  const handleClick = forwardClicksToLink ? handleHrefClick : onClick
+  const handleClick =
+    forwardClicksToLink && !draggable ? handleHrefClick : onClick
 
   Children.forEach(children, (child) => {
     if (!isValidElement(child)) return
@@ -119,7 +129,12 @@ const ListCardCondensed: Card = ({
   }
 
   return (
-    <BaseContainer {...others} className={className} onClick={handleClick}>
+    <Container
+      draggable={draggable}
+      {...others}
+      className={className}
+      onClick={handleClick}
+    >
       {draggable && (
         <DragArea>
           <RiDraggable />
@@ -135,7 +150,7 @@ const ListCardCondensed: Card = ({
           {actions && <Actions data-card-actions>{actions}</Actions>}
         </Bottom>
       </Body>
-    </BaseContainer>
+    </Container>
   )
 }
 
