@@ -231,10 +231,30 @@ type TitleProps = {
 
 type SlotProps = { children?: ReactNode; style?: CSSProperties }
 
+/**
+ * Card component with slots for image, info, title, footer, and actions:
+ * ```tsx
+ * <Card>
+ *  <Card.Image src="image-url" />
+ * <Card.Info>Info</Card.Info>
+ * <Card.Title href="link-url">Title</Card.Title>
+ * <Card.Footer>Footer</Card.Footer>
+ * <Card.Actions>Actions</Card.Actions>
+ * </Card>
+ * ```
+ *
+ * **Links:** Card.Title will be a link if `href` is supplied; the entire card
+ * will be clickable if `forwardClicksToLink` is `true`.
+ *
+ * **Custom Layout:** Use Card.Content to create a custom layout.
+ */
 type Card = FC<CardProps> & {
   Content: FC<{ children: ReactNode }>
   Image: FC<ImageProps>
   Info: FC<SlotProps>
+  /**
+   * Card title with optional `href`.
+   */
   Title: FC<TitleProps>
   Footer: FC<SlotProps>
   Actions: FC<SlotProps>

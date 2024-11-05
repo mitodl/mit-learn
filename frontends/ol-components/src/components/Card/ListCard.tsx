@@ -164,10 +164,30 @@ type CardProps = {
   as?: React.ElementType
 } & AriaAttributes
 
+/**
+ * Row-like card component with slots for image, info, title, footer, and actions:
+ * ```tsx
+ * <ListCard>
+ *   <ListCard.Image src="image-url" />
+ *   <ListCard.Info>Info</ListCard.Info>
+ *   <ListCard.Title href="link-url">Title</ListCard.Title>
+ *   <ListCard.Footer>Footer</ListCard.Footer>
+ *   <ListCard.Actions>Actions</ListCard.Actions>
+ * </ListCard>
+ * ```
+ *
+ * **Links:** Card.Title will be a link if `href` is supplied; the entire card
+ * will be clickable if `forwardClicksToLink` is `true`.
+ *
+ * **Custom Layout:** Use ListCard.Content to create a custom layout.
+ */
 export type Card = FC<CardProps> & {
   Content: FC<{ children: ReactNode }>
   Image: FC<ImageProps>
   Info: FC<{ children: ReactNode }>
+  /**
+   * Card title with optional `href`.
+   */
   Title: FC<TitleProps>
   Footer: FC<{ children: ReactNode }>
   Actions: FC<{ children: ReactNode }>

@@ -94,6 +94,22 @@ type CardProps = {
   as?: React.ElementType
 } & AriaAttributes
 
+/**
+ * Condensed row-like card component with slots for info, title, footer, and actions:
+ * ```tsx
+ * <ListCardCondensed>
+ *   <ListCardCondensed.Info>Info</ListCardCondensed.Info>
+ *   <ListCardCondensed.Title href="link-url">Title</ListCardCondensed.Title>
+ *   <ListCardCondensed.Footer>Footer</ListCardCondensed.Footer>
+ *   <ListCardCondensed.Actions>Actions</ListCardCondensed.Actions>
+ * </ListCardCondensed>
+ * ```
+ *
+ * **Links:** Card.Title will be a link if `href` is supplied; the entire card
+ * will be clickable if `forwardClicksToLink` is `true`.
+ *
+ * **Custom Layout:** Use ListCard.Content to create a custom layout.
+ */
 type Card = FC<CardProps> & Omit<BaseCard, "Image">
 
 const ListCardCondensed: Card = ({
