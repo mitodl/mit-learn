@@ -47,10 +47,9 @@ describe("Card", () => {
   ])(
     "The whole card is clickable as a link if forwardClicksToLink ($forwardClicksToLink)",
     async ({ forwardClicksToLink, finalHref }) => {
-      const href = "#woof"
       render(
-        <Card href={href} forwardClicksToLink={forwardClicksToLink}>
-          <Card.Title>Title</Card.Title>
+        <Card forwardClicksToLink={forwardClicksToLink}>
+          <Card.Title href="#woof">Title</Card.Title>
           <Card.Image src="https://via.placeholder.com/150" alt="placeholder" />
           <Card.Info>Info</Card.Info>
           <Card.Footer>Footer</Card.Footer>
@@ -75,13 +74,15 @@ describe("Card", () => {
       const href = "#meow"
       const onClick = jest.fn()
       render(
-        <Card href={href} forwardClicksToLink={forwardClicksToLink}>
+        <Card forwardClicksToLink={forwardClicksToLink}>
           <Card.Content>
             <div>Hello!</div>
             <div data-card-actions>
               <button onClick={onClick}>Button</button>
             </div>
-            <a href={href}>Link</a>
+            <a data-card-link="true" href={href}>
+              Link
+            </a>
           </Card.Content>
         </Card>,
         { wrapper: ThemeProvider },

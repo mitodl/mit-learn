@@ -8,7 +8,7 @@ import React, {
 import styled from "@emotion/styled"
 import { RiDraggable } from "@remixicon/react"
 import { theme } from "../ThemeProvider/ThemeProvider"
-import { BaseContainer, ImageProps, useClickChildHref, Linkable } from "./Card"
+import { BaseContainer, ImageProps, useClickChildLink, Linkable } from "./Card"
 import { TruncateText } from "../TruncateText/TruncateText"
 import { ActionButton, ActionButtonProps } from "../Button/Button"
 import { default as NextImage } from "next/image"
@@ -83,7 +83,11 @@ export const Info = styled.div`
   align-items: center;
 `
 
-export const Title = styled(Linkable)`
+export type TitleProps = {
+  children?: ReactNode
+  href?: string
+}
+export const Title: React.FC<TitleProps> = styled(Linkable)`
   flex-grow: 1;
   color: ${theme.custom.colors.darkGray2};
   text-overflow: ellipsis;
@@ -143,18 +147,13 @@ type CardProps = {
   children: ReactNode[] | ReactNode
   className?: string
   /**
-   * If provided, the card will render its title as a link.
-   *
-   * Clicks on the entire card can be forwarded to the link via `forwardClicksToLink`.
-   */
-  href?: string
-  /**
    * Defaults to `false`. If `true`, clicking the whole card will click the
-   * href link as well.
+   * child anchor with data-card-link.
    *
    * NOTES:
+   *  - By default, Card.Title has `data-card-link="true"`.
    *  - If using Card.Content to customize, you must ensure the content includes
-   *  an anchor with the card's href.
+   *  an anchor with data-card-link attribute. Its value is irrelevant.
    *  - Clicks will NOT be forwarded if:
    *    - The click target is a child of Card.Actions OR an element with
    *    - The click target is a child of any element with data-card-actions attribute
@@ -164,9 +163,6 @@ type CardProps = {
   onClick?: () => void
   as?: React.ElementType
 } & AriaAttributes
-type TitleProps = {
-  children?: ReactNode
-}
 
 export type Card = FC<CardProps> & {
   Content: FC<{ children: ReactNode }>
@@ -181,7 +177,6 @@ export type Card = FC<CardProps> & {
 const ListCard: Card = ({
   children,
   className,
-  href,
   forwardClicksToLink = false,
   draggable,
   onClick,
@@ -189,9 +184,8 @@ const ListCard: Card = ({
 }) => {
   let content, imageProps, info, footer, actions
   let title: TitleProps = {}
-  const hasHref = typeof href === "string"
-  const handleHrefClick = useClickChildHref(href, onClick)
-  const handleClick = hasHref && forwardClicksToLink ? handleHrefClick : onClick
+  const handleHrefClick = useClickChildLink(onClick)
+  const handleClick = forwardClicksToLink ? handleHrefClick : onClick
 
   Children.forEach(children, (child) => {
     if (!isValidElement(child)) return
@@ -227,7 +221,7 @@ const ListCard: Card = ({
       <Body>
         <Info>{info}</Info>
         {title && (
-          <Title {...title} href={href}>
+          <Title data-card-link={!!title.href} {...title} href={title.href}>
             <TruncateText lineClamp={2}>{title.children}</TruncateText>
           </Title>
         )}

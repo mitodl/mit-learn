@@ -27,8 +27,8 @@ describe("ListCard", () => {
     async ({ forwardClicksToLink, finalHref }) => {
       const href = "#woof"
       render(
-        <ListCard href={href} forwardClicksToLink={forwardClicksToLink}>
-          <ListCard.Title>Title</ListCard.Title>
+        <ListCard forwardClicksToLink={forwardClicksToLink}>
+          <ListCard.Title href={href}>Title</ListCard.Title>
           <ListCard.Info>Info</ListCard.Info>
           <ListCard.Footer>Footer</ListCard.Footer>
           <ListCard.Actions>Actions</ListCard.Actions>
@@ -50,14 +50,16 @@ describe("ListCard", () => {
   ])(
     "The whole card is clickable as a link when using Content, except buttons and links",
     async ({ forwardClicksToLink, finalHref }) => {
-      const href = "#meow"
       const onClick = jest.fn()
+      const href = "#meow"
       render(
-        <ListCard forwardClicksToLink={forwardClicksToLink} href={href}>
+        <ListCard forwardClicksToLink={forwardClicksToLink}>
           <ListCard.Content>
             <div>Hello!</div>
             <button onClick={onClick}>Button</button>
-            <a href={href}>Link</a>
+            <a data-card-link="true" href={href}>
+              Link
+            </a>
           </ListCard.Content>
         </ListCard>,
         { wrapper: ThemeProvider },
