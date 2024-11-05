@@ -385,7 +385,9 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
         )
 
     def for_search_serialization(self):
-        return self.annotate(in_featured_lists=Count("parents__parent__channel"))
+        return self.for_serialization().annotate(
+            in_featured_lists=Count("parents__parent__channel")
+        )
 
 
 class LearningResource(TimestampedModel):
