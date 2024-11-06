@@ -564,7 +564,7 @@ def generate_embeddings(ids, resource_type):
     except SystemExit as err:
         raise RetryError(SystemExit.__name__) from err
     except:  # noqa: E722
-        error = "index_courses threw an error"
+        error = "generate_embeddings threw an error"
         log.exception(error)
         return error
 
