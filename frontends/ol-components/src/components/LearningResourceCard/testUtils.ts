@@ -204,6 +204,7 @@ const courses = {
             },
           ],
           prices: ["150"],
+          location: "Earth",
         }),
         factories.learningResources.run({
           delivery: [
@@ -213,6 +214,7 @@ const courses = {
             },
           ],
           prices: ["150"],
+          location: "Earth",
         }),
       ],
     }),

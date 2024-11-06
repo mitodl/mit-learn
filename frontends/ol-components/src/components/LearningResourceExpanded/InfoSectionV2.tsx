@@ -438,6 +438,7 @@ const DifferingRunsTable: React.FC<{ resource: LearningResource }> = ({
   const asTaughtIn = resource ? showStartAnytime(resource) : false
   const prices = []
   const deliveryMethods = []
+  const locations = []
   for (const run of resource.runs) {
     if (run.prices) {
       prices.push(run.prices)
@@ -445,12 +446,20 @@ const DifferingRunsTable: React.FC<{ resource: LearningResource }> = ({
     if (run.delivery) {
       deliveryMethods.push(run.delivery)
     }
+    if (run.location) {
+      locations.push(run.location)
+    }
   }
   const distinctPrices = [...new Set(prices.flat())]
   const distinctDeliveryMethods = [
     ...new Set(deliveryMethods.flat().map((dm) => dm?.code)),
   ]
-  if (distinctPrices.length > 1 || distinctDeliveryMethods.length > 1) {
+  const distinctLocations = [...new Set(locations.flat().map((l) => l))]
+  if (
+    distinctPrices.length > 1 ||
+    distinctDeliveryMethods.length > 1 ||
+    distinctLocations.length > 1
+  ) {
     return (
       <DifferingRuns data-testid="differing-runs-table">
         <DifferingRunHeader>
@@ -474,10 +483,10 @@ const DifferingRunsTable: React.FC<{ resource: LearningResource }> = ({
               </DifferingRunData>
             )}
             {run.delivery.filter((d) => d.code === "in_person").length > 0 &&
-              resource.location && (
+              run.location && (
                 <DifferingRunLocation>
                   <strong>Location:&nbsp;</strong>
-                  <span>{resource.location}</span>
+                  <span>{run.location}</span>
                 </DifferingRunLocation>
               )}
           </DifferingRun>

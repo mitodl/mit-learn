@@ -182,9 +182,11 @@ describe("Differing runs comparison table", () => {
     const onlinePriceLabels =
       within(differingRunsTable).getAllByText("$0, $100")
     const inPersonPriceLabels = within(differingRunsTable).getAllByText("$150")
+    const earthLocationLabels = within(differingRunsTable).getAllByText("Earth")
     expect(onlineLabels).toHaveLength(2)
     expect(inPersonLabels).toHaveLength(2)
     expect(onlinePriceLabels).toHaveLength(2)
     expect(inPersonPriceLabels).toHaveLength(2)
+    expect(earthLocationLabels).toHaveLength(2)
   })
 })
