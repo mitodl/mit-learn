@@ -94,10 +94,6 @@ const renderWithProviders = (
   return { view, queryClient, location }
 }
 
-const renderTestApp = () => {
-  throw new Error("not supported")
-}
-
 /**
  * Assert that a functional component was called at some point with the given
  * props.
@@ -231,7 +227,6 @@ const assertPartialMetas = (expected: Partial<TestableMetas>) => {
 }
 
 export {
-  renderTestApp,
   renderWithProviders,
   expectProps,
   expectLastProps,
