@@ -692,6 +692,12 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
 @app.task(bind=True)
 def start_embed_resources(self, indexes, skip_content_files):
     index_tasks = []
+    if not all([settings.QDRANT_HOST, settings.QDRANT_BASE_COLLECTION_NAME]):
+        log.warning(
+            "skipping. start_embed_resources called without setting "
+            "QDRANT_HOST and QDRANT_BASE_COLLECTION_NAME"
+        )
+        return None
     try:
         if COURSE_TYPE in indexes:
             blocklisted_ids = load_course_blocklist()
