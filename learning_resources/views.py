@@ -7,7 +7,7 @@ import rapidjson
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Count, F, Q, QuerySet
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django_filters.rest_framework import DjangoFilterBackend
@@ -1082,6 +1082,49 @@ class VideoPlaylistViewSet(BaseLearningResourceViewSet):
         return self._get_base_queryset(
             resource_type=LearningResourceType.video_playlist.name
         ).filter(published=True)
+
+    @extend_schema(
+        summary="List videos in a playlist",
+        parameters=[
+            OpenApiParameter(name="id", type=int, location=OpenApiParameter.PATH),
+            OpenApiParameter(name="limit", type=int, location=OpenApiParameter.QUERY),
+        ],
+        responses=LearningResourceSerializer(many=True),
+    )
+    @action(
+        detail=True,
+        methods=["GET"],
+        name="List videos in a playlist",
+    )
+    @method_decorator(
+        cache_page_for_all_users(
+            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+        )
+    )
+    def videos(self, request, *_, **kwargs):
+        """
+        List videos in a playlist
+
+        Args:
+        id (integer): The id of the learning resource
+
+        Returns:
+        QuerySet of videos for a playlist
+        """
+        limit = abs(int(request.GET.get("limit", 10)))
+        pk = int(kwargs.get("id"))
+        try:
+            playlist = self.get_queryset().get(pk=pk)
+        except Exception as e:
+            msg = f"playlist with id {pk} does not exist"
+            raise Http404(msg) from e
+        video_resource_ids = playlist.children.filter(
+            relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value
+        ).values_list("child__id", flat=True)
+        videos = self._get_base_queryset(
+            resource_type=LearningResourceType.video.name,
+        ).filter(id__in=video_resource_ids)[:limit]
+        return Response(VideoResourceSerializer(videos, many=True).data)
 
 
 @extend_schema_view(
