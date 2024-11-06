@@ -31,7 +31,13 @@ services:
       retries: 10
     ports:
       - "6379"
-
+  qdrant:
+    image: qdrant/qdrant:latest
+    restart: always
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant-data:/qdrant/storage
   nginx:
     profiles:
       - backend
@@ -81,3 +87,4 @@ volumes:
   # note: these are here instead of docker-compose.apps.yml because `extends` doesn't pull them in
   django_media:
   yarn-cache:
+  qdrant-data:

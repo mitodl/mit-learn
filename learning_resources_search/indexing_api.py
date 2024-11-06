@@ -10,6 +10,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from opensearchpy.exceptions import ConflictError, NotFoundError
 from opensearchpy.helpers import BulkIndexError, bulk
+from qdrant_client import QdrantClient, models
 
 from learning_resources.models import ContentFile, LearningResourceRun
 from learning_resources_search.connection import (
@@ -23,6 +24,7 @@ from learning_resources_search.connection import (
 from learning_resources_search.constants import (
     ALIAS_ALL_INDICES,
     ALL_INDEX_TYPES,
+    CONTENT_FILE_TYPE,
     COURSE_TYPE,
     MAPPING,
     PERCOLATE_INDEX_TYPE,
@@ -31,6 +33,7 @@ from learning_resources_search.constants import (
 )
 from learning_resources_search.exceptions import ReindexError
 from learning_resources_search.serializers import (
+    serialize_bulk_content_files,
     serialize_bulk_learning_resources,
     serialize_bulk_learning_resources_for_deletion,
     serialize_bulk_percolators,
@@ -86,6 +89,94 @@ def clear_featured_rank(rank, clear_all_greater_than):
         )
 
 
+def qdrant_client():
+    return QdrantClient(
+        url=settings.QDRANT_HOST,
+        api_key=settings.QDRANT_API_KEY,
+        grpc_port=6334,
+        prefer_grpc=True,
+    )
+
+
+def create_qdrand_collections(force_recreate):
+    client = qdrant_client()
+    resources_collection_name = f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources"
+    content_files_collection_name = (
+        f"{settings.QDRANT_BASE_COLLECTION_NAME}.content_files"
+    )
+    if (
+        not client.collection_exists(collection_name=resources_collection_name)
+        or force_recreate
+    ):
+        client.delete_collection(resources_collection_name)
+        client.recreate_collection(
+            collection_name=resources_collection_name,
+            on_disk_payload=True,
+            vectors_config=client.get_fastembed_vector_params(),
+            sparse_vectors_config=client.get_fastembed_sparse_vector_params(),
+            optimizers_config=models.OptimizersConfigDiff(default_segment_number=2),
+            quantization_config=models.ScalarQuantization(
+                scalar=models.ScalarQuantizationConfig(
+                    type=models.ScalarType.INT8,
+                    always_ram=True,
+                ),
+            ),
+        )
+
+    if (
+        not client.collection_exists(collection_name=content_files_collection_name)
+        or force_recreate
+    ):
+        client.delete_collection(content_files_collection_name)
+        client.recreate_collection(
+            collection_name=content_files_collection_name,
+            on_disk_payload=True,
+            vectors_config=client.get_fastembed_vector_params(),
+            sparse_vectors_config=client.get_fastembed_sparse_vector_params(),
+            optimizers_config=models.OptimizersConfigDiff(default_segment_number=2),
+            quantization_config=models.ScalarQuantization(
+                scalar=models.ScalarQuantizationConfig(
+                    type=models.ScalarType.INT8,
+                    always_ram=True,
+                ),
+            ),
+        )
+
+
+def embed_learning_resources(ids, resource_type):
+    # update embeddings
+    client = qdrant_client()
+    resources_collection_name = f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources"
+    content_files_collection_name = (
+        f"{settings.QDRANT_BASE_COLLECTION_NAME}.content_files"
+    )
+    if resource_type == CONTENT_FILE_TYPE:
+        serialized_resources = serialize_bulk_content_files(ids)
+    else:
+        serialized_resources = serialize_bulk_learning_resources(ids)
+    create_qdrand_collections(force_recreate=False)
+    if resource_type != CONTENT_FILE_TYPE:
+        collection_name = resources_collection_name
+    else:
+        collection_name = content_files_collection_name
+    docs = []
+    metadata = []
+    ids = []
+    for doc in serialized_resources:
+        docs.append(
+            f'{doc.get("title")} {doc.get("description")} '
+            f'{doc.get("full_description")} {doc.get("content")}'
+        )
+        metadata.append(doc)
+        ids.append(doc["id"])
+    client.add(
+        collection_name=collection_name,
+        ids=ids,
+        documents=docs,
+        metadata=metadata,
+    )
+
+
 def _update_document_by_id(doc_id, body, object_type, *, retry_on_conflict=0, **kwargs):
     """
     Make a request to Open Search to update an existing document
@@ -99,6 +190,7 @@ def _update_document_by_id(doc_id, body, object_type, *, retry_on_conflict=0, **
         kwargs (dict): Optional kwargs to be passed to opensearch
     """
     conn = get_conn()
+
     for alias in get_active_aliases(conn, object_types=[object_type]):
         try:
             conn.update(
