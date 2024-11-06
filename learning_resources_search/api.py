@@ -906,6 +906,19 @@ def get_similar_resources(
 
 
 def _qdrant_similar_results(doc, num_resources):
+    """
+    Get similar resources from qdrant
+
+    Args:
+        doc (dict):
+            a document representing the data fields we want to search with
+        num_resources (int):
+            number of resources to return
+
+    Returns:
+        list of dict:
+            list of serialized resources
+    """
     from learning_resources_search.indexing_api import qdrant_client
 
     client = qdrant_client()
@@ -929,7 +942,7 @@ def get_similar_resources_qdrant(value_doc: dict, num_resources: int):
     Args:
         value_doc (dict):
             a document representing the data fields we want to search with
-        num_topics (int):
+        num_resources (int):
             number of resources to return
 
     Returns:
