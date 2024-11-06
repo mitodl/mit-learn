@@ -138,7 +138,7 @@ def generate_sort_clause(search_params):
         return sort
 
 
-def wrap_text_clause(text_query):
+def wrap_text_clause(text_query, min_score=None):
     """
     Wrap the text subqueries in a bool query
     Shared by generate_content_file_text_clause and
@@ -149,7 +149,13 @@ def wrap_text_clause(text_query):
     Returns:
         dict: dictionary with the opensearch text clause
     """
-    text_bool_clause = [{"bool": text_query}] if text_query else []
+    if min_score and text_query:
+        text_bool_clause = [
+            {"function_score": {"query": {"bool": text_query}, "min_score": min_score}}
+        ]
+
+    else:
+        text_bool_clause = [{"bool": text_query}] if text_query else []
 
     return {
         "bool": {
@@ -200,7 +206,7 @@ def generate_content_file_text_clause(text):
 
 
 def generate_learning_resources_text_clause(
-    text, search_mode, slop, content_file_score_weight
+    text, search_mode, slop, content_file_score_weight, min_score
 ):
     """
     Return text clause for the query
@@ -324,7 +330,7 @@ def generate_learning_resources_text_clause(
     else:
         text_query = {}
 
-    return wrap_text_clause(text_query)
+    return wrap_text_clause(text_query, min_score)
 
 
 def generate_filter_clause(
@@ -571,15 +577,15 @@ def add_text_query_to_search(search, text, search_params, query_type_query):
             search_params.get("search_mode"),
             search_params.get("slop"),
             search_params.get("content_file_score_weight"),
+            search_params.get("min_score"),
         )
 
     yearly_decay_percent = search_params.get("yearly_decay_percent")
-    min_score = search_params.get("min_score")
     max_incompleteness_penalty = (
         search_params.get("max_incompleteness_penalty", 0) / 100
     )
 
-    if yearly_decay_percent or min_score or max_incompleteness_penalty:
+    if yearly_decay_percent or max_incompleteness_penalty:
         script_query = {
             "script_score": {
                 "query": {"bool": {"must": [text_query], "filter": query_type_query}}
@@ -615,9 +621,6 @@ def add_text_query_to_search(search, text, search_params, query_type_query):
             "source": source,
             "params": params,
         }
-
-        if min_score:
-            script_query["script_score"]["min_score"] = min_score
 
         search = search.query(script_query)
     else:
