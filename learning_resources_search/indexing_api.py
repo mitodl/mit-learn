@@ -90,15 +90,12 @@ def clear_featured_rank(rank, clear_all_greater_than):
 
 
 def qdrant_client():
-    client = QdrantClient(
+    return QdrantClient(
         url=settings.QDRANT_HOST,
         api_key=settings.QDRANT_API_KEY,
         grpc_port=6334,
         prefer_grpc=True,
     )
-    client.set_model(settings.QDRANT_DENSE_MODEL)
-    client.set_sparse_model(settings.QDRANT_SPARSE_MODEL)
-    return client
 
 
 def create_qdrand_collections(force_recreate):
