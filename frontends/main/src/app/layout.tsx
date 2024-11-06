@@ -5,6 +5,7 @@ import { PageWrapper, PageWrapperInner } from "./styled"
 import Providers from "./providers"
 import { MITLearnGlobalStyles } from "ol-components"
 import Script from "next/script"
+// import { PrefetchProvider } from "./PrefetchProvider"
 
 import "./GlobalStyles"
 
@@ -26,12 +27,14 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <Providers>
+          {/* <PrefetchProvider> */}
           <MITLearnGlobalStyles />
           <PageWrapper>
             <Header />
             <PageWrapperInner>{children}</PageWrapperInner>
             <Footer />
           </PageWrapper>
+          {/* </PrefetchProvider> */}
         </Providers>
       </body>
       {process.env.NEXT_PUBLIC_APPZI_URL ? (

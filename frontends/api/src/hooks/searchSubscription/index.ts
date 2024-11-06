@@ -2,8 +2,8 @@ import {
   useMutation,
   UseQueryOptions,
   useQueryClient,
-  useQuery,
 } from "@tanstack/react-query"
+import { useQuery } from "../../useQueryCacheWarning"
 import searchSubscriptions from "./keyFactory"
 import type { LearningResourcesUserSubscriptionApiLearningResourcesUserSubscriptionSubscribeCreateRequest as subscriptionCreateRequest } from "../../generated/v1"
 import { searchSubscriptionApi } from "../../clients"

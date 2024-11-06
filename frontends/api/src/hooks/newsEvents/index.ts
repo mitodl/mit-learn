@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query"
+import { useQuery } from "../../useQueryCacheWarning"
 import newsEvents from "./keyFactory"
 import {
   NewsEventsApiNewsEventsListRequest,
@@ -15,4 +15,9 @@ const useNewsEventsDetail = (id: number) => {
   return useQuery(newsEvents.detail(id))
 }
 
-export { useNewsEventsList, useNewsEventsDetail, NewsEventsListFeedTypeEnum }
+export {
+  useNewsEventsList,
+  useNewsEventsDetail,
+  NewsEventsListFeedTypeEnum,
+  newsEvents as newsEventsKeyFactory,
+}

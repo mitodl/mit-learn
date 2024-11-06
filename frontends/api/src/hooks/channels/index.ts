@@ -1,10 +1,9 @@
 import {
   UseQueryOptions,
   useMutation,
-  useQuery,
   useQueryClient,
 } from "@tanstack/react-query"
-
+import { useQuery } from "../../useQueryCacheWarning"
 import { channelsApi } from "../../clients"
 import type {
   ChannelsApiChannelsListRequest,
@@ -27,6 +26,7 @@ const useChannelDetail = (channelType: string, channelName: string) => {
     ...channels.detailByType(channelType, channelName),
   })
 }
+
 const useChannelCounts = (channelType: string) => {
   return useQuery({
     ...channels.countsByType(channelType),
@@ -54,4 +54,5 @@ export {
   useChannelsList,
   useChannelPartialUpdate,
   useChannelCounts,
+  channels as channelsKeyFactory,
 }

@@ -286,7 +286,7 @@ const NewsEventsSection: React.FC = () => {
               <Typography component="h3" variant="h4">
                 Stories
               </Typography>
-              <Grid2 container columnSpacing="24px" rowSpacing="28px">
+              <Grid2 container columnSpacing={3} rowSpacing={3.5}>
                 {stories.map((item, index) => (
                   <Grid2
                     key={item.id}

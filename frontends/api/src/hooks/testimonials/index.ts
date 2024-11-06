@@ -1,4 +1,5 @@
-import { UseQueryOptions, useQuery } from "@tanstack/react-query"
+import { UseQueryOptions } from "@tanstack/react-query"
+import { useQuery } from "../../useQueryCacheWarning"
 
 import type { TestimonialsApiTestimonialsListRequest } from "../../generated/v0"
 import testimonials from "./keyFactory"
@@ -23,4 +24,8 @@ const useTestimonialDetail = (id: number | undefined) => {
   })
 }
 
-export { useTestimonialDetail, useTestimonialList }
+export {
+  useTestimonialDetail,
+  useTestimonialList,
+  testimonials as testimonialsKeyFactory,
+}
