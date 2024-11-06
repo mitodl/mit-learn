@@ -1,4 +1,4 @@
-import { ResourceTypeEnum } from "api"
+import { DeliveryEnum, DeliveryEnumDescriptions, ResourceTypeEnum } from "api"
 import { factories } from "api/test-utils"
 
 const _makeResource = factories.learningResources.resource
@@ -41,6 +41,7 @@ const resources = {
   }),
 }
 
+const sameDataRun = factories.learningResources.run()
 const courses = {
   free: {
     noCertificate: makeResource({
@@ -150,6 +151,70 @@ const courses = {
     dated: makeResource({
       resource_type: ResourceTypeEnum.Course,
       availability: "dated",
+    }),
+  },
+  multipleRuns: {
+    sameData: makeResource({
+      resource_type: ResourceTypeEnum.Course,
+      runs: [
+        factories.learningResources.run({
+          delivery: sameDataRun.delivery,
+          prices: sameDataRun.prices,
+        }),
+        factories.learningResources.run({
+          delivery: sameDataRun.delivery,
+          prices: sameDataRun.prices,
+        }),
+        factories.learningResources.run({
+          delivery: sameDataRun.delivery,
+          prices: sameDataRun.prices,
+        }),
+        factories.learningResources.run({
+          delivery: sameDataRun.delivery,
+          prices: sameDataRun.prices,
+        }),
+      ],
+    }),
+    differentData: makeResource({
+      resource_type: ResourceTypeEnum.Course,
+      runs: [
+        factories.learningResources.run({
+          delivery: [
+            {
+              code: DeliveryEnum.Online,
+              name: DeliveryEnumDescriptions.online,
+            },
+          ],
+          prices: ["0", "100"],
+        }),
+        factories.learningResources.run({
+          delivery: [
+            {
+              code: DeliveryEnum.Online,
+              name: DeliveryEnumDescriptions.online,
+            },
+          ],
+          prices: ["0", "100"],
+        }),
+        factories.learningResources.run({
+          delivery: [
+            {
+              code: DeliveryEnum.InPerson,
+              name: DeliveryEnumDescriptions.in_person,
+            },
+          ],
+          prices: ["150"],
+        }),
+        factories.learningResources.run({
+          delivery: [
+            {
+              code: DeliveryEnum.InPerson,
+              name: DeliveryEnumDescriptions.in_person,
+            },
+          ],
+          prices: ["150"],
+        }),
+      ],
     }),
   },
 }

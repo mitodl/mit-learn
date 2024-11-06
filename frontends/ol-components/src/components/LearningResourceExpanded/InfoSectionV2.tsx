@@ -452,7 +452,7 @@ const DifferingRunsTable: React.FC<{ resource: LearningResource }> = ({
   ]
   if (distinctPrices.length > 1 || distinctDeliveryMethods.length > 1) {
     return (
-      <DifferingRuns>
+      <DifferingRuns data-testid="differing-runs-table">
         <DifferingRunHeader>
           <DifferingRunLabel>Date</DifferingRunLabel>
           <DifferingRunLabel>Price</DifferingRunLabel>
