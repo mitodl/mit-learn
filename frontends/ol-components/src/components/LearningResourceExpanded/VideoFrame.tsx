@@ -18,7 +18,7 @@ const VideoFrame: React.FC<{
     const videoId = src?.split("v=")[1]
     return (
       <IFrame
-        src={`http://www.youtube.com/embed/${videoId}`}
+        src={`https://www.youtube.com/embed/${videoId}`}
         title={title}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
         referrerPolicy="strict-origin-when-cross-origin"

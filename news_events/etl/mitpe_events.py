@@ -2,11 +2,8 @@
 
 import html
 import logging
-from datetime import UTC, time
 from urllib.parse import urljoin
-from zoneinfo import ZoneInfo
 
-import dateparser
 from django.conf import settings
 
 from main.utils import now_in_utc
@@ -57,34 +54,6 @@ def transform_image(news_dict: dict) -> dict:
     return {}
 
 
-def parse_time_range(time_range_str: str) -> tuple[time or None]:
-    """
-    Attempt to parse the time range from the MITPE events API.
-    The field might not actually contain a time or range.
-
-    Args:
-        time_range (str): time range string
-
-    Returns:
-        tuple: start and end times as strings
-
-    """
-    start_time = None
-    end_time = None
-    zone = ZoneInfo("US/Eastern")
-    times = time_range_str.split("-")
-    if len(times) == 2:  # noqa: PLR2004
-        end_dt = dateparser.parse(times[1])
-        if end_dt:
-            zone = end_dt.tzinfo or zone
-            end_time = end_dt.replace(tzinfo=zone).astimezone(UTC).time()
-    start_dt = dateparser.parse(times[0])
-    if start_dt:
-        start_time = start_dt.replace(tzinfo=zone).astimezone(UTC).time()
-
-    return start_time, end_time
-
-
 def transform_item(item: dict) -> dict:
     """
     Transform the items from the MIT Professional Education news API.
@@ -96,13 +65,17 @@ def transform_item(item: dict) -> dict:
         dict: transformed event data
 
     """
-    time_start, time_end = parse_time_range(item.get("time_range"))
-    start_dt = parse_date(item.get("start_date"))
-    if start_dt and time_start:
-        start_dt = start_dt.replace(hour=time_start.hour, minute=time_start.minute)
-    end_dt = parse_date(item.get("end_date")) or start_dt
-    if end_dt and time_end:
-        end_dt = end_dt.replace(hour=time_end.hour, minute=time_end.minute)
+
+    times = item.get("time_range", "").split("-")
+    start_dt = parse_date(
+        f"{item.get("start_date")} {times[0] if len(times) > 0 else ''}"
+    )
+    if not start_dt:
+        # Time range may be invalid, try without it
+        start_dt = parse_date(f"{item.get("start_date")}")
+    end_dt = parse_date(f"{item.get("end_date")} {times[1] if len(times) > 1 else ''}")
+    if not end_dt:
+        end_dt = parse_date(f"{item.get("end_date")}")
 
     # Do not bother transforming past events
     now = now_in_utc()

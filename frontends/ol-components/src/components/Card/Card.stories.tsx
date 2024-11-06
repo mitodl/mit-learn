@@ -1,10 +1,11 @@
 import React from "react"
 import type { Meta, StoryObj } from "@storybook/react"
 import { Card } from "./Card"
+import type { CardProps } from "./Card"
 import { ActionButton } from "../Button/Button"
 import { RiMenuAddLine, RiBookmarkLine } from "@remixicon/react"
 
-const meta: Meta<typeof Card> = {
+const meta: Meta<CardProps & { href?: string }> = {
   title: "smoot-design/Cards/Card",
   argTypes: {
     size: {
@@ -19,7 +20,7 @@ const meta: Meta<typeof Card> = {
         alt="Provide a meaningful description or leave this blank."
       />
       <Card.Info>Info</Card.Info>
-      <Card.Title>
+      <Card.Title href={args.href}>
         Lorem ipsum dolor sit amet, consectetur adipiscing elit
       </Card.Title>
       <Card.Actions>
@@ -51,7 +52,7 @@ const meta: Meta<typeof Card> = {
 
 export default meta
 
-type Story = StoryObj<typeof Card>
+type Story = StoryObj<CardProps & { href?: string }>
 
 export const Medium: Story = {
   args: {

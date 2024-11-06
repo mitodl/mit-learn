@@ -796,6 +796,10 @@ def test_load_instructors(instructor_exists):
     )
 
     assert run.instructors.count() == len(instructors)
+    # Instructors should maintain their original order
+    assert [i.full_name for i in instructors] == [
+        i.full_name for i in run.instructors.all()
+    ]
 
 
 def test_load_instructors_dupe_full_names():

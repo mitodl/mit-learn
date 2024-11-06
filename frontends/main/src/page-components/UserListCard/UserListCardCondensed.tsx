@@ -50,10 +50,10 @@ const UserListCardCondensed = ({
   className,
 }: UserListCardCondensedProps) => {
   return (
-    <StyledCard href={href} className={className}>
+    <StyledCard forwardClicksToLink className={className}>
       <ListCardCondensed.Content>
         <TextContainer>
-          <Link href={href}>
+          <Link href={href} data-card-link>
             <Typography
               variant="subtitle1"
               color={theme.custom.colors.darkGray2}

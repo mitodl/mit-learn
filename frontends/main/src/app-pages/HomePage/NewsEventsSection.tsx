@@ -4,7 +4,7 @@ import {
   styled,
   theme,
   Typography,
-  Grid,
+  Grid2,
   Card,
   TypographyProps,
 } from "ol-components"
@@ -188,11 +188,11 @@ const Story: React.FC<{ item: NewsFeedItem; mobile: boolean }> = ({
   mobile,
 }) => {
   return (
-    <StoryCard mobile={mobile} href={item.url} forwardClicksToLink>
+    <StoryCard mobile={mobile} forwardClicksToLink>
       {item.image.url ? (
         <Card.Image src={item.image.url} alt={item.image.alt || ""} />
       ) : null}
-      <Card.Title lines={2} style={{ marginBottom: -13 }}>
+      <Card.Title href={item.url} lines={2} style={{ marginBottom: -13 }}>
         {item.title}
       </Card.Title>
       <Card.Footer>
@@ -222,7 +222,7 @@ const NewsEventsSection: React.FC = () => {
   const stories = news.results.slice(0, 6)
 
   const EventCards = events.results.map((item) => (
-    <EventCard key={item.id} href={item.url} forwardClicksToLink>
+    <EventCard key={item.id} forwardClicksToLink>
       <Card.Content>
         <EventDate>
           <EventDay>
@@ -238,7 +238,7 @@ const NewsEventsSection: React.FC = () => {
             )}
           </EventMonth>
         </EventDate>
-        <Link href={item.url}>
+        <Link href={item.url} data-card-link>
           <EventTitle>{item.title}</EventTitle>
         </Link>
         <Chevron />
@@ -286,9 +286,12 @@ const NewsEventsSection: React.FC = () => {
               <Typography component="h3" variant="h4">
                 Stories
               </Typography>
-              <Grid container columnSpacing="24px" rowSpacing="28px">
+              <Grid2 container columnSpacing="24px" rowSpacing="28px">
                 {stories.map((item, index) => (
-                  <Grid item key={item.id} xs={12} sm={12} md={6} lg={4} xl={4}>
+                  <Grid2
+                    key={item.id}
+                    size={{ xs: 12, sm: 12, md: 6, lg: 4, xl: 4 }}
+                  >
                     {index >= 4 ? (
                       <AboveLgOnly>
                         <Story item={item as NewsFeedItem} mobile={false} />
@@ -296,9 +299,9 @@ const NewsEventsSection: React.FC = () => {
                     ) : (
                       <Story item={item as NewsFeedItem} mobile={false} />
                     )}
-                  </Grid>
+                  </Grid2>
                 ))}
-              </Grid>
+              </Grid2>
             </StoriesContainer>
             <EventsContainer>
               <Typography component="h3" variant="h4">

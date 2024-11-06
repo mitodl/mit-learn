@@ -1,9 +1,10 @@
+import json
 import logging
 from typing import Optional, Union
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django_scim import constants, exceptions
+from django_scim import constants
 from django_scim.adapters import SCIMUser
 from scim2_filter_parser.attr_paths import AttrPath
 
@@ -43,6 +44,10 @@ class LearnSCIMUser(SCIMUser):
         ("active", None, None): "is_active",
         ("name", "givenName", None): "first_name",
         ("name", "familyName", None): "last_name",
+    }
+
+    IGNORED_PATHS = {
+        ("schemas", None, None),
     }
 
     @property
@@ -133,8 +138,8 @@ class LearnSCIMUser(SCIMUser):
         self.obj.profile = getattr(self.obj, "profile", Profile())
         self.obj.profile.scim_username = d.get("userName")
         self.obj.profile.scim_external_id = d.get("externalId")
-        self.obj.profile.name = d.get("displayName", "")
-        self.obj.profile.emailOptIn = d.get("emailOptIn") == 1
+        self.obj.profile.name = d.get("fullName", "")
+        self.obj.profile.email_optin = d.get("emailOptIn", 1) == 1
 
     def save(self):
         """
@@ -176,6 +181,16 @@ class LearnSCIMUser(SCIMUser):
             self.obj.profile.scim_external_id = value
             self.obj.save()
 
+    def parse_path_and_values(
+        self, path: Optional[str], value: Union[str, list, dict]
+    ) -> list:
+        if not path and isinstance(value, str):
+            # scim-for-keycloak sends this as a noncompliant JSON-encoded string
+            value = json.loads(value)
+            value.pop("schema", None)  # part of the spec, not a user prop
+
+        return super().parse_path_and_values(path, value)
+
     def handle_replace(
         self,
         path: Optional[AttrPath],
@@ -197,14 +212,15 @@ class LearnSCIMUser(SCIMUser):
                     self.obj, self.ATTR_MAP.get(nested_path.first_path), nested_value
                 )
 
-            elif nested_path.first_path == ("name", "formatted", None):
+            elif nested_path.first_path == ("fullName", None, None):
                 self.obj.profile.name = nested_value
-
+            elif nested_path.first_path == ("emailOptIn", None, None):
+                self.obj.profile.email_optin = nested_value == 1
             elif nested_path.first_path == ("emails", None, None):
                 self.parse_emails(value)
-
-            else:
-                msg = "Not Implemented"
-                raise exceptions.NotImplementedError(msg)
+            elif nested_path.first_path not in self.IGNORED_PATHS:
+                logger.debug(
+                    "Ignoring SCIM update for path: %s", nested_path.first_path
+                )
 
         self.save()

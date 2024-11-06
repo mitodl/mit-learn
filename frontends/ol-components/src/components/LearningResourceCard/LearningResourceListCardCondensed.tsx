@@ -120,7 +120,6 @@ const LearningResourceListCardCondensed: React.FC<
     <ListCardCondensed
       as="article"
       aria-label={`${readableType}: ${resource.title}`}
-      href={href}
       forwardClicksToLink
       className={className}
       draggable={draggable}
@@ -128,7 +127,9 @@ const LearningResourceListCardCondensed: React.FC<
       <ListCardCondensed.Info>
         <Info resource={resource} />
       </ListCardCondensed.Info>
-      <ListCardCondensed.Title>{resource.title}</ListCardCondensed.Title>
+      <ListCardCondensed.Title href={href}>
+        {resource.title}
+      </ListCardCondensed.Title>
       <ListCardCondensed.Actions>
         {onAddToLearningPathClick && (
           <CardActionButton
