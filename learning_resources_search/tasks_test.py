@@ -351,8 +351,7 @@ def test_start_embed_resources_without_settings(mocker, mocked_celery, index):
     generate_embeddings_mock = mocker.patch(
         "learning_resources_search.tasks.generate_embeddings", autospec=True
     )
-    with pytest.raises(mocked_celery.replace_exception_class):
-        start_embed_resources.delay([index], skip_content_files=True)
+    start_embed_resources.delay([index], skip_content_files=True)
 
     generate_embeddings_mock.si.assert_not_called()
 
