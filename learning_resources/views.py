@@ -218,7 +218,7 @@ class LearningResourceViewSet(
         Returns:
         QuerySet of similar LearningResource for the resource matching the id parameter
         """
-        limit = request.GET.get("limit", 10)
+        limit = int(request.GET.get("limit", 10))
         pk = int(kwargs.get("id"))
         learning_resource = get_object_or_404(LearningResource, id=pk)
         learning_resource = LearningResource.objects.for_search_serialization().get(
@@ -258,7 +258,7 @@ class LearningResourceViewSet(
         Returns:
         QuerySet of similar LearningResource for the resource matching the id parameter
         """
-        limit = request.GET.get("limit", 10)
+        limit = int(request.GET.get("limit", 10))
         pk = int(kwargs.get("id"))
 
         try:
