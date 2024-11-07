@@ -88,7 +88,6 @@ const DifferingRunsTable: React.FC<{ resource: LearningResource }> = ({
     }
   }
   const distinctPrices = [...new Set(prices.map((p) => p.amount).flat())]
-  console.log(distinctPrices)
   const distinctDeliveryMethods = [
     ...new Set(deliveryMethods.flat().map((dm) => dm?.code)),
   ]
