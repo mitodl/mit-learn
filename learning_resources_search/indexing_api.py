@@ -298,11 +298,11 @@ def create_index_with_embeddings(resource_type):
         object_type=resource_type,
         embedding_mapping=True,
     )
-    pipeline = (
-        "elser-ingest-pipeline-content"
-        if resource_type == COURSE_TYPE
-        else "elser-ingest-pipeline"
-    )
+   # pipeline = (
+   #     "elser-ingest-pipeline-content"
+   #     if resource_type == COURSE_TYPE
+   #     else "elser-ingest-pipeline"
+   # )
     conn = get_conn()
     default_alias = get_default_alias_name(resource_type)
     index_without_embeddings = list(conn.indices.get_alias(name=default_alias).keys())[
@@ -313,7 +313,7 @@ def create_index_with_embeddings(resource_type):
         source={"index": index_without_embeddings, "size": 30},
         dest={
             "index": name,
-            "pipeline": pipeline,
+    #        "pipeline": pipeline,
         },
     )
     alias = make_embeddings_alias_name(resource_type)
@@ -677,7 +677,7 @@ def create_backing_index(object_type):
 
     # Clear away temp alias so we can reuse it, and create mappings
     clear_and_create_index(
-        index_name=new_backing_index, object_type=object_type, embedding_mapping=True
+        index_name=new_backing_index, object_type=object_type, embedding_mapping=False
     )
     temp_alias = get_reindexing_alias_name(object_type)
     if conn.indices.exists_alias(name=temp_alias):
