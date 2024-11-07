@@ -56,6 +56,7 @@ const DifferingRunLabel = styled.strong({
 
 const DifferingRunLocation = styled(DifferingRunData)({
   flex: "1 0 100%",
+  flexDirection: "column",
   alignSelf: "stretch",
 })
 
@@ -122,7 +123,7 @@ const DifferingRunsTable: React.FC<{ resource: LearningResource }> = ({
             {run.delivery.filter((d) => d.code === "in_person").length > 0 &&
               run.location && (
                 <DifferingRunLocation>
-                  <strong>Location:&nbsp;</strong>
+                  <strong>Location</strong>
                   <span>{run.location}</span>
                 </DifferingRunLocation>
               )}
