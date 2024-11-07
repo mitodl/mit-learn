@@ -88,6 +88,7 @@ const Image = styled(NextImage)({
   borderRadius: "8px",
   width: "100%",
   objectFit: "cover",
+  zIndex: -1,
 })
 
 const SkeletonImage = styled(Skeleton)<{ aspect: number }>((aspect) => ({
