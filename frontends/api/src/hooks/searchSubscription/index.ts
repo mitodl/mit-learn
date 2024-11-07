@@ -3,7 +3,7 @@ import {
   UseQueryOptions,
   useQueryClient,
 } from "@tanstack/react-query"
-import { useQuery } from "../../useQueryCacheWarning"
+import { useQuery } from "../../ssr/useQuery"
 import searchSubscriptions from "./keyFactory"
 import type { LearningResourcesUserSubscriptionApiLearningResourcesUserSubscriptionSubscribeCreateRequest as subscriptionCreateRequest } from "../../generated/v1"
 import { searchSubscriptionApi } from "../../clients"

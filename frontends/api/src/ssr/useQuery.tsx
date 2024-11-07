@@ -2,9 +2,9 @@ import {
   useQuery as useQueryOriginal,
   UseQueryOptions,
   UseQueryResult,
-  QueryKey,
   useQueryClient,
 } from "@tanstack/react-query"
+import type { QueryKey } from "@tanstack/react-query"
 
 /* Wraps useQuery to check that the query cache is populated for a given query key.
  * Queries are expected to have been prefetched on the server. A warning is logged
@@ -29,11 +29,13 @@ export const useQuery = <
 
   const initialLoaded = queryClient.getQueryData(["initialRenderComplete"])
 
-  if (!cached && !initialLoaded) {
-    console.warn(
-      options.queryKey,
-      "QueryCache was empty - content was not prefetched on the server for query key",
-    )
+  if (!initialLoaded) {
+    if (!cached) {
+      console.warn(
+        options.queryKey,
+        "QueryCache was empty - content was not prefetched on the server for query key",
+      )
+    }
   }
 
   return useQueryOriginal(options)

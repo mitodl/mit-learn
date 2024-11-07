@@ -1,4 +1,4 @@
-import { useQuery } from "../../useQueryCacheWarning"
+import { useQuery } from "../../ssr/useQuery"
 import newsEvents from "./keyFactory"
 import {
   NewsEventsApiNewsEventsListRequest,

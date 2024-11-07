@@ -4,7 +4,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query"
-import { useQuery } from "../../useQueryCacheWarning"
+import { useQuery } from "../../ssr/useQuery"
 import {
   learningpathsApi,
   learningResourcesApi,

@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { useQuery } from "../../useQueryCacheWarning"
+import { useQuery } from "../../ssr/useQuery"
 
 import { widgetListsApi } from "../../clients"
 import widgetLists from "./keyFactory"

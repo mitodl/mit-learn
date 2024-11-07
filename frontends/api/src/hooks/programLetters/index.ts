@@ -1,4 +1,4 @@
-import { useQuery } from "../../useQueryCacheWarning"
+import { useQuery } from "../../ssr/useQuery"
 import programLetters from "./keyFactory"
 
 /**
