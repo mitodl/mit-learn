@@ -264,9 +264,7 @@ def test_load_program(  # noqa: PLR0913
             result.id, result.resource_type
         )
     elif is_published:
-        mock_upsert_tasks.upsert_learning_resource_immutable_signature.assert_called_with(
-            result.id
-        )
+        mock_upsert_tasks.upsert_learning_resource.assert_called_with(result.id)
     else:
         mock_upsert_tasks.upsert_learning_resource.assert_not_called()
 
@@ -420,9 +418,7 @@ def test_load_course(  # noqa: PLR0913,PLR0912,PLR0915
             result.id, result.resource_type
         )
     elif is_published and is_run_published and not blocklisted:
-        mock_upsert_tasks.upsert_learning_resource_immutable_signature.assert_called_with(
-            result.id
-        )
+        mock_upsert_tasks.upsert_learning_resource.assert_called_with(result.id)
     else:
         mock_upsert_tasks.deindex_learning_resource.assert_not_called()
         mock_upsert_tasks.upsert_learning_resource.assert_not_called()
@@ -553,7 +549,7 @@ def test_load_duplicate_course(
     else:
         mock_upsert_tasks.deindex_learning_resource.assert_not_called()
     if course.learning_resource.id:
-        mock_upsert_tasks.upsert_learning_resource_immutable_signature.assert_called_with(
+        mock_upsert_tasks.upsert_learning_resource.assert_called_with(
             course.learning_resource.id
         )
 
@@ -1113,9 +1109,7 @@ def test_load_podcast_episode(
             result.id, result.resource_type
         )
     elif is_published:
-        mock_upsert_tasks.upsert_learning_resource_immutable_signature.assert_called_with(
-            result.id
-        )
+        mock_upsert_tasks.upsert_learning_resource.assert_called_with(result.id)
     else:
         mock_upsert_tasks.upsert_learning_resource.assert_not_called()
         mock_upsert_tasks.deindex_learning_resource.assert_not_called()
@@ -1190,9 +1184,7 @@ def test_load_podcast(
             result.id, result.resource_type
         )
     elif is_published:
-        mock_upsert_tasks.upsert_learning_resource_immutable_signature.assert_called_with(
-            result.id
-        )
+        mock_upsert_tasks.upsert_learning_resource.assert_called_with(result.id)
     else:
         mock_upsert_tasks.deindex_learning_resource.assert_not_called()
         mock_upsert_tasks.upsert_learning_resource.assert_not_called()
@@ -1503,9 +1495,7 @@ def test_load_course_percolation(
 
     blocklist = [learning_resource.readable_id] if blocklisted else []
     result = load_course(props, blocklist, [], config=CourseLoaderConfig(prune=True))
-    mock_upsert_tasks.upsert_learning_resource_immutable_signature.assert_called_with(
-        result.id
-    )
+    mock_upsert_tasks.upsert_learning_resource.assert_called_with(result.id)
 
 
 @pytest.mark.parametrize("certification", [True, False])
