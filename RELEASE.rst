@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.24.2
+Version 0.24.2 (Released November 07, 2024)
 --------------
 
 - HTTPS youtube URLs (#1795)
