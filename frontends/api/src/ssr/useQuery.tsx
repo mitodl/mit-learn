@@ -33,7 +33,18 @@ export const useQuery = <
     if (!cached) {
       console.warn(
         options.queryKey,
-        "QueryCache was empty - content was not prefetched on the server for query key",
+        "Content was not prefetched on the server for query key needed during initial render",
+      )
+    }
+
+    const initialQueries =
+      queryClient.getQueryData<string[]>(["initialKeys"]) || []
+
+    const key = JSON.stringify(options.queryKey)
+    if (!initialQueries.includes(key)) {
+      queryClient.setQueryData(
+        ["initialKeys"],
+        [...initialQueries, JSON.stringify(options.queryKey)],
       )
     }
   }
