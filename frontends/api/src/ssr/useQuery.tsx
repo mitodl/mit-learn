@@ -42,10 +42,7 @@ export const useQuery = <
 
     const key = JSON.stringify(options.queryKey)
     if (!initialQueries.includes(key)) {
-      queryClient.setQueryData(
-        ["initialKeys"],
-        [...initialQueries, JSON.stringify(options.queryKey)],
-      )
+      queryClient.setQueryData(["initialKeys"], [...initialQueries, key])
     }
   }
 
