@@ -16,7 +16,7 @@
     "watch": "yarn workspace mit-learn watch",
     "watch:docker": "yarn workspace mit-learn watch:docker",
     "build": "yarn workspace mit-learn build",
-    "lint-check": "eslint . --ext .js,.jsx,.ts,.tsx,.mdx",
+    "lint-check": "ESLINT_USE_FLAT_CONFIG=false eslint . --ext .js,.jsx,.ts,.tsx,.mdx",
     "lint-fix": "yarn lint-check --fix",
     "fmt-check": "prettier --ignore-path ../.gitignore --ignore-path ../.prettierignore --check .",
     "fmt-fix": "prettier --ignore-path ../.gitignore --ignore-path ../.prettierignore --write .",
