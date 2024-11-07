@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+Version 0.24.3
+--------------
+
+- identify users in posthog via user id (#1799)
+- qdrant integration for vector based similar resources endpoint (#1784)
+- calculate min_score before score adjustments (#1797)
+- Update actions/setup-python digest to 0b93645 (#1757)
+
 Version 0.24.2 (Released November 07, 2024)
 --------------
 
