@@ -18,6 +18,8 @@ export const prefetch = async (queries: (Query | unknown)[]) => {
     .getQueriesData([])
     .map((item) => JSON.stringify(item[0]))
 
+  /* Set the prefetched keys so we can check them after first
+   * render to make sure we are not prefetching anything unnecessarily */
   queryClient.setQueryData(["prefetchedKeys"], prefetchedKeys)
 
   return dehydrate(queryClient)

@@ -23,28 +23,33 @@ export const useQuery = <
     initialData?: () => undefined
   },
 ): UseQueryResult<TData, TError> => {
-  const queryClient = useQueryClient()
-
-  const cached = queryClient.getQueryState(options.queryKey!)
-
-  const initialLoaded = queryClient.getQueryData(["initialRenderComplete"])
-
-  if (!initialLoaded) {
-    if (!cached) {
-      console.warn(
-        options.queryKey,
-        "Content was not prefetched on the server for query key needed during initial render",
-      )
-    }
-
-    const initialQueries =
-      queryClient.getQueryData<string[]>(["initialKeys"]) || []
-
-    const key = JSON.stringify(options.queryKey)
-    if (!initialQueries.includes(key)) {
-      queryClient.setQueryData(["initialKeys"], [...initialQueries, key])
-    }
-  }
-
   return useQueryOriginal(options)
+
+  // const queryClient = useQueryClient()
+
+  // /* This flag is set to true when we get the window load event */
+  // const initialLoaded = queryClient.getQueryData(["initialRenderComplete"])
+
+  // /* Check if the item is in the cache (implying prefetched, until initialLoaded) */
+  // const cached = queryClient.getQueryState(options.queryKey!)
+
+  // if (!initialLoaded) {
+  //   if (!cached) {
+  //     console.warn(
+  //       options.queryKey,
+  //       "Content was not prefetched on the server for query key needed during initial render",
+  //     )
+  //   }
+
+  //   const initialQueries =
+  //     queryClient.getQueryData<string[]>(["initialKeys"]) || []
+
+  //   const key = JSON.stringify(options.queryKey)
+  //   if (!initialQueries.includes(key)) {
+  //     /* Track the queries made during initial render so we can compare to the prefetched list */
+  //     queryClient.setQueryData(["initialKeys"], [...initialQueries, key])
+  //   }
+  // }
+
+  // return useQueryOriginal(options)
 }
