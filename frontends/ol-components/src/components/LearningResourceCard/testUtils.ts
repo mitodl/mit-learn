@@ -41,7 +41,12 @@ const resources = {
   }),
 }
 
-const sameDataRun = factories.learningResources.run()
+const sameDataRun = factories.learningResources.run({
+  resource_prices: [
+    { amount: "0", currency: "USD" },
+    { amount: "100", currency: "USD" },
+  ],
+})
 const courses = {
   free: {
     noCertificate: makeResource({
@@ -159,19 +164,23 @@ const courses = {
       runs: [
         factories.learningResources.run({
           delivery: sameDataRun.delivery,
-          prices: sameDataRun.prices,
+          resource_prices: sameDataRun.resource_prices,
+          location: sameDataRun.location,
         }),
         factories.learningResources.run({
           delivery: sameDataRun.delivery,
-          prices: sameDataRun.prices,
+          resource_prices: sameDataRun.resource_prices,
+          location: sameDataRun.location,
         }),
         factories.learningResources.run({
           delivery: sameDataRun.delivery,
-          prices: sameDataRun.prices,
+          resource_prices: sameDataRun.resource_prices,
+          location: sameDataRun.location,
         }),
         factories.learningResources.run({
           delivery: sameDataRun.delivery,
-          prices: sameDataRun.prices,
+          resource_prices: sameDataRun.resource_prices,
+          location: sameDataRun.location,
         }),
       ],
     }),
@@ -185,7 +194,10 @@ const courses = {
               name: DeliveryEnumDescriptions.online,
             },
           ],
-          prices: ["0", "100"],
+          resource_prices: [
+            { amount: "0", currency: "USD" },
+            { amount: "100", currency: "USD" },
+          ],
         }),
         factories.learningResources.run({
           delivery: [
@@ -194,7 +206,10 @@ const courses = {
               name: DeliveryEnumDescriptions.online,
             },
           ],
-          prices: ["0", "100"],
+          resource_prices: [
+            { amount: "0", currency: "USD" },
+            { amount: "100", currency: "USD" },
+          ],
         }),
         factories.learningResources.run({
           delivery: [
@@ -203,7 +218,7 @@ const courses = {
               name: DeliveryEnumDescriptions.in_person,
             },
           ],
-          prices: ["150"],
+          resource_prices: [{ amount: "150", currency: "USD" }],
           location: "Earth",
         }),
         factories.learningResources.run({
@@ -213,7 +228,7 @@ const courses = {
               name: DeliveryEnumDescriptions.in_person,
             },
           ],
-          prices: ["150"],
+          resource_prices: [{ amount: "150", currency: "USD" }],
           location: "Earth",
         }),
       ],

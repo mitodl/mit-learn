@@ -1,4 +1,9 @@
-import { LearningResource, LearningResourcePrice, ResourceTypeEnum } from "api"
+import {
+  LearningResource,
+  LearningResourcePrice,
+  LearningResourceRun,
+  ResourceTypeEnum,
+} from "api"
 import { findBestRun } from "ol-utilities"
 import getSymbolFromCurrency from "currency-symbol-map"
 
@@ -30,26 +35,42 @@ type Prices = {
   certificate: null | LearningResourcePrice[]
 }
 
-const getPrices = (resource: LearningResource): Prices => {
-  const sortedNonzero = resource.resource_prices
-    ? resource.resource_prices
-        .sort(
-          (a: LearningResourcePrice, b: LearningResourcePrice) =>
-            Number(a.amount) - Number(b.amount),
-        )
-        .filter((price: LearningResourcePrice) => Number(price.amount) > 0)
-    : []
-
+const getPrices = (prices: LearningResourcePrice[]) => {
+  const sortedNonzero = prices
+    .sort(
+      (a: LearningResourcePrice, b: LearningResourcePrice) =>
+        Number(a.amount) - Number(b.amount),
+    )
+    .sort(
+      (a: LearningResourcePrice, b: LearningResourcePrice) =>
+        Number(a.amount) - Number(b.amount),
+    )
+    .filter((price: LearningResourcePrice) => Number(price.amount) > 0)
   const priceRange = sortedNonzero.filter(
     (price, index, arr) => index === 0 || index === arr.length - 1,
   )
-  const prices = priceRange.length > 0 ? priceRange : null
+  return priceRange.length > 0 ? priceRange : null
+}
+
+const getResourcePrices = (resource: LearningResource): Prices => {
+  const prices = resource.resource_prices
+    ? getPrices(resource.resource_prices)
+    : []
 
   if (resource.free) {
     return resource.certification
       ? { course: [{ amount: "0", currency: "USD" }], certificate: prices }
       : { course: [{ amount: "0", currency: "USD" }], certificate: null }
   }
+  return {
+    course: prices ?? PAID,
+    certificate: null,
+  }
+}
+
+export const getRunPrices = (run: LearningResourceRun): Prices => {
+  const prices = run.resource_prices ? getPrices(run.resource_prices) : []
+
   return {
     course: prices ?? PAID,
     certificate: null,
@@ -63,7 +84,9 @@ const getDisplayPrecision = (price: number) => {
   return price.toFixed(2)
 }
 
-const getDisplayPrice = (price: Prices["course"] | Prices["certificate"]) => {
+export const getDisplayPrice = (
+  price: Prices["course"] | Prices["certificate"],
+) => {
   if (price === null) {
     return null
   }
@@ -82,7 +105,7 @@ const getDisplayPrice = (price: Prices["course"] | Prices["certificate"]) => {
 }
 
 export const getLearningResourcePrices = (resource: LearningResource) => {
-  const prices = getPrices(resource)
+  const prices = getResourcePrices(resource)
   return {
     course: {
       value: prices.course,

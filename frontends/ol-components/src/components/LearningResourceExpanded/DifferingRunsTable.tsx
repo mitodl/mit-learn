@@ -1,8 +1,13 @@
 import React from "react"
 import styled from "@emotion/styled"
 import { theme } from "../ThemeProvider/ThemeProvider"
-import { LearningResource } from "api"
-import { formatRunDate, showStartAnytime } from "ol-utilities"
+import { LearningResource, LearningResourcePrice } from "api"
+import {
+  formatRunDate,
+  getDisplayPrice,
+  getRunPrices,
+  showStartAnytime,
+} from "ol-utilities"
 
 const DifferingRuns = styled.div({
   display: "flex",
@@ -64,12 +69,16 @@ const DifferingRunsTable: React.FC<{ resource: LearningResource }> = ({
     return null
   }
   const asTaughtIn = resource ? showStartAnytime(resource) : false
-  const prices = []
+  const prices: LearningResourcePrice[] = []
   const deliveryMethods = []
   const locations = []
   for (const run of resource.runs) {
-    if (run.prices) {
-      prices.push(run.prices)
+    if (run.resource_prices) {
+      run.resource_prices.forEach((price) => {
+        if (price.amount !== "0") {
+          prices.push(price)
+        }
+      })
     }
     if (run.delivery) {
       deliveryMethods.push(run.delivery)
@@ -78,7 +87,8 @@ const DifferingRunsTable: React.FC<{ resource: LearningResource }> = ({
       locations.push(run.location)
     }
   }
-  const distinctPrices = [...new Set(prices.flat())]
+  const distinctPrices = [...new Set(prices.map((p) => p.amount).flat())]
+  console.log(distinctPrices)
   const distinctDeliveryMethods = [
     ...new Set(deliveryMethods.flat().map((dm) => dm?.code)),
   ]
@@ -100,9 +110,9 @@ const DifferingRunsTable: React.FC<{ resource: LearningResource }> = ({
             <DifferingRunData>
               {formatRunDate(run, asTaughtIn)}
             </DifferingRunData>
-            {run.prices && (
+            {run.resource_prices && (
               <DifferingRunData>
-                <span>{run.prices.map((p) => `$${p}`).join(", ")}</span>
+                <span>{getDisplayPrice(getRunPrices(run)["course"])}</span>
               </DifferingRunData>
             )}
             {run.delivery && (

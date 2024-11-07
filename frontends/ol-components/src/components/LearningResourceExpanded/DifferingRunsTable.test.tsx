@@ -27,8 +27,7 @@ describe("Differing runs comparison table", () => {
     const inPersonLabels = within(differingRunsTable).getAllByText(
       DeliveryEnumDescriptions.in_person,
     )
-    const onlinePriceLabels =
-      within(differingRunsTable).getAllByText("$0, $100")
+    const onlinePriceLabels = within(differingRunsTable).getAllByText("$100")
     const inPersonPriceLabels = within(differingRunsTable).getAllByText("$150")
     const earthLocationLabels = within(differingRunsTable).getAllByText("Earth")
     expect(onlineLabels).toHaveLength(2)
