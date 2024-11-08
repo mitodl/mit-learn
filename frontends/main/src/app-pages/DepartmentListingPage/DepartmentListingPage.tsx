@@ -16,7 +16,6 @@ import {
 import { pluralize, backgroundSrcSetCSS } from "ol-utilities"
 import type { LearningResourceSchool } from "api"
 import { useSchoolsList } from "api/hooks/learningResources"
-import { useChannelCounts } from "api/hooks/channels"
 import {
   RiPaletteLine,
   RiArrowRightSLine,
@@ -30,6 +29,7 @@ import {
 import { HOME } from "@/common/urls"
 import backgroundSteps from "@/public/images/backgrounds/background_steps.jpg"
 import { aggregateProgramCounts, aggregateCourseCounts } from "@/common/utils"
+import { useChannelCounts } from "api/hooks/channels"
 
 const SCHOOL_ICONS: Record<string, React.ReactNode> = {
   // School of Architecture and Planning
@@ -235,5 +235,3 @@ const DepartmentListingPage: React.FC = () => {
 }
 
 export default DepartmentListingPage
-
-export const test1 = [1, 2]
