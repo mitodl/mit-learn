@@ -89,6 +89,10 @@ const InfoValue = styled.div({
   ...theme.typography.body3,
 })
 
+const ShowMoreLink = styled(Link)({
+  paddingLeft: "12px",
+})
+
 const PriceDisplay = styled.div({
   display: "flex",
   alignItems: "center",
@@ -162,13 +166,13 @@ const RunDates: React.FC<{ resource: LearningResource }> = ({ resource }) => {
   const showMore = allRunsAreIdentical(resource) && sortedDates.length > 2
   if (showMore) {
     const showMoreLink = (
-      <Link
+      <ShowMoreLink
         color="red"
         size="small"
         onClick={() => setShowingMore(!showingMore)}
       >
         {showingMore ? "Show less" : "Show more"}
-      </Link>
+      </ShowMoreLink>
     )
     return (
       <span data-testid="drawer-run-dates">
@@ -178,7 +182,7 @@ const RunDates: React.FC<{ resource: LearningResource }> = ({ resource }) => {
               key={`run-${index}`}
               label={runDate}
               index={index}
-              total={sortedDates.length}
+              total={showingMore ? 3 : 2}
             />
           )
         })}
@@ -190,7 +194,7 @@ const RunDates: React.FC<{ resource: LearningResource }> = ({ resource }) => {
                 key={`run-${index}`}
                 label={runDate}
                 index={index}
-                total={sortedDates.length}
+                total={sortedDates.length - 2}
               />
             )
           })}
