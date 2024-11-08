@@ -4,7 +4,7 @@ import type {
   LearningResourcePrice,
   LearningResourceRun,
 } from "api"
-import { ResourceTypeEnum } from "api"
+import { DeliveryEnum, ResourceTypeEnum } from "api"
 import { capitalize } from "lodash"
 import { formatDate } from "../date/format"
 
@@ -128,10 +128,10 @@ const formatRunDate = (
  */
 const allRunsAreIdentical = (resource: LearningResource) => {
   if (!resource.runs) {
-    return false
+    return true
   }
-  if (resource.runs.length === 1) {
-    return false
+  if (resource.runs.length <= 1) {
+    return true
   }
   const prices: LearningResourcePrice[] = []
   const deliveryMethods = []
@@ -155,11 +155,14 @@ const allRunsAreIdentical = (resource: LearningResource) => {
   const distinctDeliveryMethods = [
     ...new Set(deliveryMethods.flat().map((dm) => dm?.code)),
   ]
+  const hasInPerson = distinctDeliveryMethods.includes(DeliveryEnum.InPerson)
   const distinctLocations = [...new Set(locations.flat().map((l) => l))]
   return (
     distinctPrices.length === 1 &&
     distinctDeliveryMethods.length === 1 &&
-    distinctLocations.length === 1
+    (hasInPerson
+      ? distinctLocations.length === 1
+      : distinctLocations.length === 0)
   )
 }
 

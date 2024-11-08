@@ -42,6 +42,12 @@ const resources = {
 }
 
 const sameDataRun = factories.learningResources.run({
+  delivery: [
+    {
+      code: DeliveryEnum.Online,
+      name: DeliveryEnumDescriptions.online,
+    },
+  ],
   resource_prices: [
     { amount: "0", currency: "USD" },
     { amount: "100", currency: "USD" },

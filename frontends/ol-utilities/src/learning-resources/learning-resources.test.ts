@@ -83,16 +83,16 @@ describe("findBestRun", () => {
 })
 
 describe("allRunsAreIdentical", () => {
-  test("returns false if no runs", () => {
+  test("returns true if no runs", () => {
     const resource = factories.learningResources.resource()
     resource.runs = []
-    expect(allRunsAreIdentical(resource)).toBe(false)
+    expect(allRunsAreIdentical(resource)).toBe(true)
   })
 
-  test("returns false if only one run", () => {
+  test("returns true if only one run", () => {
     const resource = factories.learningResources.resource()
     resource.runs = [makeRun()]
-    expect(allRunsAreIdentical(resource)).toBe(false)
+    expect(allRunsAreIdentical(resource)).toBe(true)
   })
 
   test("returns true if all runs are identical", () => {

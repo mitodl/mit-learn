@@ -5,6 +5,7 @@ import InfoSectionV2 from "./InfoSectionV2"
 import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
 import { formatRunDate } from "ol-utilities"
 import invariant from "tiny-invariant"
+import user from "@testing-library/user-event"
 
 // This is a pipe followed by a zero-width space
 const SEPARATOR = "|​"
@@ -134,9 +135,9 @@ describe("Learning resource info section start date", () => {
     within(section).getByText(runDate)
   })
 
-  test("Multiple Runs", () => {
-    const course = courses.free.multipleRuns
-    const expectedDateText = course.runs
+  test("Multiple run dates", () => {
+    const course = courses.multipleRuns.sameData
+    const expectedDateText = `${course.runs
       ?.sort((a, b) => {
         if (a?.start_date && b?.start_date) {
           return Date.parse(a.start_date) - Date.parse(b.start_date)
@@ -144,15 +145,30 @@ describe("Learning resource info section start date", () => {
         return 0
       })
       .map((run) => formatRunDate(run, false))
-      .join(SEPARATOR)
+      .slice(0, 2)
+      .join(SEPARATOR)}${SEPARATOR}Show more`
     invariant(expectedDateText)
     render(<InfoSectionV2 resource={course} />, {
       wrapper: ThemeProvider,
     })
 
     const section = screen.getByTestId("drawer-info-items")
-    within(section).getByText((_content, node) => {
+    within(section).getAllByText((_content, node) => {
       return node?.textContent === expectedDateText || false
     })
+  })
+
+  test("Clicking the show more button should show more dates", async () => {
+    const course = courses.multipleRuns.sameData
+    const totalRuns = course.runs?.length ? course.runs.length : 0
+    render(<InfoSectionV2 resource={course} />, {
+      wrapper: ThemeProvider,
+    })
+
+    const runDates = screen.getByTestId("drawer-run-dates")
+    expect(runDates.children.length).toBe(3)
+    const showMoreLink = within(runDates).getByText("Show more")
+    await user.click(showMoreLink)
+    expect(runDates.children.length).toBe(totalRuns + 1)
   })
 })

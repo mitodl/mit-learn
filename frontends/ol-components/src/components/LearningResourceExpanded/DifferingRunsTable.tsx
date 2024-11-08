@@ -65,7 +65,7 @@ const DifferingRunsTable: React.FC<{ resource: LearningResource }> = ({
   resource,
 }) => {
   const asTaughtIn = resource ? showStartAnytime(resource) : false
-  if (allRunsAreIdentical(resource)) {
+  if (!allRunsAreIdentical(resource)) {
     return (
       <DifferingRuns data-testid="differing-runs-table">
         <DifferingRunHeader>
