@@ -441,10 +441,10 @@ class LearningPathViewSet(BaseLearningResourceViewSet, viewsets.ModelViewSet):
     )
     def membership(self, request, *_, **kwargs):  # noqa: ARG002
         """
-        Fetch all userlist relationships for the user
+        Fetch all learning path relationships
 
         Returns:
-        QuerySet of UserListRelationships for the user
+        QuerySet of all LearningPathRelationships
         """
 
         return Response(
