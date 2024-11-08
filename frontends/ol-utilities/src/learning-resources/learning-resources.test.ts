@@ -1,6 +1,7 @@
-import { findBestRun } from "./learning-resources"
+import { allRunsAreIdentical, findBestRun } from "./learning-resources"
 import * as factories from "api/test-utils/factories"
 import { faker } from "@faker-js/faker/locale/en"
+import { CourseResourceDeliveryInnerCodeEnum } from "api"
 
 const makeRun = factories.learningResources.run
 const fromNow = (days: number): string => {
@@ -78,5 +79,129 @@ describe("findBestRun", () => {
     const expected = undated
     const actual = findBestRun(shuffle(runs))
     expect(actual).toEqual(expected)
+  })
+})
+
+describe("allRunsAreIdentical", () => {
+  test("returns false if no runs", () => {
+    const resource = factories.learningResources.resource()
+    resource.runs = []
+    expect(allRunsAreIdentical(resource)).toBe(false)
+  })
+
+  test("returns false if only one run", () => {
+    const resource = factories.learningResources.resource()
+    resource.runs = [makeRun()]
+    expect(allRunsAreIdentical(resource)).toBe(false)
+  })
+
+  test("returns true if all runs are identical", () => {
+    const resource = factories.learningResources.resource()
+    const prices = [{ amount: "100", currency: "USD" }]
+    const delivery = [
+      { code: CourseResourceDeliveryInnerCodeEnum.InPerson, name: "In person" },
+    ]
+    const location = "New York"
+    resource.runs = [
+      makeRun({
+        resource_prices: prices,
+        delivery: delivery,
+        location: location,
+      }),
+      makeRun({
+        resource_prices: prices,
+        delivery: delivery,
+        location: location,
+      }),
+      makeRun({
+        resource_prices: prices,
+        delivery: delivery,
+        location: location,
+      }),
+    ]
+    expect(allRunsAreIdentical(resource)).toBe(true)
+  })
+
+  test("returns false if prices differ", () => {
+    const resource = factories.learningResources.resource()
+    const prices = [{ amount: "100", currency: "USD" }]
+    const delivery = [
+      { code: CourseResourceDeliveryInnerCodeEnum.InPerson, name: "In person" },
+    ]
+    const location = "New York"
+    resource.runs = [
+      makeRun({
+        resource_prices: prices,
+        delivery: delivery,
+        location: location,
+      }),
+      makeRun({
+        resource_prices: prices,
+        delivery: delivery,
+        location: location,
+      }),
+      makeRun({
+        resource_prices: [{ amount: "150", currency: "USD" }],
+        delivery: delivery,
+        location: location,
+      }),
+    ]
+    expect(allRunsAreIdentical(resource)).toBe(false)
+  })
+
+  test("returns false if delivery methods differ", () => {
+    const resource = factories.learningResources.resource()
+    const prices = [{ amount: "100", currency: "USD" }]
+    const delivery = [
+      { code: CourseResourceDeliveryInnerCodeEnum.InPerson, name: "In person" },
+    ]
+    const location = "New York"
+    resource.runs = [
+      makeRun({
+        resource_prices: prices,
+        delivery: delivery,
+        location: location,
+      }),
+      makeRun({
+        resource_prices: prices,
+        delivery: delivery,
+        location: location,
+      }),
+      makeRun({
+        resource_prices: prices,
+        delivery: [
+          { code: CourseResourceDeliveryInnerCodeEnum.Online, name: "Online" },
+        ],
+        location: location,
+      }),
+    ]
+    expect(allRunsAreIdentical(resource)).toBe(false)
+  })
+
+  test("returns false if locations differ", () => {
+    const resource = factories.learningResources.resource()
+    const prices = [{ amount: "100", currency: "USD" }]
+    const delivery = [
+      { code: CourseResourceDeliveryInnerCodeEnum.InPerson, name: "In person" },
+    ]
+    const location = "New York"
+    resource.runs = [
+      makeRun({
+        resource_prices: prices,
+        delivery: delivery,
+        location: location,
+      }),
+      makeRun({
+        resource_prices: prices,
+        delivery: delivery,
+        location: location,
+      }),
+      makeRun({
+        resource_prices: prices,
+        delivery: delivery,
+        location: "San Francisco",
+      }),
+    ]
+    expect(allRunsAreIdentical(resource)).toBe(false)
   })
 })

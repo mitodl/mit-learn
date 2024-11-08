@@ -1,8 +1,9 @@
 import React from "react"
 import styled from "@emotion/styled"
 import { theme } from "../ThemeProvider/ThemeProvider"
-import { LearningResource, LearningResourcePrice } from "api"
+import { LearningResource } from "api"
 import {
+  allRunsAreIdentical,
   formatRunDate,
   getDisplayPrice,
   getRunPrices,
@@ -63,41 +64,8 @@ const DifferingRunLocation = styled(DifferingRunData)({
 const DifferingRunsTable: React.FC<{ resource: LearningResource }> = ({
   resource,
 }) => {
-  if (!resource.runs) {
-    return null
-  }
-  if (resource.runs.length === 1) {
-    return null
-  }
   const asTaughtIn = resource ? showStartAnytime(resource) : false
-  const prices: LearningResourcePrice[] = []
-  const deliveryMethods = []
-  const locations = []
-  for (const run of resource.runs) {
-    if (run.resource_prices) {
-      run.resource_prices.forEach((price) => {
-        if (price.amount !== "0") {
-          prices.push(price)
-        }
-      })
-    }
-    if (run.delivery) {
-      deliveryMethods.push(run.delivery)
-    }
-    if (run.location) {
-      locations.push(run.location)
-    }
-  }
-  const distinctPrices = [...new Set(prices.map((p) => p.amount).flat())]
-  const distinctDeliveryMethods = [
-    ...new Set(deliveryMethods.flat().map((dm) => dm?.code)),
-  ]
-  const distinctLocations = [...new Set(locations.flat().map((l) => l))]
-  if (
-    distinctPrices.length > 1 ||
-    distinctDeliveryMethods.length > 1 ||
-    distinctLocations.length > 1
-  ) {
+  if (allRunsAreIdentical(resource)) {
     return (
       <DifferingRuns data-testid="differing-runs-table">
         <DifferingRunHeader>
@@ -105,7 +73,7 @@ const DifferingRunsTable: React.FC<{ resource: LearningResource }> = ({
           <DifferingRunLabel>Price</DifferingRunLabel>
           <DifferingRunLabel>Format</DifferingRunLabel>
         </DifferingRunHeader>
-        {resource.runs.map((run, index) => (
+        {resource.runs?.map((run, index) => (
           <DifferingRun key={index}>
             <DifferingRunData>
               {formatRunDate(run, asTaughtIn)}
