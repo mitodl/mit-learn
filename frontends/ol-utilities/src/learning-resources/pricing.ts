@@ -41,10 +41,6 @@ const getPrices = (prices: LearningResourcePrice[]) => {
       (a: LearningResourcePrice, b: LearningResourcePrice) =>
         Number(a.amount) - Number(b.amount),
     )
-    .sort(
-      (a: LearningResourcePrice, b: LearningResourcePrice) =>
-        Number(a.amount) - Number(b.amount),
-    )
     .filter((price: LearningResourcePrice) => Number(price.amount) > 0)
   const priceRange = sortedNonzero.filter(
     (price, index, arr) => index === 0 || index === arr.length - 1,
