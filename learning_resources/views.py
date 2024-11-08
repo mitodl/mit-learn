@@ -432,11 +432,14 @@ class LearningPathViewSet(BaseLearningResourceViewSet, viewsets.ModelViewSet):
             queryset = queryset.filter(published=True)
         return queryset
 
+    @extend_schema(
+        summary="List all learning path memberships",
+        responses=MicroLearningPathRelationshipSerializer(many=True),
+    )
     @action(
         detail=False,
         methods=["GET"],
         name="Fetch all learning path relationships",
-        serializer_class=MicroLearningPathRelationshipSerializer,
         permission_classes=[HasLearningPathMembershipPermissions],
     )
     def membership(self, request, *_, **kwargs):  # noqa: ARG002
@@ -444,7 +447,7 @@ class LearningPathViewSet(BaseLearningResourceViewSet, viewsets.ModelViewSet):
         Fetch all learning path relationships
 
         Returns:
-        QuerySet of all LearningPathRelationships
+        List of all LearningPathRelationships
         """
 
         return Response(
@@ -453,7 +456,7 @@ class LearningPathViewSet(BaseLearningResourceViewSet, viewsets.ModelViewSet):
                     LearningResourceRelationship.objects.filter(
                         child__published=True,
                         parent__resource_type=LearningResourceType.learning_path.name,
-                    ).order_by("child")
+                    ).order_by("child", "parent")
                 ),
                 many=True,
             ).data
@@ -813,7 +816,6 @@ class UserListViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Return a queryset for this user"""
-        log.info("GETQUERYSET")
         return (
             UserList.objects.all()
             .prefetch_related("author", "topics")
@@ -821,7 +823,6 @@ class UserListViewSet(viewsets.ModelViewSet):
         )
 
     def list(self, request, **kwargs):  # noqa: ARG002
-        log.info("GETQUERYSET LIST")
         queryset = self.get_queryset().filter(author_id=self.request.user.id)
         page = self.paginate_queryset(queryset)
         if page is not None:
@@ -858,11 +859,15 @@ class UserListViewSet(viewsets.ModelViewSet):
         Fetch all userlist relationships for the user
 
         Returns:
-        QuerySet of UserListRelationships for the user
+            List of user list relationships for the user
         """
         return Response(
             MicroUserListRelationshipSerializer(
-                list(UserListRelationship.objects.filter(parent__author=request.user)),
+                list(
+                    UserListRelationship.objects.filter(
+                        parent__author=request.user
+                    ).order_by("child", "parent")
+                ),
                 many=True,
             ).data
         )

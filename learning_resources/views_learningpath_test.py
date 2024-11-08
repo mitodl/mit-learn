@@ -361,6 +361,28 @@ def test_learning_path_endpoint_delete(client, user, is_editor):
 
 
 @pytest.mark.parametrize("is_editor", [True, False])
+def test_learning_path_endpoint_membership_get(client, user, is_editor):
+    """Test learning path endpoint"""
+    update_editor_group(user, is_editor)
+    learning_paths = factories.LearningResourceFactory.create_batch(
+        3, is_learning_path=True
+    )
+    relationships = models.LearningResourceRelationship.objects.filter(
+        parent__in=learning_paths
+    ).order_by("child", "parent")
+
+    client.force_login(user)
+    resp = client.get(reverse("lr:v1:learningpaths_api-membership"))
+    if is_editor:
+        assert len(resp.data) == relationships.count()
+        for idx, relationship in enumerate(relationships):
+            assert resp.data[idx]["parent"] == relationship.parent_id
+            assert resp.data[idx]["child"] == relationship.child_id
+    else:
+        assert resp.status_code == 403
+
+
+@pytest.mark.parametrize("is_editor", [True, False])
 def test_get_resource_learning_paths(user_client, user, is_editor):
     """Test that the learning paths are returned for a resource"""
     update_editor_group(user, is_editor)
