@@ -89,7 +89,7 @@ const InfoValue = styled.div({
   ...theme.typography.body3,
 })
 
-const DateWrapper = styled.span({
+const NoWrap = styled.span({
   whiteSpace: "nowrap",
 })
 
@@ -170,38 +170,40 @@ const RunDates: React.FC<{ resource: LearningResource }> = ({ resource }) => {
   const showMore = allRunsAreIdentical(resource) && sortedDates.length > 2
   if (showMore) {
     const showMoreLink = (
-      <ShowMoreLink
-        color="red"
-        size="small"
-        onClick={() => setShowingMore(!showingMore)}
-      >
-        {showingMore ? "Show less" : "Show more"}
-      </ShowMoreLink>
+      <NoWrap>
+        <ShowMoreLink
+          color="red"
+          size="small"
+          onClick={() => setShowingMore(!showingMore)}
+        >
+          {showingMore ? "Show less" : "Show more"}
+        </ShowMoreLink>
+      </NoWrap>
     )
     return (
       <span data-testid="drawer-run-dates">
         {sortedDates.slice(0, 2).map((runDate, index) => {
           return (
-            <DateWrapper key={`run-${index}`}>
+            <NoWrap key={`run-${index}`}>
               <InfoItemValue
                 label={runDate}
                 index={index}
                 total={showingMore ? 3 : 2}
               />
-            </DateWrapper>
+            </NoWrap>
           )
         })}
         {!showingMore && showMoreLink}
         {showingMore &&
           sortedDates.slice(2).map((runDate, index) => {
             return (
-              <DateWrapper key={`run-${index + 2}`}>
+              <NoWrap key={`run-${index + 2}`}>
                 <InfoItemValue
                   label={runDate}
                   index={index}
                   total={sortedDates.length - 2}
                 />
-              </DateWrapper>
+              </NoWrap>
             )
           })}
         {showingMore && showMoreLink}
@@ -211,13 +213,13 @@ const RunDates: React.FC<{ resource: LearningResource }> = ({ resource }) => {
     const runDates =
       sortedDates.map((runDate, index) => {
         return (
-          <DateWrapper key={`run-${index}`}>
+          <NoWrap key={`run-${index}`}>
             <InfoItemValue
               label={runDate}
               index={index}
               total={sortedDates.length}
             />
-          </DateWrapper>
+          </NoWrap>
         )
       }) ?? []
     return <span data-testid="drawer-run-dates">{runDates}</span>
