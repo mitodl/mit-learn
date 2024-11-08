@@ -3,7 +3,6 @@ import type { Metadata } from "next"
 import HomePage from "@/app-pages/HomePage/HomePage"
 import { getMetadataAsync } from "@/common/metadata"
 import { Hydrate } from "@tanstack/react-query"
-// import { learningResourcesKeyFactory } from "api/hooks/learningResources"
 import { testimonialsKeyFactory } from "api/hooks/testimonials"
 import {
   NewsEventsListFeedTypeEnum,
