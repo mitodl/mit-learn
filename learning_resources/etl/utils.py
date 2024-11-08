@@ -773,7 +773,6 @@ def transform_price(amount: Decimal, currency: str = CURRENCY_USD) -> dict:
     }
 
 
-
 def calculate_weeks(num: int, from_unit: str) -> int:
     """
     Transform any # of days or months to weeks
