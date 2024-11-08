@@ -146,7 +146,7 @@ describe("Learning resource info section start date", () => {
       })
       .map((run) => formatRunDate(run, false))
       .slice(0, 2)
-      .join(SEPARATOR)}${SEPARATOR}Show more`
+      .join(SEPARATOR)}Show more`
     invariant(expectedDateText)
     render(<InfoSectionV2 resource={course} />, {
       wrapper: ThemeProvider,
