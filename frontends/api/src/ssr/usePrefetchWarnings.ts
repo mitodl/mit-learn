@@ -23,8 +23,11 @@ const PREFETCH_EXEMPT_QUERIES = [["userMe"]]
  * Call this as high as possible in render tree to detect query usage on
  * first render.
  */
-export const usePrefetchWarnings = (
-  queryClient: QueryClient,
+export const usePrefetchWarnings = ({
+  queryClient,
+  exemptions = [],
+}: {
+  queryClient: QueryClient
   /**
    * A list of query keys that should be exempted.
    *
@@ -34,8 +37,8 @@ export const usePrefetchWarnings = (
    *  - ["a", { x: 1, y: 2 }]
    *  - ["a", { x: 1, y: 2 }, ...any_other_entries]
    */
-  exemptions: QueryKey[] = [],
-) => {
+  exemptions?: QueryKey[]
+}) => {
   /**
    * NOTE: React renders components top-down, but effects run bottom-up, so
    * this effect will run after all child effects.

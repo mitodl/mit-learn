@@ -11,7 +11,7 @@ import { usePrefetchWarnings } from "api/ssr/usePrefetchWarnings"
 export default function Providers({ children }: { children: React.ReactNode }) {
   const queryClient = getQueryClient()
 
-  usePrefetchWarnings(queryClient)
+  usePrefetchWarnings({ queryClient })
 
   return (
     <QueryClientProvider client={queryClient}>
