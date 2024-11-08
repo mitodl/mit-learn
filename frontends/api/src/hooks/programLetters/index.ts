@@ -1,4 +1,4 @@
-import { useQuery } from "../../ssr/useQuery"
+import { useQuery } from "@tanstack/react-query"
 import programLetters from "./keyFactory"
 
 /**

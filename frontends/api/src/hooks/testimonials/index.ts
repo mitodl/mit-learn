@@ -1,5 +1,4 @@
-import { UseQueryOptions } from "@tanstack/react-query"
-import { useQuery } from "../../ssr/useQuery"
+import { UseQueryOptions, useQuery } from "@tanstack/react-query"
 
 import type { TestimonialsApiTestimonialsListRequest } from "../../generated/v0"
 import testimonials from "./keyFactory"

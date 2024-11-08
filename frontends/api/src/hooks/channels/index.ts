@@ -1,9 +1,9 @@
 import {
+  useQuery,
   UseQueryOptions,
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query"
-import { useQuery } from "../../ssr/useQuery"
 import { channelsApi } from "../../clients"
 import type {
   ChannelsApiChannelsListRequest,

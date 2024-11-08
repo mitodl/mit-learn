@@ -1,5 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { useQuery } from "../../ssr/useQuery"
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query"
 
 import { widgetListsApi } from "../../clients"
 import widgetLists from "./keyFactory"

@@ -14,7 +14,6 @@ export const metadata: Metadata = standardizeMetadata({
 const Page: React.FC = async () => {
   const dehydratedState = await prefetch([
     channelsKeyFactory.countsByType("department"),
-    channelsKeyFactory.countsByType("maybe"),
     learningResourcesKeyFactory.schools(),
   ])
 

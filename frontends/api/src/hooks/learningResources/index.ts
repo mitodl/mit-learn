@@ -1,10 +1,10 @@
 import {
   UseQueryOptions,
+  useQuery,
   useInfiniteQuery,
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query"
-import { useQuery } from "../../ssr/useQuery"
 import {
   learningpathsApi,
   learningResourcesApi,
