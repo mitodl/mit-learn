@@ -13303,6 +13303,12 @@ components:
           allOf:
           - $ref: '#/components/schemas/Video'
           readOnly: true
+        playlists:
+          type: array
+          items:
+            type: string
+          description: Get the playlist id(s) the video belongs to
+          readOnly: true
         readable_id:
           type: string
           maxLength: 512
@@ -13376,6 +13382,7 @@ components:
       - offered_by
       - pace
       - platform
+      - playlists
       - position
       - prices
       - professional

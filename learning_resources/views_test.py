@@ -827,6 +827,29 @@ def test_list_video_endpoint(client, url, params):
 
 
 @pytest.mark.parametrize(
+    ("url", "params"),
+    [
+        ("lr:v1:videos_api-list", ""),
+        ("lr:v1:learning_resources_api-list", "resource_type=video"),
+    ],
+)
+def test_list_video_endpoint_returns_playlists(client, url, params):
+    """Test video endpoint returns playlist ids"""
+
+    playlist = VideoPlaylistFactory.create().learning_resource
+    videos = VideoFactory.create_batch(2)
+    playlist.resources.set(
+        [video.learning_resource for video in videos],
+        through_defaults={
+            "relation_type": LearningResourceRelationTypes.PLAYLIST_VIDEOS
+        },
+    )
+    resp = client.get(f"{reverse(url)}?{params}")
+    for item in resp.data["results"]:
+        assert playlist.id in item["playlists"]
+
+
+@pytest.mark.parametrize(
     "url", ["lr:v1:videos_api-detail", "lr:v1:learning_resources_api-detail"]
 )
 def test_get_video_detail_endpoint(client, url):
