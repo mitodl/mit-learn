@@ -22,6 +22,7 @@ import {
   showStartAnytime,
 } from "ol-utilities"
 import { theme } from "../ThemeProvider/ThemeProvider"
+import DifferingRunsTable from "./DifferingRunsTable"
 
 const SeparatorContainer = styled.span({
   padding: "0 8px",
@@ -392,11 +393,14 @@ const InfoSectionV2 = ({ resource }: { resource?: LearningResource }) => {
   }
 
   return (
-    <InfoItems data-testid="drawer-info-items">
-      {infoItems.map((props, index) => (
-        <InfoItem key={index} {...props} />
-      ))}
-    </InfoItems>
+    <>
+      <DifferingRunsTable resource={resource} />
+      <InfoItems data-testid="drawer-info-items">
+        {infoItems.map((props, index) => (
+          <InfoItem key={index} {...props} />
+        ))}
+      </InfoItems>
+    </>
   )
 }
 
