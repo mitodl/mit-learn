@@ -6,6 +6,7 @@ from datetime import timedelta
 import pytest
 from django.utils import timezone
 from opensearch_dsl import response
+from qdrant_client import QdrantClient
 from rest_framework.reverse import reverse
 
 from channels.factories import ChannelTopicDetailFactory, ChannelUnitDetailFactory
@@ -826,6 +827,29 @@ def test_list_video_endpoint(client, url, params):
 
 
 @pytest.mark.parametrize(
+    ("url", "params"),
+    [
+        ("lr:v1:videos_api-list", ""),
+        ("lr:v1:learning_resources_api-list", "resource_type=video"),
+    ],
+)
+def test_list_video_endpoint_returns_playlists(client, url, params):
+    """Test video endpoint returns playlist ids"""
+
+    playlist = VideoPlaylistFactory.create().learning_resource
+    videos = VideoFactory.create_batch(2)
+    playlist.resources.set(
+        [video.learning_resource for video in videos],
+        through_defaults={
+            "relation_type": LearningResourceRelationTypes.PLAYLIST_VIDEOS
+        },
+    )
+    resp = client.get(f"{reverse(url)}?{params}")
+    for item in resp.data["results"]:
+        assert playlist.id in item["playlists"]
+
+
+@pytest.mark.parametrize(
     "url", ["lr:v1:videos_api-detail", "lr:v1:learning_resources_api-detail"]
 )
 def test_get_video_detail_endpoint(client, url):
@@ -1034,6 +1058,76 @@ def test_similar_resources_endpoint_only_returns_published(mocker, client):
     ).hits
     resp = client.get(
         reverse("lr:v1:learning_resources_api-similar", args=[similar_for])
+    )
+    response_ids = [hit["id"] for hit in resp.json()]
+    assert len(response_ids) == 1
+
+
+def test_vector_similar_resources_endpoint_does_not_return_self(mocker, client):
+    """Test vector based similar resources endpoint does not return initial id"""
+    from learning_resources.models import LearningResource
+
+    resources = LearningResourceFactory.create_batch(5)
+
+    resource_ids = [learning_resource.id for learning_resource in resources]
+    mocker.patch(
+        "learning_resources_search.indexing_api.qdrant_client",
+        return_value=QdrantClient(
+            host="hidden_port_addr.com",
+            port=None,
+            prefix="custom",
+        ),
+    )
+    mocker.patch(
+        "learning_resources_search.api._qdrant_similar_results",
+        return_value=[
+            serialize_learning_resource_for_update(lr)
+            for lr in LearningResource.objects.for_search_serialization().filter(
+                id__in=resource_ids
+            )
+        ],
+    )
+    similar_for = resource_ids[0]
+    resp = client.get(
+        reverse("lr:v1:learning_resources_api-vector-similar", args=[similar_for])
+    )
+    response_ids = [hit["id"] for hit in resp.json()]
+    assert similar_for not in response_ids
+
+
+def test_vector_similar_resources_endpoint_only_returns_published(mocker, client):
+    """Test vector based similar resources endpoint only returns published items"""
+    from learning_resources.models import LearningResource
+
+    resources = LearningResourceFactory.create_batch(5)
+
+    resource_ids = [learning_resource.id for learning_resource in resources]
+    similar_for = resource_ids.pop()
+    response_resources = LearningResource.objects.for_search_serialization().filter(
+        id__in=resource_ids
+    )
+    response_hits = []
+    for lr in response_resources:
+        serialized_resource = serialize_learning_resource_for_update(lr)
+        serialized_resource["published"] = False
+        response_hits.append(serialized_resource)
+    # set one item to published
+    response_hits[-1]["published"] = True
+    mocker.patch(
+        "learning_resources_search.api._qdrant_similar_results",
+        return_value=response_hits,
+    )
+    mocker.patch(
+        "learning_resources_search.indexing_api.qdrant_client",
+        return_value=QdrantClient(
+            host="hidden_port_addr.com",
+            port=None,
+            prefix="custom",
+        ),
+    )
+
+    resp = client.get(
+        reverse("lr:v1:learning_resources_api-vector-similar", args=[similar_for])
     )
     response_ids = [hit["id"] for hit in resp.json()]
     assert len(response_ids) == 1

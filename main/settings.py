@@ -33,7 +33,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.24.1"
+VERSION = "0.24.2"
 
 log = logging.getLogger()
 
@@ -786,4 +786,18 @@ DEFAULT_SEARCH_MAX_INCOMPLETENESS_PENALTY = get_float(
 )
 DEFAULT_SEARCH_CONTENT_FILE_SCORE_WEIGHT = get_float(
     name="DEFAULT_SEARCH_CONTENT_FILE_SCORE_WEIGHT", default=1
+)
+
+QDRANT_API_KEY = get_string(name="QDRANT_API_KEY", default="")
+QDRANT_HOST = get_string(name="QDRANT_HOST", default="http://qdrant:6333")
+QDRANT_BASE_COLLECTION_NAME = get_string(
+    name="QDRANT_COLLECTION_NAME", default="resource_embeddings"
+)
+
+
+QDRANT_DENSE_MODEL = get_string(
+    name="QDRANT_DENSE_MODEL", default="sentence-transformers/all-MiniLM-L6-v2"
+)
+QDRANT_SPARSE_MODEL = get_string(
+    name="QDRANT_SPARSE_MODEL", default="prithivida/Splade_PP_en_v1"
 )
