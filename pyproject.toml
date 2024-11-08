@@ -82,7 +82,6 @@ uwsgitop = "^0.12"
 pytest-lazy-fixtures = "^1.1.1"
 pycountry = "^24.6.1"
 qdrant-client = {extras = ["fastembed"], version = "^1.12.0"}
-sentence-transformers = "^3.2.1"
 
 
 [tool.poetry.group.dev.dependencies]
