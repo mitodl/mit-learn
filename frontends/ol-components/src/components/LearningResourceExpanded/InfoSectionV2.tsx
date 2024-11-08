@@ -89,6 +89,10 @@ const InfoValue = styled.div({
   ...theme.typography.body3,
 })
 
+const DateWrapper = styled.span({
+  whiteSpace: "nowrap",
+})
+
 const ShowMoreLink = styled(Link)({
   paddingLeft: "12px",
 })
@@ -178,24 +182,26 @@ const RunDates: React.FC<{ resource: LearningResource }> = ({ resource }) => {
       <span data-testid="drawer-run-dates">
         {sortedDates.slice(0, 2).map((runDate, index) => {
           return (
-            <InfoItemValue
-              key={`run-${index}`}
-              label={runDate}
-              index={index}
-              total={showingMore ? 3 : 2}
-            />
+            <DateWrapper key={`run-${index}`}>
+              <InfoItemValue
+                label={runDate}
+                index={index}
+                total={showingMore ? 3 : 2}
+              />
+            </DateWrapper>
           )
         })}
         {!showingMore && showMoreLink}
         {showingMore &&
           sortedDates.slice(2).map((runDate, index) => {
             return (
-              <InfoItemValue
-                key={`run-${index}`}
-                label={runDate}
-                index={index}
-                total={sortedDates.length - 2}
-              />
+              <DateWrapper key={`run-${index + 2}`}>
+                <InfoItemValue
+                  label={runDate}
+                  index={index}
+                  total={sortedDates.length - 2}
+                />
+              </DateWrapper>
             )
           })}
         {showingMore && showMoreLink}
@@ -205,12 +211,13 @@ const RunDates: React.FC<{ resource: LearningResource }> = ({ resource }) => {
     const runDates =
       sortedDates.map((runDate, index) => {
         return (
-          <InfoItemValue
-            key={`run-${index}`}
-            label={runDate}
-            index={index}
-            total={sortedDates.length}
-          />
+          <DateWrapper key={`run-${index}`}>
+            <InfoItemValue
+              label={runDate}
+              index={index}
+              total={sortedDates.length}
+            />
+          </DateWrapper>
         )
       }) ?? []
     return <span data-testid="drawer-run-dates">{runDates}</span>
