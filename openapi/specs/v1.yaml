@@ -7534,7 +7534,7 @@ paths:
   /api/v1/userlists/membership/:
     get:
       operationId: userlists_membership_list
-      description: Get a list of all userlist items
+      description: Get a list of all userlist items for a user
       summary: List
       tags:
       - userlists

@@ -24221,7 +24221,7 @@ export const UserlistsApiAxiosParamCreator = function (
       }
     },
     /**
-     * Get a list of all userlist items
+     * Get a list of all userlist items for a user
      * @summary List
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -24638,7 +24638,7 @@ export const UserlistsApiFp = function (configuration?: Configuration) {
         )(axios, operationBasePath || basePath)
     },
     /**
-     * Get a list of all userlist items
+     * Get a list of all userlist items for a user
      * @summary List
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -24883,7 +24883,7 @@ export const UserlistsApiFactory = function (
         .then((request) => request(axios, basePath))
     },
     /**
-     * Get a list of all userlist items
+     * Get a list of all userlist items for a user
      * @summary List
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -25301,7 +25301,7 @@ export class UserlistsApi extends BaseAPI {
   }
 
   /**
-   * Get a list of all userlist items
+   * Get a list of all userlist items for a user
    * @summary List
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}

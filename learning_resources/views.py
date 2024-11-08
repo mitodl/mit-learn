@@ -437,7 +437,7 @@ class LearningPathViewSet(BaseLearningResourceViewSet, viewsets.ModelViewSet):
     ),
 )
 class LearningPathMembershipViewSet(viewsets.ReadOnlyModelViewSet):
-    """Viewset for learning path relationships"""
+    """Viewset for listing all learning path relationships"""
 
     serializer_class = MicroLearningPathRelationshipSerializer
     permission_classes = (permissions.HasLearningPathMembershipPermissions,)
@@ -445,10 +445,11 @@ class LearningPathMembershipViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         """
-        Generate a QuerySet for fetching valid Programs
+        Generate a QuerySet for fetching all LearningResourceRelationships
+        with a parent of resource type "learning_path"
 
         Returns:
-            QuerySet of LearningResource objects that are Programs
+            QuerySet of LearningResourceRelationships objects with learning path parents
         """
         return LearningResourceRelationship.objects.filter(
             child__published=True,
@@ -901,10 +902,12 @@ def podcast_rss_feed(request):  # noqa: ARG001
 
 
 @extend_schema_view(
-    list=extend_schema(summary="List", description="Get a list of all userlist items"),
+    list=extend_schema(
+        summary="List", description="Get a list of all userlist items for a user"
+    ),
 )
 class UserListMembershipViewSet(viewsets.ReadOnlyModelViewSet):
-    """Viewset for user list relationships"""
+    """Viewset for all user list relationships"""
 
     serializer_class = MicroUserListRelationshipSerializer
     permission_classes = (IsAuthenticated,)
@@ -912,10 +915,10 @@ class UserListMembershipViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         """
-        Generate a QuerySet for fetching valid Programs
+        Generate a QuerySet for fetching all UserListRelationships for the user
 
         Returns:
-            QuerySet of LearningResource objects that are Programs
+            QuerySet of UserListRelationship objects authored by the user
         """
         return UserListRelationship.objects.filter(
             child__published=True,

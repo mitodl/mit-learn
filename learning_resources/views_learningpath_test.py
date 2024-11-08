@@ -362,7 +362,7 @@ def test_learning_path_endpoint_delete(client, user, is_editor):
 
 @pytest.mark.parametrize("is_editor", [True, False])
 def test_learning_path_endpoint_membership_get(client, user, is_editor):
-    """Test learning path endpoint"""
+    """Test learning path membership endpoint"""
     update_editor_group(user, is_editor)
     learning_paths = factories.LearningResourceFactory.create_batch(
         3, is_learning_path=True
