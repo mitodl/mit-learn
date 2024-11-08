@@ -47,6 +47,15 @@ class HasLearningPathPermissions(BasePermission):
         return can_edit
 
 
+class HasLearningPathMembershipPermissions(BasePermission):
+    """
+    Permission to view all LearningPath memberships
+    """
+
+    def has_permission(self, request, view):  # noqa: ARG002
+        return is_admin_user(request) or is_learning_path_editor(request)
+
+
 class HasLearningPathItemPermissions(BasePermission):
     """Permission to view/create/modify LearningPathItems"""
 

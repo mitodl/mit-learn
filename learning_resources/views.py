@@ -18,6 +18,7 @@ from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter
 from rest_framework.generics import get_object_or_404
 from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_nested.viewsets import NestedViewSetMixin
 
@@ -53,6 +54,7 @@ from learning_resources.models import (
     UserListRelationship,
 )
 from learning_resources.permissions import (
+    HasLearningPathMembershipPermissions,
     HasLearningPathPermissions,
     HasUserListItemPermissions,
     HasUserListPermissions,
@@ -71,6 +73,8 @@ from learning_resources.serializers import (
     LearningResourceSchoolSerializer,
     LearningResourceSerializer,
     LearningResourceTopicSerializer,
+    MicroLearningPathRelationshipSerializer,
+    MicroUserListRelationshipSerializer,
     PodcastEpisodeResourceSerializer,
     PodcastResourceSerializer,
     ProgramResourceSerializer,
@@ -408,6 +412,7 @@ class LearningPathViewSet(BaseLearningResourceViewSet, viewsets.ModelViewSet):
     Viewset for LearningPaths
     """
 
+    pagination_class = DefaultPagination
     serializer_class = LearningPathResourceSerializer
     permission_classes = (permissions.HasLearningPathPermissions,)
     http_method_names = VALID_HTTP_METHODS
@@ -426,6 +431,33 @@ class LearningPathViewSet(BaseLearningResourceViewSet, viewsets.ModelViewSet):
         if not (is_learning_path_editor(self.request) or is_admin_user(self.request)):
             queryset = queryset.filter(published=True)
         return queryset
+
+    @action(
+        detail=False,
+        methods=["GET"],
+        name="Fetch all learning path relationships",
+        serializer_class=MicroLearningPathRelationshipSerializer,
+        permission_classes=[HasLearningPathMembershipPermissions],
+    )
+    def membership(self, request, *_, **kwargs):  # noqa: ARG002
+        """
+        Fetch all userlist relationships for the user
+
+        Returns:
+        QuerySet of UserListRelationships for the user
+        """
+
+        return Response(
+            MicroLearningPathRelationshipSerializer(
+                list(
+                    LearningResourceRelationship.objects.filter(
+                        child__published=True,
+                        parent__resource_type=LearningResourceType.learning_path.name,
+                    ).order_by("child")
+                ),
+                many=True,
+            ).data
+        )
 
 
 @extend_schema_view(
@@ -781,6 +813,7 @@ class UserListViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Return a queryset for this user"""
+        log.info("GETQUERYSET")
         return (
             UserList.objects.all()
             .prefetch_related("author", "topics")
@@ -788,6 +821,7 @@ class UserListViewSet(viewsets.ModelViewSet):
         )
 
     def list(self, request, **kwargs):  # noqa: ARG002
+        log.info("GETQUERYSET LIST")
         queryset = self.get_queryset().filter(author_id=self.request.user.id)
         page = self.paginate_queryset(queryset)
         if page is not None:
@@ -808,6 +842,30 @@ class UserListViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         instance.delete()
+
+    @extend_schema(
+        summary="Get all user list memberships for a user",
+        responses=MicroUserListRelationshipSerializer(many=True),
+    )
+    @action(
+        detail=False,
+        methods=["GET"],
+        name="Fetch all user list relationships",
+        permission_classes=[IsAuthenticated],
+    )
+    def membership(self, request, *_, **kwargs):  # noqa: ARG002
+        """
+        Fetch all userlist relationships for the user
+
+        Returns:
+        QuerySet of UserListRelationships for the user
+        """
+        return Response(
+            MicroUserListRelationshipSerializer(
+                list(UserListRelationship.objects.filter(parent__author=request.user)),
+                many=True,
+            ).data
+        )
 
 
 @extend_schema_view(
