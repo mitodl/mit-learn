@@ -3255,68 +3255,6 @@ export interface PaginatedLearningResourceTopicList {
 /**
  *
  * @export
- * @interface PaginatedMicroLearningPathRelationshipList
- */
-export interface PaginatedMicroLearningPathRelationshipList {
-  /**
-   *
-   * @type {number}
-   * @memberof PaginatedMicroLearningPathRelationshipList
-   */
-  count: number
-  /**
-   *
-   * @type {string}
-   * @memberof PaginatedMicroLearningPathRelationshipList
-   */
-  next?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof PaginatedMicroLearningPathRelationshipList
-   */
-  previous?: string | null
-  /**
-   *
-   * @type {Array<MicroLearningPathRelationship>}
-   * @memberof PaginatedMicroLearningPathRelationshipList
-   */
-  results: Array<MicroLearningPathRelationship>
-}
-/**
- *
- * @export
- * @interface PaginatedMicroUserListRelationshipList
- */
-export interface PaginatedMicroUserListRelationshipList {
-  /**
-   *
-   * @type {number}
-   * @memberof PaginatedMicroUserListRelationshipList
-   */
-  count: number
-  /**
-   *
-   * @type {string}
-   * @memberof PaginatedMicroUserListRelationshipList
-   */
-  next?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof PaginatedMicroUserListRelationshipList
-   */
-  previous?: string | null
-  /**
-   *
-   * @type {Array<MicroUserListRelationship>}
-   * @memberof PaginatedMicroUserListRelationshipList
-   */
-  results: Array<MicroUserListRelationship>
-}
-/**
- *
- * @export
  * @interface PaginatedPodcastEpisodeResourceList
  */
 export interface PaginatedPodcastEpisodeResourceList {
@@ -18296,46 +18234,12 @@ export const LearningpathsApiAxiosParamCreator = function (
       }
     },
     /**
-     * Fetch all learning path relationships  Returns: List of all LearningPathRelationships
-     * @summary List all learning path memberships
-     * @param {boolean} [certification]
-     * @param {Array<LearningpathsMembershipListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - Micromasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
-     * @param {Array<string>} [course_feature] Multiple values may be separated by commas.
-     * @param {Array<Array<LearningpathsMembershipListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
-     * @param {Array<LearningpathsMembershipListDepartmentEnum>} [department] The department that offers learning resources  * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
-     * @param {boolean} [free] The course/program is offered for free
-     * @param {Array<LearningpathsMembershipListLevelEnum>} [level] The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
-     * @param {number} [limit] Number of results to return per page.
-     * @param {Array<LearningpathsMembershipListOfferedByEnum>} [offered_by] The organization that offers a learning resource  * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education
-     * @param {number} [offset] The initial index from which to return the results.
-     * @param {Array<LearningpathsMembershipListPlatformEnum>} [platform] The platform on which learning resources are offered  * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube
-     * @param {boolean} [professional]
-     * @param {Array<string>} [readable_id] Multiple values may be separated by commas.
-     * @param {Array<LearningpathsMembershipListResourceCategoryEnum>} [resource_category] The resource category of the learning resources  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
-     * @param {Array<LearningpathsMembershipListResourceTypeEnum>} [resource_type] The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist
-     * @param {LearningpathsMembershipListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
-     * @param {Array<string>} [topic] Multiple values may be separated by commas.
+     * Get a list of all learning path items
+     * @summary List
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     learningpathsMembershipList: async (
-      certification?: boolean,
-      certification_type?: Array<LearningpathsMembershipListCertificationTypeEnum>,
-      course_feature?: Array<string>,
-      delivery?: Array<Array<LearningpathsMembershipListDeliveryEnum>>,
-      department?: Array<LearningpathsMembershipListDepartmentEnum>,
-      free?: boolean,
-      level?: Array<LearningpathsMembershipListLevelEnum>,
-      limit?: number,
-      offered_by?: Array<LearningpathsMembershipListOfferedByEnum>,
-      offset?: number,
-      platform?: Array<LearningpathsMembershipListPlatformEnum>,
-      professional?: boolean,
-      readable_id?: Array<string>,
-      resource_category?: Array<LearningpathsMembershipListResourceCategoryEnum>,
-      resource_type?: Array<LearningpathsMembershipListResourceTypeEnum>,
-      sortby?: LearningpathsMembershipListSortbyEnum,
-      topic?: Array<string>,
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
       const localVarPath = `/api/v1/learningpaths/membership/`
@@ -18353,78 +18257,6 @@ export const LearningpathsApiAxiosParamCreator = function (
       }
       const localVarHeaderParameter = {} as any
       const localVarQueryParameter = {} as any
-
-      if (certification !== undefined) {
-        localVarQueryParameter["certification"] = certification
-      }
-
-      if (certification_type) {
-        localVarQueryParameter["certification_type"] = certification_type
-      }
-
-      if (course_feature) {
-        localVarQueryParameter["course_feature"] = course_feature.join(
-          COLLECTION_FORMATS.csv,
-        )
-      }
-
-      if (delivery) {
-        localVarQueryParameter["delivery"] = delivery
-      }
-
-      if (department) {
-        localVarQueryParameter["department"] = department
-      }
-
-      if (free !== undefined) {
-        localVarQueryParameter["free"] = free
-      }
-
-      if (level) {
-        localVarQueryParameter["level"] = level
-      }
-
-      if (limit !== undefined) {
-        localVarQueryParameter["limit"] = limit
-      }
-
-      if (offered_by) {
-        localVarQueryParameter["offered_by"] = offered_by
-      }
-
-      if (offset !== undefined) {
-        localVarQueryParameter["offset"] = offset
-      }
-
-      if (platform) {
-        localVarQueryParameter["platform"] = platform
-      }
-
-      if (professional !== undefined) {
-        localVarQueryParameter["professional"] = professional
-      }
-
-      if (readable_id) {
-        localVarQueryParameter["readable_id"] = readable_id.join(
-          COLLECTION_FORMATS.csv,
-        )
-      }
-
-      if (resource_category) {
-        localVarQueryParameter["resource_category"] = resource_category
-      }
-
-      if (resource_type) {
-        localVarQueryParameter["resource_type"] = resource_type
-      }
-
-      if (sortby !== undefined) {
-        localVarQueryParameter["sortby"] = sortby
-      }
-
-      if (topic) {
-        localVarQueryParameter["topic"] = topic.join(COLLECTION_FORMATS.csv)
-      }
 
       setSearchParams(localVarUrlObj, localVarQueryParameter)
       let headersFromBaseOptions =
@@ -18880,74 +18712,21 @@ export const LearningpathsApiFp = function (configuration?: Configuration) {
         )(axios, operationBasePath || basePath)
     },
     /**
-     * Fetch all learning path relationships  Returns: List of all LearningPathRelationships
-     * @summary List all learning path memberships
-     * @param {boolean} [certification]
-     * @param {Array<LearningpathsMembershipListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - Micromasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
-     * @param {Array<string>} [course_feature] Multiple values may be separated by commas.
-     * @param {Array<Array<LearningpathsMembershipListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
-     * @param {Array<LearningpathsMembershipListDepartmentEnum>} [department] The department that offers learning resources  * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
-     * @param {boolean} [free] The course/program is offered for free
-     * @param {Array<LearningpathsMembershipListLevelEnum>} [level] The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
-     * @param {number} [limit] Number of results to return per page.
-     * @param {Array<LearningpathsMembershipListOfferedByEnum>} [offered_by] The organization that offers a learning resource  * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education
-     * @param {number} [offset] The initial index from which to return the results.
-     * @param {Array<LearningpathsMembershipListPlatformEnum>} [platform] The platform on which learning resources are offered  * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube
-     * @param {boolean} [professional]
-     * @param {Array<string>} [readable_id] Multiple values may be separated by commas.
-     * @param {Array<LearningpathsMembershipListResourceCategoryEnum>} [resource_category] The resource category of the learning resources  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
-     * @param {Array<LearningpathsMembershipListResourceTypeEnum>} [resource_type] The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist
-     * @param {LearningpathsMembershipListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
-     * @param {Array<string>} [topic] Multiple values may be separated by commas.
+     * Get a list of all learning path items
+     * @summary List
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     async learningpathsMembershipList(
-      certification?: boolean,
-      certification_type?: Array<LearningpathsMembershipListCertificationTypeEnum>,
-      course_feature?: Array<string>,
-      delivery?: Array<Array<LearningpathsMembershipListDeliveryEnum>>,
-      department?: Array<LearningpathsMembershipListDepartmentEnum>,
-      free?: boolean,
-      level?: Array<LearningpathsMembershipListLevelEnum>,
-      limit?: number,
-      offered_by?: Array<LearningpathsMembershipListOfferedByEnum>,
-      offset?: number,
-      platform?: Array<LearningpathsMembershipListPlatformEnum>,
-      professional?: boolean,
-      readable_id?: Array<string>,
-      resource_category?: Array<LearningpathsMembershipListResourceCategoryEnum>,
-      resource_type?: Array<LearningpathsMembershipListResourceTypeEnum>,
-      sortby?: LearningpathsMembershipListSortbyEnum,
-      topic?: Array<string>,
       options?: RawAxiosRequestConfig,
     ): Promise<
       (
         axios?: AxiosInstance,
         basePath?: string,
-      ) => AxiosPromise<PaginatedMicroLearningPathRelationshipList>
+      ) => AxiosPromise<Array<MicroLearningPathRelationship>>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.learningpathsMembershipList(
-          certification,
-          certification_type,
-          course_feature,
-          delivery,
-          department,
-          free,
-          level,
-          limit,
-          offered_by,
-          offset,
-          platform,
-          professional,
-          readable_id,
-          resource_category,
-          resource_type,
-          sortby,
-          topic,
-          options,
-        )
+        await localVarAxiosParamCreator.learningpathsMembershipList(options)
       const index = configuration?.serverIndex ?? 0
       const operationBasePath =
         operationServerMap["LearningpathsApi.learningpathsMembershipList"]?.[
@@ -19207,37 +18986,16 @@ export const LearningpathsApiFactory = function (
         .then((request) => request(axios, basePath))
     },
     /**
-     * Fetch all learning path relationships  Returns: List of all LearningPathRelationships
-     * @summary List all learning path memberships
-     * @param {LearningpathsApiLearningpathsMembershipListRequest} requestParameters Request parameters.
+     * Get a list of all learning path items
+     * @summary List
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     learningpathsMembershipList(
-      requestParameters: LearningpathsApiLearningpathsMembershipListRequest = {},
       options?: RawAxiosRequestConfig,
-    ): AxiosPromise<PaginatedMicroLearningPathRelationshipList> {
+    ): AxiosPromise<Array<MicroLearningPathRelationship>> {
       return localVarFp
-        .learningpathsMembershipList(
-          requestParameters.certification,
-          requestParameters.certification_type,
-          requestParameters.course_feature,
-          requestParameters.delivery,
-          requestParameters.department,
-          requestParameters.free,
-          requestParameters.level,
-          requestParameters.limit,
-          requestParameters.offered_by,
-          requestParameters.offset,
-          requestParameters.platform,
-          requestParameters.professional,
-          requestParameters.readable_id,
-          requestParameters.resource_category,
-          requestParameters.resource_type,
-          requestParameters.sortby,
-          requestParameters.topic,
-          options,
-        )
+        .learningpathsMembershipList(options)
         .then((request) => request(axios, basePath))
     },
     /**
@@ -19558,132 +19316,6 @@ export interface LearningpathsApiLearningpathsListRequest {
 }
 
 /**
- * Request parameters for learningpathsMembershipList operation in LearningpathsApi.
- * @export
- * @interface LearningpathsApiLearningpathsMembershipListRequest
- */
-export interface LearningpathsApiLearningpathsMembershipListRequest {
-  /**
-   *
-   * @type {boolean}
-   * @memberof LearningpathsApiLearningpathsMembershipList
-   */
-  readonly certification?: boolean
-
-  /**
-   * The type of certification offered  * &#x60;micromasters&#x60; - Micromasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
-   * @type {Array<'completion' | 'micromasters' | 'none' | 'professional'>}
-   * @memberof LearningpathsApiLearningpathsMembershipList
-   */
-  readonly certification_type?: Array<LearningpathsMembershipListCertificationTypeEnum>
-
-  /**
-   * Multiple values may be separated by commas.
-   * @type {Array<string>}
-   * @memberof LearningpathsApiLearningpathsMembershipList
-   */
-  readonly course_feature?: Array<string>
-
-  /**
-   * The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
-   * @type {Array<Array<'online' | 'hybrid' | 'in_person' | 'offline'>>}
-   * @memberof LearningpathsApiLearningpathsMembershipList
-   */
-  readonly delivery?: Array<Array<LearningpathsMembershipListDeliveryEnum>>
-
-  /**
-   * The department that offers learning resources  * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
-   * @type {Array<'1' | '10' | '11' | '12' | '14' | '15' | '16' | '17' | '18' | '2' | '20' | '21A' | '21G' | '21H' | '21L' | '21M' | '22' | '24' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | 'CC' | 'CMS-W' | 'EC' | 'ES' | 'ESD' | 'HST' | 'IDS' | 'MAS' | 'PE' | 'SP' | 'STS' | 'WGS'>}
-   * @memberof LearningpathsApiLearningpathsMembershipList
-   */
-  readonly department?: Array<LearningpathsMembershipListDepartmentEnum>
-
-  /**
-   * The course/program is offered for free
-   * @type {boolean}
-   * @memberof LearningpathsApiLearningpathsMembershipList
-   */
-  readonly free?: boolean
-
-  /**
-   * The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
-   * @type {Array<'advanced' | 'graduate' | 'high_school' | 'intermediate' | 'introductory' | 'noncredit' | 'undergraduate'>}
-   * @memberof LearningpathsApiLearningpathsMembershipList
-   */
-  readonly level?: Array<LearningpathsMembershipListLevelEnum>
-
-  /**
-   * Number of results to return per page.
-   * @type {number}
-   * @memberof LearningpathsApiLearningpathsMembershipList
-   */
-  readonly limit?: number
-
-  /**
-   * The organization that offers a learning resource  * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education
-   * @type {Array<'bootcamps' | 'mitpe' | 'mitx' | 'ocw' | 'see' | 'xpro'>}
-   * @memberof LearningpathsApiLearningpathsMembershipList
-   */
-  readonly offered_by?: Array<LearningpathsMembershipListOfferedByEnum>
-
-  /**
-   * The initial index from which to return the results.
-   * @type {number}
-   * @memberof LearningpathsApiLearningpathsMembershipList
-   */
-  readonly offset?: number
-
-  /**
-   * The platform on which learning resources are offered  * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube
-   * @type {Array<'bootcamps' | 'csail' | 'ctl' | 'edx' | 'emeritus' | 'globalalumni' | 'mitpe' | 'mitxonline' | 'ocw' | 'oll' | 'podcast' | 'scc' | 'see' | 'simplilearn' | 'susskind' | 'whu' | 'xpro' | 'youtube'>}
-   * @memberof LearningpathsApiLearningpathsMembershipList
-   */
-  readonly platform?: Array<LearningpathsMembershipListPlatformEnum>
-
-  /**
-   *
-   * @type {boolean}
-   * @memberof LearningpathsApiLearningpathsMembershipList
-   */
-  readonly professional?: boolean
-
-  /**
-   * Multiple values may be separated by commas.
-   * @type {Array<string>}
-   * @memberof LearningpathsApiLearningpathsMembershipList
-   */
-  readonly readable_id?: Array<string>
-
-  /**
-   * The resource category of the learning resources  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
-   * @type {Array<'course' | 'learning_material' | 'program'>}
-   * @memberof LearningpathsApiLearningpathsMembershipList
-   */
-  readonly resource_category?: Array<LearningpathsMembershipListResourceCategoryEnum>
-
-  /**
-   * The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist
-   * @type {Array<'course' | 'learning_path' | 'podcast' | 'podcast_episode' | 'program' | 'video' | 'video_playlist'>}
-   * @memberof LearningpathsApiLearningpathsMembershipList
-   */
-  readonly resource_type?: Array<LearningpathsMembershipListResourceTypeEnum>
-
-  /**
-   * Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
-   * @type {'-id' | '-last_modified' | '-mitcoursenumber' | '-readable_id' | '-start_date' | '-views' | 'id' | 'last_modified' | 'mitcoursenumber' | 'new' | 'readable_id' | 'start_date' | 'upcoming' | 'views'}
-   * @memberof LearningpathsApiLearningpathsMembershipList
-   */
-  readonly sortby?: LearningpathsMembershipListSortbyEnum
-
-  /**
-   * Multiple values may be separated by commas.
-   * @type {Array<string>}
-   * @memberof LearningpathsApiLearningpathsMembershipList
-   */
-  readonly topic?: Array<string>
-}
-
-/**
  * Request parameters for learningpathsPartialUpdate operation in LearningpathsApi.
  * @export
  * @interface LearningpathsApiLearningpathsPartialUpdateRequest
@@ -19906,38 +19538,15 @@ export class LearningpathsApi extends BaseAPI {
   }
 
   /**
-   * Fetch all learning path relationships  Returns: List of all LearningPathRelationships
-   * @summary List all learning path memberships
-   * @param {LearningpathsApiLearningpathsMembershipListRequest} requestParameters Request parameters.
+   * Get a list of all learning path items
+   * @summary List
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
    * @memberof LearningpathsApi
    */
-  public learningpathsMembershipList(
-    requestParameters: LearningpathsApiLearningpathsMembershipListRequest = {},
-    options?: RawAxiosRequestConfig,
-  ) {
+  public learningpathsMembershipList(options?: RawAxiosRequestConfig) {
     return LearningpathsApiFp(this.configuration)
-      .learningpathsMembershipList(
-        requestParameters.certification,
-        requestParameters.certification_type,
-        requestParameters.course_feature,
-        requestParameters.delivery,
-        requestParameters.department,
-        requestParameters.free,
-        requestParameters.level,
-        requestParameters.limit,
-        requestParameters.offered_by,
-        requestParameters.offset,
-        requestParameters.platform,
-        requestParameters.professional,
-        requestParameters.readable_id,
-        requestParameters.resource_category,
-        requestParameters.resource_type,
-        requestParameters.sortby,
-        requestParameters.topic,
-        options,
-      )
+      .learningpathsMembershipList(options)
       .then((request) => request(this.axios, this.basePath))
   }
 
@@ -20143,169 +19752,6 @@ export const LearningpathsListSortbyEnum = {
 } as const
 export type LearningpathsListSortbyEnum =
   (typeof LearningpathsListSortbyEnum)[keyof typeof LearningpathsListSortbyEnum]
-/**
- * @export
- */
-export const LearningpathsMembershipListCertificationTypeEnum = {
-  Completion: "completion",
-  Micromasters: "micromasters",
-  None: "none",
-  Professional: "professional",
-} as const
-export type LearningpathsMembershipListCertificationTypeEnum =
-  (typeof LearningpathsMembershipListCertificationTypeEnum)[keyof typeof LearningpathsMembershipListCertificationTypeEnum]
-/**
- * @export
- */
-export const LearningpathsMembershipListDeliveryEnum = {
-  Online: "online",
-  Hybrid: "hybrid",
-  InPerson: "in_person",
-  Offline: "offline",
-} as const
-export type LearningpathsMembershipListDeliveryEnum =
-  (typeof LearningpathsMembershipListDeliveryEnum)[keyof typeof LearningpathsMembershipListDeliveryEnum]
-/**
- * @export
- */
-export const LearningpathsMembershipListDepartmentEnum = {
-  _1: "1",
-  _10: "10",
-  _11: "11",
-  _12: "12",
-  _14: "14",
-  _15: "15",
-  _16: "16",
-  _17: "17",
-  _18: "18",
-  _2: "2",
-  _20: "20",
-  _21A: "21A",
-  _21G: "21G",
-  _21H: "21H",
-  _21L: "21L",
-  _21M: "21M",
-  _22: "22",
-  _24: "24",
-  _3: "3",
-  _4: "4",
-  _5: "5",
-  _6: "6",
-  _7: "7",
-  _8: "8",
-  _9: "9",
-  Cc: "CC",
-  CmsW: "CMS-W",
-  Ec: "EC",
-  Es: "ES",
-  Esd: "ESD",
-  Hst: "HST",
-  Ids: "IDS",
-  Mas: "MAS",
-  Pe: "PE",
-  Sp: "SP",
-  Sts: "STS",
-  Wgs: "WGS",
-} as const
-export type LearningpathsMembershipListDepartmentEnum =
-  (typeof LearningpathsMembershipListDepartmentEnum)[keyof typeof LearningpathsMembershipListDepartmentEnum]
-/**
- * @export
- */
-export const LearningpathsMembershipListLevelEnum = {
-  Advanced: "advanced",
-  Graduate: "graduate",
-  HighSchool: "high_school",
-  Intermediate: "intermediate",
-  Introductory: "introductory",
-  Noncredit: "noncredit",
-  Undergraduate: "undergraduate",
-} as const
-export type LearningpathsMembershipListLevelEnum =
-  (typeof LearningpathsMembershipListLevelEnum)[keyof typeof LearningpathsMembershipListLevelEnum]
-/**
- * @export
- */
-export const LearningpathsMembershipListOfferedByEnum = {
-  Bootcamps: "bootcamps",
-  Mitpe: "mitpe",
-  Mitx: "mitx",
-  Ocw: "ocw",
-  See: "see",
-  Xpro: "xpro",
-} as const
-export type LearningpathsMembershipListOfferedByEnum =
-  (typeof LearningpathsMembershipListOfferedByEnum)[keyof typeof LearningpathsMembershipListOfferedByEnum]
-/**
- * @export
- */
-export const LearningpathsMembershipListPlatformEnum = {
-  Bootcamps: "bootcamps",
-  Csail: "csail",
-  Ctl: "ctl",
-  Edx: "edx",
-  Emeritus: "emeritus",
-  Globalalumni: "globalalumni",
-  Mitpe: "mitpe",
-  Mitxonline: "mitxonline",
-  Ocw: "ocw",
-  Oll: "oll",
-  Podcast: "podcast",
-  Scc: "scc",
-  See: "see",
-  Simplilearn: "simplilearn",
-  Susskind: "susskind",
-  Whu: "whu",
-  Xpro: "xpro",
-  Youtube: "youtube",
-} as const
-export type LearningpathsMembershipListPlatformEnum =
-  (typeof LearningpathsMembershipListPlatformEnum)[keyof typeof LearningpathsMembershipListPlatformEnum]
-/**
- * @export
- */
-export const LearningpathsMembershipListResourceCategoryEnum = {
-  Course: "course",
-  LearningMaterial: "learning_material",
-  Program: "program",
-} as const
-export type LearningpathsMembershipListResourceCategoryEnum =
-  (typeof LearningpathsMembershipListResourceCategoryEnum)[keyof typeof LearningpathsMembershipListResourceCategoryEnum]
-/**
- * @export
- */
-export const LearningpathsMembershipListResourceTypeEnum = {
-  Course: "course",
-  LearningPath: "learning_path",
-  Podcast: "podcast",
-  PodcastEpisode: "podcast_episode",
-  Program: "program",
-  Video: "video",
-  VideoPlaylist: "video_playlist",
-} as const
-export type LearningpathsMembershipListResourceTypeEnum =
-  (typeof LearningpathsMembershipListResourceTypeEnum)[keyof typeof LearningpathsMembershipListResourceTypeEnum]
-/**
- * @export
- */
-export const LearningpathsMembershipListSortbyEnum = {
-  Id: "-id",
-  LastModified: "-last_modified",
-  Mitcoursenumber: "-mitcoursenumber",
-  ReadableId: "-readable_id",
-  StartDate: "-start_date",
-  Views: "-views",
-  Id2: "id",
-  LastModified2: "last_modified",
-  Mitcoursenumber2: "mitcoursenumber",
-  New: "new",
-  ReadableId2: "readable_id",
-  StartDate2: "start_date",
-  Upcoming: "upcoming",
-  Views2: "views",
-} as const
-export type LearningpathsMembershipListSortbyEnum =
-  (typeof LearningpathsMembershipListSortbyEnum)[keyof typeof LearningpathsMembershipListSortbyEnum]
 
 /**
  * OfferorsApi - axios parameter creator
@@ -24775,16 +24221,12 @@ export const UserlistsApiAxiosParamCreator = function (
       }
     },
     /**
-     * Fetch all userlist relationships for the user  Returns:     List of user list relationships for the user
-     * @summary Get all user list memberships for a user
-     * @param {number} [limit] Number of results to return per page.
-     * @param {number} [offset] The initial index from which to return the results.
+     * Get a list of all userlist items
+     * @summary List
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     userlistsMembershipList: async (
-      limit?: number,
-      offset?: number,
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
       const localVarPath = `/api/v1/userlists/membership/`
@@ -24802,14 +24244,6 @@ export const UserlistsApiAxiosParamCreator = function (
       }
       const localVarHeaderParameter = {} as any
       const localVarQueryParameter = {} as any
-
-      if (limit !== undefined) {
-        localVarQueryParameter["limit"] = limit
-      }
-
-      if (offset !== undefined) {
-        localVarQueryParameter["offset"] = offset
-      }
 
       setSearchParams(localVarUrlObj, localVarQueryParameter)
       let headersFromBaseOptions =
@@ -25204,29 +24638,21 @@ export const UserlistsApiFp = function (configuration?: Configuration) {
         )(axios, operationBasePath || basePath)
     },
     /**
-     * Fetch all userlist relationships for the user  Returns:     List of user list relationships for the user
-     * @summary Get all user list memberships for a user
-     * @param {number} [limit] Number of results to return per page.
-     * @param {number} [offset] The initial index from which to return the results.
+     * Get a list of all userlist items
+     * @summary List
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     async userlistsMembershipList(
-      limit?: number,
-      offset?: number,
       options?: RawAxiosRequestConfig,
     ): Promise<
       (
         axios?: AxiosInstance,
         basePath?: string,
-      ) => AxiosPromise<PaginatedMicroUserListRelationshipList>
+      ) => AxiosPromise<Array<MicroUserListRelationship>>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.userlistsMembershipList(
-          limit,
-          offset,
-          options,
-        )
+        await localVarAxiosParamCreator.userlistsMembershipList(options)
       const index = configuration?.serverIndex ?? 0
       const operationBasePath =
         operationServerMap["UserlistsApi.userlistsMembershipList"]?.[index]?.url
@@ -25457,22 +24883,16 @@ export const UserlistsApiFactory = function (
         .then((request) => request(axios, basePath))
     },
     /**
-     * Fetch all userlist relationships for the user  Returns:     List of user list relationships for the user
-     * @summary Get all user list memberships for a user
-     * @param {UserlistsApiUserlistsMembershipListRequest} requestParameters Request parameters.
+     * Get a list of all userlist items
+     * @summary List
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     userlistsMembershipList(
-      requestParameters: UserlistsApiUserlistsMembershipListRequest = {},
       options?: RawAxiosRequestConfig,
-    ): AxiosPromise<PaginatedMicroUserListRelationshipList> {
+    ): AxiosPromise<Array<MicroUserListRelationship>> {
       return localVarFp
-        .userlistsMembershipList(
-          requestParameters.limit,
-          requestParameters.offset,
-          options,
-        )
+        .userlistsMembershipList(options)
         .then((request) => request(axios, basePath))
     },
     /**
@@ -25681,27 +25101,6 @@ export interface UserlistsApiUserlistsListRequest {
 }
 
 /**
- * Request parameters for userlistsMembershipList operation in UserlistsApi.
- * @export
- * @interface UserlistsApiUserlistsMembershipListRequest
- */
-export interface UserlistsApiUserlistsMembershipListRequest {
-  /**
-   * Number of results to return per page.
-   * @type {number}
-   * @memberof UserlistsApiUserlistsMembershipList
-   */
-  readonly limit?: number
-
-  /**
-   * The initial index from which to return the results.
-   * @type {number}
-   * @memberof UserlistsApiUserlistsMembershipList
-   */
-  readonly offset?: number
-}
-
-/**
  * Request parameters for userlistsPartialUpdate operation in UserlistsApi.
  * @export
  * @interface UserlistsApiUserlistsPartialUpdateRequest
@@ -25902,23 +25301,15 @@ export class UserlistsApi extends BaseAPI {
   }
 
   /**
-   * Fetch all userlist relationships for the user  Returns:     List of user list relationships for the user
-   * @summary Get all user list memberships for a user
-   * @param {UserlistsApiUserlistsMembershipListRequest} requestParameters Request parameters.
+   * Get a list of all userlist items
+   * @summary List
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
    * @memberof UserlistsApi
    */
-  public userlistsMembershipList(
-    requestParameters: UserlistsApiUserlistsMembershipListRequest = {},
-    options?: RawAxiosRequestConfig,
-  ) {
+  public userlistsMembershipList(options?: RawAxiosRequestConfig) {
     return UserlistsApiFp(this.configuration)
-      .userlistsMembershipList(
-        requestParameters.limit,
-        requestParameters.offset,
-        options,
-      )
+      .userlistsMembershipList(options)
       .then((request) => request(this.axios, this.basePath))
   }
 

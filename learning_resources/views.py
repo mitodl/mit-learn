@@ -54,7 +54,6 @@ from learning_resources.models import (
     UserListRelationship,
 )
 from learning_resources.permissions import (
-    HasLearningPathMembershipPermissions,
     HasLearningPathPermissions,
     HasUserListItemPermissions,
     HasUserListPermissions,
@@ -412,7 +411,6 @@ class LearningPathViewSet(BaseLearningResourceViewSet, viewsets.ModelViewSet):
     Viewset for LearningPaths
     """
 
-    pagination_class = DefaultPagination
     serializer_class = LearningPathResourceSerializer
     permission_classes = (permissions.HasLearningPathPermissions,)
     http_method_names = VALID_HTTP_METHODS
@@ -432,35 +430,30 @@ class LearningPathViewSet(BaseLearningResourceViewSet, viewsets.ModelViewSet):
             queryset = queryset.filter(published=True)
         return queryset
 
-    @extend_schema(
-        summary="List all learning path memberships",
-        responses=MicroLearningPathRelationshipSerializer(many=True),
-    )
-    @action(
-        detail=False,
-        methods=["GET"],
-        name="Fetch all learning path relationships",
-        permission_classes=[HasLearningPathMembershipPermissions],
-    )
-    def membership(self, request, *_, **kwargs):  # noqa: ARG002
+
+@extend_schema_view(
+    list=extend_schema(
+        summary="List", description="Get a list of all learning path items"
+    ),
+)
+class LearningPathMembershipViewSet(viewsets.ReadOnlyModelViewSet):
+    """Viewset for learning path relationships"""
+
+    serializer_class = MicroLearningPathRelationshipSerializer
+    permission_classes = (permissions.HasLearningPathMembershipPermissions,)
+    http_method_names = ["get"]
+
+    def get_queryset(self):
         """
-        Fetch all learning path relationships
+        Generate a QuerySet for fetching valid Programs
 
         Returns:
-        List of all LearningPathRelationships
+            QuerySet of LearningResource objects that are Programs
         """
-
-        return Response(
-            MicroLearningPathRelationshipSerializer(
-                list(
-                    LearningResourceRelationship.objects.filter(
-                        child__published=True,
-                        parent__resource_type=LearningResourceType.learning_path.name,
-                    ).order_by("child", "parent")
-                ),
-                many=True,
-            ).data
-        )
+        return LearningResourceRelationship.objects.filter(
+            child__published=True,
+            parent__resource_type=LearningResourceType.learning_path.name,
+        ).order_by("child", "parent")
 
 
 @extend_schema_view(
@@ -844,34 +837,6 @@ class UserListViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         instance.delete()
 
-    @extend_schema(
-        summary="Get all user list memberships for a user",
-        responses=MicroUserListRelationshipSerializer(many=True),
-    )
-    @action(
-        detail=False,
-        methods=["GET"],
-        name="Fetch all user list relationships",
-        permission_classes=[IsAuthenticated],
-    )
-    def membership(self, request, *_, **kwargs):  # noqa: ARG002
-        """
-        Fetch all userlist relationships for the user
-
-        Returns:
-            List of user list relationships for the user
-        """
-        return Response(
-            MicroUserListRelationshipSerializer(
-                list(
-                    UserListRelationship.objects.filter(
-                        parent__author=request.user
-                    ).order_by("child", "parent")
-                ),
-                many=True,
-            ).data
-        )
-
 
 @extend_schema_view(
     list=extend_schema(summary="User List Resources List"),
@@ -933,6 +898,28 @@ def podcast_rss_feed(request):  # noqa: ARG001
     return HttpResponse(
         rss.prettify(), content_type="application/rss+xml; charset=utf-8"
     )
+
+
+@extend_schema_view(
+    list=extend_schema(summary="List", description="Get a list of all userlist items"),
+)
+class UserListMembershipViewSet(viewsets.ReadOnlyModelViewSet):
+    """Viewset for user list relationships"""
+
+    serializer_class = MicroUserListRelationshipSerializer
+    permission_classes = (IsAuthenticated,)
+    http_method_names = ["get"]
+
+    def get_queryset(self):
+        """
+        Generate a QuerySet for fetching valid Programs
+
+        Returns:
+            QuerySet of LearningResource objects that are Programs
+        """
+        return UserListRelationship.objects.filter(
+            child__published=True,
+        ).order_by("child", "parent")
 
 
 @method_decorator(blocked_ip_exempt, name="dispatch")

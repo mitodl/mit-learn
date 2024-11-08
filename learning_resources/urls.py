@@ -100,6 +100,16 @@ router.register(r"platforms", views.PlatformViewSet, basename="platforms_api")
 router.register(r"offerors", views.OfferedByViewSet, basename="offerors_api")
 
 v1_urls = [
+    path(
+        "learningpaths/membership/",
+        views.LearningPathMembershipViewSet.as_view({"get": "list"}),
+        name="learningpaths_api-membership",
+    ),
+    path(
+        "userlists/membership/",
+        views.UserListMembershipViewSet.as_view({"get": "list"}),
+        name="userlists_api-membership",
+    ),
     *router.urls,
     *nested_learning_resources_router.urls,
     *nested_courses_router.urls,
