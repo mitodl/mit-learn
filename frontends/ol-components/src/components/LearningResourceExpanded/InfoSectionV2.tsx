@@ -97,6 +97,11 @@ const ShowMoreLink = styled(Link)({
   paddingLeft: "12px",
 })
 
+const ShowLessLink = styled(Link)({
+  display: "flex",
+  paddingTop: "8px",
+})
+
 const PriceDisplay = styled.div({
   display: "flex",
   alignItems: "center",
@@ -180,6 +185,18 @@ const RunDates: React.FC<{ resource: LearningResource }> = ({ resource }) => {
         </ShowMoreLink>
       </NoWrap>
     )
+    const showLessLink = (
+      <NoWrap>
+        <br />
+        <ShowLessLink
+          color="red"
+          size="small"
+          onClick={() => setShowingMore(!showingMore)}
+        >
+          Show less
+        </ShowLessLink>
+      </NoWrap>
+    )
     return (
       <span data-testid="drawer-run-dates">
         {sortedDates.slice(0, 2).map((runDate, index) => {
@@ -206,7 +223,7 @@ const RunDates: React.FC<{ resource: LearningResource }> = ({ resource }) => {
               </NoWrap>
             )
           })}
-        {showingMore && showMoreLink}
+        {showingMore && showLessLink}
       </span>
     )
   } else {
