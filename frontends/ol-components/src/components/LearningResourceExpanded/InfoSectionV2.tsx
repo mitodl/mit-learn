@@ -163,16 +163,16 @@ const InfoItemValue: React.FC<InfoItemValueProps> = ({
 const RunDates: React.FC<{ resource: LearningResource }> = ({ resource }) => {
   const [showingMore, setShowingMore] = useState(false)
   const asTaughtIn = showStartAnytime(resource)
-  const sortedDates =
-    resource.runs
-      ?.sort((a, b) => {
-        if (a?.start_date && b?.start_date) {
-          return Date.parse(a.start_date) - Date.parse(b.start_date)
-        }
-        return 0
-      })
-      .map((run) => formatRunDate(run, asTaughtIn)) ?? []
-  const showMore = sortedDates.length > 2
+  const sortedDates = resource.runs
+    ?.sort((a, b) => {
+      if (a?.start_date && b?.start_date) {
+        return Date.parse(a.start_date) - Date.parse(b.start_date)
+      }
+      return 0
+    })
+    .map((run) => formatRunDate(run, asTaughtIn))
+  const totalDates = sortedDates?.length || 0
+  const showMore = totalDates > 2
   if (showMore) {
     const ShowHideLink = showingMore ? ShowLessLink : ShowMoreLink
     const showMoreLink = (
@@ -188,7 +188,7 @@ const RunDates: React.FC<{ resource: LearningResource }> = ({ resource }) => {
     )
     return (
       <span data-testid="drawer-run-dates">
-        {sortedDates.slice(0, 2).map((runDate, index) => {
+        {sortedDates?.slice(0, 2).map((runDate, index) => {
           return (
             <NoWrap key={`run-${index}`}>
               <InfoItemValue
@@ -201,7 +201,7 @@ const RunDates: React.FC<{ resource: LearningResource }> = ({ resource }) => {
         })}
         {!showingMore && showMoreLink}
         {showingMore &&
-          sortedDates.slice(2).map((runDate, index) => {
+          sortedDates?.slice(2).map((runDate, index) => {
             return (
               <NoWrap key={`run-${index + 2}`}>
                 <InfoItemValue
@@ -216,18 +216,17 @@ const RunDates: React.FC<{ resource: LearningResource }> = ({ resource }) => {
       </span>
     )
   } else {
-    const runDates =
-      sortedDates.map((runDate, index) => {
-        return (
-          <NoWrap key={`run-${index}`}>
-            <InfoItemValue
-              label={runDate}
-              index={index}
-              total={sortedDates.length}
-            />
-          </NoWrap>
-        )
-      }) ?? []
+    const runDates = sortedDates?.map((runDate, index) => {
+      return (
+        <NoWrap key={`run-${index}`}>
+          <InfoItemValue
+            label={runDate}
+            index={index}
+            total={sortedDates.length}
+          />
+        </NoWrap>
+      )
+    })
     return <span data-testid="drawer-run-dates">{runDates}</span>
   }
 }
