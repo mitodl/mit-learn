@@ -28,9 +28,10 @@ export async function generateMetadata({
 
 const Page: React.FC = async () => {
   const dehydratedState = await prefetch([
-    /* We can't prefetch any learning resource until they are fully public, https://github.com/mitodl/hq/issues/5159 */
+    /* Prefetched learning resources must be refetched in the client for user specific versions
+     * until they are fully public, https://github.com/mitodl/hq/issues/5159
+     */
 
-    // The queries for carousel content are not checked in the query cache warnings as the use the key factory methods directly
     // Featured Courses carousel "All"
     learningResourcesKeyFactory.featured({
       limit: 12,
