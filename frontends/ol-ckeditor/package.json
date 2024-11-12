@@ -29,7 +29,7 @@
     "@ckeditor/ckeditor5-markdown-gfm": "^43.0.0",
     "@ckeditor/ckeditor5-media-embed": "^43.0.0",
     "@ckeditor/ckeditor5-paragraph": "^43.0.0",
-    "@ckeditor/ckeditor5-react": "^7.0.0",
+    "@ckeditor/ckeditor5-react": "^9.0.0",
     "@ckeditor/ckeditor5-theme-lark": "^43.0.0",
     "@ckeditor/ckeditor5-ui": "^43.0.0",
     "@ckeditor/ckeditor5-utils": "^43.0.0",
