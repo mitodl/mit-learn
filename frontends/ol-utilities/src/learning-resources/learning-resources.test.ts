@@ -97,7 +97,6 @@ describe("allRunsAreIdentical", () => {
 
   test("returns true if all runs are identical", () => {
     const resource = factories.learningResources.resource()
-    const startDate = new Date().toISOString().split("T")[0]
     const prices = [{ amount: "100", currency: "USD" }]
     const delivery = [
       { code: CourseResourceDeliveryInnerCodeEnum.InPerson, name: "In person" },
@@ -105,19 +104,16 @@ describe("allRunsAreIdentical", () => {
     const location = "New York"
     resource.runs = [
       makeRun({
-        start_date: startDate,
         resource_prices: prices,
         delivery: delivery,
         location: location,
       }),
       makeRun({
-        start_date: startDate,
         resource_prices: prices,
         delivery: delivery,
         location: location,
       }),
       makeRun({
-        start_date: startDate,
         resource_prices: prices,
         delivery: delivery,
         location: location,

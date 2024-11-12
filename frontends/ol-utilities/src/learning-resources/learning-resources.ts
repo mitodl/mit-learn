@@ -129,15 +129,11 @@ const allRunsAreIdentical = (resource: LearningResource) => {
   if (resource.runs.length <= 1) {
     return true
   }
-  const dates = new Set<string>()
   const amounts = new Set<string>()
   const currencies = new Set<string>()
   const deliveryMethods = new Set<string>()
   const locations = new Set<string>()
   for (const run of resource.runs) {
-    if (run.start_date) {
-      dates.add(run.start_date)
-    }
     if (run.resource_prices) {
       run.resource_prices.forEach((price) => {
         if (!(resource.free && price.amount === "0")) {
@@ -159,7 +155,6 @@ const allRunsAreIdentical = (resource: LearningResource) => {
     (dm) => dm === DeliveryEnum.InPerson,
   )
   return (
-    dates.size === 1 &&
     amounts.size === 1 &&
     currencies.size === 1 &&
     deliveryMethods.size === 1 &&

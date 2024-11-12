@@ -42,7 +42,6 @@ const resources = {
 }
 
 const sameDataRun = factories.learningResources.run({
-  start_date: new Date().toISOString().split("T")[0],
   delivery: [
     {
       code: DeliveryEnum.Online,
@@ -171,25 +170,21 @@ const courses = {
       free: true,
       runs: [
         factories.learningResources.run({
-          start_date: sameDataRun.start_date,
           delivery: sameDataRun.delivery,
           resource_prices: sameDataRun.resource_prices,
           location: sameDataRun.location,
         }),
         factories.learningResources.run({
-          start_date: sameDataRun.start_date,
           delivery: sameDataRun.delivery,
           resource_prices: sameDataRun.resource_prices,
           location: sameDataRun.location,
         }),
         factories.learningResources.run({
-          start_date: sameDataRun.start_date,
           delivery: sameDataRun.delivery,
           resource_prices: sameDataRun.resource_prices,
           location: sameDataRun.location,
         }),
         factories.learningResources.run({
-          start_date: sameDataRun.start_date,
           delivery: sameDataRun.delivery,
           resource_prices: sameDataRun.resource_prices,
           location: sameDataRun.location,
