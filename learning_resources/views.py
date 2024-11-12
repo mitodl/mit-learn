@@ -922,6 +922,7 @@ class UserListMembershipViewSet(viewsets.ReadOnlyModelViewSet):
         """
         return UserListRelationship.objects.filter(
             child__published=True,
+            parent__author=self.request.user,
         ).order_by("child", "parent")
 
 

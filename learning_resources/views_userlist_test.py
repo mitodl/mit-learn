@@ -115,13 +115,15 @@ def test_user_list_endpoint_patch(client, update_topics):
 @pytest.mark.parametrize("is_authenticated", [True, False])
 def test_user_list_endpoint_membership_get(client, user, is_authenticated):
     """Test user list membership endpoint"""
-    user_lists = factories.UserListFactory.create_batch(2, author=user)
-    factories.UserListFactory.create()
+    factories.UserListRelationshipFactory.create_batch(
+        3, parent=factories.UserListFactory.create(author=user)
+    )
+    factories.UserListRelationshipFactory.create_batch(2)
 
-    relationships = UserListRelationship.objects.filter(parent__in=user_lists).order_by(
+    relationships = UserListRelationship.objects.filter(parent__author=user).order_by(
         "child", "parent"
     )
-
+    assert relationships.count() == 3
     if is_authenticated:
         client.force_login(user)
     resp = client.get(reverse("lr:v1:userlists_api-membership"))
