@@ -18,6 +18,7 @@ from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter
 from rest_framework.generics import get_object_or_404
 from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_nested.viewsets import NestedViewSetMixin
 
@@ -71,6 +72,8 @@ from learning_resources.serializers import (
     LearningResourceSchoolSerializer,
     LearningResourceSerializer,
     LearningResourceTopicSerializer,
+    MicroLearningPathRelationshipSerializer,
+    MicroUserListRelationshipSerializer,
     PodcastEpisodeResourceSerializer,
     PodcastResourceSerializer,
     ProgramResourceSerializer,
@@ -426,6 +429,32 @@ class LearningPathViewSet(BaseLearningResourceViewSet, viewsets.ModelViewSet):
         if not (is_learning_path_editor(self.request) or is_admin_user(self.request)):
             queryset = queryset.filter(published=True)
         return queryset
+
+
+@extend_schema_view(
+    list=extend_schema(
+        summary="List", description="Get a list of all learning path items"
+    ),
+)
+class LearningPathMembershipViewSet(viewsets.ReadOnlyModelViewSet):
+    """Viewset for listing all learning path relationships"""
+
+    serializer_class = MicroLearningPathRelationshipSerializer
+    permission_classes = (permissions.HasLearningPathMembershipPermissions,)
+    http_method_names = ["get"]
+
+    def get_queryset(self):
+        """
+        Generate a QuerySet for fetching all LearningResourceRelationships
+        with a parent of resource type "learning_path"
+
+        Returns:
+            QuerySet of LearningResourceRelationships objects with learning path parents
+        """
+        return LearningResourceRelationship.objects.filter(
+            child__published=True,
+            parent__resource_type=LearningResourceType.learning_path.name,
+        ).order_by("child", "parent")
 
 
 @extend_schema_view(
@@ -870,6 +899,31 @@ def podcast_rss_feed(request):  # noqa: ARG001
     return HttpResponse(
         rss.prettify(), content_type="application/rss+xml; charset=utf-8"
     )
+
+
+@extend_schema_view(
+    list=extend_schema(
+        summary="List", description="Get a list of all userlist items for a user"
+    ),
+)
+class UserListMembershipViewSet(viewsets.ReadOnlyModelViewSet):
+    """Viewset for all user list relationships"""
+
+    serializer_class = MicroUserListRelationshipSerializer
+    permission_classes = (IsAuthenticated,)
+    http_method_names = ["get"]
+
+    def get_queryset(self):
+        """
+        Generate a QuerySet for fetching all UserListRelationships for the user
+
+        Returns:
+            QuerySet of UserListRelationship objects authored by the user
+        """
+        return UserListRelationship.objects.filter(
+            child__published=True,
+            parent__author=self.request.user,
+        ).order_by("child", "parent")
 
 
 @method_decorator(blocked_ip_exempt, name="dispatch")

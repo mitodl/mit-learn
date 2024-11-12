@@ -5730,6 +5730,22 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/learningpaths/membership/:
+    get:
+      operationId: learningpaths_membership_list
+      description: Get a list of all learning path items
+      summary: List
+      tags:
+      - learningpaths
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MicroLearningPathRelationship'
+          description: ''
   /api/v1/offerors/:
     get:
       operationId: offerors_list
@@ -7515,6 +7531,22 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/userlists/membership/:
+    get:
+      operationId: userlists_membership_list
+      description: Get a list of all userlist items for a user
+      summary: List
+      tags:
+      - userlists
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MicroUserListRelationship'
+          description: ''
   /api/v1/video_playlists/:
     get:
       operationId: video_playlists_list
