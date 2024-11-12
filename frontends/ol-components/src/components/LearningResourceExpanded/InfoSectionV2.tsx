@@ -240,7 +240,9 @@ const INFO_ITEMS: InfoItemConfig = [
     },
     Icon: RiCalendarLine,
     selector: (resource: LearningResource) => {
-      if (allRunsAreIdentical(resource)) {
+      const totalDatesWithRuns =
+        resource.runs?.filter((run) => run.start_date !== null).length || 0
+      if (allRunsAreIdentical(resource) && totalDatesWithRuns > 0) {
         return <RunDates resource={resource} />
       } else return null
     },
