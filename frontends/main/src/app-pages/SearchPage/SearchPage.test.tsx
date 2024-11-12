@@ -491,6 +491,32 @@ describe("Search Page Tabs", () => {
     expect(params2.get("department")).toBe("8") // should preserve other params
   })
 
+  test("Switching from learning materials tab clears resource type only", async () => {
+    setMockApiResponses({
+      search: {
+        count: 1000,
+        metadata: {
+          aggregations: {
+            resource_type: [{ key: "video", doc_count: 100 }],
+          },
+          suggestions: [],
+        },
+      },
+    })
+    const { location } = renderWithProviders(<SearchPage />, {
+      url: "?resource_category=learning_material&resource_type=video&topic=Biology",
+    })
+    const tabLM = screen.getByRole("tab", { name: /Learning Materials/ })
+    const tabCourses = screen.getByRole("tab", { name: /Courses/ })
+    expect(tabLM).toHaveAttribute("aria-selected")
+
+    // Click "Courses"
+    await user.click(tabCourses)
+    expect(location.current.search).toBe(
+      "?resource_category=course&topic=Biology",
+    )
+  })
+
   test("Tab titles show corret result counts", async () => {
     setMockApiResponses({
       search: {
