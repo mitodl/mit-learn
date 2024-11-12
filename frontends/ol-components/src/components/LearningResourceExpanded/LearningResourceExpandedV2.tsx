@@ -78,18 +78,18 @@ const RightContainer = styled.div({
   },
 })
 
-const ImageContainer = styled.div<{ aspect: number }>`
-  position: relative;
-  width: 100%;
-  padding-bottom: ${({ aspect }) => 100 / aspect}%;
-`
-
-const Image = styled(NextImage)({
-  borderRadius: "8px",
+const ImageContainer = styled.div<{ aspect: number }>((props) => ({
   width: "100%",
-  objectFit: "cover",
-  zIndex: -1,
-})
+  aspectRatio: `${props.aspect}`,
+}))
+
+const Image = styled(NextImage)`
+  position: relative !important;
+  border-radius: 8px;
+  width: 100%;
+  object-fit: cover;
+  z-index: -1;
+`
 
 const SkeletonImage = styled(Skeleton)<{ aspect: number }>((aspect) => ({
   borderRadius: "8px",
