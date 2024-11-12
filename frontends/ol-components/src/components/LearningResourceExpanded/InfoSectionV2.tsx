@@ -187,7 +187,6 @@ const RunDates: React.FC<{ resource: LearningResource }> = ({ resource }) => {
     )
     const showLessLink = (
       <NoWrap>
-        <br />
         <ShowLessLink
           color="red"
           size="small"
