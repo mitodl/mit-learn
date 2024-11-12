@@ -27,53 +27,6 @@ export async function generateMetadata({
 
 const Page: React.FC = async () => {
   const dehydratedState = await prefetch([
-    /* We can't prefetch any learning resource until they are fully public, https://github.com/mitodl/hq/issues/5159
-
-    // The queries for carousel content are not checked in the query cache warnings as the use the key factory methods directly
-
-    // Featured Courses carousel "All"
-    learningResourcesKeyFactory.featured({
-      limit: 12,
-    }),
-    // Featured Courses carousel "Free" (worth fetching for tabs not shown on load?)
-    learningResourcesKeyFactory.featured({
-      limit: 12,
-      free: true,
-    }),
-    // Featured Courses carousel "With Certificate"
-    learningResourcesKeyFactory.featured({
-      limit: 12,
-      certification: true,
-      professional: false,
-    }),
-    // Featured Courses carousel "Professional & Executive Learning"
-    learningResourcesKeyFactory.featured({
-      limit: 12,
-      certification: true,
-      professional: false,
-    }),
-    // Media carousel "All"
-    learningResourcesKeyFactory.list({
-      resource_type: ["video", "podcast_episode"],
-      limit: 12,
-      sortby: "new",
-    }),
-    // Media carousel "Videos"
-    learningResourcesKeyFactory.list({
-      resource_type: ["video"],
-      limit: 12,
-      sortby: "new",
-    }),
-    // Media carousel "Podcasts"
-    learningResourcesKeyFactory.list({
-      resource_type: ["podcast_episode"],
-      limit: 12,
-      sortby: "new",
-    }),
-    // Browse by Topic
-    learningResourcesKeyFactory.topics({ is_toplevel: true }),
-    */
-
     testimonialsKeyFactory.list({ position: 1 }),
     newsEventsKeyFactory.list({
       feed_type: [NewsEventsListFeedTypeEnum.News],
