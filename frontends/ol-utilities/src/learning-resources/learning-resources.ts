@@ -1,9 +1,5 @@
 import moment from "moment"
-import type {
-  LearningResource,
-  LearningResourcePrice,
-  LearningResourceRun,
-} from "api"
+import type { LearningResource, LearningResourceRun } from "api"
 import { DeliveryEnum, ResourceTypeEnum } from "api"
 import { capitalize } from "lodash"
 import { formatDate } from "../date/format"
@@ -133,36 +129,41 @@ const allRunsAreIdentical = (resource: LearningResource) => {
   if (resource.runs.length <= 1) {
     return true
   }
-  const prices: LearningResourcePrice[] = []
-  const deliveryMethods = []
-  const locations = []
+  const dates = new Set<string>()
+  const amounts = new Set<string>()
+  const currencies = new Set<string>()
+  const deliveryMethods = new Set<string>()
+  const locations = new Set<string>()
   for (const run of resource.runs) {
+    if (run.start_date) {
+      dates.add(run.start_date)
+    }
     if (run.resource_prices) {
       run.resource_prices.forEach((price) => {
-        if (price.amount !== "0") {
-          prices.push(price)
+        if (!(resource.free && price.amount === "0")) {
+          amounts.add(price.amount)
+          currencies.add(price.currency)
         }
       })
     }
     if (run.delivery) {
-      deliveryMethods.push(run.delivery)
+      for (const dm of run.delivery) {
+        deliveryMethods.add(dm.code)
+      }
     }
     if (run.location) {
-      locations.push(run.location)
+      locations.add(run.location)
     }
   }
-  const distinctPrices = [...new Set(prices.map((p) => p.amount).flat())]
-  const distinctDeliveryMethods = [
-    ...new Set(deliveryMethods.flat().map((dm) => dm?.code)),
-  ]
-  const hasInPerson = distinctDeliveryMethods.includes(DeliveryEnum.InPerson)
-  const distinctLocations = [...new Set(locations.flat().map((l) => l))]
+  const hasInPerson = [...deliveryMethods].some(
+    (dm) => dm === DeliveryEnum.InPerson,
+  )
   return (
-    distinctPrices.length === 1 &&
-    distinctDeliveryMethods.length === 1 &&
-    (hasInPerson
-      ? distinctLocations.length === 1
-      : distinctLocations.length === 0)
+    dates.size === 1 &&
+    amounts.size === 1 &&
+    currencies.size === 1 &&
+    deliveryMethods.size === 1 &&
+    (hasInPerson ? locations.size === 1 : locations.size === 0)
   )
 }
 
