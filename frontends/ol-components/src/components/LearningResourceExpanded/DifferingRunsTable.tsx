@@ -34,7 +34,6 @@ const DifferingRunHeader = styled.div({
   display: "flex",
   alignSelf: "stretch",
   alignItems: "center",
-  flex: "1 0 0",
   gap: "16px",
   padding: "12px",
   color: theme.custom.colors.darkGray2,
@@ -44,16 +43,45 @@ const DifferingRunHeader = styled.div({
 
 const DifferingRunData = styled.div({
   display: "flex",
-  flexShrink: 0,
-  flex: "1 0 0",
   color: theme.custom.colors.darkGray2,
   ...theme.typography.body3,
 })
 
 const DifferingRunLabel = styled.strong({
   display: "flex",
-  flex: "1 0 0",
 })
+
+const dateColumnStyle = {
+  width: "130px",
+  [theme.breakpoints.down("sm")]: {
+    width: "auto",
+    flex: "2 0 0",
+  },
+}
+
+const priceColumnStyle = {
+  width: "110px",
+  [theme.breakpoints.down("sm")]: {
+    width: "auto",
+    flex: "1 0 0",
+  },
+}
+
+const formatStyle = {
+  flex: "1 0 0",
+}
+
+const DateLabel = styled(DifferingRunLabel)(dateColumnStyle)
+
+const PriceLabel = styled(DifferingRunLabel)(priceColumnStyle)
+
+const FormatLabel = styled(DifferingRunLabel)(formatStyle)
+
+const DateData = styled(DifferingRunData)(dateColumnStyle)
+
+const PriceData = styled(DifferingRunData)(priceColumnStyle)
+
+const FormatData = styled(DifferingRunData)(formatStyle)
 
 const DifferingRunLocation = styled(DifferingRunData)({
   flex: "1 0 100%",
@@ -69,24 +97,22 @@ const DifferingRunsTable: React.FC<{ resource: LearningResource }> = ({
     return (
       <DifferingRuns data-testid="differing-runs-table">
         <DifferingRunHeader>
-          <DifferingRunLabel>Date</DifferingRunLabel>
-          <DifferingRunLabel>Price</DifferingRunLabel>
-          <DifferingRunLabel>Format</DifferingRunLabel>
+          <DateLabel>Date</DateLabel>
+          <PriceLabel>Price</PriceLabel>
+          <FormatLabel>Format</FormatLabel>
         </DifferingRunHeader>
         {resource.runs?.map((run, index) => (
           <DifferingRun key={index}>
-            <DifferingRunData>
-              {formatRunDate(run, asTaughtIn)}
-            </DifferingRunData>
+            <DateData>{formatRunDate(run, asTaughtIn)}</DateData>
             {run.resource_prices && (
-              <DifferingRunData>
+              <PriceData>
                 <span>{getDisplayPrice(getRunPrices(run)["course"])}</span>
-              </DifferingRunData>
+              </PriceData>
             )}
             {run.delivery && (
-              <DifferingRunData>
+              <FormatData>
                 <span>{run.delivery?.map((dm) => dm?.name).join(", ")}</span>
-              </DifferingRunData>
+              </FormatData>
             )}
             {run.delivery.filter((d) => d.code === "in_person").length > 0 &&
               run.location && (
