@@ -45,6 +45,13 @@ export const usePrefetchWarnings = ({
    */
   useEffect(
     () => {
+      /* Invalidate all learning resource queries so they are re-fetched in the client
+       * for session specific data (user list memberships).
+       * This is interim, until the memberships endpoint is implemented in the frontend
+       * TODO remove once complete (see https://github.com/mitodl/hq/issues/5159)
+       */
+      queryClient.invalidateQueries(["learningResources"])
+
       if (process.env.NODE_ENV === "production") {
         return
       }

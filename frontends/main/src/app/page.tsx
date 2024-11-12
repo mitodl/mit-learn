@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import HomePage from "@/app-pages/HomePage/HomePage"
 import { getMetadataAsync } from "@/common/metadata"
 import { Hydrate } from "@tanstack/react-query"
+import { learningResourcesKeyFactory } from "api/hooks/learningResources"
 import { testimonialsKeyFactory } from "api/hooks/testimonials"
 import {
   NewsEventsListFeedTypeEnum,
@@ -27,15 +28,14 @@ export async function generateMetadata({
 
 const Page: React.FC = async () => {
   const dehydratedState = await prefetch([
-    /* We can't prefetch any learning resource until they are fully public, https://github.com/mitodl/hq/issues/5159
+    /* We can't prefetch any learning resource until they are fully public, https://github.com/mitodl/hq/issues/5159 */
 
     // The queries for carousel content are not checked in the query cache warnings as the use the key factory methods directly
-
     // Featured Courses carousel "All"
     learningResourcesKeyFactory.featured({
       limit: 12,
     }),
-    // Featured Courses carousel "Free" (worth fetching for tabs not shown on load?)
+    // Featured Courses carousel "Free"
     learningResourcesKeyFactory.featured({
       limit: 12,
       free: true,
@@ -49,8 +49,7 @@ const Page: React.FC = async () => {
     // Featured Courses carousel "Professional & Executive Learning"
     learningResourcesKeyFactory.featured({
       limit: 12,
-      certification: true,
-      professional: false,
+      professional: true,
     }),
     // Media carousel "All"
     learningResourcesKeyFactory.list({
@@ -72,7 +71,6 @@ const Page: React.FC = async () => {
     }),
     // Browse by Topic
     learningResourcesKeyFactory.topics({ is_toplevel: true }),
-    */
 
     testimonialsKeyFactory.list({ position: 1 }),
     newsEventsKeyFactory.list({
