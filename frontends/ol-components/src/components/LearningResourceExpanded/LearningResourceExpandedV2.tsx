@@ -285,7 +285,7 @@ const getCallToActionText = (resource: LearningResource): string => {
   const accessCourseMaterials = "Access Course Materials"
   const watchOnYouTube = "Watch on YouTube"
   const listenToPodcast = "Listen to Podcast"
-  const learnMore = "Learn More"
+  const learnMore = "Learn More About"
   const callsToAction = {
     [ResourceTypeEnum.Course]: learnMore,
     [ResourceTypeEnum.Program]: learnMore,
@@ -355,6 +355,10 @@ const CallToActionSection = ({
       <StyledLink
         target="_blank"
         size="medium"
+        data-ph-action="click-cta"
+        data-ph-offered-by={offeredBy?.code}
+        data-ph-resource-type={resource.resource_type}
+        data-ph-resource-id={resource.id}
         endIcon={<RiExternalLinkLine />}
         href={getCallToActionUrl(resource) || ""}
       >

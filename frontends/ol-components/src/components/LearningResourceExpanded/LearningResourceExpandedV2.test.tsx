@@ -98,13 +98,14 @@ describe("Learning Resource Expanded", () => {
 
       setup(resource)
 
-      const linkName = "Learn More"
+      const linkName = "Learn More About"
       if (linkName) {
         const link = screen.getByRole("link", {
           name: linkName,
         }) as HTMLAnchorElement
 
         expect(link.href).toMatch(new RegExp(`^${resource.url}/?$`))
+        expect(link.getAttribute("data-ph-action")).toBe("click-cta")
       }
     },
   )
