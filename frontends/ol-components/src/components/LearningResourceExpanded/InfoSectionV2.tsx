@@ -167,7 +167,7 @@ const RunDates: React.FC<{ resource: LearningResource }> = ({ resource }) => {
         return 0
       })
       .map((run) => formatRunDate(run, asTaughtIn)) ?? []
-  const showMore = allRunsAreIdentical(resource) && sortedDates.length > 2
+  const showMore = sortedDates.length > 2
   if (showMore) {
     const showMoreLink = (
       <NoWrap>
@@ -235,7 +235,9 @@ const INFO_ITEMS: InfoItemConfig = [
     },
     Icon: RiCalendarLine,
     selector: (resource: LearningResource) => {
-      return <RunDates resource={resource} />
+      if (allRunsAreIdentical(resource)) {
+        return <RunDates resource={resource} />
+      } else return null
     },
   },
   {
@@ -450,9 +452,11 @@ const InfoSectionV2 = ({ resource }: { resource?: LearningResource }) => {
     <>
       <DifferingRunsTable resource={resource} />
       <InfoItems data-testid="drawer-info-items">
-        {infoItems.map((props, index) => (
-          <InfoItem key={index} {...props} />
-        ))}
+        {infoItems
+          .filter((props) => props.value !== null)
+          .map((props, index) => (
+            <InfoItem key={index} {...props} />
+          ))}
       </InfoItems>
     </>
   )
