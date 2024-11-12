@@ -174,16 +174,16 @@ const RunDates: React.FC<{ resource: LearningResource }> = ({ resource }) => {
       .map((run) => formatRunDate(run, asTaughtIn)) ?? []
   const showMore = sortedDates.length > 2
   if (showMore) {
-    const LinkType = showingMore ? ShowLessLink : ShowMoreLink
+    const ShowHideLink = showingMore ? ShowLessLink : ShowMoreLink
     const showMoreLink = (
       <NoWrap>
-        <LinkType
+        <ShowHideLink
           color="red"
           size="small"
           onClick={() => setShowingMore(!showingMore)}
         >
           {showingMore ? "Show less" : "Show more"}
-        </LinkType>
+        </ShowHideLink>
       </NoWrap>
     )
     return (
