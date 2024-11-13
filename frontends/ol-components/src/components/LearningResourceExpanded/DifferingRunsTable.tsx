@@ -1,8 +1,9 @@
 import React from "react"
 import styled from "@emotion/styled"
 import { theme } from "../ThemeProvider/ThemeProvider"
-import { LearningResource, LearningResourcePrice } from "api"
+import { LearningResource } from "api"
 import {
+  allRunsAreIdentical,
   formatRunDate,
   getDisplayPrice,
   getRunPrices,
@@ -33,7 +34,6 @@ const DifferingRunHeader = styled.div({
   display: "flex",
   alignSelf: "stretch",
   alignItems: "center",
-  flex: "1 0 0",
   gap: "16px",
   padding: "12px",
   color: theme.custom.colors.darkGray2,
@@ -43,16 +43,45 @@ const DifferingRunHeader = styled.div({
 
 const DifferingRunData = styled.div({
   display: "flex",
-  flexShrink: 0,
-  flex: "1 0 0",
   color: theme.custom.colors.darkGray2,
   ...theme.typography.body3,
 })
 
 const DifferingRunLabel = styled.strong({
   display: "flex",
-  flex: "1 0 0",
 })
+
+const dateColumnStyle = {
+  width: "130px",
+  [theme.breakpoints.down("sm")]: {
+    width: "auto",
+    flex: "2 0 0",
+  },
+}
+
+const priceColumnStyle = {
+  width: "110px",
+  [theme.breakpoints.down("sm")]: {
+    width: "auto",
+    flex: "1 0 0",
+  },
+}
+
+const formatStyle = {
+  flex: "1 0 0",
+}
+
+const DateLabel = styled(DifferingRunLabel)(dateColumnStyle)
+
+const PriceLabel = styled(DifferingRunLabel)(priceColumnStyle)
+
+const FormatLabel = styled(DifferingRunLabel)(formatStyle)
+
+const DateData = styled(DifferingRunData)(dateColumnStyle)
+
+const PriceData = styled(DifferingRunData)(priceColumnStyle)
+
+const FormatData = styled(DifferingRunData)(formatStyle)
 
 const DifferingRunLocation = styled(DifferingRunData)({
   flex: "1 0 100%",
@@ -63,62 +92,27 @@ const DifferingRunLocation = styled(DifferingRunData)({
 const DifferingRunsTable: React.FC<{ resource: LearningResource }> = ({
   resource,
 }) => {
-  if (!resource.runs) {
-    return null
-  }
-  if (resource.runs.length === 1) {
-    return null
-  }
   const asTaughtIn = resource ? showStartAnytime(resource) : false
-  const prices: LearningResourcePrice[] = []
-  const deliveryMethods = []
-  const locations = []
-  for (const run of resource.runs) {
-    if (run.resource_prices) {
-      run.resource_prices.forEach((price) => {
-        if (price.amount !== "0") {
-          prices.push(price)
-        }
-      })
-    }
-    if (run.delivery) {
-      deliveryMethods.push(run.delivery)
-    }
-    if (run.location) {
-      locations.push(run.location)
-    }
-  }
-  const distinctPrices = [...new Set(prices.map((p) => p.amount).flat())]
-  const distinctDeliveryMethods = [
-    ...new Set(deliveryMethods.flat().map((dm) => dm?.code)),
-  ]
-  const distinctLocations = [...new Set(locations.flat().map((l) => l))]
-  if (
-    distinctPrices.length > 1 ||
-    distinctDeliveryMethods.length > 1 ||
-    distinctLocations.length > 1
-  ) {
+  if (!allRunsAreIdentical(resource)) {
     return (
       <DifferingRuns data-testid="differing-runs-table">
         <DifferingRunHeader>
-          <DifferingRunLabel>Date</DifferingRunLabel>
-          <DifferingRunLabel>Price</DifferingRunLabel>
-          <DifferingRunLabel>Format</DifferingRunLabel>
+          <DateLabel>Date</DateLabel>
+          <PriceLabel>Price</PriceLabel>
+          <FormatLabel>Format</FormatLabel>
         </DifferingRunHeader>
-        {resource.runs.map((run, index) => (
+        {resource.runs?.map((run, index) => (
           <DifferingRun key={index}>
-            <DifferingRunData>
-              {formatRunDate(run, asTaughtIn)}
-            </DifferingRunData>
+            <DateData>{formatRunDate(run, asTaughtIn)}</DateData>
             {run.resource_prices && (
-              <DifferingRunData>
+              <PriceData>
                 <span>{getDisplayPrice(getRunPrices(run)["course"])}</span>
-              </DifferingRunData>
+              </PriceData>
             )}
             {run.delivery && (
-              <DifferingRunData>
+              <FormatData>
                 <span>{run.delivery?.map((dm) => dm?.name).join(", ")}</span>
-              </DifferingRunData>
+              </FormatData>
             )}
             {run.delivery.filter((d) => d.code === "in_person").length > 0 &&
               run.location && (
