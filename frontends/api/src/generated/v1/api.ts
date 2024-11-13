@@ -18234,6 +18234,45 @@ export const LearningpathsApiAxiosParamCreator = function (
       }
     },
     /**
+     * Get a list of all learning path items
+     * @summary List
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    learningpathsMembershipList: async (
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      const localVarPath = `/api/v1/learningpaths/membership/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
      * Update individual fields of a learning path
      * @summary Update
      * @param {number} id A unique integer value identifying this learning resource.
@@ -18673,6 +18712,35 @@ export const LearningpathsApiFp = function (configuration?: Configuration) {
         )(axios, operationBasePath || basePath)
     },
     /**
+     * Get a list of all learning path items
+     * @summary List
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async learningpathsMembershipList(
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<Array<MicroLearningPathRelationship>>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.learningpathsMembershipList(options)
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["LearningpathsApi.learningpathsMembershipList"]?.[
+          index
+        ]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
      * Update individual fields of a learning path
      * @summary Update
      * @param {number} id A unique integer value identifying this learning resource.
@@ -18915,6 +18983,19 @@ export const LearningpathsApiFactory = function (
           requestParameters.topic,
           options,
         )
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * Get a list of all learning path items
+     * @summary List
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    learningpathsMembershipList(
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<Array<MicroLearningPathRelationship>> {
+      return localVarFp
+        .learningpathsMembershipList(options)
         .then((request) => request(axios, basePath))
     },
     /**
@@ -19453,6 +19534,19 @@ export class LearningpathsApi extends BaseAPI {
         requestParameters.topic,
         options,
       )
+      .then((request) => request(this.axios, this.basePath))
+  }
+
+  /**
+   * Get a list of all learning path items
+   * @summary List
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof LearningpathsApi
+   */
+  public learningpathsMembershipList(options?: RawAxiosRequestConfig) {
+    return LearningpathsApiFp(this.configuration)
+      .learningpathsMembershipList(options)
       .then((request) => request(this.axios, this.basePath))
   }
 
@@ -24127,6 +24221,45 @@ export const UserlistsApiAxiosParamCreator = function (
       }
     },
     /**
+     * Get a list of all userlist items for a user
+     * @summary List
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    userlistsMembershipList: async (
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      const localVarPath = `/api/v1/userlists/membership/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
      * Viewset for UserLists
      * @summary Update
      * @param {number} id A unique integer value identifying this user list.
@@ -24505,6 +24638,33 @@ export const UserlistsApiFp = function (configuration?: Configuration) {
         )(axios, operationBasePath || basePath)
     },
     /**
+     * Get a list of all userlist items for a user
+     * @summary List
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async userlistsMembershipList(
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<Array<MicroUserListRelationship>>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.userlistsMembershipList(options)
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["UserlistsApi.userlistsMembershipList"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
      * Viewset for UserLists
      * @summary Update
      * @param {number} id A unique integer value identifying this user list.
@@ -24720,6 +24880,19 @@ export const UserlistsApiFactory = function (
           requestParameters.offset,
           options,
         )
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * Get a list of all userlist items for a user
+     * @summary List
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    userlistsMembershipList(
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<Array<MicroUserListRelationship>> {
+      return localVarFp
+        .userlistsMembershipList(options)
         .then((request) => request(axios, basePath))
     },
     /**
@@ -25124,6 +25297,19 @@ export class UserlistsApi extends BaseAPI {
   ) {
     return UserlistsApiFp(this.configuration)
       .userlistsList(requestParameters.limit, requestParameters.offset, options)
+      .then((request) => request(this.axios, this.basePath))
+  }
+
+  /**
+   * Get a list of all userlist items for a user
+   * @summary List
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof UserlistsApi
+   */
+  public userlistsMembershipList(options?: RawAxiosRequestConfig) {
+    return UserlistsApiFp(this.configuration)
+      .userlistsMembershipList(options)
       .then((request) => request(this.axios, this.basePath))
   }
 

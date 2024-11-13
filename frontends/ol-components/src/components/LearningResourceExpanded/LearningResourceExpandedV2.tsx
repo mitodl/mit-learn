@@ -78,17 +78,18 @@ const RightContainer = styled.div({
   },
 })
 
-const ImageContainer = styled.div<{ aspect: number }>`
-  position: relative;
-  width: 100%;
-  padding-bottom: ${({ aspect }) => 100 / aspect}%;
-`
-
-const Image = styled(NextImage)({
-  borderRadius: "8px",
+const ImageContainer = styled.div({
   width: "100%",
-  objectFit: "cover",
 })
+
+const Image = styled(NextImage)<{ aspect: number }>`
+  position: relative !important;
+  border-radius: 8px;
+  width: 100%;
+  aspect-ratio: ${({ aspect }) => aspect};
+  object-fit: cover;
+  z-index: -1;
+`
 
 const SkeletonImage = styled(Skeleton)<{ aspect: number }>((aspect) => ({
   borderRadius: "8px",
@@ -243,20 +244,22 @@ const ImageSection: React.FC<{
     )
   } else if (resource?.image) {
     return (
-      <ImageContainer aspect={aspect}>
+      <ImageContainer>
         <Image
           src={resource.image?.url ?? DEFAULT_RESOURCE_IMG}
           alt={resource?.image.alt ?? ""}
+          aspect={aspect}
           fill
         />
       </ImageContainer>
     )
   } else if (resource) {
     return (
-      <ImageContainer aspect={aspect}>
+      <ImageContainer>
         <Image
           src={DEFAULT_RESOURCE_IMG}
           alt={resource.image?.alt ?? ""}
+          aspect={aspect}
           fill
         />
       </ImageContainer>
@@ -354,6 +357,10 @@ const CallToActionSection = ({
       <StyledLink
         target="_blank"
         size="medium"
+        data-ph-action="click-cta"
+        data-ph-offered-by={offeredBy?.code}
+        data-ph-resource-type={resource.resource_type}
+        data-ph-resource-id={resource.id}
         endIcon={<RiExternalLinkLine />}
         href={getCallToActionUrl(resource) || ""}
       >

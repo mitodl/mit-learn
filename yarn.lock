@@ -1463,16 +1463,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@chromatic-com/storybook@npm:^1.9.0":
-  version: 1.9.0
-  resolution: "@chromatic-com/storybook@npm:1.9.0"
+"@chromatic-com/storybook@npm:^3.0.0":
+  version: 3.2.2
+  resolution: "@chromatic-com/storybook@npm:3.2.2"
   dependencies:
-    chromatic: "npm:^11.4.0"
+    chromatic: "npm:^11.15.0"
     filesize: "npm:^10.0.12"
     jsonfile: "npm:^6.1.0"
     react-confetti: "npm:^6.1.0"
     strip-ansi: "npm:^7.1.0"
-  checksum: 10/27ca6930a4978a52471ed7256cbf549e57b5c9c45b650b55461400a63692f5b30a7a0a7436faadd713952ce6285b873041494c10e92cccdc5bdafee1f1755459
+  peerDependencies:
+    storybook: ^8.2.0 || ^8.3.0-0 || ^8.4.0-0 || ^8.5.0-0 || ^8.6.0-0
+  checksum: 10/71338edf56cdbc855074c78981f2e1612b364cd864fa99bbda5c0aad147769b9f476de2fd76816102fd504efc5c0c54ba559d5ac9e3828d53278fe7000863d54
   languageName: node
   linkType: hard
 
@@ -8439,9 +8441,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"chromatic@npm:^11.4.0":
-  version: 11.12.5
-  resolution: "chromatic@npm:11.12.5"
+"chromatic@npm:^11.15.0":
+  version: 11.16.5
+  resolution: "chromatic@npm:11.16.5"
   peerDependencies:
     "@chromatic-com/cypress": ^0.*.* || ^1.0.0
     "@chromatic-com/playwright": ^0.*.* || ^1.0.0
@@ -8454,7 +8456,7 @@ __metadata:
     chroma: dist/bin.js
     chromatic: dist/bin.js
     chromatic-cli: dist/bin.js
-  checksum: 10/1b67b8f1c3813871453910a3d90b1dfe20da9ecd0fc71bb5186b132d72fc3a11a6e74f14abd1b51e1ebbd99bd7089e1615ba7be8529be5dde7897b9778c48ae7
+  checksum: 10/df200f3900be2b5bf662f2308b15693730d55380085636c20ccd7a78913b3b7e5401d32706098462e020542dc47997021ce894e17fb4bbf771a48b73378884c2
   languageName: node
   linkType: hard
 
@@ -11408,7 +11410,7 @@ __metadata:
     jest-fail-on-console: "npm:^3.2.0"
     jest-watch-typeahead: "npm:^2.2.2"
     jest-when: "npm:^3.6.0"
-    postcss-styled-syntax: "npm:^0.6.4"
+    postcss-styled-syntax: "npm:^0.7.0"
     prettier: "npm:^3.3.3"
     prettier-plugin-django-alpine: "npm:^1.2.6"
     stylelint: "npm:^15.2.0"
@@ -16017,7 +16019,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "ol-components@workspace:frontends/ol-components"
   dependencies:
-    "@chromatic-com/storybook": "npm:^1.9.0"
+    "@chromatic-com/storybook": "npm:^3.0.0"
     "@dnd-kit/core": "npm:^6.0.8"
     "@dnd-kit/sortable": "npm:^8.0.0"
     "@dnd-kit/utilities": "npm:^3.2.1"
@@ -17119,14 +17121,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"postcss-styled-syntax@npm:^0.6.4":
-  version: 0.6.4
-  resolution: "postcss-styled-syntax@npm:0.6.4"
+"postcss-styled-syntax@npm:^0.7.0":
+  version: 0.7.0
+  resolution: "postcss-styled-syntax@npm:0.7.0"
   dependencies:
-    typescript: "npm:^5.3.3"
+    typescript: "npm:^5.6.3"
   peerDependencies:
     postcss: ^8.4.21
-  checksum: 10/435bc414cc68d2d2297bb6354230226f554b88efb38610c0c35575eefc241edbabf12a4d4662957204e92091443fa25c85cb943916b61023c222e30a1127b1ff
+  checksum: 10/d52b4d556baf6b3c700fbb6b71bcc5bd3787d9af05a781bc1050031f61ac8e3ac60c5f7b8e924bd7ce6f8ff6b7d3314533f1526dd804729abdd021f835e35235
   languageName: node
   linkType: hard
 
@@ -20291,7 +20293,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@npm:^5, typescript@npm:^5.3.3, typescript@npm:^5.4.3, typescript@npm:^5.5.4":
+"typescript@npm:^5, typescript@npm:^5.4.3, typescript@npm:^5.5.4, typescript@npm:^5.6.3":
   version: 5.6.3
   resolution: "typescript@npm:5.6.3"
   bin:
@@ -20301,7 +20303,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@patch:typescript@npm%3A^5#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A^5.3.3#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A^5.4.3#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A^5.5.4#optional!builtin<compat/typescript>":
+"typescript@patch:typescript@npm%3A^5#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A^5.4.3#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A^5.5.4#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A^5.6.3#optional!builtin<compat/typescript>":
   version: 5.6.3
   resolution: "typescript@patch:typescript@npm%3A5.6.3#optional!builtin<compat/typescript>::version=5.6.3&hash=8c6c40"
   bin:

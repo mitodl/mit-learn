@@ -22,10 +22,6 @@ describe("SSR prefetch warnings", () => {
     jest.spyOn(console, "table").mockImplementation(() => {})
   })
 
-  afterEach(() => {
-    jest.clearAllMocks()
-  })
-
   it("Warns if a query is requested on the client that has not been prefetched", async () => {
     const { wrapper, queryClient } = setupReactQueryTest()
 
@@ -46,14 +42,12 @@ describe("SSR prefetch warnings", () => {
     )
     expect(console.table).toHaveBeenCalledWith(
       [
-        {
+        expect.objectContaining({
           disabled: false,
-          hash: '["learningResources","detail",1]',
           initialStatus: "loading",
-          key: ["learningResources", "detail", 1],
+          key: learningResources.detail(1).queryKey,
           observerCount: 1,
-          status: "loading",
-        },
+        }),
       ],
       ["hash", "initialStatus", "status", "observerCount", "disabled"],
     )
@@ -71,7 +65,7 @@ describe("SSR prefetch warnings", () => {
       wrapper,
       initialProps: {
         queryClient,
-        exemptions: [["learningResources", "detail", 1]],
+        exemptions: [learningResources.detail(1).queryKey],
       },
     })
 
@@ -111,9 +105,9 @@ describe("SSR prefetch warnings", () => {
       [
         {
           disabled: false,
-          hash: '["learningResources","detail",1]',
+          hash: JSON.stringify(learningResources.detail(1).queryKey),
           initialStatus: "success",
-          key: ["learningResources", "detail", 1],
+          key: learningResources.detail(1).queryKey,
           observerCount: 0,
           status: "success",
         },

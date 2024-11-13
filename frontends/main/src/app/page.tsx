@@ -68,11 +68,6 @@ const Page: React.FC = async () => {
 
     testimonials.list({ position: 1 }),
     newsEvents.list({
-      feed_type: [NewsEventsListFeedTypeEnum.News],
-      limit: 6,
-      sortby: "-news_date",
-    }),
-    newsEvents.list({
       feed_type: [NewsEventsListFeedTypeEnum.Events],
       limit: 5,
       sortby: "event_date",

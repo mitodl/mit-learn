@@ -1,6 +1,6 @@
 import moment from "moment"
 import type { LearningResource, LearningResourceRun } from "api"
-import { ResourceTypeEnum } from "api"
+import { DeliveryEnum, ResourceTypeEnum } from "api"
 import { capitalize } from "lodash"
 import { formatDate } from "../date/format"
 
@@ -116,6 +116,52 @@ const formatRunDate = (
   return null
 }
 
+/**
+ * Checks if all runs of a given learning resource are identical in terms of price, delivery method, and location.
+ *
+ * @param resource - The learning resource to check.
+ * @returns `true` if all runs have the same price, delivery method, and location; otherwise, `false`.
+ */
+const allRunsAreIdentical = (resource: LearningResource) => {
+  if (!resource.runs) {
+    return true
+  }
+  if (resource.runs.length <= 1) {
+    return true
+  }
+  const amounts = new Set<string>()
+  const currencies = new Set<string>()
+  const deliveryMethods = new Set<string>()
+  const locations = new Set<string>()
+  for (const run of resource.runs) {
+    if (run.resource_prices) {
+      run.resource_prices.forEach((price) => {
+        if (!(resource.free && price.amount === "0")) {
+          amounts.add(price.amount)
+          currencies.add(price.currency)
+        }
+      })
+    }
+    if (run.delivery) {
+      for (const dm of run.delivery) {
+        deliveryMethods.add(dm.code)
+      }
+    }
+    if (run.location) {
+      locations.add(run.location)
+    }
+  }
+  const hasInPerson = [...deliveryMethods].some(
+    (dm) => dm === DeliveryEnum.InPerson,
+  )
+  return (
+    amounts.size === 1 &&
+    currencies.size === 1 &&
+    deliveryMethods.size === 1 &&
+    (hasInPerson ? locations.size === 1 : locations.size === 0)
+  )
+}
+
 export {
   DEFAULT_RESOURCE_IMG,
   embedlyCroppedImage,
@@ -123,5 +169,6 @@ export {
   getReadableResourceType,
   findBestRun,
   formatRunDate,
+  allRunsAreIdentical,
 }
 export type { EmbedlyConfig }

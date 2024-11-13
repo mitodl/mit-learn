@@ -105,6 +105,7 @@ describe("Learning Resource Expanded", () => {
         }) as HTMLAnchorElement
 
         expect(link.href).toMatch(new RegExp(`^${resource.url}/?$`))
+        expect(link.getAttribute("data-ph-action")).toBe("click-cta")
       }
     },
   )

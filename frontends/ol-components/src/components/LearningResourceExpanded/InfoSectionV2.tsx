@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useState } from "react"
 import styled from "@emotion/styled"
 import ISO6391 from "iso-639-1"
 import {
@@ -16,12 +16,15 @@ import {
 } from "@remixicon/react"
 import { LearningResource, ResourceTypeEnum } from "api"
 import {
+  allRunsAreIdentical,
   formatDurationClockTime,
   formatRunDate,
   getLearningResourcePrices,
   showStartAnytime,
 } from "ol-utilities"
 import { theme } from "../ThemeProvider/ThemeProvider"
+import DifferingRunsTable from "./DifferingRunsTable"
+import { Link } from "../Link/Link"
 
 const SeparatorContainer = styled.span({
   padding: "0 8px",
@@ -86,6 +89,19 @@ const InfoValue = styled.div({
   ...theme.typography.body3,
 })
 
+const NoWrap = styled.span({
+  whiteSpace: "nowrap",
+})
+
+const ShowMoreLink = styled(Link)({
+  paddingLeft: "12px",
+})
+
+const ShowLessLink = styled(Link)({
+  display: "flex",
+  paddingTop: "4px",
+})
+
 const PriceDisplay = styled.div({
   display: "flex",
   alignItems: "center",
@@ -144,6 +160,77 @@ const InfoItemValue: React.FC<InfoItemValueProps> = ({
   )
 }
 
+const RunDates: React.FC<{ resource: LearningResource }> = ({ resource }) => {
+  const [showingMore, setShowingMore] = useState(false)
+  const asTaughtIn = showStartAnytime(resource)
+  const sortedDates = resource.runs
+    ?.sort((a, b) => {
+      if (a?.start_date && b?.start_date) {
+        return Date.parse(a.start_date) - Date.parse(b.start_date)
+      }
+      return 0
+    })
+    .map((run) => formatRunDate(run, asTaughtIn))
+  const totalDates = sortedDates?.length || 0
+  const showMore = totalDates > 2
+  if (showMore) {
+    const ShowHideLink = showingMore ? ShowLessLink : ShowMoreLink
+    const showMoreLink = (
+      <NoWrap>
+        <ShowHideLink
+          color="red"
+          size="small"
+          onClick={() => setShowingMore(!showingMore)}
+        >
+          {showingMore ? "Show less" : "Show more"}
+        </ShowHideLink>
+      </NoWrap>
+    )
+    return (
+      <span data-testid="drawer-run-dates">
+        {sortedDates?.slice(0, 2).map((runDate, index) => {
+          return (
+            <NoWrap key={`run-${index}`}>
+              <InfoItemValue
+                label={runDate}
+                index={index}
+                total={showingMore ? 3 : 2}
+              />
+            </NoWrap>
+          )
+        })}
+        {!showingMore && showMoreLink}
+        {showingMore &&
+          sortedDates?.slice(2).map((runDate, index) => {
+            return (
+              <NoWrap key={`run-${index + 2}`}>
+                <InfoItemValue
+                  label={runDate}
+                  index={index}
+                  total={sortedDates.length - 2}
+                />
+              </NoWrap>
+            )
+          })}
+        {showingMore && showMoreLink}
+      </span>
+    )
+  } else {
+    const runDates = sortedDates?.map((runDate, index) => {
+      return (
+        <NoWrap key={`run-${index}`}>
+          <InfoItemValue
+            label={runDate}
+            index={index}
+            total={sortedDates.length}
+          />
+        </NoWrap>
+      )
+    })
+    return <span data-testid="drawer-run-dates">{runDates}</span>
+  }
+}
+
 const INFO_ITEMS: InfoItemConfig = [
   {
     label: (resource: LearningResource) => {
@@ -153,33 +240,10 @@ const INFO_ITEMS: InfoItemConfig = [
     },
     Icon: RiCalendarLine,
     selector: (resource: LearningResource) => {
-      const asTaughtIn = resource ? showStartAnytime(resource) : false
-      if (
-        [ResourceTypeEnum.Course, ResourceTypeEnum.Program].includes(
-          resource.resource_type as "course" | "program",
-        )
-      ) {
-        const sortedDates =
-          resource.runs
-            ?.sort((a, b) => {
-              if (a?.start_date && b?.start_date) {
-                return Date.parse(a.start_date) - Date.parse(b.start_date)
-              }
-              return 0
-            })
-            .map((run) => formatRunDate(run, asTaughtIn)) ?? []
-        const runDates =
-          sortedDates.map((runDate, index) => {
-            return (
-              <InfoItemValue
-                key={`run-${index}`}
-                label={runDate}
-                index={index}
-                total={sortedDates.length}
-              />
-            )
-          }) ?? []
-        return runDates
+      const totalDatesWithRuns =
+        resource.runs?.filter((run) => run.start_date !== null).length || 0
+      if (allRunsAreIdentical(resource) && totalDatesWithRuns > 0) {
+        return <RunDates resource={resource} />
       } else return null
     },
   },
@@ -392,11 +456,16 @@ const InfoSectionV2 = ({ resource }: { resource?: LearningResource }) => {
   }
 
   return (
-    <InfoItems data-testid="drawer-info-items">
-      {infoItems.map((props, index) => (
-        <InfoItem key={index} {...props} />
-      ))}
-    </InfoItems>
+    <>
+      <DifferingRunsTable resource={resource} />
+      <InfoItems data-testid="drawer-info-items">
+        {infoItems
+          .filter((props) => props.value !== null)
+          .map((props, index) => (
+            <InfoItem key={index} {...props} />
+          ))}
+      </InfoItems>
+    </>
   )
 }
 

@@ -1,4 +1,4 @@
-import { ResourceTypeEnum } from "api"
+import { DeliveryEnum, DeliveryEnumDescriptions, ResourceTypeEnum } from "api"
 import { factories } from "api/test-utils"
 
 const _makeResource = factories.learningResources.resource
@@ -41,6 +41,18 @@ const resources = {
   }),
 }
 
+const sameDataRun = factories.learningResources.run({
+  delivery: [
+    {
+      code: DeliveryEnum.Online,
+      name: DeliveryEnumDescriptions.online,
+    },
+  ],
+  resource_prices: [
+    { amount: "0", currency: "USD" },
+    { amount: "100", currency: "USD" },
+  ],
+})
 const courses = {
   free: {
     noCertificate: makeResource({
@@ -150,6 +162,83 @@ const courses = {
     dated: makeResource({
       resource_type: ResourceTypeEnum.Course,
       availability: "dated",
+    }),
+  },
+  multipleRuns: {
+    sameData: makeResource({
+      resource_type: ResourceTypeEnum.Course,
+      free: true,
+      runs: [
+        factories.learningResources.run({
+          delivery: sameDataRun.delivery,
+          resource_prices: sameDataRun.resource_prices,
+          location: sameDataRun.location,
+        }),
+        factories.learningResources.run({
+          delivery: sameDataRun.delivery,
+          resource_prices: sameDataRun.resource_prices,
+          location: sameDataRun.location,
+        }),
+        factories.learningResources.run({
+          delivery: sameDataRun.delivery,
+          resource_prices: sameDataRun.resource_prices,
+          location: sameDataRun.location,
+        }),
+        factories.learningResources.run({
+          delivery: sameDataRun.delivery,
+          resource_prices: sameDataRun.resource_prices,
+          location: sameDataRun.location,
+        }),
+      ],
+    }),
+    differentData: makeResource({
+      resource_type: ResourceTypeEnum.Course,
+      runs: [
+        factories.learningResources.run({
+          delivery: [
+            {
+              code: DeliveryEnum.Online,
+              name: DeliveryEnumDescriptions.online,
+            },
+          ],
+          resource_prices: [
+            { amount: "0", currency: "USD" },
+            { amount: "100", currency: "USD" },
+          ],
+        }),
+        factories.learningResources.run({
+          delivery: [
+            {
+              code: DeliveryEnum.Online,
+              name: DeliveryEnumDescriptions.online,
+            },
+          ],
+          resource_prices: [
+            { amount: "0", currency: "USD" },
+            { amount: "100", currency: "USD" },
+          ],
+        }),
+        factories.learningResources.run({
+          delivery: [
+            {
+              code: DeliveryEnum.InPerson,
+              name: DeliveryEnumDescriptions.in_person,
+            },
+          ],
+          resource_prices: [{ amount: "150", currency: "USD" }],
+          location: "Earth",
+        }),
+        factories.learningResources.run({
+          delivery: [
+            {
+              code: DeliveryEnum.InPerson,
+              name: DeliveryEnumDescriptions.in_person,
+            },
+          ],
+          resource_prices: [{ amount: "150", currency: "USD" }],
+          location: "Earth",
+        }),
+      ],
     }),
   },
 }
