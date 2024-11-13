@@ -244,6 +244,10 @@ const CallToActionSection = ({
       <StyledLink
         target="_blank"
         size="medium"
+        data-ph-action="click-cta"
+        data-ph-offered-by={offeredBy?.code}
+        data-ph-resource-type={resource.resource_type}
+        data-ph-resource-id={resource.id}
         endIcon={<RiExternalLinkLine />}
         href={getCallToActionUrl(resource) || ""}
       >
