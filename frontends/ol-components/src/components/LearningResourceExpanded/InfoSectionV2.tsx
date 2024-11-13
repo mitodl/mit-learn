@@ -13,6 +13,7 @@ import {
   RiTranslate2,
   RiPresentationLine,
   RiAwardFill,
+  RiAwardLine,
 } from "@remixicon/react"
 import { LearningResource, ResourceTypeEnum } from "api"
 import {
@@ -255,18 +256,35 @@ const INFO_ITEMS: InfoItemConfig = [
 
       return (
         <PriceDisplay>
-          <div>{prices.course.display}</div>
-          {resource.certification && (
+          <div>{resource.free ? "Free" : prices.course.display}</div>
+          {resource.certification &&
+          resource.free &&
+          prices.certificate.display ? (
             <Certificate>
               <RiAwardFill />
-              {prices.certificate.display
-                ? "Earn a certificate:"
-                : "Certificate included"}
+              <span>Earn a certificate:</span>
               <span>{prices.certificate.display}</span>
             </Certificate>
-          )}
+          ) : null}
         </PriceDisplay>
       )
+    },
+  },
+  {
+    label: "Certificate:",
+    Icon: RiAwardLine,
+    selector: (resource: LearningResource) => {
+      const prices = getLearningResourcePrices(resource)
+
+      return prices.certificate &&
+        resource.certification_type &&
+        !resource.free ? (
+        <InfoItemValue
+          label={resource.certification_type.name}
+          index={1}
+          total={1}
+        />
+      ) : null
     },
   },
   {
