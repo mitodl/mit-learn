@@ -25,12 +25,14 @@ class RenameDuration(TransformWithSchema):
     @staticmethod
     def transform_api_schema(schema: dict) -> dict:
         """
-        Transform the schema to match the previous version.
+        Transform the schema to match the previous version.  We need to apply it to the
+        components in the schema for which this transform is relevant, because at this
+        point there is no serializer to transform.
         """
         resource_components = [
             component
             for component in schema["components"]["schemas"]
-            if component.endswith("Resource")
+            if component.endswith("Resource") or component == "LearningResourceRun"
         ]
         for resource in resource_components:
             resource_schema = schema["components"]["schemas"][resource]

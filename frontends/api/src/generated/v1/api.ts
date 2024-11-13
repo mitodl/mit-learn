@@ -2298,12 +2298,6 @@ export interface LearningResourceRun {
   level: Array<LearningResourceRunLevelInner>
   /**
    *
-   * @type {Array<CourseResourceLearningFormatInner>}
-   * @memberof LearningResourceRun
-   */
-  delivery: Array<CourseResourceLearningFormatInner>
-  /**
-   *
    * @type {Array<CourseResourceFormatInner>}
    * @memberof LearningResourceRun
    */
@@ -2434,6 +2428,12 @@ export interface LearningResourceRun {
    * @memberof LearningResourceRun
    */
   location?: string
+  /**
+   *
+   * @type {Array<CourseResourceLearningFormatInner>}
+   * @memberof LearningResourceRun
+   */
+  learning_format?: Array<CourseResourceLearningFormatInner>
 }
 
 /**

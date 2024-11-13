@@ -9972,23 +9972,6 @@ components:
             required:
             - code
             - name
-        delivery:
-          type: array
-          items:
-            type: object
-            properties:
-              code:
-                enum:
-                - online
-                - hybrid
-                - in_person
-                - offline
-              name:
-                type: string
-            required:
-            - code
-            - name
-          readOnly: true
         format:
           type: array
           items:
@@ -10101,6 +10084,23 @@ components:
         location:
           type: string
           maxLength: 256
+        learning_format:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                enum:
+                - online
+                - hybrid
+                - in_person
+                - offline
+              name:
+                type: string
+            required:
+            - code
+            - name
+          readOnly: true
       required:
       - delivery
       - format

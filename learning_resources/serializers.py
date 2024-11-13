@@ -278,8 +278,10 @@ class PaceSerializer(serializers.Field):
         return {"code": value, "name": Pace[value].value}
 
 
-class LearningResourceRunSerializer(serializers.ModelSerializer):
+class LearningResourceRunSerializer(VersionedSerializer, serializers.ModelSerializer):
     """Serializer for the LearningResourceRun model"""
+
+    transforms = (transforms.RenameDuration,)
 
     instructors = LearningResourceInstructorSerializer(
         read_only=True, allow_null=True, many=True
