@@ -449,13 +449,11 @@ def transform_content_files(
                     content = tika_output.get("content") or ""
                     content = content.strip()
                     tika_metadata = tika_output.get("metadata") or {}
-                    content =  re.sub(r'\n ', '\n',content)
-                    content=re.sub(r'\n+', '\n', content)
+                    content = re.sub(r"\n ", "\n", content)
+                    content = re.sub(r"\n+", "\n", content)
                     if key.endswith(".srt"):
                         content = re.sub(
-                            r"(\d+:\d+:\d+,\d+ --> \d+:\d+:\d+,\d+)\s+(.+)",
-                            "",
-                            content
+                            r"(\d+:\d+:\d+,\d+ --> \d+:\d+:\d+,\d+)\s+(.+)", "", content
                         )
                     content_dict = {
                         "content": content,
@@ -479,7 +477,9 @@ def transform_content_files(
             yield (
                 {
                     "key": key,
-                    "published": True if  content_dict['content'] or content_dict['content_title'] else False,
+                    "published": True
+                    if content_dict["content"] or content_dict["content_title"]
+                    else False,
                     "content_type": content_type,
                     "checksum": metadata.get("checksum"),
                     **content_dict,
