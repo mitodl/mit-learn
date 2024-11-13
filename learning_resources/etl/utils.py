@@ -446,10 +446,19 @@ def transform_content_files(
                         log.info("No tika response for %s", key)
                         continue
 
-                    tika_content = tika_output.get("content") or ""
+                    content = tika_output.get("content") or ""
+                    content = content.strip()
                     tika_metadata = tika_output.get("metadata") or {}
+                    content =  re.sub(r'\n ', '\n',content)
+                    content=re.sub(r'\n+', '\n', content)
+                    if key.endswith(".srt"):
+                        content = re.sub(
+                            r"(\d+:\d+:\d+,\d+ --> \d+:\d+:\d+,\d+)\s+(.+)",
+                            "",
+                            content
+                        )
                     content_dict = {
-                        "content": tika_content.strip(),
+                        "content": content,
                         "content_title": (
                             metadata.get("title") or tika_metadata.get("title") or ""
                         )[: get_max_contentfile_length("content_title")],
@@ -470,7 +479,7 @@ def transform_content_files(
             yield (
                 {
                     "key": key,
-                    "published": True,
+                    "published": True if  content_dict['content'] or content_dict['content_title'] else False,
                     "content_type": content_type,
                     "checksum": metadata.get("checksum"),
                     **content_dict,
