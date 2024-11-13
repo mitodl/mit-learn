@@ -23,4 +23,8 @@ const useTestimonialDetail = (id: number | undefined) => {
   })
 }
 
-export { useTestimonialDetail, useTestimonialList }
+export {
+  useTestimonialDetail,
+  useTestimonialList,
+  testimonials as testimonialsKeyFactory,
+}

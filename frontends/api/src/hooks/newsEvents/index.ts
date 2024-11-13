@@ -15,4 +15,9 @@ const useNewsEventsDetail = (id: number) => {
   return useQuery(newsEvents.detail(id))
 }
 
-export { useNewsEventsList, useNewsEventsDetail, NewsEventsListFeedTypeEnum }
+export {
+  useNewsEventsList,
+  useNewsEventsDetail,
+  NewsEventsListFeedTypeEnum,
+  newsEvents as newsEventsKeyFactory,
+}

@@ -27,6 +27,7 @@ const useChannelDetail = (channelType: string, channelName: string) => {
     ...channels.detailByType(channelType, channelName),
   })
 }
+
 const useChannelCounts = (channelType: string) => {
   return useQuery({
     ...channels.countsByType(channelType),
@@ -54,4 +55,5 @@ export {
   useChannelsList,
   useChannelPartialUpdate,
   useChannelCounts,
+  channels as channelsKeyFactory,
 }

@@ -3,8 +3,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { widgetListsApi } from "../../clients"
 import widgetLists from "./keyFactory"
 import { WidgetInstance } from "api/v0"
+
 /**
- * Query is diabled if id is undefined.
+ * Query is disabled if id is undefined.
  */
 const useWidgetList = (id: number | undefined) => {
   return useQuery({
