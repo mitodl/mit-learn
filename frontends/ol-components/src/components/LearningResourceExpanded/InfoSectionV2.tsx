@@ -266,7 +266,12 @@ const INFO_ITEMS: InfoItemConfig = [
                 <span>Earn a certificate:</span>
                 <span>{prices.certificate.display}</span>
               </Certificate>
-            ) : null}
+            ) : (
+              <Certificate>
+                <RiAwardFill />
+                <span>Certificate</span>
+              </Certificate>
+            )}
           </PriceDisplay>
         )
       } else return null
