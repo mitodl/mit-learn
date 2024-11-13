@@ -98,7 +98,7 @@ describe("Learning Resource Expanded", () => {
 
       setup(resource)
 
-      const linkName = "Learn More About"
+      const linkName = "Learn More"
       if (linkName) {
         const link = screen.getByRole("link", {
           name: linkName,
