@@ -258,20 +258,22 @@ const INFO_ITEMS: InfoItemConfig = [
         return (
           <PriceDisplay>
             <div>{resource.free ? "Free" : prices.course.display}</div>
-            {resource.certification &&
-            resource.free &&
-            prices.certificate.display ? (
-              <Certificate>
-                <RiAwardFill />
-                <span>Earn a certificate:</span>
-                <span>{prices.certificate.display}</span>
-              </Certificate>
-            ) : (
-              <Certificate>
-                <RiAwardFill />
-                <span>Certificate</span>
-              </Certificate>
-            )}
+            {resource.certification && resource.free ? (
+              <>
+                {prices.certificate.display ? (
+                  <Certificate>
+                    <RiAwardFill />
+                    <span>Earn a certificate:</span>
+                    <span>{prices.certificate.display}</span>
+                  </Certificate>
+                ) : (
+                  <Certificate>
+                    <RiAwardLine />
+                    <span>Certificate</span>
+                  </Certificate>
+                )}
+              </>
+            ) : null}
           </PriceDisplay>
         )
       } else return null
@@ -281,11 +283,7 @@ const INFO_ITEMS: InfoItemConfig = [
     label: "Certificate:",
     Icon: RiAwardLine,
     selector: (resource: LearningResource) => {
-      const prices = getLearningResourcePrices(resource)
-
-      return prices.certificate &&
-        resource.certification_type &&
-        !resource.free ? (
+      return resource.certification_type && !resource.free ? (
         <InfoItemValue
           label={resource.certification_type.name}
           index={1}
