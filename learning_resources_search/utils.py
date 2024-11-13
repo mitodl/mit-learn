@@ -11,6 +11,40 @@ from learning_resources_search.models import PercolateQuery
 log = logging.getLogger()
 
 
+def profile_to_query(user_profile):
+    query_params = {}
+    if user_profile.certificate_desired == "yes":
+        query_params["certification_type"] = [
+            "professional",
+            "completion",
+            "micromasters",
+        ]
+    elif user_profile.certificate_desired == "no":
+        query_params["certification_type"] = ["none"]
+
+    if user_profile.topic_interests.count() > 0:
+        query_params["topic"] = [
+            topic.name for topic in user_profile.topic_interests.all()
+        ]
+    if len(user_profile.delivery) > 0:
+        query_params["delivery"] = user_profile.delivery
+    return query_params
+
+
+def recommend_resources_for_user(user):
+    from learning_resources_search.api import (
+        execute_learn_search,
+    )
+    from learning_resources_search.serializers import (
+        LearningResourcesSearchRequestSerializer,
+    )
+
+    profile = user.profile
+    query = profile_to_query(profile)
+    serialized = LearningResourcesSearchRequestSerializer(query)
+    return execute_learn_search(serialized.data | {"endpoint": LEARNING_RESOURCE})
+
+
 def prune_channel_subscriptions():
     from learning_resources_search.api import (
         adjust_original_query_for_percolate,
