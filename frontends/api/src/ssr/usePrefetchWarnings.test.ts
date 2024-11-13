@@ -45,7 +45,7 @@ describe("SSR prefetch warnings", () => {
         expect.objectContaining({
           disabled: false,
           initialStatus: "loading",
-          key: learningResourcesKeyFactory.detail(1),
+          key: learningResourcesKeyFactory.detail(1).queryKey,
           observerCount: 1,
         }),
       ],
@@ -65,7 +65,7 @@ describe("SSR prefetch warnings", () => {
       wrapper,
       initialProps: {
         queryClient,
-        exemptions: [["learningResources", "detail", 1]],
+        exemptions: [learningResourcesKeyFactory.detail(1).queryKey],
       },
     })
 
@@ -105,9 +105,9 @@ describe("SSR prefetch warnings", () => {
       [
         {
           disabled: false,
-          hash: '["learningResources","detail",1]',
+          hash: JSON.stringify(learningResourcesKeyFactory.detail(1).queryKey),
           initialStatus: "success",
-          key: ["learningResources", "detail", 1],
+          key: learningResourcesKeyFactory.detail(1).queryKey,
           observerCount: 0,
           status: "success",
         },
