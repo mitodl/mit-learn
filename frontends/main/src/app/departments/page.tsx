@@ -3,8 +3,8 @@ import { Metadata } from "next"
 import DepartmentListingPage from "@/app-pages/DepartmentListingPage/DepartmentListingPage"
 import { standardizeMetadata } from "@/common/metadata"
 import { Hydrate } from "@tanstack/react-query"
-import { learningResourcesKeyFactory } from "api/hooks/learningResources"
-import { channelsKeyFactory } from "api/hooks/channels"
+import { learningResources } from "api/hooks/learningResources"
+import { channels } from "api/hooks/channels"
 import { prefetch } from "api/ssr/prefetch"
 
 export const metadata: Metadata = standardizeMetadata({
@@ -13,8 +13,8 @@ export const metadata: Metadata = standardizeMetadata({
 
 const Page: React.FC = async () => {
   const dehydratedState = await prefetch([
-    channelsKeyFactory.countsByType("department"),
-    learningResourcesKeyFactory.schools(),
+    channels.countsByType("department"),
+    learningResources.schools(),
   ])
 
   return (

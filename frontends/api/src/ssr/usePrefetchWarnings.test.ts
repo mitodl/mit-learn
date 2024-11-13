@@ -4,7 +4,7 @@ import { usePrefetchWarnings } from "./usePrefetchWarnings"
 import { setupReactQueryTest } from "../hooks/test-utils"
 import { urls, factories, setMockResponse } from "../test-utils"
 import {
-  learningResourcesKeyFactory,
+  learningResources,
   useLearningResourcesDetail,
 } from "../hooks/learningResources"
 
@@ -89,7 +89,7 @@ describe("SSR prefetch warnings", () => {
     const { unmount } = renderHook(
       () =>
         useQuery({
-          ...learningResourcesKeyFactory.detail(1),
+          ...learningResources.detail(1),
           initialData: data,
         }),
       { wrapper },
