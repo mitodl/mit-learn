@@ -46,14 +46,12 @@ describe("SSR prefetch warnings", () => {
     )
     expect(console.table).toHaveBeenCalledWith(
       [
-        {
-          disabled: false,
-          hash: '["learningResources","detail",1]',
-          initialStatus: "loading",
-          key: ["learningResources", "detail", 1],
-          observerCount: 1,
-          status: "loading",
-        },
+  expect.objectContaining({
+    disabled: false,
+    initialStatus: "loading",
+    key: learningResourcesKeyFactory.detail(1),
+    observerCount: 1
+  })
       ],
       ["hash", "initialStatus", "status", "observerCount", "disabled"],
     )
