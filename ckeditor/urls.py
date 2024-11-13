@@ -9,4 +9,4 @@ v0_urls = [
 ]
 
 app_name = "ckeditor"
-urlpatterns = [re_path(r"^api/v0/", include((v0_urls, "v0")))]
+urlpatterns = [re_path(r"^api/v0/", include((v0_urls, "0")))]

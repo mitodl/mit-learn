@@ -8,10 +8,11 @@ from django.contrib.auth.models import User
 from django.db import transaction
 from django.db.models import F, Max
 from drf_spectacular.utils import extend_schema_field
+from drf_versioning.serializers import VersionedSerializer
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from learning_resources import constants, models
+from learning_resources import constants, models, transforms
 from learning_resources.constants import (
     LEARNING_MATERIAL_RESOURCE_CATEGORY,
     CertificationType,
@@ -430,8 +431,14 @@ class MicroUserListRelationshipSerializer(serializers.ModelSerializer):
         fields = ("id", "parent", "child")
 
 
-class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopicsMixin):
+class LearningResourceBaseSerializer(
+    VersionedSerializer,
+    serializers.ModelSerializer,
+    WriteableTopicsMixin,
+):
     """Serializer for LearningResource, minus program"""
+
+    transforms = (transforms.RenameDuration,)
 
     position = serializers.IntegerField(read_only=True, allow_null=True)
     offered_by = LearningResourceOfferorSerializer(read_only=True, allow_null=True)
@@ -463,6 +470,12 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
     resource_category = serializers.SerializerMethodField()
     format = serializers.ListField(child=FormatSerializer(), read_only=True)
     pace = serializers.ListField(child=PaceSerializer(), read_only=True)
+    version = serializers.SerializerMethodField()
+
+    def get_version(self, instance) -> str:  # noqa: ARG002
+        """Return the version of the serializer"""
+        request = self.context.get("request")
+        return request.version
 
     def get_resource_category(self, instance) -> str:
         """Return the resource category of the resource"""
@@ -509,6 +522,7 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
     class Meta:
         model = models.LearningResource
         read_only_fields = [
+            "version",
             "free",
             "prices",
             "resource_prices",

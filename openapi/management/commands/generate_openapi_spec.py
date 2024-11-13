@@ -4,9 +4,10 @@ Management command to generate OpenAPI specs from our APIs.
 
 from pathlib import Path
 
-from django.conf import settings
 from django.core import management
 from django.core.management import BaseCommand
+
+import versioning
 
 
 class Command(BaseCommand):
@@ -33,14 +34,14 @@ class Command(BaseCommand):
 
     def handle(self, **options):
         directory = options["directory"]
-        for version in settings.REST_FRAMEWORK["ALLOWED_VERSIONS"]:
-            filename = version + ".yaml"
+        for version in versioning.version_list.VERSIONS:
+            filename = f"v{version.base_version}.yaml"
             filepath = Path(directory) / filename
             management.call_command(
                 "spectacular",
                 urlconf="main.urls",
                 file=filepath,
                 validate=True,
-                api_version=version,
+                api_version=version.base_version,
                 fail_on_warn=options["fail-on-warn"],
             )

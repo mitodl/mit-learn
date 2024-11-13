@@ -22,5 +22,5 @@ v0_urls = [
 
 app_name = "news_events"
 urlpatterns = [
-    re_path(r"^api/v0/", include((v0_urls, "v0"))),
+    re_path(r"^api/v0/", include((v0_urls, "0"))),
 ]

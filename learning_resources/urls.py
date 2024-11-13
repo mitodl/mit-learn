@@ -116,6 +116,7 @@ v1_urls = [
 
 app_name = "lr"
 urlpatterns = [
-    re_path(r"^api/v1/", include((v1_urls, "v1"))),
+    re_path(r"^api/v1/", include((v1_urls, "1"))),
+    re_path(r"^api/v2/", include((v1_urls, "2"))),
     path("podcasts/rss_feed", views.podcast_rss_feed, name="podcast-rss-feed"),
 ]

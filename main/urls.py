@@ -57,6 +57,7 @@ urlpatterns = (
         re_path(r"^app", RedirectView.as_view(url=settings.APP_BASE_URL)),
         # Hijack
         re_path(r"^hijack/", include("hijack.urls", namespace="hijack")),
+        path("version/", include("drf_versioning.urls")),
     ]
     + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

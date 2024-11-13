@@ -1426,6 +1426,30 @@ files = [
 django = ">=4.2"
 
 [[package]]
+name = "djangorestframework_versioning"
+version = "2.1.0"
+description = "Versioning tools for use with Django Rest Framework"
+optional = false
+python-versions = ">=3.9"
+files = []
+develop = false
+
+[package.dependencies]
+django = ">=3.2"
+djangorestframework = ">=3.13.1"
+packaging = ">=3.0.9"
+typing = ">=3.7.4.3"
+
+[package.extras]
+dev = ["black", "bumpver", "pytest"]
+
+[package.source]
+type = "git"
+url = "https://github.com/mbertrand/djangorestframework_versioning"
+reference = "HEAD"
+resolved_reference = "91570a0d8e0a2099529d54e7afbbfed36dc4ca08"
+
+[[package]]
 name = "docopt"
 version = "0.6.2"
 description = "Pythonic argument parser, that will make you smile"
@@ -5710,6 +5734,17 @@ docs = ["myst-parser", "pydata-sphinx-theme", "sphinx"]
 test = ["argcomplete (>=3.0.3)", "mypy (>=1.7.0)", "pre-commit", "pytest (>=7.0,<8.2)", "pytest-mock", "pytest-mypy-testing"]
 
 [[package]]
+name = "typing"
+version = "3.7.4.3"
+description = "Type Hints for Python"
+optional = false
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
+files = [
+    {file = "typing-3.7.4.3-py2-none-any.whl", hash = "sha256:283d868f5071ab9ad873e5e52268d611e851c870a2ba354193026f2dfb29d8b5"},
+    {file = "typing-3.7.4.3.tar.gz", hash = "sha256:1187fb9c82fd670d10aa07bbb6cfcfe4bdda42d6fab8d5134f04e8c4d0b71cc9"},
+]
+
+[[package]]
 name = "typing-extensions"
 version = "4.12.2"
 description = "Backported and Experimental Type Hints for Python 3.8+"
@@ -6094,4 +6129,4 @@ testing = ["coverage[toml]", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.0"
 python-versions = "3.12.6"
-content-hash = "da8cfbd5627071399d2e10b73fc4566fb3da0eee7fde48217e323036f2c66632"
+content-hash = "14c2db877935e6f076a84409d94bea33bcf788b1a7380666b96e7382b3ac753e"

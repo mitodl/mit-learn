@@ -45,8 +45,8 @@ v1_urls = [
 
 app_name = "profile"
 urlpatterns = [
-    re_path("^api/v0/", include((v0_urls, "v0"))),
-    re_path("^api/v1/", include((v1_urls, "v1"))),
+    re_path("^api/v0/", include((v0_urls, "0"))),
+    re_path("^api/v1/", include((v1_urls, "1"))),
     # The URL that gravatar will redirect to if no gravatar exists for the user (no query parameters allowed).  # noqa: E501
     re_path(
         r"^profile/(?P<username>[A-Za-z0-9_]+)/(?P<size>\d+)/(?P<color>[A-Za-z0-9]+)/(?P<bgcolor>[A-Za-z0-9]+).png",

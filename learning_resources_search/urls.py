@@ -41,6 +41,6 @@ v0_urls = [
 
 app_name = "lr_search"
 urlpatterns = [
-    re_path(r"^api/v1/", include((v1_urls, "v1"))),
-    re_path(r"^api/v0/", include((v0_urls, "v0"))),
+    re_path(r"^api/v1/", include((v1_urls, "1"))),
+    re_path(r"^api/v0/", include((v0_urls, "0"))),
 ]

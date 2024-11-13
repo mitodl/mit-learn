@@ -82,6 +82,8 @@ uwsgitop = "^0.12"
 pytest-lazy-fixtures = "^1.1.1"
 pycountry = "^24.6.1"
 qdrant-client = {extras = ["fastembed"], version = "^1.12.0"}
+djangorestframework-versioning = {git = "https://github.com/mbertrand/djangorestframework_versioning"}
+
 
 
 [tool.poetry.group.dev.dependencies]

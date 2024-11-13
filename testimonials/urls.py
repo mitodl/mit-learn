@@ -14,5 +14,5 @@ v0_urls = [
 
 app_name = "testimonials"
 urlpatterns = [
-    re_path("^api/v0/", include((v0_urls, "v0"))),
+    re_path("^api/v0/", include((v0_urls, "0"))),
 ]

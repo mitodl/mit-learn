@@ -7,3 +7,4 @@ net-tools
 pkg-config
 libffi-dev
 libxmlsec1-dev
+nano

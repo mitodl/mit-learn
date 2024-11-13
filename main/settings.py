@@ -696,9 +696,14 @@ REST_FRAMEWORK = {
         "rest_framework.renderers.MultiPartRenderer",
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
-    "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.NamespaceVersioning",
-    "ALLOWED_VERSIONS": ["v0", "v1"],
+    "DEFAULT_VERSIONING_CLASS": "drf_versioning.middleware.NamespaceVersioning",
     "ORDERING_PARAM": "sortby",
+    "ALLOWED_VERSIONS": ["0", "1", "2"],
+}
+
+DRF_VERSIONING_SETTINGS = {
+    "VERSION_LIST": "versioning.version_list.VERSIONS",
+    "DEFAULT_VERSION": "latest",
 }
 
 USE_X_FORWARDED_PORT = get_bool("USE_X_FORWARDED_PORT", False)  # noqa: FBT003
