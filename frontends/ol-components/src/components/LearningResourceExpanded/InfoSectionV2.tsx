@@ -99,7 +99,7 @@ const ShowMoreLink = styled(Link)({
 
 const ShowLessLink = styled(Link)({
   display: "flex",
-  paddingTop: "8px",
+  paddingTop: "4px",
 })
 
 const PriceDisplay = styled.div({
