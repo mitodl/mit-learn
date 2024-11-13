@@ -552,7 +552,7 @@ paths:
         description: |-
           The type of certification offered
 
-          * `micromasters` - Micromasters Credential
+          * `micromasters` - MicroMasters Credential
           * `professional` - Professional Certificate
           * `completion` - Certificate of Completion
           * `none` - No Certificate
@@ -1163,7 +1163,7 @@ paths:
         description: |-
           The type of certification offered
 
-          * `micromasters` - Micromasters Credential
+          * `micromasters` - MicroMasters Credential
           * `professional` - Professional Certificate
           * `completion` - Certificate of Completion
           * `none` - No Certificate
@@ -1567,7 +1567,7 @@ paths:
         description: |-
           The type of certification offered
 
-          * `micromasters` - Micromasters Credential
+          * `micromasters` - MicroMasters Credential
           * `professional` - Professional Certificate
           * `completion` - Certificate of Completion
           * `none` - No Certificate
@@ -1978,7 +1978,7 @@ paths:
         description: |-
           The type of certification offered
 
-          * `micromasters` - Micromasters Credential
+          * `micromasters` - MicroMasters Credential
           * `professional` - Professional Certificate
           * `completion` - Certificate of Completion
           * `none` - No Certificate
@@ -2371,7 +2371,7 @@ paths:
         description: |-
           The type of certification offered
 
-          * `micromasters` - Micromasters Credential
+          * `micromasters` - MicroMasters Credential
           * `professional` - Professional Certificate
           * `completion` - Certificate of Completion
           * `none` - No Certificate
@@ -3099,11 +3099,11 @@ paths:
             - none
             type: string
             description: |-
-              * `micromasters` - Micromasters Credential
+              * `micromasters` - MicroMasters Credential
               * `professional` - Professional Certificate
               * `completion` - Certificate of Completion
               * `none` - No Certificate
-        description: "The type of certificate             \n\n* `micromasters` - Micromasters\
+        description: "The type of certificate             \n\n* `micromasters` - MicroMasters\
           \ Credential\n* `professional` - Professional Certificate\n* `completion`\
           \ - Certificate of Completion\n* `none` - No Certificate"
       - in: query
@@ -3597,11 +3597,11 @@ paths:
             - none
             type: string
             description: |-
-              * `micromasters` - Micromasters Credential
+              * `micromasters` - MicroMasters Credential
               * `professional` - Professional Certificate
               * `completion` - Certificate of Completion
               * `none` - No Certificate
-        description: "The type of certificate             \n\n* `micromasters` - Micromasters\
+        description: "The type of certificate             \n\n* `micromasters` - MicroMasters\
           \ Credential\n* `professional` - Professional Certificate\n* `completion`\
           \ - Certificate of Completion\n* `none` - No Certificate"
       - in: query
@@ -4120,11 +4120,11 @@ paths:
             - none
             type: string
             description: |-
-              * `micromasters` - Micromasters Credential
+              * `micromasters` - MicroMasters Credential
               * `professional` - Professional Certificate
               * `completion` - Certificate of Completion
               * `none` - No Certificate
-        description: "The type of certificate             \n\n* `micromasters` - Micromasters\
+        description: "The type of certificate             \n\n* `micromasters` - MicroMasters\
           \ Credential\n* `professional` - Professional Certificate\n* `completion`\
           \ - Certificate of Completion\n* `none` - No Certificate"
       - in: query
@@ -4634,11 +4634,11 @@ paths:
             - none
             type: string
             description: |-
-              * `micromasters` - Micromasters Credential
+              * `micromasters` - MicroMasters Credential
               * `professional` - Professional Certificate
               * `completion` - Certificate of Completion
               * `none` - No Certificate
-        description: "The type of certificate             \n\n* `micromasters` - Micromasters\
+        description: "The type of certificate             \n\n* `micromasters` - MicroMasters\
           \ Credential\n* `professional` - Professional Certificate\n* `completion`\
           \ - Certificate of Completion\n* `none` - No Certificate"
       - in: query
@@ -5122,7 +5122,7 @@ paths:
         description: |-
           The type of certification offered
 
-          * `micromasters` - Micromasters Credential
+          * `micromasters` - MicroMasters Credential
           * `professional` - Professional Certificate
           * `completion` - Certificate of Completion
           * `none` - No Certificate
@@ -5866,7 +5866,7 @@ paths:
         description: |-
           The type of certification offered
 
-          * `micromasters` - Micromasters Credential
+          * `micromasters` - MicroMasters Credential
           * `professional` - Professional Certificate
           * `completion` - Certificate of Completion
           * `none` - No Certificate
@@ -6270,7 +6270,7 @@ paths:
         description: |-
           The type of certification offered
 
-          * `micromasters` - Micromasters Credential
+          * `micromasters` - MicroMasters Credential
           * `professional` - Professional Certificate
           * `completion` - Certificate of Completion
           * `none` - No Certificate
@@ -6761,7 +6761,7 @@ paths:
         description: |-
           The type of certification offered
 
-          * `micromasters` - Micromasters Credential
+          * `micromasters` - MicroMasters Credential
           * `professional` - Professional Certificate
           * `completion` - Certificate of Completion
           * `none` - No Certificate
@@ -7571,7 +7571,7 @@ paths:
         description: |-
           The type of certification offered
 
-          * `micromasters` - Micromasters Credential
+          * `micromasters` - MicroMasters Credential
           * `professional` - Professional Certificate
           * `completion` - Certificate of Completion
           * `none` - No Certificate
@@ -8041,7 +8041,7 @@ paths:
         description: |-
           The type of certification offered
 
-          * `micromasters` - Micromasters Credential
+          * `micromasters` - MicroMasters Credential
           * `professional` - Professional Certificate
           * `completion` - Certificate of Completion
           * `none` - No Certificate
@@ -8515,12 +8515,12 @@ components:
       - none
       type: string
       description: |-
-        * `micromasters` - Micromasters Credential
+        * `micromasters` - MicroMasters Credential
         * `professional` - Professional Certificate
         * `completion` - Certificate of Completion
         * `none` - No Certificate
       x-enum-descriptions:
-      - Micromasters Credential
+      - MicroMasters Credential
       - Professional Certificate
       - Certificate of Completion
       - No Certificate
@@ -11164,7 +11164,7 @@ components:
           items:
             $ref: '#/components/schemas/CertificationTypeEnum'
           description: "The type of certificate             \n\n* `micromasters` -\
-            \ Micromasters Credential\n* `professional` - Professional Certificate\n\
+            \ MicroMasters Credential\n* `professional` - Professional Certificate\n\
             * `completion` - Certificate of Completion\n* `none` - No Certificate"
         department:
           type: array
