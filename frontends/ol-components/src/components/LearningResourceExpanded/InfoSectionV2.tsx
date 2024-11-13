@@ -252,22 +252,24 @@ const INFO_ITEMS: InfoItemConfig = [
     label: "Price:",
     Icon: RiPriceTag3Line,
     selector: (resource: LearningResource) => {
-      const prices = getLearningResourcePrices(resource)
+      if (allRunsAreIdentical(resource)) {
+        const prices = getLearningResourcePrices(resource)
 
-      return (
-        <PriceDisplay>
-          <div>{resource.free ? "Free" : prices.course.display}</div>
-          {resource.certification &&
-          resource.free &&
-          prices.certificate.display ? (
-            <Certificate>
-              <RiAwardFill />
-              <span>Earn a certificate:</span>
-              <span>{prices.certificate.display}</span>
-            </Certificate>
-          ) : null}
-        </PriceDisplay>
-      )
+        return (
+          <PriceDisplay>
+            <div>{resource.free ? "Free" : prices.course.display}</div>
+            {resource.certification &&
+            resource.free &&
+            prices.certificate.display ? (
+              <Certificate>
+                <RiAwardFill />
+                <span>Earn a certificate:</span>
+                <span>{prices.certificate.display}</span>
+              </Certificate>
+            ) : null}
+          </PriceDisplay>
+        )
+      } else return null
     },
   },
   {

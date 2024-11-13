@@ -165,13 +165,14 @@ describe("Learning resource info section start date", () => {
     })
   })
 
-  test("If data is different, dates are not shown", () => {
+  test("If data is different, dates and prices are not shown", () => {
     const course = courses.multipleRuns.differentData
     render(<InfoSectionV2 resource={course} />, {
       wrapper: ThemeProvider,
     })
     const section = screen.getByTestId("drawer-info-items")
     expect(within(section).queryByText("Start Date:")).toBeNull()
+    expect(within(section).queryByText("Price:")).toBeNull()
   })
 
   test("Clicking the show more button should show more dates", async () => {
