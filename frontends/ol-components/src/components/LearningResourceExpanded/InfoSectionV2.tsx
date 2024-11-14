@@ -238,7 +238,8 @@ const shouldShowFormat = (resource: LearningResource) => {
   return (
     (resource.resource_type === ResourceTypeEnum.Course ||
       resource.resource_type === ResourceTypeEnum.Program) &&
-    allRunsAreIdentical(resource)
+    allRunsAreIdentical(resource) &&
+    resource.delivery
   )
 }
 
