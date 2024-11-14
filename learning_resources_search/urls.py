@@ -7,6 +7,7 @@ from learning_resources_search.views import (
     ContentFileSearchView,
     LearningResourceSearchDefaultsView,
     LearningResourcesSearchView,
+    LearningResourcesVectorSearchView,
     UserSearchSubscriptionViewSet,
 )
 
@@ -23,6 +24,11 @@ v1_urls = [
         r"learning_resources_search/",
         LearningResourcesSearchView.as_view(),
         name="learning_resources_search",
+    ),
+    path(
+        r"learning_resources_vector_search/",
+        LearningResourcesVectorSearchView.as_view(),
+        name="learning_resources_vector_search",
     ),
     re_path(
         r"content_file_search/",

@@ -98,6 +98,53 @@ class LearningResourcesSearchView(ESView):
             return Response(errors, status=400)
 
 
+@method_decorator(blocked_ip_exempt, name="dispatch")
+@extend_schema_view(
+    get=extend_schema(
+        parameters=[LearningResourcesSearchRequestSerializer()],
+        responses=LearningResourcesSearchResponseSerializer(),
+    ),
+)
+@action(methods=["GET"], detail=False, name="Search Learning Resources")
+class LearningResourcesVectorSearchView(ESView):
+    """
+    Vector Search for learning resources
+    """
+
+    permission_classes = ()
+
+    @method_decorator(
+        cache_page_for_anonymous_users(
+            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+        )
+    )
+    @extend_schema(summary="Vector Search")
+    def get(self, request):
+        request_data = LearningResourcesSearchRequestSerializer(data=request.GET)
+
+        if request_data.is_valid():
+            response = execute_learn_search(
+                request_data.data | {"endpoint": LEARNING_RESOURCE}
+            )
+
+            if request_data.data.get("dev_mode"):
+                return Response(response)
+            else:
+                response = LearningResourcesSearchResponseSerializer(
+                    response, context={"request": request}
+                ).data
+                response["results"] = list(response["results"])
+                return Response(response)
+        else:
+            errors = {}
+            for key, errors_obj in request_data.errors.items():
+                if isinstance(errors_obj, list):
+                    errors[key] = errors_obj
+                else:
+                    errors[key] = list(set(chain(*errors_obj.values())))
+            return Response(errors, status=400)
+
+
 @extend_schema_view(
     list=extend_schema(
         summary="List subscribed queries",

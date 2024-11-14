@@ -938,6 +938,23 @@ def _qdrant_similar_results(doc, num_resources):
     ]
 
 
+def vector_search(text: str, limit: int = 10):
+    from learning_resources_search.indexing_api import qdrant_client
+
+    client = qdrant_client()
+    search_result = client.query(
+        collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
+        query_text=text,
+        query_filter=None,  # If you don't want any filters for now
+        limit=limit,  # 5 the closest results
+    )
+    # `search_result` contains found vector ids with similarity scores
+    # along with the stored payload
+
+    # Select and return metadata
+    return [hit.metadata for hit in search_result]
+
+
 def get_similar_resources_qdrant(value_doc: dict, num_resources: int):
     """
     Get a list of similar resources from qdrant
