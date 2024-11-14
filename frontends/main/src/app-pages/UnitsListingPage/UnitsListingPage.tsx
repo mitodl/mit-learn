@@ -14,7 +14,7 @@ import {
 import { backgroundSrcSetCSS } from "ol-utilities"
 import backgroundSteps from "@/public/images/backgrounds/background_steps.jpg"
 import { RiBookOpenLine, RiSuitcaseLine } from "@remixicon/react"
-import { LearningResourceOfferorDetail } from "api"
+import type { LearningResourceOfferorDetail } from "api"
 import { HOME } from "@/common/urls"
 import { UnitCards, UnitCardLoading } from "./UnitCard"
 import { aggregateProgramCounts, aggregateCourseCounts } from "@/common/utils"
@@ -168,7 +168,6 @@ const UnitSection: React.FC<UnitSectionProps> = (props) => {
     programCounts,
     isLoading,
   } = props
-
   return (
     <UnitContainer data-testid={`UnitSection-${id}`}>
       <div>

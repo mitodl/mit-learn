@@ -1,5 +1,5 @@
 import React from "react"
-import { LearningResourceOfferorDetail, OfferedByEnum } from "api"
+import type { LearningResourceOfferorDetail, OfferedByEnum } from "api"
 import {
   Card,
   Skeleton,

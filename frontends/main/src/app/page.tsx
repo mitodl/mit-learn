@@ -24,7 +24,7 @@ export async function generateMetadata({
 }
 
 const Page: React.FC = async () => {
-  const dehydratedState = await prefetch([
+  const { dehydratedState } = await prefetch([
     // Featured Courses carousel "All"
     learningResources.featured({
       limit: 12,
