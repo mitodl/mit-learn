@@ -15,8 +15,9 @@ import {
   RiAwardFill,
   RiAwardLine,
   RiComputerLine,
+  RiMapPinLine,
 } from "@remixicon/react"
-import { LearningResource, ResourceTypeEnum } from "api"
+import { DeliveryEnum, LearningResource, ResourceTypeEnum } from "api"
 import {
   allRunsAreIdentical,
   formatDurationClockTime,
@@ -233,6 +234,14 @@ const RunDates: React.FC<{ resource: LearningResource }> = ({ resource }) => {
   }
 }
 
+const shouldShowFormat = (resource: LearningResource) => {
+  return (
+    (resource.resource_type === ResourceTypeEnum.Course ||
+      resource.resource_type === ResourceTypeEnum.Program) &&
+    allRunsAreIdentical(resource)
+  )
+}
+
 const INFO_ITEMS: InfoItemConfig = [
   {
     label: (resource: LearningResource) => {
@@ -253,11 +262,7 @@ const INFO_ITEMS: InfoItemConfig = [
     label: "Format:",
     Icon: RiComputerLine,
     selector: (resource: LearningResource) => {
-      if (
-        (resource.resource_type === ResourceTypeEnum.Course ||
-          resource.resource_type === ResourceTypeEnum.Program) &&
-        allRunsAreIdentical(resource)
-      ) {
+      if (shouldShowFormat(resource)) {
         const totalFormats = resource.delivery?.length || 0
         return resource.delivery.map((format, index) => {
           return (
@@ -269,6 +274,20 @@ const INFO_ITEMS: InfoItemConfig = [
             />
           )
         })
+      } else return null
+    },
+  },
+  {
+    label: "Location:",
+    Icon: RiMapPinLine,
+    selector: (resource: LearningResource) => {
+      if (
+        shouldShowFormat(resource) &&
+        resource.delivery?.filter((d) => d.code === DeliveryEnum.InPerson)
+          .length > 0 &&
+        resource.location
+      ) {
+        return <InfoItemValue label={resource.location} index={1} total={1} />
       } else return null
     },
   },
