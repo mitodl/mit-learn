@@ -14,6 +14,7 @@ import {
   RiPresentationLine,
   RiAwardFill,
   RiAwardLine,
+  RiComputerLine,
 } from "@remixicon/react"
 import { LearningResource, ResourceTypeEnum } from "api"
 import {
@@ -245,6 +246,29 @@ const INFO_ITEMS: InfoItemConfig = [
         resource.runs?.filter((run) => run.start_date !== null).length || 0
       if (allRunsAreIdentical(resource) && totalDatesWithRuns > 0) {
         return <RunDates resource={resource} />
+      } else return null
+    },
+  },
+  {
+    label: "Format:",
+    Icon: RiComputerLine,
+    selector: (resource: LearningResource) => {
+      if (
+        (resource.resource_type === ResourceTypeEnum.Course ||
+          resource.resource_type === ResourceTypeEnum.Program) &&
+        allRunsAreIdentical(resource)
+      ) {
+        const totalFormats = resource.delivery?.length || 0
+        return resource.delivery.map((format, index) => {
+          return (
+            <InfoItemValue
+              key={`format-${index}`}
+              label={format.name}
+              index={index}
+              total={totalFormats}
+            />
+          )
+        })
       } else return null
     },
   },
