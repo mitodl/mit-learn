@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.24.3
+Version 0.24.3 (Released November 14, 2024)
 --------------
 
 - remove sentence transformers dependency (#1806)
