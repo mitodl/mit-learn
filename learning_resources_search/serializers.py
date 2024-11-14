@@ -641,6 +641,12 @@ class PercolateQuerySerializer(serializers.ModelSerializer):
         exclude = (*COMMON_IGNORED_FIELDS, "users")
 
 
+class LearningResourcesVectorSearchResponseSerializer(SearchResponseSerializer):
+    @extend_schema_field(LearningResourceSerializer(many=True))
+    def get_results(self, instance):
+        return instance.get("hits", {}).get("hits", [])
+
+
 class LearningResourcesSearchResponseSerializer(SearchResponseSerializer):
     """
     SearchResponseSerializer with OpenAPI annotations for Learning Resources

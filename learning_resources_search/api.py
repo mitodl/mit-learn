@@ -938,21 +938,46 @@ def _qdrant_similar_results(doc, num_resources):
     ]
 
 
-def vector_search(text: str, limit: int = 10):
+def vector_search(
+    query_string: str,
+    limit: int = 10,
+    offset: int = 10,
+):
+    from qdrant_client import models
+
     from learning_resources_search.indexing_api import qdrant_client
-
-    client = qdrant_client()
-    search_result = client.query(
-        collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
-        query_text=text,
-        query_filter=None,  # If you don't want any filters for now
-        limit=limit,  # 5 the closest results
+    from learning_resources_search.serializers import (
+        serialize_bulk_learning_resources,
     )
-    # `search_result` contains found vector ids with similarity scores
-    # along with the stored payload
 
-    # Select and return metadata
-    return [hit.metadata for hit in search_result]
+    if query_string:
+        client = qdrant_client()
+
+        search_result = client.query(
+            collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
+            query_text=query_string,
+            query_filter=models.Filter(
+                must=[
+                    models.FieldCondition(
+                        key="published", match=models.MatchValue(value=True)
+                    )
+                ]
+            ),
+            limit=limit,
+            offset=offset,
+        )
+        # `search_result` contains found vector ids with similarity scores
+        # along with the stored payload
+
+        # Select and return metadata
+        hits = [hit.metadata for hit in search_result]
+        results = LearningResource.objects.for_search_serialization().filter(
+            id__in=[resource["id"] for resource in hits]
+        )
+    else:
+        results = LearningResource.objects.for_search_serialization().all()
+    hits = serialize_bulk_learning_resources([resource.id for resource in results])
+    return {"hits": {"hits": hits, "total": {"value": 10000}}}
 
 
 def get_similar_resources_qdrant(value_doc: dict, num_resources: int):

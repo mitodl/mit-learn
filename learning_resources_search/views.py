@@ -21,6 +21,7 @@ from learning_resources_search.api import (
     execute_learn_search,
     subscribe_user_to_search_query,
     unsubscribe_user_from_percolate_query,
+    vector_search,
 )
 from learning_resources_search.constants import CONTENT_FILE_TYPE, LEARNING_RESOURCE
 from learning_resources_search.models import PercolateQuery
@@ -29,6 +30,7 @@ from learning_resources_search.serializers import (
     ContentFileSearchResponseSerializer,
     LearningResourcesSearchRequestSerializer,
     LearningResourcesSearchResponseSerializer,
+    LearningResourcesVectorSearchResponseSerializer,
     PercolateQuerySerializer,
     PercolateQuerySubscriptionRequestSerializer,
 )
@@ -79,7 +81,6 @@ class LearningResourcesSearchView(ESView):
             response = execute_learn_search(
                 request_data.data | {"endpoint": LEARNING_RESOURCE}
             )
-
             if request_data.data.get("dev_mode"):
                 return Response(response)
             else:
@@ -102,7 +103,7 @@ class LearningResourcesSearchView(ESView):
 @extend_schema_view(
     get=extend_schema(
         parameters=[LearningResourcesSearchRequestSerializer()],
-        responses=LearningResourcesSearchResponseSerializer(),
+        responses=LearningResourcesVectorSearchResponseSerializer(),
     ),
 )
 @action(methods=["GET"], detail=False, name="Search Learning Resources")
@@ -123,14 +124,14 @@ class LearningResourcesVectorSearchView(ESView):
         request_data = LearningResourcesSearchRequestSerializer(data=request.GET)
 
         if request_data.is_valid():
-            response = execute_learn_search(
-                request_data.data | {"endpoint": LEARNING_RESOURCE}
-            )
-
+            query_text = request_data.data.get("q", "")
+            limit = request_data.data.get("limit", 10)
+            offset = request_data.data.get("offset", 0)
+            response = vector_search(query_text, limit=limit, offset=offset)
             if request_data.data.get("dev_mode"):
                 return Response(response)
             else:
-                response = LearningResourcesSearchResponseSerializer(
+                response = LearningResourcesVectorSearchResponseSerializer(
                     response, context={"request": request}
                 ).data
                 response["results"] = list(response["results"])
