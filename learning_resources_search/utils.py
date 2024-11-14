@@ -42,7 +42,8 @@ def recommend_resources_for_user(user):
     profile = user.profile
     query = profile_to_query(profile)
     serialized = LearningResourcesSearchRequestSerializer(query)
-    return execute_learn_search(serialized.data | {"endpoint": LEARNING_RESOURCE})
+    result = execute_learn_search(serialized.data | {"endpoint": LEARNING_RESOURCE})
+    return result["hits"]["hits"]
 
 
 def prune_channel_subscriptions():
