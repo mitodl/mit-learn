@@ -2691,6 +2691,43 @@ export interface LearningResourcesSearchResponse {
   metadata: ContentFileSearchResponseMetadata
 }
 /**
+ *
+ * @export
+ * @interface LearningResourcesVectorSearchResponse
+ */
+export interface LearningResourcesVectorSearchResponse {
+  /**
+   *
+   * @type {number}
+   * @memberof LearningResourcesVectorSearchResponse
+   */
+  count: number
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourcesVectorSearchResponse
+   */
+  next: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourcesVectorSearchResponse
+   */
+  previous: string | null
+  /**
+   *
+   * @type {Array<LearningResource>}
+   * @memberof LearningResourcesVectorSearchResponse
+   */
+  results: Array<LearningResource>
+  /**
+   *
+   * @type {ContentFileSearchResponseMetadata}
+   * @memberof LearningResourcesVectorSearchResponse
+   */
+  metadata: ContentFileSearchResponseMetadata
+}
+/**
  * * `undergraduate` - Undergraduate * `graduate` - Graduate * `high_school` - High School * `noncredit` - Non-Credit * `advanced` - Advanced * `intermediate` - Intermediate * `introductory` - Introductory
  * @export
  * @enum {string}
@@ -17665,6 +17702,848 @@ export const LearningResourcesUserSubscriptionSubscribeCreateSourceTypeEnum = {
 } as const
 export type LearningResourcesUserSubscriptionSubscribeCreateSourceTypeEnum =
   (typeof LearningResourcesUserSubscriptionSubscribeCreateSourceTypeEnum)[keyof typeof LearningResourcesUserSubscriptionSubscribeCreateSourceTypeEnum]
+
+/**
+ * LearningResourcesVectorSearchApi - axios parameter creator
+ * @export
+ */
+export const LearningResourcesVectorSearchApiAxiosParamCreator = function (
+  configuration?: Configuration,
+) {
+  return {
+    /**
+     * Vector Search for learning resources
+     * @summary Vector Search
+     * @param {Array<LearningResourcesVectorSearchRetrieveAggregationsEnum>} [aggregations] Show resource counts by category
+     * @param {boolean | null} [certification] True if the learning resource offers a certificate
+     * @param {Array<LearningResourcesVectorSearchRetrieveCertificationTypeEnum>} [certification_type] The type of certificate               * &#x60;micromasters&#x60; - Micromasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
+     * @param {number | null} [content_file_score_weight] Score weight for content file data.  1 is the default. 0 means content files are ignored
+     * @param {Array<string>} [course_feature] The course feature. Possible options are at api/v1/course_features/
+     * @param {Array<LearningResourcesVectorSearchRetrieveDeliveryEnum>} [delivery] The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<LearningResourcesVectorSearchRetrieveDepartmentEnum>} [department] The department that offers the learning resource               * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
+     * @param {boolean | null} [dev_mode] If true return raw open search results with score explanations
+     * @param {boolean | null} [free]
+     * @param {Array<number>} [id] The id value for the learning resource
+     * @param {Array<LearningResourcesVectorSearchRetrieveLevelEnum>} [level]
+     * @param {number} [limit] Number of results to return per page
+     * @param {number | null} [max_incompleteness_penalty] Maximum score penalty for incomplete OCW courses in percent. An OCW course with completeness &#x3D; 0 will have this score penalty. Partially complete courses have a linear penalty proportional to the degree of incompleteness. Only affects results if there is a search term.
+     * @param {number | null} [min_score] Minimum score value a text query result needs to have to be displayed
+     * @param {Array<string>} [ocw_topic] The ocw topic name.
+     * @param {Array<LearningResourcesVectorSearchRetrieveOfferedByEnum>} [offered_by] The organization that offers the learning resource               * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education
+     * @param {number} [offset] The initial index from which to return the results
+     * @param {Array<LearningResourcesVectorSearchRetrievePlatformEnum>} [platform] The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube
+     * @param {boolean | null} [professional]
+     * @param {string} [q] The search text
+     * @param {Array<LearningResourcesVectorSearchRetrieveResourceCategoryEnum>} [resource_category] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {Array<LearningResourcesVectorSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist
+     * @param {LearningResourcesVectorSearchRetrieveSearchModeEnum} [search_mode] The open search search type for text queries               * &#x60;best_fields&#x60; - best_fields * &#x60;most_fields&#x60; - most_fields * &#x60;phrase&#x60; - phrase  * &#x60;best_fields&#x60; - best_fields * &#x60;most_fields&#x60; - most_fields * &#x60;phrase&#x60; - phrase
+     * @param {number | null} [slop] Allowed distance for phrase search
+     * @param {LearningResourcesVectorSearchRetrieveSortbyEnum} [sortby] If the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;featured&#x60; - Featured * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
+     * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
+     * @param {number | null} [yearly_decay_percent] Relevance score penalty percent per year for for resources without upcoming runs. Only affects results if there is a search term.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    learningResourcesVectorSearchRetrieve: async (
+      aggregations?: Array<LearningResourcesVectorSearchRetrieveAggregationsEnum>,
+      certification?: boolean | null,
+      certification_type?: Array<LearningResourcesVectorSearchRetrieveCertificationTypeEnum>,
+      content_file_score_weight?: number | null,
+      course_feature?: Array<string>,
+      delivery?: Array<LearningResourcesVectorSearchRetrieveDeliveryEnum>,
+      department?: Array<LearningResourcesVectorSearchRetrieveDepartmentEnum>,
+      dev_mode?: boolean | null,
+      free?: boolean | null,
+      id?: Array<number>,
+      level?: Array<LearningResourcesVectorSearchRetrieveLevelEnum>,
+      limit?: number,
+      max_incompleteness_penalty?: number | null,
+      min_score?: number | null,
+      ocw_topic?: Array<string>,
+      offered_by?: Array<LearningResourcesVectorSearchRetrieveOfferedByEnum>,
+      offset?: number,
+      platform?: Array<LearningResourcesVectorSearchRetrievePlatformEnum>,
+      professional?: boolean | null,
+      q?: string,
+      resource_category?: Array<LearningResourcesVectorSearchRetrieveResourceCategoryEnum>,
+      resource_type?: Array<LearningResourcesVectorSearchRetrieveResourceTypeEnum>,
+      search_mode?: LearningResourcesVectorSearchRetrieveSearchModeEnum,
+      slop?: number | null,
+      sortby?: LearningResourcesVectorSearchRetrieveSortbyEnum,
+      topic?: Array<string>,
+      yearly_decay_percent?: number | null,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      const localVarPath = `/api/v1/learning_resources_vector_search/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      if (aggregations) {
+        localVarQueryParameter["aggregations"] = aggregations
+      }
+
+      if (certification !== undefined) {
+        localVarQueryParameter["certification"] = certification
+      }
+
+      if (certification_type) {
+        localVarQueryParameter["certification_type"] = certification_type
+      }
+
+      if (content_file_score_weight !== undefined) {
+        localVarQueryParameter["content_file_score_weight"] =
+          content_file_score_weight
+      }
+
+      if (course_feature) {
+        localVarQueryParameter["course_feature"] = course_feature
+      }
+
+      if (delivery) {
+        localVarQueryParameter["delivery"] = delivery
+      }
+
+      if (department) {
+        localVarQueryParameter["department"] = department
+      }
+
+      if (dev_mode !== undefined) {
+        localVarQueryParameter["dev_mode"] = dev_mode
+      }
+
+      if (free !== undefined) {
+        localVarQueryParameter["free"] = free
+      }
+
+      if (id) {
+        localVarQueryParameter["id"] = id
+      }
+
+      if (level) {
+        localVarQueryParameter["level"] = level
+      }
+
+      if (limit !== undefined) {
+        localVarQueryParameter["limit"] = limit
+      }
+
+      if (max_incompleteness_penalty !== undefined) {
+        localVarQueryParameter["max_incompleteness_penalty"] =
+          max_incompleteness_penalty
+      }
+
+      if (min_score !== undefined) {
+        localVarQueryParameter["min_score"] = min_score
+      }
+
+      if (ocw_topic) {
+        localVarQueryParameter["ocw_topic"] = ocw_topic
+      }
+
+      if (offered_by) {
+        localVarQueryParameter["offered_by"] = offered_by
+      }
+
+      if (offset !== undefined) {
+        localVarQueryParameter["offset"] = offset
+      }
+
+      if (platform) {
+        localVarQueryParameter["platform"] = platform
+      }
+
+      if (professional !== undefined) {
+        localVarQueryParameter["professional"] = professional
+      }
+
+      if (q !== undefined) {
+        localVarQueryParameter["q"] = q
+      }
+
+      if (resource_category) {
+        localVarQueryParameter["resource_category"] = resource_category
+      }
+
+      if (resource_type) {
+        localVarQueryParameter["resource_type"] = resource_type
+      }
+
+      if (search_mode !== undefined) {
+        localVarQueryParameter["search_mode"] = search_mode
+      }
+
+      if (slop !== undefined) {
+        localVarQueryParameter["slop"] = slop
+      }
+
+      if (sortby !== undefined) {
+        localVarQueryParameter["sortby"] = sortby
+      }
+
+      if (topic) {
+        localVarQueryParameter["topic"] = topic
+      }
+
+      if (yearly_decay_percent !== undefined) {
+        localVarQueryParameter["yearly_decay_percent"] = yearly_decay_percent
+      }
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+  }
+}
+
+/**
+ * LearningResourcesVectorSearchApi - functional programming interface
+ * @export
+ */
+export const LearningResourcesVectorSearchApiFp = function (
+  configuration?: Configuration,
+) {
+  const localVarAxiosParamCreator =
+    LearningResourcesVectorSearchApiAxiosParamCreator(configuration)
+  return {
+    /**
+     * Vector Search for learning resources
+     * @summary Vector Search
+     * @param {Array<LearningResourcesVectorSearchRetrieveAggregationsEnum>} [aggregations] Show resource counts by category
+     * @param {boolean | null} [certification] True if the learning resource offers a certificate
+     * @param {Array<LearningResourcesVectorSearchRetrieveCertificationTypeEnum>} [certification_type] The type of certificate               * &#x60;micromasters&#x60; - Micromasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
+     * @param {number | null} [content_file_score_weight] Score weight for content file data.  1 is the default. 0 means content files are ignored
+     * @param {Array<string>} [course_feature] The course feature. Possible options are at api/v1/course_features/
+     * @param {Array<LearningResourcesVectorSearchRetrieveDeliveryEnum>} [delivery] The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<LearningResourcesVectorSearchRetrieveDepartmentEnum>} [department] The department that offers the learning resource               * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
+     * @param {boolean | null} [dev_mode] If true return raw open search results with score explanations
+     * @param {boolean | null} [free]
+     * @param {Array<number>} [id] The id value for the learning resource
+     * @param {Array<LearningResourcesVectorSearchRetrieveLevelEnum>} [level]
+     * @param {number} [limit] Number of results to return per page
+     * @param {number | null} [max_incompleteness_penalty] Maximum score penalty for incomplete OCW courses in percent. An OCW course with completeness &#x3D; 0 will have this score penalty. Partially complete courses have a linear penalty proportional to the degree of incompleteness. Only affects results if there is a search term.
+     * @param {number | null} [min_score] Minimum score value a text query result needs to have to be displayed
+     * @param {Array<string>} [ocw_topic] The ocw topic name.
+     * @param {Array<LearningResourcesVectorSearchRetrieveOfferedByEnum>} [offered_by] The organization that offers the learning resource               * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education
+     * @param {number} [offset] The initial index from which to return the results
+     * @param {Array<LearningResourcesVectorSearchRetrievePlatformEnum>} [platform] The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube
+     * @param {boolean | null} [professional]
+     * @param {string} [q] The search text
+     * @param {Array<LearningResourcesVectorSearchRetrieveResourceCategoryEnum>} [resource_category] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {Array<LearningResourcesVectorSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist
+     * @param {LearningResourcesVectorSearchRetrieveSearchModeEnum} [search_mode] The open search search type for text queries               * &#x60;best_fields&#x60; - best_fields * &#x60;most_fields&#x60; - most_fields * &#x60;phrase&#x60; - phrase  * &#x60;best_fields&#x60; - best_fields * &#x60;most_fields&#x60; - most_fields * &#x60;phrase&#x60; - phrase
+     * @param {number | null} [slop] Allowed distance for phrase search
+     * @param {LearningResourcesVectorSearchRetrieveSortbyEnum} [sortby] If the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;featured&#x60; - Featured * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
+     * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
+     * @param {number | null} [yearly_decay_percent] Relevance score penalty percent per year for for resources without upcoming runs. Only affects results if there is a search term.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async learningResourcesVectorSearchRetrieve(
+      aggregations?: Array<LearningResourcesVectorSearchRetrieveAggregationsEnum>,
+      certification?: boolean | null,
+      certification_type?: Array<LearningResourcesVectorSearchRetrieveCertificationTypeEnum>,
+      content_file_score_weight?: number | null,
+      course_feature?: Array<string>,
+      delivery?: Array<LearningResourcesVectorSearchRetrieveDeliveryEnum>,
+      department?: Array<LearningResourcesVectorSearchRetrieveDepartmentEnum>,
+      dev_mode?: boolean | null,
+      free?: boolean | null,
+      id?: Array<number>,
+      level?: Array<LearningResourcesVectorSearchRetrieveLevelEnum>,
+      limit?: number,
+      max_incompleteness_penalty?: number | null,
+      min_score?: number | null,
+      ocw_topic?: Array<string>,
+      offered_by?: Array<LearningResourcesVectorSearchRetrieveOfferedByEnum>,
+      offset?: number,
+      platform?: Array<LearningResourcesVectorSearchRetrievePlatformEnum>,
+      professional?: boolean | null,
+      q?: string,
+      resource_category?: Array<LearningResourcesVectorSearchRetrieveResourceCategoryEnum>,
+      resource_type?: Array<LearningResourcesVectorSearchRetrieveResourceTypeEnum>,
+      search_mode?: LearningResourcesVectorSearchRetrieveSearchModeEnum,
+      slop?: number | null,
+      sortby?: LearningResourcesVectorSearchRetrieveSortbyEnum,
+      topic?: Array<string>,
+      yearly_decay_percent?: number | null,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<LearningResourcesVectorSearchResponse>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.learningResourcesVectorSearchRetrieve(
+          aggregations,
+          certification,
+          certification_type,
+          content_file_score_weight,
+          course_feature,
+          delivery,
+          department,
+          dev_mode,
+          free,
+          id,
+          level,
+          limit,
+          max_incompleteness_penalty,
+          min_score,
+          ocw_topic,
+          offered_by,
+          offset,
+          platform,
+          professional,
+          q,
+          resource_category,
+          resource_type,
+          search_mode,
+          slop,
+          sortby,
+          topic,
+          yearly_decay_percent,
+          options,
+        )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap[
+          "LearningResourcesVectorSearchApi.learningResourcesVectorSearchRetrieve"
+        ]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+  }
+}
+
+/**
+ * LearningResourcesVectorSearchApi - factory interface
+ * @export
+ */
+export const LearningResourcesVectorSearchApiFactory = function (
+  configuration?: Configuration,
+  basePath?: string,
+  axios?: AxiosInstance,
+) {
+  const localVarFp = LearningResourcesVectorSearchApiFp(configuration)
+  return {
+    /**
+     * Vector Search for learning resources
+     * @summary Vector Search
+     * @param {LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieveRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    learningResourcesVectorSearchRetrieve(
+      requestParameters: LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieveRequest = {},
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<LearningResourcesVectorSearchResponse> {
+      return localVarFp
+        .learningResourcesVectorSearchRetrieve(
+          requestParameters.aggregations,
+          requestParameters.certification,
+          requestParameters.certification_type,
+          requestParameters.content_file_score_weight,
+          requestParameters.course_feature,
+          requestParameters.delivery,
+          requestParameters.department,
+          requestParameters.dev_mode,
+          requestParameters.free,
+          requestParameters.id,
+          requestParameters.level,
+          requestParameters.limit,
+          requestParameters.max_incompleteness_penalty,
+          requestParameters.min_score,
+          requestParameters.ocw_topic,
+          requestParameters.offered_by,
+          requestParameters.offset,
+          requestParameters.platform,
+          requestParameters.professional,
+          requestParameters.q,
+          requestParameters.resource_category,
+          requestParameters.resource_type,
+          requestParameters.search_mode,
+          requestParameters.slop,
+          requestParameters.sortby,
+          requestParameters.topic,
+          requestParameters.yearly_decay_percent,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+  }
+}
+
+/**
+ * Request parameters for learningResourcesVectorSearchRetrieve operation in LearningResourcesVectorSearchApi.
+ * @export
+ * @interface LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieveRequest
+ */
+export interface LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieveRequest {
+  /**
+   * Show resource counts by category
+   * @type {Array<'resource_type' | 'certification' | 'certification_type' | 'offered_by' | 'platform' | 'topic' | 'department' | 'level' | 'course_feature' | 'professional' | 'free' | 'delivery' | 'resource_category'>}
+   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
+   */
+  readonly aggregations?: Array<LearningResourcesVectorSearchRetrieveAggregationsEnum>
+
+  /**
+   * True if the learning resource offers a certificate
+   * @type {boolean}
+   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
+   */
+  readonly certification?: boolean | null
+
+  /**
+   * The type of certificate               * &#x60;micromasters&#x60; - Micromasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
+   * @type {Array<'micromasters' | 'professional' | 'completion' | 'none'>}
+   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
+   */
+  readonly certification_type?: Array<LearningResourcesVectorSearchRetrieveCertificationTypeEnum>
+
+  /**
+   * Score weight for content file data.  1 is the default. 0 means content files are ignored
+   * @type {number}
+   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
+   */
+  readonly content_file_score_weight?: number | null
+
+  /**
+   * The course feature. Possible options are at api/v1/course_features/
+   * @type {Array<string>}
+   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
+   */
+  readonly course_feature?: Array<string>
+
+  /**
+   * The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+   * @type {Array<'online' | 'hybrid' | 'in_person' | 'offline'>}
+   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
+   */
+  readonly delivery?: Array<LearningResourcesVectorSearchRetrieveDeliveryEnum>
+
+  /**
+   * The department that offers the learning resource               * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
+   * @type {Array<'1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | '14' | '15' | '16' | '17' | '18' | '20' | '21A' | '21G' | '21H' | '21L' | '21M' | '22' | '24' | 'CC' | 'CMS-W' | 'EC' | 'ES' | 'ESD' | 'HST' | 'IDS' | 'MAS' | 'PE' | 'SP' | 'STS' | 'WGS'>}
+   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
+   */
+  readonly department?: Array<LearningResourcesVectorSearchRetrieveDepartmentEnum>
+
+  /**
+   * If true return raw open search results with score explanations
+   * @type {boolean}
+   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
+   */
+  readonly dev_mode?: boolean | null
+
+  /**
+   *
+   * @type {boolean}
+   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
+   */
+  readonly free?: boolean | null
+
+  /**
+   * The id value for the learning resource
+   * @type {Array<number>}
+   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
+   */
+  readonly id?: Array<number>
+
+  /**
+   *
+   * @type {Array<'undergraduate' | 'graduate' | 'high_school' | 'noncredit' | 'advanced' | 'intermediate' | 'introductory'>}
+   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
+   */
+  readonly level?: Array<LearningResourcesVectorSearchRetrieveLevelEnum>
+
+  /**
+   * Number of results to return per page
+   * @type {number}
+   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
+   */
+  readonly limit?: number
+
+  /**
+   * Maximum score penalty for incomplete OCW courses in percent. An OCW course with completeness &#x3D; 0 will have this score penalty. Partially complete courses have a linear penalty proportional to the degree of incompleteness. Only affects results if there is a search term.
+   * @type {number}
+   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
+   */
+  readonly max_incompleteness_penalty?: number | null
+
+  /**
+   * Minimum score value a text query result needs to have to be displayed
+   * @type {number}
+   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
+   */
+  readonly min_score?: number | null
+
+  /**
+   * The ocw topic name.
+   * @type {Array<string>}
+   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
+   */
+  readonly ocw_topic?: Array<string>
+
+  /**
+   * The organization that offers the learning resource               * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education
+   * @type {Array<'mitx' | 'ocw' | 'bootcamps' | 'xpro' | 'mitpe' | 'see'>}
+   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
+   */
+  readonly offered_by?: Array<LearningResourcesVectorSearchRetrieveOfferedByEnum>
+
+  /**
+   * The initial index from which to return the results
+   * @type {number}
+   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
+   */
+  readonly offset?: number
+
+  /**
+   * The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube
+   * @type {Array<'edx' | 'ocw' | 'oll' | 'mitxonline' | 'bootcamps' | 'xpro' | 'csail' | 'mitpe' | 'see' | 'scc' | 'ctl' | 'whu' | 'susskind' | 'globalalumni' | 'simplilearn' | 'emeritus' | 'podcast' | 'youtube'>}
+   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
+   */
+  readonly platform?: Array<LearningResourcesVectorSearchRetrievePlatformEnum>
+
+  /**
+   *
+   * @type {boolean}
+   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
+   */
+  readonly professional?: boolean | null
+
+  /**
+   * The search text
+   * @type {string}
+   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
+   */
+  readonly q?: string
+
+  /**
+   * The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+   * @type {Array<'course' | 'program' | 'learning_material'>}
+   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
+   */
+  readonly resource_category?: Array<LearningResourcesVectorSearchRetrieveResourceCategoryEnum>
+
+  /**
+   * The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist
+   * @type {Array<'course' | 'program' | 'learning_path' | 'podcast' | 'podcast_episode' | 'video' | 'video_playlist'>}
+   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
+   */
+  readonly resource_type?: Array<LearningResourcesVectorSearchRetrieveResourceTypeEnum>
+
+  /**
+   * The open search search type for text queries               * &#x60;best_fields&#x60; - best_fields * &#x60;most_fields&#x60; - most_fields * &#x60;phrase&#x60; - phrase  * &#x60;best_fields&#x60; - best_fields * &#x60;most_fields&#x60; - most_fields * &#x60;phrase&#x60; - phrase
+   * @type {'best_fields' | 'most_fields' | 'phrase'}
+   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
+   */
+  readonly search_mode?: LearningResourcesVectorSearchRetrieveSearchModeEnum
+
+  /**
+   * Allowed distance for phrase search
+   * @type {number}
+   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
+   */
+  readonly slop?: number | null
+
+  /**
+   * If the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;featured&#x60; - Featured * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
+   * @type {'featured' | 'id' | '-id' | 'readable_id' | '-readable_id' | 'last_modified' | '-last_modified' | 'new' | 'start_date' | '-start_date' | 'mitcoursenumber' | '-mitcoursenumber' | 'views' | '-views' | 'upcoming'}
+   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
+   */
+  readonly sortby?: LearningResourcesVectorSearchRetrieveSortbyEnum
+
+  /**
+   * The topic name. To see a list of options go to api/v1/topics/
+   * @type {Array<string>}
+   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
+   */
+  readonly topic?: Array<string>
+
+  /**
+   * Relevance score penalty percent per year for for resources without upcoming runs. Only affects results if there is a search term.
+   * @type {number}
+   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
+   */
+  readonly yearly_decay_percent?: number | null
+}
+
+/**
+ * LearningResourcesVectorSearchApi - object-oriented interface
+ * @export
+ * @class LearningResourcesVectorSearchApi
+ * @extends {BaseAPI}
+ */
+export class LearningResourcesVectorSearchApi extends BaseAPI {
+  /**
+   * Vector Search for learning resources
+   * @summary Vector Search
+   * @param {LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieveRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof LearningResourcesVectorSearchApi
+   */
+  public learningResourcesVectorSearchRetrieve(
+    requestParameters: LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieveRequest = {},
+    options?: RawAxiosRequestConfig,
+  ) {
+    return LearningResourcesVectorSearchApiFp(this.configuration)
+      .learningResourcesVectorSearchRetrieve(
+        requestParameters.aggregations,
+        requestParameters.certification,
+        requestParameters.certification_type,
+        requestParameters.content_file_score_weight,
+        requestParameters.course_feature,
+        requestParameters.delivery,
+        requestParameters.department,
+        requestParameters.dev_mode,
+        requestParameters.free,
+        requestParameters.id,
+        requestParameters.level,
+        requestParameters.limit,
+        requestParameters.max_incompleteness_penalty,
+        requestParameters.min_score,
+        requestParameters.ocw_topic,
+        requestParameters.offered_by,
+        requestParameters.offset,
+        requestParameters.platform,
+        requestParameters.professional,
+        requestParameters.q,
+        requestParameters.resource_category,
+        requestParameters.resource_type,
+        requestParameters.search_mode,
+        requestParameters.slop,
+        requestParameters.sortby,
+        requestParameters.topic,
+        requestParameters.yearly_decay_percent,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
+}
+
+/**
+ * @export
+ */
+export const LearningResourcesVectorSearchRetrieveAggregationsEnum = {
+  ResourceType: "resource_type",
+  Certification: "certification",
+  CertificationType: "certification_type",
+  OfferedBy: "offered_by",
+  Platform: "platform",
+  Topic: "topic",
+  Department: "department",
+  Level: "level",
+  CourseFeature: "course_feature",
+  Professional: "professional",
+  Free: "free",
+  Delivery: "delivery",
+  ResourceCategory: "resource_category",
+} as const
+export type LearningResourcesVectorSearchRetrieveAggregationsEnum =
+  (typeof LearningResourcesVectorSearchRetrieveAggregationsEnum)[keyof typeof LearningResourcesVectorSearchRetrieveAggregationsEnum]
+/**
+ * @export
+ */
+export const LearningResourcesVectorSearchRetrieveCertificationTypeEnum = {
+  Micromasters: "micromasters",
+  Professional: "professional",
+  Completion: "completion",
+  None: "none",
+} as const
+export type LearningResourcesVectorSearchRetrieveCertificationTypeEnum =
+  (typeof LearningResourcesVectorSearchRetrieveCertificationTypeEnum)[keyof typeof LearningResourcesVectorSearchRetrieveCertificationTypeEnum]
+/**
+ * @export
+ */
+export const LearningResourcesVectorSearchRetrieveDeliveryEnum = {
+  Online: "online",
+  Hybrid: "hybrid",
+  InPerson: "in_person",
+  Offline: "offline",
+} as const
+export type LearningResourcesVectorSearchRetrieveDeliveryEnum =
+  (typeof LearningResourcesVectorSearchRetrieveDeliveryEnum)[keyof typeof LearningResourcesVectorSearchRetrieveDeliveryEnum]
+/**
+ * @export
+ */
+export const LearningResourcesVectorSearchRetrieveDepartmentEnum = {
+  _1: "1",
+  _2: "2",
+  _3: "3",
+  _4: "4",
+  _5: "5",
+  _6: "6",
+  _7: "7",
+  _8: "8",
+  _9: "9",
+  _10: "10",
+  _11: "11",
+  _12: "12",
+  _14: "14",
+  _15: "15",
+  _16: "16",
+  _17: "17",
+  _18: "18",
+  _20: "20",
+  _21A: "21A",
+  _21G: "21G",
+  _21H: "21H",
+  _21L: "21L",
+  _21M: "21M",
+  _22: "22",
+  _24: "24",
+  Cc: "CC",
+  CmsW: "CMS-W",
+  Ec: "EC",
+  Es: "ES",
+  Esd: "ESD",
+  Hst: "HST",
+  Ids: "IDS",
+  Mas: "MAS",
+  Pe: "PE",
+  Sp: "SP",
+  Sts: "STS",
+  Wgs: "WGS",
+} as const
+export type LearningResourcesVectorSearchRetrieveDepartmentEnum =
+  (typeof LearningResourcesVectorSearchRetrieveDepartmentEnum)[keyof typeof LearningResourcesVectorSearchRetrieveDepartmentEnum]
+/**
+ * @export
+ */
+export const LearningResourcesVectorSearchRetrieveLevelEnum = {
+  Undergraduate: "undergraduate",
+  Graduate: "graduate",
+  HighSchool: "high_school",
+  Noncredit: "noncredit",
+  Advanced: "advanced",
+  Intermediate: "intermediate",
+  Introductory: "introductory",
+} as const
+export type LearningResourcesVectorSearchRetrieveLevelEnum =
+  (typeof LearningResourcesVectorSearchRetrieveLevelEnum)[keyof typeof LearningResourcesVectorSearchRetrieveLevelEnum]
+/**
+ * @export
+ */
+export const LearningResourcesVectorSearchRetrieveOfferedByEnum = {
+  Mitx: "mitx",
+  Ocw: "ocw",
+  Bootcamps: "bootcamps",
+  Xpro: "xpro",
+  Mitpe: "mitpe",
+  See: "see",
+} as const
+export type LearningResourcesVectorSearchRetrieveOfferedByEnum =
+  (typeof LearningResourcesVectorSearchRetrieveOfferedByEnum)[keyof typeof LearningResourcesVectorSearchRetrieveOfferedByEnum]
+/**
+ * @export
+ */
+export const LearningResourcesVectorSearchRetrievePlatformEnum = {
+  Edx: "edx",
+  Ocw: "ocw",
+  Oll: "oll",
+  Mitxonline: "mitxonline",
+  Bootcamps: "bootcamps",
+  Xpro: "xpro",
+  Csail: "csail",
+  Mitpe: "mitpe",
+  See: "see",
+  Scc: "scc",
+  Ctl: "ctl",
+  Whu: "whu",
+  Susskind: "susskind",
+  Globalalumni: "globalalumni",
+  Simplilearn: "simplilearn",
+  Emeritus: "emeritus",
+  Podcast: "podcast",
+  Youtube: "youtube",
+} as const
+export type LearningResourcesVectorSearchRetrievePlatformEnum =
+  (typeof LearningResourcesVectorSearchRetrievePlatformEnum)[keyof typeof LearningResourcesVectorSearchRetrievePlatformEnum]
+/**
+ * @export
+ */
+export const LearningResourcesVectorSearchRetrieveResourceCategoryEnum = {
+  Course: "course",
+  Program: "program",
+  LearningMaterial: "learning_material",
+} as const
+export type LearningResourcesVectorSearchRetrieveResourceCategoryEnum =
+  (typeof LearningResourcesVectorSearchRetrieveResourceCategoryEnum)[keyof typeof LearningResourcesVectorSearchRetrieveResourceCategoryEnum]
+/**
+ * @export
+ */
+export const LearningResourcesVectorSearchRetrieveResourceTypeEnum = {
+  Course: "course",
+  Program: "program",
+  LearningPath: "learning_path",
+  Podcast: "podcast",
+  PodcastEpisode: "podcast_episode",
+  Video: "video",
+  VideoPlaylist: "video_playlist",
+} as const
+export type LearningResourcesVectorSearchRetrieveResourceTypeEnum =
+  (typeof LearningResourcesVectorSearchRetrieveResourceTypeEnum)[keyof typeof LearningResourcesVectorSearchRetrieveResourceTypeEnum]
+/**
+ * @export
+ */
+export const LearningResourcesVectorSearchRetrieveSearchModeEnum = {
+  BestFields: "best_fields",
+  MostFields: "most_fields",
+  Phrase: "phrase",
+} as const
+export type LearningResourcesVectorSearchRetrieveSearchModeEnum =
+  (typeof LearningResourcesVectorSearchRetrieveSearchModeEnum)[keyof typeof LearningResourcesVectorSearchRetrieveSearchModeEnum]
+/**
+ * @export
+ */
+export const LearningResourcesVectorSearchRetrieveSortbyEnum = {
+  Featured: "featured",
+  Id: "id",
+  Id2: "-id",
+  ReadableId: "readable_id",
+  ReadableId2: "-readable_id",
+  LastModified: "last_modified",
+  LastModified2: "-last_modified",
+  New: "new",
+  StartDate: "start_date",
+  StartDate2: "-start_date",
+  Mitcoursenumber: "mitcoursenumber",
+  Mitcoursenumber2: "-mitcoursenumber",
+  Views: "views",
+  Views2: "-views",
+  Upcoming: "upcoming",
+} as const
+export type LearningResourcesVectorSearchRetrieveSortbyEnum =
+  (typeof LearningResourcesVectorSearchRetrieveSortbyEnum)[keyof typeof LearningResourcesVectorSearchRetrieveSortbyEnum]
 
 /**
  * LearningpathsApi - axios parameter creator
