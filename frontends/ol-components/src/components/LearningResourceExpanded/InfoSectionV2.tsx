@@ -129,7 +129,7 @@ const Certificate = styled.div({
     height: "16px",
   },
   [theme.breakpoints.down("sm")]: {
-    padding: "1px 2px",
+    padding: "4px 8px",
     ...theme.typography.subtitle4,
   },
 })
