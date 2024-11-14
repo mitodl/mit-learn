@@ -2,9 +2,9 @@ from versioning import versions
 from versioning.versions import TransformWithSchema
 
 
-class RenameDuration(TransformWithSchema):
+class RenameLearningFormat(TransformWithSchema):
     version = versions.VERSION_V2
-    description = "Renamed learning_format to duration"
+    description = "Renamed learning_format to delivery"
 
     def to_representation(self, data: dict, request, instance):  # noqa: ARG002
         """
@@ -22,24 +22,16 @@ class RenameDuration(TransformWithSchema):
         """
         return data
 
-    @staticmethod
-    def transform_api_schema(schema: dict) -> dict:
+    def schema_to_representation(self, schema: dict) -> dict:
         """
-        Transform the schema to match the previous version.  We need to apply it to the
-        components in the schema for which this transform is relevant, because at this
-        point there is no serializer to transform.
+        Transform the response schema to match the previous version.
         """
-        resource_components = [
-            component
-            for component in schema["components"]["schemas"]
-            if component.endswith("Resource") or component == "LearningResourceRun"
-        ]
-        for resource in resource_components:
-            resource_schema = schema["components"]["schemas"][resource]
-            if "delivery" in resource_schema.get("properties", {}):
-                schema["components"]["schemas"][resource]["properties"][
-                    "learning_format"
-                ] = schema["components"]["schemas"][resource]["properties"].pop(
-                    "delivery"
-                )
+        schema["properties"]["learning_format"] = schema["properties"].pop("delivery")
+        return schema
+
+    def schema_to_internal_value(self, schema: dict):
+        """
+        Transform the response schema to match the previous version.
+        Delivery is read_only so it will never be in the request.
+        """
         return schema

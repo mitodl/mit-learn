@@ -278,10 +278,10 @@ class PaceSerializer(serializers.Field):
         return {"code": value, "name": Pace[value].value}
 
 
-class LearningResourceRunSerializer(VersionedSerializer, serializers.ModelSerializer):
+class LearningResourceRunSerializer(serializers.ModelSerializer, VersionedSerializer):
     """Serializer for the LearningResourceRun model"""
 
-    transforms = (transforms.RenameDuration,)
+    transforms = (transforms.RenameLearningFormat,)
 
     instructors = LearningResourceInstructorSerializer(
         read_only=True, allow_null=True, many=True
@@ -434,13 +434,13 @@ class MicroUserListRelationshipSerializer(serializers.ModelSerializer):
 
 
 class LearningResourceBaseSerializer(
-    VersionedSerializer,
     serializers.ModelSerializer,
+    VersionedSerializer,
     WriteableTopicsMixin,
 ):
     """Serializer for LearningResource, minus program"""
 
-    transforms = (transforms.RenameDuration,)
+    transforms = (transforms.RenameLearningFormat,)
 
     position = serializers.IntegerField(read_only=True, allow_null=True)
     offered_by = LearningResourceOfferorSerializer(read_only=True, allow_null=True)

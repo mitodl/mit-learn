@@ -11,9 +11,14 @@ class TransformWithSchema(Transform):
     for transforming the spectacular schema
     """
 
-    @staticmethod
-    def transform_api_schema(schema: dict) -> dict:
+    def schema_to_representation(self, schema: dict) -> dict:
         """
-        Transform the schema to match the previous version.
+        Transform the response schema to match the previous version.
+        """
+        raise NotImplementedError
+
+    def schema_to_internal_value(self, schema: dict) -> dict:
+        """
+        Transform the request schema to match the previous version.
         """
         raise NotImplementedError
