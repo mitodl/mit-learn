@@ -1,6 +1,20 @@
 Release Notes
 =============
 
+Version 0.25.0
+--------------
+
+- Mechanism to sync server prefetch with client API calls (#1798)
+- show more button for v2 drawer dates (#1809)
+- Add data-ph- elements to CTA buttons (#1821)
+- Endpoints for userlist/learningpath memberships (#1808)
+- Clear resource_type filter when leaving Learning Materials search tab (#1780)
+- Update opensearchproject/opensearch Docker tag to v2.18.0 (#1812)
+- Update dependency postcss-styled-syntax to ^0.7.0 (#1811)
+- Update dependency ruff to v0.7.3 (#1810)
+- Update dependency @chromatic-com/storybook to v3 (#1764)
+- learning resource drawer v2 run comparison table (#1782)
+
 Version 0.24.3 (Released November 14, 2024)
 --------------
 
