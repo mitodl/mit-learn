@@ -33,6 +33,23 @@ export default function RootLayout({
             <Footer />
           </PageWrapper>
         </Providers>
+        <div
+          dangerouslySetInnerHTML={{
+            __html: `<iframe
+          title="Einstein Assistant"
+          src="https://www.assistantshub.ai/embed/asst_t72CbOBs7RViy12ge9pFtwXY"
+          style="right: 0;
+                position: fixed;
+                overflow: hidden;
+                height: 100vh;
+                border: 0 none;
+                width: 480px;
+                bottom: -30px;"
+          allowFullScreen
+          allowTransparency
+        ></iframe>`,
+          }}
+        />
       </body>
       {process.env.NEXT_PUBLIC_APPZI_URL ? (
         <Script async src={process.env.NEXT_PUBLIC_APPZI_URL} />
