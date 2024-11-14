@@ -1,8 +1,7 @@
 "use client"
 
 import React from "react"
-import { useChannelCounts } from "api/hooks/channels"
-import { useOfferorsList } from "api/hooks/learningResources"
+import { useChannelCounts, useChannelsList } from "api/hooks/channels"
 import {
   Banner,
   Container,
@@ -14,23 +13,23 @@ import {
 import { backgroundSrcSetCSS } from "ol-utilities"
 import backgroundSteps from "@/public/images/backgrounds/background_steps.jpg"
 import { RiBookOpenLine, RiSuitcaseLine } from "@remixicon/react"
-import type { LearningResourceOfferorDetail } from "api"
+import type { Channel, UnitChannel } from "api/v0"
 import { HOME } from "@/common/urls"
 import { UnitCards, UnitCardLoading } from "./UnitCard"
 import { aggregateProgramCounts, aggregateCourseCounts } from "@/common/utils"
 
 const DESKTOP_WIDTH = "1056px"
 
-const sortUnits = (
-  units: Array<LearningResourceOfferorDetail> | undefined,
+const sortUnitChannels = (
+  channels: Array<Channel> | undefined,
   courseCounts: Record<string, number>,
   programCounts: Record<string, number>,
 ) => {
-  return units?.sort((a, b) => {
-    const courseCountA = courseCounts[a.code] || 0
-    const programCountA = programCounts[a.code] || 0
-    const courseCountB = courseCounts[b.code] || 0
-    const programCountB = programCounts[b.code] || 0
+  return channels?.sort((a, b) => {
+    const courseCountA = courseCounts[a.name] || 0
+    const programCountA = programCounts[a.name] || 0
+    const courseCountB = courseCounts[b.name] || 0
+    const programCountB = programCounts[b.name] || 0
     const totalA = courseCountA + programCountA
     const totalB = courseCountB + programCountB
     return totalB - totalA
@@ -151,7 +150,7 @@ interface UnitSectionProps {
   icon: React.ReactNode
   title: string
   description: string
-  units: LearningResourceOfferorDetail[] | undefined
+  channels: UnitChannel[] | undefined
   courseCounts: Record<string, number>
   programCounts: Record<string, number>
   isLoading?: boolean
@@ -163,7 +162,7 @@ const UnitSection: React.FC<UnitSectionProps> = (props) => {
     icon,
     title,
     description,
-    units,
+    channels,
     courseCounts,
     programCounts,
     isLoading,
@@ -186,7 +185,7 @@ const UnitSection: React.FC<UnitSectionProps> = (props) => {
             .map((_null, i) => <UnitCardLoading key={`irrelevant-${i}`} />)
         ) : (
           <UnitCards
-            units={units}
+            channels={channels}
             courseCounts={courseCounts}
             programCounts={programCounts}
           />
@@ -197,8 +196,7 @@ const UnitSection: React.FC<UnitSectionProps> = (props) => {
 }
 
 const UnitsListingPage: React.FC = () => {
-  const unitsQuery = useOfferorsList()
-  const units = unitsQuery.data?.results
+  const channelsQuery = useChannelsList({ channel_type: "unit" })
   const channelCountQuery = useChannelCounts("unit")
 
   const courseCounts = channelCountQuery.data
@@ -207,25 +205,33 @@ const UnitsListingPage: React.FC = () => {
   const programCounts = channelCountQuery.data
     ? aggregateProgramCounts("name", channelCountQuery.data)
     : {}
-  const academicUnits = sortUnits(
-    units?.filter((unit) => unit.professional === false),
+
+  const channels = channelsQuery.data?.results
+  const academicUnits = sortUnitChannels(
+    channels?.filter(
+      (channel) =>
+        (channel as UnitChannel).unit_detail.unit.professional === false,
+    ),
     courseCounts,
     programCounts,
   )
-  const professionalUnits = sortUnits(
-    units?.filter((unit) => unit.professional === true),
+  const professionalUnits = sortUnitChannels(
+    channels?.filter(
+      (channel) =>
+        (channel as UnitChannel).unit_detail.unit.professional === true,
+    ),
     courseCounts,
     programCounts,
   )
 
-  const unitData = [
+  const sections = [
     {
       id: "academic",
       icon: <AcademicIcon />,
       title: "Academic Units",
       description:
         "MIT's Academic courses, programs, and materials mirror MIT curriculum and residential programs, making these available to a global audience. Approved by faculty committees, Academic content furnishes a comprehensive foundation of knowledge, skills, and abilities for students pursuing their academic objectives. Renowned for their rigor and challenge, MIT's Academic offerings deliver an experience on par with the campus environment.",
-      units: academicUnits,
+      channels: academicUnits as UnitChannel[],
     },
     {
       id: "professional",
@@ -233,7 +239,7 @@ const UnitsListingPage: React.FC = () => {
       title: "Professional Units",
       description:
         "MIT's Professional courses and programs are tailored for working professionals seeking essential practical skills across various industries. Led by MIT faculty and maintaining challenging standards, Professional courses and programs prioritize real-world applications, emphasize practical skills and are directly relevant to today's workforce.",
-      units: professionalUnits,
+      channels: professionalUnits as UnitChannel[],
     },
   ]
 
@@ -266,17 +272,17 @@ const UnitsListingPage: React.FC = () => {
               </PageHeaderText>
             </PageHeaderContainerInner>
           </PageHeaderContainer>
-          {unitData.map((unit) => (
+          {sections.map((section) => (
             <UnitSection
-              key={unit.id}
-              id={unit.id}
-              icon={unit.icon}
-              title={unit.title}
-              description={unit.description}
-              units={unit.units}
+              key={section.id}
+              id={section.id}
+              icon={section.icon}
+              title={section.title}
+              description={section.description}
+              channels={section.channels}
               courseCounts={courseCounts}
               programCounts={programCounts}
-              isLoading={unitsQuery.isLoading}
+              isLoading={channelsQuery.isLoading}
             />
           ))}
         </PageContent>

@@ -3,9 +3,7 @@ import { Metadata } from "next"
 import { Hydrate } from "@tanstack/react-query"
 import { prefetch } from "api/ssr/prefetch"
 import { standardizeMetadata } from "@/common/metadata"
-import { learningResources } from "api/hooks/learningResources"
 import { channels } from "api/hooks/channels"
-import type { PaginatedLearningResourceOfferorDetailList } from "api"
 import UnitsListingPage from "@/app-pages/UnitsListingPage/UnitsListingPage"
 
 export const metadata: Metadata = standardizeMetadata({
@@ -13,22 +11,10 @@ export const metadata: Metadata = standardizeMetadata({
 })
 
 const Page: React.FC = async () => {
-  const { queryClient } = await prefetch([
-    learningResources.offerors({}),
+  const { dehydratedState } = await prefetch([
     channels.countsByType("unit"),
+    channels.list({ channel_type: "unit" }),
   ])
-
-  const units = queryClient
-    .getQueryData<PaginatedLearningResourceOfferorDetailList>(
-      learningResources.offerors({}).queryKey,
-    )!
-    .results.filter((unit) => !!unit.value_prop)
-    .map((unit) => unit.code)
-
-  const { dehydratedState } = await prefetch(
-    units.map((unit) => channels.detailByType("unit", unit)),
-    queryClient,
-  )
 
   return (
     <Hydrate state={dehydratedState}>
