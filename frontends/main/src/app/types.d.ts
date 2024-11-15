@@ -2,7 +2,16 @@ export type SearchParams = {
   [key: string]: string | string[] | undefined
 }
 
-export type PageParams<RouteParams = Record<string, never>> = {
-  params?: Promise<RouteParams>
+type PageParamsWithRouteParams<RouteParams> = {
+  params: Promise<RouteParams>
   searchParams?: Promise<SearchParams>
 }
+
+type PageParamsWithoutRouteParams = {
+  searchParams?: Promise<SearchParams>
+}
+
+export type PageParams<RouteParams = Record<string, never>> =
+  RouteParams extends Record<string, never>
+    ? PageParamsWithoutRoute
+    : PageParamsWithRoute<RouteParams>
