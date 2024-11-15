@@ -17,7 +17,6 @@ import { channels } from "api/hooks/channels"
 import { testimonials } from "api/hooks/testimonials"
 import handleNotFound from "@/common/handleNotFound"
 import type { PageParams } from "@/app/types"
-// import { facetNames } from "@/app-pages/SearchPage/searchPageConfig"
 import getSearchParams from "@/page-components/SearchDisplay/getSearchParams"
 import {
   getConstantSearchParams,
@@ -60,16 +59,18 @@ const Page: React.FC = async ({
 
   const { queryClient } = await prefetch([
     learningResources.offerors({}),
-    learningResources.featured({
-      limit: 12,
-      offered_by: [name],
-    }),
-    testimonials.list({ offerors: [name] }),
-    channels.detailByType("unit", name),
+    channelType === ChannelTypeEnum.Unit &&
+      learningResources.featured({
+        limit: 12,
+        offered_by: [name],
+      }),
+    channelType === ChannelTypeEnum.Unit &&
+      testimonials.list({ offerors: [name] }),
+    channels.detailByType(channelType, name),
   ])
 
-  const unitChannel = queryClient.getQueryData<UnitChannel>(
-    channels.detailByType("unit", name).queryKey,
+  const channel = queryClient.getQueryData<UnitChannel>(
+    channels.detailByType(channelType, name).queryKey,
   )
   const offerors = queryClient
     .getQueryData<PaginatedLearningResourceOfferorDetailList>(
@@ -83,9 +84,7 @@ const Page: React.FC = async ({
       [],
     )
 
-  const constantSearchParams = getConstantSearchParams(
-    unitChannel?.search_filter,
-  )
+  const constantSearchParams = getConstantSearchParams(channel?.search_filter)
 
   const { facetNames } = getFacets(
     channelType,
@@ -115,7 +114,6 @@ const Page: React.FC = async ({
     [learningResources.search(searchRequest as LRSearchRequest)],
     queryClient,
   )
-
   return (
     <Hydrate state={dehydratedState}>
       <ChannelPage />
