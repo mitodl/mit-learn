@@ -11,11 +11,29 @@ import type {
 
 export const PAGE_SIZE = 20
 
+const toArray = (value?: string | string[]) => {
+  if (Array.isArray(value)) {
+    return value
+  }
+  if (typeof value === "string") {
+    return [value]
+  }
+  return value
+}
+
+const removeUndefined = <T extends Record<string, unknown>>(
+  obj: T,
+): Partial<T> => {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([_, value]) => value !== undefined),
+  ) as Partial<T>
+}
+
 type SearchParams = {
   searchParams: URLSearchParams
   requestParams: UseResourceSearchParamsResult["params"] //LRSearchRequest //
   constantSearchParams?: Facets & BooleanFacets
-  resourceCategory: ResourceCategoryEnum | null
+  resourceCategory?: ResourceCategoryEnum
   facetNames: UseResourceSearchParamsProps["facets"]
   page: number
   pageSize?: number
@@ -30,15 +48,6 @@ const getSearchParams = ({
   page,
   pageSize = PAGE_SIZE,
 }: SearchParams) => {
-  console.log("SERACH PARAMS", {
-    searchParams,
-    requestParams,
-    constantSearchParams,
-    resourceCategory,
-    facetNames,
-    page,
-    pageSize,
-  })
   return {
     ...constantSearchParams,
     yearly_decay_percent: searchParams.get("yearly_decay_percent"),
@@ -47,8 +56,12 @@ const getSearchParams = ({
     min_score: searchParams.get("min_score"),
     max_incompleteness_penalty: searchParams.get("max_incompleteness_penalty"),
     content_file_score_weight: searchParams.get("content_file_score_weight"),
-    ...requestParams,
-    resource_category: resourceCategory && [resourceCategory],
+    ...removeUndefined({
+      ...requestParams,
+      topic: toArray(requestParams.topic),
+      certification_type: toArray(requestParams.certification_type),
+    }),
+    resource_category: resourceCategory ? [resourceCategory] : null,
     aggregations: (facetNames || []).concat([
       "resource_category",
     ]) as LRSearchRequest["aggregations"],

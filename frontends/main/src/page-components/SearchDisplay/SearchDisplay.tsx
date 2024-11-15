@@ -587,7 +587,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
       searchParams,
       requestParams,
       constantSearchParams,
-      resourceCategory: activeTab?.resource_category,
+      resourceCategory: activeTab?.resource_category || undefined,
       facetNames,
       page,
       pageSize: PAGE_SIZE,

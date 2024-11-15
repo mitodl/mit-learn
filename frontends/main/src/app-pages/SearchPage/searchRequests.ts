@@ -1,6 +1,4 @@
-import {
-  UseResourceSearchParamsProps,
-} from "@mitodl/course-search-utils"
+import { UseResourceSearchParamsProps } from "@mitodl/course-search-utils"
 
 export const facetNames = [
   "resource_type",

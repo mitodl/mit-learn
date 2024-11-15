@@ -1,6 +1,6 @@
 type PageParamsWithRouteParams<SearchParams, RouteParams> = {
   searchParams?: Promise<SearchParams>
-  params: Promise<RouteParams>
+  params?: Promise<RouteParams>
 }
 
 type PageParamsWithoutRouteParams<SearchParams> = {
@@ -12,5 +12,5 @@ export type PageParams<
   RouteParams = Record<string, never>,
 > =
   RouteParams extends Record<string, never>
-    ? PageParamsWithoutRoute<SearchParams>
-    : PageParamsWithRoute<SearchParams, RouteParams>
+    ? PageParamsWithoutRouteParams<SearchParams>
+    : PageParamsWithRouteParams<SearchParams, RouteParams>

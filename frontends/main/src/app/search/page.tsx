@@ -5,9 +5,17 @@ import { learningResources } from "api/hooks/learningResources"
 import type { PageParams } from "@/app/types"
 import { getMetadataAsync } from "@/common/metadata"
 import SearchPage from "@/app-pages/SearchPage/SearchPage"
-import { facetNames } from "@/app-pages/SearchPage/searchPageConfig"
+import { facetNames } from "@/app-pages/SearchPage/searchRequests"
 import getSearchParams from "@/page-components/SearchDisplay/getSearchParams"
-import { LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LRSearchRequest } from "api"
+import {
+  LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LRSearchRequest,
+  ResourceCategoryEnum,
+} from "api"
+
+type SearchParams = Omit<LRSearchRequest, "free"> & {
+  resource_category?: ResourceCategoryEnum
+  free: "true" | "false"
+}
 
 export async function generateMetadata({ searchParams }: PageParams) {
   return await getMetadataAsync({
@@ -28,19 +36,22 @@ export async function generateMetadata({ searchParams }: PageParams) {
  */
 export const dynamic = "force-dynamic"
 
-const Page: React.FC = async ({
-  searchParams,
-}: PageParams<LRSearchRequest>) => {
-  searchParams = await searchParams
+const Page: React.FC = async ({ searchParams }: PageParams<SearchParams>) => {
+  const requestParams = await searchParams
 
   const params = getSearchParams({
     searchParams: new URLSearchParams({}),
     requestParams: {
-      ...searchParams,
-      free: searchParams.free === "true",
+      ...requestParams!,
+      free:
+        requestParams!.free === "true"
+          ? true
+          : requestParams!.free === "false"
+            ? false
+            : undefined,
     },
     constantSearchParams: {},
-    resourceCategory: searchParams.resource_category,
+    resourceCategory: requestParams!.resource_category,
     facetNames,
     page: 1,
   })
