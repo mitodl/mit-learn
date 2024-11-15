@@ -12,7 +12,10 @@ log = logging.getLogger(__name__)
 
 
 def search_courses(q: str, **kwargs) -> dict:
-    """Query the MIT API for courses"""
+    """
+    Query the MIT API for courses.
+    This is the function call that the AI Assistant should make.
+    """
     params = {"q": q}
 
     valid_params = {
@@ -22,23 +25,22 @@ def search_courses(q: str, **kwargs) -> dict:
         "offered_by": kwargs.get("offered_by"),
         "limit": kwargs.get("limit"),
     }
-    log.info(f"Valid params: {valid_params}")
     params.update({k: v for k, v in valid_params.items() if v is not None})
     url = "https://api.learn.mit.edu/api/v1/learning_resources_search/"
-    log.info(f"Querying MIT API with parameters: {params}")
+    log.info("Querying MIT API with parameters: {json.dumps(params)}")
     try:
         response = requests.get(url, params=params, timeout=30)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
-        log.info(f"Error querying MIT API: {e}")
+        log.exception("Error querying MIT API")
         return {"error": str(e)}
 
 
 def initiate_chat(*, stream: bool = False):
-    # Initialize the bot
+    """Initialize the AI Assistant chatbot"""
     openai_api_key = os.getenv("OPENAI_API_KEY")
-    bot = CourseRecommendationBot(openai_api_key)
+    bot = CourseRecommendationAssistant(openai_api_key)
     bot.setup_assistant()
 
     log.info("Resource Recommendation Chatbot initialized. Type 'quit' to exit.")
@@ -52,33 +54,38 @@ def initiate_chat(*, stream: bool = False):
         if stream:
             bot.get_streaming_recommendations(user_input)
         else:
-            response = bot.get_course_recommendations(user_input)
-            log.info(f"\nAssistant: {response}")
+            return bot.get_course_recommendations(user_input)
 
 
-class CourseRecommendationBot:
+class CourseRecommendationAssistant:
     def __init__(self, openai_api_key: str):
         self.client = OpenAI(api_key=openai_api_key)
         self.assistant = None
         self.thread = None
 
     def setup_assistant(self) -> None:
-        """Create an OpenAI Assistant with specific instructions for course recommendations"""
+        """
+        Create an AI Assistant with specific instructions for course recommendations
+        """
 
         self.assistant = self.client.beta.assistants.create(
             name="Resource Recommendation Assistant",
-            instructions=f"""You are a helpful MIT learning resource recommendation assistant.
-            When users ask about learning resources, use the provided functions to search the MIT catalog
-            and provide relevant recommendations based on their interests and requirements.
+            instructions=f"""You are a helpful MIT learning resource recommendation
+            assistant. When users ask about learning resources, use the provided
+            functions to search the MIT catalog and provide relevant recommendations
+            based on their interests and requirements.
 
-            If a user asks for resources "offered by" or "from" an institution, you should include the offered_by
-            parameter based on the following dictionary: {OfferedBy.as_dict()}
+            If a user asks for resources "offered by" or "from" an institution,
+            you should include the offered_by parameter based on the following
+            dictionary: {OfferedBy.as_dict()}
 
-            If the user mentions courses, programs, videos, or podcasts, filter the search by resource_category.
+            If the user mentions courses, programs, videos, or podcasts, filter
+            the search by resource_category.
 
             Always explain your reasoning for recommending specific resources.
 
-            Always answer questions only based on searching the MIT catalog.  Do not use any other information.
+            Always answer questions only based on searching the MIT catalog.
+            Do not use any other information.
             """,
             model="gpt-4o",
             tools=[
@@ -86,7 +93,7 @@ class CourseRecommendationBot:
                     "type": "function",
                     "function": {
                         "name": "search_courses",
-                        "description": "Search for learning resources in the MIT catalog",
+                        "description": "Search for MIT learning resources",
                         "parameters": {
                             "type": "object",
                             "properties": {
@@ -128,7 +135,7 @@ class CourseRecommendationBot:
                                 },
                                 "limit": {
                                     "type": "integer",
-                                    "description": "Maximum number of results to return",
+                                    "description": "Maxi number of results to return",
                                     "optional": True,
                                 },
                             },
@@ -144,7 +151,7 @@ class CourseRecommendationBot:
         self.thread = self.client.beta.threads.create()
 
     def get_course_recommendations(self, user_query: str) -> str:
-        """Process user query and return course recommendations"""
+        """Return course recommendations based on the user's question"""
         if not self.thread:
             self.create_thread()
 
@@ -172,7 +179,6 @@ class CourseRecommendationBot:
 
                 for tool_call in tool_calls:
                     if tool_call.function.name == "search_courses":
-                        log.info(f"Arguments: {tool_call.function.arguments}")
                         arguments = json.loads(tool_call.function.arguments)
                         query = arguments.pop("q")
                         results = search_courses(query, **arguments)
@@ -200,7 +206,11 @@ class CourseRecommendationBot:
 
         return "No response generated."
 
-    def get_streaming_recommendations(self, user_query: str) -> str:
+    def get_streaming_recommendations(self, user_query: str):
+        """
+        Stream the chatbot's response to the user's question on the command line.
+        Need to figure out a way to yield the response as it comes in.
+        """
         if not self.thread:
             self.create_thread()
         self.client.beta.threads.messages.create(
@@ -215,6 +225,8 @@ class CourseRecommendationBot:
 
 
 class EventHandler(AssistantEventHandler):
+    """Event handler for OpenAI Assistant"""
+
     def __init__(self, client):
         super().__init__()
         self.client = client
@@ -242,7 +254,7 @@ class EventHandler(AssistantEventHandler):
         # Submit all tool_outputs at the same time
         self.submit_tool_outputs(tool_outputs, run_id)
 
-    def submit_tool_outputs(self, tool_outputs, run_id):
+    def submit_tool_outputs(self, tool_outputs, run_id):  # noqa: ARG002
         # Use the submit_tool_outputs_stream helper
         with self.client.beta.threads.runs.submit_tool_outputs_stream(
             thread_id=self.current_run.thread_id,
@@ -251,6 +263,9 @@ class EventHandler(AssistantEventHandler):
             event_handler=EventHandler(self.client),
         ) as stream:
             for text in stream.text_deltas:
-                log.info(text, end="", flush=True)
-                # log.info(f"Flushed?: {text}")
-                # yield text
+                """
+                Print the chatbot response as it comes in to the console.
+                Yielding the text here stops the response.
+                Need to figure out how to stream it as output to an api endpoint.
+                """
+                print(text, end="", flush=True)  # noqa: T201
