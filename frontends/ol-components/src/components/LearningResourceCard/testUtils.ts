@@ -67,6 +67,10 @@ const courses = {
       runs: [factories.learningResources.run()],
       free: true,
       certification: true,
+      certification_type: {
+        code: "completion",
+        name: "Certificate of Completion",
+      },
       resource_prices: [
         { amount: "0", currency: "USD" },
         { amount: "49", currency: "USD" },
@@ -77,6 +81,10 @@ const courses = {
       runs: [factories.learningResources.run()],
       free: true,
       certification: true,
+      certification_type: {
+        code: "completion",
+        name: "Certificate of Completion",
+      },
       resource_prices: [
         { amount: "0", currency: "USD" },
         { amount: "99", currency: "USD" },
@@ -125,6 +133,10 @@ const courses = {
       runs: [factories.learningResources.run()],
       free: false,
       certification: true,
+      certification_type: {
+        code: "completion",
+        name: "Certificate of Completion",
+      },
       resource_prices: [],
     }),
   },
@@ -141,6 +153,10 @@ const courses = {
       runs: [factories.learningResources.run()],
       free: false,
       certification: true,
+      certification_type: {
+        code: "completion",
+        name: "Certificate of Completion",
+      },
       resource_prices: [{ amount: "49", currency: "USD" }],
     }),
     withCertificatePriceRange: makeResource({
@@ -148,6 +164,10 @@ const courses = {
       runs: [factories.learningResources.run()],
       free: false,
       certification: true,
+      certification_type: {
+        code: "completion",
+        name: "Certificate of Completion",
+      },
       resource_prices: [
         { amount: "49", currency: "USD" },
         { amount: "99", currency: "USD" },

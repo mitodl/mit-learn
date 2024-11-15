@@ -65,7 +65,10 @@ describe("Learning resource info section pricing", () => {
 
     screen.getByText("Paid")
     expect(screen.queryByText("Free")).toBeNull()
-    screen.getByText("Certificate included")
+    screen.getByText("Certificate:")
+    screen.getByText(
+      courses.unknownPrice.withCertificate.certification_type.name,
+    )
   })
 
   test("Paid course, no certificate", () => {
@@ -87,7 +90,8 @@ describe("Learning resource info section pricing", () => {
 
     screen.getByText("$49")
     expect(screen.queryByText("Paid")).toBeNull()
-    screen.getByText("Certificate included")
+    screen.getByText("Certificate:")
+    screen.getByText(courses.paid.withCerticateOnePrice.certification_type.name)
   })
 
   test("Paid course, with certificate, price range", () => {
@@ -100,7 +104,10 @@ describe("Learning resource info section pricing", () => {
 
     screen.getByText("$49 – $99")
     expect(screen.queryByText("Paid")).toBeNull()
-    screen.getByText("Certificate included")
+    screen.getByText("Certificate:")
+    screen.getByText(
+      courses.paid.withCertificatePriceRange.certification_type.name,
+    )
   })
 })
 
@@ -158,13 +165,14 @@ describe("Learning resource info section start date", () => {
     })
   })
 
-  test("If data is different, dates are not shown", () => {
+  test("If data is different, dates and prices are not shown", () => {
     const course = courses.multipleRuns.differentData
     render(<InfoSectionV2 resource={course} />, {
       wrapper: ThemeProvider,
     })
     const section = screen.getByTestId("drawer-info-items")
     expect(within(section).queryByText("Start Date:")).toBeNull()
+    expect(within(section).queryByText("Price:")).toBeNull()
   })
 
   test("Clicking the show more button should show more dates", async () => {
