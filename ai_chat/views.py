@@ -1,8 +1,8 @@
 import logging
 
+import markdown2
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import views
-from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from ai_chat import serializers
@@ -22,7 +22,7 @@ class ChatbotView(views.APIView):
     """DRF view for chatbot"""
 
     http_method_names = ["post"]
-    permission_classes = [AllowAny]
+    serializer_class = serializers.ChatRequestSerializer
 
     def post(self, request):
         serializer = serializers.ChatRequestSerializer(data=request.data)
@@ -30,7 +30,7 @@ class ChatbotView(views.APIView):
         assistant_service = AssistantService(request)
         assistant_response = assistant_service.run_assistant(serializer.data["message"])
         response_serializer = ChatResponseSerializer(
-            data={"ai_response": assistant_response}
+            data={"ai_response": markdown2.markdown(assistant_response)}
         )
         response_serializer.is_valid()
         return Response(response_serializer.data)

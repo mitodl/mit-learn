@@ -54,7 +54,7 @@ def initiate_chat(*, stream: bool = False):
         if stream:
             bot.get_streaming_recommendations(user_input)
         else:
-            return bot.get_course_recommendations(user_input)
+            bot.get_course_recommendations(user_input)
 
 
 class CourseRecommendationAssistant:
@@ -202,7 +202,7 @@ class CourseRecommendationAssistant:
         # Return the latest assistant message
         for message in messages.data:
             if message.role == "assistant":
-                return message.content[0].text.value
+                print(message.content[0].text.value)  # noqa: T201
 
         return "No response generated."
 

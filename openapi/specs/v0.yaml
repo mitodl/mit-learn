@@ -275,6 +275,28 @@ paths:
               schema:
                 $ref: '#/components/schemas/Channel'
           description: ''
+  /api/v0/chat:
+    post:
+      operationId: chat_create
+      description: DRF view for chatbot
+      parameters:
+      - in: query
+        name: message
+        schema:
+          type: string
+          minLength: 1
+        required: true
+      tags:
+      - chat
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+          description: ''
   /api/v0/ckeditor:
     get:
       operationId: ckeditor_retrieve
@@ -1201,6 +1223,13 @@ components:
           readOnly: true
       required:
       - unit
+    ChatResponse:
+      type: object
+      properties:
+        ai_response:
+          type: string
+      required:
+      - ai_response
     Counts:
       type: object
       properties:
