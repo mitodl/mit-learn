@@ -14,7 +14,7 @@ type RouteParams = {
 export async function generateMetadata({
   searchParams,
   params,
-}: PageParams<RouteParams>) {
+}: PageParams<never, RouteParams>) {
   const { channelType, name } = await params
 
   const { data } = await handleNotFound(

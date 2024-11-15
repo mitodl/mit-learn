@@ -6,7 +6,6 @@ import type { FacetManifest } from "@mitodl/course-search-utils"
 import { useSearchParams } from "@mitodl/course-search-utils/next"
 import {
   useResourceSearchParams,
-  UseResourceSearchParamsProps,
   getCertificationTypeName,
   getDepartmentName,
 } from "@mitodl/course-search-utils"
@@ -17,6 +16,7 @@ import type { LearningResourceOfferor } from "api"
 import { useOfferorsList } from "api/hooks/learningResources"
 import { capitalize } from "ol-utilities"
 import LearningResourceDrawer from "@/page-components/LearningResourceDrawer/LearningResourceDrawer"
+import { facetNames } from "./searchPageConfig"
 
 const cssGradient = `
   linear-gradient(
@@ -143,17 +143,6 @@ export const getFacetManifest = (
 
   return mainfest
 }
-
-const facetNames = [
-  "resource_type",
-  "certification_type",
-  "delivery",
-  "department",
-  "topic",
-  "offered_by",
-  "free",
-  "professional",
-] as UseResourceSearchParamsProps["facets"]
 
 const constantSearchParams = {}
 

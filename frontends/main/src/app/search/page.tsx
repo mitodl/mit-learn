@@ -1,7 +1,13 @@
 import React from "react"
+import { Hydrate } from "@tanstack/react-query"
+import { prefetch } from "api/ssr/prefetch"
+import { learningResources } from "api/hooks/learningResources"
+import type { PageParams } from "@/app/types"
 import { getMetadataAsync } from "@/common/metadata"
 import SearchPage from "@/app-pages/SearchPage/SearchPage"
-import type { PageParams } from "@/app/types"
+import { facetNames } from "@/app-pages/SearchPage/searchPageConfig"
+import getSearchParams from "@/page-components/SearchDisplay/getSearchParams"
+import { LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LRSearchRequest } from "api"
 
 export async function generateMetadata({ searchParams }: PageParams) {
   return await getMetadataAsync({
@@ -22,9 +28,33 @@ export async function generateMetadata({ searchParams }: PageParams) {
  */
 export const dynamic = "force-dynamic"
 
-const Page: React.FC = ({ searchParams }: PageParams) => {
-  console.log("searchParams", searchParams)
-  return <SearchPage />
+const Page: React.FC = async ({
+  searchParams,
+}: PageParams<LRSearchRequest>) => {
+  searchParams = await searchParams
+
+  const params = getSearchParams({
+    searchParams: new URLSearchParams({}),
+    requestParams: {
+      ...searchParams,
+      free: searchParams.free === "true",
+    },
+    constantSearchParams: {},
+    resourceCategory: searchParams.resource_category,
+    facetNames,
+    page: 1,
+  })
+
+  const { dehydratedState } = await prefetch([
+    learningResources.offerors({}),
+    learningResources.search(params as LRSearchRequest),
+  ])
+
+  return (
+    <Hydrate state={dehydratedState}>
+      <SearchPage />
+    </Hydrate>
+  )
 }
 
 export default Page
