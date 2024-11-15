@@ -284,8 +284,10 @@ const INFO_ITEMS: InfoItemConfig = [
     selector: (resource: LearningResource) => {
       if (
         shouldShowFormat(resource) &&
-        resource.delivery?.filter((d) => d.code === DeliveryEnum.InPerson)
-          .length > 0 &&
+        resource.delivery?.filter(
+          (d) =>
+            d.code === DeliveryEnum.InPerson || d.code === DeliveryEnum.Hybrid,
+        ).length > 0 &&
         resource.location
       ) {
         return <InfoItemValue label={resource.location} index={1} total={1} />
