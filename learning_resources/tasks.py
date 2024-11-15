@@ -211,13 +211,14 @@ def import_all_mitxonline_files(self, chunk_size=None):
 
 
 @app.task(bind=True)
-def import_all_xpro_files(self, chunk_size=None):
+def import_all_xpro_files(self, chunk_size=None, overwrite=False):
     """Ingest xPRO OLX files from an S3 bucket"""
 
     return self.replace(
         get_content_tasks(
             ETLSource.xpro.name,
             chunk_size=chunk_size,
+            overwrite=overwrite,
         )
     )
 

@@ -404,7 +404,7 @@ def documents_from_olx(
 
 
 def transform_content_files(
-    course_tarpath: Path, run: LearningResourceRun
+    course_tarpath: Path, run: LearningResourceRun, overwrite: bool = False
 ) -> Generator[dict, None, None]:
     """
     Pass content to tika, then return JSON document with transformed content inside it
@@ -426,8 +426,10 @@ def transform_content_files(
             mime_type = metadata.get("mime_type")
 
             existing_content = ContentFile.objects.filter(key=key, run=run).first()
-            if not existing_content or existing_content.checksum != metadata.get(
-                "checksum"
+            if (
+                overwrite
+                or not existing_content
+                or existing_content.checksum != metadata.get("checksum")
             ):
                 if settings.SKIP_TIKA and settings.ENVIRONMENT != "production":
                     content_dict = {

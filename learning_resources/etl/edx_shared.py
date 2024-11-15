@@ -86,7 +86,11 @@ def get_most_recent_course_archives(
 
 
 def sync_edx_course_files(
-    etl_source: str, ids: list[int], keys: list[str], s3_prefix: str | None = None
+    etl_source: str,
+    ids: list[int],
+    keys: list[str],
+    s3_prefix: str | None = None,
+    overwrite=False,
 ):
     """
     Sync all edx course run files for a list of course ids to database
@@ -156,7 +160,10 @@ def sync_edx_course_files(
                 content_files_loaded_actions(run=run, deindex_only=True)
                 continue
             try:
-                load_content_files(run, transform_content_files(course_tarpath, run))
+                load_content_files(
+                    run,
+                    transform_content_files(course_tarpath, run, overwrite=overwrite),
+                )
                 run.checksum = checksum
                 run.save()
             except:  # noqa: E722
