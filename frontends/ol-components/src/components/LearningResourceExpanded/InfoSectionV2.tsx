@@ -14,8 +14,10 @@ import {
   RiPresentationLine,
   RiAwardFill,
   RiAwardLine,
+  RiComputerLine,
+  RiMapPinLine,
 } from "@remixicon/react"
-import { LearningResource, ResourceTypeEnum } from "api"
+import { DeliveryEnum, LearningResource, ResourceTypeEnum } from "api"
 import {
   allRunsAreIdentical,
   formatDurationClockTime,
@@ -232,6 +234,15 @@ const RunDates: React.FC<{ resource: LearningResource }> = ({ resource }) => {
   }
 }
 
+const shouldShowFormat = (resource: LearningResource) => {
+  return (
+    (resource.resource_type === ResourceTypeEnum.Course ||
+      resource.resource_type === ResourceTypeEnum.Program) &&
+    allRunsAreIdentical(resource) &&
+    resource.delivery
+  )
+}
+
 const INFO_ITEMS: InfoItemConfig = [
   {
     label: (resource: LearningResource) => {
@@ -245,6 +256,41 @@ const INFO_ITEMS: InfoItemConfig = [
         resource.runs?.filter((run) => run.start_date !== null).length || 0
       if (allRunsAreIdentical(resource) && totalDatesWithRuns > 0) {
         return <RunDates resource={resource} />
+      } else return null
+    },
+  },
+  {
+    label: "Format:",
+    Icon: RiComputerLine,
+    selector: (resource: LearningResource) => {
+      if (shouldShowFormat(resource)) {
+        const totalFormats = resource.delivery?.length || 0
+        return resource.delivery.map((format, index) => {
+          return (
+            <InfoItemValue
+              key={`format-${index}`}
+              label={format.name}
+              index={index}
+              total={totalFormats}
+            />
+          )
+        })
+      } else return null
+    },
+  },
+  {
+    label: "Location:",
+    Icon: RiMapPinLine,
+    selector: (resource: LearningResource) => {
+      if (
+        shouldShowFormat(resource) &&
+        resource.delivery?.filter(
+          (d) =>
+            d.code === DeliveryEnum.InPerson || d.code === DeliveryEnum.Hybrid,
+        ).length > 0 &&
+        resource.location
+      ) {
+        return <InfoItemValue label={resource.location} index={1} total={1} />
       } else return null
     },
   },
