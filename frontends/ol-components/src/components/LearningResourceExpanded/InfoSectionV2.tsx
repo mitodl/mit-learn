@@ -13,6 +13,7 @@ import {
   RiTranslate2,
   RiPresentationLine,
   RiAwardFill,
+  RiAwardLine,
 } from "@remixicon/react"
 import { LearningResource, ResourceTypeEnum } from "api"
 import {
@@ -128,7 +129,7 @@ const Certificate = styled.div({
     height: "16px",
   },
   [theme.breakpoints.down("sm")]: {
-    padding: "1px 2px",
+    padding: "4px 8px",
     ...theme.typography.subtitle4,
   },
 })
@@ -251,22 +252,44 @@ const INFO_ITEMS: InfoItemConfig = [
     label: "Price:",
     Icon: RiPriceTag3Line,
     selector: (resource: LearningResource) => {
-      const prices = getLearningResourcePrices(resource)
+      if (allRunsAreIdentical(resource)) {
+        const prices = getLearningResourcePrices(resource)
 
-      return (
-        <PriceDisplay>
-          <div>{prices.course.display}</div>
-          {resource.certification && (
-            <Certificate>
-              <RiAwardFill />
-              {prices.certificate.display
-                ? "Earn a certificate:"
-                : "Certificate included"}
-              <span>{prices.certificate.display}</span>
-            </Certificate>
-          )}
-        </PriceDisplay>
-      )
+        return (
+          <PriceDisplay>
+            <div>{resource.free ? "Free" : prices.course.display}</div>
+            {resource.certification && resource.free ? (
+              <>
+                {prices.certificate.display ? (
+                  <Certificate>
+                    <RiAwardFill />
+                    <span>Earn a certificate:</span>
+                    <span>{prices.certificate.display}</span>
+                  </Certificate>
+                ) : (
+                  <Certificate>
+                    <RiAwardLine />
+                    <span>Certificate</span>
+                  </Certificate>
+                )}
+              </>
+            ) : null}
+          </PriceDisplay>
+        )
+      } else return null
+    },
+  },
+  {
+    label: "Certificate:",
+    Icon: RiAwardLine,
+    selector: (resource: LearningResource) => {
+      return resource.certification_type && !resource.free ? (
+        <InfoItemValue
+          label={resource.certification_type.name}
+          index={1}
+          total={1}
+        />
+      ) : null
     },
   },
   {
