@@ -644,7 +644,16 @@ class PercolateQuerySerializer(serializers.ModelSerializer):
 class LearningResourcesVectorSearchResponseSerializer(SearchResponseSerializer):
     @extend_schema_field(LearningResourceSerializer(many=True))
     def get_results(self, instance):
-        return instance.get("hits", {}).get("hits", [])
+        return instance.get("hits", {})
+
+    def get_count(self, instance) -> int:
+        return instance.get("total", {}).get("value")
+
+    def get_metadata(self, _) -> SearchResponseMetadata:
+        return {
+            "aggregations": [],
+            "suggest": [],
+        }
 
 
 class LearningResourcesSearchResponseSerializer(SearchResponseSerializer):

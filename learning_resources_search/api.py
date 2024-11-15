@@ -966,18 +966,12 @@ def vector_search(
             limit=limit,
             offset=offset,
         )
-        # `search_result` contains found vector ids with similarity scores
-        # along with the stored payload
-
         # Select and return metadata
         hits = [hit.metadata for hit in search_result]
-        results = LearningResource.objects.for_search_serialization().filter(
-            id__in=[resource["id"] for resource in hits]
-        )
     else:
         results = LearningResource.objects.for_search_serialization().all()
-    hits = serialize_bulk_learning_resources([resource.id for resource in results])
-    return {"hits": {"hits": hits, "total": {"value": 10000}}}
+        hits = serialize_bulk_learning_resources([resource.id for resource in results])
+    return {"hits": hits, "total": {"value": 10000}}
 
 
 def get_similar_resources_qdrant(value_doc: dict, num_resources: int):
