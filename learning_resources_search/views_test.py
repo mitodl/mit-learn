@@ -426,9 +426,14 @@ def test_user_subscription_check(client, user):
 
 def test_vector_search_returns_all_resources_for_empty_query(mocker, client):
     """Test vector search endpoint returns all resources when 'q' is empty"""
+
     LearningResourceFactory.create_batch(5)
     mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
     mock_qdrant.query.return_value = []
+    mocker.patch(
+        "learning_resources_search.indexing_api.qdrant_client",
+        return_value=mock_qdrant,
+    )
     params = {"q": ""}
     resp = client.get(
         reverse("lr_search:v1:learning_resources_vector_search"), data=params
