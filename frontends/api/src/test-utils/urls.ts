@@ -179,6 +179,8 @@ const channels = {
   details: (channelType: string, name: string) =>
     `${API_BASE_URL}/api/v0/channels/type/${channelType}/${name}/`,
   patch: (id: number) => `${API_BASE_URL}/api/v0/channels/${id}/`,
+  list: (params?: Params<ChannelsApi, "channelsList">) =>
+    `${API_BASE_URL}/api/v0/channels/${query(params)}`,
 }
 
 const widgetLists = {
