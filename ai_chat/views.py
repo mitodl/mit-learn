@@ -41,4 +41,5 @@ class ChatbotAgentView(views.APIView):
         return StreamingHttpResponse(
             assistant_service.run_agent(serializer.data["message"]),
             content_type="text/event-stream",
+            headers={"X-Accel-Buffering": "no"}
         )
