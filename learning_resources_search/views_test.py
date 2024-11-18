@@ -434,7 +434,7 @@ def test_vector_search_returns_all_resources_for_empty_query(mocker, client):
         "learning_resources_search.indexing_api.qdrant_client",
         return_value=mock_qdrant,
     )
-    params = {"q": ""}
+    params = {"q": "", "limit": LearningResource.objects.count() + 10}
     resp = client.get(
         reverse("lr_search:v0:learning_resources_vector_search"), data=params
     )

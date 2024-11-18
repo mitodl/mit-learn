@@ -946,6 +946,9 @@ def vector_search(
     from qdrant_client import models
 
     from learning_resources_search.indexing_api import qdrant_client
+    from learning_resources_search.serializers import (
+        serialize_bulk_learning_resources,
+    )
 
     if query_string:
         client = qdrant_client()
@@ -976,15 +979,20 @@ def vector_search(
             for hit in search_result
         ]
     else:
-        results = LearningResource.objects.for_search_serialization().all()
+        results = serialize_bulk_learning_resources(
+            LearningResource.objects.all()[offset : offset + limit].values_list(
+                "id", flat=True
+            )
+        )
+
         hits = [
             {
-                "id": resource.id,
-                "readable_id": resource.readable_id,
-                "resource_type": resource.resource_type,
-                "title": resource.title,
-                "description": resource.description,
-                "platform": resource.platform,
+                "id": resource["id"],
+                "readable_id": resource["readable_id"],
+                "resource_type": resource["resource_type"],
+                "title": resource["title"],
+                "description": resource["description"],
+                "platform": resource["platform"],
             }
             for resource in results
         ]
