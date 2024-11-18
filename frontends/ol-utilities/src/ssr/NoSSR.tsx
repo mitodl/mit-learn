@@ -5,12 +5,12 @@ type NoSSRProps = {
   onSSR?: ReactNode
 }
 
-export const NoSSR: React.FC<NoSSRProps> = ({ children, onSSR = <></> }) => {
+export const NoSSR: React.FC<NoSSRProps> = ({ children, onSSR = null }) => {
   const [isClient, setClient] = useState(false)
 
   useEffect(() => {
     setClient(true)
   }, [])
 
-  return <>{isClient ? children : onSSR}</>
+  return isClient ? children : onSSR
 }
