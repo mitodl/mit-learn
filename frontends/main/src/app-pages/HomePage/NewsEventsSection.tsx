@@ -13,7 +13,7 @@ import {
   NewsEventsListFeedTypeEnum,
 } from "api/hooks/newsEvents"
 import type { NewsFeedItem, EventFeedItem } from "api/v0"
-import { LocalDate } from "ol-utilities"
+import { formatDate } from "ol-utilities"
 import { RiArrowRightSLine } from "@remixicon/react"
 import Link from "next/link"
 
@@ -196,7 +196,7 @@ const Story: React.FC<{ item: NewsFeedItem; mobile: boolean }> = ({
         {item.title}
       </Card.Title>
       <Card.Footer>
-        Published: <LocalDate date={item.news_details?.publish_date} />
+        Published: {formatDate(item.news_details?.publish_date)}
       </Card.Footer>
     </StoryCard>
   )
@@ -226,16 +226,16 @@ const NewsEventsSection: React.FC = () => {
       <Card.Content>
         <EventDate>
           <EventDay>
-            <LocalDate
-              date={(item as EventFeedItem).event_details?.event_datetime}
-              format="D"
-            />
+            {formatDate(
+              (item as EventFeedItem).event_details?.event_datetime,
+              "D",
+            )}
           </EventDay>
           <EventMonth>
-            <LocalDate
-              date={(item as EventFeedItem).event_details?.event_datetime}
-              format="MMM"
-            />
+            {formatDate(
+              (item as EventFeedItem).event_details?.event_datetime,
+              "MMM",
+            )}
           </EventMonth>
         </EventDate>
         <Link href={item.url} data-card-link>

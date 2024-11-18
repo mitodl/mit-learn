@@ -9,7 +9,7 @@ import {
 } from "@remixicon/react"
 import { ResourceTypeEnum, LearningResource } from "api"
 import {
-  LocalDate,
+  formatDate,
   getReadableResourceType,
   DEFAULT_RESOURCE_IMG,
   pluralize,
@@ -151,7 +151,7 @@ export const StartDate: React.FC<{ resource: LearningResource }> = ({
   const startDate = getResourceDate(resource)
   const formatted = anytime
     ? "Anytime"
-    : startDate && <LocalDate date={startDate} format="MMMM DD, YYYY" />
+    : startDate && formatDate(startDate, "MMMM DD, YYYY")
   if (!formatted) return null
 
   return (
