@@ -82,6 +82,8 @@ MITOL_TITLE = get_string("MITOL_TITLE", "MIT Learn")
 # Application definition
 
 INSTALLED_APPS = (
+    "daphne",  # Should be first according to documentation
+    "channels",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",

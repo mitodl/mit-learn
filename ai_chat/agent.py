@@ -115,7 +115,7 @@ class FunctionAgentService:
             log.exception("Error querying MIT API")
             return json.dumps({"error": str(e)})
 
-    def get_or_set_chat_history_cache(self, agent):
+    def get_or_create_chat_history_cache(self, agent):
         """
         Get the user chat history from the cache,
         or create an empty cache key if it doesn't exist
@@ -130,7 +130,7 @@ class FunctionAgentService:
             self.cache.set(self.cache_key, "", timeout=self.cache_timeout)
 
     def get_or_create_agent(self):
-        """Create the assistant with any state for this particular user session"""
+        """Create the agent with any state for this particular user session"""
         llm = OpenAI(model=self.model)
         agent = OpenAIAgent.from_tools(
             [self.create_search_tool()],
@@ -138,11 +138,14 @@ class FunctionAgentService:
             verbose=True,
             system_prompt=INSTRUCTIONS,
         )
-        self.get_or_set_chat_history_cache(agent)
+        self.get_or_create_chat_history_cache(agent)
         return agent
 
     def get_or_create_assistant(self):
-        """Create the assistant with any state for this particular user session"""
+        """
+        Create an assistant with any state for this particular user session
+        Not used here.  Llamaindex equivalent of this function is in assistant.py
+        """
 
         if "assistant_id" in self.session:
             log.info("Loading existing assistant")
