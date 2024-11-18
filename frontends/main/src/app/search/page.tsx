@@ -22,7 +22,7 @@ export async function generateMetadata({ searchParams }: PageParams) {
  */
 export const dynamic = "force-dynamic"
 
-const Page: React.FC = ({ searchParams }: PageParams) => {
+const Page: React.FC = () => {
   return <SearchPage />
 }
 
