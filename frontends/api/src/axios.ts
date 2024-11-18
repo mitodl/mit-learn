@@ -11,4 +11,6 @@ const instance = axios.create({
     process.env.NEXT_PUBLIC_MITOL_AXIOS_WITH_CREDENTIALS === "true",
 })
 
+globalThis.axios = instance
+
 export default instance
