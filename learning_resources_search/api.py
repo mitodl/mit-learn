@@ -967,8 +967,11 @@ def vector_search(
         hits = [
             {
                 "id": hit.metadata["id"],
+                "readable_id": hit.metadata["readable_id"],
                 "resource_type": hit.metadata["resource_type"],
                 "title": hit.metadata["title"],
+                "description": hit.metadata["description"],
+                "platform": hit.metadata["platform"],
             }
             for hit in search_result
         ]
@@ -977,8 +980,11 @@ def vector_search(
         hits = [
             {
                 "id": resource.id,
+                "readable_id": resource.readable_id,
                 "resource_type": resource.resource_type,
                 "title": resource.title,
+                "description": resource.description,
+                "platform": resource.platform,
             }
             for resource in results
         ]
