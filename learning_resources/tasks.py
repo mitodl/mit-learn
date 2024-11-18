@@ -125,7 +125,11 @@ def get_xpro_data():
 
 @app.task
 def get_content_files(
-    ids: list[int], etl_source: str, keys: list[str], s3_prefix: str | None = None, overwrite: bool = False
+    ids: list[int],
+    etl_source: str,
+    keys: list[str],
+    s3_prefix: str | None = None,
+    overwrite: bool = False,
 ):
     """
     Task to sync edX course content files with database
@@ -137,7 +141,9 @@ def get_content_files(
     ):
         log.warning("Required settings missing for %s files", etl_source)
         return
-    sync_edx_course_files(etl_source, ids, keys, s3_prefix=s3_prefix, overwrite=overwrite)
+    sync_edx_course_files(
+        etl_source, ids, keys, s3_prefix=s3_prefix, overwrite=overwrite
+    )
     clear_search_cache()
 
 
@@ -161,7 +167,9 @@ def get_content_tasks(
     )
     return celery.group(
         [
-            get_content_files.si(ids, etl_source, archive_keys, s3_prefix=s3_prefix, overwrite=overwrite)
+            get_content_files.si(
+                ids, etl_source, archive_keys, s3_prefix=s3_prefix, overwrite=overwrite
+            )
             for ids in chunks(
                 LearningResource.objects.filter(
                     published=True, course__isnull=False, etl_source=etl_source
