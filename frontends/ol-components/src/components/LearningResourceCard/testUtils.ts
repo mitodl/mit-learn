@@ -105,7 +105,12 @@ const courses = {
     }),
     anytime: makeResource({
       resource_type: ResourceTypeEnum.Course,
-      runs: [factories.learningResources.run()],
+      runs: [
+        factories.learningResources.run({
+          year: 2022,
+          semester: "Spring",
+        }),
+      ],
       free: true,
       certification: false,
       prices: ["0"],

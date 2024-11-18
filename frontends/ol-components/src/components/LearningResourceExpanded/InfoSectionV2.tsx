@@ -16,6 +16,7 @@ import {
   RiAwardLine,
   RiComputerLine,
   RiMapPinLine,
+  RiCalendarScheduleLine,
 } from "@remixicon/react"
 import { DeliveryEnum, LearningResource, ResourceTypeEnum } from "api"
 import {
@@ -164,9 +165,16 @@ const InfoItemValue: React.FC<InfoItemValueProps> = ({
   )
 }
 
+const totalRunsWithDates = (resource: LearningResource) => {
+  return (
+    resource.runs
+      ?.map((run) => formatRunDate(run, showStartAnytime(resource)))
+      .filter((date) => date !== null).length || 0
+  )
+}
+
 const RunDates: React.FC<{ resource: LearningResource }> = ({ resource }) => {
   const [showingMore, setShowingMore] = useState(false)
-  const asTaughtIn = showStartAnytime(resource)
   const sortedDates = resource.runs
     ?.sort((a, b) => {
       if (a?.start_date && b?.start_date) {
@@ -174,7 +182,8 @@ const RunDates: React.FC<{ resource: LearningResource }> = ({ resource }) => {
       }
       return 0
     })
-    .map((run) => formatRunDate(run, asTaughtIn))
+    .map((run) => formatRunDate(run, showStartAnytime(resource)))
+    .filter((date) => date !== null)
   const totalDates = sortedDates?.length || 0
   const showMore = totalDates > 2
   if (showMore) {
@@ -246,21 +255,22 @@ const shouldShowFormat = (resource: LearningResource) => {
 
 const INFO_ITEMS: InfoItemConfig = [
   {
-    label: (resource: LearningResource) => {
-      const asTaughtIn = resource ? showStartAnytime(resource) : false
-      const label = asTaughtIn ? "As taught in:" : "Start Date:"
-      return label
-    },
+    label: "Starts:",
     Icon: RiCalendarLine,
     selector: (resource: LearningResource) => {
-      const totalDatesWithRuns =
-        resource.runs?.filter((run) => run.start_date !== null).length || 0
-      if (allRunsAreIdentical(resource) && totalDatesWithRuns > 0) {
+      const anytime = showStartAnytime(resource)
+      if (
+        allRunsAreIdentical(resource) &&
+        totalRunsWithDates(resource) > 0 &&
+        !anytime
+      ) {
         return (
           <NoSSR>
             <RunDates resource={resource} />
           </NoSSR>
         )
+      } else if (anytime) {
+        return <InfoItemValue label="Anytime" index={1} total={1} />
       } else return null
     },
   },
@@ -341,6 +351,15 @@ const INFO_ITEMS: InfoItemConfig = [
           total={1}
         />
       ) : null
+    },
+  },
+  {
+    label: "As taught in:",
+    Icon: RiCalendarScheduleLine,
+    selector: (resource: LearningResource) => {
+      if (totalRunsWithDates(resource) > 0 && showStartAnytime(resource)) {
+        return <RunDates resource={resource} />
+      } else return null
     },
   },
   {
