@@ -41,6 +41,7 @@ const ChatPage = () => {
         onChange={(e) => setEndpoint(e.target.value as ChatEndpoint)}
       />
       <StyledChat
+        key={endpoint}
         send={sends[endpoint]}
         conversationOptions={CONVERSATION_OPTTIONS}
       />
