@@ -126,12 +126,12 @@ class AssistantService:
                 "offered_by",
                 "free",
                 "resource_type",
+                "instructors",
+                "certification",
+                "level",
             ]
-            results = {
-                k: result.get(k)
-                for k in main_properties
-                for result in response.json().get("results", [])
-            }
+            for result in response.json().get("results", []):
+                results.append({k: result.get(k) for k in main_properties})  # noqa: PERF401
             return json.dumps(results)
         except requests.exceptions.RequestException as e:
             log.exception("Error querying MIT API")
