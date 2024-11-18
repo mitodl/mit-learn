@@ -17,6 +17,7 @@ http {
 
     server_tokens off;
 
+
     log_format l2met 'measure#nginx.service=$request_time request_id=$http_x_request_id';
     log_format apm '"$time_local" client=$remote_addr '
                    'method=$request_method request="$request" '
