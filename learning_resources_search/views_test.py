@@ -436,13 +436,13 @@ def test_vector_search_returns_all_resources_for_empty_query(mocker, client):
     )
     params = {"q": ""}
     resp = client.get(
-        reverse("lr_search:v1:learning_resources_vector_search"), data=params
+        reverse("lr_search:v0:learning_resources_vector_search"), data=params
     )
     results = resp.json()["results"]
     assert len(results) == LearningResource.objects.count()
     params = {"q": "test"}
     resp = client.get(
-        reverse("lr_search:v1:learning_resources_vector_search"), data=params
+        reverse("lr_search:v0:learning_resources_vector_search"), data=params
     )
     results = resp.json()["results"]
     assert len(results) == 0
