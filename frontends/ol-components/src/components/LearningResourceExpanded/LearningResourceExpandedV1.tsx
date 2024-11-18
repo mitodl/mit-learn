@@ -7,6 +7,7 @@ import { ButtonLink } from "../Button/Button"
 import type { LearningResource, LearningResourceRun } from "api"
 import { ResourceTypeEnum, PlatformEnum } from "api"
 import {
+  NoSSR,
   formatDate,
   capitalize,
   DEFAULT_RESOURCE_IMG,
@@ -299,7 +300,7 @@ const ResourceDescription = ({ resource }: { resource?: LearningResource }) => {
   return (
     <Description
       /**
-       * Resource descriptions can contain HTML. They are santiized on the
+       * Resource descriptions can contain HTML. They are sanitized on the
        * backend during ETL. This is safe to render.
        */
       dangerouslySetInnerHTML={{ __html: resource.description || "" }}
@@ -384,7 +385,7 @@ const LearningResourceExpandedV1: React.FC<LearningResourceExpandedV1Props> = ({
         .map((run) => {
           return {
             value: run.id.toString(),
-            label: formatRunDate(run, asTaughtIn),
+            label: <NoSSR>{formatRunDate(run, asTaughtIn)}</NoSSR>,
           }
         }) ?? []
 
@@ -415,7 +416,7 @@ const LearningResourceExpandedV1: React.FC<LearningResourceExpandedV1Props> = ({
     return (
       <DateSingle>
         <DateLabel>{label}</DateLabel>
-        {formatted ?? ""}
+        <NoSSR>{formatted ?? ""}</NoSSR>
       </DateSingle>
     )
   }

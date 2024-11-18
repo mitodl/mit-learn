@@ -24,6 +24,7 @@ import {
   formatRunDate,
   getLearningResourcePrices,
   showStartAnytime,
+  NoSSR,
 } from "ol-utilities"
 import { theme } from "../ThemeProvider/ThemeProvider"
 import DifferingRunsTable from "./DifferingRunsTable"
@@ -255,7 +256,11 @@ const INFO_ITEMS: InfoItemConfig = [
       const totalDatesWithRuns =
         resource.runs?.filter((run) => run.start_date !== null).length || 0
       if (allRunsAreIdentical(resource) && totalDatesWithRuns > 0) {
-        return <RunDates resource={resource} />
+        return (
+          <NoSSR>
+            <RunDates resource={resource} />
+          </NoSSR>
+        )
       } else return null
     },
   },

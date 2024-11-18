@@ -8,6 +8,7 @@ import {
   getDisplayPrice,
   getRunPrices,
   showStartAnytime,
+  NoSSR,
 } from "ol-utilities"
 
 const DifferingRuns = styled.div({
@@ -103,7 +104,9 @@ const DifferingRunsTable: React.FC<{ resource: LearningResource }> = ({
         </DifferingRunHeader>
         {resource.runs?.map((run, index) => (
           <DifferingRun key={index}>
-            <DateData>{formatRunDate(run, asTaughtIn)}</DateData>
+            <DateData>
+              <NoSSR>{formatRunDate(run, asTaughtIn)}</NoSSR>
+            </DateData>
             {run.resource_prices && (
               <PriceData>
                 <span>{getDisplayPrice(getRunPrices(run)["course"])}</span>

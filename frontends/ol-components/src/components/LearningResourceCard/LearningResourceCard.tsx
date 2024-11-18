@@ -9,7 +9,7 @@ import {
 } from "@remixicon/react"
 import { LearningResource } from "api"
 import {
-  formatDate,
+  LocalDate,
   getReadableResourceType,
   DEFAULT_RESOURCE_IMG,
   getLearningResourcePrices,
@@ -149,7 +149,8 @@ const StartDate: React.FC<{ resource: LearningResource; size?: Size }> = ({
   const format = size === "small" ? "MMM DD, YYYY" : "MMMM DD, YYYY"
   const formatted = anytime
     ? "Anytime"
-    : startDate && formatDate(startDate, format)
+    : startDate && <LocalDate date={startDate} format={format} />
+
   if (!formatted) return null
 
   const showLabel = size !== "small" || anytime
