@@ -4,7 +4,6 @@ import { channelsApi } from "api/clients"
 import { ChannelTypeEnum, UnitChannel } from "api/v0"
 import {
   FeaturedListOfferedByEnum,
-  ResourceCategoryEnum,
   LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LRSearchRequest,
   PaginatedLearningResourceOfferorDetailList,
   LearningResourceOfferorDetail,
@@ -17,7 +16,10 @@ import { channels } from "api/hooks/channels"
 import { testimonials } from "api/hooks/testimonials"
 import handleNotFound from "@/common/handleNotFound"
 import type { PageParams } from "@/app/types"
-import getSearchParams from "@/page-components/SearchDisplay/getSearchParams"
+import getSearchParams, {
+  getRequestParams,
+  RequestSearchParams,
+} from "@/page-components/SearchDisplay/getSearchParams"
 import {
   getConstantSearchParams,
   getFacets,
@@ -26,11 +28,6 @@ import {
 type RouteParams = {
   channelType: ChannelTypeEnum
   name: FeaturedListOfferedByEnum
-}
-
-type SearchParams = Omit<LRSearchRequest, "free"> & {
-  resource_category?: ResourceCategoryEnum
-  free: "true" | "false"
 }
 
 export async function generateMetadata({
@@ -53,7 +50,7 @@ export async function generateMetadata({
 const Page: React.FC = async ({
   params,
   searchParams,
-}: PageParams<SearchParams, RouteParams>) => {
+}: PageParams<RequestSearchParams, RouteParams>) => {
   const { channelType, name } = await params!
   const search = await searchParams
 
@@ -94,20 +91,10 @@ const Page: React.FC = async ({
   )
 
   const searchRequest = getSearchParams({
-    searchParams: new URLSearchParams({}),
-    requestParams: {
-      ...search!,
-      free:
-        search!.free === "true"
-          ? true
-          : search!.free === "false"
-            ? false
-            : undefined,
-    },
+    requestParams: getRequestParams(search!),
     constantSearchParams,
-    resourceCategory: search!.resource_category,
     facetNames,
-    page: 1,
+    page: Number(search!.page ?? 1),
   })
 
   const { dehydratedState } = await prefetch(

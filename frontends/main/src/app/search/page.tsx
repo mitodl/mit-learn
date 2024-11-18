@@ -6,16 +6,11 @@ import type { PageParams } from "@/app/types"
 import { getMetadataAsync } from "@/common/metadata"
 import SearchPage from "@/app-pages/SearchPage/SearchPage"
 import { facetNames } from "@/app-pages/SearchPage/searchRequests"
-import getSearchParams from "@/page-components/SearchDisplay/getSearchParams"
-import {
-  LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LRSearchRequest,
-  ResourceCategoryEnum,
-} from "api"
-
-type SearchParams = Omit<LRSearchRequest, "free"> & {
-  resource_category?: ResourceCategoryEnum
-  free: "true" | "false"
-}
+import getSearchParams, {
+  getRequestParams,
+  RequestSearchParams,
+} from "@/page-components/SearchDisplay/getSearchParams"
+import { LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LRSearchRequest } from "api"
 
 export async function generateMetadata({ searchParams }: PageParams) {
   return await getMetadataAsync({
@@ -36,24 +31,16 @@ export async function generateMetadata({ searchParams }: PageParams) {
  */
 export const dynamic = "force-dynamic"
 
-const Page: React.FC = async ({ searchParams }: PageParams<SearchParams>) => {
-  const requestParams = await searchParams
+const Page: React.FC = async ({
+  searchParams,
+}: PageParams<RequestSearchParams>) => {
+  const search = await searchParams
 
   const params = getSearchParams({
-    searchParams: new URLSearchParams({}),
-    requestParams: {
-      ...requestParams!,
-      free:
-        requestParams!.free === "true"
-          ? true
-          : requestParams!.free === "false"
-            ? false
-            : undefined,
-    },
+    requestParams: getRequestParams(search!),
     constantSearchParams: {},
-    resourceCategory: requestParams!.resource_category,
     facetNames,
-    page: 1,
+    page: Number(search!.page ?? 1),
   })
 
   const { dehydratedState } = await prefetch([

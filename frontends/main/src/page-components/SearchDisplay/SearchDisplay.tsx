@@ -582,6 +582,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     ) ??
     TABS.find((t) => t.defaultTab) ??
     TABS[0]
+
   const allParams = useMemo(() => {
     return getSearchParams({
       searchParams,
