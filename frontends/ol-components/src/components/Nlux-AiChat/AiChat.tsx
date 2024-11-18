@@ -21,9 +21,6 @@ type NluxAiChatProps = Pick<
 const NluxAiChat: React.FC<NluxAiChatProps> = (props) => {
   const adapter = useAsStreamAdapter(props.send, [])
   const api = useAiChatApi()
-  console.log({
-    personas,
-  })
   return (
     <AiChat
       api={api}

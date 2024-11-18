@@ -67,6 +67,11 @@
   --nlux-ConversationStarter--Padding: 0px;
 }
 
+.nlux-comp-exceptionBox:empty {
+  /* Potentially fragile... Will NOT match if box has whitespace-only */
+  display: none;
+}
+
 .nlux-launchPad-container {
   gap: 24px;
   padding: 24px;

@@ -1,6 +1,10 @@
 import type { NluxAiChatProps } from "ol-components"
 
-const CHAT_ENDPOINT = `${process.env.NEXT_PUBLIC_MITOL_API_BASE_URL}/api/v0/chat_agent`
+type ChatEndpoint = "assistant" | "agent"
+const ENDPOINTS: Record<ChatEndpoint, string> = {
+  assistant: `${process.env.NEXT_PUBLIC_MITOL_API_BASE_URL}/api/v0/chat_assistant`,
+  agent: `${process.env.NEXT_PUBLIC_MITOL_API_BASE_URL}/api/v0/chat_agent`,
+}
 
 function getCookie(name: string) {
   const value = `; ${document.cookie}`
@@ -10,8 +14,8 @@ function getCookie(name: string) {
   }
 }
 
-const makeRequest = async (message: string) =>
-  fetch(CHAT_ENDPOINT, {
+const makeRequest = async (endpoint: ChatEndpoint, message: string) =>
+  fetch(ENDPOINTS[endpoint], {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -26,40 +30,58 @@ const makeRequest = async (message: string) =>
 const RESPONSE_DELAY = 500
 
 // Function to send query to the server and receive a stream of chunks as response
-export const send: NluxAiChatProps["send"] = async (message, observer) => {
-  const response = await makeRequest(message)
+const makeSend =
+  (
+    endpoint: ChatEndpoint,
+    processContent: (content: string) => string = (content) => content,
+  ): NluxAiChatProps["send"] =>
+  async (message, observer) => {
+    const response = await makeRequest(endpoint, message)
 
-  if (response.status !== 200) {
-    observer.error(new Error("Failed to connect to the server"))
-    return
-  }
-
-  if (!response.body) {
-    return
-  }
-
-  // Read a stream of server-sent events
-  // and feed them to the observer as they are being generated
-  const reader = response.body.getReader()
-  const textDecoder = new TextDecoder()
-
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    const { value, done } = await reader.read()
-    if (done) {
-      /**
-       * Without the pause here, some messages were getting displayed completely
-       * empty. Unsure why.
-       */
-      await new Promise((res) => setTimeout(res, RESPONSE_DELAY))
-      break
+    if (response.status !== 200) {
+      observer.error(new Error("Failed to connect to the server"))
+      return
     }
 
-    const content = textDecoder.decode(value)
-    if (content) {
-      observer.next(content)
+    if (!response.body) {
+      return
     }
+
+    // Read a stream of server-sent events
+    // and feed them to the observer as they are being generated
+    const reader = response.body.getReader()
+    const textDecoder = new TextDecoder()
+
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const { value, done } = await reader.read()
+      if (done) {
+        /**
+         * Without the pause here, some messages were getting displayed completely
+         * empty. Unsure why.
+         *
+         * Maybe related to stream having only a single chunk?
+         */
+        await new Promise((res) => setTimeout(res, RESPONSE_DELAY))
+        break
+      }
+
+      const content = textDecoder.decode(value)
+      if (content) {
+        observer.next(processContent(content))
+      }
+    }
+
+    observer.complete()
   }
 
-  observer.complete()
+const sends: Record<ChatEndpoint, NluxAiChatProps["send"]> = {
+  assistant: makeSend(
+    "assistant",
+    (content) => JSON.parse(content).ai_response,
+  ),
+  agent: makeSend("agent"),
 }
+
+export { sends }
+export type { ChatEndpoint }
