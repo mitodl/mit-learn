@@ -34,6 +34,11 @@ v1_urls = [
 
 v0_urls = [
     path(
+        r"learning_resources_vector_search/",
+        LearningResourcesVectorSearchView.as_view(),
+        name="learning_resources_vector_search",
+    ),
+    path(
         r"learning_resources_search_admin_params/",
         LearningResourceSearchDefaultsView.as_view(),
         name="learning_resources_search_admin_params",
@@ -42,11 +47,6 @@ v0_urls = [
 
 app_name = "lr_search"
 urlpatterns = [
-    path(
-        r"learning_resources_vector_search/",
-        LearningResourcesVectorSearchView.as_view(),
-        name="learning_resources_vector_search",
-    ),
     re_path(r"^api/v1/", include((v1_urls, "v1"))),
     re_path(r"^api/v0/", include((v0_urls, "v0"))),
 ]
