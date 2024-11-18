@@ -306,7 +306,7 @@ const INFO_ITEMS: InfoItemConfig = [
         resource.location
       ) {
         return <InfoItemValue label={resource.location} index={1} total={1} />
-      }
+      } else return null
     },
   },
   {
