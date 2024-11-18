@@ -319,7 +319,7 @@ SOCIAL_AUTH_PIPELINE = (
     "social_core.pipeline.social_auth.auth_allowed",
     # Checks if the current social-account is already associated in the site.
     "social_core.pipeline.social_auth.social_user",
-    # Associates the current social details with another user account with the same email address.
+    # Associates current social details with another user account with same email.
     "social_core.pipeline.social_auth.associate_by_email",
     # Send a validation email to the user to verify its email address.
     # Disabled by default.
@@ -526,7 +526,8 @@ AWS_QUERYSTRING_AUTH = get_string("AWS_QUERYSTRING_AUTH", False)  # noqa: FBT003
 if MITOL_USE_S3 and (
     not AWS_ACCESS_KEY_ID or not AWS_SECRET_ACCESS_KEY or not AWS_STORAGE_BUCKET_NAME
 ):
-    msg = "You have enabled S3 support, but are missing one of AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, or AWS_STORAGE_BUCKET_NAME"
+    msg = "You have enabled S3 support, but are missing one of AWS_ACCESS_KEY_ID, \
+    AWS_SECRET_ACCESS_KEY, or AWS_STORAGE_BUCKET_NAME"
     raise ImproperlyConfigured(msg)
 if MITOL_USE_S3:
     DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
@@ -650,7 +651,10 @@ OPEN_RESOURCES_MIN_TERM_FREQ = get_int("OPEN_RESOURCES_MIN_TERM_FREQ", 1)
 
 # features flags
 def get_all_config_keys():
-    """Returns all the configuration keys from both environment and configuration files"""  # noqa: D401
+    """
+    Returns all the configuration keys from both
+    environment and configuration files
+    """  # noqa: D401
     return list(os.environ.keys())
 
 
@@ -804,3 +808,7 @@ QDRANT_SPARSE_MODEL = get_string(
 )
 
 OPENAI_API_KEY = get_string(name="OPENAI_API_KEY", default="")
+AI_MIT_SEARCH_URL = get_string(
+    name="AI_MIT_SEARCH_URL",
+    default="https://api.learn.mit.edu/api/v1/learning_resources_search/",
+)

@@ -11,7 +11,8 @@ from learning_resources.constants import OfferedBy
 INSTRUCTIONS = f"""You are a helpful MIT learning resource recommendation
 assistant. When users ask about learning resources, use the provided functions
 to search the MIT catalog and provide relevant recommendations based on their
-interests and requirements.
+interests and requirements. If the user asks subsequent questions
+about those results, answer using the information provided in that response.
 
 If a user asks for resources "offered by" or "from" an institution,
 you should include the offered_by parameter based on the following
@@ -117,7 +118,21 @@ class AssistantService:
         try:
             response = requests.get(url, params=params, timeout=30)
             response.raise_for_status()
-            return json.dumps(response.json())
+            results = []
+            main_properties = [
+                "title",
+                "url",
+                "description",
+                "offered_by",
+                "free",
+                "resource_type",
+            ]
+            results = {
+                k: result.get(k)
+                for k in main_properties
+                for result in response.json().get("results", [])
+            }
+            return json.dumps(results)
         except requests.exceptions.RequestException as e:
             log.exception("Error querying MIT API")
             return json.dumps({"error": str(e)})

@@ -31,7 +31,22 @@ def search_courses(q: str, **kwargs) -> dict:
     try:
         response = requests.get(url, params=params, timeout=30)
         response.raise_for_status()
-        return response.json()
+        simplified_results = []
+        for resource in response.json().get("results", []):
+            simplified_resource = {}
+            for prop in resource.keys():  # noqa: SIM118
+                if prop in (
+                    "id",
+                    "title",
+                    "url",
+                    "description",
+                    "free",
+                    "certificate",
+                    "offered_by",
+                ):
+                    simplified_resource[prop] = resource[prop]
+            simplified_results.append(simplified_resource)
+        return {"results": simplified_results}  # noqa: TRY300
     except requests.exceptions.RequestException as e:
         log.exception("Error querying MIT API")
         return {"error": str(e)}
