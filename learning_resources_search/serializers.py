@@ -469,6 +469,118 @@ class LearningResourcesSearchRequestSerializer(SearchRequestSerializer):
     )
 
 
+class LearningResourcesVectorSearchRequestSerializer(SearchRequestSerializer):
+    id = serializers.ListField(
+        required=False,
+        child=serializers.IntegerField(),
+        help_text="The id value for the learning resource",
+    )
+    sortby = serializers.ChoiceField(
+        required=False,
+        choices=[
+            (key, LEARNING_RESOURCE_SEARCH_SORTBY_OPTIONS[key]["title"])
+            for key in LEARNING_RESOURCE_SEARCH_SORTBY_OPTIONS
+        ],
+        help_text="If the parameter starts with '-' the sort is in descending order",
+    )
+    resource_choices = [(e.name, e.value.lower()) for e in LearningResourceType]
+    resource_type = serializers.ListField(
+        required=False,
+        child=serializers.ChoiceField(
+            choices=resource_choices,
+        ),
+        help_text=(
+            f"The type of learning resource \
+            \n\n{build_choice_description_list(resource_choices)}"
+        ),
+    )
+    free = ArrayWrappedBoolean(
+        required=False,
+        allow_null=True,
+        default=None,
+    )
+    professional = ArrayWrappedBoolean(
+        required=False,
+        allow_null=True,
+        default=None,
+    )
+
+    certification = ArrayWrappedBoolean(
+        required=False,
+        allow_null=True,
+        default=None,
+        help_text="True if the learning resource offers a certificate",
+    )
+    certification_choices = CertificationType.as_tuple()
+    certification_type = serializers.ListField(
+        required=False,
+        child=serializers.ChoiceField(
+            choices=certification_choices,
+        ),
+        help_text=(
+            f"The type of certificate \
+            \n\n{build_choice_description_list(certification_choices)}"
+        ),
+    )
+    department_choices = list(DEPARTMENTS.items())
+    department = serializers.ListField(
+        required=False,
+        child=serializers.ChoiceField(choices=department_choices),
+        help_text=(
+            f"The department that offers the learning resource \
+            \n\n{build_choice_description_list(department_choices)}"
+        ),
+    )
+
+    level = serializers.ListField(
+        required=False, child=serializers.ChoiceField(choices=LevelType.as_list())
+    )
+
+    course_feature = serializers.ListField(
+        required=False,
+        child=serializers.CharField(),
+        help_text="The course feature. "
+        "Possible options are at api/v1/course_features/",
+    )
+    aggregations = serializers.ListField(
+        required=False,
+        help_text="Show resource counts by category",
+        child=serializers.ChoiceField(choices=LEARNING_RESOURCE_AGGREGATIONS),
+    )
+    delivery_choices = LearningResourceDelivery.as_list()
+    delivery = serializers.ListField(
+        required=False,
+        child=serializers.ChoiceField(choices=delivery_choices),
+        help_text=(
+            f"The delivery options in which the learning resource is offered \
+            \n\n{build_choice_description_list(delivery_choices)}"
+        ),
+    )
+    resource_category_choices = [
+        (value, value.replace("_", " ").title()) for value in RESOURCE_CATEGORY_VALUES
+    ]
+    resource_category = serializers.ListField(
+        required=False,
+        child=serializers.ChoiceField(
+            choices=resource_category_choices,
+        ),
+        help_text=(
+            f"The category of learning resource \
+            \n\n{build_choice_description_list(resource_category_choices)}"
+        ),
+    )
+    content_file_score_weight = serializers.FloatField(
+        max_value=1,
+        min_value=0,
+        required=False,
+        allow_null=True,
+        help_text=(
+            "Score weight for content file data.  1 is the default."
+            " 0 means content files are ignored"
+        ),
+    )
+
+
 class ContentFileSearchRequestSerializer(SearchRequestSerializer):
     id = serializers.ListField(
         required=False,

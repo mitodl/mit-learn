@@ -30,6 +30,7 @@ from learning_resources_search.serializers import (
     ContentFileSearchResponseSerializer,
     LearningResourcesSearchRequestSerializer,
     LearningResourcesSearchResponseSerializer,
+    LearningResourcesVectorSearchRequestSerializer,
     LearningResourcesVectorSearchResponseSerializer,
     PercolateQuerySerializer,
     PercolateQuerySubscriptionRequestSerializer,
@@ -102,7 +103,7 @@ class LearningResourcesSearchView(ESView):
 @method_decorator(blocked_ip_exempt, name="dispatch")
 @extend_schema_view(
     get=extend_schema(
-        parameters=[LearningResourcesSearchRequestSerializer()],
+        parameters=[LearningResourcesVectorSearchRequestSerializer()],
         responses=LearningResourcesVectorSearchResponseSerializer(),
     ),
 )
@@ -121,7 +122,7 @@ class LearningResourcesVectorSearchView(ESView):
     )
     @extend_schema(summary="Vector Search")
     def get(self, request):
-        request_data = LearningResourcesSearchRequestSerializer(data=request.GET)
+        request_data = LearningResourcesVectorSearchRequestSerializer(data=request.GET)
 
         if request_data.is_valid():
             query_text = request_data.data.get("q", "")
