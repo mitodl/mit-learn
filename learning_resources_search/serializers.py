@@ -469,9 +469,14 @@ class LearningResourcesSearchRequestSerializer(SearchRequestSerializer):
     )
 
 
-class LearningResourcesVectorSearchRequestSerializer(SearchRequestSerializer):
-    class Meta:
-        fields = ["q", "offset", "limit"]
+class LearningResourcesVectorSearchRequestSerializer(serializers.Serializer):
+    q = serializers.CharField(required=False, help_text="The search text")
+    offset = serializers.IntegerField(
+        required=False, help_text="The initial index from which to return the results"
+    )
+    limit = serializers.IntegerField(
+        required=False, help_text="Number of results to return per page"
+    )
 
 
 class ContentFileSearchRequestSerializer(SearchRequestSerializer):
