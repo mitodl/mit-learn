@@ -7409,7 +7409,6 @@ export const LearningResourcesVectorSearchApiAxiosParamCreator = function (
      * Vector Search for learning resources
      * @summary Vector Search
      * @param {boolean | null} [dev_mode] If true return raw open search results with score explanations
-     * @param {Array<number>} [id] The id value for the learning resource
      * @param {number} [limit] Number of results to return per page
      * @param {Array<string>} [ocw_topic] The ocw topic name.
      * @param {Array<LearningResourcesVectorSearchRetrieveOfferedByEnum>} [offered_by] The organization that offers the learning resource               * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education
@@ -7422,7 +7421,6 @@ export const LearningResourcesVectorSearchApiAxiosParamCreator = function (
      */
     learningResourcesVectorSearchRetrieve: async (
       dev_mode?: boolean | null,
-      id?: Array<number>,
       limit?: number,
       ocw_topic?: Array<string>,
       offered_by?: Array<LearningResourcesVectorSearchRetrieveOfferedByEnum>,
@@ -7450,10 +7448,6 @@ export const LearningResourcesVectorSearchApiAxiosParamCreator = function (
 
       if (dev_mode !== undefined) {
         localVarQueryParameter["dev_mode"] = dev_mode
-      }
-
-      if (id) {
-        localVarQueryParameter["id"] = id
       }
 
       if (limit !== undefined) {
@@ -7515,7 +7509,6 @@ export const LearningResourcesVectorSearchApiFp = function (
      * Vector Search for learning resources
      * @summary Vector Search
      * @param {boolean | null} [dev_mode] If true return raw open search results with score explanations
-     * @param {Array<number>} [id] The id value for the learning resource
      * @param {number} [limit] Number of results to return per page
      * @param {Array<string>} [ocw_topic] The ocw topic name.
      * @param {Array<LearningResourcesVectorSearchRetrieveOfferedByEnum>} [offered_by] The organization that offers the learning resource               * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education
@@ -7528,7 +7521,6 @@ export const LearningResourcesVectorSearchApiFp = function (
      */
     async learningResourcesVectorSearchRetrieve(
       dev_mode?: boolean | null,
-      id?: Array<number>,
       limit?: number,
       ocw_topic?: Array<string>,
       offered_by?: Array<LearningResourcesVectorSearchRetrieveOfferedByEnum>,
@@ -7546,7 +7538,6 @@ export const LearningResourcesVectorSearchApiFp = function (
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.learningResourcesVectorSearchRetrieve(
           dev_mode,
-          id,
           limit,
           ocw_topic,
           offered_by,
@@ -7597,7 +7588,6 @@ export const LearningResourcesVectorSearchApiFactory = function (
       return localVarFp
         .learningResourcesVectorSearchRetrieve(
           requestParameters.dev_mode,
-          requestParameters.id,
           requestParameters.limit,
           requestParameters.ocw_topic,
           requestParameters.offered_by,
@@ -7624,13 +7614,6 @@ export interface LearningResourcesVectorSearchApiLearningResourcesVectorSearchRe
    * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
    */
   readonly dev_mode?: boolean | null
-
-  /**
-   * The id value for the learning resource
-   * @type {Array<number>}
-   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
-   */
-  readonly id?: Array<number>
 
   /**
    * Number of results to return per page
@@ -7704,7 +7687,6 @@ export class LearningResourcesVectorSearchApi extends BaseAPI {
     return LearningResourcesVectorSearchApiFp(this.configuration)
       .learningResourcesVectorSearchRetrieve(
         requestParameters.dev_mode,
-        requestParameters.id,
         requestParameters.limit,
         requestParameters.ocw_topic,
         requestParameters.offered_by,

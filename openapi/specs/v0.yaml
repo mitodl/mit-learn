@@ -311,13 +311,6 @@ paths:
           default: false
         description: If true return raw open search results with score explanations
       - in: query
-        name: id
-        schema:
-          type: array
-          items:
-            type: integer
-        description: The id value for the learning resource
-      - in: query
         name: limit
         schema:
           type: integer

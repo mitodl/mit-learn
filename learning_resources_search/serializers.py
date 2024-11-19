@@ -470,11 +470,8 @@ class LearningResourcesSearchRequestSerializer(SearchRequestSerializer):
 
 
 class LearningResourcesVectorSearchRequestSerializer(SearchRequestSerializer):
-    id = serializers.ListField(
-        required=False,
-        child=serializers.IntegerField(),
-        help_text="The id value for the learning resource",
-    )
+    class Meta:
+        fields = ["q", "offset", "limit"]
 
 
 class ContentFileSearchRequestSerializer(SearchRequestSerializer):
