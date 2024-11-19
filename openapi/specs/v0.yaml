@@ -304,121 +304,21 @@ paths:
       summary: Vector Search
       parameters:
       - in: query
-        name: dev_mode
-        schema:
-          type: boolean
-          nullable: true
-          default: false
-        description: If true return raw open search results with score explanations
-      - in: query
         name: limit
         schema:
           type: integer
         description: Number of results to return per page
-      - in: query
-        name: ocw_topic
-        schema:
-          type: array
-          items:
-            type: string
-            minLength: 1
-        description: The ocw topic name.
-      - in: query
-        name: offered_by
-        schema:
-          type: array
-          items:
-            enum:
-            - mitx
-            - ocw
-            - bootcamps
-            - xpro
-            - mitpe
-            - see
-            type: string
-            description: |-
-              * `mitx` - MITx
-              * `ocw` - MIT OpenCourseWare
-              * `bootcamps` - Bootcamps
-              * `xpro` - MIT xPRO
-              * `mitpe` - MIT Professional Education
-              * `see` - MIT Sloan Executive Education
-        description: "The organization that offers the learning resource         \
-          \    \n\n* `mitx` - MITx\n* `ocw` - MIT OpenCourseWare\n* `bootcamps` -\
-          \ Bootcamps\n* `xpro` - MIT xPRO\n* `mitpe` - MIT Professional Education\n\
-          * `see` - MIT Sloan Executive Education"
       - in: query
         name: offset
         schema:
           type: integer
         description: The initial index from which to return the results
       - in: query
-        name: platform
-        schema:
-          type: array
-          items:
-            enum:
-            - edx
-            - ocw
-            - oll
-            - mitxonline
-            - bootcamps
-            - xpro
-            - csail
-            - mitpe
-            - see
-            - scc
-            - ctl
-            - whu
-            - susskind
-            - globalalumni
-            - simplilearn
-            - emeritus
-            - podcast
-            - youtube
-            type: string
-            description: |-
-              * `edx` - edX
-              * `ocw` - MIT OpenCourseWare
-              * `oll` - Open Learning Library
-              * `mitxonline` - MITx Online
-              * `bootcamps` - Bootcamps
-              * `xpro` - MIT xPRO
-              * `csail` - CSAIL
-              * `mitpe` - MIT Professional Education
-              * `see` - MIT Sloan Executive Education
-              * `scc` - Schwarzman College of Computing
-              * `ctl` - Center for Transportation & Logistics
-              * `whu` - WHU
-              * `susskind` - Susskind
-              * `globalalumni` - Global Alumni
-              * `simplilearn` - Simplilearn
-              * `emeritus` - Emeritus
-              * `podcast` - Podcast
-              * `youtube` - YouTube
-        description: "The platform on which the learning resource is offered     \
-          \        \n\n* `edx` - edX\n* `ocw` - MIT OpenCourseWare\n* `oll` - Open\
-          \ Learning Library\n* `mitxonline` - MITx Online\n* `bootcamps` - Bootcamps\n\
-          * `xpro` - MIT xPRO\n* `csail` - CSAIL\n* `mitpe` - MIT Professional Education\n\
-          * `see` - MIT Sloan Executive Education\n* `scc` - Schwarzman College of\
-          \ Computing\n* `ctl` - Center for Transportation & Logistics\n* `whu` -\
-          \ WHU\n* `susskind` - Susskind\n* `globalalumni` - Global Alumni\n* `simplilearn`\
-          \ - Simplilearn\n* `emeritus` - Emeritus\n* `podcast` - Podcast\n* `youtube`\
-          \ - YouTube"
-      - in: query
         name: q
         schema:
           type: string
           minLength: 1
         description: The search text
-      - in: query
-        name: topic
-        schema:
-          type: array
-          items:
-            type: string
-            minLength: 1
-        description: The topic name. To see a list of options go to api/v1/topics/
       tags:
       - learning_resources_vector_search
       responses:
