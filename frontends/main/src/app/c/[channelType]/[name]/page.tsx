@@ -17,8 +17,8 @@ import { testimonials } from "api/hooks/testimonials"
 import handleNotFound from "@/common/handleNotFound"
 import type { PageParams } from "@/app/types"
 import getSearchParams from "@/page-components/SearchDisplay/getSearchParams"
-import type { ResourceSearchRequest } from "@/page-components/SearchDisplay/getSearchParams"
 import validateRequestParams from "@/page-components/SearchDisplay/validateRequestParams"
+import type { ResourceSearchRequest } from "@/page-components/SearchDisplay/validateRequestParams"
 import {
   getConstantSearchParams,
   getFacets,

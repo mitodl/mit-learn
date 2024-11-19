@@ -7,8 +7,8 @@ import { getMetadataAsync } from "@/common/metadata"
 import SearchPage from "@/app-pages/SearchPage/SearchPage"
 import { facetNames } from "@/app-pages/SearchPage/searchRequests"
 import getSearchParams from "@/page-components/SearchDisplay/getSearchParams"
-import type { ResourceSearchRequest } from "@/page-components/SearchDisplay/getSearchParams"
 import validateRequestParams from "@/page-components/SearchDisplay/validateRequestParams"
+import type { ResourceSearchRequest } from "@/page-components/SearchDisplay/validateRequestParams"
 import { LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LRSearchRequest } from "api"
 
 export async function generateMetadata({ searchParams }: PageParams) {
