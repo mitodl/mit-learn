@@ -54,6 +54,8 @@ const Page: React.FC = async ({
   const { channelType, name } = await params!
   const search = await searchParams
 
+  console.log("search", search)
+
   const { queryClient } = await prefetch([
     learningResources.offerors({}),
     channelType === ChannelTypeEnum.Unit &&
