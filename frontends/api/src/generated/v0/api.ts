@@ -7408,26 +7408,16 @@ export const LearningResourcesVectorSearchApiAxiosParamCreator = function (
     /**
      * Vector Search for learning resources
      * @summary Vector Search
-     * @param {boolean | null} [dev_mode] If true return raw open search results with score explanations
      * @param {number} [limit] Number of results to return per page
-     * @param {Array<string>} [ocw_topic] The ocw topic name.
-     * @param {Array<LearningResourcesVectorSearchRetrieveOfferedByEnum>} [offered_by] The organization that offers the learning resource               * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education
      * @param {number} [offset] The initial index from which to return the results
-     * @param {Array<LearningResourcesVectorSearchRetrievePlatformEnum>} [platform] The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube
      * @param {string} [q] The search text
-     * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     learningResourcesVectorSearchRetrieve: async (
-      dev_mode?: boolean | null,
       limit?: number,
-      ocw_topic?: Array<string>,
-      offered_by?: Array<LearningResourcesVectorSearchRetrieveOfferedByEnum>,
       offset?: number,
-      platform?: Array<LearningResourcesVectorSearchRetrievePlatformEnum>,
       q?: string,
-      topic?: Array<string>,
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
       const localVarPath = `/api/v0/learning_resources_vector_search/`
@@ -7446,36 +7436,16 @@ export const LearningResourcesVectorSearchApiAxiosParamCreator = function (
       const localVarHeaderParameter = {} as any
       const localVarQueryParameter = {} as any
 
-      if (dev_mode !== undefined) {
-        localVarQueryParameter["dev_mode"] = dev_mode
-      }
-
       if (limit !== undefined) {
         localVarQueryParameter["limit"] = limit
-      }
-
-      if (ocw_topic) {
-        localVarQueryParameter["ocw_topic"] = ocw_topic
-      }
-
-      if (offered_by) {
-        localVarQueryParameter["offered_by"] = offered_by
       }
 
       if (offset !== undefined) {
         localVarQueryParameter["offset"] = offset
       }
 
-      if (platform) {
-        localVarQueryParameter["platform"] = platform
-      }
-
       if (q !== undefined) {
         localVarQueryParameter["q"] = q
-      }
-
-      if (topic) {
-        localVarQueryParameter["topic"] = topic
       }
 
       setSearchParams(localVarUrlObj, localVarQueryParameter)
@@ -7508,26 +7478,16 @@ export const LearningResourcesVectorSearchApiFp = function (
     /**
      * Vector Search for learning resources
      * @summary Vector Search
-     * @param {boolean | null} [dev_mode] If true return raw open search results with score explanations
      * @param {number} [limit] Number of results to return per page
-     * @param {Array<string>} [ocw_topic] The ocw topic name.
-     * @param {Array<LearningResourcesVectorSearchRetrieveOfferedByEnum>} [offered_by] The organization that offers the learning resource               * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education
      * @param {number} [offset] The initial index from which to return the results
-     * @param {Array<LearningResourcesVectorSearchRetrievePlatformEnum>} [platform] The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube
      * @param {string} [q] The search text
-     * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     async learningResourcesVectorSearchRetrieve(
-      dev_mode?: boolean | null,
       limit?: number,
-      ocw_topic?: Array<string>,
-      offered_by?: Array<LearningResourcesVectorSearchRetrieveOfferedByEnum>,
       offset?: number,
-      platform?: Array<LearningResourcesVectorSearchRetrievePlatformEnum>,
       q?: string,
-      topic?: Array<string>,
       options?: RawAxiosRequestConfig,
     ): Promise<
       (
@@ -7537,14 +7497,9 @@ export const LearningResourcesVectorSearchApiFp = function (
     > {
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.learningResourcesVectorSearchRetrieve(
-          dev_mode,
           limit,
-          ocw_topic,
-          offered_by,
           offset,
-          platform,
           q,
-          topic,
           options,
         )
       const index = configuration?.serverIndex ?? 0
@@ -7587,14 +7542,9 @@ export const LearningResourcesVectorSearchApiFactory = function (
     ): AxiosPromise<LearningResourcesVectorSearchResponse> {
       return localVarFp
         .learningResourcesVectorSearchRetrieve(
-          requestParameters.dev_mode,
           requestParameters.limit,
-          requestParameters.ocw_topic,
-          requestParameters.offered_by,
           requestParameters.offset,
-          requestParameters.platform,
           requestParameters.q,
-          requestParameters.topic,
           options,
         )
         .then((request) => request(axios, basePath))
@@ -7609,32 +7559,11 @@ export const LearningResourcesVectorSearchApiFactory = function (
  */
 export interface LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieveRequest {
   /**
-   * If true return raw open search results with score explanations
-   * @type {boolean}
-   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
-   */
-  readonly dev_mode?: boolean | null
-
-  /**
    * Number of results to return per page
    * @type {number}
    * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
    */
   readonly limit?: number
-
-  /**
-   * The ocw topic name.
-   * @type {Array<string>}
-   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
-   */
-  readonly ocw_topic?: Array<string>
-
-  /**
-   * The organization that offers the learning resource               * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education
-   * @type {Array<'mitx' | 'ocw' | 'bootcamps' | 'xpro' | 'mitpe' | 'see'>}
-   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
-   */
-  readonly offered_by?: Array<LearningResourcesVectorSearchRetrieveOfferedByEnum>
 
   /**
    * The initial index from which to return the results
@@ -7644,25 +7573,11 @@ export interface LearningResourcesVectorSearchApiLearningResourcesVectorSearchRe
   readonly offset?: number
 
   /**
-   * The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube
-   * @type {Array<'edx' | 'ocw' | 'oll' | 'mitxonline' | 'bootcamps' | 'xpro' | 'csail' | 'mitpe' | 'see' | 'scc' | 'ctl' | 'whu' | 'susskind' | 'globalalumni' | 'simplilearn' | 'emeritus' | 'podcast' | 'youtube'>}
-   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
-   */
-  readonly platform?: Array<LearningResourcesVectorSearchRetrievePlatformEnum>
-
-  /**
    * The search text
    * @type {string}
    * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
    */
   readonly q?: string
-
-  /**
-   * The topic name. To see a list of options go to api/v1/topics/
-   * @type {Array<string>}
-   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
-   */
-  readonly topic?: Array<string>
 }
 
 /**
@@ -7686,58 +7601,14 @@ export class LearningResourcesVectorSearchApi extends BaseAPI {
   ) {
     return LearningResourcesVectorSearchApiFp(this.configuration)
       .learningResourcesVectorSearchRetrieve(
-        requestParameters.dev_mode,
         requestParameters.limit,
-        requestParameters.ocw_topic,
-        requestParameters.offered_by,
         requestParameters.offset,
-        requestParameters.platform,
         requestParameters.q,
-        requestParameters.topic,
         options,
       )
       .then((request) => request(this.axios, this.basePath))
   }
 }
-
-/**
- * @export
- */
-export const LearningResourcesVectorSearchRetrieveOfferedByEnum = {
-  Mitx: "mitx",
-  Ocw: "ocw",
-  Bootcamps: "bootcamps",
-  Xpro: "xpro",
-  Mitpe: "mitpe",
-  See: "see",
-} as const
-export type LearningResourcesVectorSearchRetrieveOfferedByEnum =
-  (typeof LearningResourcesVectorSearchRetrieveOfferedByEnum)[keyof typeof LearningResourcesVectorSearchRetrieveOfferedByEnum]
-/**
- * @export
- */
-export const LearningResourcesVectorSearchRetrievePlatformEnum = {
-  Edx: "edx",
-  Ocw: "ocw",
-  Oll: "oll",
-  Mitxonline: "mitxonline",
-  Bootcamps: "bootcamps",
-  Xpro: "xpro",
-  Csail: "csail",
-  Mitpe: "mitpe",
-  See: "see",
-  Scc: "scc",
-  Ctl: "ctl",
-  Whu: "whu",
-  Susskind: "susskind",
-  Globalalumni: "globalalumni",
-  Simplilearn: "simplilearn",
-  Emeritus: "emeritus",
-  Podcast: "podcast",
-  Youtube: "youtube",
-} as const
-export type LearningResourcesVectorSearchRetrievePlatformEnum =
-  (typeof LearningResourcesVectorSearchRetrievePlatformEnum)[keyof typeof LearningResourcesVectorSearchRetrievePlatformEnum]
 
 /**
  * NewsEventsApi - axios parameter creator
