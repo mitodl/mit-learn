@@ -499,6 +499,15 @@ def index_run_content_files(run_id, index_types):
     ):
         index_content_files(ids_chunk, run.learning_resource.id, index_types)
 
+    deindex_content_file_ids = run.content_files.filter(published=False).values_list(
+        "id", flat=True
+    )
+
+    for ids_chunk in chunks(
+        deindex_content_file_ids, chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE
+    ):
+        deindex_content_files(ids_chunk, run.learning_resource.id)
+
 
 def index_content_files(content_file_ids, learning_resource_id, index_types):
     """
