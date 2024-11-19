@@ -6,10 +6,9 @@ import type { PageParams } from "@/app/types"
 import { getMetadataAsync } from "@/common/metadata"
 import SearchPage from "@/app-pages/SearchPage/SearchPage"
 import { facetNames } from "@/app-pages/SearchPage/searchRequests"
-import getSearchParams, {
-  getRequestParams,
-  RequestSearchParams,
-} from "@/page-components/SearchDisplay/getSearchParams"
+import getSearchParams from "@/page-components/SearchDisplay/getSearchParams"
+import type { ResourceSearchRequest } from "@/page-components/SearchDisplay/getSearchParams"
+import validateRequestParams from "@/page-components/SearchDisplay/validateRequestParams"
 import { LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LRSearchRequest } from "api"
 
 export async function generateMetadata({ searchParams }: PageParams) {
@@ -33,11 +32,11 @@ export const dynamic = "force-dynamic"
 
 const Page: React.FC = async ({
   searchParams,
-}: PageParams<RequestSearchParams>) => {
+}: PageParams<ResourceSearchRequest & { page?: string }>) => {
   const search = await searchParams
 
   const params = getSearchParams({
-    requestParams: getRequestParams(search!),
+    requestParams: validateRequestParams(search!),
     constantSearchParams: {},
     facetNames,
     page: Number(search!.page ?? 1),

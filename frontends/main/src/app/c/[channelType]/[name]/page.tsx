@@ -16,10 +16,9 @@ import { channels } from "api/hooks/channels"
 import { testimonials } from "api/hooks/testimonials"
 import handleNotFound from "@/common/handleNotFound"
 import type { PageParams } from "@/app/types"
-import getSearchParams, {
-  getRequestParams,
-  RequestSearchParams,
-} from "@/page-components/SearchDisplay/getSearchParams"
+import getSearchParams from "@/page-components/SearchDisplay/getSearchParams"
+import type { ResourceSearchRequest } from "@/page-components/SearchDisplay/getSearchParams"
+import validateRequestParams from "@/page-components/SearchDisplay/validateRequestParams"
 import {
   getConstantSearchParams,
   getFacets,
@@ -50,11 +49,9 @@ export async function generateMetadata({
 const Page: React.FC = async ({
   params,
   searchParams,
-}: PageParams<RequestSearchParams, RouteParams>) => {
+}: PageParams<ResourceSearchRequest & { page?: string }, RouteParams>) => {
   const { channelType, name } = await params!
   const search = await searchParams
-
-  console.log("search", search)
 
   const { queryClient } = await prefetch([
     learningResources.offerors({}),
@@ -93,7 +90,7 @@ const Page: React.FC = async ({
   )
 
   const searchRequest = getSearchParams({
-    requestParams: getRequestParams(search!),
+    requestParams: validateRequestParams(search!),
     constantSearchParams,
     facetNames,
     page: Number(search!.page ?? 1),
