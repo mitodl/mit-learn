@@ -504,7 +504,8 @@ def index_run_content_files(run_id, index_types):
     )
 
     for ids_chunk in chunks(
-        deindex_content_file_ids, chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE
+        deindex_content_file_ids,
+        chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
     ):
         deindex_content_files(ids_chunk, run.learning_resource.id)
 

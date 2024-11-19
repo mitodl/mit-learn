@@ -479,7 +479,9 @@ def transform_content_files(
             yield (
                 {
                     "key": key,
-                    "published": bool(content_dict["content"], content_dict["content_title"]),
+                    "published": bool(
+                        content_dict["content"] and content_dict["content_title"]
+                    ),
                     "content_type": content_type,
                     "checksum": metadata.get("checksum"),
                     **content_dict,
