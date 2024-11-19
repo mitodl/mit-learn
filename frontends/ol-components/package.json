@@ -44,7 +44,8 @@
     "react-slick": "^0.30.2",
     "tiny-invariant": "^1.3.1",
     "tinycolor2": "^1.6.0",
-    "validator": "^13.11.0"
+    "validator": "^13.11.0",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@chromatic-com/storybook": "^3.0.0",
