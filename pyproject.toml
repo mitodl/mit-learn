@@ -102,7 +102,7 @@ pytest-freezegun = "^0.4.2"
 pytest-mock = "^3.10.0"
 responses = "^0.25.0"
 ruff = "^0.7.0"
-safety = "^2.3.4"
+safety = "^3.0.0"
 semantic-version = "^2.10.0"
 freezegun = "^1.4.0"
 pytest-xdist = { version = "^3.6.1", extras = ["psutil"] }
