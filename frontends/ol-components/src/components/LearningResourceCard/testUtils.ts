@@ -105,7 +105,12 @@ const courses = {
     }),
     anytime: makeResource({
       resource_type: ResourceTypeEnum.Course,
-      runs: [factories.learningResources.run()],
+      runs: [
+        factories.learningResources.run({
+          year: 2022,
+          semester: "Spring",
+        }),
+      ],
       free: true,
       certification: false,
       prices: ["0"],
@@ -261,6 +266,43 @@ const courses = {
       ],
     }),
   },
+  multipleFormats: makeResource({
+    resource_type: ResourceTypeEnum.Course,
+    location: "Earth",
+    delivery: [
+      {
+        code: DeliveryEnum.Online,
+        name: DeliveryEnumDescriptions.online,
+      },
+      {
+        code: DeliveryEnum.InPerson,
+        name: DeliveryEnumDescriptions.in_person,
+      },
+    ],
+    runs: [
+      factories.learningResources.run({
+        delivery: sameDataRun.delivery,
+        resource_prices: sameDataRun.resource_prices,
+        location: sameDataRun.location,
+      }),
+    ],
+  }),
+  singleFormat: makeResource({
+    resource_type: ResourceTypeEnum.Course,
+    delivery: [
+      {
+        code: DeliveryEnum.Online,
+        name: DeliveryEnumDescriptions.online,
+      },
+    ],
+    runs: [
+      factories.learningResources.run({
+        delivery: sameDataRun.delivery,
+        resource_prices: sameDataRun.resource_prices,
+        location: sameDataRun.location,
+      }),
+    ],
+  }),
 }
 
 const resourceArgType = {

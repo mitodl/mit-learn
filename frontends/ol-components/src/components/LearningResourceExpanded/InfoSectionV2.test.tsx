@@ -112,7 +112,7 @@ describe("Learning resource info section pricing", () => {
 })
 
 describe("Learning resource info section start date", () => {
-  test("Start date", () => {
+  test("Start date(s)", () => {
     const course = courses.free.dated
     const run = course.runs?.[0]
     invariant(run)
@@ -123,11 +123,11 @@ describe("Learning resource info section start date", () => {
     })
 
     const section = screen.getByTestId("drawer-info-items")
-    within(section).getByText("Start Date:")
+    within(section).getByText("Starts:")
     within(section).getByText(runDate)
   })
 
-  test("As taught in", () => {
+  test("As taught in date(s)", () => {
     const course = courses.free.anytime
     const run = course.runs?.[0]
     invariant(run)
@@ -138,8 +138,10 @@ describe("Learning resource info section start date", () => {
     })
 
     const section = screen.getByTestId("drawer-info-items")
-    within(section).getByText("As taught in:")
-    within(section).getByText(runDate)
+    const expectedDateText = `As taught in:${runDate}`
+    within(section).getAllByText((_content, node) => {
+      return node?.textContent === expectedDateText || false
+    })
   })
 
   test("Multiple run dates", () => {
@@ -165,14 +167,16 @@ describe("Learning resource info section start date", () => {
     })
   })
 
-  test("If data is different, dates and prices are not shown", () => {
+  test("If data is different then dates, formats, locations and prices are not shown", () => {
     const course = courses.multipleRuns.differentData
     render(<InfoSectionV2 resource={course} />, {
       wrapper: ThemeProvider,
     })
     const section = screen.getByTestId("drawer-info-items")
-    expect(within(section).queryByText("Start Date:")).toBeNull()
+    expect(within(section).queryByText("Starts:")).toBeNull()
     expect(within(section).queryByText("Price:")).toBeNull()
+    expect(within(section).queryByText("Format:")).toBeNull()
+    expect(within(section).queryByText("Location:")).toBeNull()
   })
 
   test("Clicking the show more button should show more dates", async () => {
@@ -187,5 +191,36 @@ describe("Learning resource info section start date", () => {
     const showMoreLink = within(runDates).getByText("Show more")
     await user.click(showMoreLink)
     expect(runDates.children.length).toBe(totalRuns + 1)
+  })
+})
+
+describe("Learning resource info section format and location", () => {
+  test("Multiple formats", () => {
+    const course = courses.multipleFormats
+    render(<InfoSectionV2 resource={course} />, {
+      wrapper: ThemeProvider,
+    })
+
+    const section = screen.getByTestId("drawer-info-items")
+    within(section).getAllByText((_content, node) => {
+      // The pipe in this string is followed by a zero width space
+      return node?.textContent === "Format:Online|​In person" || false
+    })
+    within(section).getAllByText((_content, node) => {
+      return node?.textContent === "Location:Earth" || false
+    })
+  })
+
+  test("Single format", () => {
+    const course = courses.singleFormat
+    render(<InfoSectionV2 resource={course} />, {
+      wrapper: ThemeProvider,
+    })
+
+    const section = screen.getByTestId("drawer-info-items")
+    within(section).getAllByText((_content, node) => {
+      return node?.textContent === "Format:Online" || false
+    })
+    expect(within(section).queryByText("In person")).toBeNull()
   })
 })
