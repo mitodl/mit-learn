@@ -67,6 +67,10 @@ const courses = {
       runs: [factories.learningResources.run()],
       free: true,
       certification: true,
+      certification_type: {
+        code: "completion",
+        name: "Certificate of Completion",
+      },
       resource_prices: [
         { amount: "0", currency: "USD" },
         { amount: "49", currency: "USD" },
@@ -77,6 +81,10 @@ const courses = {
       runs: [factories.learningResources.run()],
       free: true,
       certification: true,
+      certification_type: {
+        code: "completion",
+        name: "Certificate of Completion",
+      },
       resource_prices: [
         { amount: "0", currency: "USD" },
         { amount: "99", currency: "USD" },
@@ -97,7 +105,12 @@ const courses = {
     }),
     anytime: makeResource({
       resource_type: ResourceTypeEnum.Course,
-      runs: [factories.learningResources.run()],
+      runs: [
+        factories.learningResources.run({
+          year: 2022,
+          semester: "Spring",
+        }),
+      ],
       free: true,
       certification: false,
       prices: ["0"],
@@ -125,6 +138,10 @@ const courses = {
       runs: [factories.learningResources.run()],
       free: false,
       certification: true,
+      certification_type: {
+        code: "completion",
+        name: "Certificate of Completion",
+      },
       resource_prices: [],
     }),
   },
@@ -141,6 +158,10 @@ const courses = {
       runs: [factories.learningResources.run()],
       free: false,
       certification: true,
+      certification_type: {
+        code: "completion",
+        name: "Certificate of Completion",
+      },
       resource_prices: [{ amount: "49", currency: "USD" }],
     }),
     withCertificatePriceRange: makeResource({
@@ -148,6 +169,10 @@ const courses = {
       runs: [factories.learningResources.run()],
       free: false,
       certification: true,
+      certification_type: {
+        code: "completion",
+        name: "Certificate of Completion",
+      },
       resource_prices: [
         { amount: "49", currency: "USD" },
         { amount: "99", currency: "USD" },
@@ -241,6 +266,43 @@ const courses = {
       ],
     }),
   },
+  multipleFormats: makeResource({
+    resource_type: ResourceTypeEnum.Course,
+    location: "Earth",
+    delivery: [
+      {
+        code: DeliveryEnum.Online,
+        name: DeliveryEnumDescriptions.online,
+      },
+      {
+        code: DeliveryEnum.InPerson,
+        name: DeliveryEnumDescriptions.in_person,
+      },
+    ],
+    runs: [
+      factories.learningResources.run({
+        delivery: sameDataRun.delivery,
+        resource_prices: sameDataRun.resource_prices,
+        location: sameDataRun.location,
+      }),
+    ],
+  }),
+  singleFormat: makeResource({
+    resource_type: ResourceTypeEnum.Course,
+    delivery: [
+      {
+        code: DeliveryEnum.Online,
+        name: DeliveryEnumDescriptions.online,
+      },
+    ],
+    runs: [
+      factories.learningResources.run({
+        delivery: sameDataRun.delivery,
+        resource_prices: sameDataRun.resource_prices,
+        location: sameDataRun.location,
+      }),
+    ],
+  }),
 }
 
 const resourceArgType = {

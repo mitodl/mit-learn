@@ -13,6 +13,10 @@ from rest_framework.renderers import JSONRenderer
 from rest_framework.request import Request
 from rest_framework.test import APIRequestFactory
 
+from learning_resources.factories import (
+    LearningResourceFactory,
+)
+from learning_resources.models import LearningResource
 from learning_resources_search.constants import CONTENT_FILE_TYPE, LEARNING_RESOURCE
 from learning_resources_search.serializers import (
     ContentFileSearchRequestSerializer,
@@ -396,7 +400,7 @@ def test_param_reordering_generates_same_query(client, user):
 
 @pytest.mark.django_db
 @factory.django.mute_signals(signals.post_delete, signals.post_save)
-def test_user_subscribtion_check(client, user):
+def test_user_subscription_check(client, user):
     """Test user subscription list filter"""
     client.force_login(user)
     params = {"q": "monkey"}
@@ -418,3 +422,27 @@ def test_user_subscribtion_check(client, user):
     assert len(response) == 1
     assert response[0]["id"] == initial_query_id
     assert response[0]["original_query"] == initial_query
+
+
+def test_vector_search_returns_all_resources_for_empty_query(mocker, client):
+    """Test vector search endpoint returns all resources when 'q' is empty"""
+
+    LearningResourceFactory.create_batch(5)
+    mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
+    mock_qdrant.query.return_value = []
+    mocker.patch(
+        "learning_resources_search.indexing_api.qdrant_client",
+        return_value=mock_qdrant,
+    )
+    params = {"q": "", "limit": LearningResource.objects.count() + 10}
+    resp = client.get(
+        reverse("lr_search:v0:learning_resources_vector_search"), data=params
+    )
+    results = resp.json()["results"]
+    assert len(results) == LearningResource.objects.count()
+    params = {"q": "test"}
+    resp = client.get(
+        reverse("lr_search:v0:learning_resources_vector_search"), data=params
+    )
+    results = resp.json()["results"]
+    assert len(results) == 0

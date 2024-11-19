@@ -283,7 +283,7 @@ class LearningResourceDelivery(ExtendedEnum):
 class CertificationType(ExtendedEnum):
     """Enum for resource certification types"""
 
-    micromasters = "Micromasters Credential"
+    micromasters = "MicroMasters Credential"
     professional = "Professional Certificate"
     completion = "Certificate of Completion"
     none = "No Certificate"

@@ -13,14 +13,19 @@ import {
   RiTranslate2,
   RiPresentationLine,
   RiAwardFill,
+  RiAwardLine,
+  RiComputerLine,
+  RiMapPinLine,
+  RiCalendarScheduleLine,
 } from "@remixicon/react"
-import { LearningResource, ResourceTypeEnum } from "api"
+import { DeliveryEnum, LearningResource, ResourceTypeEnum } from "api"
 import {
   allRunsAreIdentical,
   formatDurationClockTime,
   formatRunDate,
   getLearningResourcePrices,
   showStartAnytime,
+  NoSSR,
 } from "ol-utilities"
 import { theme } from "../ThemeProvider/ThemeProvider"
 import DifferingRunsTable from "./DifferingRunsTable"
@@ -128,7 +133,7 @@ const Certificate = styled.div({
     height: "16px",
   },
   [theme.breakpoints.down("sm")]: {
-    padding: "1px 2px",
+    padding: "4px 8px",
     ...theme.typography.subtitle4,
   },
 })
@@ -160,9 +165,16 @@ const InfoItemValue: React.FC<InfoItemValueProps> = ({
   )
 }
 
+const totalRunsWithDates = (resource: LearningResource) => {
+  return (
+    resource.runs
+      ?.map((run) => formatRunDate(run, showStartAnytime(resource)))
+      .filter((date) => date !== null).length || 0
+  )
+}
+
 const RunDates: React.FC<{ resource: LearningResource }> = ({ resource }) => {
   const [showingMore, setShowingMore] = useState(false)
-  const asTaughtIn = showStartAnytime(resource)
   const sortedDates = resource.runs
     ?.sort((a, b) => {
       if (a?.start_date && b?.start_date) {
@@ -170,7 +182,8 @@ const RunDates: React.FC<{ resource: LearningResource }> = ({ resource }) => {
       }
       return 0
     })
-    .map((run) => formatRunDate(run, asTaughtIn))
+    .map((run) => formatRunDate(run, showStartAnytime(resource)))
+    .filter((date) => date !== null)
   const totalDates = sortedDates?.length || 0
   const showMore = totalDates > 2
   if (showMore) {
@@ -231,19 +244,68 @@ const RunDates: React.FC<{ resource: LearningResource }> = ({ resource }) => {
   }
 }
 
+const shouldShowFormat = (resource: LearningResource) => {
+  return (
+    (resource.resource_type === ResourceTypeEnum.Course ||
+      resource.resource_type === ResourceTypeEnum.Program) &&
+    allRunsAreIdentical(resource) &&
+    resource.delivery
+  )
+}
+
 const INFO_ITEMS: InfoItemConfig = [
   {
-    label: (resource: LearningResource) => {
-      const asTaughtIn = resource ? showStartAnytime(resource) : false
-      const label = asTaughtIn ? "As taught in:" : "Start Date:"
-      return label
-    },
+    label: "Starts:",
     Icon: RiCalendarLine,
     selector: (resource: LearningResource) => {
-      const totalDatesWithRuns =
-        resource.runs?.filter((run) => run.start_date !== null).length || 0
-      if (allRunsAreIdentical(resource) && totalDatesWithRuns > 0) {
-        return <RunDates resource={resource} />
+      const anytime = showStartAnytime(resource)
+      if (
+        allRunsAreIdentical(resource) &&
+        totalRunsWithDates(resource) > 0 &&
+        !anytime
+      ) {
+        return (
+          <NoSSR>
+            <RunDates resource={resource} />
+          </NoSSR>
+        )
+      } else if (anytime) {
+        return <InfoItemValue label="Anytime" index={1} total={1} />
+      } else return null
+    },
+  },
+  {
+    label: "Format:",
+    Icon: RiComputerLine,
+    selector: (resource: LearningResource) => {
+      if (shouldShowFormat(resource)) {
+        const totalFormats = resource.delivery?.length || 0
+        return resource.delivery.map((format, index) => {
+          return (
+            <InfoItemValue
+              key={`format-${index}`}
+              label={format.name}
+              index={index}
+              total={totalFormats}
+            />
+          )
+        })
+      } else return null
+    },
+  },
+  {
+    label: "Location:",
+    Icon: RiMapPinLine,
+    selector: (resource: LearningResource) => {
+      if (
+        shouldShowFormat(resource) &&
+        resource.delivery?.filter(
+          (d) =>
+            d.code === DeliveryEnum.InPerson || d.code === DeliveryEnum.Hybrid,
+        ).length > 0 &&
+        resource.location
+      ) {
+        return <InfoItemValue label={resource.location} index={1} total={1} />
       } else return null
     },
   },
@@ -251,22 +313,53 @@ const INFO_ITEMS: InfoItemConfig = [
     label: "Price:",
     Icon: RiPriceTag3Line,
     selector: (resource: LearningResource) => {
-      const prices = getLearningResourcePrices(resource)
+      if (allRunsAreIdentical(resource)) {
+        const prices = getLearningResourcePrices(resource)
 
-      return (
-        <PriceDisplay>
-          <div>{prices.course.display}</div>
-          {resource.certification && (
-            <Certificate>
-              <RiAwardFill />
-              {prices.certificate.display
-                ? "Earn a certificate:"
-                : "Certificate included"}
-              <span>{prices.certificate.display}</span>
-            </Certificate>
-          )}
-        </PriceDisplay>
-      )
+        return (
+          <PriceDisplay>
+            <div>{resource.free ? "Free" : prices.course.display}</div>
+            {resource.certification && resource.free ? (
+              <>
+                {prices.certificate.display ? (
+                  <Certificate>
+                    <RiAwardFill />
+                    <span>Earn a certificate:</span>
+                    <span>{prices.certificate.display}</span>
+                  </Certificate>
+                ) : (
+                  <Certificate>
+                    <RiAwardLine />
+                    <span>Certificate</span>
+                  </Certificate>
+                )}
+              </>
+            ) : null}
+          </PriceDisplay>
+        )
+      } else return null
+    },
+  },
+  {
+    label: "Certificate:",
+    Icon: RiAwardLine,
+    selector: (resource: LearningResource) => {
+      return resource.certification_type && !resource.free ? (
+        <InfoItemValue
+          label={resource.certification_type.name}
+          index={1}
+          total={1}
+        />
+      ) : null
+    },
+  },
+  {
+    label: "As taught in:",
+    Icon: RiCalendarScheduleLine,
+    selector: (resource: LearningResource) => {
+      if (totalRunsWithDates(resource) > 0 && showStartAnytime(resource)) {
+        return <RunDates resource={resource} />
+      } else return null
     },
   },
   {
