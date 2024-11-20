@@ -2,7 +2,7 @@ import type {
   LearningResourcesApiLearningResourcesListRequest as LRListRequest,
   LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as SearchRequest,
   FeaturedApiFeaturedListRequest as FeaturedListParams,
-  SimilarLearningResourcesApiSimilarLearningResourcesListRequest as SimilarListParams,
+  LearningResourcesApiLearningResourcesSimilarListRequest as SimilarListParams,
 } from "api"
 import type { LearningResourceCardProps } from "ol-components"
 
