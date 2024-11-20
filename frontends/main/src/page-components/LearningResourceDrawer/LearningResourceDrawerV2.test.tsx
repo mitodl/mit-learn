@@ -49,7 +49,7 @@ describe("LearningResourceDrawerV2", () => {
         resource,
       )
       setMockResponse.get(
-        urls.similarLearningResources.list({ id: resource.id }),
+        urls.learningResources.similar({ id: resource.id }),
         [],
       )
 
@@ -113,7 +113,7 @@ describe("LearningResourceDrawerV2", () => {
         resource,
       )
       setMockResponse.get(
-        urls.similarLearningResources.list({ id: resource.id }),
+        urls.learningResources.similar({ id: resource.id }),
         [],
       )
       const user = factories.user.user({

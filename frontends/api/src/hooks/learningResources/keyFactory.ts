@@ -7,7 +7,6 @@ import {
   platformsApi,
   schoolsApi,
   featuredApi,
-  similarLearningResourcesApi,
 } from "../../clients"
 import type {
   LearningResource,
@@ -112,8 +111,8 @@ const learningResources = createQueryKeys("learningResources", {
     return {
       queryKey: [`similar_resources-${id}`],
       queryFn: () =>
-        similarLearningResourcesApi
-          .similarLearningResourcesList({ id })
+        learningResourcesApi
+          .learningResourcesSimilarList({ id })
           .then((res) => res.data),
     }
   },
