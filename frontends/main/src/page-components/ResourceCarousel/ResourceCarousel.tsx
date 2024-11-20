@@ -224,6 +224,8 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
             return learningResourcesKeyFactory.featured(tab.data.params)
           case "lr_similar":
             return learningResourcesKeyFactory.similar(tab.data.params.id)
+          case "lr_vector_similar":
+            return learningResourcesKeyFactory.vectorSimilar(tab.data.params.id)
         }
       },
     ),

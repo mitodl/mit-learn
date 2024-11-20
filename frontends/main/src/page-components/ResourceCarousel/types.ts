@@ -3,6 +3,7 @@ import type {
   LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as SearchRequest,
   FeaturedApiFeaturedListRequest as FeaturedListParams,
   LearningResourcesApiLearningResourcesSimilarListRequest as SimilarListParams,
+  LearningResourcesApiLearningResourcesVectorSimilarListRequest as VectorSimilarListParams,
 } from "api"
 import type { LearningResourceCardProps } from "ol-components"
 
@@ -26,11 +27,17 @@ interface SimilarDataSource {
   params: SimilarListParams
 }
 
+interface VectorSimilarDataSource {
+  type: "lr_vector_similar"
+  params: VectorSimilarListParams
+}
+
 type DataSource =
   | ResourceDataSource
   | SearchDataSource
   | FeaturedDataSource
   | SimilarDataSource
+  | VectorSimilarDataSource
 
 type TabConfig<D extends DataSource = DataSource> = {
   label: React.ReactNode

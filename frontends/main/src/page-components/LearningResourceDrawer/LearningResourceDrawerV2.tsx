@@ -106,13 +106,30 @@ const DrawerContent: React.FC<{
       ]}
     />
   )
+  const vectorSimilarResourcesCarousel = (
+    <ResourceCarousel
+      titleComponent="p"
+      titleVariant="subtitle1"
+      title="Similar Learning Resources (Vector Based)"
+      config={[
+        {
+          label: "Similar Learning Resources (Vector Based)",
+          cardProps: { size: "small" },
+          data: {
+            type: "lr_similar",
+            params: { id: resourceId },
+          },
+        },
+      ]}
+    />
+  )
 
   return (
     <>
       <LearningResourceExpandedV2
         imgConfig={imgConfigs.large}
         resource={resource.data}
-        carousels={[similarResourcesCarousel]}
+        carousels={[similarResourcesCarousel, vectorSimilarResourcesCarousel]}
         user={user}
         onAddToLearningPathClick={handleAddToLearningPathClick}
         onAddToUserListClick={handleAddToUserListClick}
