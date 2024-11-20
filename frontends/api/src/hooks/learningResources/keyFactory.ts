@@ -1,7 +1,5 @@
-import type { QueryClient, Query } from "@tanstack/react-query"
 import {
   learningResourcesApi,
-  learningpathsApi,
   learningResourcesSearchApi,
   topicsApi,
   userListsApi,
@@ -14,16 +12,11 @@ import axiosInstance from "../../axios"
 import type {
   LearningResourcesApiLearningResourcesListRequest as LRListRequest,
   TopicsApiTopicsListRequest as TopicsListRequest,
-  LearningpathsApiLearningpathsItemsListRequest as LPResourcesListRequest,
-  LearningpathsApiLearningpathsListRequest as LPListRequest,
   PaginatedLearningResourceList,
-  LearningResource,
-  PaginatedLearningPathRelationshipList,
   LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LRSearchRequest,
   UserlistsApiUserlistsItemsListRequest as ULResourcesListRequest,
   UserlistsApiUserlistsListRequest as ULListRequest,
   PaginatedUserListRelationshipList,
-  UserList,
   OfferorsApiOfferorsListRequest,
   PlatformsApiPlatformsListRequest,
   FeaturedApiFeaturedListRequest as FeaturedListParams,
@@ -95,38 +88,6 @@ const learningResources = createQueryKeys("learningResources", {
     queryKey: [params],
     queryFn: () => topicsApi.topicsList(params).then((res) => res.data),
   }),
-  learningpaths: {
-    queryKey: ["learning_paths"],
-    contextQueries: {
-      detail: (id: number) => ({
-        queryKey: [id],
-        queryFn: () =>
-          learningpathsApi
-            .learningpathsRetrieve({ id })
-            .then((res) => res.data),
-        contextQueries: {
-          infiniteItems: (itemsP: LPResourcesListRequest) => ({
-            queryKey: [itemsP],
-            queryFn: ({ pageParam }: { pageParam?: string } = {}) => {
-              // Use generated API for first request, then use next parameter
-              const request = pageParam
-                ? axiosInstance.request<PaginatedLearningPathRelationshipList>({
-                    method: "get",
-                    url: pageParam,
-                  })
-                : learningpathsApi.learningpathsItemsList(itemsP)
-              return request.then((res) => res.data)
-            },
-          }),
-        },
-      }),
-      list: (params: LPListRequest) => ({
-        queryKey: [params],
-        queryFn: () =>
-          learningpathsApi.learningpathsList(params).then((res) => res.data),
-      }),
-    },
-  },
   search: (params: LRSearchRequest) => {
     return {
       queryKey: [params],
@@ -183,140 +144,12 @@ const learningResources = createQueryKeys("learningResources", {
       queryFn: () => schoolsApi.schoolsList().then((res) => res.data),
     }
   },
+  memberships: () => {
+    return {
+      queryKey: ["memberships"],
+    }
+  },
 })
-
-const listHasResource =
-  (resourceId: number) =>
-  (query: Query): boolean => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data = query.state.data as any
-    const resources: LearningResource[] | UserList[] = data.pages
-      ? data.pages.flatMap(
-          (page: PaginatedLearningResourceList) => page.results,
-        )
-      : data.results
-
-    return resources.some((res) => res.id === resourceId)
-  }
-
-const resourcesHaveUserList =
-  (userListId: number) =>
-  (query: Query): boolean => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data = query.state.data as any
-    const resources: LearningResource[] = data.pages
-      ? data.pages.flatMap(
-          (page: PaginatedLearningResourceList) => page.results,
-        )
-      : data.results
-
-    return resources?.some((res) =>
-      res.user_list_parents?.some((userList) => userList.parent === userListId),
-    )
-  }
-
-const resourceHasUserList =
-  (userListId: number) =>
-  (query: Query): boolean => {
-    const data = query.state.data as LearningResource
-    return !!data.user_list_parents?.some(
-      (userList) => userList.parent === userListId,
-    )
-  }
-
-/**
- * Invalidate Resource queries that a specific resource appears in.
- *
- * By default, this will invalidate featured list queries. This can result in
- * odd behavior because the featured list item order is randomized: when the
- * featured list cache is invalidated, the newly fetched data may be in a
- * different order. To maintain the order, use skipFeatured to skip invalidation
- * of featured lists and instead manually update the cached data via
- * `updateListParentsOnAdd`.
- */
-const invalidateResourceQueries = (
-  queryClient: QueryClient,
-  resourceId: LearningResource["id"],
-  { skipFeatured = false } = {},
-) => {
-  /**
-   * Invalidate details queries.
-   * In this case, looking up queries by key is easy.
-   */
-  queryClient.invalidateQueries(learningResources.detail(resourceId).queryKey)
-  queryClient.invalidateQueries(
-    learningResources.learningpaths._ctx.detail(resourceId).queryKey,
-  )
-  queryClient.invalidateQueries(
-    learningResources.userlists._ctx.detail(resourceId).queryKey,
-  )
-  /**
-   * Invalidate lists that the resource belongs to.
-   * Check for actual membership.
-   */
-  const lists = [
-    learningResources.list._def,
-    learningResources.learningpaths._ctx.list._def,
-    learningResources.search._def,
-    ...(skipFeatured ? [] : [learningResources.featured._def]),
-  ]
-  lists.forEach((queryKey) => {
-    queryClient.invalidateQueries({
-      queryKey,
-      predicate: listHasResource(resourceId),
-    })
-  })
-}
-
-/**
- * Invalidate Resource queries that a resource that belongs to user list appears in.
- */
-const invalidateResourceWithUserListQueries = (
-  queryClient: QueryClient,
-  userListId: LearningResource["id"],
-) => {
-  /**
-   * Invalidate resource detail query for resource that is in the user list.
-   */
-  queryClient.invalidateQueries({
-    queryKey: learningResources.detail._def,
-    predicate: resourceHasUserList(userListId),
-  })
-
-  /**
-   * Invalidate lists with a resource that is in the user list.
-   */
-  const lists = [
-    learningResources.list._def,
-    learningResources.learningpaths._ctx.list._def,
-    learningResources.search._def,
-    learningResources.featured._def,
-  ]
-
-  lists.forEach((queryKey) => {
-    queryClient.invalidateQueries({
-      queryKey,
-      predicate: resourcesHaveUserList(userListId),
-    })
-  })
-}
-
-const invalidateUserListQueries = (
-  queryClient: QueryClient,
-  userListId: UserList["id"],
-) => {
-  queryClient.invalidateQueries(
-    learningResources.userlists._ctx.detail(userListId).queryKey,
-  )
-  const lists = [learningResources.userlists._ctx.list._def]
-
-  lists.forEach((queryKey) => {
-    queryClient.invalidateQueries({
-      queryKey,
-      predicate: listHasResource(userListId),
-    })
-  })
-}
 
 /**
  * Given
@@ -407,11 +240,4 @@ const updateListParents = (
 }
 
 export default learningResources
-export {
-  invalidateResourceQueries,
-  invalidateUserListQueries,
-  invalidateResourceWithUserListQueries,
-  updateListParentsOnAdd,
-  updateListParentsOnDestroy,
-  updateListParents,
-}
+export { updateListParentsOnAdd, updateListParentsOnDestroy, updateListParents }
