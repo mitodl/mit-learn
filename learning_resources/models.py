@@ -474,6 +474,9 @@ class LearningResource(TimestampedModel):
     )
     location = models.CharField(max_length=256, blank=True)
 
+    def vector_point_id(self):
+        return uuid.uuid5(uuid.NAMESPACE_DNS, self.readable_id)
+
     @property
     def audience(self) -> str | None:
         """Returns the audience for the learning resource"""
