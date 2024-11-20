@@ -4,6 +4,7 @@ Functions and constants for OpenSearch indexing
 
 import json
 import logging
+import uuid
 from math import ceil
 
 from django.conf import settings
@@ -143,6 +144,10 @@ def create_qdrand_collections(force_recreate):
         )
 
 
+def vector_point_id(readable_id):
+    return str(uuid.uuid5(uuid.NAMESPACE_DNS, readable_id))
+
+
 def embed_learning_resources(ids, resource_type):
     # update embeddings
     client = qdrant_client()
@@ -151,8 +156,10 @@ def embed_learning_resources(ids, resource_type):
         f"{settings.QDRANT_BASE_COLLECTION_NAME}.content_files"
     )
     if resource_type == CONTENT_FILE_TYPE:
+        readable_id_field = "resource_readable_id"
         serialized_resources = serialize_bulk_content_files(ids)
     else:
+        readable_id_field = "readable_id"
         serialized_resources = serialize_bulk_learning_resources(ids)
     create_qdrand_collections(force_recreate=False)
     if resource_type != CONTENT_FILE_TYPE:
@@ -168,7 +175,7 @@ def embed_learning_resources(ids, resource_type):
             f'{doc.get("full_description")} {doc.get("content")}'
         )
         metadata.append(doc)
-        ids.append(doc["id"])
+        ids.append(vector_point_id(doc[readable_id_field]))
     client.add(
         collection_name=collection_name,
         ids=ids,
