@@ -190,7 +190,7 @@ type LearningResourceExpandedV2Props = {
   resource?: LearningResource
   user?: User
   imgConfig: ImageConfig
-  carousels: React.ReactNode[]
+  carousels?: React.ReactNode[]
   onAddToLearningPathClick?: LearningResourceCardProps["onAddToLearningPathClick"]
   onAddToUserListClick?: LearningResourceCardProps["onAddToUserListClick"]
   closeDrawer?: () => void
