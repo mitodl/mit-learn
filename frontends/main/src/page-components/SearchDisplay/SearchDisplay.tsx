@@ -55,6 +55,7 @@ import type { TabConfig } from "./ResourceCategoryTabs"
 import { ResourceCard } from "../ResourceCard/ResourceCard"
 import { useUserMe } from "api/hooks/user"
 import { usePostHog } from "posthog-js/react"
+import getSearchParams from "./getSearchParams"
 
 const StyledResourceTabs = styled(ResourceCategoryTabs.TabList)`
   margin-top: 0 px;
@@ -581,27 +582,17 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     ) ??
     TABS.find((t) => t.defaultTab) ??
     TABS[0]
+
   const allParams = useMemo(() => {
-    return {
-      ...constantSearchParams,
-      resource_category: activeTab.resource_category
-        ? [activeTab.resource_category]
-        : undefined,
-      yearly_decay_percent: searchParams.get("yearly_decay_percent"),
-      search_mode: searchParams.get("search_mode"),
-      slop: searchParams.get("slop"),
-      min_score: searchParams.get("min_score"),
-      max_incompleteness_penalty: searchParams.get(
-        "max_incompleteness_penalty",
-      ),
-      content_file_score_weight: searchParams.get("content_file_score_weight"),
-      ...requestParams,
-      aggregations: (facetNames || []).concat([
-        "resource_category",
-      ]) as LRSearchRequest["aggregations"],
-      offset: (page - 1) * PAGE_SIZE,
-      limit: PAGE_SIZE,
-    }
+    return getSearchParams({
+      searchParams,
+      requestParams,
+      constantSearchParams,
+      resourceCategory: activeTab?.resource_category || undefined,
+      facetNames,
+      page,
+      pageSize: PAGE_SIZE,
+    })
   }, [
     searchParams,
     requestParams,
@@ -740,7 +731,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
               step={0.2}
             />
             <ExplanationContainer>
-              Relavance score penalty percent per year for resources without
+              Relevance score penalty percent per year for resources without
               upcoming runs. Only affects results if there is a search term.
             </ExplanationContainer>
             <div>
