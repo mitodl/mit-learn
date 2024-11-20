@@ -1,5 +1,6 @@
 """Tests for utils functions"""
 
+from datetime import UTC, datetime
 from pathlib import Path
 from time import struct_time
 from urllib.error import HTTPError
@@ -82,3 +83,52 @@ def test_get_request_json_error_raise(mocker):
     )
     with pytest.raises(HTTPError):
         utils.get_request_json("https://test.mit.edu", raise_on_error=True)
+
+
+@pytest.mark.parametrize(
+    ("start_date_str", "end_date_str", "time_range_str", "start_dt", "end_dt"),
+    [
+        (
+            "2024-01-15",
+            "2024-01-15",
+            "9-10 AM",
+            datetime(2024, 1, 15, 14, 0, 0, tzinfo=UTC),
+            datetime(2024, 1, 15, 15, 0, 0, tzinfo=UTC),
+        ),
+        (
+            "2024-01-15",
+            None,
+            "9-10 AM",
+            datetime(2024, 1, 15, 14, 0, 0, tzinfo=UTC),
+            datetime(2024, 1, 15, 15, 0, 0, tzinfo=UTC),
+        ),
+        (
+            "2024-07-15",
+            "2024-07-16",
+            "9 - 12 PM",
+            datetime(2024, 7, 15, 13, 0, 0, tzinfo=UTC),
+            datetime(2024, 7, 16, 16, 0, 0, tzinfo=UTC),
+        ),
+        (
+            "2024-07-15",
+            "2024-07-15",
+            "3:30 PM - 5:45 PM",
+            datetime(2024, 7, 15, 19, 30, 0, tzinfo=UTC),
+            datetime(2024, 7, 15, 21, 45, 0, tzinfo=UTC),
+        ),
+        (
+            "2024-07-15",
+            "2024-07-15",
+            "3:30 PM - 5:30 PM pst",
+            datetime(2024, 7, 15, 23, 30, 0, tzinfo=UTC),
+            datetime(2024, 7, 16, 1, 30, 0, tzinfo=UTC),
+        ),
+    ],
+)
+def test_parse_date_time_range(
+    start_date_str, end_date_str, time_range_str, start_dt, end_dt
+):
+    """parse_date_time_range should return the expected start and end datetimes"""
+    assert utils.parse_date_time_range(
+        start_date_str, end_date_str, time_range_str
+    ) == (start_dt, end_dt)

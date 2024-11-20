@@ -8,7 +8,7 @@ from django.conf import settings
 
 from main.utils import now_in_utc
 from news_events.constants import ALL_AUDIENCES, FeedType
-from news_events.etl.utils import fetch_data_by_page, parse_date
+from news_events.etl.utils import fetch_data_by_page, parse_date_time_range
 
 log = logging.getLogger(__name__)
 MITPE_EVENTS_TITLE = "MIT Professional Education Events"
@@ -66,16 +66,9 @@ def transform_item(item: dict) -> dict:
 
     """
 
-    times = item.get("time_range", "").split("-")
-    start_dt = parse_date(
-        f"{item.get("start_date")} {times[0] if len(times) > 0 else ''}"
+    start_dt, end_dt = parse_date_time_range(
+        item.get("start_date"), item.get("end_date"), item.get("time_range")
     )
-    if not start_dt:
-        # Time range may be invalid, try without it
-        start_dt = parse_date(f"{item.get("start_date")}")
-    end_dt = parse_date(f"{item.get("end_date")} {times[1] if len(times) > 1 else ''}")
-    if not end_dt:
-        end_dt = parse_date(f"{item.get("end_date")}")
 
     # Do not bother transforming past events
     now = now_in_utc()
