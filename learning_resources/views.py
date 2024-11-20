@@ -206,6 +206,7 @@ class SimilarLearningResourceViewSet(viewsets.GenericViewSet):
     lookup_url_kwarg = "id"
     queryset = LearningResource.objects.all()
     pagination_class = None
+    permission_classes = (AnonymousAccessReadonlyPermission,)
 
     @extend_schema(
         summary="Get similar resources",
@@ -255,6 +256,7 @@ class VectorSimilarLearningResourceViewSet(viewsets.GenericViewSet):
     queryset = LearningResource.objects.all()
     lookup_url_kwarg = "id"
     pagination_class = None
+    permission_classes = (AnonymousAccessReadonlyPermission,)
 
     @extend_schema(
         summary="Get similar resources using vector embeddings",
