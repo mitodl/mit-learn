@@ -13,6 +13,7 @@ from opensearchpy.exceptions import ConflictError, NotFoundError
 from learning_resources.factories import (
     ContentFileFactory,
     CourseFactory,
+    LearningResourceFactory,
     LearningResourceRunFactory,
 )
 from learning_resources.models import ContentFile
@@ -37,6 +38,7 @@ from learning_resources_search.indexing_api import (
     deindex_percolators,
     deindex_run_content_files,
     delete_orphaned_indexes,
+    embed_learning_resources,
     get_reindexing_alias_name,
     index_content_files,
     index_course_content_files,
@@ -45,6 +47,7 @@ from learning_resources_search.indexing_api import (
     index_run_content_files,
     switch_indices,
     update_document_with_partial,
+    vector_point_id,
 )
 from learning_resources_search.models import PercolateQuery
 from learning_resources_search.utils import remove_child_queries
@@ -896,3 +899,29 @@ def test_clear_featured_rank(mocked_es, mocker, clear_all_greater_than):
             "query": query,
         },
     )
+
+
+@pytest.mark.parametrize("content_type", ["learning_resource", "content_file"])
+def test_vector_point_id_used_for_embed(mocker, content_type):
+    # test the vector ids we generate for embedding resources and files
+    if content_type == "learning_resource":
+        resources = LearningResourceFactory.create_batch(5)
+    else:
+        resources = ContentFileFactory.create_batch(5)
+    mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
+    mock_qdrant.query.return_value = []
+    mocker.patch(
+        "learning_resources_search.indexing_api.qdrant_client",
+        return_value=mock_qdrant,
+    )
+
+    embed_learning_resources([resource.id for resource in resources], content_type)
+
+    if content_type == "learning_resource":
+        point_ids = [vector_point_id(resource.readable_id) for resource in resources]
+    else:
+        point_ids = [
+            vector_point_id(resource.run.learning_resource.readable_id)
+            for resource in resources
+        ]
+    assert mock_qdrant.add.mock_calls[0].kwargs["ids"] == point_ids
