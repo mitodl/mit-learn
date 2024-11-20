@@ -25,6 +25,8 @@ import VideoFrame from "./VideoFrame"
 const DRAWER_WIDTH = "900px"
 
 const OuterContainer = styled.div({
+  display: "flex",
+  flexDirection: "column",
   width: "100%",
   overflowX: "hidden",
 })
@@ -172,17 +174,18 @@ const ListButtonContainer = styled.div({
 
 const CarouselContainer = styled.div({
   display: "flex",
-  width: DRAWER_WIDTH,
-  padding: "32px",
   flexDirection: "column",
   alignItems: "flex-start",
+  width: DRAWER_WIDTH,
+  padding: "32px",
   gap: "32px",
-  alignSelf: "stretch",
   borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
   background: theme.custom.colors.lightGray1,
-  overflow: "hidden",
   div: {
     maxWidth: "100%",
+  },
+  [theme.breakpoints.down("md")]: {
+    width: "100vw",
   },
 })
 
