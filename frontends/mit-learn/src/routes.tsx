@@ -4,6 +4,7 @@ import { ScrollRestoration } from "react-router-dom"
 
 import HomePage from "@/pages/HomePage/HomePage"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
+import EcommerceRoute from "./components/EcommerceRoute/EcommerceRoute"
 import LearningPathListingPage from "@/pages/LearningPathListingPage/LearningPathListingPage"
 import ChannelPage from "@/pages/ChannelPage/ChannelPage"
 import EditChannelPage from "@/pages/ChannelPage/EditChannelPage"
@@ -27,6 +28,7 @@ import DepartmentListingPage from "./pages/DepartmentListingPage/DepartmentListi
 import TopicsListingPage from "./pages/TopicListingPage/TopicsListingPage"
 import UnitsListingPage from "./pages/UnitsListingPage/UnitsListingPage"
 import OnboardingPage from "./pages/OnboardingPage/OnboardingPage"
+import CartChooserPage from "./pages/EcommercePages/CartChooserPage"
 import CartPage from "./pages/EcommercePages/CartPage"
 
 import { styled } from "ol-components"
@@ -193,7 +195,16 @@ const routes: RouteObject[] = [
         ],
       },
       {
-        element: <RestrictedRoute requires={Permissions.Authenticated} />,
+        element: <EcommerceRoute />,
+        children: [
+          {
+            path: urls.ECOMMERCE_CART_CHOOSER,
+            element: <CartChooserPage />,
+          },
+        ],
+      },
+      {
+        element: <EcommerceRoute />,
         children: [
           {
             path: urls.ECOMMERCE_CART,

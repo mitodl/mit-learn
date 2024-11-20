@@ -22,5 +22,6 @@ export declare global {
     SITE_NAME: string
     MITOL_SUPPORT_EMAIL: string
     PUBLIC_URL: string
+    MITOL_ECOMM_API_BASE_URL?: string
   }
 }
