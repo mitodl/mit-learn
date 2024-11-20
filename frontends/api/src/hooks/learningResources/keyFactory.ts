@@ -1,30 +1,29 @@
+import { createQueryKeys } from "@lukemorales/query-key-factory"
 import {
   learningResourcesApi,
   learningResourcesSearchApi,
   topicsApi,
-  userListsApi,
+  // userListsApi,
   offerorsApi,
   platformsApi,
   schoolsApi,
   featuredApi,
 } from "../../clients"
-import axiosInstance from "../../axios"
+// import axiosInstance from "../../axios"
 import type {
   LearningResourcesApiLearningResourcesListRequest as LRListRequest,
   TopicsApiTopicsListRequest as TopicsListRequest,
   PaginatedLearningResourceList,
   LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LRSearchRequest,
-  UserlistsApiUserlistsItemsListRequest as ULResourcesListRequest,
-  UserlistsApiUserlistsListRequest as ULListRequest,
-  PaginatedUserListRelationshipList,
+  // UserlistsApiUserlistsItemsListRequest as ULResourcesListRequest,
+  // UserlistsApiUserlistsListRequest as ULListRequest,
+  // PaginatedUserListRelationshipList,
   OfferorsApiOfferorsListRequest,
   PlatformsApiPlatformsListRequest,
   FeaturedApiFeaturedListRequest as FeaturedListParams,
-  UserListRelationship,
+  // UserListRelationship,
   MicroUserListRelationship,
 } from "../../generated/v1"
-
-import { createQueryKeys } from "@lukemorales/query-key-factory"
 
 /* TODO we can add this back in once resource user list membership is implemented in the front end
  * Currently we fetch on the server for public resources and then refetch on the client for the
@@ -103,35 +102,6 @@ const learningResources = createQueryKeys("learningResources", {
           .then((res) => res.data),
     }
   },
-  userlists: {
-    queryKey: ["user_lists"],
-    contextQueries: {
-      detail: (id: number) => ({
-        queryKey: [id],
-        queryFn: () =>
-          userListsApi.userlistsRetrieve({ id }).then((res) => res.data),
-        contextQueries: {
-          infiniteItems: (itemsP: ULResourcesListRequest) => ({
-            queryKey: [itemsP],
-            queryFn: ({ pageParam }: { pageParam?: string } = {}) => {
-              const request = pageParam
-                ? axiosInstance.request<PaginatedUserListRelationshipList>({
-                    method: "get",
-                    url: pageParam,
-                  })
-                : userListsApi.userlistsItemsList(itemsP)
-              return request.then((res) => res.data)
-            },
-          }),
-        },
-      }),
-      list: (params: ULListRequest) => ({
-        queryKey: [params],
-        queryFn: () =>
-          userListsApi.userlistsList(params).then((res) => res.data),
-      }),
-    },
-  },
   offerors: (params: OfferorsApiOfferorsListRequest) => {
     return {
       queryKey: [params],
@@ -156,59 +126,6 @@ const learningResources = createQueryKeys("learningResources", {
     }
   },
 })
-
-/**
- * Given
- *  - a list of learning resources L
- *  - a new relationship between learningpath/userlist and a resource R
- * Update the list L so that it includes the updated resource R. (If the list
- * did not contain R to begin with, no change is made)
- */
-const updateListParentsOnAdd = (
-  relationship: UserListRelationship,
-  oldList?: PaginatedLearningResourceList,
-) => {
-  if (!oldList) return oldList
-  const matchIndex = oldList.results.findIndex(
-    (res) => res.id === relationship.child,
-  )
-  if (matchIndex === -1) return oldList
-  const updatesResults = [...oldList.results]
-  updatesResults[matchIndex] = relationship.resource
-  return {
-    ...oldList,
-    results: updatesResults,
-  }
-}
-
-/**
- * Given
- *  - a list of learning resources L
- *  - a destroyed relationship between learningpath/userlist and a resource R
- * Update the list L so that it includes the updated resource R. (If the list
- * did not contain R to begin with, no change is made)
- */
-const updateListParentsOnDestroy = (
-  relationship: MicroUserListRelationship,
-  list?: PaginatedLearningResourceList,
-) => {
-  if (!list) return list
-  if (!relationship) return list
-  const matchIndex = list.results.findIndex(
-    (res) => res.id === relationship.child,
-  )
-  if (matchIndex === -1) return list
-  const updatedResults = [...list.results]
-  const newResource = { ...updatedResults[matchIndex] }
-  newResource.user_list_parents =
-    newResource.user_list_parents?.filter((m) => m.id !== relationship.id) ??
-    null
-  updatedResults[matchIndex] = newResource
-  return {
-    ...list,
-    results: updatedResults,
-  }
-}
 
 /**
  * Given
@@ -246,4 +163,4 @@ const updateListParents = (
 }
 
 export default learningResources
-export { updateListParentsOnAdd, updateListParentsOnDestroy, updateListParents }
+export { updateListParents }

@@ -14,7 +14,7 @@ import {
 } from "ol-components"
 import { ResourceCard } from "@/page-components/ResourceCard/ResourceCard"
 import { useLearningPathListItemMove } from "api/hooks/learningPaths"
-import { useUserListListItemMove } from "api/hooks/learningResources"
+import { useUserListListItemMove } from "api/hooks/userLists"
 import { ListType } from "api/constants"
 
 const EmptyMessage = styled.p({

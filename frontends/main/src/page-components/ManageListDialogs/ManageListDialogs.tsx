@@ -20,12 +20,12 @@ import {
   useLearningPathUpdate,
   useLearningPathDestroy,
 } from "api/hooks/learningPaths"
+import { useLearningResourceTopics } from "api/hooks/learningResources"
 import {
-  useLearningResourceTopics,
   useUserListCreate,
   useUserListUpdate,
   useUserListDestroy,
-} from "api/hooks/learningResources"
+} from "api/hooks/userLists"
 
 const learningPathFormSchema = Yup.object().shape({
   published: Yup.boolean()

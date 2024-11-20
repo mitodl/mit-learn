@@ -2,10 +2,11 @@ import type { QueryClient, Query } from "@tanstack/react-query"
 import type {
   PaginatedLearningResourceList,
   LearningResource,
-  UserList,
 } from "../../generated/v1"
 import learningResources from "./keyFactory"
 import learningPaths from "../learningPaths/keyFactory"
+import userLists from "../userLists/keyFactory"
+import { listHasResource } from "../userLists/invalidation"
 
 /**
  * Invalidate Resource queries that a specific resource appears in.
@@ -28,9 +29,7 @@ const invalidateResourceQueries = (
    */
   queryClient.invalidateQueries(learningResources.detail(resourceId).queryKey)
   queryClient.invalidateQueries(learningPaths.detail(resourceId).queryKey)
-  queryClient.invalidateQueries(
-    learningResources.userlists._ctx.detail(resourceId).queryKey,
-  )
+  queryClient.invalidateQueries(userLists.detail(resourceId).queryKey)
   /**
    * Invalidate lists that the resource belongs to.
    * Check for actual membership.
@@ -82,37 +81,6 @@ const invalidateResourceWithUserListQueries = (
   })
 }
 
-const invalidateUserListQueries = (
-  queryClient: QueryClient,
-  userListId: UserList["id"],
-) => {
-  queryClient.invalidateQueries(
-    learningResources.userlists._ctx.detail(userListId).queryKey,
-  )
-  const lists = [learningResources.userlists._ctx.list._def]
-
-  lists.forEach((queryKey) => {
-    queryClient.invalidateQueries({
-      queryKey,
-      predicate: listHasResource(userListId),
-    })
-  })
-}
-
-const listHasResource =
-  (resourceId: number) =>
-  (query: Query): boolean => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data = query.state.data as any
-    const resources: LearningResource[] | UserList[] = data.pages
-      ? data.pages.flatMap(
-          (page: PaginatedLearningResourceList) => page.results,
-        )
-      : data.results
-
-    return resources.some((res) => res.id === resourceId)
-  }
-
 const resourcesHaveUserList =
   (userListId: number) =>
   (query: Query): boolean => {
@@ -140,6 +108,6 @@ const resourceHasUserList =
 
 export {
   invalidateResourceQueries,
-  invalidateUserListQueries,
+  // invalidateUserListQueries,
   invalidateResourceWithUserListQueries,
 }

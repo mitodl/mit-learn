@@ -19,9 +19,9 @@ import type { LearningPathResource, LearningResource, UserList } from "api"
 import {
   useLearningResourceSetUserListRelationships,
   useLearningResourcesDetail,
-  useUserListList,
   useLearningResourceSetLearningPathRelationships,
 } from "api/hooks/learningResources"
+import { useUserListList } from "api/hooks/userLists"
 import { useLearningPathsList } from "api/hooks/learningPaths"
 import { manageListDialogs } from "@/page-components/ManageListDialogs/ManageListDialogs"
 import { ListType } from "api/constants"
