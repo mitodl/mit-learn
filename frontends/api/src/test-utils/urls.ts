@@ -81,6 +81,9 @@ const learningResources = {
     `${API_BASE_URL}/api/v1/featured/${query(params)}`,
   similar: (params: Params<LRApi, "learningResourcesSimilarList">) =>
     `${API_BASE_URL}/api/v1/learning_resources/${params.id}/similar/`,
+  vectorSimilar: (
+    params: Params<LRApi, "learningResourcesVectorSimilarList">,
+  ) => `${API_BASE_URL}/api/v1/learning_resources/${params.id}/vector_similar/`,
   setLearningPathRelationships: (
     params?: Params<LRApi, "learningResourcesLearningPathsPartialUpdate">,
   ) =>
