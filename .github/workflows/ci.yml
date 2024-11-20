@@ -168,6 +168,7 @@ jobs:
           APPZI_URL: ${{ secrets.APPZI_URL_RC }}
           VERSION: ${{ github.sha }}
         run: |
+          echo $CSRF_COOKIE_NAME;
           docker build \
             -f frontends/main/Dockerfile.web \
             --build-arg NEXT_PUBLIC_ORIGIN=$ORIGIN \
