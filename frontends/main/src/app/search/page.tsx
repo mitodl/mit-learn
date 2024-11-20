@@ -1,16 +1,9 @@
 import React from "react"
 import { getMetadataAsync } from "@/common/metadata"
 import SearchPage from "@/app-pages/SearchPage/SearchPage"
+import type { PageParams } from "@/app/types"
 
-type SearchParams = {
-  [key: string]: string | string[] | undefined
-}
-
-export async function generateMetadata({
-  searchParams,
-}: {
-  searchParams: Promise<SearchParams>
-}) {
+export async function generateMetadata({ searchParams }: PageParams) {
   return await getMetadataAsync({
     title: "Search",
     searchParams,

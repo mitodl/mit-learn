@@ -531,5 +531,5 @@ export {
   useListItemMove,
   usePlatformsList,
   useSchoolsList,
-  learningResources as learningResourcesKeyFactory,
+  learningResources,
 }

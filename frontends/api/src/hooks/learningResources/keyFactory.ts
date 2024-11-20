@@ -33,6 +33,11 @@ import type {
 
 import { createQueryKeys } from "@lukemorales/query-key-factory"
 
+/* TODO we can add this back in once resource user list membership is implemented in the front end
+ * Currently we fetch on the server for public resources and then refetch on the client for the
+ * user lists parents. Randomizing therefore causes a content flicker as the client loaded
+ * sequence replaces the server rendered sequence.
+
 const shuffle = ([...arr]) => {
   let m = arr.length
   while (m) {
@@ -61,6 +66,7 @@ const randomizeResults = ([...results]) => {
     })
   return randomizedResults
 }
+*/
 
 const learningResources = createQueryKeys("learningResources", {
   detail: (id: number) => ({
@@ -81,7 +87,7 @@ const learningResources = createQueryKeys("learningResources", {
     queryKey: [params],
     queryFn: () => {
       return featuredApi.featuredList(params).then((res) => {
-        res.data.results = randomizeResults(res.data?.results)
+        // res.data.results = randomizeResults(res.data?.results)
         return res.data
       })
     },
