@@ -27,6 +27,7 @@ const DRAWER_WIDTH = "900px"
 const OuterContainer = styled.div({
   display: "flex",
   flexDirection: "column",
+  flexGrow: 1,
   width: "100%",
   overflowX: "hidden",
 })
@@ -175,6 +176,7 @@ const ListButtonContainer = styled.div({
 const CarouselContainer = styled.div({
   display: "flex",
   flexDirection: "column",
+  flexGrow: 1,
   alignItems: "flex-start",
   width: DRAWER_WIDTH,
   padding: "32px",
