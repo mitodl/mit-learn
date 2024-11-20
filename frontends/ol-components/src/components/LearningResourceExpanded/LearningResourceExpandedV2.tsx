@@ -167,6 +167,7 @@ type LearningResourceExpandedV2Props = {
   resource?: LearningResource
   user?: User
   imgConfig: ImageConfig
+  carousels: React.ReactNode[]
   onAddToLearningPathClick?: LearningResourceCardProps["onAddToLearningPathClick"]
   onAddToUserListClick?: LearningResourceCardProps["onAddToUserListClick"]
   closeDrawer?: () => void
@@ -432,6 +433,7 @@ const LearningResourceExpandedV2: React.FC<LearningResourceExpandedV2Props> = ({
   resource,
   imgConfig,
   user,
+  carousels,
   onAddToLearningPathClick,
   onAddToUserListClick,
   closeDrawer,
@@ -458,6 +460,11 @@ const LearningResourceExpandedV2: React.FC<LearningResourceExpandedV2Props> = ({
             />
           </RightContainer>
         </ContentContainer>
+        <div>
+          {carousels?.map((carousel, index) => (
+            <div key={index}>{carousel}</div>
+          ))}
+        </div>
       </Container>
     </>
   )

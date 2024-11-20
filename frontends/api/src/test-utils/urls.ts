@@ -11,6 +11,7 @@ import type {
 } from "../generated/v0"
 import type {
   LearningResourcesApi as LRApi,
+  SimilarLearningResourcesApi as SimilarLRApi,
   FeaturedApi,
   TopicsApi,
   LearningpathsApi,
@@ -87,6 +88,11 @@ const learningResources = {
     params?: Params<LRApi, "learningResourcesUserlistsPartialUpdate">,
   ) =>
     `${API_BASE_URL}/api/v1/learning_resources/${params?.id}/userlists/${params?.userlist_id ? query({ userlist_id: params?.userlist_id }) : ""}`,
+}
+
+const similarLearningResources = {
+  list: (params: Params<SimilarLRApi, "similarLearningResourcesList">) =>
+    `${API_BASE_URL}/api/v1/similar_learning_resources/${params.id}/`,
 }
 
 const offerors = {
@@ -220,6 +226,7 @@ const newsEvents = {
 
 export {
   learningResources,
+  similarLearningResources,
   topics,
   learningPaths,
   articles,

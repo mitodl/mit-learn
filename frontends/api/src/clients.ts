@@ -11,6 +11,7 @@ import {
   LearningResourcesUserSubscriptionApi,
   SchoolsApi,
   FeaturedApi,
+  SimilarLearningResourcesApi,
 } from "./generated/v1/api"
 
 import {
@@ -36,6 +37,12 @@ const MITOL_API_BASE_URL = IS_SERVER
 const BASE_PATH = MITOL_API_BASE_URL?.replace(/\/+$/, "") ?? ""
 
 const learningResourcesApi = new LearningResourcesApi(
+  undefined,
+  BASE_PATH,
+  axiosInstance,
+)
+
+const similarLearningResourcesApi = new SimilarLearningResourcesApi(
   undefined,
   BASE_PATH,
   axiosInstance,
@@ -113,4 +120,5 @@ export {
   featuredApi,
   testimonialsApi,
   learningResourcesSearchAdminParamsApi,
+  similarLearningResourcesApi,
 }

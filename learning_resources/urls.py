@@ -30,6 +30,17 @@ learning_resource_set_list_relationships = router.register(
     basename="learning_resource_relationships_api",
 )
 
+router.register(
+    r"similar_learning_resources",
+    views.SimilarLearningResourceViewSet,
+    basename="similar_learning_resources_api",
+)
+router.register(
+    r"vector_similar_learning_resources",
+    views.VectorSimilarLearningResourceViewSet,
+    basename="vector_similar_learning_resources_api",
+)
+
 router.register(r"courses", views.CourseViewSet, basename="courses_api")
 nested_courses_router = NestedSimpleRouter(
     router, r"courses", lookup="learning_resource"

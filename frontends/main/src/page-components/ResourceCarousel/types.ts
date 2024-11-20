@@ -2,6 +2,7 @@ import type {
   LearningResourcesApiLearningResourcesListRequest as LRListRequest,
   LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as SearchRequest,
   FeaturedApiFeaturedListRequest as FeaturedListParams,
+  SimilarLearningResourcesApiSimilarLearningResourcesListRequest as SimilarListParams,
 } from "api"
 import type { LearningResourceCardProps } from "ol-components"
 
@@ -20,7 +21,16 @@ interface FeaturedDataSource {
   params: FeaturedListParams
 }
 
-type DataSource = ResourceDataSource | SearchDataSource | FeaturedDataSource
+interface SimilarDataSource {
+  type: "lr_similar"
+  params: SimilarListParams
+}
+
+type DataSource =
+  | ResourceDataSource
+  | SearchDataSource
+  | FeaturedDataSource
+  | SimilarDataSource
 
 type TabConfig<D extends DataSource = DataSource> = {
   label: React.ReactNode

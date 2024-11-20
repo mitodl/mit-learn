@@ -193,6 +193,20 @@ class LearningResourceViewSet(
     resource_type_name_plural = "Learning Resources"
     serializer_class = LearningResourceSerializer
 
+
+@extend_schema_view(
+    retrieve=extend_schema(
+        summary="Retrieve",
+        description="Fetch similar learning resources for a resource by id",
+    ),
+)
+class SimilarLearningResourceViewSet(viewsets.GenericViewSet):
+    resource_type_name_plural = "Similar Learning Resources"
+    serializer_class = LearningResourceSerializer
+    lookup_url_kwarg = "id"
+    queryset = LearningResource.objects.all()
+    pagination_class = None
+
     @extend_schema(
         summary="Get similar resources",
         parameters=[
@@ -201,17 +215,12 @@ class LearningResourceViewSet(
         ],
         responses=LearningResourceSerializer(many=True),
     )
-    @action(
-        detail=True,
-        methods=["GET"],
-        name="Fetch similar learning resources for a resource by id",
-    )
     @method_decorator(
         cache_page_for_all_users(
             settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
         )
     )
-    def similar(self, request, *_, **kwargs):
+    def retrieve(self, request, *_, **kwargs):
         """
         Fetch similar learning resources
 
@@ -233,6 +242,20 @@ class LearningResourceViewSet(
         )
         return Response(LearningResourceSerializer(list(similar), many=True).data)
 
+
+@extend_schema_view(
+    list=extend_schema(
+        summary="Retrieve",
+        description="Fetch similar resources using embeddings for a resource",
+    ),
+)
+class VectorSimilarLearningResourceViewSet(viewsets.GenericViewSet):
+    resource_type_name_plural = "Vector Similar Learning Resources"
+    serializer_class = LearningResourceSerializer
+    queryset = LearningResource.objects.all()
+    lookup_url_kwarg = "id"
+    pagination_class = None
+
     @extend_schema(
         summary="Get similar resources using vector embeddings",
         parameters=[
@@ -241,17 +264,12 @@ class LearningResourceViewSet(
         ],
         responses=LearningResourceSerializer(many=True),
     )
-    @action(
-        detail=True,
-        methods=["GET"],
-        name="Fetch similar resources using embeddings for a resource",
-    )
     @method_decorator(
         cache_page_for_all_users(
             settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
         )
     )
-    def vector_similar(self, request, *_, **kwargs):
+    def retrieve(self, request, *_, **kwargs):
         """
         Fetch similar learning resources
 

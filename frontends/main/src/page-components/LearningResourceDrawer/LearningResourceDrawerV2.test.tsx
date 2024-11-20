@@ -48,6 +48,10 @@ describe("LearningResourceDrawerV2", () => {
         urls.learningResources.details({ id: resource.id }),
         resource,
       )
+      setMockResponse.get(
+        urls.similarLearningResources.list({ id: resource.id }),
+        [],
+      )
 
       renderWithProviders(<LearningResourceDrawerV2 />, {
         url: `?dog=woof&${RESOURCE_DRAWER_QUERY_PARAM}=${resource.id}`,
@@ -107,6 +111,10 @@ describe("LearningResourceDrawerV2", () => {
       setMockResponse.get(
         urls.learningResources.details({ id: resource.id }),
         resource,
+      )
+      setMockResponse.get(
+        urls.similarLearningResources.list({ id: resource.id }),
+        [],
       )
       const user = factories.user.user({
         is_learning_path_editor: isLearningPathEditor,

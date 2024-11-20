@@ -19,6 +19,7 @@ import {
 } from "../Dialogs/AddToListDialog"
 import { SignupPopover } from "../SignupPopover/SignupPopover"
 import { usePostHog } from "posthog-js/react"
+import ResourceCarousel from "../ResourceCarousel/ResourceCarousel"
 
 const RESOURCE_DRAWER_PARAMS = [RESOURCE_DRAWER_QUERY_PARAM] as const
 
@@ -65,6 +66,7 @@ const DrawerContent: React.FC<{
   closeDrawer: () => void
 }> = ({ resourceId, closeDrawer }) => {
   const resource = useLearningResourcesDetail(Number(resourceId))
+  // const similarResources = useSimilarLearningResources(Number(resourceId))
   const [signupEl, setSignupEl] = React.useState<HTMLElement | null>(null)
   const { data: user } = useUserMe()
   const handleAddToLearningPathClick: LearningResourceCardProps["onAddToLearningPathClick"] =
@@ -87,12 +89,29 @@ const DrawerContent: React.FC<{
       }
     }, [user])
   useCapturePageView(Number(resourceId))
+  const similarResourcesCarousel = (
+    <ResourceCarousel
+      titleComponent="h2"
+      title="Similar Resources"
+      config={[
+        {
+          label: "Similar",
+          cardProps: { size: "medium" },
+          data: {
+            type: "lr_similar",
+            params: { id: resourceId },
+          },
+        },
+      ]}
+    />
+  )
 
   return (
     <>
       <LearningResourceExpandedV2
         imgConfig={imgConfigs.large}
         resource={resource.data}
+        carousels={[similarResourcesCarousel]}
         user={user}
         onAddToLearningPathClick={handleAddToLearningPathClick}
         onAddToUserListClick={handleAddToUserListClick}
