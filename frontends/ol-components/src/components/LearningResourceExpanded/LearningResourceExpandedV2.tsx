@@ -188,6 +188,7 @@ const CarouselContainer = styled.div({
   },
   [theme.breakpoints.down("md")]: {
     width: "100vw",
+    padding: "16px 0 16px 16px",
   },
 })
 
