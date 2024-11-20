@@ -91,12 +91,13 @@ const DrawerContent: React.FC<{
   useCapturePageView(Number(resourceId))
   const similarResourcesCarousel = (
     <ResourceCarousel
-      titleComponent="h2"
-      title="Similar Resources"
+      titleComponent="p"
+      titleVariant="subtitle1"
+      title="Similar Learning Resources"
       config={[
         {
-          label: "Similar",
-          cardProps: { size: "medium" },
+          label: "Similar Learning Resources",
+          cardProps: { size: "small" },
           data: {
             type: "lr_similar",
             params: { id: resourceId },

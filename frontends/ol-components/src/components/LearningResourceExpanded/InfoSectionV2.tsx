@@ -80,6 +80,7 @@ const IconContainer = styled.span({
   [theme.breakpoints.down("sm")]: {
     display: "none",
   },
+  zIndex: -1,
 })
 
 const InfoLabel = styled.div({

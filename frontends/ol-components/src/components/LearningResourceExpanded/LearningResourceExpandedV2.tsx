@@ -22,14 +22,21 @@ import { LearningResourceCardProps } from "../LearningResourceCard/LearningResou
 import { CardActionButton } from "../LearningResourceCard/LearningResourceListCard"
 import VideoFrame from "./VideoFrame"
 
+const DRAWER_WIDTH = "900px"
+
+const OuterContainer = styled.div({
+  width: "100%",
+  overflowX: "hidden",
+})
+
 const Container = styled.div({
   display: "flex",
   flexDirection: "column",
-  padding: "0 32px 160px",
-  width: "900px",
+  padding: "0 32px 24px",
+  width: DRAWER_WIDTH,
   [theme.breakpoints.down("md")]: {
     width: "auto",
-    padding: "0 16px 160px",
+    padding: "0 16px 24px",
   },
 })
 
@@ -161,6 +168,22 @@ const ListButtonContainer = styled.div({
   gap: "8px",
   flexGrow: 1,
   justifyContent: "flex-end",
+})
+
+const CarouselContainer = styled.div({
+  display: "flex",
+  width: DRAWER_WIDTH,
+  padding: "32px",
+  flexDirection: "column",
+  alignItems: "flex-start",
+  gap: "32px",
+  alignSelf: "stretch",
+  borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
+  background: theme.custom.colors.lightGray1,
+  overflow: "hidden",
+  div: {
+    maxWidth: "100%",
+  },
 })
 
 type LearningResourceExpandedV2Props = {
@@ -439,7 +462,7 @@ const LearningResourceExpandedV2: React.FC<LearningResourceExpandedV2Props> = ({
   closeDrawer,
 }) => {
   return (
-    <>
+    <OuterContainer>
       <TitleSection
         resource={resource}
         closeDrawer={closeDrawer ?? (() => {})}
@@ -460,13 +483,11 @@ const LearningResourceExpandedV2: React.FC<LearningResourceExpandedV2Props> = ({
             />
           </RightContainer>
         </ContentContainer>
-        <div>
-          {carousels?.map((carousel, index) => (
-            <div key={index}>{carousel}</div>
-          ))}
-        </div>
       </Container>
-    </>
+      <CarouselContainer>
+        {carousels?.map((carousel, index) => <div key={index}>{carousel}</div>)}
+      </CarouselContainer>
+    </OuterContainer>
   )
 }
 
