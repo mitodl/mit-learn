@@ -5,21 +5,10 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query"
-import {
-  learningpathsApi,
-  learningResourcesApi,
-  userListsApi,
-} from "../../clients"
+import { learningResourcesApi, userListsApi } from "../../clients"
 import type {
   LearningResourcesApiLearningResourcesListRequest as LRListRequest,
   TopicsApiTopicsListRequest as TopicsListRequest,
-  LearningpathsApiLearningpathsItemsListRequest as LPResourcesListRequest,
-  LearningpathsApiLearningpathsListRequest as LPListRequest,
-  LearningpathsApiLearningpathsCreateRequest as LPCreateRequest,
-  LearningpathsApiLearningpathsDestroyRequest as LPDestroyRequest,
-  LearningPathResource,
-  LearningPathRelationshipRequest,
-  MicroLearningPathRelationship,
   LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LRSearchRequest,
   UserlistsApiUserlistsListRequest as ULListRequest,
   UserlistsApiUserlistsCreateRequest as ULCreateRequest,
@@ -36,14 +25,15 @@ import type {
   LearningResourcesApiLearningResourcesLearningPathsPartialUpdateRequest,
 } from "../../generated/v1"
 import learningResources, {
-  invalidateResourceQueries,
-  invalidateUserListQueries,
-  invalidateResourceWithUserListQueries,
   updateListParentsOnAdd,
   updateListParentsOnDestroy,
   updateListParents,
 } from "./keyFactory"
-import { ListType } from "../../common/constants"
+import {
+  invalidateUserListQueries,
+  invalidateResourceWithUserListQueries,
+  invalidateResourceQueries,
+} from "./invalidation"
 
 const useLearningResourcesList = (
   params: LRListRequest = {},
@@ -80,147 +70,6 @@ const useLearningResourceTopics = (
   return useQuery({
     ...learningResources.topics(params),
     ...opts,
-  })
-}
-
-const useLearningPathsList = (
-  params: LPListRequest = {},
-  opts: Pick<UseQueryOptions, "enabled"> = {},
-) => {
-  return useQuery({
-    ...learningResources.learningpaths._ctx.list(params),
-    ...opts,
-  })
-}
-
-const useLearningPathsDetail = (id: number) => {
-  return useQuery(learningResources.learningpaths._ctx.detail(id))
-}
-
-const useInfiniteLearningPathItems = (
-  params: LPResourcesListRequest,
-  options: Pick<UseQueryOptions, "enabled"> = {},
-) => {
-  return useInfiniteQuery({
-    ...learningResources.learningpaths._ctx
-      .detail(params.learning_resource_id)
-      ._ctx.infiniteItems(params),
-    getNextPageParam: (lastPage) => {
-      return lastPage.next ?? undefined
-    },
-    ...options,
-  })
-}
-
-type LearningPathCreateRequest = Omit<
-  LPCreateRequest["LearningPathResourceRequest"],
-  "readable_id" | "resource_type"
->
-const useLearningpathCreate = () => {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (params: LearningPathCreateRequest) =>
-      learningpathsApi.learningpathsCreate({
-        LearningPathResourceRequest: params,
-      }),
-    onSettled: () => {
-      queryClient.invalidateQueries(
-        learningResources.learningpaths._ctx.list._def,
-      )
-    },
-  })
-}
-const useLearningpathUpdate = () => {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (
-      params: Pick<LearningPathResource, "id"> & Partial<LearningPathResource>,
-    ) =>
-      learningpathsApi.learningpathsPartialUpdate({
-        id: params.id,
-        PatchedLearningPathResourceRequest: params,
-      }),
-    onSettled: (_data, _err, vars) => {
-      invalidateResourceQueries(queryClient, vars.id)
-    },
-  })
-}
-
-const useLearningpathDestroy = () => {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (params: LPDestroyRequest) =>
-      learningpathsApi.learningpathsDestroy(params),
-    onSettled: (_data, _err, vars) => {
-      invalidateResourceQueries(queryClient, vars.id)
-    },
-  })
-}
-
-interface ListMoveRequest {
-  parent: number
-  id: number
-  position?: number
-}
-const useLearningpathRelationshipMove = () => {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ parent, id, position }: ListMoveRequest) =>
-      learningpathsApi.learningpathsItemsPartialUpdate({
-        learning_resource_id: parent,
-        id,
-        PatchedLearningPathRelationshipRequest: { position },
-      }),
-    onSettled: (_data, _err, vars) => {
-      queryClient.invalidateQueries(
-        learningResources.learningpaths._ctx.detail(vars.parent)._ctx
-          .infiniteItems._def,
-      )
-    },
-  })
-}
-
-const useLearningpathRelationshipCreate = () => {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (params: LearningPathRelationshipRequest) =>
-      learningpathsApi.learningpathsItemsCreate({
-        learning_resource_id: params.parent,
-        LearningPathRelationshipRequest: params,
-      }),
-    onSettled: (_response, _err, vars) => {
-      invalidateResourceQueries(
-        queryClient,
-        vars.child,
-        // do NOT skip invalidating the /featured/ lists,
-        // Changing a learning path might change the members of the featured
-        // lists.
-        { skipFeatured: false },
-      )
-      invalidateResourceQueries(queryClient, vars.parent)
-    },
-  })
-}
-
-const useLearningpathRelationshipDestroy = () => {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (params: MicroLearningPathRelationship) =>
-      learningpathsApi.learningpathsItemsDestroy({
-        id: params.id,
-        learning_resource_id: params.parent,
-      }),
-    onSettled: (_response, _err, vars) => {
-      invalidateResourceQueries(
-        queryClient,
-        vars.child,
-        // do NOT skip invalidating the /featured/ lists,
-        // Changing a learning path might change the members of the featured
-        // lists.
-        { skipFeatured: false },
-      )
-      invalidateResourceQueries(queryClient, vars.parent)
-    },
   })
 }
 
@@ -289,6 +138,11 @@ const useUserListDestroy = () => {
   })
 }
 
+interface ListMoveRequest {
+  parent: number
+  id: number
+  position?: number
+}
 const useUserListRelationshipMove = () => {
   const queryClient = useQueryClient()
   return useMutation({
@@ -442,46 +296,25 @@ const useOfferorsList = (
 }
 
 interface ListItemMoveRequest {
-  listType: string
   parent: number
   id: number
   position?: number
 }
-const useListItemMove = () => {
+const useUserListListItemMove = () => {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({
-      listType,
-      parent,
-      id,
-      position,
-    }: ListItemMoveRequest) => {
-      if (listType === ListType.LearningPath) {
-        await learningpathsApi.learningpathsItemsPartialUpdate({
-          learning_resource_id: parent,
-          id,
-          PatchedLearningPathRelationshipRequest: { position },
-        })
-      } else if (listType === ListType.UserList) {
-        await userListsApi.userlistsItemsPartialUpdate({
-          userlist_id: parent,
-          id,
-          PatchedUserListRelationshipRequest: { position },
-        })
-      }
+    mutationFn: async ({ parent, id, position }: ListItemMoveRequest) => {
+      await userListsApi.userlistsItemsPartialUpdate({
+        userlist_id: parent,
+        id,
+        PatchedUserListRelationshipRequest: { position },
+      })
     },
     onSettled: (_data, _err, vars) => {
-      if (vars.listType === ListType.LearningPath) {
-        queryClient.invalidateQueries(
-          learningResources.learningpaths._ctx.detail(vars.parent)._ctx
-            .infiniteItems._def,
-        )
-      } else if (vars.listType === ListType.UserList) {
-        queryClient.invalidateQueries(
-          learningResources.userlists._ctx.detail(vars.parent)._ctx
-            .infiniteItems._def,
-        )
-      }
+      queryClient.invalidateQueries(
+        learningResources.userlists._ctx.detail(vars.parent)._ctx.infiniteItems
+          ._def,
+      )
     },
   })
 }
@@ -506,15 +339,6 @@ export {
   useLearningResourcesDetail,
   useLearningResourceTopic,
   useLearningResourceTopics,
-  useLearningPathsList,
-  useLearningPathsDetail,
-  useInfiniteLearningPathItems,
-  useLearningpathCreate,
-  useLearningpathUpdate,
-  useLearningpathDestroy,
-  useLearningpathRelationshipMove,
-  useLearningpathRelationshipCreate,
-  useLearningpathRelationshipDestroy,
   useLearningResourcesSearch,
   useLearningResourceSetUserListRelationships,
   useLearningResourceSetLearningPathRelationships,
@@ -528,7 +352,7 @@ export {
   useUserListRelationshipDestroy,
   useInfiniteUserListItems,
   useOfferorsList,
-  useListItemMove,
+  useUserListListItemMove,
   usePlatformsList,
   useSchoolsList,
   learningResources,

@@ -18,11 +18,11 @@ import type { LearningPathResource, LearningResource, UserList } from "api"
 
 import {
   useLearningResourceSetUserListRelationships,
-  useLearningPathsList,
   useLearningResourcesDetail,
   useUserListList,
   useLearningResourceSetLearningPathRelationships,
 } from "api/hooks/learningResources"
+import { useLearningPathsList } from "api/hooks/learningPaths"
 import { manageListDialogs } from "@/page-components/ManageListDialogs/ManageListDialogs"
 import { ListType } from "api/constants"
 import { useFormik } from "formik"
