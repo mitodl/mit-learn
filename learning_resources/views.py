@@ -244,7 +244,7 @@ class SimilarLearningResourceViewSet(viewsets.GenericViewSet):
 
 
 @extend_schema_view(
-    list=extend_schema(
+    LearningResourceListRelationshipViewSet=extend_schema(
         summary="Retrieve",
         description="Fetch similar resources using embeddings for a resource",
     ),
