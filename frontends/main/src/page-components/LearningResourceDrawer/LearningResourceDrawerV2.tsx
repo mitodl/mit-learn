@@ -116,7 +116,7 @@ const DrawerContent: React.FC<{
           label: "Similar Learning Resources (Vector Based)",
           cardProps: { size: "small" },
           data: {
-            type: "lr_similar",
+            type: "lr_vector_similar",
             params: { id: resourceId },
           },
         },
