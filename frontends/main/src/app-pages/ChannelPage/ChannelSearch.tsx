@@ -1,13 +1,23 @@
 import React, { useCallback, useMemo } from "react"
+import { LearningResourceOfferor } from "api"
 import { ChannelTypeEnum } from "api/v0"
 import { useOfferorsList } from "api/hooks/learningResources"
-import { useResourceSearchParams } from "@mitodl/course-search-utils"
-import type { Facets, BooleanFacets } from "@mitodl/course-search-utils"
+
+import {
+  useResourceSearchParams,
+  UseResourceSearchParamsProps,
+} from "@mitodl/course-search-utils"
+import type {
+  Facets,
+  BooleanFacets,
+  FacetManifest,
+} from "@mitodl/course-search-utils"
 import { useSearchParams } from "@mitodl/course-search-utils/next"
 import SearchDisplay from "@/page-components/SearchDisplay/SearchDisplay"
 import { Container, styled, VisuallyHidden } from "ol-components"
 import { SearchField } from "@/page-components/SearchField/SearchField"
-import { getFacets } from "./searchRequests"
+
+import { getFacetManifest } from "@/app-pages/SearchPage/SearchPage"
 
 import _ from "lodash"
 
@@ -25,6 +35,34 @@ const StyledSearchField = styled(SearchField)({
   width: "624px",
 })
 
+const FACETS_BY_CHANNEL_TYPE: Record<ChannelTypeEnum, string[]> = {
+  [ChannelTypeEnum.Topic]: [
+    "free",
+    "resource_type",
+    "certification_type",
+    "delivery",
+    "offered_by",
+    "department",
+  ],
+  [ChannelTypeEnum.Department]: [
+    "free",
+    "resource_type",
+    "certification_type",
+    "topic",
+    "delivery",
+    "offered_by",
+  ],
+  [ChannelTypeEnum.Unit]: [
+    "free",
+    "resource_type",
+    "topic",
+    "certification_type",
+    "delivery",
+    "department",
+  ],
+  [ChannelTypeEnum.Pathway]: [],
+}
+
 const SHOW_PROFESSIONAL_TOGGLE_BY_CHANNEL_TYPE: Record<
   ChannelTypeEnum,
   boolean
@@ -33,6 +71,24 @@ const SHOW_PROFESSIONAL_TOGGLE_BY_CHANNEL_TYPE: Record<
   [ChannelTypeEnum.Department]: false,
   [ChannelTypeEnum.Unit]: false,
   [ChannelTypeEnum.Pathway]: false,
+}
+
+const getFacetManifestForChannelType = (
+  channelType: ChannelTypeEnum,
+  offerors: Record<string, LearningResourceOfferor>,
+  constantSearchParams: Facets,
+  resourceCategory: string | null,
+): FacetManifest => {
+  const facets = FACETS_BY_CHANNEL_TYPE[channelType] || []
+  return getFacetManifest(offerors, resourceCategory)
+    .filter(
+      (facetSetting) =>
+        !Object.keys(constantSearchParams).includes(facetSetting.name) &&
+        facets.includes(facetSetting.name),
+    )
+    .sort(
+      (a, b) => facets.indexOf(a.name) - facets.indexOf(b.name),
+    ) as FacetManifest
 }
 
 interface ChannelSearchProps {
@@ -54,9 +110,14 @@ const ChannelSearch: React.FC<ChannelSearchProps> = ({
   const [searchParams, setSearchParams] = useSearchParams()
   const resourceCategory = searchParams.get("resource_category")
 
-  const { facetNames, facetManifest } = useMemo(
+  const facetManifest = useMemo(
     () =>
-      getFacets(channelType, offerors, constantSearchParams, resourceCategory),
+      getFacetManifestForChannelType(
+        channelType,
+        offerors,
+        constantSearchParams,
+        resourceCategory,
+      ),
     [offerors, channelType, constantSearchParams, resourceCategory],
   )
 
@@ -78,6 +139,18 @@ const ChannelSearch: React.FC<ChannelSearchProps> = ({
   const onFacetsChange = useCallback(() => {
     setPage(1)
   }, [setPage])
+
+  const facetNames = Array.from(
+    new Set(
+      facetManifest.flatMap((facet) => {
+        if (facet.type === "group") {
+          return facet.facets.map((subfacet) => subfacet.name)
+        } else {
+          return [facet.name]
+        }
+      }),
+    ),
+  ) as UseResourceSearchParamsProps["facets"]
 
   const {
     hasFacets,

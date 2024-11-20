@@ -12,9 +12,7 @@ export const prefetch = async (
   queryClient = queryClient || new QueryClient()
 
   await Promise.all(
-    queries
-      .filter(Boolean)
-      .map((query) => queryClient.prefetchQuery(query as Query)),
+    queries.map((query) => queryClient.prefetchQuery(query as Query)),
   )
 
   return { dehydratedState: dehydrate(queryClient), queryClient }

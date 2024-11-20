@@ -4,14 +4,19 @@ import _ from "lodash"
 import React, { useCallback, useMemo } from "react"
 import type { FacetManifest } from "@mitodl/course-search-utils"
 import { useSearchParams } from "@mitodl/course-search-utils/next"
-import { useResourceSearchParams } from "@mitodl/course-search-utils"
+import {
+  useResourceSearchParams,
+  UseResourceSearchParamsProps,
+  getCertificationTypeName,
+  getDepartmentName,
+} from "@mitodl/course-search-utils"
 import SearchDisplay from "@/page-components/SearchDisplay/SearchDisplay"
 import { styled, Container, theme, VisuallyHidden } from "ol-components"
 import { SearchField } from "@/page-components/SearchField/SearchField"
+import type { LearningResourceOfferor } from "api"
 import { useOfferorsList } from "api/hooks/learningResources"
+import { capitalize } from "ol-utilities"
 import LearningResourceDrawer from "@/page-components/LearningResourceDrawer/LearningResourceDrawer"
-import { facetNames } from "./searchRequests"
-import getFacetManifest from "@/page-components/SearchDisplay/getFacetManifest"
 
 const cssGradient = `
   linear-gradient(
@@ -55,6 +60,100 @@ const StyledSearchField = styled(SearchField)(({ theme }) => ({
     width: "570px",
   },
 }))
+
+const LEARNING_MATERIAL = "learning_material"
+
+export const getFacetManifest = (
+  offerors: Record<string, LearningResourceOfferor>,
+  resourceCategory: string | null,
+) => {
+  const mainfest = [
+    {
+      type: "group",
+      name: "free",
+      facets: [
+        {
+          value: true,
+          name: "free",
+          label: "Free",
+        },
+      ],
+    },
+    {
+      name: "resource_type",
+      title: "Resource Type",
+      type: "static",
+      expandedOnLoad: true,
+      preserveItems: true,
+      labelFunction: (key: string) =>
+        key
+          .split("_")
+          .map((word) => capitalize(word))
+          .join(" "),
+    },
+    {
+      name: "certification_type",
+      title: "Certificate",
+      type: "static",
+      expandedOnLoad: true,
+      preserveItems: true,
+      labelFunction: (key: string) => getCertificationTypeName(key) || key,
+    },
+    {
+      name: "topic",
+      title: "Topic",
+      type: "filterable",
+      expandedOnLoad: true,
+      preserveItems: true,
+    },
+    {
+      name: "delivery",
+      title: "Format",
+      type: "static",
+      expandedOnLoad: true,
+      preserveItems: true,
+      labelFunction: (key: string) =>
+        key
+          .split("_")
+          .map((word) => capitalize(word))
+          .join("-"),
+    },
+    {
+      name: "offered_by",
+      title: "Offered By",
+      type: "static",
+      expandedOnLoad: false,
+      preserveItems: true,
+      labelFunction: (key: string) => offerors[key]?.name ?? key,
+    },
+    {
+      name: "department",
+      title: "Department",
+      type: "filterable",
+      expandedOnLoad: false,
+      preserveItems: true,
+      labelFunction: (key: string) => getDepartmentName(key) || key,
+    },
+  ]
+
+  //Only display the resource_type facet if the resource_category is learning_material
+  if (resourceCategory !== LEARNING_MATERIAL) {
+    mainfest.splice(1, 1)
+  }
+
+  return mainfest
+}
+
+const facetNames = [
+  "resource_type",
+  "certification_type",
+  "delivery",
+  "department",
+  "topic",
+  "offered_by",
+  "free",
+  "professional",
+] as UseResourceSearchParamsProps["facets"]
 
 const constantSearchParams = {}
 
