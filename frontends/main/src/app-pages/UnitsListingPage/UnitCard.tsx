@@ -1,6 +1,5 @@
 import React from "react"
-import type { OfferedByEnum } from "api"
-import type { UnitChannel } from "api/v0"
+import { LearningResourceOfferorDetail, OfferedByEnum } from "api"
 import {
   Card,
   Skeleton,
@@ -9,6 +8,7 @@ import {
   theme,
   UnitLogo,
 } from "ol-components"
+import { useChannelDetail } from "api/hooks/channels"
 import Link from "next/link"
 
 const CardStyled = styled(Card)({
@@ -102,23 +102,25 @@ const CountsText = styled(Typography)(({ theme }) => ({
 }))
 
 interface UnitCardsProps {
-  channels: UnitChannel[] | undefined
+  units: LearningResourceOfferorDetail[] | undefined
   courseCounts: Record<string, number>
   programCounts: Record<string, number>
 }
 
 interface UnitCardProps {
-  channel: UnitChannel
+  unit: LearningResourceOfferorDetail
   courseCount: number
   programCount: number
 }
 
 const UnitCard: React.FC<UnitCardProps> = (props) => {
-  const { channel, courseCount, programCount } = props
-  const unit = channel.unit_detail.unit
+  const { unit, courseCount, programCount } = props
+  const channelDetailQuery = useChannelDetail("unit", unit.code)
+  const channelDetail = channelDetailQuery.data
+  const unitUrl = channelDetail?.channel_url
 
-  if (!channel.channel_url) return null
-  const href = new URL(channel.channel_url).pathname
+  if (!unitUrl) return null
+  const href = unitUrl && new URL(unitUrl).pathname
 
   return (
     <CardStyled forwardClicksToLink data-testid={`unit-card-${unit.code}`}>
@@ -132,7 +134,9 @@ const UnitCard: React.FC<UnitCardProps> = (props) => {
             </LogoContainer>
             <CardBottom>
               <ValuePropContainer>
-                <HeadingText>{channel?.configuration?.heading}</HeadingText>
+                <HeadingText>
+                  {channelDetail?.configuration?.heading}
+                </HeadingText>
               </ValuePropContainer>
               <CountsTextContainer>
                 <CountsText data-testid={`course-count-${unit.code}`}>
@@ -170,18 +174,17 @@ export const UnitCardLoading = () => {
 }
 
 export const UnitCards: React.FC<UnitCardsProps> = (props) => {
-  const { channels, courseCounts, programCounts } = props
+  const { units, courseCounts, programCounts } = props
   return (
     <>
-      {channels?.map((channel) => {
-        const unit = channel.unit_detail.unit
+      {units?.map((unit) => {
         const courseCount = courseCounts[unit.code] || 0
         const programCount = programCounts[unit.code] || 0
 
         return unit.value_prop ? (
           <UnitCard
             key={unit.code}
-            channel={channel}
+            unit={unit}
             courseCount={courseCount}
             programCount={programCount}
           />
