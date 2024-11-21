@@ -112,16 +112,16 @@ def test_get_request_json_error_raise(mocker):
         (
             "2024-07-15",
             "2024-07-15",
-            "3:30 PM - 5:45 PM",
+            "3:30 PM and ends at 5:45 PM",
             datetime(2024, 7, 15, 19, 30, 0, tzinfo=UTC),
             datetime(2024, 7, 15, 21, 45, 0, tzinfo=UTC),
         ),
         (
             "2024-07-15",
             "2024-07-15",
-            "3:30 PM - 5:30 PM pst",
-            datetime(2024, 7, 15, 23, 30, 0, tzinfo=UTC),
-            datetime(2024, 7, 16, 1, 30, 0, tzinfo=UTC),
+            "3:30 PM - 5:30 PM pdt",  # Should figure out this is Pacific Daylight Time
+            datetime(2024, 7, 15, 22, 30, 0, tzinfo=UTC),
+            datetime(2024, 7, 16, 0, 30, 0, tzinfo=UTC),
         ),
         (
             "Future date tbd",
@@ -134,8 +134,78 @@ def test_get_request_json_error_raise(mocker):
             "2024-07-15",
             "2024-07-30",
             "Every afternoon after end of class",
-            datetime(2024, 7, 15, 4, 0, 0, tzinfo=UTC),
-            datetime(2024, 7, 30, 4, 0, 0, tzinfo=UTC),
+            datetime(2024, 7, 15, 16, 0, 0, tzinfo=UTC),
+            datetime(2024, 7, 30, 16, 0, 0, tzinfo=UTC),
+        ),
+        (
+            "2024-07-15",
+            "2024-07-15",
+            "1pm",
+            datetime(2024, 7, 15, 17, 0, 0, tzinfo=UTC),
+            datetime(2024, 7, 15, 17, 0, 0, tzinfo=UTC),
+        ),
+        (
+            "2024-07-15",
+            "2024-07-15",
+            "8 to 1pm",  # Should correctly guess that 8 is AM
+            datetime(2024, 7, 15, 12, 0, 0, tzinfo=UTC),
+            datetime(2024, 7, 15, 17, 0, 0, tzinfo=UTC),
+        ),
+        (
+            "2024-07-15",
+            "2024-07-15",
+            "8 AM to 1",  # Should correctly guess that 1 is PM
+            datetime(2024, 7, 15, 12, 0, 0, tzinfo=UTC),
+            datetime(2024, 7, 15, 17, 0, 0, tzinfo=UTC),
+        ),
+        (
+            "2024-12-15",
+            "2024-12-15",
+            "11 to 12 pm",  # Should correctly guess that 11 is AM
+            datetime(2024, 12, 15, 16, 0, 0, tzinfo=UTC),
+            datetime(2024, 12, 15, 17, 0, 0, tzinfo=UTC),
+        ),
+        (
+            "2024-07-15",
+            "2024-07-15",
+            "Beginning at 4:30 and ending at about 6pm",
+            datetime(2024, 7, 15, 20, 30, 0, tzinfo=UTC),
+            datetime(2024, 7, 15, 22, 0, 0, tzinfo=UTC),
+        ),
+        (
+            "2024-07-15",
+            "2024-07-15",
+            "3:00pm; weather permitting",
+            datetime(2024, 7, 15, 19, 0, 0, tzinfo=UTC),
+            datetime(2024, 7, 15, 19, 0, 0, tzinfo=UTC),
+        ),
+        (
+            "2024-07-15",
+            "2024-07-15",
+            "3:00pm; doors open at 2:30pm",  # Ignore any end time before the start time
+            datetime(2024, 7, 15, 19, 0, 0, tzinfo=UTC),
+            datetime(2024, 7, 15, 19, 0, 0, tzinfo=UTC),
+        ),
+        (
+            "2024-07-15",
+            "2024-07-15",
+            "Beginning at 4:30",  # No AM/PM, so take it literally as is
+            datetime(2024, 7, 15, 8, 30, 0, tzinfo=UTC),
+            datetime(2024, 7, 15, 8, 30, 0, tzinfo=UTC),
+        ),
+        (
+            "2024-07-15",
+            "2024-07-30",
+            "Beginning at 16:30",  # No AM/PM, so take it literally as is
+            datetime(2024, 7, 15, 20, 30, 0, tzinfo=UTC),
+            datetime(2024, 7, 30, 20, 30, 0, tzinfo=UTC),
+        ),
+        (
+            None,
+            "2024-11-30",
+            "Bldg. 123, E52nd Street, Salon MIT",  # Invalid time, default to noon Eastern time, convert to UTC
+            datetime(2024, 11, 30, 17, 0, 0, tzinfo=UTC),
+            datetime(2024, 11, 30, 17, 0, 0, tzinfo=UTC),
         ),
     ],
 )

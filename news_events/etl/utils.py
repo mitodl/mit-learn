@@ -2,19 +2,30 @@
 
 import logging
 import re
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from time import mktime, struct_time
+from typing import Optional
 from zoneinfo import ZoneInfo
 
 import dateparser
 import requests
 from bs4 import BeautifulSoup as Soup
 from bs4 import Tag
+from dateparser import timezone_parser
 from django.conf import settings
 
 from main.constants import ISOFORMAT
 
 log = logging.getLogger(__name__)
+
+
+@dataclass
+class FormattedTime:
+    hour: Optional[str]
+    minute: Optional[str]
+    ampm: Optional[str]
+    tz: Optional[str]
 
 
 def get_soup(url: str) -> Soup:
@@ -154,12 +165,38 @@ def convert_to_utc(dt: datetime, known_tz: str) -> datetime:
     return dt.astimezone(UTC)
 
 
+def format_time(matched_time: re.Match) -> FormattedTime:
+    """
+    Format a time regex match group into a standard format
+
+    Args:
+        time_str (str): The time string to parse
+
+    Returns:
+        FormattedTime: A formatted time object
+    """
+    # Regex for AM/PM and timezone
+    ampm_tz_regex = re.compile(r"(am|pm)\s*([A-Za-z]{2,3})?", re.IGNORECASE)
+    ampm, tz = "", ""
+    hour = matched_time.group(1) or ""
+    minute = matched_time.group(2) or (":00" if hour else "")
+    ampm_and_tz_match = re.search(ampm_tz_regex, matched_time.group(3) or "")
+    if ampm_and_tz_match:
+        ampm = ampm_and_tz_match.group(1) or ""
+        tz = ampm_and_tz_match.group(2) or ""
+    return FormattedTime(
+        hour, minute, ampm, (tz if timezone_parser.word_is_tz(tz.upper()) else "")
+    )
+
+
 def parse_date_time_range(
     start_date_str: str, end_date_str: str, time_range_str: str
 ) -> tuple[datetime, datetime]:
     """
     Attempt to parse the time range from the MITPE events API.
-    The field might not actually contain a time or range.
+    If the time cannot be parsed, default to noon Easterm time,
+    then convert to UTC.
+    The field might not always contain a valid time/range.
 
     Args:
         start_date_str (str): start date string
@@ -167,34 +204,71 @@ def parse_date_time_range(
         time_range (str): time range string
 
     Returns:
-        tuple: start and end datetimes
+        tuple(datetime, datetime): start and end datetimes in UTC timezone
 
     """
-    start_time, start_ampm, end_time, end_ampm, tz = "", "", "", "", ""
-    time_regex = re.compile(
-        r"(\d{1,2})(:\d{2})?\s*(am|pm)?\s*-?\s*(\d{1,2})(:?\d{2})?\s*(am|pm)?\s*([A-Za-z]{2,3})?",
-        re.IGNORECASE,
+    # If one date is missing, set it to the other
+    end_date_str = end_date_str or start_date_str
+    start_date_str = start_date_str or end_date_str
+
+    default_time = FormattedTime("12", ":00", "PM", "")
+    default_time_str = "12:00 PM"
+    # Set start/end times to noon as default
+    start_time, end_time = (default_time, default_time)
+    # Try to split the string into start and end times
+    split_times = list(
+        re.finditer(
+            re.compile(r"(\d{1,2})(:\d{2})?(\D*)", re.IGNORECASE), time_range_str or ""
+        )
     )
-    time_match = re.match(time_regex, time_range_str or "")
-    if time_match:
-        start_time = f"{time_match.group(1)}{time_match.group(2) or ':00'}" or ""
-        start_ampm = time_match.group(3) or ""
-        end_time = f"{time_match.group(4)}{time_match.group(5) or ':00'}" or start_time
-        end_ampm = time_match.group(6) or ""
-        tz = (time_match.group(7) or "").upper()
-        start_date = dateparser.parse(
-            f"{start_date_str} {start_time}{start_ampm} {tz}"
-        ) or dateparser.parse(start_date_str)
-    else:
-        start_date = dateparser.parse(start_date_str)
-    if end_date_str:
-        end_date = dateparser.parse(
-            f"{end_date_str} {end_time}{end_ampm or ''} {tz}"
-        ) or dateparser.parse(end_date_str)
-    else:
-        end_date = dateparser.parse(
-            f"{start_date_str} {end_time}{end_ampm or ""} {tz}"
-        ) or dateparser.parse(start_date_str)
+    if split_times:
+        # At least one time match was found
+        formatted_times = [format_time(time_match) for time_match in split_times]
+        # make ruff happy
+        TWO = 2
+        TWELVE = 12
+        if len(formatted_times) == TWO:
+            # Both start and end times were found
+            start_time, end_time = formatted_times
+            if start_time.hour and end_time.hour:
+                # Times must at least have an hour to be valid
+                if int(start_time.hour) > int(end_time.hour):
+                    # Example: 8 - 1 PM; 8 AM - 1
+                    start_time.ampm = start_time.ampm or "AM"
+                    end_time.ampm = end_time.ampm or "PM"
+                elif int(end_time.hour) == TWELVE and int(start_time.hour) < TWELVE:
+                    # Example: 10 - 12 PM
+                    start_time.ampm = start_time.ampm or "AM"
+                    end_time.ampm = end_time.ampm or "PM"
+                else:
+                    # Anything else, if AM/PM missing for one, set it to the other,
+                    # or "" if both are missing
+                    start_time.ampm = start_time.ampm or end_time.ampm or ""
+                    end_time.ampm = end_time.ampm or start_time.ampm or ""
+                # If timezone missing for one, set it to the other,
+                # or "" if both are missing
+                start_time.tz = start_time.tz or end_time.tz or ""
+                end_time.tz = end_time.tz or start_time.tz or ""
+        elif len(formatted_times) == 1:
+            # Only one time was found, set both start and end to that time
+            start_time = formatted_times[0]
+            end_time = start_time
+
+    # Ignore time range and use default time range if dates aren't parsable with it
+    start_date = dateparser.parse(
+        f"{start_date_str} {start_time.hour}{start_time.minute} "
+        f"{start_time.ampm} {start_time.tz}"
+    ) or dateparser.parse(f"{start_date_str} {default_time_str}")
+    end_date = dateparser.parse(
+        f"{end_date_str} {end_time.hour}{end_time.minute} "
+        f"{end_time.ampm} {end_time.tz}"
+    ) or dateparser.parse(f"{end_date_str} {default_time_str}")
+
+    if end_date and start_date and end_date < start_date:
+        # This is nonsensical, so just set the end date to the start date
+        end_date = start_date
     if not start_date:
         log.error("Failed to parse start date %s", start_date_str)
-    return convert_to_utc(start_date, tz), convert_to_utc(end_date, tz)
+    return convert_to_utc(start_date, start_time.tz), convert_to_utc(
+        end_date, end_time.tz
+    )
