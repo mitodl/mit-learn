@@ -123,6 +123,20 @@ def test_get_request_json_error_raise(mocker):
             datetime(2024, 7, 15, 23, 30, 0, tzinfo=UTC),
             datetime(2024, 7, 16, 1, 30, 0, tzinfo=UTC),
         ),
+        (
+            "Future date tbd",
+            None,
+            None,
+            None,
+            None,
+        ),
+        (
+            "2024-07-15",
+            "2024-07-30",
+            "Every afternoon after end of class",
+            datetime(2024, 7, 15, 4, 0, 0, tzinfo=UTC),
+            datetime(2024, 7, 30, 4, 0, 0, tzinfo=UTC),
+        ),
     ],
 )
 def test_parse_date_time_range(

@@ -134,18 +134,40 @@ def parse_date(text_date: str) -> datetime:
     return dt_utc
 
 
+def convert_to_utc(dt: datetime, known_tz: str) -> datetime:
+    """
+    Convert a datetime object to UTC timezone. If its
+    orignal timezone is not known, assume it is in US/Eastern.
+
+    Args:
+        dt (datetime): The datetime object to convert
+        known_tz (str): The timezone string if known
+
+    Returns:
+        datetime: The datetime object in UTC timezone
+    """
+    if not dt:
+        return None
+    if not known_tz:
+        # Assume it is in US/Eastern where MIT is
+        dt = dt.replace(tzinfo=ZoneInfo("US/Eastern"))
+    return dt.astimezone(UTC)
+
+
 def parse_date_time_range(
-    start_date_str, end_date_str, time_range_str: str
+    start_date_str: str, end_date_str: str, time_range_str: str
 ) -> tuple[datetime, datetime]:
     """
     Attempt to parse the time range from the MITPE events API.
     The field might not actually contain a time or range.
 
     Args:
+        start_date_str (str): start date string
+        end_date_str (str): end date string
         time_range (str): time range string
 
     Returns:
-        tuple: start and end times as strings
+        tuple: start and end datetimes
 
     """
     start_time, start_ampm, end_time, end_ampm, tz = "", "", "", "", ""
@@ -153,7 +175,7 @@ def parse_date_time_range(
         r"(\d{1,2})(:\d{2})?\s*(am|pm)?\s*-?\s*(\d{1,2})(:?\d{2})?\s*(am|pm)?\s*([A-Za-z]{2,3})?",
         re.IGNORECASE,
     )
-    time_match = re.match(time_regex, time_range_str)
+    time_match = re.match(time_regex, time_range_str or "")
     if time_match:
         start_time = f"{time_match.group(1)}{time_match.group(2) or ':00'}" or ""
         start_ampm = time_match.group(3) or ""
@@ -165,10 +187,6 @@ def parse_date_time_range(
         ) or dateparser.parse(start_date_str)
     else:
         start_date = dateparser.parse(start_date_str)
-    if start_date:
-        if not tz:
-            start_date = start_date.replace(tzinfo=ZoneInfo("US/Eastern"))
-        start_date = start_date.astimezone(UTC)
     if end_date_str:
         end_date = dateparser.parse(
             f"{end_date_str} {end_time}{end_ampm or ''} {tz}"
@@ -177,10 +195,6 @@ def parse_date_time_range(
         end_date = dateparser.parse(
             f"{start_date_str} {end_time}{end_ampm or ""} {tz}"
         ) or dateparser.parse(start_date_str)
-    if end_date:
-        if not tz:
-            end_date = end_date.replace(tzinfo=ZoneInfo("US/Eastern"))
-        end_date = end_date.astimezone(UTC)
     if not start_date:
         log.error("Failed to parse start date %s", start_date_str)
-    return start_date, end_date
+    return convert_to_utc(start_date, tz), convert_to_utc(end_date, tz)
