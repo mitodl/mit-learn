@@ -1,5 +1,5 @@
 import React, { useMemo } from "react"
-import { styled, Typography, Box } from "ol-components"
+import { styled, Typography } from "ol-components"
 import { capitalize } from "ol-utilities"
 import { ChannelTypeEnum, Channel } from "api/v0"
 import { RiExternalLinkLine } from "@remixicon/react"
@@ -142,7 +142,7 @@ const getChannelDetails = (channel: Channel) => {
 const InfoLabel = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.mitRed,
 }))
-const ChannelDetailsCard = styled(Box)(({ theme }) => ({
+const ChannelDetailsCard = styled.div(({ theme }) => ({
   borderRadius: "12px",
   backgroundColor: "white",
   padding: "36px",
@@ -186,7 +186,7 @@ const ChannelDetails: React.FC<ChannelDetailsProps> = (props) => {
           : detailValue
 
         return (
-          <Box key={value.title}>
+          <div key={value.title}>
             <InfoLabel
               variant="subtitle2"
               sx={{ marginBottom: (theme) => theme.typography.pxToRem(4) }}
@@ -196,7 +196,7 @@ const ChannelDetails: React.FC<ChannelDetailsProps> = (props) => {
             <Typography variant="body3" color="text.secondary">
               {Array.isArray(label) ? label.join(" | ") : label}
             </Typography>
-          </Box>
+          </div>
         )
       }
       return null
