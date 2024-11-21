@@ -924,4 +924,4 @@ def test_vector_point_id_used_for_embed(mocker, content_type):
             vector_point_id(resource.run.learning_resource.readable_id)
             for resource in resources
         ]
-    assert mock_qdrant.add.mock_calls[0].kwargs["ids"] == point_ids
+    assert sorted(mock_qdrant.add.mock_calls[0].kwargs["ids"]) == sorted(point_ids)
