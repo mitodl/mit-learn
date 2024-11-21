@@ -3,27 +3,19 @@ import {
   learningResourcesApi,
   learningResourcesSearchApi,
   topicsApi,
-  // userListsApi,
   offerorsApi,
   platformsApi,
   schoolsApi,
   featuredApi,
 } from "../../clients"
-// import axiosInstance from "../../axios"
 import type {
   LearningResource,
-  LearningResourcesApiLearningResourcesListRequest as LRListRequest,
+  LearningResourcesApiLearningResourcesListRequest as LearningResourcesListRequest,
   TopicsApiTopicsListRequest as TopicsListRequest,
-  PaginatedLearningResourceList,
-  LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LRSearchRequest,
-  // UserlistsApiUserlistsItemsListRequest as ULResourcesListRequest,
-  // UserlistsApiUserlistsListRequest as ULListRequest,
-  // PaginatedUserListRelationshipList,
+  LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LearningResourcesSearchRetrieveRequest,
   OfferorsApiOfferorsListRequest,
   PlatformsApiPlatformsListRequest,
   FeaturedApiFeaturedListRequest as FeaturedListParams,
-  // UserListRelationship,
-  MicroUserListRelationship,
 } from "../../generated/v1"
 
 const shuffle = ([...arr]) => {
@@ -63,7 +55,7 @@ const learningResources = createQueryKeys("learningResources", {
         .learningResourcesRetrieve({ id })
         .then((res) => res.data),
   }),
-  list: (params: LRListRequest) => ({
+  list: (params: LearningResourcesListRequest) => ({
     queryKey: [params],
     queryFn: () =>
       learningResourcesApi
@@ -88,7 +80,7 @@ const learningResources = createQueryKeys("learningResources", {
     queryKey: [params],
     queryFn: () => topicsApi.topicsList(params).then((res) => res.data),
   }),
-  search: (params: LRSearchRequest) => {
+  search: (params: LearningResourcesSearchRetrieveRequest) => {
     return {
       queryKey: [params],
       queryFn: () =>
@@ -115,47 +107,6 @@ const learningResources = createQueryKeys("learningResources", {
       queryFn: () => schoolsApi.schoolsList().then((res) => res.data),
     }
   },
-  memberships: () => {
-    return {
-      queryKey: ["memberships"],
-    }
-  },
 })
 
-/**
- * Given
- *  - a LearningResource ID
- *  - a paginated list of current resources
- *  - a list of new relationships
- *  - the type of list
- * Update the resources' user_list_parents field to include the new relationships
- */
-const updateListParents = (
-  resourceId: number,
-  staleResources?: PaginatedLearningResourceList,
-  newRelationships?: MicroUserListRelationship[],
-  listType?: "userlist" | "learningpath",
-) => {
-  if (!resourceId || !staleResources || !newRelationships || !listType)
-    return staleResources
-  const matchIndex = staleResources.results.findIndex(
-    (res) => res.id === resourceId,
-  )
-  if (matchIndex === -1) return staleResources
-  const updatedResults = [...staleResources.results]
-  const newResource = { ...updatedResults[matchIndex] }
-  if (listType === "userlist") {
-    newResource.user_list_parents = newRelationships
-  }
-  if (listType === "learningpath") {
-    newResource.learning_path_parents = newRelationships
-  }
-  updatedResults[matchIndex] = newResource
-  return {
-    ...staleResources,
-    results: updatedResults,
-  }
-}
-
 export default learningResources
-export { updateListParents }

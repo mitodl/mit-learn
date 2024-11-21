@@ -106,8 +106,4 @@ const resourceHasUserList =
     )
   }
 
-export {
-  invalidateResourceQueries,
-  // invalidateUserListQueries,
-  invalidateResourceWithUserListQueries,
-}
+export { invalidateResourceQueries, invalidateResourceWithUserListQueries }

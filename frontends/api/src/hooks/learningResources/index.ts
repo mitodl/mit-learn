@@ -1,6 +1,5 @@
 import {
   UseQueryOptions,
-  // useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
@@ -16,8 +15,9 @@ import type {
   PaginatedLearningResourceList,
   LearningResourcesApiLearningResourcesUserlistsPartialUpdateRequest,
   LearningResourcesApiLearningResourcesLearningPathsPartialUpdateRequest,
+  MicroUserListRelationship,
 } from "../../generated/v1"
-import learningResources, { updateListParents } from "./keyFactory"
+import learningResources from "./keyFactory"
 import { invalidateResourceQueries } from "./invalidation"
 import { invalidateUserListQueries } from "../userLists/invalidation"
 
@@ -142,6 +142,41 @@ const usePlatformsList = (
 
 const useSchoolsList = () => {
   return useQuery(learningResources.schools())
+}
+
+/**
+ * Given
+ *  - a LearningResource ID
+ *  - a paginated list of current resources
+ *  - a list of new relationships
+ *  - the type of list
+ * Update the resources' user_list_parents field to include the new relationships
+ */
+const updateListParents = (
+  resourceId: number,
+  staleResources?: PaginatedLearningResourceList,
+  newRelationships?: MicroUserListRelationship[],
+  listType?: "userlist" | "learningpath",
+) => {
+  if (!resourceId || !staleResources || !newRelationships || !listType)
+    return staleResources
+  const matchIndex = staleResources.results.findIndex(
+    (res) => res.id === resourceId,
+  )
+  if (matchIndex === -1) return staleResources
+  const updatedResults = [...staleResources.results]
+  const newResource = { ...updatedResults[matchIndex] }
+  if (listType === "userlist") {
+    newResource.user_list_parents = newRelationships
+  }
+  if (listType === "learningpath") {
+    newResource.learning_path_parents = newRelationships
+  }
+  updatedResults[matchIndex] = newResource
+  return {
+    ...staleResources,
+    results: updatedResults,
+  }
 }
 
 export {
