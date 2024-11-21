@@ -156,10 +156,8 @@ def embed_learning_resources(ids, resource_type):
         f"{settings.QDRANT_BASE_COLLECTION_NAME}.content_files"
     )
     if resource_type == CONTENT_FILE_TYPE:
-        readable_id_field = "resource_readable_id"
         serialized_resources = serialize_bulk_content_files(ids)
     else:
-        readable_id_field = "readable_id"
         serialized_resources = serialize_bulk_learning_resources(ids)
     create_qdrand_collections(force_recreate=False)
     if resource_type != CONTENT_FILE_TYPE:
@@ -175,7 +173,13 @@ def embed_learning_resources(ids, resource_type):
             f'{doc.get("full_description")} {doc.get("content")}'
         )
         metadata.append(doc)
-        ids.append(vector_point_id(doc[readable_id_field]))
+        if resource_type != CONTENT_FILE_TYPE:
+            vector_point_key = doc["readable_id"]
+        else:
+            vector_point_key = (
+                f"{doc['key']}.{doc['run_readable_id']}.{doc['resource_readable_id']}"
+            )
+        ids.append(vector_point_id(vector_point_key))
     client.add(
         collection_name=collection_name,
         ids=ids,

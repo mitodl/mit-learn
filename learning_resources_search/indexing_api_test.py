@@ -50,6 +50,7 @@ from learning_resources_search.indexing_api import (
     vector_point_id,
 )
 from learning_resources_search.models import PercolateQuery
+from learning_resources_search.serializers import serialize_bulk_content_files
 from learning_resources_search.utils import remove_child_queries
 from main.utils import chunks
 
@@ -921,7 +922,9 @@ def test_vector_point_id_used_for_embed(mocker, content_type):
         point_ids = [vector_point_id(resource.readable_id) for resource in resources]
     else:
         point_ids = [
-            vector_point_id(resource.run.learning_resource.readable_id)
-            for resource in resources
+            vector_point_id(
+                f"{resource['key']}.{resource['run_readable_id']}.{resource['resource_readable_id']}"
+            )
+            for resource in serialize_bulk_content_files([r.id for r in resources])
         ]
     assert sorted(mock_qdrant.add.mock_calls[0].kwargs["ids"]) == sorted(point_ids)
