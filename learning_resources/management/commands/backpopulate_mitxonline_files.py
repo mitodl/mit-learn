@@ -21,11 +21,19 @@ class Command(BaseCommand):
             type=int,
             help="Chunk size for batch import task",
         )
+        parser.add_argument(
+            "--overwrite",
+            dest="force_overwrite",
+            action="store_true",
+            help="Overwrite any existing records",
+        )
 
     def handle(self, *args, **options):  # noqa: ARG002
         """Run Populate MITX Online course run files"""
         chunk_size = options["chunk_size"]
-        task = import_all_mitxonline_files.delay(chunk_size=chunk_size)
+        task = import_all_mitxonline_files.delay(
+            chunk_size=chunk_size, overwrite=options["force_overwrite"]
+        )
         self.stdout.write(
             f"Started task {task} to get MITX Online course run file data"
         )
