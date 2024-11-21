@@ -66,7 +66,6 @@ const DrawerContent: React.FC<{
   closeDrawer: () => void
 }> = ({ resourceId, closeDrawer }) => {
   const resource = useLearningResourcesDetail(Number(resourceId))
-  // const similarResources = useSimilarLearningResources(Number(resourceId))
   const [signupEl, setSignupEl] = React.useState<HTMLElement | null>(null)
   const { data: user } = useUserMe()
   const handleAddToLearningPathClick: LearningResourceCardProps["onAddToLearningPathClick"] =
