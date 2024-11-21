@@ -3,7 +3,7 @@ import React from "react"
 import { styled } from "ol-components"
 import { DeepChat } from "deep-chat-react"
 import { CONNECTION_PROPS } from "./connection"
-import { STYLE_PROPS } from "./styles"
+import { insertStylesheet, STYLE_PROPS } from "./styles"
 
 const HISTORY = [
   { role: "ai", text: "Hi! What are you interested in learning about?" },
@@ -34,12 +34,15 @@ const ChatView = () => {
   return (
     <ChatContainer>
       <DeepChat
+        ref={(el) => {
+          if (!el) return
+          insertStylesheet(el)
+        }}
         {...CONNECTION_PROPS}
         {...STYLE_PROPS}
         history={HISTORY}
         // @ts-expect-error Webcomponents...
         submit
-        aria-live="polite"
       ></DeepChat>
     </ChatContainer>
   )

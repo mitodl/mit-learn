@@ -148,4 +148,19 @@ const STYLE_PROPS: DeepChatProps = {
   },
 }
 
-export { STYLE_PROPS }
+const insertStylesheet = (el: HTMLElement) => {
+  const sheet = el.shadowRoot?.appendChild(document.createElement("style"))
+  if (!sheet) return
+  sheet.innerHTML = `
+.text-message a {
+  text-decoration: none;
+  color: #750014;
+}
+.text-message a:hover {
+  text-decoration: underline;
+  color: #A31F34;
+}
+`
+}
+
+export { STYLE_PROPS, insertStylesheet }

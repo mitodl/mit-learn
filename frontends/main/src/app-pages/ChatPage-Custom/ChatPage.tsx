@@ -10,12 +10,23 @@ const StyledContainer = styled(Container)({
   flexDirection: "column",
   alignItems: "flex-start",
   gap: "16px",
+  maxHeight: "60vh",
 })
+
+const Chat = styled(ChatBox)({
+  height: "100%",
+})
+
+const STARTERS = [
+  { content: "I'm interested in quantum computing" },
+  { content: "I want to understand global warming. " },
+  { content: "I am curious about AI applications for business" },
+]
 
 const ChatPage = () => {
   return (
     <StyledContainer>
-      <ChatBox />
+      <Chat conversationStarters={STARTERS} />
     </StyledContainer>
   )
 }
