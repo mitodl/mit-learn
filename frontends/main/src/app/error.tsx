@@ -14,6 +14,11 @@ import * as Sentry from "@sentry/nextjs"
 import FallbackErrorPage from "@/app-pages/ErrorPage/FallbackErrorPage"
 import { ForbiddenError } from "@/common/permissions"
 import ForbiddenPage from "@/app-pages/ErrorPage/ForbiddenPage"
+
+export const metadata = {
+  title: "Error",
+}
+
 const Error = ({ error }: { error: Error }) => {
   useEffect(() => {
     Sentry.captureException(error)
