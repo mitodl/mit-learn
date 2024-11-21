@@ -101,7 +101,10 @@ type ContentProps = {
 
 type PanelChildrenProps = {
   config: TabConfig[]
-  queries: UseQueryResult<PaginatedLearningResourceList, unknown>[]
+  queries: UseQueryResult<
+    PaginatedLearningResourceList | LearningResource[],
+    unknown
+  >[]
   children: (props: ContentProps) => React.ReactNode
 }
 const PanelChildren: React.FC<PanelChildrenProps> = ({
@@ -109,9 +112,21 @@ const PanelChildren: React.FC<PanelChildrenProps> = ({
   queries,
   children,
 }) => {
+  const getResults = (
+    data: PaginatedLearningResourceList | LearningResource[] | undefined,
+  ): LearningResource[] => {
+    if (!data) {
+      return []
+    }
+    if ("results" in data) {
+      return data.results
+    }
+    return data
+  }
+
   if (config.length === 1) {
     const { data, isLoading } = queries[0]
-    const resources = data?.results ?? []
+    const resources = getResults(data)
 
     return children({
       resources,
@@ -123,7 +138,7 @@ const PanelChildren: React.FC<PanelChildrenProps> = ({
     <>
       {config.map((tabConfig, index) => {
         const { data, isLoading } = queries[index]
-        const resources = data?.results ?? []
+        const resources = getResults(data)
 
         return (
           <StyledTabPanel key={index} value={index.toString()}>
@@ -160,7 +175,8 @@ type ResourceCarouselProps = {
   /**
    * Element type for the carousel title
    */
-  titleComponent: React.ElementType
+  titleComponent?: React.ElementType
+  titleVariant?: TypographyProps["variant"]
 }
 /**
  * A tabbed carousel that fetches resources based on the configuration provided.
@@ -179,7 +195,8 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
   className,
   isLoading,
   "data-testid": dataTestId,
-  titleComponent,
+  titleComponent = "h4",
+  titleVariant = "h4",
 }) => {
   const [tab, setTab] = React.useState("0")
   const [ref, setRef] = React.useState<HTMLDivElement | null>(null)
@@ -189,7 +206,7 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
       (
         tab,
       ): UseQueryOptions<
-        PaginatedLearningResourceList,
+        PaginatedLearningResourceList | LearningResource[],
         unknown,
         unknown,
         // The factory-generated types for queryKeys are very specific (tuples not arrays)
@@ -205,13 +222,29 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
             return learningResourcesKeyFactory.search(tab.data.params)
           case "lr_featured":
             return learningResourcesKeyFactory.featured(tab.data.params)
+          case "lr_similar":
+            return learningResourcesKeyFactory.similar(tab.data.params.id)
+          case "lr_vector_similar":
+            return learningResourcesKeyFactory.vectorSimilar(tab.data.params.id)
         }
       },
     ),
   })
 
+  const getCount = (
+    data: PaginatedLearningResourceList | LearningResource[] | undefined,
+  ) => {
+    if (!data) {
+      return 0
+    }
+    if ("count" in data) {
+      return data.count
+    }
+    return data.length
+  }
+
   const allChildrenLoaded = queries.every(({ isLoading }) => !isLoading)
-  const allChildrenEmpty = queries.every(({ data }) => !data?.count)
+  const allChildrenEmpty = queries.every(({ data }) => !getCount(data))
   if (!isLoading && allChildrenLoaded && allChildrenEmpty) {
     return null
   }
@@ -223,7 +256,7 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
     <MobileOverflow className={className} data-testid={dataTestId}>
       <TabContext value={tab}>
         <HeaderRow>
-          <HeaderText component={titleComponent} variant="h4">
+          <HeaderText component={titleComponent} variant={titleVariant}>
             {title}
           </HeaderText>
           {config.length === 1 ? buttonsContainerElement : null}
@@ -237,7 +270,7 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
                   if (
                     !isLoading &&
                     !queries[index].isLoading &&
-                    !queries[index].data?.count
+                    !getCount(queries[index].data)
                   ) {
                     return null
                   }
@@ -256,7 +289,11 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
         </HeaderRow>
         <PanelChildren
           config={config}
-          queries={queries as UseQueryResult<PaginatedLearningResourceList>[]}
+          queries={
+            queries as UseQueryResult<
+              PaginatedLearningResourceList | LearningResource[]
+            >[]
+          }
         >
           {({ resources, childrenLoading, tabConfig }) => (
             <StyledCarousel arrowsContainer={ref}>

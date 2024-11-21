@@ -205,6 +205,7 @@ class LearningResourceViewSet(
         detail=True,
         methods=["GET"],
         name="Fetch similar learning resources for a resource by id",
+        pagination_class=None,
     )
     @method_decorator(
         cache_page_for_all_users(
@@ -245,6 +246,7 @@ class LearningResourceViewSet(
         detail=True,
         methods=["GET"],
         name="Fetch similar resources using embeddings for a resource",
+        pagination_class=None,
     )
     @method_decorator(
         cache_page_for_all_users(

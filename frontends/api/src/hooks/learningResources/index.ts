@@ -179,6 +179,26 @@ const updateListParents = (
   }
 }
 
+const useSimilarLearningResources = (
+  id: number,
+  opts: Pick<UseQueryOptions, "enabled"> = {},
+) => {
+  return useQuery({
+    ...learningResources.similar(id),
+    ...opts,
+  })
+}
+
+const useVectorSimilarLearningResources = (
+  id: number,
+  opts: Pick<UseQueryOptions, "enabled"> = {},
+) => {
+  return useQuery({
+    ...learningResources.vectorSimilar(id),
+    ...opts,
+  })
+}
+
 export {
   useLearningResourcesList,
   useFeaturedLearningResourcesList,
@@ -192,4 +212,6 @@ export {
   usePlatformsList,
   useSchoolsList,
   learningResources as learningResourcesKeyFactory,
+  useSimilarLearningResources,
+  useVectorSimilarLearningResources,
 }

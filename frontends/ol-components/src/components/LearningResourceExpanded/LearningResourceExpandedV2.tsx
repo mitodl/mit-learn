@@ -22,14 +22,24 @@ import { LearningResourceCardProps } from "../LearningResourceCard/LearningResou
 import { CardActionButton } from "../LearningResourceCard/LearningResourceListCard"
 import VideoFrame from "./VideoFrame"
 
+const DRAWER_WIDTH = "900px"
+
+const OuterContainer = styled.div({
+  display: "flex",
+  flexDirection: "column",
+  flexGrow: 1,
+  width: "100%",
+  overflowX: "hidden",
+})
+
 const Container = styled.div({
   display: "flex",
   flexDirection: "column",
-  padding: "0 32px 160px",
-  width: "900px",
+  padding: "0 32px 24px",
+  width: DRAWER_WIDTH,
   [theme.breakpoints.down("md")]: {
     width: "auto",
-    padding: "0 16px 160px",
+    padding: "0 16px 24px",
   },
 })
 
@@ -39,6 +49,7 @@ const TitleSectionContainer = styled.div({
   justifyContent: "space-between",
   top: "0",
   padding: "24px 32px",
+  zIndex: 1,
   backgroundColor: theme.custom.colors.white,
   [theme.breakpoints.down("md")]: {
     padding: "24px 16px",
@@ -88,7 +99,6 @@ const Image = styled(NextImage)<{ aspect: number }>`
   width: 100%;
   aspect-ratio: ${({ aspect }) => aspect};
   object-fit: cover;
-  z-index: -1;
 `
 
 const SkeletonImage = styled(Skeleton)<{ aspect: number }>((aspect) => ({
@@ -163,10 +173,30 @@ const ListButtonContainer = styled.div({
   justifyContent: "flex-end",
 })
 
+const CarouselContainer = styled.div({
+  display: "flex",
+  flexDirection: "column",
+  flexGrow: 1,
+  alignItems: "flex-start",
+  width: DRAWER_WIDTH,
+  padding: "32px",
+  gap: "32px",
+  borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
+  background: theme.custom.colors.lightGray1,
+  div: {
+    maxWidth: "100%",
+  },
+  [theme.breakpoints.down("md")]: {
+    width: "100vw",
+    padding: "16px 0 16px 16px",
+  },
+})
+
 type LearningResourceExpandedV2Props = {
   resource?: LearningResource
   user?: User
   imgConfig: ImageConfig
+  carousels?: React.ReactNode[]
   onAddToLearningPathClick?: LearningResourceCardProps["onAddToLearningPathClick"]
   onAddToUserListClick?: LearningResourceCardProps["onAddToUserListClick"]
   closeDrawer?: () => void
@@ -432,12 +462,13 @@ const LearningResourceExpandedV2: React.FC<LearningResourceExpandedV2Props> = ({
   resource,
   imgConfig,
   user,
+  carousels,
   onAddToLearningPathClick,
   onAddToUserListClick,
   closeDrawer,
 }) => {
   return (
-    <>
+    <OuterContainer>
       <TitleSection
         resource={resource}
         closeDrawer={closeDrawer ?? (() => {})}
@@ -459,7 +490,10 @@ const LearningResourceExpandedV2: React.FC<LearningResourceExpandedV2Props> = ({
           </RightContainer>
         </ContentContainer>
       </Container>
-    </>
+      <CarouselContainer>
+        {carousels?.map((carousel, index) => <div key={index}>{carousel}</div>)}
+      </CarouselContainer>
+    </OuterContainer>
   )
 }
 

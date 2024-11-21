@@ -48,6 +48,14 @@ describe("LearningResourceDrawerV2", () => {
         urls.learningResources.details({ id: resource.id }),
         resource,
       )
+      setMockResponse.get(
+        urls.learningResources.similar({ id: resource.id }),
+        [],
+      )
+      setMockResponse.get(
+        urls.learningResources.vectorSimilar({ id: resource.id }),
+        [],
+      )
 
       renderWithProviders(<LearningResourceDrawerV2 />, {
         url: `?dog=woof&${RESOURCE_DRAWER_QUERY_PARAM}=${resource.id}`,
@@ -108,6 +116,14 @@ describe("LearningResourceDrawerV2", () => {
         urls.learningResources.details({ id: resource.id }),
         resource,
       )
+      setMockResponse.get(
+        urls.learningResources.similar({ id: resource.id }),
+        [],
+      )
+      setMockResponse.get(
+        urls.learningResources.vectorSimilar({ id: resource.id }),
+        [],
+      )
       const user = factories.user.user({
         is_learning_path_editor: isLearningPathEditor,
       })
@@ -139,4 +155,46 @@ describe("LearningResourceDrawerV2", () => {
       ).toBe(expectAddToLearningPathButton)
     },
   )
+
+  it("Renders similar resource carousels", async () => {
+    const resource = factories.learningResources.resource({
+      resource_type: ResourceTypeEnum.Course,
+      runs: [
+        factories.learningResources.run({
+          languages: ["en-us", "es-es", "fr-fr"],
+        }),
+      ],
+    })
+    const count = 10
+    const similarResources = factories.learningResources.resources({
+      count,
+    }).results
+    const vectorSimilarResources = factories.learningResources.resources({
+      count,
+    }).results
+    setMockResponse.get(urls.userMe.get(), null, { code: 403 })
+    setMockResponse.get(
+      urls.learningResources.details({ id: resource.id }),
+      resource,
+    )
+    setMockResponse.get(
+      urls.learningResources.similar({ id: resource.id }),
+      similarResources,
+    )
+    setMockResponse.get(
+      urls.learningResources.vectorSimilar({ id: resource.id }),
+      vectorSimilarResources,
+    )
+    renderWithProviders(<LearningResourceDrawerV2 />, {
+      url: `?resource=${resource.id}`,
+    })
+    await screen.findByText("Similar Learning Resources")
+    for (const similarResource of similarResources) {
+      await screen.findByText(similarResource.title)
+    }
+    await screen.findByText("Similar Learning Resources (Vector Based)")
+    for (const vectorSimilarResource of vectorSimilarResources) {
+      await screen.findByText(vectorSimilarResource.title)
+    }
+  })
 })
