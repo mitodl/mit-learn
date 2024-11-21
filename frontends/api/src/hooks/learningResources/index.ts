@@ -12,14 +12,10 @@ import type {
   OfferorsApiOfferorsListRequest,
   PlatformsApiPlatformsListRequest,
   FeaturedApiFeaturedListRequest as FeaturedListParams,
-  // PaginatedLearningResourceList,
   LearningResourcesApiLearningResourcesUserlistsPartialUpdateRequest,
   LearningResourcesApiLearningResourcesLearningPathsPartialUpdateRequest,
-  // MicroUserListRelationship,
 } from "../../generated/v1"
 import learningResources from "./keyFactory"
-// import { invalidateResourceQueries } from "./invalidation"
-// import { invalidateUserListQueries } from "../userLists/invalidation"
 import userLists from "../userLists/keyFactory"
 import learningPaths from "../learningPaths/keyFactory"
 

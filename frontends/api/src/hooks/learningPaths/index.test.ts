@@ -5,7 +5,6 @@ import { LearningResource } from "../../generated/v1"
 import * as factories from "../../test-utils/factories"
 import { setupReactQueryTest } from "../test-utils"
 import { setMockResponse, urls, makeRequest } from "../../test-utils"
-// import { useFeaturedLearningResourcesList } from "../learningResources"
 import keyFactory from "../learningResources/keyFactory"
 import {
   useLearningPathsDetail,
@@ -14,9 +13,6 @@ import {
   useLearningPathCreate,
   useLearningPathDestroy,
   useLearningPathUpdate,
-  // useLearningPathRelationshipMove,
-  // useLearningPathRelationshipCreate,
-  // useLearningPathRelationshipDestroy,
 } from "./index"
 import learningPathKeyFactory from "./keyFactory"
 
@@ -222,112 +218,4 @@ describe("LearningPath CRUD", () => {
       path.id,
     ])
   })
-
-  // test("useLearningPathRelationshipMove calls correct API", async () => {
-  //   const { relationship, pathUrls, keys } = makeData()
-  //   const url = pathUrls.relationshipDetails
-  //   setMockResponse.patch(url, null)
-
-  //   const { wrapper, queryClient } = setupReactQueryTest()
-  //   jest.spyOn(queryClient, "invalidateQueries")
-  //   const { result } = renderHook(useLearningPathRelationshipMove, { wrapper })
-  //   result.current.mutate(relationship)
-
-  //   await waitFor(() => expect(result.current.isSuccess).toBe(true))
-  //   expect(makeRequest).toHaveBeenCalledWith(
-  //     "patch",
-  //     url,
-  //     expect.objectContaining({ position: relationship.position }),
-  //   )
-
-  //   expect(queryClient.invalidateQueries).toHaveBeenCalledWith(
-  //     keys.relationshipListing,
-  //   )
-  // })
-
-  // test.each([{ isChildFeatured: false }, { isChildFeatured: true }])(
-  //   "useLearningPathRelationshipCreate calls correct API and patches featured resources",
-  //   async ({ isChildFeatured }) => {
-  //     const { relationship, pathUrls, resourceWithoutList } = makeData()
-
-  //     const featured = factory.resources({ count: 3 })
-  //     if (isChildFeatured) {
-  //       featured.results[0] = resourceWithoutList
-  //     }
-  //     setMockResponse.get(urls.learningResources.featured(), featured)
-
-  //     const url = pathUrls.relationshipList
-  //     const requestData = {
-  //       child: relationship.child,
-  //       parent: relationship.parent,
-  //       position: relationship.position,
-  //     }
-  //     setMockResponse.post(url, relationship)
-
-  //     const { wrapper, queryClient } = setupReactQueryTest()
-  //     const { result } = renderHook(useLearningPathRelationshipCreate, {
-  //       wrapper,
-  //     })
-  //     const { result: featuredResult } = renderHook(
-  //       useFeaturedLearningResourcesList,
-  //       { wrapper },
-  //     )
-  //     await waitFor(() => expect(featuredResult.current.data).toBe(featured))
-
-  //     result.current.mutate(requestData)
-
-  //     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-  //     expect(makeRequest).toHaveBeenCalledWith("post", url, requestData)
-
-  //     expect(invalidateResourceQueries).toHaveBeenCalledWith(
-  //       queryClient,
-  //       relationship.child,
-  //       { skipFeatured: false },
-  //     )
-  //     expect(invalidateResourceQueries).toHaveBeenCalledWith(
-  //       queryClient,
-  //       relationship.parent,
-  //     )
-  //   },
-  // )
-
-  // test.each([{ isChildFeatured: false }, { isChildFeatured: true }])(
-  //   "useLearningPathRelationshipDestroy calls correct API and patches child resource cache (isChildFeatured=$isChildFeatured)",
-  //   async ({ isChildFeatured }) => {
-  //     const { relationship, pathUrls } = makeData()
-  //     const url = pathUrls.relationshipDetails
-
-  //     const featured = factory.resources({ count: 3 })
-  //     if (isChildFeatured) {
-  //       featured.results[0] = relationship.resource
-  //     }
-  //     setMockResponse.get(urls.learningResources.featured(), featured)
-
-  //     setMockResponse.delete(url, null)
-  //     const { wrapper, queryClient } = setupReactQueryTest()
-
-  //     const { result } = renderHook(useLearningPathRelationshipDestroy, {
-  //       wrapper,
-  //     })
-  //     const { result: featuredResult } = renderHook(
-  //       useFeaturedLearningResourcesList,
-  //       { wrapper },
-  //     )
-
-  //     await waitFor(() => expect(featuredResult.current.data).toBe(featured))
-  //     result.current.mutate(relationship)
-  //     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-
-  //     expect(makeRequest).toHaveBeenCalledWith("delete", url, undefined)
-  //     expect(invalidateResourceQueries).toHaveBeenCalledWith(
-  //       queryClient,
-  //       relationship.child,
-  //       { skipFeatured: false },
-  //     )
-  //     expect(invalidateResourceQueries).toHaveBeenCalledWith(
-  //       queryClient,
-  //       relationship.parent,
-  //     )
-  //   },
-  // )
 })

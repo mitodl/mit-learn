@@ -10,13 +10,10 @@ import type {
   LearningpathsApiLearningpathsItemsListRequest as ItemsListRequest,
   LearningpathsApiLearningpathsCreateRequest as CreateRequest,
   LearningpathsApiLearningpathsDestroyRequest as DestroyRequest,
-  // LearningPathRelationshipRequest,
-  // MicroLearningPathRelationship,
   LearningPathResource,
 } from "../../generated/v1"
 import { learningPathsApi } from "../../clients"
 import learningPaths from "./keyFactory"
-// import { invalidateResourceQueries } from "../learningResources/invalidation"
 
 const useLearningPathsList = (
   params: ListRequest = {},
@@ -98,22 +95,6 @@ interface ListItemMoveRequest {
   id: number
   position?: number
 }
-// const useLearningPathRelationshipMove = () => {
-//   const queryClient = useQueryClient()
-//   return useMutation({
-//     mutationFn: ({ parent, id, position }: ListItemMoveRequest) =>
-//       learningPathsApi.learningpathsItemsPartialUpdate({
-//         learning_resource_id: parent,
-//         id,
-//         PatchedLearningPathRelationshipRequest: { position },
-//       }),
-//     onSettled: (_data, _err, vars) => {
-//       queryClient.invalidateQueries(
-//         learningPaths.detail(vars.parent)._ctx.infiniteItems._def,
-//       )
-//     },
-//   })
-// }
 
 const useLearningPathListItemMove = () => {
   const queryClient = useQueryClient()
@@ -132,50 +113,6 @@ const useLearningPathListItemMove = () => {
     },
   })
 }
-
-// const useLearningPathRelationshipCreate = () => {
-//   const queryClient = useQueryClient()
-//   return useMutation({
-//     mutationFn: (params: LearningPathRelationshipRequest) =>
-//       learningPathsApi.learningpathsItemsCreate({
-//         learning_resource_id: params.parent,
-//         LearningPathRelationshipRequest: params,
-//       }),
-//     onSettled: (_response, _err, vars) => {
-//       invalidateResourceQueries(
-//         queryClient,
-//         vars.child,
-//         // do NOT skip invalidating the /featured/ lists,
-//         // Changing a learning path might change the members of the featured
-//         // lists.
-//         { skipFeatured: false },
-//       )
-//       invalidateResourceQueries(queryClient, vars.parent)
-//     },
-//   })
-// }
-
-// const useLearningPathRelationshipDestroy = () => {
-//   const queryClient = useQueryClient()
-//   return useMutation({
-//     mutationFn: (params: MicroLearningPathRelationship) =>
-//       learningPathsApi.learningpathsItemsDestroy({
-//         id: params.id,
-//         learning_resource_id: params.parent,
-//       }),
-//     onSettled: (_response, _err, vars) => {
-//       invalidateResourceQueries(
-//         queryClient,
-//         vars.child,
-//         // do NOT skip invalidating the /featured/ lists,
-//         // Changing a learning path might change the members of the featured
-//         // lists.
-//         { skipFeatured: false },
-//       )
-//       invalidateResourceQueries(queryClient, vars.parent)
-//     },
-//   })
-// }
 
 const useIsLearningPathMember = (resourceId?: number) => {
   return useQuery({
@@ -206,10 +143,7 @@ export {
   useLearningPathCreate,
   useLearningPathUpdate,
   useLearningPathDestroy,
-  // useLearningPathRelationshipMove,
   useLearningPathListItemMove,
-  // useLearningPathRelationshipCreate,
-  // useLearningPathRelationshipDestroy,
   useIsLearningPathMember,
   useLearningPathMemberList,
 }
