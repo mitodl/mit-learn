@@ -14,8 +14,6 @@ import type {
   UserList,
 } from "../../generated/v1"
 import userLists from "./keyFactory"
-import { invalidateResourceWithUserListQueries } from "../learningResources/invalidation"
-import { invalidateUserListQueries } from "./invalidation"
 
 const useUserListList = (
   params: ListRequest = {},
@@ -63,9 +61,9 @@ const useUserListDestroy = () => {
   return useMutation({
     mutationFn: (params: DestroyRequest) =>
       userListsApi.userlistsDestroy(params),
-    onSettled: (_data, _err, vars) => {
-      invalidateUserListQueries(queryClient, vars.id)
-      invalidateResourceWithUserListQueries(queryClient, vars.id)
+    onSettled: () => {
+      queryClient.invalidateQueries(userLists.list._def)
+      queryClient.invalidateQueries(userLists.membershipList._def)
     },
   })
 }
@@ -106,6 +104,28 @@ const useUserListListItemMove = () => {
   })
 }
 
+const useIsUserListMember = (resourceId?: number) => {
+  return useQuery({
+    ...userLists.membershipList(),
+    select: (data) => {
+      return !!data.find((relationship) => relationship.child === resourceId)
+    },
+    enabled: !!resourceId,
+  })
+}
+
+const useUserListMemberList = (resourceId?: number) => {
+  return useQuery({
+    ...userLists.membershipList(),
+    select: (data) => {
+      return data
+        .filter((relationship) => relationship.child === resourceId)
+        .map((relationship) => relationship.parent.toString())
+    },
+    enabled: !!resourceId,
+  })
+}
+
 export {
   useUserListList,
   useUserListsDetail,
@@ -114,4 +134,6 @@ export {
   useUserListDestroy,
   useInfiniteUserListItems,
   useUserListListItemMove,
+  useIsUserListMember,
+  useUserListMemberList,
 }

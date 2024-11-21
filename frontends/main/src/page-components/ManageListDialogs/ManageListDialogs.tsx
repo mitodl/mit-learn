@@ -91,6 +91,7 @@ const UpsertLearningPathDialog = NiceModal.create(
       LearningPathResource | LearningPathFormValues
     >["onSubmit"] = useCallback(
       async (values) => {
+        console.log("VALUES", resource?.id, values)
         if (resource?.id) {
           await updateList.mutateAsync({ ...values, id: resource.id })
         } else {

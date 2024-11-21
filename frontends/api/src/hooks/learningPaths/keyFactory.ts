@@ -37,6 +37,13 @@ const learningPaths = createQueryKeys("learningPaths", {
       return learningPathsApi.learningpathsList(params).then((res) => res.data)
     },
   }),
+  membershipList: () => ({
+    queryKey: ["membershipList"],
+    queryFn: async () => {
+      const { data } = await learningPathsApi.learningpathsMembershipList()
+      return data
+    },
+  }),
 })
 
 export default learningPaths

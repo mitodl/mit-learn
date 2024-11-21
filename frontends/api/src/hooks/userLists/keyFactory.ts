@@ -31,6 +31,13 @@ const userLists = createQueryKeys("userLists", {
     queryKey: [params],
     queryFn: () => userListsApi.userlistsList(params).then((res) => res.data),
   }),
+  membershipList: () => ({
+    queryKey: ["membershipList"],
+    queryFn: async () => {
+      const { data } = await userListsApi.userlistsMembershipList()
+      return data
+    },
+  }),
 })
 
 export default userLists
