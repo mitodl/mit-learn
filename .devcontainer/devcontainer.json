@@ -9,8 +9,10 @@
     "tika",
     "celery",
     "nginx",
-    "redis"
+    "redis",
+    "qdrant"
   ],
+  "hostRequirements": { "cpus": 4, "memory": "8gb" },
   "secrets": {
     "EDX_API_CLIENT_ID": {},
     "EDX_API_CLIENT_SECRET": {},
