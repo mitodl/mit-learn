@@ -13,7 +13,9 @@ import {
   LearningResourceListCardCondensed,
 } from "ol-components"
 import { ResourceCard } from "@/page-components/ResourceCard/ResourceCard"
-import { useListItemMove } from "api/hooks/learningResources"
+import { useLearningPathListItemMove } from "api/hooks/learningPaths"
+import { useUserListListItemMove } from "api/hooks/userLists"
+import { ListType } from "api/constants"
 
 const EmptyMessage = styled.p({
   fontStyle: "italic",
@@ -51,7 +53,9 @@ const ItemsListingSortable: React.FC<{
   isRefetching?: boolean
   condensed: boolean
 }> = ({ listType, items, isRefetching, condensed }) => {
-  const move = useListItemMove()
+  const moveLearningPathListItem = useLearningPathListItemMove()
+  const moveUserListListItem = useUserListListItemMove()
+
   const [sorted, setSorted] = React.useState<LearningResourceListItem[]>([])
 
   const ListCardComponent = condensed
@@ -84,17 +88,28 @@ const ItemsListingSortable: React.FC<{
         const newOrder = arrayMove(current, e.activeIndex, e.overIndex)
         return newOrder
       })
-      move.mutate({
-        listType: listType,
-        id: active.id,
-        parent: active.parent,
-        position: over.position,
-      })
+      if (listType === ListType.LearningPath) {
+        moveLearningPathListItem.mutate({
+          id: active.id,
+          parent: active.parent,
+          position: over.position,
+        })
+      }
+      if (listType === ListType.UserList) {
+        moveUserListListItem.mutate({
+          id: active.id,
+          parent: active.parent,
+          position: over.position,
+        })
+      }
     },
-    [listType, move],
+    [listType, moveLearningPathListItem, moveUserListListItem],
   )
 
-  const disabled = isRefetching || move.isLoading
+  const disabled =
+    isRefetching ||
+    moveLearningPathListItem.isLoading ||
+    moveUserListListItem.isLoading
 
   return (
     <StyledPlainList disabled={disabled} itemSpacing={condensed ? 1 : 2}>

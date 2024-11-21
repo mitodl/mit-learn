@@ -18,7 +18,7 @@ import type { SimpleMenuItem } from "ol-components"
 import { RiPencilFill, RiMore2Line, RiDeleteBinLine } from "@remixicon/react"
 
 import type { LearningPathResource } from "api"
-import { useLearningPathsList } from "api/hooks/learningResources"
+import { useLearningPathsList } from "api/hooks/learningPaths"
 
 import { GridColumn, GridContainer } from "@/components/GridLayout/GridLayout"
 

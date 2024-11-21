@@ -1,6 +1,7 @@
 import { searchSubscriptionApi } from "../../clients"
 import { createQueryKeys } from "@lukemorales/query-key-factory"
 import type { LearningResourcesUserSubscriptionApiLearningResourcesUserSubscriptionCheckListRequest as subscriptionCheckListRequest } from "../../generated/v1"
+
 const searchSubscriptions = createQueryKeys("searchSubscriptions", {
   list: (params: subscriptionCheckListRequest) => ({
     queryKey: [params],

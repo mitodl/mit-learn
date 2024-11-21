@@ -16,14 +16,16 @@ import * as Yup from "yup"
 import { PrivacyLevelEnum, type LearningPathResource, UserList } from "api"
 
 import {
-  useLearningpathCreate,
-  useLearningpathUpdate,
-  useLearningpathDestroy,
-  useLearningResourceTopics,
+  useLearningPathCreate,
+  useLearningPathUpdate,
+  useLearningPathDestroy,
+} from "api/hooks/learningPaths"
+import { useLearningResourceTopics } from "api/hooks/learningResources"
+import {
   useUserListCreate,
   useUserListUpdate,
   useUserListDestroy,
-} from "api/hooks/learningResources"
+} from "api/hooks/userLists"
 
 const learningPathFormSchema = Yup.object().shape({
   published: Yup.boolean()
@@ -82,8 +84,8 @@ const UpsertLearningPathDialog = NiceModal.create(
     const topicsQuery = useLearningResourceTopics(undefined, {
       enabled: modal.visible,
     })
-    const createList = useLearningpathCreate()
-    const updateList = useLearningpathUpdate()
+    const createList = useLearningPathCreate()
+    const updateList = useLearningPathUpdate()
     const mutation = resource?.id ? updateList : createList
     const handleSubmit: FormikConfig<
       LearningPathResource | LearningPathFormValues
@@ -301,7 +303,7 @@ const DeleteLearningPathDialog = NiceModal.create(
   ({ resource }: DeleteLearningPathDialogProps) => {
     const modal = NiceModal.useModal()
     const hideModal = modal.hide
-    const destroyList = useLearningpathDestroy()
+    const destroyList = useLearningPathDestroy()
 
     const handleConfirm = useCallback(async () => {
       await destroyList.mutateAsync({
