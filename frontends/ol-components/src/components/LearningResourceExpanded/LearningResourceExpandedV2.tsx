@@ -49,6 +49,7 @@ const TitleSectionContainer = styled.div({
   justifyContent: "space-between",
   top: "0",
   padding: "24px 32px",
+  zIndex: 1,
   backgroundColor: theme.custom.colors.white,
   [theme.breakpoints.down("md")]: {
     padding: "24px 16px",
@@ -98,7 +99,6 @@ const Image = styled(NextImage)<{ aspect: number }>`
   width: 100%;
   aspect-ratio: ${({ aspect }) => aspect};
   object-fit: cover;
-  z-index: -1;
 `
 
 const SkeletonImage = styled(Skeleton)<{ aspect: number }>((aspect) => ({
