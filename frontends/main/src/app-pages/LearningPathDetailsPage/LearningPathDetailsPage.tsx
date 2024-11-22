@@ -6,7 +6,7 @@ import { useUserMe } from "api/hooks/user"
 import {
   useInfiniteLearningPathItems,
   useLearningPathsDetail,
-} from "api/hooks/learningResources"
+} from "api/hooks/learningPaths"
 import { ListType } from "api/constants"
 import { manageListDialogs } from "@/page-components/ManageListDialogs/ManageListDialogs"
 import LearningResourceDrawer from "@/page-components/LearningResourceDrawer/LearningResourceDrawer"

@@ -52,7 +52,7 @@ const learningResourcesSearchAdminParamsApi =
 
 const featuredApi = new FeaturedApi(undefined, BASE_PATH, axiosInstance)
 
-const learningpathsApi = new LearningpathsApi(
+const learningPathsApi = new LearningpathsApi(
   undefined,
   BASE_PATH,
   axiosInstance,
@@ -95,7 +95,7 @@ const testimonialsApi = new TestimonialsApi(undefined, BASE_PATH, axiosInstance)
 
 export {
   learningResourcesApi,
-  learningpathsApi,
+  learningPathsApi,
   userListsApi,
   topicsApi,
   articlesApi,

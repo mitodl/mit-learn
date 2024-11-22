@@ -2,7 +2,7 @@ import React, { useMemo } from "react"
 import {
   useInfiniteUserListItems,
   useUserListsDetail,
-} from "api/hooks/learningResources"
+} from "api/hooks/userLists"
 import { useRouter } from "next/navigation"
 import { ListType } from "api/constants"
 import { useUserMe } from "api/hooks/user"
