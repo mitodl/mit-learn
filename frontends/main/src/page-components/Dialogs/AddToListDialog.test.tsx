@@ -14,13 +14,6 @@ import {
 } from "@/test-utils"
 import { manageListDialogs } from "@/page-components/ManageListDialogs/ManageListDialogs"
 import { waitForElementToBeRemoved } from "@testing-library/react"
-import {
-  LearningPathRelationship,
-  LearningPathResource,
-  LearningResource,
-  UserList,
-  UserListRelationship,
-} from "api"
 import invariant from "tiny-invariant"
 import { ListType } from "api/constants"
 
@@ -85,7 +78,7 @@ const setupUserLists = ({
   inLists = [],
   dialogOpen = true,
 }: Partial<SetupOptions> = {}) => {
-  const resource = learningResourcesFactory.resource({ user_list_parents: [] })
+  const resource = learningResourcesFactory.resource()
   const paginatedUserLists = userListsFactory.userLists({ count: 3 })
   const userLists = paginatedUserLists.results
 
@@ -114,42 +107,6 @@ const setupUserLists = ({
     lists: userLists,
     parents: userListParents,
   }
-}
-
-const addToLearningPath = (
-  resource: LearningResource,
-  list: LearningPathResource,
-): LearningPathRelationship => {
-  const member = learningResourcesFactory.microLearningPathRelationship({
-    parent: list.id,
-    child: resource.id,
-  })
-  const modified = {
-    ...resource,
-    learning_path_parents: [...(resource.learning_path_parents ?? []), member],
-  }
-  return learningResourcesFactory.learningPathRelationship({
-    ...member,
-    resource: modified,
-  })
-}
-
-const addToUserList = (
-  resource: LearningResource,
-  list: UserList,
-): UserListRelationship => {
-  const member = userListsFactory.microUserListRelationship({
-    parent: list.id,
-    child: resource.id,
-  })
-  const modified = {
-    ...resource,
-    user_list_parents: [...(resource.user_list_parents ?? []), member],
-  }
-  return userListsFactory.userListRelationship({
-    ...member,
-    resource: modified,
-  })
 }
 
 describe.each([ListType.LearningPath, ListType.UserList])(
@@ -189,8 +146,7 @@ describe.each([ListType.LearningPath, ListType.UserList])(
             id: resource.id,
             learning_path_id: [list.id],
           })
-        const newRelationship = addToLearningPath(resource, list)
-        setMockResponse.patch(setRelationshipsUrl, newRelationship)
+        setMockResponse.patch(setRelationshipsUrl)
         setMockResponse.get(
           urls.learningResources.details({ id: resource.id }),
           resource,
@@ -204,8 +160,7 @@ describe.each([ListType.LearningPath, ListType.UserList])(
           id: resource.id,
           userlist_id: [list.id],
         })
-        const newRelationship = addToUserList(resource, list)
-        setMockResponse.patch(setRelationshipsUrl, newRelationship)
+        setMockResponse.patch(setRelationshipsUrl)
         setMockResponse.get(
           urls.learningResources.details({ id: resource.id }),
           resource,
