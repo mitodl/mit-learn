@@ -14,6 +14,7 @@ import type {
 } from "../../generated/v1"
 import { learningPathsApi } from "../../clients"
 import learningPaths from "./keyFactory"
+import { useUserIsAuthenticated } from "api/hooks/user"
 
 const useLearningPathsList = (
   params: ListRequest = {},
@@ -120,19 +121,20 @@ const useIsLearningPathMember = (resourceId?: number) => {
     select: (data) => {
       return !!data.find((relationship) => relationship.child === resourceId)
     },
-    enabled: !!resourceId,
+    enabled: useUserIsAuthenticated() && !!resourceId,
   })
 }
 
 const useLearningPathMemberList = (resourceId?: number) => {
   return useQuery({
     ...learningPaths.membershipList(),
+
     select: (data) => {
       return data
         .filter((relationship) => relationship.child === resourceId)
         .map((relationship) => relationship.parent.toString())
     },
-    enabled: !!resourceId,
+    enabled: useUserIsAuthenticated() && !!resourceId,
   })
 }
 

@@ -14,6 +14,7 @@ import type {
   UserList,
 } from "../../generated/v1"
 import userLists from "./keyFactory"
+import { useUserIsAuthenticated } from "api/hooks/user"
 
 const useUserListList = (
   params: ListRequest = {},
@@ -110,7 +111,7 @@ const useIsUserListMember = (resourceId?: number) => {
     select: (data) => {
       return !!data.find((relationship) => relationship.child === resourceId)
     },
-    enabled: !!resourceId,
+    enabled: useUserIsAuthenticated() && !!resourceId,
   })
 }
 
@@ -122,7 +123,7 @@ const useUserListMemberList = (resourceId?: number) => {
         .filter((relationship) => relationship.child === resourceId)
         .map((relationship) => relationship.parent.toString())
     },
-    enabled: !!resourceId,
+    enabled: useUserIsAuthenticated() && !!resourceId,
   })
 }
 

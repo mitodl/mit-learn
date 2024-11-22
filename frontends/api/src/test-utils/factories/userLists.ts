@@ -45,7 +45,7 @@ const userListRelationship: Factory<UserListRelationship> = (
   const micro = microUserListRelationship()
   const resource = learningResource({
     id: micro.child,
-    user_list_parents: [micro],
+    user_list_parents: [],
   })
   return {
     ...micro,

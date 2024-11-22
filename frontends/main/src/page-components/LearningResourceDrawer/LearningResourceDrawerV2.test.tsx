@@ -40,6 +40,8 @@ describe("LearningResourceDrawerV2", () => {
     "Renders drawer content when resource=id is in the URL and captures the view if PostHog $descriptor",
     async ({ enablePostHog }) => {
       setMockResponse.get(urls.userMe.get(), {})
+      setMockResponse.get(urls.userLists.membershipList(), [])
+      setMockResponse.get(urls.learningPaths.membershipList(), [])
       process.env.NEXT_PUBLIC_POSTHOG_API_KEY = enablePostHog
         ? "12345abcdef" // pragma: allowlist secret
         : ""
@@ -116,6 +118,8 @@ describe("LearningResourceDrawerV2", () => {
       } else {
         setMockResponse.get(urls.userMe.get(), null, { code: 403 })
       }
+      setMockResponse.get(urls.userLists.membershipList(), [])
+      setMockResponse.get(urls.learningPaths.membershipList(), [])
 
       renderWithProviders(<LearningResourceDrawerV2 />, {
         url: `?resource=${resource.id}`,

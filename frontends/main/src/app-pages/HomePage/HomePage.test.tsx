@@ -255,6 +255,7 @@ describe("Home Page News and Events", () => {
 describe("Home Page personalize section", () => {
   test("Links to dashboard when authenticated", async () => {
     setMockResponse.get(urls.userMe.get(), {})
+
     setupAPIs()
 
     renderWithProviders(<HomePage />)
