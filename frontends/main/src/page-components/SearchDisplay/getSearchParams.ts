@@ -13,7 +13,7 @@ export const PAGE_SIZE = 20
 
 type SearchParams = {
   searchParams?: URLSearchParams
-  requestParams: UseResourceSearchParamsResult["params"] //LRSearchRequest //
+  requestParams: UseResourceSearchParamsResult["params"]
   constantSearchParams?: Facets & BooleanFacets
   resourceCategory?: ResourceCategoryEnum
   facetNames: UseResourceSearchParamsProps["facets"]
