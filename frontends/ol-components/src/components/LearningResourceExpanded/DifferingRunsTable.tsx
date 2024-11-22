@@ -120,7 +120,7 @@ const DifferingRunsTable: React.FC<{ resource: LearningResource }> = ({
             {run.delivery.filter((d) => d.code === "in_person").length > 0 &&
               run.location && (
                 <DifferingRunLocation>
-                  <strong>Location</strong>
+                  <strong>Location:</strong>
                   <span>{run.location}</span>
                 </DifferingRunLocation>
               )}
