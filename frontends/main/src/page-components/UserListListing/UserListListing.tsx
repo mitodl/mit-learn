@@ -10,7 +10,7 @@ import {
   TypographyProps,
 } from "ol-components"
 import { RiListCheck3 } from "@remixicon/react"
-import { useUserListList } from "api/hooks/learningResources"
+import { useUserListList } from "api/hooks/userLists"
 import { GridColumn, GridContainer } from "@/components/GridLayout/GridLayout"
 import { manageListDialogs } from "@/page-components/ManageListDialogs/ManageListDialogs"
 import { userListView } from "@/common/urls"

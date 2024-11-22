@@ -2175,12 +2175,6 @@ paths:
           * `see` - MIT Sloan Executive Education
         explode: true
         style: form
-      - name: offset
-        required: false
-        in: query
-        description: The initial index from which to return the results.
-        schema:
-          type: integer
       - in: query
         name: platform
         schema:
@@ -2338,7 +2332,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedLearningResourceList'
+                type: array
+                items:
+                  $ref: '#/components/schemas/LearningResource'
           description: ''
   /api/v1/learning_resources/{id}/vector_similar/:
     get:
@@ -2568,12 +2564,6 @@ paths:
           * `see` - MIT Sloan Executive Education
         explode: true
         style: form
-      - name: offset
-        required: false
-        in: query
-        description: The initial index from which to return the results.
-        schema:
-          type: integer
       - in: query
         name: platform
         schema:
@@ -2731,7 +2721,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedLearningResourceList'
+                type: array
+                items:
+                  $ref: '#/components/schemas/LearningResource'
           description: ''
   /api/v1/learning_resources/{learning_resource_id}/contentfiles/:
     get:
