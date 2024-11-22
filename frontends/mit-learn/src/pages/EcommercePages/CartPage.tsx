@@ -29,20 +29,27 @@ const CartContainer = styled.div(() => ({
 
 const CartSectionContainer = styled.div`
   display: flex;
-  background-color: #FFF;
+  background-color: #fff;
   border-radius: 8px;
-  border: 1px solid #DDE1E6;
+  border: 1px solid #dde1e6;
   padding: 32px;
   gap: 32px;
-  box-shadow: 0px 2px 4px 0px rgba(37, 38, 43, 0.10), 0px 3px 8px 0px rgba(37, 38, 43, 0.12);
+  box-shadow:
+    0px 2px 4px 0px rgba(37, 38, 43, 0.1),
+    0px 3px 8px 0px rgba(37, 38, 43, 0.12);
   flex-direction: row;
 `
 
-const CartItemsContainer = styled(CartSectionContainer)(() => ({
+const CartItemsContainer = styled.div(() => ({
   width: "auto",
   flexGrow: "1",
   marginRight: "23px",
 }))
+
+const CartItemContainer = styled(CartSectionContainer)`
+  width: auto;
+  flex-grow: 1;
+`
 
 const ItemImg = styled.img`
   padding-right: 0;
@@ -56,24 +63,26 @@ const ItemDetails = styled.div`
   flex-grow: 1;
 `
 
-const CartItemCard: React.FC<CartItemCardProps> = ({ item }) => <>
-  <ItemImg alt="placeholder" src="http://placecats.com/200/100" />
-  <ItemDetails>
-    <p>{ item.product.sku }</p>
-    <h3>{ item.product.name }</h3>
+const CartItemCard: React.FC<CartItemCardProps> = ({ item }) => (
+  <CartItemContainer>
+    <ItemImg alt="placeholder" src="http://placecats.com/200/100" />
+    <ItemDetails>
+      <p>{item.product.sku}</p>
+      <h3>{item.product.name}</h3>
 
-    <p>{item.product.description}</p>
-  </ItemDetails>
-</>
+      <p>{item.product.description}</p>
+    </ItemDetails>
+  </CartItemContainer>
+)
 
 const StyledItemCard = styled(CartItemCard)(() => ({
   display: "flex",
   "flex-direction": "row",
-  padding: "32px",  
+  padding: "32px",
   ["img"]: {
     width: "200px",
     maxHeight: "110px",
-  }
+  },
 }))
 
 const OrderSummaryContainer = styled(CartSectionContainer)`
@@ -108,51 +117,110 @@ const OrderSummaryItemPrice = styled.p`
   text-align: right;
 `
 
+const OrderSummaryTotal = styled.div`
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-content: start;
+  border-top: 1px solid #DDE1E6;
+  p { 
+    font-weight: bold;
+    font-size: 110%;
+  }
+`
 
 const CartPageInterior: React.FC<CartPageInteriorProps> = ({ systemId }) => {
   const { data: baskets, isFetched } = usePaymentsBasketList()
-  const [ basket, setBasket ] = React.useState<BasketItemWithProduct|null>(null)
+  const [basket, setBasket] = React.useState<BasketItemWithProduct | null>(null)
 
   React.useEffect(() => {
     if (isFetched && baskets?.results) {
-      const foundBasket = baskets.results.find((b) => b.integrated_system.id === systemId)
+      const foundBasket = baskets.results.find(
+        (b) => b.integrated_system.id === systemId,
+      )
       setBasket(foundBasket)
     }
   }, [isFetched, baskets, systemId])
 
-  return basket ? <>
-      {basket?.basket_items && basket.basket_items.length > 0 ? <>
-        <Typography component="h2">
-          You are about to purchase the following:
-        </Typography>
+  return basket ? (
+    <>
+      {basket?.basket_items && basket.basket_items.length > 0 ? (
+        <>
+          <Typography component="h2">
+            You are about to purchase the following:
+          </Typography>
 
-        <CartContainer>
-          <CartItemsContainer>
-            {basket.basket_items.map((item: BasketItemWithProduct) => <StyledItemCard key={`basket-item-${item.id}`} item={item} />)}
-          </CartItemsContainer>
+          <CartContainer>
+            <CartItemsContainer>
+              {basket.basket_items.map((item: BasketItemWithProduct) => (
+                <StyledItemCard key={`basket-item-${item.id}`} item={item} />
+              ))}
+            </CartItemsContainer>
 
-          <OrderSummaryContainer>
-            <OrderSummaryHeader>Order Summary</OrderSummaryHeader>
+            <OrderSummaryContainer>
+              <OrderSummaryHeader>Order Summary</OrderSummaryHeader>
 
-            {basket.basket_items.map((item: BasketItemWithProduct) => <OrderSummaryItem key={`order-summary-item-${item.id}`}>
-              <OrderSummaryItemSku key={`order-summary-sku-${item.id}`}>
-                {item.product.description}<br />
-                {item.product.sku}
-              </OrderSummaryItemSku> 
-              <OrderSummaryItemPrice key={`order-summary-price-${item.id}`}>
-                {item.discounted_price.toLocaleString("en-US", { style: "currency", currency: "USD" })}
-              </OrderSummaryItemPrice> 
-            </OrderSummaryItem>)}
-          </OrderSummaryContainer>
-        </CartContainer>
+              {basket.basket_items.map((item: BasketItemWithProduct) => (
+                <OrderSummaryItem key={`order-summary-item-${item.id}`}>
+                  <OrderSummaryItemSku key={`order-summary-sku-${item.id}`}>
+                    {item.product.description}
+                    <br />
+                    {item.product.sku}
+                  </OrderSummaryItemSku>
+                  <OrderSummaryItemPrice key={`order-summary-price-${item.id}`}>
+                    {item.discounted_price.toLocaleString("en-US", {
+                      style: "currency",
+                      currency: "USD",
+                    })}
+                  </OrderSummaryItemPrice>
+                </OrderSummaryItem>
+              ))}
 
-        </>: <Typography component="h2">No items in the cart.</Typography>}
-  </> : <div>Loading...</div>
+              <OrderSummaryTotal>
+                <OrderSummaryItemSku>Tax:</OrderSummaryItemSku>
+                <OrderSummaryItemPrice>
+                  {basket.tax.toLocaleString("en-US", {
+                    style: "currency",
+                    currency: "USD",
+                  })}
+                </OrderSummaryItemPrice>
+
+                <OrderSummaryItemSku>Total:</OrderSummaryItemSku>
+                <OrderSummaryItemPrice>
+                  {basket.total_price.toLocaleString("en-US", {
+                    style: "currency",
+                    currency: "USD",
+                  })}
+                </OrderSummaryItemPrice>
+              </OrderSummaryTotal>
+
+              <div>
+                Coupon code
+                <input type="text" />
+                <button>Apply</button>
+              </div>
+
+              <div>
+                <button>Place Your Order</button>
+              </div>
+
+              <p>By placing my order I agree to the Terms of Service and Privacy Policy.</p>
+            </OrderSummaryContainer>
+          </CartContainer>
+        </>
+      ) : (
+        <Typography component="h2">No items in the cart.</Typography>
+      )}
+    </>
+  ) : (
+    <div>Loading...</div>
+  )
 }
 
 const CartPage: React.FC = () => {
   const { system } = useParams()
-  const { data: systems, isFetched: areSystemsFetched } = useMetaIntegratedSystemsList()
+  const { data: systems, isFetched: areSystemsFetched } =
+    useMetaIntegratedSystemsList()
 
   const getSystemId = () => {
     const foundSystem = systems?.results.find((sys) => sys.slug === system)
