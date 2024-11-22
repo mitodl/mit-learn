@@ -154,6 +154,12 @@ const Description = styled.p({
   margin: 0,
   whiteSpace: "pre-wrap",
   wordBreak: "break-word",
+  "p:first-child": {
+    marginTop: 0,
+  },
+  "p:last-child": {
+    marginBottom: 0,
+  },
 })
 
 const StyledPlatformLogo = styled(PlatformLogo)({
