@@ -55,7 +55,7 @@ const randomizeResults = ([...results]) => {
  * Removing here to ensure they are not depended on anywhere, though they can
  * be removed from the GET APIs TODO.
  */
-const clearListMemberships = (resource: LearningResource) => ({
+export const clearListMemberships = (resource: LearningResource) => ({
   ...resource,
   user_list_parents: [],
   learning_path_parents: [],
@@ -107,7 +107,7 @@ const learningResources = createQueryKeys("learningResources", {
         await learningResourcesSearchApi.learningResourcesSearchRetrieve(params)
       return {
         ...data,
-        results: randomizeResults(data.results.map(clearListMemberships)),
+        results: data.results.map(clearListMemberships),
       }
     },
   }),
