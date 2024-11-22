@@ -123,6 +123,20 @@ const learningResources = createQueryKeys("learningResources", {
     queryKey: ["schools"],
     queryFn: () => schoolsApi.schoolsList().then((res) => res.data),
   }),
+  similar: (id: number) => ({
+    queryKey: [`similar_resources-${id}`],
+    queryFn: () =>
+      learningResourcesApi
+        .learningResourcesSimilarList({ id })
+        .then((res) => res.data),
+  }),
+  vectorSimilar: (id: number) => ({
+    queryKey: [`vector_similar_resources-${id}`],
+    queryFn: () =>
+      learningResourcesApi
+        .learningResourcesVectorSimilarList({ id })
+        .then((res) => res.data),
+  }),
 })
 
 export default learningResources

@@ -19,6 +19,7 @@ import {
 } from "../Dialogs/AddToListDialog"
 import { SignupPopover } from "../SignupPopover/SignupPopover"
 import { usePostHog } from "posthog-js/react"
+import ResourceCarousel from "../ResourceCarousel/ResourceCarousel"
 import { useIsLearningPathMember } from "api/hooks/learningPaths"
 import { useIsUserListMember } from "api/hooks/userLists"
 
@@ -92,12 +93,47 @@ const DrawerContent: React.FC<{
       }
     }, [user])
   useCapturePageView(Number(resourceId))
+  const similarResourcesCarousel = (
+    <ResourceCarousel
+      titleComponent="p"
+      titleVariant="subtitle1"
+      title="Similar Learning Resources"
+      config={[
+        {
+          label: "Similar Learning Resources",
+          cardProps: { size: "small" },
+          data: {
+            type: "lr_similar",
+            params: { id: resourceId },
+          },
+        },
+      ]}
+    />
+  )
+  const vectorSimilarResourcesCarousel = (
+    <ResourceCarousel
+      titleComponent="p"
+      titleVariant="subtitle1"
+      title="Similar Learning Resources (Vector Based)"
+      config={[
+        {
+          label: "Similar Learning Resources (Vector Based)",
+          cardProps: { size: "small" },
+          data: {
+            type: "lr_vector_similar",
+            params: { id: resourceId },
+          },
+        },
+      ]}
+    />
+  )
 
   return (
     <>
       <LearningResourceExpandedV2
         imgConfig={imgConfigs.large}
         resource={resource.data}
+        carousels={[similarResourcesCarousel, vectorSimilarResourcesCarousel]}
         user={user}
         inLearningPath={inLearningPath}
         inUserList={inUserList}

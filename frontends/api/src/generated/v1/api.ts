@@ -11623,7 +11623,6 @@ export const LearningResourcesApiAxiosParamCreator = function (
      * @param {Array<LearningResourcesSimilarListLevelEnum>} [level] The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
      * @param {number} [limit]
      * @param {Array<LearningResourcesSimilarListOfferedByEnum>} [offered_by] The organization that offers a learning resource  * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education
-     * @param {number} [offset] The initial index from which to return the results.
      * @param {Array<LearningResourcesSimilarListPlatformEnum>} [platform] The platform on which learning resources are offered  * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube
      * @param {boolean} [professional]
      * @param {Array<string>} [readable_id] Multiple values may be separated by commas.
@@ -11645,7 +11644,6 @@ export const LearningResourcesApiAxiosParamCreator = function (
       level?: Array<LearningResourcesSimilarListLevelEnum>,
       limit?: number,
       offered_by?: Array<LearningResourcesSimilarListOfferedByEnum>,
-      offset?: number,
       platform?: Array<LearningResourcesSimilarListPlatformEnum>,
       professional?: boolean,
       readable_id?: Array<string>,
@@ -11712,10 +11710,6 @@ export const LearningResourcesApiAxiosParamCreator = function (
 
       if (offered_by) {
         localVarQueryParameter["offered_by"] = offered_by
-      }
-
-      if (offset !== undefined) {
-        localVarQueryParameter["offset"] = offset
       }
 
       if (platform) {
@@ -11836,7 +11830,6 @@ export const LearningResourcesApiAxiosParamCreator = function (
      * @param {Array<LearningResourcesVectorSimilarListLevelEnum>} [level] The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
      * @param {number} [limit]
      * @param {Array<LearningResourcesVectorSimilarListOfferedByEnum>} [offered_by] The organization that offers a learning resource  * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education
-     * @param {number} [offset] The initial index from which to return the results.
      * @param {Array<LearningResourcesVectorSimilarListPlatformEnum>} [platform] The platform on which learning resources are offered  * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube
      * @param {boolean} [professional]
      * @param {Array<string>} [readable_id] Multiple values may be separated by commas.
@@ -11858,7 +11851,6 @@ export const LearningResourcesApiAxiosParamCreator = function (
       level?: Array<LearningResourcesVectorSimilarListLevelEnum>,
       limit?: number,
       offered_by?: Array<LearningResourcesVectorSimilarListOfferedByEnum>,
-      offset?: number,
       platform?: Array<LearningResourcesVectorSimilarListPlatformEnum>,
       professional?: boolean,
       readable_id?: Array<string>,
@@ -11926,10 +11918,6 @@ export const LearningResourcesApiAxiosParamCreator = function (
 
       if (offered_by) {
         localVarQueryParameter["offered_by"] = offered_by
-      }
-
-      if (offset !== undefined) {
-        localVarQueryParameter["offset"] = offset
       }
 
       if (platform) {
@@ -12322,7 +12310,6 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
      * @param {Array<LearningResourcesSimilarListLevelEnum>} [level] The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
      * @param {number} [limit]
      * @param {Array<LearningResourcesSimilarListOfferedByEnum>} [offered_by] The organization that offers a learning resource  * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education
-     * @param {number} [offset] The initial index from which to return the results.
      * @param {Array<LearningResourcesSimilarListPlatformEnum>} [platform] The platform on which learning resources are offered  * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube
      * @param {boolean} [professional]
      * @param {Array<string>} [readable_id] Multiple values may be separated by commas.
@@ -12344,7 +12331,6 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
       level?: Array<LearningResourcesSimilarListLevelEnum>,
       limit?: number,
       offered_by?: Array<LearningResourcesSimilarListOfferedByEnum>,
-      offset?: number,
       platform?: Array<LearningResourcesSimilarListPlatformEnum>,
       professional?: boolean,
       readable_id?: Array<string>,
@@ -12357,7 +12343,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
       (
         axios?: AxiosInstance,
         basePath?: string,
-      ) => AxiosPromise<PaginatedLearningResourceList>
+      ) => AxiosPromise<Array<LearningResource>>
     > {
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.learningResourcesSimilarList(
@@ -12371,7 +12357,6 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
           level,
           limit,
           offered_by,
-          offset,
           platform,
           professional,
           readable_id,
@@ -12447,7 +12432,6 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
      * @param {Array<LearningResourcesVectorSimilarListLevelEnum>} [level] The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
      * @param {number} [limit]
      * @param {Array<LearningResourcesVectorSimilarListOfferedByEnum>} [offered_by] The organization that offers a learning resource  * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education
-     * @param {number} [offset] The initial index from which to return the results.
      * @param {Array<LearningResourcesVectorSimilarListPlatformEnum>} [platform] The platform on which learning resources are offered  * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube
      * @param {boolean} [professional]
      * @param {Array<string>} [readable_id] Multiple values may be separated by commas.
@@ -12469,7 +12453,6 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
       level?: Array<LearningResourcesVectorSimilarListLevelEnum>,
       limit?: number,
       offered_by?: Array<LearningResourcesVectorSimilarListOfferedByEnum>,
-      offset?: number,
       platform?: Array<LearningResourcesVectorSimilarListPlatformEnum>,
       professional?: boolean,
       readable_id?: Array<string>,
@@ -12482,7 +12465,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
       (
         axios?: AxiosInstance,
         basePath?: string,
-      ) => AxiosPromise<PaginatedLearningResourceList>
+      ) => AxiosPromise<Array<LearningResource>>
     > {
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.learningResourcesVectorSimilarList(
@@ -12496,7 +12479,6 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
           level,
           limit,
           offered_by,
-          offset,
           platform,
           professional,
           readable_id,
@@ -12696,7 +12678,7 @@ export const LearningResourcesApiFactory = function (
     learningResourcesSimilarList(
       requestParameters: LearningResourcesApiLearningResourcesSimilarListRequest,
       options?: RawAxiosRequestConfig,
-    ): AxiosPromise<PaginatedLearningResourceList> {
+    ): AxiosPromise<Array<LearningResource>> {
       return localVarFp
         .learningResourcesSimilarList(
           requestParameters.id,
@@ -12709,7 +12691,6 @@ export const LearningResourcesApiFactory = function (
           requestParameters.level,
           requestParameters.limit,
           requestParameters.offered_by,
-          requestParameters.offset,
           requestParameters.platform,
           requestParameters.professional,
           requestParameters.readable_id,
@@ -12751,7 +12732,7 @@ export const LearningResourcesApiFactory = function (
     learningResourcesVectorSimilarList(
       requestParameters: LearningResourcesApiLearningResourcesVectorSimilarListRequest,
       options?: RawAxiosRequestConfig,
-    ): AxiosPromise<PaginatedLearningResourceList> {
+    ): AxiosPromise<Array<LearningResource>> {
       return localVarFp
         .learningResourcesVectorSimilarList(
           requestParameters.id,
@@ -12764,7 +12745,6 @@ export const LearningResourcesApiFactory = function (
           requestParameters.level,
           requestParameters.limit,
           requestParameters.offered_by,
-          requestParameters.offset,
           requestParameters.platform,
           requestParameters.professional,
           requestParameters.readable_id,
@@ -13164,13 +13144,6 @@ export interface LearningResourcesApiLearningResourcesSimilarListRequest {
   readonly offered_by?: Array<LearningResourcesSimilarListOfferedByEnum>
 
   /**
-   * The initial index from which to return the results.
-   * @type {number}
-   * @memberof LearningResourcesApiLearningResourcesSimilarList
-   */
-  readonly offset?: number
-
-  /**
    * The platform on which learning resources are offered  * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube
    * @type {Array<'bootcamps' | 'csail' | 'ctl' | 'edx' | 'emeritus' | 'globalalumni' | 'mitpe' | 'mitxonline' | 'ocw' | 'oll' | 'podcast' | 'scc' | 'see' | 'simplilearn' | 'susskind' | 'whu' | 'xpro' | 'youtube'>}
    * @memberof LearningResourcesApiLearningResourcesSimilarList
@@ -13325,13 +13298,6 @@ export interface LearningResourcesApiLearningResourcesVectorSimilarListRequest {
    * @memberof LearningResourcesApiLearningResourcesVectorSimilarList
    */
   readonly offered_by?: Array<LearningResourcesVectorSimilarListOfferedByEnum>
-
-  /**
-   * The initial index from which to return the results.
-   * @type {number}
-   * @memberof LearningResourcesApiLearningResourcesVectorSimilarList
-   */
-  readonly offset?: number
 
   /**
    * The platform on which learning resources are offered  * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube
@@ -13581,7 +13547,6 @@ export class LearningResourcesApi extends BaseAPI {
         requestParameters.level,
         requestParameters.limit,
         requestParameters.offered_by,
-        requestParameters.offset,
         requestParameters.platform,
         requestParameters.professional,
         requestParameters.readable_id,
@@ -13640,7 +13605,6 @@ export class LearningResourcesApi extends BaseAPI {
         requestParameters.level,
         requestParameters.limit,
         requestParameters.offered_by,
-        requestParameters.offset,
         requestParameters.platform,
         requestParameters.professional,
         requestParameters.readable_id,

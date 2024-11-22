@@ -116,6 +116,26 @@ const useSchoolsList = () => {
   return useQuery(learningResources.schools())
 }
 
+const useSimilarLearningResources = (
+  id: number,
+  opts: Pick<UseQueryOptions, "enabled"> = {},
+) => {
+  return useQuery({
+    ...learningResources.similar(id),
+    ...opts,
+  })
+}
+
+const useVectorSimilarLearningResources = (
+  id: number,
+  opts: Pick<UseQueryOptions, "enabled"> = {},
+) => {
+  return useQuery({
+    ...learningResources.vectorSimilar(id),
+    ...opts,
+  })
+}
+
 export {
   useLearningResourcesList,
   useFeaturedLearningResourcesList,
@@ -128,5 +148,7 @@ export {
   useOfferorsList,
   usePlatformsList,
   useSchoolsList,
+  useSimilarLearningResources,
+  useVectorSimilarLearningResources,
   learningResources as learningResourcesKeyFactory,
 }
