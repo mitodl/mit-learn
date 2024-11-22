@@ -176,7 +176,7 @@ const UnitChannelTemplate: React.FC<UnitChannelTemplateProps> = ({
           </BannerContent>
         </Container>
       </StyledBannerBackground>
-      <Container id="foo" component="section">
+      <Container component="section">
         <FeaturedCoursesCarousel
           title="Featured Courses"
           titleComponent="h2"
