@@ -57,6 +57,7 @@ const setupLearningPaths = ({
     child: resource.id,
   }))
 
+  setMockResponse.get(urls.userMe.get(), { is_authenticated: true })
   setMockResponse.get(urls.learningPaths.membershipList(), learningPathParents)
   setMockResponse.get(urls.userLists.membershipList(), [])
 
@@ -99,6 +100,7 @@ const setupUserLists = ({
     child: resource.id,
   }))
 
+  setMockResponse.get(urls.userMe.get(), { is_authenticated: true })
   setMockResponse.get(urls.learningPaths.membershipList(), [])
   setMockResponse.get(urls.userLists.membershipList(), userListParents)
   return {
