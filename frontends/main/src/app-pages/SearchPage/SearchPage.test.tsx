@@ -46,6 +46,8 @@ const setMockApiResponses = ({
     urls.offerors.list(),
     offerors ?? factories.learningResources.offerors({ count: 5 }),
   )
+  setMockResponse.get(urls.userLists.membershipList(), [])
+  setMockResponse.get(urls.learningPaths.membershipList(), [])
 }
 
 const getLastApiSearchParams = () => {

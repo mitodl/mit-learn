@@ -63,6 +63,7 @@ const AddToListDialogInner: React.FC<AddToListDialogInnerProps> = ({
   }, [listType])
   const { data: userListValues } = useUserListMemberList(resource?.id)
   const { data: learningPathValues } = useLearningPathMemberList(resource?.id)
+
   const {
     isLoading: isSavingUserListRelationships,
     mutateAsync: setUserListRelationships,
@@ -195,6 +196,7 @@ const AddToLearningPathDialogInner: React.FC<AddToListDialogProps> = ({
 
   const isReady = !!(resource && listsQuery.isSuccess)
   const lists = listsQuery.data?.results ?? []
+
   return (
     <AddToListDialogInner
       listType={ListType.LearningPath}

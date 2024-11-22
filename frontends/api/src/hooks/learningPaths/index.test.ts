@@ -18,16 +18,6 @@ import learningPathKeyFactory from "./keyFactory"
 
 const factory = factories.learningResources
 
-jest.mock("../learningResources/invalidation", () => {
-  const actual = jest.requireActual("../learningResources/invalidation")
-  return {
-    __esModule: true,
-    ...actual,
-    invalidateResourceQueries: jest.fn(),
-    invalidateUserListQueries: jest.fn(),
-  }
-})
-
 /**
  * Assert that `hook` queries the API with the correct `url`, `method`, and
  * exposes the API's data.
@@ -167,6 +157,7 @@ describe("LearningPath CRUD", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(makeRequest).toHaveBeenCalledWith("post", url, requestData)
+
     expect(queryClient.invalidateQueries).toHaveBeenCalledWith([
       "learningPaths",
       "list",
@@ -179,12 +170,15 @@ describe("LearningPath CRUD", () => {
     setMockResponse.delete(url, null)
 
     const { wrapper, queryClient } = setupReactQueryTest()
+    jest.spyOn(queryClient, "invalidateQueries")
+
     const { result } = renderHook(useLearningPathDestroy, {
       wrapper,
     })
     result.current.mutate({ id: path.id })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(makeRequest).toHaveBeenCalledWith("delete", url, undefined)
+
     expect(queryClient.invalidateQueries).toHaveBeenCalledWith([
       "learningPaths",
       "list",
@@ -202,6 +196,8 @@ describe("LearningPath CRUD", () => {
     setMockResponse.patch(url, path)
 
     const { wrapper, queryClient } = setupReactQueryTest()
+    jest.spyOn(queryClient, "invalidateQueries")
+
     const { result } = renderHook(useLearningPathUpdate, { wrapper })
     result.current.mutate(patch)
 

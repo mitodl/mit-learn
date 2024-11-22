@@ -4,7 +4,14 @@ import { AddToLearningPathDialog, AddToUserListDialog } from "./AddToListDialog"
 
 import { setMockResponse, makeRequest, factories, urls } from "api/test-utils"
 
-import { renderWithProviders, screen, user, within, act } from "@/test-utils"
+import {
+  renderWithProviders,
+  screen,
+  user,
+  within,
+  act,
+  waitFor,
+} from "@/test-utils"
 import { manageListDialogs } from "@/page-components/ManageListDialogs/ManageListDialogs"
 import { waitForElementToBeRemoved } from "@testing-library/react"
 import {
@@ -36,24 +43,12 @@ const setupLearningPaths = ({
   inLists = [],
   dialogOpen = true,
 }: Partial<SetupOptions> = {}) => {
-  const resource = learningResourcesFactory.resource({
-    learning_path_parents: [],
-  })
+  const resource = learningResourcesFactory.resource()
   const paginatedLearningPaths = learningResourcesFactory.learningPaths({
     count: 3,
   })
   const learningPaths = paginatedLearningPaths.results
-  const learningPathParents = resource.learning_path_parents!
-  inLists.forEach((index) => {
-    const learningPath = learningPaths[index]
-    learningPathParents.push(
-      learningResourcesFactory.microLearningPathRelationship({
-        parent: learningPath.id,
-        child: resource.id,
-      }),
-    )
-    learningPath.learning_path.item_count += 1
-  })
+
   setMockResponse.get(
     urls.learningResources.details({ id: resource.id }),
     resource,
@@ -62,6 +57,16 @@ const setupLearningPaths = ({
     urls.learningPaths.list({ limit: 100 }),
     paginatedLearningPaths,
   )
+
+  const learningPathParents = inLists.map((index) => ({
+    id: 123,
+    parent: learningPaths[index].id,
+    child: resource.id,
+  }))
+
+  setMockResponse.get(urls.learningPaths.membershipList(), learningPathParents)
+  setMockResponse.get(urls.userLists.membershipList(), [])
+
   const view = renderWithProviders(null)
   if (dialogOpen) {
     act(() => {
@@ -83,16 +88,7 @@ const setupUserLists = ({
   const resource = learningResourcesFactory.resource({ user_list_parents: [] })
   const paginatedUserLists = userListsFactory.userLists({ count: 3 })
   const userLists = paginatedUserLists.results
-  const userListParents = resource.user_list_parents!
-  inLists.forEach((index) => {
-    const userList = userLists[index]
-    userListParents.push(
-      userListsFactory.microUserListRelationship({
-        parent: userList.id,
-        child: resource.id,
-      }),
-    )
-  })
+
   setMockResponse.get(
     urls.learningResources.details({ id: resource.id }),
     resource,
@@ -104,6 +100,14 @@ const setupUserLists = ({
       NiceModal.show(AddToUserListDialog, { resourceId: resource.id })
     })
   }
+
+  const userListParents = inLists.map((index) => ({
+    parent: userLists[index].id,
+    child: resource.id,
+  }))
+
+  setMockResponse.get(urls.learningPaths.membershipList(), [])
+  setMockResponse.get(urls.userLists.membershipList(), userListParents)
   return {
     view,
     resource,
@@ -151,7 +155,7 @@ const addToUserList = (
 describe.each([ListType.LearningPath, ListType.UserList])(
   "AddToListDialog",
   (listType: string) => {
-    test("List is checked if resource is in list", async () => {
+    test(`${listType} List is checked if resource is in list`, async () => {
       const index = faker.number.int({ min: 0, max: 2 })
       if (listType === ListType.LearningPath) {
         setupLearningPaths({ inLists: [index] })
@@ -161,9 +165,16 @@ describe.each([ListType.LearningPath, ListType.UserList])(
 
       const checkboxes =
         await screen.findAllByRole<HTMLInputElement>("checkbox")
-      expect(checkboxes[0].checked).toBe(index === 0)
-      expect(checkboxes[1].checked).toBe(index === 1)
-      expect(checkboxes[2].checked).toBe(index === 2)
+
+      await waitFor(() => {
+        expect(checkboxes[0].checked).toBe(index === 0)
+      })
+      await waitFor(() => {
+        expect(checkboxes[1].checked).toBe(index === 1)
+      })
+      await waitFor(() => {
+        expect(checkboxes[2].checked).toBe(index === 2)
+      })
     })
 
     test("Clicking an unchecked list and clicking save adds item to that list", async () => {
@@ -257,7 +268,10 @@ describe.each([ListType.LearningPath, ListType.UserList])(
 
       const checkbox = await screen.findByLabelText<HTMLInputElement>(title)
 
-      expect(checkbox.checked).toBe(true)
+      await waitFor(() => {
+        expect(checkbox.checked).toBe(true)
+      })
+
       await user.click(checkbox)
 
       const saveButton = await screen.findByRole("button", { name: "Save" })
