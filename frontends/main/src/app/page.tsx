@@ -72,6 +72,11 @@ const Page: React.FC = async () => {
       limit: 5,
       sortby: "event_date",
     }),
+    newsEvents.list({
+      feed_type: [NewsEventsListFeedTypeEnum.News],
+      limit: 6,
+      sortby: "-news_date",
+    }),
   ])
 
   return (
