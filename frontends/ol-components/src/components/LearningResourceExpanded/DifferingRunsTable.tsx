@@ -25,7 +25,7 @@ const DifferingRun = styled.div({
   display: "flex",
   flexWrap: "wrap",
   alignItems: "center",
-  gap: "16px",
+  gap: "8px",
   padding: "12px",
   alignSelf: "stretch",
   borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
