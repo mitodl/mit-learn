@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useCallback, useRef, useState } from "react"
 import styled from "@emotion/styled"
 import Skeleton from "@mui/material/Skeleton"
 import Typography from "@mui/material/Typography"
@@ -21,6 +21,7 @@ import type { User } from "api/hooks/user"
 import { LearningResourceCardProps } from "../LearningResourceCard/LearningResourceCard"
 import { CardActionButton } from "../LearningResourceCard/LearningResourceListCard"
 import VideoFrame from "./VideoFrame"
+import { Link } from "../Link/Link"
 
 const DRAWER_WIDTH = "900px"
 
@@ -148,6 +149,13 @@ const Platform = styled.div({
   gap: "16px",
 })
 
+const DescriptionContainer = styled.div({
+  display: "flex",
+  flexDirection: "column",
+  gap: "4px",
+  width: "100%",
+})
+
 const Description = styled.p({
   ...theme.typography.body2,
   color: theme.custom.colors.black,
@@ -160,6 +168,17 @@ const Description = styled.p({
   "p:last-child": {
     marginBottom: 0,
   },
+})
+
+const DescriptionCollapsed = styled(Description)({
+  display: "-webkit-box",
+  overflow: "hidden",
+  WebkitLineClamp: 5,
+  WebkitBoxOrient: "vertical",
+})
+
+const DescriptionExpanded = styled(Description)({
+  display: "block",
 })
 
 const StyledPlatformLogo = styled(PlatformLogo)({
@@ -445,6 +464,24 @@ const CallToActionSection = ({
 }
 
 const ResourceDescription = ({ resource }: { resource?: LearningResource }) => {
+  const firstRender = useRef(true)
+  const clampedOnFirstRender = useRef(false)
+  const [isClamped, setClamped] = useState(false)
+  const [isExpanded, setExpanded] = useState(false)
+  const descriptionRendered = useCallback((node: HTMLDivElement) => {
+    if (node !== null) {
+      const clamped = node.scrollHeight > node.clientHeight
+      setClamped(clamped)
+      if (firstRender.current) {
+        firstRender.current = false
+        clampedOnFirstRender.current = clamped
+        return
+      }
+    }
+  }, [])
+  const DescriptionText = isExpanded
+    ? DescriptionExpanded
+    : DescriptionCollapsed
   if (!resource) {
     return (
       <>
@@ -458,13 +495,22 @@ const ResourceDescription = ({ resource }: { resource?: LearningResource }) => {
     )
   }
   return (
-    <Description
-      /**
-       * Resource descriptions can contain HTML. They are santiized on the
-       * backend during ETL. This is safe to render.
-       */
-      dangerouslySetInnerHTML={{ __html: resource.description || "" }}
-    />
+    <DescriptionContainer data-testid="drawer-description-container">
+      <DescriptionText
+        data-testid="drawer-description-text"
+        ref={descriptionRendered}
+        /**
+         * Resource descriptions can contain HTML. They are santiized on the
+         * backend during ETL. This is safe to render.
+         */
+        dangerouslySetInnerHTML={{ __html: resource.description || "" }}
+      />
+      {(isClamped || clampedOnFirstRender.current) && (
+        <Link color="red" size="small" onClick={() => setExpanded(!isExpanded)}>
+          {isExpanded ? "Show less" : "Show more"}
+        </Link>
+      )}
+    </DescriptionContainer>
   )
 }
 
