@@ -47,28 +47,49 @@ const randomizeResults = ([...results]) => {
   return randomizedResults
 }
 
+/* List memberships were previously determined in the learningResourcesApi
+ * from user_list_parents and learning_path_parents on each resource.
+ * Resource endpoints are now treated as public so that they can be
+ * server rendered and cached on public CDN. The membership endpoints on
+ * learningPathsApi and userListsApi are now used to determine membership.
+ * Removing here to ensure they are not depended on anywhere, though they can
+ * be removed from the GET APIs TODO
+ */
+const clearListMemberships = (resource: LearningResource) => ({
+  ...resource,
+  user_list_parents: null,
+  learning_path_parents: null,
+})
+
 const learningResources = createQueryKeys("learningResources", {
   detail: (id: number) => ({
     queryKey: [id],
-    queryFn: () =>
-      learningResourcesApi
-        .learningResourcesRetrieve({ id })
-        .then((res) => res.data),
+    queryFn: async () => {
+      const { data } = await learningResourcesApi.learningResourcesRetrieve({
+        id,
+      })
+      return clearListMemberships(data)
+    },
   }),
   list: (params: LearningResourcesListRequest) => ({
     queryKey: [params],
-    queryFn: () =>
-      learningResourcesApi
-        .learningResourcesList(params)
-        .then((res) => res.data),
+    queryFn: async () => {
+      const { data } = await learningResourcesApi.learningResourcesList(params)
+      console.log(">>>>>>>>.DATA LIST", data)
+      return {
+        ...data,
+        results: data.results.map(clearListMemberships),
+      }
+    },
   }),
   featured: (params: FeaturedListParams = {}) => ({
     queryKey: [params],
-    queryFn: () => {
-      return featuredApi.featuredList(params).then((res) => {
-        res.data.results = randomizeResults(res.data?.results)
-        return res.data
-      })
+    queryFn: async () => {
+      const { data } = await featuredApi.featuredList(params)
+      return {
+        ...data,
+        results: randomizeResults(data.results.map(clearListMemberships)),
+      }
     },
   }),
   topic: (id: number | undefined) => ({
@@ -83,10 +104,16 @@ const learningResources = createQueryKeys("learningResources", {
   search: (params: LearningResourcesSearchRetrieveRequest) => {
     return {
       queryKey: [params],
-      queryFn: () =>
-        learningResourcesSearchApi
-          .learningResourcesSearchRetrieve(params)
-          .then((res) => res.data),
+      queryFn: async () => {
+        const { data } =
+          await learningResourcesSearchApi.learningResourcesSearchRetrieve(
+            params,
+          )
+        return {
+          ...data,
+          results: randomizeResults(data.results.map(clearListMemberships)),
+        }
+      },
     }
   },
   offerors: (params: OfferorsApiOfferorsListRequest) => {
