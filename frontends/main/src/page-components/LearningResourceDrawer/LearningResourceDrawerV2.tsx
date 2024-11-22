@@ -19,6 +19,8 @@ import {
 } from "../Dialogs/AddToListDialog"
 import { SignupPopover } from "../SignupPopover/SignupPopover"
 import { usePostHog } from "posthog-js/react"
+import { useIsLearningPathMember } from "api/hooks/learningPaths"
+import { useIsUserListMember } from "api/hooks/userLists"
 
 const RESOURCE_DRAWER_PARAMS = [RESOURCE_DRAWER_QUERY_PARAM] as const
 
@@ -67,6 +69,9 @@ const DrawerContent: React.FC<{
   const resource = useLearningResourcesDetail(Number(resourceId))
   const [signupEl, setSignupEl] = React.useState<HTMLElement | null>(null)
   const { data: user } = useUserMe()
+  const { data: inLearningPath } = useIsLearningPathMember(resourceId)
+  const { data: inUserList } = useIsUserListMember(resourceId)
+
   const handleAddToLearningPathClick: LearningResourceCardProps["onAddToLearningPathClick"] =
     useMemo(() => {
       if (user?.is_learning_path_editor) {
@@ -94,6 +99,8 @@ const DrawerContent: React.FC<{
         imgConfig={imgConfigs.large}
         resource={resource.data}
         user={user}
+        inLearningPath={inLearningPath}
+        inUserList={inUserList}
         onAddToLearningPathClick={handleAddToLearningPathClick}
         onAddToUserListClick={handleAddToUserListClick}
         closeDrawer={closeDrawer}

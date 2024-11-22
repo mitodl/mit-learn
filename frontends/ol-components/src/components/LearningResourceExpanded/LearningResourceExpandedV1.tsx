@@ -148,6 +148,8 @@ type LearningResourceExpandedV1Props = {
   resource?: LearningResource
   user?: User
   imgConfig: ImageConfig
+  inLearningPath?: boolean
+  inUserList?: boolean
   onAddToLearningPathClick?: LearningResourceCardProps["onAddToLearningPathClick"]
   onAddToUserListClick?: LearningResourceCardProps["onAddToUserListClick"]
 }
@@ -334,6 +336,8 @@ const LearningResourceExpandedV1: React.FC<LearningResourceExpandedV1Props> = ({
   resource,
   user,
   imgConfig,
+  inLearningPath,
+  inUserList,
   onAddToLearningPathClick,
   onAddToUserListClick,
 }) => {
@@ -436,6 +440,8 @@ const LearningResourceExpandedV1: React.FC<LearningResourceExpandedV1Props> = ({
         resource={resource}
         run={selectedRun}
         user={user}
+        inLearningPath={inLearningPath}
+        inUserList={inUserList}
         onAddToLearningPathClick={onAddToLearningPathClick}
         onAddToUserListClick={onAddToUserListClick}
       />
