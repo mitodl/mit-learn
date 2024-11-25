@@ -388,7 +388,7 @@ def test_list_podcast_episode_endpoint_returns_podcast(client, url, params):
     )
     resp = client.get(f"{reverse(url)}?{params}")
     for item in resp.data["results"]:
-        assert podcast.id in item["podcasts"]
+        assert podcast.id in item["podcast_episode"]["podcasts"]
 
 
 @pytest.mark.parametrize(
