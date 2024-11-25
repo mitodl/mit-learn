@@ -81,7 +81,7 @@ const Page: React.FC = async () => {
 
   return (
     <Hydrate state={dehydratedState}>
-      <HomePage />
+      <HomePage heroImageIndex={Math.floor(Math.random() * 5) + 1} />
     </Hydrate>
   )
 }
