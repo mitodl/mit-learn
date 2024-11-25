@@ -105,12 +105,6 @@ describe("UnitListingPage", () => {
       results: unitChannels,
     })
 
-    // units.forEach((unit) => {
-    //   setMockResponse.get(urls.channels.details("unit", unit.code), {
-    //     channel_url: `${window.location.origin}/units/${unit.code}`,
-    //   })
-    // })
-
     return {
       unitChannels,
       courseCounts,
