@@ -4336,6 +4336,12 @@ export interface PodcastEpisodeResource {
    */
   podcast_episode: PodcastEpisode
   /**
+   * Get the playlist id(s) the video belongs to
+   * @type {Array<string>}
+   * @memberof PodcastEpisodeResource
+   */
+  podcasts: Array<string>
+  /**
    *
    * @type {string}
    * @memberof PodcastEpisodeResource

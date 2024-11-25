@@ -11563,6 +11563,12 @@ components:
           allOf:
           - $ref: '#/components/schemas/PodcastEpisode'
           readOnly: true
+        podcasts:
+          type: array
+          items:
+            type: string
+          description: Get the playlist id(s) the video belongs to
+          readOnly: true
         readable_id:
           type: string
           maxLength: 512
@@ -11637,6 +11643,7 @@ components:
       - pace
       - platform
       - podcast_episode
+      - podcasts
       - position
       - prices
       - professional
