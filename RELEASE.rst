@@ -1,6 +1,29 @@
 Release Notes
 =============
 
+Version 0.26.0
+--------------
+
+- Refactor date/time parsing for mitpe events (#1840)
+- Server rendering for homepage, units and topics listing pages (#1847)
+- Query membership endpoints for resources belonging to user lists and learning paths (#1846)
+- Remove some unused exports from ol-components (#1844)
+- Update Yarn to v4.5.2 (#1851)
+- Update postgres Docker tag to v12.22 (#1854)
+- Update dependency ruff to v0.8.0 (#1853)
+- Consistent qdrant point ids (#1839)
+- set min cpu and memory. also add qdrant container (#1845)
+- similar resources carousel (#1835)
+- Refactor user lists and learning paths hooks out of learning resources (#1842)
+- Revert "Server rendering for homepage, units and topics listing pages (#1822)" (#1838)
+- Server rendering for homepage, units and topics listing pages (#1822)
+- Update dependency @mui/lab to v6.0.0-beta.15 (#1830)
+- vector search endpoint (#1827)
+- Update dependency django-anymail to v12 (#1815)
+- Update dependency safety to v3 (#1819)
+- Update dependency pytest-cov to v6 (#1818)
+- separate starts and as taught in, show anytime availability (#1828)
+
 Version 0.25.0 (Released November 25, 2024)
 --------------
 
