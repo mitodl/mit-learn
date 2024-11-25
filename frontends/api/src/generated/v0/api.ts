@@ -3198,6 +3198,12 @@ export interface PodcastEpisode {
    */
   id: number
   /**
+   * Get the playlist id(s) the video belongs to
+   * @type {Array<string>}
+   * @memberof PodcastEpisode
+   */
+  podcasts: Array<string>
+  /**
    *
    * @type {string}
    * @memberof PodcastEpisode
@@ -3366,12 +3372,6 @@ export interface PodcastEpisodeResource {
    * @memberof PodcastEpisodeResource
    */
   podcast_episode: PodcastEpisode
-  /**
-   * Get the playlist id(s) the video belongs to
-   * @type {Array<string>}
-   * @memberof PodcastEpisodeResource
-   */
-  podcasts: Array<string>
   /**
    *
    * @type {string}
