@@ -1,5 +1,6 @@
 """Tests for utils functions"""
 
+from datetime import UTC, datetime
 from pathlib import Path
 from time import struct_time
 from urllib.error import HTTPError
@@ -82,3 +83,136 @@ def test_get_request_json_error_raise(mocker):
     )
     with pytest.raises(HTTPError):
         utils.get_request_json("https://test.mit.edu", raise_on_error=True)
+
+
+@pytest.mark.parametrize(
+    ("start_date_str", "end_date_str", "time_range_str", "start_dt", "end_dt"),
+    [
+        (
+            "2024-01-15",
+            "2024-01-15",
+            "9-10 AM",
+            datetime(2024, 1, 15, 14, 0, 0, tzinfo=UTC),
+            datetime(2024, 1, 15, 15, 0, 0, tzinfo=UTC),
+        ),
+        (
+            "2024-01-15",
+            None,
+            "9-10 AM",
+            datetime(2024, 1, 15, 14, 0, 0, tzinfo=UTC),
+            datetime(2024, 1, 15, 15, 0, 0, tzinfo=UTC),
+        ),
+        (
+            "2024-07-15",
+            "2024-07-16",
+            "9 - 12 PM",
+            datetime(2024, 7, 15, 13, 0, 0, tzinfo=UTC),
+            datetime(2024, 7, 16, 16, 0, 0, tzinfo=UTC),
+        ),
+        (
+            "2024-07-15",
+            "2024-07-15",
+            "3:30 PM and ends at 5:45 PM",
+            datetime(2024, 7, 15, 19, 30, 0, tzinfo=UTC),
+            datetime(2024, 7, 15, 21, 45, 0, tzinfo=UTC),
+        ),
+        (
+            "2024-07-15",
+            "2024-07-15",
+            "3:30 PM - 5:30 PM pdt",  # Should figure out this is Pacific Daylight Time
+            datetime(2024, 7, 15, 22, 30, 0, tzinfo=UTC),
+            datetime(2024, 7, 16, 0, 30, 0, tzinfo=UTC),
+        ),
+        (
+            "Future date tbd",
+            None,
+            None,
+            None,
+            None,
+        ),
+        (
+            "2024-07-15",
+            "2024-07-30",
+            "Every afternoon after end of class",
+            datetime(2024, 7, 15, 16, 0, 0, tzinfo=UTC),
+            datetime(2024, 7, 30, 16, 0, 0, tzinfo=UTC),
+        ),
+        (
+            "2024-07-15",
+            "2024-07-15",
+            "1pm",
+            datetime(2024, 7, 15, 17, 0, 0, tzinfo=UTC),
+            datetime(2024, 7, 15, 17, 0, 0, tzinfo=UTC),
+        ),
+        (
+            "2024-07-15",
+            "2024-07-15",
+            "8 to 1pm",  # Should correctly guess that 8 is AM
+            datetime(2024, 7, 15, 12, 0, 0, tzinfo=UTC),
+            datetime(2024, 7, 15, 17, 0, 0, tzinfo=UTC),
+        ),
+        (
+            "2024-07-15",
+            "2024-07-15",
+            "8 AM to 1",  # Should correctly guess that 1 is PM
+            datetime(2024, 7, 15, 12, 0, 0, tzinfo=UTC),
+            datetime(2024, 7, 15, 17, 0, 0, tzinfo=UTC),
+        ),
+        (
+            "2024-12-15",
+            "2024-12-15",
+            "11 to 12 pm",  # Should correctly guess that 11 is AM
+            datetime(2024, 12, 15, 16, 0, 0, tzinfo=UTC),
+            datetime(2024, 12, 15, 17, 0, 0, tzinfo=UTC),
+        ),
+        (
+            "2024-07-15",
+            "2024-07-15",
+            "Beginning at 4:30 and ending at about 6pm",
+            datetime(2024, 7, 15, 20, 30, 0, tzinfo=UTC),
+            datetime(2024, 7, 15, 22, 0, 0, tzinfo=UTC),
+        ),
+        (
+            "2024-07-15",
+            "2024-07-15",
+            "3:00pm; weather permitting",
+            datetime(2024, 7, 15, 19, 0, 0, tzinfo=UTC),
+            datetime(2024, 7, 15, 19, 0, 0, tzinfo=UTC),
+        ),
+        (
+            "2024-07-15",
+            "2024-07-15",
+            "3:00pm; doors open at 2:30pm",  # Ignore any end time before the start time
+            datetime(2024, 7, 15, 19, 0, 0, tzinfo=UTC),
+            datetime(2024, 7, 15, 19, 0, 0, tzinfo=UTC),
+        ),
+        (
+            "2024-07-15",
+            "2024-07-15",
+            "Beginning at 4:30",  # No AM/PM, so take it literally as is
+            datetime(2024, 7, 15, 8, 30, 0, tzinfo=UTC),
+            datetime(2024, 7, 15, 8, 30, 0, tzinfo=UTC),
+        ),
+        (
+            "2024-07-15",
+            "2024-07-30",
+            "Beginning at 16:30",  # No AM/PM, so take it literally as is
+            datetime(2024, 7, 15, 20, 30, 0, tzinfo=UTC),
+            datetime(2024, 7, 30, 20, 30, 0, tzinfo=UTC),
+        ),
+        (
+            None,
+            "2024-11-30",
+            "Bldg. 123, E52nd Street, Salon MIT",  # Invalid time, default to noon Eastern time, convert to UTC
+            datetime(2024, 11, 30, 17, 0, 0, tzinfo=UTC),
+            datetime(2024, 11, 30, 17, 0, 0, tzinfo=UTC),
+        ),
+    ],
+)
+def test_parse_date_time_range(
+    start_date_str, end_date_str, time_range_str, start_dt, end_dt
+):
+    """parse_date_time_range should return the expected start and end datetimes"""
+    assert utils.parse_date_time_range(
+        start_date_str, end_date_str, time_range_str
+    ) == (start_dt, end_dt)
