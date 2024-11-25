@@ -11373,6 +11373,12 @@ components:
         id:
           type: integer
           readOnly: true
+        podcasts:
+          type: array
+          items:
+            type: string
+          description: Get the playlist id(s) the video belongs to
+          readOnly: true
         transcript:
           type: string
         episode_link:
@@ -11389,6 +11395,7 @@ components:
           nullable: true
       required:
       - id
+      - podcasts
     PodcastEpisodeRequest:
       type: object
       description: Serializer for PodcastEpisode
@@ -11563,12 +11570,6 @@ components:
           allOf:
           - $ref: '#/components/schemas/PodcastEpisode'
           readOnly: true
-        podcasts:
-          type: array
-          items:
-            type: string
-          description: Get the playlist id(s) the video belongs to
-          readOnly: true
         readable_id:
           type: string
           maxLength: 512
@@ -11643,7 +11644,6 @@ components:
       - pace
       - platform
       - podcast_episode
-      - podcasts
       - position
       - prices
       - professional
