@@ -37,6 +37,7 @@ from learning_resources.factories import (
 from learning_resources.models import (
     LearningResourceOfferor,
     LearningResourceRelationship,
+    PodcastEpisode,
 )
 from learning_resources.serializers import (
     ContentFileSerializer,
@@ -365,6 +366,29 @@ def test_list_podcast_episode_endpoint(client, url, params):
             resp.data.get("results")[idx]["podcast_episode"]
             == PodcastEpisodeSerializer(instance=episode.podcast_episode).data
         )
+
+
+@pytest.mark.parametrize(
+    ("url", "params"),
+    [
+        ("lr:v1:podcast_episodes_api-list", "sortby=-last_modified"),
+        ("lr:v1:learning_resources_api-list", "resource_type=podcast_episode"),
+    ],
+)
+def test_list_podcast_episode_endpoint_returns_podcast(client, url, params):
+    """Test podcast episode endpoint returns podcast ids"""
+    podcast = PodcastFactory.create().learning_resource
+    PodcastEpisodeFactory.create_batch(2)
+    episodes = PodcastEpisode.objects.all()
+    podcast.resources.set(
+        [episode.learning_resource for episode in episodes],
+        through_defaults={
+            "relation_type": LearningResourceRelationTypes.PODCAST_EPISODES.value
+        },
+    )
+    resp = client.get(f"{reverse(url)}?{params}")
+    for item in resp.data["results"]:
+        assert podcast.id in item["podcasts"]
 
 
 @pytest.mark.parametrize(
