@@ -14,10 +14,14 @@ import { useResourceDrawerHref } from "../LearningResourceDrawer/LearningResourc
 import { useUserMe } from "api/hooks/user"
 import { LearningResource } from "api"
 import { SignupPopover } from "../SignupPopover/SignupPopover"
+import { useIsUserListMember } from "api/hooks/userLists"
+import { useIsLearningPathMember } from "api/hooks/learningPaths"
 
 const useResourceCard = (resource?: LearningResource | null) => {
   const getDrawerHref = useResourceDrawerHref()
   const { data: user } = useUserMe()
+  const { data: inUserList } = useIsUserListMember(resource?.id)
+  const { data: inLearningPath } = useIsLearningPathMember(resource?.id)
 
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
 
@@ -49,9 +53,6 @@ const useResourceCard = (resource?: LearningResource | null) => {
         setAnchorEl(event.currentTarget)
       }
     }, [user])
-
-  const inUserList = !!resource?.user_list_parents?.length
-  const inLearningPath = !!resource?.learning_path_parents?.length
 
   return {
     getDrawerHref,

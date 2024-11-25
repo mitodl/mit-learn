@@ -21,8 +21,11 @@ import {
   useLearningResourcesDetail,
   useLearningResourceSetLearningPathRelationships,
 } from "api/hooks/learningResources"
-import { useUserListList } from "api/hooks/userLists"
-import { useLearningPathsList } from "api/hooks/learningPaths"
+import { useUserListList, useUserListMemberList } from "api/hooks/userLists"
+import {
+  useLearningPathsList,
+  useLearningPathMemberList,
+} from "api/hooks/learningPaths"
 import { manageListDialogs } from "@/page-components/ManageListDialogs/ManageListDialogs"
 import { ListType } from "api/constants"
 import { useFormik } from "formik"
@@ -58,6 +61,11 @@ const AddToListDialogInner: React.FC<AddToListDialogInnerProps> = ({
       manageListDialogs.upsertUserList()
     }
   }, [listType])
+  const { data: userListValues, isLoading: isUserListLoading } =
+    useUserListMemberList(resource?.id)
+  const { data: learningPathValues, isLoading: isLearningPathLoading } =
+    useLearningPathMemberList(resource?.id)
+
   const {
     isLoading: isSavingUserListRelationships,
     mutateAsync: setUserListRelationships,
@@ -66,9 +74,11 @@ const AddToListDialogInner: React.FC<AddToListDialogInnerProps> = ({
     isLoading: isSavingLearningPathRelationships,
     mutateAsync: setLearningPathRelationships,
   } = useLearningResourceSetLearningPathRelationships()
+
   const posthog = usePostHog()
   const isSaving =
     isSavingLearningPathRelationships || isSavingUserListRelationships
+
   let dialogTitle = "Add to list"
   if (listType === ListType.LearningPath) {
     dialogTitle = "Add to Learning List"
@@ -79,28 +89,14 @@ const AddToListDialogInner: React.FC<AddToListDialogInnerProps> = ({
     value: list.id.toString(),
     label: list.title,
   }))
-  const learningPathValues = lists
-    .map((list) =>
-      resource?.learning_path_parents?.some(({ parent }) => parent === list.id)
-        ? list.id.toString()
-        : null,
-    )
-    .filter((value) => value !== null)
-  const userListValues = lists
-    .map((list) =>
-      resource?.user_list_parents?.some(({ parent }) => parent === list.id)
-        ? list.id.toString()
-        : null,
-    )
-    .filter((value) => value !== null)
 
   const formik = useFormik({
     enableReinitialize: true,
     validateOnChange: false,
     validateOnBlur: false,
     initialValues: {
-      learning_paths: learningPathValues,
-      user_lists: userListValues,
+      learning_paths: learningPathValues ?? [],
+      user_lists: userListValues ?? [],
     },
     onSubmit: async (values) => {
       if (resource) {
@@ -170,6 +166,7 @@ const AddToListDialogInner: React.FC<AddToListDialogInnerProps> = ({
               choices={listChoices}
               values={formik.values.learning_paths}
               onChange={formik.handleChange}
+              disabled={isLearningPathLoading}
               vertical
             />
           ) : null}
@@ -179,6 +176,7 @@ const AddToListDialogInner: React.FC<AddToListDialogInnerProps> = ({
               choices={listChoices}
               values={formik.values.user_lists}
               onChange={formik.handleChange}
+              disabled={isUserListLoading}
               vertical
             />
           ) : null}
@@ -196,12 +194,12 @@ type AddToListDialogProps = {
 const AddToLearningPathDialogInner: React.FC<AddToListDialogProps> = ({
   resourceId,
 }) => {
-  const resourceQuery = useLearningResourcesDetail(resourceId)
-  const resource = resourceQuery.data
+  const { data: resource } = useLearningResourcesDetail(resourceId)
   const listsQuery = useLearningPathsList({ limit: LIST_LIMIT })
 
   const isReady = !!(resource && listsQuery.isSuccess)
   const lists = listsQuery.data?.results ?? []
+
   return (
     <AddToListDialogInner
       listType={ListType.LearningPath}
@@ -215,8 +213,7 @@ const AddToLearningPathDialogInner: React.FC<AddToListDialogProps> = ({
 const AddToUserListDialogInner: React.FC<AddToListDialogProps> = ({
   resourceId,
 }) => {
-  const resourceQuery = useLearningResourcesDetail(resourceId)
-  const resource = resourceQuery.data
+  const { data: resource } = useLearningResourcesDetail(resourceId)
   const listsQuery = useUserListList({ limit: LIST_LIMIT })
 
   const isReady = !!(resource && listsQuery.isSuccess)

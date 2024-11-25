@@ -6,23 +6,33 @@ import type {
   PaginatedUserListRelationshipList,
 } from "../../generated/v1"
 import { userListsApi } from "../../clients"
+import { clearListMemberships } from "../learningResources/keyFactory"
 
 const userLists = createQueryKeys("userLists", {
   detail: (id: number) => ({
     queryKey: [id],
-    queryFn: () =>
-      userListsApi.userlistsRetrieve({ id }).then((res) => res.data),
+    queryFn: async () => {
+      const { data } = await userListsApi.userlistsRetrieve({ id })
+      return data
+    },
     contextQueries: {
       infiniteItems: (itemsP: ItemsListRequest) => ({
         queryKey: [itemsP],
-        queryFn: ({ pageParam }: { pageParam?: string } = {}) => {
+        queryFn: async ({ pageParam }: { pageParam?: string } = {}) => {
           const request = pageParam
             ? axiosInstance.request<PaginatedUserListRelationshipList>({
                 method: "get",
                 url: pageParam,
               })
             : userListsApi.userlistsItemsList(itemsP)
-          return request.then((res) => res.data)
+          const { data } = await request
+          return {
+            ...data,
+            results: data.results.map((relation) => ({
+              ...relation,
+              resource: clearListMemberships(relation.resource),
+            })),
+          }
         },
       }),
     },
@@ -30,6 +40,13 @@ const userLists = createQueryKeys("userLists", {
   list: (params: ListRequest) => ({
     queryKey: [params],
     queryFn: () => userListsApi.userlistsList(params).then((res) => res.data),
+  }),
+  membershipList: () => ({
+    queryKey: ["membershipList"],
+    queryFn: async () => {
+      const { data } = await userListsApi.userlistsMembershipList()
+      return data
+    },
   }),
 })
 

@@ -6,6 +6,7 @@ import type { ItemsListingComponentProps } from "@/page-components/ItemsListing/
 
 const StyledContainer = styled(Container)({
   paddingTop: "24px",
+  marginBottom: "80px",
 })
 
 const ListDetailsPage: React.FC<ItemsListingComponentProps> = ({

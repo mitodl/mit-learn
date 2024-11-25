@@ -28,5 +28,10 @@ const useUserMe = () =>
     },
   })
 
-export { useUserMe }
+const useUserIsAuthenticated = () => {
+  const { data: user } = useUserMe()
+  return !!user?.is_authenticated
+}
+
+export { useUserMe, useUserIsAuthenticated }
 export type { User }

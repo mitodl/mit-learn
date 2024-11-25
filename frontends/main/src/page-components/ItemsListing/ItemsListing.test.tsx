@@ -106,6 +106,8 @@ describe("ItemsListing", () => {
     "Shows empty message when there are no items",
     ({ listType, count, hasEmptyMessage }) => {
       setMockResponse.get(urls.userMe.get(), {})
+      setMockResponse.get(urls.userLists.membershipList(), [])
+      setMockResponse.get(urls.learningPaths.membershipList(), [])
       const emptyMessage = faker.lorem.sentence()
       const paginatedRelationships = getPaginatedRelationships(
         listType,
@@ -167,6 +169,8 @@ describe("ItemsListing", () => {
       const items = paginatedRelationships.results as LearningResourceListItem[]
       const user = factories.user.user()
       setMockResponse.get(urls.userMe.get(), user)
+      setMockResponse.get(urls.userLists.membershipList(), [])
+      setMockResponse.get(urls.learningPaths.membershipList(), [])
       renderWithProviders(
         <ItemsListing
           listType={listType}

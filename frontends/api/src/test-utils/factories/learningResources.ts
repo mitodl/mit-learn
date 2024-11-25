@@ -373,7 +373,6 @@ const learningPath: LearningResourceFactory<LearningPathResource> = (
         id: uniqueEnforcerId.enforce(() => faker.number.int()),
         item_count: faker.number.int({ min: 1, max: 30 }),
       },
-      learning_path_parents: [],
     },
     overrides,
   )
