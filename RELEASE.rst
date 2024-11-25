@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.25.0
+Version 0.25.0 (Released November 25, 2024)
 --------------
 
 - LocalDate and NoSSR components to render localized dates only on client (#1831)
