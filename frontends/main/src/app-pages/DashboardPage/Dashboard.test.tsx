@@ -183,6 +183,8 @@ describe("DashboardPage", () => {
       ),
       makeSearchResponse(courses),
     )
+    setMockResponse.get(urls.userLists.membershipList(), [])
+    setMockResponse.get(urls.learningPaths.membershipList(), [])
     return {
       profile,
       topPicks,

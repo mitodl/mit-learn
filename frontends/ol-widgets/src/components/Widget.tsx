@@ -1,6 +1,12 @@
 import React, { useCallback } from "react"
 import classNames from "classnames"
-import { Divider, MuiCard, CardContent, CardActions } from "ol-components"
+import { Divider } from "ol-components"
+// eslint-disable-next-line @typescript-eslint/no-restricted-imports
+import MuiCard from "@mui/material/Card"
+// eslint-disable-next-line @typescript-eslint/no-restricted-imports
+import CardContent from "@mui/material/CardContent"
+// eslint-disable-next-line @typescript-eslint/no-restricted-imports
+import CardActions from "@mui/material/CardActions"
 import {
   RiPencilFill,
   RiDeleteBin7Fill,

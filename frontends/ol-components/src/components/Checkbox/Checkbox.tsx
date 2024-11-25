@@ -22,17 +22,21 @@ const containerStyles = css`
     background-position: 3px 3px;
     flex-shrink: 0;
     cursor: pointer;
-  }
 
-  input[type="checkbox"]:hover {
-    ${hoverSprite}
-    + .checkbox-label {
-      color: ${theme.custom.colors.darkGray2};
+    &:disabled {
+      cursor: not-allowed;
     }
   }
 
   input[type="checkbox"]:checked {
     ${checkedSprite}
+    + .checkbox-label {
+      color: ${theme.custom.colors.darkGray2};
+    }
+  }
+
+  input[type="checkbox"]:hover:not(:disabled, :checked) {
+    ${hoverSprite}
     + .checkbox-label {
       color: ${theme.custom.colors.darkGray2};
     }
@@ -48,19 +52,24 @@ const Container = styled.div`
     cursor: pointer;
   }
 
+  input[type="checkbox"] + .checkbox-label {
+    color: ${theme.custom.colors.silverGrayDark};
+  }
+
+  input[type="checkbox"]:disabled + .checkbox-label,
+  label:has(input[type="checkbox"]:disabled) {
+    cursor: not-allowed;
+  }
+
   && input[type="checkbox"] {
     margin: 0;
     margin-right: 4px;
   }
 
-  input[type="checkbox"] + .checkbox-label {
-    color: ${theme.custom.colors.silverGrayDark};
-  }
-
   ${containerStyles}
 
-  &:hover input[type="checkbox"]:not(:checked),
-  label:hover & input[type="checkbox"]:not(:checked) {
+  &:hover input[type="checkbox"]:not(:checked, :disabled),
+  label:hover & input[type="checkbox"]:not(:checked, :disabled) {
     ${hoverSprite}
   }
 `
@@ -72,6 +81,7 @@ export type CheckboxProps = {
   checked?: boolean
   onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void
   className?: string
+  disabled?: boolean
 }
 
 const Checkbox = ({
@@ -81,6 +91,7 @@ const Checkbox = ({
   checked,
   onChange,
   className,
+  disabled = false,
 }: CheckboxProps) => {
   return (
     <Container className={className}>
@@ -92,6 +103,7 @@ const Checkbox = ({
             value={value}
             checked={checked}
             onChange={onChange}
+            disabled={disabled}
           />
           <span className="checkbox-label">{label}</span>
         </label>
@@ -102,6 +114,7 @@ const Checkbox = ({
           value={value}
           checked={checked}
           onChange={onChange}
+          disabled={disabled}
         />
       )}
     </Container>

@@ -10,13 +10,11 @@ import type {
   LearningpathsApiLearningpathsItemsListRequest as ItemsListRequest,
   LearningpathsApiLearningpathsCreateRequest as CreateRequest,
   LearningpathsApiLearningpathsDestroyRequest as DestroyRequest,
-  LearningPathRelationshipRequest,
-  MicroLearningPathRelationship,
   LearningPathResource,
 } from "../../generated/v1"
 import { learningPathsApi } from "../../clients"
 import learningPaths from "./keyFactory"
-import { invalidateResourceQueries } from "../learningResources/invalidation"
+import { useUserIsAuthenticated } from "api/hooks/user"
 
 const useLearningPathsList = (
   params: ListRequest = {},
@@ -74,8 +72,9 @@ const useLearningPathUpdate = () => {
         id: params.id,
         PatchedLearningPathResourceRequest: params,
       }),
-    onSettled: (_data, _err, vars) => {
-      invalidateResourceQueries(queryClient, vars.id)
+    onSettled: (data, err, vars) => {
+      queryClient.invalidateQueries(learningPaths.list._def)
+      queryClient.invalidateQueries(learningPaths.detail(vars.id).queryKey)
     },
   })
 }
@@ -85,8 +84,9 @@ const useLearningPathDestroy = () => {
   return useMutation({
     mutationFn: (params: DestroyRequest) =>
       learningPathsApi.learningpathsDestroy(params),
-    onSettled: (_data, _err, vars) => {
-      invalidateResourceQueries(queryClient, vars.id)
+    onSettled: () => {
+      queryClient.invalidateQueries(learningPaths.list._def)
+      queryClient.invalidateQueries(learningPaths.membershipList._def)
     },
   })
 }
@@ -95,22 +95,6 @@ interface ListItemMoveRequest {
   parent: number
   id: number
   position?: number
-}
-const useLearningPathRelationshipMove = () => {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ parent, id, position }: ListItemMoveRequest) =>
-      learningPathsApi.learningpathsItemsPartialUpdate({
-        learning_resource_id: parent,
-        id,
-        PatchedLearningPathRelationshipRequest: { position },
-      }),
-    onSettled: (_data, _err, vars) => {
-      queryClient.invalidateQueries(
-        learningPaths.detail(vars.parent)._ctx.infiniteItems._def,
-      )
-    },
-  })
 }
 
 const useLearningPathListItemMove = () => {
@@ -131,47 +115,26 @@ const useLearningPathListItemMove = () => {
   })
 }
 
-const useLearningPathRelationshipCreate = () => {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (params: LearningPathRelationshipRequest) =>
-      learningPathsApi.learningpathsItemsCreate({
-        learning_resource_id: params.parent,
-        LearningPathRelationshipRequest: params,
-      }),
-    onSettled: (_response, _err, vars) => {
-      invalidateResourceQueries(
-        queryClient,
-        vars.child,
-        // do NOT skip invalidating the /featured/ lists,
-        // Changing a learning path might change the members of the featured
-        // lists.
-        { skipFeatured: false },
-      )
-      invalidateResourceQueries(queryClient, vars.parent)
+const useIsLearningPathMember = (resourceId?: number) => {
+  return useQuery({
+    ...learningPaths.membershipList(),
+    select: (data) => {
+      return !!data.find((relationship) => relationship.child === resourceId)
     },
+    enabled: useUserIsAuthenticated() && !!resourceId,
   })
 }
 
-const useLearningPathRelationshipDestroy = () => {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (params: MicroLearningPathRelationship) =>
-      learningPathsApi.learningpathsItemsDestroy({
-        id: params.id,
-        learning_resource_id: params.parent,
-      }),
-    onSettled: (_response, _err, vars) => {
-      invalidateResourceQueries(
-        queryClient,
-        vars.child,
-        // do NOT skip invalidating the /featured/ lists,
-        // Changing a learning path might change the members of the featured
-        // lists.
-        { skipFeatured: false },
-      )
-      invalidateResourceQueries(queryClient, vars.parent)
+const useLearningPathMemberList = (resourceId?: number) => {
+  return useQuery({
+    ...learningPaths.membershipList(),
+
+    select: (data) => {
+      return data
+        .filter((relationship) => relationship.child === resourceId)
+        .map((relationship) => relationship.parent.toString())
     },
+    enabled: useUserIsAuthenticated() && !!resourceId,
   })
 }
 
@@ -182,8 +145,7 @@ export {
   useLearningPathCreate,
   useLearningPathUpdate,
   useLearningPathDestroy,
-  useLearningPathRelationshipMove,
   useLearningPathListItemMove,
-  useLearningPathRelationshipCreate,
-  useLearningPathRelationshipDestroy,
+  useIsLearningPathMember,
+  useLearningPathMemberList,
 }

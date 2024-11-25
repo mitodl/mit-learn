@@ -237,26 +237,28 @@ const InfoItem = ({ label, Icon, value }: InfoItemProps) => {
   )
 }
 
+type InfoSectionV1Props = {
+  resource?: LearningResource
+  run?: LearningResourceRun
+  user?: User
+  inLearningPath?: boolean
+  inUserList?: boolean
+  onAddToLearningPathClick?: LearningResourceCardProps["onAddToLearningPathClick"]
+  onAddToUserListClick?: LearningResourceCardProps["onAddToUserListClick"]
+}
+
 const InfoSectionV1 = ({
   resource,
   run,
   user,
+  inUserList,
+  inLearningPath,
   onAddToLearningPathClick,
   onAddToUserListClick,
-}: {
-  resource?: LearningResource
-  run?: LearningResourceRun
-  user?: User
-  onAddToLearningPathClick?: LearningResourceCardProps["onAddToLearningPathClick"]
-  onAddToUserListClick?: LearningResourceCardProps["onAddToUserListClick"]
-}) => {
+}: InfoSectionV1Props) => {
   if (!resource) {
     return null
   }
-
-  const inUserList = !!resource?.user_list_parents?.length
-  const inLearningPath = !!resource?.learning_path_parents?.length
-
   const infoItems = INFO_ITEMS.map(({ label, Icon, selector }) => ({
     label,
     Icon,

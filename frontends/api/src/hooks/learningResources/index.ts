@@ -12,14 +12,12 @@ import type {
   OfferorsApiOfferorsListRequest,
   PlatformsApiPlatformsListRequest,
   FeaturedApiFeaturedListRequest as FeaturedListParams,
-  PaginatedLearningResourceList,
   LearningResourcesApiLearningResourcesUserlistsPartialUpdateRequest,
   LearningResourcesApiLearningResourcesLearningPathsPartialUpdateRequest,
-  MicroUserListRelationship,
 } from "../../generated/v1"
 import learningResources from "./keyFactory"
-import { invalidateResourceQueries } from "./invalidation"
-import { invalidateUserListQueries } from "../userLists/invalidation"
+import userLists from "../userLists/keyFactory"
+import learningPaths from "../learningPaths/keyFactory"
 
 const useLearningResourcesList = (
   params: LRListRequest = {},
@@ -75,20 +73,8 @@ const useLearningResourceSetUserListRelationships = () => {
     mutationFn: (
       params: LearningResourcesApiLearningResourcesUserlistsPartialUpdateRequest,
     ) => learningResourcesApi.learningResourcesUserlistsPartialUpdate(params),
-    onSettled: (_response, _err, vars) => {
-      invalidateResourceQueries(queryClient, vars.id, {
-        skipFeatured: true,
-      })
-      vars.userlist_id?.forEach((userlistId) => {
-        invalidateUserListQueries(queryClient, userlistId)
-      })
-    },
-    onSuccess: (response, vars) => {
-      queryClient.setQueriesData<PaginatedLearningResourceList>(
-        learningResources.featured({}).queryKey,
-        (featured) =>
-          updateListParents(vars.id, featured, response.data, "userlist"),
-      )
+    onSettled: () => {
+      queryClient.invalidateQueries(userLists.membershipList().queryKey)
     },
   })
 }
@@ -100,22 +86,8 @@ const useLearningResourceSetLearningPathRelationships = () => {
       params: LearningResourcesApiLearningResourcesLearningPathsPartialUpdateRequest,
     ) =>
       learningResourcesApi.learningResourcesLearningPathsPartialUpdate(params),
-    onSettled: (_response, _err, vars) => {
-      invalidateResourceQueries(queryClient, vars.id, {
-        skipFeatured: true,
-      })
-      vars.learning_path_id?.forEach((learningPathId) => {
-        invalidateResourceQueries(queryClient, learningPathId, {
-          skipFeatured: true,
-        })
-      })
-    },
-    onSuccess: (response, vars) => {
-      queryClient.setQueriesData<PaginatedLearningResourceList>(
-        learningResources.featured({}).queryKey,
-        (featured) =>
-          updateListParents(vars.id, featured, response.data, "learningpath"),
-      )
+    onSettled: () => {
+      queryClient.invalidateQueries(learningPaths.membershipList().queryKey)
     },
   })
 }
@@ -142,41 +114,6 @@ const usePlatformsList = (
 
 const useSchoolsList = () => {
   return useQuery(learningResources.schools())
-}
-
-/**
- * Given
- *  - a LearningResource ID
- *  - a paginated list of current resources
- *  - a list of new relationships
- *  - the type of list
- * Update the resources' user_list_parents field to include the new relationships
- */
-const updateListParents = (
-  resourceId: number,
-  staleResources?: PaginatedLearningResourceList,
-  newRelationships?: MicroUserListRelationship[],
-  listType?: "userlist" | "learningpath",
-) => {
-  if (!resourceId || !staleResources || !newRelationships || !listType)
-    return staleResources
-  const matchIndex = staleResources.results.findIndex(
-    (res) => res.id === resourceId,
-  )
-  if (matchIndex === -1) return staleResources
-  const updatedResults = [...staleResources.results]
-  const newResource = { ...updatedResults[matchIndex] }
-  if (listType === "userlist") {
-    newResource.user_list_parents = newRelationships
-  }
-  if (listType === "learningpath") {
-    newResource.learning_path_parents = newRelationships
-  }
-  updatedResults[matchIndex] = newResource
-  return {
-    ...staleResources,
-    results: updatedResults,
-  }
 }
 
 const useSimilarLearningResources = (
@@ -211,7 +148,7 @@ export {
   useOfferorsList,
   usePlatformsList,
   useSchoolsList,
-  learningResources,
   useSimilarLearningResources,
   useVectorSimilarLearningResources,
+  learningResources as learningResourcesKeyFactory,
 }

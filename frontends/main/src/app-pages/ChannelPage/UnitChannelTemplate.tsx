@@ -2,7 +2,6 @@ import React, { useMemo } from "react"
 import {
   styled,
   Container,
-  Box,
   Breadcrumbs,
   Stack,
   BannerBackground,
@@ -147,8 +146,7 @@ const UnitChannelTemplate: React.FC<UnitChannelTemplateProps> = ({
                   {displayConfiguration?.sub_heading}
                 </Typography>
               </Stack>
-              <Box
-                display="flex"
+              <Stack
                 flexDirection="row"
                 alignItems="end"
                 sx={{
@@ -172,7 +170,7 @@ const UnitChannelTemplate: React.FC<UnitChannelTemplateProps> = ({
                     />
                   ) : null}
                 </ChannelControls>
-              </Box>
+              </Stack>
             </Stack>
             {channel.data ? <ChannelDetails channel={channel.data} /> : null}
           </BannerContent>

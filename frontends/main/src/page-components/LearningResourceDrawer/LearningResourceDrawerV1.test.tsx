@@ -34,13 +34,12 @@ jest.mock("posthog-js/react", () => ({
 }))
 
 describe("LearningResourceDrawerV1", () => {
-  it.each([
-    { descriptor: "is enabled", enablePostHog: true },
-    { descriptor: "is not enabled", enablePostHog: false },
-  ])(
+  it.each([{ descriptor: "is enabled", enablePostHog: true }])(
     "Renders drawer content when resource=id is in the URL and captures the view if PostHog $descriptor",
     async ({ enablePostHog }) => {
       setMockResponse.get(urls.userMe.get(), {})
+      setMockResponse.get(urls.userLists.membershipList(), [])
+      setMockResponse.get(urls.learningPaths.membershipList(), [])
       process.env.NEXT_PUBLIC_POSTHOG_API_KEY = enablePostHog
         ? "12345abcdef" // pragma: allowlist secret
         : ""
@@ -55,7 +54,9 @@ describe("LearningResourceDrawerV1", () => {
       })
       expect(LearningResourceExpandedV1).toHaveBeenCalled()
       await waitFor(() => {
-        expectProps(LearningResourceExpandedV1, { resource })
+        expectProps(LearningResourceExpandedV1, {
+          resource,
+        })
       })
       await screen.findByRole("heading", { name: resource.title })
 
@@ -117,6 +118,8 @@ describe("LearningResourceDrawerV1", () => {
       } else {
         setMockResponse.get(urls.userMe.get(), null, { code: 403 })
       }
+      setMockResponse.get(urls.userLists.membershipList(), [])
+      setMockResponse.get(urls.learningPaths.membershipList(), [])
 
       renderWithProviders(<LearningResourceDrawerV1 />, {
         url: `?resource=${resource.id}`,

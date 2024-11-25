@@ -6,6 +6,7 @@ import type {
   LearningpathsApiLearningpathsListRequest as ListRequest,
   PaginatedLearningPathRelationshipList,
 } from "../../generated/v1"
+import { clearListMemberships } from "../learningResources/keyFactory"
 
 const learningPaths = createQueryKeys("learningPaths", {
   detail: (id: number) => ({
@@ -18,7 +19,7 @@ const learningPaths = createQueryKeys("learningPaths", {
     contextQueries: {
       infiniteItems: (itemsP: ItemsListRequest) => ({
         queryKey: [itemsP],
-        queryFn: ({ pageParam }: { pageParam?: string } = {}) => {
+        queryFn: async ({ pageParam }: { pageParam?: string } = {}) => {
           // Use generated API for first request, then use next parameter
           const request = pageParam
             ? axiosInstance.request<PaginatedLearningPathRelationshipList>({
@@ -26,7 +27,14 @@ const learningPaths = createQueryKeys("learningPaths", {
                 url: pageParam,
               })
             : learningPathsApi.learningpathsItemsList(itemsP)
-          return request.then((res) => res.data)
+          const { data } = await request
+          return {
+            ...data,
+            results: data.results.map((relation) => ({
+              ...relation,
+              resource: clearListMemberships(relation.resource),
+            })),
+          }
         },
       }),
     },
@@ -35,6 +43,13 @@ const learningPaths = createQueryKeys("learningPaths", {
     queryKey: [params],
     queryFn: () => {
       return learningPathsApi.learningpathsList(params).then((res) => res.data)
+    },
+  }),
+  membershipList: () => ({
+    queryKey: ["membershipList"],
+    queryFn: async () => {
+      const { data } = await learningPathsApi.learningpathsMembershipList()
+      return data
     },
   }),
 })

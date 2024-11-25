@@ -197,6 +197,8 @@ type LearningResourceExpandedV2Props = {
   user?: User
   imgConfig: ImageConfig
   carousels?: React.ReactNode[]
+  inLearningPath?: boolean
+  inUserList?: boolean
   onAddToLearningPathClick?: LearningResourceCardProps["onAddToLearningPathClick"]
   onAddToUserListClick?: LearningResourceCardProps["onAddToUserListClick"]
   closeDrawer?: () => void
@@ -349,6 +351,8 @@ const CallToActionSection = ({
   resource,
   hide,
   user,
+  inUserList,
+  inLearningPath,
   onAddToLearningPathClick,
   onAddToUserListClick,
 }: {
@@ -356,6 +360,8 @@ const CallToActionSection = ({
   resource?: LearningResource
   hide?: boolean
   user?: User
+  inUserList?: boolean
+  inLearningPath?: boolean
   onAddToLearningPathClick?: LearningResourceCardProps["onAddToLearningPathClick"]
   onAddToUserListClick?: LearningResourceCardProps["onAddToUserListClick"]
 }) => {
@@ -371,8 +377,6 @@ const CallToActionSection = ({
       </PlatformContainer>
     )
   }
-  const inUserList = !!resource?.user_list_parents?.length
-  const inLearningPath = !!resource?.learning_path_parents?.length
   const { platform } = resource!
   const offeredBy = resource?.offered_by
   const platformCode =
@@ -463,6 +467,8 @@ const LearningResourceExpandedV2: React.FC<LearningResourceExpandedV2Props> = ({
   imgConfig,
   user,
   carousels,
+  inUserList,
+  inLearningPath,
   onAddToLearningPathClick,
   onAddToUserListClick,
   closeDrawer,
@@ -484,6 +490,8 @@ const LearningResourceExpandedV2: React.FC<LearningResourceExpandedV2Props> = ({
               imgConfig={imgConfig}
               resource={resource}
               user={user}
+              inLearningPath={inLearningPath}
+              inUserList={inUserList}
               onAddToLearningPathClick={onAddToLearningPathClick}
               onAddToUserListClick={onAddToUserListClick}
             />
