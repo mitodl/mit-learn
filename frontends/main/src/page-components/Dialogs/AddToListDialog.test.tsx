@@ -223,10 +223,9 @@ describe.each([ListType.LearningPath, ListType.UserList])(
         )
       }
 
-      const checkbox = await screen.findByLabelText<HTMLInputElement>(title)
-
-      await waitFor(() => {
-        expect(checkbox.checked).toBe(true)
+      const checkbox = await screen.findByRole<HTMLInputElement>("checkbox", {
+        name: title,
+        checked: true,
       })
 
       await user.click(checkbox)
