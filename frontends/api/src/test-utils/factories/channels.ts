@@ -148,6 +148,7 @@ const _channelShared = (): Partial<Omit<Channel, "channel_type">> => {
       key: faker.lorem.slug(),
       value: faker.lorem.slug(),
     }),
+    channel_url: `${faker.internet.url({ appendSlash: false })}${faker.system.directoryPath()}`,
   }
 }
 

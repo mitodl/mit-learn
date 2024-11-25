@@ -55,5 +55,5 @@ export {
   useChannelsList,
   useChannelPartialUpdate,
   useChannelCounts,
-  channels as channelsKeyFactory,
+  channels,
 }

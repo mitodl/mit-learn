@@ -1,10 +1,9 @@
 import React from "react"
-import LearningPathListingPage from "@/app-pages/LearningPathListingPage/LearningPathListingPage"
-
 import { Metadata } from "next"
 import { standardizeMetadata } from "@/common/metadata"
-import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
 import { Permissions } from "@/common/permissions"
+import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
+import LearningPathListingPage from "@/app-pages/LearningPathListingPage/LearningPathListingPage"
 
 export const metadata: Metadata = standardizeMetadata({
   title: "Learning Paths",

@@ -19,5 +19,5 @@ export {
   useNewsEventsList,
   useNewsEventsDetail,
   NewsEventsListFeedTypeEnum,
-  newsEvents as newsEventsKeyFactory,
+  newsEvents,
 }
