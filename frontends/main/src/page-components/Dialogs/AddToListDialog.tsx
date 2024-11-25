@@ -61,8 +61,10 @@ const AddToListDialogInner: React.FC<AddToListDialogInnerProps> = ({
       manageListDialogs.upsertUserList()
     }
   }, [listType])
-  const { data: userListValues } = useUserListMemberList(resource?.id)
-  const { data: learningPathValues } = useLearningPathMemberList(resource?.id)
+  const { data: userListValues, isLoading: isUserListLoading } =
+    useUserListMemberList(resource?.id)
+  const { data: learningPathValues, isLoading: isLearningPathLoading } =
+    useLearningPathMemberList(resource?.id)
 
   const {
     isLoading: isSavingUserListRelationships,
@@ -93,8 +95,8 @@ const AddToListDialogInner: React.FC<AddToListDialogInnerProps> = ({
     validateOnChange: false,
     validateOnBlur: false,
     initialValues: {
-      learning_paths: learningPathValues,
-      user_lists: userListValues,
+      learning_paths: learningPathValues ?? [],
+      user_lists: userListValues ?? [],
     },
     onSubmit: async (values) => {
       if (resource) {
@@ -108,13 +110,13 @@ const AddToListDialogInner: React.FC<AddToListDialogInnerProps> = ({
           })
         }
         if (listType === ListType.LearningPath) {
-          const newParents = values.learning_paths!.map((id) => parseInt(id))
+          const newParents = values.learning_paths.map((id) => parseInt(id))
           await setLearningPathRelationships({
             id: resource.id,
             learning_path_id: newParents,
           })
         } else if (listType === ListType.UserList) {
-          const newParents = values.user_lists!.map((id) => parseInt(id))
+          const newParents = values.user_lists.map((id) => parseInt(id))
           await setUserListRelationships({
             id: resource.id,
             userlist_id: newParents,
@@ -164,6 +166,7 @@ const AddToListDialogInner: React.FC<AddToListDialogInnerProps> = ({
               choices={listChoices}
               values={formik.values.learning_paths}
               onChange={formik.handleChange}
+              disabled={isLearningPathLoading}
               vertical
             />
           ) : null}
@@ -173,6 +176,7 @@ const AddToListDialogInner: React.FC<AddToListDialogInnerProps> = ({
               choices={listChoices}
               values={formik.values.user_lists}
               onChange={formik.handleChange}
+              disabled={isUserListLoading}
               vertical
             />
           ) : null}
@@ -190,8 +194,7 @@ type AddToListDialogProps = {
 const AddToLearningPathDialogInner: React.FC<AddToListDialogProps> = ({
   resourceId,
 }) => {
-  const resourceQuery = useLearningResourcesDetail(resourceId)
-  const resource = resourceQuery.data
+  const { data: resource } = useLearningResourcesDetail(resourceId)
   const listsQuery = useLearningPathsList({ limit: LIST_LIMIT })
 
   const isReady = !!(resource && listsQuery.isSuccess)
@@ -210,8 +213,7 @@ const AddToLearningPathDialogInner: React.FC<AddToListDialogProps> = ({
 const AddToUserListDialogInner: React.FC<AddToListDialogProps> = ({
   resourceId,
 }) => {
-  const resourceQuery = useLearningResourcesDetail(resourceId)
-  const resource = resourceQuery.data
+  const { data: resource } = useLearningResourcesDetail(resourceId)
   const listsQuery = useUserListList({ limit: LIST_LIMIT })
 
   const isReady = !!(resource && listsQuery.isSuccess)
