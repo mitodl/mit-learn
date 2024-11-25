@@ -922,19 +922,17 @@ def _qdrant_similar_results(doc, num_resources):
         list of dict:
             list of serialized resources
     """
-    from learning_resources_search.indexing_api import qdrant_client
+    from learning_resources_search.indexing_api import qdrant_client, vector_point_id
 
     client = qdrant_client()
     return [
-        hit.metadata
-        for hit in client.query(
+        hit.payload
+        for hit in client.query_points(
             collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
-            query_text=(
-                f'{doc.get("title")} {doc.get("description")} '
-                f'{doc.get("full_description")} {doc.get("content")}'
-            ),
+            query=vector_point_id(doc["readable_id"]),
             limit=num_resources,
-        )
+            using=settings.QDRANT_SEARCH_VECTOR_NAME,
+        ).points
     ]
 
 

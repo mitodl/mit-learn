@@ -1,10 +1,16 @@
 import React from "react"
 import * as NiceModal from "@ebay/nice-modal-react"
-import { renderWithProviders, user, screen, expectProps } from "@/test-utils"
+import {
+  renderWithProviders,
+  user,
+  screen,
+  expectProps,
+  waitFor,
+} from "@/test-utils"
 import type { User } from "api/hooks/user"
 import { ResourceCard } from "./ResourceCard"
 import { getReadableResourceType } from "ol-utilities"
-import { ResourceTypeEnum } from "api"
+import { ResourceTypeEnum, MicroUserListRelationship } from "api"
 import {
   AddToLearningPathDialog,
   AddToUserListDialog,
@@ -53,11 +59,23 @@ describe.each([
   type SetupOptions = {
     user?: Partial<User>
     props?: Partial<ResourceCardProps>
+    userListMemberships?: MicroUserListRelationship[]
+    learningPathMemberships?: MicroUserListRelationship[]
   }
-  const setup = ({ user, props = {} }: SetupOptions = {}) => {
+  const setup = ({
+    user,
+    props = {},
+    userListMemberships = [],
+    learningPathMemberships = [],
+  }: SetupOptions = {}) => {
     const { resource = makeResource() } = props
     if (user?.is_authenticated) {
       setMockResponse.get(urls.userMe.get(), user)
+      setMockResponse.get(urls.userLists.membershipList(), userListMemberships)
+      setMockResponse.get(
+        urls.learningPaths.membershipList(),
+        learningPathMemberships,
+      )
     } else {
       setMockResponse.get(urls.userMe.get(), {}, { code: 403 })
     }
@@ -102,41 +120,54 @@ describe.each([
 
   test.each([
     {
-      userlist: { count: 1, inList: true },
-      learningpath: { count: 1, inList: true },
+      userList: { count: 1, inList: true },
+      learningPath: { count: 1, inList: true },
     },
     {
-      userlist: { count: 0, inList: false },
-      learningpath: { count: 1, inList: true },
+      userList: { count: 0, inList: false },
+      learningPath: { count: 1, inList: true },
     },
     {
-      userlist: { count: 1, inList: true },
-      learningpath: { count: 0, inList: false },
+      userList: { count: 1, inList: true },
+      learningPath: { count: 0, inList: false },
     },
     {
-      userlist: { count: 0, inList: false },
-      learningpath: { count: 0, inList: false },
+      userList: { count: 0, inList: false },
+      learningPath: { count: 0, inList: false },
     },
   ])(
     "'Add to ...' buttons are filled based on membership in list",
-    ({ userlist, learningpath }) => {
+    async ({ userList, learningPath }) => {
       const resource = makeResource()
-      const { microLearningPathRelationship } = factories.learningResources
-      const { microUserListRelationship } = factories.userLists
-      resource.learning_path_parents = Array.from(
-        { length: learningpath.count },
-        () => microLearningPathRelationship({ child: resource.id }),
-      )
-      resource.user_list_parents = Array.from({ length: userlist.count }, () =>
-        microUserListRelationship({ child: resource.id }),
-      )
 
-      setup({ user: { is_authenticated: true }, props: { resource } })
+      setup({
+        user: { is_authenticated: true },
+        props: { resource },
+        userListMemberships: userList.inList
+          ? [
+              {
+                id: 1,
+                parent: 123,
+                child: resource.id,
+              },
+            ]
+          : [],
+        learningPathMemberships: learningPath.inList
+          ? [
+              {
+                id: 2,
+                parent: 456,
+                child: resource.id,
+              },
+            ]
+          : [],
+      })
 
-      expectProps(BaseComponent, {
-        resource,
-        inLearningPath: learningpath.inList,
-        inUserList: userlist.inList,
+      await waitFor(() => {
+        expectProps(BaseComponent, {
+          inLearningPath: learningPath.inList,
+          inUserList: userList.inList,
+        })
       })
     },
   )

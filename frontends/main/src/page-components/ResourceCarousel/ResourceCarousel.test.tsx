@@ -33,6 +33,8 @@ describe("ResourceCarousel", () => {
       list: factories.learningResources.resources({ count }),
     }
     setMockResponse.get(urls.userMe.get(), {})
+    setMockResponse.get(urls.userLists.membershipList(), [])
+    setMockResponse.get(urls.learningPaths.membershipList(), [])
 
     const searchResponse = new ControlledPromise()
     const listResponse = new ControlledPromise()

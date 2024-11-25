@@ -11,16 +11,6 @@ import { UseQueryResult } from "@tanstack/react-query"
 
 const factory = factories.learningResources
 
-jest.mock("./invalidation", () => {
-  const actual = jest.requireActual("./invalidation")
-  return {
-    __esModule: true,
-    ...actual,
-    invalidateResourceQueries: jest.fn(),
-    invalidateUserListQueries: jest.fn(),
-  }
-})
-
 /**
  * Assert that `hook` queries the API with the correct `url`, `method`, and
  * exposes the API's data.

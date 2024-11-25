@@ -37,6 +37,8 @@ const assertLinksTo = (
 
 const setupAPIs = () => {
   setMockResponse.get(urls.userMe.get(), {})
+  setMockResponse.get(urls.userLists.membershipList(), [])
+  setMockResponse.get(urls.learningPaths.membershipList(), [])
 
   const resources = learningResources.resources({ count: 4 })
   const attestations = testimonials.testimonials({ count: 3 })
@@ -125,7 +127,7 @@ describe("Home Page Browse by Topic", () => {
 
     const response = learningResources.topics({ count: 3 })
     setMockResponse.get(urls.topics.list({ is_toplevel: true }), response)
-    setMockResponse.get(urls.userMe.get(), {})
+
     renderWithProviders(<HomePage />)
 
     await waitFor(() => {
@@ -254,7 +256,6 @@ describe("Home Page News and Events", () => {
 
 describe("Home Page personalize section", () => {
   test("Links to dashboard when authenticated", async () => {
-    setMockResponse.get(urls.userMe.get(), {})
     setupAPIs()
 
     renderWithProviders(<HomePage />)

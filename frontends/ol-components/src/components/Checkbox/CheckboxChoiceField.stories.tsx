@@ -7,16 +7,15 @@ import {
 import Typography from "@mui/material/Typography"
 
 const StateWrapper = (props: CheckboxChoiceFieldProps) => {
-  const [value, setValue] = useState(props.value)
+  const [values, setValues] = useState(props.value)
 
   const handleChange = () => {
-    setValue(
+    setValues(
       Array.from(
         document.querySelectorAll("input[name='checkbox-group']:checked"),
       ).map((el) => el.getAttribute("value") || ""),
     )
   }
-
   return (
     <>
       <CheckboxChoiceField
@@ -27,12 +26,12 @@ const StateWrapper = (props: CheckboxChoiceFieldProps) => {
           { label: "Choice 2", value: "2" },
           { label: "Choice 3", value: "3" },
         ]}
-        value={value}
+        values={values}
         onChange={handleChange}
       />
       <br />
       <br />
-      <Typography variant="body1">Selected: {value?.join(", ")}</Typography>
+      <Typography variant="body1">Selected: {values?.join(", ")}</Typography>
     </>
   )
 }
@@ -56,5 +55,12 @@ export const WithoutLabel: Story = {}
 export const WithLabel: Story = {
   args: {
     label: "CheckboxChoiceField",
+  },
+}
+
+export const Disabled: Story = {
+  args: {
+    label: "CheckboxChoiceField disabled",
+    disabled: true,
   },
 }

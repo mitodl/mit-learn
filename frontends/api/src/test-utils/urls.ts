@@ -136,6 +136,7 @@ const learningPaths = {
     `${API_BASE_URL}/api/v1/learningpaths/${parentId}/items/${id}/`,
   details: (params: Params<LearningpathsApi, "learningpathsRetrieve">) =>
     `${API_BASE_URL}/api/v1/learningpaths/${params.id}/`,
+  membershipList: () => `${API_BASE_URL}/api/v1/learningpaths/membership/`,
 }
 
 const userLists = {
@@ -153,6 +154,7 @@ const userLists = {
     `${API_BASE_URL}/api/v1/userlists/${parentId}/items/${id}/`,
   details: (params: Params<UserlistsApi, "userlistsRetrieve">) =>
     `${API_BASE_URL}/api/v1/userlists/${params.id}/`,
+  membershipList: () => `${API_BASE_URL}/api/v1/userlists/membership/`,
 }
 
 const articles = {

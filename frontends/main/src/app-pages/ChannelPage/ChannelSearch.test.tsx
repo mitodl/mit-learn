@@ -84,6 +84,10 @@ const setMockApiResponses = ({
     results: [],
   })
 
+  setMockResponse.get(urls.userMe.get(), {})
+  setMockResponse.get(urls.userLists.membershipList(), [])
+  setMockResponse.get(urls.learningPaths.membershipList(), [])
+
   if (channel.channel_type === ChannelTypeEnum.Topic) {
     const topicId = channel.topic_detail.topic
     if (topicId) {
@@ -133,7 +137,7 @@ describe("ChannelSearch", () => {
         results: resources,
       },
     })
-    setMockResponse.get(urls.userMe.get(), {})
+
     renderWithProviders(<ChannelPage />, {
       url: `/c/${channel.channel_type}/${channel.name}`,
     })
@@ -183,7 +187,6 @@ describe("ChannelSearch", () => {
           },
         },
       })
-      setMockResponse.get(urls.userMe.get(), {})
 
       renderWithProviders(<ChannelPage />, {
         url: `/c/${channel.channel_type}/${channel.name}/${url}`,
@@ -249,8 +252,6 @@ describe("ChannelSearch", () => {
         },
       })
 
-      setMockResponse.get(urls.userMe.get(), {})
-
       renderWithProviders(<ChannelPage />, {
         url: `/c/${channel.channel_type}/${channel.name}/`,
       })
@@ -299,7 +300,6 @@ describe("ChannelSearch", () => {
         results: resources,
       },
     })
-    setMockResponse.get(urls.userMe.get(), {})
 
     const initialSearch = "?q=meow&page=2"
 

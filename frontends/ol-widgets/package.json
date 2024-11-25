@@ -5,6 +5,7 @@
   "main": "./src/index.ts",
   "dependencies": {
     "@faker-js/faker": "^9.0.0",
+    "@mui/material": "^6.1.8",
     "@remixicon/react": "^4.2.0",
     "classnames": "^2.3.2",
     "formik": "^2.4.5",

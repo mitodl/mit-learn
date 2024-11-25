@@ -13,6 +13,7 @@ export type CheckboxChoiceFieldProps = {
   onChange?: CheckboxProps["onChange"]
   className?: string
   vertical?: boolean
+  disabled?: boolean
 }
 
 const Container = styled.div(({ theme }) => ({
@@ -45,6 +46,7 @@ const CheckboxChoiceField: React.FC<CheckboxChoiceFieldProps> = ({
   onChange,
   className,
   vertical = false,
+  disabled = false,
 }) => {
   const isChecked = (choice: CheckboxProps) =>
     choice.value ? (values?.includes(choice.value) ?? false) : false
@@ -55,6 +57,7 @@ const CheckboxChoiceField: React.FC<CheckboxChoiceFieldProps> = ({
       component="fieldset"
       sx={{ width: "100%" }}
       className={className}
+      disabled={disabled}
     >
       {label && <Label>{label}</Label>}
       <_Container>
@@ -65,6 +68,7 @@ const CheckboxChoiceField: React.FC<CheckboxChoiceFieldProps> = ({
               name={name}
               checked={isChecked(choice)}
               onChange={onChange}
+              disabled={disabled}
               {...choice}
             />
           )
