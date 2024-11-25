@@ -1,11 +1,5 @@
 import React from "react"
-import {
-  Container,
-  MuiCard,
-  CardContent,
-  CardActions,
-  ButtonLink,
-} from "ol-components"
+import { Container, ButtonLink, Typography, styled } from "ol-components"
 import { HOME } from "@/common/urls"
 
 type ErrorPageTemplateProps = {
@@ -13,18 +7,34 @@ type ErrorPageTemplateProps = {
   children: React.ReactNode
 }
 
-const ErrorPageTemplate: React.FC<ErrorPageTemplateProps> = ({ children }) => {
+const ErrorContainer = styled(Container)(({ theme }) => ({
+  backgroundColor: theme.custom.colors.white,
+  borderRadius: "8px",
+  marginTop: "4rem",
+  padding: "16px",
+  boxShadow:
+    "1px 2px 1px -1px rgba(0,0,0,0.2),0px 1px 1px 0px rgba(0,0,0,0.14),0px 1px 3px 0px rgba(0,0,0,0.12)",
+}))
+const Footer = styled.div({
+  marginTop: "16px",
+})
+
+const ErrorPageTemplate: React.FC<ErrorPageTemplateProps> = ({
+  children,
+  title,
+}) => {
   return (
-    <Container maxWidth="sm">
-      <MuiCard sx={{ marginTop: "4rem" }}>
-        <CardContent>{children}</CardContent>
-        <CardActions>
-          <ButtonLink variant="secondary" href={HOME}>
-            Home
-          </ButtonLink>
-        </CardActions>
-      </MuiCard>
-    </Container>
+    <ErrorContainer maxWidth="sm">
+      <Typography variant="h3" component="h1">
+        {title}
+      </Typography>
+      {children}
+      <Footer>
+        <ButtonLink variant="secondary" href={HOME}>
+          Home
+        </ButtonLink>
+      </Footer>
+    </ErrorContainer>
   )
 }
 

@@ -3,8 +3,6 @@ import {
   styled,
   Pagination,
   PaginationItem,
-  MuiCard,
-  CardContent,
   PlainList,
   Container,
   Typography,
@@ -459,6 +457,14 @@ const AdminTitleContainer = styled.div`
   ${({ theme }) => css({ ...theme.typography.subtitle3 })}
   margin-top: 20px;
 `
+const NoneFound = styled.div(({ theme }) => ({
+  backgroundColor: theme.custom.colors.white,
+  borderRadius: "8px",
+  padding: "16px",
+  paddingBottom: "24px",
+  boxShadow:
+    "1px 2px 1px -1px rgba(0,0,0,0.2),0px 1px 1px 0px rgba(0,0,0,0.14),0px 1px 3px 0px rgba(0,0,0,0.12)",
+}))
 
 const PAGE_SIZE = 20
 const MAX_PAGE = 50
@@ -963,9 +969,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                     ))}
                   </PlainList>
                 ) : (
-                  <MuiCard>
-                    <CardContent>No results found for your query.</CardContent>
-                  </MuiCard>
+                  <NoneFound>No results found for your query.</NoneFound>
                 )}
               </StyledResultsContainer>
               <PaginationContainer>

@@ -1,12 +1,13 @@
 import React, { useId, useCallback, useEffect, useMemo, useState } from "react"
-import {
-  MuiDialog,
-  MuiDialogActions,
-  MuiDialogContent,
-  MuiDialogTitle,
-  Button,
-  RadioChoiceField,
-} from "ol-components"
+import { Button, RadioChoiceField } from "ol-components"
+// eslint-disable-next-line @typescript-eslint/no-restricted-imports
+import MuiDialog from "@mui/material/Dialog"
+// eslint-disable-next-line @typescript-eslint/no-restricted-imports
+import MuiDialogActions from "@mui/material/DialogActions"
+// eslint-disable-next-line @typescript-eslint/no-restricted-imports
+import MuiDialogContent from "@mui/material/DialogContent"
+// eslint-disable-next-line @typescript-eslint/no-restricted-imports
+import MuiDialogTitle from "@mui/material/DialogTitle"
 import { Formik, Form, Field, ErrorMessage, FieldProps } from "formik"
 import { isNil } from "lodash"
 import { AnonymousWidget, WidgetSpec, WidgetTypes } from "../../interfaces"
