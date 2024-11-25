@@ -3198,7 +3198,7 @@ export interface PodcastEpisode {
    */
   id: number
   /**
-   * Get the playlist id(s) the video belongs to
+   * Get the podcast id(s) the episode belongs to
    * @type {Array<string>}
    * @memberof PodcastEpisode
    */

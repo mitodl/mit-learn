@@ -3105,7 +3105,7 @@ components:
           type: array
           items:
             type: string
-          description: Get the playlist id(s) the video belongs to
+          description: Get the podcast id(s) the episode belongs to
           readOnly: true
         transcript:
           type: string
