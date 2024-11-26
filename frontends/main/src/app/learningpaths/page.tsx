@@ -1,7 +1,7 @@
 import React from "react"
 import { Metadata } from "next"
 import { standardizeMetadata } from "@/common/metadata"
-import { Permissions } from "@/common/permissions"
+import { Permission } from "api/hooks/user"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
 import LearningPathListingPage from "@/app-pages/LearningPathListingPage/LearningPathListingPage"
 
@@ -11,7 +11,7 @@ export const metadata: Metadata = standardizeMetadata({
 
 const Page: React.FC = () => {
   return (
-    <RestrictedRoute requires={Permissions.LearningPathEditor}>
+    <RestrictedRoute requires={Permission.LearningPathEditor}>
       <LearningPathListingPage />
     </RestrictedRoute>
   )

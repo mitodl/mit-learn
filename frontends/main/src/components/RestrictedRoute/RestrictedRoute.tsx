@@ -1,14 +1,14 @@
 "use client"
 
 import React from "react"
-import { ForbiddenError, Permissions } from "@/common/permissions"
-import { useUserMe } from "api/hooks/user"
+import { ForbiddenError } from "@/common/errors"
+import { Permission, useUserMe } from "api/hooks/user"
 import { redirect } from "next/navigation"
 import * as urls from "@/common/urls"
 
 type RestrictedRouteProps = {
   children?: React.ReactNode
-  requires: Permissions
+  requires: Permission
 }
 
 /**
