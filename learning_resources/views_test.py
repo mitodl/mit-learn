@@ -1040,9 +1040,13 @@ def test_similar_resources_endpoint_only_returns_published(mocker, client):
     for lr in response_resources:
         serialized_resource = serialize_learning_resource_for_update(lr)
         serialized_resource["published"] = False
+        lr.published = False
+        lr.save()
         response_hits.append(serialized_resource)
     # set one item to published
-    response_hits[-1]["published"] = True
+    published_resource = response_resources[0]
+    published_resource.published = True
+    published_resource.save()
     Search.execute.return_value = response.Response(
         Search().query(),
         {
@@ -1061,6 +1065,45 @@ def test_similar_resources_endpoint_only_returns_published(mocker, client):
     )
     response_ids = [hit["id"] for hit in resp.json()]
     assert len(response_ids) == 1
+
+
+def test_similar_resources_endpoint_ignores_opensearch_published(mocker, client):
+    """Test similar learning_resources ignores the published attribute from opensearch"""
+    from learning_resources.models import LearningResource
+
+    resources = LearningResourceFactory.create_batch(5)
+
+    resource_ids = [learning_resource.id for learning_resource in resources]
+    similar_for = resource_ids.pop()
+    mocker.patch.object(Search, "execute")
+    response_resources = LearningResource.objects.for_search_serialization().filter(
+        id__in=resource_ids
+    )
+    response_hits = []
+    for lr in response_resources:
+        serialized_resource = serialize_learning_resource_for_update(lr)
+        serialized_resource["published"] = False
+        response_hits.append(serialized_resource)
+    # remove the published attribute on one hit
+    del response_hits[-1]["published"]
+    Search.execute.return_value = response.Response(
+        Search().query(),
+        {
+            "_shards": {"failed": 0, "successful": 10, "total": 10},
+            "hits": {
+                "hits": response_hits,
+                "max_score": 12.0,
+                "total": 123,
+            },
+            "timed_out": False,
+            "took": 123,
+        },
+    ).hits
+    resp = client.get(
+        reverse("lr:v1:learning_resources_api-similar", args=[similar_for])
+    )
+    response_ids = [hit["id"] for hit in resp.json()]
+    assert len(response_ids) == 4
 
 
 def test_vector_similar_resources_endpoint_does_not_return_self(mocker, client):
