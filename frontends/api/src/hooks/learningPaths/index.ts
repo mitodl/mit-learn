@@ -125,7 +125,8 @@ const useIsLearningPathMember = (resourceId?: number) => {
     select: (data) => {
       return !!data.find((relationship) => relationship.child === resourceId)
     },
-    enabled: useUserIsAuthenticated() && !!resourceId,
+    enabled:
+      useUserHasPermission(Permission.LearningPathEditor) && !!resourceId,
   })
 }
 
