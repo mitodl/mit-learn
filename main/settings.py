@@ -117,6 +117,7 @@ INSTALLED_APPS = (
     "news_events",
     "testimonials",
     "data_fixtures",
+    "vector_search",
 )
 
 if not get_bool("RUN_DATA_MIGRATIONS", default=False):
