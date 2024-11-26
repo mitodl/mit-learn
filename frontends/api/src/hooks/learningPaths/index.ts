@@ -14,11 +14,7 @@ import type {
 } from "../../generated/v1"
 import { learningPathsApi } from "../../clients"
 import learningPaths from "./keyFactory"
-import {
-  useUserIsAuthenticated,
-  useUserHasPermission,
-  Permission,
-} from "api/hooks/user"
+import { useUserHasPermission, Permission } from "api/hooks/user"
 
 const useLearningPathsList = (
   params: ListRequest = {},
