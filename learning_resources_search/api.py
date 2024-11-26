@@ -1062,8 +1062,7 @@ def get_similar_resources_opensearch(
     response = search.execute()
     return LearningResource.objects.for_search_serialization().filter(
         id__in=[
-            resource.id
-            for resource in response.hits
-            if resource.id != value_doc["id"] and resource.published
-        ]
+            resource.id for resource in response.hits if resource.id != value_doc["id"]
+        ],
+        published=True,
     )
