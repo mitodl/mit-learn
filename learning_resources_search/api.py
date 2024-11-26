@@ -1041,12 +1041,11 @@ def get_similar_resources_opensearch(
         list of str:
             list of learning resources
     """
-    indexes = relevant_indexes([COURSE_TYPE], [], endpoint=LEARNING_RESOURCE)
+    indexes = relevant_indexes(LEARNING_RESOURCE_TYPES, [], endpoint=LEARNING_RESOURCE)
     search = Search(index=",".join(indexes))
     if num_resources:
         # adding +1 to num_resources since we filter out existing resource.id
         search = search.extra(size=num_resources + 1)
-    search = search.filter("term", resource_type=COURSE_TYPE)
     search = search.query(
         MoreLikeThis(
             like=[{"doc": value_doc, "fields": list(value_doc.keys())}],
