@@ -1046,24 +1046,25 @@ def get_similar_resources_opensearch(
     if num_resources:
         # adding +1 to num_resources since we filter out existing resource.id
         search = search.extra(size=num_resources + 1)
+    mlt_query = MoreLikeThis(
+        like=[{"doc": value_doc, "fields": list(value_doc.keys())}],
+        fields=[
+            "course.course_numbers.value",
+            "title",
+            "description",
+            "full_description",
+        ],
+        min_term_freq=min_term_freq,
+        min_doc_freq=min_doc_freq,
+    )
+    # return only learning_resources
     search = search.query(
-        MoreLikeThis(
-            like=[{"doc": value_doc, "fields": list(value_doc.keys())}],
-            fields=[
-                "course.course_numbers.value",
-                "title",
-                "description",
-                "full_description",
-            ],
-            min_term_freq=min_term_freq,
-            min_doc_freq=min_doc_freq,
-        )
+        "bool", must=[mlt_query], filter={"exists": {"field": "resource_type"}}
     )
     response = search.execute()
     return LearningResource.objects.for_search_serialization().filter(
         id__in=[
-            resource.id
-            for resource in response.hits
-            if resource.id != value_doc["id"] and resource.published
-        ]
+            resource.id for resource in response.hits if resource.id != value_doc["id"]
+        ],
+        published=True,
     )
