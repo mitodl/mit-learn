@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.27.0
+--------------
+
+- Select random hero image index on server (#1859)
+- returnning all resource types for similar (#1849)
+
 Version 0.26.0 (Released November 26, 2024)
 --------------
 
