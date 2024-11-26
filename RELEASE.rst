@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.26.0
+Version 0.26.0 (Released November 26, 2024)
 --------------
 
 - Refactor date/time parsing for mitpe events (#1840)
