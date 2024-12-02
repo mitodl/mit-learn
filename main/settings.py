@@ -805,3 +805,4 @@ QDRANT_DENSE_MODEL = get_string(
 QDRANT_SPARSE_MODEL = get_string(
     name="QDRANT_SPARSE_MODEL", default="prithivida/Splade_PP_en_v1"
 )
+OPENAI_API_KEY = get_string(name="OPENAI_API_KEY", default=None)
