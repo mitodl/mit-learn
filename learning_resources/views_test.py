@@ -1114,7 +1114,7 @@ def test_vector_similar_resources_endpoint_does_not_return_self(mocker, client):
 
     resource_ids = [learning_resource.id for learning_resource in resources]
     mocker.patch(
-        "learning_resources_search.indexing_api.qdrant_client",
+        "vector_search.utils.qdrant_client",
         return_value=QdrantClient(
             host="hidden_port_addr.com",
             port=None,
@@ -1161,7 +1161,7 @@ def test_vector_similar_resources_endpoint_only_returns_published(mocker, client
         return_value=response_hits,
     )
     mocker.patch(
-        "learning_resources_search.indexing_api.qdrant_client",
+        "vector_search.utils.qdrant_client",
         return_value=QdrantClient(
             host="hidden_port_addr.com",
             port=None,

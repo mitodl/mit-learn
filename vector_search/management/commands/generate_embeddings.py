@@ -3,11 +3,11 @@
 from django.core.management.base import BaseCommand, CommandError
 
 from learning_resources_search.constants import LEARNING_RESOURCE_TYPES
-from learning_resources_search.indexing_api import (
+from main.utils import now_in_utc
+from vector_search.tasks import start_embed_resources
+from vector_search.utils import (
     create_qdrand_collections,
 )
-from learning_resources_search.tasks import start_embed_resources
-from main.utils import now_in_utc
 
 
 class Command(BaseCommand):
