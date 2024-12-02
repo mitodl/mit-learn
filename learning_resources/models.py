@@ -522,7 +522,7 @@ class LearningResource(TimestampedModel):
 
     @cached_property
     def podcasts(self) -> list["LearningResourceRelationship"]:
-        """Return a list of podcast episodes that the resource is in"""
+        """Return a list of podcasts that the resource is in"""
         return getattr(
             self,
             "_podcasts",
