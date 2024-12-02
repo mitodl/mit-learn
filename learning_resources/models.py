@@ -374,9 +374,9 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
                 Prefetch(
                     "parents",
                     queryset=LearningResourceRelationship.objects.filter(
-                        relation_type=LearningResourceRelationTypes.PODCAST_EPISODES.value
+                        relation_type=LearningResourceRelationTypes.PODCAST_EPISODES.value,
                     ),
-                    to_attr="podcasts",
+                    to_attr="_podcasts",
                 ),
                 Prefetch(
                     "user_lists",
@@ -517,6 +517,17 @@ class LearningResource(TimestampedModel):
             "_learning_path_parents",
             self.parents.filter(
                 relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS
+            ),
+        )
+
+    @cached_property
+    def podcasts(self) -> list["LearningResourceRelationship"]:
+        """Return a list of podcast episodes that the resource is in"""
+        return getattr(
+            self,
+            "_podcasts",
+            self.parents.filter(
+                relation_type=LearningResourceRelationTypes.PODCAST_EPISODES.value,
             ),
         )
 
