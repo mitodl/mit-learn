@@ -9,9 +9,9 @@ from math import ceil
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from qdrant_client import QdrantClient, models
 from elasticsearch.exceptions import ConflictError, NotFoundError
 from elasticsearch.helpers import BulkIndexError, bulk
+from qdrant_client import QdrantClient, models
 
 from learning_resources.models import ContentFile, LearningResourceRun
 from learning_resources_search.connection import (
@@ -236,10 +236,6 @@ def make_elser_pipeline():
                             "input_field": "description",
                             "output_field": "description_embedding",
                         },
-                        {
-                            "input_field": "full_description",
-                            "output_field": "full_description_embedding",
-                        },
                         {"input_field": "title", "output_field": "title_embedding"},
                     ],
                 }
@@ -345,7 +341,6 @@ def clear_and_create_index(*, index_name=None, skip_mapping=False, object_type=N
         mapping = MAPPING[object_type]
         mapping["description_embedding"] = {"type": "sparse_vector"}
         mapping["title_embedding"] = {"type": "sparse_vector"}
-        mapping["full_description_embedding"] = {"type": "sparse_vector"}
 
         index_create_data["mappings"] = {"properties": mapping}
     # from https://www.elastic.co/guide/en/elasticsearch/guide/current/asciifolding-token-filter.html
