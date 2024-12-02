@@ -35,7 +35,7 @@ const DifferingRunHeader = styled.div({
   display: "flex",
   alignSelf: "stretch",
   alignItems: "center",
-  gap: "16px",
+  gap: "8px",
   padding: "12px",
   color: theme.custom.colors.darkGray2,
   backgroundColor: theme.custom.colors.lightGray1,
