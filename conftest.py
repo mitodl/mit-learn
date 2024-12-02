@@ -11,7 +11,7 @@ from main.exceptions import DoNotUseRequestException
 
 
 @pytest.fixture(autouse=True)
-def prevent_requests(mocker, request):  # noqa: PT004
+def prevent_requests(mocker, request):
     """Patch requests to error on request by default"""
     if "mocked_responses" in request.fixturenames:
         return
