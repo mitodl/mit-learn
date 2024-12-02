@@ -13,7 +13,6 @@ export async function generateMetadata({
     [key: string]: string | string[] | undefined
   }>
 }): Promise<Metadata> {
-  console.log(">>>>>>..SLOT", await params)
   return await getMetadataAsync({
     title: "Learn with MIT",
     searchParams: params,
@@ -25,14 +24,12 @@ const Page: React.FC = async ({
 }: {
   params?: Promise<Record<string, never>>
 }) => {
-  console.log("PREFETCHING DRAWER")
   const { resourceId } = await params!
 
   const { dehydratedState } = await prefetch([
     learningResources.detail(Number(resourceId)),
   ])
 
-  console.log("dehydratedState", dehydratedState)
   return (
     <Hydrate state={dehydratedState}>
       <LearningResourceDrawer />
