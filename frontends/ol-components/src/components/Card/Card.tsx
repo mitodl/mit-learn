@@ -109,7 +109,7 @@ const Title = styled(Linkable, titleOpts)<{ lines?: number; size?: Size }>`
   text-overflow: ellipsis;
   height: ${({ lines, size }) => {
     const lineHeightPx = size === "small" ? 18 : 20
-    lines = lines ?? (size === "small" ? 2 : 3)
+    lines = 3
     return theme.typography.pxToRem(lines * lineHeightPx)
   }};
   overflow: hidden;
@@ -120,14 +120,16 @@ const Title = styled(Linkable, titleOpts)<{ lines?: number; size?: Size }>`
       ? { ...theme.typography.subtitle2 }
       : { ...theme.typography.subtitle1 }}
 
-  ${({ lines, size }) => {
-    lines = lines ?? (size === "small" ? 2 : 3)
+  ${({ lines }) => {
+    lines = 3
     return `
       @supports (-webkit-line-clamp: ${lines}) {
         white-space: initial;
         display: -webkit-box;
-        -webkit-line-clamp: ${lines};
         -webkit-box-orient: vertical;
+        div {
+          -webkit-line-clamp: ${lines};
+        }
       }`
   }}
 `
