@@ -357,11 +357,7 @@ class PodcastEpisodeSerializer(serializers.ModelSerializer):
 
     def get_podcasts(self, instance) -> list[str]:
         """Get the podcast id(s) the episode belongs to"""
-        return list(
-            instance.learning_resource.parents.filter(
-                relation_type=constants.LearningResourceRelationTypes.PODCAST_EPISODES.value
-            ).values_list("parent__id", flat=True)
-        )
+        return [podcast.parent_id for podcast in instance.learning_resource.podcasts]
 
     class Meta:
         model = models.PodcastEpisode

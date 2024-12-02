@@ -372,6 +372,13 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
                     to_attr="_learning_path_parents",
                 ),
                 Prefetch(
+                    "parents",
+                    queryset=LearningResourceRelationship.objects.filter(
+                        relation_type=LearningResourceRelationTypes.PODCAST_EPISODES.value
+                    ),
+                    to_attr="podcasts",
+                ),
+                Prefetch(
                     "user_lists",
                     queryset=UserListRelationship.objects.filter(parent__author=user)
                     if user is not None and user.is_authenticated
