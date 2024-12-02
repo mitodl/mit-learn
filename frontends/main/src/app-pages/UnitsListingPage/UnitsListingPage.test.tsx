@@ -2,71 +2,44 @@ import React from "react"
 import { renderWithProviders, screen, waitFor, within } from "@/test-utils"
 import UnitsListingPage from "./UnitsListingPage"
 import { factories, setMockResponse, urls } from "api/test-utils"
-import { ChannelTypeEnum } from "api/v0"
-import type { UnitChannel } from "api/v0"
 import { assertHeadings } from "ol-test-utilities"
 
-describe("UnitListingPage", () => {
+describe("DepartmentListingPage", () => {
   const setupApis = () => {
-    const make = factories.channels
-    const academicUnit1 = make.channel({
-      channel_type: ChannelTypeEnum.Unit,
-      name: "academicUnit1",
-      title: "Academic Unit 1",
-      unit_detail: {
-        unit: {
-          value_prop: "Academic Unit 1 value prop",
-          professional: false,
-        },
-      },
+    const make = factories.learningResources
+    const academicUnit1 = make.offeror({
+      code: "academicUnit1",
+      name: "Academic Unit 1",
+      value_prop: "Academic Unit 1 value prop",
+      professional: false,
     })
-    const academicUnit2 = make.channel({
-      channel_type: ChannelTypeEnum.Unit,
-      name: "academicUnit2",
-      title: "Academic Unit 2",
-      unit_detail: {
-        unit: {
-          value_prop: "Academic Unit 2 value prop",
-          professional: false,
-        },
-      },
+    const academicUnit2 = make.offeror({
+      code: "academicUnit2",
+      name: "Academic Unit 2",
+      value_prop: "Academic Unit 2 value prop",
+      professional: false,
     })
-    const academicUnit3 = make.channel({
-      channel_type: ChannelTypeEnum.Unit,
-      name: "academicUnit3",
-      title: "Academic Unit 3",
-      unit_detail: {
-        unit: {
-          value_prop: "Academic Unit 3 value prop",
-          professional: false,
-        },
-      },
+    const academicUnit3 = make.offeror({
+      code: "academicUnit3",
+      name: "Academic Unit 3",
+      value_prop: "Academic Unit 3 value prop",
+      professional: false,
     })
 
-    const professionalUnit1 = make.channel({
-      channel_type: ChannelTypeEnum.Unit,
-      name: "professionalUnit1",
-      title: "Professional Unit 1",
-      unit_detail: {
-        unit: {
-          value_prop: "Professional Unit 1 value prop",
-          professional: true,
-        },
-      },
+    const professionalUnit1 = make.offeror({
+      code: "professionalUnit1",
+      name: "Professional Unit 1",
+      value_prop: "Professional Unit 1 value prop",
+      professional: true,
     })
-    const professionalUnit2 = make.channel({
-      channel_type: ChannelTypeEnum.Unit,
-      name: "professionalUnit2",
-      title: "Professional Unit 2",
-      unit_detail: {
-        unit: {
-          value_prop: "Professional Unit 2 value prop",
-          professional: true,
-        },
-      },
+    const professionalUnit2 = make.offeror({
+      code: "professionalUnit2",
+      name: "Professional Unit 2",
+      value_prop: "Professional Unit 2 value prop",
+      professional: true,
     })
 
-    const unitChannels = [
+    const units = [
       academicUnit1,
       academicUnit2,
       academicUnit3,
@@ -90,23 +63,29 @@ describe("UnitListingPage", () => {
 
     setMockResponse.get(
       urls.channels.counts("unit"),
-      unitChannels.map((channel) => {
+      units.map((unit) => {
         return {
-          name: channel.name,
+          name: unit.code,
           counts: {
-            courses: courseCounts[channel.name],
-            programs: programCounts[channel.name],
+            courses: courseCounts[unit.code],
+            programs: programCounts[unit.code],
           },
         }
       }),
     )
-    setMockResponse.get(urls.channels.list({ channel_type: "unit" }), {
-      count: unitChannels.length,
-      results: unitChannels,
+    setMockResponse.get(urls.offerors.list(), {
+      count: units.length,
+      results: units,
+    })
+
+    units.forEach((unit) => {
+      setMockResponse.get(urls.channels.details("unit", unit.code), {
+        channel_url: `${window.location.origin}/units/${unit.code}`,
+      })
     })
 
     return {
-      unitChannels,
+      units,
       courseCounts,
       programCounts,
     }
@@ -119,7 +98,7 @@ describe("UnitListingPage", () => {
   })
 
   it("Shows unit properties within the proper section", async () => {
-    const { unitChannels, courseCounts, programCounts } = setupApis()
+    const { units, courseCounts, programCounts } = setupApis()
 
     renderWithProviders(<UnitsListingPage />)
 
@@ -137,15 +116,11 @@ describe("UnitListingPage", () => {
       return links
     })
 
-    unitChannels.forEach((channel) => {
-      const { unit } = (channel as UnitChannel).unit_detail
+    units.forEach((unit) => {
       const section = unit.professional ? professionalSection : academicSection
       const card = within(section).getByTestId(`unit-card-${unit.code}`)
       const link = within(card).getByRole("link")
-      expect(link).toHaveAttribute(
-        "href",
-        new URL(channel.channel_url!).pathname,
-      )
+      expect(link).toHaveAttribute("href", `/units/${unit.code}`)
 
       const courseCount = courseCounts[unit.code]
       const programCount = programCounts[unit.code]

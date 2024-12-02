@@ -2410,7 +2410,7 @@ export interface LearningResourceTopic {
   channel_url: string | null
 }
 /**
- *
+ * Response serializer for vector based search
  * @export
  * @interface LearningResourcesVectorSearchResponse
  */
