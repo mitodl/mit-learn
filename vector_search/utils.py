@@ -21,6 +21,13 @@ def qdrant_client():
 
 
 def create_qdrand_collections(force_recreate):
+    """
+    Create or recreate QDrant collections
+
+    Args:
+        force_recreate (bool): Whether to recreate the collections
+        even if they already exist
+    """
     client = qdrant_client()
     resources_collection_name = f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources"
     content_files_collection_name = (
@@ -66,11 +73,26 @@ def create_qdrand_collections(force_recreate):
 
 
 def vector_point_id(readable_id):
+    """
+    Generate a consistent unique id for a learning resource
+
+    Args:
+        readable_id (str): Readable id of learning resource
+    Returns:
+        str:
+            A unique id (UUID5) for the learning resource
+    """
     return str(uuid.uuid5(uuid.NAMESPACE_DNS, readable_id))
 
 
 def embed_learning_resources(ids, resource_type):
-    # update embeddings
+    """
+    Embed learning resources
+
+    Args:
+        ids (list of int): Ids of learning resources to embed
+        resource_type (str): Type of learning resource to embed
+    """
     client = qdrant_client()
     resources_collection_name = f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources"
     content_files_collection_name = (
@@ -114,6 +136,18 @@ def vector_search(
     limit: int = 10,
     offset: int = 10,
 ):
+    """
+    Perform a vector search given a query string
+
+    Args:
+        query_string (str): Query string to search
+        limit (int): Max number of results to return
+        offset (int): Offset to start from
+    Returns:
+        dict:
+            Response dict containing "hits" with search results
+            and "total" with total count
+    """
     if query_string:
         client = qdrant_client()
 

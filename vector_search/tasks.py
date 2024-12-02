@@ -64,6 +64,13 @@ def generate_embeddings(ids, resource_type):
 
 @app.task(bind=True)
 def start_embed_resources(self, indexes, skip_content_files):
+    """
+    Celery task to embed learning resources
+
+    Args:
+        indexes (list of str): resource types to embed
+        skip_content_files (bool): whether to skip embedding content files
+    """
     index_tasks = []
     if not all([settings.QDRANT_HOST, settings.QDRANT_BASE_COLLECTION_NAME]):
         log.warning(

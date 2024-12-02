@@ -9,6 +9,10 @@ from learning_resources_search.serializers import (
 
 
 class LearningResourcesVectorSearchRequestSerializer(serializers.Serializer):
+    """
+    Request serializer for vector based search
+    """
+
     q = serializers.CharField(required=False, help_text="The search text")
     offset = serializers.IntegerField(
         required=False, help_text="The initial index from which to return the results"
@@ -19,6 +23,10 @@ class LearningResourcesVectorSearchRequestSerializer(serializers.Serializer):
 
 
 class LearningResourcesVectorSearchResponseSerializer(SearchResponseSerializer):
+    """
+    Response serializer for vector based search
+    """
+
     @extend_schema_field(LearningResourceSerializer(many=True))
     def get_results(self, instance):
         return instance.get("hits", {})
