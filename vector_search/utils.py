@@ -20,6 +20,24 @@ def qdrant_client():
     )
 
 
+def points_generator(
+    ids,
+    metadata,
+    encoded_docs,
+    vector_name,
+    ids_accumulator,
+):
+    if ids is None:
+        ids = iter(lambda: uuid.uuid4().hex, None)
+    if metadata is None:
+        metadata = iter(dict, None)
+    for idx, meta, vector in zip(ids, metadata, encoded_docs):
+        ids_accumulator.append(idx)
+        payload = meta
+        point_vector: dict[str, models.Vector] = {vector_name: vector}
+        yield models.PointStruct(id=idx, payload=payload, vector=point_vector)
+
+
 def create_qdrand_collections(force_recreate):
     """
     Create or recreate QDrant collections
