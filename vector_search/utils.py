@@ -25,14 +25,24 @@ def points_generator(
     metadata,
     encoded_docs,
     vector_name,
-    ids_accumulator,
 ):
+    """
+    Get a generator for embedding points to store in Qdrant
+
+    Args:
+        ids (list): list of unique point ids
+        metadata (list): list of metadata dictionaries
+        encoded_docs (list): list of vectorized documents
+        vector_name (str): name of the vector in qdrant
+    Returns:
+        generator:
+            A generator of PointStruct objects
+    """
     if ids is None:
         ids = iter(lambda: uuid.uuid4().hex, None)
     if metadata is None:
         metadata = iter(dict, None)
     for idx, meta, vector in zip(ids, metadata, encoded_docs):
-        ids_accumulator.append(idx)
         payload = meta
         point_vector: dict[str, models.Vector] = {vector_name: vector}
         yield models.PointStruct(id=idx, payload=payload, vector=point_vector)
