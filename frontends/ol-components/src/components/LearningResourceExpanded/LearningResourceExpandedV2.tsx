@@ -173,8 +173,11 @@ const Description = styled.p({
 const DescriptionCollapsed = styled(Description)({
   display: "-webkit-box",
   overflow: "hidden",
-  WebkitLineClamp: 5,
-  WebkitBoxOrient: "vertical",
+  height: `calc(${theme.typography.body2.lineHeight} * 5)`,
+  "@supports (-webkit-line-clamp: 5)": {
+    WebkitLineClamp: 5,
+    WebkitBoxOrient: "vertical",
+  },
 })
 
 const DescriptionExpanded = styled(Description)({
