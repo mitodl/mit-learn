@@ -19,14 +19,17 @@ export const metadata = {
 
 export default function RootLayout({
   children,
+  drawer,
 }: Readonly<{
   children: React.ReactNode
+  drawer: React.ReactNode
 }>) {
   return (
     <html lang="en">
       <body>
         <Providers>
           <MITLearnGlobalStyles />
+          {drawer}
           <PageWrapper>
             <Header />
             <PageWrapperInner>{children}</PageWrapperInner>

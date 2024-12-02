@@ -12,7 +12,15 @@ export const prefetch = async (
   queryClient = queryClient || new QueryClient()
 
   await Promise.all(
-    queries.map((query) => queryClient.prefetchQuery(query as Query)),
+    queries.map(async (query) => {
+      try {
+        const result = await queryClient.prefetchQuery(query as Query)
+        return result
+      } catch (error) {
+        // TODO check if this actually throws
+        console.error("Error prefetching query", query, error)
+      }
+    }),
   )
 
   return { dehydratedState: dehydrate(queryClient), queryClient }

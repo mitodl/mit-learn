@@ -119,7 +119,7 @@ const PAPER_PROPS: RoutedDrawerProps["PaperProps"] = {
   },
 }
 
-const LearningResourceDrawerV1 = () => {
+const LearningResourceDrawerV1 = ({ resourceId }: { resourceId: number }) => {
   return (
     <Suspense>
       <RoutedDrawer
@@ -127,9 +127,7 @@ const LearningResourceDrawerV1 = () => {
         requiredParams={RESOURCE_DRAWER_PARAMS}
         PaperProps={PAPER_PROPS}
       >
-        {({ params }) => {
-          return <DrawerContent resourceId={Number(params.resource)} />
-        }}
+        <DrawerContent resourceId={resourceId} />
       </RoutedDrawer>
     </Suspense>
   )

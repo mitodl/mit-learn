@@ -18,35 +18,6 @@ import type {
   FeaturedApiFeaturedListRequest as FeaturedListParams,
 } from "../../generated/v1"
 
-const shuffle = ([...arr]) => {
-  let m = arr.length
-  while (m) {
-    const i = Math.floor(Math.random() * m--)
-    ;[arr[m], arr[i]] = [arr[i], arr[m]]
-  }
-  return arr
-}
-
-const randomizeResults = ([...results]) => {
-  const resultsByPosition: {
-    [position: string]: (LearningResource & { position?: string })[] | undefined
-  } = {}
-  const randomizedResults: LearningResource[] = []
-  results.forEach((result) => {
-    if (!resultsByPosition[result?.position]) {
-      resultsByPosition[result?.position] = []
-    }
-    resultsByPosition[result?.position ?? ""]?.push(result)
-  })
-  Object.keys(resultsByPosition)
-    .sort()
-    .forEach((position) => {
-      const shuffled = shuffle(resultsByPosition[position] ?? [])
-      randomizedResults.push(...shuffled)
-    })
-  return randomizedResults
-}
-
 /* List memberships were previously determined in the learningResourcesApi
  * from user_list_parents and learning_path_parents on each resource.
  * Resource endpoints are now treated as public so that they can be
@@ -87,7 +58,7 @@ const learningResources = createQueryKeys("learningResources", {
       const { data } = await featuredApi.featuredList(params)
       return {
         ...data,
-        results: randomizeResults(data.results.map(clearListMemberships)),
+        results: data.results.map(clearListMemberships),
       }
     },
   }),

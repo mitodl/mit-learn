@@ -8,18 +8,9 @@ import { testimonials } from "api/hooks/testimonials"
 import { NewsEventsListFeedTypeEnum, newsEvents } from "api/hooks/newsEvents"
 import { prefetch } from "api/ssr/prefetch"
 
-type SearchParams = {
-  [key: string]: string | string[] | undefined
-}
-
-export async function generateMetadata({
-  searchParams,
-}: {
-  searchParams: Promise<SearchParams>
-}): Promise<Metadata> {
+export async function generateMetadata(): Promise<Metadata> {
   return await getMetadataAsync({
     title: "Learn with MIT",
-    searchParams,
   })
 }
 

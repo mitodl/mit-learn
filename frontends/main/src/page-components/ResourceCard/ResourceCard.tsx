@@ -101,6 +101,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
       : list
         ? LearningResourceListCard
         : LearningResourceCard
+
   return (
     <>
       <CardComponent

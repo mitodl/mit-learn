@@ -1,38 +1,44 @@
 "use client"
 
 import React, { useCallback } from "react"
-import { RESOURCE_DRAWER_QUERY_PARAM } from "@/common/urls"
-import { ReadonlyURLSearchParams, useSearchParams } from "next/navigation"
+import { usePathname } from "next/navigation"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import LearningResourceDrawerV2 from "./LearningResourceDrawerV2"
 import LearningResourceDrawerV1 from "./LearningResourceDrawerV1"
 import { FeatureFlags } from "@/common/feature_flags"
 
-const LearningResourceDrawer = () => {
+const LearningResourceDrawer: React.FC = () => {
+  const pathname = usePathname()
+  const match = pathname.match(/\/resource\/(\d+)$/)
   const drawerV2 = useFeatureFlagEnabled(FeatureFlags.DrawerV2Enabled)
-  return drawerV2 ? <LearningResourceDrawerV2 /> : <LearningResourceDrawerV1 />
-}
-
-const getOpenDrawerSearchParams = (
-  current: ReadonlyURLSearchParams,
-  resourceId: number,
-) => {
-  const newSearchParams = new URLSearchParams(current)
-  newSearchParams.set(RESOURCE_DRAWER_QUERY_PARAM, resourceId.toString())
-  return newSearchParams
+  const resourceId = match?.[1]
+  if (!resourceId) return null
+  return drawerV2 ? (
+    <LearningResourceDrawerV2 resourceId={Number(resourceId)} />
+  ) : (
+    <LearningResourceDrawerV1 resourceId={Number(resourceId)} />
+  )
 }
 
 const useResourceDrawerHref = () => {
-  const searchParams = useSearchParams()
+  const pathname = usePathname()
 
   return useCallback(
     (resourceId: number) => {
-      const hash = typeof window !== "undefined" && window?.location.hash
-      return `?${getOpenDrawerSearchParams(searchParams, resourceId)}${hash || ""}`
+      let path = ""
+      const match = pathname.match(/(.+)\/resource\/(\d+)$/)
+      if (match) {
+        path = match[0]
+      } else {
+        path = pathname
+      }
+
+      return `${path}${path.endsWith("/") ? "" : "/"}resource/${resourceId}`
     },
-    [searchParams],
+    [pathname],
   )
 }
 
 export default LearningResourceDrawer
 export { useResourceDrawerHref }
+//

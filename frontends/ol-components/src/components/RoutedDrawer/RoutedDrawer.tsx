@@ -8,6 +8,8 @@ import {
   useSearchParams,
   useRouter,
   ReadonlyURLSearchParams,
+  useParams,
+  usePathname,
 } from "next/navigation"
 import { useToggle } from "ol-utilities"
 
@@ -25,91 +27,48 @@ type RoutedDrawerProps<K extends string = string, R extends K = K> = {
   requiredParams: readonly R[]
   onView?: () => void
   hideCloseButton?: boolean
-  children: (childProps: {
-    params: ChildParams<K, R>
-    closeDrawer: () => void
-  }) => React.ReactNode
+  children: React.ReactNode
+  anchor: string
 } & Omit<DrawerProps, "open" | "onClose" | "children">
 
 const RoutedDrawer = <K extends string, R extends K = K>(
   props: RoutedDrawerProps<K, R>,
 ) => {
   const { requiredParams, children, onView, hideCloseButton, ...others } = props
-  const { params = requiredParams } = props
+  const params = useParams<{ resourceId: string }>()
 
-  const [open, setOpen] = useToggle(false)
-  const searchParams = useSearchParams()
-  const router = useRouter()
-
-  const childParams = useMemo(() => {
-    return Object.fromEntries(
-      params.map((name) => [name, searchParams.get(name)] as const),
-    ) as Record<K, string | null>
-  }, [searchParams, params])
-
-  /**
-   * `requiredArePresnet` and `open` are usually the same, except when the
-   * drawer is in the process of closing.
-   *  - `open` changes to false when the drawer begins closing
-   *  - URL Params are updated when the drawer finishes closing, changing the
-   *   value of `requiredArePresent`
-   *
-   * This means that if content within the drawer depends on the search params,
-   * then the content will remain visible during the closing animation.
-   */
-  const requiredArePresent = requiredParams.every(
-    (name) => childParams[name] !== null,
-  )
+  const [open, setOpen] = useToggle(!!params.resourceId)
+  const pathname = usePathname()
 
   useEffect(() => {
-    if (requiredArePresent) {
-      setOpen(true)
-    } else {
-      setOpen(false)
+    if (!open) {
+      setOpen(!!pathname.match(/resource\/\d+$/))
     }
-  }, [requiredArePresent, setOpen, requiredParams])
+  }, [pathname, setOpen])
 
-  const removeUrlParams = useCallback(() => {
-    const getNewParams = (current: ReadonlyURLSearchParams) => {
-      const newSearchParams = new URLSearchParams(current)
-      params.forEach((param) => {
-        newSearchParams.delete(param)
-      })
+  const removeUrlParams = () => {
+    window.history.pushState(null, "", pathname.replace(/resource\/\d+$/, ""))
+  }
 
-      return newSearchParams
-    }
-    const newParams = getNewParams(searchParams)
-
-    const hash = window?.location.hash
-
-    // Note that { scroll: true } and { scroll: false } both remove the hash fragment
-    if (hash) {
-      router.push(`?${newParams}${hash}`)
-    } else {
-      // Prevent scroll to top of page
-      router.push(`?${newParams}`, { scroll: false })
-    }
-  }, [router, searchParams, params])
+  const onDrawerClose = () => {
+    setOpen(false)
+  }
 
   return (
     <Drawer
       open={open}
       onTransitionExited={removeUrlParams}
-      onClose={setOpen.off}
+      onClose={onDrawerClose}
       {...others}
     >
       {
         <>
-          {requiredArePresent &&
-            children?.({
-              params: childParams as Record<K, string>,
-              closeDrawer: setOpen.off,
-            })}
+          {open && children}
           {!hideCloseButton && (
             <CloseButton
               variant="text"
               size="medium"
-              onClick={setOpen.off}
+              onClick={onDrawerClose}
               aria-label="Close"
             >
               <RiCloseLargeLine />
