@@ -34,15 +34,18 @@ const ChatPage = () => {
   )
   return (
     <StyledContainer>
-      {recommendationBotEnabled ? (
-        <StyledChat
-          key={"agent"}
-          send={sends["agent"]}
-          conversationOptions={CONVERSATION_OPTTIONS}
-        />
-      ) : (
-        <></>
-      )}
+      {
+        // eslint-disable-next-line no-constant-condition
+        recommendationBotEnabled || true ? (
+          <StyledChat
+            key={"agent"}
+            send={sends["agent"]}
+            conversationOptions={CONVERSATION_OPTTIONS}
+          />
+        ) : (
+          <></>
+        )
+      }
     </StyledContainer>
   )
 }

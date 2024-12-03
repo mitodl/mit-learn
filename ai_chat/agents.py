@@ -162,6 +162,14 @@ If a user asks for resources "offered by" or "from" an institution,
 you should include the offered_by parameter based on the following
 dictionary: {OfferedBy.as_dict()}  DO NOT USE THE offered_by FILTER OTHERWISE.
 
+NEVER INCLUDE WORDS SUCH AS "advanced" or "introductory" IN THE "q" QUERY PARAMETER!
+ONLY INCLUDE SUCH WORDS IN THE "level" PARAMETER!
+If the user asks for introductory, intermediate, or advanced courses,
+use the level filter. DO NOT USE THE level FILTER OTHERWISE.
+
+Do not use the certificate filter unless the user specifically asks for
+resources that do or do not offer certificates.
+
 If the user mentions courses, programs, videos, or podcasts in particular, filter
 the search by resource_type.  DO NOT USE THE resource_type FILTER OTHERWISE.
 You MUST combine multiple resource types in one request like this:
@@ -172,15 +180,12 @@ user message. If the user asks for podcasts, filter by both "podcast" and
 If the user asks what other courses are taught by a particular instructor,
 search the catalog for courses taught by that instructor.
 
-If the user asks for introductory, intermediate, or advanced courses,
-use the level filter. DO NOT USE THE level FILTER OTHERWISE.
-
-Do not use the certificate filter unless the user specifically asks for
-resources that do or do not offer certificates.
-
 Always explain your reasoning for recommending specific resources.
 
-Here are examples of recommended query parameters for given questions:
+Here are examples of recommended query parameters for user questions:
+
+User: "I am interested in learning advanced AI techniques"
+Search parameters: {{"q": "AI techniques", "level": "advanced"}}
 
 User: "I am curious about AI applications for business"
 Search parameters: {{"q": "AI business", "limit": 10}}
@@ -189,10 +194,8 @@ User: "I want free basic courses about climate change"
 Search parameters: {{"q": "climate change", "free": true, "resource_type": ["course"],
 "level": "introductory", "limit": 10}}
 
-User: Do you have any podcasts about machine learning?
-Search parameters: {{"q": "machine learning", "resource_type":
-["podcast", "podcast_episode"] "limit": 10}}
-
+User: "I want to learn some advanced mathematics"
+Search parameters: {{"q": "mathematics", "level": "advanced"}}
     """
 
     class SearchToolSchema(pydantic.BaseModel):
@@ -207,22 +210,34 @@ Search parameters: {{"q": "machine learning", "resource_type":
             offered_by: Filter by institution offering the resource
         """
 
-        q: str = Field(description="Search query to find learning resources")
+        q: str = Field(
+            description=(
+                "Query to find resources. Never use level terms like 'advanced' here"
+            )
+        )
         resource_type: Optional[
             list[enum_zip("resource_type", LearningResourceType)]
-        ] = Field(default=None, description="Type of learning resource to search for")
+        ] = Field(
+            default=None,
+            description="Type of resource to search for: course, program, video, etc",
+        )
         level: Optional[list[enum_zip("level", LevelType)]] = Field(
-            default=None, description="Difficulty level of the resource"
+            default=None,
+            description="Difficulty level of the resource: introductory, advanced, etc",
         )
         free: Optional[bool] = Field(
-            default=None, description="Whether the resource is free to access"
+            default=None,
+            description="Whether the resource is free to access, true|false",
         )
         certificate: Optional[bool] = Field(
             default=None,
-            description="Whether the resource offers a certificate upon completion",
+            description=(
+                "Whether the resource offers a certificate upon completion, true|false"
+            ),
         )
         offered_by: Optional[enum_zip("offered_by", OfferedBy)] = Field(
-            default=None, description="Institution that offers the resource"
+            default=None,
+            description="Institution that offers the resource: ocw, mitxonline, etc",
         )
 
     model_config = {
