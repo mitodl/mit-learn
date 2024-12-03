@@ -795,12 +795,9 @@ QDRANT_BASE_COLLECTION_NAME = get_string(
     name="QDRANT_COLLECTION_NAME", default="resource_embeddings"
 )
 
-QDRANT_SEARCH_VECTOR_NAME = get_string(
-    name="QDRANT_SEARCH_VECTOR_NAME", default="fast-bge-small-en"
-)
 
 QDRANT_DENSE_MODEL = get_string(
-    name="QDRANT_DENSE_MODEL", default="sentence-transformers/all-MiniLM-L6-v2"
+    name="QDRANT_DENSE_MODEL", default="BAAI/bge-small-en-v1.5"
 )
 QDRANT_SPARSE_MODEL = get_string(
     name="QDRANT_SPARSE_MODEL", default="prithivida/Splade_PP_en_v1"

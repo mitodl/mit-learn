@@ -3,10 +3,11 @@ from abc import ABC, abstractmethod
 
 class BaseEncoder(ABC):
     def model_short_name(self):
-        split_model_name = self.model_name.split("/")[1]
+        split_model_name = self.model_name.split("/")
+        model_name = self.model_name
         if len(split_model_name) > 1:
-            return split_model_name[1]
-        return split_model_name
+            model_name = split_model_name[1]
+        return model_name
 
     @abstractmethod
     def encode(self, text):
