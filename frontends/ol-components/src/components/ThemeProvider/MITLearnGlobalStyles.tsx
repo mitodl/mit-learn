@@ -56,30 +56,13 @@ const pageCss = css`
   }
 `
 
-const formCss = css`
-  form,
-  .form {
-    select {
-      background: #f8f8f8;
-      border: 1px solid #bbb;
-      font-size: 15px;
-      color: ${theme.typography.body1.color};
-      height: 39px;
-
-      /* If you add too much padding here, the options won't show in IE */
-      padding: 8px 20px;
-      width: 100%;
-    }
-  }
-`
-
 const MITLearnGlobalStyles: React.FC = () => {
   /**
    * Preload the font just in case emotion doesn't put the import near top of
    * HTML.
    */
   preload(ADOBE_FONT_URL, { as: "style", fetchPriority: "high" })
-  return <Global styles={[pageCss, formCss]}></Global>
+  return <Global styles={[pageCss]}></Global>
 }
 
 export { MITLearnGlobalStyles }
