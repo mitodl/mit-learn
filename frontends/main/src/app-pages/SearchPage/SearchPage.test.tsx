@@ -13,7 +13,7 @@ import type {
   PaginatedLearningResourceOfferorDetailList,
 } from "api"
 import invariant from "tiny-invariant"
-import { Permissions } from "@/common/permissions"
+import { Permission } from "api/hooks/user"
 import { assertHeadings, ControlledPromise } from "ol-test-utilities"
 
 const DEFAULT_SEARCH_RESPONSE: LearningResourcesSearchResponse = {
@@ -35,7 +35,7 @@ const setMockApiResponses = ({
   offerors?: PaginatedLearningResourceOfferorDetailList
 } = {}) => {
   setMockResponse.get(urls.userMe.get(), {
-    [Permissions.Authenticated]: false,
+    [Permission.Authenticated]: false,
   })
 
   setMockResponse.get(expect.stringContaining(urls.search.resources()), {

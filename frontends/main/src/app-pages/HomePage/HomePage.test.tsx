@@ -83,7 +83,7 @@ const setupAPIs = () => {
 describe("Home Page Hero", () => {
   test("Submitting search goes to search page", async () => {
     setupAPIs()
-    const { location } = renderWithProviders(<HomePage />)
+    const { location } = renderWithProviders(<HomePage heroImageIndex={1} />)
     const searchbox = screen.getByRole("textbox", { name: /search for/i })
     await user.click(searchbox)
     await user.paste("physics")
@@ -101,7 +101,7 @@ describe("Home Page Hero", () => {
       results: [],
     })
     setupAPIs()
-    renderWithProviders(<HomePage />)
+    renderWithProviders(<HomePage heroImageIndex={1} />)
     const expected = [
       { label: "Topic", href: "/topics" },
       { label: "Recently Added", href: "/search?sortby=new" },
@@ -128,7 +128,7 @@ describe("Home Page Browse by Topic", () => {
     const response = learningResources.topics({ count: 3 })
     setMockResponse.get(urls.topics.list({ is_toplevel: true }), response)
 
-    renderWithProviders(<HomePage />)
+    renderWithProviders(<HomePage heroImageIndex={1} />)
 
     await waitFor(() => {
       const section = screen
@@ -258,7 +258,7 @@ describe("Home Page personalize section", () => {
   test("Links to dashboard when authenticated", async () => {
     setupAPIs()
 
-    renderWithProviders(<HomePage />)
+    renderWithProviders(<HomePage heroImageIndex={1} />)
     const personalize = (
       await screen.findByRole("heading", {
         name: "Continue Your Journey",
@@ -273,7 +273,7 @@ describe("Home Page personalize section", () => {
     setupAPIs()
 
     setMockResponse.get(urls.userMe.get(), {}, { code: 403 })
-    renderWithProviders(<HomePage />)
+    renderWithProviders(<HomePage heroImageIndex={1} />)
     const personalize = (
       await screen.findByRole("heading", {
         name: "Personalize Your Journey",
@@ -294,7 +294,7 @@ describe("Home Page Testimonials", () => {
   test("Displays testimonials carousel", async () => {
     setupAPIs()
 
-    renderWithProviders(<HomePage />)
+    renderWithProviders(<HomePage heroImageIndex={1} />)
 
     await waitFor(() => {
       screen.getAllByText(/testable title/i)
@@ -306,7 +306,7 @@ describe("Home Page Carousel", () => {
   test("Tabbed Carousel sanity check", async () => {
     setupAPIs()
 
-    renderWithProviders(<HomePage />)
+    renderWithProviders(<HomePage heroImageIndex={1} />)
 
     await screen.findAllByRole("tablist").then(([featured, media]) => {
       within(featured).getByRole("tab", { name: "All" })
@@ -325,7 +325,7 @@ describe("Home Page Carousel", () => {
 test("Headings", async () => {
   setupAPIs()
 
-  renderWithProviders(<HomePage />)
+  renderWithProviders(<HomePage heroImageIndex={1} />)
   await waitFor(() => {
     assertHeadings([
       { level: 1, name: "Learn with MIT" },

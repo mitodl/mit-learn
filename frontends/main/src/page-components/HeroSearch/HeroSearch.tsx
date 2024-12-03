@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useCallback, useEffect } from "react"
+import React, { useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import {
   Typography,
@@ -192,29 +192,7 @@ const BoldLink = styled(Link)(({ theme }) => ({
   ...theme.typography.subtitle1,
 }))
 
-const HeroImage: React.FC = () => {
-  const [imageIndex, setImageIndex] = useState<number>()
-
-  useEffect(() => {
-    /* We need to set the random image index once in useEffece to prevent
-     * hydration mismatch between client and server
-     */
-    const index = Math.floor(Math.random() * 5) + 1
-    setImageIndex(index)
-  }, [])
-
-  if (!imageIndex) {
-    return <ImageContainer />
-  }
-
-  return (
-    <ImageContainer>
-      <Image alt="" src={`/images/hero/hero-${imageIndex}.png`} fill priority />
-    </ImageContainer>
-  )
-}
-
-const HeroSearch: React.FC = () => {
+const HeroSearch: React.FC<{ imageIndex: number }> = ({ imageIndex }) => {
   const [searchText, setSearchText] = useState("")
   const onSearchClear = useCallback(() => setSearchText(""), [])
   const router = useRouter()
@@ -281,7 +259,14 @@ const HeroSearch: React.FC = () => {
           </div>
         </ControlsContainer>
       </TitleAndControls>
-      <HeroImage />
+      <ImageContainer>
+        <Image
+          alt=""
+          src={`/images/hero/hero-${imageIndex}.png`}
+          fill
+          priority
+        />
+      </ImageContainer>
     </HeroWrapper>
   )
 }

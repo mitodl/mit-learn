@@ -64,8 +64,8 @@ def test_transform(mitpe_events_json_data):
         2024, 8, 15, 21, 0, 0, tzinfo=UTC
     )
     assert items[3]["detail"]["event_datetime"] == datetime(
-        2023, 5, 12, 4, 0, 0, tzinfo=UTC
+        2023, 5, 12, 16, 0, 0, tzinfo=UTC
     )
     assert items[3]["detail"]["event_end_datetime"] == datetime(
-        2023, 5, 12, 4, 0, 0, tzinfo=UTC
+        2023, 5, 12, 16, 0, 0, tzinfo=UTC
     )

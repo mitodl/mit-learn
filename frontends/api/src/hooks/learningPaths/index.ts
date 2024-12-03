@@ -14,7 +14,7 @@ import type {
 } from "../../generated/v1"
 import { learningPathsApi } from "../../clients"
 import learningPaths from "./keyFactory"
-import { useUserIsAuthenticated } from "api/hooks/user"
+import { useUserHasPermission, Permission } from "api/hooks/user"
 
 const useLearningPathsList = (
   params: ListRequest = {},
@@ -121,7 +121,8 @@ const useIsLearningPathMember = (resourceId?: number) => {
     select: (data) => {
       return !!data.find((relationship) => relationship.child === resourceId)
     },
-    enabled: useUserIsAuthenticated() && !!resourceId,
+    enabled:
+      useUserHasPermission(Permission.LearningPathEditor) && !!resourceId,
   })
 }
 
@@ -134,7 +135,8 @@ const useLearningPathMemberList = (resourceId?: number) => {
         .filter((relationship) => relationship.child === resourceId)
         .map((relationship) => relationship.parent.toString())
     },
-    enabled: useUserIsAuthenticated() && !!resourceId,
+    enabled:
+      useUserHasPermission(Permission.LearningPathEditor) && !!resourceId,
   })
 }
 
