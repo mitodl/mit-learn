@@ -1,6 +1,6 @@
 import type { NluxAiChatProps } from "ol-components"
 
-type ChatEndpoint = "assistant" | "agent"
+type ChatEndpoint = "agent"
 
 function getCookie(name: string) {
   const value = `; ${document.cookie}`
@@ -72,10 +72,6 @@ const makeSend =
   }
 
 const sends: Record<ChatEndpoint, NluxAiChatProps["send"]> = {
-  assistant: makeSend(
-    "assistant",
-    (content) => JSON.parse(content).ai_response,
-  ),
   agent: makeSend("agent"),
 }
 

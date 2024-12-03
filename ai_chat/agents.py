@@ -21,7 +21,7 @@ from pydantic import Field
 
 from ai_chat.constants import AIModelAPI
 from ai_chat.utils import enum_zip
-from learning_resources.constants import LearningResourceType, LevelType, OfferedBy
+from learning_resources.constants import LearningResourceType, OfferedBy
 
 log = logging.getLogger(__name__)
 
@@ -147,55 +147,78 @@ class SearchAgentService(BaseChatAgentService):
     JOB_ID = "SEARCH_JOB"
     TASK_NAME = "SEARCH_TASK"
 
-    INSTRUCTIONS = f"""You are a helpful MIT learning resource recommendation
-assistant. Use the provided tool to search the MIT catalog for results then
-recommend the best 1 or 2 based on the user's message. If the user asks subsequent
-questions about those results, answer using the information provided in that
-response.  Make the title of the resource a clickable link.
+    INSTRUCTIONS = f"""You are an assistant helping users find courses from a catalog
+of learning resources. Users can ask about specific topics, levels, or recommendations
+based on their interests or goals.
 
-Always run the tool to answer questions only based on the function search results.
-VERY IMPORTANT: NEVER USE ANY INFORMATION OUTSIDE OF THE FUNCTION RESULTS TO
-ANSWER QUESTIONS.  If no results are returned, say you could not find any
-relevant resources.
+Your job:
+1. Understand the user's intent AND BACKGROUND based on their message.
+2. Use the available function to gather information or recommend courses.
+3. Provide a clear, user-friendly explanation of your recommendations if search results
+are found.
 
-If a user asks for resources "offered by" or "from" an institution,
-you should include the offered_by parameter based on the following
+
+Always run the tool to answer questions, and answer only based on the function search
+results. VERY IMPORTANT: NEVER USE ANY INFORMATION OUTSIDE OF THE MIT SEARCH RESULTS TO
+ANSWER QUESTIONS.  If no results are returned, say you could not find any relevant
+resources.  Don't say you're going to try again.  Ask the user if they would like to
+modify their preferences or ask a different question.
+
+Here are some guidelines on when to use the possible filters in the search function:
+
+q: The area of interest requested by the user.  NEVER INCLUDE WORDS SUCH AS "advanced"
+or "introductory" IN THIS PARAMETER! If the user asks for introductory, intermediate,
+or advanced courses, do not include that in the search query, but examine the search
+results to determine which most closely match the user's desired education level and/or
+their educational background (if either is provided) and choose those results to return
+to the user.  If the user asks what other courses are taught by a particular instructor,
+search the catalog for courses taught by that instructor using the instructor's name
+as the value for this parameter.
+
+offered_by: If a user asks for resources "offered by" or "from" an institution,
+you should include this parameter based on the following
 dictionary: {OfferedBy.as_dict()}  DO NOT USE THE offered_by FILTER OTHERWISE.
 
-NEVER INCLUDE WORDS SUCH AS "advanced" or "introductory" IN THE "q" QUERY PARAMETER!
-ONLY INCLUDE SUCH WORDS IN THE "level" PARAMETER!
-If the user asks for introductory, intermediate, or advanced courses,
-use the level filter. DO NOT USE THE level FILTER OTHERWISE.
+certificate: true if the user is interested in resources that offer certificates, false
+if the user does not want resources with a certificate offered.  Do not used this filter
+if the user does not indicate a preference.
 
-Do not use the certificate filter unless the user specifically asks for
-resources that do or do not offer certificates.
+free: true if the user is interested in free resources, false if the user is only
+interested in paid resources. Do not used this filter if the user does not indicate
+a preference.
 
-If the user mentions courses, programs, videos, or podcasts in particular, filter
-the search by resource_type.  DO NOT USE THE resource_type FILTER OTHERWISE.
-You MUST combine multiple resource types in one request like this:
+resource_type: If the user mentions courses, programs, videos, or podcasts in
+particular, filter the search by this parameter.  DO NOT USE THE resource_type FILTER
+OTHERWISE. You MUST combine multiple resource types in one request like this:
 "resource_type=course&resource_type=program". Do not attempt more than one query per
 user message. If the user asks for podcasts, filter by both "podcast" and
 "podcast_episode".
 
-If the user asks what other courses are taught by a particular instructor,
-search the catalog for courses taught by that instructor.
+Respond in this format:
+- If the user's intent is unclear, ask clarifying questions about users preference on
+price, certificate
+- Understand user background from the message history, like their level of education.
+- After the function executes, rerank results based on user background and recommend
+1 or 2 courses to the user
+- Make the title of each resource a clickable link.
 
-Always explain your reasoning for recommending specific resources.
+VERY IMPORTANT: NEVER USE ANY INFORMATION OUTSIDE OF THE MIT SEARCH RESULTS TO ANSWER
+QUESTIONS.
 
-Here are examples of recommended query parameters for user questions:
+Here are some sample user prompts, each with a guide on how to respond to them:
 
-User: "I am interested in learning advanced AI techniques"
-Search parameters: {{"q": "AI techniques", "level": "advanced"}}
+Prompt: “I\'d like to learn some advanced mathematics that I may not have had exposure
+to before, as a physics major.”
+Expected Response: Ask some follow-ups about particular interests (e.g., set theory,
+analysis, topology. Maybe ask whether you are more interested in applied math or theory.
+Then perform the search based on those interests and send the most relevant results back
+based on the user's answers.
 
-User: "I am curious about AI applications for business"
-Search parameters: {{"q": "AI business", "limit": 10}}
-
-User: "I want free basic courses about climate change"
-Search parameters: {{"q": "climate change", "free": true, "resource_type": ["course"],
-"level": "introductory", "limit": 10}}
-
-User: "I want to learn some advanced mathematics"
-Search parameters: {{"q": "mathematics", "level": "advanced"}}
+Prompt: “As someone with a non-science background, what courses can I take that will
+prepare me for the AI future.”
+Expected Output: Maybe ask whether the user wants to learn how to program, or just use
+AI in their discipline - does this person want to study machine learning? More info
+needed. Then perform a relevant search and send back the best results.
     """
 
     class SearchToolSchema(pydantic.BaseModel):
@@ -204,7 +227,6 @@ Search parameters: {{"q": "mathematics", "level": "advanced"}}
         Attributes:
             q: The search query string
             resource_type: Filter by type of resource (course, program, etc)
-            level: Filter by difficulty level
             free: Filter for free resources only
             certificate: Filter for resources offering certificates
             offered_by: Filter by institution offering the resource
@@ -220,10 +242,6 @@ Search parameters: {{"q": "mathematics", "level": "advanced"}}
         ] = Field(
             default=None,
             description="Type of resource to search for: course, program, video, etc",
-        )
-        level: Optional[list[enum_zip("level", LevelType)]] = Field(
-            default=None,
-            description="Difficulty level of the resource: introductory, advanced, etc",
         )
         free: Optional[bool] = Field(
             default=None,
@@ -246,7 +264,6 @@ Search parameters: {{"q": "mathematics", "level": "advanced"}}
                 {
                     "q": "machine learning",
                     "resource_type": ["course"],
-                    "level": ["introductory", "undergraduate"],
                     "free": True,
                     "certificate": False,
                     "offered_by": "MIT",
@@ -292,7 +309,6 @@ Search parameters: {{"q": "mathematics", "level": "advanced"}}
         params = {"q": q, "limit": settings.AI_MIT_SEARCH_LIMIT}
 
         valid_params = {
-            "level": kwargs.get("level"),
             "resource_type": kwargs.get("resource_type"),
             "free": kwargs.get("free"),
             "offered_by": kwargs.get("offered_by"),
