@@ -1,19 +1,19 @@
 import React from "react"
 import { renderWithProviders, screen } from "../../test-utils"
 import RestrictedRoute from "./RestrictedRoute"
-import { Permissions } from "@/common/permissions"
+import { Permission } from "api/hooks/user"
 import { allowConsoleErrors } from "ol-test-utilities"
 
 test("Renders children if permission check satisfied", () => {
   const errors: unknown[] = []
 
   renderWithProviders(
-    <RestrictedRoute requires={Permissions.Authenticated}>
+    <RestrictedRoute requires={Permission.Authenticated}>
       Hello, world!
     </RestrictedRoute>,
 
     {
-      user: { [Permissions.Authenticated]: true },
+      user: { [Permission.Authenticated]: true },
     },
   )
 
@@ -21,11 +21,11 @@ test("Renders children if permission check satisfied", () => {
   expect(!errors.length).toBe(true)
 })
 
-test.each(Object.values(Permissions))(
+test.each(Object.values(Permission))(
   "Throws error if and only if lacking required permission",
   async (permission) => {
     // if a user is not authenticated they are redirected to login before an error is thrown
-    if (permission === Permissions.Authenticated) {
+    if (permission === Permission.Authenticated) {
       return
     }
     allowConsoleErrors()
