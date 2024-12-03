@@ -796,9 +796,7 @@ QDRANT_BASE_COLLECTION_NAME = get_string(
 )
 
 
-QDRANT_DENSE_MODEL = get_string(
-    name="QDRANT_DENSE_MODEL", default="BAAI/bge-small-en-v1.5"
-)
+QDRANT_DENSE_MODEL = get_string(name="QDRANT_DENSE_MODEL", default=None)
 QDRANT_SPARSE_MODEL = get_string(
     name="QDRANT_SPARSE_MODEL", default="prithivida/Splade_PP_en_v1"
 )
