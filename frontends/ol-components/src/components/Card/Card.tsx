@@ -125,8 +125,9 @@ const Title = styled(Linkable, titleOpts)<{ size?: Size }>`
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
 
-    > * {
-      -webkit-line-clamp: 3;
+    /* Any and all children of the card need to be clamped */
+    * {
+      -webkit-line-clamp: 3 !important;
     }
   }
 `
