@@ -124,6 +124,7 @@ const Title = styled(Linkable, titleOpts)<{ size?: Size }>`
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
+
     > * {
       -webkit-line-clamp: 3;
     }
