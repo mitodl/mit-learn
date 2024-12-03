@@ -18,7 +18,12 @@ import {
   RiMapPinLine,
   RiCalendarScheduleLine,
 } from "@remixicon/react"
-import { DeliveryEnum, LearningResource, ResourceTypeEnum } from "api"
+import {
+  CertificationTypeEnum,
+  DeliveryEnum,
+  LearningResource,
+  ResourceTypeEnum,
+} from "api"
 import {
   allRunsAreIdentical,
   formatDurationClockTime,
@@ -344,7 +349,9 @@ const INFO_ITEMS: InfoItemConfig = [
     label: "Certificate:",
     Icon: RiAwardLine,
     selector: (resource: LearningResource) => {
-      return resource.certification_type ? (
+      return (resource.certification_type && !resource.free) ||
+        (resource.free &&
+          resource.certification_type?.code === CertificationTypeEnum.None) ? (
         <InfoItemValue
           label={resource.certification_type.name}
           index={1}
