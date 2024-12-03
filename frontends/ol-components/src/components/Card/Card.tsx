@@ -123,7 +123,8 @@ const Title = styled(Linkable, titleOpts)<{ size?: Size }>`
     white-space: initial;
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    div {
+    -webkit-line-clamp: 3;
+    > * {
       -webkit-line-clamp: 3;
     }
   }
