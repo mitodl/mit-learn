@@ -28,5 +28,9 @@
   "resolutions": {
     "@types/react": "^18",
     "@types/react-dom": "^18"
+  },
+  "dependencies": {
+    "@nlux/react": "^2.17.1",
+    "@nlux/themes": "^2.17.1"
   }
 }

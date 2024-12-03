@@ -19,6 +19,62 @@
   ],
   "description": "mit-learn",
   "env": {
+    "AI_CACHE_TIMEOUT": {
+      "description": "Timeout for AI cache",
+      "required": false
+    },
+    "AI_MIT_SEARCH_URL": {
+      "description": "URL for AI search agent",
+      "required": false
+    },
+    "AI_MODEL": {
+      "description": "Model to use for AI functionality",
+      "required": false
+    },
+    "AI_MODEL_API": {
+      "description": "The API used for the AI model",
+      "required": false
+    },
+    "AI_PROXY_CLASS": {
+      "description": "Proxy class for AI functionality",
+      "required": false
+    },
+    "AI_PROXY_URL": {
+      "description": "URL for AI proxy",
+      "required": false
+    },
+    "AI_PROXY_AUTH_TOKEN": {
+      "description": "Auth token for AI proxy",
+      "required": false
+    },
+    "AI_MAX_PARALLEL_REQUESTS": {
+      "description": "Max parallel requests/user for AI functionality",
+      "required": false
+    },
+    "AI_TPM_LIMIT": {
+      "description": "Tokens/minute limit per user for AI functionality",
+      "required": false
+    },
+    "AI_RPM_LIMIT": {
+      "description": "Requests/minute limit per user for AI functionality",
+      "required": false
+    },
+    "AI_BUDGET_DURATION": {
+      "description": "Length of time before a user's budget usage resets",
+      "required": false
+    },
+    "AI_MAX_BUDGET": {
+      "description": "Max budget per user for AI functionality",
+      "required": false
+    },
+    "AI_ANON_LIMIT_MULTIPLIER": {
+      "description": "Multiplier for per-user limit/budget shared by anonymous users",
+      "required": false
+    },
+    "AI_MIT_SEARCH_LIMIT": {
+      "description": "Limit parameter value for AI search agent",
+      "required": false
+    },
     "ALLOWED_HOSTS": {
       "description": "",
       "required": false
