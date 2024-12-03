@@ -344,7 +344,7 @@ const INFO_ITEMS: InfoItemConfig = [
     label: "Certificate:",
     Icon: RiAwardLine,
     selector: (resource: LearningResource) => {
-      return resource.certification_type && !resource.free ? (
+      return resource.certification_type ? (
         <InfoItemValue
           label={resource.certification_type.name}
           index={1}
