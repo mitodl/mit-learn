@@ -6,6 +6,6 @@ from enum import Enum
 log = logging.getLogger(__name__)
 
 
-def enum_zip(label: str, names: tuple[str or int]) -> type[Enum]:
-    """Create a new enum from a tuple"""
-    return Enum(label, dict(zip(names, names)))
+def enum_zip(label: str, enum: Enum) -> type[Enum]:
+    """Create a new Enum from a tuple of Enum names"""
+    return Enum(label, dict(zip(enum.names(), enum.names())))

@@ -151,7 +151,7 @@ class SearchAgentService(BaseChatAgentService):
 assistant. Use the provided tool to search the MIT catalog for results then
 recommend the best 1 or 2 based on the user's message. If the user asks subsequent
 questions about those results, answer using the information provided in that
-response.
+response.  Make the title of the resource a clickable link.
 
 Always run the tool to answer questions only based on the function search results.
 VERY IMPORTANT: NEVER USE ANY INFORMATION OUTSIDE OF THE FUNCTION RESULTS TO
@@ -165,7 +165,8 @@ If the user mentions courses, programs, videos, or podcasts in particular, filte
 the search by resource_type.  DO NOT USE THE resource_type FILTER OTHERWISE.
 You MUST combine multiple resource types in one request like this:
 "resource_type=course&resource_type=program". Do not attempt more than one query per
-user message.
+user message. If the user asks for podcasts, filter by both "podcast" and
+"podcast_episode".
 
 If the user asks what other courses are taught by a particular instructor,
 search the catalog for courses taught by that instructor.
@@ -180,22 +181,49 @@ Always explain your reasoning for recommending specific resources.
     """
 
     class SearchToolSchema(pydantic.BaseModel):
-        """Schema for the search_courses function tool"""
+        """Schema for searching MIT learning resources.
 
-        q: str = Field(description="Search query")
+        Attributes:
+            q: The search query string
+            resource_type: Filter by type of resource (course, program, etc)
+            level: Filter by difficulty level
+            free: Filter for free resources only
+            certificate: Filter for resources offering certificates
+            offered_by: Filter by institution offering the resource
+        """
+
+        q: str = Field(description="Search query to find learning resources")
         resource_type: Optional[
-            list[enum_zip("resource_type", LearningResourceType.names())]
-        ] = Field(description="Resource type filter")
-        level: Optional[enum_zip("level", LevelType.names())] = Field(
-            description="Resource level filter"
+            list[enum_zip("resource_type", LearningResourceType)]
+        ] = Field(default=None, description="Type of learning resource to search for")
+        level: Optional[list[enum_zip("level", LevelType)]] = Field(
+            default=None, description="Difficulty level of the resource"
         )
-        free: Optional[bool] = Field(description="boolean filter, true if free")
+        free: Optional[bool] = Field(
+            default=None, description="Whether the resource is free to access"
+        )
         certificate: Optional[bool] = Field(
-            description="boolean filter, true if certificate offered"
+            default=None,
+            description="Whether the resource offers a certificate upon completion",
         )
-        offered_by: Optional[enum_zip("offered_by", OfferedBy.names())] = Field(
-            description="Which institution offers the resource"
+        offered_by: Optional[enum_zip("offered_by", OfferedBy)] = Field(
+            default=None, description="Institution that offers the resource"
         )
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "q": "machine learning",
+                    "resource_type": ["course"],
+                    "level": ["introductory", "undergraduate"],
+                    "free": True,
+                    "certificate": False,
+                    "offered_by": "MIT",
+                }
+            ]
+        }
+    }
 
     def __init__(  # noqa: PLR0913
         self,
