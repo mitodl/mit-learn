@@ -191,7 +191,7 @@ def vector_search(
         search_result = client.query_points(
             collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
             using=encoder.model_short_name(),
-            query=next(iter(encoder.encode(query_string)))[0],
+            query=encoder.encode(query_string),
             query_filter=models.Filter(
                 must=[
                     models.FieldCondition(

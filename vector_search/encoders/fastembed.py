@@ -9,7 +9,7 @@ class FastEmbedEncoder(BaseEncoder):
         self.model = TextEmbedding(model_name=model_name, lazy_load=True)
 
     def encode(self, text: str) -> list:
-        return self.model.embed([text])
+        return next(iter(self.model.embed([text])))[0]
 
     def encode_batch(self, texts: list[str]) -> list[list[float]]:
         return self.model.embed(texts)

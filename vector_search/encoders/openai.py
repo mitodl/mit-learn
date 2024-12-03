@@ -7,7 +7,7 @@ from vector_search.encoders.base import BaseEncoder
 class OpenAIEncoder(BaseEncoder):
     def __init__(self, model_name="text-embedding-3-small"):
         self.model_name = model_name
-        self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
+        self.client = OpenAI(api_key=settings.OPENAI_EMBEDDINGS_API_KEY)
         self.info = self.client.models.retrieve(self.model_name)
 
     def encode(self, text: str) -> list:
