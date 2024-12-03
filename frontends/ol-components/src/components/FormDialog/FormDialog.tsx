@@ -45,9 +45,6 @@ interface FormDialogProps {
    * form inputs but still semantically mark inputs as `<input required />`.
    */
   noValidate?: boolean
-  /**
-   * The form content. These will be direct children of MUI's [DialogContent](https://mui.com/material-ui/api/dialog-content/)
-   */
   children?: React.ReactNode
   actions?: DialogProps["actions"]
   /**

@@ -71,16 +71,6 @@ const formCss = css`
       width: 100%;
     }
   }
-
-  .MuiDialogContent-root {
-    .MuiFormControl-root:first-of-type {
-      margin-top: 0;
-    }
-
-    .MuiFormControl-root:last-child {
-      margin-bottom: 0;
-    }
-  }
 `
 
 const MITLearnGlobalStyles: React.FC = () => {
