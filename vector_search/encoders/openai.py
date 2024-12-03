@@ -1,12 +1,7 @@
 from django.conf import settings
 from openai import OpenAI
 
-from learning_resources_search.encoders.base import BaseEncoder
-
-OPENAI_MODEL_DIMENSIONS = {
-    "text-embedding-3-small": 1536,
-    "text-embedding-3-large": 3072,
-}
+from vector_search.encoders.base import BaseEncoder
 
 
 class OpenAIEncoder(BaseEncoder):
@@ -29,6 +24,3 @@ class OpenAIEncoder(BaseEncoder):
                 model=self.model_name, input=texts
             ).data
         ]
-
-    def dim(self):
-        return OPENAI_MODEL_DIMENSIONS.get(self.model_name, 0)

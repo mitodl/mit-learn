@@ -805,4 +805,7 @@ QDRANT_DENSE_MODEL = get_string(
 QDRANT_SPARSE_MODEL = get_string(
     name="QDRANT_SPARSE_MODEL", default="prithivida/Splade_PP_en_v1"
 )
+QDRANT_ENCODER = get_string(
+    name="QDRANT_ENCODER", default="vector_search.encoders.fastembed.FastEmbedEncoder"
+)
 OPENAI_API_KEY = get_string(name="OPENAI_API_KEY", default=None)

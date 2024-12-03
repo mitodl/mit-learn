@@ -9,6 +9,7 @@ from learning_resources_search.serializers import (
     serialize_bulk_content_files,
     serialize_bulk_learning_resources,
 )
+from vector_search.encoders.utils import dense_encoder
 
 
 def qdrant_client():
@@ -61,6 +62,7 @@ def create_qdrand_collections(force_recreate):
     content_files_collection_name = (
         f"{settings.QDRANT_BASE_COLLECTION_NAME}.content_files"
     )
+    encoder = dense_encoder()
     if (
         not client.collection_exists(collection_name=resources_collection_name)
         or force_recreate
@@ -69,7 +71,11 @@ def create_qdrand_collections(force_recreate):
         client.recreate_collection(
             collection_name=resources_collection_name,
             on_disk_payload=True,
-            vectors_config=client.get_fastembed_vector_params(),
+            vectors_config={
+                encoder.model_short_name(): models.VectorParams(
+                    size=encoder.dim(), distance=models.Distance.COSINE
+                )
+            },
             sparse_vectors_config=client.get_fastembed_sparse_vector_params(),
             optimizers_config=models.OptimizersConfigDiff(default_segment_number=2),
             quantization_config=models.ScalarQuantization(
@@ -88,7 +94,11 @@ def create_qdrand_collections(force_recreate):
         client.recreate_collection(
             collection_name=content_files_collection_name,
             on_disk_payload=True,
-            vectors_config=client.get_fastembed_vector_params(),
+            vectors_config={
+                encoder.model_short_name(): models.VectorParams(
+                    size=encoder.dim(), distance=models.Distance.COSINE
+                )
+            },
             sparse_vectors_config=client.get_fastembed_sparse_vector_params(),
             optimizers_config=models.OptimizersConfigDiff(default_segment_number=2),
             quantization_config=models.ScalarQuantization(
@@ -151,12 +161,11 @@ def embed_learning_resources(ids, resource_type):
                 f"{doc['key']}.{doc['run_readable_id']}.{doc['resource_readable_id']}"
             )
         ids.append(vector_point_id(vector_point_key))
-    client.add(
-        collection_name=collection_name,
-        ids=ids,
-        documents=docs,
-        metadata=metadata,
-    )
+    encoder = dense_encoder()
+    embeddings = encoder.encode_batch(docs)
+    vector_name = encoder.model_short_name()
+    points = points_generator(ids, metadata, embeddings, vector_name)
+    client.upload_points(collection_name, points=points, wait=False)
 
 
 def vector_search(
@@ -178,10 +187,11 @@ def vector_search(
     """
     if query_string:
         client = qdrant_client()
-
-        search_result = client.query(
+        encoder = dense_encoder()
+        search_result = client.query_points(
             collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
-            query_text=query_string,
+            using=encoder.model_short_name(),
+            query=next(iter(encoder.encode(query_string)))[0],
             query_filter=models.Filter(
                 must=[
                     models.FieldCondition(
@@ -192,17 +202,16 @@ def vector_search(
             limit=limit,
             offset=offset,
         )
-        # Select and return metadata
         hits = [
             {
-                "id": hit.metadata["id"],
-                "readable_id": hit.metadata["readable_id"],
-                "resource_type": hit.metadata["resource_type"],
-                "title": hit.metadata["title"],
-                "description": hit.metadata["description"],
-                "platform": hit.metadata["platform"],
+                "id": hit.payload["id"],
+                "readable_id": hit.payload["readable_id"],
+                "resource_type": hit.payload["resource_type"],
+                "title": hit.payload["title"],
+                "description": hit.payload["description"],
+                "platform": hit.payload["platform"],
             }
-            for hit in search_result
+            for hit in search_result.points
         ]
     else:
         results = serialize_bulk_learning_resources(

@@ -1,6 +1,6 @@
 from fastembed import TextEmbedding
 
-from learning_resources_search.encoders.base import BaseEncoder
+from vector_search.encoders.base import BaseEncoder
 
 
 class FastEmbedEncoder(BaseEncoder):
