@@ -192,7 +192,7 @@ const Story: React.FC<{ item: NewsFeedItem; mobile: boolean }> = ({
       {item.image.url ? (
         <Card.Image src={item.image.url} alt={item.image.alt || ""} />
       ) : null}
-      <Card.Title href={item.url} lines={2} style={{ marginBottom: -13 }}>
+      <Card.Title href={item.url} style={{ marginBottom: -13 }}>
         {item.title}
       </Card.Title>
       <Card.Footer>

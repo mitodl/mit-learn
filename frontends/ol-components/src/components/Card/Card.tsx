@@ -103,14 +103,13 @@ const Info = styled.div<{ size?: Size }>`
 `
 
 const titleOpts = {
-  shouldForwardProp: (prop: string) => prop !== "lines" && prop !== "size",
+  shouldForwardProp: (prop: string) => prop !== "size",
 }
-const Title = styled(Linkable, titleOpts)<{ lines?: number; size?: Size }>`
+const Title = styled(Linkable, titleOpts)<{ size?: Size }>`
   text-overflow: ellipsis;
-  height: ${({ lines, size }) => {
+  height: ${({ size }) => {
     const lineHeightPx = size === "small" ? 18 : 20
-    lines = 3
-    return theme.typography.pxToRem(lines * lineHeightPx)
+    return theme.typography.pxToRem(3 * lineHeightPx)
   }};
   overflow: hidden;
   margin: 0;
@@ -120,18 +119,14 @@ const Title = styled(Linkable, titleOpts)<{ lines?: number; size?: Size }>`
       ? { ...theme.typography.subtitle2 }
       : { ...theme.typography.subtitle1 }}
 
-  ${({ lines }) => {
-    lines = 3
-    return `
-      @supports (-webkit-line-clamp: ${lines}) {
-        white-space: initial;
-        display: -webkit-box;
-        -webkit-box-orient: vertical;
-        div {
-          -webkit-line-clamp: ${lines};
-        }
-      }`
-  }}
+  @supports (-webkit-line-clamp: 3) {
+    white-space: initial;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    div {
+      -webkit-line-clamp: 3;
+    }
+  }
 `
 
 const Footer = styled.span`
@@ -227,7 +222,6 @@ export type ImageProps = NextImageProps & {
 type TitleProps = {
   children?: ReactNode
   href?: string
-  lines?: number
   style?: CSSProperties
 }
 
