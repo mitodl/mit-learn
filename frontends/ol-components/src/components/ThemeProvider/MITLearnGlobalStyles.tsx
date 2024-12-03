@@ -83,43 +83,13 @@ const formCss = css`
   }
 `
 
-const muiCss = css`
-  #app-container {
-    .MuiCardContent-root {
-      padding-bottom: 16px;
-
-      &:last-child {
-        padding-bottom: 16px; /* MUI puts extra padding on the last child by default. We don't want it. */
-      }
-
-      > *:first-of-type {
-        margin-top: 0; /* No extra space for the first child, beyond the card content's padding. */
-      }
-    }
-
-    .MuiCardActions-root {
-      padding-left: 16px;
-      padding-right: 16px;
-    }
-
-    .MuiCard-root {
-      transition-duration: ${theme.custom.transitionDuration};
-      transition-property: box-shadow;
-
-      &:hover {
-        box-shadow: ${theme.custom.shadow};
-      }
-    }
-  }
-`
-
 const MITLearnGlobalStyles: React.FC = () => {
   /**
    * Preload the font just in case emotion doesn't put the import near top of
    * HTML.
    */
   preload(ADOBE_FONT_URL, { as: "style", fetchPriority: "high" })
-  return <Global styles={[pageCss, formCss, muiCss]}></Global>
+  return <Global styles={[pageCss, formCss]}></Global>
 }
 
 export { MITLearnGlobalStyles }
