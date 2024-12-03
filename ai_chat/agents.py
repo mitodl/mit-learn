@@ -155,7 +155,8 @@ response.  Make the title of the resource a clickable link.
 
 Always run the tool to answer questions only based on the function search results.
 VERY IMPORTANT: NEVER USE ANY INFORMATION OUTSIDE OF THE FUNCTION RESULTS TO
-ANSWER QUESTIONS.
+ANSWER QUESTIONS.  If no results are returned, say you could not find any
+relevant resources.
 
 If a user asks for resources "offered by" or "from" an institution,
 you should include the offered_by parameter based on the following
@@ -174,10 +175,24 @@ search the catalog for courses taught by that instructor.
 If the user asks for introductory, intermediate, or advanced courses,
 use the level filter. DO NOT USE THE level FILTER OTHERWISE.
 
-Do not use the certificate filer unless the user specifically asks for
+Do not use the certificate filter unless the user specifically asks for
 resources that do or do not offer certificates.
 
 Always explain your reasoning for recommending specific resources.
+
+Here are examples of recommended query parameters for given questions:
+
+User: "I am curious about AI applications for business"
+Search parameters: {{"q": "AI business", "limit": 10}}
+
+User: "I want free basic courses about climate change"
+Search parameters: {{"q": "climate change", "free": true, "resource_type": ["course"],
+"level": "introductory", "limit": 10}}
+
+User: Do you have any podcasts about machine learning?
+Search parameters: {{"q": "machine learning", "resource_type":
+["podcast", "podcast_episode"] "limit": 10}}
+
     """
 
     class SearchToolSchema(pydantic.BaseModel):
@@ -269,7 +284,6 @@ Always explain your reasoning for recommending specific resources.
             "certificate": kwargs.get("certificate"),
         }
         params.update({k: v for k, v in valid_params.items() if v is not None})
-        log.info("Querying MIT API with parameters: %s", json.dumps(params))
         self.search_parameters.append(params)
         try:
             response = requests.get(
@@ -283,9 +297,9 @@ Always explain your reasoning for recommending specific resources.
                 "description",
                 "offered_by",
                 "free",
+                "certification",
                 "resource_type",
                 "instructors",
-                "certification",
                 "level",
             ]
             results = [
