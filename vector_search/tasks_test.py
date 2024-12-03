@@ -124,14 +124,14 @@ def test_embed_new_learning_resources(mocker, mocked_celery, period):
     weekly_resource_ids = [
         resource.id
         for resource in LearningResource.objects.filter(
-            created_on__gte=now_in_utc() - datetime.timedelta(days=7)
+            created_on__gt=now_in_utc() - datetime.timedelta(days=7)
         )
     ]
 
     daily_resource_ids = [
         resource.id
         for resource in LearningResource.objects.filter(
-            created_on__gte=now_in_utc() - datetime.timedelta(days=1)
+            created_on__gt=now_in_utc() - datetime.timedelta(days=1)
         )
     ]
 
