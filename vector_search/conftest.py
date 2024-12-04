@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from vector_search.encoders.base import BaseEncoder
 
@@ -16,3 +17,8 @@ class DummyEmbedEncoder(BaseEncoder):
 
     def encode_batch(self, texts: list[str]) -> list[list[float]]:
         return np.random.random((10, len(texts)))
+
+
+@pytest.fixture(autouse=True)
+def _use_dummy_encoder(settings):
+    settings.QDRANT_ENCODER = "vector_search.conftest.DummyEmbedEncoder"

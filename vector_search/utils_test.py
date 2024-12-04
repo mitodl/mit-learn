@@ -1,5 +1,4 @@
 import pytest
-from django.conf import settings
 
 from learning_resources.factories import ContentFileFactory, LearningResourceFactory
 from learning_resources_search.serializers import serialize_bulk_content_files
@@ -13,7 +12,6 @@ pytestmark = pytest.mark.django_db
 
 @pytest.mark.parametrize("content_type", ["learning_resource", "content_file"])
 def test_vector_point_id_used_for_embed(mocker, content_type):
-    settings.QDRANT_ENCODER = "vector_search.encoders.dummy.DummyEmbedEncoder"
     # test the vector ids we generate for embedding resources and files
     if content_type == "learning_resource":
         resources = LearningResourceFactory.create_batch(5)

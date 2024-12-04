@@ -803,7 +803,8 @@ QDRANT_SPARSE_MODEL = get_string(
 QDRANT_ENCODER = get_string(
     name="QDRANT_ENCODER", default="vector_search.encoders.fastembed.FastEmbedEncoder"
 )
-OPENAI_EMBEDDINGS_API_KEY = get_string(
-    name="OPENAI_EMBEDDINGS_API_KEY",
+
+OPENAI_API_KEY = get_string(
+    name="OPENAI_API_KEY",
     default=None,
 )
