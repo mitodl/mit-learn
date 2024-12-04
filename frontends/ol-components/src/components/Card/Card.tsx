@@ -12,6 +12,7 @@ import { theme } from "../ThemeProvider/ThemeProvider"
 import { pxToRem } from "../ThemeProvider/typography"
 import Link from "next/link"
 import { default as NextImage, ImageProps as NextImageProps } from "next/image"
+import { TruncateText } from "../TruncateText/TruncateText"
 
 export type Size = "small" | "medium"
 
@@ -103,13 +104,14 @@ const Info = styled.div<{ size?: Size }>`
 `
 
 const titleOpts = {
-  shouldForwardProp: (prop: string) => prop !== "size",
+  shouldForwardProp: (prop: string) => prop !== "lines" && prop !== "size",
 }
-const Title = styled(Linkable, titleOpts)<{ size?: Size }>`
+const Title = styled(Linkable, titleOpts)<{ size?: Size; lines?: number }>`
+  display: flex;
   text-overflow: ellipsis;
-  height: ${({ size }) => {
+  height: ${({ size, lines }) => {
     const lineHeightPx = size === "small" ? 18 : 20
-    return theme.typography.pxToRem(3 * lineHeightPx)
+    return theme.typography.pxToRem((lines || 3) * lineHeightPx)
   }};
   overflow: hidden;
   margin: 0;
@@ -118,18 +120,6 @@ const Title = styled(Linkable, titleOpts)<{ size?: Size }>`
     size === "small"
       ? { ...theme.typography.subtitle2 }
       : { ...theme.typography.subtitle1 }}
-
-  @supports (-webkit-line-clamp: 3) {
-    white-space: initial;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-
-    /* Any and all children of the card need to be clamped */
-    * {
-      -webkit-line-clamp: 3 !important;
-    }
-  }
 `
 
 const Footer = styled.span`
@@ -225,6 +215,7 @@ export type ImageProps = NextImageProps & {
 type TitleProps = {
   children?: ReactNode
   href?: string
+  lines?: number
   style?: CSSProperties
 }
 
@@ -301,6 +292,7 @@ const Card: Card = ({
   const handleClick = forwardClicksToLink ? handleHrefClick : onClick
 
   const allClassNames = ["MitCard-root", className ?? ""].join(" ")
+  const lines = title.lines || 3
 
   if (content) {
     return (
@@ -343,9 +335,10 @@ const Card: Card = ({
           data-card-link={!!title.href}
           className="MitCard-title"
           size={size}
+          lines={lines}
           {...title}
         >
-          {title.children}
+          <TruncateText lineClamp={lines}>{title.children}</TruncateText>
         </Title>
       </Body>
       <Bottom>
