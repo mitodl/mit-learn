@@ -118,8 +118,12 @@ def test_embed_new_learning_resources(mocker, mocked_celery, period):
     weekly_since = now_in_utc() - datetime.timedelta(days=5)
     daily_since = now_in_utc() - datetime.timedelta(hours=5)
 
-    LearningResourceFactory.create_batch(4, created_on=daily_since)
-    LearningResourceFactory.create_batch(4, created_on=weekly_since)
+    LearningResourceFactory.create_batch(
+        4, created_on=daily_since, resource_type=COURSE_TYPE, published=True
+    )
+    LearningResourceFactory.create_batch(
+        4, created_on=weekly_since, resource_type=COURSE_TYPE, published=True
+    )
 
     weekly_resource_ids = [
         resource.id
