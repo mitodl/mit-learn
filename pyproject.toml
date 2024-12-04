@@ -84,6 +84,7 @@ pycountry = "^24.6.1"
 qdrant-client = {extras = ["fastembed"], version = "^1.12.0"}
 onnxruntime = "1.19.2"
 openai = "^1.55.3"
+litellm = "^1.53.5"
 
 
 [tool.poetry.group.dev.dependencies]
