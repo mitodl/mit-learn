@@ -121,11 +121,11 @@ const Title = styled(
     size === "small"
       ? {
           ...theme.typography.subtitle2,
-          height: theme.typography.pxToRem(18 * lines),
+          height: `calc(${lines} * ${theme.typography.subtitle2.lineHeight})`,
         }
       : {
           ...theme.typography.subtitle1,
-          height: theme.typography.pxToRem(20 * lines),
+          height: `calc(${lines} * ${theme.typography.subtitle1.lineHeight})`,
         },
   ]
 })
