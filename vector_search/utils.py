@@ -3,12 +3,32 @@ import uuid
 from django.conf import settings
 from qdrant_client import QdrantClient, models
 
-from learning_resources.models import LearningResource
 from learning_resources_search.constants import CONTENT_FILE_TYPE
 from learning_resources_search.serializers import (
     serialize_bulk_content_files,
     serialize_bulk_learning_resources,
 )
+
+QDRANT_PARAM_MAP = {
+    "resource_type": "resource_type",
+    "certification": "certification",
+    "certification_type": "certification_type.code",
+    "professional": "professional",
+    "free": "free",
+    "id": "id",
+    "course_feature": "course_feature",
+    "content_feature_type": "content_feature_type",
+    "run_id": "run_id",
+    "resource_id": "resource_id",
+    "topic": "topics[].name",
+    "ocw_topic": "ocw_topics",
+    "level": "runs[].level.code",
+    "department": "departments.department_id",
+    "platform": "platform.code",
+    "offered_by": "offered_by.code",
+    "delivery": "delivery[].code",
+    "resource_category": "resource_category",
+}
 
 
 def qdrant_client():
@@ -133,6 +153,7 @@ def embed_learning_resources(ids, resource_type):
 
 def vector_search(
     query_string: str,
+    params: dict,
     limit: int = 10,
     offset: int = 10,
 ):
@@ -143,39 +164,48 @@ def vector_search(
         query_string (str): Query string to search
         limit (int): Max number of results to return
         offset (int): Offset to start from
+        params (dict): Additional search filters
     Returns:
         dict:
             Response dict containing "hits" with search results
             and "total" with total count
     """
+    client = qdrant_client()
+    qdrant_conditions = qdrant_query_conditions(params)
     if query_string:
-        client = qdrant_client()
-
         search_result = client.query(
             collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
             query_text=query_string,
             query_filter=models.Filter(
                 must=[
+                    *qdrant_conditions,
                     models.FieldCondition(
                         key="published", match=models.MatchValue(value=True)
-                    )
-                ]
+                    ),
+                ],
             ),
             limit=limit,
             offset=offset,
         )
-        # Select and return metadata
-        hits = [
-            {
-                "id": hit.metadata["id"],
-                "readable_id": hit.metadata["readable_id"],
-                "resource_type": hit.metadata["resource_type"],
-                "title": hit.metadata["title"],
-                "description": hit.metadata["description"],
-                "platform": hit.metadata["platform"],
-            }
-            for hit in search_result
-        ]
+        hits = [hit.metadata for hit in search_result]
+    else:
+        search_result = client.scroll(
+            collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
+            scroll_filter=models.Filter(
+                must=[
+                    *qdrant_conditions,
+                    models.FieldCondition(
+                        key="published", match=models.MatchValue(value=True)
+                    ),
+                ],
+            ),
+            limit=limit,
+            offset=offset,
+        )
+        hits = [hit.payload for hit in search_result[0]]
+    # Select and return metadata
+
+    """
     else:
         results = serialize_bulk_learning_resources(
             LearningResource.objects.all()[offset : offset + limit].values_list(
@@ -194,4 +224,31 @@ def vector_search(
             }
             for resource in results
         ]
+    """
     return {"hits": hits, "total": {"value": 10000}}
+
+
+def qdrant_query_conditions(params):
+    """
+    Generate Qdrant query conditions from query params
+    Args:
+        params (dict): Query params
+    Returns:
+        FieldCondition[]:
+            List of Qdrant FieldCondition objects
+    """
+    conditions = []
+    if not params:
+        return conditions
+    for param in params:
+        if param in QDRANT_PARAM_MAP and params[param] is not None:
+            if type(params[param]) is list:
+                match_condition = models.MatchAny(any=params[param])
+            else:
+                match_condition = models.MatchValue(value=params[param])
+            conditions.append(
+                models.FieldCondition(
+                    key=QDRANT_PARAM_MAP[param], match=match_condition
+                )
+            )
+    return conditions
