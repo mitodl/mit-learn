@@ -153,6 +153,8 @@ def load_run_dependent_values(
             else []
         )
         resource.location = best_run.location
+        resource.duration = best_run.duration
+        resource.time_commitment = best_run.time_commitment
     resource.save()
     return ResourceNextRunConfig(
         next_start_date=resource.next_start_date,
@@ -160,6 +162,8 @@ def load_run_dependent_values(
         resource_prices=resource.resource_prices.all(),
         availability=resource.availability,
         location=resource.location,
+        duration=resource.duration,
+        time_commitment=resource.time_commitment,
     )
 
 

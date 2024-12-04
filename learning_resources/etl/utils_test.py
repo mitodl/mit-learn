@@ -500,3 +500,38 @@ def test_transform_price(amount, currency, valid_currency):
         "amount": amount,
         "currency": currency if valid_currency else CURRENCY_USD,
     }
+
+
+@pytest.mark.parametrize(
+    ("raw_value", "parsed_value"),
+    [
+        ("3 Days", "3 days"),
+        ("3-4 Weeks, no weekends", "3-4 weeks"),
+        ("5 - 6 MoNths", "5-6 months"),
+        ("1 WEEK", "1 week"),
+        ("1 month more or less", "1 month"),
+    ],
+)
+def test_parse_resource_duration(raw_value, parsed_value):
+    """Test that parse_resource_duration returns the expected duration"""
+    assert utils.parse_resource_duration(raw_value) == parsed_value
+
+
+@pytest.mark.parametrize(
+    ("raw_value", "parsed_value"),
+    [
+        ("5 Hours", "5 hours"),
+        ("3-4 Hours per Week", "3-4 hours/week"),
+        ("15 - 16 Hours per Week", "15-16 hours/week"),
+        ("1 hour per Day, no Weekends", "1 hour/day"),
+        ("3 hours/Day with lunch breaks", "3 hours/day"),
+        ("5-8 hrs per week", "5-8 hours/week"),
+        ("5 - 10", "5-10 hours"),
+        ("6 semanas", "6 hours"),
+        ("3", "3 hours"),
+        ("1", "1 hour"),
+    ],
+)
+def test_parse_resource_commitment(raw_value, parsed_value):
+    """Test that parse_resource_duration returns the expected duration"""
+    assert utils.parse_resource_commitment(raw_value) == parsed_value

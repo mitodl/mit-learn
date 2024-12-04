@@ -37,7 +37,11 @@ from learning_resources.etl.prolearn import (
     transform_programs,
     update_delivery,
 )
-from learning_resources.etl.utils import transform_delivery
+from learning_resources.etl.utils import (
+    parse_resource_commitment,
+    parse_resource_duration,
+    transform_delivery,
+)
 from learning_resources.factories import (
     LearningResourceOfferorFactory,
     LearningResourcePlatformFactory,
@@ -184,6 +188,8 @@ def test_prolearn_transform_programs(mock_csail_programs_data):
                     "delivery": transform_delivery(program["format_name"]),
                     "pace": [Pace.instructor_paced.name],
                     "format": [Format.asynchronous.name],
+                    "duration": "",
+                    "time_commitment": "",
                 }
                 for (start_val, end_val) in zip(
                     program["start_value"], program["end_value"]
@@ -267,6 +273,10 @@ def test_prolearn_transform_courses(mock_mitpe_courses_data):
                     "delivery": transform_delivery(course["format_name"]),
                     "pace": [Pace.instructor_paced.name],
                     "format": [Format.asynchronous.name],
+                    "duration": parse_resource_duration(course["field_duration"]),
+                    "time_commitment": parse_resource_commitment(
+                        course["field_time_commitment"]
+                    ),
                 }
                 for (start_val, end_val) in zip(
                     course["start_value"], course["end_value"]
@@ -276,6 +286,10 @@ def test_prolearn_transform_courses(mock_mitpe_courses_data):
             "unique_field": UNIQUE_FIELD,
             "pace": [Pace.instructor_paced.name],
             "format": [Format.asynchronous.name],
+            "duration": parse_resource_duration(course["field_duration"]),
+            "time_commitment": parse_resource_commitment(
+                course["field_time_commitment"]
+            ),
         }
         for course in extracted_data[2:]
     ]

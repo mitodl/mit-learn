@@ -292,6 +292,8 @@ LEARNING_RESOURCE_MAP = {
                 },
             },
             "location": {"type": "keyword"},
+            "duration": {"type": "keyword"},
+            "time_commitment": {"type": "keyword"},
         },
     },
     "next_start_date": {"type": "date"},
@@ -308,6 +310,8 @@ LEARNING_RESOURCE_MAP = {
             "currency": {"type": "keyword"},
         },
     },
+    "duration": {"type": "keyword"},
+    "time_commitment": {"type": "keyword"},
 }
 
 

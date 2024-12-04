@@ -132,6 +132,8 @@ def test_transform_run(
         "pace": [Pace.instructor_paced.name],
         "format": [Format.synchronous.name],
         "location": run_data["Location"],
+        "duration": run_data["Duration"],
+        "time_commitment": run_data["Time_Commitment"],
     }
 
 
