@@ -15,7 +15,7 @@ from llama_index.core.agent import AgentRunner
 from llama_index.core.base.llms.types import ChatMessage
 from llama_index.core.constants import DEFAULT_TEMPERATURE
 from llama_index.core.tools import FunctionTool, ToolMetadata
-from llama_index.llms.openai import OpenAI
+from llama_index.llms.litellm import LiteLLM
 from openai import BadRequestError
 from pydantic import Field
 
@@ -219,6 +219,21 @@ prepare me for the AI future.”
 Expected Output: Maybe ask whether the user wants to learn how to program, or just use
 AI in their discipline - does this person want to study machine learning? More info
 needed. Then perform a relevant search and send back the best results.
+
+And here are some recommended search parameters to apply for sample user prompts:
+
+User: "I am interested in learning advanced AI techniques"
+Search parameters: {{"q": "AI techniques"}}
+
+User: "I am curious about AI applications for business"
+Search parameters: {{"q": "AI business"}}
+
+User: "I want free basic courses about climate change from OpenCourseware"
+Search parameters: {{"q": "climate change", "free": true, "resource_type": ["course"],
+"offered_by": "ocw"}}
+
+User: "I want to learn some advanced mathematics"
+Search parameters: {{"q": "mathematics"}}
     """
 
     class SearchToolSchema(pydantic.BaseModel):
@@ -343,10 +358,10 @@ needed. Then perform a relevant search and send back the best results.
             log.exception("Error querying MIT API")
             return json.dumps({"error": str(e)})
 
-    def create_openai_agent(self) -> OpenAIAgent:
+    def create_agent(self) -> OpenAIAgent:
         """Create an OpenAI agent"""
 
-        llm = OpenAI(
+        llm = LiteLLM(
             model=self.model,
             **(self.proxy.get_api_kwargs() if self.proxy else {}),
             additional_kwargs=(
