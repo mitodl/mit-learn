@@ -12,6 +12,7 @@ import { theme } from "../ThemeProvider/ThemeProvider"
 import { pxToRem } from "../ThemeProvider/typography"
 import Link from "next/link"
 import { default as NextImage, ImageProps as NextImageProps } from "next/image"
+import { truncateText } from "../TruncateText/TruncateText"
 
 export type Size = "small" | "medium"
 
@@ -103,33 +104,31 @@ const Info = styled.div<{ size?: Size }>`
 `
 
 const titleOpts = {
-  shouldForwardProp: (prop: string) => prop !== "size",
+  shouldForwardProp: (prop: string) => prop !== "lines" && prop !== "size",
 }
-const Title = styled(Linkable, titleOpts)<{ size?: Size }>`
-  text-overflow: ellipsis;
-  height: ${({ size }) => {
-    const lineHeightPx = size === "small" ? 18 : 20
-    return theme.typography.pxToRem(3 * lineHeightPx)
-  }};
-  overflow: hidden;
-  margin: 0;
-
-  ${({ size }) =>
+const Title = styled(
+  Linkable,
+  titleOpts,
+)<{ size?: Size; lines?: number }>(({ theme, size, lines = 3 }) => {
+  return [
+    {
+      display: "flex",
+      textOverflow: "ellipsis",
+      overflow: "hidden",
+      margin: 0,
+      ...truncateText(lines),
+    },
     size === "small"
-      ? { ...theme.typography.subtitle2 }
-      : { ...theme.typography.subtitle1 }}
-
-  @supports (-webkit-line-clamp: 3) {
-    white-space: initial;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-
-    > * {
-      -webkit-line-clamp: 3;
-    }
-  }
-`
+      ? {
+          ...theme.typography.subtitle2,
+          height: `calc(${lines} * ${theme.typography.subtitle2.lineHeight})`,
+        }
+      : {
+          ...theme.typography.subtitle1,
+          height: `calc(${lines} * ${theme.typography.subtitle1.lineHeight})`,
+        },
+  ]
+})
 
 const Footer = styled.span`
   display: block;
@@ -224,6 +223,7 @@ export type ImageProps = NextImageProps & {
 type TitleProps = {
   children?: ReactNode
   href?: string
+  lines?: number
   style?: CSSProperties
 }
 
@@ -343,9 +343,7 @@ const Card: Card = ({
           className="MitCard-title"
           size={size}
           {...title}
-        >
-          {title.children}
-        </Title>
+        />
       </Body>
       <Bottom>
         <Footer className="MitCard-footer" {...footer}>
