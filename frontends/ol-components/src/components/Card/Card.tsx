@@ -12,7 +12,7 @@ import { theme } from "../ThemeProvider/ThemeProvider"
 import { pxToRem } from "../ThemeProvider/typography"
 import Link from "next/link"
 import { default as NextImage, ImageProps as NextImageProps } from "next/image"
-import { TruncateText } from "../TruncateText/TruncateText"
+import { truncateText } from "../TruncateText/TruncateText"
 
 export type Size = "small" | "medium"
 
@@ -106,21 +106,29 @@ const Info = styled.div<{ size?: Size }>`
 const titleOpts = {
   shouldForwardProp: (prop: string) => prop !== "lines" && prop !== "size",
 }
-const Title = styled(Linkable, titleOpts)<{ size?: Size; lines?: number }>`
-  display: flex;
-  text-overflow: ellipsis;
-  height: ${({ size, lines }) => {
-    const lineHeightPx = size === "small" ? 18 : 20
-    return theme.typography.pxToRem((lines || 3) * lineHeightPx)
-  }};
-  overflow: hidden;
-  margin: 0;
-
-  ${({ size }) =>
+const Title = styled(
+  Linkable,
+  titleOpts,
+)<{ size?: Size; lines?: number }>(({ theme, size, lines = 3 }) => {
+  return [
+    {
+      display: "flex",
+      textOverflow: "ellipsis",
+      overflow: "hidden",
+      margin: 0,
+      ...truncateText(lines),
+    },
     size === "small"
-      ? { ...theme.typography.subtitle2 }
-      : { ...theme.typography.subtitle1 }}
-`
+      ? {
+          ...theme.typography.subtitle2,
+          height: theme.typography.pxToRem(18 * lines),
+        }
+      : {
+          ...theme.typography.subtitle1,
+          height: theme.typography.pxToRem(20 * lines),
+        },
+  ]
+})
 
 const Footer = styled.span`
   display: block;
@@ -292,7 +300,6 @@ const Card: Card = ({
   const handleClick = forwardClicksToLink ? handleHrefClick : onClick
 
   const allClassNames = ["MitCard-root", className ?? ""].join(" ")
-  const lines = title.lines || 3
 
   if (content) {
     return (
@@ -335,11 +342,8 @@ const Card: Card = ({
           data-card-link={!!title.href}
           className="MitCard-title"
           size={size}
-          lines={lines}
           {...title}
-        >
-          <TruncateText lineClamp={lines}>{title.children}</TruncateText>
-        </Title>
+        />
       </Body>
       <Bottom>
         <Footer className="MitCard-footer" {...footer}>
