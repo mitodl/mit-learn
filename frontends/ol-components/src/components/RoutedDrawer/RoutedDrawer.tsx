@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo } from "react"
+import React, { useCallback, useEffect, useMemo, useRef } from "react"
 import Drawer from "@mui/material/Drawer"
 import styled from "@emotion/styled"
 import type { DrawerProps } from "@mui/material/Drawer"
@@ -9,7 +9,6 @@ import {
   useRouter,
   ReadonlyURLSearchParams,
 } from "next/navigation"
-import { useToggle } from "ol-utilities"
 
 const CloseButton = styled(ActionButton)({
   position: "absolute",
@@ -35,39 +34,28 @@ const RoutedDrawer = <K extends string, R extends K = K>(
   props: RoutedDrawerProps<K, R>,
 ) => {
   const { requiredParams, children, onView, hideCloseButton, ...others } = props
+  /**
+   * Store the last set of params that includes all required params.
+   * That way, when the drawer is closing, its content can still be displayed.
+   */
+  const lastValidParams = useRef<ChildParams<K, R> | null>(null)
+
   const { params = requiredParams } = props
 
-  const [open, setOpen] = useToggle(false)
   const searchParams = useSearchParams()
   const router = useRouter()
 
-  const childParams = useMemo(() => {
+  const isOpen = requiredParams.every((name) => searchParams.get(name) !== null)
+  const filteredParams = useMemo(() => {
     return Object.fromEntries(
-      params.map((name) => [name, searchParams.get(name)] as const),
-    ) as Record<K, string | null>
+      params.map((name) => [name, searchParams.get(name)]),
+    ) as ChildParams<K, R>
   }, [searchParams, params])
-
-  /**
-   * `requiredArePresnet` and `open` are usually the same, except when the
-   * drawer is in the process of closing.
-   *  - `open` changes to false when the drawer begins closing
-   *  - URL Params are updated when the drawer finishes closing, changing the
-   *   value of `requiredArePresent`
-   *
-   * This means that if content within the drawer depends on the search params,
-   * then the content will remain visible during the closing animation.
-   */
-  const requiredArePresent = requiredParams.every(
-    (name) => childParams[name] !== null,
-  )
-
   useEffect(() => {
-    if (requiredArePresent) {
-      setOpen(true)
-    } else {
-      setOpen(false)
+    if (isOpen) {
+      lastValidParams.current = filteredParams
     }
-  }, [requiredArePresent, setOpen, requiredParams])
+  }, [isOpen, filteredParams])
 
   const removeUrlParams = useCallback(() => {
     const getNewParams = (current: ReadonlyURLSearchParams) => {
@@ -91,25 +79,21 @@ const RoutedDrawer = <K extends string, R extends K = K>(
     }
   }, [router, searchParams, params])
 
+  const childParams = isOpen ? filteredParams : lastValidParams.current
   return (
-    <Drawer
-      open={open}
-      onTransitionExited={removeUrlParams}
-      onClose={setOpen.off}
-      {...others}
-    >
+    <Drawer open={isOpen} onClose={removeUrlParams} {...others}>
       {
         <>
-          {requiredArePresent &&
+          {childParams &&
             children?.({
-              params: childParams as Record<K, string>,
-              closeDrawer: setOpen.off,
+              params: childParams,
+              closeDrawer: removeUrlParams,
             })}
           {!hideCloseButton && (
             <CloseButton
               variant="text"
               size="medium"
-              onClick={setOpen.off}
+              onClick={removeUrlParams}
               aria-label="Close"
             >
               <RiCloseLargeLine />

@@ -1,6 +1,7 @@
 import { RoutedDrawer } from "./RoutedDrawer"
 import type { RoutedDrawerProps } from "./RoutedDrawer"
 import {
+  ByRoleOptions,
   render,
   screen,
   waitForElementToBeRemoved,
@@ -18,8 +19,8 @@ const TestDrawerContents = ({ closeDrawer }: { closeDrawer: () => void }) => (
     </button>
   </section>
 )
-const getDrawerContent = () =>
-  screen.getByRole("heading", { name: "DrawerContent" })
+const getDrawerContent = (opts: ByRoleOptions = {}) =>
+  screen.getByRole("heading", { name: "DrawerContent", ...opts })
 
 const renderRoutedDrawer = <P extends string, R extends P>(
   props: Omit<RoutedDrawerProps<P, R>, "children">,
@@ -124,6 +125,24 @@ describe("RoutedDrawer", () => {
     await waitForElementToBeRemoved(content)
 
     expect(mockRouter.query).toEqual({})
+  })
+
+  it("Renders previous search params while closing drawer", async () => {
+    const params = ["a"]
+    const requiredParams = ["a"]
+    const initialSearch = "a=1"
+    const { childFn } = renderRoutedDrawer(
+      { params, requiredParams },
+      initialSearch,
+      "",
+    )
+
+    await user.click(screen.getByRole("button", { name: "CloseFn" }))
+    await waitForElementToBeRemoved(getDrawerContent({ hidden: true }))
+    expect(childFn).toHaveBeenLastCalledWith({
+      params: { a: "1" },
+      closeDrawer: expect.any(Function),
+    })
   })
 
   it("Restores any hash params that were in the initial request", async () => {
