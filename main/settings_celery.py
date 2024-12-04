@@ -136,7 +136,9 @@ CELERY_BEAT_SCHEDULE = {
     },
     "daily_embed_new_learning_resources": {
         "task": "vector_search.tasks.embed_new_learning_resources",
-        "schedule": crontab(hour=5, minute=30),  # 1:30am EST
+        "schedule": get_int(
+            "EMBED_NEW_RESOURCES_SCHEDULE_SECONDS", 60 * 30
+        ),  # default is every 30 minutes
         "kwargs": {"period": "daily"},
     },
     "send-search-subscription-emails-every-1-days": {

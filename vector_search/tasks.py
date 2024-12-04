@@ -30,7 +30,7 @@ from main.utils import (
     chunks,
     now_in_utc,
 )
-from vector_search.utils import embed_learning_resources
+from vector_search.utils import embed_learning_resources, filter_existing_qdrant_points
 
 log = logging.getLogger(__name__)
 
@@ -166,12 +166,12 @@ def embed_new_learning_resources(self, period="daily"):
         published=True,
         created_on__gt=since,
     ).exclude(resource_type=CONTENT_FILE_TYPE)
-
+    filtered_resources = filter_existing_qdrant_points(new_learning_resources)
     embed_tasks = celery.group(
         [
             generate_embeddings.si(ids, COURSE_TYPE)
             for ids in chunks(
-                new_learning_resources.order_by("id").values_list("id", flat=True),
+                filtered_resources.order_by("id").values_list("id", flat=True),
                 chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
             )
         ]

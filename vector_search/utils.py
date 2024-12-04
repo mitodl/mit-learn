@@ -232,3 +232,28 @@ def vector_search(
             for resource in results
         ]
     return {"hits": hits, "total": {"value": 10000}}
+
+
+def filter_existing_qdrant_points(learning_resources):
+    """
+    Filter learning resources that already have embeddings
+    Args:
+        learning_resources (QuerySet): Learning resources to check
+    Returns:
+        Queryset of learning resources that do not have embeddings in Qdrant
+
+    """
+    readable_ids = [
+        learning_resource.readable_id for learning_resource in learning_resources
+    ]
+    client = qdrant_client()
+    results = client.scroll(
+        collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
+        scroll_filter=models.Filter(
+            must=models.FieldCondition(
+                key="readable_id", match=models.MatchAny(any=readable_ids)
+            )
+        ),
+    )
+    existing_readable_ids = [point.payload["readable_id"] for point in results[0]]
+    return LearningResource.objects.filter(readable_id__in=existing_readable_ids)
