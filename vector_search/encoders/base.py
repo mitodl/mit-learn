@@ -21,7 +21,7 @@ class BaseEncoder(ABC):
         """
         Embed a single text
         """
-        next(iter(self.encode_batch([text])[0]))
+        next(iter(self.encode_batch([text])))
 
     @abstractmethod
     def encode_batch(self, texts: list[str]) -> list[list[float]]:
