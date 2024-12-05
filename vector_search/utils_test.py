@@ -4,6 +4,7 @@ from qdrant_client.models import PointStruct
 from learning_resources.factories import ContentFileFactory, LearningResourceFactory
 from learning_resources_search.serializers import serialize_bulk_content_files
 from vector_search.utils import (
+    create_qdrand_collections,
     embed_learning_resources,
     filter_existing_qdrant_points,
     vector_point_id,
@@ -67,4 +68,94 @@ def test_filter_existing_qdrant_points(mocker):
     filtered_resources = filter_existing_qdrant_points(resources)
     assert sorted(filtered_resources.values_list("id", flat=True)) == sorted(
         [res.id for res in already_embedded]
+    )
+
+
+def test_force_create_qdrand_collections(mocker):
+    """
+    Test that the force flag will recreate collections
+    even if they exist
+    """
+    mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
+    mocker.patch(
+        "vector_search.utils.qdrant_client",
+        return_value=mock_qdrant,
+    )
+    mock_qdrant.collection_exists.return_value = True
+    create_qdrand_collections(force_recreate=True)
+    assert (
+        mock_qdrant.recreate_collection.mock_calls[0].kwargs["collection_name"]
+        == "test.resources"
+    )
+    assert (
+        mock_qdrant.recreate_collection.mock_calls[1].kwargs["collection_name"]
+        == "test.content_files"
+    )
+    assert (
+        "dummy-embedding"
+        in mock_qdrant.recreate_collection.mock_calls[0].kwargs["vectors_config"]
+    )
+    assert (
+        "dummy-embedding"
+        in mock_qdrant.recreate_collection.mock_calls[1].kwargs["vectors_config"]
+    )
+
+
+def test_auto_create_qdrand_collections(mocker):
+    """
+    Test that collections will get autocreated if they
+    don't exist
+    """
+    mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
+    mocker.patch(
+        "vector_search.utils.qdrant_client",
+        return_value=mock_qdrant,
+    )
+    mock_qdrant.collection_exists.return_value = False
+    create_qdrand_collections(force_recreate=False)
+    assert (
+        mock_qdrant.recreate_collection.mock_calls[0].kwargs["collection_name"]
+        == "test.resources"
+    )
+    assert (
+        mock_qdrant.recreate_collection.mock_calls[1].kwargs["collection_name"]
+        == "test.content_files"
+    )
+    assert (
+        "dummy-embedding"
+        in mock_qdrant.recreate_collection.mock_calls[0].kwargs["vectors_config"]
+    )
+    assert (
+        "dummy-embedding"
+        in mock_qdrant.recreate_collection.mock_calls[1].kwargs["vectors_config"]
+    )
+
+
+def test_skip_creating_qdrand_collections(mocker):
+    """
+    Test collections do not get recreated
+    if they exist and force_recreate is False
+    """
+    mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
+    mocker.patch(
+        "vector_search.utils.qdrant_client",
+        return_value=mock_qdrant,
+    )
+    mock_qdrant.collection_exists.return_value = False
+    create_qdrand_collections(force_recreate=False)
+    assert (
+        mock_qdrant.recreate_collection.mock_calls[0].kwargs["collection_name"]
+        == "test.resources"
+    )
+    assert (
+        mock_qdrant.recreate_collection.mock_calls[1].kwargs["collection_name"]
+        == "test.content_files"
+    )
+    assert (
+        "dummy-embedding"
+        in mock_qdrant.recreate_collection.mock_calls[0].kwargs["vectors_config"]
+    )
+    assert (
+        "dummy-embedding"
+        in mock_qdrant.recreate_collection.mock_calls[1].kwargs["vectors_config"]
     )
