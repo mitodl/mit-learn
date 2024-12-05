@@ -77,11 +77,7 @@ const RoutedDrawer = <K extends string, R extends K = K>(
 
     const hash = window?.location.hash
 
-    if (hash) {
-      window.history.pushState({}, "", `?${newParams}${hash}`)
-    } else {
-      window.history.pushState({}, "", `?${newParams}${hash}`)
-    }
+    window.history.pushState({}, "", `?${newParams}${hash || ""}`)
   }, [searchParams, params])
 
   return (

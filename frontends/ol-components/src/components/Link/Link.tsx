@@ -3,6 +3,7 @@ import styled from "@emotion/styled"
 import { css } from "@emotion/react"
 import { default as NextLink } from "next/link"
 import { theme } from "../ThemeProvider/ThemeProvider"
+import invariant from "tiny-invariant"
 
 type LinkStyleProps = {
   size?: "small" | "medium" | "large"
@@ -73,6 +74,12 @@ type LinkProps = LinkStyleProps &
   }
 
 const BaseLink = ({ href, shallow, nohover, onClick, ...rest }: LinkProps) => {
+  if (process.env.NODE_ENV === "development") {
+    invariant(
+      !shallow || href?.startsWith("?"),
+      "Shallow routing should only be used to update search params",
+    )
+  }
   return (
     <NextLink
       href={href || ""}
