@@ -1,5 +1,3 @@
-"use client"
-
 import React, { useCallback } from "react"
 import { RESOURCE_DRAWER_QUERY_PARAM } from "@/common/urls"
 import { ReadonlyURLSearchParams, useSearchParams } from "next/navigation"
@@ -27,7 +25,7 @@ const useResourceDrawerHref = () => {
 
   return useCallback(
     (resourceId: number) => {
-      const hash = typeof window !== "undefined" && window?.location.hash
+      const hash = window?.location.hash
       return `?${getOpenDrawerSearchParams(searchParams, resourceId)}${hash || ""}`
     },
     [searchParams],

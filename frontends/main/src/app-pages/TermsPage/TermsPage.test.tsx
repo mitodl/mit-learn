@@ -1,13 +1,13 @@
 import React from "react"
 import { screen, setMockResponse, renderWithProviders } from "@/test-utils"
 import { urls } from "api/test-utils"
-import { Permissions } from "@/common/permissions"
+import { Permission } from "api/hooks/user"
 import TermsPage from "./TermsPage"
 
 describe("TermsPage", () => {
   test("Renders title", async () => {
     setMockResponse.get(urls.userMe.get(), {
-      [Permissions.Authenticated]: true,
+      [Permission.Authenticated]: true,
     })
 
     renderWithProviders(<TermsPage />)

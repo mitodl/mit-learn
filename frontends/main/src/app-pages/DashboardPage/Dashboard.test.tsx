@@ -6,7 +6,7 @@ import {
   renderWithProviders,
 } from "@/test-utils"
 import { factories, urls } from "api/test-utils"
-import { Permissions } from "@/common/permissions"
+import { Permission } from "api/hooks/user"
 import DashboardPage, {
   DashboardTabKeys,
   DashboardTabLabels,
@@ -108,7 +108,7 @@ describe("DashboardPage", () => {
 
     setMockResponse.get(urls.userMe.get(), {
       username: profile.username,
-      [Permissions.Authenticated]: true,
+      [Permission.Authenticated]: true,
     })
     setMockResponse.get(urls.profileMe.get(), profile)
     setMockResponse.get(
@@ -207,7 +207,7 @@ describe("DashboardPage", () => {
   test("Renders user info", async () => {
     setupAPIs()
     setMockResponse.get(urls.userMe.get(), {
-      [Permissions.Authenticated]: true,
+      [Permission.Authenticated]: true,
       first_name: "Joe",
       last_name: "Smith",
       profile: {

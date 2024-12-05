@@ -2,7 +2,7 @@ import React from "react"
 import { renderWithProviders, screen } from "@/test-utils"
 import { HOME } from "@/common/urls"
 import ErrorPage from "./error"
-import { ForbiddenError } from "@/common/permissions"
+import { ForbiddenError } from "@/common/errors"
 
 test("The error page shows error message", () => {
   const error = new Error("Ruh roh")

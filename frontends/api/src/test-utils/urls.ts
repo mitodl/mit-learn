@@ -8,7 +8,6 @@
 import type {
   NewsEventsApiNewsEventsListRequest,
   TestimonialsApi,
-  ChannelsApi,
 } from "../generated/v0"
 import type {
   LearningResourcesApi as LRApi,
@@ -187,8 +186,6 @@ const channels = {
   details: (channelType: string, name: string) =>
     `${API_BASE_URL}/api/v0/channels/type/${channelType}/${name}/`,
   patch: (id: number) => `${API_BASE_URL}/api/v0/channels/${id}/`,
-  list: (params?: Paramsv0<ChannelsApi, "channelsList">) =>
-    `${API_BASE_URL}/api/v0/channels/${query(params)}`,
 }
 
 const widgetLists = {

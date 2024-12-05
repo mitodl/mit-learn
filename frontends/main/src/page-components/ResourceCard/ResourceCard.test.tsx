@@ -141,7 +141,7 @@ describe.each([
       const resource = makeResource()
 
       setup({
-        user: { is_authenticated: true },
+        user: { is_authenticated: true, is_learning_path_editor: true },
         props: { resource },
         userListMemberships: userList.inList
           ? [

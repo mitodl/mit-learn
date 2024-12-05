@@ -18,15 +18,10 @@ import {
 } from "ol-utilities"
 import { Card } from "../Card/Card"
 import type { Size } from "../Card/Card"
-import { TruncateText } from "../TruncateText/TruncateText"
 import { ActionButton, ActionButtonProps } from "../Button/Button"
 import { imgConfigs } from "../../constants/imgConfigs"
 import { theme } from "../ThemeProvider/ThemeProvider"
 import Tooltip from "@mui/material/Tooltip"
-
-const EllipsisTitle = styled(TruncateText)({
-  margin: 0,
-})
 
 const SkeletonImage = styled(Skeleton)<{ aspect: number }>`
   padding-bottom: ${({ aspect }) => 100 / aspect}%;
@@ -247,11 +242,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
       <Card.Info>
         <Info resource={resource} size={size} />
       </Card.Info>
-      <Card.Title href={href}>
-        <EllipsisTitle lineClamp={size === "small" ? 2 : 3}>
-          {resource.title}
-        </EllipsisTitle>
-      </Card.Title>
+      <Card.Title href={href}>{resource.title}</Card.Title>
       <Card.Actions>
         {onAddToLearningPathClick && (
           <CardActionButton

@@ -1,6 +1,6 @@
 import React from "react"
 import { useFeatureFlagEnabled } from "posthog-js/react"
-import { ForbiddenError } from "@/common/permissions"
+import { ForbiddenError } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
 
 type EcommerceFeatureProps = {

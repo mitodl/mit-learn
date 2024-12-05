@@ -44,13 +44,13 @@ const StyledContainer = styled(Container)({
   },
 })
 
-const HomePage: React.FC = () => {
+const HomePage: React.FC<{ heroImageIndex: number }> = ({ heroImageIndex }) => {
   return (
     <>
       <LearningResourceDrawer />
       <FullWidthBackground>
         <StyledContainer>
-          <HeroSearch />
+          <HeroSearch imageIndex={heroImageIndex} />
           <section>
             <FeaturedCoursesCarousel
               titleComponent="h2"

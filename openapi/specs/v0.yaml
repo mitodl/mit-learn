@@ -2602,6 +2602,7 @@ components:
       - name
     LearningResourcesVectorSearchResponse:
       type: object
+      description: Response serializer for vector based search
       properties:
         count:
           type: integer

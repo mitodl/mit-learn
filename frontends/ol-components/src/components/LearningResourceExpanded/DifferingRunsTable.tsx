@@ -25,7 +25,7 @@ const DifferingRun = styled.div({
   display: "flex",
   flexWrap: "wrap",
   alignItems: "center",
-  gap: "16px",
+  gap: "8px",
   padding: "12px",
   alignSelf: "stretch",
   borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
@@ -35,7 +35,7 @@ const DifferingRunHeader = styled.div({
   display: "flex",
   alignSelf: "stretch",
   alignItems: "center",
-  gap: "16px",
+  gap: "8px",
   padding: "12px",
   color: theme.custom.colors.darkGray2,
   backgroundColor: theme.custom.colors.lightGray1,
@@ -120,7 +120,7 @@ const DifferingRunsTable: React.FC<{ resource: LearningResource }> = ({
             {run.delivery.filter((d) => d.code === "in_person").length > 0 &&
               run.location && (
                 <DifferingRunLocation>
-                  <strong>Location</strong>
+                  <strong>Location:</strong>
                   <span>{run.location}</span>
                 </DifferingRunLocation>
               )}
