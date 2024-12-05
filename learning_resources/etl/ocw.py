@@ -55,6 +55,12 @@ PRIMARY_COURSE_ID = "primary_course_number"
 UNIQUE_FIELD = "url"
 
 
+def format_url(s3_path: str) -> str:
+    """Format the URL"""
+    url = urljoin(settings.OCW_BASE_URL, urlparse(s3_path).path.lstrip("/"))
+    return url if url.endswith("/") else f"{url}/"
+
+
 def parse_delivery(course_data: dict) -> list[str]:
     """
     Parse delivery methods
@@ -167,7 +173,7 @@ def transform_page(s3_key: str, page_data: dict) -> dict:
     s3_path = s3_key.split("data.json")[0]
     return {
         "content_type": CONTENT_TYPE_PAGE,
-        "url": urljoin(settings.OCW_BASE_URL, urlparse(s3_path).path.lstrip("/")),
+        "url": format_url(s3_path),
         "title": page_data.get("title"),
         "content_title": page_data.get("title"),
         "content": page_data.get("content"),
@@ -476,5 +482,5 @@ def extract_course(
         **course_json,
         "last_modified": last_modified,
         "slug": run_slug,
-        "url": urljoin(settings.OCW_BASE_URL, run_slug),
+        "url": format_url(run_slug),
     }
