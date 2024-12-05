@@ -4141,6 +4141,12 @@ export interface PodcastEpisode {
    */
   id: number
   /**
+   * Get the podcast id(s) the episode belongs to
+   * @type {Array<string>}
+   * @memberof PodcastEpisode
+   */
+  podcasts: Array<string>
+  /**
    *
    * @type {string}
    * @memberof PodcastEpisode
