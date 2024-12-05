@@ -29,6 +29,10 @@ def _use_test_qdrant_settings(settings, mocker):
     settings.QDRANT_HOST = "https://test"
     settings.QDRANT_BASE_COLLECTION_NAME = "test"
     mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
+    mock_qdrant.scroll.return_value = [
+        [],
+        None,
+    ]
     mocker.patch(
         "vector_search.utils.qdrant_client",
         return_value=mock_qdrant,
