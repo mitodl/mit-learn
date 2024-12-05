@@ -255,7 +255,23 @@ def filter_existing_qdrant_points(learning_resources):
             )
         ),
     )
+    next_page_offset = results[1]
     existing_readable_ids = [point.payload["readable_id"] for point in results[0]]
+    # go page by page to fetch all existing readable ids
+    while next_page_offset:
+        results = client.scroll(
+            collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
+            scroll_filter=models.Filter(
+                must=models.FieldCondition(
+                    key="readable_id", match=models.MatchAny(any=readable_ids)
+                )
+            ),
+            offset=next_page_offset,
+        )
+        existing_readable_ids.extend(
+            [point.payload["readable_id"] for point in results[0]]
+        )
+        next_page_offset = results[1]
     return LearningResource.objects.filter(
         readable_id__in=[
             readable_id
