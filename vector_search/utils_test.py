@@ -1,9 +1,11 @@
 import pytest
+from qdrant_client.models import PointStruct
 
 from learning_resources.factories import ContentFileFactory, LearningResourceFactory
 from learning_resources_search.serializers import serialize_bulk_content_files
 from vector_search.utils import (
     embed_learning_resources,
+    filter_existing_qdrant_points,
     vector_point_id,
 )
 
@@ -38,3 +40,31 @@ def test_vector_point_id_used_for_embed(mocker, content_type):
     assert sorted(
         [p.id for p in mock_qdrant.upload_points.mock_calls[0].kwargs["points"]]
     ) == sorted(point_ids)
+
+
+def test_filter_existing_qdrant_points(mocker):
+    """
+    Test that filter_existing_qdrant_points filters out
+    resources that are already embedded in Qdrant
+    """
+    mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
+    mocker.patch(
+        "vector_search.utils.qdrant_client",
+        return_value=mock_qdrant,
+    )
+    resources = LearningResourceFactory.create_batch(10)
+    already_embedded = resources[:3]
+    mock_qdrant.scroll.return_value = [
+        [
+            PointStruct(
+                id=resource.id,
+                payload={"readable_id": resource.readable_id},
+                vector=[0, 0, 0, 0],
+            )
+            for resource in already_embedded
+        ],
+    ]
+    filtered_resources = filter_existing_qdrant_points(resources)
+    assert sorted(filtered_resources.values_list("id", flat=True)) == sorted(
+        [res.id for res in already_embedded]
+    )

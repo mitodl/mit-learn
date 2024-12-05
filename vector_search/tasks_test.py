@@ -28,8 +28,7 @@ def test_start_embed_resources(mocker, mocked_celery, index):
     """
     start_embed_resources should generate embeddings for each resource type
     """
-    settings.QDRANT_HOST = "http://test"
-    settings.QDRANT_BASE_COLLECTION_NAME = "test"
+
     mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
 
     if index == COURSE_TYPE:
@@ -111,8 +110,6 @@ def test_embed_new_learning_resources(mocker, mocked_celery, period):
     embed_new_learning_resources should generate embeddings for new resources
     based on the period
     """
-    settings.QDRANT_HOST = "http://test"
-    settings.QDRANT_BASE_COLLECTION_NAME = "test"
     mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
 
     weekly_since = now_in_utc() - datetime.timedelta(days=5)
