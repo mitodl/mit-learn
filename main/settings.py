@@ -811,10 +811,10 @@ QDRANT_SPARSE_MODEL = get_string(
     name="QDRANT_SPARSE_MODEL", default="prithivida/Splade_PP_en_v1"
 )
 
-OPENAI_API_KEY = get_string(name="OPENAI_API_KEY", default="")
-
 # AI settings
+AI_DEBUG = get_bool("", False)  # noqa: FBT003
 AI_CACHE_TIMEOUT = get_int(name="AI_CACHE_TIMEOUT", default=3600)
+AI_CACHE = get_string(name="AI_CACHE", default="redis")
 AI_MIT_SEARCH_URL = get_string(
     name="AI_MIT_SEARCH_URL",
     default="https://api.learn.mit.edu/api/v1/learning_resources_search/",

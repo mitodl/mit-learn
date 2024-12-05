@@ -6,9 +6,10 @@ model_list:
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
-#litellm_settings:
-# The following should set default customer budgets, but they are
-# not enforced and this prevents per-customer budgets from being set.
-# https://docs.litellm.ai/docs/proxy/users
-#max_end_user_budget: os.environ/OPENAI_AI_MAX_BUDGET
-#max_end_user_budget_duration: os.environ/OPENAI_AI_MAX_BUDGET_DURATION
+
+litellm_settings:
+  # The following should set default customer budgets, but they are
+  # being ignored or not created (not sure which).
+  # https://docs.litellm.ai/docs/proxy/users
+  max_end_user_budget: os.environ/OPENAI_AI_MAX_BUDGET
+  max_end_user_budget_duration: os.environ/OPENAI_AI_MAX_BUDGET_DURATION

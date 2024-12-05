@@ -63,7 +63,7 @@ class BaseChatAgentService(ABC):
             if not cache_key:
                 msg = "cache_key must be set to save chat history"
                 raise ValueError(msg)
-            self.cache = caches["redis"]  # Save user's chat history to redis cache
+            self.cache = caches[settings.AI_CACHE]
             self.cache_timeout = cache_timeout or settings.AI_CACHE_TIMEOUT
             self.cache_key = cache_key
         else:
@@ -81,13 +81,13 @@ class BaseChatAgentService(ABC):
         if self.cache_key in self.cache:
             try:
                 for message in json.loads(self.cache.get(self.cache_key)):
-                    agent.chat_history.append(ChatMessage(**dict(message.items())))
+                    agent.chat_history.append(ChatMessage(**message))
             except json.JSONDecodeError:
                 self.cache.set(self.cache_key, "[]", timeout=self.cache_timeout)
         else:
             if self.proxy:
                 self.proxy.create_proxy_user(self.user_id)
-            self.cache.set(self.cache_key, "", timeout=self.cache_timeout)
+            self.cache.set(self.cache_key, "[]", timeout=self.cache_timeout)
 
     def create_agent(self) -> AgentRunner:
         """Create an AgentRunner for the relevant AI source"""
@@ -104,10 +104,7 @@ class BaseChatAgentService(ABC):
     def save_chat_history(self) -> None:
         """Save the agent chat history to the cache"""
         chat_history = [
-            {
-                "role": message.role,
-                "content": message.content,
-            }
+            message.dict()
             for message in self.agent.chat_history
             if message.role != "tool" and message.content
         ]
@@ -116,6 +113,7 @@ class BaseChatAgentService(ABC):
     def clear_chat_history(self) -> None:
         """Clear the chat history from the cache"""
         if self.save_history:
+            self.agent.chat_history.clear()
             self.cache.delete(self.cache_key)
             self.get_or_create_chat_history_cache(self.agent)
 
@@ -123,7 +121,7 @@ class BaseChatAgentService(ABC):
     def get_comment_metadata(self):
         """Yield markdown comments to send hidden metdata in the response"""
 
-    def run_streaming_agent(self, message: ChatMessage) -> str:
+    def run_streaming_agent(self, message: str) -> str:
         """
         Send the user message to the agent and yield the response as
         it comes in.
@@ -140,10 +138,25 @@ class BaseChatAgentService(ABC):
             response_gen = response.response_gen
             yield from response_gen
         except BadRequestError as error:
-            yield f"<!-- {error.response.json()} -->\n\n"
+            if hasattr(error, "response"):
+                error = error.response.json()
+            else:
+                error = {"error": {"message": str(error)}}
+            if (
+                error["error"]["message"].startswith("Budget has been exceeded")
+                and not settings.AI_DEBUG
+            ):
+                error["error"]["message"] = (
+                    "You have exceeded your AI usage limit. Please try again later."
+                )
+            yield f"<!-- {json.dumps(error)} -->"
+        except Exception:
+            yield '<!-- {"error":{"message":"An error occurred, please try again"}} -->'
+            log.exception("Error running AI agent")
         if self.save_history:
             self.save_chat_history()
-        yield f"\n\n<!-- {self.get_comment_metadata()} -->\n\n"
+        if settings.AI_DEBUG:
+            yield f"\n\n<!-- {self.get_comment_metadata()} -->\n\n"
 
 
 class SearchAgentService(BaseChatAgentService):

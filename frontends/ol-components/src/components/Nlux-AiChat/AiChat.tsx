@@ -11,7 +11,8 @@ import { personas } from "./personas"
 
 import "@nlux/themes/unstyled.css"
 import "./nlux-theme.css"
-import { styled } from "ol-components"
+import { Alert, styled } from "ol-components"
+import { extractJSONFromComment } from "ol-utilities"
 
 type NluxAiChatProps = Pick<
   AiChatProps,
@@ -47,32 +48,30 @@ const NluxAiChat: React.FC<NluxAiChatProps> = (props) => {
         events={{ messageReceived: onMessageReceived }}
         {...props}
       />
-      {lastMessageReceived ? (
-        <div>
-          <p>Debug Info:</p>
-          <StyledDebugPre>
-            {lastMessageReceived
-              ? lastMessageReceived.toString()?.includes('{"error":')
-                ? JSON.stringify(
-                    JSON.parse(lastMessageReceived.toString() || ""),
-                    null,
-                    4,
-                  )
-                : lastMessageReceived.toString().includes("<!--")
-                  ? JSON.stringify(
-                      JSON.parse(
-                        lastMessageReceived
-                          .toString()
-                          .match(/<!-{2}(.*)-{2}>/)?.[1] || "",
-                      ),
-                      null,
-                      4,
-                    )
-                  : ""
-              : ""}
-          </StyledDebugPre>
-        </div>
-      ) : null}
+      {lastMessageReceived &&
+        (lastMessageReceived.toString().includes('{"error":') ? (
+          <Alert severity="error">
+            {extractJSONFromComment(lastMessageReceived)?.error?.message ||
+              "Sorry, an unexpected error occurred."}
+          </Alert>
+        ) : lastMessageReceived.toString().includes("<!--") ? (
+          <div>
+            <p>Debug Info:</p>
+            <StyledDebugPre>
+              {lastMessageReceived
+                ? lastMessageReceived.toString()?.includes('{"error":')
+                  ? JSON.stringify(extractJSONFromComment(lastMessageReceived))
+                  : lastMessageReceived.toString().includes("<!--")
+                    ? JSON.stringify(
+                        extractJSONFromComment(lastMessageReceived),
+                        null,
+                        4,
+                      )
+                    : ""
+                : ""}
+            </StyledDebugPre>
+          </div>
+        ) : null)}
     </>
   )
 }

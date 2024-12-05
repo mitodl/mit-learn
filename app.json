@@ -23,6 +23,10 @@
       "description": "Timeout for AI cache",
       "required": false
     },
+    "AI_DEBUG": {
+      "description": "Include debug information in AI responses if True",
+      "required": false
+    },
     "AI_MIT_SEARCH_URL": {
       "description": "URL for AI search agent",
       "required": false
