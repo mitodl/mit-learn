@@ -112,7 +112,7 @@ class LearningResourceRelationTypes(TextChoices):
 
 GROUP_STAFF_LISTS_EDITORS = "learning_path_editors"
 
-VALID_TEXT_FILE_TYPES = [
+VALID_FILE_TYPES = [
     ".csv",
     ".doc",
     ".docx",
@@ -138,17 +138,35 @@ VALID_TEXT_FILE_TYPES = [
     ".xml",
 ]
 
+VALID_TEXT_FILE_TYPES = [
+    ".doc",
+    ".docx",
+    ".htm",
+    ".html",
+    ".json",
+    ".md",
+    ".pdf",
+    ".ppt",
+    ".pptx",
+    ".rtf",
+    ".sjson",
+    ".srt",
+    ".txt",
+    ".vtt",
+    ".xml",
+]
+
 
 CONTENT_TYPE_PAGE = "page"
 CONTENT_TYPE_FILE = "file"
 CONTENT_TYPE_VIDEO = "video"
 CONTENT_TYPE_PDF = "pdf"
 
-CONTENT_TYPE_VERTICAL = "vertical"
 VALID_COURSE_CONTENT_TYPES = (
     CONTENT_TYPE_PAGE,
     CONTENT_TYPE_FILE,
-    CONTENT_TYPE_VERTICAL,
+    CONTENT_TYPE_VIDEO,
+    CONTENT_TYPE_PDF,
 )
 VALID_COURSE_CONTENT_CHOICES = list(
     zip(VALID_COURSE_CONTENT_TYPES, VALID_COURSE_CONTENT_TYPES)

@@ -95,7 +95,9 @@ def test_sync_edx_course_files(  # noqa: PLR0913
                     Body=infile.read(),
                     ACL="public-read",
                 )
-    sync_edx_course_files(source, [course.id for course in courses], keys, s3_prefix)
+    sync_edx_course_files(
+        source, [course.id for course in courses], keys, s3_prefix=s3_prefix
+    )
     assert mock_transform.call_count == (2 if published else 0)
     assert mock_load_content_files.call_count == (2 if published else 0)
     if published:
