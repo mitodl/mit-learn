@@ -795,13 +795,16 @@ QDRANT_BASE_COLLECTION_NAME = get_string(
     name="QDRANT_COLLECTION_NAME", default="resource_embeddings"
 )
 
-QDRANT_SEARCH_VECTOR_NAME = get_string(
-    name="QDRANT_SEARCH_VECTOR_NAME", default="fast-bge-small-en"
-)
 
-QDRANT_DENSE_MODEL = get_string(
-    name="QDRANT_DENSE_MODEL", default="sentence-transformers/all-MiniLM-L6-v2"
-)
+QDRANT_DENSE_MODEL = get_string(name="QDRANT_DENSE_MODEL", default=None)
 QDRANT_SPARSE_MODEL = get_string(
     name="QDRANT_SPARSE_MODEL", default="prithivida/Splade_PP_en_v1"
+)
+QDRANT_ENCODER = get_string(
+    name="QDRANT_ENCODER", default="vector_search.encoders.fastembed.FastEmbedEncoder"
+)
+
+OPENAI_API_KEY = get_string(
+    name="OPENAI_API_KEY",
+    default=None,
 )
