@@ -139,7 +139,6 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": get_int(
             "EMBED_NEW_RESOURCES_SCHEDULE_SECONDS", 60 * 30
         ),  # default is every 30 minutes
-        "kwargs": {"period": "daily"},
     },
     "send-search-subscription-emails-every-1-days": {
         "task": "learning_resources_search.tasks.send_subscription_emails",
