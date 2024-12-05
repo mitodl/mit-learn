@@ -849,6 +849,8 @@ class ContentFile(TimestampedModel):
     content_tags = models.ManyToManyField(LearningResourceContentTag)
     published = models.BooleanField(default=True)
     checksum = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
+    source_path = models.CharField(max_length=1024, null=True, blank=True)  # noqa: DJ001
+    file_extension = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
 
     class Meta:
         unique_together = (("key", "run"),)

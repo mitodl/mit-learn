@@ -8677,16 +8677,19 @@ components:
       enum:
       - page
       - file
-      - vertical
+      - video
+      - pdf
       type: string
       description: |-
         * `page` - page
         * `file` - file
-        * `vertical` - vertical
+        * `video` - video
+        * `pdf` - pdf
       x-enum-descriptions:
       - page
       - file
-      - vertical
+      - video
+      - pdf
     Course:
       type: object
       description: Serializer for the Course model

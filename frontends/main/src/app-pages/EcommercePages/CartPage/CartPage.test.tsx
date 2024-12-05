@@ -2,7 +2,8 @@ import React from "react"
 import { renderWithProviders, setMockResponse } from "@/test-utils"
 import { urls } from "api/test-utils"
 import * as commonUrls from "@/common/urls"
-import { ForbiddenError, Permissions } from "@/common/permissions"
+import { ForbiddenError } from "@/common/errors"
+import { Permission } from "api/hooks/user"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import CartPage from "./CartPage"
 import { allowConsoleErrors } from "ol-test-utilities"
@@ -33,7 +34,7 @@ describe("CartPage", () => {
   ;["on", "off"].forEach((testCase: string) => {
     test(`Renders when logged in and feature flag is ${testCase}`, async () => {
       setMockResponse.get(urls.userMe.get(), {
-        [Permissions.Authenticated]: true,
+        [Permission.Authenticated]: true,
       })
       mockedUseFeatureFlagEnabled.mockReturnValue(testCase === "on")
 

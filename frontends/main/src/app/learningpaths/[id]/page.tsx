@@ -1,11 +1,11 @@
 import React from "react"
-import LearningPathDetailsPage from "@/app-pages/LearningPathDetailsPage/LearningPathDetailsPage"
+import { Permission } from "api/hooks/user"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
-import { Permissions } from "@/common/permissions"
+import LearningPathDetailsPage from "@/app-pages/LearningPathDetailsPage/LearningPathDetailsPage"
 
 const Page: React.FC = () => {
   return (
-    <RestrictedRoute requires={Permissions.LearningPathEditor}>
+    <RestrictedRoute requires={Permission.LearningPathEditor}>
       <LearningPathDetailsPage />
     </RestrictedRoute>
   )
