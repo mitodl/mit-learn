@@ -64,6 +64,7 @@ def test_filter_existing_qdrant_points(mocker):
             )
             for resource in already_embedded
         ],
+        None,
     ]
     filtered_resources = filter_existing_qdrant_points(resources)
 
