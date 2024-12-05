@@ -153,14 +153,12 @@ def start_embed_resources(self, indexes, skip_content_files):
 
 
 @app.task(bind=True)
-def embed_new_learning_resources(self, period="daily"):
+def embed_new_learning_resources(self):
     """
-    Embed new resources in period by type
+    Embed new resources from the last day
     """
-    log.info("Running %s embedding task", period)
+    log.info("Running new resource embedding task")
     delta = datetime.timedelta(days=1)
-    if period == "weekly":
-        delta = datetime.timedelta(days=7)
     since = now_in_utc() - delta
     new_learning_resources = LearningResource.objects.filter(
         published=True,

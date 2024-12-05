@@ -66,9 +66,18 @@ def test_filter_existing_qdrant_points(mocker):
         ],
     ]
     filtered_resources = filter_existing_qdrant_points(resources)
-    assert sorted(filtered_resources.values_list("id", flat=True)) == sorted(
-        [res.id for res in already_embedded]
+
+    assert (
+        len(
+            [
+                res.id
+                for res in already_embedded
+                if res.id in filtered_resources.values_list("id", flat=True)
+            ]
+        )
+        == 0
     )
+    assert filtered_resources.count() == 7
 
 
 def test_force_create_qdrand_collections(mocker):

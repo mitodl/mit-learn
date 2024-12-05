@@ -101,33 +101,25 @@ def test_start_embed_resources_without_settings(mocker, mocked_celery, index):
     generate_embeddings_mock.si.assert_not_called()
 
 
-@pytest.mark.parametrize(
-    "period",
-    ["daily", "weekly"],
-)
-def test_embed_new_learning_resources(mocker, mocked_celery, period):
+def test_embed_new_learning_resources(mocker, mocked_celery):
     """
     embed_new_learning_resources should generate embeddings for new resources
     based on the period
     """
     mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
 
-    weekly_since = now_in_utc() - datetime.timedelta(days=5)
     daily_since = now_in_utc() - datetime.timedelta(hours=5)
 
     LearningResourceFactory.create_batch(
         4, created_on=daily_since, resource_type=COURSE_TYPE, published=True
     )
+    # create resources older than a day
     LearningResourceFactory.create_batch(
-        4, created_on=weekly_since, resource_type=COURSE_TYPE, published=True
+        4,
+        created_on=now_in_utc() - datetime.timedelta(days=5),
+        resource_type=COURSE_TYPE,
+        published=True,
     )
-
-    weekly_resource_ids = [
-        resource.id
-        for resource in LearningResource.objects.filter(
-            created_on__gt=now_in_utc() - datetime.timedelta(days=7)
-        )
-    ]
 
     daily_resource_ids = [
         resource.id
@@ -141,12 +133,8 @@ def test_embed_new_learning_resources(mocker, mocked_celery, period):
     )
 
     with pytest.raises(mocked_celery.replace_exception_class):
-        embed_new_learning_resources.delay(period)
-    if period == "weekly":
-        generate_embeddings_mock.si.assert_called_once_with(
-            weekly_resource_ids, "course"
-        )
-    else:
-        generate_embeddings_mock.si.assert_called_once_with(
-            daily_resource_ids, "course"
-        )
+        embed_new_learning_resources.delay()
+    list(mocked_celery.group.call_args[0][0])
+
+    embedded_ids = generate_embeddings_mock.si.mock_calls[0].args[0]
+    assert sorted(daily_resource_ids) == sorted(embedded_ids)

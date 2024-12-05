@@ -256,4 +256,10 @@ def filter_existing_qdrant_points(learning_resources):
         ),
     )
     existing_readable_ids = [point.payload["readable_id"] for point in results[0]]
-    return LearningResource.objects.filter(readable_id__in=existing_readable_ids)
+    return LearningResource.objects.filter(
+        readable_id__in=[
+            readable_id
+            for readable_id in readable_ids
+            if readable_id not in existing_readable_ids
+        ]
+    )

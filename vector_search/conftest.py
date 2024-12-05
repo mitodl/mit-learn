@@ -28,4 +28,8 @@ def _use_dummy_encoder(settings):
 def _use_test_qdrant_settings(settings, mocker):
     settings.QDRANT_HOST = "https://test"
     settings.QDRANT_BASE_COLLECTION_NAME = "test"
-    mocker.patch("qdrant_client.QdrantClient")
+    mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
+    mocker.patch(
+        "vector_search.utils.qdrant_client",
+        return_value=mock_qdrant,
+    )
