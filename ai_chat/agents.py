@@ -1,4 +1,4 @@
-"""Agent/service classes for the ai_chat app"""
+"""Agent service classes for the AI chatbots"""
 
 import json
 import logging
@@ -15,7 +15,7 @@ from llama_index.core.agent import AgentRunner
 from llama_index.core.base.llms.types import ChatMessage
 from llama_index.core.constants import DEFAULT_TEMPERATURE
 from llama_index.core.tools import FunctionTool, ToolMetadata
-from llama_index.llms.litellm import LiteLLM
+from llama_index.llms.openai import OpenAI
 from openai import BadRequestError
 from pydantic import Field
 
@@ -30,27 +30,29 @@ class BaseChatAgentService(ABC):
     """Base service class for an AI chat agent"""
 
     INSTRUCTIONS = "Provide instructions for the AI assistant"
+
+    # For LiteLLM tracking purposes
     JOB_ID = "BASECHAT_JOB"
     TASK_NAME = "BASECHAT_TASK"
 
     def __init__(  # noqa: PLR0913
         self,
-        name,
+        name: str,
         *,
-        model=settings.AI_MODEL,
-        temperature=DEFAULT_TEMPERATURE,
-        instructions=None,
-        user_id=None,
-        save_history=False,
-        cache_key=None,
-        cache_timeout=settings.AI_CACHE_TIMEOUT,
+        model: Optional[str] = None,
+        temperature: Optional[float] = None,
+        instructions: Optional[str] = None,
+        user_id: Optional[str] = None,
+        save_history: Optional[bool] = False,
+        cache_key: Optional[str] = None,
+        cache_timeout: Optional[int] = None,
     ):
+        """Initialize the AI chat agent service"""
         self.assistant_name = name
         self.ai = settings.AI_MODEL_API
-        self.model_id = "gpt-4o"
-        self.model = model
+        self.model = model or settings.AI_MODEL
         self.save_history = save_history
-        self.temperature = temperature
+        self.temperature = temperature or DEFAULT_TEMPERATURE
         self.instructions = instructions or self.INSTRUCTIONS
         self.user_id = user_id
         if settings.AI_PROXY_CLASS:
@@ -62,7 +64,7 @@ class BaseChatAgentService(ABC):
                 msg = "cache_key must be set to save chat history"
                 raise ValueError(msg)
             self.cache = caches["redis"]  # Save user's chat history to redis cache
-            self.cache_timeout = cache_timeout
+            self.cache_timeout = cache_timeout or settings.AI_CACHE_TIMEOUT
             self.cache_key = cache_key
         else:
             self.cache = None
@@ -72,8 +74,9 @@ class BaseChatAgentService(ABC):
 
     def get_or_create_chat_history_cache(self, agent: AgentRunner) -> None:
         """
-        Get the user chat history from the cache,
-        or create an empty cache key if it doesn't exist
+        Get the user chat history from the cache and load it into the
+        llamaindex agent's chat history (agent.chat_history).
+        Create an empty cache key if it doesn't exist.
         """
         if self.cache_key in self.cache:
             try:
@@ -99,7 +102,7 @@ class BaseChatAgentService(ABC):
         """Create an OpenAI agent"""
 
     def save_chat_history(self) -> None:
-        """Save the chat history to the cache"""
+        """Save the agent chat history to the cache"""
         chat_history = [
             {
                 "role": message.role,
@@ -120,19 +123,21 @@ class BaseChatAgentService(ABC):
     def get_comment_metadata(self):
         """Yield markdown comments to send hidden metdata in the response"""
 
-    def run_streaming_agent(self, message) -> str:
+    def run_streaming_agent(self, message: ChatMessage) -> str:
         """
-        Run the AI assistant with the provided user message
-        and yield the response as it comes in
+        Send the user message to the agent and yield the response as
+        it comes in.
+
+        Append the response with debugging metadata and/or errors.
         """
         if not self.agent:
             error = "Create agent before running"
             raise ValueError(error)
-        response = self.agent.stream_chat(
-            message,
-        )
-        response_gen = response.response_gen
         try:
+            response = self.agent.stream_chat(
+                message,
+            )
+            response_gen = response.response_gen
             yield from response_gen
         except BadRequestError as error:
             yield f"<!-- {error.response.json()} -->\n\n"
@@ -289,27 +294,27 @@ Search parameters: {{"q": "mathematics"}}
 
     def __init__(  # noqa: PLR0913
         self,
-        name,
+        name: str,
         *,
-        model=settings.AI_MODEL,
-        temperature=DEFAULT_TEMPERATURE,
-        instructions=None,
-        user_id=None,
-        save_history=True,
-        cache_key=None,
-        cache_timeout=settings.AI_CACHE_TIMEOUT,
+        model: Optional[str] = None,
+        temperature: Optional[float] = None,
+        instructions: Optional[str] = None,
+        user_id: Optional[str] = None,
+        save_history: Optional[bool] = False,
+        cache_key: Optional[str] = None,
+        cache_timeout: Optional[int] = None,
     ):
+        """Initialize the AI search agent service"""
         super().__init__(
             name,
-            model=model,
+            model=model or settings.AI_MODEL,
             temperature=temperature,
             instructions=instructions,
             save_history=save_history,
             user_id=user_id,
             cache_key=cache_key,
-            cache_timeout=cache_timeout,
+            cache_timeout=cache_timeout or settings.AI_CACHE_TIMEOUT,
         )
-        self.temperature = temperature
         self.search_parameters = []
         self.search_results = []
         self.agent = self.create_agent()
@@ -358,10 +363,17 @@ Search parameters: {{"q": "mathematics"}}
             log.exception("Error querying MIT API")
             return json.dumps({"error": str(e)})
 
-    def create_agent(self) -> OpenAIAgent:
-        """Create an OpenAI agent"""
+    def create_openai_agent(self) -> OpenAIAgent:
+        """
+        Create an OpenAI-specific llamaindex agent for function calling
 
-        llm = LiteLLM(
+        Using `OpenAI` instead of a more universal `LiteLLM` because
+        the `LiteLLM` class as implemented by llamaindex does not
+        support function calling. ie:
+        agent = FunctionCallingAgentWorker.from_tools(....
+        > AssertionError: llm must be an instance of FunctionCallingLLM
+        """
+        llm = OpenAI(
             model=self.model,
             **(self.proxy.get_api_kwargs() if self.proxy else {}),
             additional_kwargs=(
@@ -391,8 +403,10 @@ Search parameters: {{"q": "mathematics"}}
             fn=self.search_courses, tool_metadata=metadata
         )
 
-    def get_comment_metadata(self):
-        """Yield markdown comments to send hidden metadata in the response"""
+    def get_comment_metadata(self) -> str:
+        """
+        Yield markdown comments to send hidden metadata in the response
+        """
         metadata = {
             "metadata": {
                 "search_parameters": self.search_parameters,

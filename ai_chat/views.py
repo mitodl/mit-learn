@@ -5,6 +5,7 @@ import logging
 from django.http import StreamingHttpResponse
 from drf_spectacular.utils import extend_schema
 from rest_framework import views
+from rest_framework.request import Request
 
 from ai_chat import serializers
 from ai_chat.agents import SearchAgentService
@@ -13,8 +14,9 @@ from ai_chat.permissions import SearchAgentPermissions
 log = logging.getLogger(__name__)
 
 
-class ChatbotAgentView(views.APIView):
-    """DRF view for AI agent that answers user queries
+class SearchAgentView(views.APIView):
+    """
+    DRF view for an AI agent that answers user queries
     by performing a relevant learning resources search.
     """
 
@@ -30,7 +32,8 @@ class ChatbotAgentView(views.APIView):
             }
         }
     )
-    def post(self, request):
+    def post(self, request: Request) -> StreamingHttpResponse:
+        """Handle a POST request to the chatbot agent."""
         serializer = serializers.ChatRequestSerializer(
             data=request.data, context={"request": request}
         )
@@ -42,7 +45,7 @@ class ChatbotAgentView(views.APIView):
             if request.user.is_authenticated
             else request.session.session_key
         )
-        # Make anonymous users share a common budget/rate limit.
+        # Make anonymous users share a common LiteLLM budget/rate limit.
         user_id = request.user.email if request.user.is_authenticated else "anonymous"
         message = serializer.validated_data.pop("message", "")
         clear_history = serializer.validated_data.pop("clear_history", False)
@@ -50,6 +53,7 @@ class ChatbotAgentView(views.APIView):
             "Learning Resource Search AI Assistant",
             user_id=user_id,
             cache_key=f"{cache_id}_search_chat_history",
+            save_history=True,
             **serializer.validated_data,
         )
         if clear_history:

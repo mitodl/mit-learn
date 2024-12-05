@@ -10,7 +10,7 @@ from django.conf import settings
 from ai_chat.agents import BaseChatAgentService
 from ai_chat.constants import AI_ANONYMOUS_USER
 
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 class AIProxy(ABC):
@@ -108,4 +108,4 @@ class LiteLLMProxy(AIProxy):
                     """
                     self.create_proxy_user(user_id=user_id, endpoint="update")
                 else:
-                    logger.exception("Error creating/updating proxy customer account")
+                    log.exception("Error creating/updating proxy customer account")
