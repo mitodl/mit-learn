@@ -136,7 +136,7 @@ const allRunsAreIdentical = (resource: LearningResource) => {
   for (const run of resource.runs) {
     if (run.resource_prices) {
       run.resource_prices.forEach((price) => {
-        if (!(resource.free && price.amount === "0")) {
+        if (!(resource.free && Number(price.amount) === 0)) {
           amounts.add(price.amount)
           currencies.add(price.currency)
         }
