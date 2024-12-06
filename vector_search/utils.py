@@ -261,7 +261,14 @@ def qdrant_query_conditions(params):
     for param in params:
         if param in QDRANT_PARAM_MAP and params[param] is not None:
             if type(params[param]) is list:
-                match_condition = models.MatchAny(any=params[param])
+                """
+                Account for array wrapped booleans which should only match value
+                We can also use MatchValue for arrays with a single item
+                """
+                if len(params[param]) == 1 and type(params[param][0]) is bool:
+                    match_condition = models.MatchValue(value=params[param][0])
+                else:
+                    match_condition = models.MatchAny(any=params[param])
             else:
                 match_condition = models.MatchValue(value=params[param])
             conditions.append(
