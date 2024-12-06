@@ -123,7 +123,10 @@ describe("allRunsAreIdentical", () => {
   })
 
   test("returns false if prices differ", () => {
-    const resource = factories.learningResources.resource()
+    const resource = factories.learningResources.resource({
+      free: false,
+      certification: false,
+    })
     const prices = [{ amount: "100", currency: "USD" }]
     const delivery = [
       { code: CourseResourceDeliveryInnerCodeEnum.InPerson, name: "In person" },
