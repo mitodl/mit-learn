@@ -470,11 +470,9 @@ def extract_course(
 
     log.info("Digesting %s...", url_path)
 
-    run_slug = url_path.strip("/")
-
     return {
         **course_json,
         "last_modified": last_modified,
-        "slug": run_slug,
-        "url": urljoin(settings.OCW_BASE_URL, run_slug),
+        "slug": url_path.strip("/"),
+        "url": urljoin(settings.OCW_BASE_URL, url_path),
     }
