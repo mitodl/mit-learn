@@ -96,7 +96,10 @@ describe("allRunsAreIdentical", () => {
   })
 
   test("returns true if all runs are identical", () => {
-    const resource = factories.learningResources.resource()
+    const resource = factories.learningResources.resource({
+      free: false,
+      certification: false,
+    })
     const prices = [{ amount: "100", currency: "USD" }]
     const delivery = [
       { code: CourseResourceDeliveryInnerCodeEnum.InPerson, name: "In person" },
@@ -153,12 +156,14 @@ describe("allRunsAreIdentical", () => {
   })
 
   test("returns true if prices differ but have same numerical value", () => {
-    const resource = factories.learningResources.resource()
+    const resource = factories.learningResources.resource({
+      free: true,
+      certification: false,
+    })
     const delivery = [
       { code: CourseResourceDeliveryInnerCodeEnum.InPerson, name: "In person" },
     ]
     const location = "New York"
-    resource.free = true
     resource.runs = [
       makeRun({
         resource_prices: [{ amount: "0", currency: "USD" }],
