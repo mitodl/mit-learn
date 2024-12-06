@@ -1,6 +1,48 @@
 Release Notes
 =============
 
+Version 0.26.0 (Released November 26, 2024)
+--------------
+
+- Refactor date/time parsing for mitpe events (#1840)
+- Server rendering for homepage, units and topics listing pages (#1847)
+- Query membership endpoints for resources belonging to user lists and learning paths (#1846)
+- Remove some unused exports from ol-components (#1844)
+- Update Yarn to v4.5.2 (#1851)
+- Update postgres Docker tag to v12.22 (#1854)
+- Update dependency ruff to v0.8.0 (#1853)
+- Consistent qdrant point ids (#1839)
+- set min cpu and memory. also add qdrant container (#1845)
+- similar resources carousel (#1835)
+- Refactor user lists and learning paths hooks out of learning resources (#1842)
+- Revert "Server rendering for homepage, units and topics listing pages (#1822)" (#1838)
+- Server rendering for homepage, units and topics listing pages (#1822)
+- Update dependency @mui/lab to v6.0.0-beta.15 (#1830)
+- vector search endpoint (#1827)
+- Update dependency django-anymail to v12 (#1815)
+- Update dependency safety to v3 (#1819)
+- Update dependency pytest-cov to v6 (#1818)
+- separate starts and as taught in, show anytime availability (#1828)
+
+Version 0.25.0 (Released November 25, 2024)
+--------------
+
+- LocalDate and NoSSR components to render localized dates only on client (#1831)
+- Revert "LocalDate and NoSSR components to render localized dates only on client"
+- LocalDate and NoSSR components to render localized dates only on client
+- v2 learning resource drawer formats and location (#1826)
+- v2 drawer certification updates (#1823)
+- Mechanism to sync server prefetch with client API calls (#1798)
+- show more button for v2 drawer dates (#1809)
+- Add data-ph- elements to CTA buttons (#1821)
+- Endpoints for userlist/learningpath memberships (#1808)
+- Clear resource_type filter when leaving Learning Materials search tab (#1780)
+- Update opensearchproject/opensearch Docker tag to v2.18.0 (#1812)
+- Update dependency postcss-styled-syntax to ^0.7.0 (#1811)
+- Update dependency ruff to v0.7.3 (#1810)
+- Update dependency @chromatic-com/storybook to v3 (#1764)
+- learning resource drawer v2 run comparison table (#1782)
+
 Version 0.24.3 (Released November 14, 2024)
 --------------
 

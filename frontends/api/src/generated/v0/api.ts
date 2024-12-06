@@ -2410,7 +2410,7 @@ export interface LearningResourceTopic {
   channel_url: string | null
 }
 /**
- *
+ * Response serializer for vector based search
  * @export
  * @interface LearningResourcesVectorSearchResponse
  */
@@ -3197,6 +3197,12 @@ export interface PodcastEpisode {
    * @memberof PodcastEpisode
    */
   id: number
+  /**
+   * Get the podcast id(s) the episode belongs to
+   * @type {Array<string>}
+   * @memberof PodcastEpisode
+   */
+  podcasts: Array<string>
   /**
    *
    * @type {string}

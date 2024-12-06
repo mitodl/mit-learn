@@ -2602,6 +2602,7 @@ components:
       - name
     LearningResourcesVectorSearchResponse:
       type: object
+      description: Response serializer for vector based search
       properties:
         count:
           type: integer
@@ -3101,6 +3102,12 @@ components:
         id:
           type: integer
           readOnly: true
+        podcasts:
+          type: array
+          items:
+            type: string
+          description: Get the podcast id(s) the episode belongs to
+          readOnly: true
         transcript:
           type: string
         episode_link:
@@ -3117,6 +3124,7 @@ components:
           nullable: true
       required:
       - id
+      - podcasts
     PodcastEpisodeResource:
       type: object
       description: Serializer for podcast episode resources

@@ -10,8 +10,9 @@ import React, {
 import styled from "@emotion/styled"
 import { theme } from "../ThemeProvider/ThemeProvider"
 import { pxToRem } from "../ThemeProvider/typography"
-import Link from "next/link"
+import { Link } from "../Link/Link"
 import { default as NextImage, ImageProps as NextImageProps } from "next/image"
+import { truncateText } from "../TruncateText/TruncateText"
 
 export type Size = "small" | "medium"
 
@@ -22,7 +23,9 @@ type LinkableProps = {
 }
 /**
  * Render a NextJS link if href is provided, otherwise a span.
- * Does not scroll if the href is a query string.
+ * Passes shallow to navigate with window.history.pushState
+ * where we are only updating search params to prevent calls
+ * to the server for RSC payloads.
  */
 export const Linkable: React.FC<LinkableProps> = ({
   href,
@@ -36,7 +39,8 @@ export const Linkable: React.FC<LinkableProps> = ({
         {...others}
         className={className}
         href={href}
-        scroll={!href.startsWith("?")}
+        shallow={href.startsWith("?")}
+        nohover
       >
         {children}
       </Link>
@@ -105,32 +109,29 @@ const Info = styled.div<{ size?: Size }>`
 const titleOpts = {
   shouldForwardProp: (prop: string) => prop !== "lines" && prop !== "size",
 }
-const Title = styled(Linkable, titleOpts)<{ lines?: number; size?: Size }>`
-  text-overflow: ellipsis;
-  height: ${({ lines, size }) => {
-    const lineHeightPx = size === "small" ? 18 : 20
-    lines = lines ?? (size === "small" ? 2 : 3)
-    return theme.typography.pxToRem(lines * lineHeightPx)
-  }};
-  overflow: hidden;
-  margin: 0;
-
-  ${({ size }) =>
+const Title = styled(
+  Linkable,
+  titleOpts,
+)<{ size?: Size; lines?: number }>(({ theme, size, lines = 3 }) => {
+  return [
+    {
+      display: "flex",
+      textOverflow: "ellipsis",
+      overflow: "hidden",
+      margin: 0,
+      ...truncateText(lines),
+    },
     size === "small"
-      ? { ...theme.typography.subtitle2 }
-      : { ...theme.typography.subtitle1 }}
-
-  ${({ lines, size }) => {
-    lines = lines ?? (size === "small" ? 2 : 3)
-    return `
-      @supports (-webkit-line-clamp: ${lines}) {
-        white-space: initial;
-        display: -webkit-box;
-        -webkit-line-clamp: ${lines};
-        -webkit-box-orient: vertical;
-      }`
-  }}
-`
+      ? {
+          ...theme.typography.subtitle2,
+          height: `calc(${lines} * ${theme.typography.subtitle2.lineHeight})`,
+        }
+      : {
+          ...theme.typography.subtitle1,
+          height: `calc(${lines} * ${theme.typography.subtitle1.lineHeight})`,
+        },
+  ]
+})
 
 const Footer = styled.span`
   display: block;
@@ -345,9 +346,7 @@ const Card: Card = ({
           className="MitCard-title"
           size={size}
           {...title}
-        >
-          {title.children}
-        </Title>
+        />
       </Body>
       <Bottom>
         <Footer className="MitCard-footer" {...footer}>

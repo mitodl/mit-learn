@@ -12,7 +12,7 @@ const Panel = styled.div({
   alignItems: "center",
   color: theme.palette.primary.main,
   backgroundColor: theme.palette.grey[300],
-  borderShadow: theme.custom.shadow,
+  borderShadow: "3 4 12 rgb(0 0 0 / 36%)",
 })
 const Slide: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <Panel>{children}</Panel>

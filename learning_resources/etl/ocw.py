@@ -18,7 +18,7 @@ from retry import retry
 from learning_resources.constants import (
     CONTENT_TYPE_PAGE,
     CONTENT_TYPE_VIDEO,
-    VALID_TEXT_FILE_TYPES,
+    VALID_FILE_TYPES,
     Availability,
     Format,
     LearningResourceDelivery,
@@ -196,7 +196,7 @@ def get_file_content(
     mime_type = mimetypes.types_map.get(file_s3_path)
     content_json = None
 
-    if ext_lower in VALID_TEXT_FILE_TYPES:
+    if ext_lower in VALID_FILE_TYPES:
         s3_obj = s3_resource.Object(
             settings.OCW_LIVE_BUCKET, unquote(file_s3_path)
         ).get()

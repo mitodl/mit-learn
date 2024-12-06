@@ -372,6 +372,13 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
                     to_attr="_learning_path_parents",
                 ),
                 Prefetch(
+                    "parents",
+                    queryset=LearningResourceRelationship.objects.filter(
+                        relation_type=LearningResourceRelationTypes.PODCAST_EPISODES.value,
+                    ),
+                    to_attr="_podcasts",
+                ),
+                Prefetch(
                     "user_lists",
                     queryset=UserListRelationship.objects.filter(parent__author=user)
                     if user is not None and user.is_authenticated
@@ -510,6 +517,17 @@ class LearningResource(TimestampedModel):
             "_learning_path_parents",
             self.parents.filter(
                 relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS
+            ),
+        )
+
+    @cached_property
+    def podcasts(self) -> list["LearningResourceRelationship"]:
+        """Return a list of podcasts that the resource is in"""
+        return getattr(
+            self,
+            "_podcasts",
+            self.parents.filter(
+                relation_type=LearningResourceRelationTypes.PODCAST_EPISODES.value,
             ),
         )
 
@@ -849,6 +867,8 @@ class ContentFile(TimestampedModel):
     content_tags = models.ManyToManyField(LearningResourceContentTag)
     published = models.BooleanField(default=True)
     checksum = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
+    source_path = models.CharField(max_length=1024, null=True, blank=True)  # noqa: DJ001
+    file_extension = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
 
     class Meta:
         unique_together = (("key", "run"),)

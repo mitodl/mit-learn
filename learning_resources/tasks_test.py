@@ -149,11 +149,12 @@ def test_import_all_mit_edx_files(settings, mocker, mocked_celery, mock_blocklis
         "learning_resources.tasks.get_content_tasks", autospec=True
     )
     with pytest.raises(mocked_celery.replace_exception_class):
-        tasks.import_all_mit_edx_files.delay(4)
+        tasks.import_all_mit_edx_files.delay(chunk_size=4, overwrite=False)
     get_content_tasks_mock.assert_called_once_with(
         ETLSource.mit_edx.name,
         chunk_size=4,
         s3_prefix="simeon-mitx-course-tarballs",
+        overwrite=False,
     )
 
 
@@ -166,10 +167,9 @@ def test_import_all_mitxonline_files(settings, mocker, mocked_celery, mock_block
     )
 
     with pytest.raises(mocked_celery.replace_exception_class):
-        tasks.import_all_mitxonline_files.delay(3)
+        tasks.import_all_mitxonline_files.delay(chunk_size=3, overwrite=True)
     get_content_tasks_mock.assert_called_once_with(
-        PlatformType.mitxonline.name,
-        chunk_size=3,
+        PlatformType.mitxonline.name, chunk_size=3, overwrite=True
     )
 
 
@@ -181,8 +181,10 @@ def test_import_all_xpro_files(settings, mocker, mocked_celery, mock_blocklist):
         "learning_resources.tasks.get_content_tasks", autospec=True
     )
     with pytest.raises(mocked_celery.replace_exception_class):
-        tasks.import_all_xpro_files.delay(3)
-    get_content_tasks_mock.assert_called_once_with(PlatformType.xpro.name, chunk_size=3)
+        tasks.import_all_xpro_files.delay(chunk_size=3)
+    get_content_tasks_mock.assert_called_once_with(
+        PlatformType.xpro.name, chunk_size=3, overwrite=False
+    )
 
 
 @mock_aws
@@ -193,12 +195,13 @@ def test_import_all_oll_files(settings, mocker, mocked_celery, mock_blocklist):
         "learning_resources.tasks.get_content_tasks", autospec=True
     )
     with pytest.raises(mocked_celery.replace_exception_class):
-        tasks.import_all_oll_files.delay(4)
+        tasks.import_all_oll_files.delay(chunk_size=4)
     get_content_tasks_mock.assert_called_once_with(
         ETLSource.oll.name,
         chunk_size=4,
         s3_prefix="open-learning-library/courses",
         override_base_prefix=True,
+        overwrite=False,
     )
 
 
@@ -219,7 +222,7 @@ def test_get_content_tasks(settings, mocker, mocked_celery, mock_xpro_learning_b
     platform = PlatformType.xpro.name
     factories.CourseFactory.create_batch(3, etl_source=etl_source, platform=platform)
     s3_prefix = "course-prefix"
-    tasks.get_content_tasks(etl_source, s3_prefix=s3_prefix)
+    tasks.get_content_tasks(etl_source, s3_prefix=s3_prefix, overwrite=True)
     assert mocked_celery.group.call_count == 1
     assert (
         models.LearningResource.objects.filter(
@@ -233,7 +236,7 @@ def test_get_content_tasks(settings, mocker, mocked_celery, mock_xpro_learning_b
     ).count() == 3
     assert mock_get_content_files.call_count == 2
     mock_get_content_files.assert_any_call(
-        ANY, etl_source, ["foo.tar.gz"], s3_prefix=s3_prefix
+        ANY, etl_source, ["foo.tar.gz"], s3_prefix=s3_prefix, overwrite=True
     )
 
 
@@ -248,7 +251,7 @@ def test_get_content_files(mocker, mock_xpro_learning_bucket):
     )
     tasks.get_content_files([1, 2], PlatformType.xpro.value, ["foo.tar.gz"])
     mock_sync_edx_course_files.assert_called_once_with(
-        PlatformType.xpro.value, [1, 2], ["foo.tar.gz"], s3_prefix=None
+        PlatformType.xpro.value, [1, 2], ["foo.tar.gz"], s3_prefix=None, overwrite=False
     )
 
 

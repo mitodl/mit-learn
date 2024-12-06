@@ -766,6 +766,14 @@ def load_content_files(
         for content_file in content_files_data:
             content_tags.append(content_file.get("content_tags", []))
             content_files_ids.append(load_content_file(course_run, content_file))
+        for file in (
+            ContentFile.objects.filter(run=course_run)
+            .exclude(id__in=content_files_ids)
+            .all()
+        ):
+            file.published = False
+            file.save()
+
         if calc_completeness:
             calculate_completeness(course_run, content_tags=content_tags)
         content_files_loaded_actions(run=course_run, deindex_only=False)

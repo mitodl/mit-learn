@@ -37,6 +37,7 @@ from learning_resources.factories import (
 from learning_resources.models import (
     LearningResourceOfferor,
     LearningResourceRelationship,
+    PodcastEpisode,
 )
 from learning_resources.serializers import (
     ContentFileSerializer,
@@ -167,7 +168,7 @@ def test_program_endpoint(client, url, params):
 def test_program_detail_endpoint(client, django_assert_num_queries, url):
     """Test program endpoint"""
     program = ProgramFactory.create()
-    with django_assert_num_queries(16):
+    with django_assert_num_queries(17):
         resp = client.get(reverse(url, args=[program.learning_resource.id]))
     assert resp.data.get("title") == program.learning_resource.title
     assert resp.data.get("resource_type") == LearningResourceType.program.name
@@ -212,7 +213,7 @@ def test_no_excess_queries(rf, user, mocker, django_assert_num_queries, course_c
     request = rf.get("/")
     request.user = user
 
-    with django_assert_num_queries(18):
+    with django_assert_num_queries(19):
         view = CourseViewSet(request=request)
         results = view.get_queryset().all()
         assert len(results) == course_count
@@ -365,6 +366,29 @@ def test_list_podcast_episode_endpoint(client, url, params):
             resp.data.get("results")[idx]["podcast_episode"]
             == PodcastEpisodeSerializer(instance=episode.podcast_episode).data
         )
+
+
+@pytest.mark.parametrize(
+    ("url", "params"),
+    [
+        ("lr:v1:podcast_episodes_api-list", "sortby=-last_modified"),
+        ("lr:v1:learning_resources_api-list", "resource_type=podcast_episode"),
+    ],
+)
+def test_list_podcast_episode_endpoint_returns_podcast(client, url, params):
+    """Test podcast episode endpoint returns podcast ids"""
+    podcast = PodcastFactory.create().learning_resource
+    PodcastEpisodeFactory.create_batch(2)
+    episodes = PodcastEpisode.objects.all()
+    podcast.resources.set(
+        [episode.learning_resource for episode in episodes],
+        through_defaults={
+            "relation_type": LearningResourceRelationTypes.PODCAST_EPISODES.value
+        },
+    )
+    resp = client.get(f"{reverse(url)}?{params}")
+    for item in resp.data["results"]:
+        assert podcast.id in item["podcast_episode"]["podcasts"]
 
 
 @pytest.mark.parametrize(
@@ -1040,9 +1064,13 @@ def test_similar_resources_endpoint_only_returns_published(mocker, client):
     for lr in response_resources:
         serialized_resource = serialize_learning_resource_for_update(lr)
         serialized_resource["published"] = False
+        lr.published = False
+        lr.save()
         response_hits.append(serialized_resource)
     # set one item to published
-    response_hits[-1]["published"] = True
+    published_resource = response_resources[0]
+    published_resource.published = True
+    published_resource.save()
     Search.execute.return_value = response.Response(
         Search().query(),
         {
@@ -1063,6 +1091,45 @@ def test_similar_resources_endpoint_only_returns_published(mocker, client):
     assert len(response_ids) == 1
 
 
+def test_similar_resources_endpoint_ignores_opensearch_published(mocker, client):
+    """Test similar learning_resources ignores the published attribute from opensearch"""
+    from learning_resources.models import LearningResource
+
+    resources = LearningResourceFactory.create_batch(5)
+
+    resource_ids = [learning_resource.id for learning_resource in resources]
+    similar_for = resource_ids.pop()
+    mocker.patch.object(Search, "execute")
+    response_resources = LearningResource.objects.for_search_serialization().filter(
+        id__in=resource_ids
+    )
+    response_hits = []
+    for lr in response_resources:
+        serialized_resource = serialize_learning_resource_for_update(lr)
+        serialized_resource["published"] = False
+        response_hits.append(serialized_resource)
+    # remove the published attribute on one hit
+    del response_hits[-1]["published"]
+    Search.execute.return_value = response.Response(
+        Search().query(),
+        {
+            "_shards": {"failed": 0, "successful": 10, "total": 10},
+            "hits": {
+                "hits": response_hits,
+                "max_score": 12.0,
+                "total": 123,
+            },
+            "timed_out": False,
+            "took": 123,
+        },
+    ).hits
+    resp = client.get(
+        reverse("lr:v1:learning_resources_api-similar", args=[similar_for])
+    )
+    response_ids = [hit["id"] for hit in resp.json()]
+    assert len(response_ids) == 4
+
+
 def test_vector_similar_resources_endpoint_does_not_return_self(mocker, client):
     """Test vector based similar resources endpoint does not return initial id"""
     from learning_resources.models import LearningResource
@@ -1071,7 +1138,7 @@ def test_vector_similar_resources_endpoint_does_not_return_self(mocker, client):
 
     resource_ids = [learning_resource.id for learning_resource in resources]
     mocker.patch(
-        "learning_resources_search.indexing_api.qdrant_client",
+        "vector_search.utils.qdrant_client",
         return_value=QdrantClient(
             host="hidden_port_addr.com",
             port=None,
@@ -1118,7 +1185,7 @@ def test_vector_similar_resources_endpoint_only_returns_published(mocker, client
         return_value=response_hits,
     )
     mocker.patch(
-        "learning_resources_search.indexing_api.qdrant_client",
+        "vector_search.utils.qdrant_client",
         return_value=QdrantClient(
             host="hidden_port_addr.com",
             port=None,
