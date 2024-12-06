@@ -304,21 +304,347 @@ paths:
       summary: Vector Search
       parameters:
       - in: query
+        name: certification
+        schema:
+          type: boolean
+          nullable: true
+        description: True if the learning resource offers a certificate
+      - in: query
+        name: certification_type
+        schema:
+          type: array
+          items:
+            enum:
+            - micromasters
+            - professional
+            - completion
+            - none
+            type: string
+            description: |-
+              * `micromasters` - MicroMasters Credential
+              * `professional` - Professional Certificate
+              * `completion` - Certificate of Completion
+              * `none` - No Certificate
+        description: "The type of certificate             \n\n* `micromasters` - MicroMasters\
+          \ Credential\n* `professional` - Professional Certificate\n* `completion`\
+          \ - Certificate of Completion\n* `none` - No Certificate"
+      - in: query
+        name: course_feature
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        description: The course feature. Possible options are at api/v1/course_features/
+      - in: query
+        name: delivery
+        schema:
+          type: array
+          items:
+            enum:
+            - online
+            - hybrid
+            - in_person
+            - offline
+            type: string
+            description: |-
+              * `online` - Online
+              * `hybrid` - Hybrid
+              * `in_person` - In person
+              * `offline` - Offline
+        description: "The delivery options in which the learning resource is offered\
+          \             \n\n* `online` - Online\n* `hybrid` - Hybrid\n* `in_person`\
+          \ - In person\n* `offline` - Offline"
+      - in: query
+        name: department
+        schema:
+          type: array
+          items:
+            enum:
+            - '1'
+            - '2'
+            - '3'
+            - '4'
+            - '5'
+            - '6'
+            - '7'
+            - '8'
+            - '9'
+            - '10'
+            - '11'
+            - '12'
+            - '14'
+            - '15'
+            - '16'
+            - '17'
+            - '18'
+            - '20'
+            - 21A
+            - 21G
+            - 21H
+            - 21L
+            - 21M
+            - '22'
+            - '24'
+            - CC
+            - CMS-W
+            - EC
+            - ES
+            - ESD
+            - HST
+            - IDS
+            - MAS
+            - PE
+            - SP
+            - STS
+            - WGS
+            type: string
+            description: |-
+              * `1` - Civil and Environmental Engineering
+              * `2` - Mechanical Engineering
+              * `3` - Materials Science and Engineering
+              * `4` - Architecture
+              * `5` - Chemistry
+              * `6` - Electrical Engineering and Computer Science
+              * `7` - Biology
+              * `8` - Physics
+              * `9` - Brain and Cognitive Sciences
+              * `10` - Chemical Engineering
+              * `11` - Urban Studies and Planning
+              * `12` - Earth, Atmospheric, and Planetary Sciences
+              * `14` - Economics
+              * `15` - Management
+              * `16` - Aeronautics and Astronautics
+              * `17` - Political Science
+              * `18` - Mathematics
+              * `20` - Biological Engineering
+              * `21A` - Anthropology
+              * `21G` - Global Languages
+              * `21H` - History
+              * `21L` - Literature
+              * `21M` - Music and Theater Arts
+              * `22` - Nuclear Science and Engineering
+              * `24` - Linguistics and Philosophy
+              * `CC` - Concourse
+              * `CMS-W` - Comparative Media Studies/Writing
+              * `EC` - Edgerton Center
+              * `ES` - Experimental Study Group
+              * `ESD` - Engineering Systems Division
+              * `HST` - Medical Engineering and Science
+              * `IDS` - Data, Systems, and Society
+              * `MAS` - Media Arts and Sciences
+              * `PE` - Athletics, Physical Education and Recreation
+              * `SP` - Special Programs
+              * `STS` - Science, Technology, and Society
+              * `WGS` - Women's and Gender Studies
+        description: "The department that offers the learning resource           \
+          \  \n\n* `1` - Civil and Environmental Engineering\n* `2` - Mechanical Engineering\n\
+          * `3` - Materials Science and Engineering\n* `4` - Architecture\n* `5` -\
+          \ Chemistry\n* `6` - Electrical Engineering and Computer Science\n* `7`\
+          \ - Biology\n* `8` - Physics\n* `9` - Brain and Cognitive Sciences\n* `10`\
+          \ - Chemical Engineering\n* `11` - Urban Studies and Planning\n* `12` -\
+          \ Earth, Atmospheric, and Planetary Sciences\n* `14` - Economics\n* `15`\
+          \ - Management\n* `16` - Aeronautics and Astronautics\n* `17` - Political\
+          \ Science\n* `18` - Mathematics\n* `20` - Biological Engineering\n* `21A`\
+          \ - Anthropology\n* `21G` - Global Languages\n* `21H` - History\n* `21L`\
+          \ - Literature\n* `21M` - Music and Theater Arts\n* `22` - Nuclear Science\
+          \ and Engineering\n* `24` - Linguistics and Philosophy\n* `CC` - Concourse\n\
+          * `CMS-W` - Comparative Media Studies/Writing\n* `EC` - Edgerton Center\n\
+          * `ES` - Experimental Study Group\n* `ESD` - Engineering Systems Division\n\
+          * `HST` - Medical Engineering and Science\n* `IDS` - Data, Systems, and\
+          \ Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics, Physical\
+          \ Education and Recreation\n* `SP` - Special Programs\n* `STS` - Science,\
+          \ Technology, and Society\n* `WGS` - Women's and Gender Studies"
+      - in: query
+        name: free
+        schema:
+          type: boolean
+          nullable: true
+      - in: query
+        name: id
+        schema:
+          type: array
+          items:
+            type: integer
+        description: The id value for the learning resource
+      - in: query
+        name: level
+        schema:
+          type: array
+          items:
+            enum:
+            - undergraduate
+            - graduate
+            - high_school
+            - noncredit
+            - advanced
+            - intermediate
+            - introductory
+            type: string
+            description: |-
+              * `undergraduate` - Undergraduate
+              * `graduate` - Graduate
+              * `high_school` - High School
+              * `noncredit` - Non-Credit
+              * `advanced` - Advanced
+              * `intermediate` - Intermediate
+              * `introductory` - Introductory
+      - in: query
         name: limit
         schema:
           type: integer
         description: Number of results to return per page
+      - in: query
+        name: ocw_topic
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        description: The ocw topic name.
+      - in: query
+        name: offered_by
+        schema:
+          type: array
+          items:
+            enum:
+            - mitx
+            - ocw
+            - bootcamps
+            - xpro
+            - mitpe
+            - see
+            type: string
+            description: |-
+              * `mitx` - MITx
+              * `ocw` - MIT OpenCourseWare
+              * `bootcamps` - Bootcamps
+              * `xpro` - MIT xPRO
+              * `mitpe` - MIT Professional Education
+              * `see` - MIT Sloan Executive Education
+        description: "The organization that offers the learning resource         \
+          \    \n\n* `mitx` - MITx\n* `ocw` - MIT OpenCourseWare\n* `bootcamps` -\
+          \ Bootcamps\n* `xpro` - MIT xPRO\n* `mitpe` - MIT Professional Education\n\
+          * `see` - MIT Sloan Executive Education"
       - in: query
         name: offset
         schema:
           type: integer
         description: The initial index from which to return the results
       - in: query
+        name: platform
+        schema:
+          type: array
+          items:
+            enum:
+            - edx
+            - ocw
+            - oll
+            - mitxonline
+            - bootcamps
+            - xpro
+            - csail
+            - mitpe
+            - see
+            - scc
+            - ctl
+            - whu
+            - susskind
+            - globalalumni
+            - simplilearn
+            - emeritus
+            - podcast
+            - youtube
+            type: string
+            description: |-
+              * `edx` - edX
+              * `ocw` - MIT OpenCourseWare
+              * `oll` - Open Learning Library
+              * `mitxonline` - MITx Online
+              * `bootcamps` - Bootcamps
+              * `xpro` - MIT xPRO
+              * `csail` - CSAIL
+              * `mitpe` - MIT Professional Education
+              * `see` - MIT Sloan Executive Education
+              * `scc` - Schwarzman College of Computing
+              * `ctl` - Center for Transportation & Logistics
+              * `whu` - WHU
+              * `susskind` - Susskind
+              * `globalalumni` - Global Alumni
+              * `simplilearn` - Simplilearn
+              * `emeritus` - Emeritus
+              * `podcast` - Podcast
+              * `youtube` - YouTube
+        description: "The platform on which the learning resource is offered     \
+          \        \n\n* `edx` - edX\n* `ocw` - MIT OpenCourseWare\n* `oll` - Open\
+          \ Learning Library\n* `mitxonline` - MITx Online\n* `bootcamps` - Bootcamps\n\
+          * `xpro` - MIT xPRO\n* `csail` - CSAIL\n* `mitpe` - MIT Professional Education\n\
+          * `see` - MIT Sloan Executive Education\n* `scc` - Schwarzman College of\
+          \ Computing\n* `ctl` - Center for Transportation & Logistics\n* `whu` -\
+          \ WHU\n* `susskind` - Susskind\n* `globalalumni` - Global Alumni\n* `simplilearn`\
+          \ - Simplilearn\n* `emeritus` - Emeritus\n* `podcast` - Podcast\n* `youtube`\
+          \ - YouTube"
+      - in: query
+        name: professional
+        schema:
+          type: boolean
+          nullable: true
+      - in: query
         name: q
         schema:
           type: string
           minLength: 1
         description: The search text
+      - in: query
+        name: resource_category
+        schema:
+          type: array
+          items:
+            enum:
+            - course
+            - program
+            - learning_material
+            type: string
+            description: |-
+              * `course` - Course
+              * `program` - Program
+              * `learning_material` - Learning Material
+        description: "The category of learning resource             \n\n* `course`\
+          \ - Course\n* `program` - Program\n* `learning_material` - Learning Material"
+      - in: query
+        name: resource_type
+        schema:
+          type: array
+          items:
+            enum:
+            - course
+            - program
+            - learning_path
+            - podcast
+            - podcast_episode
+            - video
+            - video_playlist
+            type: string
+            description: |-
+              * `course` - course
+              * `program` - program
+              * `learning_path` - learning path
+              * `podcast` - podcast
+              * `podcast_episode` - podcast episode
+              * `video` - video
+              * `video_playlist` - video playlist
+        description: "The type of learning resource             \n\n* `course` - course\n\
+          * `program` - program\n* `learning_path` - learning path\n* `podcast` -\
+          \ podcast\n* `podcast_episode` - podcast episode\n* `video` - video\n* `video_playlist`\
+          \ - video playlist"
+      - in: query
+        name: topic
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        description: The topic name. To see a list of options go to api/v1/topics/
       tags:
       - learning_resources_vector_search
       responses:
