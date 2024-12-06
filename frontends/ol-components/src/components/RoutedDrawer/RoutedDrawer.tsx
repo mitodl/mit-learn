@@ -4,11 +4,7 @@ import styled from "@emotion/styled"
 import type { DrawerProps } from "@mui/material/Drawer"
 import { ActionButton } from "../Button/Button"
 import { RiCloseLargeLine } from "@remixicon/react"
-import {
-  useSearchParams,
-  useRouter,
-  ReadonlyURLSearchParams,
-} from "next/navigation"
+import { useSearchParams, ReadonlyURLSearchParams } from "next/navigation"
 import { useToggle } from "ol-utilities"
 
 const CloseButton = styled(ActionButton)({
@@ -39,7 +35,6 @@ const RoutedDrawer = <K extends string, R extends K = K>(
 
   const [open, setOpen] = useToggle(false)
   const searchParams = useSearchParams()
-  const router = useRouter()
 
   const childParams = useMemo(() => {
     return Object.fromEntries(
@@ -48,7 +43,7 @@ const RoutedDrawer = <K extends string, R extends K = K>(
   }, [searchParams, params])
 
   /**
-   * `requiredArePresnet` and `open` are usually the same, except when the
+   * `requiredArePresent` and `open` are usually the same, except when the
    * drawer is in the process of closing.
    *  - `open` changes to false when the drawer begins closing
    *  - URL Params are updated when the drawer finishes closing, changing the
@@ -82,14 +77,8 @@ const RoutedDrawer = <K extends string, R extends K = K>(
 
     const hash = window?.location.hash
 
-    // Note that { scroll: true } and { scroll: false } both remove the hash fragment
-    if (hash) {
-      router.push(`?${newParams}${hash}`)
-    } else {
-      // Prevent scroll to top of page
-      router.push(`?${newParams}`, { scroll: false })
-    }
-  }, [router, searchParams, params])
+    window.history.pushState({}, "", `?${newParams}${hash || ""}`)
+  }, [searchParams, params])
 
   return (
     <Drawer

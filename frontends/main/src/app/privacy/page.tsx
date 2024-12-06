@@ -1,8 +1,8 @@
 import React from "react"
 import { Metadata } from "next"
-
-import PrivacyPage from "@/app-pages/PrivacyPage/PrivacyPage"
 import { standardizeMetadata } from "@/common/metadata"
+import PrivacyPage from "@/app-pages/PrivacyPage/PrivacyPage"
+
 export const metadata: Metadata = standardizeMetadata({
   title: "Privacy Policy",
 })
