@@ -812,13 +812,14 @@ QDRANT_SPARSE_MODEL = get_string(
 )
 
 # AI settings
-AI_DEBUG = get_bool("", False)  # noqa: FBT003
+AI_DEBUG = get_bool("AI_DEBUG", False)  # noqa: FBT003
 AI_CACHE_TIMEOUT = get_int(name="AI_CACHE_TIMEOUT", default=3600)
 AI_CACHE = get_string(name="AI_CACHE", default="redis")
 AI_MIT_SEARCH_URL = get_string(
     name="AI_MIT_SEARCH_URL",
     default="https://api.learn.mit.edu/api/v1/learning_resources_search/",
 )
+AI_MIT_SEARCH_LIMIT = get_int(name="AI_MIT_SEARCH_LIMIT", default=10)
 AI_MODEL = get_string(name="AI_MODEL", default="gpt-4o")
 AI_MODEL_API = get_string(name="AI_MODEL_API", default="openai")
 
@@ -832,4 +833,3 @@ AI_RPM_LIMIT = get_int(name="AI_RPM_LIMIT", default=10)
 AI_BUDGET_DURATION = get_string(name="AI_BUDGET_DURATION", default="60m")
 AI_MAX_BUDGET = get_float(name="AI_MAX_BUDGET", default=0.05)
 AI_ANON_LIMIT_MULTIPLIER = get_float(name="AI_ANON_LIMIT_MULTIPLIER", default=10.0)
-AI_MIT_SEARCH_LIMIT = get_int(name="AI_MIT_SEARCH_LIMIT", default=10)

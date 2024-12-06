@@ -15,8 +15,8 @@ def test_post_search_agent_endpoint(
     user_message = "Do you have any good physics courses?"
     temperature = 0.1
     system_prompt = "Answer this question as best you can"
-    mock_service = mocker.patch("ai_chat.views.SearchAgentService", autospec=True)
-    mock_service.return_value.run_streaming_agent = mocker.Mock(
+    mock_agent = mocker.patch("ai_chat.views.SearchAgent", autospec=True)
+    mock_agent.return_value.get_completion = mocker.Mock(
         return_value=iter(expected_answer)
     )
     model = "gpt-3.5-turbo"
@@ -36,7 +36,7 @@ def test_post_search_agent_endpoint(
     expected_cache_prefix = (
         user.email if is_authenticated else resp.request["session"].session_key
     )
-    mock_service.assert_called_once_with(
+    mock_agent.assert_called_once_with(
         "Learning Resource Search AI Assistant",
         user_id=expected_user_id,
         cache_key=f"{expected_cache_prefix}_search_chat_history",
@@ -45,9 +45,9 @@ def test_post_search_agent_endpoint(
         instructions=system_prompt,
         temperature=temperature,
     )
-    instantiated_service = mock_service.return_value
-    instantiated_service.run_streaming_agent.assert_called_once_with(user_message)
-    assert instantiated_service.clear_chat_history.call_count == (
+    instantiated_agent = mock_agent.return_value
+    instantiated_agent.get_completion.assert_called_once_with(user_message)
+    assert instantiated_agent.clear_chat_history.call_count == (
         1 if clear_history else 0
     )
     assert resp.status_code == 200

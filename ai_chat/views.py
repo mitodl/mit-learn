@@ -8,7 +8,7 @@ from rest_framework import views
 from rest_framework.request import Request
 
 from ai_chat import serializers
-from ai_chat.agents import SearchAgentService
+from ai_chat.agents import SearchAgent
 from ai_chat.permissions import SearchAgentPermissions
 
 log = logging.getLogger(__name__)
@@ -49,7 +49,7 @@ class SearchAgentView(views.APIView):
         user_id = request.user.email if request.user.is_authenticated else "anonymous"
         message = serializer.validated_data.pop("message", "")
         clear_history = serializer.validated_data.pop("clear_history", False)
-        agent_service = SearchAgentService(
+        agent = SearchAgent(
             "Learning Resource Search AI Assistant",
             user_id=user_id,
             cache_key=f"{cache_id}_search_chat_history",
@@ -57,9 +57,9 @@ class SearchAgentView(views.APIView):
             **serializer.validated_data,
         )
         if clear_history:
-            agent_service.clear_chat_history()
+            agent.clear_chat_history()
         return StreamingHttpResponse(
-            agent_service.run_streaming_agent(message),
+            agent.get_completion(message),
             content_type="text/event-stream",
             headers={"X-Accel-Buffering": "no"},
         )

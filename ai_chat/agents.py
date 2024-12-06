@@ -26,8 +26,22 @@ from learning_resources.constants import LearningResourceType, OfferedBy
 log = logging.getLogger(__name__)
 
 
-class BaseChatAgentService(ABC):
-    """Base service class for an AI chat agent"""
+class BaseChatAgent(ABC):
+    """
+    Base service class for an AI chat agent
+
+    Llamaindex was chosen to implement this because it provides
+    a far easier framework than native OpenAi or LiteLLM to
+    handle function calling completions.  With LiteLLM/OpenAI,
+    the first response may or may not be the result of a
+    function call, so it's necessary to check the response.
+    If it did call a function, then a second completion is needed
+    to get the final response with the function call result added
+    to the chat history.  Llamaindex handles this automatically.
+
+    For comparison see:
+    https://docs.litellm.ai/docs/completion/function_call
+    """
 
     INSTRUCTIONS = "Provide instructions for the AI assistant"
 
@@ -97,6 +111,10 @@ class BaseChatAgentService(ABC):
             error = f"AI source {self.ai} is not supported"
             raise NotImplementedError(error)
 
+    def create_tools(self):
+        """Create any tools required by the agent"""
+        return []
+
     @abstractmethod
     def create_openai_agent(self) -> OpenAIAgent:
         """Create an OpenAI agent"""
@@ -121,7 +139,7 @@ class BaseChatAgentService(ABC):
     def get_comment_metadata(self):
         """Yield markdown comments to send hidden metdata in the response"""
 
-    def run_streaming_agent(self, message: str) -> str:
+    def get_completion(self, message: str, *, debug: bool = settings.AI_DEBUG) -> str:
         """
         Send the user message to the agent and yield the response as
         it comes in.
@@ -138,6 +156,7 @@ class BaseChatAgentService(ABC):
             response_gen = response.response_gen
             yield from response_gen
         except BadRequestError as error:
+            # Format and yield an error message inside a hidden comment
             if hasattr(error, "response"):
                 error = error.response.json()
             else:
@@ -145,21 +164,21 @@ class BaseChatAgentService(ABC):
             if (
                 error["error"]["message"].startswith("Budget has been exceeded")
                 and not settings.AI_DEBUG
-            ):
+            ):  # Friendlier message for end user
                 error["error"]["message"] = (
                     "You have exceeded your AI usage limit. Please try again later."
                 )
-            yield f"<!-- {json.dumps(error)} -->"
+            yield f"<!-- {json.dumps(error)} -->".encode()
         except Exception:
             yield '<!-- {"error":{"message":"An error occurred, please try again"}} -->'
             log.exception("Error running AI agent")
         if self.save_history:
             self.save_chat_history()
-        if settings.AI_DEBUG:
-            yield f"\n\n<!-- {self.get_comment_metadata()} -->\n\n"
+        if debug:
+            yield f"\n\n<!-- {self.get_comment_metadata()} -->\n\n".encode()
 
 
-class SearchAgentService(BaseChatAgentService):
+class SearchAgent(BaseChatAgent):
     """Service class for the AI search function agent"""
 
     JOB_ID = "SEARCH_JOB"
@@ -354,6 +373,7 @@ Search parameters: {{"q": "mathematics"}}
                 settings.AI_MIT_SEARCH_URL, params=params, timeout=30
             )
             response.raise_for_status()
+            raw_results = response.json().get("results", [])
             # Simplify the response to only include the main properties
             main_properties = [
                 "title",
@@ -363,15 +383,26 @@ Search parameters: {{"q": "mathematics"}}
                 "free",
                 "certification",
                 "resource_type",
-                "instructors",
-                "level",
             ]
-            results = [
-                {k: result.get(k) for k in main_properties}
-                for result in response.json().get("results", [])
-            ]
-            self.search_results.append(results)
-            return json.dumps(results)
+            simplified_results = []
+            for result in raw_results:
+                simplified_result = {k: result.get(k) for k in main_properties}
+                # Instructors and level will be in the runs data if present
+                next_date = result.get("next_start_date", None)
+                raw_runs = result.get("runs", [])
+                best_run = None
+                if next_date:
+                    runs = [run for run in raw_runs if run["start_date"] == next_date]
+                    if runs:
+                        best_run = runs[0]
+                elif raw_runs:
+                    best_run = raw_runs[-1]
+                if best_run:
+                    for attribute in ("level", "instructors"):
+                        simplified_result[attribute] = best_run.get(attribute, [])
+                simplified_results.append(simplified_result)
+            self.search_results.extend(simplified_results)
+            return json.dumps(simplified_results)
         except requests.exceptions.RequestException as e:
             log.exception("Error querying MIT API")
             return json.dumps({"error": str(e)})
@@ -396,7 +427,7 @@ Search parameters: {{"q": "mathematics"}}
         if self.temperature:
             llm.temperature = self.temperature
         agent = OpenAIAgent.from_tools(
-            [self.create_search_tool()],
+            tools=self.create_tools(),
             llm=llm,
             verbose=True,
             system_prompt=self.instructions,
@@ -404,6 +435,10 @@ Search parameters: {{"q": "mathematics"}}
         if self.save_history:
             self.get_or_create_chat_history_cache(agent)
         return agent
+
+    def create_tools(self):
+        """Create tools required by the agent"""
+        return [self.create_search_tool()]
 
     def create_search_tool(self) -> FunctionTool:
         """Create the search tool for the AI agent"""

@@ -7,7 +7,7 @@ from urllib.parse import urljoin
 import requests
 from django.conf import settings
 
-from ai_chat.agents import BaseChatAgentService
+from ai_chat.agents import BaseChatAgent
 from ai_chat.constants import AI_ANONYMOUS_USER
 
 log = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ class AIProxy(ABC):
         """Get the api kwargs required to connect to the proxy."""
 
     @abstractmethod
-    def get_additional_kwargs(self, service: BaseChatAgentService) -> dict:
+    def get_additional_kwargs(self, service: BaseChatAgent) -> dict:
         """Get any additional kwargs that should be sent to the proxy"""
 
     @abstractmethod
@@ -53,7 +53,7 @@ class LiteLLMProxy(AIProxy):
             "api_key": settings.AI_PROXY_AUTH_TOKEN,
         }
 
-    def get_additional_kwargs(self, service: BaseChatAgentService) -> dict:
+    def get_additional_kwargs(self, service: BaseChatAgent) -> dict:
         return {
             "user": service.user_id,
             "store": True,
