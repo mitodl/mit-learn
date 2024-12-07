@@ -28,7 +28,7 @@ services:
     profiles:
       - frontend
     working_dir: /src
-    image: node:22.11
+    image: node:22.12
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
