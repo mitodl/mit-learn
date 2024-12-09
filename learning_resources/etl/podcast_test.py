@@ -64,7 +64,7 @@ apple_podcasts_url: {apple_podcasts_url}
 
 
 @pytest.fixture
-def mock_rss_request(mocker):  # noqa: PT004
+def mock_rss_request(mocker):
     """
     Mock request data
     """
@@ -76,7 +76,7 @@ def mock_rss_request(mocker):  # noqa: PT004
 
 
 @pytest.fixture
-def mock_rss_request_with_bad_rss_file(mocker):  # noqa: PT004
+def mock_rss_request_with_bad_rss_file(mocker):
     """
     Mock request data
     """
