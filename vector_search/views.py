@@ -62,7 +62,9 @@ class LearningResourcesVectorSearchView(QdrantView):
             query_text = request_data.data.get("q", "")
             limit = request_data.data.get("limit", 10)
             offset = request_data.data.get("offset", 0)
-            response = vector_search(query_text, limit=limit, offset=offset)
+            response = vector_search(
+                query_text, limit=limit, offset=offset, params=request_data.data
+            )
             if request_data.data.get("dev_mode"):
                 return Response(response)
             else:
