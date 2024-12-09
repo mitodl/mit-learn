@@ -195,7 +195,7 @@ const OnPlatform = styled.span({
   color: theme.custom.colors.black,
 })
 
-const ListButtonContainer = styled.div({
+const ButtonContainer = styled.div({
   display: "flex",
   gap: "8px",
   flexGrow: 1,
@@ -467,7 +467,7 @@ const CallToActionSection = ({
           </Platform>
         ) : null}
       </PlatformContainer>
-      <ListButtonContainer>
+      <ButtonContainer>
         {user?.is_learning_path_editor && (
           <CallToActionButton
             filled={inLearningPath ? 1 : 0}
@@ -497,7 +497,7 @@ const CallToActionSection = ({
         <CallToActionButton startIcon={<RiShareLine />} aria-label={shareLabel}>
           {shareLabel}
         </CallToActionButton>
-      </ListButtonContainer>
+      </ButtonContainer>
     </CallToAction>
   )
 }
