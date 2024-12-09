@@ -175,7 +175,7 @@ def test_skip_creating_qdrand_collections(mocker):
 
 def test_qdrant_query_conditions(mocker):
     """
-    Test query filter mapping to qdrant consitions
+    Test query filter mapping to qdrant conditions
     """
     params = {
         "q": "test",
