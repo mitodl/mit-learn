@@ -81,7 +81,7 @@ uwsgitop = "^0.12"
 pytest-lazy-fixtures = "^1.1.1"
 pycountry = "^24.6.1"
 qdrant-client = {extras = ["fastembed"], version = "^1.12.0"}
-onnxruntime = "1.19.2"
+onnxruntime = "1.20.1"
 openai = "^1.55.3"
 litellm = "^1.53.5"
 
