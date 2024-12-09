@@ -1,6 +1,22 @@
 Release Notes
 =============
 
+Version 0.26.1 (Released December 09, 2024)
+--------------
+
+- Update Yarn to v4.5.3 (#1865)
+- fix certification type none display (#1873)
+- fix card line clamping (#1871)
+- Update dependency eslint-plugin-react-hooks to v5 (#1817)
+- Update dependency eslint-plugin-testing-library to v7 (#1856)
+- v2 drawer qa adjustments (#1850)
+- Fixes issue with learning path membership being called for non-admins (#1864)
+- Consolidate qdrant functionality into its own app (#1860)
+- Revert "Server rendering for homepage, units and topics listing pages (#1847)" (#1866)
+- Filter out content type on similar resources endpoint (#1863)
+- Select random hero image index on server (#1859)
+- returnning all resource types for similar (#1849)
+
 Version 0.26.0 (Released November 26, 2024)
 --------------
 
