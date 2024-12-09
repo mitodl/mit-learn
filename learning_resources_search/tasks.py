@@ -923,7 +923,11 @@ def _generate_subscription_digest_subject(
 
     """
     prefix = "" if shortform else "MIT Learn: "
-    resource_type = unique_resource_types.pop()
+    if len(unique_resource_types) == 1:
+        resource_type = unique_resource_types.pop()
+    else:
+        resource_type = "Learning Resource"
+
     if sample_course["source_channel_type"] == "saved_search":
         if shortform:
             return f"New {resource_type}{pluralize(total_count)} from MIT Learn"
