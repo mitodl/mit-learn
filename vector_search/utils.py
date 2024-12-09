@@ -4,6 +4,7 @@ from django.conf import settings
 from qdrant_client import QdrantClient, models
 
 from learning_resources.models import LearningResource
+from learning_resources.serializers import LearningResourceSerializer
 from learning_resources_search.constants import CONTENT_FILE_TYPE
 from learning_resources_search.serializers import (
     serialize_bulk_content_files,
@@ -227,7 +228,7 @@ def vector_search(
             limit=limit,
             offset=offset,
         )
-        hits = [hit.metadata for hit in search_result]
+        hits = [hit.metadata["readable_id"] for hit in search_result]
     else:
         search_result = client.scroll(
             collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
@@ -242,8 +243,18 @@ def vector_search(
             limit=limit,
             offset=offset,
         )
-        hits = [hit.payload for hit in search_result[0]]
-    return {"hits": hits, "total": {"value": 10000}}
+        hits = [hit.payload["readable_id"] for hit in search_result[0]]
+    """
+    Always lookup learning resources by readable_id for portability
+    in case we load points from external systems
+    """
+    return {
+        "hits": LearningResourceSerializer(
+            LearningResource.objects.for_serialization().filter(readable_id__in=hits),
+            many=True,
+        ).data,
+        "total": {"value": 10000},
+    }
 
 
 def qdrant_query_conditions(params):
