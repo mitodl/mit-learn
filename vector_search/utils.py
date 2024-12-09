@@ -13,12 +13,12 @@ from learning_resources_search.serializers import (
 from vector_search.encoders.utils import dense_encoder
 
 QDRANT_PARAM_MAP = {
+    "readable_id": "readable_id",
     "resource_type": "resource_type",
     "certification": "certification",
     "certification_type": "certification_type.code",
     "professional": "professional",
     "free": "free",
-    "id": "id",
     "course_feature": "course_feature",
     "content_feature_type": "content_feature_type",
     "run_id": "run_id",

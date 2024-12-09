@@ -7420,7 +7420,6 @@ export const LearningResourcesVectorSearchApiAxiosParamCreator = function (
      * @param {Array<LearningResourcesVectorSearchRetrieveDeliveryEnum>} [delivery] The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
      * @param {Array<LearningResourcesVectorSearchRetrieveDepartmentEnum>} [department] The department that offers the learning resource               * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean | null} [free]
-     * @param {Array<number>} [id] The id value for the learning resource
      * @param {Array<LearningResourcesVectorSearchRetrieveLevelEnum>} [level]
      * @param {number} [limit] Number of results to return per page
      * @param {Array<string>} [ocw_topic] The ocw topic name.
@@ -7429,6 +7428,7 @@ export const LearningResourcesVectorSearchApiAxiosParamCreator = function (
      * @param {Array<LearningResourcesVectorSearchRetrievePlatformEnum>} [platform] The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube
      * @param {boolean | null} [professional]
      * @param {string} [q] The search text
+     * @param {string} [readable_id] The readable id of the resource
      * @param {Array<LearningResourcesVectorSearchRetrieveResourceCategoryEnum>} [resource_category] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
      * @param {Array<LearningResourcesVectorSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
@@ -7442,7 +7442,6 @@ export const LearningResourcesVectorSearchApiAxiosParamCreator = function (
       delivery?: Array<LearningResourcesVectorSearchRetrieveDeliveryEnum>,
       department?: Array<LearningResourcesVectorSearchRetrieveDepartmentEnum>,
       free?: boolean | null,
-      id?: Array<number>,
       level?: Array<LearningResourcesVectorSearchRetrieveLevelEnum>,
       limit?: number,
       ocw_topic?: Array<string>,
@@ -7451,6 +7450,7 @@ export const LearningResourcesVectorSearchApiAxiosParamCreator = function (
       platform?: Array<LearningResourcesVectorSearchRetrievePlatformEnum>,
       professional?: boolean | null,
       q?: string,
+      readable_id?: string,
       resource_category?: Array<LearningResourcesVectorSearchRetrieveResourceCategoryEnum>,
       resource_type?: Array<LearningResourcesVectorSearchRetrieveResourceTypeEnum>,
       topic?: Array<string>,
@@ -7496,10 +7496,6 @@ export const LearningResourcesVectorSearchApiAxiosParamCreator = function (
         localVarQueryParameter["free"] = free
       }
 
-      if (id) {
-        localVarQueryParameter["id"] = id
-      }
-
       if (level) {
         localVarQueryParameter["level"] = level
       }
@@ -7530,6 +7526,10 @@ export const LearningResourcesVectorSearchApiAxiosParamCreator = function (
 
       if (q !== undefined) {
         localVarQueryParameter["q"] = q
+      }
+
+      if (readable_id !== undefined) {
+        localVarQueryParameter["readable_id"] = readable_id
       }
 
       if (resource_category) {
@@ -7580,7 +7580,6 @@ export const LearningResourcesVectorSearchApiFp = function (
      * @param {Array<LearningResourcesVectorSearchRetrieveDeliveryEnum>} [delivery] The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
      * @param {Array<LearningResourcesVectorSearchRetrieveDepartmentEnum>} [department] The department that offers the learning resource               * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean | null} [free]
-     * @param {Array<number>} [id] The id value for the learning resource
      * @param {Array<LearningResourcesVectorSearchRetrieveLevelEnum>} [level]
      * @param {number} [limit] Number of results to return per page
      * @param {Array<string>} [ocw_topic] The ocw topic name.
@@ -7589,6 +7588,7 @@ export const LearningResourcesVectorSearchApiFp = function (
      * @param {Array<LearningResourcesVectorSearchRetrievePlatformEnum>} [platform] The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube
      * @param {boolean | null} [professional]
      * @param {string} [q] The search text
+     * @param {string} [readable_id] The readable id of the resource
      * @param {Array<LearningResourcesVectorSearchRetrieveResourceCategoryEnum>} [resource_category] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
      * @param {Array<LearningResourcesVectorSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
@@ -7602,7 +7602,6 @@ export const LearningResourcesVectorSearchApiFp = function (
       delivery?: Array<LearningResourcesVectorSearchRetrieveDeliveryEnum>,
       department?: Array<LearningResourcesVectorSearchRetrieveDepartmentEnum>,
       free?: boolean | null,
-      id?: Array<number>,
       level?: Array<LearningResourcesVectorSearchRetrieveLevelEnum>,
       limit?: number,
       ocw_topic?: Array<string>,
@@ -7611,6 +7610,7 @@ export const LearningResourcesVectorSearchApiFp = function (
       platform?: Array<LearningResourcesVectorSearchRetrievePlatformEnum>,
       professional?: boolean | null,
       q?: string,
+      readable_id?: string,
       resource_category?: Array<LearningResourcesVectorSearchRetrieveResourceCategoryEnum>,
       resource_type?: Array<LearningResourcesVectorSearchRetrieveResourceTypeEnum>,
       topic?: Array<string>,
@@ -7629,7 +7629,6 @@ export const LearningResourcesVectorSearchApiFp = function (
           delivery,
           department,
           free,
-          id,
           level,
           limit,
           ocw_topic,
@@ -7638,6 +7637,7 @@ export const LearningResourcesVectorSearchApiFp = function (
           platform,
           professional,
           q,
+          readable_id,
           resource_category,
           resource_type,
           topic,
@@ -7689,7 +7689,6 @@ export const LearningResourcesVectorSearchApiFactory = function (
           requestParameters.delivery,
           requestParameters.department,
           requestParameters.free,
-          requestParameters.id,
           requestParameters.level,
           requestParameters.limit,
           requestParameters.ocw_topic,
@@ -7698,6 +7697,7 @@ export const LearningResourcesVectorSearchApiFactory = function (
           requestParameters.platform,
           requestParameters.professional,
           requestParameters.q,
+          requestParameters.readable_id,
           requestParameters.resource_category,
           requestParameters.resource_type,
           requestParameters.topic,
@@ -7757,13 +7757,6 @@ export interface LearningResourcesVectorSearchApiLearningResourcesVectorSearchRe
   readonly free?: boolean | null
 
   /**
-   * The id value for the learning resource
-   * @type {Array<number>}
-   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
-   */
-  readonly id?: Array<number>
-
-  /**
    *
    * @type {Array<'undergraduate' | 'graduate' | 'high_school' | 'noncredit' | 'advanced' | 'intermediate' | 'introductory'>}
    * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
@@ -7820,6 +7813,13 @@ export interface LearningResourcesVectorSearchApiLearningResourcesVectorSearchRe
   readonly q?: string
 
   /**
+   * The readable id of the resource
+   * @type {string}
+   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
+   */
+  readonly readable_id?: string
+
+  /**
    * The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
    * @type {Array<'course' | 'program' | 'learning_material'>}
    * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
@@ -7868,7 +7868,6 @@ export class LearningResourcesVectorSearchApi extends BaseAPI {
         requestParameters.delivery,
         requestParameters.department,
         requestParameters.free,
-        requestParameters.id,
         requestParameters.level,
         requestParameters.limit,
         requestParameters.ocw_topic,
@@ -7877,6 +7876,7 @@ export class LearningResourcesVectorSearchApi extends BaseAPI {
         requestParameters.platform,
         requestParameters.professional,
         requestParameters.q,
+        requestParameters.readable_id,
         requestParameters.resource_category,
         requestParameters.resource_type,
         requestParameters.topic,

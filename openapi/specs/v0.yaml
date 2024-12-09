@@ -461,13 +461,6 @@ paths:
           type: boolean
           nullable: true
       - in: query
-        name: id
-        schema:
-          type: array
-          items:
-            type: integer
-        description: The id value for the learning resource
-      - in: query
         name: level
         schema:
           type: array
@@ -595,6 +588,12 @@ paths:
           type: string
           minLength: 1
         description: The search text
+      - in: query
+        name: readable_id
+        schema:
+          type: string
+          minLength: 1
+        description: The readable id of the resource
       - in: query
         name: resource_category
         schema:

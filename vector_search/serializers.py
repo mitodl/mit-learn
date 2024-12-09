@@ -32,10 +32,8 @@ class LearningResourcesVectorSearchRequestSerializer(serializers.Serializer):
     limit = serializers.IntegerField(
         required=False, help_text="Number of results to return per page"
     )
-    id = serializers.ListField(
-        required=False,
-        child=serializers.IntegerField(),
-        help_text="The id value for the learning resource",
+    readable_id = serializers.CharField(
+        required=False, help_text="The readable id of the resource"
     )
     offered_by_choices = [(e.name.lower(), e.value) for e in OfferedBy]
     offered_by = serializers.ListField(
