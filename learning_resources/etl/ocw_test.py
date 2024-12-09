@@ -94,6 +94,7 @@ def test_transform_content_files(settings, mocker, base_ocw_url):
         "title": "Resource Title",
         "content_title": "Resource Title",
         "url": f"{ocw_url}/courses/16-01-unified-engineering-i-ii-iii-iv-fall-2005-spring-2006/resources/resource/",
+        "file_extension": ".pdf",
     }
 
     assert content_data[3] == {
@@ -108,6 +109,7 @@ def test_transform_content_files(settings, mocker, base_ocw_url):
         "content_title": None,
         "url": f"{ocw_url}/courses/16-01-unified-engineering-i-ii-iii-iv-fall-2005-spring-2006/resources/video/",
         "image_src": "https://img.youtube.com/vi/vKer2U5W5-s/default.jpg",
+        "file_extension": ".mp4",
     }
 
 
