@@ -1,7 +1,6 @@
 import React, { useCallback, useRef, useState } from "react"
 import styled from "@emotion/styled"
 import Skeleton from "@mui/material/Skeleton"
-import Typography from "@mui/material/Typography"
 import { default as NextImage } from "next/image"
 import { ActionButton, Button, ButtonLink, ButtonProps } from "../Button/Button"
 import type { LearningResource } from "api"
@@ -12,8 +11,12 @@ import {
   RiBookmarkLine,
   RiCloseLargeLine,
   RiExternalLinkLine,
+  RiFacebookFill,
+  RiLink,
+  RiLinkedinFill,
   RiMenuAddLine,
   RiShareLine,
+  RiTwitterXLine,
 } from "@remixicon/react"
 import type { ImageConfig } from "../../constants/imgConfigs"
 import { theme } from "../ThemeProvider/ThemeProvider"
@@ -23,6 +26,8 @@ import type { User } from "api/hooks/user"
 import { LearningResourceCardProps } from "../LearningResourceCard/LearningResourceCard"
 import VideoFrame from "./VideoFrame"
 import { Link } from "../Link/Link"
+import { Input } from "../Input/Input"
+import { Typography } from "../.."
 
 const DRAWER_WIDTH = "900px"
 
@@ -225,6 +230,49 @@ const StyledButton = styled(Button)<{ filled?: number }>((props) => {
   }
 })
 
+const ShareContainer = styled.div({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  alignSelf: "stretch",
+  padding: "16px 0 8px 0",
+  gap: "12px",
+})
+
+const ShareLabel = styled(Typography)({
+  ...theme.typography.body3,
+  color: theme.custom.colors.darkGray2,
+})
+
+const ShareInput = styled(Input)({
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "center",
+  alignItems: "flexStart",
+  alignSelf: "stretch",
+})
+
+const ShareButtonContainer = styled.div({
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  alignSelf: "stretch",
+  gap: "16px",
+})
+
+const ShareLink = styled(Link)({
+  color: theme.custom.colors.silverGrayDark,
+})
+
+const CopyLinkButton = styled(StyledButton)({
+  "span:first-of-type": {
+    color: theme.custom.colors.red,
+    "&:hover": {
+      color: theme.custom.colors.white,
+    },
+  },
+})
+
 const CarouselContainer = styled.div({
   display: "flex",
   flexDirection: "column",
@@ -247,6 +295,7 @@ const CarouselContainer = styled.div({
 type LearningResourceExpandedV2Props = {
   resource?: LearningResource
   user?: User
+  location: string
   imgConfig: ImageConfig
   carousels?: React.ReactNode[]
   inLearningPath?: boolean
@@ -407,6 +456,7 @@ const CallToActionSection = ({
   resource,
   hide,
   user,
+  location,
   inUserList,
   inLearningPath,
   onAddToLearningPathClick,
@@ -416,6 +466,7 @@ const CallToActionSection = ({
   resource?: LearningResource
   hide?: boolean
   user?: User
+  location: string
   inUserList?: boolean
   inLearningPath?: boolean
   onAddToLearningPathClick?: LearningResourceCardProps["onAddToLearningPathClick"]
@@ -444,6 +495,7 @@ const CallToActionSection = ({
   const addToLearningPathLabel = "Add to list"
   const bookmarkLabel = "Bookmark"
   const shareLabel = "Share"
+  const copyLinkLabel = "Copy Link"
   return (
     <CallToAction data-testid="drawer-cta">
       <ImageSection resource={resource} config={imgConfig} />
@@ -498,6 +550,29 @@ const CallToActionSection = ({
           {shareLabel}
         </CallToActionButton>
       </ButtonContainer>
+      <ShareContainer>
+        <ShareLabel>Share a link to this Resource</ShareLabel>
+        <ShareInput value={location} />
+        <ShareButtonContainer>
+          <ShareLink>
+            <RiFacebookFill />
+          </ShareLink>
+          <ShareLink>
+            <RiTwitterXLine />
+          </ShareLink>
+          <ShareLink>
+            <RiLinkedinFill />
+          </ShareLink>
+          <CopyLinkButton
+            size="small"
+            edge="circular"
+            startIcon={<RiLink />}
+            aria-label={copyLinkLabel}
+          >
+            {copyLinkLabel}
+          </CopyLinkButton>
+        </ShareButtonContainer>
+      </ShareContainer>
     </CallToAction>
   )
 }
@@ -557,6 +632,7 @@ const LearningResourceExpandedV2: React.FC<LearningResourceExpandedV2Props> = ({
   resource,
   imgConfig,
   user,
+  location,
   carousels,
   inUserList,
   inLearningPath,
@@ -581,6 +657,7 @@ const LearningResourceExpandedV2: React.FC<LearningResourceExpandedV2Props> = ({
               imgConfig={imgConfig}
               resource={resource}
               user={user}
+              location={location}
               inLearningPath={inLearningPath}
               inUserList={inUserList}
               onAddToLearningPathClick={onAddToLearningPathClick}
