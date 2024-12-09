@@ -1,6 +1,25 @@
 Release Notes
 =============
 
+Version 0.26.2
+--------------
+
+- add a trailing slash to non contentfile OCW resources (#1877)
+- Update codecov/codecov-action action to v5.1.1 (#1883)
+- Update Node.js to v22.12.0 (#1882)
+- Update nginx Docker tag to v1.27.3 (#1881)
+- Update dependency ruff to v0.8.2 (#1880)
+- Update dependency Django to v4.2.17 [SECURITY] (#1879)
+- specify non-free course for differing prices test (#1878)
+- Server render search results (search and channel pages) (#1836)
+- Server render homepage and listing pages. Client-only drawer navigation. (#1872)
+- fix price comparison in differing runs table (#1876)
+- OpenAI embeddings for vector search (#1869)
+- Simplify Theme (#1870)
+- Add parent id to podcast api (#1857)
+- Fix edx file import (#1867)
+- Update codecov/codecov-action action to v5 (#1855)
+
 Version 0.26.1 (Released December 09, 2024)
 --------------
 
