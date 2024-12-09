@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.26.1
+Version 0.26.1 (Released December 09, 2024)
 --------------
 
 - Update Yarn to v4.5.3 (#1865)
