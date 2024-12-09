@@ -3,15 +3,17 @@ import styled from "@emotion/styled"
 import Skeleton from "@mui/material/Skeleton"
 import Typography from "@mui/material/Typography"
 import { default as NextImage } from "next/image"
-import { ActionButton, ButtonLink } from "../Button/Button"
+import { ActionButton, Button, ButtonLink, ButtonProps } from "../Button/Button"
 import type { LearningResource } from "api"
 import { ResourceTypeEnum, PlatformEnum } from "api"
 import { DEFAULT_RESOURCE_IMG, getReadableResourceType } from "ol-utilities"
 import {
+  RiBookmarkFill,
   RiBookmarkLine,
   RiCloseLargeLine,
   RiExternalLinkLine,
   RiMenuAddLine,
+  RiShareLine,
 } from "@remixicon/react"
 import type { ImageConfig } from "../../constants/imgConfigs"
 import { theme } from "../ThemeProvider/ThemeProvider"
@@ -19,7 +21,6 @@ import { PlatformLogo, PLATFORM_LOGOS } from "../Logo/Logo"
 import InfoSectionV2 from "./InfoSectionV2"
 import type { User } from "api/hooks/user"
 import { LearningResourceCardProps } from "../LearningResourceCard/LearningResourceCard"
-import { CardActionButton } from "../LearningResourceCard/LearningResourceListCard"
 import VideoFrame from "./VideoFrame"
 import { Link } from "../Link/Link"
 
@@ -128,7 +129,7 @@ const CallToAction = styled.div({
 const PlatformContainer = styled.div({
   display: "flex",
   alignItems: "center",
-  justifyContent: "space-between",
+  justifyContent: "center",
   gap: "16px",
   alignSelf: "stretch",
 })
@@ -198,7 +199,30 @@ const ListButtonContainer = styled.div({
   display: "flex",
   gap: "8px",
   flexGrow: 1,
-  justifyContent: "flex-end",
+  justifyContent: "center",
+})
+
+const StyledButton = styled(Button)<{ filled?: number }>((props) => {
+  return {
+    height: "32px",
+    padding: "12px 12px 12px 8px",
+    border: `1px solid ${props.filled ? theme.custom.colors.red : theme.custom.colors.silverGrayLight}`,
+    backgroundColor: props.filled
+      ? theme.custom.colors.red
+      : theme.custom.colors.white,
+    color: props.filled
+      ? theme.custom.colors.white
+      : theme.custom.colors.silverGrayDark,
+    boxShadow: "none",
+    "&:hover": {
+      backgroundColor: theme.custom.colors.red,
+      borderColor: theme.custom.colors.red,
+      color: theme.custom.colors.white,
+    },
+    "span:first-of-type": {
+      marginRight: "4px",
+    },
+  }
 })
 
 const CarouselContainer = styled.div({
@@ -374,6 +398,10 @@ const getCallToActionText = (resource: LearningResource): string => {
   }
 }
 
+const CallToActionButton: React.FC<ButtonProps & { filled?: number }> = (
+  props,
+) => <StyledButton size="small" edge="circular" {...props} />
+
 const CallToActionSection = ({
   imgConfig,
   resource,
@@ -413,6 +441,9 @@ const CallToActionSection = ({
       : (platform?.code as PlatformEnum)
   const platformImage = PLATFORM_LOGOS[platformCode]?.image
   const cta = getCallToActionText(resource)
+  const addToLearningPathLabel = "Add to list"
+  const bookmarkLabel = "Bookmark"
+  const shareLabel = "Share"
   return (
     <CallToAction data-testid="drawer-cta">
       <ImageSection resource={resource} config={imgConfig} />
@@ -435,33 +466,38 @@ const CallToActionSection = ({
             <StyledPlatformLogo platformCode={platformCode} height={26} />
           </Platform>
         ) : null}
-        <ListButtonContainer>
-          {user?.is_learning_path_editor && (
-            <CardActionButton
-              filled={inLearningPath}
-              aria-label="Add to Learning Path"
-              onClick={(event) =>
-                onAddToLearningPathClick
-                  ? onAddToLearningPathClick(event, resource.id)
-                  : null
-              }
-            >
-              <RiMenuAddLine aria-hidden />
-            </CardActionButton>
-          )}
-          <CardActionButton
-            filled={inUserList}
-            aria-label={`Bookmark ${getReadableResourceType(resource.resource_type)}`}
-            onClick={
-              onAddToUserListClick
-                ? (event) => onAddToUserListClick?.(event, resource.id)
-                : undefined
+      </PlatformContainer>
+      <ListButtonContainer>
+        {user?.is_learning_path_editor && (
+          <CallToActionButton
+            filled={inLearningPath ? 1 : 0}
+            startIcon={<RiMenuAddLine />}
+            aria-label={addToLearningPathLabel}
+            onClick={(event) =>
+              onAddToLearningPathClick
+                ? onAddToLearningPathClick(event, resource.id)
+                : null
             }
           >
-            <RiBookmarkLine aria-hidden />
-          </CardActionButton>
-        </ListButtonContainer>
-      </PlatformContainer>
+            {addToLearningPathLabel}
+          </CallToActionButton>
+        )}
+        <CallToActionButton
+          filled={inUserList ? 1 : 0}
+          startIcon={inUserList ? <RiBookmarkFill /> : <RiBookmarkLine />}
+          aria-label={bookmarkLabel}
+          onClick={
+            onAddToUserListClick
+              ? (event) => onAddToUserListClick?.(event, resource.id)
+              : undefined
+          }
+        >
+          {bookmarkLabel}
+        </CallToActionButton>
+        <CallToActionButton startIcon={<RiShareLine />} aria-label={shareLabel}>
+          {shareLabel}
+        </CallToActionButton>
+      </ListButtonContainer>
     </CallToAction>
   )
 }
