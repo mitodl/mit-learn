@@ -922,8 +922,9 @@ def _qdrant_similar_results(doc, num_resources):
         list of dict:
             list of serialized resources
     """
-    from vector_search.utils import qdrant_client, vector_point_id
+    from vector_search.utils import dense_encoder, qdrant_client, vector_point_id
 
+    encoder = dense_encoder()
     client = qdrant_client()
     return [
         hit.payload
@@ -931,7 +932,7 @@ def _qdrant_similar_results(doc, num_resources):
             collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
             query=vector_point_id(doc["readable_id"]),
             limit=num_resources,
-            using=settings.QDRANT_SEARCH_VECTOR_NAME,
+            using=encoder.model_short_name(),
         ).points
     ]
 

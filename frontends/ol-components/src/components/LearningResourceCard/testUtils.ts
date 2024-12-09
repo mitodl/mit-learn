@@ -193,6 +193,7 @@ const courses = {
     sameData: makeResource({
       resource_type: ResourceTypeEnum.Course,
       free: true,
+      certification: true,
       runs: [
         factories.learningResources.run({
           delivery: sameDataRun.delivery,

@@ -119,6 +119,9 @@ def test_serialize_podcast_episode_to_json():
         {
             "duration": podcast_episode.duration,
             "episode_link": podcast_episode.episode_link,
+            "podcasts": podcast_episode.learning_resource.parents.filter(
+                relation_type=LearningResourceRelationTypes.PODCAST_EPISODES.value
+            ).values_list("parent__id", flat=True),
             "id": podcast_episode.id,
             "rss": podcast_episode.rss,
             "transcript": podcast_episode.transcript,
@@ -194,9 +197,7 @@ def test_learning_resource_serializer(  # noqa: PLR0913
         resource_category = resource.resource_type
     else:
         resource_category = LEARNING_MATERIAL_RESOURCE_CATEGORY
-
     assert result == expected
-
     assert result == {
         "id": resource.id,
         "title": resource.title,

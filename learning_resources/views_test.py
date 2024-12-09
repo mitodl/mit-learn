@@ -37,6 +37,7 @@ from learning_resources.factories import (
 from learning_resources.models import (
     LearningResourceOfferor,
     LearningResourceRelationship,
+    PodcastEpisode,
 )
 from learning_resources.serializers import (
     ContentFileSerializer,
@@ -167,7 +168,7 @@ def test_program_endpoint(client, url, params):
 def test_program_detail_endpoint(client, django_assert_num_queries, url):
     """Test program endpoint"""
     program = ProgramFactory.create()
-    with django_assert_num_queries(16):
+    with django_assert_num_queries(17):
         resp = client.get(reverse(url, args=[program.learning_resource.id]))
     assert resp.data.get("title") == program.learning_resource.title
     assert resp.data.get("resource_type") == LearningResourceType.program.name
@@ -212,7 +213,7 @@ def test_no_excess_queries(rf, user, mocker, django_assert_num_queries, course_c
     request = rf.get("/")
     request.user = user
 
-    with django_assert_num_queries(18):
+    with django_assert_num_queries(19):
         view = CourseViewSet(request=request)
         results = view.get_queryset().all()
         assert len(results) == course_count
@@ -365,6 +366,29 @@ def test_list_podcast_episode_endpoint(client, url, params):
             resp.data.get("results")[idx]["podcast_episode"]
             == PodcastEpisodeSerializer(instance=episode.podcast_episode).data
         )
+
+
+@pytest.mark.parametrize(
+    ("url", "params"),
+    [
+        ("lr:v1:podcast_episodes_api-list", "sortby=-last_modified"),
+        ("lr:v1:learning_resources_api-list", "resource_type=podcast_episode"),
+    ],
+)
+def test_list_podcast_episode_endpoint_returns_podcast(client, url, params):
+    """Test podcast episode endpoint returns podcast ids"""
+    podcast = PodcastFactory.create().learning_resource
+    PodcastEpisodeFactory.create_batch(2)
+    episodes = PodcastEpisode.objects.all()
+    podcast.resources.set(
+        [episode.learning_resource for episode in episodes],
+        through_defaults={
+            "relation_type": LearningResourceRelationTypes.PODCAST_EPISODES.value
+        },
+    )
+    resp = client.get(f"{reverse(url)}?{params}")
+    for item in resp.data["results"]:
+        assert podcast.id in item["podcast_episode"]["podcasts"]
 
 
 @pytest.mark.parametrize(

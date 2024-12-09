@@ -353,6 +353,12 @@ class PodcastEpisodeSerializer(serializers.ModelSerializer):
     Serializer for PodcastEpisode
     """
 
+    podcasts = serializers.SerializerMethodField()
+
+    def get_podcasts(self, instance) -> list[str]:
+        """Get the podcast id(s) the episode belongs to"""
+        return [podcast.parent_id for podcast in instance.learning_resource.podcasts]
+
     class Meta:
         model = models.PodcastEpisode
         exclude = ("learning_resource", *COMMON_IGNORED_FIELDS)

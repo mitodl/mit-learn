@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 import celery
@@ -27,8 +28,9 @@ from learning_resources_search.tasks import wrap_retry_exception
 from main.celery import app
 from main.utils import (
     chunks,
+    now_in_utc,
 )
-from vector_search.utils import embed_learning_resources
+from vector_search.utils import embed_learning_resources, filter_existing_qdrant_points
 
 log = logging.getLogger(__name__)
 
@@ -148,3 +150,28 @@ def start_embed_resources(self, indexes, skip_content_files):
     # Use self.replace so that code waiting on this task will also wait on the embedding
     #  and finish tasks
     return self.replace(celery.chain(*index_tasks))
+
+
+@app.task(bind=True)
+def embed_new_learning_resources(self):
+    """
+    Embed new resources from the last day
+    """
+    log.info("Running new resource embedding task")
+    delta = datetime.timedelta(days=1)
+    since = now_in_utc() - delta
+    new_learning_resources = LearningResource.objects.filter(
+        published=True,
+        created_on__gt=since,
+    ).exclude(resource_type=CONTENT_FILE_TYPE)
+    filtered_resources = filter_existing_qdrant_points(new_learning_resources)
+    embed_tasks = celery.group(
+        [
+            generate_embeddings.si(ids, COURSE_TYPE)
+            for ids in chunks(
+                filtered_resources.order_by("id").values_list("id", flat=True),
+                chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
+            )
+        ]
+    )
+    return self.replace(embed_tasks)

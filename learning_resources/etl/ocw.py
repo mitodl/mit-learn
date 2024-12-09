@@ -18,7 +18,7 @@ from retry import retry
 from learning_resources.constants import (
     CONTENT_TYPE_PAGE,
     CONTENT_TYPE_VIDEO,
-    VALID_TEXT_FILE_TYPES,
+    VALID_FILE_TYPES,
     Availability,
     Format,
     LearningResourceDelivery,
@@ -196,7 +196,7 @@ def get_file_content(
     mime_type = mimetypes.types_map.get(file_s3_path)
     content_json = None
 
-    if ext_lower in VALID_TEXT_FILE_TYPES:
+    if ext_lower in VALID_FILE_TYPES:
         s3_obj = s3_resource.Object(
             settings.OCW_LIVE_BUCKET, unquote(file_s3_path)
         ).get()
@@ -470,11 +470,9 @@ def extract_course(
 
     log.info("Digesting %s...", url_path)
 
-    run_slug = url_path.strip("/")
-
     return {
         **course_json,
         "last_modified": last_modified,
-        "slug": run_slug,
-        "url": urljoin(settings.OCW_BASE_URL, run_slug),
+        "slug": url_path.strip("/"),
+        "url": urljoin(settings.OCW_BASE_URL, url_path),
     }

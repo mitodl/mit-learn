@@ -150,5 +150,5 @@ export {
   useSchoolsList,
   useSimilarLearningResources,
   useVectorSimilarLearningResources,
-  learningResources as learningResourcesKeyFactory,
+  learningResources,
 }

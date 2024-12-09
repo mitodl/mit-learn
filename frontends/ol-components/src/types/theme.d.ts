@@ -10,8 +10,6 @@ export interface ColorGroup {
 }
 
 interface CustomTheme {
-  transitionDuration: string
-  shadow: string
   colors: {
     mitRed: string
     silverGray: string

@@ -915,7 +915,8 @@ def test_load_content_files(mocker, is_published, extra_run, calc_score):
     run_count = 2 if extra_run else 1
     assert course.runs.count() == run_count
 
-    returned_content_file_id = 1
+    deleted_content_file = ContentFileFactory.create(run=course_run)
+    returned_content_file_id = deleted_content_file.id + 1
 
     content_data = [{"a": "b"}, {"a": "c"}]
     mock_load_content_file = mocker.patch(
@@ -940,6 +941,8 @@ def test_load_content_files(mocker, is_published, extra_run, calc_score):
         run_count if not is_published else run_count - 1
     )
     assert mock_calc_score.call_count == (1 if calc_score else 0)
+    deleted_content_file.refresh_from_db()
+    assert not deleted_content_file.published
 
 
 def test_load_content_file():

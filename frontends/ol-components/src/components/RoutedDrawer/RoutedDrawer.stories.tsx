@@ -8,7 +8,7 @@ const Content = styled.div({
   width: 400,
   padding: 80,
   color: theme.palette.primary.main,
-  borderShadow: theme.custom.shadow,
+  borderShadow: "3 4 12 rgb(0 0 0 / 36%)",
 })
 
 const meta: Meta<typeof RoutedDrawer> = {

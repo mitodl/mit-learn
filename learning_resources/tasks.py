@@ -125,7 +125,12 @@ def get_xpro_data():
 
 @app.task
 def get_content_files(
-    ids: list[int], etl_source: str, keys: list[str], s3_prefix: str | None = None
+    ids: list[int],
+    etl_source: str,
+    keys: list[str],
+    *,
+    s3_prefix: str | None = None,
+    overwrite: bool = False,
 ):
     """
     Task to sync edX course content files with database
@@ -137,7 +142,9 @@ def get_content_files(
     ):
         log.warning("Required settings missing for %s files", etl_source)
         return
-    sync_edx_course_files(etl_source, ids, keys, s3_prefix=s3_prefix)
+    sync_edx_course_files(
+        etl_source, ids, keys, s3_prefix=s3_prefix, overwrite=overwrite
+    )
     clear_search_cache()
 
 
@@ -147,6 +154,7 @@ def get_content_tasks(
     chunk_size: int | None = None,
     s3_prefix: str | None = None,
     override_base_prefix: bool = False,
+    overwrite: bool = False,
 ) -> celery.group:
     """
     Return a list of grouped celery tasks for indexing edx content
@@ -160,7 +168,9 @@ def get_content_tasks(
     )
     return celery.group(
         [
-            get_content_files.si(ids, etl_source, archive_keys, s3_prefix=s3_prefix)
+            get_content_files.si(
+                ids, etl_source, archive_keys, s3_prefix=s3_prefix, overwrite=overwrite
+            )
             for ids in chunks(
                 LearningResource.objects.filter(
                     published=True, course__isnull=False, etl_source=etl_source
@@ -175,19 +185,20 @@ def get_content_tasks(
 
 
 @app.task(bind=True)
-def import_all_mit_edx_files(self, chunk_size=None):
+def import_all_mit_edx_files(self, *, chunk_size=None, overwrite=False):
     """Ingest MIT edX files from an S3 bucket"""
     return self.replace(
         get_content_tasks(
             ETLSource.mit_edx.name,
             chunk_size=chunk_size,
             s3_prefix=settings.EDX_LEARNING_COURSE_BUCKET_PREFIX,
+            overwrite=overwrite,
         )
     )
 
 
 @app.task(bind=True)
-def import_all_oll_files(self, chunk_size=None):
+def import_all_oll_files(self, *, chunk_size=None, overwrite=False):
     """Ingest MIT edX files from an S3 bucket"""
     return self.replace(
         get_content_tasks(
@@ -195,29 +206,28 @@ def import_all_oll_files(self, chunk_size=None):
             chunk_size=chunk_size,
             s3_prefix=settings.OLL_LEARNING_COURSE_BUCKET_PREFIX,
             override_base_prefix=True,
+            overwrite=overwrite,
         )
     )
 
 
 @app.task(bind=True)
-def import_all_mitxonline_files(self, chunk_size=None):
+def import_all_mitxonline_files(self, *, chunk_size=None, overwrite=False):
     """Ingest MITx Online files from an S3 bucket"""
     return self.replace(
         get_content_tasks(
-            ETLSource.mitxonline.name,
-            chunk_size=chunk_size,
+            ETLSource.mitxonline.name, chunk_size=chunk_size, overwrite=overwrite
         )
     )
 
 
 @app.task(bind=True)
-def import_all_xpro_files(self, chunk_size=None):
+def import_all_xpro_files(self, *, chunk_size=None, overwrite=False):
     """Ingest xPRO OLX files from an S3 bucket"""
 
     return self.replace(
         get_content_tasks(
-            ETLSource.xpro.name,
-            chunk_size=chunk_size,
+            ETLSource.xpro.name, chunk_size=chunk_size, overwrite=overwrite
         )
     )
 

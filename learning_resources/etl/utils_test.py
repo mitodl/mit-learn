@@ -6,14 +6,11 @@ from decimal import Decimal
 from random import randrange
 from subprocess import check_call
 from tempfile import TemporaryDirectory
-from unittest.mock import ANY
 
 import pytest
-from lxml import etree
 
 from learning_resources.constants import (
     CONTENT_TYPE_FILE,
-    CONTENT_TYPE_VERTICAL,
     CURRENCY_USD,
     LearningResourceDelivery,
     LearningResourceType,
@@ -171,58 +168,26 @@ def test_parse_dates():
     assert utils.parse_dates("This is not a date") is None
 
 
-def test_get_text_from_element():
-    """
-    get_text_from_element should walk through elements, extracting text, and ignoring script and style tags completely.
-    """
-    input_xml = """
-    <vertical display_name="name">
-    pre-text
-    <style attr="ibute">
-    style stuff here
-    </style>
-    <script>
-    scripty script
-    </script>
-    <other>
-    some
-    <inner>
-    important
-    </inner>
-    text here
-    </other>
-    post-text
-    </vertical>
-    """
-
-    ret = utils.get_text_from_element(etree.fromstring(input_xml))  # noqa: S320
-    assert (
-        ret == "\n    pre-text\n     \n    some\n     \n    important"
-        "\n     \n    text here\n     \n    post-text\n    "
-    )
-
-
 @pytest.mark.parametrize("has_metadata", [True, False])
 @pytest.mark.parametrize("matching_checksum", [True, False])
-def test_transform_content_files(mocker, has_metadata, matching_checksum):
+@pytest.mark.parametrize("overwrite", [True, False])
+@pytest.mark.parametrize("tika_content", ["tika'ed text", ""])
+def test_transform_content_files(
+    mocker, has_metadata, matching_checksum, overwrite, tika_content
+):
     """transform_content_files"""
     run = LearningResourceRunFactory.create(published=True)
     document = "some text in the document"
-    key = "a key here"
+    file_extension = ".html"
+    key = f"root/key{file_extension}"
     content_type = "course"
     checksum = "7s35721d1647f962d59b8120a52210a7"
-    metadata = (
-        {"Author": "author", "language": "French", "title": "the title of the course"}
-        if has_metadata
-        else None
-    )
-    tika_output = {"content": "tika'ed text", "metadata": metadata}
+    metadata = {"title": "the title of the course"} if has_metadata else None
+    tika_output = {"content": tika_content, "metadata": metadata}
     if matching_checksum:
         ContentFileFactory.create(
-            content=tika_output["content"],
-            content_author=metadata["Author"] if metadata else "",
+            content="existing content",
             content_title=metadata["title"] if metadata else "",
-            content_language=metadata["language"] if metadata else "",
             content_type=content_type,
             published=True,
             run=run,
@@ -233,7 +198,16 @@ def test_transform_content_files(mocker, has_metadata, matching_checksum):
     documents_mock = mocker.patch(
         "learning_resources.etl.utils.documents_from_olx",
         return_value=[
-            (document, {"key": key, "content_type": content_type, "checksum": checksum})
+            (
+                document,
+                {
+                    "key": key,
+                    "content_type": content_type,
+                    "checksum": checksum,
+                    "file_extension": file_extension,
+                    "source_path": "root",
+                },
+            )
         ],
     )
     extract_mock = mocker.patch(
@@ -244,22 +218,34 @@ def test_transform_content_files(mocker, has_metadata, matching_checksum):
 
     content = list(
         utils.transform_content_files(
-            pathlib.Path(script_dir, "test_json", "exported_courses_12345.tar.gz"), run
+            pathlib.Path(script_dir, "test_json", "exported_courses_12345.tar.gz"),
+            run,
+            overwrite=overwrite,
         )
     )
-    assert content == [
-        {
-            "content": tika_output["content"],
-            "key": key,
-            "published": True,
-            "content_author": metadata["Author"] if has_metadata else "",
-            "content_title": metadata["title"] if has_metadata else "",
-            "content_language": metadata["language"] if has_metadata else "",
-            "content_type": content_type,
-            "checksum": checksum,
-        }
-    ]
-    if matching_checksum:
+    if tika_content or (matching_checksum and not overwrite):
+        assert content == [
+            {
+                "content": "existing content"
+                if (matching_checksum and not overwrite)
+                else tika_output["content"]
+                if file_extension == ".html" or matching_checksum
+                else "",
+                "key": key,
+                "published": True,
+                "content_title": metadata["title"]
+                if has_metadata and file_extension == ".html"
+                else "",
+                "content_type": content_type,
+                "checksum": checksum,
+                "file_extension": file_extension,
+                "source_path": "root",
+            }
+        ]
+    else:
+        assert content == []
+
+    if matching_checksum and not overwrite:
         extract_mock.assert_not_called()
     else:
         extract_mock.assert_called_once_with(document, other_headers={})
@@ -269,25 +255,8 @@ def test_transform_content_files(mocker, has_metadata, matching_checksum):
 def test_documents_from_olx():
     """Test for documents_from_olx"""
     parsed_documents = get_olx_test_docs()
-    assert len(parsed_documents) == 108
+    assert len(parsed_documents) == 92
 
-    expected_parsed_vertical = (
-        "\n    Where all of the tests are defined  Jasmine tests: HTML module edition"
-        " \n Did it break? Dunno; let's find out. \n Some of the libraries tested are"
-        " only served by the LMS for courseware, therefore, some tests can be expected"
-        " to fail if executed in Studio. \n\n  Where Jasmine will inject its output"
-        " (dictated in boot.js)  \n Test output will generate here when viewing in LMS."
-    )
-    assert parsed_documents[0] == (
-        expected_parsed_vertical,
-        {
-            "key": "vertical_1",
-            "title": "HTML",
-            "content_type": CONTENT_TYPE_VERTICAL,
-            "mime_type": "application/xml",
-            "checksum": "2c35721d1647f962d59b8120a52210a7",
-        },
-    )
     formula2do = next(
         doc for doc in parsed_documents if doc[1]["key"].endswith("formula2do.xml")
     )
@@ -295,16 +264,6 @@ def test_documents_from_olx():
     assert formula2do[1]["key"].endswith("formula2do.xml")
     assert formula2do[1]["content_type"] == CONTENT_TYPE_FILE
     assert formula2do[1]["mime_type"].endswith("/xml")
-
-
-def test_documents_from_olx_bad_vertical(mocker):
-    """An exception should be logged if verticals can't be read, other files should still be processed"""
-    mock_log = mocker.patch("learning_resources.etl.utils.log.exception")
-    mock_bundle = mocker.patch("learning_resources.etl.utils.XBundle")
-    mock_bundle.return_value.import_from_directory.side_effect = OSError()
-    parsed_documents = get_olx_test_docs()
-    mock_log.assert_called_once_with("Could not read verticals from path %s", ANY)
-    assert len(parsed_documents) == 92
 
 
 @pytest.mark.parametrize(
@@ -500,3 +459,35 @@ def test_transform_price(amount, currency, valid_currency):
         "amount": amount,
         "currency": currency if valid_currency else CURRENCY_USD,
     }
+
+
+def test_text_from_srt_content():
+    """Test that text_from_srt_content returns expected text"""
+    srt_content = (
+        "1\n"
+        "00:00:00,000 --> 00:00:02,000\n"
+        "This is the first subtitle."
+        "\n"
+        "2\n"
+        "00:00:02,000 --> 00:00:04,000\n"
+        "This is the second subtitle."
+    )
+    assert utils.text_from_srt_content(srt_content) == (
+        "This is the first subtitle.\nThis is the second subtitle."
+    )
+
+
+def test_text_from_sjson_content():
+    """Test that text_from_sjson_content returns expected text"""
+    sjson_content = """
+        {
+            "start": [0,2],
+            "end": [2,4],
+            "text": ["This is the first subtitle.",
+                 "This is the second subtitle."
+            ]
+        }
+    """
+    assert utils.text_from_sjson_content(sjson_content) == (
+        "This is the first subtitle. This is the second subtitle."
+    )

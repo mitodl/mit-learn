@@ -1,6 +1,7 @@
 """Helper functions for ETL"""
 
 import glob
+import json
 import logging
 import mimetypes
 import os
@@ -24,12 +25,10 @@ from django.utils.dateparse import parse_duration
 from django.utils.text import slugify
 from pycountry import currencies
 from tika import parser as tika_parser
-from xbundle import XBundle
 
 from learning_resources.constants import (
     CONTENT_TYPE_FILE,
     CONTENT_TYPE_PDF,
-    CONTENT_TYPE_VERTICAL,
     CONTENT_TYPE_VIDEO,
     CURRENCY_USD,
     DEPARTMENTS,
@@ -307,63 +306,6 @@ def parse_dates(date_string, hour=12):
     return None
 
 
-def _get_text_from_element(element, content):
-    """
-    Recurse through XML elements
-
-    Args:
-        element (Element): An XML element
-        content (list): A list of strings, to be modified with any new material
-    """
-    if element.tag not in ("style", "script"):
-        if element.text:
-            content.append(element.text)
-
-        for child in element.getchildren():
-            _get_text_from_element(child, content)
-
-        if element.tail:
-            content.append(element.tail)
-
-
-def get_text_from_element(element):
-    """
-    Get relevant text for ingestion from XML element
-
-    Args:
-        element (Element): A XML element representing a vertical
-    """
-    content = []
-    _get_text_from_element(element, content)
-    return " ".join(content)
-
-
-def get_xbundle_docs(olx_path: str) -> Generator[dict, None, None]:
-    """
-    Get vertical documents from an edx tar archive
-
-    Args:
-        olx_path(str): path to extracted edx tar archive
-
-    Yields:
-        tuple: A list of (bytes of content, metadata)
-    """
-    bundle = XBundle()
-    bundle.import_from_directory(olx_path)
-    for index, vertical in enumerate(bundle.course.findall(".//vertical")):
-        content = get_text_from_element(vertical)
-        yield (
-            content,
-            {
-                "key": f"vertical_{index + 1}",
-                "content_type": CONTENT_TYPE_VERTICAL,
-                "title": vertical.attrib.get("display_name") or "",
-                "mime_type": "application/xml",
-                "checksum": md5(content.encode("utf-8")).hexdigest(),  # noqa: S324
-            },
-        )
-
-
 def documents_from_olx(
     olx_path: str,
 ) -> Generator[tuple, None, None]:
@@ -376,17 +318,11 @@ def documents_from_olx(
     Yields:
         tuple: A list of (bytes of content, metadata)
     """
-    try:
-        yield from get_xbundle_docs(olx_path)
-    except:  # noqa: E722
-        log.exception("Could not read verticals from path %s", olx_path)
-
-    counter = _infinite_counter()
-
     for root, _, files in os.walk(olx_path):
+        path = "/".join(root.split("/")[3:])
         for filename in files:
             extension_lower = Path(filename).suffix.lower()
-            if extension_lower in VALID_TEXT_FILE_TYPES:
+            if extension_lower in VALID_TEXT_FILE_TYPES and "draft" not in root:
                 with Path.open(Path(root, filename), "rb") as f:
                     filebytes = f.read()
 
@@ -395,16 +331,52 @@ def documents_from_olx(
                 yield (
                     filebytes,
                     {
-                        "key": f"document_{next(counter)}_{filename}",
+                        "key": f"{path}/{filename}",
                         "content_type": CONTENT_TYPE_FILE,
                         "mime_type": mimetype,
                         "checksum": md5(filebytes).hexdigest(),  # noqa: S324
+                        "file_extension": extension_lower,
+                        "source_path": path,
                     },
                 )
 
 
+def text_from_srt_content(content: str):
+    """
+    Remove timestamps and other extraneous data from SRT content
+
+    Args:
+        content (str): The SRT content to clean
+
+    Returns:
+        str: The content as a string without timestamps
+    """
+    # Remove timestamps
+    content = re.sub(
+        r"\d{2}:\d{2}:\d{2},\d{3} --> \d{2}:\d{2}:\d{2},\d{3}(\n|$)", "", content
+    )
+    # Remove sequence numbers
+    content = re.sub(r"\d+\n", "", content)
+    # Remove empty lines
+    return re.sub(r"\n\s*\n", " ", content)
+
+
+def text_from_sjson_content(content: str):
+    """
+    return text from sjson content
+
+    Args:
+        content (str): The sjson content
+
+    Returns:
+        str: The content as a string without timestamps
+    """
+    data = json.loads(content)
+    return " ".join(data.get("text", []))
+
+
 def transform_content_files(
-    course_tarpath: Path, run: LearningResourceRun
+    course_tarpath: Path, run: LearningResourceRun, *, overwrite: bool
 ) -> Generator[dict, None, None]:
     """
     Pass content to tika, then return JSON document with transformed content inside it
@@ -424,17 +396,18 @@ def transform_content_files(
             key = metadata["key"]
             content_type = metadata["content_type"]
             mime_type = metadata.get("mime_type")
+            file_extension = metadata.get("file_extension")
+            source_path = metadata.get("source_path")
 
             existing_content = ContentFile.objects.filter(key=key, run=run).first()
-            if not existing_content or existing_content.checksum != metadata.get(
-                "checksum"
-            ):
+            if (
+                not existing_content
+                or existing_content.checksum != metadata.get("checksum")
+            ) or overwrite:
                 if settings.SKIP_TIKA and settings.ENVIRONMENT != "production":
                     content_dict = {
                         "content": "",
                         "content_title": "",
-                        "content_author": "",
-                        "content_language": "",
                     }
                 else:
                     tika_output = extract_text_metadata(
@@ -448,24 +421,25 @@ def transform_content_files(
 
                     tika_content = tika_output.get("content") or ""
                     tika_metadata = tika_output.get("metadata") or {}
+                    content = tika_content.strip()
+                    if file_extension == ".srt":
+                        content = text_from_srt_content(content)
+                    elif file_extension == ".sjson":
+                        content = text_from_sjson_content(content)
+
+                    if not content:
+                        continue
+
                     content_dict = {
-                        "content": tika_content.strip(),
+                        "content": content,
                         "content_title": (
                             metadata.get("title") or tika_metadata.get("title") or ""
                         )[: get_max_contentfile_length("content_title")],
-                        "content_author": (tika_metadata.get("Author") or "")[
-                            : get_max_contentfile_length("content_author")
-                        ],
-                        "content_language": (tika_metadata.get("language") or "")[
-                            : get_max_contentfile_length("content_language")
-                        ],
                     }
             else:
                 content_dict = {
                     "content": existing_content.content,
                     "content_title": existing_content.content_title,
-                    "content_author": existing_content.content_author,
-                    "content_language": existing_content.content_language,
                 }
             yield (
                 {
@@ -473,6 +447,8 @@ def transform_content_files(
                     "published": True,
                     "content_type": content_type,
                     "checksum": metadata.get("checksum"),
+                    "file_extension": file_extension,
+                    "source_path": source_path,
                     **content_dict,
                 }
             )

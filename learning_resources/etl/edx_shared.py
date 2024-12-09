@@ -86,7 +86,12 @@ def get_most_recent_course_archives(
 
 
 def sync_edx_course_files(
-    etl_source: str, ids: list[int], keys: list[str], s3_prefix: str | None = None
+    etl_source: str,
+    ids: list[int],
+    keys: list[str],
+    *,
+    s3_prefix: str | None = None,
+    overwrite: bool = False,
 ):
     """
     Sync all edx course run files for a list of course ids to database
@@ -150,13 +155,16 @@ def sync_edx_course_files(
             except ReadError:
                 log.exception("Error reading tar file %s, skipping", course_tarpath)
                 continue
-            if run.checksum == checksum:
+            if run.checksum == checksum and not overwrite:
                 log.info("Checksums match for %s, skipping load", key)
                 # Ensure any content files for other runs in the course are deindexed
                 content_files_loaded_actions(run=run, deindex_only=True)
                 continue
             try:
-                load_content_files(run, transform_content_files(course_tarpath, run))
+                load_content_files(
+                    run,
+                    transform_content_files(course_tarpath, run, overwrite=overwrite),
+                )
                 run.checksum = checksum
                 run.save()
             except:  # noqa: E722
