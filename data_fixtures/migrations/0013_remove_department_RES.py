@@ -5,7 +5,7 @@ from urllib.parse import urlencode
 from django.db import migrations
 from django.utils.text import slugify
 
-from channels.constants import ChannelType
+from learning_channels.constants import ChannelType
 
 
 def remove_res(apps, schema_editor):
@@ -13,7 +13,7 @@ def remove_res(apps, schema_editor):
     Remove department with department_id=RES
     """
 
-    Channel = apps.get_model("channels", "Channel")
+    Channel = apps.get_model("learning_channels", "Channel")
     LearningResourceDepartment = apps.get_model(
         "learning_resources", "LearningResourceDepartment"
     )
@@ -27,14 +27,16 @@ def add_res(apps, schema_editor):
     LearningResourceDepartment = apps.get_model(
         "learning_resources", "LearningResourceDepartment"
     )
-    Channel = apps.get_model("channels", "Channel")
-    ChannelDepartmentDetail = apps.get_model("channels", "ChannelDepartmentDetail")
+    Channel = apps.get_model("learning_channels", "Channel")
+    ChannelDepartmentDetail = apps.get_model(
+        "learning_channels", "ChannelDepartmentDetail"
+    )
 
     department = LearningResourceDepartment.objects.create(
         department_id="RES",
         name="Supplemental Resources",
     )
-    Channel = apps.get_model("channels", "Channel")
+    Channel = apps.get_model("learning_channels", "Channel")
 
     channel = Channel.objects.create(
         search_filter=urlencode({"department": department.department_id}),

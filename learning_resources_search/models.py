@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.db import models
 from django.db.models import JSONField
 
-from channels.models import Channel
+from learning_channels.models import Channel
 from main.models import TimestampedModel
 
 User = get_user_model()

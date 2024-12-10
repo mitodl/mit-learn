@@ -6,7 +6,7 @@ import pytest
 from django.db.models import signals
 from django.urls import reverse
 
-from channels.factories import ChannelFactory
+from learning_channels.factories import ChannelFactory
 from learning_resources_search.factories import PercolateQueryFactory
 from learning_resources_search.models import PercolateQuery
 from learning_resources_search.utils import prune_channel_subscriptions

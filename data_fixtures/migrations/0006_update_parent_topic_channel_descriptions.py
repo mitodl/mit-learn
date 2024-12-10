@@ -2,7 +2,7 @@
 
 from django.db import migrations
 
-from channels.constants import ChannelType
+from learning_channels.constants import ChannelType
 
 CHANNEL_UPDATES = {
     "Art, Design & Architecture": "Develop the creative, critical thinking, "
@@ -40,7 +40,7 @@ CHANNEL_UPDATES = {
 
 
 def update_parent_topic_channel_descriptions(apps, schema_editor):
-    Channel = apps.get_model("channels", "Channel")
+    Channel = apps.get_model("learning_channels", "Channel")
     LearningResourceTopic = apps.get_model(
         "learning_resources", "LearningResourceTopic"
     )

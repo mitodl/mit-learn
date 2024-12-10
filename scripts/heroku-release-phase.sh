@@ -14,6 +14,7 @@ MANAGE_FILE=${MANAGE_FILE:2}
 
 echo "-----> Running django migrations"
 python $MANAGE_FILE showmigrations --list 2>&1 | indent
+python $MANAGE_FILE rename_app channels learning_channels
 python $MANAGE_FILE migrate --noinput 2>&1 | indent
 RUN_DATA_MIGRATIONS=true python $MANAGE_FILE migrate --noinput 2>&1 | indent
 

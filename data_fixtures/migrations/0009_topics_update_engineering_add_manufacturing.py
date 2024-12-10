@@ -7,8 +7,8 @@ so it should match on name directly.
 
 from django.db import migrations
 
-from channels.constants import ChannelType
 from data_fixtures.utils import upsert_topic_data_string
+from learning_channels.constants import ChannelType
 
 map_changes = """
 ---
@@ -34,7 +34,7 @@ def rollback_new_mapping(apps, schema_editor):
     LearningResourceTopic = apps.get_model(
         "learning_resources", "LearningResourceTopic"
     )
-    Channel = apps.get_model("channels", "Channel")
+    Channel = apps.get_model("learning_channels", "Channel")
 
     topic = LearningResourceTopic.objects.filter(
         topic_uuid="4176e385-92c5-4e02-b3cc-4f34d9a4bf40",

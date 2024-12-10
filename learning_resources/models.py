@@ -63,7 +63,7 @@ class LearningResourceTopicQuerySet(TimestampedModelQuerySet):
 
     def annotate_channel_url(self):
         """Annotate with the channel url"""
-        from channels.models import Channel
+        from learning_channels.models import Channel
 
         return self.annotate(
             channel_url=(
@@ -129,7 +129,7 @@ class LearningResourceOfferorQuerySet(TimestampedModelQuerySet):
 
     def annotate_channel_url(self):
         """Annotate with the channel url"""
-        from channels.models import Channel
+        from learning_channels.models import Channel
 
         return self.annotate(
             channel_url=(
@@ -247,7 +247,7 @@ class LearningResourceDepartmentQuerySet(TimestampedModelQuerySet):
 
     def annotate_channel_url(self):
         """Annotate the queryset with channel_url"""
-        from channels.models import Channel
+        from learning_channels.models import Channel
 
         return self.annotate(
             channel_url=(
@@ -275,7 +275,7 @@ class LearningResourceDepartment(TimestampedModel):
     @cached_property
     def channel_url(self) -> str | None:
         """Get the channel url for the department if it exists"""
-        from channels.models import Channel
+        from learning_channels.models import Channel
 
         channel = Channel.objects.filter(department_detail__department=self).first()
         return channel.channel_url if channel is not None else None

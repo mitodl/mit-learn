@@ -9,8 +9,11 @@ from opensearch_dsl import response
 from qdrant_client import QdrantClient
 from rest_framework.reverse import reverse
 
-from channels.factories import ChannelTopicDetailFactory, ChannelUnitDetailFactory
-from channels.models import Channel
+from learning_channels.factories import (
+    ChannelTopicDetailFactory,
+    ChannelUnitDetailFactory,
+)
+from learning_channels.models import Channel
 from learning_resources.constants import (
     LearningResourceRelationTypes,
     LearningResourceType,

@@ -4,6 +4,9 @@
 
 python3 manage.py collectstatic --noinput --clear
 
+# Rename channels app, should have no effect if already run
+python manage.py rename_app channels learning_channels
+
 # run initial django migrations
 python3 manage.py migrate --noinput
 

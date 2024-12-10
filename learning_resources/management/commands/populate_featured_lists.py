@@ -6,7 +6,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.management import BaseCommand
 
-from channels.models import Channel
+from learning_channels.models import Channel
 from learning_resources.constants import (
     LearningResourceRelationTypes,
     LearningResourceType,

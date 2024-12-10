@@ -7,7 +7,7 @@ def unpublish_empty_topic_channels(apps, schema_editor):
     """
     Set a topic channel to unpublished if it has no published learning resources.
     """
-    Channel = apps.get_model("channels", "Channel")
+    Channel = apps.get_model("learning_channels", "Channel")
     LearningResource = apps.get_model("learning_resources", "LearningResource")
 
     published_resources = LearningResource.objects.filter(

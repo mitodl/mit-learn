@@ -13,7 +13,7 @@ from rest_framework.renderers import JSONRenderer
 from rest_framework.request import Request
 from rest_framework.test import APIRequestFactory
 
-from channels.factories import ChannelUnitDetailFactory
+from learning_channels.factories import ChannelUnitDetailFactory
 from learning_resources import factories
 from learning_resources.constants import (
     DEPARTMENTS,

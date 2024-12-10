@@ -102,11 +102,12 @@ INSTALLED_APPS = (
     "imagekit",
     "django_json_widget",
     "django_filters",
+    "django_rename_app",
     "drf_spectacular",
     # Put our apps after this point
     "main",
     "authentication",
-    "channels",
+    "learning_channels",
     "profiles",
     "widgets",
     "learning_resources",
