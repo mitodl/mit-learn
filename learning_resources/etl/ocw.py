@@ -254,10 +254,12 @@ def transform_contentfile(
         content_type = CONTENT_TYPE_VIDEO
         file_s3_path = contentfile_data.get("transcript_file")
         image_src = contentfile_data.get("thumbnail_file")
+        file_extension = Path(contentfile_data.get("file")).suffix
     else:
         content_type = get_content_type(file_type)
         file_s3_path = contentfile_data.get("file")
         image_src = None
+        file_extension = Path(file_s3_path).suffix
 
     title = contentfile_data.get("title")
 
@@ -274,6 +276,7 @@ def transform_contentfile(
         "key": s3_path,
         "content_tags": contentfile_data.get("learning_resource_types"),
         "published": True,
+        "file_extension": file_extension,
     }
 
     if not file_s3_path.startswith("courses"):
