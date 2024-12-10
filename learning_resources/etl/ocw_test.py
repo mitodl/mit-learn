@@ -41,7 +41,7 @@ pytestmark = pytest.mark.django_db
 @pytest.mark.parametrize("base_ocw_url", ["http://test.edu/", "http://test.edu"])
 def test_transform_content_files(settings, mocker, base_ocw_url):
     """
-    Test transform_content_files
+    Test that ocw.transform_content_files returns the expected data
     """
     settings.OCW_BASE_URL = base_ocw_url
     ocw_url = base_ocw_url.rstrip("/")
@@ -116,7 +116,7 @@ def test_transform_content_files(settings, mocker, base_ocw_url):
 @mock_aws
 def test_transform_content_files_exceptions(settings, mocker):
     """
-    Test transform_content_files
+    Test that ocw.transform_content_files logs exceptions
     """
 
     setup_s3_ocw(settings)
