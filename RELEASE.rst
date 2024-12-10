@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.26.2
+Version 0.26.2 (Released December 10, 2024)
 --------------
 
 - add a trailing slash to non contentfile OCW resources (#1877)
