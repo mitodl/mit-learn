@@ -10282,10 +10282,17 @@ components:
           type: string
           readOnly: true
           nullable: true
+        topic_uuid:
+          type: string
+          format: uuid
+          readOnly: true
+          description: An immutable ID for the topic, used if the topic needs to be
+            changed via migration.
       required:
       - channel_url
       - id
       - name
+      - topic_uuid
     LearningResourcesSearchResponse:
       type: object
       description: |-

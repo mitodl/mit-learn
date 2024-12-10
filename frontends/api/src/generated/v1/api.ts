@@ -2657,6 +2657,12 @@ export interface LearningResourceTopic {
    * @memberof LearningResourceTopic
    */
   channel_url: string | null
+  /**
+   * An immutable ID for the topic, used if the topic needs to be changed via migration.
+   * @type {string}
+   * @memberof LearningResourceTopic
+   */
+  topic_uuid: string
 }
 /**
  * SearchResponseSerializer with OpenAPI annotations for Learning Resources search
