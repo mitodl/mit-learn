@@ -23,6 +23,7 @@ from learning_resources_search.serializers import (
 class LearningResourcesVectorSearchRequestSerializer(serializers.Serializer):
     """
     Request serializer for vector based search
+    instead of id we use readable_id in case we upload qdrant snapshots
     """
 
     q = serializers.CharField(required=False, help_text="The search text")
