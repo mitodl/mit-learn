@@ -20,6 +20,7 @@ VIDEO_PLAYLIST_TYPE = "video_playlist"
 PERCOLATE_INDEX_TYPE = "percolator"
 CURRENT_INDEX = "current_index"
 REINDEXING_INDEX = "reindexing_index"
+TOPIC_TYPE = "topic"
 BOTH_INDEXES = "all_indexes"
 
 LEARNING_RESOURCE = "learning_resource"
