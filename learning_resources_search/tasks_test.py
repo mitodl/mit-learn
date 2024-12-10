@@ -994,6 +994,36 @@ def test_subscription_digest_subject():
     assert subject_line == "New courses from management"
 
 
+def test_subscription_digest_subject_multiple_types():
+    """
+    Test that when there are multiple unique resource types
+    we use Leaning Resource in the header
+    """
+    resource_types = {"program"}
+    sample_course = {"source_channel_type": "topic", "resource_title": "robotics"}
+
+    subject_line = _generate_subscription_digest_subject(
+        sample_course,
+        "electronics",
+        resource_types,
+        total_count=1,
+        shortform=False,
+    )
+    assert subject_line == "MIT Learn: New program in electronics: robotics"
+
+    sample_course = {"source_channel_type": "podcast", "resource_title": "robotics"}
+    resource_types = {"program", "video", "podcast"}
+
+    subject_line = _generate_subscription_digest_subject(
+        sample_course,
+        "xpro",
+        resource_types,
+        total_count=9,
+        shortform=False,
+    )
+    assert subject_line == "MIT Learn: New Learning Resources from xpro: robotics"
+
+
 def test_update_featured_rank(mocker, offeror_featured_lists):
     """The updated_featured_rank task should make the expected calls"""
 

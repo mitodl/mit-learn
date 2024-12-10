@@ -923,7 +923,11 @@ def _generate_subscription_digest_subject(
 
     """
     prefix = "" if shortform else "MIT Learn: "
-    resource_type = unique_resource_types.pop()
+    if len(unique_resource_types) == 1:
+        resource_type = unique_resource_types.pop()
+    else:
+        resource_type = "Learning Resource"
+
     if sample_course["source_channel_type"] == "saved_search":
         if shortform:
             return f"New {resource_type}{pluralize(total_count)} from MIT Learn"
@@ -956,8 +960,8 @@ def attempt_send_digest_email_batch(user_template_items):
             continue
         user = User.objects.get(id=user_id)
 
-        unique_resource_types = set()
         for group in template_data:
+            unique_resource_types = set()
             total_count = len(template_data[group])
             unique_resource_types.update(
                 [resource["resource_type"] for resource in template_data[group]]
