@@ -3,7 +3,8 @@ import uuid
 from django.conf import settings
 from qdrant_client import QdrantClient, models
 
-from learning_resources.models import LearningResource
+from learning_resources.models import LearningResource, LearningResourceTopic
+from learning_resources.serializers import LearningResourceTopicSerializer
 from learning_resources_search.constants import CONTENT_FILE_TYPE
 from learning_resources_search.serializers import (
     serialize_bulk_content_files,
@@ -62,6 +63,7 @@ def create_qdrand_collections(force_recreate):
     content_files_collection_name = (
         f"{settings.QDRANT_BASE_COLLECTION_NAME}.content_files"
     )
+    topics_collection_name = f"{settings.QDRANT_BASE_COLLECTION_NAME}.topics"
     encoder = dense_encoder()
     if (
         not client.collection_exists(collection_name=resources_collection_name)
@@ -108,6 +110,28 @@ def create_qdrand_collections(force_recreate):
                 ),
             ),
         )
+    if (
+        not client.collection_exists(collection_name=topics_collection_name)
+        or force_recreate
+    ):
+        client.delete_collection(topics_collection_name)
+        client.recreate_collection(
+            collection_name=topics_collection_name,
+            on_disk_payload=True,
+            vectors_config={
+                encoder.model_short_name(): models.VectorParams(
+                    size=encoder.dim(), distance=models.Distance.COSINE
+                )
+            },
+            sparse_vectors_config=client.get_fastembed_sparse_vector_params(),
+            optimizers_config=models.OptimizersConfigDiff(default_segment_number=2),
+            quantization_config=models.ScalarQuantization(
+                scalar=models.ScalarQuantizationConfig(
+                    type=models.ScalarType.INT8,
+                    always_ram=True,
+                ),
+            ),
+        )
 
 
 def vector_point_id(readable_id):
@@ -121,6 +145,44 @@ def vector_point_id(readable_id):
             A unique id (UUID5) for the learning resource
     """
     return str(uuid.uuid5(uuid.NAMESPACE_DNS, readable_id))
+
+
+def embed_topics():
+    """
+    Embed topics
+    """
+    client = qdrant_client()
+    collection_name = f"{settings.QDRANT_BASE_COLLECTION_NAME}.topics"
+    create_qdrand_collections(force_recreate=False)
+
+    docs = []
+    metadata = []
+    ids = []
+
+    topic_uuids = [
+        str(topic_uuid)
+        for topic_uuid in LearningResourceTopic.objects.all().values_list(
+            "topic_uuid", flat=True
+        )
+    ]
+    filtered_uuids = filter_existing_qdrant_points(
+        values=topic_uuids,
+        lookup_field="topic_uuid",
+        collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.topics",
+    )
+    filtered_topics = LearningResourceTopic.objects.filter(
+        topic_uuid__in=filtered_uuids
+    )
+    serialized_topics = LearningResourceTopicSerializer(filtered_topics, many=True).data
+    for topic in serialized_topics:
+        docs.append(topic["name"])
+        metadata.append(topic)
+        ids.append(topic["topic_uuid"])
+    encoder = dense_encoder()
+    embeddings = encoder.encode_batch(docs)
+    vector_name = encoder.model_short_name()
+    points = points_generator(ids, metadata, embeddings, vector_name)
+    client.upload_points(collection_name, points=points, wait=False)
 
 
 def embed_learning_resources(ids, resource_type):
@@ -234,48 +296,33 @@ def vector_search(
     return {"hits": hits, "total": {"value": 10000}}
 
 
-def filter_existing_qdrant_points(learning_resources):
-    """
-    Filter learning resources that already have embeddings
-    Args:
-        learning_resources (QuerySet): Learning resources to check
-    Returns:
-        Queryset of learning resources that do not have embeddings in Qdrant
-
-    """
-    readable_ids = [
-        learning_resource.readable_id for learning_resource in learning_resources
-    ]
+def filter_existing_qdrant_points(
+    values,
+    lookup_field="readable_id",
+    collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
+):
     client = qdrant_client()
     results = client.scroll(
-        collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
+        collection_name=collection_name,
         scroll_filter=models.Filter(
             must=models.FieldCondition(
-                key="readable_id", match=models.MatchAny(any=readable_ids)
+                key=lookup_field, match=models.MatchAny(any=values)
             )
         ),
     )
     next_page_offset = results[1]
-    existing_readable_ids = [point.payload["readable_id"] for point in results[0]]
+    existing_values = [point.payload[lookup_field] for point in results[0]]
     # go page by page to fetch all existing readable ids
     while next_page_offset:
         results = client.scroll(
-            collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
+            collection_name=collection_name,
             scroll_filter=models.Filter(
                 must=models.FieldCondition(
-                    key="readable_id", match=models.MatchAny(any=readable_ids)
+                    key=lookup_field, match=models.MatchAny(any=values)
                 )
             ),
             offset=next_page_offset,
         )
-        existing_readable_ids.extend(
-            [point.payload["readable_id"] for point in results[0]]
-        )
+        existing_values.extend([point.payload[lookup_field] for point in results[0]])
         next_page_offset = results[1]
-    return LearningResource.objects.filter(
-        readable_id__in=[
-            readable_id
-            for readable_id in readable_ids
-            if readable_id not in existing_readable_ids
-        ]
-    )
+    return [value for value in values if value not in existing_values]

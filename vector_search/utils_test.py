@@ -2,6 +2,7 @@ import pytest
 from qdrant_client.models import PointStruct
 
 from learning_resources.factories import ContentFileFactory, LearningResourceFactory
+from learning_resources.models import LearningResource
 from learning_resources_search.serializers import serialize_bulk_content_files
 from vector_search.utils import (
     create_qdrand_collections,
@@ -66,7 +67,13 @@ def test_filter_existing_qdrant_points(mocker):
         ],
         None,
     ]
-    filtered_resources = filter_existing_qdrant_points(resources)
+    readable_ids = [r.readable_id for r in resources]
+    filtered_readable_ids = filter_existing_qdrant_points(
+        readable_ids, lookup_field="readable_id", collection_name="test.resources"
+    )
+    filtered_resources = LearningResource.objects.filter(
+        readable_id__in=filtered_readable_ids
+    )
 
     assert (
         len(

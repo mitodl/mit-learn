@@ -20,6 +20,7 @@ from learning_resources_search.constants import (
     PODCAST_TYPE,
     PROGRAM_TYPE,
     SEARCH_CONN_EXCEPTIONS,
+    TOPIC_TYPE,
     VIDEO_PLAYLIST_TYPE,
     VIDEO_TYPE,
 )
@@ -30,7 +31,12 @@ from main.utils import (
     chunks,
     now_in_utc,
 )
-from vector_search.utils import embed_learning_resources, filter_existing_qdrant_points
+from vector_search.utils import (
+    create_qdrand_collections,
+    embed_learning_resources,
+    embed_topics,
+    filter_existing_qdrant_points,
+)
 
 log = logging.getLogger(__name__)
 
@@ -81,17 +87,18 @@ def start_embed_resources(self, indexes, skip_content_files):
         )
         return None
     try:
+        if TOPIC_TYPE in indexes:
+            index_tasks.append(embed_new_topics.si())
         if COURSE_TYPE in indexes:
             blocklisted_ids = load_course_blocklist()
-
-            index_tasks = [
+            index_tasks = index_tasks + [
                 generate_embeddings.si(ids, COURSE_TYPE)
                 for ids in chunks(
                     Course.objects.filter(learning_resource__published=True)
                     .exclude(learning_resource__readable_id=blocklisted_ids)
                     .order_by("learning_resource_id")
                     .values_list("learning_resource_id", flat=True),
-                    chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
+                    chunk_size=settings.QDRANT_CHUNK_SIZE,
                 )
             ]
             if not skip_content_files:
@@ -134,7 +141,7 @@ def start_embed_resources(self, indexes, skip_content_files):
                     )
                     .order_by("id")
                     .values_list("id", flat=True),
-                    chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
+                    chunk_size=settings.QDRANT_CHUNK_SIZE,
                 ):
                     index_tasks.append(
                         generate_embeddings.si(
@@ -152,26 +159,56 @@ def start_embed_resources(self, indexes, skip_content_files):
     return self.replace(celery.chain(*index_tasks))
 
 
+@app.task(
+    acks_late=True,
+    reject_on_worker_lost=True,
+    autoretry_for=(RetryError,),
+    retry_backoff=True,
+    rate_limit="600/m",
+)
+def embed_new_topics():
+    log.info("embedding new topics task")
+    embed_topics()
+
+
 @app.task(bind=True)
 def embed_new_learning_resources(self):
     """
     Embed new resources from the last day
     """
     log.info("Running new resource embedding task")
+    create_qdrand_collections(force_recreate=False)
     delta = datetime.timedelta(days=1)
     since = now_in_utc() - delta
     new_learning_resources = LearningResource.objects.filter(
         published=True,
         created_on__gt=since,
     ).exclude(resource_type=CONTENT_FILE_TYPE)
-    filtered_resources = filter_existing_qdrant_points(new_learning_resources)
-    embed_tasks = celery.group(
-        [
-            generate_embeddings.si(ids, COURSE_TYPE)
-            for ids in chunks(
-                filtered_resources.order_by("id").values_list("id", flat=True),
-                chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
-            )
-        ]
+
+    existing_readable_ids = [
+        learning_resource.readable_id for learning_resource in new_learning_resources
+    ]
+    filtered_readable_ids = filter_existing_qdrant_points(
+        values=existing_readable_ids,
+        lookup_field="readable_id",
+        collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
     )
+    filtered_resources = LearningResource.objects.filter(
+        readable_id__in=filtered_readable_ids
+    )
+    resource_types = list(filtered_resources.values_list("resource_type", flat=True))
+    tasks = []
+    for resource_type in resource_types:
+        tasks.extend(
+            [
+                generate_embeddings.si(ids, resource_type)
+                for ids in chunks(
+                    filtered_resources.filter(resource_type=resource_type).values_list(
+                        "id", flat=True
+                    ),
+                    chunk_size=settings.QDRANT_CHUNK_SIZE,
+                )
+            ]
+        )
+    embed_tasks = celery.group(tasks)
     return self.replace(embed_tasks)
