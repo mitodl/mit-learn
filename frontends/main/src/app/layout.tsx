@@ -24,6 +24,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        {/*
+          Font files for Adobe neue haas grotesk.
+          WARNING: This is linked to chudzick@mit.edu's Adobe account.
+          We'd prefer a non-personal MIT account to be used.
+          See https://github.com/mitodl/hq/issues/4237 for more.
+        */}
+        <link
+          rel="stylesheet"
+          href="https://use.typekit.net/lbk1xay.css"
+        ></link>
+      </head>
       <body>
         <Providers>
           <MITLearnGlobalStyles />
