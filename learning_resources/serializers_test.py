@@ -4,12 +4,12 @@ from decimal import Decimal
 
 import pytest
 
-from channels.factories import (
+from learning_channels.factories import (
     ChannelDepartmentDetailFactory,
     ChannelTopicDetailFactory,
     ChannelUnitDetailFactory,
 )
-from channels.models import Channel
+from learning_channels.models import Channel
 from learning_resources import factories, serializers, utils
 from learning_resources.constants import (
     CURRENCY_USD,

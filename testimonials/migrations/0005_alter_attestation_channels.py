@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("channels", "0009_rename_field_to_channel"),
+        ("learning_channels", "0009_rename_field_to_channel"),
         ("testimonials", "0004_update_attestation_avatar_make_optional"),
     ]
 
@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
                 blank=True,
                 help_text="Channels that the testimonial belongs to",
                 related_name="+",
-                to="channels.channel",
+                to="learning_channels.channel",
             ),
         ),
     ]
