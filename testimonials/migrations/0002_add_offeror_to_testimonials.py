@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
             "learning_resources",
             "0054_rename_description_learningresourceofferor_value_prop",
         ),
-        ("channels", "0006_remove_channel_type_default"),
+        ("learning_channels", "0006_remove_channel_type_default"),
         ("testimonials", "0001_add_attestation_table"),
     ]
 
@@ -31,7 +31,7 @@ class Migration(migrations.Migration):
                 blank=True,
                 help_text="Channels that the testimonial belongs to",
                 related_name="+",
-                to="channels.fieldchannel",
+                to="learning_channels.fieldchannel",
             ),
         ),
     ]

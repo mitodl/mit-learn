@@ -42,7 +42,7 @@ urlpatterns = (
         re_path(r"^o/", include("oauth2_provider.urls", namespace="oauth2_provider")),
         re_path(r"^admin/", admin.site.urls),
         re_path(r"", include("authentication.urls")),
-        re_path(r"", include("channels.urls")),
+        re_path(r"", include("learning_channels.urls")),
         re_path(r"", include("profiles.urls")),
         re_path(r"", include("embedly.urls")),
         re_path(r"", include("learning_resources_search.urls")),

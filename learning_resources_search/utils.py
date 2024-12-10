@@ -3,7 +3,7 @@ import urllib
 
 from opensearch_dsl import Search
 
-from channels.models import Channel
+from learning_channels.models import Channel
 from learning_resources.hooks import get_plugin_manager
 from learning_resources_search.constants import LEARNING_RESOURCE
 from learning_resources_search.models import PercolateQuery

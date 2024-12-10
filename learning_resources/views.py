@@ -23,8 +23,8 @@ from rest_framework.response import Response
 from rest_framework_nested.viewsets import NestedViewSetMixin
 
 from authentication.decorators import blocked_ip_exempt
-from channels.constants import ChannelType
-from channels.models import Channel
+from learning_channels.constants import ChannelType
+from learning_channels.models import Channel
 from learning_resources import permissions
 from learning_resources.constants import (
     LearningResourceRelationTypes,

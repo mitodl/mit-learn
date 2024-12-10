@@ -6,5 +6,5 @@ MITOL_AUTHENTICATION_PLUGINS = get_string(
 )
 MITOL_LEARNING_RESOURCES_PLUGINS = get_string(
     "MITOL_LEARNING_RESOURCES_PLUGINS",
-    "learning_resources_search.plugins.SearchIndexPlugin,channels.plugins.ChannelPlugin",
+    "learning_resources_search.plugins.SearchIndexPlugin,learning_channels.plugins.ChannelPlugin",
 )

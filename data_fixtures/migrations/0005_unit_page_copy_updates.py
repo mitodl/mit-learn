@@ -15,7 +15,7 @@ fixtures = [
 
 
 def update_copy(apps, schema_editor):
-    Channel = apps.get_model("channels", "Channel")
+    Channel = apps.get_model("learning_channels", "Channel")
     for fixture in fixtures:
         channel_configuration_updates = fixture["channel_configuration"]
         channel = Channel.objects.get(name=fixture["name"])
