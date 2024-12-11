@@ -22,7 +22,6 @@ import { usePostHog } from "posthog-js/react"
 import ResourceCarousel from "../ResourceCarousel/ResourceCarousel"
 import { useIsLearningPathMember } from "api/hooks/learningPaths"
 import { useIsUserListMember } from "api/hooks/userLists"
-import { usePathname, useSearchParams } from "next/navigation"
 
 const RESOURCE_DRAWER_PARAMS = [RESOURCE_DRAWER_QUERY_PARAM] as const
 
@@ -68,8 +67,6 @@ const DrawerContent: React.FC<{
   resourceId: number
   closeDrawer: () => void
 }> = ({ resourceId, closeDrawer }) => {
-  const currentPath = usePathname()
-  const searchParams = useSearchParams()
   const resource = useLearningResourcesDetail(Number(resourceId))
   const [signupEl, setSignupEl] = React.useState<HTMLElement | null>(null)
   const { data: user } = useUserMe()
@@ -138,7 +135,7 @@ const DrawerContent: React.FC<{
         resource={resource.data}
         carousels={[similarResourcesCarousel, vectorSimilarResourcesCarousel]}
         user={user}
-        location={`${window.location.origin}${currentPath}?${searchParams}`}
+        shareUrl={`${window.location.origin}/search?${RESOURCE_DRAWER_QUERY_PARAM}=${resourceId}`}
         inLearningPath={inLearningPath}
         inUserList={inUserList}
         onAddToLearningPathClick={handleAddToLearningPathClick}

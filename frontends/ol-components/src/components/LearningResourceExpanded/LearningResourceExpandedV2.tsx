@@ -308,7 +308,7 @@ const CarouselContainer = styled.div({
 type LearningResourceExpandedV2Props = {
   resource?: LearningResource
   user?: User
-  location?: string
+  shareUrl?: string
   imgConfig: ImageConfig
   carousels?: React.ReactNode[]
   inLearningPath?: boolean
@@ -469,7 +469,7 @@ const CallToActionSection = ({
   resource,
   hide,
   user,
-  location,
+  shareUrl,
   inUserList,
   inLearningPath,
   onAddToLearningPathClick,
@@ -479,7 +479,7 @@ const CallToActionSection = ({
   resource?: LearningResource
   hide?: boolean
   user?: User
-  location?: string
+  shareUrl?: string
   inUserList?: boolean
   inLearningPath?: boolean
   onAddToLearningPathClick?: LearningResourceCardProps["onAddToLearningPathClick"]
@@ -574,25 +574,25 @@ const CallToActionSection = ({
             {shareLabel}
           </CallToActionButton>
         </ButtonContainer>
-        {shareExpanded && location && (
+        {shareExpanded && shareUrl && (
           <ShareContainer>
             <ShareLabel>Share a link to this Resource</ShareLabel>
-            <ShareInput value={location} />
+            <ShareInput value={shareUrl} />
             <ShareButtonContainer>
               <ShareLink
-                href={`${facebookShareBaseUrl}?u=${encodeURIComponent(location)}`}
+                href={`${facebookShareBaseUrl}?u=${encodeURIComponent(shareUrl)}`}
                 target="_blank"
               >
                 <RiFacebookFill size={socialIconSize} />
               </ShareLink>
               <ShareLink
-                href={`${twitterShareBaseUrl}?text=${encodeURIComponent(resource.title)}&url=${encodeURIComponent(location)}`}
+                href={`${twitterShareBaseUrl}?text=${encodeURIComponent(resource.title)}&url=${encodeURIComponent(shareUrl)}`}
                 target="_blank"
               >
                 <RiTwitterXLine size={socialIconSize} />
               </ShareLink>
               <ShareLink
-                href={`${linkedInShareBaseUrl}?url=${encodeURIComponent(location)}`}
+                href={`${linkedInShareBaseUrl}?url=${encodeURIComponent(shareUrl)}`}
                 target="_blank"
               >
                 <RiLinkedinFill size={socialIconSize} />
@@ -603,7 +603,7 @@ const CallToActionSection = ({
                 startIcon={<RiLink />}
                 aria-label={copyLinkLabel}
                 onClick={() => {
-                  navigator.clipboard.writeText(location)
+                  navigator.clipboard.writeText(shareUrl)
                 }}
               >
                 {copyLinkLabel}
@@ -671,7 +671,7 @@ const LearningResourceExpandedV2: React.FC<LearningResourceExpandedV2Props> = ({
   resource,
   imgConfig,
   user,
-  location,
+  shareUrl,
   carousels,
   inUserList,
   inLearningPath,
@@ -696,7 +696,7 @@ const LearningResourceExpandedV2: React.FC<LearningResourceExpandedV2Props> = ({
               imgConfig={imgConfig}
               resource={resource}
               user={user}
-              location={location}
+              shareUrl={shareUrl}
               inLearningPath={inLearningPath}
               inUserList={inUserList}
               onAddToLearningPathClick={onAddToLearningPathClick}
