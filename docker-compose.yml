@@ -17,6 +17,21 @@ services:
       - path: .env
         required: false
 
+  ai:
+    extends:
+      file: docker-compose.apps.yml
+      service: ai
+    env_file:
+      - path: env/shared.env
+      - path: env/shared.local.env
+        required: false
+      - path: env/backend.env
+      - path: env/backend.local.env
+        required: false
+      # DEPRECATED: legacy .env file at the repo root
+      - path: .env
+        required: false
+
   watch:
     extends:
       file: docker-compose.apps.yml

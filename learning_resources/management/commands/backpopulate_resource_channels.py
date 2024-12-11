@@ -6,8 +6,8 @@ from pathlib import Path
 from django.conf import settings
 from django.core.management import BaseCommand
 
-from channels.constants import ChannelType
-from channels.models import Channel
+from learning_channels.constants import ChannelType
+from learning_channels.models import Channel
 from learning_resources.hooks import get_plugin_manager
 from learning_resources.models import (
     LearningResourceDepartment,

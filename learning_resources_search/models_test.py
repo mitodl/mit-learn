@@ -3,7 +3,7 @@ from urllib.parse import urlencode
 
 import pytest
 
-from channels.factories import ChannelFactory
+from learning_channels.factories import ChannelFactory
 from learning_resources_search.connection import get_default_alias_name
 from learning_resources_search.constants import (
     COURSE_TYPE,
