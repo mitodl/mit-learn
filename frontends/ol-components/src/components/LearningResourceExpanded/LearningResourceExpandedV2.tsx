@@ -511,6 +511,9 @@ const CallToActionSection = ({
   const shareLabel = "Share"
   const copyLinkLabel = "Copy Link"
   const socialIconSize = 18
+  const facebookShareBaseUrl = "https://www.facebook.com/sharer/sharer.php"
+  const twitterShareBaseUrl = "https://x.com/share"
+  const linkedInShareBaseUrl = "https://www.linkedin.com/sharing/share-offsite"
   return (
     <CallToAction data-testid="drawer-cta">
       <ImageSection resource={resource} config={imgConfig} />
@@ -571,18 +574,27 @@ const CallToActionSection = ({
             {shareLabel}
           </CallToActionButton>
         </ButtonContainer>
-        {shareExpanded && (
+        {shareExpanded && location && (
           <ShareContainer>
             <ShareLabel>Share a link to this Resource</ShareLabel>
             <ShareInput value={location} />
             <ShareButtonContainer>
-              <ShareLink>
+              <ShareLink
+                href={`${facebookShareBaseUrl}?u=${encodeURIComponent(location)}`}
+                target="_blank"
+              >
                 <RiFacebookFill size={socialIconSize} />
               </ShareLink>
-              <ShareLink>
+              <ShareLink
+                href={`${twitterShareBaseUrl}?text=${encodeURIComponent(resource.title)}&url=${encodeURIComponent(location)}`}
+                target="_blank"
+              >
                 <RiTwitterXLine size={socialIconSize} />
               </ShareLink>
-              <ShareLink>
+              <ShareLink
+                href={`${linkedInShareBaseUrl}?url=${encodeURIComponent(location)}`}
+                target="_blank"
+              >
                 <RiLinkedinFill size={socialIconSize} />
               </ShareLink>
               <CopyLinkButton
