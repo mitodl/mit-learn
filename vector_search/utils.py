@@ -211,20 +211,19 @@ def vector_search(
     """
     client = qdrant_client()
     qdrant_conditions = qdrant_query_conditions(params)
+    search_filter = models.Filter(
+        must=[
+            *qdrant_conditions,
+            models.FieldCondition(key="published", match=models.MatchValue(value=True)),
+        ],
+    )
     if query_string:
         encoder = dense_encoder()
         search_result = client.query_points(
             collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
             using=encoder.model_short_name(),
             query=encoder.encode(query_string),
-            query_filter=models.Filter(
-                must=[
-                    *qdrant_conditions,
-                    models.FieldCondition(
-                        key="published", match=models.MatchValue(value=True)
-                    ),
-                ]
-            ),
+            query_filter=search_filter,
             limit=limit,
             offset=offset,
         )
@@ -232,18 +231,17 @@ def vector_search(
     else:
         search_result = client.scroll(
             collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
-            scroll_filter=models.Filter(
-                must=[
-                    *qdrant_conditions,
-                    models.FieldCondition(
-                        key="published", match=models.MatchValue(value=True)
-                    ),
-                ],
-            ),
+            scroll_filter=search_filter,
             limit=limit,
             offset=offset,
         )
         hits = [hit.payload["readable_id"] for hit in search_result[0]]
+    count_result = client.count(
+        collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
+        count_filter=search_filter,
+        exact=True,
+    )
+
     """
     Always lookup learning resources by readable_id for portability
     in case we load points from external systems
@@ -253,7 +251,7 @@ def vector_search(
             LearningResource.objects.for_serialization().filter(readable_id__in=hits),
             many=True,
         ).data,
-        "total": {"value": 10000},
+        "total": {"value": count_result.count},
     }
 
 
