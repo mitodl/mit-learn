@@ -251,7 +251,7 @@ const ShareContainer = styled.div({
 
 const ShareLabel = styled(Typography)({
   ...theme.typography.body3,
-  color: theme.custom.colors.darkGray2,
+  color: theme.custom.colors.darkGray1,
 })
 
 const ShareInput = styled(Input)({
