@@ -226,16 +226,15 @@ def vector_search(
             query_filter=search_filter,
             limit=limit,
             offset=offset,
-        )
-        hits = [hit.metadata["readable_id"] for hit in search_result]
+        ).points
     else:
         search_result = client.scroll(
             collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
             scroll_filter=search_filter,
             limit=limit,
             offset=offset,
-        )
-        hits = [hit.payload["readable_id"] for hit in search_result[0]]
+        )[0]
+    hits = [hit.payload["readable_id"] for hit in search_result]
     count_result = client.count(
         collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
         count_filter=search_filter,
