@@ -472,6 +472,7 @@ const CallToActionSection = ({
   onAddToLearningPathClick?: LearningResourceCardProps["onAddToLearningPathClick"]
   onAddToUserListClick?: LearningResourceCardProps["onAddToUserListClick"]
 }) => {
+  const [shareExpanded, setShareExpanded] = useState(false)
   if (hide) {
     return null
   }
@@ -546,33 +547,40 @@ const CallToActionSection = ({
         >
           {bookmarkLabel}
         </CallToActionButton>
-        <CallToActionButton startIcon={<RiShareLine />} aria-label={shareLabel}>
+        <CallToActionButton
+          filled={shareExpanded ? 1 : 0}
+          startIcon={<RiShareLine />}
+          aria-label={shareLabel}
+          onClick={() => setShareExpanded(!shareExpanded)}
+        >
           {shareLabel}
         </CallToActionButton>
       </ButtonContainer>
-      <ShareContainer>
-        <ShareLabel>Share a link to this Resource</ShareLabel>
-        <ShareInput value={location} />
-        <ShareButtonContainer>
-          <ShareLink>
-            <RiFacebookFill />
-          </ShareLink>
-          <ShareLink>
-            <RiTwitterXLine />
-          </ShareLink>
-          <ShareLink>
-            <RiLinkedinFill />
-          </ShareLink>
-          <CopyLinkButton
-            size="small"
-            edge="circular"
-            startIcon={<RiLink />}
-            aria-label={copyLinkLabel}
-          >
-            {copyLinkLabel}
-          </CopyLinkButton>
-        </ShareButtonContainer>
-      </ShareContainer>
+      {shareExpanded && (
+        <ShareContainer>
+          <ShareLabel>Share a link to this Resource</ShareLabel>
+          <ShareInput value={location} />
+          <ShareButtonContainer>
+            <ShareLink>
+              <RiFacebookFill />
+            </ShareLink>
+            <ShareLink>
+              <RiTwitterXLine />
+            </ShareLink>
+            <ShareLink>
+              <RiLinkedinFill />
+            </ShareLink>
+            <CopyLinkButton
+              size="small"
+              edge="circular"
+              startIcon={<RiLink />}
+              aria-label={copyLinkLabel}
+            >
+              {copyLinkLabel}
+            </CopyLinkButton>
+          </ShareButtonContainer>
+        </ShareContainer>
+      )}
     </CallToAction>
   )
 }
