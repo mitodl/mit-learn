@@ -578,7 +578,7 @@ const CallToActionSection = ({
           </CallToActionButton>
         </ButtonContainer>
         {shareExpanded && shareUrl && (
-          <ShareContainer>
+          <ShareContainer data-testid="drawer-share">
             <ShareLabel>Share a link to this Resource</ShareLabel>
             <ShareInput value={shareUrl} />
             <ShareButtonContainer>
