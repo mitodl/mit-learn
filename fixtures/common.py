@@ -11,7 +11,7 @@ import responses
 from pytest_mock import PytestMockWarning
 from urllib3.exceptions import InsecureRequestWarning
 
-from channels.factories import ChannelUnitDetailFactory
+from learning_channels.factories import ChannelUnitDetailFactory
 from learning_resources.constants import LearningResourceRelationTypes, OfferedBy
 from learning_resources.factories import (
     LearningPathFactory,
@@ -44,7 +44,7 @@ def warnings_as_errors():  # noqa: PT004
         # Ignore deprecation warnings in third party libraries
         warnings.filterwarnings(
             "ignore",
-            module=".*(api_jwt|api_jws|rest_framework_jwt|astroid|bs4|celery|factory|botocore|posthog).*",
+            module=".*(api_jwt|api_jws|rest_framework_jwt|astroid|bs4|celery|factory|botocore|posthog|pydantic).*",
             category=DeprecationWarning,
         )
         yield

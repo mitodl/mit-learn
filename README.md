@@ -254,3 +254,36 @@ Once these are set (and you've restarted the app), you should see events flowing
 ## GitHub Pages Storybook
 
 Demos and documentation of reusable UI components in this repo are published as a [storybook](https://storybook.js.org/) at https://mitodl.github.io/mit-learn/.
+
+## AI Functions
+
+To enable AI functionality, with OpenAI as the default provider, you must provide values
+for the following environment variable:
+
+- OPENAI_API_KEY
+
+### Running a LiteLLM Proxy
+
+The LiteLLM proxy is a service that can enforce rate and budget limits on AI calls.
+To use this service locally, follow these steps:
+
+- Set the following .env variables:
+
+  - AI_PROXY_AUTH_TOKEN=sk-<some_unique_string>
+  - AI_PROXY_URL=http://litellm:4000
+  - AI_PROXY_CLASS=LiteLLMProxy
+
+- You can also add values for these settings to your .env file if you are not satisfied
+  with the defaults:
+
+  - AI_MAX_PARALLEL_REQUESTS = max parallel requests per user
+  - AI_TPM_LIMIT = max tokens per minute per user
+  - AI_RPM_LIMIT = max requests per minute per user
+  - AI_MAX_BUDGET = max cost in $ that a user is allowed to spend within a certain time period
+  - AI_BUDGET_DURATION = Time in seconds before a user's budget usage is reset to 0
+  - AI_ANON_LIMIT_MULTIPLIER = multiplier for all the above, shared among all anonymous users
+
+- Start your docker containers with the following command:
+  ```bash
+  docker compose -f docker-compose.yml -f docker-compose.litellm.yml up
+  ```

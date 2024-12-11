@@ -6,7 +6,7 @@ import pytest
 from django.urls import reverse
 from freezegun import freeze_time
 
-from channels.factories import ChannelFactory
+from learning_channels.factories import ChannelFactory
 from learning_resources.factories import LearningResourceOfferorFactory
 from main.utils import now_in_utc
 from testimonials.factories import AttestationFactory

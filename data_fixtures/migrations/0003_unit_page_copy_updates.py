@@ -66,7 +66,7 @@ fixtures = [
 
 
 def update_copy(apps, schema_editor):
-    Channel = apps.get_model("channels", "Channel")
+    Channel = apps.get_model("learning_channels", "Channel")
     LearningResourceOfferor = apps.get_model(
         "learning_resources", "LearningResourceOfferor"
     )

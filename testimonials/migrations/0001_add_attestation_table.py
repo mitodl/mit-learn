@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ("channels", "0005_alter_fieldchannel_configuration"),
+        ("learning_channels", "0005_alter_fieldchannel_configuration"),
     ]
 
     operations = [
@@ -73,7 +73,7 @@ class Migration(migrations.Migration):
                     models.ManyToManyField(
                         help_text="Channels that the testimonial belongs to",
                         related_name="+",
-                        to="channels.fieldchannel",
+                        to="learning_channels.fieldchannel",
                     ),
                 ),
             ],

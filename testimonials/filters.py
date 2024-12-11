@@ -6,7 +6,7 @@ from django_filters import (
     NumberFilter,
 )
 
-from channels.models import Channel
+from learning_channels.models import Channel
 from learning_resources.models import LearningResourceOfferor
 
 
