@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+Version 0.26.3
+--------------
+
+- simplify font loading (#1895)
+- Update dependency onnxruntime to v1.20.1 (#1886)
+- subscription email language update (#1892)
+- Bump cross-spawn from 7.0.3 to 7.0.6 (#1834)
+- Update dependency cryptography to v44 (#1887)
+
 Version 0.26.2 (Released December 10, 2024)
 --------------
 
