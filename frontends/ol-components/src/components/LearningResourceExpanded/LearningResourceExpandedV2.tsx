@@ -212,7 +212,7 @@ const StyledButton = styled(Button)<{ filled?: number }>((props) => {
   return {
     flex: 1,
     height: "32px",
-    padding: "12px 12px 12px 8px",
+    padding: "12px 8px",
     border: `1px solid ${props.filled ? theme.custom.colors.red : theme.custom.colors.silverGrayLight}`,
     backgroundColor: props.filled
       ? theme.custom.colors.red
@@ -227,6 +227,7 @@ const StyledButton = styled(Button)<{ filled?: number }>((props) => {
       color: theme.custom.colors.white,
     },
     "span:first-of-type": {
+      marginLeft: "0",
       marginRight: "4px",
     },
   }
