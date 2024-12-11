@@ -602,6 +602,9 @@ const CallToActionSection = ({
                 edge="circular"
                 startIcon={<RiLink />}
                 aria-label={copyLinkLabel}
+                onClick={() => {
+                  navigator.clipboard.writeText(location)
+                }}
               >
                 {copyLinkLabel}
               </CopyLinkButton>
