@@ -202,6 +202,7 @@ const OnPlatform = styled.span({
 
 const ButtonContainer = styled.div({
   display: "flex",
+  width: "100%",
   gap: "8px",
   flexGrow: 1,
   justifyContent: "center",
@@ -209,6 +210,7 @@ const ButtonContainer = styled.div({
 
 const StyledButton = styled(Button)<{ filled?: number }>((props) => {
   return {
+    flex: 1,
     height: "32px",
     padding: "12px 12px 12px 8px",
     border: `1px solid ${props.filled ? theme.custom.colors.red : theme.custom.colors.silverGrayLight}`,
