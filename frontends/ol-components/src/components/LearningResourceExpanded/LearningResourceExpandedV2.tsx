@@ -275,9 +275,12 @@ const ShareLink = styled(Link)({
 })
 
 const CopyLinkButton = styled(StyledButton)({
+  flexGrow: 0,
   "span:first-of-type": {
     color: theme.custom.colors.red,
-    "&:hover": {
+  },
+  "&:hover": {
+    "span:first-of-type": {
       color: theme.custom.colors.white,
     },
   },
@@ -507,6 +510,7 @@ const CallToActionSection = ({
   const bookmarkLabel = "Bookmark"
   const shareLabel = "Share"
   const copyLinkLabel = "Copy Link"
+  const socialIconSize = 18
   return (
     <CallToAction data-testid="drawer-cta">
       <ImageSection resource={resource} config={imgConfig} />
@@ -573,13 +577,13 @@ const CallToActionSection = ({
             <ShareInput value={location} />
             <ShareButtonContainer>
               <ShareLink>
-                <RiFacebookFill />
+                <RiFacebookFill size={socialIconSize} />
               </ShareLink>
               <ShareLink>
-                <RiTwitterXLine />
+                <RiTwitterXLine size={socialIconSize} />
               </ShareLink>
               <ShareLink>
-                <RiLinkedinFill />
+                <RiLinkedinFill size={socialIconSize} />
               </ShareLink>
               <CopyLinkButton
                 size="small"
