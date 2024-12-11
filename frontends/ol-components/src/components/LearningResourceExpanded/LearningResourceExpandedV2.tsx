@@ -469,7 +469,7 @@ const CallToActionSection = ({
   resource?: LearningResource
   hide?: boolean
   user?: User
-  location: string
+  location?: string
   inUserList?: boolean
   inLearningPath?: boolean
   onAddToLearningPathClick?: LearningResourceCardProps["onAddToLearningPathClick"]
