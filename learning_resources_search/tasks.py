@@ -660,6 +660,116 @@ def start_full_recreate_index(self, indexes, remove_existing_reindexing_tags):
     )
 
 
+def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
+    """
+    Wipe and recreate index and mapping, and index all items.
+    """
+    try:
+        if not remove_existing_reindexing_tags:
+            existing_reindexing_indexes = api.get_existing_reindexing_indexes(indexes)
+
+            if existing_reindexing_indexes:
+                error = (
+                    f"Reindexing in progress. Reindexing indexes already exist: "
+                    f"{', '.join(existing_reindexing_indexes)}"
+                )
+                log.exception(error)
+                return error
+
+        api.delete_orphaned_indexes(
+            indexes, delete_reindexing_tags=remove_existing_reindexing_tags
+        )
+
+        new_backing_indices = {
+            obj_type: api.create_backing_index(obj_type) for obj_type in indexes
+        }
+
+        # Do the indexing on the temp index
+        log.info("starting to index %s objects...", ", ".join(indexes))
+
+        index_tasks = []
+
+       
+        if COURSE_TYPE in indexes:
+            blocklisted_ids = load_course_blocklist()
+            index_tasks = index_tasks + [
+                index_learning_resources.si(
+                    ids,
+                    COURSE_TYPE,
+                    index_types=IndexestoUpdate.reindexing_index.value,
+                )
+                for ids in chunks(
+                    Course.objects.filter(learning_resource__published=True)
+                    .exclude(learning_resource__readable_id=blocklisted_ids)
+                    .order_by("learning_resource_id")
+                    .values_list("learning_resource_id", flat=True),
+                    chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
+                )
+            ]
+
+            for course in (
+                Course.objects.filter(learning_resource__published=True)
+                .filter(learning_resource__etl_source__in=RESOURCE_FILE_ETL_SOURCES)
+                .exclude(learning_resource__readable_id=blocklisted_ids)
+                .order_by("learning_resource_id")
+            ):
+                index_tasks = index_tasks + [
+                    index_content_files.si(
+                        ids,
+                        course.learning_resource_id,
+                        index_types=IndexestoUpdate.reindexing_index.value,
+                    )
+                    for ids in chunks(
+                        ContentFile.objects.filter(
+                            run__learning_resource_id=course.learning_resource_id,
+                            published=True,
+                            run__published=True,
+                        )
+                        .order_by("id")
+                        .values_list("id", flat=True),
+                        chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
+                    )
+                ]
+
+        for resource_type in [
+            PROGRAM_TYPE,
+            PODCAST_TYPE,
+            PODCAST_EPISODE_TYPE,
+            LEARNING_PATH_TYPE,
+            VIDEO_TYPE,
+            VIDEO_PLAYLIST_TYPE,
+            COURSE_TYPE
+        ]:
+            if resource_type in indexes:
+                index_tasks = index_tasks + [
+                    index_learning_resources.si(
+                        ids,
+                        resource_type,
+                        index_types=IndexestoUpdate.reindexing_index.value,
+                    )
+                    for ids in chunks(
+                        LearningResource.objects.filter(
+                            published=True, resource_type=resource_type
+                        )
+                        .order_by("id")
+                        .values_list("id", flat=True),
+                        chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
+                    )
+                ]
+
+        index_tasks = celery.group(index_tasks)
+    except:  # noqa: E722
+        error = "start_recreate_index threw an error"
+        log.exception(error)
+        return error
+
+    # Use self.replace so that code waiting on this task will also wait on the indexing
+    #  and finish tasks
+    return self.replace(
+        celery.chain(index_tasks, finish_recreate_index.s(new_backing_indices))
+    )
+
+
 @app.task(autoretry_for=(RetryError,), retry_backoff=True, rate_limit="600/m")
 def finish_update_index(results):  # noqa: ARG001
     clear_search_cache()
