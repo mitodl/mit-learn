@@ -295,7 +295,7 @@ const CarouselContainer = styled.div({
 type LearningResourceExpandedV2Props = {
   resource?: LearningResource
   user?: User
-  location: string
+  location?: string
   imgConfig: ImageConfig
   carousels?: React.ReactNode[]
   inLearningPath?: boolean
