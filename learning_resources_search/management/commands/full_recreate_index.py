@@ -4,7 +4,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 from learning_resources_search.constants import ALL_INDEX_TYPES
 from learning_resources_search.indexing_api import get_existing_reindexing_indexes
-from learning_resources_search.tasks import start_recreate_index
+from learning_resources_search.tasks import start_full_recreate_index
 from main.utils import now_in_utc
 
 
@@ -61,7 +61,7 @@ class Command(BaseCommand):
                 )
                 return
 
-        task = start_recreate_index.delay(
+        task = start_full_recreate_index.delay(
             indexes_to_update, remove_existing_reindexing_tags
         )
         self.stdout.write(

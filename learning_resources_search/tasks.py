@@ -541,7 +541,7 @@ def wrap_retry_exception(*exception_classes):
 
 
 @app.task(bind=True)
-def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
+def start_full_recreate_index(self, indexes, remove_existing_reindexing_tags):
     """
     Wipe and recreate index and mapping, and index all items.
     """
@@ -656,7 +656,7 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
     # Use self.replace so that code waiting on this task will also wait on the indexing
     #  and finish tasks
     return self.replace(
-        celery.chain(index_tasks, finish_recreate_index.s(new_backing_indices))
+        celery.chain(index_tasks, finish_full_recreate_index.s(new_backing_indices))
     )
 
 
@@ -877,7 +877,7 @@ def get_update_learning_resource_tasks(resource_type):
     retry_backoff=True,
     rate_limit="600/m",
 )
-def finish_recreate_index(results, backing_indices):
+def finish_full_recreate_index(results, backing_indices):
     """
     Swap reindex backing index with default backing index
 
