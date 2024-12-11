@@ -276,6 +276,9 @@ const ShareLink = styled(Link)({
 
 const CopyLinkButton = styled(StyledButton)({
   flexGrow: 0,
+  flexBasis: "112px",
+  padding: "12px 16px",
+  whiteSpace: "nowrap",
   "span:first-of-type": {
     color: theme.custom.colors.red,
   },
