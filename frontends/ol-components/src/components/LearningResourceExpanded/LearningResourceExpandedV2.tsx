@@ -131,6 +131,13 @@ const CallToAction = styled.div({
   },
 })
 
+const ActionsContainer = styled.div({
+  display: "flex",
+  flexDirection: "column",
+  gap: "16px",
+  width: "100%",
+})
+
 const PlatformContainer = styled.div({
   display: "flex",
   alignItems: "center",
@@ -503,87 +510,89 @@ const CallToActionSection = ({
   return (
     <CallToAction data-testid="drawer-cta">
       <ImageSection resource={resource} config={imgConfig} />
-      <StyledLink
-        target="_blank"
-        size="medium"
-        data-ph-action="click-cta"
-        data-ph-offered-by={offeredBy?.code}
-        data-ph-resource-type={resource.resource_type}
-        data-ph-resource-id={resource.id}
-        endIcon={<RiExternalLinkLine />}
-        href={getCallToActionUrl(resource) || ""}
-      >
-        {cta}
-      </StyledLink>
-      <PlatformContainer>
-        {platformImage ? (
-          <Platform>
-            <OnPlatform>on</OnPlatform>
-            <StyledPlatformLogo platformCode={platformCode} height={26} />
-          </Platform>
-        ) : null}
-      </PlatformContainer>
-      <ButtonContainer>
-        {user?.is_learning_path_editor && (
+      <ActionsContainer>
+        <StyledLink
+          target="_blank"
+          size="medium"
+          data-ph-action="click-cta"
+          data-ph-offered-by={offeredBy?.code}
+          data-ph-resource-type={resource.resource_type}
+          data-ph-resource-id={resource.id}
+          endIcon={<RiExternalLinkLine />}
+          href={getCallToActionUrl(resource) || ""}
+        >
+          {cta}
+        </StyledLink>
+        <PlatformContainer>
+          {platformImage ? (
+            <Platform>
+              <OnPlatform>on</OnPlatform>
+              <StyledPlatformLogo platformCode={platformCode} height={26} />
+            </Platform>
+          ) : null}
+        </PlatformContainer>
+        <ButtonContainer>
+          {user?.is_learning_path_editor && (
+            <CallToActionButton
+              filled={inLearningPath ? 1 : 0}
+              startIcon={<RiMenuAddLine />}
+              aria-label={addToLearningPathLabel}
+              onClick={(event) =>
+                onAddToLearningPathClick
+                  ? onAddToLearningPathClick(event, resource.id)
+                  : null
+              }
+            >
+              {addToLearningPathLabel}
+            </CallToActionButton>
+          )}
           <CallToActionButton
-            filled={inLearningPath ? 1 : 0}
-            startIcon={<RiMenuAddLine />}
-            aria-label={addToLearningPathLabel}
-            onClick={(event) =>
-              onAddToLearningPathClick
-                ? onAddToLearningPathClick(event, resource.id)
-                : null
+            filled={inUserList ? 1 : 0}
+            startIcon={inUserList ? <RiBookmarkFill /> : <RiBookmarkLine />}
+            aria-label={bookmarkLabel}
+            onClick={
+              onAddToUserListClick
+                ? (event) => onAddToUserListClick?.(event, resource.id)
+                : undefined
             }
           >
-            {addToLearningPathLabel}
+            {bookmarkLabel}
           </CallToActionButton>
+          <CallToActionButton
+            filled={shareExpanded ? 1 : 0}
+            startIcon={<RiShareLine />}
+            aria-label={shareLabel}
+            onClick={() => setShareExpanded(!shareExpanded)}
+          >
+            {shareLabel}
+          </CallToActionButton>
+        </ButtonContainer>
+        {shareExpanded && (
+          <ShareContainer>
+            <ShareLabel>Share a link to this Resource</ShareLabel>
+            <ShareInput value={location} />
+            <ShareButtonContainer>
+              <ShareLink>
+                <RiFacebookFill />
+              </ShareLink>
+              <ShareLink>
+                <RiTwitterXLine />
+              </ShareLink>
+              <ShareLink>
+                <RiLinkedinFill />
+              </ShareLink>
+              <CopyLinkButton
+                size="small"
+                edge="circular"
+                startIcon={<RiLink />}
+                aria-label={copyLinkLabel}
+              >
+                {copyLinkLabel}
+              </CopyLinkButton>
+            </ShareButtonContainer>
+          </ShareContainer>
         )}
-        <CallToActionButton
-          filled={inUserList ? 1 : 0}
-          startIcon={inUserList ? <RiBookmarkFill /> : <RiBookmarkLine />}
-          aria-label={bookmarkLabel}
-          onClick={
-            onAddToUserListClick
-              ? (event) => onAddToUserListClick?.(event, resource.id)
-              : undefined
-          }
-        >
-          {bookmarkLabel}
-        </CallToActionButton>
-        <CallToActionButton
-          filled={shareExpanded ? 1 : 0}
-          startIcon={<RiShareLine />}
-          aria-label={shareLabel}
-          onClick={() => setShareExpanded(!shareExpanded)}
-        >
-          {shareLabel}
-        </CallToActionButton>
-      </ButtonContainer>
-      {shareExpanded && (
-        <ShareContainer>
-          <ShareLabel>Share a link to this Resource</ShareLabel>
-          <ShareInput value={location} />
-          <ShareButtonContainer>
-            <ShareLink>
-              <RiFacebookFill />
-            </ShareLink>
-            <ShareLink>
-              <RiTwitterXLine />
-            </ShareLink>
-            <ShareLink>
-              <RiLinkedinFill />
-            </ShareLink>
-            <CopyLinkButton
-              size="small"
-              edge="circular"
-              startIcon={<RiLink />}
-              aria-label={copyLinkLabel}
-            >
-              {copyLinkLabel}
-            </CopyLinkButton>
-          </ShareButtonContainer>
-        </ShareContainer>
-      )}
+      </ActionsContainer>
     </CallToAction>
   )
 }
