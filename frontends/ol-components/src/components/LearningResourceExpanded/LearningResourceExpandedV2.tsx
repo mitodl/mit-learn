@@ -27,7 +27,7 @@ import { LearningResourceCardProps } from "../LearningResourceCard/LearningResou
 import VideoFrame from "./VideoFrame"
 import { Link } from "../Link/Link"
 import { Input } from "../Input/Input"
-import { Typography } from "../.."
+import Typography from "@mui/material/Typography"
 
 const DRAWER_WIDTH = "900px"
 
