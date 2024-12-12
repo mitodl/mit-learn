@@ -11,20 +11,17 @@ function getCookie(name: string) {
 }
 
 const makeRequest = async (endpoint: ChatEndpoint, message: string) =>
-  fetch(
-    `${process.env.NEXT_PUBLIC_AI_LEARN_BASE_WEBSOCKET_URL}ws/chat_agent/`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken":
-          getCookie(process.env.NEXT_PUBLIC_CSRF_COOKIE_NAME || "csrftoken") ??
-          "",
-      },
-      credentials: "include", // TODO Remove this, should be handled by same-origin
-      body: JSON.stringify({ message }),
+  fetch(`${process.env.NEXT_PUBLIC_AI_LEARN_BASE_WEBSOCKET_URL}${endpoint}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken":
+        getCookie(process.env.NEXT_PUBLIC_CSRF_COOKIE_NAME || "csrftoken") ??
+        "",
     },
-  )
+    credentials: "include", // TODO Remove this, should be handled by same-origin
+    body: JSON.stringify({ message }),
+  })
 
 const RESPONSE_DELAY = 500
 

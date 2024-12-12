@@ -186,6 +186,7 @@ export { MITLearnGlobalStyles } from "./components/ThemeProvider/MITLearnGlobalS
 export { default as styled } from "@emotion/styled"
 export { css, Global } from "@emotion/react"
 
-export { WebConnectionComponent } from "./components/Nlux-AiChat/AiChat"
+export { NluxAiChat } from "./components/Nlux-AiChat/AiChat"
+export type { NluxAiChatProps } from "./components/Nlux-AiChat/AiChat"
 
 export { AppRouterCacheProvider as NextJsAppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter"

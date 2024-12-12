@@ -1,11 +1,19 @@
 "use client"
 import React from "react"
-import { WebConnectionComponent, Container, styled } from "ol-components"
+import { NluxAiChat, Container, styled } from "ol-components"
 
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 
-const StyledChat = styled(WebConnectionComponent)({
+const CONVERSATION_OPTTIONS = {
+  conversationStarters: [
+    { prompt: "I'm interested in quantum computing." },
+    { prompt: "I want to learn about global warming." },
+    { prompt: "I am curious about AI applications for business." },
+  ],
+}
+
+const StyledChat = styled(NluxAiChat)({
   maxHeight: "60vh",
   flex: 1,
 })
@@ -27,7 +35,15 @@ const ChatPage = () => {
     <StyledContainer>
       {
         // eslint-disable-next-line no-constant-condition
-        recommendationBotEnabled || true ? <StyledChat /> : <></>
+        recommendationBotEnabled || true ? (
+          <StyledChat
+            key={"agent"}
+            conversationOptions={CONVERSATION_OPTTIONS}
+            endpoint="recommendation_agent"
+          />
+        ) : (
+          <></>
+        )
       }
     </StyledContainer>
   )
