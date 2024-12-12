@@ -1,6 +1,6 @@
 "use client"
 
-import _ from "lodash"
+import { keyBy } from "lodash"
 import React, { useCallback, useMemo } from "react"
 import type { FacetManifest } from "@mitodl/course-search-utils"
 import { useSearchParams } from "@mitodl/course-search-utils/next"
@@ -66,7 +66,7 @@ const constantSearchParams = {}
 const useFacetManifest = (resourceCategory: string | null) => {
   const offerorsQuery = useOfferorsList()
   const offerors = useMemo(() => {
-    return _.keyBy(offerorsQuery.data?.results ?? [], (o) => o.code)
+    return keyBy(offerorsQuery.data?.results ?? [], (o) => o.code)
   }, [offerorsQuery.data?.results])
   const facetManifest = useMemo(
     () => getFacetManifest(offerors, resourceCategory),

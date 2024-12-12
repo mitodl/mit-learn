@@ -9,7 +9,7 @@ import { Container, styled, VisuallyHidden } from "ol-components"
 import { SearchField } from "@/page-components/SearchField/SearchField"
 import { getFacets } from "./searchRequests"
 
-import _ from "lodash"
+import { keyBy } from "lodash"
 
 const SearchInputContainer = styled(Container)(({ theme }) => ({
   width: "100%",
@@ -48,7 +48,7 @@ const ChannelSearch: React.FC<ChannelSearchProps> = ({
 }) => {
   const offerorsQuery = useOfferorsList()
   const offerors = useMemo(() => {
-    return _.keyBy(offerorsQuery.data?.results ?? [], (o) => o.code)
+    return keyBy(offerorsQuery.data?.results ?? [], (o) => o.code)
   }, [offerorsQuery.data?.results])
 
   const [searchParams, setSearchParams] = useSearchParams()

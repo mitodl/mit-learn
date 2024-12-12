@@ -34,6 +34,13 @@ module.exports = {
   },
   rules: {
     ...restrictedImports({
+      paths: [
+        {
+          name: "lodash",
+          importNames: ["default"],
+          message: "Default import from 'lodash' is not allowed. Use named imports instead.",
+        },
+      ],
       patterns: [
         {
           group: ["@mui/material*", "@mui/lab/*"],
@@ -119,7 +126,7 @@ module.exports = {
           "Property[key.name=fontFamily][value.raw=/Neue Haas/], TemplateElement[value.raw=/Neue Haas/]",
         message:
           "Do not specify `fontFamily` manually. Prefer spreading `theme.typography.subtitle1` or similar. If using neue-haas-grotesk-text, this is ThemeProvider's default fontFamily.",
-      },
+      }
     ],
   },
   overrides: [
