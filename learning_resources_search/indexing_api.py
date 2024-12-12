@@ -190,6 +190,46 @@ def clear_and_create_index(*, index_name=None, skip_mapping=False, object_type=N
     conn.indices.create(index_name, body=index_create_data)
 
 
+def get_mapping_changes(object_type):
+    conn = get_conn()
+    old_index = get_default_alias_name(object_type)
+    reindexing_index = get_default_alias_name(object_type)
+
+    old_mapping = conn.indices.get_mapping(old_index)
+    old_mapping = list(old_mapping.values())[0]["mappings"]["properties"]
+    reindexing_mapping = conn.indices.get_mapping(reindexing_index)
+    reindexing_mapping = list(reindexing_mapping.values())[0]["mappings"]["properties"]
+
+    removed = []
+    updated = []
+
+    for key in old_mapping:
+        if key not in reindexing_mapping:
+            removed.append(key)
+        elif old_mapping[key] != reindexing_mapping[key]:
+            if old_mapping[key].get("type") == "nested" and reindexing_mapping.get("type") == "nested":
+                for nested_key in old_mapping[key]["properties"]:
+                    if nested_key not in reindexing_mapping[key]["properties"]:
+                        removed.append(f"{key}.{nested_key}")
+                    elif (
+                        old_mapping[key]["properties"][nested_key]
+                        != reindexing_mapping[key]["properties"][nested_key]
+                    ):
+                        updated.append(f"{key}.{nested_key}")
+
+                for nested_key in reindexing_mapping[key]["properties"]:
+                    if nested_key not in old_mapping[key]["properties"]:
+                        updated.append(f"{key}.{nested_key}")
+            else:
+                updated.append(key)
+
+    for key in reindexing_mapping:
+        if key not in old_mapping:
+            updated.append(key)
+
+    return removed, updated
+
+
 def upsert_document(doc_id, doc, object_type, *, retry_on_conflict=0, **kwargs):
     """
     Make a request to ES to create or update a document
