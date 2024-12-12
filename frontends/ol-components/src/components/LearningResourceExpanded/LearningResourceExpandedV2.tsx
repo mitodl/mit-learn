@@ -215,20 +215,23 @@ const ButtonContainer = styled.div({
   justifyContent: "center",
 })
 
-const NoWrapButton = styled(Button)({
-  whiteSpace: "nowrap",
-})
-
-const SelectedButton = styled(NoWrapButton)({
-  backgroundColor: theme.custom.colors.red,
-  border: `1px solid ${theme.custom.colors.red}`,
-  color: theme.custom.colors.white,
-  "&:hover:not(:disabled)": {
-    backgroundColor: theme.custom.colors.red,
-    border: `1px solid ${theme.custom.colors.red}`,
-    color: theme.custom.colors.white,
+const SelectableButton = styled(Button)<{ selected?: number }>((props) => [
+  {
+    whiteSpace: "nowrap",
   },
-})
+  props.selected
+    ? {
+        backgroundColor: theme.custom.colors.red,
+        border: `1px solid ${theme.custom.colors.red}`,
+        color: theme.custom.colors.white,
+        "&:hover:not(:disabled)": {
+          backgroundColor: theme.custom.colors.red,
+          border: `1px solid ${theme.custom.colors.red}`,
+          color: theme.custom.colors.white,
+        },
+      }
+    : {},
+])
 
 const ShareContainer = styled.div({
   display: "flex",
@@ -267,7 +270,7 @@ const ShareLink = styled(Link)({
   color: theme.custom.colors.silverGrayDark,
 })
 
-const CopyLinkButton = styled(NoWrapButton)({
+const CopyLinkButton = styled(Button)({
   flexGrow: 0,
   flexBasis: "112px",
   "span:first-of-type": {
@@ -452,15 +455,13 @@ const getCallToActionText = (resource: LearningResource): string => {
 const CallToActionButton: React.FC<ButtonProps & { selected?: number }> = (
   props,
 ) => {
-  return props.selected ? (
-    <SelectedButton
+  return (
+    <SelectableButton
       size="small"
       edge="circular"
       variant="bordered"
       {...props}
     />
-  ) : (
-    <NoWrapButton size="small" edge="circular" variant="bordered" {...props} />
   )
 }
 
