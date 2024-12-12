@@ -2,6 +2,7 @@
 Base utility views. Handles errors and feature list views.
 """
 
+from django.template.response import TemplateResponse
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -48,3 +49,7 @@ class FeaturesViewSet(ViewSet):
         Return a single feature_flag, specified by its ID.
         """
         return Response(is_enabled(pk))
+
+
+def chat(request):
+    return TemplateResponse(request, "ai_chat/single_chat.html")

@@ -1,56 +1,41 @@
 import json
-import uuid
+import logging
 
 from channels.generic.websocket import AsyncWebsocketConsumer
-from django.conf import settings
-from django.template.loader import render_to_string
-from openai import AsyncOpenAI
+
+log = logging.getLogger(__name__)
 
 
-class ChatConsumer(AsyncWebsocketConsumer):
+class RecommendationConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        self.messages = []
+        self.user = self.scope.get("user", {}).get("username", "anonymous")
+        from ai_chat.agents import SearchAgent
+
+        self.agent = SearchAgent()
         await super().connect()
 
     async def receive(self, text_data):
         # our webhook handling code goes here
+        from ai_chat.serializers import ChatRequestSerializer
+
         text_data_json = json.loads(text_data)
-        message_text = text_data_json["message"]
+        serializer = ChatRequestSerializer(data=text_data_json)
+        serializer.is_valid(raise_exception=True)
+        message_text = serializer.validated_data.pop("message", "")
+        clear_history = serializer.validated_data.pop("clear_history", False)
+        temperature = serializer.validated_data.pop("temperature", None)
+        instructions = serializer.validated_data.pop("instructions", None)
+
+        if clear_history:
+            self.agent.agent.chat_history.clear()
+        if temperature:
+            self.agent.agent.agent_worker._llm.temperature = temperature  # noqa: SLF001
+        if instructions:
+            self.agent.agent.agent_worker._llm.instructions = instructions  # noqa: SLF001
+
         # do something with the user's message
         # show user's message
-        user_message_html = render_to_string(
-            "ai_chat/ws/chat_message.html",
-            {
-                "message_text": message_text,
-                "is_system": False,
-            },
-        )
-        await self.send(text_data=user_message_html)
-        self.messages.append(
-            {
-                "role": "user",
-                "content": message_text,
-            }
-        )
-        message_id = f"message-{uuid.uuid4().hex}"
-        system_message_html = render_to_string(
-            "ai_chat/ws/chat_message.html",
-            {"message_text": "", "is_system": True, "message_id": message_id},
-        )
-        await self.send(text_data=system_message_html)
+        await self.send(text_data=message_text)
 
-        client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
-        openai_response = await client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=self.messages,
-            stream=True,
-        )
-        chunks = []
-        async for chunk in openai_response:
-            message_chunk = chunk.choices[0].delta.content or ""
-            formatted_chunk = message_chunk.replace("\n", "<br>")
-            await self.send(
-                text_data=f'<div id="{message_id}" hx-swap-oob="beforeend">{formatted_chunk}</div>'  # noqa: E501
-            )
-            chunks.append(message_chunk)
-        self.messages.append({"role": "system", "content": "".join(chunks)})
+        for chunk in self.agent.get_completion(message_text):
+            await self.send(text_data=chunk)

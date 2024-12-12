@@ -21,7 +21,7 @@ from django.urls import include, path, re_path
 from django.views.generic.base import RedirectView
 from rest_framework.routers import DefaultRouter
 
-from main.views import FeaturesViewSet
+from main.views import FeaturesViewSet, chat
 
 # Post slugs can contain unicode characters, so a letter-matching pattern
 # like [A-Za-z] doesn't work.
@@ -58,10 +58,10 @@ urlpatterns = (
         re_path(r"", include("testimonials.urls")),
         re_path(r"", include("news_events.urls")),
         re_path(r"", include(features_router.urls)),
-        re_path(r"", include("ai_chat.urls")),
         re_path(r"^app", RedirectView.as_view(url=settings.APP_BASE_URL)),
         # Hijack
         re_path(r"^hijack/", include("hijack.urls", namespace="hijack")),
+        path("chat", chat, name="chat"),
     ]
     + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

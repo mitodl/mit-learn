@@ -1,53 +1,60 @@
-import * as React from "react"
-import { useCallback, useState } from "react"
-import {
-  AiChat,
-  AiChatProps,
-  useAsStreamAdapter,
-  useAiChatApi,
-} from "@nlux/react"
-import type { StreamSend } from "@nlux/react"
-import { personas } from "./personas"
-
-import "@nlux/themes/unstyled.css"
-import "./nlux-theme.css"
+import React, { useEffect, useState } from "react"
+import ReactMarkdown from "react-markdown"
 import { Alert, styled } from "ol-components"
 import { extractJSONFromComment } from "ol-utilities"
-
-type NluxAiChatProps = Pick<
-  AiChatProps,
-  "initialConversation" | "conversationOptions"
-> & {
-  send: StreamSend
-}
 
 const StyledDebugPre = styled.pre({
   width: "80%",
   "white-space": "pre-wrap",
 })
 
-const NluxAiChat: React.FC<NluxAiChatProps> = (props) => {
-  const adapter = useAsStreamAdapter(props.send, [])
+const WebConnectionComponent = () => {
+  const [messages, setMessages] = useState("")
   const [lastMessageReceived, setLastMessageReceived] = useState("")
-  const onMessageReceived = useCallback(
-    (payload: { message: React.SetStateAction<string> }) =>
-      setLastMessageReceived(payload.message),
-    [setLastMessageReceived],
-  )
-  const api = useAiChatApi()
+  const [inputMessage, setInputMessage] = useState("")
+  const [socket, setSocket] = useState(null)
+
+  useEffect(() => {
+    const ws = new WebSocket(
+      `${process.env.NEXT_PUBLIC_AI_LEARN_BASE_WEBSOCKET_URL}ws/chat_agent/`,
+    )
+
+    ws.onmessage = (event) => {
+      setMessages((prev) => prev + event.data)
+      setLastMessageReceived(event.data)
+    }
+
+    ws.onerror = (e) => {
+      console.log(`WTF happened? Ignoring..${JSON.stringify(e)}`)
+      //ws.close();
+    }
+
+    setSocket(ws)
+
+    return () => {
+      ws.close()
+    }
+  }, [])
+
+  const sendMessage = () => {
+    console.log(`sending message to ${socket}`)
+    if (socket && inputMessage.trim() !== "") {
+      console.log(`really sending message to ${socket}`)
+      socket.send(JSON.stringify({ message: inputMessage }))
+      setInputMessage("")
+    }
+  }
+
+  const handleSubmit = (e) => {
+    console.log("submitting")
+    e.preventDefault()
+    sendMessage()
+  }
+
   return (
-    <>
-      <AiChat
-        api={api}
-        displayOptions={{
-          themeId: "MyBrandName",
-          colorScheme: "light",
-        }}
-        adapter={adapter}
-        personaOptions={personas}
-        events={{ messageReceived: onMessageReceived }}
-        {...props}
-      />
+    <div>
+      <h3>{`${process.env.NEXT_PUBLIC_AI_LEARN_BASE_WEBSOCKET_URL}ws/chat_agent/`}</h3>
+      <ReactMarkdown>{messages}</ReactMarkdown>
       {lastMessageReceived &&
         (lastMessageReceived.toString().includes('{"error":') ? (
           <Alert severity="error">
@@ -72,9 +79,17 @@ const NluxAiChat: React.FC<NluxAiChatProps> = (props) => {
             </StyledDebugPre>
           </div>
         ) : null)}
-    </>
+      <form onSubmit={handleSubmit}>
+        <input
+          type="text"
+          value={inputMessage}
+          onChange={(e) => setInputMessage(e.target.value)}
+          placeholder="Type your message..."
+        />
+        <button type="submit">Send</button>
+      </form>
+    </div>
   )
 }
 
-export { NluxAiChat }
-export type { NluxAiChatProps }
+export { WebConnectionComponent }
