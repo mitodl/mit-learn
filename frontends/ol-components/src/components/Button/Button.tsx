@@ -190,7 +190,9 @@ const buildStyles = (props: ButtonStyleProps & { theme: Theme }) => {
         backgroundColor: colors.lightGray1,
       },
       ":disabled": {
-        color: colors.silverGray,
+        backgroundColor: colors.lightGray2,
+        border: `1px solid ${colors.silverGrayDark}`,
+        color: colors.silverGrayDark,
       },
     },
     variant === "noBorder" && {

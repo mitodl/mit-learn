@@ -93,14 +93,17 @@ export const VariantStory: Story = {
       <Button {...args} variant="bordered">
         Bordered
       </Button>
-      <Button {...args} variant="text">
-        Text
-      </Button>
       <Button {...args} variant="noBorder">
-        Text Secondary
+        No Border
       </Button>
       <Button {...args} variant="inverted">
         Inverted
+      </Button>
+      <Button {...args} variant="success">
+        Success
+      </Button>
+      <Button {...args} variant="text">
+        Text
       </Button>
     </Stack>
   ),
@@ -154,19 +157,19 @@ export const DisabledStory: Story = {
       <Button {...args} disabled variant="secondary">
         Secondary
       </Button>
-      <Button {...args} variant="tertiary">
+      <Button {...args} disabled variant="tertiary">
         Tertiary
       </Button>
-      <Button {...args} variant="bordered">
+      <Button {...args} disabled variant="bordered">
         Bordered
       </Button>
-      <Button {...args} variant="noBorder">
+      <Button {...args} disabled variant="noBorder">
         No Border
       </Button>
-      <Button {...args} variant="inverted">
+      <Button {...args} disabled variant="inverted">
         Inverted
       </Button>
-      <Button {...args} variant="success">
+      <Button {...args} disabled variant="success">
         Success
       </Button>
       <Button {...args} disabled variant="text">
