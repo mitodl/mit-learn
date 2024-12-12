@@ -34,6 +34,8 @@ const meta: Meta<typeof Button> = {
         "primary",
         "secondary",
         "tertiary",
+        "bordered",
+        "noBorder",
         "text",
         "inverted",
         "text-secondary",
