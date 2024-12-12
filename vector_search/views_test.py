@@ -1,5 +1,6 @@
 from django.urls import reverse
 from qdrant_client import models
+from qdrant_client.http.models.models import CountResult
 
 
 def test_vector_search_filters(mocker, client):
@@ -11,7 +12,7 @@ def test_vector_search_filters(mocker, client):
         "vector_search.utils.qdrant_client",
         return_value=mock_qdrant,
     )
-
+    mock_qdrant.count.return_value = CountResult(count=10)
     params = {
         "q": "test",
         "topic": ["test"],
@@ -53,6 +54,7 @@ def test_vector_search_filters_empty_query(mocker, client):
 
     mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
     mock_qdrant.scroll.return_value = [[]]
+    mock_qdrant.count.return_value = CountResult(count=10)
     mocker.patch(
         "vector_search.utils.qdrant_client",
         return_value=mock_qdrant,
