@@ -952,12 +952,14 @@ def get_similar_resources_qdrant(value_doc: dict, num_resources: int):
             list of learning resources
     """
     hits = _qdrant_similar_results(value_doc, num_resources)
-    return LearningResource.objects.for_search_serialization().filter(
-        id__in=[
-            resource["id"]
-            for resource in hits
-            if resource["id"] != value_doc["id"] and resource["published"]
-        ]
+    return (
+        LearningResource.objects.for_search_serialization()
+        .filter(
+            readable_id__in=[
+                resource["readable_id"] for resource in hits if resource["published"]
+            ]
+        )
+        .exclude(id=value_doc["id"])
     )
 
 

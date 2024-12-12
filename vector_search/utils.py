@@ -4,12 +4,32 @@ from django.conf import settings
 from qdrant_client import QdrantClient, models
 
 from learning_resources.models import LearningResource
+from learning_resources.serializers import LearningResourceSerializer
 from learning_resources_search.constants import CONTENT_FILE_TYPE
 from learning_resources_search.serializers import (
     serialize_bulk_content_files,
     serialize_bulk_learning_resources,
 )
 from vector_search.encoders.utils import dense_encoder
+
+QDRANT_PARAM_MAP = {
+    "readable_id": "readable_id",
+    "resource_type": "resource_type",
+    "certification": "certification",
+    "certification_type": "certification_type.code",
+    "professional": "professional",
+    "free": "free",
+    "course_feature": "course_feature",
+    "content_feature_type": "content_feature_type",
+    "topic": "topics[].name",
+    "ocw_topic": "ocw_topics",
+    "level": "runs[].level.code",
+    "department": "departments.department_id",
+    "platform": "platform.code",
+    "offered_by": "offered_by.code",
+    "delivery": "delivery[].code",
+    "resource_category": "resource_category",
+}
 
 
 def qdrant_client():
@@ -170,6 +190,7 @@ def embed_learning_resources(ids, resource_type):
 
 def vector_search(
     query_string: str,
+    params: dict,
     limit: int = 10,
     offset: int = 10,
 ):
@@ -178,6 +199,7 @@ def vector_search(
 
     Args:
         query_string (str): Query string to search
+        params (dict): Additional search filters
         limit (int): Max number of results to return
         offset (int): Offset to start from
     Returns:
@@ -185,53 +207,82 @@ def vector_search(
             Response dict containing "hits" with search results
             and "total" with total count
     """
+    client = qdrant_client()
+    qdrant_conditions = qdrant_query_conditions(params)
+    search_filter = models.Filter(
+        must=[
+            *qdrant_conditions,
+            models.FieldCondition(key="published", match=models.MatchValue(value=True)),
+        ],
+    )
     if query_string:
-        client = qdrant_client()
         encoder = dense_encoder()
         search_result = client.query_points(
             collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
             using=encoder.model_short_name(),
             query=encoder.encode(query_string),
-            query_filter=models.Filter(
-                must=[
-                    models.FieldCondition(
-                        key="published", match=models.MatchValue(value=True)
-                    )
-                ]
-            ),
+            query_filter=search_filter,
             limit=limit,
             offset=offset,
-        )
-        hits = [
-            {
-                "id": hit.payload["id"],
-                "readable_id": hit.payload["readable_id"],
-                "resource_type": hit.payload["resource_type"],
-                "title": hit.payload["title"],
-                "description": hit.payload["description"],
-                "platform": hit.payload["platform"],
-            }
-            for hit in search_result.points
-        ]
+        ).points
     else:
-        results = serialize_bulk_learning_resources(
-            LearningResource.objects.all()[offset : offset + limit].values_list(
-                "id", flat=True
-            )
-        )
+        search_result = client.scroll(
+            collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
+            scroll_filter=search_filter,
+            limit=limit,
+            offset=offset,
+        )[0]
+    hits = [hit.payload["readable_id"] for hit in search_result]
+    count_result = client.count(
+        collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
+        count_filter=search_filter,
+        exact=True,
+    )
 
-        hits = [
-            {
-                "id": resource["id"],
-                "readable_id": resource["readable_id"],
-                "resource_type": resource["resource_type"],
-                "title": resource["title"],
-                "description": resource["description"],
-                "platform": resource["platform"],
-            }
-            for resource in results
-        ]
-    return {"hits": hits, "total": {"value": 10000}}
+    """
+    Always lookup learning resources by readable_id for portability
+    in case we load points from external systems
+    """
+    return {
+        "hits": LearningResourceSerializer(
+            LearningResource.objects.for_serialization().filter(readable_id__in=hits),
+            many=True,
+        ).data,
+        "total": {"value": count_result.count},
+    }
+
+
+def qdrant_query_conditions(params):
+    """
+    Generate Qdrant query conditions from query params
+    Args:
+        params (dict): Query params
+    Returns:
+        FieldCondition[]:
+            List of Qdrant FieldCondition objects
+    """
+    conditions = []
+    if not params:
+        return conditions
+    for param in params:
+        if param in QDRANT_PARAM_MAP and params[param] is not None:
+            if type(params[param]) is list:
+                """
+                Account for array wrapped booleans which should only match value
+                We can also use MatchValue for arrays with a single item
+                """
+                if len(params[param]) == 1 and type(params[param][0]) is bool:
+                    match_condition = models.MatchValue(value=params[param][0])
+                else:
+                    match_condition = models.MatchAny(any=params[param])
+            else:
+                match_condition = models.MatchValue(value=params[param])
+            conditions.append(
+                models.FieldCondition(
+                    key=QDRANT_PARAM_MAP[param], match=match_condition
+                )
+            )
+    return conditions
 
 
 def filter_existing_qdrant_points(learning_resources):
