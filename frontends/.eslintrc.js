@@ -40,6 +40,10 @@ module.exports = {
           message:
             "Please use 'ol-components' isInterfaceDeclaration; Direct use of @mui/material is limited to ol-components.",
         },
+        {
+          group: ["**/LearningResourceDrawer/LearningResourceDrawer"],
+          message: "The LearningResourceDrawer should be lazy loaded with dynamic import.",
+        },
       ],
     }),
     // This rule is disabled in the default a11y config, but unclear why.

@@ -10,12 +10,23 @@ import {
   AddToLearningPathDialog,
   AddToUserListDialog,
 } from "../Dialogs/AddToListDialog"
-import { useResourceDrawerHref } from "../LearningResourceDrawer/LearningResourceDrawer"
+import { useResourceDrawerHref } from "../LearningResourceDrawer/useResourceDrawerHref"
 import { useUserMe } from "api/hooks/user"
 import { LearningResource } from "api"
 import { SignupPopover } from "../SignupPopover/SignupPopover"
 import { useIsUserListMember } from "api/hooks/userLists"
 import { useIsLearningPathMember } from "api/hooks/learningPaths"
+
+// const useResourceDrawerHref = dynamic<(resourceId: number) => string>(() =>
+//   import("../LearningResourceDrawer/LearningResourceDrawer").then(
+//     (mod) => mod.useResourceDrawerHref,
+//   ),
+// )
+
+// const useResourceDrawerHref = async (): Promise<(resourceId: number) => string> => {
+//   const mod = await import("../LearningResourceDrawer/LearningResourceDrawer");
+//   return mod.useResourceDrawerHref();
+// };
 
 const useResourceCard = (resource?: LearningResource | null) => {
   const getDrawerHref = useResourceDrawerHref()

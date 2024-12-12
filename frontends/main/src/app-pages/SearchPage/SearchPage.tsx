@@ -9,9 +9,14 @@ import SearchDisplay from "@/page-components/SearchDisplay/SearchDisplay"
 import { styled, Container, theme, VisuallyHidden } from "ol-components"
 import { SearchField } from "@/page-components/SearchField/SearchField"
 import { useOfferorsList } from "api/hooks/learningResources"
-import LearningResourceDrawer from "@/page-components/LearningResourceDrawer/LearningResourceDrawer"
 import { facetNames } from "./searchRequests"
 import getFacetManifest from "@/page-components/SearchDisplay/getFacetManifest"
+import dynamic from "next/dynamic"
+
+const LearningResourceDrawer = dynamic(
+  () =>
+    import("@/page-components/LearningResourceDrawer/LearningResourceDrawer"),
+)
 
 const cssGradient = `
   linear-gradient(

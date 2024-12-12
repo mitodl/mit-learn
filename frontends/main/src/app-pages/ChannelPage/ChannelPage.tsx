@@ -1,7 +1,6 @@
 "use client"
 
 import React from "react"
-import LearningResourceDrawer from "@/page-components/LearningResourceDrawer/LearningResourceDrawer"
 import { useParams } from "next/navigation"
 import { ChannelPageTemplate } from "./ChannelPageTemplate"
 import { useChannelDetail } from "api/hooks/channels"
@@ -9,6 +8,12 @@ import ChannelSearch from "./ChannelSearch"
 import { ChannelTypeEnum } from "api/v0"
 import { Typography } from "ol-components"
 import { getConstantSearchParams } from "./searchRequests"
+import dynamic from "next/dynamic"
+
+const LearningResourceDrawer = dynamic(
+  () =>
+    import("@/page-components/LearningResourceDrawer/LearningResourceDrawer"),
+)
 
 type RouteParams = {
   channelType: ChannelTypeEnum
