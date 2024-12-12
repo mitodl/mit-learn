@@ -215,29 +215,19 @@ const ButtonContainer = styled.div({
   justifyContent: "center",
 })
 
-const StyledButton = styled(Button)<{ filled?: number }>((props) => {
-  return {
-    flex: 1,
-    height: "32px",
-    padding: "12px 8px",
-    border: `1px solid ${props.filled ? theme.custom.colors.red : theme.custom.colors.silverGrayLight}`,
-    backgroundColor: props.filled
-      ? theme.custom.colors.red
-      : theme.custom.colors.white,
-    color: props.filled
-      ? theme.custom.colors.white
-      : theme.custom.colors.silverGrayDark,
-    boxShadow: "none",
-    "&:hover": {
-      backgroundColor: theme.custom.colors.red,
-      borderColor: theme.custom.colors.red,
-      color: theme.custom.colors.white,
-    },
-    "span:first-of-type": {
-      marginLeft: "0",
-      marginRight: "4px",
-    },
-  }
+const NoWrapButton = styled(Button)({
+  whiteSpace: "nowrap",
+})
+
+const SelectedButton = styled(NoWrapButton)({
+  backgroundColor: theme.custom.colors.red,
+  border: `1px solid ${theme.custom.colors.red}`,
+  color: theme.custom.colors.white,
+  "&:hover:not(:disabled)": {
+    backgroundColor: theme.custom.colors.red,
+    border: `1px solid ${theme.custom.colors.red}`,
+    color: theme.custom.colors.white,
+  },
 })
 
 const ShareContainer = styled.div({
@@ -268,24 +258,21 @@ const ShareButtonContainer = styled.div({
   alignItems: "center",
   alignSelf: "stretch",
   gap: "16px",
+  a: {
+    height: "18px",
+  },
 })
 
 const ShareLink = styled(Link)({
   color: theme.custom.colors.silverGrayDark,
 })
 
-const CopyLinkButton = styled(StyledButton)({
+const CopyLinkButton = styled(NoWrapButton)({
   flexGrow: 0,
   flexBasis: "112px",
-  padding: "12px 16px",
-  whiteSpace: "nowrap",
+  // padding: "12px 16px",
   "span:first-of-type": {
     color: theme.custom.colors.red,
-  },
-  "&:hover": {
-    "span:first-of-type": {
-      color: theme.custom.colors.white,
-    },
   },
 })
 
@@ -463,9 +450,20 @@ const getCallToActionText = (resource: LearningResource): string => {
   }
 }
 
-const CallToActionButton: React.FC<ButtonProps & { filled?: number }> = (
+const CallToActionButton: React.FC<ButtonProps & { selected?: number }> = (
   props,
-) => <StyledButton size="small" edge="circular" {...props} />
+) => {
+  return props.selected ? (
+    <SelectedButton
+      size="small"
+      edge="circular"
+      variant="bordered"
+      {...props}
+    />
+  ) : (
+    <NoWrapButton size="small" edge="circular" variant="bordered" {...props} />
+  )
+}
 
 const CallToActionSection = ({
   imgConfig,
@@ -544,7 +542,7 @@ const CallToActionSection = ({
         <ButtonContainer>
           {user?.is_learning_path_editor && (
             <CallToActionButton
-              filled={inLearningPath ? 1 : 0}
+              selected={inLearningPath ? 1 : 0}
               startIcon={<RiMenuAddLine />}
               aria-label={addToLearningPathLabel}
               onClick={(event) =>
@@ -557,7 +555,7 @@ const CallToActionSection = ({
             </CallToActionButton>
           )}
           <CallToActionButton
-            filled={inUserList ? 1 : 0}
+            selected={inUserList ? 1 : 0}
             startIcon={inUserList ? <RiBookmarkFill /> : <RiBookmarkLine />}
             aria-label={bookmarkLabel}
             onClick={
@@ -569,7 +567,7 @@ const CallToActionSection = ({
             {bookmarkLabel}
           </CallToActionButton>
           <CallToActionButton
-            filled={shareExpanded ? 1 : 0}
+            selected={shareExpanded ? 1 : 0}
             startIcon={<RiShareLine />}
             aria-label={shareLabel}
             onClick={() => setShareExpanded(!shareExpanded)}
@@ -603,6 +601,7 @@ const CallToActionSection = ({
               <CopyLinkButton
                 size="small"
                 edge="circular"
+                variant="bordered"
                 startIcon={<RiLink />}
                 aria-label={copyLinkLabel}
                 onClick={() => {
