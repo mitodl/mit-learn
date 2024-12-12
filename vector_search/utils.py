@@ -1,6 +1,7 @@
 import uuid
 
 from django.conf import settings
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from qdrant_client import QdrantClient, models
 
 from learning_resources.models import LearningResource
@@ -152,6 +153,7 @@ def embed_learning_resources(ids, resource_type):
         resource_type (str): Type of learning resource to embed
     """
     client = qdrant_client()
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=5000, chunk_overlap=200)
     resources_collection_name = f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources"
     content_files_collection_name = (
         f"{settings.QDRANT_BASE_COLLECTION_NAME}.content_files"
@@ -169,18 +171,39 @@ def embed_learning_resources(ids, resource_type):
     metadata = []
     ids = []
     for doc in serialized_resources:
-        docs.append(
-            f'{doc.get("title")} {doc.get("description")} '
-            f'{doc.get("full_description")} {doc.get("content")}'
-        )
-        metadata.append(doc)
         if resource_type != CONTENT_FILE_TYPE:
             vector_point_key = doc["readable_id"]
-        else:
-            vector_point_key = (
-                f"{doc['key']}.{doc['run_readable_id']}.{doc['resource_readable_id']}"
+            metadata.append(doc)
+            ids.append(vector_point_id(vector_point_key))
+            docs.append(
+                f'{doc.get("title")} {doc.get("description")} '
+                f'{doc.get("full_description")} {doc.get("content")}'
             )
-        ids.append(vector_point_id(vector_point_key))
+        else:
+            split_docs = text_splitter.create_documents(
+                texts=[doc.get("content")], metadatas=[doc]
+            )
+            split_texts = [d.page_content for d in split_docs]
+            split_metadatas = [
+                {
+                    "resource_point_id": str(
+                        vector_point_id(doc["resource_readable_id"])
+                    ),
+                    "CHUNK_ID_KEY": chunk_id,
+                    **d.metadata,
+                }
+                for chunk_id, d in enumerate(split_docs)
+            ]
+            split_ids = [
+                vector_point_id(
+                    f'{doc['resource_readable_id']}.{doc['_id']}.{md["CHUNK_ID_KEY"]}'
+                )
+                for md in split_metadatas
+            ]
+            docs.extend(split_texts)
+            metadata.extend(split_metadatas)
+            ids.extend(split_ids)
+
     encoder = dense_encoder()
     embeddings = encoder.encode_batch(docs)
     vector_name = encoder.model_short_name()
