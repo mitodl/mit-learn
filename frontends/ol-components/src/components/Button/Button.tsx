@@ -188,10 +188,11 @@ const buildStyles = (props: ButtonStyleProps & { theme: Theme }) => {
       border: `1px solid ${colors.silverGrayLight}`,
       ":hover:not(:disabled)": {
         backgroundColor: colors.lightGray1,
+        color: colors.darkGray2,
       },
       ":disabled": {
         backgroundColor: colors.lightGray2,
-        border: `1px solid ${colors.silverGrayDark}`,
+        border: `1px solid ${colors.lightGray2}`,
         color: colors.silverGrayDark,
       },
     },
