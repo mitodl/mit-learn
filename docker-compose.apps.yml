@@ -62,6 +62,7 @@ services:
       - "6006:6006"
     environment:
       - NEXT_SERVER_MITOL_API_BASE_URL=http://nginx:8063/
+      - AI_LEARN_BASE_WEBSOCKET_URL=ws://api.open.odl.local:8001/
     volumes:
       - .:/src
     links:
