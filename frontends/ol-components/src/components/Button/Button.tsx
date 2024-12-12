@@ -10,11 +10,11 @@ type ButtonVariant =
   | "primary"
   | "secondary"
   | "tertiary"
-  | "text"
   | "bordered"
   | "noBorder"
   | "inverted"
   | "success"
+  | "text"
 type ButtonSize = "small" | "medium" | "large"
 type ButtonEdge = "circular" | "rounded" | "none"
 
@@ -191,11 +191,6 @@ const buildStyles = (props: ButtonStyleProps & { theme: Theme }) => {
       },
       ":disabled": {
         color: colors.silverGray,
-      },
-      ":active": {
-        backgroundColor: colors.red,
-        borderColor: colors.red,
-        color: colors.white,
       },
     },
     variant === "noBorder" && {
