@@ -21,8 +21,6 @@ QDRANT_PARAM_MAP = {
     "free": "free",
     "course_feature": "course_feature",
     "content_feature_type": "content_feature_type",
-    "run_id": "run_id",
-    "resource_id": "resource_id",
     "topic": "topics[].name",
     "ocw_topic": "ocw_topics",
     "level": "runs[].level.code",
