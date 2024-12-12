@@ -262,12 +262,17 @@ const IconContainer = styled.span<{ side: "start" | "end"; size: ButtonSize }>(
       alignItems: "center",
     },
     side === "start" && {
-      marginLeft: "0",
-      marginRight: "4px",
+      /**
+       * The negative margin is to counteract the padding on the button itself.
+       * Without icons, the left space is 24/16/12 px.
+       * With icons, the left space is 20/12/8 px.
+       */
+      marginLeft: "-4px",
+      marginRight: "8px",
     },
     side === "end" && {
-      marginLeft: "4px",
-      marginRight: "0",
+      marginLeft: "8px",
+      marginRight: "-4px",
     },
     {
       "& svg, & .MuiSvgIcon-root": {
