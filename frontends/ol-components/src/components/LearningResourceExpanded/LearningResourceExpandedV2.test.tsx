@@ -340,5 +340,6 @@ describe("Learning Resource Expanded", () => {
     expect(writeText).toHaveBeenCalledWith(
       `https://learn.mit.edu/search?resource=${resource.id}`,
     )
+    expect(copyButton).toHaveTextContent("Copied!")
   })
 })
