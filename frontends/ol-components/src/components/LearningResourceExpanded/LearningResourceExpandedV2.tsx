@@ -270,12 +270,13 @@ const ShareLink = styled(Link)({
   color: theme.custom.colors.silverGrayDark,
 })
 
+const RedLinkIcon = styled(RiLink)({
+  color: theme.custom.colors.red,
+})
+
 const CopyLinkButton = styled(Button)({
   flexGrow: 0,
   flexBasis: "112px",
-  "span:first-of-type": {
-    color: theme.custom.colors.red,
-  },
 })
 
 const CarouselContainer = styled.div({
@@ -604,7 +605,7 @@ const CallToActionSection = ({
                 size="small"
                 edge="circular"
                 variant="bordered"
-                startIcon={<RiLink />}
+                startIcon={<RedLinkIcon />}
                 aria-label={copyLinkLabel}
                 ref={copyLinkButtonRef}
                 onClick={() => {
