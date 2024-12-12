@@ -14334,6 +14334,7 @@ __metadata:
     jest-extended: "npm:^4.0.2"
     lodash: "npm:^4.17.21"
     next: "npm:^15.0.2"
+    next-nprogress-bar: "npm:^2.4.2"
     ol-ckeditor: "npm:0.0.0"
     ol-components: "npm:0.0.0"
     ol-test-utilities: "npm:0.0.0"
@@ -15783,6 +15784,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"next-nprogress-bar@npm:^2.4.2":
+  version: 2.4.2
+  resolution: "next-nprogress-bar@npm:2.4.2"
+  dependencies:
+    nprogress-v2: "npm:^1.0.4"
+  checksum: 10/a338840accd7b34edd428b9be4554afbff77d1ff6bdf45dd39b57484631734b1a87f616eaf64b93fbcf65c83662527f74ee94dba71228ad03831432e6c75d917
+  languageName: node
+  linkType: hard
+
 "next-router-mock@npm:^0.9.13":
   version: 0.9.13
   resolution: "next-router-mock@npm:0.9.13"
@@ -16041,6 +16051,13 @@ __metadata:
   dependencies:
     path-key: "npm:^3.0.0"
   checksum: 10/5374c0cea4b0bbfdfae62da7bbdf1e1558d338335f4cacf2515c282ff358ff27b2ecb91ffa5330a8b14390ac66a1e146e10700440c1ab868208430f56b5f4d23
+  languageName: node
+  linkType: hard
+
+"nprogress-v2@npm:^1.0.4":
+  version: 1.0.4
+  resolution: "nprogress-v2@npm:1.0.4"
+  checksum: 10/0c9f3e79990440e9f5c6f8484aaf67285a87ec91a11d8d97df2ab3940d6d9dd52ebafc69363b2ed61d99ba3b5415a732ce9204f104ac71671dba22e40ba96b32
   languageName: node
   linkType: hard
 
