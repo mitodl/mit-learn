@@ -306,13 +306,12 @@ describe("Learning Resource Expanded", () => {
 
     setup(resource)
 
-    const shareButton = screen.getByRole("button", { name: "Share" })
-    fireEvent.click(shareButton)
+    fireEvent.click(screen.getByRole("button", { name: "Share" }))
 
     const shareSection = screen.getByTestId("drawer-share")
     expect(shareSection).toBeInTheDocument()
 
-    fireEvent.click(shareButton)
+    fireEvent.click(screen.getByRole("button", { name: "Share" }))
     expect(shareSection).not.toBeInTheDocument()
   })
 
