@@ -23,7 +23,6 @@ const meta: Meta<typeof SelectField> = {
   },
   args: {
     onChange: fn(),
-    placeholder: "placeholder",
     label: "Label",
     helpText: "Help text the quick brown fox jumps over the lazy dog",
     errorText: "Error text the quick brown fox jumps over the lazy dog",

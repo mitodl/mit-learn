@@ -8,7 +8,6 @@ import SearchDisplay from "@/page-components/SearchDisplay/SearchDisplay"
 import { Container, styled, VisuallyHidden } from "ol-components"
 import { SearchField } from "@/page-components/SearchField/SearchField"
 import { getFacets } from "./searchRequests"
-
 import { keyBy } from "lodash"
 
 const SearchInputContainer = styled(Container)(({ theme }) => ({
