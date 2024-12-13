@@ -215,7 +215,7 @@ const ButtonContainer = styled.div({
   justifyContent: "center",
 })
 
-const SelectableButton = styled(Button)<{ selected?: number }>((props) => [
+const SelectableButton = styled(Button)<{ selected?: boolean }>((props) => [
   {
     whiteSpace: "nowrap",
   },
@@ -445,7 +445,7 @@ const getCallToActionText = (resource: LearningResource): string => {
   }
 }
 
-const CallToActionButton: React.FC<ButtonProps & { selected?: number }> = (
+const CallToActionButton: React.FC<ButtonProps & { selected?: boolean }> = (
   props,
 ) => {
   return (
