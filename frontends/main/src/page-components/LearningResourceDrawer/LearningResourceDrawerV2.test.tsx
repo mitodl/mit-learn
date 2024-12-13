@@ -150,11 +150,11 @@ describe("LearningResourceDrawerV2", () => {
       const section = screen.getByTestId("drawer-cta")
 
       const buttons = within(section).getAllByRole("button")
-      const expectedButtons = expectAddToLearningPathButton ? 2 : 1
+      const expectedButtons = expectAddToLearningPathButton ? 3 : 2
       expect(buttons).toHaveLength(expectedButtons)
       expect(
         !!within(section).queryByRole("button", {
-          name: "Add to Learning Path",
+          name: "Add to list",
         }),
       ).toBe(expectAddToLearningPathButton)
     },

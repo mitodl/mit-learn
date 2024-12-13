@@ -8,12 +8,13 @@ import {
 } from "./LearningResourceExpandedV2"
 import type { LearningResourceExpandedV2Props } from "./LearningResourceExpandedV2"
 import { ResourceTypeEnum, PodcastEpisodeResource } from "api"
-import { factories } from "api/test-utils"
+import { factories, setMockResponse, urls } from "api/test-utils"
 import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
 import invariant from "tiny-invariant"
 import type { LearningResource } from "api"
 import { PLATFORM_LOGOS } from "../Logo/Logo"
 import _ from "lodash"
+import user from "@testing-library/user-event"
 
 const IMG_CONFIG: LearningResourceExpandedV2Props["imgConfig"] = {
   width: 385,
@@ -23,10 +24,22 @@ const IMG_CONFIG: LearningResourceExpandedV2Props["imgConfig"] = {
 // This is a pipe followed by a zero-width space
 const SEPARATOR = "|​"
 
-const setup = (resource: LearningResource) => {
+const setup = (resource: LearningResource, isLearningPathEditor?: boolean) => {
+  const user = {
+    ...factories.user.user({
+      is_learning_path_editor: isLearningPathEditor,
+    }),
+    is_authenticated: true,
+  }
+  setMockResponse.get(urls.userMe.get(), user)
   return render(
     <BrowserRouter>
-      <LearningResourceExpandedV2 resource={resource} imgConfig={IMG_CONFIG} />
+      <LearningResourceExpandedV2
+        resource={resource}
+        user={user}
+        shareUrl={`https://learn.mit.edu/search?resource=${resource.id}`}
+        imgConfig={IMG_CONFIG}
+      />
     </BrowserRouter>,
     { wrapper: ThemeProvider },
   )
@@ -264,5 +277,70 @@ describe("Learning Resource Expanded", () => {
     const section = screen.getByTestId("drawer-info-items")
 
     within(section).getByText("13:44")
+  })
+
+  test.each([true, false])(
+    "Add to list button only shows if you have the proper permissions",
+    (isLearningPathEditor) => {
+      const resource = factories.learningResources.resource({
+        resource_type: ResourceTypeEnum.Course,
+      })
+
+      setup(resource, isLearningPathEditor)
+
+      const section = screen.getByTestId("drawer-cta")
+
+      const buttons = within(section).getAllByRole("button")
+      expect(buttons).toHaveLength(isLearningPathEditor ? 3 : 2)
+      expect(
+        !!within(section).queryByRole("button", {
+          name: "Add to list",
+        }),
+      ).toBe(isLearningPathEditor)
+    },
+  )
+
+  test("Clicking the share button toggles the share section", async () => {
+    const resource = factories.learningResources.resource({
+      resource_type: ResourceTypeEnum.Course,
+    })
+
+    setup(resource)
+
+    await user.click(screen.getByRole("button", { name: "Share" }))
+
+    const shareSection = screen.getByTestId("drawer-share")
+    expect(shareSection).toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "Share" }))
+    expect(shareSection).not.toBeInTheDocument()
+  })
+
+  test("Clicking the share button copies the share URL to the clipboard", async () => {
+    const writeText = jest.fn()
+    Object.assign(navigator, {
+      clipboard: {
+        writeText,
+      },
+    })
+    const resource = factories.learningResources.resource({
+      resource_type: ResourceTypeEnum.Course,
+    })
+
+    setup(resource)
+
+    const shareButton = screen.getByRole("button", { name: "Share" })
+    await user.click(shareButton)
+
+    const shareSection = screen.getByTestId("drawer-share")
+    const copyButton = within(shareSection).getByRole("button", {
+      name: "Copy Link",
+    })
+
+    await user.click(copyButton)
+    expect(writeText).toHaveBeenCalledWith(
+      `https://learn.mit.edu/search?resource=${resource.id}`,
+    )
+    expect(copyButton).toHaveTextContent("Copied!")
   })
 })
