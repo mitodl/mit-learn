@@ -38,12 +38,14 @@ module.exports = {
         {
           name: "lodash",
           importNames: ["default"],
-          message: "Default import from 'lodash' is not allowed. Use named imports instead.",
+          message:
+            "Default import from 'lodash' is not allowed. Use named imports instead.",
         },
         {
           name: "@mui/material/Typography",
-          message: "Typography must be imported from 'ol-components/ThemeProvider/typography' for variant mappings",
-        }
+          message:
+            "Typography must be imported from 'ol-components/ThemeProvider/typography' for variant mappings",
+        },
       ],
       patterns: [
         // {
@@ -53,12 +55,18 @@ module.exports = {
         // },
         {
           group: ["**/LearningResourceDrawer/LearningResourceDrawer"],
-          message: "The LearningResourceDrawer should be lazy loaded with dynamic import.",
+          message:
+            "The LearningResourceDrawer should be lazy loaded with dynamic import.",
         },
         {
-          group: ["@mui/lab/TabContext", "@mui/lab/TabPanel", "@mui/material/Tabs"],
-          message: "TabContext, TabPanel and Tabs must be imported from 'ol-components/TabButtons/TabButtonList'",
-        }
+          group: [
+            "@mui/lab/TabContext",
+            "@mui/lab/TabPanel",
+            "@mui/material/Tabs",
+          ],
+          message:
+            "TabContext, TabPanel and Tabs must be imported from 'ol-components/TabButtons/TabButtonList'",
+        },
       ],
     }),
     // This rule is disabled in the default a11y config, but unclear why.
@@ -134,7 +142,7 @@ module.exports = {
           "Property[key.name=fontFamily][value.raw=/Neue Haas/], TemplateElement[value.raw=/Neue Haas/]",
         message:
           "Do not specify `fontFamily` manually. Prefer spreading `theme.typography.subtitle1` or similar. If using neue-haas-grotesk-text, this is ThemeProvider's default fontFamily.",
-      }
+      },
     ],
   },
   overrides: [
