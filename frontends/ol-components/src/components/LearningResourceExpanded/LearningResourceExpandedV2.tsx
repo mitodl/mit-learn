@@ -247,14 +247,6 @@ const ShareLabel = styled(Typography)({
   color: theme.custom.colors.darkGray1,
 })
 
-const ShareInput = styled(Input)({
-  display: "flex",
-  flexDirection: "column",
-  justifyContent: "center",
-  alignItems: "flexStart",
-  alignSelf: "stretch",
-})
-
 const ShareButtonContainer = styled.div({
   display: "flex",
   justifyContent: "center",
@@ -488,6 +480,7 @@ const CallToActionSection = ({
   onAddToUserListClick?: LearningResourceCardProps["onAddToUserListClick"]
 }) => {
   const [shareExpanded, setShareExpanded] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
   const copyLinkButtonRef = useRef<HTMLButtonElement>(null)
   if (hide) {
     return null
@@ -581,7 +574,16 @@ const CallToActionSection = ({
         {shareExpanded && shareUrl && (
           <ShareContainer data-testid="drawer-share">
             <ShareLabel>Share a link to this Resource</ShareLabel>
-            <ShareInput value={shareUrl} />
+            <Input
+              fullWidth
+              ref={inputRef}
+              value={shareUrl}
+              onClick={() => {
+                if (inputRef.current) {
+                  inputRef.current.getElementsByTagName("input")[0].select()
+                }
+              }}
+            />
             <ShareButtonContainer>
               <ShareLink
                 href={`${facebookShareBaseUrl}?u=${encodeURIComponent(shareUrl)}`}
