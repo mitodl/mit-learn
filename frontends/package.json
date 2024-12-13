@@ -4,13 +4,11 @@
   "workspaces": [
     "api",
     "main",
-    "ol-ckeditor",
     "ol-common",
     "ol-components",
     "ol-template",
     "ol-test-utilities",
-    "ol-utilities",
-    "ol-widgets"
+    "ol-utilities"
   ],
   "scripts": {
     "watch": "yarn workspace mit-learn watch",
