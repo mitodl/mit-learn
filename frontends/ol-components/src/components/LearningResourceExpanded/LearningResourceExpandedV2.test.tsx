@@ -1,6 +1,6 @@
 import React from "react"
 import { BrowserRouter } from "react-router-dom"
-import { fireEvent, render, screen, within } from "@testing-library/react"
+import { render, screen, within } from "@testing-library/react"
 
 import {
   getCallToActionText,
@@ -14,6 +14,7 @@ import invariant from "tiny-invariant"
 import type { LearningResource } from "api"
 import { PLATFORM_LOGOS } from "../Logo/Logo"
 import _ from "lodash"
+import user from "@testing-library/user-event"
 
 const IMG_CONFIG: LearningResourceExpandedV2Props["imgConfig"] = {
   width: 385,
@@ -299,19 +300,19 @@ describe("Learning Resource Expanded", () => {
     },
   )
 
-  test("Clicking the share button toggles the share section", () => {
+  test("Clicking the share button toggles the share section", async () => {
     const resource = factories.learningResources.resource({
       resource_type: ResourceTypeEnum.Course,
     })
 
     setup(resource)
 
-    fireEvent.click(screen.getByRole("button", { name: "Share" }))
+    await user.click(screen.getByRole("button", { name: "Share" }))
 
     const shareSection = screen.getByTestId("drawer-share")
     expect(shareSection).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole("button", { name: "Share" }))
+    await user.click(screen.getByRole("button", { name: "Share" }))
     expect(shareSection).not.toBeInTheDocument()
   })
 
@@ -329,14 +330,14 @@ describe("Learning Resource Expanded", () => {
     setup(resource)
 
     const shareButton = screen.getByRole("button", { name: "Share" })
-    fireEvent.click(shareButton)
+    await user.click(shareButton)
 
     const shareSection = screen.getByTestId("drawer-share")
     const copyButton = within(shareSection).getByRole("button", {
       name: "Copy Link",
     })
 
-    fireEvent.click(copyButton)
+    await user.click(copyButton)
     expect(writeText).toHaveBeenCalledWith(
       `https://learn.mit.edu/search?resource=${resource.id}`,
     )
