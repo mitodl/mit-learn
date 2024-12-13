@@ -1,5 +1,5 @@
 #!/bin/sh
->.env
+true >.env
 echo "# Vault Secrets" >>.env
 echo "CKEDITOR_ENVIRONMENT_ID=${CKEDITOR_ENVIRONMENT_ID}" >>.env
 echo "CKEDITOR_SECRET_KEY=${CKEDITOR_SECRET_KEY}" >>.env
