@@ -1,7 +1,9 @@
 import React, { useMemo } from "react"
+import styled from "@emotion/styled"
 import * as routes from "@/common/urls"
-import { SimpleMenu, ActionButton, styled } from "ol-components"
-import type { SimpleMenuItem } from "ol-components"
+import { SimpleMenu } from "ol-components/SimpleMenu/SimpleMenu"
+import type { SimpleMenuItem } from "ol-components/SimpleMenu/SimpleMenu"
+import { ActionButton } from "ol-components/Button/Button"
 import { RiSettings4Fill } from "@remixicon/react"
 
 const InvertedButton = styled(ActionButton)({ color: "white" })

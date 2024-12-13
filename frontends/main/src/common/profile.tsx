@@ -10,7 +10,7 @@ import {
   DeliveryEnum,
   DeliveryEnumDescriptions,
 } from "api/v0"
-import { SimpleSelectOption } from "ol-components"
+import { SimpleSelectOption } from "ol-components/SimpleSelect/SimpleSelect"
 
 const DELIVERY_CHOICES = [
   DeliveryEnum.Online,

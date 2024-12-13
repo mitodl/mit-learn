@@ -76,4 +76,7 @@ const TabButtonLink = ({ ...props }: TabProps<typeof TabLinkInner>) => (
   <MuiTab {...props} component={TabLinkInner} />
 )
 
+export { default as TabContext } from "@mui/lab/TabContext"
+export { default as TabPanel } from "@mui/lab/TabPanel"
+export { default as Tabs } from "@mui/material/Tabs"
 export { TabButtonList, TabButton, TabButtonLink }

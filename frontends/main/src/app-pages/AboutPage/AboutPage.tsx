@@ -1,12 +1,10 @@
 "use client"
 
-import {
-  Breadcrumbs,
-  Container,
-  Typography,
-  theme,
-  styled,
-} from "ol-components"
+import { theme } from "ol-components/ThemeProvider/ThemeProvider"
+import styled from "@emotion/styled"
+import { Breadcrumbs } from "ol-components/Breadcrumbs/Breadcrumbs"
+import Container from "@mui/material/Container"
+import { Typography } from "ol-components/ThemeProvider/typography"
 import * as urls from "@/common/urls"
 import React from "react"
 import domeImage from "@/public/mit-dome-2.jpg"

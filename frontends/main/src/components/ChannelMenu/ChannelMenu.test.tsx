@@ -7,7 +7,7 @@ import ChannelMenu from "./ChannelMenu"
 import { urls } from "api/test-utils"
 import { setMockResponse, user } from "@/test-utils"
 import { channels as factory } from "api/test-utils/factories"
-import { ThemeProvider } from "ol-components"
+import { ThemeProvider } from "ol-components/ThemeProvider/ThemeProvider"
 
 describe("ChannelMenu", () => {
   it("Includes links to channel management", async () => {

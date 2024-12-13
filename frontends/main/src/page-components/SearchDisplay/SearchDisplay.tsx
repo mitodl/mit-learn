@@ -1,20 +1,18 @@
 import React, { useMemo, useRef, useState } from "react"
-import {
-  styled,
-  Pagination,
-  PaginationItem,
-  PlainList,
-  Container,
-  Typography,
-  Button,
-  SimpleSelect,
-  truncateText,
-  css,
-  Drawer,
-  Checkbox,
-  VisuallyHidden,
-  Stack,
-} from "ol-components"
+import styled from "@emotion/styled"
+import { css } from "@emotion/react"
+import { Typography } from "ol-components/ThemeProvider/typography"
+import Container from "@mui/material/Container"
+import Pagination from "@mui/material/Pagination"
+import PaginationItem from "@mui/material/PaginationItem"
+import Drawer from "@mui/material/Drawer"
+import Stack from "@mui/material/Stack"
+import { Button } from "ol-components/Button/Button"
+import { PlainList } from "ol-components/PlainList/PlainList"
+import { SimpleSelect } from "ol-components/SimpleSelect/SimpleSelect"
+import { Checkbox } from "ol-components/Checkbox/Checkbox"
+import { VisuallyHidden } from "ol-components/VisuallyHidden/VisuallyHidden"
+import { truncateText } from "ol-components/TruncateText/TruncateText"
 
 import {
   RiCloseLine,

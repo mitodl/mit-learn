@@ -1,10 +1,8 @@
 import * as React from "react"
-import {
-  Collapse,
-  ToggleButton,
-  ToggleButtonGroup,
-  styled,
-} from "ol-components"
+import styled from "@emotion/styled"
+import Collapse from "@mui/material/Collapse"
+import ToggleButton from "@mui/material/ToggleButton"
+import ToggleButtonGroup from "@mui/material/ToggleButtonGroup"
 import { RiBookOpenLine, RiBriefcase3Line } from "@remixicon/react"
 
 const StyledToggleButtonGroup = styled(ToggleButtonGroup)`

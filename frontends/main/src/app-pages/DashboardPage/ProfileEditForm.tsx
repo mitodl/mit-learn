@@ -1,16 +1,14 @@
 import React, { useId, useMemo } from "react"
 import { useFormik } from "formik"
+import styled from "@emotion/styled"
+import CircularProgress from "@mui/material/CircularProgress"
 import { Profile, useProfileMeMutation } from "api/hooks/profile"
-import {
-  styled,
-  Button,
-  CircularProgress,
-  CheckboxChoiceBoxField,
-  CheckboxChoiceField,
-  RadioChoiceField,
-  SimpleSelectField,
-  TextField,
-} from "ol-components"
+import { Button } from "ol-components/Button/Button"
+import { CheckboxChoiceBoxField } from "ol-components/ChoiceBox/ChoiceBoxField"
+import { CheckboxChoiceField } from "ol-components/Checkbox/CheckboxChoiceField"
+import { RadioChoiceField } from "ol-components/RadioChoiceField/RadioChoiceField"
+import { TextField } from "ol-components/TextField/TextField"
+import { SimpleSelectField } from "ol-components/SimpleSelect/SimpleSelect"
 
 import { useLearningResourceTopics } from "api/hooks/learningResources"
 import {

@@ -1,13 +1,13 @@
 import React from "react"
+import styled from "@emotion/styled"
+import Container from "@mui/material/Container"
+import Grid2 from "@mui/material/Grid2"
 import {
-  Container,
-  styled,
-  theme,
   Typography,
-  Grid2,
-  Card,
   TypographyProps,
-} from "ol-components"
+} from "ol-components/ThemeProvider/typography"
+import { Card } from "ol-components/Card/Card"
+import { theme } from "ol-components/ThemeProvider/ThemeProvider"
 import {
   useNewsEventsList,
   NewsEventsListFeedTypeEnum,

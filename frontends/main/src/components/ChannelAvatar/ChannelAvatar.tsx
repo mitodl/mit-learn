@@ -1,6 +1,7 @@
 import React from "react"
 import type { Channel } from "api/v0"
-import { styled } from "ol-components"
+import styled from "@emotion/styled"
+
 export const AVATAR_SMALL = "small" as const
 export const AVATAR_MEDIUM = "medium" as const
 export const AVATAR_LARGE = "large" as const

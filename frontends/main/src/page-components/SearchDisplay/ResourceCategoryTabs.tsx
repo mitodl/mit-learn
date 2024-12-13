@@ -1,11 +1,11 @@
 import React from "react"
+import styled from "@emotion/styled"
 import {
-  TabButton,
   TabContext,
-  TabButtonList,
   TabPanel,
-  styled,
-} from "ol-components"
+  TabButton,
+  TabButtonList,
+} from "ol-components/TabButtons/TabButtonList"
 import { ResourceCategoryEnum, LearningResourcesSearchResponse } from "api"
 
 const TabsList = styled(TabButtonList)(({ theme }) => ({

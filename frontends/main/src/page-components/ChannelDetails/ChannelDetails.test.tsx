@@ -6,7 +6,7 @@ import { BrowserRouter } from "react-router-dom"
 import { urls } from "api/test-utils"
 import { setMockResponse } from "@/test-utils"
 import { channels as factory } from "api/test-utils/factories"
-import { ThemeProvider } from "ol-components"
+import { ThemeProvider } from "ol-components/ThemeProvider/ThemeProvider"
 
 describe("ChannelDetails", () => {
   it("Includes channel detail info panel", async () => {

@@ -1,17 +1,19 @@
 "use client"
 
 import React from "react"
+import styled from "@emotion/styled"
 import { learningResources } from "api/hooks/learningResources"
 import {
-  Carousel,
-  TabButton,
-  TabPanel,
-  TabContext,
-  TabButtonList,
-  styled,
   Typography,
   TypographyProps,
-} from "ol-components"
+} from "ol-components/ThemeProvider/typography"
+import {
+  TabContext,
+  TabPanel,
+  TabButton,
+  TabButtonList,
+} from "ol-components/TabButtons/TabButtonList"
+import { Carousel } from "ol-components/Carousel/Carousel"
 import type { TabConfig } from "./types"
 import { LearningResource, PaginatedLearningResourceList } from "api"
 import { ResourceCard } from "../ResourceCard/ResourceCard"

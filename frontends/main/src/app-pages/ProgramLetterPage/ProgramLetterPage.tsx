@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { styled } from "ol-components"
+import styled from "@emotion/styled"
 import { useProgramLettersDetail } from "api/hooks/programLetters"
 import { useParams } from "next/navigation"
 

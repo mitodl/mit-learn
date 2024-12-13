@@ -1,5 +1,5 @@
 import React from "react"
-import { Global, css } from "ol-components"
+import { Global, css } from "@emotion/react"
 
 const widgetCss = css`
   .ol-widget {

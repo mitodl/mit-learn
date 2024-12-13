@@ -2,7 +2,8 @@ import React from "react"
 import { screen, render } from "@testing-library/react"
 import user from "@testing-library/user-event"
 import { assertInstanceOf, assertNotNil } from "ol-utilities"
-import { EmbedlyCard, ThemeProvider } from "ol-components"
+import { ThemeProvider } from "ol-components/ThemeProvider/ThemeProvider"
+import { EmbedlyCard } from "ol-components/EmbedlyCard/EmbedlyCard"
 import {
   makeEmbeddedUrlWidgetSpec,
   makeEmbeddedUrlWidget,
@@ -24,8 +25,8 @@ const getErrorFor = (el: HTMLElement) => {
   return errEl
 }
 
-jest.mock("ol-components", () => {
-  const actual = jest.requireActual("ol-components")
+jest.mock("ol-components/EmbedlyCard/EmbedlyCard", () => {
+  const actual = jest.requireActual("ol-components/EmbedlyCard/EmbedlyCard")
   return {
     __esModule: true,
     ...actual,

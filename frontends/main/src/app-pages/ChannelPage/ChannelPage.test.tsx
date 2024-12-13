@@ -453,6 +453,13 @@ describe("Channel Pages, Unit only", () => {
         { level: 2, name: `Search within ${channel.title}` },
         { level: 3, name: "Search Results" },
         { level: 3, name: "Filter" },
+        // { level: 6, name: "Offerings" },
+        // { level: 6, name: "Formats" },
+        // { level: 6, name: "Fee" },
+        // { level: 6, name: "Type of Content" },
+        // { level: 6, name: "Audience" },
+        // { level: 6, name: "Certificates" },
+        // { level: 6, name: "More Information" },
       ])
     })
   })

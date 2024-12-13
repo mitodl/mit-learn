@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect } from "react"
+import styled from "@emotion/styled"
 import type { LearningResource } from "api"
 import {
   SortableItem,
@@ -6,12 +7,11 @@ import {
   RenderActive,
   arrayMove,
   OnSortEnd,
-  LoadingSpinner,
-  styled,
-  PlainList,
-  LearningResourceListCard,
-  LearningResourceListCardCondensed,
-} from "ol-components"
+} from "ol-components/SortableList/SortableList"
+import { LoadingSpinner } from "ol-components/LoadingSpinner/LoadingSpinner"
+import { PlainList } from "ol-components/PlainList/PlainList"
+import { LearningResourceListCard } from "ol-components/LearningResourceCard/LearningResourceListCard"
+import { LearningResourceListCardCondensed } from "ol-components/LearningResourceCard/LearningResourceListCardCondensed"
 import { ResourceCard } from "@/page-components/ResourceCard/ResourceCard"
 import { useLearningPathListItemMove } from "api/hooks/learningPaths"
 import { useUserListListItemMove } from "api/hooks/userLists"

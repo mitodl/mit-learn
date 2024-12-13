@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Slider } from "ol-components"
+import Slider from "@mui/material/Slider"
 
 const SliderInput: React.FC<{
   currentValue: number

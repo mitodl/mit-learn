@@ -1,12 +1,12 @@
 "use client"
 
+import styled from "@emotion/styled"
+import Container from "@mui/material/Container"
 import {
-  Breadcrumbs,
-  Container,
   Typography,
   TypographyProps,
-  styled,
-} from "ol-components"
+} from "ol-components/ThemeProvider/typography"
+import { Breadcrumbs } from "ol-components/Breadcrumbs/Breadcrumbs"
 import * as urls from "@/common/urls"
 import React from "react"
 

@@ -1,18 +1,16 @@
 "use client"
 
 import React from "react"
-import {
-  Container,
-  Typography,
-  styled,
-  List,
-  ListItem,
-  ListItemLink,
-  ListItemText,
-  Grid,
-  Banner,
-  Breadcrumbs,
-} from "ol-components"
+import styled from "@emotion/styled"
+import { Typography } from "ol-components/ThemeProvider/typography"
+import Container from "@mui/material/Container"
+import List from "@mui/material/List"
+import ListItem from "@mui/material/ListItem"
+import ListItemText from "@mui/material/ListItemText"
+import { ListItemLink } from "ol-components/Lists/ListItemLink"
+import { Banner } from "ol-components/Banner/Banner"
+import { Breadcrumbs } from "ol-components/Breadcrumbs/Breadcrumbs"
+import Grid from "@mui/material/Grid"
 import { pluralize, backgroundSrcSetCSS } from "ol-utilities"
 import type { LearningResourceSchool } from "api"
 import { useSchoolsList } from "api/hooks/learningResources"

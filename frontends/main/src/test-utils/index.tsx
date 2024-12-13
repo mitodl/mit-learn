@@ -1,10 +1,9 @@
 /* eslint-disable import/no-extraneous-dependencies */
 import React from "react"
 import { QueryClientProvider } from "@tanstack/react-query"
-import { ThemeProvider } from "ol-components"
+import { ThemeProvider } from "ol-components/ThemeProvider/ThemeProvider"
 import { Provider as NiceModalProvider } from "@ebay/nice-modal-react"
 import type { QueryClient } from "@tanstack/react-query"
-
 import { makeQueryClient } from "@/app/getQueryClient"
 import { render } from "@testing-library/react"
 import { setMockResponse } from "api/test-utils"

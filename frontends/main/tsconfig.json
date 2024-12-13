@@ -19,7 +19,10 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "@/public/*": ["./public/*"]
+      "@/public/*": ["./public/*"],
+      "ol-components/*": ["../ol-components/src/components/*"],
+      "ol-components/constants/*": ["../ol-components/src/constants/*"],
+      "ol-components/types/*": ["../ol-components/src/types/*"],
     },
     "target": "ESNext",
     "types": [
@@ -27,7 +30,7 @@
       "jest",
       "@types/jest",
       "@testing-library/jest-dom",
-      "jest-extended"
+      "jest-extended",
     ]
   },
   "include": [
@@ -35,7 +38,7 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "../jest.jsdom.config"
+    "../jest.jsdom.config",
   ],
   "exclude": ["node_modules"]
 }

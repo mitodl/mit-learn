@@ -1,6 +1,9 @@
 import React from "react"
-import { SearchInput } from "ol-components"
-import type { SearchInputProps, SearchSubmissionEvent } from "ol-components"
+import { SearchInput } from "ol-components/SearchInput/SearchInput"
+import type {
+  SearchInputProps,
+  SearchSubmissionEvent,
+} from "ol-components/SearchInput/SearchInput"
 import { usePostHog } from "posthog-js/react"
 
 type SearchFieldProps = SearchInputProps & {

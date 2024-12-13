@@ -1,4 +1,6 @@
 import React from "react"
+import styled from "@emotion/styled"
+import Skeleton from "@mui/material/Skeleton"
 import type {
   Aggregation,
   Bucket,
@@ -8,8 +10,8 @@ import type {
   BooleanFacetKey,
 } from "@mitodl/course-search-utils"
 import { BOOLEAN_FACET_NAMES } from "@mitodl/course-search-utils"
-import { Skeleton, styled, SimpleSelect } from "ol-components"
-import type { SimpleSelectOption } from "ol-components"
+import { SimpleSelect } from "ol-components/SimpleSelect/SimpleSelect"
+import type { SimpleSelectOption } from "ol-components/SimpleSelect/SimpleSelect"
 
 const StyledSkeleton = styled(Skeleton)`
   display: inline-flex;

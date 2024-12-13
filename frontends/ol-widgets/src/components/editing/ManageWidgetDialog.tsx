@@ -1,5 +1,6 @@
 import React, { useId, useCallback, useEffect, useMemo, useState } from "react"
-import { Button, RadioChoiceField } from "ol-components"
+import { Button } from "ol-components/Button/Button"
+import { RadioChoiceField } from "ol-components/RadioChoiceField/RadioChoiceField"
 // eslint-disable-next-line @typescript-eslint/no-restricted-imports
 import MuiDialog from "@mui/material/Dialog"
 // eslint-disable-next-line @typescript-eslint/no-restricted-imports

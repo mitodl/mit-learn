@@ -3,9 +3,9 @@ import { faker } from "@faker-js/faker/locale/en"
 import {
   SortableList,
   SortableItem,
-  LearningResourceListCard,
-  LearningResourceListCardCondensed,
-} from "ol-components"
+} from "ol-components/SortableList/SortableList"
+import { LearningResourceListCard } from "ol-components/LearningResourceCard/LearningResourceListCard"
+import { LearningResourceListCardCondensed } from "ol-components/LearningResourceCard/LearningResourceListCardCondensed"
 import { factories, urls, makeRequest } from "api/test-utils"
 import {
   screen,
@@ -24,19 +24,42 @@ import { ControlledPromise } from "ol-test-utilities"
 import invariant from "tiny-invariant"
 import { ListType } from "api/constants"
 
-jest.mock("ol-components", () => {
-  const actual = jest.requireActual("ol-components")
+jest.mock("ol-components/SortableList/SortableList", () => {
+  const actual = jest.requireActual("ol-components/SortableList/SortableList")
   return {
     __esModule: true,
     ...actual,
     SortableList: jest.fn(actual.SortableList),
     SortableItem: jest.fn(actual.SortableItem),
-    LearningResourceListCard: jest.fn(actual.LearningResourceListCard),
-    LearningResourceListCardCondensed: jest.fn(
-      actual.LearningResourceListCardCondensed,
-    ),
   }
 })
+
+jest.mock("ol-components/LearningResourceCard/LearningResourceListCard", () => {
+  const actual = jest.requireActual(
+    "ol-components/LearningResourceCard/LearningResourceListCard",
+  )
+  return {
+    __esModule: true,
+    ...actual,
+    LearningResourceListCard: jest.fn(actual.LearningResourceListCard),
+  }
+})
+
+jest.mock(
+  "ol-components/LearningResourceCard/LearningResourceListCardCondensed",
+  () => {
+    const actual = jest.requireActual(
+      "ol-components/LearningResourceCard/LearningResourceListCardCondensed",
+    )
+    return {
+      __esModule: true,
+      ...actual,
+      LearningResourceListCardCondensed: jest.fn(
+        actual.LearningResourceListCardCondensed,
+      ),
+    }
+  },
+)
 
 const spyLearningResourceListCard = jest.mocked(LearningResourceListCard)
 const spyLearningResourceListCardCondensed = jest.mocked(

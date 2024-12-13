@@ -2,13 +2,13 @@
 
 import React from "react"
 import { useParams } from "next/navigation"
+import dynamic from "next/dynamic"
+import { Typography } from "ol-components/ThemeProvider/typography"
 import { ChannelPageTemplate } from "./ChannelPageTemplate"
 import { useChannelDetail } from "api/hooks/channels"
 import ChannelSearch from "./ChannelSearch"
 import { ChannelTypeEnum } from "api/v0"
-import { Typography } from "ol-components"
 import { getConstantSearchParams } from "./searchRequests"
-import dynamic from "next/dynamic"
 
 const LearningResourceDrawer = dynamic(
   () =>

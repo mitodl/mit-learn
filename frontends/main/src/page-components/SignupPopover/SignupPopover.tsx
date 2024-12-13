@@ -1,6 +1,9 @@
 import React from "react"
-import { Popover, Typography, styled, ButtonLink } from "ol-components"
-import type { PopoverProps } from "ol-components"
+import styled from "@emotion/styled"
+import { Typography } from "ol-components/ThemeProvider/typography"
+import { Popover } from "ol-components/Popover/Popover"
+import type { PopoverProps } from "ol-components/Popover/Popover"
+import { ButtonLink } from "ol-components/Button/Button"
 import * as urls from "@/common/urls"
 import { usePathname, useSearchParams } from "next/navigation"
 

@@ -27,7 +27,10 @@ import { CloudServices } from "@ckeditor/ckeditor5-cloud-services"
 
 // block toolbar setup
 import { BlockToolbar } from "@ckeditor/ckeditor5-ui"
-import { ensureEmbedlyPlatform, embedlyCardHtml } from "ol-components"
+import {
+  ensureEmbedlyPlatform,
+  embedlyCardHtml,
+} from "ol-components/EmbedlyCard/util"
 import cloudServicesConfig from "./cloudServices"
 import { useOnChangePendingActions } from "./util"
 

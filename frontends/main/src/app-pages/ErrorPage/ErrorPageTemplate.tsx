@@ -1,5 +1,8 @@
 import React from "react"
-import { Container, ButtonLink, Typography, styled } from "ol-components"
+import styled from "@emotion/styled"
+import { Typography } from "ol-components/ThemeProvider/typography"
+import Container from "@mui/material/Container"
+import { ButtonLink } from "ol-components/Button/Button"
 import { HOME } from "@/common/urls"
 
 type ErrorPageTemplateProps = {

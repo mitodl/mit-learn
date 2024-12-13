@@ -1,5 +1,7 @@
 import React, { useMemo } from "react"
-import { styled, Typography } from "ol-components"
+import styled from "@emotion/styled"
+// import { Typography } from "ol-components/ThemeProvider/typography"
+import { Typography } from "ol-components/ThemeProvider/typography"
 import { capitalize } from "ol-utilities"
 import { ChannelTypeEnum, Channel } from "api/v0"
 import { RiExternalLinkLine } from "@remixicon/react"

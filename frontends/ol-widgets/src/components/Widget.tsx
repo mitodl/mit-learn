@@ -1,6 +1,6 @@
 import React, { useCallback } from "react"
 import classNames from "classnames"
-import { Divider } from "ol-components"
+import Divider from "@mui/material/Divider"
 // eslint-disable-next-line @typescript-eslint/no-restricted-imports
 import MuiCard from "@mui/material/Card"
 // eslint-disable-next-line @typescript-eslint/no-restricted-imports

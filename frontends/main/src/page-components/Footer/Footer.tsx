@@ -1,6 +1,7 @@
 "use client"
 
-import { Container, styled } from "ol-components"
+import styled from "@emotion/styled"
+import Container from "@mui/material/Container"
 import MITLogoLink from "@/components/MITLogoLink/MITLogoLink"
 import * as urls from "@/common/urls"
 import React, { FunctionComponent } from "react"

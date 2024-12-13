@@ -1,7 +1,9 @@
 "use client"
 
 import React from "react"
-import { Container, styled, theme } from "ol-components"
+import styled from "@emotion/styled"
+import Container from "@mui/material/Container"
+import { theme } from "ol-components/ThemeProvider/ThemeProvider"
 import HeroSearch from "@/page-components/HeroSearch/HeroSearch"
 import BrowseTopicsSection from "./BrowseTopicsSection"
 import NewsEventsSection from "./NewsEventsSection"

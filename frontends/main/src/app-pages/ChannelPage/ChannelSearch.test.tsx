@@ -9,7 +9,6 @@ import {
 import { setMockResponse, urls, factories, makeRequest } from "api/test-utils"
 import type { LearningResourcesSearchResponse } from "api"
 import invariant from "tiny-invariant"
-import { makeWidgetListResponse } from "ol-widgets/src/factories"
 import type { Channel } from "api/v0"
 import { ChannelTypeEnum } from "api/v0"
 import ChannelPage from "./ChannelPage"
@@ -50,12 +49,6 @@ const setMockApiResponses = ({
   setMockResponse.get(
     urls.channels.details(channel.channel_type, channel.name),
     channel,
-  )
-
-  const widgetsList = makeWidgetListResponse()
-  setMockResponse.get(
-    urls.widgetLists.details(channel.widget_list || -1),
-    widgetsList,
   )
 
   setMockResponse.get(

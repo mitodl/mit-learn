@@ -1,15 +1,12 @@
 import React, { useEffect, useState } from "react"
 import { shuffle } from "lodash"
-import {
-  Container,
-  Typography,
-  styled,
-  theme,
-  pxToRem,
-  ActionButton,
-  TruncateText,
-  onReInitSlickA11y,
-} from "ol-components"
+import styled from "@emotion/styled"
+import { Typography, pxToRem } from "ol-components/ThemeProvider/typography"
+import Container from "@mui/material/Container"
+import { ActionButton } from "ol-components/Button/Button"
+import { TruncateText } from "ol-components/TruncateText/TruncateText"
+import { onReInitSlickA11y } from "ol-components/Carousel/util"
+import { theme } from "ol-components/ThemeProvider/ThemeProvider"
 import { useTestimonialList } from "api/hooks/testimonials"
 import type { Attestation } from "api/v0"
 import { RiArrowRightLine, RiArrowLeftLine } from "@remixicon/react"

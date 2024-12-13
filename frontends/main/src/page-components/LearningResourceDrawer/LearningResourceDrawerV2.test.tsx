@@ -8,17 +8,22 @@ import {
 } from "@/test-utils"
 import LearningResourceDrawerV2 from "./LearningResourceDrawerV2"
 import { urls, factories, setMockResponse } from "api/test-utils"
-import { LearningResourceExpandedV2 } from "ol-components"
+import { LearningResourceExpandedV2 } from "ol-components/LearningResourceExpanded/LearningResourceExpandedV2"
 import { RESOURCE_DRAWER_QUERY_PARAM } from "@/common/urls"
 import { ResourceTypeEnum } from "api"
 
-jest.mock("ol-components", () => {
-  const actual = jest.requireActual("ol-components")
-  return {
-    ...actual,
-    LearningResourceExpandedV2: jest.fn(actual.LearningResourceExpandedV2),
-  }
-})
+jest.mock(
+  "ol-components/LearningResourceExpanded/LearningResourceExpandedV2",
+  () => {
+    const actual = jest.requireActual(
+      "ol-components/LearningResourceExpanded/LearningResourceExpandedV2",
+    )
+    return {
+      ...actual,
+      LearningResourceExpandedV2: jest.fn(actual.LearningResourceExpandedV2),
+    }
+  },
+)
 
 const mockedPostHogCapture = jest.fn()
 

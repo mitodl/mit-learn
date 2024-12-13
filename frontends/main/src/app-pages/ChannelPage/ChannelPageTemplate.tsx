@@ -7,7 +7,7 @@ import {
   TOPICS as TOPICS_URL,
   UNITS as UNITS_URL,
 } from "@/common/urls"
-import { styled } from "ol-components"
+import styled from "@emotion/styled"
 import TopicChannelTemplate from "./TopicChannelTemplate"
 
 const TOPICS_LABEL = "Browse by Topic"

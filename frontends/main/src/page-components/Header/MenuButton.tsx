@@ -1,6 +1,6 @@
 "use client"
 
-import { styled } from "ol-components"
+import styled from "@emotion/styled"
 import { RiMenuLine } from "@remixicon/react"
 import React from "react"
 

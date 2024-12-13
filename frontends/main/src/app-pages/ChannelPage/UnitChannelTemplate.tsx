@@ -1,14 +1,12 @@
 import React, { useMemo } from "react"
-import {
-  styled,
-  Container,
-  Breadcrumbs,
-  Stack,
-  BannerBackground,
-  Typography,
-  VisuallyHidden,
-  UnitLogo,
-} from "ol-components"
+import styled from "@emotion/styled"
+import { Typography } from "ol-components/ThemeProvider/typography"
+import Container from "@mui/material/Container"
+import Stack from "@mui/material/Stack"
+import { Breadcrumbs } from "ol-components/Breadcrumbs/Breadcrumbs"
+import { BannerBackground } from "ol-components/Banner/Banner"
+import { VisuallyHidden } from "ol-components/VisuallyHidden/VisuallyHidden"
+import { UnitLogo } from "ol-components/Logo/Logo"
 import { OfferedByEnum, SourceTypeEnum } from "api"
 import { SearchSubscriptionToggle } from "@/page-components/SearchSubscriptionToggle/SearchSubscriptionToggle"
 import { ChannelDetails } from "@/page-components/ChannelDetails/ChannelDetails"

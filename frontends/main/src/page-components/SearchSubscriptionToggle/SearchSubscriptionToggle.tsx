@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from "react"
+import styled from "@emotion/styled"
 import { getSearchParamMap } from "@/common/utils"
 import {
   useSearchSubscriptionCreate,
   useSearchSubscriptionList,
 } from "api/hooks/searchSubscription"
-import { Button, styled } from "ol-components"
-
+import { Button } from "ol-components/Button/Button"
 import { RiMailLine } from "@remixicon/react"
 import { useUserMe } from "api/hooks/user"
 import { SourceTypeEnum } from "api"

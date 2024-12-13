@@ -40,17 +40,25 @@ module.exports = {
           importNames: ["default"],
           message: "Default import from 'lodash' is not allowed. Use named imports instead.",
         },
+        {
+          name: "@mui/material/Typography",
+          message: "Typography must be imported from 'ol-components/ThemeProvider/typography' for variant mappings",
+        }
       ],
       patterns: [
-        {
-          group: ["@mui/material*", "@mui/lab/*"],
-          message:
-            "Please use 'ol-components' isInterfaceDeclaration; Direct use of @mui/material is limited to ol-components.",
-        },
+        // {
+        //   group: ["@mui/material*", "@mui/lab/*"],
+        //   message:
+        //     "Please use 'ol-components' isInterfaceDeclaration; Direct use of @mui/material is limited to ol-components.",
+        // },
         {
           group: ["**/LearningResourceDrawer/LearningResourceDrawer"],
           message: "The LearningResourceDrawer should be lazy loaded with dynamic import.",
         },
+        {
+          group: ["@mui/lab/TabContext", "@mui/lab/TabPanel", "@mui/material/Tabs"],
+          message: "TabContext, TabPanel and Tabs must be imported from 'ol-components/TabButtons/TabButtonList'",
+        }
       ],
     }),
     // This rule is disabled in the default a11y config, but unclear why.
@@ -180,11 +188,6 @@ function restrictedImports({ paths = [], patterns = [] } = {}) {
           {
             name: "@faker-js/faker",
             message: "Please use @faker-js/faker/locale/en instead.",
-            allowTypeImports: true,
-          },
-          {
-            name: "@mui/material",
-            message: "Please use @mui/material/<COMPONENT_NAME> instead.",
             allowTypeImports: true,
           },
           ...paths,

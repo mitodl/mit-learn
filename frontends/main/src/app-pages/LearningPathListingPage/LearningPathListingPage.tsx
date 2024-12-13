@@ -1,20 +1,18 @@
 "use client"
 
 import React, { useCallback, useMemo } from "react"
-import {
-  Button,
-  SimpleMenu,
-  Grid,
-  LoadingSpinner,
-  BannerPage,
-  Container,
-  styled,
-  Typography,
-  PlainList,
-  LearningResourceListCard,
-  ListCardActionButton,
-} from "ol-components"
-import type { SimpleMenuItem } from "ol-components"
+import styled from "@emotion/styled"
+import { Typography } from "ol-components/ThemeProvider/typography"
+import Container from "@mui/material/Container"
+import { Button } from "ol-components/Button/Button"
+import { BannerPage } from "ol-components/BannerPage/BannerPage"
+import { SimpleMenu } from "ol-components/SimpleMenu/SimpleMenu"
+import { PlainList } from "ol-components/PlainList/PlainList"
+import { LoadingSpinner } from "ol-components/LoadingSpinner/LoadingSpinner"
+import { LearningResourceListCard } from "ol-components/LearningResourceCard/LearningResourceListCard"
+import { ListCardActionButton } from "ol-components/Card/ListCard"
+import Grid from "@mui/material/Grid"
+import type { SimpleMenuItem } from "ol-components/SimpleMenu/SimpleMenu"
 import { RiPencilFill, RiMore2Line, RiDeleteBinLine } from "@remixicon/react"
 
 import type { LearningPathResource } from "api"

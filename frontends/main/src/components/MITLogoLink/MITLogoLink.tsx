@@ -1,10 +1,10 @@
 import React from "react"
 import Image from "next/image"
 import Link from "next/link"
+import styled from "@emotion/styled"
 import mitLogoBlack from "@/public/images/mit-logo-black.svg"
 import whiteLogoWhite from "@/public/images/mit-logo-white.svg"
 import learnLogo from "@/public/images/mit-learn-logo.svg"
-import { styled } from "ol-components"
 
 interface Props {
   logo: "mit_white" | "mit_black" | "learn"

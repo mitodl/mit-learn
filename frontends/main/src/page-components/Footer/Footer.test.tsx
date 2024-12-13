@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react"
 import Footer from "./Footer"
 import React from "react"
-import { ThemeProvider } from "ol-components"
+import { ThemeProvider } from "ol-components/ThemeProvider/ThemeProvider"
 import * as urls from "@/common/urls"
 
 describe("Footer", () => {

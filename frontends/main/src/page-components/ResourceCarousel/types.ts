@@ -5,7 +5,7 @@ import type {
   LearningResourcesApiLearningResourcesSimilarListRequest as SimilarListParams,
   LearningResourcesApiLearningResourcesVectorSimilarListRequest as VectorSimilarListParams,
 } from "api"
-import type { LearningResourceCardProps } from "ol-components"
+import type { LearningResourceCardProps } from "ol-components/LearningResourceCard/LearningResourceCard"
 
 interface ResourceDataSource {
   type: "resources"

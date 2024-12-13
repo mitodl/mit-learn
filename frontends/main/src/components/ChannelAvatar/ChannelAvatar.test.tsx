@@ -1,7 +1,6 @@
 import React from "react"
 import { render, screen } from "@testing-library/react"
-
-import { ThemeProvider } from "ol-components"
+import { ThemeProvider } from "ol-components/ThemeProvider/ThemeProvider"
 import { channels as factory } from "api/test-utils/factories"
 import ChannelAvatar from "./ChannelAvatar"
 import { getByImageSrc } from "ol-test-utilities"

@@ -1,13 +1,10 @@
 import React from "react"
-import {
-  PlainList,
-  Typography,
-  Link,
-  styled,
-  Button,
-  Dialog,
-  DialogActions,
-} from "ol-components"
+import styled from "@emotion/styled"
+import { Typography } from "ol-components/ThemeProvider/typography"
+import { PlainList } from "ol-components/PlainList/PlainList"
+import { Button } from "ol-components/Button/Button"
+import { Dialog, DialogActions } from "ol-components/Dialog/Dialog"
+import { Link } from "ol-components/Link/Link"
 import { useUserMe } from "api/hooks/user"
 import {
   useSearchSubscriptionDelete,

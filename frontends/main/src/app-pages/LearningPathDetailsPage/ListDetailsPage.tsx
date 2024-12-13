@@ -1,5 +1,7 @@
 import React from "react"
-import { Container, BannerPage, styled } from "ol-components"
+import styled from "@emotion/styled"
+import Container from "@mui/material/Container"
+import { BannerPage } from "ol-components/BannerPage/BannerPage"
 import PrivateTitle from "@/components/PrivateTitle/PrivateTitle"
 import ItemsListingComponent from "@/page-components/ItemsListing/ItemsListingComponent"
 import type { ItemsListingComponentProps } from "@/page-components/ItemsListing/ItemsListingComponent"

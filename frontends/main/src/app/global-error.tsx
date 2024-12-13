@@ -15,7 +15,8 @@
 import React, { useEffect } from "react"
 import * as Sentry from "@sentry/nextjs"
 import FallbackErrorPage from "@/app-pages/ErrorPage/FallbackErrorPage"
-import { MITLearnGlobalStyles, ThemeProvider } from "ol-components"
+import { ThemeProvider } from "ol-components/ThemeProvider/ThemeProvider"
+import { MITLearnGlobalStyles } from "ol-components/ThemeProvider/MITLearnGlobalStyles"
 
 export default function GlobalError({ error }: { error: Error }) {
   useEffect(() => {

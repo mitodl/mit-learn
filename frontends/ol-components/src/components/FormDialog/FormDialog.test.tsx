@@ -5,7 +5,7 @@ import user from "@testing-library/user-event"
 import { FormDialog } from "./FormDialog"
 import type { FormDialogProps } from "./FormDialog"
 import { ControlledPromise } from "ol-test-utilities"
-import { ThemeProvider } from "ol-components"
+import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
 
 const setup = (props?: Partial<FormDialogProps>) => {
   const onSubmit = jest.fn((e) => {

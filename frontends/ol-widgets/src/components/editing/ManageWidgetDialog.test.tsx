@@ -7,7 +7,7 @@ import { makeWidgetListResponse, makeWidget } from "../../factories"
 import ManageWidgetDialog from "./ManageWidgetDialog"
 import type { ManageWidgetDialogProps } from "./ManageWidgetDialog"
 import { WidgetTypes } from "../../interfaces"
-import { ThemeProvider } from "ol-components"
+import { ThemeProvider } from "ol-components/ThemeProvider/ThemeProvider"
 
 type TestProps = Partial<ManageWidgetDialogProps>
 

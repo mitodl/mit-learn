@@ -1,5 +1,5 @@
 import React from "react"
-import { Container } from "ol-components"
+import Container from "@mui/material/Container"
 import ResourceCarousel, {
   ResourceCarouselProps,
 } from "@/page-components/ResourceCarousel/ResourceCarousel"

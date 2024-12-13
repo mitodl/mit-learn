@@ -1,6 +1,6 @@
 "use client"
 
-import { styled } from "ol-components"
+import styled from "@emotion/styled"
 
 /*
  * Use in server components gives:

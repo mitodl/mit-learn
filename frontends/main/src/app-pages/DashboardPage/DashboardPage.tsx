@@ -8,21 +8,23 @@ import {
   RiEditLine,
   RiNotificationLine,
 } from "@remixicon/react"
+import styled from "@emotion/styled"
 import {
-  ButtonLink,
-  Card,
-  Container,
-  Skeleton,
-  Tab,
-  TabButtonLink,
-  TabButtonList,
+  Typography,
+  TypographyProps,
+} from "ol-components/ThemeProvider/typography"
+import Container from "@mui/material/Container"
+import Skeleton from "@mui/material/Skeleton"
+import Tab from "@mui/material/Tab"
+import {
   TabContext,
   TabPanel,
   Tabs,
-  Typography,
-  TypographyProps,
-  styled,
-} from "ol-components"
+  TabButtonLink,
+  TabButtonList,
+} from "ol-components/TabButtons/TabButtonList"
+import { ButtonLink } from "ol-components/Button/Button"
+import { Card } from "ol-components/Card/Card"
 import Link from "next/link"
 import { useUserMe } from "api/hooks/user"
 import { useParams } from "next/navigation"

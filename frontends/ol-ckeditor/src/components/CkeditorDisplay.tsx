@@ -1,6 +1,9 @@
 import React, { useMemo, useEffect } from "react"
 import classNames from "classnames"
-import { embedlyCardHtml, ensureEmbedlyPlatform } from "ol-components"
+import {
+  embedlyCardHtml,
+  ensureEmbedlyPlatform,
+} from "ol-components/EmbedlyCard/util"
 
 const parser = new DOMParser()
 interface Replacer {

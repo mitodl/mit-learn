@@ -1,14 +1,12 @@
 import React from "react"
+import styled from "@emotion/styled"
+import { Typography } from "ol-components/ThemeProvider/typography"
+import Skeleton from "@mui/material/Skeleton"
 import type { OfferedByEnum } from "api"
 import type { UnitChannel } from "api/v0"
-import {
-  Card,
-  Skeleton,
-  Typography,
-  styled,
-  theme,
-  UnitLogo,
-} from "ol-components"
+import { Card } from "ol-components/Card/Card"
+import { UnitLogo } from "ol-components/Logo/Logo"
+import { theme } from "ol-components/ThemeProvider/ThemeProvider"
 import Link from "next/link"
 
 const CardStyled = styled(Card)({

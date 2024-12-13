@@ -1,6 +1,6 @@
 import React from "react"
-import { Grid } from "ol-components"
-import type { GridProps } from "ol-components"
+import Grid from "@mui/material/Grid"
+import type { GridProps } from "@mui/material/Grid"
 
 type GridContainerProps = Omit<
   GridProps,

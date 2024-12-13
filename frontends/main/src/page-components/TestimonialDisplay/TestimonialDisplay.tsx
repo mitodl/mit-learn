@@ -1,14 +1,11 @@
 import React from "react"
-
+import styled from "@emotion/styled"
 import { RiArrowRightLine, RiArrowLeftLine } from "@remixicon/react"
 import Slider from "react-slick"
-import {
-  ActionButton,
-  TruncateText,
-  onReInitSlickA11y,
-  styled,
-  theme,
-} from "ol-components"
+import { ActionButton } from "ol-components/Button/Button"
+import { TruncateText } from "ol-components/TruncateText/TruncateText"
+import { onReInitSlickA11y } from "ol-components/Carousel/util"
+import { theme } from "ol-components/ThemeProvider/ThemeProvider"
 import AttestantBlock from "./AttestantBlock"
 import { useTestimonialList } from "api/hooks/testimonials"
 import type { Attestation } from "api/v0"

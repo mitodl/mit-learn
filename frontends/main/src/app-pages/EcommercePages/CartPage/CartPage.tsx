@@ -1,6 +1,8 @@
 "use client"
 import React from "react"
-import { Breadcrumbs, Container, Typography } from "ol-components"
+import { Typography } from "ol-components/ThemeProvider/typography"
+import Container from "@mui/material/Container"
+import { Breadcrumbs } from "ol-components/Breadcrumbs/Breadcrumbs"
 import EcommerceFeature from "@/page-components/EcommerceFeature/EcommerceFeature"
 import * as urls from "@/common/urls"
 

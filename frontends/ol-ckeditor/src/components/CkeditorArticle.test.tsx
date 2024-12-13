@@ -2,10 +2,10 @@
 import React from "react"
 import { render } from "@testing-library/react"
 import CkeditorArticle from "./CkeditorArticle"
-import { ensureEmbedlyPlatform } from "ol-components"
+import { ensureEmbedlyPlatform } from "ol-components/EmbedlyCard/util"
 
-jest.mock("ol-components", () => {
-  const original = jest.requireActual("ol-components")
+jest.mock("ol-components/EmbedlyCard/util", () => {
+  const original = jest.requireActual("ol-components/EmbedlyCard/util")
   return {
     ...original,
     ensureEmbedlyPlatform: jest.fn(original.ensureEmbedlyPlatform),

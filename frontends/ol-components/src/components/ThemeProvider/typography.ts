@@ -14,8 +14,8 @@ const fontWeights = {
  * (which is the default for most modern browsers).
  *
  * Using this function, we can:
- * - match desgins that are in pixels for default font size
- * - allow users to scale the font size up or down by chaning base font size.
+ * - match designs that are in pixels for default font size
+ * - allow users to scale the font size up or down by changing base font size.
  *
  * For example, a Chrome user might specify a base font size of 20px ("large")
  * in their browser settings. Then, `pxToRem(32)` would actually be 40px for
@@ -171,4 +171,6 @@ const { typography } = createTheme({
   custom: {},
 })
 
+export { default as Typography } from "@mui/material/Typography"
+export type { TypographyProps } from "@mui/material/Typography"
 export { globalSettings, component, pxToRem, typography }

@@ -1,14 +1,14 @@
 import React, { useCallback } from "react"
+import styled from "@emotion/styled"
 import {
-  Button,
-  LoadingSpinner,
-  styled,
   Typography,
-  PlainList,
-  Card,
-  theme,
   TypographyProps,
-} from "ol-components"
+} from "ol-components/ThemeProvider/typography"
+import { Button } from "ol-components/Button/Button"
+import { LoadingSpinner } from "ol-components/LoadingSpinner/LoadingSpinner"
+import { PlainList } from "ol-components/PlainList/PlainList"
+import { Card } from "ol-components/Card/Card"
+import { theme } from "ol-components/ThemeProvider/ThemeProvider"
 import { RiListCheck3 } from "@remixicon/react"
 import { useUserListList } from "api/hooks/userLists"
 import { GridColumn, GridContainer } from "@/components/GridLayout/GridLayout"

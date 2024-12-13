@@ -1,8 +1,11 @@
 import React from "react"
+import styled from "@emotion/styled"
 import { UserList } from "api"
 import { pluralize } from "ol-utilities"
 import { RiListCheck3 } from "@remixicon/react"
-import { ListCardCondensed, styled, theme, Typography } from "ol-components"
+import { Typography } from "ol-components/ThemeProvider/typography"
+import { theme } from "ol-components/ThemeProvider/ThemeProvider"
+import { ListCardCondensed } from "ol-components/Card/ListCardCondensed"
 import Link from "next/link"
 
 const StyledCard = styled(ListCardCondensed)({

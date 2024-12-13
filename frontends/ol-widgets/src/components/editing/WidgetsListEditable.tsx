@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react"
 import type { Dispatch, SetStateAction } from "react"
+import { Button } from "ol-components/Button/Button"
 import {
-  Button,
   RenderActive,
   SortableItem,
   SortableList,
   SortEndEvent,
-} from "ol-components"
+} from "ol-components/SortableList/SortableList"
 import { RiAddLine } from "@remixicon/react"
 import { uniqueId, zip } from "lodash"
 import Widget from "../Widget"

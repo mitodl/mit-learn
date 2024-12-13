@@ -1,13 +1,13 @@
 import React from "react"
+import styled from "@emotion/styled"
 import Link from "next/link"
+import Container from "@mui/material/Container"
 import {
-  Container,
-  styled,
-  theme,
   Typography,
-  ButtonLink,
   TypographyProps,
-} from "ol-components"
+} from "ol-components/ThemeProvider/typography"
+import { ButtonLink } from "ol-components/Button/Button"
+import { theme } from "ol-components/ThemeProvider/ThemeProvider"
 import { useLearningResourceTopics } from "api/hooks/learningResources"
 import { RiArrowRightLine } from "@remixicon/react"
 import RootTopicIcon from "@/components/RootTopicIcon/RootTopicIcon"

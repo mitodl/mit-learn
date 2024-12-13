@@ -9,11 +9,15 @@ import WidgetsListEditable from "./WidgetsListEditable"
 import { btnLabel } from "../Widget"
 import { WidgetTypes } from "../../interfaces"
 import { assertInstanceOf } from "ol-utilities"
-import { SortableList, SortEndEvent, ThemeProvider } from "ol-components"
+import { ThemeProvider } from "ol-components/ThemeProvider/ThemeProvider"
+import {
+  SortableList,
+  SortEndEvent,
+} from "ol-components/SortableList/SortableList"
 import invariant from "tiny-invariant"
 
-jest.mock("ol-components", () => {
-  const actual = jest.requireActual("ol-components")
+jest.mock("ol-components/SortableList/SortableList", () => {
+  const actual = jest.requireActual("ol-components/SortableList/SortableList")
   return {
     __esModule: true,
     ...actual,

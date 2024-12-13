@@ -1,6 +1,8 @@
 import React from "react"
 import { RiAccountCircleFill } from "@remixicon/react"
-import { TruncateText, styled, theme } from "ol-components"
+import styled from "@emotion/styled"
+import { TruncateText } from "ol-components/TruncateText/TruncateText"
+import { theme } from "ol-components/ThemeProvider/ThemeProvider"
 import type { Attestation } from "api/v0"
 import Image from "next/image"
 

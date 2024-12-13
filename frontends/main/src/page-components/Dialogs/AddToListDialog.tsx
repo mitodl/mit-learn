@@ -1,17 +1,13 @@
 import React, { useCallback } from "react"
-import {
-  LoadingSpinner,
-  Typography,
-  styled,
-  CheckboxChoiceField,
-  Button,
-  FormDialog,
-  DialogActions,
-} from "ol-components"
-
 import { RiAddLine } from "@remixicon/react"
 import { usePostHog } from "posthog-js/react"
-
+import styled from "@emotion/styled"
+import { Typography } from "ol-components/ThemeProvider/typography"
+import { LoadingSpinner } from "ol-components/LoadingSpinner/LoadingSpinner"
+import { CheckboxChoiceField } from "ol-components/Checkbox/CheckboxChoiceField"
+import { Button } from "ol-components/Button/Button"
+import { FormDialog } from "ol-components/FormDialog/FormDialog"
+import { DialogActions } from "ol-components/Dialog/Dialog"
 import NiceModal, { muiDialogV5 } from "@ebay/nice-modal-react"
 
 import type { LearningPathResource, LearningResource, UserList } from "api"

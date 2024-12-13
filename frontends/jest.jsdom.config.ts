@@ -14,6 +14,14 @@ const config: Config.InitialOptions &
   moduleNameMapper: {
     "\\.(svg|jpg|jpeg|png)$": "ol-test-utilities/filemocks/imagemock.js",
     "\\.(css|scss)$": "ol-test-utilities/filemocks/filemock.js",
+    "ol-components/constants/(.*)$": resolve(
+      __dirname,
+      "ol-components/src/constants/$1",
+    ),
+    "ol-components/(.*)$": resolve(
+      __dirname,
+      "ol-components/src/components/$1",
+    ),
   },
   rootDir: "./src",
 }

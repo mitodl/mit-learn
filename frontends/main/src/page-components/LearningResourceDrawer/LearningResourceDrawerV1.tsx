@@ -1,13 +1,9 @@
 import React, { Suspense, useEffect, useMemo } from "react"
-import {
-  RoutedDrawer,
-  LearningResourceExpandedV1,
-  imgConfigs,
-} from "ol-components"
-import type {
-  LearningResourceCardProps,
-  RoutedDrawerProps,
-} from "ol-components"
+import { RoutedDrawer } from "ol-components/RoutedDrawer/RoutedDrawer"
+import { LearningResourceExpandedV1 } from "ol-components/LearningResourceExpanded/LearningResourceExpandedV1"
+import { imgConfigs } from "ol-components/constants/imgConfigs"
+import type { LearningResourceCardProps } from "ol-components/LearningResourceCard/LearningResourceCard"
+import type { RoutedDrawerProps } from "ol-components/RoutedDrawer/RoutedDrawer"
 import { useLearningResourcesDetail } from "api/hooks/learningResources"
 
 import { RESOURCE_DRAWER_QUERY_PARAM } from "@/common/urls"

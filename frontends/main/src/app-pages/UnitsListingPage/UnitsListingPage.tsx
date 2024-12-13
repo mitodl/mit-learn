@@ -1,15 +1,13 @@
 "use client"
 
 import React from "react"
+import styled from "@emotion/styled"
+import { Typography } from "ol-components/ThemeProvider/typography"
+import Container from "@mui/material/Container"
 import { useChannelCounts, useChannelsList } from "api/hooks/channels"
-import {
-  Banner,
-  Container,
-  Typography,
-  styled,
-  theme,
-  Breadcrumbs,
-} from "ol-components"
+import { Breadcrumbs } from "ol-components/Breadcrumbs/Breadcrumbs"
+import { Banner } from "ol-components/Banner/Banner"
+import { theme } from "ol-components/ThemeProvider/ThemeProvider"
 import { backgroundSrcSetCSS } from "ol-utilities"
 import backgroundSteps from "@/public/images/backgrounds/background_steps.jpg"
 import { RiBookOpenLine, RiSuitcaseLine } from "@remixicon/react"

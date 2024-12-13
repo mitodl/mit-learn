@@ -1,11 +1,9 @@
 import React, { useCallback, useMemo, useState } from "react"
-import {
-  LearningResourceCard,
-  LearningResourceListCard,
-  LearningResourceListCardCondensed,
-} from "ol-components"
+import { LearningResourceCard } from "ol-components/LearningResourceCard/LearningResourceCard"
+import type { LearningResourceCardProps } from "ol-components/LearningResourceCard/LearningResourceCard"
+import { LearningResourceListCard } from "ol-components/LearningResourceCard/LearningResourceListCard"
+import { LearningResourceListCardCondensed } from "ol-components/LearningResourceCard/LearningResourceListCardCondensed"
 import NiceModal from "@ebay/nice-modal-react"
-import type { LearningResourceCardProps } from "ol-components"
 import {
   AddToLearningPathDialog,
   AddToUserListDialog,

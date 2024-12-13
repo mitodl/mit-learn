@@ -12,6 +12,7 @@ const config: Config.InitialOptions = {
       ")/)",
   ],
   moduleNameMapper: {
+    ...baseConfig.moduleNameMapper,
     "\\.svg$": "ol-test-utilities/filemocks/raw-svgmock.js",
     "\\.(css|scss)$": "ol-test-utilities/filemocks/filemock.js",
   },

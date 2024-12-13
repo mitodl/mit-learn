@@ -3,7 +3,7 @@ import Header from "@/page-components/Header/Header"
 import Footer from "@/page-components/Footer/Footer"
 import { PageWrapper, PageWrapperInner } from "./styled"
 import Providers from "./providers"
-import { MITLearnGlobalStyles } from "ol-components"
+import { MITLearnGlobalStyles } from "ol-components/ThemeProvider/MITLearnGlobalStyles"
 import Script from "next/script"
 
 import "./GlobalStyles"

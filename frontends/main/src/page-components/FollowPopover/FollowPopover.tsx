@@ -1,6 +1,9 @@
 import React, { useMemo } from "react"
-import { Popover, Typography, styled, Button } from "ol-components"
-import type { PopoverProps } from "ol-components"
+import styled from "@emotion/styled"
+import { Typography } from "ol-components/ThemeProvider/typography"
+import { Button } from "ol-components/Button/Button"
+import { Popover } from "ol-components/Popover/Popover"
+import type { PopoverProps } from "ol-components/Popover/Popover"
 import { getSearchParamMap } from "@/common/utils"
 
 import { SignupPopover } from "../SignupPopover/SignupPopover"

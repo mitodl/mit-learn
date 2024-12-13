@@ -1,14 +1,14 @@
 "use client"
 
 import React from "react"
+import styled from "@emotion/styled"
 // Not currently linked to. See https://github.com/mitodl/hq/issues/4639
+import Container from "@mui/material/Container"
 import {
-  Breadcrumbs,
-  Container,
   Typography,
   TypographyProps,
-  styled,
-} from "ol-components"
+} from "ol-components/ThemeProvider/typography"
+import { Breadcrumbs } from "ol-components/Breadcrumbs/Breadcrumbs"
 import * as urls from "@/common/urls"
 
 const PageContainer = styled.div(({ theme }) => ({

@@ -1,18 +1,16 @@
 "use client"
 
 import React, { useMemo } from "react"
-import {
-  Container,
-  Typography,
-  styled,
-  Grid,
-  PlainList,
-  ChipLink,
-  linkStyles,
-  Banner,
-  Skeleton,
-  Breadcrumbs,
-} from "ol-components"
+import styled from "@emotion/styled"
+import { Typography } from "ol-components/ThemeProvider/typography"
+import Container from "@mui/material/Container"
+import Grid from "@mui/material/Grid"
+import Skeleton from "@mui/material/Skeleton"
+import { PlainList } from "ol-components/PlainList/PlainList"
+import { ChipLink } from "ol-components/Chips/ChipLink"
+import { Banner } from "ol-components/Banner/Banner"
+import { Breadcrumbs } from "ol-components/Breadcrumbs/Breadcrumbs"
+import { linkStyles } from "ol-components/Link/Link"
 import Link from "next/link"
 import { propsNotNil, backgroundSrcSetCSS } from "ol-utilities"
 import { useLearningResourceTopics } from "api/hooks/learningResources"

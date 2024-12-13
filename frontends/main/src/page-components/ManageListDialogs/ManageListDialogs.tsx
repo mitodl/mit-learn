@@ -2,16 +2,14 @@ import React, { useCallback } from "react"
 import { useFormik, FormikConfig } from "formik"
 import NiceModal, { muiDialogV5 } from "@ebay/nice-modal-react"
 import { RiDeleteBinLine } from "@remixicon/react"
-import {
-  Alert,
-  TextField,
-  Autocomplete,
-  BooleanRadioChoiceField,
-  FormDialog,
-  Dialog,
-  MenuItem,
-  Button,
-} from "ol-components"
+import Autocomplete from "@mui/material/Autocomplete"
+import { Alert } from "ol-components/Alert/Alert"
+import { TextField } from "ol-components/TextField/TextField"
+import { BooleanRadioChoiceField } from "ol-components/RadioChoiceField/RadioChoiceField"
+import { FormDialog } from "ol-components/FormDialog/FormDialog"
+import { Dialog } from "ol-components/Dialog/Dialog"
+import { MenuItem } from "ol-components/MenuItem/MenuItem"
+import { Button } from "ol-components/Button/Button"
 import * as Yup from "yup"
 import { PrivacyLevelEnum, type LearningPathResource, UserList } from "api"
 

@@ -9,12 +9,14 @@ import {
   waitFor,
 } from "@/test-utils"
 import { factories, setMockResponse, makeRequest, urls } from "api/test-utils"
-import { LearningResourceCard } from "ol-components"
+import { LearningResourceCard } from "ol-components/LearningResourceCard/LearningResourceCard"
 import { ControlledPromise } from "ol-test-utilities"
 import invariant from "tiny-invariant"
 
-jest.mock("ol-components", () => {
-  const actual = jest.requireActual("ol-components")
+jest.mock("ol-components/LearningResourceCard/LearningResourceCard", () => {
+  const actual = jest.requireActual(
+    "ol-components/LearningResourceCard/LearningResourceCard",
+  )
   return {
     ...actual,
     LearningResourceCard: jest.fn(actual.LearningResourceCard),

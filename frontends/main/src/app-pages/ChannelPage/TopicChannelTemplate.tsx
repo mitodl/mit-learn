@@ -1,13 +1,11 @@
 import React from "react"
-import {
-  styled,
-  Breadcrumbs,
-  Banner,
-  ChipLink,
-  Typography,
-  Skeleton,
-  BreadcrumbsProps,
-} from "ol-components"
+import styled from "@emotion/styled"
+import { Typography } from "ol-components/ThemeProvider/typography"
+import Skeleton from "@mui/material/Skeleton"
+import { Breadcrumbs } from "ol-components/Breadcrumbs/Breadcrumbs"
+import { Banner } from "ol-components/Banner/Banner"
+import { ChipLink } from "ol-components/Chips/ChipLink"
+import type { BreadcrumbsProps } from "ol-components/Breadcrumbs/Breadcrumbs"
 import { SearchSubscriptionToggle } from "@/page-components/SearchSubscriptionToggle/SearchSubscriptionToggle"
 import { useChannelDetail } from "api/hooks/channels"
 import ChannelMenu from "@/components/ChannelMenu/ChannelMenu"

@@ -1,14 +1,14 @@
 "use client"
 
 import React, { useState } from "react"
-import {
-  ActionButtonLink,
-  ButtonLink,
-  SimpleMenu,
-  styled,
-  theme,
-} from "ol-components"
-import type { MenuOverrideProps, SimpleMenuItem } from "ol-components"
+import styled from "@emotion/styled"
+import { ActionButtonLink, ButtonLink } from "ol-components/Button/Button"
+import { SimpleMenu } from "ol-components/SimpleMenu/SimpleMenu"
+import { theme } from "ol-components/ThemeProvider/ThemeProvider"
+import type {
+  MenuOverrideProps,
+  SimpleMenuItem,
+} from "ol-components/SimpleMenu/SimpleMenu"
 import * as urls from "@/common/urls"
 import {
   RiAccountCircleFill,

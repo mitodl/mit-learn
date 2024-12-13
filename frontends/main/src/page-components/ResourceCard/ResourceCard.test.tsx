@@ -19,14 +19,27 @@ import type { ResourceCardProps } from "./ResourceCard"
 import { urls, factories, setMockResponse } from "api/test-utils"
 import { RESOURCE_DRAWER_QUERY_PARAM } from "@/common/urls"
 import invariant from "tiny-invariant"
-import { LearningResourceCard, LearningResourceListCard } from "ol-components"
+import { LearningResourceCard } from "ol-components/LearningResourceCard/LearningResourceCard"
+import { LearningResourceListCard } from "ol-components/LearningResourceCard/LearningResourceListCard"
 
-jest.mock("ol-components", () => {
-  const actual = jest.requireActual("ol-components")
+jest.mock("ol-components/LearningResourceCard/LearningResourceCard", () => {
+  const actual = jest.requireActual(
+    "ol-components/LearningResourceCard/LearningResourceCard",
+  )
   return {
     __esModule: true,
     ...actual,
     LearningResourceCard: jest.fn(actual.LearningResourceCard),
+  }
+})
+
+jest.mock("ol-components/LearningResourceCard/LearningResourceListCard", () => {
+  const actual = jest.requireActual(
+    "ol-components/LearningResourceCard/LearningResourceListCard",
+  )
+  return {
+    __esModule: true,
+    ...actual,
     LearningResourceListCard: jest.fn(actual.LearningResourceListCard),
   }
 })
