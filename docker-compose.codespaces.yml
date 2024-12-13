@@ -2,6 +2,14 @@ include:
   - docker-compose.services.yml
 
 services:
+  ai:
+    extends:
+      file: docker-compose.apps.yml
+      service: ai
+    env_file: env/codespaces.env
+    depends_on:
+      - opensearch-node-mitopen-1
+
   web:
     extends:
       file: docker-compose.apps.yml
