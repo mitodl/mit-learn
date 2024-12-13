@@ -217,6 +217,7 @@ const ButtonContainer = styled.div({
 
 const SelectableButton = styled(Button)<{ selected?: boolean }>((props) => [
   {
+    flex: 1,
     whiteSpace: "nowrap",
   },
   props.selected
