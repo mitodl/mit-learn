@@ -1,0 +1,107 @@
+#!/bin/sh
+>.env
+echo "# Vault Secrets" >>.env
+echo "CKEDITOR_ENVIRONMENT_ID=${CKEDITOR_ENVIRONMENT_ID}" >>.env
+echo "CKEDITOR_SECRET_KEY=${CKEDITOR_SECRET_KEY}" >>.env
+echo "CKEDITOR_UPLOAD_URL=${CKEDITOR_UPLOAD_URL}" >>.env
+echo "EDX_API_CLIENT_ID=${EDX_API_CLIENT_ID}" >>.env
+echo "EDX_API_CLIENT_SECRET=${EDX_API_CLIENT_SECRET}" >>.env
+echo "EMBEDLY_KEY=${EMBEDLY_KEY}" >>.env
+echo "MAILGUN_KEY=${MAILGUN_KEY}" >>.env
+echo "OCW_NEXT_SEARCH_WEBHOOK_KEY=${OCW_NEXT_SEARCH_WEBHOOK_KEY}" >>.env
+echo "OCW_WEBHOOK_KEY=${OCW_WEBHOOK_KEY}" >>.env
+echo "OLL_API_CLIENT_ID=${OLL_API_CLIENT_ID}" >>.env
+echo "OPENSEARCH_HTTP_AUTH=${OPENSEARCH_HTTP_AUTH}" >>.env
+echo "SENTRY_DSN=${SENTRY_DSN}" >>.env
+echo "SOCIAL_AUTH_OL_OIDC_SECRET=${SOCIAL_AUTH_OL_OIDC_SECRET}" >>.env
+echo "STATUS_TOKEN=${STATUS_TOKEN}" >>.env
+echo "TIKA_ACCESS_TOKEN=${TIKA_ACCESS_TOKEN}" >>.env
+echo "YOUTUBE_DEVELOPER_KEY=${YOUTUBE_DEVELOPER_KEY}" >>.env
+echo "POSTHOG_PROJECT_API_KEY=${POSTHOG_PROJECT_API_KEY}" >>.env
+echo "POSTHOG_PERSONAL_API_KEY=${POSTHOG_PERSONAL_API_KEY}" >>.env
+echo >>.env
+echo "# Heroku Vault Static Vars" >>.env
+echo "ALLOWED_HOSTS=["*"]" >>.env
+echo "AWS_STORAGE_BUCKET_NAME=ol-mitlearn-app-storage-qa" >>.env
+echo "CORS_ALLOWED_ORIGIN_REGEXES=['^.+ocw-next.netlify.app$']" >>.env
+echo "CSAIL_BASE_URL=https://cap.csail.mit.edu/" >>.env
+echo "CSRF_COOKIE_DOMAIN=.rc.learn.mit.edu" >>.env
+echo "EDX_API_ACCESS_TOKEN_URL=https://api.edx.org/oauth2/v1/access_token" >>.env
+echo "EDX_API_URL=https://api.edx.org/catalog/v1/catalogs/10/courses" >>.env
+echo "EDX_PROGRAMS_API_URL=https://discovery.edx.org/api/v1/programs/" >>.env
+echo "MICROMASTERS_CATALOG_API_URL=https://micromasters.mit.edu/api/v0/catalog/" >>.env
+echo "MICROMASTERS_CMS_API_URL=https://micromasters.mit.edu/api/v0/wagtail/" >>.env
+echo "MITOL_ADMIN_EMAIL=cuddle-bunnies@mit.edu" >>.env
+echo "MITOL_AXIOS_BASE_PATH=https://rc.learn.mit.edu" >>.env
+echo "MITOL_DEFAULT_SITE_KEY=micromasters" >>.env
+echo "MITOL_EMAIL_PORT=587" >>.env
+echo "MITOL_EMAIL_TLS=True" >>.env
+echo "MITOL_ENVIRONMENT=local" >>.env
+echo "MITOL_FROM_EMAIL=MITOpen <mitopen-support@mit.edu>" >>.env
+echo "MITOL_FRONTPAGE_DIGEST_MAX_POSTS=10" >>.env
+echo "MITOL_USE_S3=True" >>.env
+echo "MITOL_NOTIFICATION_EMAIL_BACKEND=anymail.backends.mailgun.EmailBackend" >>.env
+echo "MITPE_BASE_URL=https://professional.mit.edu/" >>.env
+echo "MITX_ONLINE_BASE_URL=https://mitxonline.mit.edu/" >>.env
+echo "MITX_ONLINE_COURSES_API_URL=https://mitxonline.mit.edu/api/v2/courses/" >>.env
+echo "MITX_ONLINE_LEARNING_COURSE_BUCKET_NAME=mitx-etl-mitxonline-production" >>.env
+echo "MITX_ONLINE_PROGRAMS_API_URL=https://mitxonline.mit.edu/api/v2/programs/" >>.env
+echo "OCW_BASE_URL=https://ocw.mit.edu/" >>.env
+echo "OCW_CONTENT_BUCKET_NAME=ocw-content-storage" >>.env
+echo "OCW_UPLOAD_IMAGE_ONLY=True" >>.env
+echo "OCW_LIVE_BUCKET=ocw-content-live-production" >>.env
+echo "OLL_ALT_URL=https://openlearninglibrary.mit.edu/courses/" >>.env
+echo "OLL_API_ACCESS_TOKEN_URL=https://openlearninglibrary.mit.edu/oauth2/access_token/" >>.env
+echo "OLL_API_URL=https://discovery.openlearninglibrary.mit.edu/api/v1/catalogs/1/courses/" >>.env
+echo "OLL_BASE_URL=https://openlearninglibrary.mit.edu/course/" >>.env
+echo "OLL_LEARNING_COURSE_BUCKET_NAME=ol-data-lake-landing-zone-production" >>.env
+echo "OLL_LEARNING_COURSE_BUCKET_PREFIX=open-learning-library/courses/" >>.env
+echo "OPENSEARCH_DEFAULT_TIMEOUT=30" >>.env
+echo "OPENSEARCH_INDEXING_CHUNK_SIZE=75" >>.env
+echo "QDRANT_COLLECTION_NAME=mitlearn-qa" >>.env
+echo "PROLEARN_CATALOG_API_URL=https://prolearn.mit.edu/graphql" >>.env
+echo "SEE_API_URL=https://mit-unified-portal-prod-78eeds.43d8q2.usa-e2.cloudhub.io/api/" >>.env
+echo "SEE_API_ACCESS_TOKEN_URL=https://mit-unified-portal-prod-78eeds.43d8q2.usa-e2.cloudhub.io/oauth/token" >>.env
+echo "SECURE_CROSS_ORIGIN_OPENER_POLICY=None" >>.env
+echo "SEE_BASE_URL=https://executive.mit.edu/" >>.env
+echo "SENTRY_ENV=dev" >>.env
+echo "SOCIAL_AUTH_OL_OIDC_KEY=ol-mitlearn-client" >>.env
+echo "XPRO_CATALOG_API_URL=https://xpro.mit.edu/api/programs/" >>.env
+echo "XPRO_COURSES_API_URL=https://xpro.mit.edu/api/courses/" >>.env
+echo "XPRO_LEARNING_COURSE_BUCKET_NAME=mitx-etl-xpro-production-mitxpro-production" >>.env
+echo "YOUTUBE_FETCH_TRANSCRIPT_SCHEDULE_SECONDS=21600" >>.env
+echo "YOUTUBE_CONFIG_URL=https://raw.githubusercontent.com/mitodl/open-video-data/mitopen/youtube/channels.yaml" >>.env
+echo "POSTHOG_ENABLED=True" >>.env
+echo "POSTHOG_TIMEOUT_MS=1000" >>.env
+echo "POSTHOG_API_HOST=https://app.posthog.com" >>.env
+echo "POSTHOG_PROJECT_ID=63497" >>.env
+echo >>.env
+echo "# Heroku Interopelated Vars" >>.env
+echo "ACCESS_TOKEN_URL=https://sso-qa.ol.mit.edu/realms/olapps/protocol/openid-connect/token" >>.env
+echo "AUTHORIZATION_URL=https://sso-qa.ol.mit.edu/realms/olapps/protocol/openid-connect/auth" >>.env
+echo 'CORS_ALLOWED_ORIGINS=["https://mitopen-rc.odl.mit.edu", "https://ocw-next.netlify.app", "https://ol-devops-ci.odl.mit.edu", "https://draft-qa.ocw.mit.edu", "https://live-qa.ocw.mit.edu"]' >>.env
+echo 'CSRF_TRUSTED_ORIGINS=["https://api.mitopen-rc.odl.mit.edu", "https://mitopen-rc.odl.mit.edu"]' >>.env
+echo "KEYCLOAK_BASE_URL=https://sso-qa.ol.mit.edu/" >>.env
+echo "MAILGUN_FROM_EMAIL=MIT Open <no-reply@discussions-mail.odl.mit.edu" >>.env
+echo "MAILGUN_SENDER_DOMAIN=discussions-mail.odl.mit.edu" >>.env
+echo "MAILGUN_URL=https://api.mailgun.net/v3/discussions-mail.odl.mit.edu" >>.env
+echo "OIDC_ENDPOINT=https://sso-qa.ol.mit.edu/realms/olapps" >>.env
+echo "SESSION_COOKIE_DOMAIN=.odl.local" >>.env
+echo 'SOCIAL_AUTH_ALLOWED_REDIRECT_HOSTS=["live-qa.ocw.mit.edu", "mitopen-rc.odl.mit.edu"]' >>.env
+echo "SOCIAL_AUTH_OL_OIDC_OIDC_ENDPOINT=https://sso-qa.ol.mit.edu/realms/olapps" >>.env
+echo "USERINFO_URL=https://sso-qa.ol.mit.edu/realms/olapps/protocol/openid-connect/userinfo" >>.env
+echo >>.env
+echo "# Heroku Vars" >>.env
+echo "COMPOSE_PROFILES=backend,frontend" >>.env
+echo "DEBUG=false" >>.env
+echo "EDX_LEARNING_COURSE_BUCKET_NAME=edxorg-qa-edxapp-courses" >>.env
+echo "ENABLE_INFINITE_CORRIDOR=true" >>.env
+echo "GA_G_TRACKING_ID= " >>.env
+echo "GA_TRACKING_ID= " >>.env
+echo "INDEXING_API_USERNAME=admin" >>.env
+echo "MITLEARN_BASE_URL=http://localhost:8063" >>.env
+echo "MITLEARN_COOKIE_DOMAIN=odl.local" >>.env
+echo "MITLEARN_COOKIE_NAME=odc2" >>.env
+echo "MITLEARN_LOG_LEVEL=INFO" >>.env
+echo "OPENSEARCH_INDEX=mitlearn-rc" >>.env
+echo "TIKA_SERVER_ENDPOINT=http://tika:9998/" >>.env
