@@ -481,8 +481,6 @@ const CallToActionSection = ({
 }) => {
   const [shareExpanded, setShareExpanded] = useState(false)
   const [copyText, setCopyText] = useState("Copy Link")
-  const inputRef = useRef<HTMLInputElement>(null)
-  const copyLinkButtonRef = useRef<HTMLButtonElement>(null)
   if (hide) {
     return null
   }
@@ -575,12 +573,11 @@ const CallToActionSection = ({
             <ShareLabel>Share a link to this Resource</ShareLabel>
             <Input
               fullWidth
-              ref={inputRef}
               value={shareUrl}
-              onClick={() => {
-                if (inputRef.current) {
-                  inputRef.current.getElementsByTagName("input")[0].select()
-                }
+              onClick={(event) => {
+                const input = event.currentTarget.querySelector("input")
+                if (!input) return
+                input.select()
               }}
             />
             <ShareButtonContainer>
@@ -608,7 +605,6 @@ const CallToActionSection = ({
                 variant="bordered"
                 startIcon={<RedLinkIcon />}
                 aria-label={copyText}
-                ref={copyLinkButtonRef}
                 onClick={() => {
                   navigator.clipboard.writeText(shareUrl)
                   setCopyText("Copied!")
