@@ -207,7 +207,10 @@ def get_mapping_changes(object_type):
         if key not in reindexing_mapping:
             removed.append(key)
         elif old_mapping[key] != reindexing_mapping[key]:
-            if old_mapping[key].get("type") == "nested" and reindexing_mapping.get("type") == "nested":
+            if (
+                old_mapping[key].get("type") == "nested"
+                and reindexing_mapping.get("type") == "nested"
+            ):
                 for nested_key in old_mapping[key]["properties"]:
                     if nested_key not in reindexing_mapping[key]["properties"]:
                         removed.append(f"{key}.{nested_key}")

@@ -656,10 +656,11 @@ def start_full_recreate_index(self, indexes, remove_existing_reindexing_tags):
     # Use self.replace so that code waiting on this task will also wait on the indexing
     #  and finish tasks
     return self.replace(
-        celery.chain(index_tasks, finish_full_recreate_index.s(new_backing_indices))
+        celery.chain(index_tasks, finish_recreate_index.s(new_backing_indices))
     )
 
 
+@app.task(bind=True)
 def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
     """
     Wipe and recreate index and mapping, and index all items.
@@ -689,85 +690,27 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
 
         index_tasks = []
 
-       
-        if COURSE_TYPE in indexes:
-            blocklisted_ids = load_course_blocklist()
-            index_tasks = index_tasks + [
-                index_learning_resources.si(
-                    ids,
-                    COURSE_TYPE,
-                    index_types=IndexestoUpdate.reindexing_index.value,
-                )
-                for ids in chunks(
-                    Course.objects.filter(learning_resource__published=True)
-                    .exclude(learning_resource__readable_id=blocklisted_ids)
-                    .order_by("learning_resource_id")
-                    .values_list("learning_resource_id", flat=True),
-                    chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
-                )
-            ]
-
-            for course in (
-                Course.objects.filter(learning_resource__published=True)
-                .filter(learning_resource__etl_source__in=RESOURCE_FILE_ETL_SOURCES)
-                .exclude(learning_resource__readable_id=blocklisted_ids)
-                .order_by("learning_resource_id")
-            ):
-                index_tasks = index_tasks + [
-                    index_content_files.si(
-                        ids,
-                        course.learning_resource_id,
-                        index_types=IndexestoUpdate.reindexing_index.value,
-                    )
-                    for ids in chunks(
-                        ContentFile.objects.filter(
-                            run__learning_resource_id=course.learning_resource_id,
-                            published=True,
-                            run__published=True,
-                        )
-                        .order_by("id")
-                        .values_list("id", flat=True),
-                        chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
-                    )
-                ]
-
         for resource_type in [
+            COURSE_TYPE,
             PROGRAM_TYPE,
             PODCAST_TYPE,
             PODCAST_EPISODE_TYPE,
             LEARNING_PATH_TYPE,
             VIDEO_TYPE,
             VIDEO_PLAYLIST_TYPE,
-            COURSE_TYPE
+            COURSE_TYPE,
         ]:
             if resource_type in indexes:
-                index_tasks = index_tasks + [
-                    index_learning_resources.si(
-                        ids,
-                        resource_type,
-                        index_types=IndexestoUpdate.reindexing_index.value,
-                    )
-                    for ids in chunks(
-                        LearningResource.objects.filter(
-                            published=True, resource_type=resource_type
-                        )
-                        .order_by("id")
-                        .values_list("id", flat=True),
-                        chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
-                    )
-                ]
+                removed, updated = api.get_mapping_changes(resource_type)
+                log.info(resource_type)
+                log.info(removed)
+                log.info(updated)
+            #  api.reindex(resource_type, removed+updated)
 
-        index_tasks = celery.group(index_tasks)
     except:  # noqa: E722
         error = "start_recreate_index threw an error"
         log.exception(error)
         return error
-
-    # Use self.replace so that code waiting on this task will also wait on the indexing
-    #  and finish tasks
-    return self.replace(
-        celery.chain(index_tasks, finish_recreate_index.s(new_backing_indices))
-    )
 
 
 @app.task(autoretry_for=(RetryError,), retry_backoff=True, rate_limit="600/m")
@@ -987,7 +930,7 @@ def get_update_learning_resource_tasks(resource_type):
     retry_backoff=True,
     rate_limit="600/m",
 )
-def finish_full_recreate_index(results, backing_indices):
+def finish_recreate_index(results, backing_indices):
     """
     Swap reindex backing index with default backing index
 
