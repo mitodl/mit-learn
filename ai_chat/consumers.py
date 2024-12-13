@@ -45,6 +45,7 @@ class RecommendationAgentConsumer(AsyncWebsocketConsumer):
                 ]
 
             for chunk in self.agent.get_completion(message_text):
+                log.info("Sending chunk: %s", chunk)
                 await self.send(text_data=chunk)
         except:  # noqa: E722
             log.exception("Error in RecommendationAgentConsumer")

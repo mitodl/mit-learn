@@ -106,7 +106,9 @@ class BaseChatAgent(ABC):
                 message,
             )
             response_gen = response.response_gen
-            yield from response_gen
+            for chunk in response_gen:
+                log.info("yielding chunk: %s", chunk)
+                yield chunk
         except BadRequestError as error:
             # Format and yield an error message inside a hidden comment
             if hasattr(error, "response"):
@@ -125,6 +127,7 @@ class BaseChatAgent(ABC):
             yield '<!-- {"error":{"message":"An error occurred, please try again"}} -->'
             log.exception("Error running AI agent")
         if debug:
+            log.info("yielding debug info")
             yield f"\n\n<!-- {self.get_comment_metadata()} -->\n\n"
 
 

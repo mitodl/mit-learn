@@ -30,6 +30,7 @@
     "@types/react-dom": "^18"
   },
   "dependencies": {
+    "@nlux/core": "^2.17.1",
     "@nlux/react": "^2.17.1",
     "@nlux/themes": "^2.17.1"
   }
