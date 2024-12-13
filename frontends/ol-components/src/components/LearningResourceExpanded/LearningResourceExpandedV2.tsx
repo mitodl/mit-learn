@@ -480,6 +480,7 @@ const CallToActionSection = ({
   onAddToUserListClick?: LearningResourceCardProps["onAddToUserListClick"]
 }) => {
   const [shareExpanded, setShareExpanded] = useState(false)
+  const [copyText, setCopyText] = useState("Copy Link")
   const inputRef = useRef<HTMLInputElement>(null)
   const copyLinkButtonRef = useRef<HTMLButtonElement>(null)
   if (hide) {
@@ -505,8 +506,6 @@ const CallToActionSection = ({
   const addToLearningPathLabel = "Add to list"
   const bookmarkLabel = "Bookmark"
   const shareLabel = "Share"
-  const copyLinkLabel = "Copy Link"
-  const copiedLabel = "Copied!"
   const socialIconSize = 18
   const facebookShareBaseUrl = "https://www.facebook.com/sharer/sharer.php"
   const twitterShareBaseUrl = "https://x.com/share"
@@ -608,21 +607,14 @@ const CallToActionSection = ({
                 edge="circular"
                 variant="bordered"
                 startIcon={<RedLinkIcon />}
-                aria-label={copyLinkLabel}
+                aria-label={copyText}
                 ref={copyLinkButtonRef}
                 onClick={() => {
                   navigator.clipboard.writeText(shareUrl)
-                  if (copyLinkButtonRef.current) {
-                    copyLinkButtonRef.current.ariaLabel = copiedLabel
-                    copyLinkButtonRef.current.innerHTML =
-                      copyLinkButtonRef.current.innerHTML.replace(
-                        copyLinkLabel,
-                        copiedLabel,
-                      )
-                  }
+                  setCopyText("Copied!")
                 }}
               >
-                {copyLinkLabel}
+                {copyText}
               </CopyLinkButton>
             </ShareButtonContainer>
           </ShareContainer>
