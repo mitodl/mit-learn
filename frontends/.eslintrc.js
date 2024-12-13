@@ -48,11 +48,11 @@ module.exports = {
         },
       ],
       patterns: [
-        // {
-        //   group: ["@mui/material*", "@mui/lab/*"],
-        //   message:
-        //     "Please use 'ol-components' isInterfaceDeclaration; Direct use of @mui/material is limited to ol-components.",
-        // },
+        {
+          group: ["next/navigation"],
+          importNames: ["useRouter"],
+          message: "Please use `useRouter` from `next-nprogress-bar` instead.",
+        },
         {
           group: ["**/LearningResourceDrawer/LearningResourceDrawer"],
           message:

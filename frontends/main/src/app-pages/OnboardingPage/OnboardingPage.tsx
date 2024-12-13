@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useId, useMemo } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter } from "next-nprogress-bar"
 import range from "lodash/range"
 import styled from "@emotion/styled"
 import { Typography } from "ol-components/ThemeProvider/typography"

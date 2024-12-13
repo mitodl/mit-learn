@@ -1,13 +1,14 @@
 "use client"
 
 import React, { useState, useCallback } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter } from "next-nprogress-bar"
 import styled from "@emotion/styled"
 import { Typography } from "ol-components/ThemeProvider/typography"
 import { ChipLink } from "ol-components/Chips/ChipLink"
 import type { ChipLinkProps } from "ol-components/Chips/ChipLink"
 import type { SearchInputProps } from "ol-components/SearchInput/SearchInput"
 import { Link } from "ol-components/Link/Link"
+
 import {
   ABOUT,
   SEARCH_CERTIFICATE,

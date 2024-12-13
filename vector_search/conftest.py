@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+from qdrant_client.http.models.models import CountResult
 
 from vector_search.encoders.base import BaseEncoder
 
@@ -33,6 +34,7 @@ def _use_test_qdrant_settings(settings, mocker):
         [],
         None,
     ]
+    mock_qdrant.count.return_value = CountResult(count=10)
     mocker.patch(
         "vector_search.utils.qdrant_client",
         return_value=mock_qdrant,

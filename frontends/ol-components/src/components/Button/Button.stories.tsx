@@ -34,9 +34,11 @@ const meta: Meta<typeof Button> = {
         "primary",
         "secondary",
         "tertiary",
-        "text",
+        "bordered",
+        "noBorder",
         "inverted",
-        "text-secondary",
+        "success",
+        "text",
       ],
       control: { type: "select" },
     },
@@ -88,14 +90,20 @@ export const VariantStory: Story = {
       <Button {...args} variant="tertiary">
         Tertiary
       </Button>
-      <Button {...args} variant="text">
-        Text
+      <Button {...args} variant="bordered">
+        Bordered
       </Button>
       <Button {...args} variant="noBorder">
-        Text Secondary
+        No Border
       </Button>
       <Button {...args} variant="inverted">
         Inverted
+      </Button>
+      <Button {...args} variant="success">
+        Success
+      </Button>
+      <Button {...args} variant="text">
+        Text
       </Button>
     </Stack>
   ),
@@ -149,8 +157,20 @@ export const DisabledStory: Story = {
       <Button {...args} disabled variant="secondary">
         Secondary
       </Button>
-      <Button {...args} variant="tertiary">
+      <Button {...args} disabled variant="tertiary">
         Tertiary
+      </Button>
+      <Button {...args} disabled variant="bordered">
+        Bordered
+      </Button>
+      <Button {...args} disabled variant="noBorder">
+        No Border
+      </Button>
+      <Button {...args} disabled variant="inverted">
+        Inverted
+      </Button>
+      <Button {...args} disabled variant="success">
+        Success
       </Button>
       <Button {...args} disabled variant="text">
         Text
@@ -217,7 +237,16 @@ export const IconOnlyStory: Story = {
 
 const EDGES = ["rounded", "circular", "none"] as const
 
-const VARIANTS = ["primary", "secondary", "tertiary", "text"] as const
+const VARIANTS = [
+  "primary",
+  "secondary",
+  "tertiary",
+  "bordered",
+  "noBorder",
+  "success",
+  "inverted",
+  "text",
+] as const
 const EXTRA_PROPS = [
   {},
   /**

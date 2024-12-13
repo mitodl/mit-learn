@@ -3,7 +3,7 @@ import {
   useInfiniteUserListItems,
   useUserListsDetail,
 } from "api/hooks/userLists"
-import { useRouter } from "next/navigation"
+import { useRouter } from "next-nprogress-bar"
 import { ListType } from "api/constants"
 import { useUserMe } from "api/hooks/user"
 import { manageListDialogs } from "@/page-components/ManageListDialogs/ManageListDialogs"
