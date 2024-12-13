@@ -4066,7 +4066,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nlux/core@npm:2.17.1":
+"@nlux/core@npm:2.17.1, @nlux/core@npm:^2.17.1":
   version: 2.17.1
   resolution: "@nlux/core@npm:2.17.1"
   checksum: 10/ea30460c396e75f6b13d8a5519f6d0ee0c7282f1cd4a176572e7d3c923c539ea367debb4f079d2e177103197c77ef2cea8462f3b033f2034467e842c26016537
@@ -15794,6 +15794,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "mit-learn@workspace:."
   dependencies:
+    "@nlux/core": "npm:^2.17.1"
     "@nlux/react": "npm:^2.17.1"
     "@nlux/themes": "npm:^2.17.1"
     syncpack: "npm:^12.4.0"
