@@ -538,7 +538,7 @@ const CallToActionSection = ({
         <ButtonContainer>
           {user?.is_learning_path_editor && (
             <CallToActionButton
-              selected={inLearningPath ? 1 : 0}
+              selected={inLearningPath}
               startIcon={<RiMenuAddLine />}
               aria-label={addToLearningPathLabel}
               onClick={(event) =>
@@ -551,7 +551,7 @@ const CallToActionSection = ({
             </CallToActionButton>
           )}
           <CallToActionButton
-            selected={inUserList ? 1 : 0}
+            selected={inUserList}
             startIcon={inUserList ? <RiBookmarkFill /> : <RiBookmarkLine />}
             aria-label={bookmarkLabel}
             onClick={
@@ -563,7 +563,7 @@ const CallToActionSection = ({
             {bookmarkLabel}
           </CallToActionButton>
           <CallToActionButton
-            selected={shareExpanded ? 1 : 0}
+            selected={shareExpanded}
             startIcon={<RiShareLine />}
             aria-label={shareLabel}
             onClick={() => setShareExpanded(!shareExpanded)}
