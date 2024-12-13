@@ -199,7 +199,7 @@ describe("DashboardPage", () => {
   test("Renders title", async () => {
     setupAPIs()
     renderWithProviders(<DashboardPage />)
-    screen.getByRole("heading", {
+    await screen.findByRole("heading", {
       name: "Your MIT Learning Journey",
     })
   })

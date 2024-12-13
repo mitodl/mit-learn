@@ -1,6 +1,5 @@
 import React, { useMemo } from "react"
 import styled from "@emotion/styled"
-// import { Typography } from "ol-components/ThemeProvider/typography"
 import { Typography } from "ol-components/ThemeProvider/typography"
 import { capitalize } from "ol-utilities"
 import { ChannelTypeEnum, Channel } from "api/v0"

@@ -7,7 +7,6 @@
     "build-storybook": "storybook build"
   },
   "exports": {
-    ".": "./src/index.ts",
     "./deprecated": "./src/components/deprecated/index.ts"
   },
   "dependencies": {

@@ -184,7 +184,7 @@ const AddToListDialogInner: React.FC<AddToListDialogInnerProps> = ({
   )
 }
 
-export type AddToListDialogProps = {
+type AddToListDialogProps = {
   resourceId: number
 }
 const AddToLearningPathDialogInner: React.FC<AddToListDialogProps> = ({

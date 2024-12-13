@@ -21,8 +21,7 @@
       "@/*": ["./src/*"],
       "@/public/*": ["./public/*"],
       "ol-components/*": ["../ol-components/src/components/*"],
-      "ol-components/constants/*": ["../ol-components/src/constants/*"],
-      "ol-components/types/*": ["../ol-components/src/types/*"]
+      "ol-components/constants/*": ["../ol-components/src/constants/*"]
     },
     "target": "ESNext",
     "types": [
