@@ -110,7 +110,6 @@ export const States: Story = {
     )
   },
   argTypes: {
-    placeholder: { table: { disable: true } },
     value: { table: { disable: true } },
     error: { table: { disable: true } },
     disabled: { table: { disable: true } },
