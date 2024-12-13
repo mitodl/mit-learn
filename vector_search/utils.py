@@ -83,6 +83,7 @@ def create_qdrand_collections(force_recreate):
     content_files_collection_name = (
         f"{settings.QDRANT_BASE_COLLECTION_NAME}.content_files"
     )
+
     encoder = dense_encoder()
     if (
         not client.collection_exists(collection_name=resources_collection_name)
@@ -95,7 +96,14 @@ def create_qdrand_collections(force_recreate):
             vectors_config={
                 encoder.model_short_name(): models.VectorParams(
                     size=encoder.dim(), distance=models.Distance.COSINE
-                )
+                ),
+                f"{encoder.model_short_name()}_content": models.VectorParams(
+                    size=encoder.dim(),
+                    distance=models.Distance.COSINE,
+                    multivector_config=models.MultiVectorConfig(
+                        comparator=models.MultiVectorComparator.MAX_SIM
+                    ),
+                ),
             },
             sparse_vectors_config=client.get_fastembed_sparse_vector_params(),
             optimizers_config=models.OptimizersConfigDiff(default_segment_number=2),
@@ -118,7 +126,7 @@ def create_qdrand_collections(force_recreate):
             vectors_config={
                 encoder.model_short_name(): models.VectorParams(
                     size=encoder.dim(), distance=models.Distance.COSINE
-                )
+                ),
             },
             sparse_vectors_config=client.get_fastembed_sparse_vector_params(),
             optimizers_config=models.OptimizersConfigDiff(default_segment_number=2),
@@ -144,6 +152,73 @@ def vector_point_id(readable_id):
     return str(uuid.uuid5(uuid.NAMESPACE_DNS, readable_id))
 
 
+def _process_resource_embeddings(serialized_resources):
+    docs = []
+    metadata = []
+    ids = []
+    encoder = dense_encoder()
+    vector_name = encoder.model_short_name()
+    for doc in serialized_resources:
+        vector_point_key = doc["readable_id"]
+        metadata.append(doc)
+        ids.append(vector_point_id(vector_point_key))
+        docs.append(
+            f'{doc.get("title")} {doc.get("description")} '
+            f'{doc.get("full_description")} {doc.get("content")}'
+        )
+    embeddings = encoder.encode_batch(docs)
+    return points_generator(ids, metadata, embeddings, vector_name)
+
+
+def _process_content_embeddings(serialized_content):
+    embeddings = []
+    metadata = []
+    ids = []
+    resource_points = []
+    client = qdrant_client()
+    encoder = dense_encoder()
+    vector_name = encoder.model_short_name()
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=10000, chunk_overlap=200)
+    for doc in serialized_content:
+        split_docs = text_splitter.create_documents(
+            texts=[doc.get("content")], metadatas=[doc]
+        )
+        split_texts = [d.page_content for d in split_docs]
+        resource_vector_point_id = vector_point_id(doc["resource_readable_id"])
+        split_metadatas = [
+            {
+                "resource_point_id": str(resource_vector_point_id),
+                "CHUNK_ID_KEY": chunk_id,
+                **d.metadata,
+            }
+            for chunk_id, d in enumerate(split_docs)
+        ]
+
+        split_ids = [
+            vector_point_id(
+                f'{doc['resource_readable_id']}.{doc['_id']}.{md["CHUNK_ID_KEY"]}'
+            )
+            for md in split_metadatas
+        ]
+        split_embeddings = list(encoder.encode_batch(split_texts))
+        if len(split_embeddings) > 0:
+            resource_points.append(
+                models.PointVectors(
+                    id=resource_vector_point_id,
+                    vector={f"{vector_name}_content": split_embeddings},
+                )
+            )
+        embeddings.extend(split_embeddings)
+        metadata.extend(split_metadatas)
+        ids.extend(split_ids)
+    if len(resource_points) > 0:
+        client.update_vectors(
+            collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
+            points=resource_points,
+        )
+    return points_generator(ids, metadata, embeddings, vector_name)
+
+
 def embed_learning_resources(ids, resource_type):
     """
     Embed learning resources
@@ -152,62 +227,23 @@ def embed_learning_resources(ids, resource_type):
         ids (list of int): Ids of learning resources to embed
         resource_type (str): Type of learning resource to embed
     """
+
     client = qdrant_client()
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=5000, chunk_overlap=200)
     resources_collection_name = f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources"
     content_files_collection_name = (
         f"{settings.QDRANT_BASE_COLLECTION_NAME}.content_files"
     )
-    if resource_type == CONTENT_FILE_TYPE:
-        serialized_resources = serialize_bulk_content_files(ids)
-    else:
-        serialized_resources = serialize_bulk_learning_resources(ids)
+
     create_qdrand_collections(force_recreate=False)
     if resource_type != CONTENT_FILE_TYPE:
+        serialized_resources = serialize_bulk_learning_resources(ids)
         collection_name = resources_collection_name
+        points = _process_resource_embeddings(serialized_resources)
     else:
+        serialized_resources = serialize_bulk_content_files(ids)
         collection_name = content_files_collection_name
-    docs = []
-    metadata = []
-    ids = []
-    for doc in serialized_resources:
-        if resource_type != CONTENT_FILE_TYPE:
-            vector_point_key = doc["readable_id"]
-            metadata.append(doc)
-            ids.append(vector_point_id(vector_point_key))
-            docs.append(
-                f'{doc.get("title")} {doc.get("description")} '
-                f'{doc.get("full_description")} {doc.get("content")}'
-            )
-        else:
-            split_docs = text_splitter.create_documents(
-                texts=[doc.get("content")], metadatas=[doc]
-            )
-            split_texts = [d.page_content for d in split_docs]
-            split_metadatas = [
-                {
-                    "resource_point_id": str(
-                        vector_point_id(doc["resource_readable_id"])
-                    ),
-                    "CHUNK_ID_KEY": chunk_id,
-                    **d.metadata,
-                }
-                for chunk_id, d in enumerate(split_docs)
-            ]
-            split_ids = [
-                vector_point_id(
-                    f'{doc['resource_readable_id']}.{doc['_id']}.{md["CHUNK_ID_KEY"]}'
-                )
-                for md in split_metadatas
-            ]
-            docs.extend(split_texts)
-            metadata.extend(split_metadatas)
-            ids.extend(split_ids)
+        points = _process_content_embeddings(serialized_resources)
 
-    encoder = dense_encoder()
-    embeddings = encoder.encode_batch(docs)
-    vector_name = encoder.model_short_name()
-    points = points_generator(ids, metadata, embeddings, vector_name)
     client.upload_points(collection_name, points=points, wait=False)
 
 
