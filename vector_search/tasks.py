@@ -16,6 +16,7 @@ from learning_resources_search.constants import (
     CONTENT_FILE_TYPE,
     COURSE_TYPE,
     LEARNING_PATH_TYPE,
+    LEARNING_RESOURCE_TYPES,
     PODCAST_EPISODE_TYPE,
     PODCAST_TYPE,
     PROGRAM_TYPE,
@@ -173,15 +174,7 @@ def embed_learning_resources_by_id(self, ids, skip_content_files):
         published=True,
     )
     try:
-        for resource_type in [
-            COURSE_TYPE,
-            PROGRAM_TYPE,
-            PODCAST_TYPE,
-            PODCAST_EPISODE_TYPE,
-            LEARNING_PATH_TYPE,
-            VIDEO_TYPE,
-            VIDEO_PLAYLIST_TYPE,
-        ]:
+        for resource_type in LEARNING_RESOURCE_TYPES:
             resources = resources.filter(resource_type=resource_type)
 
             [

@@ -180,6 +180,8 @@ def _process_content_embeddings(serialized_content):
     vector_name = encoder.model_short_name()
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=10000, chunk_overlap=200)
     for doc in serialized_content:
+        if not doc.get("content"):
+            continue
         split_docs = text_splitter.create_documents(
             texts=[doc.get("content")], metadatas=[doc]
         )
@@ -193,10 +195,9 @@ def _process_content_embeddings(serialized_content):
             }
             for chunk_id, d in enumerate(split_docs)
         ]
-
         split_ids = [
             vector_point_id(
-                f'{doc['resource_readable_id']}.{doc['_id']}.{md["CHUNK_ID_KEY"]}'
+                f'{doc['resource_readable_id']}.{doc['run_readable_id']}.{doc['_id']}.{md["CHUNK_ID_KEY"]}'
             )
             for md in split_metadatas
         ]

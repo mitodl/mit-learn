@@ -21,7 +21,7 @@ def test_vector_point_id_used_for_embed(mocker, content_type):
     if content_type == "learning_resource":
         resources = LearningResourceFactory.create_batch(5)
     else:
-        resources = ContentFileFactory.create_batch(5)
+        resources = ContentFileFactory.create_batch(5, content="test content")
     mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
     mocker.patch(
         "vector_search.utils.qdrant_client",
@@ -35,7 +35,7 @@ def test_vector_point_id_used_for_embed(mocker, content_type):
     else:
         point_ids = [
             vector_point_id(
-                f"{resource['key']}.{resource['run_readable_id']}.{resource['resource_readable_id']}"
+                f"{resource['resource_readable_id']}.{resource['run_readable_id']}.{resource['_id']}.0"
             )
             for resource in serialize_bulk_content_files([r.id for r in resources])
         ]
