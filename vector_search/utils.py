@@ -195,7 +195,24 @@ def _process_content_embeddings(serialized_content):
             {
                 "resource_point_id": str(resource_vector_point_id),
                 "CHUNK_ID_KEY": chunk_id,
-                **d.metadata,
+                "chunk_content": d.page_content,
+                **{
+                    key: d.metadata[key]
+                    for key in [
+                        "run_title",
+                        "platform",
+                        "offered_by",
+                        "run_readable_id",
+                        "content_type",
+                        "content_feature_type",
+                        "course_number",
+                        "file_type",
+                        "description",
+                        "key",
+                        "run_title",
+                        "_id",
+                    ]
+                },
             }
             for chunk_id, d in enumerate(split_docs)
         ]
