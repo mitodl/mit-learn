@@ -1,7 +1,7 @@
 import uuid
 
 from django.conf import settings
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSplitter
 from qdrant_client import QdrantClient, models
 
 from learning_resources.models import LearningResource
@@ -178,7 +178,11 @@ def _process_content_embeddings(serialized_content):
     client = qdrant_client()
     encoder = dense_encoder()
     vector_name = encoder.model_short_name()
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=10000, chunk_overlap=200)
+    if hasattr(encoder, "token_encoding_name"):
+        text_splitter = TokenTextSplitter(encoding_name=encoder.token_encoding_name)
+    else:
+        # default for use with fastembed
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=512, chunk_overlap=0)
     for doc in serialized_content:
         if not doc.get("content"):
             continue
@@ -197,7 +201,7 @@ def _process_content_embeddings(serialized_content):
         ]
         split_ids = [
             vector_point_id(
-                f'{doc['resource_readable_id']}.{doc['run_readable_id']}.{doc['_id']}.{md["CHUNK_ID_KEY"]}'
+                f'{doc['resource_readable_id']}.{doc['run_readable_id']}.{doc['key']}.{md["CHUNK_ID_KEY"]}'
             )
             for md in split_metadatas
         ]

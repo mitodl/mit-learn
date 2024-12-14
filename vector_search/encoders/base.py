@@ -1,7 +1,5 @@
 from abc import ABC, abstractmethod
 
-import tiktoken
-
 
 class BaseEncoder(ABC):
     """
@@ -37,8 +35,3 @@ class BaseEncoder(ABC):
         Return the dimension of the embeddings
         """
         return len(self.encode("test"))
-
-    def num_tokens_from_string(self, string: str, encoding_name: str) -> int:
-        """Return the number of tokens in a text string."""
-        encoding = tiktoken.get_encoding(encoding_name)
-        return len(encoding.encode(string))

@@ -55,7 +55,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):  # noqa: ARG002
         """Embed all LEARNING_RESOURCE_TYPES"""
 
-        if options["all"]:
+        if options["all"] or options["resource-ids"]:
             indexes_to_update = list(LEARNING_RESOURCE_TYPES)
         else:
             indexes_to_update = list(

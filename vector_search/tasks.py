@@ -68,7 +68,7 @@ def generate_embeddings(ids, resource_type):
 @app.task(bind=True)
 def start_embed_resources(self, indexes, skip_content_files):
     """
-    Celery task to embed learning resources
+    Celery task to embed all learning resources for given indexes
 
     Args:
         indexes (list of str): resource types to embed
@@ -156,10 +156,10 @@ def start_embed_resources(self, indexes, skip_content_files):
 @app.task(bind=True)
 def embed_learning_resources_by_id(self, ids, skip_content_files):
     """
-    Celery task to embed learning resources
+    Celery task to embed specific resources
 
     Args:
-        indexes (list of str): resource types to embed
+        ids (list of int): list of resource ids to embed
         skip_content_files (bool): whether to skip embedding content files
     """
     index_tasks = []
@@ -209,7 +209,6 @@ def embed_learning_resources_by_id(self, ids, skip_content_files):
                             chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
                         )
                     ]
-
     except:  # noqa: E722
         error = "start_embed_resources threw an error"
         log.exception(error)
@@ -234,13 +233,16 @@ def embed_new_learning_resources(self):
         created_on__gt=since,
     ).exclude(resource_type=CONTENT_FILE_TYPE)
     filtered_resources = filter_existing_qdrant_points(new_learning_resources)
-    embed_tasks = celery.group(
-        [
-            generate_embeddings.si(ids, COURSE_TYPE)
-            for ids in chunks(
-                filtered_resources.order_by("id").values_list("id", flat=True),
-                chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
-            )
-        ]
-    )
+    for resource_type in LEARNING_RESOURCE_TYPES:
+        embed_tasks = celery.group(
+            [
+                generate_embeddings.si(ids, resource_type)
+                for ids in chunks(
+                    filtered_resources.filter(resource_type=resource_type).values_list(
+                        "id", flat=True
+                    ),
+                    chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
+                )
+            ]
+        )
     return self.replace(embed_tasks)

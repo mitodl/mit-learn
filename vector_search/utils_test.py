@@ -35,7 +35,7 @@ def test_vector_point_id_used_for_embed(mocker, content_type):
     else:
         point_ids = [
             vector_point_id(
-                f"{resource['resource_readable_id']}.{resource['run_readable_id']}.{resource['_id']}.0"
+                f"{resource['resource_readable_id']}.{resource['run_readable_id']}.{resource['key']}.0"
             )
             for resource in serialize_bulk_content_files([r.id for r in resources])
         ]
