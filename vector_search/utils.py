@@ -15,6 +15,8 @@ from vector_search.encoders.utils import dense_encoder
 
 QDRANT_PARAM_MAP = {
     "readable_id": "readable_id",
+    "resource_readable_id": "resource_readable_id",
+    "run_readable_id": "run_readable_id",
     "resource_type": "resource_type",
     "certification": "certification",
     "certification_type": "certification_type.code",
@@ -190,12 +192,30 @@ def _process_content_embeddings(serialized_content):
             texts=[doc.get("content")], metadatas=[doc]
         )
         split_texts = [d.page_content for d in split_docs]
+
         resource_vector_point_id = vector_point_id(doc["resource_readable_id"])
         split_metadatas = [
             {
                 "resource_point_id": str(resource_vector_point_id),
                 "CHUNK_ID_KEY": chunk_id,
-                **d.metadata,
+                "chunk_content": d.page_content,
+                **{
+                    key: d.metadata[key]
+                    for key in [
+                        "run_title",
+                        "platform",
+                        "offered_by",
+                        "run_readable_id",
+                        "content_type",
+                        "content_feature_type",
+                        "course_number",
+                        "file_type",
+                        "description",
+                        "key",
+                        "run_title",
+                        "_id",
+                    ]
+                },
             }
             for chunk_id, d in enumerate(split_docs)
         ]
@@ -257,6 +277,7 @@ def vector_search(
     params: dict,
     limit: int = 10,
     offset: int = 10,
+    collection: str = f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
 ):
     """
     Perform a vector search given a query string
@@ -282,7 +303,7 @@ def vector_search(
     if query_string:
         encoder = dense_encoder()
         search_result = client.query_points(
-            collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
+            collection_name=collection,
             using=encoder.model_short_name(),
             query=encoder.encode(query_string),
             query_filter=search_filter,
@@ -291,14 +312,14 @@ def vector_search(
         ).points
     else:
         search_result = client.scroll(
-            collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
+            collection_name=collection,
             scroll_filter=search_filter,
             limit=limit,
             offset=offset,
         )[0]
     hits = [hit.payload["readable_id"] for hit in search_result]
     count_result = client.count(
-        collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
+        collection_name=collection,
         count_filter=search_filter,
         exact=True,
     )
@@ -312,6 +333,64 @@ def vector_search(
             LearningResource.objects.for_serialization().filter(readable_id__in=hits),
             many=True,
         ).data,
+        "total": {"value": count_result.count},
+    }
+
+
+def content_file_vector_search(
+    query_string: str,
+    params: dict,
+    limit: int = 10,
+    offset: int = 10,
+    collection: str = f"{settings.QDRANT_BASE_COLLECTION_NAME}.content_files",
+):
+    """
+    Perform a vector search given a query string
+
+    Args:
+        query_string (str): Query string to search
+        params (dict): Additional search filters
+        limit (int): Max number of results to return
+        offset (int): Offset to start from
+    Returns:
+        dict:
+            Response dict containing "hits" with search results
+            and "total" with total count
+    """
+    client = qdrant_client()
+    qdrant_conditions = qdrant_query_conditions(params)
+    search_filter = models.Filter(
+        must=[
+            *qdrant_conditions,
+        ],
+    )
+
+    if query_string:
+        encoder = dense_encoder()
+        search_result = client.query_points(
+            collection_name=collection,
+            using=encoder.model_short_name(),
+            query=encoder.encode(query_string),
+            query_filter=search_filter,
+            limit=limit,
+            offset=offset,
+        ).points
+    else:
+        search_result = client.scroll(
+            collection_name=collection,
+            scroll_filter=search_filter,
+            limit=limit,
+            offset=offset,
+        )[0]
+    hits = [hit.payload for hit in search_result]
+    count_result = client.count(
+        collection_name=collection,
+        count_filter=search_filter,
+        exact=True,
+    )
+
+    return {
+        "hits": hits,
         "total": {"value": count_result.count},
     }
 

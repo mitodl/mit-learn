@@ -12,10 +12,12 @@ from rest_framework.views import APIView
 from authentication.decorators import blocked_ip_exempt
 from main.utils import cache_page_for_anonymous_users
 from vector_search.serializers import (
+    ContentFileVectorSearchRequestSerializer,
+    ContentFileVectorSearchResponseSerializer,
     LearningResourcesVectorSearchRequestSerializer,
     LearningResourcesVectorSearchResponseSerializer,
 )
-from vector_search.utils import vector_search
+from vector_search.utils import content_file_vector_search, vector_search
 
 log = logging.getLogger(__name__)
 
@@ -69,6 +71,58 @@ class LearningResourcesVectorSearchView(QdrantView):
                 return Response(response)
             else:
                 response = LearningResourcesVectorSearchResponseSerializer(
+                    response, context={"request": request}
+                ).data
+                response["results"] = list(response["results"])
+                return Response(response)
+        else:
+            errors = {}
+            for key, errors_obj in request_data.errors.items():
+                if isinstance(errors_obj, list):
+                    errors[key] = errors_obj
+                else:
+                    errors[key] = list(set(chain(*errors_obj.values())))
+            return Response(errors, status=400)
+
+
+@method_decorator(blocked_ip_exempt, name="dispatch")
+@extend_schema_view(
+    get=extend_schema(
+        parameters=[ContentFileVectorSearchRequestSerializer()],
+        responses=ContentFileVectorSearchResponseSerializer(),
+    ),
+)
+@action(methods=["GET"], detail=False, name="Search Learning Resources")
+class ContentFilesVectorSearchView(QdrantView):
+    """
+    Vector Search for content
+    """
+
+    permission_classes = ()
+
+    @method_decorator(
+        cache_page_for_anonymous_users(
+            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+        )
+    )
+    @extend_schema(summary="Vector Search")
+    def get(self, request):
+        request_data = ContentFileVectorSearchRequestSerializer(data=request.GET)
+
+        if request_data.is_valid():
+            query_text = request_data.data.get("q", "")
+            limit = request_data.data.get("limit", 10)
+            offset = request_data.data.get("offset", 0)
+            response = content_file_vector_search(
+                query_text,
+                limit=limit,
+                offset=offset,
+                params=request_data.data,
+            )
+            if request_data.data.get("dev_mode"):
+                return Response(response)
+            else:
+                response = ContentFileVectorSearchResponseSerializer(
                     response, context={"request": request}
                 ).data
                 response["results"] = list(response["results"])

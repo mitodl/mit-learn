@@ -1,7 +1,10 @@
 from django.urls import include, path, re_path
 from rest_framework.routers import SimpleRouter
 
-from vector_search.views import LearningResourcesVectorSearchView
+from vector_search.views import (
+    ContentFilesVectorSearchView,
+    LearningResourcesVectorSearchView,
+)
 
 router = SimpleRouter()
 v0_urls = [
@@ -9,6 +12,11 @@ v0_urls = [
         r"learning_resources_vector_search/",
         LearningResourcesVectorSearchView.as_view(),
         name="learning_resources_vector_search",
+    ),
+    path(
+        r"content_files_vector_search/",
+        ContentFilesVectorSearchView.as_view(),
+        name="content_files_vector_search",
     ),
 ]
 
