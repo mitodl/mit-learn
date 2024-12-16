@@ -18,10 +18,17 @@ from learning_resources.constants import (
     PlatformType,
     RunStatus,
 )
-from learning_resources.etl.constants import COMMON_HEADERS, CourseNumberType
+from learning_resources.etl.constants import (
+    COMMON_HEADERS,
+    CommitmentConfig,
+    CourseNumberType,
+    DurationConfig,
+)
 from learning_resources.etl.openedx import (
     OpenEdxConfiguration,
     _filter_resource,
+    _transform_course_commitment,
+    _transform_course_duration,
     openedx_extract_transform_factory,
 )
 from learning_resources.factories import (
@@ -264,6 +271,12 @@ def test_transform_course(  # noqa: PLR0913
                         "availability": Availability.dated.name,
                         "format": [Format.asynchronous.name],
                         "pace": [Pace.instructor_paced.name],
+                        "duration": "13 weeks",
+                        "min_weeks": 13,
+                        "max_weeks": 13,
+                        "time_commitment": "10-15 hours/week",
+                        "min_weekly_hours": 10,
+                        "max_weekly_hours": 15,
                     }
                 ]
             ),
@@ -409,6 +422,12 @@ def test_transform_program(
             offered_by=offeror,
             is_course=True,
             create_runs=False,
+            time_commitment="3-4 hours/week",
+            min_weekly_hours=3,
+            max_weekly_hours=4,
+            duration="3-4 weeks",
+            min_weeks=3,
+            max_weeks=4,
         )
         topics.extend([topic.name for topic in course.topics.all()])
         LearningResourceRunFactory.create(learning_resource=course)
@@ -469,6 +488,12 @@ def test_transform_program(
                     "availability": Availability.anytime.name,
                     "format": [Format.asynchronous.name],
                     "pace": [Pace.self_paced.name],
+                    "duration": "12 weeks",
+                    "min_weeks": 12,
+                    "max_weeks": 12,
+                    "time_commitment": "3-4 hours/week",
+                    "min_weekly_hours": 3,
+                    "max_weekly_hours": 4,
                 }
             ]
         ),
@@ -495,3 +520,50 @@ def test_filter_resource(openedx_course_config, openedx_program_config, deleted)
     }
     assert _filter_resource(openedx_course_config, resource) is not deleted
     assert _filter_resource(openedx_program_config, resource) is not deleted
+
+
+@pytest.mark.parametrize(
+    ("min_hours", "max_hours", "expected"),
+    [
+        (None, None, ""),
+        (1, 1, "1 hour/week"),
+        (0, 1, "0-1 hour/week"),
+        (0, 2, "0-2 hours/week"),
+        (1, 3, "1-3 hours/week"),
+        (4, 4, "4 hours/week"),
+    ],
+)
+def test_transform_course_commitment(min_hours, max_hours, expected):
+    """
+    Time commitment values should be assigned correctly
+    """
+    run = {
+        "min_effort": min_hours,
+        "max_effort": max_hours,
+    }
+    assert _transform_course_commitment(run) == CommitmentConfig(
+        commitment=expected,
+        min_weekly_hours=min_hours,
+        max_weekly_hours=max_hours,
+    )
+
+
+@pytest.mark.parametrize(
+    ("weeks", "expected"),
+    [
+        (5, "5 weeks"),
+        (1, "1 week"),
+        (0, ""),
+        (None, ""),
+    ],
+)
+def test_transform_duration(weeks, expected):
+    """Duration values should be assigned correctly"""
+    run = {
+        "weeks_to_complete": weeks,
+    }
+    assert _transform_course_duration(run) == DurationConfig(
+        duration=expected,
+        min_weeks=weeks or None,
+        max_weeks=weeks or None,
+    )

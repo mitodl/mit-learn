@@ -823,6 +823,18 @@ export interface CourseResource {
    * @memberof CourseResource
    */
   location?: string
+  /**
+   *
+   * @type {any}
+   * @memberof CourseResource
+   */
+  duration?: any | null
+  /**
+   *
+   * @type {any}
+   * @memberof CourseResource
+   */
+  time_commitment?: any | null
 }
 
 /**
@@ -1043,6 +1055,18 @@ export interface CourseResourceRequest {
    * @memberof CourseResourceRequest
    */
   location?: string
+  /**
+   *
+   * @type {any}
+   * @memberof CourseResourceRequest
+   */
+  duration?: any | null
+  /**
+   *
+   * @type {any}
+   * @memberof CourseResourceRequest
+   */
+  time_commitment?: any | null
 }
 
 /**
@@ -1617,6 +1641,18 @@ export interface LearningPathResource {
    * @memberof LearningPathResource
    */
   location?: string
+  /**
+   *
+   * @type {any}
+   * @memberof LearningPathResource
+   */
+  duration?: any | null
+  /**
+   *
+   * @type {any}
+   * @memberof LearningPathResource
+   */
+  time_commitment?: any | null
 }
 
 /**
@@ -1721,6 +1757,18 @@ export interface LearningPathResourceRequest {
    * @memberof LearningPathResourceRequest
    */
   location?: string
+  /**
+   *
+   * @type {any}
+   * @memberof LearningPathResourceRequest
+   */
+  duration?: any | null
+  /**
+   *
+   * @type {any}
+   * @memberof LearningPathResourceRequest
+   */
+  time_commitment?: any | null
 }
 
 /**
@@ -2427,6 +2475,18 @@ export interface LearningResourceRun {
    * @memberof LearningResourceRun
    */
   location?: string
+  /**
+   *
+   * @type {any}
+   * @memberof LearningResourceRun
+   */
+  duration?: any | null
+  /**
+   *
+   * @type {any}
+   * @memberof LearningResourceRun
+   */
+  time_commitment?: any | null
 }
 
 /**
@@ -2588,6 +2648,18 @@ export interface LearningResourceRunRequest {
    * @memberof LearningResourceRunRequest
    */
   location?: string
+  /**
+   *
+   * @type {any}
+   * @memberof LearningResourceRunRequest
+   */
+  duration?: any | null
+  /**
+   *
+   * @type {any}
+   * @memberof LearningResourceRunRequest
+   */
+  time_commitment?: any | null
 }
 
 /**
@@ -3620,6 +3692,18 @@ export interface PatchedLearningPathResourceRequest {
    * @memberof PatchedLearningPathResourceRequest
    */
   location?: string
+  /**
+   *
+   * @type {any}
+   * @memberof PatchedLearningPathResourceRequest
+   */
+  duration?: any | null
+  /**
+   *
+   * @type {any}
+   * @memberof PatchedLearningPathResourceRequest
+   */
+  time_commitment?: any | null
 }
 
 /**
@@ -4442,6 +4526,18 @@ export interface PodcastEpisodeResource {
    * @memberof PodcastEpisodeResource
    */
   location?: string
+  /**
+   *
+   * @type {any}
+   * @memberof PodcastEpisodeResource
+   */
+  duration?: any | null
+  /**
+   *
+   * @type {any}
+   * @memberof PodcastEpisodeResource
+   */
+  time_commitment?: any | null
 }
 
 /**
@@ -4546,6 +4642,18 @@ export interface PodcastEpisodeResourceRequest {
    * @memberof PodcastEpisodeResourceRequest
    */
   location?: string
+  /**
+   *
+   * @type {any}
+   * @memberof PodcastEpisodeResourceRequest
+   */
+  duration?: any | null
+  /**
+   *
+   * @type {any}
+   * @memberof PodcastEpisodeResourceRequest
+   */
+  time_commitment?: any | null
 }
 
 /**
@@ -4836,6 +4944,18 @@ export interface PodcastResource {
    * @memberof PodcastResource
    */
   location?: string
+  /**
+   *
+   * @type {any}
+   * @memberof PodcastResource
+   */
+  duration?: any | null
+  /**
+   *
+   * @type {any}
+   * @memberof PodcastResource
+   */
+  time_commitment?: any | null
 }
 
 /**
@@ -4940,6 +5060,18 @@ export interface PodcastResourceRequest {
    * @memberof PodcastResourceRequest
    */
   location?: string
+  /**
+   *
+   * @type {any}
+   * @memberof PodcastResourceRequest
+   */
+  duration?: any | null
+  /**
+   *
+   * @type {any}
+   * @memberof PodcastResourceRequest
+   */
+  time_commitment?: any | null
 }
 
 /**
@@ -5462,6 +5594,18 @@ export interface ProgramResource {
    * @memberof ProgramResource
    */
   location?: string
+  /**
+   *
+   * @type {any}
+   * @memberof ProgramResource
+   */
+  duration?: any | null
+  /**
+   *
+   * @type {any}
+   * @memberof ProgramResource
+   */
+  time_commitment?: any | null
 }
 
 /**
@@ -5566,6 +5710,18 @@ export interface ProgramResourceRequest {
    * @memberof ProgramResourceRequest
    */
   location?: string
+  /**
+   *
+   * @type {any}
+   * @memberof ProgramResourceRequest
+   */
+  duration?: any | null
+  /**
+   *
+   * @type {any}
+   * @memberof ProgramResourceRequest
+   */
+  time_commitment?: any | null
 }
 
 /**
@@ -6335,6 +6491,18 @@ export interface VideoPlaylistResource {
    * @memberof VideoPlaylistResource
    */
   location?: string
+  /**
+   *
+   * @type {any}
+   * @memberof VideoPlaylistResource
+   */
+  duration?: any | null
+  /**
+   *
+   * @type {any}
+   * @memberof VideoPlaylistResource
+   */
+  time_commitment?: any | null
 }
 
 /**
@@ -6439,6 +6607,18 @@ export interface VideoPlaylistResourceRequest {
    * @memberof VideoPlaylistResourceRequest
    */
   location?: string
+  /**
+   *
+   * @type {any}
+   * @memberof VideoPlaylistResourceRequest
+   */
+  duration?: any | null
+  /**
+   *
+   * @type {any}
+   * @memberof VideoPlaylistResourceRequest
+   */
+  time_commitment?: any | null
 }
 
 /**
@@ -6723,6 +6903,18 @@ export interface VideoResource {
    * @memberof VideoResource
    */
   location?: string
+  /**
+   *
+   * @type {any}
+   * @memberof VideoResource
+   */
+  duration?: any | null
+  /**
+   *
+   * @type {any}
+   * @memberof VideoResource
+   */
+  time_commitment?: any | null
 }
 
 /**
@@ -6827,6 +7019,18 @@ export interface VideoResourceRequest {
    * @memberof VideoResourceRequest
    */
   location?: string
+  /**
+   *
+   * @type {any}
+   * @memberof VideoResourceRequest
+   */
+  duration?: any | null
+  /**
+   *
+   * @type {any}
+   * @memberof VideoResourceRequest
+   */
+  time_commitment?: any | null
 }
 
 /**

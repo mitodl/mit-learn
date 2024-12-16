@@ -813,6 +813,18 @@ export interface CourseResource {
    * @memberof CourseResource
    */
   location?: string
+  /**
+   *
+   * @type {any}
+   * @memberof CourseResource
+   */
+  duration?: any | null
+  /**
+   *
+   * @type {any}
+   * @memberof CourseResource
+   */
+  time_commitment?: any | null
 }
 
 /**
@@ -1804,6 +1816,18 @@ export interface LearningPathResource {
    * @memberof LearningPathResource
    */
   location?: string
+  /**
+   *
+   * @type {any}
+   * @memberof LearningPathResource
+   */
+  duration?: any | null
+  /**
+   *
+   * @type {any}
+   * @memberof LearningPathResource
+   */
+  time_commitment?: any | null
 }
 
 /**
@@ -2337,6 +2361,18 @@ export interface LearningResourceRun {
    * @memberof LearningResourceRun
    */
   location?: string
+  /**
+   *
+   * @type {any}
+   * @memberof LearningResourceRun
+   */
+  duration?: any | null
+  /**
+   *
+   * @type {any}
+   * @memberof LearningResourceRun
+   */
+  time_commitment?: any | null
 }
 
 /**
@@ -3468,6 +3504,18 @@ export interface PodcastEpisodeResource {
    * @memberof PodcastEpisodeResource
    */
   location?: string
+  /**
+   *
+   * @type {any}
+   * @memberof PodcastEpisodeResource
+   */
+  duration?: any | null
+  /**
+   *
+   * @type {any}
+   * @memberof PodcastEpisodeResource
+   */
+  time_commitment?: any | null
 }
 
 /**
@@ -3727,6 +3775,18 @@ export interface PodcastResource {
    * @memberof PodcastResource
    */
   location?: string
+  /**
+   *
+   * @type {any}
+   * @memberof PodcastResource
+   */
+  duration?: any | null
+  /**
+   *
+   * @type {any}
+   * @memberof PodcastResource
+   */
+  time_commitment?: any | null
 }
 
 /**
@@ -4375,6 +4435,18 @@ export interface ProgramResource {
    * @memberof ProgramResource
    */
   location?: string
+  /**
+   *
+   * @type {any}
+   * @memberof ProgramResource
+   */
+  duration?: any | null
+  /**
+   *
+   * @type {any}
+   * @memberof ProgramResource
+   */
+  time_commitment?: any | null
 }
 
 /**
@@ -5291,6 +5363,18 @@ export interface VideoPlaylistResource {
    * @memberof VideoPlaylistResource
    */
   location?: string
+  /**
+   *
+   * @type {any}
+   * @memberof VideoPlaylistResource
+   */
+  duration?: any | null
+  /**
+   *
+   * @type {any}
+   * @memberof VideoPlaylistResource
+   */
+  time_commitment?: any | null
 }
 
 /**
@@ -5556,6 +5640,18 @@ export interface VideoResource {
    * @memberof VideoResource
    */
   location?: string
+  /**
+   *
+   * @type {any}
+   * @memberof VideoResource
+   */
+  duration?: any | null
+  /**
+   *
+   * @type {any}
+   * @memberof VideoResource
+   */
+  time_commitment?: any | null
 }
 
 /**

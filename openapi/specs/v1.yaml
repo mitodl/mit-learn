@@ -8956,6 +8956,10 @@ components:
         location:
           type: string
           maxLength: 256
+        duration:
+          nullable: true
+        time_commitment:
+          nullable: true
       required:
       - certification
       - certification_type
@@ -9051,6 +9055,10 @@ components:
         location:
           type: string
           maxLength: 256
+        duration:
+          nullable: true
+        time_commitment:
+          nullable: true
       required:
       - readable_id
       - title
@@ -9457,6 +9465,10 @@ components:
         location:
           type: string
           maxLength: 256
+        duration:
+          nullable: true
+        time_commitment:
+          nullable: true
       required:
       - certification
       - certification_type
@@ -9549,6 +9561,10 @@ components:
         location:
           type: string
           maxLength: 256
+        duration:
+          nullable: true
+        time_commitment:
+          nullable: true
       required:
       - title
     LearningPathResourceResourceTypeEnum:
@@ -10118,6 +10134,10 @@ components:
         location:
           type: string
           maxLength: 256
+        duration:
+          nullable: true
+        time_commitment:
+          nullable: true
       required:
       - delivery
       - format
@@ -10233,6 +10253,10 @@ components:
         location:
           type: string
           maxLength: 256
+        duration:
+          nullable: true
+        time_commitment:
+          nullable: true
       required:
       - level
       - run_id
@@ -10978,6 +11002,10 @@ components:
         location:
           type: string
           maxLength: 256
+        duration:
+          nullable: true
+        time_commitment:
+          nullable: true
     PatchedLearningResourceRelationshipRequest:
       type: object
       description: CRUD serializer for LearningResourceRelationship
@@ -11632,6 +11660,10 @@ components:
         location:
           type: string
           maxLength: 256
+        duration:
+          nullable: true
+        time_commitment:
+          nullable: true
       required:
       - certification
       - certification_type
@@ -11727,6 +11759,10 @@ components:
         location:
           type: string
           maxLength: 256
+        duration:
+          nullable: true
+        time_commitment:
+          nullable: true
       required:
       - readable_id
       - title
@@ -11974,6 +12010,10 @@ components:
         location:
           type: string
           maxLength: 256
+        duration:
+          nullable: true
+        time_commitment:
+          nullable: true
       required:
       - certification
       - certification_type
@@ -12069,6 +12109,10 @@ components:
         location:
           type: string
           maxLength: 256
+        duration:
+          nullable: true
+        time_commitment:
+          nullable: true
       required:
       - readable_id
       - title
@@ -12454,6 +12498,10 @@ components:
         location:
           type: string
           maxLength: 256
+        duration:
+          nullable: true
+        time_commitment:
+          nullable: true
       required:
       - certification
       - certification_type
@@ -12549,6 +12597,10 @@ components:
         location:
           type: string
           maxLength: 256
+        duration:
+          nullable: true
+        time_commitment:
+          nullable: true
       required:
       - readable_id
       - title
@@ -13068,6 +13120,10 @@ components:
         location:
           type: string
           maxLength: 256
+        duration:
+          nullable: true
+        time_commitment:
+          nullable: true
       required:
       - certification
       - certification_type
@@ -13163,6 +13219,10 @@ components:
         location:
           type: string
           maxLength: 256
+        duration:
+          nullable: true
+        time_commitment:
+          nullable: true
       required:
       - readable_id
       - title
@@ -13402,6 +13462,10 @@ components:
         location:
           type: string
           maxLength: 256
+        duration:
+          nullable: true
+        time_commitment:
+          nullable: true
       required:
       - certification
       - certification_type
@@ -13498,6 +13562,10 @@ components:
         location:
           type: string
           maxLength: 256
+        duration:
+          nullable: true
+        time_commitment:
+          nullable: true
       required:
       - readable_id
       - title
