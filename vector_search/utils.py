@@ -202,7 +202,7 @@ def _process_content_embeddings(serialized_content):
         split_metadatas = [
             {
                 "resource_point_id": str(resource_vector_point_id),
-                "CHUNK_ID_KEY": chunk_id,
+                "chunk_number": chunk_id,
                 "chunk_content": d.page_content,
                 **{
                     key: d.metadata[key]
@@ -226,7 +226,7 @@ def _process_content_embeddings(serialized_content):
         ]
         split_ids = [
             vector_point_id(
-                f'{doc['resource_readable_id']}.{doc['run_readable_id']}.{doc['key']}.{md["CHUNK_ID_KEY"]}'
+                f'{doc['resource_readable_id']}.{doc['run_readable_id']}.{doc['key']}.{md["chunk_number"]}'
             )
             for md in split_metadatas
         ]
