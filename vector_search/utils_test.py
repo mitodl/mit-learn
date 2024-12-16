@@ -1,10 +1,13 @@
 import pytest
+from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSplitter
 from qdrant_client import models
 from qdrant_client.models import PointStruct
 
 from learning_resources.factories import ContentFileFactory, LearningResourceFactory
 from learning_resources_search.serializers import serialize_bulk_content_files
+from vector_search.encoders.utils import dense_encoder
 from vector_search.utils import (
+    _get_text_splitter,
     create_qdrand_collections,
     embed_learning_resources,
     filter_existing_qdrant_points,
@@ -215,3 +218,16 @@ def test_qdrant_query_conditions(mocker):
         models.FieldCondition(key="q", match=models.MatchValue(value="test"))
         not in query_conditions
     )
+
+
+def test_get_text_splitter(mocker):
+    """
+    Test that the correct splitter is returned based on encoder
+    """
+    encoder = dense_encoder()
+    encoder.token_encoding_name = None
+    splitter = _get_text_splitter(encoder)
+    assert isinstance(splitter, RecursiveCharacterTextSplitter)
+    encoder.token_encoding_name = "test"  # noqa: S105
+    splitter = _get_text_splitter(encoder)
+    assert isinstance(splitter, TokenTextSplitter)
