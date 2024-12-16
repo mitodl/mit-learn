@@ -173,21 +173,14 @@ describe("LearningResourceDrawerV2", () => {
     const similarResources = factories.learningResources.resources({
       count,
     }).results
-    const vectorSimilarResources = factories.learningResources.resources({
-      count,
-    }).results
     setMockResponse.get(urls.userMe.get(), null, { code: 403 })
     setMockResponse.get(
       urls.learningResources.details({ id: resource.id }),
       resource,
     )
     setMockResponse.get(
-      urls.learningResources.similar({ id: resource.id }),
-      similarResources,
-    )
-    setMockResponse.get(
       urls.learningResources.vectorSimilar({ id: resource.id }),
-      vectorSimilarResources,
+      similarResources,
     )
     renderWithProviders(<LearningResourceDrawerV2 />, {
       url: `?resource=${resource.id}`,
@@ -195,10 +188,6 @@ describe("LearningResourceDrawerV2", () => {
     await screen.findByText("Similar Learning Resources")
     for (const similarResource of similarResources) {
       await screen.findByText(similarResource.title)
-    }
-    await screen.findByText("Similar Learning Resources (Vector Based)")
-    for (const vectorSimilarResource of vectorSimilarResources) {
-      await screen.findByText(vectorSimilarResource.title)
     }
   })
 })
