@@ -1,5 +1,5 @@
 import pytest
-from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSplitter
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from qdrant_client import models
 from qdrant_client.models import PointStruct
 
@@ -226,8 +226,9 @@ def test_get_text_splitter(mocker):
     """
     encoder = dense_encoder()
     encoder.token_encoding_name = None
+    mocked_splitter = mocker.patch("vector_search.utils.TokenTextSplitter")
     splitter = _get_text_splitter(encoder)
     assert isinstance(splitter, RecursiveCharacterTextSplitter)
     encoder.token_encoding_name = "cl100k_base"  # noqa: S105
     splitter = _get_text_splitter(encoder)
-    assert isinstance(splitter, TokenTextSplitter)
+    mocked_splitter.assert_called()
