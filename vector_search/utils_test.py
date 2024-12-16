@@ -228,6 +228,6 @@ def test_get_text_splitter(mocker):
     encoder.token_encoding_name = None
     splitter = _get_text_splitter(encoder)
     assert isinstance(splitter, RecursiveCharacterTextSplitter)
-    encoder.token_encoding_name = "test"  # noqa: S105
+    encoder.token_encoding_name = "cl100k_base"  # noqa: S105
     splitter = _get_text_splitter(encoder)
     assert isinstance(splitter, TokenTextSplitter)
