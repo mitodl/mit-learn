@@ -8957,8 +8957,30 @@ components:
           type: string
           maxLength: 256
         duration:
+          type: string
+          maxLength: 256
+        min_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
         time_commitment:
+          type: string
+          maxLength: 256
+        min_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
       required:
       - certification
@@ -9056,8 +9078,30 @@ components:
           type: string
           maxLength: 256
         duration:
+          type: string
+          maxLength: 256
+        min_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
         time_commitment:
+          type: string
+          maxLength: 256
+        min_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
       required:
       - readable_id
@@ -9466,8 +9510,30 @@ components:
           type: string
           maxLength: 256
         duration:
+          type: string
+          maxLength: 256
+        min_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
         time_commitment:
+          type: string
+          maxLength: 256
+        min_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
       required:
       - certification
@@ -9562,8 +9628,30 @@ components:
           type: string
           maxLength: 256
         duration:
+          type: string
+          maxLength: 256
+        min_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
         time_commitment:
+          type: string
+          maxLength: 256
+        min_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
       required:
       - title
@@ -10135,8 +10223,30 @@ components:
           type: string
           maxLength: 256
         duration:
+          type: string
+          maxLength: 256
+        min_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
         time_commitment:
+          type: string
+          maxLength: 256
+        min_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
       required:
       - delivery
@@ -10254,8 +10364,30 @@ components:
           type: string
           maxLength: 256
         duration:
+          type: string
+          maxLength: 256
+        min_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
         time_commitment:
+          type: string
+          maxLength: 256
+        min_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
       required:
       - level
@@ -11003,8 +11135,30 @@ components:
           type: string
           maxLength: 256
         duration:
+          type: string
+          maxLength: 256
+        min_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
         time_commitment:
+          type: string
+          maxLength: 256
+        min_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
     PatchedLearningResourceRelationshipRequest:
       type: object
@@ -11661,8 +11815,30 @@ components:
           type: string
           maxLength: 256
         duration:
+          type: string
+          maxLength: 256
+        min_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
         time_commitment:
+          type: string
+          maxLength: 256
+        min_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
       required:
       - certification
@@ -11760,8 +11936,30 @@ components:
           type: string
           maxLength: 256
         duration:
+          type: string
+          maxLength: 256
+        min_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
         time_commitment:
+          type: string
+          maxLength: 256
+        min_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
       required:
       - readable_id
@@ -12011,8 +12209,30 @@ components:
           type: string
           maxLength: 256
         duration:
+          type: string
+          maxLength: 256
+        min_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
         time_commitment:
+          type: string
+          maxLength: 256
+        min_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
       required:
       - certification
@@ -12110,8 +12330,30 @@ components:
           type: string
           maxLength: 256
         duration:
+          type: string
+          maxLength: 256
+        min_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
         time_commitment:
+          type: string
+          maxLength: 256
+        min_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
       required:
       - readable_id
@@ -12499,8 +12741,30 @@ components:
           type: string
           maxLength: 256
         duration:
+          type: string
+          maxLength: 256
+        min_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
         time_commitment:
+          type: string
+          maxLength: 256
+        min_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
       required:
       - certification
@@ -12598,8 +12862,30 @@ components:
           type: string
           maxLength: 256
         duration:
+          type: string
+          maxLength: 256
+        min_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
         time_commitment:
+          type: string
+          maxLength: 256
+        min_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
       required:
       - readable_id
@@ -13121,8 +13407,30 @@ components:
           type: string
           maxLength: 256
         duration:
+          type: string
+          maxLength: 256
+        min_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
         time_commitment:
+          type: string
+          maxLength: 256
+        min_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
       required:
       - certification
@@ -13220,8 +13528,30 @@ components:
           type: string
           maxLength: 256
         duration:
+          type: string
+          maxLength: 256
+        min_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
         time_commitment:
+          type: string
+          maxLength: 256
+        min_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
       required:
       - readable_id
@@ -13463,8 +13793,30 @@ components:
           type: string
           maxLength: 256
         duration:
+          type: string
+          maxLength: 256
+        min_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
         time_commitment:
+          type: string
+          maxLength: 256
+        min_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
       required:
       - certification
@@ -13563,8 +13915,30 @@ components:
           type: string
           maxLength: 256
         duration:
+          type: string
+          maxLength: 256
+        min_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
         time_commitment:
+          type: string
+          maxLength: 256
+        min_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
       required:
       - readable_id
