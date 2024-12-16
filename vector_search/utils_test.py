@@ -1,4 +1,5 @@
 import pytest
+from qdrant_client import models
 from qdrant_client.models import PointStruct
 
 from learning_resources.factories import ContentFileFactory, LearningResourceFactory
@@ -7,6 +8,7 @@ from vector_search.utils import (
     create_qdrand_collections,
     embed_learning_resources,
     filter_existing_qdrant_points,
+    qdrant_query_conditions,
     vector_point_id,
 )
 
@@ -168,4 +170,48 @@ def test_skip_creating_qdrand_collections(mocker):
     assert (
         "dummy-embedding"
         in mock_qdrant.recreate_collection.mock_calls[1].kwargs["vectors_config"]
+    )
+
+
+def test_qdrant_query_conditions(mocker):
+    """
+    Test query filter mapping to qdrant conditions
+    """
+    params = {
+        "q": "test",
+        "topic": ["test topic 1", "test topic 2"],
+        "offered_by": ["ocw", "edx"],
+        "platform": ["edx"],
+        "resource_type": ["course", "podcast"],
+        "free": True,
+    }
+    query_conditions = qdrant_query_conditions(params)
+
+    assert (
+        models.FieldCondition(
+            key="offered_by.code", match=models.MatchAny(any=["ocw", "edx"])
+        )
+        in query_conditions
+    )
+    assert (
+        models.FieldCondition(key="platform.code", match=models.MatchAny(any=["edx"]))
+        in query_conditions
+    )
+    assert (
+        models.FieldCondition(
+            key="resource_type", match=models.MatchAny(any=["course", "podcast"])
+        )
+        in query_conditions
+    )
+    assert (
+        models.FieldCondition(
+            key="topics[].name",
+            match=models.MatchAny(any=["test topic 1", "test topic 2"]),
+        )
+        in query_conditions
+    )
+    # test that items not in the filter map are ignored
+    assert (
+        models.FieldCondition(key="q", match=models.MatchValue(value="test"))
+        not in query_conditions
     )

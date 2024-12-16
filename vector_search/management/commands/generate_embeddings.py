@@ -64,12 +64,11 @@ class Command(BaseCommand):
                 for object_type in sorted(LEARNING_RESOURCE_TYPES):
                     self.stdout.write(f"  --{object_type}s")
                 return
-
+        if options["recreate_collections"]:
+            create_qdrand_collections(force_recreate=True)
         task = start_embed_resources.delay(
             indexes_to_update, skip_content_files=options["skip_content_files"]
         )
-        if options["recreate_collections"]:
-            create_qdrand_collections(force_recreate=True)
         self.stdout.write(
             f"Started celery task {task} to index content for the following"
             f" Types to embed: {indexes_to_update}"

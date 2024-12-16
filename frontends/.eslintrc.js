@@ -44,6 +44,11 @@ module.exports = {
       ],
       patterns: [
         {
+          group: ["next/navigation"],
+          importNames: ["useRouter"],
+          message: "Please use `useRouter` from `next-nprogress-bar` instead.",
+        },
+        {
           group: ["@mui/material*", "@mui/lab/*"],
           message:
             "Please use 'ol-components' isInterfaceDeclaration; Direct use of @mui/material is limited to ol-components.",
