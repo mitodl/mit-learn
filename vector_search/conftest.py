@@ -23,6 +23,7 @@ class DummyEmbedEncoder(BaseEncoder):
 @pytest.fixture(autouse=True)
 def _use_dummy_encoder(settings):
     settings.QDRANT_ENCODER = "vector_search.conftest.DummyEmbedEncoder"
+    settings.QDRANT_DENSE_MODEL = None
 
 
 @pytest.fixture(autouse=True)
