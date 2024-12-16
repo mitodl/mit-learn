@@ -308,6 +308,12 @@ LEARNING_RESOURCE_MAP = {
             "currency": {"type": "keyword"},
         },
     },
+    "duration": {"type": "keyword"},
+    "min_weeks": {"type": "integer"},
+    "max_weeks": {"type": "integer"},
+    "time_commitment": {"type": "keyword"},
+    "min_weekly_hours": {"type": "integer"},
+    "max_weekly_hours": {"type": "integer"},
 }
 
 

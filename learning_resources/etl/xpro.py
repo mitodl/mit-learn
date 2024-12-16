@@ -20,6 +20,7 @@ from learning_resources.constants import (
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.utils import (
     generate_course_numbers_json,
+    parse_string_to_int,
     transform_delivery,
     transform_price,
     transform_topics,
@@ -125,6 +126,12 @@ def _transform_run(course_run: dict, course: dict) -> dict:
         "delivery": transform_delivery(course.get("format")),
         "pace": [Pace.self_paced.name],
         "format": [Format.asynchronous.name],
+        "duration": course.get("duration") or "",
+        "min_weeks": course.get("min_weeks"),
+        "max_weeks": course.get("max_weeks"),
+        "time_commitment": course.get("time_commitment") or "",
+        "min_weekly_hours": parse_string_to_int(course.get("min_weekly_hours")),
+        "max_weekly_hours": parse_string_to_int(course.get("max_weekly_hours")),
     }
 
 
@@ -228,6 +235,16 @@ def transform_programs(programs):
                     "availability": program["availability"],
                     "pace": [Pace.self_paced.name],
                     "format": [Format.asynchronous.name],
+                    "duration": program.get("duration") or "",
+                    "min_weeks": program.get("min_weeks"),
+                    "max_weeks": program.get("max_weeks"),
+                    "time_commitment": program.get("time_commitment") or "",
+                    "min_weekly_hours": parse_string_to_int(
+                        program.get("min_weekly_hours")
+                    ),
+                    "max_weekly_hours": parse_string_to_int(
+                        program.get("max_weekly_hours")
+                    ),
                 }
             ],
             "courses": transform_courses(program["courses"]),
