@@ -16,6 +16,8 @@ from vector_search.encoders.utils import dense_encoder
 QDRANT_PARAM_MAP = {
     "readable_id": "readable_id",
     "resource_type": "resource_type",
+    "resource_readable_id": "resource_readable_id",
+    "run_readable_id": "run_readable_id",
     "certification": "certification",
     "certification_type": "certification_type.code",
     "professional": "professional",
@@ -277,11 +279,28 @@ def embed_learning_resources(ids, resource_type):
     client.upload_points(collection_name, points=points, wait=False)
 
 
+def _resource_vector_hits(search_result):
+    hits = [hit.payload["readable_id"] for hit in search_result]
+    """
+     Always lookup learning resources by readable_id for portability
+     in case we load points from external systems
+     """
+    return LearningResourceSerializer(
+        LearningResource.objects.for_serialization().filter(readable_id__in=hits),
+        many=True,
+    ).data
+
+
+def _conetnt_file_vector_hits(search_result):
+    return [hit.payload for hit in search_result]
+
+
 def vector_search(
     query_string: str,
     params: dict,
     limit: int = 10,
     offset: int = 10,
+    search_collection="resources",
 ):
     """
     Perform a vector search given a query string
@@ -291,23 +310,28 @@ def vector_search(
         params (dict): Additional search filters
         limit (int): Max number of results to return
         offset (int): Offset to start from
+        type (str): Type of search to perform (learning_resources or contentffiles)
     Returns:
         dict:
             Response dict containing "hits" with search results
             and "total" with total count
     """
+
     client = qdrant_client()
     qdrant_conditions = qdrant_query_conditions(params)
+    collection_name = f"{settings.QDRANT_BASE_COLLECTION_NAME}.{search_collection}"
+    if search_collection == "resources":
+        qdrant_conditions.append(
+            models.FieldCondition(key="published", match=models.MatchValue(value=True))
+        )
+
     search_filter = models.Filter(
-        must=[
-            *qdrant_conditions,
-            models.FieldCondition(key="published", match=models.MatchValue(value=True)),
-        ],
+        must=qdrant_conditions,
     )
     if query_string:
         encoder = dense_encoder()
         search_result = client.query_points(
-            collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
+            collection_name=collection_name,
             using=encoder.model_short_name(),
             query=encoder.encode(query_string),
             query_filter=search_filter,
@@ -316,27 +340,24 @@ def vector_search(
         ).points
     else:
         search_result = client.scroll(
-            collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
+            collection_name=collection_name,
             scroll_filter=search_filter,
             limit=limit,
             offset=offset,
         )[0]
-    hits = [hit.payload["readable_id"] for hit in search_result]
+
+    if search_collection == "resources":
+        hits = _resource_vector_hits(search_result)
+    else:
+        hits = _conetnt_file_vector_hits(search_result)
     count_result = client.count(
-        collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
+        collection_name=collection_name,
         count_filter=search_filter,
         exact=True,
     )
 
-    """
-    Always lookup learning resources by readable_id for portability
-    in case we load points from external systems
-    """
     return {
-        "hits": LearningResourceSerializer(
-            LearningResource.objects.for_serialization().filter(readable_id__in=hits),
-            many=True,
-        ).data,
+        "hits": hits,
         "total": {"value": count_result.count},
     }
 
