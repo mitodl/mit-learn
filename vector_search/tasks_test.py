@@ -3,11 +3,12 @@ import datetime
 import pytest
 from django.conf import settings
 
-from learning_resources.etl.constants import ETLSource
+from learning_resources.etl.constants import RESOURCE_FILE_ETL_SOURCES, ETLSource
 from learning_resources.factories import (
     ContentFileFactory,
     CourseFactory,
     LearningResourceFactory,
+    LearningResourceRunFactory,
     ProgramFactory,
 )
 from learning_resources.models import LearningResource
@@ -15,7 +16,11 @@ from learning_resources_search.constants import (
     COURSE_TYPE,
 )
 from main.utils import now_in_utc
-from vector_search.tasks import embed_new_learning_resources, start_embed_resources
+from vector_search.tasks import (
+    embed_learning_resources_by_id,
+    embed_new_learning_resources,
+    start_embed_resources,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -138,3 +143,38 @@ def test_embed_new_learning_resources(mocker, mocked_celery):
 
     embedded_ids = generate_embeddings_mock.si.mock_calls[0].args[0]
     assert sorted(daily_resource_ids) == sorted(embedded_ids)
+
+
+def test_embed_learning_resources_by_id(mocker, mocked_celery):
+    """
+    embed_learning_resources_by_id should generate embeddings for resources
+    based the ids passed as well as associated contentfiles
+    """
+    mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
+
+    resources = LearningResourceFactory.create_batch(
+        4,
+        resource_type=COURSE_TYPE,
+        etl_source=RESOURCE_FILE_ETL_SOURCES[0],
+        published=True,
+    )
+
+    resource_ids = [resource.id for resource in resources]
+
+    generate_embeddings_mock = mocker.patch(
+        "vector_search.tasks.generate_embeddings", autospec=True
+    )
+    content_ids = []
+    for resource in resources:
+        cf = ContentFileFactory.create(
+            run=LearningResourceRunFactory.create(learning_resource=resource)
+        )
+        content_ids.append(cf.id)
+
+    with pytest.raises(mocked_celery.replace_exception_class):
+        embed_learning_resources_by_id.delay(resource_ids, skip_content_files=False)
+    for mock_call in generate_embeddings_mock.si.mock_calls[1:]:
+        assert mock_call.args[0][0] in content_ids
+        assert mock_call.args[1] == "content_file"
+    embedded_resource_ids = generate_embeddings_mock.si.mock_calls[0].args[0]
+    assert sorted(resource_ids) == sorted(embedded_resource_ids)

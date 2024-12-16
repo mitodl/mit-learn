@@ -174,7 +174,7 @@ def _get_text_splitter(encoder):
     """
     Get the text splitter to use based on the encoder
     """
-    if hasattr(encoder, "token_encoding_name"):
+    if hasattr(encoder, "token_encoding_name") and encoder.token_encoding_name:
         # leverage tiktoken to ensure we stay within token limits
         return TokenTextSplitter(encoding_name=encoder.token_encoding_name)
     else:
