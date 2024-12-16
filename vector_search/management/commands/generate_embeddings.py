@@ -4,7 +4,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 from learning_resources_search.constants import LEARNING_RESOURCE_TYPES
 from main.utils import clear_search_cache, now_in_utc
-from vector_search.tasks import start_embed_resources
+from vector_search.tasks import embed_learning_resources_by_id, start_embed_resources
 from vector_search.utils import (
     create_qdrand_collections,
 )
@@ -31,6 +31,12 @@ class Command(BaseCommand):
         )
 
         parser.add_argument(
+            "--resource-ids",
+            dest="resource-ids",
+            help="Embed a specific set of reesources (overrides the --all flag)",
+        )
+
+        parser.add_argument(
             "--skip-contentfiles",
             dest="skip_content_files",
             action="store_true",
@@ -49,7 +55,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):  # noqa: ARG002
         """Embed all LEARNING_RESOURCE_TYPES"""
 
-        if options["all"]:
+        if options["all"] or options["resource-ids"]:
             indexes_to_update = list(LEARNING_RESOURCE_TYPES)
         else:
             indexes_to_update = list(
@@ -66,9 +72,18 @@ class Command(BaseCommand):
                 return
         if options["recreate_collections"]:
             create_qdrand_collections(force_recreate=True)
-        task = start_embed_resources.delay(
-            indexes_to_update, skip_content_files=options["skip_content_files"]
-        )
+        if options["resource-ids"]:
+            task = embed_learning_resources_by_id.delay(
+                [
+                    int(resource_id)
+                    for resource_id in options["resource-ids"].split(",")
+                ],
+                skip_content_files=options["skip_content_files"],
+            )
+        else:
+            task = start_embed_resources.delay(
+                indexes_to_update, skip_content_files=options["skip_content_files"]
+            )
         self.stdout.write(
             f"Started celery task {task} to index content for the following"
             f" Types to embed: {indexes_to_update}"

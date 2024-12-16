@@ -1,10 +1,13 @@
 import pytest
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from qdrant_client import models
 from qdrant_client.models import PointStruct
 
 from learning_resources.factories import ContentFileFactory, LearningResourceFactory
 from learning_resources_search.serializers import serialize_bulk_content_files
+from vector_search.encoders.utils import dense_encoder
 from vector_search.utils import (
+    _get_text_splitter,
     create_qdrand_collections,
     embed_learning_resources,
     filter_existing_qdrant_points,
@@ -21,7 +24,7 @@ def test_vector_point_id_used_for_embed(mocker, content_type):
     if content_type == "learning_resource":
         resources = LearningResourceFactory.create_batch(5)
     else:
-        resources = ContentFileFactory.create_batch(5)
+        resources = ContentFileFactory.create_batch(5, content="test content")
     mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
     mocker.patch(
         "vector_search.utils.qdrant_client",
@@ -35,7 +38,7 @@ def test_vector_point_id_used_for_embed(mocker, content_type):
     else:
         point_ids = [
             vector_point_id(
-                f"{resource['key']}.{resource['run_readable_id']}.{resource['resource_readable_id']}"
+                f"{resource['resource_readable_id']}.{resource['run_readable_id']}.{resource['key']}.0"
             )
             for resource in serialize_bulk_content_files([r.id for r in resources])
         ]
@@ -215,3 +218,17 @@ def test_qdrant_query_conditions(mocker):
         models.FieldCondition(key="q", match=models.MatchValue(value="test"))
         not in query_conditions
     )
+
+
+def test_get_text_splitter(mocker):
+    """
+    Test that the correct splitter is returned based on encoder
+    """
+    encoder = dense_encoder()
+    encoder.token_encoding_name = None
+    mocked_splitter = mocker.patch("vector_search.utils.TokenTextSplitter")
+    splitter = _get_text_splitter(encoder)
+    assert isinstance(splitter, RecursiveCharacterTextSplitter)
+    encoder.token_encoding_name = "cl100k_base"  # noqa: S105
+    splitter = _get_text_splitter(encoder)
+    mocked_splitter.assert_called()
