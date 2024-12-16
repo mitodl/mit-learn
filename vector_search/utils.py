@@ -170,6 +170,18 @@ def _process_resource_embeddings(serialized_resources):
     return points_generator(ids, metadata, embeddings, vector_name)
 
 
+def _get_text_splitter(encoder):
+    """
+    Get the text splitter to use based on the encoder
+    """
+    if hasattr(encoder, "token_encoding_name"):
+        # leverage tiktoken to ensure we stay within token limits
+        return TokenTextSplitter(encoding_name=encoder.token_encoding_name)
+    else:
+        # default for use with fastembed
+        return RecursiveCharacterTextSplitter(chunk_size=512, chunk_overlap=0)
+
+
 def _process_content_embeddings(serialized_content):
     embeddings = []
     metadata = []
@@ -178,11 +190,7 @@ def _process_content_embeddings(serialized_content):
     client = qdrant_client()
     encoder = dense_encoder()
     vector_name = encoder.model_short_name()
-    if hasattr(encoder, "token_encoding_name"):
-        text_splitter = TokenTextSplitter(encoding_name=encoder.token_encoding_name)
-    else:
-        # default for use with fastembed
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=512, chunk_overlap=0)
+    text_splitter = _get_text_splitter(encoder)
     for doc in serialized_content:
         if not doc.get("content"):
             continue
