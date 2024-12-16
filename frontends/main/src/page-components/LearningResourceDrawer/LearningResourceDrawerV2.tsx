@@ -135,6 +135,7 @@ const DrawerContent: React.FC<{
         resource={resource.data}
         carousels={[similarResourcesCarousel, vectorSimilarResourcesCarousel]}
         user={user}
+        shareUrl={`${window.location.origin}/search?${RESOURCE_DRAWER_QUERY_PARAM}=${resourceId}`}
         inLearningPath={inLearningPath}
         inUserList={inUserList}
         onAddToLearningPathClick={handleAddToLearningPathClick}
