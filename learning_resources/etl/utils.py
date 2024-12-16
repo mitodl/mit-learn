@@ -799,7 +799,7 @@ def transform_interval(interval_txt: str) -> str or None:
         re.IGNORECASE,
     )
     if english_matches:
-        return english_matches.group(0)
+        return english_matches.group(0).lower()
     reverse_map = {
         interval: k for k, v in TIME_INTERVAL_MAPPING.items() for interval in v
     }
@@ -807,7 +807,7 @@ def transform_interval(interval_txt: str) -> str or None:
         rf"{'|'.join(reverse_map.keys())}(\s|\/|$)", interval_txt, re.IGNORECASE
     )
     if other_matches:
-        return reverse_map[other_matches.group(0)]
+        return reverse_map[other_matches.group(0).lower()]
     return None
 
 
@@ -839,8 +839,7 @@ def parse_resource_duration(duration_str: str) -> DurationConfig:
             )
         else:
             log.warning("Invalid duration: %s", duration_str)
-            return DurationConfig(duration=duration_str)
-    return None
+    return DurationConfig(duration=duration_str or "")
 
 
 def parse_resource_commitment(commitment_str: str) -> CommitmentConfig:
@@ -870,5 +869,4 @@ def parse_resource_commitment(commitment_str: str) -> CommitmentConfig:
             )
         else:
             log.warning("Invalid commitment: %s", commitment_str)
-            return CommitmentConfig(commitment=commitment_str)
-    return None
+    return CommitmentConfig(commitment=commitment_str or "")

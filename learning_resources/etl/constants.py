@@ -32,21 +32,22 @@ TIME_INTERVAL_MAPPING = {
     ],
     "days": [
         "días",
+        "jours",
     ],
     "day": [
         "día",
+        "jour",
     ],
-    "weeks": [
-        "semanas",
-    ],
+    "weeks": ["semanas", "semaines", "settimanes"],
     "week": [
         "semana",
+        "semaine",
+        "settimane",
     ],
-    "months": [
-        "meses",
-    ],
+    "months": ["meses", "mois", "mesi"],
     "month": [
         "mes",
+        "mois",
     ],
 }
 

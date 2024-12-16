@@ -517,6 +517,7 @@ def test_parse_string_to_int(hour, expected):
         ("1 semana", 1, 1),  # 1 week in Spanish
         ("2 - 3 semanas", 2, 3),
         ("Unparseable duration", None, None),
+        ("", None, None),
     ],
 )
 def test_parse_resource_duration(raw_value, min_weeks, max_weeks):
@@ -538,6 +539,7 @@ def test_parse_resource_duration(raw_value, min_weeks, max_weeks):
         ("6 horas", 6, 6),
         ("1 hour", 1, 1),
         ("1 hora", 1, 1),
+        ("", None, None),
     ],
 )
 def test_parse_resource_commitment(raw_value, min_hours, max_hours):
