@@ -25,7 +25,11 @@ from learning_resources.constants import (
     PlatformType,
     RunStatus,
 )
-from learning_resources.etl.constants import COMMON_HEADERS
+from learning_resources.etl.constants import (
+    COMMON_HEADERS,
+    CommitmentConfig,
+    DurationConfig,
+)
 from learning_resources.etl.utils import (
     extract_valid_department_from_id,
     generate_course_numbers_json,
@@ -96,8 +100,9 @@ def _get_openedx_catalog_page(url, access_token):
         access_token (str): the access token to use
 
     Returns:
-        tuple(list of dict, str or None): a tuple with the next set of courses and the url to the next page of results, if any
-    """  # noqa: E501
+        tuple(list of dict, str or None): a tuple with the next set of
+        courses and the url to the next page of results, if any
+    """
     response = requests.get(  # noqa: S113
         url, headers={**COMMON_HEADERS, "Authorization": f"JWT {access_token}"}
     )
@@ -300,7 +305,87 @@ def _parse_course_dates(program, date_field):
     return dates
 
 
-def _sum_course_prices(program: dict) -> dict:
+def _transform_course_duration(course_run) -> DurationConfig:
+    """
+    Determine the duration of a course run
+
+    Args:
+        course_run (dict): the course run data
+
+    Returns:
+        DurationConfig: the duration of the course run
+    """
+    duration = course_run.get("weeks_to_complete")
+    if duration:
+        return DurationConfig(
+            duration=f"{duration} week{'s' if duration > 1 else ''}",
+            min_weeks=duration,
+            max_weeks=duration,
+        )
+    return DurationConfig()
+
+
+def _transform_program_effort(program_data) -> tuple[DurationConfig, CommitmentConfig]:
+    """
+    Determine the time commitment of a program
+
+    Args:
+        program_data (dict): the program data
+
+    Returns:
+        tuple[DurationConfig, CommitmentConfig]: duration and time commitment of program
+    """
+    course_ids = [course["key"] for course in program_data.get("courses", [])]
+    courses = LearningResource.objects.filter(
+        published=True, readable_id__in=course_ids, platform__code=PlatformType.edx.name
+    ).only("min_weekly_hours", "max_weekly_hours")
+    min_efforts = [
+        course.min_weekly_hours for course in courses if course.min_weekly_hours
+    ]
+    max_efforts = [
+        course.max_weekly_hours for course in courses if course.max_weekly_hours
+    ]
+    max_duration = sum([course.max_weeks for course in courses if course.max_weeks])
+    return _transform_course_duration(
+        {"weeks_to_complete": max_duration}
+    ), _transform_course_commitment(
+        {
+            "min_effort": round(sum(min_efforts) / len(min_efforts))
+            if min_efforts
+            else None,
+            "max_effort": round(sum(max_efforts) / len(max_efforts))
+            if max_efforts
+            else None,
+        }
+    )
+
+
+def _transform_course_commitment(course_run) -> CommitmentConfig:
+    """
+    Determine the time commitment of a course run
+
+    Args:
+        course_run (dict): the course run data
+
+    Returns:
+        CommitmentConfig: the time commitment of the course in hours per week
+    """
+
+    min_effort = course_run.get("min_effort") or 0
+    max_effort = course_run.get("max_effort") or min_effort
+    commit_str_prefix = f"{min_effort}-" if min_effort else ""
+    if min_effort or max_effort:
+        return CommitmentConfig(
+            commitment=f"{
+            commit_str_prefix}{max_effort or min_effort
+            } hour{'s' if max_effort > 1 else ''}/week",
+            min_weekly_hours=min(min_effort, max_effort),
+            max_weekly_hours=max(min_effort, max_effort),
+        )
+    return CommitmentConfig()
+
+
+def _sum_course_prices(program: dict) -> Decimal:
     """
     Sum all the course run price values for the program
 
@@ -349,6 +434,8 @@ def _transform_course_run(config, course_run, course_last_modified, marketing_ur
     year, semester = get_year_and_semester(course_run)
     course_run_last_modified = _parse_openedx_datetime(course_run.get("modified"))
     last_modified = max(course_last_modified, course_run_last_modified)
+    duration = _transform_course_duration(course_run)
+    commitment = _transform_course_commitment(course_run)
     return {
         "run_id": course_run.get("key"),
         "title": course_run.get("title"),
@@ -391,6 +478,12 @@ def _transform_course_run(config, course_run, course_last_modified, marketing_ur
             }
             for person in course_run.get("staff")
         ],
+        "duration": duration.duration,
+        "min_weeks": duration.min_weeks,
+        "max_weeks": duration.max_weeks,
+        "time_commitment": commitment.commitment,
+        "min_weekly_hours": commitment.min_weekly_hours,
+        "max_weekly_hours": commitment.max_weekly_hours,
     }
 
 
@@ -479,6 +572,7 @@ def _transform_program_run(
     Returns:
         dict: the transformed program run data
     """
+    duration, commitment = _transform_program_effort(program)
     return {
         "run_id": program.get("uuid"),
         "title": program.get("title"),
@@ -509,6 +603,12 @@ def _transform_program_run(
                 for pace in _parse_course_pace(course.get("course_runs", []))
             }
         ),
+        "duration": duration.duration,
+        "min_weeks": duration.min_weeks,
+        "max_weeks": duration.max_weeks,
+        "time_commitment": commitment.commitment,
+        "min_weekly_hours": commitment.min_weekly_hours,
+        "max_weekly_hours": commitment.max_weekly_hours,
     }
 
 

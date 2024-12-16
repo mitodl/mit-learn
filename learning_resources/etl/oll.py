@@ -1,6 +1,7 @@
 """MITx learning_resources ETL"""
 
 import logging
+import math
 from _csv import QUOTE_MINIMAL
 from csv import DictReader
 from io import StringIO
@@ -19,7 +20,10 @@ from learning_resources.constants import (
     RunStatus,
 )
 from learning_resources.etl.constants import ETLSource
-from learning_resources.etl.utils import generate_course_numbers_json, transform_levels
+from learning_resources.etl.utils import (
+    generate_course_numbers_json,
+    transform_levels,
+)
 from learning_resources.utils import get_year_and_semester
 
 log = logging.getLogger(__name__)
@@ -88,6 +92,24 @@ def transform_image(course_data: dict) -> dict:
     }
 
 
+def parse_duration(course_data: dict) -> tuple[str, int | None]:
+    """Get the duration as a string and integer from the course data."""
+    duration_str = course_data.get("Duration")
+    if not duration_str:
+        return "", None
+    duration = math.ceil(float(duration_str))
+    return f"{duration} weeks", duration
+
+
+def parse_commitment(course_data: dict) -> dict:
+    """Get the time commitment as a string and integer from the course data."""
+    commitment_str = course_data.get("Student Effort")
+    if not commitment_str:
+        return "", None
+    commitment = math.ceil(float(commitment_str))
+    return f"{commitment} hours/week", commitment
+
+
 def parse_topics(course_data: dict) -> list[dict]:
     """
     Transform course topics into our normalized data structure
@@ -121,6 +143,8 @@ def transform_run(course_data: dict) -> list[dict]:
         dict: normalized course run data
     """
     year, semester = get_year_and_semester({"key": course_data["readable_id"]})
+    duration_str, duration = parse_duration(course_data)
+    commitment_str, commitment = parse_commitment(course_data)
     return [
         {
             "title": course_data["title"],
@@ -145,6 +169,12 @@ def transform_run(course_data: dict) -> list[dict]:
             "availability": Availability.anytime.name,
             "pace": [Pace.self_paced.name],
             "format": [Format.asynchronous.name],
+            "duration": duration_str,
+            "time_commitment": commitment_str,
+            "min_weeks": duration,
+            "max_weeks": duration,
+            "min_weekly_hours": commitment,
+            "max_weekly_hours": commitment,
         }
     ]
 

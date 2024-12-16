@@ -153,6 +153,12 @@ def load_run_dependent_values(
             else []
         )
         resource.location = best_run.location
+        resource.duration = best_run.duration
+        resource.min_weeks = best_run.min_weeks
+        resource.max_weeks = best_run.max_weeks
+        resource.time_commitment = best_run.time_commitment
+        resource.min_weekly_hours = best_run.min_weekly_hours
+        resource.max_weekly_hours = best_run.max_weekly_hours
     resource.save()
     return ResourceNextRunConfig(
         next_start_date=resource.next_start_date,
@@ -160,6 +166,12 @@ def load_run_dependent_values(
         resource_prices=resource.resource_prices.all(),
         availability=resource.availability,
         location=resource.location,
+        duration=resource.duration,
+        min_weeks=resource.min_weeks,
+        max_weeks=resource.max_weeks,
+        time_commitment=resource.time_commitment,
+        min_weekly_hours=resource.min_weekly_hours,
+        max_weekly_hours=resource.max_weekly_hours,
     )
 
 
