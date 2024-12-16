@@ -373,7 +373,9 @@ def _transform_course_commitment(course_run) -> CommitmentConfig:
 
     min_effort = course_run.get("min_effort") or 0
     max_effort = course_run.get("max_effort") or min_effort
-    commit_str_prefix = f"{min_effort}-" if min_effort else ""
+    commit_str_prefix = (
+        f"{min_effort}-" if min_effort is not None and min_effort != max_effort else ""
+    )
     if min_effort or max_effort:
         return CommitmentConfig(
             commitment=f"{
