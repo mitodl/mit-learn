@@ -184,7 +184,12 @@ def _get_text_splitter(encoder):
         return TokenTextSplitter(encoding_name=encoder.token_encoding_name)
     else:
         # default for use with fastembed
-        return RecursiveCharacterTextSplitter(chunk_size=512, chunk_overlap=0)
+        return RecursiveCharacterTextSplitter(
+            chunk_size=512,
+            chunk_overlap=50,
+            add_start_index=True,
+            separators=["\n\n", "\n", ".", " ", ""],
+        )
 
 
 def _process_content_embeddings(serialized_content):
@@ -297,7 +302,7 @@ def _resource_vector_hits(search_result):
     ).data
 
 
-def _conetnt_file_vector_hits(search_result):
+def _content_file_vector_hits(search_result):
     return [hit.payload for hit in search_result]
 
 
@@ -353,7 +358,7 @@ def vector_search(
     if search_collection == RESOURCES_COLLECTION_NAME:
         hits = _resource_vector_hits(search_result)
     else:
-        hits = _conetnt_file_vector_hits(search_result)
+        hits = _content_file_vector_hits(search_result)
     count_result = client.count(
         collection_name=search_collection,
         count_filter=search_filter,
