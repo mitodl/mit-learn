@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react"
-import _ from "lodash"
+import { shuffle } from "lodash"
 import {
   Container,
   Typography,
@@ -229,8 +229,8 @@ const SlickCarousel = () => {
 
   useEffect(() => {
     if (!data) return
-    setShuffled(_.shuffle(data?.results))
-    setImageSequence(_.shuffle([1, 2, 3, 4, 5, 6]))
+    setShuffled(shuffle(data?.results))
+    setImageSequence(shuffle([1, 2, 3, 4, 5, 6]))
   }, [data])
 
   if (!data?.results?.length || !shuffled?.length) {
