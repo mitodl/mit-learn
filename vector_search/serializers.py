@@ -171,6 +171,10 @@ class LearningResourcesVectorSearchResponseSerializer(SearchResponseSerializer):
 
 
 class ContentFileVectorSearchRequestSerializer(serializers.Serializer):
+    """
+    Request serializer for vector based content file search
+    """
+
     q = serializers.CharField(required=False, help_text="The search text")
     offset = serializers.IntegerField(
         required=False, help_text="The initial index from which to return the results"
@@ -182,6 +186,21 @@ class ContentFileVectorSearchRequestSerializer(serializers.Serializer):
         required=False,
         choices=CONTENT_FILE_SORTBY_OPTIONS,
         help_text="if the parameter starts with '-' the sort is in descending order",
+    )
+    key = serializers.ListField(
+        required=False,
+        child=serializers.CharField(),
+        help_text="The filename of the content file",
+    )
+    course_number = serializers.ListField(
+        required=False,
+        child=serializers.CharField(),
+        help_text="Course number of the content file",
+    )
+    platform = serializers.ListField(
+        required=False,
+        child=serializers.CharField(),
+        help_text="platform(s) of the content file",
     )
     content_feature_type = serializers.ListField(
         required=False,
