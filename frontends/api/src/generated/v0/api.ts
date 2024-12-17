@@ -517,6 +517,290 @@ export interface ChannelUnitDetail {
   unit: LearningResourceOfferorDetail
 }
 /**
+ * Serializer class for course run ContentFiles
+ * @export
+ * @interface ContentFile
+ */
+export interface ContentFile {
+  /**
+   *
+   * @type {number}
+   * @memberof ContentFile
+   */
+  id: number
+  /**
+   *
+   * @type {number}
+   * @memberof ContentFile
+   */
+  run_id: number
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  run_title: string
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  run_slug: string
+  /**
+   *
+   * @type {Array<LearningResourceDepartment>}
+   * @memberof ContentFile
+   */
+  departments: Array<LearningResourceDepartment>
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  semester: string
+  /**
+   *
+   * @type {number}
+   * @memberof ContentFile
+   */
+  year: number
+  /**
+   *
+   * @type {Array<LearningResourceTopic>}
+   * @memberof ContentFile
+   */
+  topics: Array<LearningResourceTopic>
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  key?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  uid?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  title?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  url?: string | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof ContentFile
+   */
+  content_feature_type: Array<string>
+  /**
+   *
+   * @type {ContentTypeEnum}
+   * @memberof ContentFile
+   */
+  content_type?: ContentTypeEnum
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  content?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  content_title?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  content_author?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  content_language?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  image_src?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  resource_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  resource_readable_id: string
+  /**
+   * Extract the course number(s) from the associated course
+   * @type {Array<string>}
+   * @memberof ContentFile
+   */
+  course_number: Array<string>
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  file_type?: string | null
+  /**
+   *
+   * @type {LearningResourceOfferor}
+   * @memberof ContentFile
+   */
+  offered_by: LearningResourceOfferor
+  /**
+   *
+   * @type {LearningResourcePlatform}
+   * @memberof ContentFile
+   */
+  platform: LearningResourcePlatform
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  run_readable_id: string
+}
+
+/**
+ * SearchResponseSerializer with OpenAPI annotations for Content Files search
+ * @export
+ * @interface ContentFileVectorSearchResponse
+ */
+export interface ContentFileVectorSearchResponse {
+  /**
+   *
+   * @type {number}
+   * @memberof ContentFileVectorSearchResponse
+   */
+  count: number
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFileVectorSearchResponse
+   */
+  next: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFileVectorSearchResponse
+   */
+  previous: string | null
+  /**
+   *
+   * @type {Array<ContentFile>}
+   * @memberof ContentFileVectorSearchResponse
+   */
+  results: Array<ContentFile>
+  /**
+   *
+   * @type {ContentFileVectorSearchResponseMetadata}
+   * @memberof ContentFileVectorSearchResponse
+   */
+  metadata: ContentFileVectorSearchResponseMetadata
+}
+/**
+ *
+ * @export
+ * @interface ContentFileVectorSearchResponseMetadata
+ */
+export interface ContentFileVectorSearchResponseMetadata {
+  /**
+   *
+   * @type {{ [key: string]: Array<ContentFileVectorSearchResponseMetadataAggregationsValueInner>; }}
+   * @memberof ContentFileVectorSearchResponseMetadata
+   */
+  aggregations: {
+    [
+      key: string
+    ]: Array<ContentFileVectorSearchResponseMetadataAggregationsValueInner>
+  }
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof ContentFileVectorSearchResponseMetadata
+   */
+  suggestions: Array<string>
+}
+/**
+ *
+ * @export
+ * @interface ContentFileVectorSearchResponseMetadataAggregationsValueInner
+ */
+export interface ContentFileVectorSearchResponseMetadataAggregationsValueInner {
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFileVectorSearchResponseMetadataAggregationsValueInner
+   */
+  key: string
+  /**
+   *
+   * @type {number}
+   * @memberof ContentFileVectorSearchResponseMetadataAggregationsValueInner
+   */
+  doc_count: number
+}
+/**
+ * * `page` - page * `file` - file * `video` - video * `pdf` - pdf
+ * @export
+ * @enum {string}
+ */
+
+export const ContentTypeEnumDescriptions = {
+  page: "page",
+  file: "file",
+  video: "video",
+  pdf: "pdf",
+} as const
+
+export const ContentTypeEnum = {
+  /**
+   * page
+   */
+  Page: "page",
+  /**
+   * file
+   */
+  File: "file",
+  /**
+   * video
+   */
+  Video: "video",
+  /**
+   * pdf
+   */
+  Pdf: "pdf",
+} as const
+
+export type ContentTypeEnum =
+  (typeof ContentTypeEnum)[keyof typeof ContentTypeEnum]
+
+/**
  *
  * @export
  * @interface Counts
@@ -2441,52 +2725,10 @@ export interface LearningResourcesVectorSearchResponse {
   results: Array<LearningResource>
   /**
    *
-   * @type {LearningResourcesVectorSearchResponseMetadata}
+   * @type {ContentFileVectorSearchResponseMetadata}
    * @memberof LearningResourcesVectorSearchResponse
    */
-  metadata: LearningResourcesVectorSearchResponseMetadata
-}
-/**
- *
- * @export
- * @interface LearningResourcesVectorSearchResponseMetadata
- */
-export interface LearningResourcesVectorSearchResponseMetadata {
-  /**
-   *
-   * @type {{ [key: string]: Array<LearningResourcesVectorSearchResponseMetadataAggregationsValueInner>; }}
-   * @memberof LearningResourcesVectorSearchResponseMetadata
-   */
-  aggregations: {
-    [
-      key: string
-    ]: Array<LearningResourcesVectorSearchResponseMetadataAggregationsValueInner>
-  }
-  /**
-   *
-   * @type {Array<string>}
-   * @memberof LearningResourcesVectorSearchResponseMetadata
-   */
-  suggestions: Array<string>
-}
-/**
- *
- * @export
- * @interface LearningResourcesVectorSearchResponseMetadataAggregationsValueInner
- */
-export interface LearningResourcesVectorSearchResponseMetadataAggregationsValueInner {
-  /**
-   *
-   * @type {string}
-   * @memberof LearningResourcesVectorSearchResponseMetadataAggregationsValueInner
-   */
-  key: string
-  /**
-   *
-   * @type {number}
-   * @memberof LearningResourcesVectorSearchResponseMetadataAggregationsValueInner
-   */
-  doc_count: number
+  metadata: ContentFileVectorSearchResponseMetadata
 }
 /**
  * Serializer containing only parent and child ids for a learning path relationship
@@ -7265,6 +7507,357 @@ export class CkeditorApi extends BaseAPI {
       .then((request) => request(this.axios, this.basePath))
   }
 }
+
+/**
+ * ContentFilesVectorSearchApi - axios parameter creator
+ * @export
+ */
+export const ContentFilesVectorSearchApiAxiosParamCreator = function (
+  configuration?: Configuration,
+) {
+  return {
+    /**
+     * Vector Search for content
+     * @summary Content File Vector Search
+     * @param {Array<string>} [content_feature_type] The feature type of the content file. Possible options are at api/v1/course_features/
+     * @param {Array<string>} [course_number] Course number of the content file
+     * @param {Array<string>} [key] The filename of the content file
+     * @param {number} [limit] Number of results to return per page
+     * @param {number} [offset] The initial index from which to return the results
+     * @param {Array<string>} [platform] platform(s) of the content file
+     * @param {string} [q] The search text
+     * @param {Array<string>} [resource_readable_id] The readable_id value of the parent learning resource for the content file
+     * @param {Array<string>} [run_readable_id] The readable_id value of the run that the content file belongs to
+     * @param {ContentFilesVectorSearchRetrieveSortbyEnum} [sortby] if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;id&#x60; - id * &#x60;-id&#x60; - -id * &#x60;resource_readable_id&#x60; - resource_readable_id * &#x60;-resource_readable_id&#x60; - -resource_readable_id
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    contentFilesVectorSearchRetrieve: async (
+      content_feature_type?: Array<string>,
+      course_number?: Array<string>,
+      key?: Array<string>,
+      limit?: number,
+      offset?: number,
+      platform?: Array<string>,
+      q?: string,
+      resource_readable_id?: Array<string>,
+      run_readable_id?: Array<string>,
+      sortby?: ContentFilesVectorSearchRetrieveSortbyEnum,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      const localVarPath = `/api/v0/content_files_vector_search/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      if (content_feature_type) {
+        localVarQueryParameter["content_feature_type"] = content_feature_type
+      }
+
+      if (course_number) {
+        localVarQueryParameter["course_number"] = course_number
+      }
+
+      if (key) {
+        localVarQueryParameter["key"] = key
+      }
+
+      if (limit !== undefined) {
+        localVarQueryParameter["limit"] = limit
+      }
+
+      if (offset !== undefined) {
+        localVarQueryParameter["offset"] = offset
+      }
+
+      if (platform) {
+        localVarQueryParameter["platform"] = platform
+      }
+
+      if (q !== undefined) {
+        localVarQueryParameter["q"] = q
+      }
+
+      if (resource_readable_id) {
+        localVarQueryParameter["resource_readable_id"] = resource_readable_id
+      }
+
+      if (run_readable_id) {
+        localVarQueryParameter["run_readable_id"] = run_readable_id
+      }
+
+      if (sortby !== undefined) {
+        localVarQueryParameter["sortby"] = sortby
+      }
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+  }
+}
+
+/**
+ * ContentFilesVectorSearchApi - functional programming interface
+ * @export
+ */
+export const ContentFilesVectorSearchApiFp = function (
+  configuration?: Configuration,
+) {
+  const localVarAxiosParamCreator =
+    ContentFilesVectorSearchApiAxiosParamCreator(configuration)
+  return {
+    /**
+     * Vector Search for content
+     * @summary Content File Vector Search
+     * @param {Array<string>} [content_feature_type] The feature type of the content file. Possible options are at api/v1/course_features/
+     * @param {Array<string>} [course_number] Course number of the content file
+     * @param {Array<string>} [key] The filename of the content file
+     * @param {number} [limit] Number of results to return per page
+     * @param {number} [offset] The initial index from which to return the results
+     * @param {Array<string>} [platform] platform(s) of the content file
+     * @param {string} [q] The search text
+     * @param {Array<string>} [resource_readable_id] The readable_id value of the parent learning resource for the content file
+     * @param {Array<string>} [run_readable_id] The readable_id value of the run that the content file belongs to
+     * @param {ContentFilesVectorSearchRetrieveSortbyEnum} [sortby] if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;id&#x60; - id * &#x60;-id&#x60; - -id * &#x60;resource_readable_id&#x60; - resource_readable_id * &#x60;-resource_readable_id&#x60; - -resource_readable_id
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async contentFilesVectorSearchRetrieve(
+      content_feature_type?: Array<string>,
+      course_number?: Array<string>,
+      key?: Array<string>,
+      limit?: number,
+      offset?: number,
+      platform?: Array<string>,
+      q?: string,
+      resource_readable_id?: Array<string>,
+      run_readable_id?: Array<string>,
+      sortby?: ContentFilesVectorSearchRetrieveSortbyEnum,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<ContentFileVectorSearchResponse>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.contentFilesVectorSearchRetrieve(
+          content_feature_type,
+          course_number,
+          key,
+          limit,
+          offset,
+          platform,
+          q,
+          resource_readable_id,
+          run_readable_id,
+          sortby,
+          options,
+        )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap[
+          "ContentFilesVectorSearchApi.contentFilesVectorSearchRetrieve"
+        ]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+  }
+}
+
+/**
+ * ContentFilesVectorSearchApi - factory interface
+ * @export
+ */
+export const ContentFilesVectorSearchApiFactory = function (
+  configuration?: Configuration,
+  basePath?: string,
+  axios?: AxiosInstance,
+) {
+  const localVarFp = ContentFilesVectorSearchApiFp(configuration)
+  return {
+    /**
+     * Vector Search for content
+     * @summary Content File Vector Search
+     * @param {ContentFilesVectorSearchApiContentFilesVectorSearchRetrieveRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    contentFilesVectorSearchRetrieve(
+      requestParameters: ContentFilesVectorSearchApiContentFilesVectorSearchRetrieveRequest = {},
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<ContentFileVectorSearchResponse> {
+      return localVarFp
+        .contentFilesVectorSearchRetrieve(
+          requestParameters.content_feature_type,
+          requestParameters.course_number,
+          requestParameters.key,
+          requestParameters.limit,
+          requestParameters.offset,
+          requestParameters.platform,
+          requestParameters.q,
+          requestParameters.resource_readable_id,
+          requestParameters.run_readable_id,
+          requestParameters.sortby,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+  }
+}
+
+/**
+ * Request parameters for contentFilesVectorSearchRetrieve operation in ContentFilesVectorSearchApi.
+ * @export
+ * @interface ContentFilesVectorSearchApiContentFilesVectorSearchRetrieveRequest
+ */
+export interface ContentFilesVectorSearchApiContentFilesVectorSearchRetrieveRequest {
+  /**
+   * The feature type of the content file. Possible options are at api/v1/course_features/
+   * @type {Array<string>}
+   * @memberof ContentFilesVectorSearchApiContentFilesVectorSearchRetrieve
+   */
+  readonly content_feature_type?: Array<string>
+
+  /**
+   * Course number of the content file
+   * @type {Array<string>}
+   * @memberof ContentFilesVectorSearchApiContentFilesVectorSearchRetrieve
+   */
+  readonly course_number?: Array<string>
+
+  /**
+   * The filename of the content file
+   * @type {Array<string>}
+   * @memberof ContentFilesVectorSearchApiContentFilesVectorSearchRetrieve
+   */
+  readonly key?: Array<string>
+
+  /**
+   * Number of results to return per page
+   * @type {number}
+   * @memberof ContentFilesVectorSearchApiContentFilesVectorSearchRetrieve
+   */
+  readonly limit?: number
+
+  /**
+   * The initial index from which to return the results
+   * @type {number}
+   * @memberof ContentFilesVectorSearchApiContentFilesVectorSearchRetrieve
+   */
+  readonly offset?: number
+
+  /**
+   * platform(s) of the content file
+   * @type {Array<string>}
+   * @memberof ContentFilesVectorSearchApiContentFilesVectorSearchRetrieve
+   */
+  readonly platform?: Array<string>
+
+  /**
+   * The search text
+   * @type {string}
+   * @memberof ContentFilesVectorSearchApiContentFilesVectorSearchRetrieve
+   */
+  readonly q?: string
+
+  /**
+   * The readable_id value of the parent learning resource for the content file
+   * @type {Array<string>}
+   * @memberof ContentFilesVectorSearchApiContentFilesVectorSearchRetrieve
+   */
+  readonly resource_readable_id?: Array<string>
+
+  /**
+   * The readable_id value of the run that the content file belongs to
+   * @type {Array<string>}
+   * @memberof ContentFilesVectorSearchApiContentFilesVectorSearchRetrieve
+   */
+  readonly run_readable_id?: Array<string>
+
+  /**
+   * if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;id&#x60; - id * &#x60;-id&#x60; - -id * &#x60;resource_readable_id&#x60; - resource_readable_id * &#x60;-resource_readable_id&#x60; - -resource_readable_id
+   * @type {'id' | '-id' | 'resource_readable_id' | '-resource_readable_id'}
+   * @memberof ContentFilesVectorSearchApiContentFilesVectorSearchRetrieve
+   */
+  readonly sortby?: ContentFilesVectorSearchRetrieveSortbyEnum
+}
+
+/**
+ * ContentFilesVectorSearchApi - object-oriented interface
+ * @export
+ * @class ContentFilesVectorSearchApi
+ * @extends {BaseAPI}
+ */
+export class ContentFilesVectorSearchApi extends BaseAPI {
+  /**
+   * Vector Search for content
+   * @summary Content File Vector Search
+   * @param {ContentFilesVectorSearchApiContentFilesVectorSearchRetrieveRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ContentFilesVectorSearchApi
+   */
+  public contentFilesVectorSearchRetrieve(
+    requestParameters: ContentFilesVectorSearchApiContentFilesVectorSearchRetrieveRequest = {},
+    options?: RawAxiosRequestConfig,
+  ) {
+    return ContentFilesVectorSearchApiFp(this.configuration)
+      .contentFilesVectorSearchRetrieve(
+        requestParameters.content_feature_type,
+        requestParameters.course_number,
+        requestParameters.key,
+        requestParameters.limit,
+        requestParameters.offset,
+        requestParameters.platform,
+        requestParameters.q,
+        requestParameters.resource_readable_id,
+        requestParameters.run_readable_id,
+        requestParameters.sortby,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
+}
+
+/**
+ * @export
+ */
+export const ContentFilesVectorSearchRetrieveSortbyEnum = {
+  Id: "id",
+  Id2: "-id",
+  ResourceReadableId: "resource_readable_id",
+  ResourceReadableId2: "-resource_readable_id",
+} as const
+export type ContentFilesVectorSearchRetrieveSortbyEnum =
+  (typeof ContentFilesVectorSearchRetrieveSortbyEnum)[keyof typeof ContentFilesVectorSearchRetrieveSortbyEnum]
 
 /**
  * LearningResourcesSearchAdminParamsApi - axios parameter creator
