@@ -325,6 +325,14 @@ paths:
           type: integer
         description: Number of results to return per page
       - in: query
+        name: offered_by
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        description: Offeror of the content file
+      - in: query
         name: offset
         schema:
           type: integer

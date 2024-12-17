@@ -7523,6 +7523,7 @@ export const ContentFilesVectorSearchApiAxiosParamCreator = function (
      * @param {Array<string>} [course_number] Course number of the content file
      * @param {Array<string>} [key] The filename of the content file
      * @param {number} [limit] Number of results to return per page
+     * @param {Array<string>} [offered_by] Offeror of the content file
      * @param {number} [offset] The initial index from which to return the results
      * @param {Array<string>} [platform] platform(s) of the content file
      * @param {string} [q] The search text
@@ -7537,6 +7538,7 @@ export const ContentFilesVectorSearchApiAxiosParamCreator = function (
       course_number?: Array<string>,
       key?: Array<string>,
       limit?: number,
+      offered_by?: Array<string>,
       offset?: number,
       platform?: Array<string>,
       q?: string,
@@ -7575,6 +7577,10 @@ export const ContentFilesVectorSearchApiAxiosParamCreator = function (
 
       if (limit !== undefined) {
         localVarQueryParameter["limit"] = limit
+      }
+
+      if (offered_by) {
+        localVarQueryParameter["offered_by"] = offered_by
       }
 
       if (offset !== undefined) {
@@ -7635,6 +7641,7 @@ export const ContentFilesVectorSearchApiFp = function (
      * @param {Array<string>} [course_number] Course number of the content file
      * @param {Array<string>} [key] The filename of the content file
      * @param {number} [limit] Number of results to return per page
+     * @param {Array<string>} [offered_by] Offeror of the content file
      * @param {number} [offset] The initial index from which to return the results
      * @param {Array<string>} [platform] platform(s) of the content file
      * @param {string} [q] The search text
@@ -7649,6 +7656,7 @@ export const ContentFilesVectorSearchApiFp = function (
       course_number?: Array<string>,
       key?: Array<string>,
       limit?: number,
+      offered_by?: Array<string>,
       offset?: number,
       platform?: Array<string>,
       q?: string,
@@ -7668,6 +7676,7 @@ export const ContentFilesVectorSearchApiFp = function (
           course_number,
           key,
           limit,
+          offered_by,
           offset,
           platform,
           q,
@@ -7720,6 +7729,7 @@ export const ContentFilesVectorSearchApiFactory = function (
           requestParameters.course_number,
           requestParameters.key,
           requestParameters.limit,
+          requestParameters.offered_by,
           requestParameters.offset,
           requestParameters.platform,
           requestParameters.q,
@@ -7766,6 +7776,13 @@ export interface ContentFilesVectorSearchApiContentFilesVectorSearchRetrieveRequ
    * @memberof ContentFilesVectorSearchApiContentFilesVectorSearchRetrieve
    */
   readonly limit?: number
+
+  /**
+   * Offeror of the content file
+   * @type {Array<string>}
+   * @memberof ContentFilesVectorSearchApiContentFilesVectorSearchRetrieve
+   */
+  readonly offered_by?: Array<string>
 
   /**
    * The initial index from which to return the results
@@ -7835,6 +7852,7 @@ export class ContentFilesVectorSearchApi extends BaseAPI {
         requestParameters.course_number,
         requestParameters.key,
         requestParameters.limit,
+        requestParameters.offered_by,
         requestParameters.offset,
         requestParameters.platform,
         requestParameters.q,
