@@ -221,7 +221,6 @@ def _process_content_embeddings(serialized_content):
                         "description",
                         "key",
                         "run_title",
-                        "_id",
                     ]
                 },
             }
