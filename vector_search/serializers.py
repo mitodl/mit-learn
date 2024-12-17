@@ -197,6 +197,11 @@ class ContentFileVectorSearchRequestSerializer(serializers.Serializer):
         child=serializers.CharField(),
         help_text="Course number of the content file",
     )
+    offered_by = serializers.ListField(
+        required=False,
+        child=serializers.CharField(),
+        help_text="Offeror of the content file",
+    )
     platform = serializers.ListField(
         required=False,
         child=serializers.CharField(),
