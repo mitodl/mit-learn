@@ -312,7 +312,7 @@ def vector_search(
         params (dict): Additional search filters
         limit (int): Max number of results to return
         offset (int): Offset to start from
-        type (str): Type of search to perform (learning_resources or contentffiles)
+        search_collection (str): name of the collection to search
     Returns:
         dict:
             Response dict containing "hits" with search results
