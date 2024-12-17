@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from "react"
+import React, { useCallback, useEffect, useRef, useState } from "react"
 import styled from "@emotion/styled"
 import Skeleton from "@mui/material/Skeleton"
 import { default as NextImage } from "next/image"
@@ -28,6 +28,7 @@ import VideoFrame from "./VideoFrame"
 import { Link } from "../Link/Link"
 import { Input } from "../Input/Input"
 import Typography from "@mui/material/Typography"
+import { useSearchParams } from "next/navigation"
 
 const DRAWER_WIDTH = "900px"
 
@@ -689,8 +690,20 @@ const LearningResourceExpandedV2: React.FC<LearningResourceExpandedV2Props> = ({
   onAddToUserListClick,
   closeDrawer,
 }) => {
+  const outerContainerRef = useRef<HTMLDivElement>(null)
+  const searchParams = useSearchParams()
+  const searchParamsRef = useRef(searchParams)
+  useEffect(() => {
+    if (
+      outerContainerRef.current &&
+      searchParamsRef.current.get("resource") !== searchParams.get("resource")
+    ) {
+      outerContainerRef.current.scrollTo(0, 0)
+      searchParamsRef.current = searchParams
+    }
+  })
   return (
-    <OuterContainer>
+    <OuterContainer ref={outerContainerRef}>
       <TitleSection
         resource={resource}
         closeDrawer={closeDrawer ?? (() => {})}
