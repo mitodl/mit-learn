@@ -166,7 +166,7 @@ def _process_resource_embeddings(serialized_resources):
         ids.append(vector_point_id(vector_point_key))
         docs.append(
             f'{doc.get("title")} {doc.get("description")} '
-            f'{doc.get("full_description")} {doc.get("content")}'
+            f'{doc.get("full_description")}'
         )
     embeddings = encoder.encode_batch(docs)
     return points_generator(ids, metadata, embeddings, vector_name)
@@ -213,6 +213,7 @@ def _process_content_embeddings(serialized_content):
                         "platform",
                         "offered_by",
                         "run_readable_id",
+                        "resource_readable_id",
                         "content_type",
                         "content_feature_type",
                         "course_number",
