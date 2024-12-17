@@ -6687,6 +6687,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/youtube-player@npm:^5":
+  version: 5.5.11
+  resolution: "@types/youtube-player@npm:5.5.11"
+  checksum: 10/a14e974b5cc9dd191f2427112a6fcd97faba28cf11d62b9f74036c67f598a0429dce3bc4d1af8009ada662ef27889219750c8ce76c6eb71ada13d40ac6fc21c7
+  languageName: node
+  linkType: hard
+
 "@typescript-eslint/eslint-plugin@npm:^5.4.2 || ^6.0.0 || ^7.0.0 || ^8.0.0":
   version: 8.8.1
   resolution: "@typescript-eslint/eslint-plugin@npm:8.8.1"
@@ -14090,6 +14097,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"load-script@npm:^1.0.0":
+  version: 1.0.0
+  resolution: "load-script@npm:1.0.0"
+  checksum: 10/8458e3f07b4a86f8d9d66e47a987811491a5d013af23ba7b371c6d3c9dc899885b072ccf65abf7874c10cb197d4975eacd8a7a125bfb38dbbcb267539f5dc1e9
+  languageName: node
+  linkType: hard
+
 "loader-runner@npm:^4.2.0":
   version: 4.3.0
   resolution: "loader-runner@npm:4.3.0"
@@ -16252,6 +16266,7 @@ __metadata:
     "@types/react-dom": "npm:^18.3.0"
     "@types/react-slick": "npm:^0"
     "@types/tinycolor2": "npm:^1.4.6"
+    "@types/youtube-player": "npm:^5"
     api: "workspace:*"
     classnames: "npm:^2.5.1"
     dotenv: "npm:^16.4.5"
@@ -16275,6 +16290,7 @@ __metadata:
     typescript: "npm:^5.5.4"
     validator: "npm:^13.11.0"
     webpack: "npm:^5.94.0"
+    youtube-player: "npm:^5.6.0"
   languageName: unknown
   linkType: soft
 
@@ -19011,6 +19027,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"sister@npm:^3.0.0":
+  version: 3.0.2
+  resolution: "sister@npm:3.0.2"
+  checksum: 10/9eb0e74c319f96d4cb7d47c6242e3c9e4763986af63f3348d28359a4fd96aed7cd83e2e19c8ee4d18c1f675f3d1aae7d614fd45b1115b5dec3522dcd545873dd
+  languageName: node
+  linkType: hard
+
 "sisteransi@npm:^1.0.5":
   version: 1.0.5
   resolution: "sisteransi@npm:1.0.5"
@@ -21576,6 +21599,17 @@ __metadata:
   version: 1.1.1
   resolution: "yocto-queue@npm:1.1.1"
   checksum: 10/f2e05b767ed3141e6372a80af9caa4715d60969227f38b1a4370d60bffe153c9c5b33a862905609afc9b375ec57cd40999810d20e5e10229a204e8bde7ef255c
+  languageName: node
+  linkType: hard
+
+"youtube-player@npm:^5.6.0":
+  version: 5.6.0
+  resolution: "youtube-player@npm:5.6.0"
+  dependencies:
+    debug: "npm:^4.3.4"
+    load-script: "npm:^1.0.0"
+    sister: "npm:^3.0.0"
+  checksum: 10/ebdbea28d6e4d7f2fb4f04c8256a206659e10b037df8892b50ea5125ae2806c2238d2aa4a8d23f4478ea9b3107cbb878d13533ac376881546406b7ebd6fcb349
   languageName: node
   linkType: hard
 
