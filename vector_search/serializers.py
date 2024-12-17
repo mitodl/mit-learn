@@ -213,6 +213,11 @@ class ContentFileVectorSearchRequestSerializer(serializers.Serializer):
         help_text="The feature type of the content file. "
         "Possible options are at api/v1/course_features/",
     )
+    file_extension = serializers.ListField(
+        required=False,
+        child=serializers.CharField(),
+        help_text="The extension of the content file. ",
+    )
     run_readable_id = serializers.ListField(
         required=False,
         child=serializers.CharField(),

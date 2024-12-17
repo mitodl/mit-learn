@@ -202,7 +202,7 @@ def _process_content_embeddings(serialized_content):
         split_docs = text_splitter.create_documents(
             texts=[doc.get("content")], metadatas=[doc]
         )
-        split_texts = [d.page_content for d in split_docs]
+        split_texts = [d.page_content for d in split_docs if d.page_content]
         resource_vector_point_id = vector_point_id(doc["resource_readable_id"])
         split_metadatas = [
             {
@@ -217,18 +217,22 @@ def _process_content_embeddings(serialized_content):
                         "offered_by",
                         "run_readable_id",
                         "resource_readable_id",
+                        "published",
                         "content_type",
+                        "file_extension",
                         "content_feature_type",
                         "course_number",
                         "file_type",
                         "description",
                         "key",
-                        "run_title",
+                        "url",
                     ]
                 },
             }
             for chunk_id, d in enumerate(split_docs)
+            if d.page_content
         ]
+
         split_ids = [
             vector_point_id(
                 f'{doc['resource_readable_id']}.{doc['run_readable_id']}.{doc['key']}.{md["chunk_number"]}'
@@ -324,11 +328,6 @@ def vector_search(
     qdrant_conditions = qdrant_query_conditions(
         params, collection_name=search_collection
     )
-
-    if search_collection == RESOURCES_COLLECTION_NAME:
-        qdrant_conditions.append(
-            models.FieldCondition(key="published", match=models.MatchValue(value=True))
-        )
 
     search_filter = models.Filter(
         must=qdrant_conditions,

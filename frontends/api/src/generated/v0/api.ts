@@ -596,6 +596,12 @@ export interface ContentFile {
   description?: string | null
   /**
    *
+   * @type {boolean}
+   * @memberof ContentFile
+   */
+  published?: boolean
+  /**
+   *
    * @type {string}
    * @memberof ContentFile
    */
@@ -666,6 +672,12 @@ export interface ContentFile {
    * @memberof ContentFile
    */
   file_type?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  file_extension?: string | null
   /**
    *
    * @type {LearningResourceOfferor}
@@ -7521,6 +7533,7 @@ export const ContentFilesVectorSearchApiAxiosParamCreator = function (
      * @summary Content File Vector Search
      * @param {Array<string>} [content_feature_type] The feature type of the content file. Possible options are at api/v1/course_features/
      * @param {Array<string>} [course_number] Course number of the content file
+     * @param {Array<string>} [file_extension] The extension of the content file.
      * @param {Array<string>} [key] The filename of the content file
      * @param {number} [limit] Number of results to return per page
      * @param {Array<string>} [offered_by] Offeror of the content file
@@ -7536,6 +7549,7 @@ export const ContentFilesVectorSearchApiAxiosParamCreator = function (
     contentFilesVectorSearchRetrieve: async (
       content_feature_type?: Array<string>,
       course_number?: Array<string>,
+      file_extension?: Array<string>,
       key?: Array<string>,
       limit?: number,
       offered_by?: Array<string>,
@@ -7569,6 +7583,10 @@ export const ContentFilesVectorSearchApiAxiosParamCreator = function (
 
       if (course_number) {
         localVarQueryParameter["course_number"] = course_number
+      }
+
+      if (file_extension) {
+        localVarQueryParameter["file_extension"] = file_extension
       }
 
       if (key) {
@@ -7639,6 +7657,7 @@ export const ContentFilesVectorSearchApiFp = function (
      * @summary Content File Vector Search
      * @param {Array<string>} [content_feature_type] The feature type of the content file. Possible options are at api/v1/course_features/
      * @param {Array<string>} [course_number] Course number of the content file
+     * @param {Array<string>} [file_extension] The extension of the content file.
      * @param {Array<string>} [key] The filename of the content file
      * @param {number} [limit] Number of results to return per page
      * @param {Array<string>} [offered_by] Offeror of the content file
@@ -7654,6 +7673,7 @@ export const ContentFilesVectorSearchApiFp = function (
     async contentFilesVectorSearchRetrieve(
       content_feature_type?: Array<string>,
       course_number?: Array<string>,
+      file_extension?: Array<string>,
       key?: Array<string>,
       limit?: number,
       offered_by?: Array<string>,
@@ -7674,6 +7694,7 @@ export const ContentFilesVectorSearchApiFp = function (
         await localVarAxiosParamCreator.contentFilesVectorSearchRetrieve(
           content_feature_type,
           course_number,
+          file_extension,
           key,
           limit,
           offered_by,
@@ -7727,6 +7748,7 @@ export const ContentFilesVectorSearchApiFactory = function (
         .contentFilesVectorSearchRetrieve(
           requestParameters.content_feature_type,
           requestParameters.course_number,
+          requestParameters.file_extension,
           requestParameters.key,
           requestParameters.limit,
           requestParameters.offered_by,
@@ -7762,6 +7784,13 @@ export interface ContentFilesVectorSearchApiContentFilesVectorSearchRetrieveRequ
    * @memberof ContentFilesVectorSearchApiContentFilesVectorSearchRetrieve
    */
   readonly course_number?: Array<string>
+
+  /**
+   * The extension of the content file.
+   * @type {Array<string>}
+   * @memberof ContentFilesVectorSearchApiContentFilesVectorSearchRetrieve
+   */
+  readonly file_extension?: Array<string>
 
   /**
    * The filename of the content file
@@ -7850,6 +7879,7 @@ export class ContentFilesVectorSearchApi extends BaseAPI {
       .contentFilesVectorSearchRetrieve(
         requestParameters.content_feature_type,
         requestParameters.course_number,
+        requestParameters.file_extension,
         requestParameters.key,
         requestParameters.limit,
         requestParameters.offered_by,
