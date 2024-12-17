@@ -11,6 +11,7 @@ from rest_framework.views import APIView
 
 from authentication.decorators import blocked_ip_exempt
 from main.utils import cache_page_for_anonymous_users
+from vector_search.constants import CONTENT_FILES_COLLECTION_NAME
 from vector_search.serializers import (
     ContentFileVectorSearchRequestSerializer,
     ContentFileVectorSearchResponseSerializer,
@@ -118,7 +119,7 @@ class ContentFilesVectorSearchView(QdrantView):
                 limit=limit,
                 offset=offset,
                 params=request_data.data,
-                search_collection="content_files",
+                search_collection=CONTENT_FILES_COLLECTION_NAME,
             )
             if request_data.data.get("dev_mode"):
                 return Response(response)

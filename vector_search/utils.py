@@ -124,7 +124,8 @@ def create_qdrand_collections(force_recreate):
                 ),
             ),
         )
-    create_qdrant_indexes()
+    if force_recreate:
+        create_qdrant_indexes()
 
 
 def create_qdrant_indexes():
@@ -318,8 +319,10 @@ def vector_search(
     """
 
     client = qdrant_client()
-    collection_name = RESOURCES_COLLECTION_NAME
-    qdrant_conditions = qdrant_query_conditions(params, collection_name=collection_name)
+
+    qdrant_conditions = qdrant_query_conditions(
+        params, collection_name=search_collection
+    )
 
     if search_collection == RESOURCES_COLLECTION_NAME:
         qdrant_conditions.append(
@@ -332,7 +335,7 @@ def vector_search(
     if query_string:
         encoder = dense_encoder()
         search_result = client.query_points(
-            collection_name=collection_name,
+            collection_name=search_collection,
             using=encoder.model_short_name(),
             query=encoder.encode(query_string),
             query_filter=search_filter,
@@ -341,7 +344,7 @@ def vector_search(
         ).points
     else:
         search_result = client.scroll(
-            collection_name=collection_name,
+            collection_name=search_collection,
             scroll_filter=search_filter,
             limit=limit,
             offset=offset,
@@ -352,7 +355,7 @@ def vector_search(
     else:
         hits = _conetnt_file_vector_hits(search_result)
     count_result = client.count(
-        collection_name=collection_name,
+        collection_name=search_collection,
         count_filter=search_filter,
         exact=True,
     )
