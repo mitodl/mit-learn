@@ -1,4 +1,5 @@
 import datetime
+import hashlib
 import logging
 
 import celery
@@ -68,6 +69,33 @@ def generate_embeddings(ids, resource_type):
         return error
 
 
+def unique_content_ids(contenfiles):
+    """
+    Get content ids for unique records by content hash
+    """
+    content_ids = []
+    seen_content_hashes = []
+    for cf in contenfiles:
+        if not cf.content:
+            continue
+        content_hasher = hashlib.new("sha256")
+        content_hasher.update(cf.content.encode("utf-8"))
+        c_hash = content_hasher.hexdigest()
+        if c_hash not in seen_content_hashes:
+            seen_content_hashes.append(c_hash)
+            content_ids.append(cf.id)
+    return content_ids
+
+
+def _next_run(course):
+    """
+    Get the next run for a course
+    """
+    if course.next_run:
+        return course.next_run
+    return course.runs.filter(published=True).order_by("-start_date").first()
+
+
 @app.task(bind=True)
 def start_embed_resources(self, indexes, skip_content_files):
     """
@@ -107,19 +135,20 @@ def start_embed_resources(self, indexes, skip_content_files):
                     .exclude(readable_id=blocklisted_ids)
                     .order_by("id")
                 ):
+                    run = _next_run(course)
+                    run_contentfiles = ContentFile.objects.filter(
+                        run=run,
+                        published=True,
+                        run__published=True,
+                    ).order_by("id")
+                    content_ids = unique_content_ids(run_contentfiles)
                     index_tasks = index_tasks + [
                         generate_embeddings.si(
                             ids,
                             CONTENT_FILE_TYPE,
                         )
                         for ids in chunks(
-                            ContentFile.objects.filter(
-                                run__learning_resource_id=course.id,
-                                published=True,
-                                run__published=True,
-                            )
-                            .order_by("id")
-                            .values_list("id", flat=True),
+                            content_ids,
                             chunk_size=settings.QDRANT_CHUNK_SIZE,
                         )
                     ]
@@ -176,6 +205,7 @@ def embed_learning_resources_by_id(self, ids, skip_content_files):
         id__in=ids,
         published=True,
     )
+
     try:
         for resource_type in LEARNING_RESOURCE_TYPES:
             resources = resources.filter(resource_type=resource_type)
@@ -196,19 +226,20 @@ def embed_learning_resources_by_id(self, ids, skip_content_files):
                 for course in resources.filter(
                     etl_source__in=RESOURCE_FILE_ETL_SOURCES
                 ).order_by("id"):
+                    run = _next_run(course)
+                    run_contentfiles = ContentFile.objects.filter(
+                        run=run,
+                        published=True,
+                        run__published=True,
+                    ).order_by("id")
+                    content_ids = unique_content_ids(run_contentfiles)
                     index_tasks = index_tasks + [
                         generate_embeddings.si(
-                            content_ids,
+                            ids,
                             CONTENT_FILE_TYPE,
                         )
-                        for content_ids in chunks(
-                            ContentFile.objects.filter(
-                                run__learning_resource_id=course.id,
-                                published=True,
-                                run__published=True,
-                            )
-                            .order_by("id")
-                            .values_list("id", flat=True),
+                        for ids in chunks(
+                            content_ids,
                             chunk_size=settings.QDRANT_CHUNK_SIZE,
                         )
                     ]
