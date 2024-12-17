@@ -92,7 +92,7 @@ class LearningResourcesVectorSearchView(QdrantView):
         responses=ContentFileVectorSearchResponseSerializer(),
     ),
 )
-@action(methods=["GET"], detail=False, name="Search Learning Resources")
+@action(methods=["GET"], detail=False, name="Search Content Files")
 class ContentFilesVectorSearchView(QdrantView):
     """
     Vector Search for content
@@ -105,7 +105,7 @@ class ContentFilesVectorSearchView(QdrantView):
             settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
         )
     )
-    @extend_schema(summary="Vector Search")
+    @extend_schema(summary="Content File Vector Search")
     def get(self, request):
         request_data = ContentFileVectorSearchRequestSerializer(data=request.GET)
 
