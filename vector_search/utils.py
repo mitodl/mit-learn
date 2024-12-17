@@ -335,7 +335,10 @@ def vector_search(
     )
 
     search_filter = models.Filter(
-        must=qdrant_conditions,
+        must=[
+            *qdrant_conditions,
+            models.FieldCondition(key="published", match=models.MatchValue(value=True)),
+        ]
     )
     if query_string:
         encoder = dense_encoder()
