@@ -31,6 +31,9 @@ from main.utils import (
     chunks,
     now_in_utc,
 )
+from vector_search.constants import (
+    RESOURCES_COLLECTION_NAME,
+)
 from vector_search.utils import embed_learning_resources, filter_existing_qdrant_points
 
 log = logging.getLogger(__name__)
@@ -238,7 +241,7 @@ def embed_new_learning_resources(self):
     filtered_readable_ids = filter_existing_qdrant_points(
         values=existing_readable_ids,
         lookup_field="readable_id",
-        collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
+        collection_name=RESOURCES_COLLECTION_NAME,
     )
     filtered_resources = LearningResource.objects.filter(
         readable_id__in=filtered_readable_ids

@@ -11,31 +11,15 @@ from learning_resources_search.serializers import (
     serialize_bulk_content_files,
     serialize_bulk_learning_resources,
 )
+from vector_search.constants import (
+    CONTENT_FILES_COLLECTION_NAME,
+    QDRANT_CONTENT_FILE_INDEXES,
+    QDRANT_CONTENT_FILE_PARAM_MAP,
+    QDRANT_LEARNING_RESOURCE_INDEXES,
+    QDRANT_RESOURCE_PARAM_MAP,
+    RESOURCES_COLLECTION_NAME,
+)
 from vector_search.encoders.utils import dense_encoder
-
-QDRANT_PARAM_MAP = {
-    "readable_id": "readable_id",
-    "resource_type": "resource_type",
-    "resource_readable_id": "resource_readable_id",
-    "key": "key",
-    "run_title": "run_title",
-    "course_number": "course_number",
-    "run_readable_id": "run_readable_id",
-    "certification": "certification",
-    "certification_type": "certification_type.code",
-    "professional": "professional",
-    "free": "free",
-    "course_feature": "course_feature",
-    "content_feature_type": "content_feature_type",
-    "topic": "topics[].name",
-    "ocw_topic": "ocw_topics",
-    "level": "runs[].level.code",
-    "department": "departments.department_id",
-    "platform": "platform.code",
-    "offered_by": "offered_by.code",
-    "delivery": "delivery[].code",
-    "resource_category": "resource_category",
-}
 
 
 def qdrant_client():
@@ -84,10 +68,8 @@ def create_qdrand_collections(force_recreate):
         even if they already exist
     """
     client = qdrant_client()
-    resources_collection_name = f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources"
-    content_files_collection_name = (
-        f"{settings.QDRANT_BASE_COLLECTION_NAME}.content_files"
-    )
+    resources_collection_name = RESOURCES_COLLECTION_NAME
+    content_files_collection_name = CONTENT_FILES_COLLECTION_NAME
 
     encoder = dense_encoder()
     if (
@@ -141,6 +123,23 @@ def create_qdrand_collections(force_recreate):
                     always_ram=True,
                 ),
             ),
+        )
+    create_qdrant_indexes()
+
+
+def create_qdrant_indexes():
+    client = qdrant_client()
+    for index_field in QDRANT_LEARNING_RESOURCE_INDEXES:
+        client.create_payload_index(
+            collection_name=RESOURCES_COLLECTION_NAME,
+            field_name=index_field,
+            field_schema=QDRANT_LEARNING_RESOURCE_INDEXES[index_field],
+        )
+    for index_field in QDRANT_CONTENT_FILE_INDEXES:
+        client.create_payload_index(
+            collection_name=CONTENT_FILES_COLLECTION_NAME,
+            field_name=index_field,
+            field_schema=QDRANT_CONTENT_FILE_INDEXES[index_field],
         )
 
 
@@ -248,7 +247,7 @@ def _process_content_embeddings(serialized_content):
         ids.extend(split_ids)
     if len(resource_points) > 0:
         client.update_vectors(
-            collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
+            collection_name=RESOURCES_COLLECTION_NAME,
             points=resource_points,
         )
     return points_generator(ids, metadata, embeddings, vector_name)
@@ -264,10 +263,8 @@ def embed_learning_resources(ids, resource_type):
     """
 
     client = qdrant_client()
-    resources_collection_name = f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources"
-    content_files_collection_name = (
-        f"{settings.QDRANT_BASE_COLLECTION_NAME}.content_files"
-    )
+    resources_collection_name = RESOURCES_COLLECTION_NAME
+    content_files_collection_name = CONTENT_FILES_COLLECTION_NAME
 
     create_qdrand_collections(force_recreate=False)
     if resource_type != CONTENT_FILE_TYPE:
@@ -303,7 +300,7 @@ def vector_search(
     params: dict,
     limit: int = 10,
     offset: int = 10,
-    search_collection="resources",
+    search_collection=RESOURCES_COLLECTION_NAME,
 ):
     """
     Perform a vector search given a query string
@@ -321,9 +318,10 @@ def vector_search(
     """
 
     client = qdrant_client()
-    qdrant_conditions = qdrant_query_conditions(params)
-    collection_name = f"{settings.QDRANT_BASE_COLLECTION_NAME}.{search_collection}"
-    if search_collection == "resources":
+    collection_name = RESOURCES_COLLECTION_NAME
+    qdrant_conditions = qdrant_query_conditions(params, collection_name=collection_name)
+
+    if search_collection == RESOURCES_COLLECTION_NAME:
         qdrant_conditions.append(
             models.FieldCondition(key="published", match=models.MatchValue(value=True))
         )
@@ -349,7 +347,7 @@ def vector_search(
             offset=offset,
         )[0]
 
-    if search_collection == "resources":
+    if search_collection == RESOURCES_COLLECTION_NAME:
         hits = _resource_vector_hits(search_result)
     else:
         hits = _conetnt_file_vector_hits(search_result)
@@ -365,7 +363,7 @@ def vector_search(
     }
 
 
-def qdrant_query_conditions(params):
+def qdrant_query_conditions(params, collection_name=RESOURCES_COLLECTION_NAME):
     """
     Generate Qdrant query conditions from query params
     Args:
@@ -375,6 +373,10 @@ def qdrant_query_conditions(params):
             List of Qdrant FieldCondition objects
     """
     conditions = []
+    if collection_name == RESOURCES_COLLECTION_NAME:
+        QDRANT_PARAM_MAP = QDRANT_RESOURCE_PARAM_MAP
+    else:
+        QDRANT_PARAM_MAP = QDRANT_CONTENT_FILE_PARAM_MAP
     if not params:
         return conditions
     for param in params:
@@ -401,7 +403,7 @@ def qdrant_query_conditions(params):
 def filter_existing_qdrant_points(
     values,
     lookup_field="readable_id",
-    collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
+    collection_name=RESOURCES_COLLECTION_NAME,
 ):
     client = qdrant_client()
     results = client.scroll(
