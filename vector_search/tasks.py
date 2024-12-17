@@ -92,7 +92,7 @@ def start_embed_resources(self, indexes, skip_content_files):
                     .exclude(learning_resource__readable_id=blocklisted_ids)
                     .order_by("learning_resource_id")
                     .values_list("learning_resource_id", flat=True),
-                    chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
+                    chunk_size=settings.QDRANT_CHUNK_SIZE,
                 )
             ]
             if not skip_content_files:
@@ -117,7 +117,7 @@ def start_embed_resources(self, indexes, skip_content_files):
                             )
                             .order_by("id")
                             .values_list("id", flat=True),
-                            chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
+                            chunk_size=settings.QDRANT_CHUNK_SIZE,
                         )
                     ]
         for resource_type in [
@@ -135,7 +135,7 @@ def start_embed_resources(self, indexes, skip_content_files):
                     )
                     .order_by("id")
                     .values_list("id", flat=True),
-                    chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
+                    chunk_size=settings.QDRANT_CHUNK_SIZE,
                 ):
                     index_tasks.append(
                         generate_embeddings.si(
@@ -186,7 +186,7 @@ def embed_learning_resources_by_id(self, ids, skip_content_files):
                 )
                 for chunk_ids in chunks(
                     resources.order_by("id").values_list("id", flat=True),
-                    chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
+                    chunk_size=settings.QDRANT_CHUNK_SIZE,
                 )
             ]
             if not skip_content_files and resource_type == COURSE_TYPE:
@@ -206,7 +206,7 @@ def embed_learning_resources_by_id(self, ids, skip_content_files):
                             )
                             .order_by("id")
                             .values_list("id", flat=True),
-                            chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
+                            chunk_size=settings.QDRANT_CHUNK_SIZE,
                         )
                     ]
     except:  # noqa: E722
@@ -232,17 +232,30 @@ def embed_new_learning_resources(self):
         published=True,
         created_on__gt=since,
     ).exclude(resource_type=CONTENT_FILE_TYPE)
-    filtered_resources = filter_existing_qdrant_points(new_learning_resources)
-    for resource_type in LEARNING_RESOURCE_TYPES:
-        embed_tasks = celery.group(
+    existing_readable_ids = [
+        learning_resource.readable_id for learning_resource in new_learning_resources
+    ]
+    filtered_readable_ids = filter_existing_qdrant_points(
+        values=existing_readable_ids,
+        lookup_field="readable_id",
+        collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
+    )
+    filtered_resources = LearningResource.objects.filter(
+        readable_id__in=filtered_readable_ids
+    )
+    resource_types = list(filtered_resources.values_list("resource_type", flat=True))
+    tasks = []
+    for resource_type in resource_types:
+        tasks.extend(
             [
                 generate_embeddings.si(ids, resource_type)
                 for ids in chunks(
                     filtered_resources.filter(resource_type=resource_type).values_list(
                         "id", flat=True
                     ),
-                    chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
+                    chunk_size=settings.QDRANT_CHUNK_SIZE,
                 )
             ]
         )
+    embed_tasks = celery.group(tasks)
     return self.replace(embed_tasks)

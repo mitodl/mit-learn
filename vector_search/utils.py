@@ -396,48 +396,33 @@ def qdrant_query_conditions(params):
     return conditions
 
 
-def filter_existing_qdrant_points(learning_resources):
-    """
-    Filter learning resources that already have embeddings
-    Args:
-        learning_resources (QuerySet): Learning resources to check
-    Returns:
-        Queryset of learning resources that do not have embeddings in Qdrant
-
-    """
-    readable_ids = [
-        learning_resource.readable_id for learning_resource in learning_resources
-    ]
+def filter_existing_qdrant_points(
+    values,
+    lookup_field="readable_id",
+    collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
+):
     client = qdrant_client()
     results = client.scroll(
-        collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
+        collection_name=collection_name,
         scroll_filter=models.Filter(
             must=models.FieldCondition(
-                key="readable_id", match=models.MatchAny(any=readable_ids)
+                key=lookup_field, match=models.MatchAny(any=values)
             )
         ),
     )
     next_page_offset = results[1]
-    existing_readable_ids = [point.payload["readable_id"] for point in results[0]]
+    existing_values = [point.payload[lookup_field] for point in results[0]]
     # go page by page to fetch all existing readable ids
     while next_page_offset:
         results = client.scroll(
-            collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
+            collection_name=collection_name,
             scroll_filter=models.Filter(
                 must=models.FieldCondition(
-                    key="readable_id", match=models.MatchAny(any=readable_ids)
+                    key=lookup_field, match=models.MatchAny(any=values)
                 )
             ),
             offset=next_page_offset,
         )
-        existing_readable_ids.extend(
-            [point.payload["readable_id"] for point in results[0]]
-        )
+        existing_values.extend([point.payload[lookup_field] for point in results[0]])
         next_page_offset = results[1]
-    return LearningResource.objects.filter(
-        readable_id__in=[
-            readable_id
-            for readable_id in readable_ids
-            if readable_id not in existing_readable_ids
-        ]
-    )
+    return [value for value in values if value not in existing_values]
