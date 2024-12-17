@@ -261,4 +261,5 @@ def embed_new_learning_resources(self):
             ]
         )
     embed_tasks = celery.group(tasks)
+
     return self.replace(embed_tasks)

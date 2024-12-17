@@ -103,23 +103,6 @@ const DrawerContent: React.FC<{
           label: "Similar Learning Resources",
           cardProps: { size: "small" },
           data: {
-            type: "lr_similar",
-            params: { id: resourceId },
-          },
-        },
-      ]}
-    />
-  )
-  const vectorSimilarResourcesCarousel = (
-    <ResourceCarousel
-      titleComponent="p"
-      titleVariant="subtitle1"
-      title="Similar Learning Resources (Vector Based)"
-      config={[
-        {
-          label: "Similar Learning Resources (Vector Based)",
-          cardProps: { size: "small" },
-          data: {
             type: "lr_vector_similar",
             params: { id: resourceId },
           },
@@ -133,7 +116,7 @@ const DrawerContent: React.FC<{
       <LearningResourceExpandedV2
         imgConfig={imgConfigs.large}
         resource={resource.data}
-        carousels={[similarResourcesCarousel, vectorSimilarResourcesCarousel]}
+        carousels={[similarResourcesCarousel]}
         user={user}
         shareUrl={`${window.location.origin}/search?${RESOURCE_DRAWER_QUERY_PARAM}=${resourceId}`}
         inLearningPath={inLearningPath}

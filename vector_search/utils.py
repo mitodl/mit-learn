@@ -264,6 +264,7 @@ def embed_learning_resources(ids, resource_type):
     """
 
     client = qdrant_client()
+
     resources_collection_name = RESOURCES_COLLECTION_NAME
     content_files_collection_name = CONTENT_FILES_COLLECTION_NAME
 
