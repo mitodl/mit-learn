@@ -664,7 +664,12 @@ const ResourceDescription = ({ resource }: { resource?: LearningResource }) => {
         dangerouslySetInnerHTML={{ __html: resource.description || "" }}
       />
       {(isClamped || clampedOnFirstRender.current) && (
-        <Link color="red" size="small" onClick={() => setExpanded(!isExpanded)}>
+        <Link
+          scroll={false}
+          color="red"
+          size="small"
+          onClick={() => setExpanded(!isExpanded)}
+        >
           {isExpanded ? "Show less" : "Show more"}
         </Link>
       )}
