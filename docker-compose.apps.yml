@@ -24,28 +24,6 @@ services:
       - .:/src
       - django_media:/var/media
 
-  ai:
-    profiles:
-      - backend
-    build:
-      context: .
-      dockerfile: Dockerfile-async
-    mem_limit: 1gb
-    cpus: 2
-    command: ./scripts/run-ai-dev.sh
-    stdin_open: true
-    tty: true
-    ports:
-      - "8001:8001"
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - .:/src
-      - django_media:/var/media
-
   watch:
     profiles:
       - frontend
@@ -62,7 +40,7 @@ services:
       - "6006:6006"
     environment:
       - NEXT_SERVER_MITOL_API_BASE_URL=http://nginx:8063/
-      - AI_LEARN_BASE_WEBSOCKET_URL=ws://api.open.odl.local:8001/ws/
+      - AI_LEARN_BASE_WEBSOCKET_URL=ws://api.open.odl.local:8002/ws/
     volumes:
       - .:/src
     links:
