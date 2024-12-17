@@ -193,7 +193,7 @@ def clear_and_create_index(*, index_name=None, skip_mapping=False, object_type=N
 def get_mapping_changes(object_type):
     conn = get_conn()
     old_index = get_default_alias_name(object_type)
-    reindexing_index = get_default_alias_name(object_type)
+    reindexing_index = get_reindexing_alias_name(object_type)
 
     old_mapping = conn.indices.get_mapping(old_index)
     old_mapping = list(old_mapping.values())[0]["mappings"]["properties"]
