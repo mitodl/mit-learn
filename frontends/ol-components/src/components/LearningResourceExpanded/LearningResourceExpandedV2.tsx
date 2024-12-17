@@ -659,7 +659,7 @@ const ResourceDescription = ({ resource }: { resource?: LearningResource }) => {
         data-testid="drawer-description-text"
         ref={descriptionRendered}
         /**
-         * Resource descriptions can contain HTML. They are santiized on the
+         * Resource descriptions can contain HTML. They are sanitized on the
          * backend during ETL. This is safe to render.
          */
         dangerouslySetInnerHTML={{ __html: resource.description || "" }}
