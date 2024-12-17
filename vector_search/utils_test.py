@@ -6,6 +6,10 @@ from qdrant_client.models import PointStruct
 from learning_resources.factories import ContentFileFactory, LearningResourceFactory
 from learning_resources.models import LearningResource
 from learning_resources_search.serializers import serialize_bulk_content_files
+from vector_search.constants import (
+    CONTENT_FILES_COLLECTION_NAME,
+    RESOURCES_COLLECTION_NAME,
+)
 from vector_search.encoders.utils import dense_encoder
 from vector_search.utils import (
     _get_text_splitter,
@@ -106,11 +110,11 @@ def test_force_create_qdrand_collections(mocker):
     create_qdrand_collections(force_recreate=True)
     assert (
         mock_qdrant.recreate_collection.mock_calls[0].kwargs["collection_name"]
-        == "test.resources"
+        == RESOURCES_COLLECTION_NAME
     )
     assert (
         mock_qdrant.recreate_collection.mock_calls[1].kwargs["collection_name"]
-        == "test.content_files"
+        == CONTENT_FILES_COLLECTION_NAME
     )
     assert (
         "dummy-embedding"
@@ -136,11 +140,11 @@ def test_auto_create_qdrand_collections(mocker):
     create_qdrand_collections(force_recreate=False)
     assert (
         mock_qdrant.recreate_collection.mock_calls[0].kwargs["collection_name"]
-        == "test.resources"
+        == RESOURCES_COLLECTION_NAME
     )
     assert (
         mock_qdrant.recreate_collection.mock_calls[1].kwargs["collection_name"]
-        == "test.content_files"
+        == CONTENT_FILES_COLLECTION_NAME
     )
     assert (
         "dummy-embedding"
@@ -166,11 +170,11 @@ def test_skip_creating_qdrand_collections(mocker):
     create_qdrand_collections(force_recreate=False)
     assert (
         mock_qdrant.recreate_collection.mock_calls[0].kwargs["collection_name"]
-        == "test.resources"
+        == RESOURCES_COLLECTION_NAME
     )
     assert (
         mock_qdrant.recreate_collection.mock_calls[1].kwargs["collection_name"]
-        == "test.content_files"
+        == CONTENT_FILES_COLLECTION_NAME
     )
     assert (
         "dummy-embedding"
