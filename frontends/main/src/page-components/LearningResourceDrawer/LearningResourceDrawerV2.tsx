@@ -115,6 +115,7 @@ const DrawerContent: React.FC<{
     <>
       <LearningResourceExpandedV2
         imgConfig={imgConfigs.large}
+        resourceId={resourceId}
         resource={resource.data}
         carousels={[similarResourcesCarousel]}
         user={user}

@@ -28,7 +28,6 @@ import VideoFrame from "./VideoFrame"
 import { Link } from "../Link/Link"
 import { Input } from "../Input/Input"
 import Typography from "@mui/material/Typography"
-import { useSearchParams } from "next/navigation"
 
 const DRAWER_WIDTH = "900px"
 
@@ -293,6 +292,7 @@ const CarouselContainer = styled.div({
 })
 
 type LearningResourceExpandedV2Props = {
+  resourceId: number
   resource?: LearningResource
   user?: User
   shareUrl?: string
@@ -679,6 +679,7 @@ const ResourceDescription = ({ resource }: { resource?: LearningResource }) => {
 }
 
 const LearningResourceExpandedV2: React.FC<LearningResourceExpandedV2Props> = ({
+  resourceId,
   resource,
   imgConfig,
   user,
@@ -691,17 +692,11 @@ const LearningResourceExpandedV2: React.FC<LearningResourceExpandedV2Props> = ({
   closeDrawer,
 }) => {
   const outerContainerRef = useRef<HTMLDivElement>(null)
-  const searchParams = useSearchParams()
-  const searchParamsRef = useRef(searchParams)
   useEffect(() => {
-    if (
-      outerContainerRef.current &&
-      searchParamsRef.current.get("resource") !== searchParams.get("resource")
-    ) {
+    if (outerContainerRef.current && outerContainerRef.current.scrollTo) {
       outerContainerRef.current.scrollTo(0, 0)
-      searchParamsRef.current = searchParams
     }
-  })
+  }, [resourceId])
   return (
     <OuterContainer ref={outerContainerRef}>
       <TitleSection
