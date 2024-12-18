@@ -794,8 +794,6 @@ QDRANT_HOST = get_string(name="QDRANT_HOST", default="http://qdrant:6333")
 QDRANT_BASE_COLLECTION_NAME = get_string(
     name="QDRANT_COLLECTION_NAME", default="resource_embeddings"
 )
-
-
 QDRANT_DENSE_MODEL = get_string(name="QDRANT_DENSE_MODEL", default=None)
 QDRANT_SPARSE_MODEL = get_string(
     name="QDRANT_SPARSE_MODEL", default="prithivida/Splade_PP_en_v1"
@@ -803,6 +801,13 @@ QDRANT_SPARSE_MODEL = get_string(
 QDRANT_ENCODER = get_string(
     name="QDRANT_ENCODER", default="vector_search.encoders.fastembed.FastEmbedEncoder"
 )
+
+LITELLM_TOKEN_ENCODING_NAME = get_string(
+    name="LITELLM_TOKEN_ENCODING_NAME", default=None
+)
+LITELLM_CUSTOM_PROVIDER = get_string(name="LITELLM_CUSTOM_PROVIDER", default="ollama")
+LITELLM_API_BASE = get_string(name="LITELLM_API_BASE", default=None)
+
 
 OPENAI_API_KEY = get_string(
     name="OPENAI_API_KEY",
