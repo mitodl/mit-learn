@@ -163,6 +163,20 @@ describe("LearningResourceDrawerV2", () => {
     expect(LearningResourceExpandedV2).not.toHaveBeenCalled()
   })
 
+  test("Drawer is a dialog and has title", async () => {
+    const { resource } = setupApis({
+      resource: {
+        resource_type: ResourceTypeEnum.Course,
+      },
+    })
+    renderWithProviders(<LearningResourceDrawerV2 />, {
+      url: `?resource=${resource.id}`,
+    })
+    await screen.findByRole("dialog", {
+      name: `Course ${resource.title}`,
+    })
+  })
+
   test.each([
     {
       isLearningPathEditor: true,

@@ -6,6 +6,7 @@ import { ActionButton } from "../Button/Button"
 import { RiCloseLargeLine } from "@remixicon/react"
 import { useSearchParams, ReadonlyURLSearchParams } from "next/navigation"
 import { useToggle } from "ol-utilities"
+import invariant from "tiny-invariant"
 
 const CloseButton = styled(ActionButton)({
   position: "absolute",
@@ -80,11 +81,22 @@ const RoutedDrawer = <K extends string, R extends K = K>(
     window.history.pushState({}, "", `?${newParams}${hash || ""}`)
   }, [searchParams, params])
 
+  if (
+    process.env.NODE_ENV === "development" ||
+    process.env.NODE_ENV === "test"
+  ) {
+    const msg =
+      "[Dev-only Warning]: RoutedDrawer requires an aria-label or aria-labelledby prop."
+    invariant(props["aria-label"] || props["aria-labelledby"], msg)
+  }
+
   return (
     <Drawer
       open={open}
       onTransitionExited={removeUrlParams}
       onClose={setOpen.off}
+      role="dialog"
+      aria-modal="true"
       {...others}
     >
       {
