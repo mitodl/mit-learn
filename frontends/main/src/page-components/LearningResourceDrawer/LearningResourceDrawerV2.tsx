@@ -22,6 +22,7 @@ import { usePostHog } from "posthog-js/react"
 import ResourceCarousel from "../ResourceCarousel/ResourceCarousel"
 import { useIsLearningPathMember } from "api/hooks/learningPaths"
 import { useIsUserListMember } from "api/hooks/userLists"
+import { TopicCarouselConfig } from "@/app-pages/DashboardPage/carousels"
 
 const RESOURCE_DRAWER_PARAMS = [RESOURCE_DRAWER_QUERY_PARAM] as const
 
@@ -108,15 +109,27 @@ const DrawerContent: React.FC<{
           },
         },
       ]}
+      excludeResourceId={resourceId}
     />
   )
+  const topicCarousels = resource.data?.topics?.map((topic) => (
+    <ResourceCarousel
+      key={topic.id}
+      titleComponent="p"
+      titleVariant="subtitle1"
+      title={`Popular courses in ${topic.name}`}
+      config={TopicCarouselConfig(topic.name)}
+      data-testid={`topic-carousel-${topic}`}
+      excludeResourceId={resourceId}
+    />
+  ))
 
   return (
     <>
       <LearningResourceExpandedV2
         imgConfig={imgConfigs.large}
         resource={resource.data}
-        carousels={[similarResourcesCarousel]}
+        carousels={[similarResourcesCarousel, ...(topicCarousels || [])]}
         user={user}
         shareUrl={`${window.location.origin}/search?${RESOURCE_DRAWER_QUERY_PARAM}=${resourceId}`}
         inLearningPath={inLearningPath}
