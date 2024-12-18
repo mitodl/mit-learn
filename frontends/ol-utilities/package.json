@@ -7,8 +7,8 @@
     "./test-utils/factories": "./src/test-utils/factories.ts"
   },
   "peerDependencies": {
-    "next": "^14.2.15",
-    "react": "18.3.1"
+    "next": "^15",
+    "react": "19"
   },
   "sideEffects": false,
   "dependencies": {
