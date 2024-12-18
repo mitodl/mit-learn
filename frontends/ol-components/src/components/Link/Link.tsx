@@ -71,9 +71,17 @@ type LinkProps = LinkStyleProps &
      * re-fetch API data.
      */
     shallow?: boolean
+    scroll?: boolean
   }
 
-const BaseLink = ({ href, shallow, nohover, onClick, ...rest }: LinkProps) => {
+const BaseLink = ({
+  href,
+  shallow,
+  nohover,
+  scroll,
+  onClick,
+  ...rest
+}: LinkProps) => {
   if (process.env.NODE_ENV === "development") {
     invariant(
       !shallow || href?.startsWith("?"),
@@ -82,6 +90,7 @@ const BaseLink = ({ href, shallow, nohover, onClick, ...rest }: LinkProps) => {
   }
   return (
     <NextLink
+      scroll={scroll}
       href={href || ""}
       {...rest}
       onClick={

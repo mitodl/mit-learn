@@ -35,6 +35,7 @@ const setup = (resource: LearningResource, isLearningPathEditor?: boolean) => {
   return render(
     <BrowserRouter>
       <LearningResourceExpandedV2
+        resourceId={resource.id}
         resource={resource}
         user={user}
         shareUrl={`https://learn.mit.edu/search?resource=${resource.id}`}

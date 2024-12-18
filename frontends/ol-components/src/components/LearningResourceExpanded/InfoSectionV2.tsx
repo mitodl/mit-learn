@@ -196,6 +196,7 @@ const RunDates: React.FC<{ resource: LearningResource }> = ({ resource }) => {
     const showMoreLink = (
       <NoWrap>
         <ShowHideLink
+          scroll={false}
           color="red"
           size="small"
           onClick={() => setShowingMore(!showingMore)}
