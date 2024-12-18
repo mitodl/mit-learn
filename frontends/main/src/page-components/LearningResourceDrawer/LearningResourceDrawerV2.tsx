@@ -112,7 +112,10 @@ const DrawerContent: React.FC<{
       excludeResourceId={resourceId}
     />
   )
-  const topicCarousels = resource.data?.topics?.map((topic) => (
+  const topics = resource.data?.topics
+    ?.filter((topic) => topic.parent)
+    .slice(0, 2)
+  const topicCarousels = topics?.map((topic) => (
     <ResourceCarousel
       key={topic.id}
       titleComponent="p"
