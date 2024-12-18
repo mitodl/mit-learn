@@ -534,7 +534,7 @@ const InfoItem = ({ label, Icon, value }: InfoItemProps) => {
   }
   return (
     <InfoItemContainer>
-      <IconContainer>{Icon && <Icon />}</IconContainer>
+      <IconContainer>{Icon && <Icon aria-hidden="true" />}</IconContainer>
       <InfoLabel>{label}</InfoLabel>
       <InfoValue>{value}</InfoValue>
     </InfoItemContainer>
