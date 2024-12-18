@@ -89,6 +89,7 @@ const NluxAiChat: React.FC<NluxAiChatProps> = (props) => {
             model: model,
             temperature: temperature,
             instructions: systemPrompt,
+            clear_history: newChat,
           }),
         )
       }
