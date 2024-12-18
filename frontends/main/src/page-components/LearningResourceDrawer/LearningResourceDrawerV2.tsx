@@ -117,7 +117,7 @@ const DrawerContent: React.FC<{
       key={topic.id}
       titleComponent="p"
       titleVariant="subtitle1"
-      title={`Popular courses in ${topic.name}`}
+      title={`Learning Resources in "${topic.name}"`}
       config={TopicCarouselConfig(topic.name)}
       data-testid={`topic-carousel-${topic}`}
       excludeResourceId={resourceId}
