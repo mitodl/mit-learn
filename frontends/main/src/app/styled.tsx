@@ -19,6 +19,6 @@ export const PageWrapper = styled.div(({ theme }) => ({
   },
 }))
 
-export const PageWrapperInner = styled.div({
+export const PageWrapperInner = styled.main({
   flex: "1",
 })
