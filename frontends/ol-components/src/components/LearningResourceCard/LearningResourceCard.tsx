@@ -79,9 +79,7 @@ const Info = ({
           <Certificate>
             {size === "small" ? (
               <Tooltip title="Certificate">
-                <CertificateIconContainer>
-                  <RiAwardFill />
-                </CertificateIconContainer>
+                <RiAwardFill />
               </Tooltip>
             ) : (
               <RiAwardFill />
@@ -97,11 +95,6 @@ const Info = ({
     </>
   )
 }
-
-const CertificateIconContainer = styled.div`
-  display: flex;
-  align-items: center;
-`
 
 const PriceContainer = styled.div`
   display: flex;
