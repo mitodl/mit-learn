@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.26.3
+Version 0.26.3 (Released December 18, 2024)
 --------------
 
 - simplify font loading (#1895)
