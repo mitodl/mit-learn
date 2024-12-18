@@ -1,6 +1,23 @@
 Release Notes
 =============
 
+Version 0.26.4
+--------------
+
+- restore main tag in root layout (#1909)
+- Reduce the initial JS size (#1901)
+- Contentfile chunk embeddings (#1905)
+- remove the opensearch based carousel from the drawer and rename the vector based one as the default (#1902)
+- Update dependency ruff to v0.8.3 (#1903)
+- drawer v2 - share resource (#1893)
+- Fix shellcheck issue
+- App env vars for use with local vault agent (#1868)
+- add bordered button variant (#1900)
+- fix storybook (#1899)
+- Filter params for vector search (#1889)
+- add nprogress loading bar (#1897)
+- populate file extensions for ocw (#1891)
+
 Version 0.26.3 (Released December 18, 2024)
 --------------
 

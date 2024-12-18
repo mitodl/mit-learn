@@ -1,17 +1,22 @@
 import React, { useCallback, useRef, useState } from "react"
 import styled from "@emotion/styled"
 import Skeleton from "@mui/material/Skeleton"
-import Typography from "@mui/material/Typography"
 import { default as NextImage } from "next/image"
-import { ActionButton, ButtonLink } from "../Button/Button"
+import { ActionButton, Button, ButtonLink, ButtonProps } from "../Button/Button"
 import type { LearningResource } from "api"
 import { ResourceTypeEnum, PlatformEnum } from "api"
 import { DEFAULT_RESOURCE_IMG, getReadableResourceType } from "ol-utilities"
 import {
+  RiBookmarkFill,
   RiBookmarkLine,
   RiCloseLargeLine,
   RiExternalLinkLine,
+  RiFacebookFill,
+  RiLink,
+  RiLinkedinFill,
   RiMenuAddLine,
+  RiShareLine,
+  RiTwitterXLine,
 } from "@remixicon/react"
 import type { ImageConfig } from "../../constants/imgConfigs"
 import { theme } from "../ThemeProvider/ThemeProvider"
@@ -19,9 +24,10 @@ import { PlatformLogo, PLATFORM_LOGOS } from "../Logo/Logo"
 import InfoSectionV2 from "./InfoSectionV2"
 import type { User } from "api/hooks/user"
 import { LearningResourceCardProps } from "../LearningResourceCard/LearningResourceCard"
-import { CardActionButton } from "../LearningResourceCard/LearningResourceListCard"
 import VideoFrame from "./VideoFrame"
 import { Link } from "../Link/Link"
+import { Input } from "../Input/Input"
+import Typography from "@mui/material/Typography"
 
 const DRAWER_WIDTH = "900px"
 
@@ -125,10 +131,17 @@ const CallToAction = styled.div({
   },
 })
 
+const ActionsContainer = styled.div({
+  display: "flex",
+  flexDirection: "column",
+  gap: "16px",
+  width: "100%",
+})
+
 const PlatformContainer = styled.div({
   display: "flex",
   alignItems: "center",
-  justifyContent: "space-between",
+  justifyContent: "center",
   gap: "16px",
   alignSelf: "stretch",
 })
@@ -194,11 +207,69 @@ const OnPlatform = styled.span({
   color: theme.custom.colors.black,
 })
 
-const ListButtonContainer = styled.div({
+const ButtonContainer = styled.div({
   display: "flex",
+  width: "100%",
   gap: "8px",
   flexGrow: 1,
-  justifyContent: "flex-end",
+  justifyContent: "center",
+})
+
+const SelectableButton = styled(Button)<{ selected?: boolean }>((props) => [
+  {
+    flex: 1,
+    whiteSpace: "nowrap",
+  },
+  props.selected
+    ? {
+        backgroundColor: theme.custom.colors.red,
+        border: `1px solid ${theme.custom.colors.red}`,
+        color: theme.custom.colors.white,
+        "&:hover:not(:disabled)": {
+          backgroundColor: theme.custom.colors.red,
+          border: `1px solid ${theme.custom.colors.red}`,
+          color: theme.custom.colors.white,
+        },
+      }
+    : {},
+])
+
+const ShareContainer = styled.div({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  alignSelf: "stretch",
+  padding: "16px 0 8px 0",
+  gap: "12px",
+})
+
+const ShareLabel = styled(Typography)({
+  ...theme.typography.body3,
+  color: theme.custom.colors.darkGray1,
+})
+
+const ShareButtonContainer = styled.div({
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  alignSelf: "stretch",
+  gap: "16px",
+  a: {
+    height: "18px",
+  },
+})
+
+const ShareLink = styled(Link)({
+  color: theme.custom.colors.silverGrayDark,
+})
+
+const RedLinkIcon = styled(RiLink)({
+  color: theme.custom.colors.red,
+})
+
+const CopyLinkButton = styled(Button)({
+  flexGrow: 0,
+  flexBasis: "112px",
 })
 
 const CarouselContainer = styled.div({
@@ -223,6 +294,7 @@ const CarouselContainer = styled.div({
 type LearningResourceExpandedV2Props = {
   resource?: LearningResource
   user?: User
+  shareUrl?: string
   imgConfig: ImageConfig
   carousels?: React.ReactNode[]
   inLearningPath?: boolean
@@ -374,11 +446,25 @@ const getCallToActionText = (resource: LearningResource): string => {
   }
 }
 
+const CallToActionButton: React.FC<ButtonProps & { selected?: boolean }> = (
+  props,
+) => {
+  return (
+    <SelectableButton
+      size="small"
+      edge="circular"
+      variant="bordered"
+      {...props}
+    />
+  )
+}
+
 const CallToActionSection = ({
   imgConfig,
   resource,
   hide,
   user,
+  shareUrl,
   inUserList,
   inLearningPath,
   onAddToLearningPathClick,
@@ -388,11 +474,14 @@ const CallToActionSection = ({
   resource?: LearningResource
   hide?: boolean
   user?: User
+  shareUrl?: string
   inUserList?: boolean
   inLearningPath?: boolean
   onAddToLearningPathClick?: LearningResourceCardProps["onAddToLearningPathClick"]
   onAddToUserListClick?: LearningResourceCardProps["onAddToUserListClick"]
 }) => {
+  const [shareExpanded, setShareExpanded] = useState(false)
+  const [copyText, setCopyText] = useState("Copy Link")
   if (hide) {
     return null
   }
@@ -413,55 +502,121 @@ const CallToActionSection = ({
       : (platform?.code as PlatformEnum)
   const platformImage = PLATFORM_LOGOS[platformCode]?.image
   const cta = getCallToActionText(resource)
+  const addToLearningPathLabel = "Add to list"
+  const bookmarkLabel = "Bookmark"
+  const shareLabel = "Share"
+  const socialIconSize = 18
+  const facebookShareBaseUrl = "https://www.facebook.com/sharer/sharer.php"
+  const twitterShareBaseUrl = "https://x.com/share"
+  const linkedInShareBaseUrl = "https://www.linkedin.com/sharing/share-offsite"
   return (
     <CallToAction data-testid="drawer-cta">
       <ImageSection resource={resource} config={imgConfig} />
-      <StyledLink
-        target="_blank"
-        size="medium"
-        data-ph-action="click-cta"
-        data-ph-offered-by={offeredBy?.code}
-        data-ph-resource-type={resource.resource_type}
-        data-ph-resource-id={resource.id}
-        endIcon={<RiExternalLinkLine />}
-        href={getCallToActionUrl(resource) || ""}
-      >
-        {cta}
-      </StyledLink>
-      <PlatformContainer>
-        {platformImage ? (
-          <Platform>
-            <OnPlatform>on</OnPlatform>
-            <StyledPlatformLogo platformCode={platformCode} height={26} />
-          </Platform>
-        ) : null}
-        <ListButtonContainer>
+      <ActionsContainer>
+        <StyledLink
+          target="_blank"
+          size="medium"
+          data-ph-action="click-cta"
+          data-ph-offered-by={offeredBy?.code}
+          data-ph-resource-type={resource.resource_type}
+          data-ph-resource-id={resource.id}
+          endIcon={<RiExternalLinkLine />}
+          href={getCallToActionUrl(resource) || ""}
+        >
+          {cta}
+        </StyledLink>
+        <PlatformContainer>
+          {platformImage ? (
+            <Platform>
+              <OnPlatform>on</OnPlatform>
+              <StyledPlatformLogo platformCode={platformCode} height={26} />
+            </Platform>
+          ) : null}
+        </PlatformContainer>
+        <ButtonContainer>
           {user?.is_learning_path_editor && (
-            <CardActionButton
-              filled={inLearningPath}
-              aria-label="Add to Learning Path"
+            <CallToActionButton
+              selected={inLearningPath}
+              startIcon={<RiMenuAddLine />}
+              aria-label={addToLearningPathLabel}
               onClick={(event) =>
                 onAddToLearningPathClick
                   ? onAddToLearningPathClick(event, resource.id)
                   : null
               }
             >
-              <RiMenuAddLine aria-hidden />
-            </CardActionButton>
+              {addToLearningPathLabel}
+            </CallToActionButton>
           )}
-          <CardActionButton
-            filled={inUserList}
-            aria-label={`Bookmark ${getReadableResourceType(resource.resource_type)}`}
+          <CallToActionButton
+            selected={inUserList}
+            startIcon={inUserList ? <RiBookmarkFill /> : <RiBookmarkLine />}
+            aria-label={bookmarkLabel}
             onClick={
               onAddToUserListClick
                 ? (event) => onAddToUserListClick?.(event, resource.id)
                 : undefined
             }
           >
-            <RiBookmarkLine aria-hidden />
-          </CardActionButton>
-        </ListButtonContainer>
-      </PlatformContainer>
+            {bookmarkLabel}
+          </CallToActionButton>
+          <CallToActionButton
+            selected={shareExpanded}
+            startIcon={<RiShareLine />}
+            aria-label={shareLabel}
+            onClick={() => setShareExpanded(!shareExpanded)}
+          >
+            {shareLabel}
+          </CallToActionButton>
+        </ButtonContainer>
+        {shareExpanded && shareUrl && (
+          <ShareContainer data-testid="drawer-share">
+            <ShareLabel>Share a link to this Resource</ShareLabel>
+            <Input
+              fullWidth
+              value={shareUrl}
+              onClick={(event) => {
+                const input = event.currentTarget.querySelector("input")
+                if (!input) return
+                input.select()
+              }}
+            />
+            <ShareButtonContainer>
+              <ShareLink
+                href={`${facebookShareBaseUrl}?u=${encodeURIComponent(shareUrl)}`}
+                target="_blank"
+              >
+                <RiFacebookFill size={socialIconSize} />
+              </ShareLink>
+              <ShareLink
+                href={`${twitterShareBaseUrl}?text=${encodeURIComponent(resource.title)}&url=${encodeURIComponent(shareUrl)}`}
+                target="_blank"
+              >
+                <RiTwitterXLine size={socialIconSize} />
+              </ShareLink>
+              <ShareLink
+                href={`${linkedInShareBaseUrl}?url=${encodeURIComponent(shareUrl)}`}
+                target="_blank"
+              >
+                <RiLinkedinFill size={socialIconSize} />
+              </ShareLink>
+              <CopyLinkButton
+                size="small"
+                edge="circular"
+                variant="bordered"
+                startIcon={<RedLinkIcon />}
+                aria-label={copyText}
+                onClick={() => {
+                  navigator.clipboard.writeText(shareUrl)
+                  setCopyText("Copied!")
+                }}
+              >
+                {copyText}
+              </CopyLinkButton>
+            </ShareButtonContainer>
+          </ShareContainer>
+        )}
+      </ActionsContainer>
     </CallToAction>
   )
 }
@@ -521,6 +676,7 @@ const LearningResourceExpandedV2: React.FC<LearningResourceExpandedV2Props> = ({
   resource,
   imgConfig,
   user,
+  shareUrl,
   carousels,
   inUserList,
   inLearningPath,
@@ -545,6 +701,7 @@ const LearningResourceExpandedV2: React.FC<LearningResourceExpandedV2Props> = ({
               imgConfig={imgConfig}
               resource={resource}
               user={user}
+              shareUrl={shareUrl}
               inLearningPath={inLearningPath}
               inUserList={inUserList}
               onAddToLearningPathClick={onAddToLearningPathClick}

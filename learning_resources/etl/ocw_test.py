@@ -41,7 +41,7 @@ pytestmark = pytest.mark.django_db
 @pytest.mark.parametrize("base_ocw_url", ["http://test.edu/", "http://test.edu"])
 def test_transform_content_files(settings, mocker, base_ocw_url):
     """
-    Test transform_content_files
+    Test that ocw.transform_content_files returns the expected data
     """
     settings.OCW_BASE_URL = base_ocw_url
     ocw_url = base_ocw_url.rstrip("/")
@@ -94,6 +94,7 @@ def test_transform_content_files(settings, mocker, base_ocw_url):
         "title": "Resource Title",
         "content_title": "Resource Title",
         "url": f"{ocw_url}/courses/16-01-unified-engineering-i-ii-iii-iv-fall-2005-spring-2006/resources/resource/",
+        "file_extension": ".pdf",
     }
 
     assert content_data[3] == {
@@ -108,13 +109,14 @@ def test_transform_content_files(settings, mocker, base_ocw_url):
         "content_title": None,
         "url": f"{ocw_url}/courses/16-01-unified-engineering-i-ii-iii-iv-fall-2005-spring-2006/resources/video/",
         "image_src": "https://img.youtube.com/vi/vKer2U5W5-s/default.jpg",
+        "file_extension": ".mp4",
     }
 
 
 @mock_aws
 def test_transform_content_files_exceptions(settings, mocker):
     """
-    Test transform_content_files
+    Test that ocw.transform_content_files logs exceptions
     """
 
     setup_s3_ocw(settings)

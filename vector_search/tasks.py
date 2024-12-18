@@ -16,6 +16,7 @@ from learning_resources_search.constants import (
     CONTENT_FILE_TYPE,
     COURSE_TYPE,
     LEARNING_PATH_TYPE,
+    LEARNING_RESOURCE_TYPES,
     PODCAST_EPISODE_TYPE,
     PODCAST_TYPE,
     PROGRAM_TYPE,
@@ -67,7 +68,7 @@ def generate_embeddings(ids, resource_type):
 @app.task(bind=True)
 def start_embed_resources(self, indexes, skip_content_files):
     """
-    Celery task to embed learning resources
+    Celery task to embed all learning resources for given indexes
 
     Args:
         indexes (list of str): resource types to embed
@@ -153,6 +154,73 @@ def start_embed_resources(self, indexes, skip_content_files):
 
 
 @app.task(bind=True)
+def embed_learning_resources_by_id(self, ids, skip_content_files):
+    """
+    Celery task to embed specific resources
+
+    Args:
+        ids (list of int): list of resource ids to embed
+        skip_content_files (bool): whether to skip embedding content files
+    """
+    index_tasks = []
+    if not all([settings.QDRANT_HOST, settings.QDRANT_BASE_COLLECTION_NAME]):
+        log.warning(
+            "skipping. start_embed_resources called without setting "
+            "QDRANT_HOST and QDRANT_BASE_COLLECTION_NAME"
+        )
+        return None
+    resources = LearningResource.objects.filter(
+        id__in=ids,
+        published=True,
+    )
+    try:
+        for resource_type in LEARNING_RESOURCE_TYPES:
+            resources = resources.filter(resource_type=resource_type)
+
+            [
+                index_tasks.append(
+                    generate_embeddings.si(
+                        chunk_ids,
+                        resource_type,
+                    )
+                )
+                for chunk_ids in chunks(
+                    resources.order_by("id").values_list("id", flat=True),
+                    chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
+                )
+            ]
+            if not skip_content_files and resource_type == COURSE_TYPE:
+                for course in resources.filter(
+                    etl_source__in=RESOURCE_FILE_ETL_SOURCES
+                ).order_by("id"):
+                    index_tasks = index_tasks + [
+                        generate_embeddings.si(
+                            content_ids,
+                            CONTENT_FILE_TYPE,
+                        )
+                        for content_ids in chunks(
+                            ContentFile.objects.filter(
+                                run__learning_resource_id=course.id,
+                                published=True,
+                                run__published=True,
+                            )
+                            .order_by("id")
+                            .values_list("id", flat=True),
+                            chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
+                        )
+                    ]
+    except:  # noqa: E722
+        error = "start_embed_resources threw an error"
+        log.exception(error)
+        return error
+
+    # Use self.replace so that code waiting on this task will also wait on the embedding
+    #  and finish tasks
+
+    return self.replace(celery.chain(*index_tasks))
+
+
+@app.task(bind=True)
 def embed_new_learning_resources(self):
     """
     Embed new resources from the last day
@@ -165,13 +233,16 @@ def embed_new_learning_resources(self):
         created_on__gt=since,
     ).exclude(resource_type=CONTENT_FILE_TYPE)
     filtered_resources = filter_existing_qdrant_points(new_learning_resources)
-    embed_tasks = celery.group(
-        [
-            generate_embeddings.si(ids, COURSE_TYPE)
-            for ids in chunks(
-                filtered_resources.order_by("id").values_list("id", flat=True),
-                chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
-            )
-        ]
-    )
+    for resource_type in LEARNING_RESOURCE_TYPES:
+        embed_tasks = celery.group(
+            [
+                generate_embeddings.si(ids, resource_type)
+                for ids in chunks(
+                    filtered_resources.filter(resource_type=resource_type).values_list(
+                        "id", flat=True
+                    ),
+                    chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
+                )
+            ]
+        )
     return self.replace(embed_tasks)

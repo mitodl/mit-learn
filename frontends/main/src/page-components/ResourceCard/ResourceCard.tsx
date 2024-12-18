@@ -10,7 +10,7 @@ import {
   AddToLearningPathDialog,
   AddToUserListDialog,
 } from "../Dialogs/AddToListDialog"
-import { useResourceDrawerHref } from "../LearningResourceDrawer/LearningResourceDrawer"
+import { useResourceDrawerHref } from "../LearningResourceDrawer/useResourceDrawerHref"
 import { useUserMe } from "api/hooks/user"
 import { LearningResource } from "api"
 import { SignupPopover } from "../SignupPopover/SignupPopover"
