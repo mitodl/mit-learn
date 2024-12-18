@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useMemo } from "react"
+import React, { Suspense, useEffect, useId, useMemo } from "react"
 import {
   RoutedDrawer,
   LearningResourceExpandedV1,
@@ -64,7 +64,8 @@ const useCapturePageView = (resourceId: number) => {
 
 const DrawerContent: React.FC<{
   resourceId: number
-}> = ({ resourceId }) => {
+  titleId: string
+}> = ({ resourceId, titleId }) => {
   const resource = useLearningResourcesDetail(Number(resourceId))
   const [signupEl, setSignupEl] = React.useState<HTMLElement | null>(null)
   const { data: user } = useUserMe()
@@ -97,6 +98,7 @@ const DrawerContent: React.FC<{
       <LearningResourceExpandedV1
         imgConfig={imgConfigs.large}
         resource={resource.data}
+        titleId={titleId}
         user={user}
         inLearningPath={inLearningPath}
         inUserList={inUserList}
@@ -120,15 +122,19 @@ const PAPER_PROPS: RoutedDrawerProps["PaperProps"] = {
 }
 
 const LearningResourceDrawerV1 = () => {
+  const id = useId()
   return (
     <Suspense>
       <RoutedDrawer
         anchor="right"
+        aria-labelledby={id}
         requiredParams={RESOURCE_DRAWER_PARAMS}
         PaperProps={PAPER_PROPS}
       >
         {({ params }) => {
-          return <DrawerContent resourceId={Number(params.resource)} />
+          return (
+            <DrawerContent titleId={id} resourceId={Number(params.resource)} />
+          )
         }}
       </RoutedDrawer>
     </Suspense>
