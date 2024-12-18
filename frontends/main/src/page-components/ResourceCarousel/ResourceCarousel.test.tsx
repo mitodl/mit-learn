@@ -220,4 +220,28 @@ describe("ResourceCarousel", () => {
       expect(title.tagName).toBe(expectedTag)
     },
   )
+
+  it("Excludes a resource if excludeResourceId is provided", async () => {
+    const config: ResourceCarouselProps["config"] = [
+      {
+        label: "Resources",
+        data: {
+          type: "resources",
+          params: { resource_type: ["course", "program"], professional: true },
+        },
+      },
+    ]
+    const { resources } = setupApis()
+    renderWithProviders(
+      <ResourceCarousel
+        titleComponent="h1"
+        title="My Carousel"
+        config={config}
+        excludeResourceId={resources.list.results[1].id}
+      />,
+    )
+    await screen.findByText(resources.list.results[0].title)
+    await screen.findByText(resources.list.results[2].title)
+    expect(screen.queryByText(resources.list.results[1].title)).toBeNull()
+  })
 })
