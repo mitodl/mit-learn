@@ -152,6 +152,7 @@ const NluxAiChat: React.FC<NluxAiChatProps> = (props) => {
             <TextArea
               label="System Prompt"
               name="systemPrompt"
+              fullWidth
               value={systemPrompt}
               minRows={5}
               onChange={(e) => setSystemPrompt(e.target.value)}

@@ -98,7 +98,6 @@ class BaseChatAgent(ABC):
 
         Append the response with debugging metadata and/or errors.
         """
-        log.info("AI KEY IS %s", settings.OPENAI_API_KEY)
         if not self.agent:
             error = "Create agent before running"
             raise ValueError(error)
