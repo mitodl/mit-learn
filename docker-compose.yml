@@ -2,10 +2,10 @@ include:
   - docker-compose.services.yml
 
 services:
-  web:
+  ai:
     extends:
       file: docker-compose.apps.yml
-      service: web
+      service: ai
     env_file:
       - path: env/shared.env
       - path: env/shared.local.env
@@ -17,10 +17,10 @@ services:
       - path: .env
         required: false
 
-  ai:
+  web:
     extends:
       file: docker-compose.apps.yml
-      service: ai
+      service: web
     env_file:
       - path: env/shared.env
       - path: env/shared.local.env
