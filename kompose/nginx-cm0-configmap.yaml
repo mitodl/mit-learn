@@ -1,0 +1,98 @@
+apiVersion: v1
+data:
+  litellm_config.yml: |
+    model_list:
+      - model_name: "*"
+        litellm_params:
+          model: openai/*
+          api_key: os.environ/OPENAI_API_KEY
+
+    general_settings:
+      master_key: os.environ/LITELLM_MASTER_KEY
+
+    litellm_settings:
+      # The following should set default customer budgets, but they are
+      # being ignored or not created (not sure which).
+      # https://docs.litellm.ai/docs/proxy/users
+      max_end_user_budget: os.environ/OPENAI_AI_MAX_BUDGET
+      max_end_user_budget_duration: os.environ/OPENAI_AI_MAX_BUDGET_DURATION
+  nginx.conf.erb: |
+    # This file is for configuring Nginx on Heroku using the nginx-buildpack
+
+    daemon off;
+    #Heroku dynos have at least 4 cores.
+    worker_processes <%= ENV['NGINX_WORKERS'] || 4 %>;
+
+    events {
+        use epoll;
+        accept_mutex on;
+        worker_connections 1024;
+    }
+
+    http {
+        gzip on;
+        gzip_comp_level 2;
+        gzip_min_length 512;
+
+        server_tokens off;
+
+        log_format l2met 'measure#nginx.service=$request_time request_id=$http_x_request_id';
+        log_format apm '"$time_local" client=$remote_addr '
+                       'method=$request_method request="$request" '
+                       'request_length=$request_length '
+                       'status=$status bytes_sent=$bytes_sent '
+                       'body_bytes_sent=$body_bytes_sent '
+                       'referer=$http_referer '
+                       'user_agent="$http_user_agent" '
+                       'upstream_addr=$upstream_addr '
+                       'upstream_status=$upstream_status '
+                       'request_time=$request_time '
+                       'upstream_response_time=$upstream_response_time '
+                       'upstream_connect_time=$upstream_connect_time '
+                       'upstream_header_time=$upstream_header_time';
+        access_log logs/nginx/access.log apm;
+        error_log logs/nginx/error.log;
+
+        include mime.types;
+        default_type application/octet-stream;
+        sendfile on;
+
+        server {
+            listen <%= ENV["PORT"] %> default_server;
+            server_name _;
+
+            location = /.well-known/dnt-policy.txt {
+                return 204;
+            }
+
+            location / {
+                uwsgi_param QUERY_STRING $query_string;
+                uwsgi_param REQUEST_METHOD $request_method;
+                uwsgi_param CONTENT_TYPE $content_type;
+                uwsgi_param CONTENT_LENGTH $content_length;
+                uwsgi_param REQUEST_URI $request_uri;
+                uwsgi_param PATH_INFO $document_uri;
+                uwsgi_param DOCUMENT_ROOT $document_root;
+                uwsgi_param SERVER_PROTOCOL $server_protocol;
+                uwsgi_param REMOTE_ADDR $remote_addr;
+                uwsgi_param REMOTE_PORT $remote_port;
+                uwsgi_param SERVER_ADDR $server_addr;
+                uwsgi_param SERVER_PORT $server_port;
+                uwsgi_param SERVER_NAME $server_name;
+                uwsgi_param X-Forwarded-For $proxy_add_x_forwarded_for;
+                uwsgi_param X-Forwarded-Proto $http_x_forwarded_proto;
+                uwsgi_param X-Forwarded-Port $http_x_forwarded_port;
+                uwsgi_param X-Forwarded-Host $http_x_forwarded_host;
+                uwsgi_pass <%= ENV["NGINX_UWSGI_PASS"] || "unix:/tmp/nginx.socket" %>;
+                uwsgi_pass_request_headers on;
+                uwsgi_pass_request_body on;
+                client_max_body_size 25M;
+            }
+        }
+    }
+kind: ConfigMap
+metadata:
+  labels:
+    io.kompose.service: nginx
+  name: nginx-cm0
+  namespace: learn-ai

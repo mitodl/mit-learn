@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    io.kompose.service: opensearch-data1
+  name: opensearch-data1
+  namespace: learn-ai
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2000Mi

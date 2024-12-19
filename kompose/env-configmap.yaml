@@ -1,0 +1,106 @@
+apiVersion: v1
+data:
+  ACCESS_TOKEN_URL: https://sso-qa.ol.mit.edu/realms/olapps/protocol/openid-connect/token
+  ALLOWED_HOSTS: '[*]'
+  AUTHORIZATION_URL: https://sso-qa.ol.mit.edu/realms/olapps/protocol/openid-connect/auth
+  AWS_STORAGE_BUCKET_NAME: ol-mitlearn-app-storage-qa
+  CKEDITOR_ENVIRONMENT_ID: ""
+  CKEDITOR_SECRET_KEY: ""
+  CKEDITOR_UPLOAD_URL: ""
+  COMPOSE_PROFILES: backend,frontend
+  CORS_ALLOWED_ORIGIN_REGEXES: '[''^.+ocw-next.netlify.app$'']'
+  CORS_ALLOWED_ORIGINS: '["https://mitopen-rc.odl.mit.edu", "https://ocw-next.netlify.app", "https://ol-devops-ci.odl.mit.edu", "https://draft-qa.ocw.mit.edu", "https://live-qa.ocw.mit.edu"]'
+  CSAIL_BASE_URL: https://cap.csail.mit.edu/
+  CSRF_COOKIE_DOMAIN: .rc.learn.mit.edu
+  CSRF_TRUSTED_ORIGINS: '["https://api.mitopen-rc.odl.mit.edu", "https://mitopen-rc.odl.mit.edu"]'
+  DEBUG: "false"
+  EDX_API_ACCESS_TOKEN_URL: https://api.edx.org/oauth2/v1/access_token
+  EDX_API_CLIENT_ID: ""
+  EDX_API_CLIENT_SECRET: ""
+  EDX_API_URL: https://api.edx.org/catalog/v1/catalogs/10/courses
+  EDX_LEARNING_COURSE_BUCKET_NAME: edxorg-qa-edxapp-courses
+  EDX_PROGRAMS_API_URL: https://discovery.edx.org/api/v1/programs/
+  EMBEDLY_KEY: ffaa860a1ed5405994f0ee0e880e36f5
+  ENABLE_INFINITE_CORRIDOR: "true"
+  GA_G_TRACKING_ID: ""
+  GA_TRACKING_ID: ""
+  INDEXING_API_USERNAME: admin
+  KEYCLOAK_BASE_URL: https://sso-qa.ol.mit.edu/
+  MAILGUN_FROM_EMAIL: MIT Open <no-reply@discussions-mail.odl.mit.edu
+  MAILGUN_KEY: ""
+  MAILGUN_SENDER_DOMAIN: discussions-mail.odl.mit.edu
+  MAILGUN_URL: https://api.mailgun.net/v3/discussions-mail.odl.mit.edu
+  MICROMASTERS_CATALOG_API_URL: https://micromasters.mit.edu/api/v0/catalog/
+  MICROMASTERS_CMS_API_URL: https://micromasters.mit.edu/api/v0/wagtail/
+  MITLEARN_BASE_URL: http://localhost:8063
+  MITLEARN_COOKIE_DOMAIN: odl.local
+  MITLEARN_COOKIE_NAME: odc2
+  MITLEARN_LOG_LEVEL: INFO
+  MITOL_ADMIN_EMAIL: cuddle-bunnies@mit.edu
+  MITOL_AXIOS_BASE_PATH: https://rc.learn.mit.edu
+  MITOL_DEFAULT_SITE_KEY: micromasters
+  MITOL_EMAIL_PORT: "587"
+  MITOL_EMAIL_TLS: "True"
+  MITOL_ENVIRONMENT: local
+  MITOL_FROM_EMAIL: MITOpen <mitopen-support@mit.edu>
+  MITOL_FRONTPAGE_DIGEST_MAX_POSTS: "10"
+  MITOL_NOTIFICATION_EMAIL_BACKEND: anymail.backends.mailgun.EmailBackend
+  MITOL_USE_S3: "False"
+  MITPE_BASE_URL: https://professional.mit.edu/
+  MITX_ONLINE_BASE_URL: https://mitxonline.mit.edu/
+  MITX_ONLINE_COURSES_API_URL: https://mitxonline.mit.edu/api/v2/courses/
+  MITX_ONLINE_LEARNING_COURSE_BUCKET_NAME: mitx-etl-mitxonline-production
+  MITX_ONLINE_PROGRAMS_API_URL: https://mitxonline.mit.edu/api/v2/programs/
+  OCW_BASE_URL: https://ocw.mit.edu/
+  OCW_CONTENT_BUCKET_NAME: ocw-content-storage
+  OCW_LIVE_BUCKET: ocw-content-live-production
+  OCW_NEXT_SEARCH_WEBHOOK_KEY: ""
+  OCW_UPLOAD_IMAGE_ONLY: "True"
+  OCW_WEBHOOK_KEY: ""
+  OIDC_ENDPOINT: https://sso-qa.ol.mit.edu/realms/olapps
+  OLL_ALT_URL: https://openlearninglibrary.mit.edu/courses/
+  OLL_API_ACCESS_TOKEN_URL: https://openlearninglibrary.mit.edu/oauth2/access_token/
+  OLL_API_CLIENT_ID: ""
+  OLL_API_URL: https://discovery.openlearninglibrary.mit.edu/api/v1/catalogs/1/courses/
+  OLL_BASE_URL: https://openlearninglibrary.mit.edu/course/
+  OLL_LEARNING_COURSE_BUCKET_NAME: ol-data-lake-landing-zone-production
+  OLL_LEARNING_COURSE_BUCKET_PREFIX: open-learning-library/courses/
+  OPENSEARCH_DEFAULT_TIMEOUT: "30"
+  OPENSEARCH_HTTP_AUTH: ""
+  OPENSEARCH_INDEX: mitlearn-rc
+  OPENSEARCH_INDEXING_CHUNK_SIZE: "75"
+  POSTHOG_API_HOST: https://app.posthog.com
+  POSTHOG_ENABLED: "True"
+  POSTHOG_PERSONAL_API_KEY: ""
+  POSTHOG_PROJECT_API_KEY: ""
+  POSTHOG_PROJECT_ID: "63497"
+  POSTHOG_TIMEOUT_MS: "1000"
+  PROLEARN_CATALOG_API_URL: https://prolearn.mit.edu/graphql
+  QDRANT_COLLECTION_NAME: mitlearn-qa
+  SECURE_CROSS_ORIGIN_OPENER_POLICY: None
+  SEE_API_ACCESS_TOKEN_URL: https://mit-unified-portal-prod-78eeds.43d8q2.usa-e2.cloudhub.io/oauth/token
+  SEE_API_URL: https://mit-unified-portal-prod-78eeds.43d8q2.usa-e2.cloudhub.io/api/
+  SEE_BASE_URL: https://executive.mit.edu/
+  SENTRY_DSN: ""
+  SENTRY_ENV: dev
+  SESSION_COOKIE_DOMAIN: .odl.local
+  SOCIAL_AUTH_ALLOWED_REDIRECT_HOSTS: '["live-qa.ocw.mit.edu", "mitopen-rc.odl.mit.edu"]'
+  SOCIAL_AUTH_OL_OIDC_KEY: ol-mitlearn-client
+  SOCIAL_AUTH_OL_OIDC_OIDC_ENDPOINT: https://sso-qa.ol.mit.edu/realms/olapps
+  SOCIAL_AUTH_OL_OIDC_SECRET: ""
+  STATUS_TOKEN: ""
+  TIKA_ACCESS_TOKEN: ""
+  TIKA_SERVER_ENDPOINT: http://tika:9998/
+  USERINFO_URL: https://sso-qa.ol.mit.edu/realms/olapps/protocol/openid-connect/userinfo
+  XPRO_CATALOG_API_URL: https://xpro.mit.edu/api/programs/
+  XPRO_COURSES_API_URL: https://xpro.mit.edu/api/courses/
+  XPRO_LEARNING_COURSE_BUCKET_NAME: mitx-etl-xpro-production-mitxpro-production
+  YOUTUBE_CONFIG_URL: https://raw.githubusercontent.com/mitodl/open-video-data/mitopen/youtube/channels.yaml
+  YOUTUBE_DEVELOPER_KEY: ""
+  YOUTUBE_FETCH_TRANSCRIPT_SCHEDULE_SECONDS: "21600"
+kind: ConfigMap
+metadata:
+  labels:
+    io.kompose.service: ai-env
+  name: env
+  namespace: learn-ai

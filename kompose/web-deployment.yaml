@@ -1,0 +1,692 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose -vv -f docker-compose.yml convert --controller deployment --pvc-request-size 2000Mi --out kompose/ --profile backend --profile frontend --namespace learn-ai
+    kompose.version: 1.34.0 (HEAD)
+  labels:
+    io.kompose.service: web
+  name: web
+  namespace: learn-ai
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: web
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose -vv -f docker-compose.yml convert --controller deployment --pvc-request-size 2000Mi --out kompose/ --profile backend --profile frontend --namespace learn-ai
+        kompose.version: 1.34.0 (HEAD)
+      labels:
+        io.kompose.service: web
+    spec:
+      containers:
+        - args:
+            - ./scripts/run-django-dev.sh
+          env:
+            - name: ACCESS_TOKEN_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: ACCESS_TOKEN_URL
+                  name: env
+            - name: ALLOWED_HOSTS
+              valueFrom:
+                configMapKeyRef:
+                  key: ALLOWED_HOSTS
+                  name: env
+            - name: AUTHORIZATION_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: AUTHORIZATION_URL
+                  name: env
+            - name: AWS_STORAGE_BUCKET_NAME
+              valueFrom:
+                configMapKeyRef:
+                  key: AWS_STORAGE_BUCKET_NAME
+                  name: env
+            - name: CELERY_BROKER_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: CELERY_BROKER_URL
+                  name: backend-env
+            - name: CELERY_RESULT_BACKEND
+              valueFrom:
+                configMapKeyRef:
+                  key: CELERY_RESULT_BACKEND
+                  name: backend-env
+            - name: CELERY_TASK_ALWAYS_EAGER
+              valueFrom:
+                configMapKeyRef:
+                  key: CELERY_TASK_ALWAYS_EAGER
+                  name: backend-env
+            - name: CKEDITOR_ENVIRONMENT_ID
+              valueFrom:
+                configMapKeyRef:
+                  key: CKEDITOR_ENVIRONMENT_ID
+                  name: env
+            - name: CKEDITOR_SECRET_KEY
+              valueFrom:
+                configMapKeyRef:
+                  key: CKEDITOR_SECRET_KEY
+                  name: env
+            - name: CKEDITOR_UPLOAD_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: CKEDITOR_UPLOAD_URL
+                  name: env
+            - name: COMPOSE_PROFILES
+              valueFrom:
+                configMapKeyRef:
+                  key: COMPOSE_PROFILES
+                  name: env
+            - name: CORS_ALLOWED_ORIGINS
+              valueFrom:
+                configMapKeyRef:
+                  key: CORS_ALLOWED_ORIGINS
+                  name: backend-env
+            - name: CORS_ALLOWED_ORIGINS
+              valueFrom:
+                configMapKeyRef:
+                  key: CORS_ALLOWED_ORIGINS
+                  name: env
+            - name: CORS_ALLOWED_ORIGIN_REGEXES
+              valueFrom:
+                configMapKeyRef:
+                  key: CORS_ALLOWED_ORIGIN_REGEXES
+                  name: env
+            - name: CSAIL_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: CSAIL_BASE_URL
+                  name: env
+            - name: CSRF_COOKIE_DOMAIN
+              valueFrom:
+                configMapKeyRef:
+                  key: CSRF_COOKIE_DOMAIN
+                  name: backend-env
+            - name: CSRF_COOKIE_DOMAIN
+              valueFrom:
+                configMapKeyRef:
+                  key: CSRF_COOKIE_DOMAIN
+                  name: env
+            - name: CSRF_COOKIE_NAME
+              valueFrom:
+                configMapKeyRef:
+                  key: CSRF_COOKIE_NAME
+                  name: shared-env
+            - name: CSRF_COOKIE_SECURE
+              valueFrom:
+                configMapKeyRef:
+                  key: CSRF_COOKIE_SECURE
+                  name: backend-env
+            - name: CSRF_TRUSTED_ORIGINS
+              valueFrom:
+                configMapKeyRef:
+                  key: CSRF_TRUSTED_ORIGINS
+                  name: backend-env
+            - name: CSRF_TRUSTED_ORIGINS
+              valueFrom:
+                configMapKeyRef:
+                  key: CSRF_TRUSTED_ORIGINS
+                  name: env
+            - name: DATABASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: DATABASE_URL
+                  name: backend-env
+            - name: DEBUG
+              valueFrom:
+                configMapKeyRef:
+                  key: DEBUG
+                  name: backend-env
+            - name: DEBUG
+              valueFrom:
+                configMapKeyRef:
+                  key: DEBUG
+                  name: env
+            - name: DEV_ENV
+              valueFrom:
+                configMapKeyRef:
+                  key: DEV_ENV
+                  name: backend-env
+            - name: DJANGO_LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  key: DJANGO_LOG_LEVEL
+                  name: backend-env
+            - name: EDX_API_ACCESS_TOKEN_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: EDX_API_ACCESS_TOKEN_URL
+                  name: env
+            - name: EDX_API_CLIENT_ID
+              valueFrom:
+                configMapKeyRef:
+                  key: EDX_API_CLIENT_ID
+                  name: env
+            - name: EDX_API_CLIENT_SECRET
+              valueFrom:
+                configMapKeyRef:
+                  key: EDX_API_CLIENT_SECRET
+                  name: env
+            - name: EDX_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: EDX_API_URL
+                  name: env
+            - name: EDX_LEARNING_COURSE_BUCKET_NAME
+              valueFrom:
+                configMapKeyRef:
+                  key: EDX_LEARNING_COURSE_BUCKET_NAME
+                  name: env
+            - name: EDX_PROGRAMS_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: EDX_PROGRAMS_API_URL
+                  name: env
+            - name: EMBEDLY_KEY
+              valueFrom:
+                configMapKeyRef:
+                  key: EMBEDLY_KEY
+                  name: env
+            - name: ENABLE_INFINITE_CORRIDOR
+              valueFrom:
+                configMapKeyRef:
+                  key: ENABLE_INFINITE_CORRIDOR
+                  name: env
+            - name: GA_G_TRACKING_ID
+              valueFrom:
+                configMapKeyRef:
+                  key: GA_G_TRACKING_ID
+                  name: env
+            - name: GA_TRACKING_ID
+              valueFrom:
+                configMapKeyRef:
+                  key: GA_TRACKING_ID
+                  name: env
+            - name: INDEXING_API_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  key: INDEXING_API_USERNAME
+                  name: env
+            - name: KEYCLOAK_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: KEYCLOAK_BASE_URL
+                  name: env
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  key: LOG_LEVEL
+                  name: backend-env
+            - name: MAILGUN_FROM_EMAIL
+              valueFrom:
+                configMapKeyRef:
+                  key: MAILGUN_FROM_EMAIL
+                  name: env
+            - name: MAILGUN_KEY
+              valueFrom:
+                configMapKeyRef:
+                  key: MAILGUN_KEY
+                  name: env
+            - name: MAILGUN_SENDER_DOMAIN
+              valueFrom:
+                configMapKeyRef:
+                  key: MAILGUN_SENDER_DOMAIN
+                  name: env
+            - name: MAILGUN_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: MAILGUN_URL
+                  name: env
+            - name: MICROMASTERS_CATALOG_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: MICROMASTERS_CATALOG_API_URL
+                  name: env
+            - name: MICROMASTERS_CMS_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: MICROMASTERS_CMS_API_URL
+                  name: env
+            - name: MITLEARN_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: MITLEARN_BASE_URL
+                  name: env
+            - name: MITLEARN_COOKIE_DOMAIN
+              valueFrom:
+                configMapKeyRef:
+                  key: MITLEARN_COOKIE_DOMAIN
+                  name: env
+            - name: MITLEARN_COOKIE_NAME
+              valueFrom:
+                configMapKeyRef:
+                  key: MITLEARN_COOKIE_NAME
+                  name: env
+            - name: MITLEARN_LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  key: MITLEARN_LOG_LEVEL
+                  name: env
+            - name: MITOL_ADMIN_EMAIL
+              valueFrom:
+                configMapKeyRef:
+                  key: MITOL_ADMIN_EMAIL
+                  name: env
+            - name: MITOL_API_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: MITOL_API_BASE_URL
+                  name: shared-env
+            - name: MITOL_APP_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: MITOL_APP_BASE_URL
+                  name: shared-env
+            - name: MITOL_AXIOS_BASE_PATH
+              valueFrom:
+                configMapKeyRef:
+                  key: MITOL_AXIOS_BASE_PATH
+                  name: env
+            - name: MITOL_COOKIE_DOMAIN
+              valueFrom:
+                configMapKeyRef:
+                  key: MITOL_COOKIE_DOMAIN
+                  name: backend-env
+            - name: MITOL_COOKIE_NAME
+              valueFrom:
+                configMapKeyRef:
+                  key: MITOL_COOKIE_NAME
+                  name: backend-env
+            - name: MITOL_DB_DISABLE_SSL
+              valueFrom:
+                configMapKeyRef:
+                  key: MITOL_DB_DISABLE_SSL
+                  name: backend-env
+            - name: MITOL_DEFAULT_SITE_KEY
+              valueFrom:
+                configMapKeyRef:
+                  key: MITOL_DEFAULT_SITE_KEY
+                  name: env
+            - name: MITOL_EMAIL_PORT
+              valueFrom:
+                configMapKeyRef:
+                  key: MITOL_EMAIL_PORT
+                  name: env
+            - name: MITOL_EMAIL_TLS
+              valueFrom:
+                configMapKeyRef:
+                  key: MITOL_EMAIL_TLS
+                  name: env
+            - name: MITOL_ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  key: MITOL_ENVIRONMENT
+                  name: env
+            - name: MITOL_FEATURES_DEFAULT
+              valueFrom:
+                configMapKeyRef:
+                  key: MITOL_FEATURES_DEFAULT
+                  name: backend-env
+            - name: MITOL_FROM_EMAIL
+              valueFrom:
+                configMapKeyRef:
+                  key: MITOL_FROM_EMAIL
+                  name: env
+            - name: MITOL_FRONTPAGE_DIGEST_MAX_POSTS
+              valueFrom:
+                configMapKeyRef:
+                  key: MITOL_FRONTPAGE_DIGEST_MAX_POSTS
+                  name: env
+            - name: MITOL_NOTIFICATION_EMAIL_BACKEND
+              valueFrom:
+                configMapKeyRef:
+                  key: MITOL_NOTIFICATION_EMAIL_BACKEND
+                  name: env
+            - name: MITOL_SECURE_SSL_REDIRECT
+              valueFrom:
+                configMapKeyRef:
+                  key: MITOL_SECURE_SSL_REDIRECT
+                  name: backend-env
+            - name: MITOL_SUPPORT_EMAIL
+              valueFrom:
+                configMapKeyRef:
+                  key: MITOL_SUPPORT_EMAIL
+                  name: shared-env
+            - name: MITOL_USE_S3
+              valueFrom:
+                configMapKeyRef:
+                  key: MITOL_USE_S3
+                  name: env
+            - name: MITPE_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: MITPE_BASE_URL
+                  name: env
+            - name: MITX_ONLINE_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: MITX_ONLINE_BASE_URL
+                  name: env
+            - name: MITX_ONLINE_COURSES_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: MITX_ONLINE_COURSES_API_URL
+                  name: env
+            - name: MITX_ONLINE_LEARNING_COURSE_BUCKET_NAME
+              valueFrom:
+                configMapKeyRef:
+                  key: MITX_ONLINE_LEARNING_COURSE_BUCKET_NAME
+                  name: env
+            - name: MITX_ONLINE_PROGRAMS_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: MITX_ONLINE_PROGRAMS_API_URL
+                  name: env
+            - name: OCW_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: OCW_BASE_URL
+                  name: env
+            - name: OCW_CONTENT_BUCKET_NAME
+              valueFrom:
+                configMapKeyRef:
+                  key: OCW_CONTENT_BUCKET_NAME
+                  name: env
+            - name: OCW_LIVE_BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  key: OCW_LIVE_BUCKET
+                  name: env
+            - name: OCW_NEXT_SEARCH_WEBHOOK_KEY
+              valueFrom:
+                configMapKeyRef:
+                  key: OCW_NEXT_SEARCH_WEBHOOK_KEY
+                  name: env
+            - name: OCW_UPLOAD_IMAGE_ONLY
+              valueFrom:
+                configMapKeyRef:
+                  key: OCW_UPLOAD_IMAGE_ONLY
+                  name: env
+            - name: OCW_WEBHOOK_KEY
+              valueFrom:
+                configMapKeyRef:
+                  key: OCW_WEBHOOK_KEY
+                  name: env
+            - name: OIDC_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  key: OIDC_ENDPOINT
+                  name: env
+            - name: OLL_ALT_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: OLL_ALT_URL
+                  name: env
+            - name: OLL_API_ACCESS_TOKEN_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: OLL_API_ACCESS_TOKEN_URL
+                  name: env
+            - name: OLL_API_CLIENT_ID
+              valueFrom:
+                configMapKeyRef:
+                  key: OLL_API_CLIENT_ID
+                  name: env
+            - name: OLL_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: OLL_API_URL
+                  name: env
+            - name: OLL_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: OLL_BASE_URL
+                  name: env
+            - name: OLL_LEARNING_COURSE_BUCKET_NAME
+              valueFrom:
+                configMapKeyRef:
+                  key: OLL_LEARNING_COURSE_BUCKET_NAME
+                  name: env
+            - name: OLL_LEARNING_COURSE_BUCKET_PREFIX
+              valueFrom:
+                configMapKeyRef:
+                  key: OLL_LEARNING_COURSE_BUCKET_PREFIX
+                  name: env
+            - name: OPENSEARCH_DEFAULT_TIMEOUT
+              valueFrom:
+                configMapKeyRef:
+                  key: OPENSEARCH_DEFAULT_TIMEOUT
+                  name: env
+            - name: OPENSEARCH_HTTP_AUTH
+              valueFrom:
+                configMapKeyRef:
+                  key: OPENSEARCH_HTTP_AUTH
+                  name: env
+            - name: OPENSEARCH_INDEX
+              valueFrom:
+                configMapKeyRef:
+                  key: OPENSEARCH_INDEX
+                  name: backend-env
+            - name: OPENSEARCH_INDEX
+              valueFrom:
+                configMapKeyRef:
+                  key: OPENSEARCH_INDEX
+                  name: env
+            - name: OPENSEARCH_INDEXING_CHUNK_SIZE
+              valueFrom:
+                configMapKeyRef:
+                  key: OPENSEARCH_INDEXING_CHUNK_SIZE
+                  name: backend-env
+            - name: OPENSEARCH_INDEXING_CHUNK_SIZE
+              valueFrom:
+                configMapKeyRef:
+                  key: OPENSEARCH_INDEXING_CHUNK_SIZE
+                  name: env
+            - name: OPENSEARCH_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: OPENSEARCH_URL
+                  name: backend-env
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  key: PORT
+                  name: backend-env
+            - name: POSTHOG_API_HOST
+              valueFrom:
+                configMapKeyRef:
+                  key: POSTHOG_API_HOST
+                  name: env
+            - name: POSTHOG_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  key: POSTHOG_ENABLED
+                  name: env
+            - name: POSTHOG_PERSONAL_API_KEY
+              valueFrom:
+                configMapKeyRef:
+                  key: POSTHOG_PERSONAL_API_KEY
+                  name: env
+            - name: POSTHOG_PROJECT_API_KEY
+              valueFrom:
+                configMapKeyRef:
+                  key: POSTHOG_PROJECT_API_KEY
+                  name: env
+            - name: POSTHOG_PROJECT_ID
+              valueFrom:
+                configMapKeyRef:
+                  key: POSTHOG_PROJECT_ID
+                  name: env
+            - name: POSTHOG_TIMEOUT_MS
+              valueFrom:
+                configMapKeyRef:
+                  key: POSTHOG_TIMEOUT_MS
+                  name: shared-env
+            - name: POSTHOG_TIMEOUT_MS
+              valueFrom:
+                configMapKeyRef:
+                  key: POSTHOG_TIMEOUT_MS
+                  name: env
+            - name: PROLEARN_CATALOG_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: PROLEARN_CATALOG_API_URL
+                  name: env
+            - name: QDRANT_COLLECTION_NAME
+              valueFrom:
+                configMapKeyRef:
+                  key: QDRANT_COLLECTION_NAME
+                  name: env
+            - name: SECURE_CROSS_ORIGIN_OPENER_POLICY
+              valueFrom:
+                configMapKeyRef:
+                  key: SECURE_CROSS_ORIGIN_OPENER_POLICY
+                  name: env
+            - name: SEE_API_ACCESS_TOKEN_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: SEE_API_ACCESS_TOKEN_URL
+                  name: env
+            - name: SEE_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: SEE_API_URL
+                  name: env
+            - name: SEE_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: SEE_BASE_URL
+                  name: env
+            - name: SENTRY_DSN
+              valueFrom:
+                configMapKeyRef:
+                  key: SENTRY_DSN
+                  name: env
+            - name: SENTRY_ENV
+              valueFrom:
+                configMapKeyRef:
+                  key: SENTRY_ENV
+                  name: env
+            - name: SESSION_COOKIE_DOMAIN
+              valueFrom:
+                configMapKeyRef:
+                  key: SESSION_COOKIE_DOMAIN
+                  name: env
+            - name: SOCIAL_AUTH_ALLOWED_REDIRECT_HOSTS
+              valueFrom:
+                configMapKeyRef:
+                  key: SOCIAL_AUTH_ALLOWED_REDIRECT_HOSTS
+                  name: env
+            - name: SOCIAL_AUTH_OL_OIDC_KEY
+              valueFrom:
+                configMapKeyRef:
+                  key: SOCIAL_AUTH_OL_OIDC_KEY
+                  name: env
+            - name: SOCIAL_AUTH_OL_OIDC_OIDC_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  key: SOCIAL_AUTH_OL_OIDC_OIDC_ENDPOINT
+                  name: env
+            - name: SOCIAL_AUTH_OL_OIDC_SECRET
+              valueFrom:
+                configMapKeyRef:
+                  key: SOCIAL_AUTH_OL_OIDC_SECRET
+                  name: env
+            - name: STATUS_TOKEN
+              valueFrom:
+                configMapKeyRef:
+                  key: STATUS_TOKEN
+                  name: env
+            - name: TIKA_ACCESS_TOKEN
+              valueFrom:
+                configMapKeyRef:
+                  key: TIKA_ACCESS_TOKEN
+                  name: env
+            - name: TIKA_CLIENT_ONLY
+              valueFrom:
+                configMapKeyRef:
+                  key: TIKA_CLIENT_ONLY
+                  name: backend-env
+            - name: TIKA_SERVER_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  key: TIKA_SERVER_ENDPOINT
+                  name: backend-env
+            - name: TIKA_SERVER_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  key: TIKA_SERVER_ENDPOINT
+                  name: env
+            - name: USERINFO_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: USERINFO_URL
+                  name: env
+            - name: UWSGI_THREADS
+              valueFrom:
+                configMapKeyRef:
+                  key: UWSGI_THREADS
+                  name: backend-env
+            - name: UWSGI_WORKERS
+              valueFrom:
+                configMapKeyRef:
+                  key: UWSGI_WORKERS
+                  name: backend-env
+            - name: XPRO_CATALOG_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: XPRO_CATALOG_API_URL
+                  name: env
+            - name: XPRO_COURSES_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: XPRO_COURSES_API_URL
+                  name: env
+            - name: XPRO_LEARNING_COURSE_BUCKET_NAME
+              valueFrom:
+                configMapKeyRef:
+                  key: XPRO_LEARNING_COURSE_BUCKET_NAME
+                  name: env
+            - name: YOUTUBE_CONFIG_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: YOUTUBE_CONFIG_URL
+                  name: env
+            - name: YOUTUBE_DEVELOPER_KEY
+              valueFrom:
+                configMapKeyRef:
+                  key: YOUTUBE_DEVELOPER_KEY
+                  name: env
+            - name: YOUTUBE_FETCH_TRANSCRIPT_SCHEDULE_SECONDS
+              valueFrom:
+                configMapKeyRef:
+                  key: YOUTUBE_FETCH_TRANSCRIPT_SCHEDULE_SECONDS
+                  name: env
+          image: mitodl/mitlearn-django:dev
+          name: web
+          ports:
+            - containerPort: 8061
+              protocol: TCP
+          resources:
+            limits:
+              memory: "1073741824"
+          stdin: true
+          tty: true
+          volumeMounts:
+            - mountPath: /src
+              name: web-cm0
+            - mountPath: /var/media
+              name: django-media
+      restartPolicy: Always
+      volumes:
+        - configMap:
+            name: web-cm0
+          name: web-cm0
+        - name: django-media
+          persistentVolumeClaim:
+            claimName: django-media

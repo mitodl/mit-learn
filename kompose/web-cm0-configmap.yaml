@@ -1,0 +1,3508 @@
+apiVersion: v1
+kind: ConfigMap
+data:
+  .coveragerc: |
+    [run]
+    branch = True
+    source = .
+    data_file=/tmp/coverage
+    omit =
+        main/wsgi.py
+        manage.py
+        ./.tox/*
+        */migrations/*
+        *_test.py
+        *_tests.py
+
+    [report]
+    exclude_lines =
+        pragma: no cover
+    show_missing = True
+    precision = 2
+
+    [html]
+    directory = htmlcov
+  .dockerignore: |
+    .tox
+    .cache
+    htmlcov
+    .coverage
+    node_modules
+    staticfiles/
+    env/
+    .venv/
+    kompose/
+  .editorconfig: |
+    root = true
+
+    [*.py]
+    indent_style = space
+    indent_size = 4
+    trim_trailing_whitespace = true
+    insert_final_newline = true
+
+    [*.js]
+    indent_style = space
+    indent_size = 2
+    trim_trailing_whitespace = true
+    insert_final_newline = true
+  .env: "# Vault Secrets\nCKEDITOR_ENVIRONMENT_ID=\nCKEDITOR_SECRET_KEY=\nCKEDITOR_UPLOAD_URL=\nEDX_API_CLIENT_ID=\nEDX_API_CLIENT_SECRET=\nEMBEDLY_KEY=ffaa860a1ed5405994f0ee0e880e36f5\nMAILGUN_KEY=\nOCW_NEXT_SEARCH_WEBHOOK_KEY=\nOCW_WEBHOOK_KEY=\nOLL_API_CLIENT_ID=\nOPENSEARCH_HTTP_AUTH=\nSENTRY_DSN=\nSOCIAL_AUTH_OL_OIDC_SECRET=\nSTATUS_TOKEN=\nTIKA_ACCESS_TOKEN=\nYOUTUBE_DEVELOPER_KEY=\nPOSTHOG_PROJECT_API_KEY=\nPOSTHOG_PERSONAL_API_KEY=\n\n# Heroku Vault Static Vars\nALLOWED_HOSTS=[*]\nAWS_STORAGE_BUCKET_NAME=ol-mitlearn-app-storage-qa\nCORS_ALLOWED_ORIGIN_REGEXES=['^.+ocw-next.netlify.app$']\nCSAIL_BASE_URL=https://cap.csail.mit.edu/\nCSRF_COOKIE_DOMAIN=.rc.learn.mit.edu\nEDX_API_ACCESS_TOKEN_URL=https://api.edx.org/oauth2/v1/access_token\nEDX_API_URL=https://api.edx.org/catalog/v1/catalogs/10/courses\nEDX_PROGRAMS_API_URL=https://discovery.edx.org/api/v1/programs/\nMICROMASTERS_CATALOG_API_URL=https://micromasters.mit.edu/api/v0/catalog/\nMICROMASTERS_CMS_API_URL=https://micromasters.mit.edu/api/v0/wagtail/\nMITOL_ADMIN_EMAIL=cuddle-bunnies@mit.edu\nMITOL_AXIOS_BASE_PATH=https://rc.learn.mit.edu\nMITOL_DEFAULT_SITE_KEY=micromasters\nMITOL_EMAIL_PORT=587\nMITOL_EMAIL_TLS=True\nMITOL_ENVIRONMENT=local\nMITOL_FROM_EMAIL=MITOpen <mitopen-support@mit.edu>\nMITOL_FRONTPAGE_DIGEST_MAX_POSTS=10\nMITOL_USE_S3=True\nMITOL_NOTIFICATION_EMAIL_BACKEND=anymail.backends.mailgun.EmailBackend\nMITPE_BASE_URL=https://professional.mit.edu/\nMITX_ONLINE_BASE_URL=https://mitxonline.mit.edu/\nMITX_ONLINE_COURSES_API_URL=https://mitxonline.mit.edu/api/v2/courses/\nMITX_ONLINE_LEARNING_COURSE_BUCKET_NAME=mitx-etl-mitxonline-production\nMITX_ONLINE_PROGRAMS_API_URL=https://mitxonline.mit.edu/api/v2/programs/\nOCW_BASE_URL=https://ocw.mit.edu/\nOCW_CONTENT_BUCKET_NAME=ocw-content-storage\nOCW_UPLOAD_IMAGE_ONLY=True\nOCW_LIVE_BUCKET=ocw-content-live-production\nOLL_ALT_URL=https://openlearninglibrary.mit.edu/courses/\nOLL_API_ACCESS_TOKEN_URL=https://openlearninglibrary.mit.edu/oauth2/access_token/\nOLL_API_URL=https://discovery.openlearninglibrary.mit.edu/api/v1/catalogs/1/courses/\nOLL_BASE_URL=https://openlearninglibrary.mit.edu/course/\nOLL_LEARNING_COURSE_BUCKET_NAME=ol-data-lake-landing-zone-production\nOLL_LEARNING_COURSE_BUCKET_PREFIX=open-learning-library/courses/\nOPENSEARCH_DEFAULT_TIMEOUT=30\nOPENSEARCH_INDEXING_CHUNK_SIZE=75\nQDRANT_COLLECTION_NAME=mitlearn-qa\nPROLEARN_CATALOG_API_URL=https://prolearn.mit.edu/graphql\nSEE_API_URL=https://mit-unified-portal-prod-78eeds.43d8q2.usa-e2.cloudhub.io/api/\nSEE_API_ACCESS_TOKEN_URL=https://mit-unified-portal-prod-78eeds.43d8q2.usa-e2.cloudhub.io/oauth/token\nSECURE_CROSS_ORIGIN_OPENER_POLICY=None\nSEE_BASE_URL=https://executive.mit.edu/\nSENTRY_ENV=dev\nSOCIAL_AUTH_OL_OIDC_KEY=ol-mitlearn-client\nXPRO_CATALOG_API_URL=https://xpro.mit.edu/api/programs/\nXPRO_COURSES_API_URL=https://xpro.mit.edu/api/courses/\nXPRO_LEARNING_COURSE_BUCKET_NAME=mitx-etl-xpro-production-mitxpro-production\nYOUTUBE_FETCH_TRANSCRIPT_SCHEDULE_SECONDS=21600\nYOUTUBE_CONFIG_URL=https://raw.githubusercontent.com/mitodl/open-video-data/mitopen/youtube/channels.yaml\nPOSTHOG_ENABLED=True\nPOSTHOG_TIMEOUT_MS=1000\nPOSTHOG_API_HOST=https://app.posthog.com\nPOSTHOG_PROJECT_ID=63497\n\n# Heroku Interopelated Vars\nACCESS_TOKEN_URL=https://sso-qa.ol.mit.edu/realms/olapps/protocol/openid-connect/token\nAUTHORIZATION_URL=https://sso-qa.ol.mit.edu/realms/olapps/protocol/openid-connect/auth\nCORS_ALLOWED_ORIGINS=[\"https://mitopen-rc.odl.mit.edu\", \"https://ocw-next.netlify.app\", \"https://ol-devops-ci.odl.mit.edu\", \"https://draft-qa.ocw.mit.edu\", \"https://live-qa.ocw.mit.edu\"]\nCSRF_TRUSTED_ORIGINS=[\"https://api.mitopen-rc.odl.mit.edu\", \"https://mitopen-rc.odl.mit.edu\"]\nKEYCLOAK_BASE_URL=https://sso-qa.ol.mit.edu/\nMAILGUN_FROM_EMAIL=MIT Open <no-reply@discussions-mail.odl.mit.edu\nMAILGUN_SENDER_DOMAIN=discussions-mail.odl.mit.edu\nMAILGUN_URL=https://api.mailgun.net/v3/discussions-mail.odl.mit.edu\nOIDC_ENDPOINT=https://sso-qa.ol.mit.edu/realms/olapps\nSESSION_COOKIE_DOMAIN=.odl.local\nSOCIAL_AUTH_ALLOWED_REDIRECT_HOSTS=[\"live-qa.ocw.mit.edu\", \"mitopen-rc.odl.mit.edu\"]\nSOCIAL_AUTH_OL_OIDC_OIDC_ENDPOINT=https://sso-qa.ol.mit.edu/realms/olapps\nUSERINFO_URL=https://sso-qa.ol.mit.edu/realms/olapps/protocol/openid-connect/userinfo\n\n# Heroku Vars\nCOMPOSE_PROFILES=backend,frontend\nDEBUG=false\nEDX_LEARNING_COURSE_BUCKET_NAME=edxorg-qa-edxapp-courses\nENABLE_INFINITE_CORRIDOR=true\nGA_G_TRACKING_ID= \nGA_TRACKING_ID= \nINDEXING_API_USERNAME=admin\nMITLEARN_BASE_URL=http://localhost:8063\nMITLEARN_COOKIE_DOMAIN=odl.local\nMITLEARN_COOKIE_NAME=odc2\nMITLEARN_LOG_LEVEL=INFO\nOPENSEARCH_INDEX=mitlearn-rc\nTIKA_SERVER_ENDPOINT=http://tika:9998/\n"
+  .git-blame-ignore-revs: |
+    34dc761b7198da36fd66b2c8aa7eddf141d75dce
+  .gitattributes: |
+    cassettes/* merge=binary linguist-generated=true
+    factory_data/* merge=binary linguist-generated=true
+    yarn.lock merge=binary linguist-generated=true
+    frontends/api/src/generated/* merge=binary linguist-generated=true
+    # Do not mark as generated; we want to see diffs in PRs
+    openapi/specs/* merge=binary
+  .gitignore: |
+    # Byte-compiled / optimized / DLL files
+    __pycache__/
+    *.py[cod]
+    *$py.class
+    .pytest_cache/
+
+    # C extensions
+    *.so
+
+    # Distribution / packaging
+    .Python
+    build/
+    build-exports/
+    develop-eggs/
+    dist/
+    downloads/
+    eggs/
+    .eggs/
+    ./lib/
+    ./lib64/
+    parts/
+    sdist/
+    var/
+    *.egg-info/
+    .installed.cfg
+    *.egg
+
+    # PyInstaller
+    #  Usually these files are written by a python script from a template
+    #  before PyInstaller builds the exe, so as to inject date/other infos into it.
+    *.manifest
+    *.spec
+
+    # Installer logs
+    pip-log.txt
+    pip-delete-this-directory.txt
+
+    # Unit test / coverage reports
+    htmlcov/
+    .tox/
+    .coverage
+    .coverage.*
+    .cache
+    nosetests.xml
+    coverage.xml
+    *,cover
+    .hypothesis/
+    coverage/
+    .nyc_output/
+
+    # Translations
+    *.mo
+    *.pot
+
+    # Django stuff:
+    *.log
+    celerybeat-schedule.db
+
+    # Sphinx documentation
+    docs/_build/
+
+    # PyBuilder
+    target/
+
+    #Ipython/Jupyter Notebook
+    .ipynb_checkpoints
+    *.ipynb
+
+    # Heroku/Foreman
+    .env
+
+    # webpack
+    static/bundles
+    node_modules
+
+
+    # Editor stuff
+    *.swp
+    *.orig
+
+    /nbproject
+    .idea/
+    .redcar/
+    codekit-config.json
+    .pycharm_helpers/
+
+    .project
+    .pydevproject
+
+    *.DS_Store
+
+    # Django static
+    staticfiles/
+    static/hash.txt
+
+    .venv
+    release-notes-checklist
+
+    # Webpack
+    webpack-stats.json
+    webpack-stats/
+    !scripts/test/data/webpack-stats/
+
+
+    # Celery Beat
+    celerybeat-schedule
+
+    # for testing out NPM packages
+    *.tgz
+
+    # docs/bundler/jekyll
+    docs/_site
+
+    .pnp.*
+    frontends/.yarn
+    !frontends/.yarn/releases
+
+    .yarn/*
+    !.yarn/releases
+
+    # Typescript
+    tsconfig.tsbuildinfo
+
+    # VS-Code
+    .vscode
+
+    # GitHub Pages static site
+    github-pages/public
+
+    # Storybook
+    storybook-static/
+
+    /**/.yarn/cache
+    .swc
+  .pre-commit-config.yaml: |
+    ---
+    # See https://pre-commit.com for more information
+    # See https://pre-commit.com/hooks.html for more hooks
+    ci:
+      skip:
+        - prettier
+        # Because these are local hooks it seems like they won't easily run in pre-commit CI
+        - eslint
+        - style-lint
+    repos:
+      - repo: https://github.com/pre-commit/pre-commit-hooks
+        rev: v5.0.0
+        hooks:
+          - id: trailing-whitespace
+          - id: end-of-file-fixer
+            exclude: ".hbs$"
+          - id: check-yaml
+          - id: check-added-large-files
+            exclude: "yarn.lock|.yarn/releases/.*|frontends/.yarn/releases/.*"
+          - id: check-merge-conflict
+          - id: check-toml
+          - id: debug-statements
+      - repo: local
+        hooks:
+          - id: prettier
+            name: prettier
+            entry: npx prettier --write
+            language: node
+            types_or:
+              [
+                javascript,
+                jsx,
+                ts,
+                tsx,
+                json,
+                scss,
+                sass,
+                css,
+                yaml,
+                markdown,
+                html,
+              ]
+      - repo: https://github.com/scop/pre-commit-shfmt
+        rev: v3.10.0-1
+        hooks:
+          - id: shfmt
+      - repo: https://github.com/adrienverge/yamllint.git
+        rev: v1.35.1
+        hooks:
+          - id: yamllint
+            args: [--format, parsable, -d, relaxed]
+      - repo: https://github.com/Yelp/detect-secrets
+        rev: v1.5.0
+        hooks:
+          - id: detect-secrets
+            args:
+              - --baseline
+              - .secrets.baseline
+              - --exclude-files
+              - .yarn/
+              - --exclude-files
+              - cassettes/
+              - --exclude-files
+              - test_json/
+              - --exclude-files
+              - ".*_test.py"
+              - --exclude-files
+              - "test_.*.py"
+              - --exclude-files
+              - poetry.lock
+              - --exclude-files
+              - yarn.lock
+              - --exclude-files
+              - ".*/generated/"
+            additional_dependencies: ["gibberish-detector"]
+      - repo: https://github.com/astral-sh/ruff-pre-commit
+        rev: "v0.7.2"
+        hooks:
+          - id: ruff-format
+          - id: ruff
+            args: [--extend-ignore=D1, --fix]
+      - repo: local
+        hooks:
+          - id: eslint
+            name: eslint
+            description: "Lint JS/TS files and apply automatic fixes"
+            entry: npx eslint --config frontends/.eslintrc.js --fix
+            language: node
+            types_or: [javascript, jsx, ts, tsx]
+            args: []
+            exclude: "(node_modules/|.yarn/)"
+            require_serial: false
+            additional_dependencies:
+              - eslint@8
+          - id: style-lint
+            name: style-lint
+            description: "Lint CSS"
+            entry: npx stylelint --allow-empty-input --fix
+            language: node
+            types: [scss, jsx, ts, tsx]
+            args: []
+            exclude: node_modules/
+            require_serial: false
+      - repo: https://github.com/shellcheck-py/shellcheck-py
+        rev: v0.10.0.1
+        hooks:
+          - id: shellcheck
+            args: ["--severity=warning"]
+  .prettierignore: |
+    openapi/specs/*
+    .yarn/
+    .next/
+  .prettierrc.json: |
+    {
+      "$schema": "http://json.schemastore.org/prettierrc",
+      "semi": false,
+      "plugins": ["prettier-plugin-django-alpine"]
+    }
+  .rsync-ignore: |
+    node_modules
+    .git
+    .tox
+    .rsync-ignore
+    Makefile
+    README.rst
+    .DS_Store
+    .idea/
+  .secrets.baseline: |
+    {
+      "version": "1.4.0",
+      "plugins_used": [
+        {
+          "name": "ArtifactoryDetector"
+        },
+        {
+          "name": "AWSKeyDetector"
+        },
+        {
+          "name": "Base64HighEntropyString",
+          "limit": 4.5
+        },
+        {
+          "name": "BasicAuthDetector"
+        },
+        {
+          "name": "CloudantDetector"
+        },
+        {
+          "name": "HexHighEntropyString",
+          "limit": 3
+        },
+        {
+          "name": "JwtTokenDetector"
+        },
+        {
+          "name": "KeywordDetector",
+          "keyword_exclude": ""
+        },
+        {
+          "name": "MailchimpDetector"
+        },
+        {
+          "name": "PrivateKeyDetector"
+        },
+        {
+          "name": "SlackDetector"
+        },
+        {
+          "name": "SoftlayerDetector"
+        },
+        {
+          "name": "StripeDetector"
+        },
+        {
+          "name": "TwilioKeyDetector"
+        }
+      ],
+      "filters_used": [
+        {
+          "path": "detect_secrets.filters.allowlist.is_line_allowlisted"
+        },
+        {
+          "path": "detect_secrets.filters.common.is_baseline_file",
+          "filename": ".secrets.baseline"
+        },
+        {
+          "path": "detect_secrets.filters.common.is_ignored_due_to_verification_policies",
+          "min_level": 2
+        },
+        {
+          "path": "detect_secrets.filters.gibberish.should_exclude_secret",
+          "limit": 3.7
+        },
+        {
+          "path": "detect_secrets.filters.heuristic.is_indirect_reference"
+        },
+        {
+          "path": "detect_secrets.filters.heuristic.is_likely_id_string"
+        },
+        {
+          "path": "detect_secrets.filters.heuristic.is_lock_file"
+        },
+        {
+          "path": "detect_secrets.filters.heuristic.is_not_alphanumeric_string"
+        },
+        {
+          "path": "detect_secrets.filters.heuristic.is_potential_uuid"
+        },
+        {
+          "path": "detect_secrets.filters.heuristic.is_prefixed_with_dollar_sign"
+        },
+        {
+          "path": "detect_secrets.filters.heuristic.is_sequential_string"
+        },
+        {
+          "path": "detect_secrets.filters.heuristic.is_swagger_file"
+        },
+        {
+          "path": "detect_secrets.filters.heuristic.is_templated_secret"
+        },
+        {
+          "path": "detect_secrets.filters.regex.should_exclude_file",
+          "pattern": [
+            ".yarn/",
+            "cassettes/",
+            "test_json/",
+            ".*_test.py",
+            "test_.*.py",
+            "poetry.lock",
+            "yarn.lock",
+            ".*/generated/"
+          ]
+        }
+      ],
+      "results": {},
+      "generated_at": "2024-05-28T18:05:16Z"
+    }
+  .yarnrc.yml: |
+    compressionLevel: mixed
+
+    enableGlobalCache: false
+
+    nodeLinker: node-modules
+
+    yarnPath: .yarn/releases/yarn-4.5.3.cjs
+
+    # https://github.com/vitejs/vite-plugin-react-swc/issues/74#issuecomment-1520484130
+    # https://github.com/swc-project/swc/issues/5616#issuecomment-1265639797
+    # This setting ensures we always install the Linux binaries when running `yarn install`. This is needed for running
+    # swc natively in Docker (addresses swc-loader bindings not found error).
+    supportedArchitectures:
+      os:
+        - current
+        - linux
+      cpu:
+        - current
+        - x64
+        - arm64
+      libc:
+        - current
+        - glibc
+  Aptfile: |
+    pkg-config
+    libffi-dev
+    libxmlsec1-dev
+  CODEOWNERS: |
+    # This is a comment.
+    # Each line is a file pattern followed by one or more owners.
+
+    # These owners will be the default owners for everything in
+    # the repo. Unless a later match takes precedence,
+    # @global-owner1 and @global-owner2 will be requested for
+    # review when someone opens a pull request.
+    *       @mitodl/owners-mit-learn
+
+    # Order is important; the last matching pattern takes the most
+    # precedence. When someone opens a pull request that only
+    # modifies JS files, only @js-owner and not the global
+    # owner(s) will be requested for a review.
+    # *.js    @js-owner #This is an inline comment.
+
+    # You can also use email addresses if you prefer. They'll be
+    # used to look up users just like we do for commit author
+    # emails.
+    # *.go docs@example.com
+
+    # Teams can be specified as code owners as well. Teams should
+    # be identified in the format @org/team-name. Teams must have
+    # explicit write access to the repository. In this example,
+    # the octocats team in the octo-org organization owns all .txt files.
+    # *.txt @octo-org/octocats
+
+    # In this example, @doctocat owns any files in the build/logs
+    # directory at the root of the repository and any of its
+    # subdirectories.
+    # /build/logs/ @doctocat
+
+    # The `docs/*` pattern will match files like
+    # `docs/getting-started.md` but not further nested files like
+    # `docs/build-app/troubleshooting.md`.
+    # docs/*  docs@example.com
+
+    # In this example, @octocat owns any file in an apps directory
+    # anywhere in your repository.
+    # apps/ @octocat
+
+    # In this example, @doctocat owns any file in the `/docs`
+    # directory in the root of your repository and any of its
+    # subdirectories.
+    # /docs/ @doctocat
+
+    # In this example, any change inside the `/scripts` directory
+    # will require approval from @doctocat or @octocat.
+    # /scripts/ @doctocat @octocat
+
+    # In this example, @octocat owns any file in a `/logs` directory such as
+    # `/build/logs`, `/scripts/logs`, and `/deeply/nested/logs`. Any changes
+    # in a `/logs` directory will require approval from @octocat.
+    # **/logs @octocat
+
+    # In this example, @octocat owns any file in the `/apps`
+    # directory in the root of your repository except for the `/apps/github`
+    # subdirectory, as its owners are left empty.
+    # /apps/ @octocat
+    # /apps/github
+  Dockerfile: |
+    FROM python:3.12.6
+    LABEL maintainer "ODL DevOps <mitx-devops@mit.edu>"
+
+    # Add package files, install updated node and pip
+    WORKDIR /tmp
+
+    # Install packages
+    COPY apt.txt /tmp/apt.txt
+    RUN apt-get update
+    RUN apt-get install -y $(grep -vE "^\s*#" apt.txt  | tr "\n" " ")
+    RUN apt-get update && apt-get install libpq-dev postgresql-client -y
+
+    # pip
+    RUN curl --silent --location https://bootstrap.pypa.io/get-pip.py | python3 -
+
+    # Add, and run as, non-root user.
+    RUN mkdir /src
+    RUN adduser --disabled-password --gecos "" mitodl
+    RUN mkdir /var/media && chown -R mitodl:mitodl /var/media
+
+    ## Set some poetry config
+    ENV  \
+      POETRY_VERSION=1.7.1 \
+      POETRY_VIRTUALENVS_CREATE=true \
+      POETRY_CACHE_DIR='/tmp/cache/poetry' \
+      POETRY_HOME='/home/mitodl/.local' \
+      VIRTUAL_ENV="/opt/venv"
+    ENV PATH="$VIRTUAL_ENV/bin:$POETRY_HOME/bin:$PATH"
+
+    # Install poetry
+    RUN pip install "poetry==$POETRY_VERSION"
+
+    COPY pyproject.toml /src
+    COPY poetry.lock /src
+    RUN chown -R mitodl:mitodl /src
+    RUN mkdir ${VIRTUAL_ENV} && chown -R mitodl:mitodl ${VIRTUAL_ENV}
+
+    ## Install poetry itself, and pre-create a venv with predictable name
+    USER mitodl
+    RUN curl -sSL https://install.python-poetry.org \
+      | \
+      POETRY_VERSION=${POETRY_VERSION} \
+      POETRY_HOME=${POETRY_HOME} \
+      python3 -q
+    WORKDIR /src
+    RUN python3 -m venv $VIRTUAL_ENV
+    RUN poetry install
+
+    # Add project
+    USER root
+    COPY . /src
+    WORKDIR /src
+    RUN mkdir /src/staticfiles
+
+    RUN apt-get clean && apt-get purge
+
+    USER mitodl
+
+    EXPOSE 8061
+    ENV PORT 8061
+    CMD uwsgi uwsgi.ini
+  Dockerfile-async: |
+    FROM python:3.12.6
+    LABEL maintainer "ODL DevOps <mitx-devops@mit.edu>"
+
+    # Add package files, install updated node and pip
+    WORKDIR /tmp
+
+    # Install packages
+    COPY apt.txt /tmp/apt.txt
+    RUN apt-get update
+    RUN apt-get install -y $(grep -vE "^\s*#" apt.txt  | tr "\n" " ")
+    RUN apt-get update && apt-get install libpq-dev postgresql-client -y
+
+    # pip
+    RUN curl --silent --location https://bootstrap.pypa.io/get-pip.py | python3 -
+
+    # Add, and run as, non-root user.
+    RUN mkdir /src
+    RUN adduser --disabled-password --gecos "" mitodl
+    RUN mkdir /var/media && chown -R mitodl:mitodl /var/media
+
+    ## Set some poetry config
+    ENV  \
+      POETRY_VERSION=1.7.1 \
+      POETRY_VIRTUALENVS_CREATE=true \
+      POETRY_CACHE_DIR='/tmp/cache/poetry' \
+      POETRY_HOME='/home/mitodl/.local' \
+      VIRTUAL_ENV="/opt/venv"
+    ENV PATH="$VIRTUAL_ENV/bin:$POETRY_HOME/bin:$PATH"
+
+    # Install poetry
+    RUN pip install "poetry==$POETRY_VERSION"
+
+    COPY pyproject.toml /src
+    COPY poetry.lock /src
+    RUN chown -R mitodl:mitodl /src
+    RUN mkdir ${VIRTUAL_ENV} && chown -R mitodl:mitodl ${VIRTUAL_ENV}
+
+    ## Install poetry itself, and pre-create a venv with predictable name
+    USER mitodl
+    RUN curl -sSL https://install.python-poetry.org \
+      | \
+      POETRY_VERSION=${POETRY_VERSION} \
+      POETRY_HOME=${POETRY_HOME} \
+      python3 -q
+    WORKDIR /src
+    RUN python3 -m venv $VIRTUAL_ENV
+    RUN poetry install
+
+    # Add project
+    USER root
+    COPY . /src
+    WORKDIR /src
+    RUN mkdir /src/staticfiles
+
+    RUN apt-get clean && apt-get purge
+
+    USER mitodl
+
+    EXPOSE 8001
+    ENV PORT 8001
+    #CMD gunicorn --port 8001 --reload -k uvicorn.workers.UvicornWorker main.asgi.application
+    #CMD uwsgi uwsgi.ini
+  Dockerfile-litellm: |
+    # Use the provided base image
+    FROM ghcr.io/berriai/litellm:main-latest
+
+    # Set the working directory to /app
+    WORKDIR /app
+
+
+    # Make sure your docker/entrypoint.sh is executable
+    RUN chmod +x ./docker/entrypoint.sh
+
+    # Expose the necessary port
+    EXPOSE 4000/tcp
+
+    # Override the CMD instruction with your desired command and arguments
+    # WARNING: FOR PROD DO NOT USE `--detailed_debug` it slows down response times, instead use the following CMD
+    # CMD ["--port", "4000", "--config", "config.yaml"]
+
+    CMD ["--port", "4000", "--config", "litellm_config.yml"]
+  Dockerfile-nb: |
+    FROM mit-learn-web
+
+    USER root
+
+    WORKDIR /tmp
+
+    RUN pip install --force-reinstall jupyter
+
+    USER mitodl
+    WORKDIR /src
+  LICENSE: |
+    BSD 3-Clause License
+
+    Copyright (c) 2017, MIT Office of Digital Learning
+    All rights reserved.
+
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright notice, this
+      list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above copyright notice,
+      this list of conditions and the following disclaimer in the documentation
+      and/or other materials provided with the distribution.
+
+    * Neither the name of the copyright holder nor the names of its
+      contributors may be used to endorse or promote products derived from
+      this software without specific prior written permission.
+
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+    AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+    DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+    FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+    DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+    SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+    OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  Procfile: |
+    release: bash scripts/heroku-release-phase.sh
+    web: bin/start-nginx bin/start-pgbouncer uwsgi uwsgi.ini
+    worker: bin/start-pgbouncer celery -A main.celery:app worker -E -Q default --concurrency=2 -B -l $MITOL_LOG_LEVEL
+    extra_worker_2x: bin/start-pgbouncer celery -A main.celery:app worker -E -Q edx_content,default --concurrency=2 -l $MITOL_LOG_LEVEL
+    extra_worker_performance: bin/start-pgbouncer celery -A main.celery:app worker -E -Q edx_content,default -l $MITOL_LOG_LEVEL
+  README.md: |
+    # MIT Learn
+
+    ![CI Workflow](https://github.com/mitodl/mit-learn/actions/workflows/ci.yml/badge.svg)
+
+    This application provides a central interface from which learners can browse MIT courses.
+
+    **SECTIONS**
+
+    1. [Initial Setup](#initial-setup)
+    1. [Code Generation](#code-generation)
+    1. [Committing & Formatting](#committing-&-formatting)
+    1. [Optional Setup](#optional-setup)
+
+    ## Initial Setup
+
+    MIT Learn follows the same [initial setup steps outlined in the common OL web app guide](https://mitodl.github.io/handbook/how-to/common-web-app-guide.html).
+    Run through those steps **including the addition of `/etc/hosts` aliases and the optional step for running the
+    `createsuperuser` command**.
+
+    ### Configuration
+
+    Configuration can be put in the following files which are gitignored:
+
+    ```
+    mit-learn/
+      ├── env/
+      │   ├── shared.local.env (provided to both frontend and backend containers)
+      │   ├── frontend.local.env (provided only to frontend containers)
+      │   └── backend.local.env (provided only to frontend containers)
+      └── .env (legacy file)
+    ```
+
+    The following settings must be configured before running the app:
+
+    - `COMPOSE_PROFILES`
+
+      Controls which docker containers run. To run them all, use `COMPOSE_PROFILES=backend,frontend`. See [Frontend Development](./frontends/README.md) for more.
+      This can be set either in a top-level `.env` that `docker compose` [automatically ingests](https://docs.docker.com/compose/environment-variables/envvars/#compose_env_files) or through any other method of setting an environment variable in your shell (e.g. `direnv`).
+
+    - `MAILGUN_KEY` and `MAILGUN_SENDER_DOMAIN`
+
+      You can set these values to any non-empty string value if email-sending functionality
+      is not needed. It's recommended that you eventually configure the site to be able
+      to send emails. Those configuration steps can be found [below](#enabling-email).
+
+    ### Loading Data
+
+    The MIT Learn platform aggregates data from many sources. These data are populated by ETL (extract, transform, load) pipelines that run automatically on a regular schedule. Django [management commands](https://docs.djangoproject.com/en/4.2/howto/custom-management-commands/) are also available to force the pipelines to run—particularly useful for local development.
+
+    To load data from [xpro](https://github.com/mitodl/mitxpro), for example, ensure you have the relevant environment variables
+
+    ```
+    XPRO_CATALOG_API_URL
+    XPRO_COURSES_API_URL
+    ```
+
+    and run
+
+    ```bash
+    docker compose run --rm web python manage.py backpopulate_xpro_data
+    ```
+
+    See [learning_resources/management/commands](learning_resources/management/commands) and [main/settings_course_etl.py](main/settings_course_etl.py) for more ETL commands and their relevant environment variables.
+
+    ### Frontend Development
+
+    The frontend package root is at [./frontends](./frontends). A `watch` container is provided to serve and rebuild the front end when there are changes to source files, which is started alongside backing services with `docker compose up`.
+
+    Package scripts are also provided for building and serving the frontend in isolation. More detail can be found in the [Frontend README](./frontends/README.md#frontend-development).
+
+    ## Code Generation
+
+    MIT Learn uses [drf-spectacular](https://drf-spectacular.readthedocs.io/en/latest/) to generate and OpenAPI spec from Django views. Additionally, we use [OpenAPITools/openapi-generator](https://github.com/OpenAPITools/openapi-generator) to generate Typescript declarations and an API Client. These generated files are checked into source control; CI checks that they are up-to-date. To regenerate these files, run
+
+    ```bash
+    ./scripts/generate_openapi.sh
+    ```
+
+    ## Committing & Formatting
+
+    To ensure commits to GitHub are safe, first install [pre-commit](https://pre-commit.com/):
+
+    ```
+    pip install pre_commit
+    pre-commit install
+    ```
+
+    Running pre-commit can confirm your commit is safe to be pushed to GitHub and correctly formatted:
+
+    ```
+    pre-commit run --all-files
+    ```
+
+    To automatically install precommit hooks when cloning a repo, you can run this:
+
+    ```
+    git config --global init.templateDir ~/.git-template
+    pre-commit init-templatedir ~/.git-template
+    ```
+
+    ## Launching a Codespace
+
+    There are times where you will want a live and shareable environment (validating UI changes with the design team, demoing a feature etc). You can launch a codespace on any branch or PR by clicking the green "code" button at the top right and launching a codespace from the codespaces tab. There are a few things to be aware of when provisioning a codespace:
+
+    - DEBUG is disabled by default - this is because codespaces are live (but unpublished/indexed) environments.
+    - Codespaces are provisioned/billed under personal accounts - everyone has 120 free hours every month
+    - Secrets and environment variables can be configured in the [codespace settings page](https://github.com/settings/codespaces)
+    - You will have to manually set the api's port to public each time you launch a codespace (noted in instructions above) due to a known limitation with cors in codespaces (see: https://github.com/orgs/community/discussions/22399 and https://github.com/orgs/community/discussions/31316)
+    - Once you are finished with the codespace you should shut it down by going to the green code button -> codespaces tab
+    - limits, instance size, idle-timeout settings and more can be configured from the [codespace settings page](https://github.com/settings/codespaces)
+
+    When new environment variables are introduced to the main application, the codespace config should be updated as well:
+
+    - Environment variables that are required for the app to build/function belong in [codespaces.env](https://github.com/mitodl/mit-open/blob/main/env/codespaces.env) with some default value (developers can later override these as needed)
+    - Optional "suggested" variables should go in [devcontainer.json](https://github.com/mitodl/mit-open/blob/main/.devcontainer/devcontainer.json)
+
+    At a bare minimum, a codespace should be able to build and run without requiring any configuration
+
+    ## Optional Setup
+
+    Described below are some setup steps that are not strictly necessary
+    for running MIT Learn
+
+    ### Enabling email
+
+    The app is usable without email-sending capability, but there is a lot of app functionality
+    that depends on it. The following variables will need to be set in your `.env` file -
+    please reach out to a fellow developer or devops for the correct values.
+
+    ```
+    MAILGUN_SENDER_DOMAIN
+    MAILGUN_URL
+    MAILGUN_KEY
+    ```
+
+    Additionally, you'll need to set `MAILGUN_RECIPIENT_OVERRIDE` to your own email address so
+    any emails sent from the app will be delivered to you.
+
+    ### Loading fixture files
+
+    Run the following to load platforms, departments, and offers. This populates the database with the fixture files contained in [learning_resources/fixtures](learning_resources/fixtures). Note that you will first need to run the Django models to schema migrations detailed in the [Handbook Initial Setup](https://mitodl.github.io/handbook/how-to/common-web-app-guide.html#3-create-database-tables-from-the-django-models) step.
+
+    ```bash
+    # Note!
+    # This is already done for you when bringing up your local (development)
+    # environment.
+    docker compose run --rm web python manage.py loaddata platforms departments offered_by
+    ```
+
+    ### Enabling image uploads to S3
+
+    :warning: **NOTE: Article cover image thumbnails will be broken unless this is configured** :warning:
+
+    Article posts give users the option to upload a cover image, and we show a thumbnail for that
+    image in post listings. We use Embedly to generate that thumbnail, so they will appear as
+    broken images unless you configure your app to upload to S3. Steps:
+
+    1. Set `MITOL_USE_S3=True` in `.env`
+    1. Also in `.env`, set these AWS variables: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,
+       `AWS_STORAGE_BUCKET_NAME`
+
+       These values can be copied directly from the Open Discussions CI Heroku settings, or a
+       fellow dev can provide them.
+
+    ### Enabling searching the course catalog on opensearch
+
+    To enable searching the course catalog on opensearch, run through these steps:
+
+    1. Start the services with `docker compose up`
+    2. With the above running, run this management command, which kicks off a celery task, to create an opensearch index:
+       ```
+       docker compose  run web python manage.py recreate_index --all
+       ```
+       If there is an error running the above command, observe what traceback gets logged in the celery service.
+    3. Once created and with `docker compose up` running, hit this endpoint in your browser to see if the index exists: `http://localhost:9101/discussions_local_all_default/_search`
+    4. If yes, to run a specific query, make a `POST` request (using `curl`, [Postman](https://www.getpostman.com/downloads/), Python `requests`, etc.) to the above endpoint with a `json` payload. For example, to search for all courses, run a query with Content-Type as `application/json` and with a body `{"query":{"term":{"object_type":"course"}}}`
+
+    ### Running OpenSearch as a multi-node local cluster
+
+    By default the configuration runs OpenSearch in `single-node` mode. If you'd like to run a 3-node cluster locally you can set the following environment variable in your shell.
+
+    ```shell
+    export OPENSEARCH_CLUSTER_TYPE=cluster
+    ```
+
+    You should make this permanent by using `direnv` or similar so that all your shell sessions are using the same docker compose config):
+
+    After setting this and running `docker compose up` you'll see this 3 node cluster be created. Note that the volumes used by these containers are separate from the volume used by the single-node setup so you will need to recreate your indicies. This is intentional and critical to being able to switch back and forth between `single-node` and `cluster` setups.
+
+    ### Running the app in a notebook
+
+    This repo includes a config for running a [Jupyter notebook](https://jupyter.org/) in a Docker container. This enables you to do in a Jupyter notebook anything you might otherwise do in a Django shell. To get started:
+
+    - Copy the example file
+      ```bash
+      # Choose any name for the resulting .ipynb file
+      cp app.ipynb.example app.ipynb
+      ```
+    - Build the `notebook` container _(for first time use, or when requirements change)_
+      ```bash
+      docker compose -f docker-compose-notebook.yml build
+      ```
+    - Run all the standard containers (`docker compose up`)
+    - In another terminal window, run the `notebook` container
+      ```bash
+      docker compose -f docker-compose-notebook.yml run --rm --service-ports notebook
+      ```
+    - The notebook container log output will indicate a URL at which you can interact with the notebook server.
+    - After visiting the notebook url, click the `.ipynb` file that you created to run the notebook
+    - Execute the first block to confirm it's working properly (click inside the block and press Shift+Enter)
+
+    From there, you should be able to run code snippets with a live Django app just like you would in a Django shell.
+
+    ### Connecting with an OpenID Connect provider for authentication
+
+    The MIT Learn application relies on an OpenID Connect client provided by Keycloak for authentication.
+
+    The following environment variables must be defined using values from a Keycloak instance:
+
+    - SOCIAL_AUTH_OL_OIDC_OIDC_ENDPOINT - The base URI for OpenID Connect discovery, https://<OIDC_ENDPOINT>/ without .well-known/openid-configuration.
+    - OIDC_ENDPOINT - The base URI for OpenID Connect discovery, https://<OIDC_ENDPOINT>/ without .well-known/openid-configuration.
+
+    - SOCIAL_AUTH_OL_OIDC_KEY - The client ID provided by the OpenID Connect provider.
+    - SOCIAL_AUTH_OL_OIDC_SECRET - The client secret provided by the OpenID Connect provider.
+    - AUTHORIZATION_URL - Provider endpoint where the user is asked to authenticate.
+    - ACCESS_TOKEN_URL - Provider endpoint where client exchanges the authorization code for tokens.
+    - USERINFO_URL - Provder endpoint where client sends requests for identity claims.
+    - KEYCLOAK_BASE_URL - The base URL of the Keycloak instance. Used for generating the
+    - KEYCLOAK_REALM_NAME - The Keycloak realm that the OpenID Connect client exists in.
+
+    To login via the Keycloak client, open http://od.odl.local:8063/login/ol-oidc in your browser.
+
+    Additional details can be found at https://docs.google.com/document/d/17tJ-C2EwWoSpJWZKjuhMVgsqGtyPH0IN9KakXvSKU0M/edit
+
+    ### Configuring PostHog Support
+
+    The system can use PostHog to evaluate feature flags and record views for the Learning Resource drawer.
+
+    The following environment variables must be set for this support to work:
+
+    - `POSTHOG_PROJECT_ID` - int, the project ID for the app in PostHog
+    - `POSTHOG_PROJECT_API_KEY` - string, the project API key for the app in PostHog. This usually starts with `phc_`.
+    - `POSTHOG_PERSONAL_API_KEY` - string, your personal API key for PostHog. This usually starts with `phx_`.
+
+    The keys and ID can be found in the Settings section of the project in PostHog that you're using for the app. The project key and ID are under "Project", and you can generate a personal API key under "User"->"Personal API Keys".
+
+    > [!WARNING]
+    > Be careful with the API keys! The project API key is **not secret** and is sent in clear text with the frontend. The personal API key **is** secret. Don't mix them up.
+
+    Personal API keys only need read permission to Query. When creating a personal API key, choose "Read" under Query for Scopes. The key needs no other permissions (unless you need them for other things). Additionally, if you select either option besides "All-access" under "Organization & project access", make sure you assign the correct project/org to the API key.
+
+    Once these are set (and you've restarted the app), you should see events flowing into the PostHog dashboard.
+
+    ## GitHub Pages Storybook
+
+    Demos and documentation of reusable UI components in this repo are published as a [storybook](https://storybook.js.org/) at https://mitodl.github.io/mit-learn/.
+
+    ## AI Functions
+
+    To enable AI functionality, with OpenAI as the default provider, you must provide values
+    for the following environment variable:
+
+    - OPENAI_API_KEY
+
+    ### Running a LiteLLM Proxy
+
+    The LiteLLM proxy is a service that can enforce rate and budget limits on AI calls.
+    To use this service locally, follow these steps:
+
+    - Set the following .env variables:
+
+      - AI_PROXY_AUTH_TOKEN=sk-<some_unique_string>
+      - AI_PROXY_URL=http://litellm:4000
+      - AI_PROXY_CLASS=LiteLLMProxy
+
+    - You can also add values for these settings to your .env file if you are not satisfied
+      with the defaults:
+
+      - AI_MAX_PARALLEL_REQUESTS = max parallel requests per user
+      - AI_TPM_LIMIT = max tokens per minute per user
+      - AI_RPM_LIMIT = max requests per minute per user
+      - AI_MAX_BUDGET = max cost in $ that a user is allowed to spend within a certain time period
+      - AI_BUDGET_DURATION = Time in seconds before a user's budget usage is reset to 0
+      - AI_ANON_LIMIT_MULTIPLIER = multiplier for all the above, shared among all anonymous users
+
+    - Start your docker containers with the following command:
+      ```bash
+      docker compose -f docker-compose.yml -f docker-compose.litellm.yml up
+      ```
+  RELEASE.rst: |
+    Release Notes
+    =============
+
+    Version 0.26.3 (Released December 18, 2024)
+    --------------
+
+    - simplify font loading (#1895)
+    - Update dependency onnxruntime to v1.20.1 (#1886)
+    - subscription email language update (#1892)
+    - Bump cross-spawn from 7.0.3 to 7.0.6 (#1834)
+    - Update dependency cryptography to v44 (#1887)
+
+    Version 0.26.2 (Released December 10, 2024)
+    --------------
+
+    - add a trailing slash to non contentfile OCW resources (#1877)
+    - Update codecov/codecov-action action to v5.1.1 (#1883)
+    - Update Node.js to v22.12.0 (#1882)
+    - Update nginx Docker tag to v1.27.3 (#1881)
+    - Update dependency ruff to v0.8.2 (#1880)
+    - Update dependency Django to v4.2.17 [SECURITY] (#1879)
+    - specify non-free course for differing prices test (#1878)
+    - Server render search results (search and channel pages) (#1836)
+    - Server render homepage and listing pages. Client-only drawer navigation. (#1872)
+    - fix price comparison in differing runs table (#1876)
+    - OpenAI embeddings for vector search (#1869)
+    - Simplify Theme (#1870)
+    - Add parent id to podcast api (#1857)
+    - Fix edx file import (#1867)
+    - Update codecov/codecov-action action to v5 (#1855)
+
+    Version 0.26.1 (Released December 09, 2024)
+    --------------
+
+    - Update Yarn to v4.5.3 (#1865)
+    - fix certification type none display (#1873)
+    - fix card line clamping (#1871)
+    - Update dependency eslint-plugin-react-hooks to v5 (#1817)
+    - Update dependency eslint-plugin-testing-library to v7 (#1856)
+    - v2 drawer qa adjustments (#1850)
+    - Fixes issue with learning path membership being called for non-admins (#1864)
+    - Consolidate qdrant functionality into its own app (#1860)
+    - Revert "Server rendering for homepage, units and topics listing pages (#1847)" (#1866)
+    - Filter out content type on similar resources endpoint (#1863)
+    - Select random hero image index on server (#1859)
+    - returnning all resource types for similar (#1849)
+
+    Version 0.26.0 (Released November 26, 2024)
+    --------------
+
+    - Refactor date/time parsing for mitpe events (#1840)
+    - Server rendering for homepage, units and topics listing pages (#1847)
+    - Query membership endpoints for resources belonging to user lists and learning paths (#1846)
+    - Remove some unused exports from ol-components (#1844)
+    - Update Yarn to v4.5.2 (#1851)
+    - Update postgres Docker tag to v12.22 (#1854)
+    - Update dependency ruff to v0.8.0 (#1853)
+    - Consistent qdrant point ids (#1839)
+    - set min cpu and memory. also add qdrant container (#1845)
+    - similar resources carousel (#1835)
+    - Refactor user lists and learning paths hooks out of learning resources (#1842)
+    - Revert "Server rendering for homepage, units and topics listing pages (#1822)" (#1838)
+    - Server rendering for homepage, units and topics listing pages (#1822)
+    - Update dependency @mui/lab to v6.0.0-beta.15 (#1830)
+    - vector search endpoint (#1827)
+    - Update dependency django-anymail to v12 (#1815)
+    - Update dependency safety to v3 (#1819)
+    - Update dependency pytest-cov to v6 (#1818)
+    - separate starts and as taught in, show anytime availability (#1828)
+
+    Version 0.25.0 (Released November 25, 2024)
+    --------------
+
+    - LocalDate and NoSSR components to render localized dates only on client (#1831)
+    - Revert "LocalDate and NoSSR components to render localized dates only on client"
+    - LocalDate and NoSSR components to render localized dates only on client
+    - v2 learning resource drawer formats and location (#1826)
+    - v2 drawer certification updates (#1823)
+    - Mechanism to sync server prefetch with client API calls (#1798)
+    - show more button for v2 drawer dates (#1809)
+    - Add data-ph- elements to CTA buttons (#1821)
+    - Endpoints for userlist/learningpath memberships (#1808)
+    - Clear resource_type filter when leaving Learning Materials search tab (#1780)
+    - Update opensearchproject/opensearch Docker tag to v2.18.0 (#1812)
+    - Update dependency postcss-styled-syntax to ^0.7.0 (#1811)
+    - Update dependency ruff to v0.7.3 (#1810)
+    - Update dependency @chromatic-com/storybook to v3 (#1764)
+    - learning resource drawer v2 run comparison table (#1782)
+
+    Version 0.24.3 (Released November 14, 2024)
+    --------------
+
+    - remove sentence transformers dependency (#1806)
+    - Add playlist id to video results (#1802)
+    - Remove unnecessary percolate calls (#1801)
+    - Update actions/checkout digest to 11bd719 (#1755)
+    - Update actions/setup-node digest to 39370e3 (#1756)
+    - [pre-commit.ci] pre-commit autoupdate (#1790)
+    - Update akhileshns/heroku-deploy digest to e86b991 (#1715)
+    - Empty commit to try and fix heroku
+    - identify users in posthog via user id (#1799)
+    - qdrant integration for vector based similar resources endpoint (#1784)
+    - calculate min_score before score adjustments (#1797)
+    - Update actions/setup-python digest to 0b93645 (#1757)
+
+    Version 0.24.2 (Released November 07, 2024)
+    --------------
+
+    - HTTPS youtube URLs (#1795)
+    - Card bug fixes (#1793)
+    - upgrade stories & events grid to grid2 (#1792)
+    - Fixes to address scim-form-keycloak weirdness (#1789)
+    - Maintain API instructor order (#1783)
+    - Fix DST issue (#1788)
+    - Update Node.js to v22 (#1786)
+    - Update dependency ruff to v0.7.2 (#1785)
+    - Image and video optimizations (#1769)
+    - Upgrade to Next.js v15 (#1776)
+    - Fix issue with hero image causing horizontal scroll (#1777)
+    - add new learning resource drawer layout (#1711)
+    - Change frontend to use resource_prices field instead of prices field (#1737)
+    - move facets first in tab order (#1751)
+    - Card Accessibility Improvements (#1778)
+
+    Version 0.24.1 (Released October 30, 2024)
+    --------------
+
+    - Fix prolearn bug for existing resources whose urls have changed (#1775)
+    - [pre-commit.ci] pre-commit autoupdate (#1629)
+    - Update typescript-eslint monorepo to v8 (#1534)
+    - fixing intermittent test failure (#1773)
+    - Professional Education ETL Pipeline (#1210)
+
+    Version 0.24.0 (Released October 29, 2024)
+    --------------
+
+    - adding fix for pruning percolate queries (#1770)
+    - Handle dupe prices during import (#1767)
+    - Add the ol-profile openid scope to auth (#1765)
+    - remove learning_path from search (#1753)
+    - Update dependency @mui/base to v5.0.0-beta.60 (#1758)
+    - New LearningResourcePrice model (#1736)
+    - Update codecov/codecov-action action to v4.6.0 (#1763)
+    - Update Node.js to v20.18.0 (#1762)
+    - Update redis Docker tag to v7.4.1 (#1761)
+    - Update nginx Docker tag to v1.27.2 (#1760)
+    - Update dependency eslint to v8.57.1 (#1759)
+    - move nextjs hash.txt generation after heroku deploy (#1752)
+    - Replace plain <a> tags with Next.js <Link> components (#1739)
+    - Shanbady/similar resources endpoint (#1743)
+    - restore images in subscription emails (#1747)
+    - fix list duplication when editing lists (#1749)
+    - remove elasticsearch (#1734)
+    - Update dependency pygithub to v2 (#1748)
+    - Update dependency ruff to v0.7.1 (#1745)
+    - Update opensearchproject/opensearch Docker tag to v2.17.1 (#1746)
+    - Update dependency moto to v5 (#1740)
+    - Update dependency urllib3 to v2 (#1741)
+    - ol-template is not used (#1738)
+    - Update dependency @faker-js/faker to v9 (#1735)
+    - Update dependency faker to v30 (#1732)
+    - Update dependency toolz to v1 (#1733)
+    - Fixes to make learn work with scim-for-keycloak (#1727)
+    - Navigation Accessibility (#1726)
+    - Middleware for SSL redirect (#1729)
+    - Clean out the static frontend (#1731)
+    - Update Yarn to v4.5.1 (#1716)
+    - Search count inside label (#1730)
+    - Announce search count for screen readers (#1713)
+    - Update actions/checkout digest to eef6144 (#1686)
+
+    Version 0.23.0 (Released October 22, 2024)
+    --------------
+
+    - Revert "Fixed issue with full name not being pulled in (#1682)" (#1723)
+    - Fix path to Storybook build (#1722)
+    - Update for Storybook's new home in ol-components (#1721)
+    - bundle analyzer, fix search page + channel page JS sizes (#1707)
+    - Update ckeditor monorepo to v43 (major) (#1204)
+    - Update actions/setup-node digest to 0a44ba7 (#1623)
+    - Read Sentry rates from the Actions secrets
+    - Fixed issue with full name not being pulled in (#1682)
+    - Remove unnecessary Heroku vars
+    - fix textarea placeholder color (#1712)
+    - Reinstate backend release steps
+    - Capture the search_update event after making the adjustments to search terms (#1709)
+    - Move deploy jobs to respective workflow. Docker build for dry run
+    - Appzi env vars and Sentry config
+    - NextJS Sentry Integration (#1701)
+    - Increase cache duration (#1705)
+    - remove unnecessary webpack customizations (#1704)
+    - NextJS - re-enable program letter tests (#1696)
+    - Copy yarn releases to the Docker container (fixes build) (#1703)
+    - Config to set cache control headers (#1700)
+    - restoring up and down chevrons (#1690)
+    - synonyms in analyzer (#1697)
+    - NextJS Sentry Integration (#1701)
+    - Prod deployment. Add Posthog vars
+    - Increase cache duration (#1705)
+    - Update dependency @ckeditor/ckeditor5-react to v9 (#1532)
+    - remove unnecessary webpack customizations (#1704)
+    - NextJS - re-enable program letter tests (#1696)
+    - Update dependency @ckeditor/ckeditor5-dev-utils to v43 (#1552)
+    - Copy yarn releases to the Docker container (fixes build) (#1703)
+    - Update dependency @ckeditor/ckeditor5-dev-translations to v43 (#1551)
+    - Config to set cache control headers (#1700)
+    - Shanbady/improve bookmark button label (#1699)
+    - Shanbady/xpro logo for all xpro offerings (#1695)
+    - search facet accessibility fixes (#1698)
+    - exclude topics with no associated channel from Topic querySets (#1693)
+    - restoring up and down chevrons (#1690)
+    - Merge `main` into `nextjs` (#1687)
+    - Reinstate background steps image
+    - Handle 404 errors from API during server render (#1678)
+    - Fix search page history stack (#1680)
+    - fix spacing issues on nextjs branch (#1685)
+    - Make metadataBase apply to all pages, not just homepage (#1677)
+    - Positioning for search utils input close button (#1617)
+    - fix tests
+    - bump course search utils
+    - fix metadata baseurl
+    - switch search page to dynamic render
+    - Next.js Migration Bug Fixes  (#1626)
+    - adding new og-image
+    - Various post-merge bug fixes:
+    - Adds PostHog back into the NextJS build (#1644)
+    - Restore nextjs main workspace tests (#1639)
+    - Migrate remaining images to Next.js (#1614)
+    - Add error handling (#1613)
+    - adding env vars (#1609)
+    - Merge latest from main (#1602)
+    - Fix homepage image hydration errors (#1605)
+    - Migrate useMediaQuery hooks (#1563)
+    - [NextJS] configure query client like on `main` (#1591)
+    - [NextJS] Make noindex tag opt-out (like main) rather than opt-in (#1592)
+    - CI to push to Heroku (#1569)
+    - [NextJS] Load correct font and a few other global things (#1583)
+    - Reinstate head metadata (#1572)
+    - set single react types resolution (#1586)
+    - Dockerfile for the Next.js frontend and Action to build and publish (#1542)
+    - [NextJS] Fix tests, re-enable on CI (#1560)
+    - fix carousel initial positioning (#1546)
+    - [NextJS] Local docker setup (#1538)
+    - [NextJS] fix frontend tests outside of `main` workspace (#1527)
+    - Migrate Storybook for Next.js (#1525)
+    - Fixes for successful build (#1516)
+    - Fix linting on nextjs branch (#1509)
+    - Next.js Initial Migration (#1505)
+
+    Version 0.22.1 (Released October 15, 2024)
+    --------------
+
+    - increase learning path listing limit to 100 (#1692)
+    - Shanbady/consolidate static fixtures (#1684)
+
+    Version 0.22.0 (Released October 15, 2024)
+    --------------
+
+    - Make add to list dialog scrollable (#1689)
+    - make search defaults settable (#1681)
+    - Shuffling around where the search_update event is fired so it happens in more places (#1679)
+    - prevent featured course carousel from re-randomizing (#1673)
+
+    Version 0.21.3 (Released October 15, 2024)
+    --------------
+
+    - removing invalid flag from clear cache command (#1675)
+    - Clear Cache on Deploy (#1668)
+    - Update Yarn to v4.5.0 (#1624)
+    - topic detail banner / subtopic logic revisions (#1646)
+    - Restore program letter intercept view (#1643)
+
+    Version 0.21.2 (Released October 10, 2024)
+    --------------
+
+    - Content File Score Adjustment (#1667)
+    - remove unnecessary padding adjustment on Input base styles (#1666)
+
+    Version 0.21.1 (Released October 09, 2024)
+    --------------
+
+    - Always delete past events during ETL, and filter them out from api results too just in case (#1660)
+    - Add location field to LearningResource and LearningResourceRun models (#1604)
+    - Cached department and topic page counts (#1661)
+    - Shanbady/randomize featured resources (#1653)
+    - Ignore NotFoundErrors in switch_indices function (#1654)
+
+    Version 0.21.0 (Released October 07, 2024)
+    --------------
+
+    - update og:image to use new logo (#1658)
+    - Use a partial match mode as the search mode for instructor fields(#1652)
+
+    Version 0.20.4 (Released October 07, 2024)
+    --------------
+
+    - add is_incomplete_or_stale to default sort (#1641)
+    - set default minimum score cutoff (#1642)
+    - Adds base infra for the Unified Ecommerce frontend (#1634)
+    - reset search page in SearchField (#1647)
+    - updating email template with new logo (#1638)
+
+    Version 0.20.3 (Released October 03, 2024)
+    --------------
+
+    - add is_incomplete_or_stale (#1627)
+    - "unfollow" confirmation modal and "Unfollow All" button  (#1628)
+    - raise SystemExit as a RetryError (#1635)
+
+    Version 0.20.2 (Released October 01, 2024)
+    --------------
+
+    - remove border and shadow (#1636)
+    - set card root to auto height (#1633)
+
+    Version 0.20.1 (Released October 01, 2024)
+    --------------
+
+    - fix Safari MIT logo bug (#1631)
+    - Retry recreate_index subtasks on worker exit (#1615)
+    - Email for saved searches (#1619)
+
+    Version 0.20.0 (Released October 01, 2024)
+    --------------
+
+    - updated header (#1622)
+    - Switch to using full name (#1621)
+    - Update dependency lxml to v5 (#1554)
+    - Remove health checks against opensearch (#1620)
+    - Add additional event capturing for some interactions (#1596)
+    - Revert "changes for formatting search subscription emails"
+    - changes for formatting search subscription emails
+    - Add custom label for percolate query subscriptions (#1610)
+    - Update Python to v3.12.6 (#1593)
+    - [pre-commit.ci] pre-commit autoupdate (#1601)
+
+    Version 0.19.6 (Released September 27, 2024)
+    --------------
+
+    - Add task_reject_on_worker_lost=True to finish_recreate_index, use return instead of raise for replaced tasks (#1608)
+
+    Version 0.19.5 (Released September 26, 2024)
+    --------------
+
+    - Add separate field for ocw topics, use best field to assign related topics (#1600)
+
+    Version 0.19.4 (Released September 25, 2024)
+    --------------
+
+    - new -> recently added (#1594)
+    - Pace and format fields for learning resources (#1588)
+
+    Version 0.19.3 (Released September 23, 2024)
+    --------------
+
+    - Make search mode defaults settable env variables (#1590)
+    - follow/unfollow popover (#1589)
+    - Fix extract_openedx_data and backpopulate_mit_edx_data commands to work with course/program datafiles (#1587)
+
+    Version 0.19.2 (Released September 23, 2024)
+    --------------
+
+    - Codespace opensearch service fix (#1582)
+    - Remove learning_format, use delivery for search filter/facet (#1567)
+    - Signup popover owns url (#1576)
+    - [pre-commit.ci] pre-commit autoupdate (#1541)
+    - Remove an unused dependency (#1571)
+
+    Version 0.19.1 (Released September 18, 2024)
+    --------------
+
+    - fix testimonial color title attribute (#1580)
+    - fix adornment color (#1578)
+    - fix homepage testimonials font (#1568)
+    - properly add Mit-AdornmentButton class (#1574)
+    - fixing cache clear method (#1573)
+    - add SignupPopover to learning resource drawer bookmark button (#1565)
+    - Delivery and availability fields for runs (#1470)
+    - add caching to remaining views (#1555)
+    - Fix refreshes and deterministic sort order (#1564)
+    - align items center (#1566)
+    - add noindex setting (#1559)
+    - always use dfs_query_then_fetch (#1558)
+    - updated OLL csv file (#1557)
+    - input / search input styling updates (#1545)
+    - Update dependency pytest to v8 (#1548)
+
+    Version 0.19.0 (Released September 16, 2024)
+    --------------
+
+    - Update docker-compose config to support OS cluster (#1540)
+    - Update dependency faker to v28 (#1550)
+    - Update actions/upload-artifact digest to 5076954 (#1528)
+    - Update dependency attrs to v24 (#1535)
+    - Update dependency @faker-js/faker to v9 (#1533)
+    - Update dependency pytest-cov to v5 (#1549)
+    - Update docker.elastic.co/elasticsearch/elasticsearch Docker tag to v8 (#1260)
+    - ETL pipeline for MIT edX programs (#1536)
+    - license_cc and continuing_ed_credits fields (#1544)
+    - Fix data migration erroring if a record exists (#1543)
+    - learning resource drawer list buttons (#1537)
+    - Add LearningResource.delivery field (eventually to replace learning_format) (#1510)
+    - Update mcr.microsoft.com/playwright Docker tag to v1.47.0 (#1531)
+    - Update dependency ruff to v0.6.4 (#1530)
+    - Update dependency Django to v4.2.16 (#1529)
+    - display sub topics on topic channels (#1511)
+    - Sort news items by publish_date (#1522)
+
+    Version 0.18.2 (Released September 12, 2024)
+    --------------
+
+    - Use new OLL column for secondary topic; fix semester capitalization mismatch (#1519)
+    - Shanbady/fix course panel start date (#1521)
+    - Update dependency cryptography to v43 [SECURITY] (#1513)
+    - [pre-commit.ci] pre-commit autoupdate (#1504)
+    - Update dependency @ckeditor/ckeditor5-dev-utils to v42 (#1503)
+    - Update dependency @testing-library/react to v16.0.1 (#1496)
+    - Update dependency @ckeditor/ckeditor5-dev-translations to v42 (#1502)
+    - Update actions/setup-python digest to f677139 (#1493)
+    - Cache unit page counts (#1507)
+    - dfs_query_then_fetch (#1518)
+    - Add completeness discount to search (#1512)
+
+    Version 0.18.1 (Released September 05, 2024)
+    --------------
+
+    - Remove unnecessary searchparms check (#1514)
+    - Ingest OLL courses from a spreadsheet/csv (#1508)
+
+    Version 0.18.0 (Released September 04, 2024)
+    --------------
+
+    - Setup sentry tracing and profiling (#1492)
+    - Update Yarn to v4.4.1 (#1494)
+    - Update postgres Docker tag to v12.20 (#1501)
+    - Update opensearchproject/opensearch Docker tag to v2.16.0 (#1500)
+    - Update mcr.microsoft.com/playwright Docker tag to v1.46.1 (#1499)
+    - Update Node.js to v20.17.0 (#1498)
+    - Update dependency ruff to v0.6.3 (#1497)
+    - Update dependency @testing-library/react to v16.0.1 (#1495)
+
+    Version 0.17.14 (Released August 30, 2024)
+    ---------------
+
+    - put hero image into its own component and set the random image in a state variable so it doesn't change on re-render (#1490)
+    - fix codespace backend (#1488)
+    - score cutoff (#1466)
+
+    Version 0.17.13 (Released August 30, 2024)
+    ---------------
+
+    - Fix a flaky test (#1487)
+    - homepage search revisions (#1485)
+    - Better Headings Structure (#1473)
+    - Fix dialog spacing + reset AddToListDialog (#1484)
+
+    Version 0.17.12 (Released August 29, 2024)
+    ---------------
+
+    - Remove Pathways (Coming Soon) (#1482)
+    - add to list dialog updates (#1463)
+    - Fix syntax that a pre-commit check was failing (#1480)
+
+    Version 0.17.11 (Released August 29, 2024)
+    ---------------
+
+    - Switched imagekit caching from in-memory to redis (#1475)
+    - [pre-commit.ci] pre-commit autoupdate (#1468)
+    - OCW course completeness score (#1461)
+    - Shanbady/fix multiple instances of subscriptions (#1469)
+
+    Version 0.17.10 (Released August 28, 2024)
+    ---------------
+
+    - Remove the in-memory cache for now (#1477)
+    - change drawer CTA label (#1471)
+    - update the footer logo (#1467)
+    - Add caching for imagekit (#1472)
+    - [pre-commit.ci] pre-commit autoupdate (#1215)
+    - Update redis Docker tag to v7 (#1261)
+
+    Version 0.17.9 (Released August 28, 2024)
+    --------------
+
+    - Update newrelic agent (#1464)
+    - Update actions/upload-artifact digest to 834a144 (#1396)
+    - Update snok/install-poetry digest to 76e04a9 (#1397)
+    - Update dependency ruff to v0.6.2 (#1426)
+    - Carousel accessibility improvements (#1462)
+    - Add search mode selector to admin (#1456)
+    - Update Python to v3.12.5 (#1398)
+    - Sloan ETL pipeline (#1394)
+    - Setup codespaces (#1444)
+    - fix certification search url (#1460)
+    - randomize the hero image (#1459)
+
+    Version 0.17.8 (Released August 26, 2024)
+    --------------
+
+    - search box adornment buttons should be 56px wide on mobile (#1457)
+    - homepage hero search updates (#1454)
+    - Fix departments and schools fixtures (#1453)
+    - Renaming the s3 buckets used for storing the app. (#1455)
+
+    Version 0.17.7 (Released August 21, 2024)
+    --------------
+
+    - Add SP as a department  (#1451)
+    - adding test for redirect view (#1448)
+    - News and events for MIT Professional Education (#1365)
+
+    Version 0.17.6 (Released August 21, 2024)
+    --------------
+
+    - change default og:image (#1449)
+
+    Version 0.17.5 (Released August 21, 2024)
+    --------------
+
+    - restorin g redirect route (#1446)
+
+    Version 0.17.4 (Released August 21, 2024)
+    --------------
+
+    - update departments fixture (#1439)
+    - department is optional (#1437)
+    - restrict learning path pages to learning path editors (#1442)
+    - remove privacy chip from add to user list dialog (#1440)
+
+    Version 0.17.3 (Released August 21, 2024)
+    --------------
+
+    - allow empty APPZI_URL (#1441)
+    - Get availability value from xpro api (#1432)
+    - add appzi for feedback (#1435)
+    - Fix frontend sentry_env and release version (#1386)
+    - Remove remaining frontend routes (#1424)
+    - Only process best/next run contentfiles, and make sure other run contentfiles are deindexed (#1383)
+
+    Version 0.17.2 (Released August 20, 2024)
+    --------------
+
+    - Add locust load testing (#1422)
+
+    Version 0.17.1 (Released August 19, 2024)
+    --------------
+
+    - Replace topic chips with info section text (#1379)
+    - Handle topics with colons from xpro in ETL pipeline (#1429)
+    - Set default sort to featured (#1414) (#1423)
+
+    Version 0.17.0 (Released August 19, 2024)
+    --------------
+
+    - Add migration to adjust mappings, make some minor changes to the dump to yaml util function (#1408)
+    - uncapitalize with (#1428)
+    - Update nginx Docker tag to v1.27.1 (#1425)
+    - search query clean up (#1393)
+    - remove elementary / primary school as an education option (#1415)
+    - Per Page metadata tags  (#1411)
+
+    Version 0.16.1 (Released August 15, 2024)
+    --------------
+
+    - set csrf cookie name from env var (#1420)
+    - Expose the SESSION_COOKIE_NAME setting (#1418)
+    - Update the ETL pipelines times (#1416)
+    - Add accessibility linting (#1395)
+    - Undo Change to default sort (#1414)
+    - Make MITOL_ settings optional in app.json (#1412)
+    - Rename the variables on release workflows (#1409)
+    - Fix typo in env variable prefix (#1406)
+    - cache learning resources search api view (#1392)
+    - rename MIT Open to MIT Learn (#1389)
+    - Rename env var prefix MITOPEN_ to MITOL_ (#1388)
+    - adding fix for logo in email (#1404)
+    - Change Default sort to featured (#1377)
+    - Empty user list items view (#1376)
+
+    Version 0.16.0 (Released August 13, 2024)
+    --------------
+
+    - Update values of hostnames to use learn.mit.edu (#1401)
+    - Add featured ranks to the opensearch index (#1381)
+    - Fix homepage contrast issues (#1371)
+    - copy update for mitx channel page (#1400)
+    - Update Yarn to v4.4.0 (#1399)
+    - Update search term event handler to clear page if the term changes and is submitted, updating tests for this (#1387)
+    - fix prettier and eslint in pre-commit (#1391)
+    - Rename MIT Open to MIT Learn for subscription emails (#1390)
+    - enable mailgun and analytics (#1370)
+    - update suppport email (#1385)
+    - Update topic boxes to support multiple lines (#1380)
+    - Update dependency Django to v4.2.15 [SECURITY] (#1384)
+    - adding version specifier for renovate (#1378)
+    - Create, Edit and Delete User List modal UI (#1356)
+
+    Version 0.15.1 (Released August 07, 2024)
+    --------------
+
+    - Update dependency redis to v5 (#1244)
+    - sort before comparing (#1372)
+    - Rename my 0008 to 0009 to prevent conflict (#1374)
+    - Add Manufacturing topic; update upserter to make adding child topics easier (#1364)
+    - Publish topic channels based on resource count (#1349)
+    - Update dependency opensearch-dsl to v2 (#1242)
+    - Update dependency opensearch-py to v2 (#1243)
+    - Fix issue with User List cards not updating on edit (#1361)
+    - Update dependency django-anymail to v11 (#1207)
+    - Update CI to check data migrations for conflicts (#1368)
+    - Fix frontend sentry configuration (#1362)
+    - Migrate config renovate.json (#1367)
+    - Update dependency sentry-sdk to v2 [SECURITY] (#1366)
+    - add a bullet about collecting demographics to PrivacyPage.tsx (#1355)
+    - user list UI updates (#1348)
+    - Subscription email template updates (#1311)
+
+    Version 0.15.0 (Released August 05, 2024)
+    --------------
+
+    - Performance fixes on LR queries (#1303)
+    - Subscription management page (#1331)
+    - Add certificate badge to drawer (#1307)
+    - Lock file maintenance (#1360)
+    - Update mcr.microsoft.com/playwright Docker tag to v1.45.3 (#1358)
+    - Update docker.elastic.co/elasticsearch/elasticsearch Docker tag to v7.17.23 (#1357)
+
+    Version 0.14.7 (Released August 01, 2024)
+    --------------
+
+    - Renaming my topic update migration from 0006 to 0007 (#1353)
+    - Update the mappings for PWT topic "Programming & Coding"  (#1344)
+
+    Version 0.14.6 (Released August 01, 2024)
+    --------------
+
+    - Use resource_delete_actions instead of resource.delete directly (#1347)
+    - Show "Start Anytime" based on resource "availability" property (#1336)
+    - Handle alternate unique id fields better in load_course (#1342)
+    - topic / privacy / onboarding / profile copy updates (#1334)
+
+    Version 0.14.5 (Released July 31, 2024)
+    --------------
+
+    - Flatten OCW topics so all of them get mapped to PWT topics when running the ETL pipeline (#1343)
+
+    Version 0.14.4 (Released July 31, 2024)
+    --------------
+
+    - fix bug (#1340)
+    - dev mode (#1333)
+    - Updated designs for the unit page (#1325)
+    - Avoid course overwrites in program ETL pipelines (#1332)
+    - Assign mitxonline certificate type from api values (#1335)
+    - add default yearly_decay_percent (#1330)
+    - Modal dialog component and styles
+    - tab widths (#1309)
+    - Resource availability: backend changes (#1301)
+    - styling and icon updates (#1316)
+
+    Version 0.14.3 (Released July 29, 2024)
+    --------------
+
+    - Remove some styling for topic box names so they wrap, adjusting icons (#1328)
+    - Lock file maintenance (#1262)
+    - fix flaky tests (#1324)
+    - urlencode search_filter (#1326)
+    - Moves all env vars to global APP_SETTINGS (#1310)
+    - Remap topic icons according to what's in the topics listing (#1322)
+    - Fix podcast duration frontend display (#1321)
+    - Update topics code for PWT topic mappings (#1275)
+    - Convert durations to ISO8601 format (podcast episodes) (#1317)
+    - No prices for archived runs or resources w/out certificates (#1305)
+
+    Version 0.14.2 (Released July 25, 2024)
+    --------------
+
+    - Reorder where the testimonial displays in the unit/offeror page to fix spacing and background (#1314)
+    - fix banner background width (#1315)
+    - fix price display and update vertical cards (#1296)
+    - Fix channel views test (#1318)
+    - free section css (#1312)
+    - Extract department info for mitxonline from correct external API fields (#1308)
+    - Determine can edit and can sort permission upstream (#1299)
+
+    Version 0.14.1 (Released July 24, 2024)
+    --------------
+
+    - Add a database index on FeedEventDetail.event_datetime (#1304)
+    - Update platform logos (#1302)
+
+    Version 0.14.0 (Released July 23, 2024)
+    --------------
+
+    - Save resource prices in a new database model and calculate during ETL/nightly task (#1290)
+    - set search page size to 20 (#1298)
+    - Add a slider to prioritize newer resources (#1283)
+    - Fix bug with background image obscuring search controls (#1293)
+    - allow hitting local edx datafile in dev mode (#1297)
+    - fix restricted redirect (#1287)
+
+    Version 0.13.23 (Released July 18, 2024)
+    ---------------
+
+    - Revert "Fix bug with background image obscuring search controls (#1286)" (#1289)
+    - Improve channels api performance (#1278)
+
+    Version 0.13.22 (Released July 18, 2024)
+    ---------------
+
+    - Optimize queries for learning resource APIs
+    - Fix bug with background image obscuring search controls (#1286)
+    - Draggable list card styles (#1282)
+    - Update actions/setup-node digest to 1e60f62 (#1267)
+    - Update actions/upload-artifact digest to 0b2256b (#1269)
+    - Update actions/setup-python digest to 39cd149 (#1268)
+
+    Version 0.13.21 (Released July 17, 2024)
+    ---------------
+
+    - Unit Detail Banner Updates (#1272)
+    - Shanbady/clicking item routes away from list fix (#1280)
+    - adding migrations for copy update (#1276)
+    - Shanbady/ingest sloan events (#1270)
+    - fix keyboard drag and drop (#1279)
+    - Use newer Learning Resource list cards in Learning Paths lists (#1256)
+    - Improve offeror api performance (#1274)
+    - Shanbady/clicking item routes away from list (#1273)
+    - refactor profile and onboarding (#1266)
+    - add a story showing platform logos (#1277)
+    - Add profile option for silky to settings (#1271)
+    - Take is_enrollable attribute into account for publish status of edx resources (#1264)
+    - Update react monorepo to v18.3.1 (#874)
+
+    Version 0.13.20 (Released July 17, 2024)
+    ---------------
+
+    - Make static/hash.txt served again (#1259)
+    - Update actions/checkout digest to 692973e (#1263)
+    - adjust department names (#1253)
+    - Update eslint-config and friends (#1246)
+
+    Version 0.13.19 (Released July 12, 2024)
+    ---------------
+
+    - remove erronous export string (#1257)
+    - Install django-silk nad fix topics api perf (#1250)
+    - change xpro ETL dict key back (#1252)
+    - reindexing fixes (#1247)
+    - Pin dependencies (#1225)
+    - Plain text news/events titles/authors; standardize html cleanup (#1248)
+    - Condensed list card components for user lists (#1251)
+    - Change readable_id values for podcasts and episodes (#1232)
+    - adjust / refactor channel detail header (#1234)
+    - use main not "$default-branch" (#1249)
+    - Update dependency ruff to v0.5.1 (#1241)
+    - Update dependency Django to v4.2.14 (#1240)
+
+    Version 0.13.18 (Released July 10, 2024)
+    ---------------
+
+    - Fix logout view (#1236)
+    - remove manage widgets (#1239)
+    - Unit and detail page copy updates (#1235)
+    - Align departments listing colors to designs (#1238)
+    - resource drawer UI fixes (#1237)
+    - Remove "Top picks" carousel if no results (#1195)
+    - fix learning path count, increase item page size (#1230)
+    - Use ovewrite=True when calling pluggy function from upsert_offered_by (#1227)
+    - open resources in new tab (#1220)
+    - extra weight for instructors (#1231)
+    - Homepage and nav drawer copy edits (#1233)
+    - Update dependency eslint-plugin-jest to v28 (#1038)
+    - Only publish enrollable mitxonline courses (#1229)
+    - Navigation UI fixes (#1228)
+    - better spacing around pagination component (#1219)
+    - Update resource drawer text and URL for podcast episodes (#1191)
+    - resource type (#1222)
+    - Data fixtures app for loading static fixtures (#1218)
+    - Webpack build config loads .env files for running outside of Docker (#1221)
+    - Updates icons to use Remixicons where they don't already (#1157)
+    - make primary buttons shadowy, remove edge=none (#1213)
+    - resource category tabs (#1211)
+    - Fix storybook github pages publishing (#1200)
+    - Fix and reenable onboarding page tests (#1216)
+    - Removed nginx serving of frontend locally (#1179)
+    - Update actions/checkout digest to 692973e (#961)
+    - Privacy policy updates (#1208)
+
+    Version 0.13.17 (Released July 02, 2024)
+    ---------------
+
+    - Fix default image height in resource cards (#1212)
+    - update unit names (#1198)
+    - Update opensearchproject/opensearch Docker tag to v2.15.0 (#1205)
+    - Update mcr.microsoft.com/playwright Docker tag to v1.45.0 (#1203)
+    - Update dependency ruff to v0.5.0 (#1202)
+    - Update Node.js to v20.15.0 (#1201)
+    - Shanbady/log out flow (#1199)
+    - update mitpe unit data (#1194)
+    - update sloan executive education offerings (#1193)
+    - adding post logout redirect to keycloak (#1192)
+    - stop publishing github pages every pr (#1197)
+    - setting 100px as default width for buttons (#1185)
+    - Don't display carousel tabs if there's no data to display (#1169)
+    - Filled vs Unfilled Bookmarks (#1180)
+    - Square aspect ratio for media resource images (#1183)
+    - Add resource category to apis (#1188)
+    - Scroll results into view when paginating (#1189)
+    - Drawer CSS fixes (#1190)
+    - Updates to ChoiceBox; Checkbox, Radio components (#1174)
+
+    Version 0.13.16 (Released June 28, 2024)
+    ---------------
+
+    - adding command to remove old tables (#1186)
+    - New default image for learning resources (#1136)
+    - Swap search and login button (#1181)
+    - Adding the PostHog settings to the "Build frontend" step (#1182)
+    - facet order (#1171)
+    - rename field to channel (#1170)
+    - fixing width of unit page logo for small devices (#1151)
+
+    Version 0.13.15 (Released June 27, 2024)
+    ---------------
+
+    - fix content file search (#1167)
+    - Set default ordering by position for userlist and learningresource relationships (#1165)
+    - fix flaky test (#1168)
+    - Update favicons (#1153)
+    - de-flake a test (#1166)
+    - Shanbady/search page card mobile updates (#1156)
+    - remove course filter from featured carousel (#1164)
+    - Update Select and Dropdown components (#1160)
+    - Adds a separate pane for the filter CTAs, adds an apply button on mobile (#1144)
+    - Search facet styles and animation (#1143)
+    - Modifications to api/search filtering with comma values (#1122)
+    - [pre-commit.ci] pre-commit autoupdate (#1110)
+    - Update Yarn to v4.3.1 (#1145)
+
+    Version 0.13.14 (Released June 26, 2024)
+    ---------------
+
+    - better chunk sizes (#1159)
+    - Use course_description_html field for OCW courses (#1154)
+    - Update dependency eslint-plugin-mdx to v3 (#1149)
+    - sort by -views instead (#1158)
+    - exposing hijack routes via nginx conf (#1152)
+    - sort the media carousel tabs by "new" (#1155)
+    - Update dependency faker to v25 (#1150)
+    - Update codecov/codecov-action action to v4.5.0 (#1148)
+    - Update docker.elastic.co/elasticsearch/elasticsearch Docker tag to v7.17.22 (#1147)
+    - Update dependency ruff to v0.4.10 (#1146)
+
+    Version 0.13.13 (Released June 21, 2024)
+    ---------------
+
+    - Some copy edits and minor about page styling updates (#1141)
+    - creating profile automatically for logged in user (#1140)
+
+    Version 0.13.12 (Released June 21, 2024)
+    ---------------
+
+    - Search facet checkbox and label styles (#1137)
+    - Applies new fixes for the homepage and unit page testimonial sliders (#1131)
+    - fixing sort method for panel detail display (#1130)
+    - add learning materials tab (#1132)
+
+    Version 0.13.11 (Released June 21, 2024)
+    ---------------
+
+    - about page updates (#1134)
+
+    Version 0.13.10 (Released June 20, 2024)
+    ---------------
+
+    - Channel page updates (#1126)
+
+    Version 0.13.9 (Released June 20, 2024)
+    --------------
+
+    - removing check for live attribute (#1128)
+    - Shanbady/copy edits for milestone demo (#1125)
+    - Signup Popover (#1109)
+    - show podcast_episode in media carousel all (#1123)
+    - Updates to page titles (#1121)
+    - Shanbady/minor UI updates (#1118)
+    - Shanbady/navigation UI fixes (#1119)
+    - mitx - only ingest published courses (#1102)
+    - Make resource.prices = most recent published run prices if there is no next run (#1116)
+    - switch default sort to use popular instead of created on (#1120)
+    - Fix populate_featured_lists mgmt command (#1097)
+
+    Version 0.13.8 (Released June 20, 2024)
+    --------------
+
+    - add is_learning_material filter show courses and programs first in default sort (#1104)
+    - dashboard my lists style fixes (#1107)
+    - Updates to learning resource price display (#1108)
+    - Add profile edit page (#1029)
+    - Append `/static` to the front of the testimonial marketing card image (#1115)
+    - two separate search inputs (#1111)
+
+    Version 0.13.7 (Released June 18, 2024)
+    --------------
+
+    - Redoing the marketing image selector (#1113)
+    - Update Python to v3.12.4 (#1035)
+    - Update the conditional for the marketing image test to drop out if we haven't seen a marketing image at all yet (#1112)
+    - Update Yarn to v4.3.0 (#1095)
+    - Homepage Stories & Events layout fixes (#1103)
+    - Add marketing images to homepage testimonial, fix some styling issues (#1077)
+    - Contentfile archive comparison fix (#1078)
+    - Sort run prices on save; make learning resource prices equal "next run" prices (#1085)
+    - units page fixes (#1083)
+    - Rename test appropriately and increase the timeout (#1105)
+    - Fixed typo in the fastly api key secret name. (#1106)
+    - breadcrumbs component (#1089)
+    - Update dependency eslint-config-mitodl to v2 (#1037)
+
+    Version 0.13.6 (Released June 17, 2024)
+    --------------
+
+    - update course-search-utils (#1100)
+    - fix safari image stretching, cap image width (#1096)
+    - excluding users from serializer (#1090)
+    - All MITx runs should include a price of $0 (#1094)
+    - Search page styling (#1051)
+    - fix dashboard home certificate course carousel (#1082)
+    - Shanbady/browse by topics UI fix (#1081)
+    - Update OCW unit name in offerors.json (#1084)
+    - Add -E flag to worker subcommand for sending task events
+
+    Version 0.13.5 (Released June 14, 2024)
+    --------------
+
+    - Shanbady/topic channel page header fixes (#1063)
+    - Learning Resource cards, list view (#1054)
+
+    Version 0.13.4 (Released June 14, 2024)
+    --------------
+
+    - Expose thenew user login url as an environment var (#1086)
+    - Homepage "Personalize" (#1068)
+    - Revert "Add flag for Celery to send task state change events"
+    - Adds learner testimonials component for interior pages (#1001)
+    - Fixing image width and position on the homepage carousel; prefer cover image over avatar if it exists (#1073)
+    - Add pytest-xdist and use it for CI builds (#1074)
+    - Update names in offerors.json (#1079)
+    - Add flag for Celery to send task state change events
+
+    Version 0.13.3 (Released June 14, 2024)
+    --------------
+
+    - Adds ScrollRestoration to the spot in the routes; sets it up so it works only if the path change; adds a mit-learn mock for window.scrollTo (#1071)
+    - Change LOGIN_REDIRECT_URL and LOGOUT_REDIRECT_URL to use the base URL (#1075)
+    - dashboard home (#1062)
+
+    Version 0.13.2 (Released June 13, 2024)
+    --------------
+
+    - Update education options and add to schema (#1069)
+    - local dev: Read `MITOL_AXIOS_BASE_PATH` from env (#1065)
+    - Add featured courses carousel to unit channel page (#1059)
+    - Add ordering to testimonials, adjust view on homepage testimonial carousel (#1067)
+    - Change channel type and url from "offeror" to "unit" (#1031)
+    - Update dependency ruff to v0.4.8 (#1036)
+
+    Version 0.13.1 (Released June 11, 2024)
+    --------------
+
+    - [pre-commit.ci] pre-commit autoupdate (#1055)
+    - make slick fail more gracefully when parent width unconstrained (#1060)
+    - Copies static assets to root build directory (#1053)
+    - Absolute login return URL (#1052)
+    - resource card fallback image and alt text fix (#1050)
+    - pass cardProps to loading state (#1048)
+    - search prefs learning format as list (#1056)
+    - Use login redirect URL setting for social auth as well
+    - Expose the login/logout redirects as an environment variable (#1046)
+    - homepage hero bug fixes (#1034)
+
+    Version 0.13.0 (Released June 10, 2024)
+    --------------
+
+    - adding configurable csrf settings and including withXSRFToken in axio… (#1042)
+    - Fixing authentication issue, and fixing some filtering and test issues (#1039)
+    - dashboard menu (#1009)
+    - Add a setting for CSRF_COOKIE_DOMAIN (#1032)
+    - Add backpopulate command for user profiles (#1030)
+    - mitxonline etl v2 api (#1026)
+    - Carousel Makeover: New tabs and Fixed Width Cards (#1020)
+    - Update dependency @testing-library/react to v16 (#799)
+    - Offerer banner UI (#1010)
+    - Add learner testimonials homepage UI (#916)
+    - Update dependency @ckeditor/ckeditor5-react to v7 (#997)
+    - Update dependency django-json-widget to v2 (#998)
+    - OLL contentfiles (#1008)
+    - Profile-based search filter preferences (#1017)
+    - Move Heroku deploy step prior to S3 publish
+    - Fix bug with onboarding steps not saving (#1024)
+    - Purge the fastly cache on deploy (#1021)
+    - Write the commit hash to the frontend build for doof (#1023)
+    - Point the webpack dev server proxy to the new API subdomain (#1022)
+    - Learning Resource Card (#1015)
+    - certification_type (#1018)
+    - Insert learning_path_parents/user_list_parents values into search results (#992)
+    - Add channel links to unit cards (#1016)
+    - [pre-commit.ci] pre-commit autoupdate (#1004)
+    - Add onboarding ux (#964)
+    - Style tab components to match figma (#1012)
+    - Toggle Professional (#1005)
+    - Absolute URL to backend for login routes (#1011)
+    - Add nullalbe offerors and channels to the testimonials model/API (#1006)
+
+    Version 0.12.1 (Released June 05, 2024)
+    --------------
+
+    - Update profile fields to align to LR data (#1003)
+    - Shanbady/additional details on offeror channel pages (#975)
+    - Configure JS bundles to use a separate API domain for backend (#1002)
+    - units page (#974)
+    - Add "tertiary" button and align button terminology with Figma (#991)
+
+    Version 0.12.0 (Released June 04, 2024)
+    --------------
+
+    - Sortby parameter for news_events (#989)
+    - Reduce functions occurring under atomic transactions; fix dedupe comparison in load_course function (#984)
+    - Update nginx Docker tag to v1.27.0 (#996)
+    - Update Node.js to v20.14.0 (#995)
+    - Update dependency ruff to v0.4.7 (#993)
+    - Update mcr.microsoft.com/playwright Docker tag to v1.44.1 (#994)
+    - More code sharing between search and field pages (#980)
+    - Certification types for learning resources (#977)
+    - Revert "Error if using npm to install (#986)" (#990)
+    - Learning resource drawer design updates (#958)
+    - Adding the EMBEDLY_KEY to the populated envvars for building the release static assets. (#987)
+    - Error if using npm to install (#986)
+    - Fix celerybeat schedule (#985)
+    - Lock file maintenance (#982)
+    - extract images for news articles (#973)
+
+    Version 0.11.0 (Released May 30, 2024)
+    --------------
+
+    - remove package-lock.json (#978)
+    - Randomize featured api order by offeror, keep sorting by position (#971)
+    - Updated hero page (#969)
+    - Fix flaky test by specifying a sort of program courses in serializer (#972)
+    - Clean up resource descriptions (#957)
+    - Fix Featured API requests (#970)
+    - add the footer & privacy, terms and about us pages (#956)
+    - Adding call to update program topics during ETL loads (#952)
+    - Upgrade NukaCarousel to v8 (#960)
+    - Fix detect-secrets baseline file (#967)
+    - Update dependency @faker-js/faker to v8 (#797)
+
+    Version 0.10.2 (Released May 30, 2024)
+    --------------
+
+    - Update dependency @ckeditor/ckeditor5-dev-utils to v40 (#933)
+    - Topics Listing Page (#946)
+    - Do not ingest prolearn courses/programs from the past (#955)
+    - Update dependency @ckeditor/ckeditor5-dev-translations to v40 (#932)
+    - add All tab (#966)
+    - fix flaky test (#965)
+    - [pre-commit.ci] pre-commit autoupdate (#963)
+    - Update codecov/codecov-action action to v4.4.1 (#962)
+    - Featured Courses Carousel (#959)
+    - horizontal facets (#949)
+    - workflow changes to publish static assets to s3 (#922)
+    - daily subscription email to subscribers (#937)
+    - Filtering by free=true should exclude all professional courses (#948)
+    - Fix flaky test (#954)
+
+    Version 0.10.1 (Released May 24, 2024)
+    --------------
+
+    - Homepage News and Events section (#945)
+    - side nav updates (#951)
+    - Remove 3 offerors and provide featured resources from all remaining ones (#943)
+    - Additional offeror details (#923)
+
+    Version 0.10.0 (Released May 23, 2024)
+    --------------
+
+    - Update dependency django-ipware to v7 (#935)
+    - fix install and storybook (#942)
+    - Fixes button styles to match design (#941)
+    - header updates (#910)
+    - Update dependency django-imagekit to v5 (#934)
+    - [pre-commit.ci] pre-commit autoupdate (#938)
+    - Work on onboarding updates to profile API (#907)
+    - Fix several ETL bugs (#939)
+    - Add Free, Certification, and Professional Facets to Search UI (#917)
+    - use docker profiles, mount root to watch (#936)
+    - serve static react app for django 40x (#911)
+    - Update postgres Docker tag to v12.19 (#931)
+    - Update opensearchproject/opensearch Docker tag to v2.14.0 (#930)
+    - Update mcr.microsoft.com/playwright Docker tag to v1.44.0 (#929)
+    - Update dependency drf-nested-routers to ^0.94.0 (#928)
+    - Update Node.js to v20.13.1 (#926)
+    - Update codecov/codecov-action action to v4.4.0 (#927)
+    - Update dependency ruff to v0.4.4 (#925)
+    - Update dependency Django to v4.2.13 (#924)
+    - Browse by Topics section for the home page (#901)
+    - Fix schema for news_events feed items (#919)
+
+    Version 0.9.14 (Released May 20, 2024)
+    --------------
+
+    - Fix schema issue that was breaking redoc (#920)
+    - Fix flaky python test (#912)
+    - adding fix for program letter route in nginx (#914)
+    - Give video/podcast/learning_path resources a default learning format of ["online"] (#892)
+    - Fix schema generation errors (#895)
+    - Button Updates (#915)
+    - Pin actions/upload-artifact action to 6546280 (#868)
+    - Use our ActionButton, no more MUI IconButton (#909)
+    - Update Python to v3.12.3 (#349)
+    - Update Yarn to v4.2.2 (#897)
+    - Update dependency django-cors-headers to v4 (#840)
+    - Handle nulls in attestation cover field (#906)
+    - navigation menu (#890)
+
+    Version 0.9.13 (Released May 16, 2024)
+    --------------
+
+    - Adds learner testimonials support (#891)
+    - Null start dates for OCW course runs (#899)
+    - Featured API endpoint (#887)
+
+    Version 0.9.12 (Released May 14, 2024)
+    --------------
+
+    - use neue-haas-grotesk font (#889)
+    - Shanbady/add subscribe button to pages (#878)
+    - bump course-search-utils (#900)
+    - Replace react-dotdotdot with CSS (#896)
+    - Switch django migrations to release phase (#898)
+    - Do not show unpublished runs in learning resource serializer data (#894)
+    - Fix some n+1 query warnings (#884)
+
+    Version 0.9.11 (Released May 13, 2024)
+    --------------
+
+    - add format facet (#888)
+    - Free everything (#885)
+    - Add nesting learning resource topics (#844)
+
+    Version 0.9.10 (Released May 09, 2024)
+    --------------
+
+    - search dropdown (#875)
+    - Add certificate as a real database field to LearningResource (#862)
+    - allow Button to hold a ref (#883)
+    - Display loading view for search page (#881)
+
+    Version 0.9.9 (Released May 09, 2024)
+    -------------
+
+    - fix spacing between department groups (#880)
+    - #4053 Alert UI component (#861)
+
+    Version 0.9.8 (Released May 08, 2024)
+    -------------
+
+    - Departments Listing Page (#865)
+    - only show clear all if it would do something (#877)
+    - create exported components bundle (#867)
+    - Update Yarn to v4.2.1 (#872)
+    - Update docker.elastic.co/elasticsearch/elasticsearch Docker tag to v7.17.21 (#871)
+    - Update dependency ruff to v0.4.3 (#870)
+    - Update codecov/codecov-action action to v4.3.1 (#869)
+
+    Version 0.9.7 (Released May 06, 2024)
+    -------------
+
+    - Api sort fixes (#846)
+    - configure api BASE_PATH (#863)
+
+    Version 0.9.6 (Released May 03, 2024)
+    -------------
+
+    - Additional routes to the Django app (#858)
+    - allow configuring Axios defaults.withCredentials (#854)
+    - Alert handler for percolate matches (#842)
+    - Adds the missing OIDC auth route (#855)
+    - Learning format filter for search/db api's (#845)
+    - Corrects the path to write hash.txt (#850)
+    - Lock file maintenance (#578)
+    - Self contained front end and fixes for building on Heroku (#829)
+    - remove pytz (#830)
+    - Update dependency dj-database-url to v2 (#839)
+    - Update dependency cryptography to v42 (#838)
+    - Add format field to LearningResource model and ETL pipelines (#828)
+
+    Version 0.9.5 (Released April 30, 2024)
+    -------------
+
+    - Minor updates for PostHog settings (#833)
+    - Update nginx Docker tag to v1.26.0 (#836)
+    - Update dependency @types/react to v18.3.1 (#835)
+    - Update dependency ruff to v0.4.2 (#834)
+    - Don't initialize PostHog if it's disabled (#831)
+
+    Version 0.9.4 (Released April 30, 2024)
+    -------------
+
+    - Text Input + Select components (#827)
+    - Update ckeditor monorepo to v41 (major) (#795)
+    - Do not analyze webpack by default (#785)
+    - Populate prices for mitxonline programs (#817)
+    - Filter for free resources (#810)
+    - Add drop down for certification in channel search (#802)
+    - Pin dependencies (#735)
+    - Update dependency @dnd-kit/sortable to v8 (#796)
+    - Design system buttons (#800)
+    - Reverts decoupled front end and subsequent commits to fix Heroku build errors (#825)
+    - Remove package manager config (#823)
+    - Set engines to instruct Heroku to install yarn (#821)
+    - Deployment fixes for static frontend on Heroku (#819)
+    - fixing compose mount (#818)
+    - Move hash.txt location to frontend build directory (#815)
+    - Build front end to make available on Heroku (#813)
+    - Updating the LearningResourceViewEvent to cascade delete, rather than do nothing, so things can be deleted (#812)
+    - Self contained front end using Webpack to build HTML and Webpack Dev Server to serve (#678)
+    - create api routes for user subscribe/unsubscribe to search (#782)
+    - Retrieve OL events via API instead of HTML scraping (#786)
+
+    Version 0.9.3 (Released April 23, 2024)
+    -------------
+
+    - Fix index schema (#807)
+    - Merge the lrd_view migration and the schools migration (#804)
+    - School model and api (#788)
+    - Adds ETL to pull PostHog view events into the database; adds popular resource APIs (#789)
+    - Update dependency @typescript-eslint/eslint-plugin to v7 (#801)
+    - Update opensearchproject/opensearch Docker tag to v2.13.0 (#794)
+    - Update mcr.microsoft.com/playwright Docker tag to v1.43.1 (#793)
+    - Update dependency ruff to v0.4.1 (#792)
+    - Update nginx Docker tag to v1.25.5 (#791)
+    - Update dependency @types/react to v18.2.79 (#790)
+    - Capture page views with more information (#746)
+
+    Version 0.9.2 (Released April 22, 2024)
+    -------------
+
+    - adding manual migration to fix foreign key type (#752)
+    - Add channel url to topic, department, and offeror serializers (#778)
+    - Filter channels api by channel_type (#779)
+
+    Version 0.9.1 (Released April 18, 2024)
+    -------------
+
+    - Homepage hero section (#754)
+    - Add necessary celery client configurables for celery monitoring (#780)
+
+    Version 0.9.0 (Released April 16, 2024)
+    -------------
+
+    - Customize channel page facets by channel type (#756)
+    - Update dependency sentry-sdk to v1.45.0 (#775)
+    - Update dependency posthog-js to v1.121.2 (#774)
+    - Update dependency ipython to v8.23.0 (#773)
+    - Update dependency google-api-python-client to v2.125.0 (#772)
+    - Update all non-major dev-dependencies (#768)
+    - Update dependency @testing-library/react to v14.3.1 (#771)
+    - Update dependency @sentry/react to v7.110.0 (#770)
+    - Update codecov/codecov-action action to v4.3.0 (#769)
+    - Update material-ui monorepo (#767)
+    - Update docker.elastic.co/elasticsearch/elasticsearch Docker tag to v7.17.20 (#765)
+    - Update dependency uwsgi to v2.0.25 (#766)
+    - Update dependency ruff to v0.3.7 (#763)
+    - Update dependency qs to v6.12.1 (#762)
+    - Update dependency drf-spectacular to v0.27.2 (#761)
+    - Update dependency boto3 to v1.34.84 (#760)
+    - Update Node.js to v20.12.2 (#759)
+    - Pin dependency @types/react to 18.2.73 (#758)
+    - Add a channel for every topic, department, offeror (#749)
+    - Update dependency djangorestframework to v3.15.1 (#628)
+    - Shanbady/define percolate index schema (#737)
+
+    Version 0.8.0 (Released April 11, 2024)
+    -------------
+
+    - Channel Search (#740)
+    - fixing readonly exception in migration (#741)
+    - fix channel configuration (#743)
+    - Configurable, Tabbed Carousels (#731)
+    - add userlist bookmark button and add to user list modal (#732)
+    - Adds Posthog support to the frontend. (#693)
+    - Channel types (#725)
+    - Remove dupe line from urls.py file (#730)
+    - adding initial models for user subscription (#723)
+    - Shanbady/add record hash field for hightouch sync (#717)
+    - fix flaky test (#720)
+    - Revert "bump to 2024.3.22" (#719)
+    - add UserList modals and wire up buttons (#718)
+    - bump to 2024.3.22
+    - Migrate config renovate.json (#713)
+    - try ckeditor grouping again (#711)
+
+    Version 0.7.0 (Released April 01, 2024)
+    -------------
+
+    - Basic learning resources drawer (#686)
+    - Update actions/configure-pages action to v5 (#706)
+    - display image and description in userlists (#695)
+    - Update dependency sentry-sdk to v1.44.0 (#705)
+    - Update dependency google-api-python-client to v2.124.0 (#704)
+    - Update dependency @sentry/react to v7.109.0 (#703)
+    - Update Node.js to v20.12.0 (#702)
+    - Update docker.elastic.co/elasticsearch/elasticsearch Docker tag to v7.17.19 (#701)
+    - Update dependency safety to v2.3.5 (#700)
+    - Update dependency nh3 to v0.2.17 (#699)
+    - Update dependency boto3 to v1.34.74 (#698)
+    - Update all non-major dev-dependencies (#696)
+    - Update dependency @emotion/styled to v11.11.5 (#697)
+    - Add botocore to ignored deprecation warnings, remove old python 3.7 ignore line (#692)
+    - Add UserListDetails page (#691)
+    - Add Posthog integration to backend (#682)
+    - Update postgres Docker tag to v12.18 (#670)
+    - remove depricated ACL setting (#690)
+    - fix new upcoming (#684)
+    - Remove Cloudfront references (#689)
+    - updating spec (#688)
+    - Shanbady/endpoint to retrieve session data (#647)
+    - Sloan Executive Education blog ETL (#679)
+
+    Version 0.6.1 (Released April 01, 2024)
+    -------------
+
+    - Search page cleanup (#675)
+    - Shanbady/retrieve environment config (#653)
+    - Update codecov/codecov-action action to v4 (#671)
+    - Add userlists page and refactor LearningResourceCardTemplate (#650)
+    - fields pages (#633)
+    - [pre-commit.ci] pre-commit autoupdate (#677)
+    - fix learningpath invalidation (#635)
+
+    Version 0.6.0 (Released March 26, 2024)
+    -------------
+
+    - News & Events API (#638)
+    - Update opensearchproject/opensearch Docker tag to v2.12.0 (#669)
+    - Update mcr.microsoft.com/playwright Docker tag to v1.42.1 (#667)
+    - Update dependency yup to v1.4.0 (#666)
+    - Update dependency type-fest to v4.14.0 (#668)
+    - Update dependency sentry-sdk to v1.43.0 (#665)
+    - Update dependency rc-tooltip to v6.2.0 (#664)
+    - Update dependency qs to v6.12.0 (#663)
+    - Update dependency pytest-mock to v3.14.0 (#662)
+    - Update dependency google-api-python-client to v2.123.0 (#661)
+    - Update dependency @sentry/react to v7.108.0 (#660)
+    - Update material-ui monorepo (#659)
+    - Update dependency ruff to v0.3.4 (#657)
+    - Update dependency boto3 to v1.34.69 (#656)
+    - Update all non-major dev-dependencies (#654)
+    - generate v0 apis (#651)
+    - MIT news/events ETL  (#612)
+    - Remove all usages of pytz (#646)
+    - allow filtering by readable id in the api (#639)
+    - Update jest-dom, make TS aware (#637)
+    - fixing ordering of response data in test (#634)
+    - [pre-commit.ci] pre-commit autoupdate (#610)
+    - Update dependency eslint-plugin-testing-library to v6 (#354)
+    - Update Yarn to v3.8.1 (#455)
+
+    Version 0.5.1 (Released March 19, 2024)
+    -------------
+
+    - Add a Search Page (#618)
+    - pushing fix for test failure (#631)
+    - shanbady/separate database router and schema for program certificates (#617)
+    - Update dependency django-anymail to v10.3 (#627)
+    - Update dependency @sentry/react to v7.107.0 (#626)
+    - Update react-router monorepo to v6.22.3 (#625)
+    - Update material-ui monorepo (#624)
+    - Update dependency boto3 to v1.34.64 (#623)
+    - Update dependency axios to v1.6.8 (#622)
+    - Update dependency @ckeditor/ckeditor5-dev-utils to v39.6.3 (#621)
+    - Update dependency @ckeditor/ckeditor5-dev-translations to v39.6.3 (#620)
+    - Update all non-major dev-dependencies (#619)
+    - Endpoint for user program certificate info and program letter links (#608)
+    - Update Node.js to v20 (#507)
+    - Program Letter View (#605)
+
+    Version 0.5.0 (Released March 13, 2024)
+    -------------
+
+    - Avoid duplicate courses (#603)
+    - Type-specific api endpoints for videos and video playlists (#595)
+    - Update dependency ipython to v8.22.2 (#600)
+    - Update dependency html-entities to v2.5.2 (#599)
+    - Update dependency boto3 to v1.34.59 (#598)
+    - Update dependency Django to v4.2.11 (#597)
+    - Update all non-major dev-dependencies (#596)
+    - Assign topics to videos and playlists (#584)
+    - Add daily micromasters ETL task to celerybeat schedule (#585)
+
+    Version 0.4.1 (Released March 08, 2024)
+    -------------
+
+    - resource_type changes (#583)
+    - Update nginx Docker tag to v1.25.4 (#544)
+    - Youtube video ETL and search (#558)
+
+    Version 0.4.0 (Released March 06, 2024)
+    -------------
+
+    - Update dependency ruff to ^0.3.0 (#577)
+    - Update dependency html-entities to v2.5.0 (#576)
+    - Update dependency python-rapidjson to v1.16 (#575)
+    - Update dependency python-dateutil to v2.9.0 (#574)
+    - Update dependency google-api-python-client to v2.120.0 (#573)
+    - Update dependency @sentry/react to v7.104.0 (#572)
+    - Update react-router monorepo to v6.22.2 (#571)
+    - Update dependency storybook-addon-react-router-v6 to v2.0.11 (#570)
+    - Update dependency sentry-sdk to v1.40.6 (#569)
+    - Update dependency markdown2 to v2.4.13 (#568)
+    - Update dependency ddt to v1.7.2 (#567)
+    - Update dependency boto3 to v1.34.54 (#566)
+    - Update dependency @ckeditor/ckeditor5-dev-utils to v39.6.2 (#565)
+    - Update dependency @ckeditor/ckeditor5-dev-translations to v39.6.2 (#564)
+    - Update all non-major dev-dependencies (#563)
+    - Create program certificate django model (#561)
+    - fix OpenAPI response for content_file_search (#559)
+    - Update material-ui monorepo (#233)
+    - next/previous links for search api (#550)
+    - Remove livestream app (#549)
+    - Assign best date available to LearningResourceRun.start_date field (#514)
+    - Update dependency ipython to v8.22.1 (#547)
+    - Update dependency google-api-python-client to v2.119.0 (#546)
+    - Update dependency @sentry/react to v7.102.1 (#545)
+    - Update mcr.microsoft.com/playwright Docker tag to v1.41.2 (#543)
+    - Update dependency sentry-sdk to v1.40.5 (#542)
+    - Update dependency iso-639-1 to v3.1.2 (#540)
+    - Update dependency boto3 to v1.34.49 (#541)
+    - Update all non-major dev-dependencies (#539)
+
+    Version 0.3.3 (Released March 04, 2024)
+    -------------
+
+    - Save user with is_active from SCIM request (#535)
+    - Add SCIM client (#513)
+    - CI and test fixtures for E2E testing (#481)
+    - Update postgres Docker tag to v12.18 (#530)
+    - Update dependency responses to ^0.25.0 (#529)
+    - Update dependency google-api-python-client to v2.118.0 (#528)
+    - Update dependency @sentry/react to v7.101.1 (#527)
+    - Update react-router monorepo to v6.22.1 (#526)
+    - Update nginx Docker tag to v1.25.4 (#524)
+    - Update dependency ruff to v0.2.2 (#525)
+    - Update dependency social-auth-core to v4.5.3 (#523)
+    - Update dependency sentry-sdk to v1.40.4 (#522)
+    - Update dependency iso-639-1 to v3.1.1 (#521)
+    - Update dependency boto3 to v1.34.44 (#520)
+    - Update all non-major dev-dependencies (#519)
+    - Update Node.js to v18.19.1 (#518)
+
+    Version 0.3.2 (Released February 20, 2024)
+    -------------
+
+    - Update ruff and adjust code to new criteria (#511)
+    - Avoid using get_or_create for LearningResourceImage object that has no unique constraint (#510)
+    - Update SimenB/github-actions-cpu-cores action to v2 (#508)
+    - Update dependency sentry-sdk to v1.40.3 (#506)
+    - Update dependency react-share to v5.1.0 (#504)
+    - Update dependency pytest-django to v4.8.0 (#503)
+    - Update dependency google-api-python-client to v2.117.0 (#502)
+    - Update dependency faker to v22.7.0 (#501)
+    - Update dependency @sentry/react to v7.100.1 (#499)
+    - Update docker.elastic.co/elasticsearch/elasticsearch Docker tag to v7.17.18 (#498)
+    - Update dependency uwsgi to v2.0.24 (#497)
+    - Update all non-major dev-dependencies (#500)
+    - Update dependency boto3 to v1.34.39 (#496)
+    - Update dependency Django to v4.2.10 (#495)
+    - Update dependency @ckeditor/ckeditor5-dev-utils to v39.6.1 (#493)
+    - Update dependency @ckeditor/ckeditor5-dev-translations to v39.6.1 (#492)
+    - Update all non-major dev-dependencies (#491)
+    - fix topics schema (#488)
+    - Use root document counts to avoid overcounting in aggregations (#484)
+
+    Version 0.3.1 (Released February 14, 2024)
+    -------------
+
+    - Avoid integrity errors when loading instructors (#478)
+    - Load fixtures by default in dev environment (#483)
+    - upgrading version of poetry (#480)
+    - Fix multiword search filters & aggregations, change Non Credit to Non-Credit
+    - Update dependency nplusone to v1 (#381)
+    - Update dependency pytest-env to v1 (#382)
+
+    Version 0.3.0 (Released February 09, 2024)
+    -------------
+
+    - Allow for blank OCW terms/years (adjust readable_id accordingly), raise an error at end of ocw_courses_etl function if any exceptions occurred during processing (#475)
+    - Remove all references to open-discussions (#472)
+    - Fix prolearn etl (#471)
+    - Multiple filter options for learningresources and contenfiles API rest endpoints (#449)
+    - Lock file maintenance (#470)
+    - Update dependency pluggy to v1.4.0 (#468)
+    - Update dependency jekyll-feed to v0.17.0 (#467)
+    - Update dependency @types/react to v18.2.53 (#469)
+    - Update dependency ipython to v8.21.0 (#466)
+    - Update dependency google-api-python-client to v2.116.0 (#465)
+    - Update dependency django-debug-toolbar to v4.3.0 (#464)
+    - Update dependency @sentry/react to v7.99.0 (#463)
+    - Update apache/tika Docker tag to v2.5.0 (#461)
+    - Update docker.elastic.co/elasticsearch/elasticsearch Docker tag to v7.17.17 (#460)
+    - Update dependency prettier to v3.2.5 (#462)
+    - Update dependency social-auth-core to v4.5.2 (#458)
+    - Update dependency toolz to v0.12.1 (#459)
+    - Update dependency moto to v4.2.14 (#457)
+    - Update dependency drf-spectacular to v0.27.1 (#456)
+    - Update dependency boto3 to v1.34.34 (#454)
+    - Update dependency beautifulsoup4 to v4.12.3 (#453)
+    - Update dependency axios to v1.6.7 (#452)
+    - Update codecov/codecov-action action to v3.1.6 (#451)
+    - Update all non-major dev-dependencies (#450)
+    - Added support to set SOCIAL_AUTH_ALLOWED_REDIRECT_HOSTS (#429)
+    - do not allow None in levels/languages (#446)
+
+    Version 0.2.2 (Released February 02, 2024)
+    -------------
+
+    - Fix webhook url (#442)
+    - Update akhileshns/heroku-deploy digest to 581dd28 (#366)
+    - Poetry install to virtualenv (#436)
+    - rename oasdiff workflow (#437)
+    - Upgrade tika and disable OCR via headers (#430)
+    - Add a placeholder dashboard page (#428)
+    - Update dependency faker to v22 (#378)
+    - Update dependency jest-fail-on-console to v3 (#380)
+    - Save OCW contentfiles as absolute instead of relative (#424)
+    - Check for breaking openapi changes on ci (#425)
+    - Initial E2E test setup with Playwright (#419)
+    - Use DRF NamespaceVersioning to manage OpenAPI api versions (#411)
+
+    Version 0.2.1 (Released January 30, 2024)
+    -------------
+
+    - Modify OCW webhook endpoint to handle multiple courses (#412)
+    - Optionally skip loading OCW content files (#413)
+    - Add /api/v0/users/me API (#415)
+
+    Version 0.2.0 (Released January 26, 2024)
+    -------------
+
+    - Get rid of tika verify warning (#410)
+    - Improve contentfile api query performance (#409)
+    - Search: Tweak aggregations formattings, add OpenAPI schema for metadata (#407)
+    - Remove unused django apps (#398)
+
+    Version 0.1.1 (Released January 19, 2024)
+    -------------
+
+    - Replace Sass styles with Emotion's CSS-in-JS (#390)
+    - move openapi spec to subdir (#397)
+    - Add Storybook to present front end components (#360)
+    - remove legacy search (#365)
+    - Remove author from LearningPath serializer (#385)
+
+    Version 0.1.0 (Released January 09, 2024)
+    -------------
+
+    - chore(deps): update dependency github-pages to v228 (#379)
+  agent-config.hcl: |2
+    auto_auth {
+
+      method {
+        type = "token_file"
+
+        config {
+          token_file_path = "/home/tmacey/.vault-token"
+        }
+      }
+    }
+
+    template_config {
+      static_secret_render_interval = "5m"
+      exit_on_retry_failure         = true
+      max_connections_per_host      = 10
+    }
+
+    vault {
+      address = "https://vault-qa.odl.mit.edu"
+    }
+
+    env_template "SECRETS_CKEDITOR" {
+      contents             = "{{ with secret \"secret-dev/data/mitopen/secrets\" }}{{ .Data.data.ckeditor }}{{ end }}"
+      error_on_missing_key = true
+    }
+    env_template "SECRETS_DJANGO_SECRET_KEY" {
+      contents             = "{{ with secret \"secret-dev/data/mitopen/secrets\" }}{{ .Data.data.django_secret_key }}{{ end }}"
+      error_on_missing_key = true
+    }
+    env_template "SECRETS_DJANGO_STATUS_TOKEN" {
+      contents             = "{{ with secret \"secret-dev/data/mitopen/secrets\" }}{{ .Data.data.django_status_token }}{{ end }}"
+      error_on_missing_key = true
+    }
+    env_template "SECRETS_EDX_API_CLIENT" {
+      contents             = "{{ with secret \"secret-dev/data/mitopen/secrets\" }}{{ .Data.data.edx_api_client }}{{ end }}"
+      error_on_missing_key = true
+    }
+    env_template "SECRETS_FASTLY" {
+      contents             = "{{ with secret \"secret-dev/data/mitopen/secrets\" }}{{ .Data.data.fastly }}{{ end }}"
+      error_on_missing_key = true
+    }
+    env_template "SECRETS_JWT_SECRET" {
+      contents             = "{{ with secret \"secret-dev/data/mitopen/secrets\" }}{{ .Data.data.jwt_secret }}{{ end }}"
+      error_on_missing_key = true
+    }
+    env_template "SECRETS_OIDC_SECRET_KEY" {
+      contents             = "{{ with secret \"secret-dev/data/mitopen/secrets\" }}{{ .Data.data.oidc_secret_key }}{{ end }}"
+      error_on_missing_key = true
+    }
+    env_template "SECRETS_OPEN_LEARNING_LIBRARY_CLIENT" {
+      contents             = "{{ with secret \"secret-dev/data/mitopen/secrets\" }}{{ .Data.data.open_learning_library_client }}{{ end }}"
+      error_on_missing_key = true
+    }
+    env_template "SECRETS_OPENAI" {
+      contents             = "{{ with secret \"secret-dev/data/mitopen/secrets\" }}{{ .Data.data.openai }}{{ end }}"
+      error_on_missing_key = true
+    }
+    env_template "SECRETS_OPENSEARCH" {
+      contents             = "{{ with secret \"secret-dev/data/mitopen/secrets\" }}{{ .Data.data.opensearch }}{{ end }}"
+      error_on_missing_key = true
+    }
+    env_template "SECRETS_POSTHOG" {
+      contents             = "{{ with secret \"secret-dev/data/mitopen/secrets\" }}{{ .Data.data.posthog }}{{ end }}"
+      error_on_missing_key = true
+    }
+    env_template "SECRETS_QDRANT" {
+      contents             = "{{ with secret \"secret-dev/data/mitopen/secrets\" }}{{ .Data.data.qdrant }}{{ end }}"
+      error_on_missing_key = true
+    }
+    env_template "SECRETS_SEE_API_CLIENT" {
+      contents             = "{{ with secret \"secret-dev/data/mitopen/secrets\" }}{{ .Data.data.see_api_client }}{{ end }}"
+      error_on_missing_key = true
+    }
+    env_template "SECRETS_SENTRY_DSN" {
+      contents             = "{{ with secret \"secret-dev/data/mitopen/secrets\" }}{{ .Data.data.sentry_dsn }}{{ end }}"
+      error_on_missing_key = true
+    }
+    env_template "SECRETS_YOUTUBE_DEVELOPER_KEY" {
+      contents             = "{{ with secret \"secret-dev/data/mitopen/secrets\" }}{{ .Data.data.youtube_developer_key }}{{ end }}"
+      error_on_missing_key = true
+    }
+    env_template "MAILGUN_API_KEY" {
+      contents             = "{{ with secret \"secret-operations/mailgun\" }}{{ .Data.api_key }}{{ end }}"
+      error_on_missing_key = true
+    }
+    env_template "EMBEDLY_KEY" {
+      contents             = "{{ with secret \"secret-operations/global/embedly\" }}{{ .Data.key }}{{ end }}"
+      error_on_missing_key = true
+    }
+    env_template "ODLBOT_GITHUB_ACCESS_TOKEN_VALUE" {
+      contents             = "{{ with secret \"secret-operations/global/odlbot-github-access-token\" }}{{ .Data.value }}{{ end }}"
+      error_on_missing_key = true
+    }
+    env_template "MIT_SMTP_RELAY_HOST" {
+      contents             = "{{ with secret \"secret-operations/global/mit-smtp\" }}{{ .Data.relay_host }}{{ end }}"
+      error_on_missing_key = true
+    }
+    env_template "MIT_SMTP_RELAY_PASSWORD" {
+      contents             = "{{ with secret \"secret-operations/global/mit-smtp\" }}{{ .Data.relay_password }}{{ end }}"
+      error_on_missing_key = true
+    }
+    env_template "MIT_SMTP_RELAY_PORT" {
+      contents             = "{{ with secret \"secret-operations/global/mit-smtp\" }}{{ .Data.relay_port }}{{ end }}"
+      error_on_missing_key = true
+    }
+    env_template "MIT_SMTP_RELAY_USERNAME" {
+      contents             = "{{ with secret \"secret-operations/global/mit-smtp\" }}{{ .Data.relay_username }}{{ end }}"
+      error_on_missing_key = true
+    }
+    env_template "UPDATE_SEARCH_DATA_WEBHOOK_KEY_VALUE" {
+      contents             = "{{ with secret \"secret-operations/global/update-search-data-webhook-key\" }}{{ .Data.value }}{{ end }}"
+      error_on_missing_key = true
+    }
+    env_template "MITLEARN_CLIENT_ID" {
+      contents             = "{{ with secret \"secret-operations/sso/mitlearn\" }}{{ .Data.client_id }}{{ end }}"
+      error_on_missing_key = true
+    }
+    env_template "MITLEARN_CLIENT_SECRET" {
+      contents             = "{{ with secret \"secret-operations/sso/mitlearn\" }}{{ .Data.client_secret }}{{ end }}"
+      error_on_missing_key = true
+    }
+    env_template "MITLEARN_REALM_ID" {
+      contents             = "{{ with secret \"secret-operations/sso/mitlearn\" }}{{ .Data.realm_id }}{{ end }}"
+      error_on_missing_key = true
+    }
+    env_template "MITLEARN_REALM_NAME" {
+      contents             = "{{ with secret \"secret-operations/sso/mitlearn\" }}{{ .Data.realm_name }}{{ end }}"
+      error_on_missing_key = true
+    }
+    env_template "MITLEARN_REALM_PUBLIC_KEY" {
+      contents             = "{{ with secret \"secret-operations/sso/mitlearn\" }}{{ .Data.realm_public_key }}{{ end }}"
+      error_on_missing_key = true
+    }
+    env_template "MITLEARN_SECRET" {
+      contents             = "{{ with secret \"secret-operations/sso/mitlearn\" }}{{ .Data.secret }}{{ end }}"
+      error_on_missing_key = true
+    }
+    env_template "MITLEARN_URL" {
+      contents             = "{{ with secret \"secret-operations/sso/mitlearn\" }}{{ .Data.url }}{{ end }}"
+      error_on_missing_key = true
+    }
+    env_template "ACCESS_TOKEN_VALUE" {
+      contents             = "{{ with secret \"secret-operations/tika/access-token\" }}{{ .Data.value }}{{ end }}"
+      error_on_missing_key = true
+    }
+
+    exec {
+      command                   = ["./env/app_vars.sh"]
+      restart_on_secret_changes = "always"
+      restart_stop_signal       = "SIGTERM"
+    }
+  app.ipynb.example: |
+    {
+     "cells": [
+      {
+       "cell_type": "code",
+       "execution_count": null,
+       "metadata": {},
+       "outputs": [],
+       "source": [
+        "import os\n",
+        "import django\n",
+        "from django.contrib.auth import get_user_model\n",
+        "\n",
+        "BASE_DJANGO_APP_NAME = os.environ.get(\"BASE_DJANGO_APP_NAME\")\n",
+        "os.environ.setdefault('DJANGO_SETTINGS_MODULE', '{}.settings'.format(BASE_DJANGO_APP_NAME))\n",
+        "django.setup()\n",
+        "\n",
+        "User = get_user_model()"
+       ]
+      }
+     ],
+     "metadata": {
+      "kernelspec": {
+       "display_name": "Python 3",
+       "language": "python",
+       "name": "python3"
+      },
+      "language_info": {
+       "codemirror_mode": {
+        "name": "ipython",
+        "version": 3
+       },
+       "file_extension": ".py",
+       "mimetype": "text/x-python",
+       "name": "python",
+       "nbconvert_exporter": "python",
+       "pygments_lexer": "ipython3",
+       "version": "3.6.4"
+      }
+     },
+     "nbformat": 4,
+     "nbformat_minor": 2
+    }
+  app.json: |
+    {
+      "addons": ["heroku-postgresql:hobby-dev", "rediscloud:30"],
+      "buildpacks": [
+        {
+          "url": "https://github.com/heroku/heroku-buildpack-apt"
+        },
+        {
+          "url": "https://github.com/moneymeets/python-poetry-buildpack"
+        },
+        {
+          "url": "https://github.com/heroku/heroku-buildpack-python"
+        },
+        {
+          "url": "https://github.com/heroku/heroku-buildpack-pgbouncer"
+        },
+        {
+          "url": "https://github.com/heroku/heroku-buildpack-nginx"
+        }
+      ],
+      "description": "mit-learn",
+      "env": {
+        "AI_CACHE_TIMEOUT": {
+          "description": "Timeout for AI cache",
+          "required": false
+        },
+        "AI_DEBUG": {
+          "description": "Include debug information in AI responses if True",
+          "required": false
+        },
+        "AI_MIT_SEARCH_URL": {
+          "description": "URL for AI search agent",
+          "required": false
+        },
+        "AI_MODEL": {
+          "description": "Model to use for AI functionality",
+          "required": false
+        },
+        "AI_MODEL_API": {
+          "description": "The API used for the AI model",
+          "required": false
+        },
+        "AI_PROXY_CLASS": {
+          "description": "Proxy class for AI functionality",
+          "required": false
+        },
+        "AI_PROXY_URL": {
+          "description": "URL for AI proxy",
+          "required": false
+        },
+        "AI_PROXY_AUTH_TOKEN": {
+          "description": "Auth token for AI proxy",
+          "required": false
+        },
+        "AI_MAX_PARALLEL_REQUESTS": {
+          "description": "Max parallel requests/user for AI functionality",
+          "required": false
+        },
+        "AI_TPM_LIMIT": {
+          "description": "Tokens/minute limit per user for AI functionality",
+          "required": false
+        },
+        "AI_RPM_LIMIT": {
+          "description": "Requests/minute limit per user for AI functionality",
+          "required": false
+        },
+        "AI_BUDGET_DURATION": {
+          "description": "Length of time before a user's budget usage resets",
+          "required": false
+        },
+        "AI_MAX_BUDGET": {
+          "description": "Max budget per user for AI functionality",
+          "required": false
+        },
+        "AI_ANON_LIMIT_MULTIPLIER": {
+          "description": "Multiplier for per-user limit/budget shared by anonymous users",
+          "required": false
+        },
+        "AI_MIT_SEARCH_LIMIT": {
+          "description": "Limit parameter value for AI search agent",
+          "required": false
+        },
+        "ALLOWED_HOSTS": {
+          "description": "",
+          "required": false
+        },
+        "AWS_ACCESS_KEY_ID": {
+          "description": "AWS Access Key for S3 storage.",
+          "required": false
+        },
+        "AWS_SECRET_ACCESS_KEY": {
+          "description": "AWS Secret Key for S3 storage.",
+          "required": false
+        },
+        "AWS_STORAGE_BUCKET_NAME": {
+          "description": "S3 Bucket name.",
+          "required": false
+        },
+        "BLOCKLISTED_COURSES_URL": {
+          "description": "URL of a text file containing blocklisted course ids",
+          "required": false
+        },
+        "DUPLICATE_COURSES_URL": {
+          "description": "URL of a text file containing course ids that are duplicates of each other",
+          "required": false
+        },
+        "BOOTCAMPS_URL": {
+          "description": "URL to retrieve bootcamps data",
+          "required": false
+        },
+        "CELERY_WORKER_MAX_MEMORY_PER_CHILD": {
+          "description": "Max memory to be used by celery worker child",
+          "required": false
+        },
+        "CORS_ALLOWED_ORIGINS": {
+          "description": "A list of origins that are authorized to make cross-site HTTP requests",
+          "required": false
+        },
+        "DRF_NESTED_PARENT_LOOKUP_PREFIX": {
+          "description": "DRF extensions parent lookup kwarg name prefix",
+          "required": false
+        },
+        "CORS_ALLOWED_ORIGIN_REGEXES": {
+          "description": "A list of regexes that match origins that are authorized to make cross-site HTTP requests",
+          "required": false
+        },
+        "CSAIL_BASE_URL": {
+          "description": "CSAIL courses base URL",
+          "required": false
+        },
+        "CSRF_COOKIE_DOMAIN": {
+          "description": "The domain to set the CSRF cookie on",
+          "required": false
+        },
+        "DEFAULT_SEARCH_MODE": {
+          "description": "Default search mode for the search API and frontend",
+          "required": false
+        },
+        "DEFAULT_SEARCH_SLOP": {
+          "description": "Default slop value for the search API and frontend. Only used for phrase queries.",
+          "required": false
+        },
+        "DEFAULT_SEARCH_STALENESS_PENALTY": {
+          "description": "Default staleness penalty value for the search API and frontend",
+          "required": false
+        },
+        "DEFAULT_SEARCH_MINIMUM_SCORE_CUTOFF": {
+          "description": "Default minimum score cutoff value for the search API and frontend",
+          "required": false
+        },
+        "DEFAULT_SEARCH_MAX_INCOMPLETENESS_PENALTY": {
+          "description": "Default max incompleteness penalty value for the search API and frontend",
+          "required": false
+        },
+        "DEFAULT_SEARCH_CONTENT_FILE_SCORE_WEIGHT": {
+          "description": "Default score weight for content file search match",
+          "required": false
+        },
+        "EDX_API_ACCESS_TOKEN_URL": {
+          "description": "URL to retrieve a MITx access token",
+          "required": false
+        },
+        "EDX_API_URL": {
+          "description": "URL to retrieve MITx course data from",
+          "required": false
+        },
+        "EDX_API_CLIENT_ID": {
+          "description": "EdX client id to access the MITx course catalog API",
+          "required": false
+        },
+        "EDX_API_CLIENT_SECRET": {
+          "description": "EdX secret key to access the MITx course catalog API",
+          "required": false
+        },
+        "EDX_ALT_URL": {
+          "description": "Base alternate URL for MITx courses hosted on edX",
+          "required": false
+        },
+        "EDX_BASE_URL": {
+          "description": "Base default URL for MITx courses hosted on edX",
+          "required": false
+        },
+        "EDX_LEARNING_COURSE_BUCKET_NAME": {
+          "description": "Name of the bucket with course run tar archives for MITx",
+          "required": false
+        },
+        "EDX_LEARNING_COURSE_BUCKET_PREFIX": {
+          "description": "S3 prefix for MITx bucket keys",
+          "required": false
+        },
+        "EDX_PROGRAMS_API_URL": {
+          "description": "The catalog url for MITx programs",
+          "required": false
+        },
+        "OPENSEARCH_HTTP_AUTH": {
+          "description": "Basic auth settings for connecting to OpenSearch"
+        },
+        "OPENSEARCH_CONNECTIONS_PER_NODE": {
+          "description": "The size of the connection pool created for each node detected within an OpenSearch cluster.",
+          "required": false
+        },
+        "OPENSEARCH_DEFAULT_TIMEOUT": {
+          "description": "The default timeout in seconds for OpenSearch requests",
+          "required": false
+        },
+        "OPENSEARCH_INDEX": {
+          "description": "Index to use on OpenSearch",
+          "required": true
+        },
+        "OPENSEARCH_MAX_REQUEST_SIZE": {
+          "description": "Maximum size of JSON data requests sent to OpenSearch",
+          "required": false
+        },
+        "OPENSEARCH_SHARD_COUNT": {
+          "description": "Number of shards to allocate when creating an OpenSearch index. Generally set to the CPU count of an individual node in the cluster.",
+          "required": false
+        },
+        "OPENSEARCH_REPLICA_COUNT": {
+          "description": "Number of index replicas to create when initializing a new OpenSearch index. Generally set to the number of search nodes available in the cluster.",
+          "required": false
+        },
+        "OPENSEARCH_INDEXING_CHUNK_SIZE": {
+          "description": "Chunk size to use for OpenSearch indexing tasks",
+          "required": false
+        },
+        "OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE": {
+          "description": "Chunk size to use for OpenSearch course document indexing",
+          "required": false
+        },
+        "OPENSEARCH_MAX_SUGGEST_HITS": {
+          "description": "Return suggested search terms only if the number of hits is equal to or below this value",
+          "required": false
+        },
+        "OPENSEARCH_MAX_SUGGEST_RESULTS": {
+          "description": "The maximum number of search term suggestions to return",
+          "required": false
+        },
+        "OPENSEARCH_MIN_QUERY_SIZE": {
+          "description": "Minimimum number of characters in a query string to search for",
+          "required": false
+        },
+        "OPENSEARCH_URL": {
+          "description": "URL for connecting to OpenSearch cluster"
+        },
+        "GA_TRACKING_ID": {
+          "description": "Google analytics tracking ID",
+          "required": false
+        },
+        "GA_G_TRACKING_ID": {
+          "description": "Google analytics GTM tracking ID",
+          "required": false
+        },
+        "GITHUB_ACCESS_TOKEN": {
+          "description": "Access token for the Github API",
+          "required": false
+        },
+        "IMAGEKIT_CACHEFILE_DIR": {
+          "description": "Prefix path for cached images generated by imagekit",
+          "required": false
+        },
+        "INDEXING_ERROR_RETRIES": {
+          "description": "Number of times to retry an indexing operation on failure",
+          "required": false
+        },
+        "LEARNING_COURSE_ITERATOR_CHUNK_SIZE": {
+          "description": "Chunk size for iterating over xPRO/MITx Online courses for master json",
+          "required": false
+        },
+        "MAILGUN_URL": {
+          "description": "The URL for communicating with Mailgun"
+        },
+        "MAILGUN_KEY": {
+          "description": "The token for authenticating against the Mailgun API"
+        },
+        "MAILGUN_FROM_EMAIL": {
+          "description": "Email which mail comes from"
+        },
+        "MAILGUN_BCC_TO_EMAIL": {
+          "description": "Email address used with bcc email",
+          "required": false
+        },
+        "MAILGUN_SENDER_DOMAIN": {
+          "description": "Domain used for emails sent via mailgun"
+        },
+        "MAX_S3_GET_ITERATIONS": {
+          "description": "Max retry attempts to get an S3 object",
+          "required": false
+        },
+        "MICROMASTERS_CATALOG_API_URL": {
+          "description": "URL to MicroMasters catalog API",
+          "required": "false"
+        },
+        "MITPE_API_ENABLED": {
+          "description": "Whether MIT Professional Education ETL should be enabled",
+          "required": "false"
+        },
+        "MITPE_BASE_URL": {
+          "description": "Base URL for MIT Professional Education website",
+          "required": "false"
+        },
+        "MITX_ONLINE_BASE_URL": {
+          "description": "Base default URL for MITx Online courses",
+          "required": false
+        },
+        "MITX_ONLINE_PROGRAMS_API_URL": {
+          "description": "The catalog url for MITx Online programs",
+          "required": false
+        },
+        "MITX_ONLINE_COURSES_API_URL": {
+          "description": "The api url for MITx Online courses",
+          "required": false
+        },
+        "MITX_ONLINE_LEARNING_COURSE_BUCKET_NAME": {
+          "description": "Name of S3 bucket to upload MITx Online course media",
+          "required": false
+        },
+        "MIT_WS_CERTIFICATE": {
+          "description": "X509 certificate as a string",
+          "required": false
+        },
+        "MIT_WS_PRIVATE_KEY": {
+          "description": "X509 private key as a string",
+          "required": false
+        },
+        "OCW_BASE_URL": {
+          "description": "Base URL for OCW courses",
+          "required": false
+        },
+        "OCW_CONTENT_BUCKET_NAME": {
+          "description": "Name of S3 bucket containing OCW course data",
+          "required": false
+        },
+        "OCW_ITERATOR_CHUNK_SIZE": {
+          "description": "Chunk size for iterating over OCW courses for master json",
+          "required": false
+        },
+        "OCW_LEARNING_COURSE_BUCKET_NAME": {
+          "description": "Name of S3 bucket to upload OCW course media",
+          "required": false
+        },
+        "OCW_UPLOAD_IMAGE_ONLY": {
+          "description": "Upload course image only instead of all OCW files",
+          "required": false
+        },
+        "OCW_SKIP_CONTENT_FILES": {
+          "description": "Skip upserting of OCW content files",
+          "required": false
+        },
+        "OCW_WEBHOOK_DELAY": {
+          "description": "Delay in seconds to process an OCW course after receiving webhook",
+          "required": false
+        },
+        "OCW_WEBHOOK_KEY": {
+          "description": "Authentication parameter value that should be passed in a webhook",
+          "required": false
+        },
+        "OLL_LEARNING_COURSE_BUCKET_NAME": {
+          "description": "Name of S3 bucket containing OLL content files",
+          "required": false
+        },
+        "OLL_LEARNING_COURSE_BUCKET_PREFIX": {
+          "description": "Prefix to use with the OLL S3 bucket",
+          "required": false
+        },
+        "MITOL_ADMIN_EMAIL": {
+          "description": "E-mail to send 500 reports to.",
+          "required": false
+        },
+        "MITOL_AUTHENTICATION_PLUGINS": {
+          "description": "List of pluggy plugins to use for authentication",
+          "required": false
+        },
+        "MITOL_LEARNING_RESOURCES_PLUGINS": {
+          "description": "List of pluggy plugins to use for learning resources",
+          "required": false
+        },
+        "MITOL_APP_BASE_URL": {
+          "description": "Base url to create links to the app",
+          "required": false
+        },
+        "MITOL_COOKIE_NAME": {
+          "description": "Name of the cookie for the JWT auth token",
+          "required": false
+        },
+        "MITOL_COOKIE_DOMAIN": {
+          "description": "Domain for the cookie for the JWT auth token",
+          "required": false
+        },
+        "MITOL_DB_CONN_MAX_AGE": {
+          "value": "0",
+          "required": false
+        },
+        "MITOL_DB_DISABLE_SSL": {
+          "value": "True",
+          "required": false
+        },
+        "MITOL_DB_DISABLE_SS_CURSORS": {
+          "description": "Disable server-side cursors",
+          "required": false
+        },
+        "MITOL_EMAIL_HOST": {
+          "description": "Outgoing e-mail settings",
+          "required": false
+        },
+        "MITOL_EMAIL_PASSWORD": {
+          "description": "Outgoing e-mail settings",
+          "required": false
+        },
+        "MITOL_EMAIL_PORT": {
+          "description": "Outgoing e-mail settings",
+          "value": "587",
+          "required": false
+        },
+        "MITOL_EMAIL_TLS": {
+          "description": "Outgoing e-mail settings",
+          "value": "True",
+          "required": false
+        },
+        "MITOL_EMAIL_USER": {
+          "description": "Outgoing e-mail settings",
+          "required": false
+        },
+        "MITOL_ENVIRONMENT": {
+          "description": "The execution environment that the app is in (e.g. dev, staging, prod)",
+          "required": false
+        },
+        "MITOL_FROM_EMAIL": {
+          "description": "E-mail to use for the from field",
+          "required": false
+        },
+        "MITOL_LOG_LEVEL": {
+          "description": "The log level for the application",
+          "required": false,
+          "value": "INFO"
+        },
+        "MITOL_NEW_USER_LOGIN_URL": {
+          "description": "Url to redirect new users to",
+          "required": false
+        },
+        "MITOL_JWT_SECRET": {
+          "description": "Shared secret for JWT auth tokens",
+          "required": false
+        },
+        "MITOL_NOINDEX": {
+          "description": "Prevent search engines from indexing the site",
+          "required": false
+        },
+        "MITOL_SECURE_SSL_REDIRECT": {
+          "description": "Application-level SSL redirect setting.",
+          "value": "True",
+          "required": false
+        },
+        "MITOL_SIMILAR_RESOURCES_COUNT": {
+          "description": "Number of similar resources to return",
+          "required": false
+        },
+        "MITOL_TITLE": {
+          "description": "Title of the MIT Learn site",
+          "required": false
+        },
+        "MITOL_SUPPORT_EMAIL": {
+          "description": "Email address listed for customer support",
+          "required": false
+        },
+        "MITOL_UNSUBSCRIBE_TOKEN_MAX_AGE_SECONDS": {
+          "description": "Maximum age of unsubscribe tokens in seconds",
+          "required": false
+        },
+        "MITOL_USE_S3": {
+          "description": "Use S3 for storage backend (required on Heroku)",
+          "value": "False",
+          "required": false
+        },
+        "NEWS_EVENTS_MEDIUM_NEWS_SCHEDULE_SECONDS": {
+          "description": "Time in seconds between periodic syncs of Medium MIT News feed",
+          "required": false
+        },
+        "NEWS_EVENTS_SLOAN_NEWS_SCHEDULE_SECONDS": {
+          "description": "Time in seconds between periodic syncs of Sloan news",
+          "required": false
+        },
+        "NEWS_EVENTS_OL_EVENTS_SCHEDULE_SECONDS": {
+          "description": "Time in seconds between periodic syncs of Open Learning events",
+          "required": false
+        },
+        "OPEN_PODCAST_DATA_BRANCH": {
+          "description": "Branch in the open podcast data repository to use for podcast ingestion",
+          "required": false
+        },
+        "OPEN_RESOURCES_MIN_DOC_FREQ": {
+          "description": "OpenSearch min_doc_freq value for determining similar resources",
+          "required": false
+        },
+        "OPEN_RESOURCES_MIN_TERM_FREQ": {
+          "description": "OpenSearch min_term_freq value for determining similar resources",
+          "required": false
+        },
+        "OPEN_VIDEO_DATA_BRANCH": {
+          "description": "Branch in the open video data repository to use for video downloads",
+          "required": false
+        },
+        "OPEN_VIDEO_MAX_TOPICS": {
+          "description": "Maximum number of topics to assign a video",
+          "required": false
+        },
+        "OPEN_VIDEO_MIN_DOC_FREQ": {
+          "description": "OpenSearch min_doc_freq value for determing video topics",
+          "required": false
+        },
+        "OPEN_VIDEO_MIN_TERM_FREQ": {
+          "description": "OpenSearch min_term_freq value for determing video topics",
+          "required": false
+        },
+        "OPEN_VIDEO_USER_LIST_OWNER": {
+          "description": "User who will own user lists generated from playlists",
+          "required": false
+        },
+        "NEW_RELIC_APP_NAME": {
+          "description": "Application identifier in New Relic."
+        },
+        "NODE_MODULES_CACHE": {
+          "description": "If false, disables the node_modules cache to fix yarn install",
+          "value": "false"
+        },
+        "OCW_NEXT_LIVE_BUCKET": {
+          "description": "bucket for ocw-next courses data",
+          "required": false
+        },
+        "OCW_NEXT_AWS_STORAGE_BUCKET_NAME": {
+          "description": "bucket for ocw-next storage data",
+          "required": false
+        },
+        "OCW_OFFLINE_DELIVERY": {
+          "description": "Enable offline delivery of OCW courses",
+          "required": false
+        },
+        "PGBOUNCER_DEFAULT_POOL_SIZE": {
+          "value": "50"
+        },
+        "PGBOUNCER_MIN_POOL_SIZE": {
+          "value": "5"
+        },
+        "PODCAST_FETCH_SCHEDULE_SECONDS": {
+          "description": "The time in seconds between periodic syncs of podcasts",
+          "required": false
+        },
+        "PROLEARN_CATALOG_API_URL": {
+          "description": "Base URL for the Prolearn search API",
+          "required": false
+        },
+        "RECAPTCHA_SITE_KEY": {
+          "description": "Google Recaptcha site key",
+          "required": false
+        },
+        "RECAPTCHA_SECRET_KEY": {
+          "description": "Google Recaptcha secret key",
+          "required": false
+        },
+        "REQUESTS_TIMEOUT": {
+          "description": "Default timeout for requests",
+          "required": false
+        },
+        "RSS_FEED_EPISODE_LIMIT": {
+          "description": "Number of episodes included in aggregated rss feed",
+          "required": false
+        },
+        "RSS_FEED_CACHE_MINUTES": {
+          "description": "Minutes that /podcasts/rss_feed will be cached",
+          "required": false
+        },
+        "SECRET_KEY": {
+          "description": "Django secret key.",
+          "generator": "secret"
+        },
+        "SEE_API_ACCESS_TOKEN_URL": {
+          "description": "URL to retrieve a MITx access token",
+          "required": false
+        },
+        "SEE_API_URL": {
+          "description": "URL to retrieve MITx course data from",
+          "required": false
+        },
+        "SEE_API_CLIENT_ID": {
+          "description": "EdX client id to access the MITx course catalog API",
+          "required": false
+        },
+        "SEE_API_CLIENT_SECRET": {
+          "description": "EdX secret key to access the MITx course catalog API",
+          "required": false
+        },
+        "SENTRY_DSN": {
+          "description": "The connection settings for Sentry"
+        },
+        "SENTRY_LOG_LEVEL": {
+          "description": "The log level for Sentry",
+          "required": false
+        },
+        "STATUS_TOKEN": {
+          "description": "Token to access the status API."
+        },
+        "TIKA_ACCESS_TOKEN": {
+          "description": "X-Access-Token value for tika requests",
+          "required": false
+        },
+        "TIKA_OCR_STRATEGY": {
+          "description": "OCR strategy to specify in header for tika requests",
+          "required": false
+        },
+        "TIKA_TIMEOUT": {
+          "description": "Timeout for tika requests",
+          "required": false
+        },
+        "USE_X_FORWARDED_PORT": {
+          "description": "Use the X-Forwarded-Port",
+          "required": false
+        },
+        "USE_X_FORWARDED_HOST": {
+          "description": "Use the X-Forwarded-Host",
+          "required": false
+        },
+        "CKEDITOR_ENVIRONMENT_ID": {
+          "description": "env ID for CKEditor EasyImage auth",
+          "required": false
+        },
+        "CKEDITOR_SECRET_KEY": {
+          "description": "secret key for CKEditor EasyImage auth",
+          "required": false
+        },
+        "CKEDITOR_UPLOAD_URL": {
+          "description": "upload URL for CKEditor EasyImage",
+          "required": false
+        },
+        "XPRO_CATALOG_API_URL": {
+          "description": "The catalog url for xpro programs",
+          "required": false
+        },
+        "XPRO_COURSES_API_URL": {
+          "description": "The api url for xpro courses",
+          "required": false
+        },
+        "XPRO_LEARNING_COURSE_BUCKET_NAME": {
+          "description": "Name of S3 bucket to upload xPRO course media",
+          "required": false
+        },
+        "YOUTUBE_DEVELOPER_KEY": {
+          "description": "The key to the google youtube api",
+          "required": false
+        },
+        "YOUTUBE_FETCH_SCHEDULE_SECONDS": {
+          "description": "The time in seconds between periodic syncs of youtube videos",
+          "required": false
+        },
+        "YOUTUBE_FETCH_TRANSCRIPT_SCHEDULE_SECONDS": {
+          "description": "The time in seconds between periodic syncs of youtube video transcripts",
+          "required": false
+        },
+        "SOCIAL_AUTH_OL_OIDC_OIDC_ENDPOINT": {
+          "description": "The base URI for OpenID Connect discovery, https://<OIDC_ENDPOINT>/ without .well-known/openid-configuration.",
+          "required": false
+        },
+        "SOCIAL_AUTH_OL_OIDC_KEY": {
+          "description": "The client ID provided by the OpenID Connect provider.",
+          "required": false
+        },
+        "SOCIAL_AUTH_OL_OIDC_SECRET": {
+          "description": "The client secret provided by the OpenID Connect provider.",
+          "required": false
+        },
+        "SOCIAL_AUTH_ALLOWED_REDIRECT_HOSTS": {
+          "description": "The list of additional redirect hosts allowed for social auth.",
+          "required": false
+        },
+        "USERINFO_URL": {
+          "description": "Provder endpoint where client sends requests for identity claims.",
+          "required": false
+        },
+        "ACCESS_TOKEN_URL": {
+          "description": "Provider endpoint where client exchanges the authorization code for tokens.",
+          "required": false
+        },
+        "AUTHORIZATION_URL": {
+          "description": "Provider endpoint where the user is asked to authenticate.",
+          "required": false
+        },
+        "FEATURE_KEYCLOAK_ENABLED": {
+          "description": "Authentication functionality is managed by Keycloak.",
+          "required": true
+        },
+        "KEYCLOAK_REALM_NAME": {
+          "description": "The Keycloak realm name in which Open Discussions has a client configuration.",
+          "required": true
+        },
+        "KEYCLOAK_BASE_URL": {
+          "description": "The base URL for a Keycloak configuration.",
+          "required": true
+        },
+        "POSTHOG_API_HOST": {
+          "description": "API host for PostHog",
+          "required": false
+        },
+        "POSTHOG_PROJECT_API_KEY": {
+          "description": "Project API key to capture events in PostHog",
+          "required": false
+        },
+        "POSTHOG_PERSONAL_API_KEY": {
+          "description": "Private API key to communicate with PostHog",
+          "required": false
+        },
+        "POSTHOG_PROJECT_ID": {
+          "description": "PostHog project ID for the application",
+          "required": false
+        },
+        "POSTHOG_TIMEOUT_MS": {
+          "description": "Timeout for communication with PostHog API",
+          "required": false
+        }
+      },
+      "keywords": ["Django", "Python", "MIT", "Office of Digital Learning"],
+      "name": "mit_open",
+      "repository": "https://github.com/mitodl/mit-learn",
+      "scripts": {
+        "postdeploy": "./manage.py migrate --noinput"
+      },
+      "success_url": "/",
+      "website": "https://github.com/mitodl/mit-learn"
+    }
+  apt.txt: |
+    # Core requirements
+    git
+    curl
+    libjpeg-dev
+    zlib1g-dev
+    net-tools
+    pkg-config
+    libffi-dev
+    libxmlsec1-dev
+  codecov.yml: |
+    coverage:
+metadata:
+  labels:
+    io.kompose.service: web
+  name: web-cm0
+  namespace: learn-ai

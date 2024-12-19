@@ -1,0 +1,10 @@
+apiVersion: v1
+data:
+  AI_LEARN_BASE_WEBSOCKET_URL: ws://api.open.odl.local:8001/ws/
+  NEXT_PUBLIC_EMBEDLY_KEY: ""
+kind: ConfigMap
+metadata:
+  labels:
+    io.kompose.service: watch-frontend-local-env
+  name: frontend-local-env
+  namespace: learn-ai
