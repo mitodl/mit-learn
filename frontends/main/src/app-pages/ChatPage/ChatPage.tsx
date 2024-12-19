@@ -7,8 +7,10 @@ import { useFeatureFlagEnabled } from "posthog-js/react"
 
 const CONVERSATION_OPTTIONS = {
   conversationStarters: [
-    { prompt: "I'm interested in quantum computing." },
-    { prompt: "I want to learn about global warming." },
+    {
+      prompt: "Recommend some free courses about quantum information science.",
+    },
+    { prompt: "What are some podcast episodes about global warming?" },
     { prompt: "I am curious about AI applications for business." },
   ],
 }

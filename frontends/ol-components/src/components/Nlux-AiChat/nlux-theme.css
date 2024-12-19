@@ -149,6 +149,14 @@
   font-weight: 700;
 }
 
+.nlux-markdown-container a {
+  color: #750014;
+}
+
+.nlux-markdown-container a:hover {
+  text-decoration: underline;
+}
+
 /* Put this last because it breaks syntax highlight in VSCode... */
 /* stylelint-disable-next-line no-duplicate-selectors */
 .nlux-theme-MyBrandName {

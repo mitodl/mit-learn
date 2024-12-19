@@ -1,21 +1,24 @@
 import * as React from "react"
 import { useCallback, useState } from "react"
 import { AiChat, AiChatProps, useAiChatApi } from "@nlux/react"
-import type { StreamSend } from "@nlux/react"
 import { ChatAdapter, StreamingAdapterObserver } from "@nlux/core"
 import { personas } from "./personas"
 
 import "@nlux/themes/unstyled.css"
 import "./nlux-theme.css"
-import { Alert, Button, MenuItem, styled } from "ol-components"
+import Alert from "@mui/material/Alert"
+import { Button } from "../Button/Button"
+import { SimpleSelectField } from "../SimpleSelect/SimpleSelect"
+import styled from "@emotion/styled"
+import Slider from "@mui/material/Slider"
 import { extractJSONFromComment } from "ol-utilities"
-import { InputLabel, Select, Slider, TextareaAutosize } from "@mui/material"
+import TextareaAutosize from "@mui/material/TextareaAutosize"
+import InputLabel from "@mui/material/InputLabel"
 
 type NluxAiChatProps = Pick<
   AiChatProps,
   "initialConversation" | "conversationOptions"
 > & {
-  send: StreamSend
   endpoint: string
 }
 
@@ -36,24 +39,18 @@ const FormContainer = styled.div(({ theme }) => ({
   },
 }))
 
-const TextArea = styled(TextareaAutosize)(
-  ({ theme }) => `
+const TextArea = styled(TextareaAutosize)`
   box-sizing: border-box;
   width: 800px;
-`,
-)
-
-const sleep = (seconds: number) => {
-  return new Promise((resolve) => setTimeout(resolve, seconds))
-}
+`
 
 const NluxAiChat: React.FC<NluxAiChatProps> = (props) => {
   const [lastMessageReceived, setLastMessageReceived] = useState("")
-  const [socket, setSocket] = useState<WebSocket | null>(null)
   const [model, setModel] = useState("gpt-4o")
+  const [connecting, setConnecting] = useState(true)
   const [temperature, setTemperature] = useState(0.1)
   const [systemPrompt, setSystemPrompt] = useState("")
-  const [newChat, setNewChat] = useState(false)
+  const [_newChat, setNewChat] = useState(false)
 
   const onMessageReceived = useCallback(
     (payload: { message: React.SetStateAction<string> }) =>
@@ -61,9 +58,25 @@ const NluxAiChat: React.FC<NluxAiChatProps> = (props) => {
     [setLastMessageReceived],
   )
   const api = useAiChatApi()
-  const WebSocketAdapter: ChatAdapter = {
-    streamText: (message: string, observer: StreamingAdapterObserver): void => {
-      if (socket) {
+  const socket = React.useMemo(() => {
+    const socket = new WebSocket(
+      `${process.env.NEXT_PUBLIC_AI_LEARN_BASE_WEBSOCKET_URL}${props.endpoint}/`,
+    )
+    /**
+     * May not work well if endpoint changes.
+     * Maybe should just use an 200ms interval check or something
+     */
+    socket.onopen = () => {
+      setConnecting(false)
+    }
+    return socket
+  }, [props.endpoint])
+  const adapter = React.useMemo(() => {
+    const adapter: ChatAdapter = {
+      streamText: (
+        message: string,
+        observer: StreamingAdapterObserver,
+      ): void => {
         // We register listeners for the WebSocket events here
         // and call the observer methods accordingly
         socket.onmessage = (event) => {
@@ -76,11 +89,11 @@ const NluxAiChat: React.FC<NluxAiChatProps> = (props) => {
           }
         }
         socket.onclose = () => observer.complete()
-        socket.onerror = (error) => observer.error(error)
-        // while (socket.readyState !== WebSocket.OPEN) {
-        //     // Wait for the WebSocket connection to be established
-        //     sleep(2000)
-        // }
+        socket.onerror = (error) =>
+          observer.error(
+            // @ts-expect-error This is what nlux docs show? Maybe their TS is wrong. (or their docs)
+            error,
+          )
 
         // This is where we send the user message to the API
         socket.send(
@@ -91,20 +104,13 @@ const NluxAiChat: React.FC<NluxAiChatProps> = (props) => {
             instructions: systemPrompt,
           }),
         )
-      }
-    },
-  }
+      },
+    }
+    return adapter
+  }, [model, temperature, systemPrompt, socket])
 
-  const adapter = WebSocketAdapter
-
-  if (!socket) {
-    setSocket(
-      new WebSocket(
-        `${process.env.NEXT_PUBLIC_AI_LEARN_BASE_WEBSOCKET_URL}${props.endpoint}/`,
-      ),
-    )
-  }
-  return (
+  // If still connecting, return nothing. A little clunky.
+  return connecting ? null : (
     <>
       <AiChat
         api={api}
@@ -120,19 +126,19 @@ const NluxAiChat: React.FC<NluxAiChatProps> = (props) => {
       <form id="chat-form">
         <FormContainer>
           <div>
-            <InputLabel>Model</InputLabel>
-            <Select
+            <SimpleSelectField
               label="Model"
               value={model}
-              onChange={(e) => setModel(e.target.value)}
-            >
-              <MenuItem value="gpt-4-turbo">gpt-4-turbo</MenuItem>
-              <MenuItem value="gpt-4o-mini">gpt-4o-mini</MenuItem>
-              <MenuItem value="gpt-4o">gpt-4o</MenuItem>
-              <MenuItem value="gpt-4">gpt-4</MenuItem>
-              <MenuItem value="gpt-3.5-turbo">gpt-3.5-turbo</MenuItem>
-              <MenuItem value="gpt-fake">Fake Model</MenuItem>
-            </Select>
+              onChange={(e) => setModel(e.target.value as string)}
+              options={[
+                { label: "gpt-4-turbo", value: "gpt-4-turbo" },
+                { label: "gpt-4o-mini", value: "gpt-4o-mini" },
+                { label: "gpt-4o", value: "gpt-4o" },
+                { label: "gpt-4", value: "gpt-4" },
+                { label: "gpt-3.5-turbo", value: "gpt-3.5-turbo" },
+                { label: "gpt-fake", value: "gpt-fake" },
+              ]}
+            />
           </div>
           <div>
             <InputLabel>Temperature</InputLabel>
@@ -150,9 +156,7 @@ const NluxAiChat: React.FC<NluxAiChatProps> = (props) => {
           <div>
             <InputLabel>System Prompt</InputLabel>
             <TextArea
-              label="System Prompt"
               name="systemPrompt"
-              fullWidth
               value={systemPrompt}
               minRows={5}
               onChange={(e) => setSystemPrompt(e.target.value)}
@@ -160,8 +164,6 @@ const NluxAiChat: React.FC<NluxAiChatProps> = (props) => {
           </div>
           <div>
             <Button
-              variant="contained"
-              color="primary"
               onClick={() => {
                 setNewChat(true)
                 setLastMessageReceived("")

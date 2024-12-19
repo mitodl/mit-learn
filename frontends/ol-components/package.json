@@ -21,6 +21,7 @@
     "@mui/material": "^6.1.8",
     "@mui/material-nextjs": "^6.1.6",
     "@mui/system": "^6.1.6",
+    "@nlux/core": "^2.17.1",
     "@nlux/react": "^2.17.1",
     "@nlux/themes": "^2.17.1",
     "@remixicon/react": "^4.2.0",
