@@ -15,7 +15,7 @@
     "./test-utils": "./src/test-utils/index.ts"
   },
   "peerDependencies": {
-    "react": "18.3.1"
+    "react": "^19"
   },
   "devDependencies": {
     "@faker-js/faker": "^9.0.0",

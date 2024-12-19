@@ -107,7 +107,7 @@ const expectProps = (
 ) => {
   expect(fc).toHaveBeenCalledWith(
     expect.objectContaining(partialProps),
-    expect.anything(),
+    expect.toBeOneOf([expect.anything(), undefined]),
   )
 }
 
@@ -124,7 +124,7 @@ const expectLastProps = (
 ) => {
   expect(fc).toHaveBeenLastCalledWith(
     expect.objectContaining(partialProps),
-    expect.anything(),
+    expect.toBeOneOf([expect.anything(), undefined]),
   )
 }
 
