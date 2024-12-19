@@ -8556,6 +8556,8 @@ components:
         description:
           type: string
           nullable: true
+        published:
+          type: boolean
         url:
           type: string
           nullable: true
@@ -8599,6 +8601,10 @@ components:
           type: string
           nullable: true
           maxLength: 128
+        file_extension:
+          type: string
+          nullable: true
+          maxLength: 32
         offered_by:
           $ref: '#/components/schemas/LearningResourceOfferor'
         platform:

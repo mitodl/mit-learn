@@ -303,6 +303,12 @@ export interface ContentFile {
   description?: string | null
   /**
    *
+   * @type {boolean}
+   * @memberof ContentFile
+   */
+  published?: boolean
+  /**
+   *
    * @type {string}
    * @memberof ContentFile
    */
@@ -373,6 +379,12 @@ export interface ContentFile {
    * @memberof ContentFile
    */
   file_type?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  file_extension?: string | null
   /**
    *
    * @type {LearningResourceOfferor}

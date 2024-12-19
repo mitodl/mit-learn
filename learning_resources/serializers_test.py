@@ -496,6 +496,8 @@ def test_content_file_serializer(settings, expected_types, has_channels):
                 "name": PlatformType[platform].value,
                 "code": platform,
             },
+            "published": content_file.published,
+            "file_extension": content_file.file_extension,
             "offered_by": {
                 "name": content_file.run.learning_resource.offered_by.name,
                 "code": content_file.run.learning_resource.offered_by.code,

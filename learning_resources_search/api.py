@@ -35,6 +35,7 @@ from learning_resources_search.utils import (
     adjust_search_for_percolator,
     document_percolated_actions,
 )
+from vector_search.constants import RESOURCES_COLLECTION_NAME
 
 log = logging.getLogger(__name__)
 
@@ -929,7 +930,7 @@ def _qdrant_similar_results(doc, num_resources):
     return [
         hit.payload
         for hit in client.query_points(
-            collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
+            collection_name=RESOURCES_COLLECTION_NAME,
             query=vector_point_id(doc["readable_id"]),
             limit=num_resources,
             using=encoder.model_short_name(),
