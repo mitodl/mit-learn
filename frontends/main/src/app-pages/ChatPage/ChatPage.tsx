@@ -3,9 +3,6 @@ import React from "react"
 import { NluxAiChat, Container, styled } from "ol-components"
 import { sends } from "./send"
 
-import { FeatureFlags } from "@/common/feature_flags"
-import { useFeatureFlagEnabled } from "posthog-js/react"
-
 const CONVERSATION_OPTTIONS = {
   conversationStarters: [
     { prompt: "I'm interested in quantum computing." },
@@ -29,14 +26,11 @@ const StyledContainer = styled(Container)({
 })
 
 const ChatPage = () => {
-  const recommendationBotEnabled = useFeatureFlagEnabled(
-    FeatureFlags.RecommendationBot,
-  )
   return (
     <StyledContainer>
       {
         // eslint-disable-next-line no-constant-condition
-        recommendationBotEnabled ? (
+        true ? (
           <StyledChat
             key={"agent"}
             send={sends["agent"]}
