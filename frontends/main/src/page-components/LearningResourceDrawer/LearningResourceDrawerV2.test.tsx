@@ -10,7 +10,8 @@ import LearningResourceDrawerV2 from "./LearningResourceDrawerV2"
 import { urls, factories, setMockResponse } from "api/test-utils"
 import { LearningResourceExpandedV2 } from "ol-components"
 import { RESOURCE_DRAWER_QUERY_PARAM } from "@/common/urls"
-import { ResourceTypeEnum } from "api"
+import { CourseResource, LearningResource, ResourceTypeEnum } from "api"
+import { ControlledPromise } from "ol-test-utilities"
 
 jest.mock("ol-components", () => {
   const actual = jest.requireActual("ol-components")
@@ -19,6 +20,22 @@ jest.mock("ol-components", () => {
     LearningResourceExpandedV2: jest.fn(actual.LearningResourceExpandedV2),
   }
 })
+
+const makeSearchResponse = (results: CourseResource[] | LearningResource[]) => {
+  const responseData = {
+    metadata: {
+      suggestions: [],
+      aggregations: {},
+    },
+    count: results.length,
+    results: results,
+    next: null,
+    previous: null,
+  }
+  const promise = new ControlledPromise()
+  promise.resolve(responseData)
+  return responseData
+}
 
 const mockedPostHogCapture = jest.fn()
 
@@ -31,6 +48,52 @@ jest.mock("posthog-js/react", () => ({
     return { capture: mockedPostHogCapture }
   },
 }))
+
+const setupApis = (resource: LearningResource) => {
+  setMockResponse.get(
+    urls.learningResources.details({ id: resource.id }),
+    resource,
+  )
+  const count = 10
+  const similarResources = factories.learningResources.resources({
+    count,
+  }).results
+  setMockResponse.get(urls.userMe.get(), null, { code: 403 })
+  setMockResponse.get(
+    urls.learningResources.details({ id: resource.id }),
+    resource,
+  )
+  setMockResponse.get(
+    urls.learningResources.vectorSimilar({ id: resource.id }),
+    similarResources,
+  )
+  const topicsCourses: CourseResource[] = []
+  resource.topics?.forEach((topic) => {
+    const topicCourses = factories.learningResources.courses({ count: 10 })
+    topicCourses.results.map((course) => {
+      course.topics = [factories.learningResources.topic({ name: topic.name })]
+    })
+    topicsCourses.push(...topicCourses.results)
+  })
+  resource.topics?.forEach((topic) => {
+    setMockResponse.get(
+      expect.stringContaining(
+        urls.search.resources({
+          limit: 12,
+          resource_type: ["course"],
+          sortby: "-views",
+          topic: [topic.name],
+        }),
+      ),
+      makeSearchResponse(
+        topicsCourses.filter(
+          (course) => course.topics?.[0].name === topic.name,
+        ),
+      ),
+    )
+  })
+  return { resource, similarResources }
+}
 
 describe("LearningResourceDrawerV2", () => {
   it.each([
@@ -46,18 +109,7 @@ describe("LearningResourceDrawerV2", () => {
         ? "12345abcdef" // pragma: allowlist secret
         : ""
       const resource = factories.learningResources.resource()
-      setMockResponse.get(
-        urls.learningResources.details({ id: resource.id }),
-        resource,
-      )
-      setMockResponse.get(
-        urls.learningResources.similar({ id: resource.id }),
-        [],
-      )
-      setMockResponse.get(
-        urls.learningResources.vectorSimilar({ id: resource.id }),
-        [],
-      )
+      setupApis(resource)
 
       renderWithProviders(<LearningResourceDrawerV2 />, {
         url: `?dog=woof&${RESOURCE_DRAWER_QUERY_PARAM}=${resource.id}`,
@@ -114,18 +166,7 @@ describe("LearningResourceDrawerV2", () => {
           }),
         ],
       })
-      setMockResponse.get(
-        urls.learningResources.details({ id: resource.id }),
-        resource,
-      )
-      setMockResponse.get(
-        urls.learningResources.similar({ id: resource.id }),
-        [],
-      )
-      setMockResponse.get(
-        urls.learningResources.vectorSimilar({ id: resource.id }),
-        [],
-      )
+      setupApis(resource)
       const user = factories.user.user({
         is_learning_path_editor: isLearningPathEditor,
       })
@@ -169,19 +210,7 @@ describe("LearningResourceDrawerV2", () => {
         }),
       ],
     })
-    const count = 10
-    const similarResources = factories.learningResources.resources({
-      count,
-    }).results
-    setMockResponse.get(urls.userMe.get(), null, { code: 403 })
-    setMockResponse.get(
-      urls.learningResources.details({ id: resource.id }),
-      resource,
-    )
-    setMockResponse.get(
-      urls.learningResources.vectorSimilar({ id: resource.id }),
-      similarResources,
-    )
+    const { similarResources } = setupApis(resource)
     renderWithProviders(<LearningResourceDrawerV2 />, {
       url: `?resource=${resource.id}`,
     })
