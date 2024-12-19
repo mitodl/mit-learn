@@ -1,11 +1,11 @@
 import React, { useCallback } from "react"
+import dynamic from "next/dynamic"
 import {
   LoadingSpinner,
   Typography,
   styled,
   CheckboxChoiceField,
   Button,
-  FormDialog,
   DialogActions,
 } from "ol-components"
 
@@ -29,6 +29,10 @@ import {
 import { manageListDialogs } from "@/page-components/ManageListDialogs/ManageListDialogs"
 import { ListType } from "api/constants"
 import { useFormik } from "formik"
+
+const FormDialog = dynamic(() =>
+  import("ol-components").then((mod) => mod.FormDialog),
+)
 
 const LIST_LIMIT = 100
 

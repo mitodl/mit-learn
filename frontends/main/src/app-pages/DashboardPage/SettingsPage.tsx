@@ -1,11 +1,11 @@
 import React from "react"
+import dynamic from "next/dynamic"
 import {
   PlainList,
   Typography,
   Link,
   styled,
   Button,
-  Dialog,
   DialogActions,
 } from "ol-components"
 import { useUserMe } from "api/hooks/user"
@@ -14,6 +14,9 @@ import {
   useSearchSubscriptionList,
 } from "api/hooks/searchSubscription"
 import * as NiceModal from "@ebay/nice-modal-react"
+
+const Dialog = dynamic(() => import("ol-components").then((mod) => mod.Dialog))
+
 const SOURCE_LABEL_DISPLAY = {
   topic: "Topic",
   unit: "MIT Unit",

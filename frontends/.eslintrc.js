@@ -58,6 +58,11 @@ module.exports = {
           message:
             "The LearningResourceDrawer should be lazy loaded with dynamic import.",
         },
+        {
+          group: ["ol-components"],
+          importNames: ["Alert", "Dialog", "FormDialog"],
+          message: "Alert, Dialog, and FormDialog should be lazy loaded with dynamic import.",
+        },
       ],
     }),
     // This rule is disabled in the default a11y config, but unclear why.

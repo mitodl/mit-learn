@@ -1,14 +1,12 @@
 import React, { useCallback } from "react"
 import { useFormik, FormikConfig } from "formik"
+import dynamic from "next/dynamic"
 import NiceModal, { muiDialogV5 } from "@ebay/nice-modal-react"
 import { RiDeleteBinLine } from "@remixicon/react"
 import {
-  Alert,
   TextField,
   Autocomplete,
   BooleanRadioChoiceField,
-  FormDialog,
-  Dialog,
   MenuItem,
   Button,
 } from "ol-components"
@@ -26,6 +24,12 @@ import {
   useUserListUpdate,
   useUserListDestroy,
 } from "api/hooks/userLists"
+
+const Alert = dynamic(() => import("ol-components").then((mod) => mod.Alert))
+const FormDialog = dynamic(() =>
+  import("ol-components").then((mod) => mod.FormDialog),
+)
+const Dialog = dynamic(() => import("ol-components").then((mod) => mod.Dialog))
 
 const learningPathFormSchema = Yup.object().shape({
   published: Yup.boolean()
