@@ -1,6 +1,7 @@
 import logging
 
 import tiktoken
+from django.conf import settings
 from litellm import embedding
 
 from vector_search.encoders.base import BaseEncoder
@@ -13,20 +14,25 @@ class LiteLLMEncoder(BaseEncoder):
     LiteLLM encoder
     """
 
-    token_encoding_name = "cl100k_base"  # noqa: S105
+    token_encoding_name = settings.LITELLM_TOKEN_ENCODING_NAME
 
     def __init__(self, model_name="text-embedding-3-small"):
         self.model_name = model_name
         try:
             self.token_encoding_name = tiktoken.encoding_name_for_model(model_name)
         except KeyError:
-            msg = f"Model {model_name} not found in tiktoken. defaulting to cl100k_base"
+            msg = f"Model {model_name} not found in tiktoken. defaulting to None"
             log.warning(msg)
 
     def encode_batch(self, texts: list[str]) -> list[list[float]]:
-        return [
-            result["embedding"]
-            for result in embedding(model=self.model_name, input=texts).to_dict()[
-                "data"
-            ]
-        ]
+        return [result["embedding"] for result in self.get_embedding(texts)["data"]]
+
+    def get_embedding(self, texts):
+        if settings.LITELLM_CUSTOM_PROVIDER and settings.LITELLM_API_BASE:
+            return embedding(
+                model=self.model_name,
+                input=texts,
+                api_base=settings.LITELLM_API_BASE,
+                custom_llm_provider=settings.LITELLM_CUSTOM_PROVIDER,
+            ).to_dict()
+        return embedding(model=self.model_name, input=texts).to_dict()
