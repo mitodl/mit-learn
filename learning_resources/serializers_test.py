@@ -294,6 +294,12 @@ def test_learning_resource_serializer(  # noqa: PLR0913
         "completeness": 1.0,
         "continuing_ed_credits": resource.continuing_ed_credits,
         "license_cc": resource.license_cc,
+        "duration": resource.duration,
+        "time_commitment": resource.time_commitment,
+        "min_weekly_hours": resource.min_weekly_hours,
+        "max_weekly_hours": resource.max_weekly_hours,
+        "min_weeks": resource.min_weeks,
+        "max_weeks": resource.max_weeks,
     }
 
 

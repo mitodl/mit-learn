@@ -19,6 +19,7 @@ from learning_resources.constants import (
 from learning_resources.etl import xpro
 from learning_resources.etl.constants import CourseNumberType, ETLSource
 from learning_resources.etl.utils import (
+    parse_string_to_int,
     transform_delivery,
 )
 from learning_resources.etl.xpro import _parse_datetime, parse_topics
@@ -143,6 +144,16 @@ def test_xpro_transform_programs(mock_xpro_programs_data):
                     "availability": Availability.dated.name,
                     "pace": [Pace.self_paced.name],
                     "format": [Format.asynchronous.name],
+                    "duration": program_data.get("duration") or "",
+                    "min_weeks": program_data.get("min_weeks"),
+                    "max_weeks": program_data.get("max_weeks"),
+                    "time_commitment": program_data.get("time_commitment") or "",
+                    "min_weekly_hours": parse_string_to_int(
+                        program_data.get("min_weekly_hours")
+                    ),
+                    "max_weekly_hours": parse_string_to_int(
+                        program_data.get("max_weekly_hours")
+                    ),
                 }
             ],
             "courses": [
@@ -194,6 +205,16 @@ def test_xpro_transform_programs(mock_xpro_programs_data):
                             "availability": Availability.dated.name,
                             "pace": [Pace.self_paced.name],
                             "format": [Format.asynchronous.name],
+                            "duration": course_data.get("duration") or "",
+                            "min_weeks": course_data.get("min_weeks"),
+                            "max_weeks": course_data.get("max_weeks"),
+                            "time_commitment": course_data.get("time_commitment") or "",
+                            "min_weekly_hours": parse_string_to_int(
+                                course_data.get("min_weekly_hours")
+                            ),
+                            "max_weekly_hours": parse_string_to_int(
+                                course_data.get("max_weekly_hours")
+                            ),
                         }
                         for course_run_data in course_data["courseruns"]
                     ],
@@ -273,6 +294,16 @@ def test_xpro_transform_courses(mock_xpro_courses_data):
                     "availability": Availability.dated.name,
                     "pace": [Pace.self_paced.name],
                     "format": [Format.asynchronous.name],
+                    "duration": course_data.get("duration") or "",
+                    "min_weeks": course_data.get("min_weeks"),
+                    "max_weeks": course_data.get("max_weeks"),
+                    "time_commitment": course_data.get("time_commitment") or "",
+                    "min_weekly_hours": parse_string_to_int(
+                        course_data.get("min_weekly_hours")
+                    ),
+                    "max_weekly_hours": parse_string_to_int(
+                        course_data.get("max_weekly_hours")
+                    ),
                 }
                 for course_run_data in course_data["courseruns"]
             ],

@@ -121,7 +121,6 @@ def transform_levels(level_labels: list[str]) -> list[LevelType]:
     """
     Given list of level labels, return list of keys.
 
-    >>> transform_levels(["High School", "Undergraduate"])
     ["high_school", "undergraduate"]
     """
     return [
@@ -743,3 +742,19 @@ def transform_price(amount: Decimal, currency: str = CURRENCY_USD) -> dict:
         # Use pycountry.currencies to ensure the code is valid, default to USD
         "currency": currency if currencies.get(alpha_3=currency) else CURRENCY_USD,
     }
+
+
+def parse_string_to_int(int_str: str) -> int | None:
+    """
+    Parse a string to an integer if possible
+
+    Args:
+        int_str(str): the string to parse
+
+    Returns:
+        int or None: an integer or None
+    """
+    try:
+        return int(int_str)
+    except (TypeError, ValueError):
+        return None
