@@ -1,4 +1,5 @@
 import datetime
+import uuid
 
 import pytest
 from django.conf import settings
@@ -11,7 +12,7 @@ from learning_resources.factories import (
     LearningResourceRunFactory,
     ProgramFactory,
 )
-from learning_resources.models import LearningResource
+from learning_resources.models import ContentFile, LearningResource
 from learning_resources_search.constants import (
     COURSE_TYPE,
 )
@@ -20,6 +21,7 @@ from vector_search.tasks import (
     embed_learning_resources_by_id,
     embed_new_learning_resources,
     start_embed_resources,
+    unique_content_ids,
 )
 
 pytestmark = pytest.mark.django_db
@@ -178,3 +180,34 @@ def test_embed_learning_resources_by_id(mocker, mocked_celery):
         assert mock_call.args[1] == "content_file"
     embedded_resource_ids = generate_embeddings_mock.si.mock_calls[0].args[0]
     assert sorted(resource_ids) == sorted(embedded_resource_ids)
+
+
+def test_unique_content_ids():
+    """
+    Test unique_content_ids returns ids for contentfiles with unique contents
+    """
+    course = CourseFactory.create()
+    duplicate_contentfile_ids = [
+        cf.id
+        for cf in ContentFileFactory.create_batch(
+            3, run=course.learning_resource.runs.first(), content="this is a duplicate"
+        )
+    ]
+    unique_contentfile_ids = []
+    for cf in ContentFileFactory.create_batch(
+        3,
+        run=course.learning_resource.runs.first(),
+    ):
+        cf.content = f"this is not a duplicate {uuid.uuid4()!s}"
+        cf.save()
+        unique_contentfile_ids.append(cf.id)
+    assert (
+        len(
+            unique_content_ids(
+                ContentFile.objects.filter(
+                    id__in=unique_contentfile_ids + duplicate_contentfile_ids
+                )
+            )
+        )
+        == len(unique_contentfile_ids) + 1
+    )

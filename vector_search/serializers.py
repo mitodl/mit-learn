@@ -14,7 +14,9 @@ from learning_resources.constants import (
 )
 from learning_resources.serializers import LearningResourceSerializer
 from learning_resources_search.serializers import (
+    CONTENT_FILE_SORTBY_OPTIONS,
     ArrayWrappedBoolean,
+    ContentFileSerializer,
     SearchResponseMetadata,
     SearchResponseSerializer,
 )
@@ -162,6 +164,88 @@ class LearningResourcesVectorSearchResponseSerializer(SearchResponseSerializer):
         return instance.get("total", {}).get("value")
 
     def get_metadata(self, _) -> SearchResponseMetadata:
+        return {
+            "aggregations": [],
+            "suggest": [],
+        }
+
+
+class ContentFileVectorSearchRequestSerializer(serializers.Serializer):
+    """
+    Request serializer for vector based content file search
+    """
+
+    q = serializers.CharField(required=False, help_text="The search text")
+    offset = serializers.IntegerField(
+        required=False, help_text="The initial index from which to return the results"
+    )
+    limit = serializers.IntegerField(
+        required=False, help_text="Number of results to return per page"
+    )
+    sortby = serializers.ChoiceField(
+        required=False,
+        choices=CONTENT_FILE_SORTBY_OPTIONS,
+        help_text="if the parameter starts with '-' the sort is in descending order",
+    )
+    key = serializers.ListField(
+        required=False,
+        child=serializers.CharField(),
+        help_text="The filename of the content file",
+    )
+    course_number = serializers.ListField(
+        required=False,
+        child=serializers.CharField(),
+        help_text="Course number of the content file",
+    )
+    offered_by = serializers.ListField(
+        required=False,
+        child=serializers.CharField(),
+        help_text="Offeror of the content file",
+    )
+    platform = serializers.ListField(
+        required=False,
+        child=serializers.CharField(),
+        help_text="platform(s) of the content file",
+    )
+    content_feature_type = serializers.ListField(
+        required=False,
+        child=serializers.CharField(),
+        help_text="The feature type of the content file. "
+        "Possible options are at api/v1/course_features/",
+    )
+    file_extension = serializers.ListField(
+        required=False,
+        child=serializers.CharField(),
+        help_text="The extension of the content file. ",
+    )
+    run_readable_id = serializers.ListField(
+        required=False,
+        child=serializers.CharField(),
+        help_text="The readable_id value of the run that the content file belongs to",
+    )
+    resource_readable_id = serializers.ListField(
+        required=False,
+        child=serializers.CharField(),
+        help_text=(
+            "The readable_id value of the parent learning "
+            "resource for the content file"
+        ),
+    )
+
+
+class ContentFileVectorSearchResponseSerializer(SearchResponseSerializer):
+    """
+    SearchResponseSerializer with OpenAPI annotations for Content Files search
+    """
+
+    def get_count(self, instance) -> int:
+        return instance["total"]["value"]
+
+    @extend_schema_field(ContentFileSerializer(many=True))
+    def get_results(self, instance):
+        return instance["hits"]
+
+    def get_metadata(self, *_) -> SearchResponseMetadata:
         return {
             "aggregations": [],
             "suggest": [],
