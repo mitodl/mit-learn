@@ -1,0 +1,170 @@
+/* stylelint-disable string-no-newline */
+/* stylelint-disable custom-property-pattern */
+/* stylelint-disable selector-class-pattern */
+
+.nlux-theme-MyBrandName[data-color-scheme="light"] {
+  --nlux-ChatRoom--BackgroundColor: #f3f4f8;
+}
+
+.nlux-theme-MyBrandName {
+  /* Override top-level chat room colors */
+  --nlux-ChatRoom--BorderColor: #dde1e6;
+  --nlux-ChatRoom--BorderWidth: 1px;
+  --nlux-ChatRoom-Divider--Color: #dde1e6;
+  --nlux-ChatRoom--TextColor: #212326;
+  --nlux-ChatRoom--Padding: 24px;
+  --nlux-ChatRoom--FontFamily: "neue-haas-grotesk-text, sans-serif";
+  --nlux-ChatRoom--FontSize: 0.875rem;
+  --nlux-ChatRoom--LineHeight: 1rem;
+
+  /* Override message bubble colors */
+  --nlux-AiMessage--BackgroundColor: #fff;
+  --nlux-HumanMessage--BackgroundColor: #fff;
+  --nlux-ChatItem-ParticipantName--FontSize: 20px;
+  --nlux-ChatItem-ParticipantName--FontWeight: 700;
+
+  /* Override border width */
+  --nlux-SubmitButton--BorderWidth: 0;
+  --nlux-ChatItem-Avatar--BorderWidth: 0;
+  --nlux-ChatItem-Message-BubbleLayout--BorderWidth: 0;
+  --nlux-ConversationStarter--BorderWidth: 0;
+
+  /* Override border radius */
+  --nlux-ChatRoom--BorderRadius: 5px;
+  --nlux-SubmitButton--BorderRadius: 0 5px 5px 0;
+  --nlux-ChatItem-Avatar--BorderRadius: 5px;
+  --nlux-ChatItem-Message-BubbleLayout--BorderRadius: 12px;
+  --nlux-ConversationStarter--BorderRadius: 5px;
+
+  /* Override input colors */
+  --nlux-PromptInput--BorderWidth: 1px;
+  --nlux-PromptInput--BorderRadius: 0 0 0 4px;
+  --nlux-PromptInput--BorderColor: #dde1e6;
+  --nlux-PromptInput--BackgroundColor: #fff;
+  --nlux-PromptInput--Padding: 0px;
+  --nlux-PromptInput-Active--BackgroundColor: #fff;
+  --nlux-PromptInput-Disabled--BackgroundColor: #fff;
+  --nlux-PromptInput-Max-Height: 80px;
+  --nlux-PromptInput-Height: 48px;
+
+  /* Gap between submit button and input */
+  --nlux-Composer--Gap: 0;
+
+  /* Override submit button colors */
+  --nlux-SubmitButton--BackgroundColor: #a31f34;
+  --nlux-SubmitButton-Active--BackgroundColor: #d02e44;
+  --nlux-SubmitButton-Disabled--BackgroundColor: #626a73;
+  --nlux-SubmitButton--TextColor: #fff;
+  --nlux-SubmitButton-Active--TextColor: #fff;
+  --nlux-SubmitButton-Disabled--TextColor: #fff;
+  --nlux-SubmitButton--Width: 48px;
+
+  /* Conversation starter colors */
+  --nlux-ConversationStarter--BackgroundColor: #fff;
+  --nlux-ConversationStarter--Gap: 12px;
+  --nlux-ConversationStarter--Width: "";
+  --nlux-ConversationStarter--Height: "";
+  --nlux-ConversationStarter--Padding: 0px;
+}
+
+.nlux-comp-exceptionBox:empty {
+  /* Potentially fragile... Will NOT match if box has whitespace-only */
+  display: none;
+}
+
+.nlux-launchPad-container {
+  gap: 24px;
+  padding: 24px;
+}
+
+.nlux-theme-MyBrandName
+  .nlux-comp-chatItem.nlux-comp-chatItem--bubblesLayout
+  > .nlux-comp-message {
+  padding: 0;
+}
+
+.nlux-theme-MyBrandName
+  .nlux-comp-chatItem.nlux-comp-chatItem--sent.nlux-comp-chatItem--bubblesLayout
+  > .nlux-comp-message {
+  border-radius: 12px 0 12px 12px;
+}
+
+.nlux-theme-MyBrandName
+  .nlux-comp-chatItem.nlux-comp-chatItem--received.nlux-comp-chatItem--bubblesLayout
+  > .nlux-comp-message {
+  border-radius: 0 12px 12px;
+}
+
+.nlux-comp-chatItem.nlux-comp-chatItem--bubblesLayout.nlux-comp-chatItem--received {
+  padding-right: 0;
+}
+
+.nlux-comp-chatItem.nlux-comp-chatItem--bubblesLayout.nlux-comp-chatItem--sent {
+  padding-left: 0;
+}
+
+.nlux-comp-composer > textarea {
+  min-height: 48px;
+  padding-top: 16px;
+  padding-bottom: 16px;
+}
+
+.nlux-launchPad-container > .nlux-comp-welcomeMessage {
+  flex: 1;
+}
+
+.nlux-conversationStarters-container {
+  overflow-y: auto;
+}
+
+.nlux-conversationStarters-container > .nlux-comp-conversationStarters {
+  flex-direction: column;
+}
+
+.nlux-markdown-container > *:first-child {
+  margin-top: 0;
+}
+
+.nlux-markdown-container > *:last-child {
+  margin-bottom: 0;
+}
+
+.nlux-markdown-container {
+  margin: 20px;
+}
+
+.nlux-comp-chatItem.nlux-comp-chatItem--received
+  > .nlux-comp-chatItem-participantInfo
+  > .nlux-comp-avatar
+  > .nlux-comp-avatarContainer
+  > .nlux-comp-avatarPicture {
+  background-color: rgba(255 255 255 0);
+}
+
+.nlux-comp-message > a {
+  font-weight: 700;
+}
+
+.nlux-comp-message a {
+  font-weight: 700;
+}
+
+/* Put this last because it breaks syntax highlight in VSCode... */
+/* stylelint-disable-next-line no-duplicate-selectors */
+.nlux-theme-MyBrandName {
+  /* Override icon for the send button */
+  --nlux-send-icon: url('data:image/svg+xml,\
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">\
+  <g id="icon">\
+  <path id="Vector" d="M1.94631 9.31531C1.42377 9.14113 1.41964 8.8601 1.95706 8.68096L21.0432 2.31889C21.5717 2.14273 21.8748 2.43854 21.7267 2.95682L16.2735 22.0431C16.1225 22.5715 15.8179 22.5899 15.5946 22.0875L12.0001 13.9999L18.0001 5.99993L10.0002 11.9999L1.94631 9.31531Z" fill="white"/>\
+  </g>\
+  </svg>\
+  ');
+  --nlux-cancel-icon: url('data:image/svg+xml,\
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">\
+  <g id="icon">\
+  <path id="Vector" d="M11.9997 10.5865L16.9495 5.63672L18.3637 7.05093L13.4139 12.0007L18.3637 16.9504L16.9495 18.3646L11.9997 13.4149L7.04996 18.3646L5.63574 16.9504L10.5855 12.0007L5.63574 7.05093L7.04996 5.63672L11.9997 10.5865Z" fill="white"/>\
+  </g>\
+  </svg>\
+  ');
+}

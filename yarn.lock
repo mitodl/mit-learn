@@ -3088,6 +3088,32 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@nlux/core@npm:2.17.1":
+  version: 2.17.1
+  resolution: "@nlux/core@npm:2.17.1"
+  checksum: 10/ea30460c396e75f6b13d8a5519f6d0ee0c7282f1cd4a176572e7d3c923c539ea367debb4f079d2e177103197c77ef2cea8462f3b033f2034467e842c26016537
+  languageName: node
+  linkType: hard
+
+"@nlux/react@npm:^2.17.1":
+  version: 2.17.1
+  resolution: "@nlux/react@npm:2.17.1"
+  dependencies:
+    "@nlux/core": "npm:2.17.1"
+  peerDependencies:
+    react: ^18
+    react-dom: ^18
+  checksum: 10/09fc44b2caea47d926483a9e987f97f456c4230342ffbdc83ee2f78a95eff1613abae2aa5b33b7ed6bf072d3ed14c4bfcd9fa4431e1b16fe95f490068d3e1263
+  languageName: node
+  linkType: hard
+
+"@nlux/themes@npm:^2.17.1":
+  version: 2.17.1
+  resolution: "@nlux/themes@npm:2.17.1"
+  checksum: 10/faa167100478fc3d266ed59bb5854ced1cad8717d2b1975803912b8199ada5df727dd3bb61465647fa05cd635ef6faac7e4cc33b7d60e7deb432af29a42f05ed
+  languageName: node
+  linkType: hard
+
 "@nodelib/fs.scandir@npm:2.1.5":
   version: 2.1.5
   resolution: "@nodelib/fs.scandir@npm:2.1.5"
@@ -13850,6 +13876,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "mit-learn@workspace:."
   dependencies:
+    "@nlux/react": "npm:^2.17.1"
+    "@nlux/themes": "npm:^2.17.1"
     syncpack: "npm:^12.4.0"
   languageName: unknown
   linkType: soft
@@ -14346,6 +14374,8 @@ __metadata:
     "@mui/material": "npm:^6.1.8"
     "@mui/material-nextjs": "npm:^6.1.6"
     "@mui/system": "npm:^6.1.6"
+    "@nlux/react": "npm:^2.17.1"
+    "@nlux/themes": "npm:^2.17.1"
     "@remixicon/react": "npm:^4.2.0"
     "@storybook/addon-actions": "npm:^8.2.9"
     "@storybook/addon-essentials": "npm:^8.2.9"

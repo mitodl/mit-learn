@@ -105,6 +105,7 @@ INSTALLED_APPS = (
     "drf_spectacular",
     # Put our apps after this point
     "main",
+    "ai_chat",
     "authentication",
     "channels",
     "profiles",
@@ -319,7 +320,7 @@ SOCIAL_AUTH_PIPELINE = (
     "social_core.pipeline.social_auth.auth_allowed",
     # Checks if the current social-account is already associated in the site.
     "social_core.pipeline.social_auth.social_user",
-    # Associates the current social details with another user account with the same email address.  # noqa: E501
+    # Associates current social details with another user account with same email.
     "social_core.pipeline.social_auth.associate_by_email",
     # Send a validation email to the user to verify its email address.
     # Disabled by default.
@@ -526,7 +527,8 @@ AWS_QUERYSTRING_AUTH = get_string("AWS_QUERYSTRING_AUTH", False)  # noqa: FBT003
 if MITOL_USE_S3 and (
     not AWS_ACCESS_KEY_ID or not AWS_SECRET_ACCESS_KEY or not AWS_STORAGE_BUCKET_NAME
 ):
-    msg = "You have enabled S3 support, but are missing one of AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, or AWS_STORAGE_BUCKET_NAME"  # noqa: E501
+    msg = "You have enabled S3 support, but are missing one of AWS_ACCESS_KEY_ID, \
+    AWS_SECRET_ACCESS_KEY, or AWS_STORAGE_BUCKET_NAME"
     raise ImproperlyConfigured(msg)
 if MITOL_USE_S3:
     DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
@@ -650,7 +652,10 @@ OPEN_RESOURCES_MIN_TERM_FREQ = get_int("OPEN_RESOURCES_MIN_TERM_FREQ", 1)
 
 # features flags
 def get_all_config_keys():
-    """Returns all the configuration keys from both environment and configuration files"""  # noqa: E501, D401
+    """
+    Returns all the configuration keys from both
+    environment and configuration files
+    """  # noqa: D401
     return list(os.environ.keys())
 
 
@@ -798,6 +803,7 @@ QDRANT_DENSE_MODEL = get_string(name="QDRANT_DENSE_MODEL", default=None)
 QDRANT_SPARSE_MODEL = get_string(
     name="QDRANT_SPARSE_MODEL", default="prithivida/Splade_PP_en_v1"
 )
+
 QDRANT_ENCODER = get_string(
     name="QDRANT_ENCODER", default="vector_search.encoders.fastembed.FastEmbedEncoder"
 )
@@ -813,3 +819,27 @@ OPENAI_API_KEY = get_string(
     name="OPENAI_API_KEY",
     default=None,
 )
+
+# AI settings
+AI_DEBUG = get_bool("AI_DEBUG", True)  # noqa: FBT003
+AI_CACHE_TIMEOUT = get_int(name="AI_CACHE_TIMEOUT", default=3600)
+AI_CACHE = get_string(name="AI_CACHE", default="redis")
+AI_MIT_SEARCH_URL = get_string(
+    name="AI_MIT_SEARCH_URL",
+    default="https://api.learn.mit.edu/api/v1/learning_resources_search/",
+)
+AI_MIT_SEARCH_LIMIT = get_int(name="AI_MIT_SEARCH_LIMIT", default=10)
+AI_MODEL = get_string(name="AI_MODEL", default="gpt-4o")
+AI_MODEL_API = get_string(name="AI_MODEL_API", default="openai")
+
+# AI proxy settings (aka LiteLLM)
+AI_CHAT_ENABLED = get_bool(name="AI_CHAT_ENABLED", default=False)
+AI_PROXY_CLASS = get_string(name="AI_PROXY_CLASS", default="")
+AI_PROXY_URL = get_string(name="AI_PROXY_URL", default="")
+AI_PROXY_AUTH_TOKEN = get_string(name="AI_PROXY_AUTH_TOKEN", default="")
+AI_MAX_PARALLEL_REQUESTS = get_int(name="AI_MAX_PARALLEL_REQUESTS", default=10)
+AI_TPM_LIMIT = get_int(name="AI_TPM_LIMIT", default=5000)
+AI_RPM_LIMIT = get_int(name="AI_RPM_LIMIT", default=10)
+AI_BUDGET_DURATION = get_string(name="AI_BUDGET_DURATION", default="60m")
+AI_MAX_BUDGET = get_float(name="AI_MAX_BUDGET", default=0.05)
+AI_ANON_LIMIT_MULTIPLIER = get_float(name="AI_ANON_LIMIT_MULTIPLIER", default=10.0)
