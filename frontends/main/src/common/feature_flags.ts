@@ -3,5 +3,6 @@
 
 export enum FeatureFlags {
   EnableEcommerce = "enable-ecommerce",
-  DrawerV2Enabled = "lr_drawer_v2"
+  DrawerV2Enabled = "lr_drawer_v2",
+  RecommendationBot = "recommendation-bot",
 }

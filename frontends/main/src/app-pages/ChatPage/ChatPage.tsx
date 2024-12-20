@@ -1,7 +1,11 @@
 "use client"
 import React from "react"
-import { NluxAiChat, Container, styled } from "ol-components"
+import { Container, styled } from "ol-components"
 import { sends } from "./send"
+import { NluxAiChat } from "@/page-components/Nlux-AiChat/AiChat"
+
+import { FeatureFlags } from "@/common/feature_flags"
+import { useFeatureFlagEnabled } from "posthog-js/react"
 
 const CONVERSATION_OPTTIONS = {
   conversationStarters: [
@@ -26,11 +30,14 @@ const StyledContainer = styled(Container)({
 })
 
 const ChatPage = () => {
+  const recommendationBotEnabled = useFeatureFlagEnabled(
+    FeatureFlags.RecommendationBot,
+  )
   return (
     <StyledContainer>
       {
         // eslint-disable-next-line no-constant-condition
-        true ? (
+        recommendationBotEnabled ? (
           <StyledChat
             key={"agent"}
             send={sends["agent"]}

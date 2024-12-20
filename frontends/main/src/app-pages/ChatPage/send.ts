@@ -1,4 +1,4 @@
-import type { NluxAiChatProps } from "ol-components"
+import { NluxAiChatProps } from "@/page-components/Nlux-AiChat/AiChat"
 
 type ChatEndpoint = "agent"
 
