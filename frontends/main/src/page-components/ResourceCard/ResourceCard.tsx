@@ -15,6 +15,7 @@ import { useUserMe } from "api/hooks/user"
 import { LearningResource } from "api"
 import { SignupPopover } from "../SignupPopover/SignupPopover"
 import { useIsUserListMember } from "api/hooks/userLists"
+import { useLearningResourceDetailSetCache } from "api/hooks/learningResources"
 import { useIsLearningPathMember } from "api/hooks/learningPaths"
 
 const useResourceCard = (resource?: LearningResource | null) => {
@@ -54,7 +55,10 @@ const useResourceCard = (resource?: LearningResource | null) => {
       }
     }, [user])
 
+  const onClick = useLearningResourceDetailSetCache(resource)
+
   return {
+    onClick,
     getDrawerHref,
     anchorEl,
     handleClosePopover,
@@ -94,6 +98,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
     handleAddToUserListClick,
     inUserList,
     inLearningPath,
+    onClick,
   } = useResourceCard(resource)
   const CardComponent =
     list && condensed
@@ -104,6 +109,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
   return (
     <>
       <CardComponent
+        onClick={onClick}
         resource={resource}
         href={resource ? getDrawerHref(resource.id) : undefined}
         onAddToLearningPathClick={handleAddToLearningPathClick}
