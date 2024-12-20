@@ -233,12 +233,13 @@ def test_get_completion(mocker):
             "system_prompt": SearchAgent.INSTRUCTIONS,
         }
     }
-    expected_return_value = [b"Here ", b"are ", b"some ", b"results"]
+    expected_return_value = ["Here ", "are ", "some ", "results"]
     mocker.patch(
         "ai_chat.agents.OpenAIAgent.stream_chat",
         return_value=mocker.Mock(response_gen=iter(expected_return_value)),
     )
-    search_agent = SearchAgent("test agent")
+    mock_hog = mocker.patch("ai_chat.agents.posthog.Posthog")
+    search_agent = SearchAgent("test agent", user_id="testuser@email.edu")
     search_agent.search_parameters = metadata["metadata"]["search_parameters"]
     search_agent.search_results = metadata["metadata"]["search_results"]
     search_agent.instructions = metadata["metadata"]["system_prompt"]
@@ -256,4 +257,14 @@ def test_get_completion(mocker):
         ]
     )
     search_agent.agent.stream_chat.assert_called_once_with("I want to learn physics")
+    mock_hog.return_value.capture.assert_called_once_with(
+        "testuser@email.edu",
+        event=search_agent.JOB_ID,
+        properties={
+            "question": "I want to learn physics",
+            "answer": "Here are some results",
+            "metadata": search_agent.get_comment_metadata(),
+            "user": "testuser@email.edu",
+        },
+    )
     assert "".join([str(value) for value in expected_return_value]) in results
