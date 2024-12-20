@@ -25,7 +25,6 @@ const CONVERSATION_OPTIONS = {
       prompt:
         "I would like to learn about linear regression, preferably at no cost.",
     },
-    { prompt: "What is the relationship between albedo and climate?" },
   ],
 }
 
