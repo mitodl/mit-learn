@@ -833,7 +833,6 @@ AI_MODEL = get_string(name="AI_MODEL", default="gpt-4o")
 AI_MODEL_API = get_string(name="AI_MODEL_API", default="openai")
 
 # AI proxy settings (aka LiteLLM)
-AI_CHAT_ENABLED = get_bool(name="AI_CHAT_ENABLED", default=False)
 AI_PROXY_CLASS = get_string(name="AI_PROXY_CLASS", default="")
 AI_PROXY_URL = get_string(name="AI_PROXY_URL", default="")
 AI_PROXY_AUTH_TOKEN = get_string(name="AI_PROXY_AUTH_TOKEN", default="")

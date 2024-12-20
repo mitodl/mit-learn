@@ -23,7 +23,7 @@ type NluxAiChatProps = Pick<
 
 const StyledDebugPre = styled.pre({
   width: "80%",
-  "white-space": "pre-wrap",
+  whiteSpace: "pre-wrap",
 })
 
 const NluxAiChat: React.FC<NluxAiChatProps> = (props) => {
