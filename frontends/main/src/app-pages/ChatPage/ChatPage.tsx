@@ -7,7 +7,7 @@ import { NluxAiChat } from "@/page-components/Nlux-AiChat/AiChat"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 
-const CONVERSATION_OPTTIONS = {
+const CONVERSATION_OPTIONS = {
   conversationStarters: [
     {
       prompt:
@@ -55,7 +55,7 @@ const ChatPage = () => {
           <StyledChat
             key={"agent"}
             send={sends["agent"]}
-            conversationOptions={CONVERSATION_OPTTIONS}
+            conversationOptions={CONVERSATION_OPTIONS}
           />
         ) : (
           <></>
