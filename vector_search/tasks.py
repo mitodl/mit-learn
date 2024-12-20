@@ -185,11 +185,9 @@ def embed_learning_resources_by_id(self, ids, skip_content_files):
         id__in=ids,
         published=True,
     )
-
     try:
         for resource_type in LEARNING_RESOURCE_TYPES:
-            resources = resources.filter(resource_type=resource_type)
-
+            embed_resources = resources.filter(resource_type=resource_type)
             [
                 index_tasks.append(
                     generate_embeddings.si(
@@ -198,12 +196,12 @@ def embed_learning_resources_by_id(self, ids, skip_content_files):
                     )
                 )
                 for chunk_ids in chunks(
-                    resources.order_by("id").values_list("id", flat=True),
+                    embed_resources.order_by("id").values_list("id", flat=True),
                     chunk_size=settings.QDRANT_CHUNK_SIZE,
                 )
             ]
             if not skip_content_files and resource_type == COURSE_TYPE:
-                for course in resources.filter(
+                for course in embed_resources.filter(
                     etl_source__in=RESOURCE_FILE_ETL_SOURCES
                 ).order_by("id"):
                     run = (
@@ -227,6 +225,7 @@ def embed_learning_resources_by_id(self, ids, skip_content_files):
                             chunk_size=settings.QDRANT_CHUNK_SIZE,
                         )
                     ]
+
     except:  # noqa: E722
         error = "start_embed_resources threw an error"
         log.exception(error)
