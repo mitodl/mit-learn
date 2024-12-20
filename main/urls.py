@@ -23,10 +23,13 @@ from rest_framework.routers import DefaultRouter
 
 from main.views import FeaturesViewSet
 
-# Post slugs can contain unicode characters, so a letter-matching pattern like [A-Za-z] doesn't work.  # noqa: E501
-# "[^\W]" Matches any character that is NOT a non-alphanumeric character, including underscores.  # noqa: E501
-# "[^\W]" will match all numbers, underscores, and letters, unicode or otherwise. To accept dashes  # noqa: E501
-# as well, that character is added to the pattern via an alternation (|).
+# Post slugs can contain unicode characters, so a letter-matching pattern
+# like [A-Za-z] doesn't work.
+# "[^\W]" Matches any character that is NOT a non-alphanumeric character,
+# including underscores.
+# "[^\W]" will match all numbers, underscores, and letters, unicode or
+# otherwise. To accept dashes as well, that character is added to the pattern
+# via an alternation (|).
 POST_SLUG_PATTERN = "([^\\W]|-)+"
 
 handler400 = "main.views.handle_error"
@@ -55,6 +58,7 @@ urlpatterns = (
         re_path(r"", include("testimonials.urls")),
         re_path(r"", include("news_events.urls")),
         re_path(r"", include(features_router.urls)),
+        re_path(r"", include("ai_chat.urls")),
         re_path(r"^app", RedirectView.as_view(url=settings.APP_BASE_URL)),
         # Hijack
         re_path(r"^hijack/", include("hijack.urls", namespace="hijack")),

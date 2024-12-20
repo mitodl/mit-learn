@@ -7,6 +7,7 @@ import {
   setMockResponse,
   waitFor,
   renderWithProviders,
+  expectLastProps,
 } from "@/test-utils"
 import ChannelSearch from "./ChannelSearch"
 import { assertHeadings, getByImageSrc } from "ol-test-utilities"
@@ -176,18 +177,13 @@ describe.each(ALL_CHANNEL_TYPES)(
         setupTopicApis(channel)
       }
       await screen.findAllByText(channel.title)
-      const expectedProps = expect.objectContaining({
+
+      expectLastProps(mockedChannelSearch, {
         constantSearchParams: {
           platform: ["ocw", "mitxonline"],
           department: ["8", "9"],
         },
       })
-      const expectedContext = expect.anything()
-
-      expect(mockedChannelSearch).toHaveBeenLastCalledWith(
-        expectedProps,
-        expectedContext,
-      )
     }, 10000)
     it("Does not display the channel search if search_filter is undefined", async () => {
       const { channel } = setupApis({

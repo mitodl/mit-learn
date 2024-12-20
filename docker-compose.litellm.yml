@@ -1,0 +1,23 @@
+include:
+  - docker-compose.services.yml
+
+services:
+  litellm:
+    profiles:
+      - backend
+    build:
+      dockerfile: Dockerfile-litellm
+    ports:
+      - "4000:4000"
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/litellm
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LITELLM_MASTER_KEY=${AI_PROXY_AUTH_TOKEN}
+      - LITELLM_SALT_KEY=${AI_PROXY_AUTH_TOKEN}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./config:/app

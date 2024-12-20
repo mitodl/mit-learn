@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useCallback } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter } from "next-nprogress-bar"
 import {
   Typography,
   styled,

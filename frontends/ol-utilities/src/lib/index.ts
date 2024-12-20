@@ -4,4 +4,5 @@ export {
   emptyOrNil,
   formatDurationClockTime,
   pluralize,
+  extractJSONFromComment,
 } from "./utils"

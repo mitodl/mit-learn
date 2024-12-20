@@ -4,13 +4,11 @@
   "workspaces": [
     "api",
     "main",
-    "ol-ckeditor",
     "ol-common",
     "ol-components",
     "ol-template",
     "ol-test-utilities",
-    "ol-utilities",
-    "ol-widgets"
+    "ol-utilities"
   ],
   "scripts": {
     "watch": "yarn workspace mit-learn watch",
@@ -41,7 +39,7 @@
     "@swc/core": "^1.4.11",
     "@swc/jest": "^0.2.26",
     "@testing-library/jest-dom": "^6.4.2",
-    "@testing-library/react": "16.0.1",
+    "@testing-library/react": "16.1.0",
     "@testing-library/user-event": "14.5.2",
     "@types/css-mediaquery": "^0.1.1",
     "@types/jest": "^29.5.2",

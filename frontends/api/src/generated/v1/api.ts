@@ -375,6 +375,12 @@ export interface ContentFile {
   file_type?: string | null
   /**
    *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  file_extension?: string | null
+  /**
+   *
    * @type {LearningResourceOfferor}
    * @memberof ContentFile
    */

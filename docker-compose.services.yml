@@ -38,6 +38,11 @@ services:
       - "6333:6333"
     volumes:
       - qdrant-data:/qdrant/storage
+    healthcheck:
+      test: ["CMD", "cat", ".qdrant-initialized"]
+      interval: 1s
+      timeout: 3s
+      retries: 10
   nginx:
     profiles:
       - backend

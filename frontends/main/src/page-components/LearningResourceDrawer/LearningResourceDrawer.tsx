@@ -1,8 +1,6 @@
 "use client"
 
-import React, { useCallback } from "react"
-import { RESOURCE_DRAWER_QUERY_PARAM } from "@/common/urls"
-import { ReadonlyURLSearchParams, useSearchParams } from "next/navigation"
+import React from "react"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import LearningResourceDrawerV2 from "./LearningResourceDrawerV2"
 import LearningResourceDrawerV1 from "./LearningResourceDrawerV1"
@@ -13,26 +11,4 @@ const LearningResourceDrawer = () => {
   return drawerV2 ? <LearningResourceDrawerV2 /> : <LearningResourceDrawerV1 />
 }
 
-const getOpenDrawerSearchParams = (
-  current: ReadonlyURLSearchParams,
-  resourceId: number,
-) => {
-  const newSearchParams = new URLSearchParams(current)
-  newSearchParams.set(RESOURCE_DRAWER_QUERY_PARAM, resourceId.toString())
-  return newSearchParams
-}
-
-const useResourceDrawerHref = () => {
-  const searchParams = useSearchParams()
-
-  return useCallback(
-    (resourceId: number) => {
-      const hash = typeof window !== "undefined" && window?.location.hash
-      return `?${getOpenDrawerSearchParams(searchParams, resourceId)}${hash || ""}`
-    },
-    [searchParams],
-  )
-}
-
 export default LearningResourceDrawer
-export { useResourceDrawerHref }
