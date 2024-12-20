@@ -803,7 +803,6 @@ class ContentFileSerializer(serializers.ModelSerializer):
             "uid",
             "title",
             "description",
-            "published",
             "url",
             "content_feature_type",
             "content_type",

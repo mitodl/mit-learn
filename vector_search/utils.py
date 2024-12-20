@@ -222,7 +222,6 @@ def _process_content_embeddings(serialized_content):
                         "offered_by",
                         "run_readable_id",
                         "resource_readable_id",
-                        "published",
                         "content_type",
                         "file_extension",
                         "content_feature_type",
@@ -337,7 +336,6 @@ def vector_search(
     search_filter = models.Filter(
         must=[
             *qdrant_conditions,
-            models.FieldCondition(key="published", match=models.MatchValue(value=True)),
         ]
     )
     if query_string:
