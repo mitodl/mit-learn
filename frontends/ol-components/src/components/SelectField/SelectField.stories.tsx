@@ -23,7 +23,6 @@ const meta: Meta<typeof SelectField> = {
   },
   args: {
     onChange: fn(),
-    placeholder: "placeholder",
     label: "Label",
     helpText: "Help text the quick brown fox jumps over the lazy dog",
     errorText: "Error text the quick brown fox jumps over the lazy dog",
@@ -111,7 +110,6 @@ export const States: Story = {
     )
   },
   argTypes: {
-    placeholder: { table: { disable: true } },
     value: { table: { disable: true } },
     error: { table: { disable: true } },
     disabled: { table: { disable: true } },

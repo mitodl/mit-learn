@@ -517,6 +517,43 @@ export interface ChannelUnitDetail {
   unit: LearningResourceOfferorDetail
 }
 /**
+ * DRF serializer for chatbot requests
+ * @export
+ * @interface ChatRequestRequest
+ */
+export interface ChatRequestRequest {
+  /**
+   *
+   * @type {string}
+   * @memberof ChatRequestRequest
+   */
+  message: string
+  /**
+   *
+   * @type {string}
+   * @memberof ChatRequestRequest
+   */
+  model?: string
+  /**
+   *
+   * @type {number}
+   * @memberof ChatRequestRequest
+   */
+  temperature?: number
+  /**
+   *
+   * @type {string}
+   * @memberof ChatRequestRequest
+   */
+  instructions?: string
+  /**
+   *
+   * @type {boolean}
+   * @memberof ChatRequestRequest
+   */
+  clear_history?: boolean
+}
+/**
  * Serializer class for course run ContentFiles
  * @export
  * @interface ContentFile
@@ -7382,6 +7419,173 @@ export const ChannelsListChannelTypeEnum = {
 } as const
 export type ChannelsListChannelTypeEnum =
   (typeof ChannelsListChannelTypeEnum)[keyof typeof ChannelsListChannelTypeEnum]
+
+/**
+ * ChatAgentApi - axios parameter creator
+ * @export
+ */
+export const ChatAgentApiAxiosParamCreator = function (
+  configuration?: Configuration,
+) {
+  return {
+    /**
+     * Handle a POST request to the chatbot agent.
+     * @param {ChatRequestRequest} ChatRequestRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    chatAgentCreate: async (
+      ChatRequestRequest: ChatRequestRequest,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'ChatRequestRequest' is not null or undefined
+      assertParamExists(
+        "chatAgentCreate",
+        "ChatRequestRequest",
+        ChatRequestRequest,
+      )
+      const localVarPath = `/api/v0/chat_agent/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "POST",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      localVarHeaderParameter["Content-Type"] = "application/json"
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+      localVarRequestOptions.data = serializeDataIfNeeded(
+        ChatRequestRequest,
+        localVarRequestOptions,
+        configuration,
+      )
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+  }
+}
+
+/**
+ * ChatAgentApi - functional programming interface
+ * @export
+ */
+export const ChatAgentApiFp = function (configuration?: Configuration) {
+  const localVarAxiosParamCreator = ChatAgentApiAxiosParamCreator(configuration)
+  return {
+    /**
+     * Handle a POST request to the chatbot agent.
+     * @param {ChatRequestRequest} ChatRequestRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async chatAgentCreate(
+      ChatRequestRequest: ChatRequestRequest,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<string>
+    > {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.chatAgentCreate(
+        ChatRequestRequest,
+        options,
+      )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["ChatAgentApi.chatAgentCreate"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+  }
+}
+
+/**
+ * ChatAgentApi - factory interface
+ * @export
+ */
+export const ChatAgentApiFactory = function (
+  configuration?: Configuration,
+  basePath?: string,
+  axios?: AxiosInstance,
+) {
+  const localVarFp = ChatAgentApiFp(configuration)
+  return {
+    /**
+     * Handle a POST request to the chatbot agent.
+     * @param {ChatAgentApiChatAgentCreateRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    chatAgentCreate(
+      requestParameters: ChatAgentApiChatAgentCreateRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<string> {
+      return localVarFp
+        .chatAgentCreate(requestParameters.ChatRequestRequest, options)
+        .then((request) => request(axios, basePath))
+    },
+  }
+}
+
+/**
+ * Request parameters for chatAgentCreate operation in ChatAgentApi.
+ * @export
+ * @interface ChatAgentApiChatAgentCreateRequest
+ */
+export interface ChatAgentApiChatAgentCreateRequest {
+  /**
+   *
+   * @type {ChatRequestRequest}
+   * @memberof ChatAgentApiChatAgentCreate
+   */
+  readonly ChatRequestRequest: ChatRequestRequest
+}
+
+/**
+ * ChatAgentApi - object-oriented interface
+ * @export
+ * @class ChatAgentApi
+ * @extends {BaseAPI}
+ */
+export class ChatAgentApi extends BaseAPI {
+  /**
+   * Handle a POST request to the chatbot agent.
+   * @param {ChatAgentApiChatAgentCreateRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ChatAgentApi
+   */
+  public chatAgentCreate(
+    requestParameters: ChatAgentApiChatAgentCreateRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return ChatAgentApiFp(this.configuration)
+      .chatAgentCreate(requestParameters.ChatRequestRequest, options)
+      .then((request) => request(this.axios, this.basePath))
+  }
+}
 
 /**
  * CkeditorApi - axios parameter creator

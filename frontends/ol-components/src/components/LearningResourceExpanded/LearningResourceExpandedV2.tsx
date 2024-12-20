@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from "react"
+import React, { useCallback, useEffect, useRef, useState } from "react"
 import styled from "@emotion/styled"
 import Skeleton from "@mui/material/Skeleton"
 import { default as NextImage } from "next/image"
@@ -292,6 +292,7 @@ const CarouselContainer = styled.div({
 })
 
 type LearningResourceExpandedV2Props = {
+  resourceId: number
   resource?: LearningResource
   user?: User
   shareUrl?: string
@@ -658,13 +659,18 @@ const ResourceDescription = ({ resource }: { resource?: LearningResource }) => {
         data-testid="drawer-description-text"
         ref={descriptionRendered}
         /**
-         * Resource descriptions can contain HTML. They are santiized on the
+         * Resource descriptions can contain HTML. They are sanitized on the
          * backend during ETL. This is safe to render.
          */
         dangerouslySetInnerHTML={{ __html: resource.description || "" }}
       />
       {(isClamped || clampedOnFirstRender.current) && (
-        <Link color="red" size="small" onClick={() => setExpanded(!isExpanded)}>
+        <Link
+          scroll={false}
+          color="red"
+          size="small"
+          onClick={() => setExpanded(!isExpanded)}
+        >
           {isExpanded ? "Show less" : "Show more"}
         </Link>
       )}
@@ -673,6 +679,7 @@ const ResourceDescription = ({ resource }: { resource?: LearningResource }) => {
 }
 
 const LearningResourceExpandedV2: React.FC<LearningResourceExpandedV2Props> = ({
+  resourceId,
   resource,
   imgConfig,
   user,
@@ -684,8 +691,14 @@ const LearningResourceExpandedV2: React.FC<LearningResourceExpandedV2Props> = ({
   onAddToUserListClick,
   closeDrawer,
 }) => {
+  const outerContainerRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (outerContainerRef.current && outerContainerRef.current.scrollTo) {
+      outerContainerRef.current.scrollTo(0, 0)
+    }
+  }, [resourceId])
   return (
-    <OuterContainer>
+    <OuterContainer ref={outerContainerRef}>
       <TitleSection
         resource={resource}
         closeDrawer={closeDrawer ?? (() => {})}

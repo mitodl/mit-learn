@@ -34,6 +34,14 @@ module.exports = {
   },
   rules: {
     ...restrictedImports({
+      paths: [
+        {
+          name: "lodash",
+          importNames: ["default"],
+          message:
+            "Default import from 'lodash' is not allowed. Use named imports instead.",
+        },
+      ],
       patterns: [
         {
           group: ["next/navigation"],
@@ -44,6 +52,11 @@ module.exports = {
           group: ["@mui/material*", "@mui/lab/*"],
           message:
             "Please use 'ol-components' isInterfaceDeclaration; Direct use of @mui/material is limited to ol-components.",
+        },
+        {
+          group: ["**/LearningResourceDrawer/LearningResourceDrawer"],
+          message:
+            "The LearningResourceDrawer should be lazy loaded with dynamic import.",
         },
       ],
     }),

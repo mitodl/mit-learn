@@ -42,7 +42,12 @@ import ResourceCarousel from "@/page-components/ResourceCarousel/ResourceCarouse
 import UserListDetailsTab from "./UserListDetailsTab"
 import { SettingsPage } from "./SettingsPage"
 import { DASHBOARD_HOME, MY_LISTS, PROFILE, SETTINGS } from "@/common/urls"
-import LearningResourceDrawer from "@/page-components/LearningResourceDrawer/LearningResourceDrawer"
+import dynamic from "next/dynamic"
+
+const LearningResourceDrawer = dynamic(
+  () =>
+    import("@/page-components/LearningResourceDrawer/LearningResourceDrawer"),
+)
 
 /**
  *

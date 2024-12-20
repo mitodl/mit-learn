@@ -177,6 +177,7 @@ type ResourceCarouselProps = {
    */
   titleComponent?: React.ElementType
   titleVariant?: TypographyProps["variant"]
+  excludeResourceId?: number
 }
 /**
  * A tabbed carousel that fetches resources based on the configuration provided.
@@ -197,6 +198,7 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
   "data-testid": dataTestId,
   titleComponent = "h4",
   titleVariant = "h4",
+  excludeResourceId,
 }) => {
   const [tab, setTab] = React.useState("0")
   const [ref, setRef] = React.useState<HTMLDivElement | null>(null)
@@ -306,13 +308,15 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
                       {...tabConfig.cardProps}
                     />
                   ))
-                : resources.map((resource) => (
-                    <ResourceCard
-                      key={resource.id}
-                      resource={resource}
-                      {...tabConfig.cardProps}
-                    />
-                  ))}
+                : resources.map((resource) =>
+                    resource.id !== excludeResourceId ? (
+                      <ResourceCard
+                        key={resource.id}
+                        resource={resource}
+                        {...tabConfig.cardProps}
+                      />
+                    ) : null,
+                  )}
             </StyledCarousel>
           )}
         </PanelChildren>
