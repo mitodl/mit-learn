@@ -3485,6 +3485,11 @@ components:
           readOnly: true
         transcript:
           type: string
+        audio_url:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 2048
         episode_link:
           type: string
           format: uri
