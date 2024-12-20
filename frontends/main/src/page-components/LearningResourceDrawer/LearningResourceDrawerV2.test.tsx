@@ -10,8 +10,7 @@ import LearningResourceDrawerV2 from "./LearningResourceDrawerV2"
 import { urls, factories, setMockResponse } from "api/test-utils"
 import { LearningResourceExpandedV2 } from "ol-components"
 import { RESOURCE_DRAWER_QUERY_PARAM } from "@/common/urls"
-import { CourseResource, LearningResource, ResourceTypeEnum } from "api"
-import { ControlledPromise } from "ol-test-utilities"
+import { LearningResource, ResourceTypeEnum } from "api"
 import { makeUserSettings } from "@/test-utils/factories"
 import type { User } from "api/hooks/user"
 
@@ -22,22 +21,6 @@ jest.mock("ol-components", () => {
     LearningResourceExpandedV2: jest.fn(actual.LearningResourceExpandedV2),
   }
 })
-
-const makeSearchResponse = (results: CourseResource[] | LearningResource[]) => {
-  const responseData = {
-    metadata: {
-      suggestions: [],
-      aggregations: {},
-    },
-    count: results.length,
-    results: results,
-    next: null,
-    previous: null,
-  }
-  const promise = new ControlledPromise()
-  promise.resolve(responseData)
-  return responseData
-}
 
 const mockedPostHogCapture = jest.fn()
 
@@ -50,52 +33,6 @@ jest.mock("posthog-js/react", () => ({
     return { capture: mockedPostHogCapture }
   },
 }))
-
-const setupApis = (resource: LearningResource) => {
-  setMockResponse.get(
-    urls.learningResources.details({ id: resource.id }),
-    resource,
-  )
-  const count = 10
-  const similarResources = factories.learningResources.resources({
-    count,
-  }).results
-  setMockResponse.get(urls.userMe.get(), null, { code: 403 })
-  setMockResponse.get(
-    urls.learningResources.details({ id: resource.id }),
-    resource,
-  )
-  setMockResponse.get(
-    urls.learningResources.vectorSimilar({ id: resource.id }),
-    similarResources,
-  )
-  const topicsCourses: CourseResource[] = []
-  resource.topics?.forEach((topic) => {
-    const topicCourses = factories.learningResources.courses({ count: 10 })
-    topicCourses.results.map((course) => {
-      course.topics = [factories.learningResources.topic({ name: topic.name })]
-    })
-    topicsCourses.push(...topicCourses.results)
-  })
-  resource.topics?.forEach((topic) => {
-    setMockResponse.get(
-      expect.stringContaining(
-        urls.search.resources({
-          limit: 12,
-          resource_type: ["course"],
-          sortby: "-views",
-          topic: [topic.name],
-        }),
-      ),
-      makeSearchResponse(
-        topicsCourses.filter(
-          (course) => course.topics?.[0].name === topic.name,
-        ),
-      ),
-    )
-  })
-  return { resource, similarResources }
-}
 
 describe("LearningResourceDrawerV2", () => {
   const setupApis = (
