@@ -208,7 +208,7 @@ def test_search_agent_tool(settings, mocker):
         "q": "physics",
         "resource_type": ["course", "program"],
         "free": False,
-        "certificate": True,
+        "certification": True,
         "offered_by": "xpro",
         "limit": 5,
     }

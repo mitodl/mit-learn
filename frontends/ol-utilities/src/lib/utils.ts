@@ -71,5 +71,10 @@ export const pluralize = (singular: string, count: number, plural?: string) => {
  */
 export const extractJSONFromComment = (comment: string) => {
   const jsonStr = comment.toString().match(/<!-{2}(.*)-{2}>/)?.[1] || "{}"
-  return JSON.parse(jsonStr)
+  try {
+    return JSON.parse(jsonStr)
+  } catch (e) {
+    console.error("error parsing JSON from comment", comment, e)
+    return {}
+  }
 }
