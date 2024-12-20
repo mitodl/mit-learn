@@ -246,6 +246,7 @@ interface LearningResourceListCardProps {
   inUserList?: boolean
   inLearningPath?: boolean
   draggable?: boolean
+  onClick?: React.MouseEventHandler
 }
 
 type CardActionButtonProps = Pick<
@@ -285,6 +286,7 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
   inLearningPath,
   inUserList,
   draggable,
+  onClick,
 }) => {
   if (isLoading) {
     return (
@@ -306,6 +308,7 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
       forwardClicksToLink
       className={className}
       draggable={draggable}
+      onClick={onClick}
     >
       <ListCard.Image
         src={resource.image?.url || DEFAULT_RESOURCE_IMG}

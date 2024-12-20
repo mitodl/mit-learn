@@ -168,6 +168,7 @@ interface LearningResourceCardProps {
   onAddToUserListClick?: ResourceIdCallback | null
   inUserList?: boolean
   inLearningPath?: boolean
+  onClick?: React.MouseEventHandler
 }
 
 const FILLED_PROPS = { variant: "primary" } as const
@@ -206,6 +207,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
   onAddToUserListClick,
   inLearningPath,
   inUserList,
+  onClick,
 }) => {
   if (isLoading) {
     const { width, height } = imgConfigs["column"]
@@ -233,6 +235,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
       forwardClicksToLink
       className={className}
       size={size}
+      onClick={onClick}
     >
       <Card.Image
         src={resource.image?.url ? resource.image?.url : DEFAULT_RESOURCE_IMG}
