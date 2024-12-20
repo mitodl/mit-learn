@@ -44,7 +44,6 @@ def test_vector_search_filters(mocker, client):
                 key="departments.department_id",
                 match=models.MatchAny(any=["6", "7"]),
             ),
-            models.FieldCondition(key="published", match=models.MatchValue(value=True)),
         ]
     )
 
@@ -91,7 +90,6 @@ def test_vector_search_filters_empty_query(mocker, client):
                 key="departments.department_id",
                 match=models.MatchAny(any=["6", "7"]),
             ),
-            models.FieldCondition(key="published", match=models.MatchValue(value=True)),
         ]
     )
 

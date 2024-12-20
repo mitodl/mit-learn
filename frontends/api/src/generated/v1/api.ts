@@ -303,12 +303,6 @@ export interface ContentFile {
   description?: string | null
   /**
    *
-   * @type {boolean}
-   * @memberof ContentFile
-   */
-  published?: boolean
-  /**
-   *
    * @type {string}
    * @memberof ContentFile
    */

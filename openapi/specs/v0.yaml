@@ -1723,8 +1723,6 @@ components:
         description:
           type: string
           nullable: true
-        published:
-          type: boolean
         url:
           type: string
           nullable: true
