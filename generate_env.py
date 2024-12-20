@@ -19,11 +19,11 @@ def get_secret_from_vault(path):
 
     client.token = token
     secret = client.secrets.kv.v2.read_secret_version(path=path)["data"]["data"]
-    return secret
+    return secret  # noqa: RET504
 
 
 def generate_env_file(env_path):
-    with open(env_path, "w") as env_file:
+    with open(env_path, "w") as env_file:  # noqa: PTH123
         for key, value in STATIC_VARIABLES.items():
             env_file.write(f"{key}={value}\n")
 
@@ -40,4 +40,4 @@ def generate_env_file(env_path):
 if __name__ == "__main__":
     env_path = ".env"
     generate_env_file(env_path)
-    print(f"Environment file generated at {env_path}")
+    print(f"Environment file generated at {env_path}")  # noqa: T201
