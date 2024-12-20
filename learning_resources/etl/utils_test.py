@@ -19,7 +19,7 @@ from learning_resources.constants import (
     RunStatus,
 )
 from learning_resources.etl import utils
-from learning_resources.etl.utils import parse_certification
+from learning_resources.etl.utils import parse_certification, parse_string_to_int
 from learning_resources.factories import (
     ContentFileFactory,
     LearningResourceFactory,
@@ -491,3 +491,11 @@ def test_text_from_sjson_content():
     assert utils.text_from_sjson_content(sjson_content) == (
         "This is the first subtitle. This is the second subtitle."
     )
+
+
+@pytest.mark.parametrize(
+    ("hour", "expected"), [("3", 3), (2, 2), ("", None), ("one", None)]
+)
+def test_parse_string_to_int(hour, expected):
+    """Test that the weekly hours are correctly parsed"""
+    assert parse_string_to_int(hour) == expected
