@@ -69,6 +69,13 @@ const DrawerContent: React.FC<{
   titleId: string
   closeDrawer: () => void
 }> = ({ resourceId, closeDrawer, titleId }) => {
+  /**
+   * Ideally the resource data should already exist in the query cache, e.g., by:
+   * - a server-side prefetch
+   * - or by `setQueryData` in the component that triggers opening this drawer.
+   *   The triggering component likely has the data already via some other API
+   *   call.
+   */
   const resource = useLearningResourcesDetail(Number(resourceId))
   const [signupEl, setSignupEl] = React.useState<HTMLElement | null>(null)
   const { data: user } = useUserMe()

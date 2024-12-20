@@ -350,7 +350,15 @@ const TitleSection: React.FC<{
   const title = resource ? (
     resource.title
   ) : (
-    <Skeleton variant="text" height={20} width="80%" />
+    <Skeleton
+      // Ideally the resource data is loaded before the drawer opens, e.g., by
+      // a server prefetch or by setQueryData in a parent component.
+      // This is a fallback.
+      aria-label="Resource Details Loading"
+      variant="text"
+      height={20}
+      width="80%"
+    />
   )
 
   return (
