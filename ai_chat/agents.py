@@ -218,9 +218,9 @@ offered_by: If a user asks for resources "offered by" or "from" an institution,
 you should include this parameter based on the following
 dictionary: {OfferedBy.as_dict()}  DO NOT USE THE offered_by FILTER OTHERWISE.
 
-certificate: true if the user is interested in resources that offer certificates, false
-if the user does not want resources with a certificate offered.  Do not used this filter
-if the user does not indicate a preference.
+certification: true if the user is interested in resources that offer certificates,
+false if the user does not want resources with a certificate offered.  Do not use
+this filter if the user does not indicate a preference.
 
 free: true if the user is interested in free resources, false if the user is only
 interested in paid resources. Do not used this filter if the user does not indicate
@@ -282,7 +282,7 @@ Search parameters: {{"q": "mathematics"}}
             q: The search query string
             resource_type: Filter by type of resource (course, program, etc)
             free: Filter for free resources only
-            certificate: Filter for resources offering certificates
+            certification: Filter for resources offering certificates
             offered_by: Filter by institution offering the resource
         """
 
@@ -301,7 +301,7 @@ Search parameters: {{"q": "mathematics"}}
             default=None,
             description="Whether the resource is free to access, true|false",
         )
-        certificate: Optional[bool] = Field(
+        certification: Optional[bool] = Field(
             default=None,
             description=(
                 "Whether the resource offers a certificate upon completion, true|false"
@@ -319,7 +319,7 @@ Search parameters: {{"q": "mathematics"}}
                     "q": "machine learning",
                     "resource_type": ["course"],
                     "free": True,
-                    "certificate": False,
+                    "certification": False,
                     "offered_by": "MIT",
                 }
             ]
@@ -366,7 +366,7 @@ Search parameters: {{"q": "mathematics"}}
             "resource_type": kwargs.get("resource_type"),
             "free": kwargs.get("free"),
             "offered_by": kwargs.get("offered_by"),
-            "certificate": kwargs.get("certificate"),
+            "certification": kwargs.get("certification"),
         }
         params.update({k: v for k, v in valid_params.items() if v is not None})
         self.search_parameters.append(params)
@@ -461,7 +461,6 @@ Search parameters: {{"q": "mathematics"}}
             "metadata": {
                 "search_parameters": self.search_parameters,
                 "search_results": self.search_results,
-                "system_prompt": self.instructions,
             }
         }
         return json.dumps(metadata)

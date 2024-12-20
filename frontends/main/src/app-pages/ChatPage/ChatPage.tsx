@@ -9,9 +9,23 @@ import { useFeatureFlagEnabled } from "posthog-js/react"
 
 const CONVERSATION_OPTTIONS = {
   conversationStarters: [
-    { prompt: "I'm interested in quantum computing." },
-    { prompt: "I want to learn about global warming." },
-    { prompt: "I am curious about AI applications for business." },
+    {
+      prompt:
+        "I'm interested in courses on quantum computing that offer certificates.",
+    },
+    {
+      prompt:
+        "I want to learn about global warming, can you recommend any videos?",
+    },
+    {
+      prompt:
+        "I am curious about AI applications for business.  Do you have any free courses about that?",
+    },
+    {
+      prompt:
+        "I would like to learn about linear regression, preferably at no cost.",
+    },
+    { prompt: "What is the relationship between albedo and climate?" },
   ],
 }
 
