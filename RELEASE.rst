@@ -1,6 +1,32 @@
 Release Notes
 =============
 
+Version 0.26.4
+--------------
+
+- Demo Course Recommendation Chatbot (not production-ready, for RC only) (#1918)
+- adding extra settings to allow us to use ollama locally (#1915)
+- adding new management command for creating collections and fixing init script (#1911)
+- config: Ignore env, venv, and kompose directories in Docker images
+- feat(generate_env.py): add script to generate .env file using hvac and OIDC authentication
+- Update dependency @testing-library/react to v16.1.0 (#1884)
+- Update version of react used in tests to same as production (#1917)
+- add topics carousels to v2 drawer (#1912)
+- fix v2 drawer scrolling issues (#1908)
+- restore main tag in root layout (#1909)
+- Reduce the initial JS size (#1901)
+- Contentfile chunk embeddings (#1905)
+- remove the opensearch based carousel from the drawer and rename the vector based one as the default (#1902)
+- Update dependency ruff to v0.8.3 (#1903)
+- drawer v2 - share resource (#1893)
+- Fix shellcheck issue
+- App env vars for use with local vault agent (#1868)
+- add bordered button variant (#1900)
+- fix storybook (#1899)
+- Filter params for vector search (#1889)
+- add nprogress loading bar (#1897)
+- populate file extensions for ocw (#1891)
+
 Version 0.26.3 (Released December 18, 2024)
 --------------
 
