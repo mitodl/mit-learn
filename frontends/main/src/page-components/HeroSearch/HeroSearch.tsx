@@ -17,6 +17,7 @@ import {
   SEARCH_NEW,
   SEARCH_POPULAR,
   SEARCH_UPCOMING,
+  ABOUT_NON_DEGREE_LEARNING_FRAGMENT,
 } from "@/common/urls"
 import {
   RiAwardLine,
@@ -26,7 +27,6 @@ import {
   RiTimeLine,
   RiVerifiedBadgeLine,
 } from "@remixicon/react"
-import { NON_DEGREE_LEARNING_FRAGMENT_IDENTIFIER } from "@/app-pages/AboutPage/AboutPage"
 import Image from "next/image"
 import { SearchField } from "@/page-components/SearchField/SearchField"
 
@@ -221,7 +221,8 @@ const HeroSearch: React.FC<{ imageIndex: number }> = ({ imageIndex }) => {
         <Typography>
           Explore MIT's{" "}
           <BoldLink
-            href={`${ABOUT}#${NON_DEGREE_LEARNING_FRAGMENT_IDENTIFIER}`}
+            href={`${ABOUT}#${ABOUT_NON_DEGREE_LEARNING_FRAGMENT}`}
+            prefetch={false}
           >
             Non-Degree Learning
           </BoldLink>
