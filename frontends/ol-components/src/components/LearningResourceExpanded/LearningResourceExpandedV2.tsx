@@ -423,19 +423,6 @@ const ImageSection: React.FC<{
   }
 }
 
-const getCallToActionUrl = (resource: LearningResource) => {
-  switch (resource.resource_type) {
-    case ResourceTypeEnum.PodcastEpisode:
-      return (
-        resource.podcast_episode?.episode_link ||
-        resource.podcast_episode?.audio_url ||
-        resource.url
-      )
-    default:
-      return resource.url
-  }
-}
-
 const getCallToActionText = (resource: LearningResource): string => {
   const accessCourseMaterials = "Access Course Materials"
   const watchOnYouTube = "Watch on YouTube"
@@ -542,7 +529,7 @@ const CallToActionSection = ({
           data-ph-resource-type={resource.resource_type}
           data-ph-resource-id={resource.id}
           endIcon={<RiExternalLinkLine />}
-          href={getCallToActionUrl(resource) || ""}
+          href={resource.url || ""}
         >
           {cta}
         </StyledLink>
