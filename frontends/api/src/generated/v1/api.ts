@@ -4415,6 +4415,12 @@ export interface PodcastEpisode {
    * @type {string}
    * @memberof PodcastEpisode
    */
+  audio_url?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastEpisode
+   */
   episode_link?: string | null
   /**
    *
@@ -4441,6 +4447,12 @@ export interface PodcastEpisodeRequest {
    * @memberof PodcastEpisodeRequest
    */
   transcript?: string
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastEpisodeRequest
+   */
+  audio_url?: string | null
   /**
    *
    * @type {string}
