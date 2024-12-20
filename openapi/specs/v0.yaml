@@ -314,6 +314,121 @@ paths:
               schema:
                 $ref: '#/components/schemas/CKEditorSettings'
           description: ''
+  /api/v0/content_files_vector_search/:
+    get:
+      operationId: content_files_vector_search_retrieve
+      description: Vector Search for content
+      summary: Content File Vector Search
+      parameters:
+      - in: query
+        name: content_feature_type
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        description: The feature type of the content file. Possible options are at
+          api/v1/course_features/
+      - in: query
+        name: course_number
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        description: Course number of the content file
+      - in: query
+        name: file_extension
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        description: 'The extension of the content file. '
+      - in: query
+        name: key
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        description: The filename of the content file
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Number of results to return per page
+      - in: query
+        name: offered_by
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        description: Offeror of the content file
+      - in: query
+        name: offset
+        schema:
+          type: integer
+        description: The initial index from which to return the results
+      - in: query
+        name: platform
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        description: platform(s) of the content file
+      - in: query
+        name: q
+        schema:
+          type: string
+          minLength: 1
+        description: The search text
+      - in: query
+        name: resource_readable_id
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        description: The readable_id value of the parent learning resource for the
+          content file
+      - in: query
+        name: run_readable_id
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        description: The readable_id value of the run that the content file belongs
+          to
+      - in: query
+        name: sortby
+        schema:
+          enum:
+          - id
+          - -id
+          - resource_readable_id
+          - -resource_readable_id
+          type: string
+          minLength: 1
+        description: |-
+          if the parameter starts with '-' the sort is in descending order
+
+          * `id` - id
+          * `-id` - -id
+          * `resource_readable_id` - resource_readable_id
+          * `-resource_readable_id` - -resource_readable_id
+      tags:
+      - content_files_vector_search
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentFileVectorSearchResponse'
+          description: ''
   /api/v0/learning_resources_search_admin_params/:
     get:
       operationId: learning_resources_search_admin_params_retrieve
@@ -1618,6 +1733,184 @@ components:
           default: false
       required:
       - message
+    ContentFile:
+      type: object
+      description: Serializer class for course run ContentFiles
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        run_id:
+          type: integer
+        run_title:
+          type: string
+        run_slug:
+          type: string
+        departments:
+          type: array
+          items:
+            $ref: '#/components/schemas/LearningResourceDepartment'
+        semester:
+          type: string
+        year:
+          type: integer
+        topics:
+          type: array
+          items:
+            $ref: '#/components/schemas/LearningResourceTopic'
+        key:
+          type: string
+          nullable: true
+          maxLength: 1024
+        uid:
+          type: string
+          nullable: true
+          maxLength: 36
+        title:
+          type: string
+          nullable: true
+          maxLength: 1024
+        description:
+          type: string
+          nullable: true
+        url:
+          type: string
+          nullable: true
+        content_feature_type:
+          type: array
+          items:
+            type: string
+        content_type:
+          $ref: '#/components/schemas/ContentTypeEnum'
+        content:
+          type: string
+          nullable: true
+        content_title:
+          type: string
+          nullable: true
+          maxLength: 1024
+        content_author:
+          type: string
+          nullable: true
+          maxLength: 1024
+        content_language:
+          type: string
+          nullable: true
+          maxLength: 24
+        image_src:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
+        resource_id:
+          type: string
+        resource_readable_id:
+          type: string
+        course_number:
+          type: array
+          items:
+            type: string
+          description: Extract the course number(s) from the associated course
+          readOnly: true
+        file_type:
+          type: string
+          nullable: true
+          maxLength: 128
+        file_extension:
+          type: string
+          nullable: true
+          maxLength: 32
+        offered_by:
+          $ref: '#/components/schemas/LearningResourceOfferor'
+        platform:
+          $ref: '#/components/schemas/LearningResourcePlatform'
+        run_readable_id:
+          type: string
+      required:
+      - content_feature_type
+      - course_number
+      - departments
+      - id
+      - offered_by
+      - platform
+      - resource_id
+      - resource_readable_id
+      - run_id
+      - run_readable_id
+      - run_slug
+      - run_title
+      - semester
+      - topics
+      - year
+    ContentFileVectorSearchResponse:
+      type: object
+      description: SearchResponseSerializer with OpenAPI annotations for Content Files
+        search
+      properties:
+        count:
+          type: integer
+          readOnly: true
+        next:
+          type: string
+          nullable: true
+          readOnly: true
+        previous:
+          type: string
+          nullable: true
+          readOnly: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContentFile'
+          readOnly: true
+        metadata:
+          type: object
+          properties:
+            aggregations:
+              type: object
+              additionalProperties:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    key:
+                      type: string
+                    doc_count:
+                      type: integer
+                  required:
+                  - doc_count
+                  - key
+            suggestions:
+              type: array
+              items:
+                type: string
+          required:
+          - aggregations
+          - suggestions
+          readOnly: true
+      required:
+      - count
+      - metadata
+      - next
+      - previous
+      - results
+    ContentTypeEnum:
+      enum:
+      - page
+      - file
+      - video
+      - pdf
+      type: string
+      description: |-
+        * `page` - page
+        * `file` - file
+        * `video` - video
+        * `pdf` - pdf
+      x-enum-descriptions:
+      - page
+      - file
+      - video
+      - pdf
     Counts:
       type: object
       properties:

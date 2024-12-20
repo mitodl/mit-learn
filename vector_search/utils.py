@@ -11,26 +11,15 @@ from learning_resources_search.serializers import (
     serialize_bulk_content_files,
     serialize_bulk_learning_resources,
 )
+from vector_search.constants import (
+    CONTENT_FILES_COLLECTION_NAME,
+    QDRANT_CONTENT_FILE_INDEXES,
+    QDRANT_CONTENT_FILE_PARAM_MAP,
+    QDRANT_LEARNING_RESOURCE_INDEXES,
+    QDRANT_RESOURCE_PARAM_MAP,
+    RESOURCES_COLLECTION_NAME,
+)
 from vector_search.encoders.utils import dense_encoder
-
-QDRANT_PARAM_MAP = {
-    "readable_id": "readable_id",
-    "resource_type": "resource_type",
-    "certification": "certification",
-    "certification_type": "certification_type.code",
-    "professional": "professional",
-    "free": "free",
-    "course_feature": "course_feature",
-    "content_feature_type": "content_feature_type",
-    "topic": "topics[].name",
-    "ocw_topic": "ocw_topics",
-    "level": "runs[].level.code",
-    "department": "departments.department_id",
-    "platform": "platform.code",
-    "offered_by": "offered_by.code",
-    "delivery": "delivery[].code",
-    "resource_category": "resource_category",
-}
 
 
 def qdrant_client():
@@ -79,10 +68,8 @@ def create_qdrand_collections(force_recreate):
         even if they already exist
     """
     client = qdrant_client()
-    resources_collection_name = f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources"
-    content_files_collection_name = (
-        f"{settings.QDRANT_BASE_COLLECTION_NAME}.content_files"
-    )
+    resources_collection_name = RESOURCES_COLLECTION_NAME
+    content_files_collection_name = CONTENT_FILES_COLLECTION_NAME
 
     encoder = dense_encoder()
     if (
@@ -137,6 +124,24 @@ def create_qdrand_collections(force_recreate):
                 ),
             ),
         )
+    if force_recreate:
+        create_qdrant_indexes()
+
+
+def create_qdrant_indexes():
+    client = qdrant_client()
+    for index_field in QDRANT_LEARNING_RESOURCE_INDEXES:
+        client.create_payload_index(
+            collection_name=RESOURCES_COLLECTION_NAME,
+            field_name=index_field,
+            field_schema=QDRANT_LEARNING_RESOURCE_INDEXES[index_field],
+        )
+    for index_field in QDRANT_CONTENT_FILE_INDEXES:
+        client.create_payload_index(
+            collection_name=CONTENT_FILES_COLLECTION_NAME,
+            field_name=index_field,
+            field_schema=QDRANT_CONTENT_FILE_INDEXES[index_field],
+        )
 
 
 def vector_point_id(readable_id):
@@ -164,7 +169,7 @@ def _process_resource_embeddings(serialized_resources):
         ids.append(vector_point_id(vector_point_key))
         docs.append(
             f'{doc.get("title")} {doc.get("description")} '
-            f'{doc.get("full_description")} {doc.get("content")}'
+            f'{doc.get("full_description")}'
         )
     embeddings = encoder.encode_batch(docs)
     return points_generator(ids, metadata, embeddings, vector_name)
@@ -179,7 +184,12 @@ def _get_text_splitter(encoder):
         return TokenTextSplitter(encoding_name=encoder.token_encoding_name)
     else:
         # default for use with fastembed
-        return RecursiveCharacterTextSplitter(chunk_size=512, chunk_overlap=0)
+        return RecursiveCharacterTextSplitter(
+            chunk_size=512,
+            chunk_overlap=50,
+            add_start_index=True,
+            separators=["\n\n", "\n", ".", " ", ""],
+        )
 
 
 def _process_content_embeddings(serialized_content):
@@ -197,7 +207,7 @@ def _process_content_embeddings(serialized_content):
         split_docs = text_splitter.create_documents(
             texts=[doc.get("content")], metadatas=[doc]
         )
-        split_texts = [d.page_content for d in split_docs]
+        split_texts = [d.page_content for d in split_docs if d.page_content]
         resource_vector_point_id = vector_point_id(doc["resource_readable_id"])
         split_metadatas = [
             {
@@ -211,19 +221,22 @@ def _process_content_embeddings(serialized_content):
                         "platform",
                         "offered_by",
                         "run_readable_id",
+                        "resource_readable_id",
                         "content_type",
+                        "file_extension",
                         "content_feature_type",
                         "course_number",
                         "file_type",
                         "description",
                         "key",
-                        "run_title",
-                        "_id",
+                        "url",
                     ]
                 },
             }
             for chunk_id, d in enumerate(split_docs)
+            if d.page_content
         ]
+
         split_ids = [
             vector_point_id(
                 f'{doc['resource_readable_id']}.{doc['run_readable_id']}.{doc['key']}.{md["chunk_number"]}'
@@ -243,7 +256,7 @@ def _process_content_embeddings(serialized_content):
         ids.extend(split_ids)
     if len(resource_points) > 0:
         client.update_vectors(
-            collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
+            collection_name=RESOURCES_COLLECTION_NAME,
             points=resource_points,
         )
     return points_generator(ids, metadata, embeddings, vector_name)
@@ -259,10 +272,9 @@ def embed_learning_resources(ids, resource_type):
     """
 
     client = qdrant_client()
-    resources_collection_name = f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources"
-    content_files_collection_name = (
-        f"{settings.QDRANT_BASE_COLLECTION_NAME}.content_files"
-    )
+
+    resources_collection_name = RESOURCES_COLLECTION_NAME
+    content_files_collection_name = CONTENT_FILES_COLLECTION_NAME
 
     create_qdrand_collections(force_recreate=False)
     if resource_type != CONTENT_FILE_TYPE:
@@ -277,11 +289,28 @@ def embed_learning_resources(ids, resource_type):
     client.upload_points(collection_name, points=points, wait=False)
 
 
+def _resource_vector_hits(search_result):
+    hits = [hit.payload["readable_id"] for hit in search_result]
+    """
+     Always lookup learning resources by readable_id for portability
+     in case we load points from external systems
+     """
+    return LearningResourceSerializer(
+        LearningResource.objects.for_serialization().filter(readable_id__in=hits),
+        many=True,
+    ).data
+
+
+def _content_file_vector_hits(search_result):
+    return [hit.payload for hit in search_result]
+
+
 def vector_search(
     query_string: str,
     params: dict,
     limit: int = 10,
     offset: int = 10,
+    search_collection=RESOURCES_COLLECTION_NAME,
 ):
     """
     Perform a vector search given a query string
@@ -291,23 +320,28 @@ def vector_search(
         params (dict): Additional search filters
         limit (int): Max number of results to return
         offset (int): Offset to start from
+        search_collection (str): name of the collection to search
     Returns:
         dict:
             Response dict containing "hits" with search results
             and "total" with total count
     """
+
     client = qdrant_client()
-    qdrant_conditions = qdrant_query_conditions(params)
+
+    qdrant_conditions = qdrant_query_conditions(
+        params, collection_name=search_collection
+    )
+
     search_filter = models.Filter(
         must=[
             *qdrant_conditions,
-            models.FieldCondition(key="published", match=models.MatchValue(value=True)),
-        ],
+        ]
     )
     if query_string:
         encoder = dense_encoder()
         search_result = client.query_points(
-            collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
+            collection_name=search_collection,
             using=encoder.model_short_name(),
             query=encoder.encode(query_string),
             query_filter=search_filter,
@@ -316,32 +350,29 @@ def vector_search(
         ).points
     else:
         search_result = client.scroll(
-            collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
+            collection_name=search_collection,
             scroll_filter=search_filter,
             limit=limit,
             offset=offset,
         )[0]
-    hits = [hit.payload["readable_id"] for hit in search_result]
+
+    if search_collection == RESOURCES_COLLECTION_NAME:
+        hits = _resource_vector_hits(search_result)
+    else:
+        hits = _content_file_vector_hits(search_result)
     count_result = client.count(
-        collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
+        collection_name=search_collection,
         count_filter=search_filter,
         exact=True,
     )
 
-    """
-    Always lookup learning resources by readable_id for portability
-    in case we load points from external systems
-    """
     return {
-        "hits": LearningResourceSerializer(
-            LearningResource.objects.for_serialization().filter(readable_id__in=hits),
-            many=True,
-        ).data,
+        "hits": hits,
         "total": {"value": count_result.count},
     }
 
 
-def qdrant_query_conditions(params):
+def qdrant_query_conditions(params, collection_name=RESOURCES_COLLECTION_NAME):
     """
     Generate Qdrant query conditions from query params
     Args:
@@ -351,6 +382,10 @@ def qdrant_query_conditions(params):
             List of Qdrant FieldCondition objects
     """
     conditions = []
+    if collection_name == RESOURCES_COLLECTION_NAME:
+        QDRANT_PARAM_MAP = QDRANT_RESOURCE_PARAM_MAP
+    else:
+        QDRANT_PARAM_MAP = QDRANT_CONTENT_FILE_PARAM_MAP
     if not params:
         return conditions
     for param in params:
@@ -374,48 +409,33 @@ def qdrant_query_conditions(params):
     return conditions
 
 
-def filter_existing_qdrant_points(learning_resources):
-    """
-    Filter learning resources that already have embeddings
-    Args:
-        learning_resources (QuerySet): Learning resources to check
-    Returns:
-        Queryset of learning resources that do not have embeddings in Qdrant
-
-    """
-    readable_ids = [
-        learning_resource.readable_id for learning_resource in learning_resources
-    ]
+def filter_existing_qdrant_points(
+    values,
+    lookup_field="readable_id",
+    collection_name=RESOURCES_COLLECTION_NAME,
+):
     client = qdrant_client()
     results = client.scroll(
-        collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
+        collection_name=collection_name,
         scroll_filter=models.Filter(
             must=models.FieldCondition(
-                key="readable_id", match=models.MatchAny(any=readable_ids)
+                key=lookup_field, match=models.MatchAny(any=values)
             )
         ),
     )
     next_page_offset = results[1]
-    existing_readable_ids = [point.payload["readable_id"] for point in results[0]]
+    existing_values = [point.payload[lookup_field] for point in results[0]]
     # go page by page to fetch all existing readable ids
     while next_page_offset:
         results = client.scroll(
-            collection_name=f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources",
+            collection_name=collection_name,
             scroll_filter=models.Filter(
                 must=models.FieldCondition(
-                    key="readable_id", match=models.MatchAny(any=readable_ids)
+                    key=lookup_field, match=models.MatchAny(any=values)
                 )
             ),
             offset=next_page_offset,
         )
-        existing_readable_ids.extend(
-            [point.payload["readable_id"] for point in results[0]]
-        )
+        existing_values.extend([point.payload[lookup_field] for point in results[0]])
         next_page_offset = results[1]
-    return LearningResource.objects.filter(
-        readable_id__in=[
-            readable_id
-            for readable_id in readable_ids
-            if readable_id not in existing_readable_ids
-        ]
-    )
+    return [value for value in values if value not in existing_values]

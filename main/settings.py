@@ -804,6 +804,11 @@ QDRANT_SPARSE_MODEL = get_string(
     name="QDRANT_SPARSE_MODEL", default="prithivida/Splade_PP_en_v1"
 )
 
+QDRANT_CHUNK_SIZE = get_int(
+    name="QDRANT_CHUNK_SIZE",
+    default=100,
+)
+
 QDRANT_ENCODER = get_string(
     name="QDRANT_ENCODER", default="vector_search.encoders.fastembed.FastEmbedEncoder"
 )
