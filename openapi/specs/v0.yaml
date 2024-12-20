@@ -3488,7 +3488,6 @@ components:
         audio_url:
           type: string
           format: uri
-          nullable: true
           maxLength: 2048
         episode_link:
           type: string
@@ -3503,6 +3502,7 @@ components:
           type: string
           nullable: true
       required:
+      - audio_url
       - id
       - podcasts
     PodcastEpisodeResource:

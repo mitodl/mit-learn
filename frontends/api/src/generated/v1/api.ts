@@ -4157,7 +4157,7 @@ export interface PodcastEpisode {
    * @type {string}
    * @memberof PodcastEpisode
    */
-  audio_url?: string | null
+  audio_url: string
   /**
    *
    * @type {string}
@@ -4194,7 +4194,7 @@ export interface PodcastEpisodeRequest {
    * @type {string}
    * @memberof PodcastEpisodeRequest
    */
-  audio_url?: string | null
+  audio_url: string
   /**
    *
    * @type {string}

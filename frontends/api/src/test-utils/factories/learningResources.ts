@@ -460,6 +460,7 @@ const podcastEpisode: LearningResourceFactory<PodcastEpisodeResource> = (
       podcast_episode: {
         id: uniqueEnforcerId.enforce(() => faker.number.int()),
         duration: faker.helpers.arrayElement(["PT1H13M44S", "PT2H30M", "PT1M"]),
+        audio_url: faker.internet.url(),
         episode_link: faker.internet.url(),
       },
     },
