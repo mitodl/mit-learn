@@ -426,7 +426,11 @@ const ImageSection: React.FC<{
 const getCallToActionUrl = (resource: LearningResource) => {
   switch (resource.resource_type) {
     case ResourceTypeEnum.PodcastEpisode:
-      return resource.podcast_episode?.episode_link
+      return (
+        resource.podcast_episode?.episode_link ||
+        resource.podcast_episode?.audio_url ||
+        resource.url
+      )
     default:
       return resource.url
   }
