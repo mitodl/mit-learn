@@ -49,7 +49,7 @@ const SeparatorContainer = styled.span({
  * breaks after the pipe but not before it.
  */
 const Separator: React.FC = () => (
-  <SeparatorContainer>|&#8203;</SeparatorContainer>
+  <SeparatorContainer aria-label=", ">|&#8203;</SeparatorContainer>
 )
 
 const InfoItems = styled.section({
