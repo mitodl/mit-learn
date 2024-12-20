@@ -103,6 +103,7 @@ ENGLISH_TEXT_FIELD_WITH_SUGGEST = {
 
 LEARNING_RESOURCE_MAP = {
     "resource_relations": {"type": "join", "relations": {"resource": "content_file"}},
+    "availability": {"type": "keyword"},
     "id": {"type": "long"},
     "certification": {"type": "boolean"},
     "certification_type": {
@@ -146,6 +147,7 @@ LEARNING_RESOURCE_MAP = {
     "image": {
         "type": "nested",
         "properties": {
+            "id": {"type": "long"},
             "url": {"type": "keyword"},
             "description": ENGLISH_TEXT_FIELD_WITH_SUGGEST,
             "alt": ENGLISH_TEXT_FIELD,
@@ -183,6 +185,8 @@ LEARNING_RESOURCE_MAP = {
             "id": {"type": "long"},
             "name": {"type": "keyword"},
             "channel_url": {"type": "keyword"},
+            "icon": {"type": "keyword"},
+            "parent": {"type": "long"},
         },
     },
     "ocw_topics": {"type": "keyword"},
@@ -200,6 +204,7 @@ LEARNING_RESOURCE_MAP = {
             "course_numbers": {
                 "type": "nested",
                 "properties": {
+                    "listing_type": {"type": "keyword"},
                     "value": {"type": "keyword"},
                     "sort_coursenum": {"type": "keyword"},
                     "department": {
@@ -226,13 +231,14 @@ LEARNING_RESOURCE_MAP = {
         "properties": {
             "duration": {"type": "keyword"},
             "transcript": ENGLISH_TEXT_FIELD,
+            "id": {"type": "long"},
         }
     },
     "runs": {
         "type": "nested",
         "properties": {
             "id": {"type": "long"},
-            "run_is": {"type": "keyword"},
+            "run_id": {"type": "keyword"},
             "title": ENGLISH_TEXT_FIELD_WITH_SUGGEST,
             "description": ENGLISH_TEXT_FIELD_WITH_SUGGEST,
             "full_description": ENGLISH_TEXT_FIELD,
@@ -292,6 +298,7 @@ LEARNING_RESOURCE_MAP = {
                 },
             },
             "location": {"type": "keyword"},
+            "published": {"type": "boolean"},
         },
     },
     "next_start_date": {"type": "date"},
@@ -307,6 +314,44 @@ LEARNING_RESOURCE_MAP = {
             "amount": {"type": "scaled_float", "scaling_factor": 100},
             "currency": {"type": "keyword"},
         },
+    },
+    "prices": {"type": "scaled_float", "scaling_factor": 100},
+    "published": {"type": "boolean"},
+    "views": {"type": "long"},
+    "url": {"type": "keyword"},
+    "video_playlist": {
+        "properties": {
+            "channel": {
+                "properties": {
+                    "channel_id": {"type": "keyword"},
+                    "title": ENGLISH_TEXT_FIELD,
+                }
+            },
+            "title": ENGLISH_TEXT_FIELD,
+            "id": {"type": "long"},
+            "video_count": {"type": "long"},
+        }
+    },
+    "playlists": {"type": "long"},
+    "program": {"properties": {"course_count": {"type": "long"}}},
+    "podcast": {
+        "properties": {
+            "apple_podcasts_url": {"type": "keyword"},
+            "episode_count": {"type": "long"},
+            "google_podcasts_url": {"type": "keyword"},
+            "id": {"type": "long"},
+            "rss_url": {"type": "keyword"},
+        }
+    },
+    "podcast_episode": {
+        "properties": {
+            "duration": {"type": "keyword"},
+            "episode_link": {"type": "keyword"},
+            "id": {"type": "long"},
+            "podcasts": {"type": "long"},
+            "transcript": ENGLISH_TEXT_FIELD,
+            "rss": {"type": "keyword"},
+        }
     },
 }
 
@@ -356,6 +401,7 @@ CONTENT_FILE_MAP = {
         "properties": {
             "code": {"type": "keyword"},
             "name": {"type": "keyword"},
+            "channel_url": {"type": "keyword"},
         },
     },
     "platform": {
