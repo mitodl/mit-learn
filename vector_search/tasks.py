@@ -87,15 +87,6 @@ def unique_content_ids(contenfiles):
     return content_ids
 
 
-def _next_run(course):
-    """
-    Get the next run for a course
-    """
-    if course.next_run:
-        return course.next_run
-    return course.runs.filter(published=True).order_by("-start_date").first()
-
-
 @app.task(bind=True)
 def start_embed_resources(self, indexes, skip_content_files):
     """
@@ -135,7 +126,11 @@ def start_embed_resources(self, indexes, skip_content_files):
                     .exclude(readable_id=blocklisted_ids)
                     .order_by("id")
                 ):
-                    run = _next_run(course)
+                    run = (
+                        course.runs.filter(published=True)
+                        .order_by("-start_date")
+                        .first()
+                    )
                     run_contentfiles = ContentFile.objects.filter(
                         run=run,
                         published=True,
@@ -226,7 +221,11 @@ def embed_learning_resources_by_id(self, ids, skip_content_files):
                 for course in resources.filter(
                     etl_source__in=RESOURCE_FILE_ETL_SOURCES
                 ).order_by("id"):
-                    run = _next_run(course)
+                    run = (
+                        course.runs.filter(published=True)
+                        .order_by("-start_date")
+                        .first()
+                    )
                     run_contentfiles = ContentFile.objects.filter(
                         run=run,
                         published=True,
