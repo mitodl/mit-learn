@@ -5,6 +5,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Optional
 
+import posthog
 import pydantic
 import requests
 from django.conf import settings
@@ -146,6 +147,7 @@ class BaseChatAgent(ABC):
 
         Append the response with debugging metadata and/or errors.
         """
+        full_response = ""
         if not self.agent:
             error = "Create agent before running"
             raise ValueError(error)
@@ -154,7 +156,9 @@ class BaseChatAgent(ABC):
                 message,
             )
             response_gen = response.response_gen
-            yield from response_gen
+            for response in response_gen:
+                full_response += response
+                yield response
         except BadRequestError as error:
             # Format and yield an error message inside a hidden comment
             if hasattr(error, "response"):
@@ -178,13 +182,26 @@ class BaseChatAgent(ABC):
             self.save_chat_history()
         if debug:
             yield f"\n\n<!-- {self.get_comment_metadata()} -->\n\n".encode()
+        hog_client = posthog.Posthog(
+            settings.POSTHOG_PROJECT_API_KEY, host=settings.POSTHOG_API_HOST
+        )
+        hog_client.capture(
+            self.user_id,
+            event=self.JOB_ID,
+            properties={
+                "question": message,
+                "answer": full_response,
+                "metadata": self.get_comment_metadata(),
+                "user": self.user_id,
+            },
+        )
 
 
 class SearchAgent(BaseChatAgent):
     """Service class for the AI search function agent"""
 
-    JOB_ID = "SEARCH_JOB"
-    TASK_NAME = "SEARCH_TASK"
+    JOB_ID = "recommendation_agent"
+    TASK_NAME = "recommendation_task"
 
     INSTRUCTIONS = f"""You are an assistant helping users find courses from a catalog
 of learning resources. Users can ask about specific topics, levels, or recommendations

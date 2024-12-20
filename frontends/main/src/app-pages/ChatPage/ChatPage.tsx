@@ -24,11 +24,7 @@ const CONVERSATION_OPTIONS = {
     {
       prompt:
         "I would like to learn about linear regression, preferably at no cost.",
-<<<<<<< HEAD
-    }
-=======
     },
->>>>>>> f61d54cf3 (Remove prompt about albedo, answers seem erratic)
   ],
 }
 
