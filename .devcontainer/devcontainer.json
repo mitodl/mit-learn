@@ -1,6 +1,13 @@
 {
   "dockerComposeFile": "../docker-compose.codespaces.yml",
   "service": "web",
+  "containerEnv": {
+    "OPENAI_API_KEY": "${localEnv:OPENAI_API_KEY}",
+    "AI_PROXY_AUTH_TOKEN": "${localEnv:AI_PROXY_AUTH_TOKEN}",
+    "POSTHOG_PROJECT_ID": "${localEnv:POSTHOG_PROJECT_ID}",
+    "POSTHOG_PROJECT_API_KEY": "${localEnv:POSTHOG_PROJECT_API_KEY}",
+    "POSTHOG_PERSONAL_API_KEY": "${localEnv:POSTHOG_PERSONAL_API_KEY}"
+  },
   "runServices": [
     "watch",
     "web",
@@ -10,6 +17,7 @@
     "celery",
     "nginx",
     "redis",
+    "litellm",
     "qdrant"
   ],
   "hostRequirements": { "cpus": 4, "memory": "8gb" },
@@ -21,9 +29,10 @@
     "OLL_API_CLIENT_SECRET": {},
     "OLL_API_CLIENT_ID": {},
     "SEE_API_CLIENT_ID": {},
-    "SEE_API_CLIENT_SECRET": {}
+    "SEE_API_CLIENT_SECRET": {},
+    "OPENAI_API_KEY": {}
   },
   "features": {},
   "postStartCommand": "while [ \"$(python manage.py showmigrations | grep \"\\[ \\]\" | wc -l)\" -ne \"0\" ]; do echo \"waiting for migrations\"; sleep 2; done && python manage.py update_offered_by && python manage.py update_platforms && python manage.py update_departments_schools && python manage.py update_course_number_departments && python manage.py backpopulate_mitxonline_data && python manage.py backpopulate_micromasters_data && python manage.py backpopulate_resource_channels --overwrite --all && python manage.py recreate_index --all",
-  "forwardPorts": [8062, 8063, 6333]
+  "forwardPorts": [4000, 6333, 8062, 8063]
 }
