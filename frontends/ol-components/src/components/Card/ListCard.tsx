@@ -160,7 +160,7 @@ type CardProps = {
    */
   forwardClicksToLink?: boolean
   draggable?: boolean
-  onClick?: () => void
+  onClick?: React.MouseEventHandler
   as?: React.ElementType
 } & AriaAttributes
 
