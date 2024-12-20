@@ -156,13 +156,14 @@ def test_transform(mock_github_client, title, topics, offered_by):
                         "SMorbi id consequat nisl. Morbi leo elit, vulputate nec"
                         " aliquam molestie, ullamcorper sit amet tortor"
                     ),
-                    "url": "http://feeds.soundcloud.com/stream/episode1.mp3",
+                    "url": "https://soundcloud.com/podcast/episode1",
                     "image": {"url": "apicture.jpg"},
                     "last_modified": datetime.datetime(
                         2020, 4, 1, 18, 20, 31, tzinfo=tzutc()
                     ),
                     "published": True,
                     "podcast_episode": {
+                        "audio_url": "http://feeds.soundcloud.com/stream/episode1.mp3",
                         "episode_link": "https://soundcloud.com/podcast/episode1",
                         "duration": "PT17M16S",
                         "rss": episodes_rss[0].prettify(),
@@ -180,13 +181,14 @@ def test_transform(mock_github_client, title, topics, offered_by):
                         "Praesent fermentum suscipit metus nec aliquam. Proin hendrerit"
                         " felis ut varius facilisis."
                     ),
-                    "url": "http://feeds.soundcloud.com/stream/episode2.mp3",
+                    "url": "https://soundcloud.com/podcast/episode2",
                     "image": {"url": "image1.jpg"},
                     "last_modified": datetime.datetime(
                         2020, 4, 1, 18, 20, 31, tzinfo=tzutc()
                     ),
                     "published": True,
                     "podcast_episode": {
+                        "audio_url": "http://feeds.soundcloud.com/stream/episode2.mp3",
                         "episode_link": "https://soundcloud.com/podcast/episode2",
                         "duration": "PT17M16S",
                         "rss": episodes_rss[1].prettify(),
