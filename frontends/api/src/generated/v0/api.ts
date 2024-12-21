@@ -3499,6 +3499,12 @@ export interface PodcastEpisode {
    * @type {string}
    * @memberof PodcastEpisode
    */
+  audio_url: string
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastEpisode
+   */
   episode_link?: string | null
   /**
    *

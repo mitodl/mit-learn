@@ -153,6 +153,8 @@ def transform_episode(rss_data, offered_by, topics, parent_image):
             normalized podcast episode data
     """
 
+    episode_link = rss_data.link.text if rss_data.link else None
+    audio_url = rss_data.enclosure["url"]
     return {
         "readable_id": rss_data.guid.text
         or parse_readable_id_from_url(
@@ -163,7 +165,7 @@ def transform_episode(rss_data, offered_by, topics, parent_image):
         "title": rss_data.title.text,
         "offered_by": offered_by,
         "description": clean_data(rss_data.description.text),
-        "url": rss_data.enclosure["url"],
+        "url": episode_link or audio_url,
         "image": {
             "url": (rss_data.find("image")["href"]),
         }
@@ -173,6 +175,7 @@ def transform_episode(rss_data, offered_by, topics, parent_image):
         "published": True,
         "topics": topics,
         "podcast_episode": {
+            "audio_url": rss_data.enclosure["url"],
             "episode_link": rss_data.link.text if rss_data.link else None,
             "duration": (
                 iso8601_duration(rss_data.find("itunes:duration").text)
