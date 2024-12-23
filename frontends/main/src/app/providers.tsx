@@ -9,7 +9,6 @@ import {
   theme,
 } from "ol-components"
 import { Provider as NiceModalProvider } from "@ebay/nice-modal-react"
-import ConfiguredPostHogProvider from "@/page-components/ConfiguredPostHogProvider/ConfiguredPostHogProvider"
 import { usePrefetchWarnings } from "api/ssr/usePrefetchWarnings"
 import { AppProgressBar as ProgressBar } from "next-nprogress-bar"
 import type { NProgressOptions } from "next-nprogress-bar"
@@ -30,13 +29,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         shallowRouting
       />
       <QueryClientProvider client={queryClient}>
-        <ConfiguredPostHogProvider>
-          <NextJsAppRouterCacheProvider>
-            <ThemeProvider>
-              <NiceModalProvider>{children}</NiceModalProvider>
-            </ThemeProvider>
-          </NextJsAppRouterCacheProvider>
-        </ConfiguredPostHogProvider>
+        <NextJsAppRouterCacheProvider>
+          <ThemeProvider>
+            <NiceModalProvider>{children}</NiceModalProvider>
+          </ThemeProvider>
+        </NextJsAppRouterCacheProvider>
       </QueryClientProvider>
     </>
   )

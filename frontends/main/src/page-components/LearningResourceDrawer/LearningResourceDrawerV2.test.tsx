@@ -37,18 +37,6 @@ const makeSearchResponse = (results: CourseResource[] | LearningResource[]) => {
   return responseData
 }
 
-const mockedPostHogCapture = jest.fn()
-
-jest.mock("posthog-js/react", () => ({
-  PostHogProvider: (props: { children: React.ReactNode }) => (
-    <div data-testid="phProvider">{props.children}</div>
-  ),
-
-  usePostHog: () => {
-    return { capture: mockedPostHogCapture }
-  },
-}))
-
 const setupApis = (resource: LearningResource) => {
   setMockResponse.get(
     urls.learningResources.details({ id: resource.id }),
@@ -119,12 +107,6 @@ describe("LearningResourceDrawerV2", () => {
         expectProps(LearningResourceExpandedV2, { resource })
       })
       await screen.findByText(resource.title)
-
-      if (enablePostHog) {
-        expect(mockedPostHogCapture).toHaveBeenCalled()
-      } else {
-        expect(mockedPostHogCapture).not.toHaveBeenCalled()
-      }
     },
   )
 

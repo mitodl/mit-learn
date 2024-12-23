@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useMemo } from "react"
+import React, { Suspense, useMemo } from "react"
 import {
   RoutedDrawer,
   LearningResourceExpandedV1,
@@ -18,36 +18,10 @@ import {
   AddToUserListDialog,
 } from "../Dialogs/AddToListDialog"
 import { SignupPopover } from "../SignupPopover/SignupPopover"
-import { usePostHog } from "posthog-js/react"
 import { useIsLearningPathMember } from "api/hooks/learningPaths"
 import { useIsUserListMember } from "api/hooks/userLists"
 
 const RESOURCE_DRAWER_PARAMS = [RESOURCE_DRAWER_QUERY_PARAM] as const
-
-const useCapturePageView = (resourceId: number) => {
-  const { data, isSuccess } = useLearningResourcesDetail(Number(resourceId))
-  const posthog = usePostHog()
-  const apiKey = process.env.NEXT_PUBLIC_POSTHOG_API_KEY
-
-  useEffect(() => {
-    if (!apiKey || apiKey.length < 1) return
-    if (!isSuccess) return
-    posthog.capture("lrd_view", {
-      resourceId: data?.id,
-      readableId: data?.readable_id,
-      platformCode: data?.platform?.code,
-      resourceType: data?.resource_type,
-    })
-  }, [
-    isSuccess,
-    posthog,
-    data?.id,
-    data?.readable_id,
-    data?.platform?.code,
-    data?.resource_type,
-    apiKey,
-  ])
-}
 
 /**
  * Convert HTML to plaintext, removing any HTML tags.
@@ -90,7 +64,6 @@ const DrawerContent: React.FC<{
         NiceModal.show(AddToUserListDialog, { resourceId })
       }
     }, [user])
-  useCapturePageView(Number(resourceId))
 
   return (
     <>

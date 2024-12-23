@@ -52,7 +52,6 @@ import type { TabConfig } from "./ResourceCategoryTabs"
 
 import { ResourceCard } from "../ResourceCard/ResourceCard"
 import { useUserMe } from "api/hooks/user"
-import { usePostHog } from "posthog-js/react"
 import getSearchParams from "./getSearchParams"
 
 const StyledResourceTabs = styled(ResourceCategoryTabs.TabList)`
@@ -617,35 +616,22 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
 
   const [mobileDrawerOpen, setMobileDrawerOpen] = React.useState(false)
 
-  const posthog = usePostHog()
-
-  const NEXT_PUBLIC_POSTHOG_API_KEY = process.env.NEXT_PUBLIC_POSTHOG_API_KEY
-
   const toggleMobileDrawer = (newOpen: boolean) => () => {
     setMobileDrawerOpen(newOpen)
   }
 
-  const captureSearchEvent = () => {
-    if (NEXT_PUBLIC_POSTHOG_API_KEY) {
-      posthog.capture("search_update")
-    }
-  }
-
   const setParamValue = (value: string, prev: string | string[]) => {
     actuallySetParamValue(value, prev)
-    captureSearchEvent()
   }
 
   const clearAllFacets = () => {
     actuallyClearAllFacets()
-    captureSearchEvent()
   }
 
   const setSearchParams = (
     value: URLSearchParams | ((prev: URLSearchParams) => URLSearchParams),
   ) => {
     actuallySetSearchParams(value)
-    captureSearchEvent()
   }
 
   const toggleParamValue = (
@@ -654,7 +640,6 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     checked: boolean,
   ) => {
     actuallyToggleParamValue(name, rawValue, checked)
-    captureSearchEvent()
   }
 
   const sortDropdown = (

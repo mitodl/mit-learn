@@ -23,16 +23,6 @@ jest.mock("ol-components", () => {
 
 const mockedPostHogCapture = jest.fn()
 
-jest.mock("posthog-js/react", () => ({
-  PostHogProvider: (props: { children: React.ReactNode }) => (
-    <div data-testid="phProvider">{props.children}</div>
-  ),
-
-  usePostHog: () => {
-    return { capture: mockedPostHogCapture }
-  },
-}))
-
 describe("LearningResourceDrawerV1", () => {
   it.each([{ descriptor: "is enabled", enablePostHog: true }])(
     "Renders drawer content when resource=id is in the URL and captures the view if PostHog $descriptor",

@@ -4,12 +4,8 @@ import { urls } from "api/test-utils"
 import * as commonUrls from "@/common/urls"
 import { ForbiddenError } from "@/common/errors"
 import { Permission } from "api/hooks/user"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import CartPage from "./CartPage"
 import { allowConsoleErrors } from "ol-test-utilities"
-
-jest.mock("posthog-js/react")
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
 
 const oldWindowLocation = window.location
 
@@ -36,8 +32,6 @@ describe("CartPage", () => {
       setMockResponse.get(urls.userMe.get(), {
         [Permission.Authenticated]: true,
       })
-      mockedUseFeatureFlagEnabled.mockReturnValue(testCase === "on")
-
       if (testCase === "off") {
         allowConsoleErrors()
         expect(() =>
