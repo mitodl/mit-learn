@@ -16,9 +16,10 @@ Sentry.init({
   tracePropagationTargets: process.env.NEXT_PUBLIC_MITOL_API_BASE_URL
     ? [process.env.NEXT_PUBLIC_MITOL_API_BASE_URL]
     : [],
-  // Add optional integrations for additional features
-  integrations: [
-    Sentry.browserTracingIntegration(),
-    Sentry.browserProfilingIntegration(),
-  ],
+})
+
+// https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/integrations/#lazy-loading-integrations
+import("@sentry/nextjs").then((lazyLoadedSentry) => {
+  Sentry.addIntegration(lazyLoadedSentry.browserTracingIntegration())
+  Sentry.addIntegration(lazyLoadedSentry.browserProfilingIntegration())
 })

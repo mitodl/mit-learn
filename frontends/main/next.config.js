@@ -75,6 +75,15 @@ const nextConfig = {
           },
         ],
       },
+      {
+        source: "/:path*",
+        headers: [
+          {
+            key: "Document-Policy",
+            value: "js-profiling",
+          },
+        ],
+      },
     ]
   },
 
