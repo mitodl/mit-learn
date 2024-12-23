@@ -222,7 +222,7 @@ def test_index_learning_resources(
     index_types,
 ):
     """
-    index functions should call bulk with correct arguments
+    Index functions should call bulk with correct arguments
     """
     settings.OPENSEARCH_INDEXING_CHUNK_SIZE = 3
     documents = ["doc1", "doc2", "doc3", "doc4", "doc5"]
@@ -602,7 +602,7 @@ def test_bulk_index_content_files(  # noqa: PLR0913
     document_indexing_chunk_size,
 ):
     """
-    index functions for content files should call bulk with correct arguments
+    Index functions for content files should call bulk with correct arguments
     """
     settings.OPENSEARCH_INDEXING_CHUNK_SIZE = indexing_chunk_size
     settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE = document_indexing_chunk_size
@@ -685,7 +685,7 @@ def test_index_content_files(  # noqa: PLR0913
     doc,
 ):
     """
-    index functions for content files should call bulk with correct arguments
+    Index functions for content files should call bulk with correct arguments
     """
     settings.OPENSEARCH_INDEXING_CHUNK_SIZE = 6
     course = CourseFactory.create()
