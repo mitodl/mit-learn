@@ -22,13 +22,13 @@ from learning_resources.models import LearningResourceRun
 
 
 @pytest.fixture(autouse=True)
-def silence_factory_logging():  # noqa: PT004
+def silence_factory_logging():
     """Only show factory errors"""
     logging.getLogger("factory").setLevel(logging.ERROR)
 
 
 @pytest.fixture(autouse=True)
-def warnings_as_errors():  # noqa: PT004
+def warnings_as_errors():
     """
     Convert warnings to errors. This should only affect unit tests, letting pylint and other plugins
     raise DeprecationWarnings without erroring.
@@ -53,7 +53,7 @@ def warnings_as_errors():  # noqa: PT004
 
 
 @pytest.fixture
-def randomness():  # noqa: PT004
+def randomness():
     """Ensure a fixed seed for factoryboy"""
     factory.fuzzy.reseed_random("happy little clouds")
 
@@ -95,7 +95,7 @@ def mocked_responses():
 
 
 @pytest.fixture
-def offeror_featured_lists():  # noqa: PT004
+def offeror_featured_lists():
     """Generate featured offeror lists for testing"""
     for offered_by in OfferedBy.names():
         offeror = LearningResourceOfferorFactory.create(code=offered_by)
