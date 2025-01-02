@@ -105,7 +105,6 @@ INSTALLED_APPS = (
     "drf_spectacular",
     # Put our apps after this point
     "main",
-    "ai_chat",
     "authentication",
     "channels",
     "profiles",
@@ -119,6 +118,7 @@ INSTALLED_APPS = (
     "testimonials",
     "data_fixtures",
     "vector_search",
+    "ai_chat",
 )
 
 if not get_bool("RUN_DATA_MIGRATIONS", default=False):
