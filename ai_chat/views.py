@@ -8,7 +8,6 @@ from rest_framework import views
 from rest_framework.request import Request
 
 from ai_chat import serializers
-from ai_chat.agents import SearchAgent
 from ai_chat.permissions import SearchAgentPermissions
 
 log = logging.getLogger(__name__)
@@ -34,6 +33,8 @@ class SearchAgentView(views.APIView):
     )
     def post(self, request: Request) -> StreamingHttpResponse:
         """Handle a POST request to the chatbot agent."""
+        from ai_chat.agents import SearchAgent
+
         serializer = serializers.ChatRequestSerializer(
             data=request.data, context={"request": request}
         )
