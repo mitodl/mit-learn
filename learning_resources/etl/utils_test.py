@@ -518,6 +518,8 @@ def test_parse_string_to_int(hour, expected):
         ("2 - 3 semanas", 2, 3),
         ("Unparseable duration", None, None),
         ("", None, None),
+        ("2 days in person+3 live webinars", 1, 1),
+        ("2 weeks in person+3 live webinars", 2, 2),
     ],
 )
 def test_parse_resource_duration(raw_value, min_weeks, max_weeks):

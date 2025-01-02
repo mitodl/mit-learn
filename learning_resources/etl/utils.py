@@ -823,12 +823,12 @@ def parse_resource_duration(duration_str: str) -> DurationConfig:
         DurationConfig: the standardized duration
     """
     if duration_str:
-        duration_regex = re.compile(r"(\d+)\D+(\d+)?\s*(\w+)?", re.IGNORECASE)
+        duration_regex = re.compile(r"(\d+)\s*(to|-)*\s*(\d+)?\s*(\w+)?", re.IGNORECASE)
         interval = transform_interval(duration_str)
         match = duration_regex.match(duration_str.lower().strip())
         if match and interval:
             dmin = match.group(1)
-            dmax = match.group(2)
+            dmax = match.group(3)
             return DurationConfig(
                 duration=duration_str,
                 min_weeks=calculate_weeks(int(dmin), interval.lower()),
