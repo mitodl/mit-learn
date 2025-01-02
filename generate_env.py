@@ -22,9 +22,7 @@ def get_secret_from_vault(path):
     return secret  # noqa: RET504
 
 
-
 def generate_env_file(env_path):
-
     with open(env_path, "w") as env_file:  # noqa: PTH123
         for key, value in STATIC_VARIABLES.items():
             env_file.write(f"{key}={value}\n")
