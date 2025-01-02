@@ -12,15 +12,11 @@
  *
  * https://nextjs.org/docs/app/building-your-application/routing/error-handling#handling-errors-in-root-layouts
  */
-import React, { useEffect } from "react"
-import * as Sentry from "@sentry/nextjs"
+import React from "react"
 import FallbackErrorPage from "@/app-pages/ErrorPage/FallbackErrorPage"
 import { MITLearnGlobalStyles, ThemeProvider } from "ol-components"
 
 export default function GlobalError({ error }: { error: Error }) {
-  useEffect(() => {
-    Sentry.captureException(error)
-  }, [error])
   return (
     <html lang="en">
       <body>

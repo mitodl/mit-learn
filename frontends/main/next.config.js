@@ -3,21 +3,6 @@ const { validateEnv } = require("./validateEnv")
 
 validateEnv()
 
-const processFeatureFlags = () => {
-  const featureFlagPrefix =
-    process.env.NEXT_PUBLIC_POSTHOG_FEATURE_PREFIX || "FEATURE_"
-  const bootstrapFeatureFlags = {}
-
-  for (const [key, value] of Object.entries(process.env)) {
-    if (key.startsWith(`NEXT_PUBLIC_${featureFlagPrefix}`)) {
-      bootstrapFeatureFlags[
-        key.replace(`NEXT_PUBLIC_${featureFlagPrefix}`, "")
-      ] = value === "True" ? true : JSON.stringify(value)
-    }
-  }
-
-  return bootstrapFeatureFlags
-}
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -103,62 +88,15 @@ const nextConfig = {
       },
     ],
   },
-
-  // https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/tree-shaking/#tree-shaking-with-nextjs
-  webpack: (config, { webpack }) => {
-    config.plugins.push(
-      new webpack.DefinePlugin({
-        __SENTRY_DEBUG__: false,
-        __SENTRY_TRACING__: false,
-        __RRWEB_EXCLUDE_IFRAME__: true,
-        __RRWEB_EXCLUDE_SHADOW_DOM__: true,
-        __SENTRY_EXCLUDE_REPLAY_WORKER__: true,
-      }),
-    );
-
-    return config;
-  },
-
-  env: {
-    FEATURE_FLAGS: JSON.stringify(processFeatureFlags()),
-  },
 }
 
-// Injected content via Sentry wizard below
 
-const { withSentryConfig } = require("@sentry/nextjs")
-const withSentry = (config) =>
-  withSentryConfig(config, {
-    // For all available options, see:
-    // https://github.com/getsentry/sentry-webpack-plugin#options
-
-    org: "mit-office-of-digital-learning",
-    project: "open-next",
-
-    // Only print logs for uploading source maps in CI
-    silent: !process.env.CI,
-
-    // For all available options, see:
-    // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
-
-    // Upload a larger set of source maps for prettier stack traces (increases build time)
-    widenClientFileUpload: true,
-
-    // Uncomment to route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
-    // This can increase your server load as well as your hosting bill.
-    // Note: Check that the configured route will not match with your Next.js middleware, otherwise reporting of client-
-    // side errors will fail.
-    // tunnelRoute: "/monitoring",
-
-    // Automatically tree-shake Sentry logger statements to reduce bundle size
-    disableLogger: true,
-  })
 
 const withBundleAnalyzer = require("@next/bundle-analyzer")({
   enabled: process.env.ANALYZE === "true",
 })
 
-module.exports = [withBundleAnalyzer, withSentry].reduce(
+module.exports = [withBundleAnalyzer].reduce(
   (acc, withPlugin) => withPlugin(acc),
   nextConfig,
 )
