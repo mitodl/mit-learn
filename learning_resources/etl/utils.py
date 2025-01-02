@@ -3,6 +3,7 @@
 import glob
 import json
 import logging
+import math
 import mimetypes
 import os
 import re
@@ -40,7 +41,10 @@ from learning_resources.constants import (
 )
 from learning_resources.etl.constants import (
     RESOURCE_DELIVERY_MAPPING,
+    TIME_INTERVAL_MAPPING,
+    CommitmentConfig,
     CourseNumberType,
+    DurationConfig,
     ETLSource,
 )
 from learning_resources.models import (
@@ -758,3 +762,111 @@ def parse_string_to_int(int_str: str) -> int | None:
         return int(int_str)
     except (TypeError, ValueError):
         return None
+
+
+def calculate_weeks(num: int, from_unit: str) -> int:
+    """
+    Transform any # of days or months to weeks
+
+    Args:
+        num (int): the numerical value
+        from_unit (str): the time unit
+
+    Returns:
+        int: the number of weeks
+    """
+    if "day" in from_unit:
+        return max(math.ceil(num / 5), 1)  # Assuming weekends should be excluded
+    elif "month" in from_unit:
+        return num * 4
+    return num
+
+
+def transform_interval(interval_txt: str) -> str or None:
+    """
+    Transform any interval units to standard English units
+    Only languages currently supported are English and Spanish
+
+    Args:
+        interval_txt (str): the interval text
+
+    Returns:
+        str: the interval text with intervals translated to English
+    """
+    english_matches = re.search(
+        rf"{'|'.join(TIME_INTERVAL_MAPPING.keys())}(\s|\/|$)",
+        interval_txt,
+        re.IGNORECASE,
+    )
+    if english_matches:
+        return english_matches.group(0).lower()
+    reverse_map = {
+        interval: k for k, v in TIME_INTERVAL_MAPPING.items() for interval in v
+    }
+    other_matches = re.search(
+        rf"{'|'.join(reverse_map.keys())}(\s|\/|$)", interval_txt, re.IGNORECASE
+    )
+    if other_matches:
+        return reverse_map[other_matches.group(0).lower()]
+    return None
+
+
+def parse_resource_duration(duration_str: str) -> DurationConfig:
+    """
+    Standardize duration string and return it if it is valid,
+    otherwise return an empty string
+
+    Args:
+        course_data (str): the course data
+
+    Returns:
+        DurationConfig: the standardized duration
+    """
+    if duration_str:
+        duration_regex = re.compile(r"(\d+)\s*(to|-)*\s*(\d+)?\s*(\w+)?", re.IGNORECASE)
+        interval = transform_interval(duration_str)
+        match = duration_regex.match(duration_str.lower().strip())
+        if match and interval:
+            dmin = match.group(1)
+            dmax = match.group(3)
+            return DurationConfig(
+                duration=duration_str,
+                min_weeks=calculate_weeks(int(dmin), interval.lower()),
+                max_weeks=calculate_weeks(
+                    int(dmax or dmin),
+                    interval.lower(),
+                ),
+            )
+        else:
+            log.warning("Invalid duration: %s", duration_str)
+    return DurationConfig(duration=duration_str or "")
+
+
+def parse_resource_commitment(commitment_str: str) -> CommitmentConfig:
+    """
+    Standardize time commitment value and return it if it is valid,
+    otherwise return an empty string
+
+    Args:
+        course_data (str): the course data
+
+    Returns:
+        str: the standardized time commitment, min, and max in hours
+    """
+    if commitment_str:
+        commitment_regex = re.compile(
+            r"(\d+)\D+(\d+)?\s*(\w+)?",
+            re.IGNORECASE,
+        )
+        match = commitment_regex.match(commitment_str.strip())
+        if match:
+            cmin = match.group(1)
+            cmax = match.group(2)
+            return CommitmentConfig(
+                commitment=commitment_str,
+                min_weekly_hours=int(cmin),
+                max_weekly_hours=int(cmax if cmax else cmin),
+            )
+        else:
+            log.warning("Invalid commitment: %s", commitment_str)
+    return CommitmentConfig(commitment=commitment_str or "")

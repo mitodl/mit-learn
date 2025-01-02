@@ -23,7 +23,7 @@ from learning_resources.constants import (
     PlatformType,
 )
 from learning_resources.etl.constants import ETLSource
-from learning_resources.etl.utils import transform_delivery
+from learning_resources.etl.utils import parse_resource_duration, transform_delivery
 from main.utils import clean_data, now_in_utc
 
 log = logging.getLogger(__name__)
@@ -231,6 +231,7 @@ def _transform_runs(resource_data: dict) -> list[dict]:
         resource_data["end_date"].split("|"),
         resource_data["enrollment_end_date"].split("|"),
     )
+    duration = parse_resource_duration(resource_data.get("duration"))
     published_runs = []
     for run_data in runs_data:
         start = parse_date(run_data[1])
@@ -264,6 +265,9 @@ def _transform_runs(resource_data: dict) -> list[dict]:
                     "availability": Availability.dated.name,
                     "delivery": transform_delivery(resource_data["learning_format"]),
                     "location": parse_location(resource_data),
+                    "duration": duration.duration,
+                    "min_weeks": duration.min_weeks,
+                    "max_weeks": duration.max_weeks,
                 }
             )
     return published_runs

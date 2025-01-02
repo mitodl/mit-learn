@@ -19,6 +19,7 @@ from learning_resources.constants import (
     RunStatus,
 )
 from learning_resources.etl import utils
+from learning_resources.etl.constants import CommitmentConfig, DurationConfig
 from learning_resources.etl.utils import parse_certification, parse_string_to_int
 from learning_resources.factories import (
     ContentFileFactory,
@@ -499,3 +500,52 @@ def test_text_from_sjson_content():
 def test_parse_string_to_int(hour, expected):
     """Test that the weekly hours are correctly parsed"""
     assert parse_string_to_int(hour) == expected
+
+
+@pytest.mark.parametrize(
+    ("raw_value", "min_weeks", "max_weeks"),
+    [
+        ("3 Days", 1, 1),  # <= 5 days == 1 week
+        ("7 Days", 2, 2),  # >7 days = 2 weeks
+        ("4 to 8 Days", 1, 2),
+        ("3-4 Weeks, no weekends", 3, 4),
+        ("5 - 6 MoNths", 20, 24),
+        ("1 WEEK", 1, 1),
+        ("1 month more or less", 4, 4),
+        ("2-3 meses", 8, 12),  # 2-3 months in Spanish
+        ("1 mes", 4, 4),  # 1 month in Spanish
+        ("1 semana", 1, 1),  # 1 week in Spanish
+        ("2 - 3 semanas", 2, 3),
+        ("Unparseable duration", None, None),
+        ("", None, None),
+        ("2 days in person+3 live webinars", 1, 1),
+        ("2 weeks in person+3 live webinars", 2, 2),
+    ],
+)
+def test_parse_resource_duration(raw_value, min_weeks, max_weeks):
+    """Test that parse_resource_duration returns the expected min/max weeks"""
+    assert utils.parse_resource_duration(raw_value) == DurationConfig(
+        duration=raw_value, min_weeks=min_weeks, max_weeks=max_weeks
+    )
+
+
+@pytest.mark.parametrize(
+    ("raw_value", "min_hours", "max_hours"),
+    [
+        ("5 Hours", 5, 5),
+        ("3-4 Hours per Week", 3, 4),
+        ("15 - 16 Hours per Week", 15, 16),
+        ("5-8 hrs per week", 5, 8),
+        ("5 - 10", 5, 10),
+        ("5 to 10", 5, 10),
+        ("6 horas", 6, 6),
+        ("1 hour", 1, 1),
+        ("1 hora", 1, 1),
+        ("", None, None),
+    ],
+)
+def test_parse_resource_commitment(raw_value, min_hours, max_hours):
+    """Test that parse_resource_commitment returns the expected min/max hours"""
+    assert utils.parse_resource_commitment(raw_value) == CommitmentConfig(
+        commitment=raw_value, min_weekly_hours=min_hours, max_weekly_hours=max_hours
+    )

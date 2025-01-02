@@ -24,6 +24,10 @@ from learning_resources.etl.sloan import (
     transform_delivery,
     transform_run,
 )
+from learning_resources.etl.utils import (
+    parse_resource_commitment,
+    parse_resource_duration,
+)
 from learning_resources.factories import (
     LearningResourceOfferorFactory,
     LearningResourceTopicMappingFactory,
@@ -117,6 +121,8 @@ def test_transform_run(
     faculty_names = (
         run_data["Faculty_Name"].split(",") if run_data["Faculty_Name"] else []
     )
+    duration = parse_resource_duration(run_data["Duration"])
+    commitment = parse_resource_commitment(run_data["Time_Commitment"])
     assert transform_run(run_data, course_data) == {
         "run_id": run_data["CO_Title"],
         "start_date": parse_datetime(run_data["Start_Date"]),
@@ -132,6 +138,12 @@ def test_transform_run(
         "pace": [Pace.instructor_paced.name],
         "format": [Format.synchronous.name],
         "location": run_data["Location"],
+        "duration": duration.duration,
+        "min_weeks": duration.min_weeks,
+        "max_weeks": duration.max_weeks,
+        "time_commitment": commitment.commitment,
+        "min_weekly_hours": commitment.min_weekly_hours,
+        "max_weekly_hours": commitment.max_weekly_hours,
     }
 
 

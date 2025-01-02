@@ -63,6 +63,9 @@ EXPECTED_COURSES = [
                 "availability": Availability.dated.name,
                 "delivery": [LearningResourceDelivery.online.name],
                 "location": "",
+                "duration": "9 semanas",
+                "min_weeks": 9,
+                "max_weeks": 9,
             }
         ],
         "format": [Format.asynchronous.name],
@@ -111,6 +114,9 @@ EXPECTED_COURSES = [
                 "availability": Availability.dated.name,
                 "delivery": [LearningResourceDelivery.in_person.name],
                 "location": "On Campus",
+                "duration": "3 Days",
+                "min_weeks": 1,
+                "max_weeks": 1,
             }
         ],
         "format": [Format.asynchronous.name],
@@ -156,6 +162,9 @@ EXPECTED_PROGRAMS = [
                 "availability": Availability.dated.name,
                 "location": "",
                 "delivery": [LearningResourceDelivery.online.name],
+                "duration": "6 to 10 Weeks",
+                "min_weeks": 6,
+                "max_weeks": 10,
             }
         ],
         "courses": [EXPECTED_COURSES[0], EXPECTED_COURSES[1]],
