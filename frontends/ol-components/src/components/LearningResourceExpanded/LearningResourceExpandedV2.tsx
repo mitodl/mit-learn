@@ -56,6 +56,7 @@ const TitleSectionContainer = styled.div({
   justifyContent: "space-between",
   top: "0",
   padding: "24px 32px",
+  gap: "16px",
   zIndex: 1,
   backgroundColor: theme.custom.colors.white,
   [theme.breakpoints.down("md")]: {
@@ -293,6 +294,7 @@ const CarouselContainer = styled.div({
 
 type LearningResourceExpandedV2Props = {
   resourceId: number
+  titleId?: string
   resource?: LearningResource
   user?: User
   shareUrl?: string
@@ -325,9 +327,10 @@ const CloseIcon = styled(RiCloseLargeLine)`
 `
 
 const TitleSection: React.FC<{
+  titleId?: string
   resource?: LearningResource
   closeDrawer: () => void
-}> = ({ resource, closeDrawer }) => {
+}> = ({ resource, closeDrawer, titleId }) => {
   const closeButton = (
     <CloseButton
       variant="text"
@@ -338,32 +341,45 @@ const TitleSection: React.FC<{
       <CloseIcon />
     </CloseButton>
   )
-  if (resource) {
-    return (
-      <TitleSectionContainer>
-        <div>
-          <Typography
-            variant="subtitle2"
-            color={theme.custom.colors.silverGrayDark}
-          >
-            {getReadableResourceType(resource?.resource_type)}
-          </Typography>
-          <Typography variant="h4" color={theme.custom.colors.darkGray2}>
-            {resource?.title}
-          </Typography>
-        </div>
-        {closeButton}
-      </TitleSectionContainer>
-    )
-  } else {
-    return (
-      <TitleSectionContainer>
-        <Skeleton variant="text" height={20} width="66%" />
-        <Skeleton variant="text" height={20} width="100%" />
-        {closeButton}
-      </TitleSectionContainer>
-    )
-  }
+
+  const type = resource ? (
+    getReadableResourceType(resource.resource_type)
+  ) : (
+    <Skeleton variant="text" width="33%" />
+  )
+  const title = resource ? (
+    resource.title
+  ) : (
+    <Skeleton
+      // Ideally the resource data is loaded before the drawer opens, e.g., by
+      // a server prefetch or by setQueryData in a parent component.
+      // This is a fallback.
+      aria-label="Resource Details Loading"
+      variant="text"
+      height={20}
+      width="80%"
+    />
+  )
+
+  return (
+    <TitleSectionContainer>
+      <Typography
+        variant="h4"
+        id={titleId}
+        width="100%"
+        color={theme.custom.colors.darkGray2}
+      >
+        <Typography
+          variant="subtitle2"
+          color={theme.custom.colors.silverGrayDark}
+        >
+          {type}
+        </Typography>
+        {title}
+      </Typography>
+      {closeButton}
+    </TitleSectionContainer>
+  )
 }
 
 const ImageSection: React.FC<{
@@ -687,6 +703,7 @@ const LearningResourceExpandedV2: React.FC<LearningResourceExpandedV2Props> = ({
   carousels,
   inUserList,
   inLearningPath,
+  titleId,
   onAddToLearningPathClick,
   onAddToUserListClick,
   closeDrawer,
@@ -700,6 +717,7 @@ const LearningResourceExpandedV2: React.FC<LearningResourceExpandedV2Props> = ({
   return (
     <OuterContainer ref={outerContainerRef}>
       <TitleSection
+        titleId={titleId}
         resource={resource}
         closeDrawer={closeDrawer ?? (() => {})}
       />

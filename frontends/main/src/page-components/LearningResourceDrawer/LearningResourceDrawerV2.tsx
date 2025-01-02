@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useMemo } from "react"
+import React, { Suspense, useEffect, useId, useMemo } from "react"
 import {
   RoutedDrawer,
   LearningResourceExpandedV2,
@@ -66,8 +66,16 @@ const useCapturePageView = (resourceId: number) => {
 
 const DrawerContent: React.FC<{
   resourceId: number
+  titleId: string
   closeDrawer: () => void
-}> = ({ resourceId, closeDrawer }) => {
+}> = ({ resourceId, closeDrawer, titleId }) => {
+  /**
+   * Ideally the resource data should already exist in the query cache, e.g., by:
+   * - a server-side prefetch
+   * - or by `setQueryData` in the component that triggers opening this drawer.
+   *   The triggering component likely has the data already via some other API
+   *   call.
+   */
   const resource = useLearningResourcesDetail(Number(resourceId))
   const [signupEl, setSignupEl] = React.useState<HTMLElement | null>(null)
   const { data: user } = useUserMe()
@@ -130,6 +138,7 @@ const DrawerContent: React.FC<{
   return (
     <>
       <LearningResourceExpandedV2
+        titleId={titleId}
         imgConfig={imgConfigs.large}
         resourceId={resourceId}
         resource={resource.data}
@@ -166,6 +175,7 @@ const PAPER_PROPS: RoutedDrawerProps["PaperProps"] = {
 }
 
 const LearningResourceDrawerV2 = () => {
+  const id = useId()
   return (
     <Suspense>
       <RoutedDrawer
@@ -173,10 +183,12 @@ const LearningResourceDrawerV2 = () => {
         requiredParams={RESOURCE_DRAWER_PARAMS}
         PaperProps={PAPER_PROPS}
         hideCloseButton={true}
+        aria-labelledby={id}
       >
         {({ params, closeDrawer }) => {
           return (
             <DrawerContent
+              titleId={id}
               resourceId={Number(params.resource)}
               closeDrawer={closeDrawer}
             />

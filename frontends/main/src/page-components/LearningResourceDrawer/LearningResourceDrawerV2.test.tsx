@@ -10,8 +10,9 @@ import LearningResourceDrawerV2 from "./LearningResourceDrawerV2"
 import { urls, factories, setMockResponse } from "api/test-utils"
 import { LearningResourceExpandedV2 } from "ol-components"
 import { RESOURCE_DRAWER_QUERY_PARAM } from "@/common/urls"
-import { CourseResource, LearningResource, ResourceTypeEnum } from "api"
-import { ControlledPromise } from "ol-test-utilities"
+import { LearningResource, ResourceTypeEnum } from "api"
+import { makeUserSettings } from "@/test-utils/factories"
+import type { User } from "api/hooks/user"
 
 jest.mock("ol-components", () => {
   const actual = jest.requireActual("ol-components")
@@ -20,22 +21,6 @@ jest.mock("ol-components", () => {
     LearningResourceExpandedV2: jest.fn(actual.LearningResourceExpandedV2),
   }
 })
-
-const makeSearchResponse = (results: CourseResource[] | LearningResource[]) => {
-  const responseData = {
-    metadata: {
-      suggestions: [],
-      aggregations: {},
-    },
-    count: results.length,
-    results: results,
-    next: null,
-    previous: null,
-  }
-  const promise = new ControlledPromise()
-  promise.resolve(responseData)
-  return responseData
-}
 
 const mockedPostHogCapture = jest.fn()
 
@@ -49,67 +34,47 @@ jest.mock("posthog-js/react", () => ({
   },
 }))
 
-const setupApis = (resource: LearningResource) => {
-  setMockResponse.get(
-    urls.learningResources.details({ id: resource.id }),
-    resource,
-  )
-  const count = 10
-  const similarResources = factories.learningResources.resources({
-    count,
-  }).results
-  setMockResponse.get(urls.userMe.get(), null, { code: 403 })
-  setMockResponse.get(
-    urls.learningResources.details({ id: resource.id }),
-    resource,
-  )
-  setMockResponse.get(
-    urls.learningResources.vectorSimilar({ id: resource.id }),
-    similarResources,
-  )
-  const topicsCourses: CourseResource[] = []
-  resource.topics?.forEach((topic) => {
-    const topicCourses = factories.learningResources.courses({ count: 10 })
-    topicCourses.results.map((course) => {
-      course.topics = [factories.learningResources.topic({ name: topic.name })]
-    })
-    topicsCourses.push(...topicCourses.results)
-  })
-  resource.topics?.forEach((topic) => {
-    setMockResponse.get(
-      expect.stringContaining(
-        urls.search.resources({
-          limit: 12,
-          resource_type: ["course"],
-          sortby: "-views",
-          topic: [topic.name],
-        }),
-      ),
-      makeSearchResponse(
-        topicsCourses.filter(
-          (course) => course.topics?.[0].name === topic.name,
-        ),
-      ),
-    )
-  })
-  return { resource, similarResources }
-}
-
 describe("LearningResourceDrawerV2", () => {
+  const setupApis = (
+    overries: {
+      user?: Partial<User>
+      resource?: Partial<LearningResource>
+    } = {},
+  ) => {
+    const user = makeUserSettings(overries.user)
+    const resource = factories.learningResources.resource(overries.resource)
+    if (user.is_authenticated) {
+      setMockResponse.get(urls.userMe.get(), user)
+      setMockResponse.get(urls.userLists.membershipList(), [])
+    } else {
+      setMockResponse.get(urls.userMe.get(), null, { code: 403 })
+    }
+    if (user.is_learning_path_editor) {
+      setMockResponse.get(urls.learningPaths.membershipList(), [])
+    }
+
+    setMockResponse.get(
+      urls.learningResources.details({ id: resource.id }),
+      resource,
+    )
+    setMockResponse.get(
+      urls.learningResources.vectorSimilar({ id: resource.id }),
+      [],
+    )
+
+    return { resource, user }
+  }
+
   it.each([
     { descriptor: "is enabled", enablePostHog: true },
     { descriptor: "is not enabled", enablePostHog: false },
   ])(
     "Renders drawer content when resource=id is in the URL and captures the view if PostHog $descriptor",
     async ({ enablePostHog }) => {
-      setMockResponse.get(urls.userMe.get(), {})
-      setMockResponse.get(urls.userLists.membershipList(), [])
-      setMockResponse.get(urls.learningPaths.membershipList(), [])
+      const { resource } = setupApis()
       process.env.NEXT_PUBLIC_POSTHOG_API_KEY = enablePostHog
         ? "12345abcdef" // pragma: allowlist secret
         : ""
-      const resource = factories.learningResources.resource()
-      setupApis(resource)
 
       renderWithProviders(<LearningResourceDrawerV2 />, {
         url: `?dog=woof&${RESOURCE_DRAWER_QUERY_PARAM}=${resource.id}`,
@@ -135,6 +100,20 @@ describe("LearningResourceDrawerV2", () => {
     expect(LearningResourceExpandedV2).not.toHaveBeenCalled()
   })
 
+  test("Drawer is a dialog and has title", async () => {
+    const { resource } = setupApis({
+      resource: {
+        resource_type: ResourceTypeEnum.Course,
+      },
+    })
+    renderWithProviders(<LearningResourceDrawerV2 />, {
+      url: `?resource=${resource.id}`,
+    })
+    await screen.findByRole("dialog", {
+      name: `Course ${resource.title}`,
+    })
+  })
+
   test.each([
     {
       isLearningPathEditor: true,
@@ -158,25 +137,20 @@ describe("LearningResourceDrawerV2", () => {
       isAuthenticated,
       expectAddToLearningPathButton,
     }) => {
-      const resource = factories.learningResources.resource({
-        resource_type: ResourceTypeEnum.Course,
-        runs: [
-          factories.learningResources.run({
-            languages: ["en-us", "es-es", "fr-fr"],
-          }),
-        ],
+      const { resource } = setupApis({
+        user: {
+          is_authenticated: isAuthenticated,
+          is_learning_path_editor: isLearningPathEditor,
+        },
+        resource: {
+          resource_type: ResourceTypeEnum.Course,
+          runs: [
+            factories.learningResources.run({
+              languages: ["en-us", "es-es", "fr-fr"],
+            }),
+          ],
+        },
       })
-      setupApis(resource)
-      const user = factories.user.user({
-        is_learning_path_editor: isLearningPathEditor,
-      })
-      if (isAuthenticated) {
-        setMockResponse.get(urls.userMe.get(), user)
-      } else {
-        setMockResponse.get(urls.userMe.get(), null, { code: 403 })
-      }
-      setMockResponse.get(urls.userLists.membershipList(), [])
-      setMockResponse.get(urls.learningPaths.membershipList(), [])
 
       renderWithProviders(<LearningResourceDrawerV2 />, {
         url: `?resource=${resource.id}`,
@@ -202,21 +176,31 @@ describe("LearningResourceDrawerV2", () => {
   )
 
   it("Renders similar resource carousels", async () => {
-    const resource = factories.learningResources.resource({
-      resource_type: ResourceTypeEnum.Course,
-      runs: [
-        factories.learningResources.run({
-          languages: ["en-us", "es-es", "fr-fr"],
-        }),
-      ],
+    const { resource } = setupApis({
+      resource: {
+        resource_type: ResourceTypeEnum.Course,
+        runs: [
+          factories.learningResources.run({
+            languages: ["en-us", "es-es", "fr-fr"],
+          }),
+        ],
+      },
     })
-    const { similarResources } = setupApis(resource)
+    const similarResources = factories.learningResources.resources({
+      count: 10,
+    }).results
+
+    setMockResponse.get(
+      urls.learningResources.vectorSimilar({ id: resource.id }),
+      similarResources,
+    )
+
     renderWithProviders(<LearningResourceDrawerV2 />, {
       url: `?resource=${resource.id}`,
     })
     await screen.findByText("Similar Learning Resources")
-    for (const similarResource of similarResources) {
-      await screen.findByText(similarResource.title)
-    }
+    await screen.findAllByText((text) =>
+      similarResources.some((r) => text.includes(r.title)),
+    )
   })
 })

@@ -815,6 +815,7 @@ class ContentFileSerializer(serializers.ModelSerializer):
             "resource_readable_id",
             "course_number",
             "file_type",
+            "file_extension",
             "offered_by",
             "platform",
             "run_readable_id",

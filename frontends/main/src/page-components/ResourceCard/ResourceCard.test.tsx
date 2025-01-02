@@ -8,6 +8,7 @@ import {
   waitFor,
 } from "@/test-utils"
 import type { User } from "api/hooks/user"
+import { learningResources } from "api/hooks/learningResources"
 import { ResourceCard } from "./ResourceCard"
 import { getReadableResourceType } from "ol-utilities"
 import { ResourceTypeEnum, MicroUserListRelationship } from "api"
@@ -79,10 +80,10 @@ describe.each([
     } else {
       setMockResponse.get(urls.userMe.get(), {}, { code: 403 })
     }
-    const { view, location } = renderWithProviders(
+    const { view, location, queryClient } = renderWithProviders(
       <ResourceCard {...props} resource={resource} list={isList} />,
     )
-    return { resource, view, location }
+    return { resource, view, location, queryClient }
   }
 
   test("Applies className to the resource card", () => {
@@ -222,5 +223,16 @@ describe.each([
     expect(url.searchParams.get(RESOURCE_DRAWER_QUERY_PARAM)).toBe(
       String(resource.id),
     )
+  })
+
+  test("Clicking a resource card sets resource detail cache", async () => {
+    const { resource, view, queryClient } = setup()
+    await user.click(view.container.firstChild as HTMLElement)
+
+    invariant(resource)
+    const cached = queryClient.getQueryData(
+      learningResources.detail(resource.id).queryKey,
+    )
+    expect(cached).toEqual(resource)
   })
 })
