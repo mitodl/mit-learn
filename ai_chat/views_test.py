@@ -18,7 +18,7 @@ def test_post_search_agent_endpoint(
     user_message = "Do you have any good physics courses?"
     temperature = 0.1
     system_prompt = "Answer this question as best you can"
-    mock_agent = mocker.patch("ai_chat.views.SearchAgent", autospec=True)
+    mock_agent = mocker.patch("ai_chat.agents.SearchAgent", autospec=True)
     mock_agent.return_value.get_completion = mocker.Mock(
         return_value=iter(expected_answer)
     )
