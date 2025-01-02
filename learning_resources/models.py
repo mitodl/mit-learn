@@ -480,6 +480,12 @@ class LearningResource(TimestampedModel):
         default=default_format,
     )
     location = models.CharField(max_length=256, blank=True)
+    duration = models.CharField(max_length=256, blank=True)
+    min_weeks = models.IntegerField(null=True, blank=True)
+    max_weeks = models.IntegerField(null=True, blank=True)
+    time_commitment = models.CharField(max_length=256, blank=True)
+    min_weekly_hours = models.IntegerField(null=True, blank=True)
+    max_weekly_hours = models.IntegerField(null=True, blank=True)
 
     @property
     def audience(self) -> str | None:
@@ -649,6 +655,12 @@ class LearningResourceRun(TimestampedModel):
         default=default_format,
     )
     location = CharField(max_length=256, blank=True)
+    duration = models.CharField(max_length=256, blank=True)
+    min_weeks = models.IntegerField(null=True, blank=True)
+    max_weeks = models.IntegerField(null=True, blank=True)
+    time_commitment = models.CharField(max_length=256, blank=True)
+    min_weekly_hours = models.IntegerField(null=True, blank=True)
+    max_weekly_hours = models.IntegerField(null=True, blank=True)
 
     def __str__(self):
         return f"LearningResourceRun platform={self.learning_resource.platform} run_id={self.run_id}"  # noqa: E501

@@ -121,5 +121,25 @@ class ResourceNextRunConfig:
     next_start_date: datetime = None
     prices: list[Decimal] = field(default_factory=list)
     resource_prices: list[LearningResourcePrice] = field(default_factory=list)
-    availability: str = None
-    location: str = None
+    availability: str = ""
+    location: str = ""
+    duration: str = ""
+    min_weeks: int = None
+    max_weeks: int = None
+    time_commitment: str = ""
+    min_weekly_hours: int = None
+    max_weekly_hours: int = None
+
+
+@dataclass
+class DurationConfig:
+    duration: str = ""
+    min_weeks: int = None
+    max_weeks: int = None
+
+
+@dataclass
+class CommitmentConfig:
+    commitment: str = ""
+    min_weekly_hours: int = None
+    max_weekly_hours: int = None

@@ -1140,6 +1140,42 @@ export interface CourseResource {
    * @memberof CourseResource
    */
   location?: string
+  /**
+   *
+   * @type {string}
+   * @memberof CourseResource
+   */
+  duration?: string
+  /**
+   *
+   * @type {number}
+   * @memberof CourseResource
+   */
+  min_weeks?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof CourseResource
+   */
+  max_weeks?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof CourseResource
+   */
+  time_commitment?: string
+  /**
+   *
+   * @type {number}
+   * @memberof CourseResource
+   */
+  min_weekly_hours?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof CourseResource
+   */
+  max_weekly_hours?: number | null
 }
 
 /**
@@ -2131,6 +2167,42 @@ export interface LearningPathResource {
    * @memberof LearningPathResource
    */
   location?: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningPathResource
+   */
+  duration?: string
+  /**
+   *
+   * @type {number}
+   * @memberof LearningPathResource
+   */
+  min_weeks?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof LearningPathResource
+   */
+  max_weeks?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof LearningPathResource
+   */
+  time_commitment?: string
+  /**
+   *
+   * @type {number}
+   * @memberof LearningPathResource
+   */
+  min_weekly_hours?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof LearningPathResource
+   */
+  max_weekly_hours?: number | null
 }
 
 /**
@@ -2664,6 +2736,42 @@ export interface LearningResourceRun {
    * @memberof LearningResourceRun
    */
   location?: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceRun
+   */
+  duration?: string
+  /**
+   *
+   * @type {number}
+   * @memberof LearningResourceRun
+   */
+  min_weeks?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof LearningResourceRun
+   */
+  max_weeks?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceRun
+   */
+  time_commitment?: string
+  /**
+   *
+   * @type {number}
+   * @memberof LearningResourceRun
+   */
+  min_weekly_hours?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof LearningResourceRun
+   */
+  max_weekly_hours?: number | null
 }
 
 /**
@@ -3753,6 +3861,42 @@ export interface PodcastEpisodeResource {
    * @memberof PodcastEpisodeResource
    */
   location?: string
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastEpisodeResource
+   */
+  duration?: string
+  /**
+   *
+   * @type {number}
+   * @memberof PodcastEpisodeResource
+   */
+  min_weeks?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof PodcastEpisodeResource
+   */
+  max_weeks?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastEpisodeResource
+   */
+  time_commitment?: string
+  /**
+   *
+   * @type {number}
+   * @memberof PodcastEpisodeResource
+   */
+  min_weekly_hours?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof PodcastEpisodeResource
+   */
+  max_weekly_hours?: number | null
 }
 
 /**
@@ -4012,6 +4156,42 @@ export interface PodcastResource {
    * @memberof PodcastResource
    */
   location?: string
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastResource
+   */
+  duration?: string
+  /**
+   *
+   * @type {number}
+   * @memberof PodcastResource
+   */
+  min_weeks?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof PodcastResource
+   */
+  max_weeks?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastResource
+   */
+  time_commitment?: string
+  /**
+   *
+   * @type {number}
+   * @memberof PodcastResource
+   */
+  min_weekly_hours?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof PodcastResource
+   */
+  max_weekly_hours?: number | null
 }
 
 /**
@@ -4660,6 +4840,42 @@ export interface ProgramResource {
    * @memberof ProgramResource
    */
   location?: string
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramResource
+   */
+  duration?: string
+  /**
+   *
+   * @type {number}
+   * @memberof ProgramResource
+   */
+  min_weeks?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof ProgramResource
+   */
+  max_weeks?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramResource
+   */
+  time_commitment?: string
+  /**
+   *
+   * @type {number}
+   * @memberof ProgramResource
+   */
+  min_weekly_hours?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof ProgramResource
+   */
+  max_weekly_hours?: number | null
 }
 
 /**
@@ -5576,6 +5792,42 @@ export interface VideoPlaylistResource {
    * @memberof VideoPlaylistResource
    */
   location?: string
+  /**
+   *
+   * @type {string}
+   * @memberof VideoPlaylistResource
+   */
+  duration?: string
+  /**
+   *
+   * @type {number}
+   * @memberof VideoPlaylistResource
+   */
+  min_weeks?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof VideoPlaylistResource
+   */
+  max_weeks?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof VideoPlaylistResource
+   */
+  time_commitment?: string
+  /**
+   *
+   * @type {number}
+   * @memberof VideoPlaylistResource
+   */
+  min_weekly_hours?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof VideoPlaylistResource
+   */
+  max_weekly_hours?: number | null
 }
 
 /**
@@ -5841,6 +6093,42 @@ export interface VideoResource {
    * @memberof VideoResource
    */
   location?: string
+  /**
+   *
+   * @type {string}
+   * @memberof VideoResource
+   */
+  duration?: string
+  /**
+   *
+   * @type {number}
+   * @memberof VideoResource
+   */
+  min_weeks?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof VideoResource
+   */
+  max_weeks?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof VideoResource
+   */
+  time_commitment?: string
+  /**
+   *
+   * @type {number}
+   * @memberof VideoResource
+   */
+  min_weekly_hours?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof VideoResource
+   */
+  max_weekly_hours?: number | null
 }
 
 /**

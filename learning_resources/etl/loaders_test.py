@@ -1517,6 +1517,12 @@ def test_load_run_dependent_values(certification):
         resource_prices=LearningResourcePriceFactory.create_batch(2),
         start_date=closest_date,
         location="Portland, ME",
+        duration="3 - 4 weeks",
+        min_weeks=3,
+        max_weeks=4,
+        time_commitment="5 - 10 hours per week",
+        min_weekly_hours=5,
+        max_weekly_hours=10,
     )
     LearningResourceRunFactory.create(
         learning_resource=course,
@@ -1526,6 +1532,12 @@ def test_load_run_dependent_values(certification):
         resource_prices=LearningResourcePriceFactory.create_batch(2),
         start_date=furthest_date,
         location="Portland, OR",
+        duration="7 - 9 weeks",
+        min_weeks=7,
+        max_weeks=9,
+        time_commitment="8 - 9 hours per week",
+        min_weekly_hours=8,
+        max_weekly_hours=19,
     )
     result = load_run_dependent_values(course)
     assert result.next_start_date == course.next_start_date == closest_date
@@ -1537,6 +1549,15 @@ def test_load_run_dependent_values(certification):
     )
     assert result.availability == course.availability == Availability.dated.name
     assert result.location == course.location == run.location
+    for key in [
+        "duration",
+        "time_commitment",
+        "min_weeks",
+        "max_weeks",
+        "min_weekly_hours",
+        "max_weekly_hours",
+    ]:
+        assert getattr(result, key) == getattr(course, key) == getattr(run, key)
 
 
 @pytest.mark.parametrize(

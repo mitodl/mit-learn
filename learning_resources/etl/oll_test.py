@@ -73,6 +73,12 @@ def test_oll_transform(mocker, oll_course_data):
                 "availability": "anytime",
                 "pace": ["self_paced"],
                 "format": ["asynchronous"],
+                "duration": "14 weeks",
+                "time_commitment": "14 hours/week",
+                "min_weeks": 14,
+                "max_weeks": 14,
+                "min_weekly_hours": 14,
+                "max_weekly_hours": 14,
             }
         ],
         "image": {
@@ -127,6 +133,12 @@ def test_oll_transform(mocker, oll_course_data):
                 "availability": "anytime",
                 "pace": ["self_paced"],
                 "format": ["asynchronous"],
+                "duration": "6 weeks",
+                "time_commitment": "",
+                "min_weeks": 6,
+                "max_weeks": 6,
+                "min_weekly_hours": None,
+                "max_weekly_hours": None,
             }
         ],
         "image": {
