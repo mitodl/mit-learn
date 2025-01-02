@@ -5194,13 +5194,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/qs@npm:^6.9.17":
-  version: 6.9.17
-  resolution: "@types/qs@npm:6.9.17"
-  checksum: 10/fc3beda0be70e820ddabaa361e8dfec5e09b482b8f6cf1515615479a027dd06cd5ba0ffbd612b654c2605523f45f484c8905a475623d6cd0c4cadcf5d0c517f5
-  languageName: node
-  linkType: hard
-
 "@types/react-dom@npm:^18":
   version: 18.3.5
   resolution: "@types/react-dom@npm:18.3.5"
@@ -12891,7 +12884,6 @@ __metadata:
   dependencies:
     "@nlux/react": "npm:^2.17.1"
     "@nlux/themes": "npm:^2.17.1"
-    "@types/qs": "npm:^6.9.17"
     syncpack: "npm:^12.4.0"
   languageName: unknown
   linkType: soft
