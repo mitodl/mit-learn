@@ -23,6 +23,7 @@
   },
   "packageManager": "yarn@4.6.0",
   "devDependencies": {
+    "@types/qs": "^6.9.17",
     "syncpack": "^12.4.0"
   },
   "resolutions": {
