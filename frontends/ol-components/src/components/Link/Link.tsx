@@ -72,6 +72,7 @@ type LinkProps = LinkStyleProps &
      */
     shallow?: boolean
     scroll?: boolean
+    prefetch?: boolean
   }
 
 const BaseLink = ({

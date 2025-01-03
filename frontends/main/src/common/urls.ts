@@ -98,6 +98,7 @@ export const SETTINGS = "/dashboard/settings"
 export const SEARCH = "/search"
 
 export const ABOUT = "/about"
+export const ABOUT_NON_DEGREE_LEARNING_FRAGMENT = "non-degree-learning"
 
 export const ACCESSIBILITY = "https://accessibility.mit.edu/"
 
