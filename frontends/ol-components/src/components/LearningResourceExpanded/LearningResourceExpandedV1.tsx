@@ -146,6 +146,7 @@ const OnPlatform = styled.span`
 
 type LearningResourceExpandedV1Props = {
   resource?: LearningResource
+  titleId?: string
   user?: User
   imgConfig: ImageConfig
   inLearningPath?: boolean
@@ -266,21 +267,33 @@ const CallToActionSection = ({
   )
 }
 
-const DetailSection = ({ resource }: { resource?: LearningResource }) => {
+const DetailSection = ({
+  resource,
+  titleId,
+}: {
+  resource?: LearningResource
+  titleId?: string
+}) => {
   return (
     <Detail>
-      <ResourceTitle resource={resource} />
+      <ResourceTitle id={titleId} resource={resource} />
       <ResourceDescription resource={resource} />
     </Detail>
   )
 }
 
-const ResourceTitle = ({ resource }: { resource?: LearningResource }) => {
+const ResourceTitle = ({
+  resource,
+  id,
+}: {
+  resource?: LearningResource
+  id?: string
+}) => {
   if (!resource) {
     return <Skeleton variant="text" height={20} width="66%" />
   }
   return (
-    <Typography variant="h5" component="h2">
+    <Typography id={id} variant="h5" component="h2">
       {resource.title}
     </Typography>
   )
@@ -334,6 +347,7 @@ const formatRunDate = (
 
 const LearningResourceExpandedV1: React.FC<LearningResourceExpandedV1Props> = ({
   resource,
+  titleId,
   user,
   imgConfig,
   inLearningPath,
@@ -435,7 +449,7 @@ const LearningResourceExpandedV1: React.FC<LearningResourceExpandedV1Props> = ({
       <DateSection hide={isVideo} />
       <ImageSection resource={resource} config={imgConfig} />
       <CallToActionSection resource={resource} hide={isVideo} />
-      <DetailSection resource={resource} />
+      <DetailSection titleId={titleId} resource={resource} />
       <InfoSectionV1
         resource={resource}
         run={selectedRun}

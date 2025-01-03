@@ -49,7 +49,7 @@ const SeparatorContainer = styled.span({
  * breaks after the pipe but not before it.
  */
 const Separator: React.FC = () => (
-  <SeparatorContainer>|&#8203;</SeparatorContainer>
+  <SeparatorContainer aria-label=", ">|&#8203;</SeparatorContainer>
 )
 
 const InfoItems = styled.section({
@@ -196,6 +196,7 @@ const RunDates: React.FC<{ resource: LearningResource }> = ({ resource }) => {
     const showMoreLink = (
       <NoWrap>
         <ShowHideLink
+          scroll={false}
           color="red"
           size="small"
           onClick={() => setShowingMore(!showingMore)}
@@ -533,7 +534,7 @@ const InfoItem = ({ label, Icon, value }: InfoItemProps) => {
   }
   return (
     <InfoItemContainer>
-      <IconContainer>{Icon && <Icon />}</IconContainer>
+      <IconContainer>{Icon && <Icon aria-hidden="true" />}</IconContainer>
       <InfoLabel>{label}</InfoLabel>
       <InfoValue>{value}</InfoValue>
     </InfoItemContainer>

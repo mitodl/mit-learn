@@ -4,13 +4,11 @@
   "workspaces": [
     "api",
     "main",
-    "ol-ckeditor",
     "ol-common",
     "ol-components",
     "ol-template",
     "ol-test-utilities",
-    "ol-utilities",
-    "ol-widgets"
+    "ol-utilities"
   ],
   "scripts": {
     "watch": "yarn workspace mit-learn watch",
@@ -41,7 +39,7 @@
     "@swc/core": "^1.4.11",
     "@swc/jest": "^0.2.26",
     "@testing-library/jest-dom": "^6.4.2",
-    "@testing-library/react": "16.0.1",
+    "@testing-library/react": "16.1.0",
     "@testing-library/user-event": "14.5.2",
     "@types/css-mediaquery": "^0.1.1",
     "@types/jest": "^29.5.2",
@@ -70,7 +68,7 @@
     "postcss-styled-syntax": "^0.7.0",
     "prettier": "^3.3.3",
     "prettier-plugin-django-alpine": "^1.2.6",
-    "stylelint": "^15.2.0",
+    "stylelint": "^16.0.0",
     "stylelint-config-standard-scss": "^7.0.1",
     "ts-node": "^10.9.2",
     "type-fest": "^4.18.3",

@@ -7,9 +7,10 @@
     "./test-utils/factories": "./src/test-utils/factories.ts"
   },
   "peerDependencies": {
-    "next": "^14.2.15",
-    "react": "18.3.1"
+    "next": "^15",
+    "react": "19"
   },
+  "sideEffects": false,
   "dependencies": {
     "@dnd-kit/core": "^6.0.8",
     "@dnd-kit/sortable": "^8.0.0",
@@ -28,7 +29,7 @@
     "striptags": "^3.2.0"
   },
   "devDependencies": {
-    "@testing-library/react": "16.0.1",
+    "@testing-library/react": "16.1.0",
     "@testing-library/user-event": "14.5.2",
     "@types/validator": "^13.7.6",
     "casual-browserify": "^1.5.19-2",

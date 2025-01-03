@@ -23,10 +23,13 @@ from rest_framework.routers import DefaultRouter
 
 from main.views import FeaturesViewSet
 
-# Post slugs can contain unicode characters, so a letter-matching pattern like [A-Za-z] doesn't work.  # noqa: E501
-# "[^\W]" Matches any character that is NOT a non-alphanumeric character, including underscores.  # noqa: E501
-# "[^\W]" will match all numbers, underscores, and letters, unicode or otherwise. To accept dashes  # noqa: E501
-# as well, that character is added to the pattern via an alternation (|).
+# Post slugs can contain unicode characters, so a letter-matching pattern
+# like [A-Za-z] doesn't work.
+# "[^\W]" Matches any character that is NOT a non-alphanumeric character,
+# including underscores.
+# "[^\W]" will match all numbers, underscores, and letters, unicode or
+# otherwise. To accept dashes as well, that character is added to the pattern
+# via an alternation (|).
 POST_SLUG_PATTERN = "([^\\W]|-)+"
 
 handler400 = "main.views.handle_error"
@@ -42,6 +45,7 @@ urlpatterns = (
         re_path(r"^o/", include("oauth2_provider.urls", namespace="oauth2_provider")),
         re_path(r"^admin/", admin.site.urls),
         re_path(r"", include("authentication.urls")),
+        re_path(r"", include("ai_chat.urls")),
         re_path(r"", include("channels.urls")),
         re_path(r"", include("profiles.urls")),
         re_path(r"", include("embedly.urls")),

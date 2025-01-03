@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useMemo } from "react"
+import React, { Suspense, useEffect, useId, useMemo } from "react"
 import {
   RoutedDrawer,
   LearningResourceExpandedV2,
@@ -22,6 +22,7 @@ import { usePostHog } from "posthog-js/react"
 import ResourceCarousel from "../ResourceCarousel/ResourceCarousel"
 import { useIsLearningPathMember } from "api/hooks/learningPaths"
 import { useIsUserListMember } from "api/hooks/userLists"
+import { TopicCarouselConfig } from "@/app-pages/DashboardPage/carousels"
 
 const RESOURCE_DRAWER_PARAMS = [RESOURCE_DRAWER_QUERY_PARAM] as const
 
@@ -65,8 +66,16 @@ const useCapturePageView = (resourceId: number) => {
 
 const DrawerContent: React.FC<{
   resourceId: number
+  titleId: string
   closeDrawer: () => void
-}> = ({ resourceId, closeDrawer }) => {
+}> = ({ resourceId, closeDrawer, titleId }) => {
+  /**
+   * Ideally the resource data should already exist in the query cache, e.g., by:
+   * - a server-side prefetch
+   * - or by `setQueryData` in the component that triggers opening this drawer.
+   *   The triggering component likely has the data already via some other API
+   *   call.
+   */
   const resource = useLearningResourcesDetail(Number(resourceId))
   const [signupEl, setSignupEl] = React.useState<HTMLElement | null>(null)
   const { data: user } = useUserMe()
@@ -103,38 +112,39 @@ const DrawerContent: React.FC<{
           label: "Similar Learning Resources",
           cardProps: { size: "small" },
           data: {
-            type: "lr_similar",
-            params: { id: resourceId },
-          },
-        },
-      ]}
-    />
-  )
-  const vectorSimilarResourcesCarousel = (
-    <ResourceCarousel
-      titleComponent="p"
-      titleVariant="subtitle1"
-      title="Similar Learning Resources (Vector Based)"
-      config={[
-        {
-          label: "Similar Learning Resources (Vector Based)",
-          cardProps: { size: "small" },
-          data: {
             type: "lr_vector_similar",
             params: { id: resourceId },
           },
         },
       ]}
+      excludeResourceId={resourceId}
     />
   )
+  const topics = resource.data?.topics
+    ?.filter((topic) => topic.parent)
+    .slice(0, 2)
+  const topicCarousels = topics?.map((topic) => (
+    <ResourceCarousel
+      key={topic.id}
+      titleComponent="p"
+      titleVariant="subtitle1"
+      title={`Learning Resources in "${topic.name}"`}
+      config={TopicCarouselConfig(topic.name)}
+      data-testid={`topic-carousel-${topic}`}
+      excludeResourceId={resourceId}
+    />
+  ))
 
   return (
     <>
       <LearningResourceExpandedV2
+        titleId={titleId}
         imgConfig={imgConfigs.large}
+        resourceId={resourceId}
         resource={resource.data}
-        carousels={[similarResourcesCarousel, vectorSimilarResourcesCarousel]}
+        carousels={[similarResourcesCarousel, ...(topicCarousels || [])]}
         user={user}
+        shareUrl={`${window.location.origin}/search?${RESOURCE_DRAWER_QUERY_PARAM}=${resourceId}`}
         inLearningPath={inLearningPath}
         inUserList={inUserList}
         onAddToLearningPathClick={handleAddToLearningPathClick}
@@ -165,6 +175,7 @@ const PAPER_PROPS: RoutedDrawerProps["PaperProps"] = {
 }
 
 const LearningResourceDrawerV2 = () => {
+  const id = useId()
   return (
     <Suspense>
       <RoutedDrawer
@@ -172,10 +183,12 @@ const LearningResourceDrawerV2 = () => {
         requiredParams={RESOURCE_DRAWER_PARAMS}
         PaperProps={PAPER_PROPS}
         hideCloseButton={true}
+        aria-labelledby={id}
       >
         {({ params, closeDrawer }) => {
           return (
             <DrawerContent
+              titleId={id}
               resourceId={Number(params.resource)}
               closeDrawer={closeDrawer}
             />

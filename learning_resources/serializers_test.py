@@ -294,6 +294,12 @@ def test_learning_resource_serializer(  # noqa: PLR0913
         "completeness": 1.0,
         "continuing_ed_credits": resource.continuing_ed_credits,
         "license_cc": resource.license_cc,
+        "duration": resource.duration,
+        "time_commitment": resource.time_commitment,
+        "min_weekly_hours": resource.min_weekly_hours,
+        "max_weekly_hours": resource.max_weekly_hours,
+        "min_weeks": resource.min_weeks,
+        "max_weeks": resource.max_weeks,
     }
 
 
@@ -496,6 +502,7 @@ def test_content_file_serializer(settings, expected_types, has_channels):
                 "name": PlatformType[platform].value,
                 "code": platform,
             },
+            "file_extension": content_file.file_extension,
             "offered_by": {
                 "name": content_file.run.learning_resource.offered_by.name,
                 "code": content_file.run.learning_resource.offered_by.code,

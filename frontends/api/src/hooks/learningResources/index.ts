@@ -14,10 +14,12 @@ import type {
   FeaturedApiFeaturedListRequest as FeaturedListParams,
   LearningResourcesApiLearningResourcesUserlistsPartialUpdateRequest,
   LearningResourcesApiLearningResourcesLearningPathsPartialUpdateRequest,
+  LearningResource,
 } from "../../generated/v1"
 import learningResources from "./keyFactory"
 import userLists from "../userLists/keyFactory"
 import learningPaths from "../learningPaths/keyFactory"
+import { useCallback } from "react"
 
 const useLearningResourcesList = (
   params: LRListRequest = {},
@@ -27,6 +29,21 @@ const useLearningResourcesList = (
     ...learningResources.list(params),
     ...opts,
   })
+}
+
+const useLearningResourceDetailSetCache = (
+  resource: LearningResource | null | undefined,
+) => {
+  const queryClient = useQueryClient()
+  const onClick = useCallback(() => {
+    if (resource) {
+      queryClient.setQueryData(
+        learningResources.detail(resource.id).queryKey,
+        resource,
+      )
+    }
+  }, [resource, queryClient])
+  return onClick
 }
 
 const useLearningResourcesDetail = (id: number) => {
@@ -140,6 +157,7 @@ export {
   useLearningResourcesList,
   useFeaturedLearningResourcesList,
   useLearningResourcesDetail,
+  useLearningResourceDetailSetCache,
   useLearningResourceTopic,
   useLearningResourceTopics,
   useLearningResourcesSearch,

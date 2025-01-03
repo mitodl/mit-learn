@@ -1,7 +1,4 @@
-import { setupMockEditors } from "ol-ckeditor/test_utils"
 import { mockAxiosInstance } from "api/test-utils"
-
-setupMockEditors()
 
 jest.mock("axios", () => {
   const AxiosError = jest.requireActual("axios").AxiosError

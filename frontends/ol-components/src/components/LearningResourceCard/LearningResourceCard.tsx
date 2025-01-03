@@ -79,9 +79,7 @@ const Info = ({
           <Certificate>
             {size === "small" ? (
               <Tooltip title="Certificate">
-                <CertificateIconContainer>
-                  <RiAwardFill />
-                </CertificateIconContainer>
+                <RiAwardFill />
               </Tooltip>
             ) : (
               <RiAwardFill />
@@ -97,11 +95,6 @@ const Info = ({
     </>
   )
 }
-
-const CertificateIconContainer = styled.div`
-  display: flex;
-  align-items: center;
-`
 
 const PriceContainer = styled.div`
   display: flex;
@@ -168,6 +161,7 @@ interface LearningResourceCardProps {
   onAddToUserListClick?: ResourceIdCallback | null
   inUserList?: boolean
   inLearningPath?: boolean
+  onClick?: React.MouseEventHandler
 }
 
 const FILLED_PROPS = { variant: "primary" } as const
@@ -206,6 +200,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
   onAddToUserListClick,
   inLearningPath,
   inUserList,
+  onClick,
 }) => {
   if (isLoading) {
     const { width, height } = imgConfigs["column"]
@@ -233,6 +228,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
       forwardClicksToLink
       className={className}
       size={size}
+      onClick={onClick}
     >
       <Card.Image
         src={resource.image?.url ? resource.image?.url : DEFAULT_RESOURCE_IMG}

@@ -9,8 +9,13 @@ import {
 } from "api/hooks/learningPaths"
 import { ListType } from "api/constants"
 import { manageListDialogs } from "@/page-components/ManageListDialogs/ManageListDialogs"
-import LearningResourceDrawer from "@/page-components/LearningResourceDrawer/LearningResourceDrawer"
 import ListDetailsPage from "./ListDetailsPage"
+import dynamic from "next/dynamic"
+
+const LearningResourceDrawer = dynamic(
+  () =>
+    import("@/page-components/LearningResourceDrawer/LearningResourceDrawer"),
+)
 
 type RouteParams = {
   id: string

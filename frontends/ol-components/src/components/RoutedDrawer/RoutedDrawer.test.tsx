@@ -29,9 +29,14 @@ const renderRoutedDrawer = <P extends string, R extends P>(
   mockRouter.setCurrentUrl(`/?${initialSearchParams}#${initialHashParams}`)
   window.location.hash = initialHashParams
   const childFn = jest.fn(TestDrawerContents)
-  render(<RoutedDrawer {...props}>{childFn}</RoutedDrawer>, {
-    wrapper: ThemeProvider,
-  })
+  render(
+    <RoutedDrawer aria-label="Test Drawer" {...props}>
+      {childFn}
+    </RoutedDrawer>,
+    {
+      wrapper: ThemeProvider,
+    },
+  )
   return { childFn }
 }
 
@@ -111,6 +116,13 @@ describe("RoutedDrawer", () => {
     await waitForElementToBeRemoved(content)
 
     expect(mockRouter.query).toEqual({})
+  })
+
+  it("Has role dialog", () => {
+    renderRoutedDrawer({ params: [], requiredParams: [] }, "", "")
+    expect(
+      screen.getByRole("dialog", { name: "Test Drawer" }),
+    ).toBeInTheDocument()
   })
 
   it("Passes a closeDrawer callback to child that can close the drawer", async () => {
