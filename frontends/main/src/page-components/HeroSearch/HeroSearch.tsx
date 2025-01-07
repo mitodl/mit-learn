@@ -223,7 +223,6 @@ const HeroSearch: React.FC<{ imageIndex: number }> = ({ imageIndex }) => {
           <BoldLink
             href={`${ABOUT}#${ABOUT_NON_DEGREE_LEARNING_FRAGMENT}`}
             prefetch={false}
-            scroll={false}
           >
             Non-Degree Learning
           </BoldLink>
