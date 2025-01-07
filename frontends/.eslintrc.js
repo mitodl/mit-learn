@@ -18,7 +18,7 @@ module.exports = {
   settings: {
     "import/resolver": {
       typescript: {
-        project: "*/tsconfig.json",
+        project: "**/tsconfig.json",
       },
     },
     "jsx-a11y": {
@@ -99,14 +99,14 @@ module.exports = {
       {
         zones: [
           {
-            target: "**/{components,utilities}/**",
-            from: "**/{pages,page-components,services}/**",
+            target: "**/components/**",
+            from: "**/{app,app-pages,page-components}/**",
             message:
               "Import breaks component hierarchy. See https://github.com/mitodl/mit-open/blob/main/docs/architecture/front-end-component-structure.md#module-boundary-and-importexport-rules",
           },
           {
             target: "**/page-components/**",
-            from: "**/pages/**",
+            from: "**/{app,app-pages}/**",
             message:
               "Import breaks component hierarchy. See https://github.com/mitodl/mit-open/blob/main/docs/architecture/front-end-component-structure.md#module-boundary-and-importexport-rules",
           },

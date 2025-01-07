@@ -37,7 +37,7 @@ import {
   POPULAR_LEARNING_RESOURCES_CAROUSEL,
   CERTIFICATE_COURSES_CAROUSEL,
   FREE_COURSES_CAROUSEL,
-} from "./carousels"
+} from "../../common/carousels"
 import ResourceCarousel from "@/page-components/ResourceCarousel/ResourceCarousel"
 import UserListDetailsTab from "./UserListDetailsTab"
 import { SettingsPage } from "./SettingsPage"
