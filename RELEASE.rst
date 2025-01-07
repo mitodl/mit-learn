@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.26.5
+Version 0.26.5 (Released January 07, 2025)
 --------------
 
 - pin ubuntu due to 24 dropping heroku cli (#1943)
