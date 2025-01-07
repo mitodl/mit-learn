@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.26.5
+--------------
+
+- pin ubuntu due to 24 dropping heroku cli (#1943)
+- fix(deps): update dependency litellm to v1.56.9 (#1941)
+- fix(deps): update dependency ruff to v0.8.5 (#1939)
+
 Version 0.26.4 (Released January 07, 2025)
 --------------
 
