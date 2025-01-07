@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.26.4
+Version 0.26.4 (Released January 07, 2025)
 --------------
 
 - Import AI agent within view post code (#1936)
