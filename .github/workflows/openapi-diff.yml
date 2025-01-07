@@ -2,7 +2,7 @@ name: OpenAPI Diff
 on: [pull_request]
 jobs:
   openapi-diff:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout HEAD
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
