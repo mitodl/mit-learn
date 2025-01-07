@@ -22,7 +22,7 @@ import { usePostHog } from "posthog-js/react"
 import ResourceCarousel from "../ResourceCarousel/ResourceCarousel"
 import { useIsLearningPathMember } from "api/hooks/learningPaths"
 import { useIsUserListMember } from "api/hooks/userLists"
-import { TopicCarouselConfig } from "@/app-pages/DashboardPage/carousels"
+import { TopicCarouselConfig } from "@/common/carousels"
 
 const RESOURCE_DRAWER_PARAMS = [RESOURCE_DRAWER_QUERY_PARAM] as const
 
