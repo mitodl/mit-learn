@@ -69,16 +69,23 @@
         <td style="padding: 10px 20px; width: 113px; height: 60px">
           <div
             style="
-              height: 60px !important;
-              width: 113px !important;
-              display: block;
               overflow: hidden !important;
+              height: 60px;
+              width: 113px;
+              max-height: 60px !important;
+              max-width: 113px !important;
+              display: block;
             "
           >
             <img
               src="{{item.resource_image_url}}"
               alt="{{item.resource_title}}"
-              style="background: #ffffff; max-width: 140%"
+              style="
+                display: block;
+                max-width: 200% !important;
+                background: #ffffff;
+                object-fit: contain;
+              "
             />
           </div>
         </td>
