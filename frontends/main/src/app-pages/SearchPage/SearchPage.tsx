@@ -1,7 +1,7 @@
 "use client"
 
 import { keyBy } from "lodash"
-import React, { useCallback, useMemo } from "react"
+import React, { useCallback, useMemo, useEffect } from "react"
 import type { FacetManifest } from "@mitodl/course-search-utils"
 import { useSearchParams } from "@mitodl/course-search-utils/next"
 import { useResourceSearchParams } from "@mitodl/course-search-utils"
@@ -93,6 +93,7 @@ const SearchPage: React.FC = () => {
     },
     [setSearchParams],
   )
+
   const onFacetsChange = useCallback(() => {
     setPage(1)
   }, [setPage])
@@ -114,6 +115,10 @@ const SearchPage: React.FC = () => {
   })
 
   const page = +(searchParams.get("page") ?? "1")
+
+  useEffect(() => {
+    setCurrentText(params.q ?? "")
+  }, [params, setCurrentText])
 
   return (
     <Page>

@@ -15,6 +15,7 @@ import type {
 import invariant from "tiny-invariant"
 import { Permission } from "api/hooks/user"
 import { assertHeadings, ControlledPromise } from "ol-test-utilities"
+import { act } from "@testing-library/react"
 
 const DEFAULT_SEARCH_RESPONSE: LearningResourcesSearchResponse = {
   count: 0,
@@ -794,5 +795,18 @@ test("Count changes are announced to screen readers", async () => {
 
   await waitFor(() => {
     expect(count).toHaveTextContent("456 results")
+  })
+})
+
+test("routing to new query sets currentText", async () => {
+  setMockApiResponses({})
+  renderWithProviders(<SearchPage />)
+  act(() => {
+    window.history.pushState({}, "", "?q=meow")
+  })
+
+  await waitFor(() => {
+    const textInput = screen.getByRole("textbox", { name: "Search for" })
+    expect(textInput).toHaveValue("meow")
   })
 })
