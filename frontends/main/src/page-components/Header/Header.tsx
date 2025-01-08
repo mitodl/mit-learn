@@ -1,14 +1,9 @@
 "use client"
 
 import React, { FunctionComponent } from "react"
+import dynamic from "next/dynamic"
 import type { NavData } from "ol-components"
-import {
-  styled,
-  AppBar,
-  NavDrawer,
-  Toolbar,
-  ActionButtonLink,
-} from "ol-components"
+import { styled, AppBar, Toolbar, ActionButtonLink } from "ol-components"
 import {
   RiSearch2Line,
   RiPencilRulerLine,
@@ -25,7 +20,6 @@ import {
 } from "@remixicon/react"
 import { useToggle } from "ol-utilities"
 import MITLogoLink from "@/components/MITLogoLink/MITLogoLink"
-import UserMenu from "./UserMenu"
 import { MenuButton } from "./MenuButton"
 import {
   DEPARTMENTS,
@@ -42,6 +36,13 @@ import {
   SEARCH_LEARNING_MATERIAL,
 } from "@/common/urls"
 import { useUserMe } from "api/hooks/user"
+
+const NavDrawer = dynamic(
+  () => import("ol-components").then((mod) => mod.NavDrawer),
+  { ssr: false },
+)
+
+const UserMenu = dynamic(() => import("./UserMenu"), { ssr: false })
 
 const Bar = styled(AppBar)(({ theme }) => ({
   padding: "16px 8px",
