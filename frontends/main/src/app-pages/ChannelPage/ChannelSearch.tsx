@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from "react"
+import React, { useCallback, useMemo, useEffect } from "react"
 import { ChannelTypeEnum } from "api/v0"
 import { useOfferorsList } from "api/hooks/learningResources"
 import { useResourceSearchParams } from "@mitodl/course-search-utils"
@@ -94,6 +94,10 @@ const ChannelSearch: React.FC<ChannelSearchProps> = ({
     onFacetsChange,
   })
   const page = +(searchParams.get("page") ?? "1")
+
+  useEffect(() => {
+    setCurrentText(params.q ?? "")
+  }, [params, setCurrentText])
 
   return (
     <section>

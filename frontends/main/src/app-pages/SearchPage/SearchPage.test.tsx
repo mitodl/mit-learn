@@ -15,6 +15,7 @@ import type {
 import invariant from "tiny-invariant"
 import { Permission } from "api/hooks/user"
 import { assertHeadings, ControlledPromise } from "ol-test-utilities"
+import { act } from "@testing-library/react"
 
 const DEFAULT_SEARCH_RESPONSE: LearningResourcesSearchResponse = {
   count: 0,
@@ -224,6 +225,7 @@ describe("SearchPage", () => {
     expect(queryInput.value).toBe("meow")
     await user.clear(queryInput)
     await user.paste("woof")
+
     expect(location.current.search).toBe(initialQuery)
     await user.click(screen.getByRole("button", { name: "Search" }))
     expect(location.current.search).toBe(finalQuery)
@@ -794,5 +796,47 @@ test("Count changes are announced to screen readers", async () => {
 
   await waitFor(() => {
     expect(count).toHaveTextContent("456 results")
+  })
+})
+
+test("routing to new query sets currentText", async () => {
+  setMockApiResponses({})
+  renderWithProviders(<SearchPage />)
+  act(() => {
+    window.history.pushState({}, "", "?q=meow")
+  })
+
+  await waitFor(() => {
+    const textInput = screen.getByRole("textbox", { name: "Search for" })
+    expect(textInput).toHaveValue("meow")
+  })
+})
+
+test("changing a facet resets unsubmitted text", async () => {
+  setMockApiResponses({
+    search: {},
+  })
+  renderWithProviders(<SearchPage />)
+
+  const queryInput = await screen.findByRole<HTMLInputElement>("textbox", {
+    name: "Search for",
+  })
+  await user.clear(queryInput)
+  await user.paste("woof")
+
+  const textInput = screen.getByRole("textbox", { name: "Search for" })
+
+  await waitFor(() => {
+    expect(textInput).toHaveValue("woof")
+  })
+
+  const facets = screen.getByTestId("facets-container")
+  const professionalToggle = await within(facets).findByRole("button", {
+    name: "Professional",
+  })
+  await user.click(professionalToggle)
+
+  await waitFor(() => {
+    expect(textInput).toHaveValue("")
   })
 })
