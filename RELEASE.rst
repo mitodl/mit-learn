@@ -1,6 +1,56 @@
 Release Notes
 =============
 
+Version 0.26.5 (Released January 07, 2025)
+--------------
+
+- pin ubuntu due to 24 dropping heroku cli (#1943)
+- fix(deps): update dependency litellm to v1.56.9 (#1941)
+- fix(deps): update dependency ruff to v0.8.5 (#1939)
+
+Version 0.26.4 (Released January 07, 2025)
+--------------
+
+- Import AI agent within view post code (#1936)
+- Duration and/or commitment for Sloan and Professional Education (#1906)
+- Remove latest change to uwsgi.ini (#1934)
+- Duration and time commitment (#1650)
+- Shanbady/qdrant docs (#1932)
+- chore(deps): update yarn to v4.6.0 (#1933)
+- chore(deps): update dependency stylelint to v16 (#1931)
+- remove unncessary wrapper (#1916)
+- fix(deps): update dependency onnxruntime to v1.20.1 (#1928)
+- fix(deps): update dependency litellm to v1.55.9 (#1929)
+- fix(deps): update dependency ruff to v0.8.4 (#1927)
+- fix(deps): update dependency litellm to v1.55.8 (#1926)
+- chore(deps): update codecov/codecov-action action to v5.1.2 (#1925)
+- Track chatbot activity in posthog (#1923)
+- Content File Vector Search Endpoint (#1907)
+- Gives LR Drawer role "dialog" and a name. (#1914)
+- Fix certification parameter, update prompts, catch json parsing error… (#1921)
+- Demo Course Recommendation Chatbot (not production-ready, for RC only) (#1918)
+- adding extra settings to allow us to use ollama locally (#1915)
+- adding new management command for creating collections and fixing init script (#1911)
+- config: Ignore env, venv, and kompose directories in Docker images
+- feat(generate_env.py): add script to generate .env file using hvac and OIDC authentication
+- Update dependency @testing-library/react to v16.1.0 (#1884)
+- Update version of react used in tests to same as production (#1917)
+- add topics carousels to v2 drawer (#1912)
+- fix v2 drawer scrolling issues (#1908)
+- restore main tag in root layout (#1909)
+- Reduce the initial JS size (#1901)
+- Contentfile chunk embeddings (#1905)
+- remove the opensearch based carousel from the drawer and rename the vector based one as the default (#1902)
+- Update dependency ruff to v0.8.3 (#1903)
+- drawer v2 - share resource (#1893)
+- Fix shellcheck issue
+- App env vars for use with local vault agent (#1868)
+- add bordered button variant (#1900)
+- fix storybook (#1899)
+- Filter params for vector search (#1889)
+- add nprogress loading bar (#1897)
+- populate file extensions for ocw (#1891)
+
 Version 0.26.3 (Released December 18, 2024)
 --------------
 

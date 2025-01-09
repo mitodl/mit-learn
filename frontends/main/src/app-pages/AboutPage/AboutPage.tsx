@@ -7,13 +7,12 @@ import {
   theme,
   styled,
 } from "ol-components"
-import * as urls from "@/common/urls"
+import { HOME, ABOUT_NON_DEGREE_LEARNING_FRAGMENT } from "@/common/urls"
 import React from "react"
 import domeImage from "@/public/mit-dome-2.jpg"
 import Image from "next/image"
 
 const WHAT_IS_MIT_OPEN_FRAGMENT_IDENTIFIER = "what-is-mit-learn"
-const NON_DEGREE_LEARNING_FRAGMENT_IDENTIFIER = "non-degree-learning"
 const ACADEMIC_AND_PROFESSIONAL_CONTENT = "kinds-of-content"
 
 const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME
@@ -116,7 +115,7 @@ const AboutPage: React.FC = () => {
         <BannerContainerInner>
           <Breadcrumbs
             variant="light"
-            ancestors={[{ href: urls.HOME, label: "Home" }]}
+            ancestors={[{ href: HOME, label: "Home" }]}
             current="About Us"
           />
           <Typography variant="h3" component="h1">
@@ -206,7 +205,7 @@ const AboutPage: React.FC = () => {
           <Typography
             variant="h4"
             component="h2"
-            id={NON_DEGREE_LEARNING_FRAGMENT_IDENTIFIER}
+            id={ABOUT_NON_DEGREE_LEARNING_FRAGMENT}
           >
             What is non-degree learning at MIT?
           </Typography>
@@ -257,9 +256,4 @@ const AboutPage: React.FC = () => {
   )
 }
 
-export {
-  AboutPage,
-  WHAT_IS_MIT_OPEN_FRAGMENT_IDENTIFIER,
-  NON_DEGREE_LEARNING_FRAGMENT_IDENTIFIER,
-  ACADEMIC_AND_PROFESSIONAL_CONTENT as WHAT_KINDS_OF_CONTENT_FRAGMENT_IDENTIFIER,
-}
+export { AboutPage }
