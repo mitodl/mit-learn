@@ -259,12 +259,15 @@ def test_documents_from_olx():
     assert len(parsed_documents) == 92
 
     formula2do = next(
-        doc for doc in parsed_documents if doc[1]["key"].endswith("formula2do.xml")
+        doc
+        for doc in parsed_documents
+        if doc[1]["source_path"].endswith("formula2do.xml")
     )
     assert formula2do[0] == b'<html filename="formula2do" display_name="To do list"/>\n'
-    assert formula2do[1]["key"].endswith("formula2do.xml")
+    assert formula2do[1]["source_path"].endswith("formula2do.xml")
     assert formula2do[1]["content_type"] == CONTENT_TYPE_FILE
     assert formula2do[1]["mime_type"].endswith("/xml")
+    assert formula2do[1]["key"] == "8852bcb31c0a4dc9d6c5385e09b0e0c4"
 
 
 @pytest.mark.parametrize(
