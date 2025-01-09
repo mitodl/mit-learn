@@ -14,7 +14,7 @@ import {
   LearningResource,
   LearningResourcesSearchRetrieveDeliveryEnum,
 } from "api"
-import { ControlledPromise } from "ol-test-utilities"
+import { allowConsoleErrors, ControlledPromise } from "ol-test-utilities"
 import React from "react"
 import { DASHBOARD_HOME, MY_LISTS, PROFILE, SETTINGS } from "@/common/urls"
 
@@ -332,4 +332,30 @@ describe("DashboardPage", () => {
       expect(courseTitle).toBeInTheDocument()
     })
   }, 10000)
+
+  test.each([
+    { url: DASHBOARD_HOME, tab: "Home" },
+    { url: MY_LISTS, tab: "My Lists" },
+    { url: PROFILE, tab: "Profile" },
+    { url: SETTINGS, tab: "Settings" },
+  ])("Expected tab is active", async ({ url }) => {
+    // No need to mock APIs for this test.
+    // We'll get a bunch of console errors.
+    // Lets ignore them.
+    allowConsoleErrors()
+
+    renderWithProviders(<DashboardPage />, {
+      url,
+    })
+    const desktopNav = screen.getByTestId("desktop-nav")
+    const mobileNav = screen.getByTestId("mobile-nav")
+
+    expect(
+      within(desktopNav).getByRole("tab", { selected: true }),
+    ).toHaveAttribute("href", url)
+
+    expect(
+      within(mobileNav).getByRole("tab", { selected: true }),
+    ).toHaveAttribute("href", url)
+  })
 })

@@ -176,7 +176,7 @@ const TabsContainer = styled(TabList)(({ theme }) => ({
       textDecoration: "none",
     },
   },
-  ".user-menu-tab-selected": {
+  ".MuiTab-root[aria-selected='true']": {
     ".user-menu-link-icon, .user-menu-link-text": {
       color: theme.custom.colors.mitRed,
     },
