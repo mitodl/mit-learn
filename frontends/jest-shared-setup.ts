@@ -1,7 +1,7 @@
 import failOnConsole from "jest-fail-on-console"
 import "@testing-library/jest-dom"
 import "cross-fetch/polyfill"
-import { configure } from "@testing-library/react"
+import { configure, act } from "@testing-library/react"
 import { resetAllWhenMocks } from "jest-when"
 import * as matchers from "jest-extended"
 import { mockRouter } from "ol-test-utilities/mocks/nextNavigation"
@@ -93,6 +93,8 @@ afterEach(() => {
    */
   jest.clearAllMocks()
   resetAllWhenMocks()
-  mockRouter.setCurrentUrl("/")
-  window.history.replaceState({}, "", "/")
+  act(() => {
+    mockRouter.setCurrentUrl("/")
+    window.history.replaceState({}, "", "/")
+  })
 })
