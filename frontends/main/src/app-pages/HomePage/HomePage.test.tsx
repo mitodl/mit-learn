@@ -84,7 +84,9 @@ describe("Home Page Hero", () => {
   test("Submitting search goes to search page", async () => {
     setupAPIs()
     const { location } = renderWithProviders(<HomePage heroImageIndex={1} />)
-    const searchbox = screen.getByRole("textbox", { name: /search for/i })
+    const searchbox = await screen.findByRole("textbox", {
+      name: /search for/i,
+    })
     await user.click(searchbox)
     await user.paste("physics")
     await user.type(searchbox, "[Enter]")
