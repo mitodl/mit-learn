@@ -38,7 +38,6 @@ const ConfiguredPostHogProvider: React.FC<{ children: React.ReactNode }> = ({
     const featureFlags = JSON.parse(process.env.FEATURE_FLAGS || "")
 
     if (POSTHOG_API_KEY) {
-      console.info("Initializing PostHog")
       posthog.init(POSTHOG_API_KEY, {
         api_host: POSTHOG_API_HOST,
         bootstrap: {
