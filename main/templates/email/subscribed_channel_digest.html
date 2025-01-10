@@ -67,19 +67,30 @@
     >
       <tr>
         <td style="padding: 10px 20px; width: 113px; height: 60px">
-          <img
-            src="{{item.resource_image_url}}"
-            width="113"
-            alt="{{item.resource_title}}"
+          <div
             style="
+              height: 60px;
               width: 113px;
-              background: #ffffff;
-              font-family: sans-serif;
-              font-size: 15px;
-              line-height: 15px;
-              color: #a31f34;
+              max-height: 60px !important;
+              max-width: 113px !important;
+              background: #000;
+              vertical-align: middle;
+              display: table-cell;
+              overflow: hidden !important;
             "
-          />
+          >
+            <img
+              class="item-image"
+              src="{{item.resource_image_url}}"
+              alt="{{item.resource_title}}"
+              width="113"
+              style="
+                object-fit: cover;
+                max-height: 100%;
+                vertical-align: middle;
+              "
+            />
+          </div>
         </td>
         <td
           style="
