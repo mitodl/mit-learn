@@ -181,13 +181,30 @@ class LearnSCIMUser(SCIMUser):
             self.obj.profile.scim_external_id = value
             self.obj.save()
 
+    def parse_scim_for_keycloak_payload(self, payload: str) -> dict:
+        """
+        Parse the payload sent from scim-for-keycloak and normalize it
+        """
+        result = {}
+
+        for key, value in json.loads(payload).items():
+            if key == "schema":
+                continue
+
+            if isinstance(value, dict):
+                for nested_key, nested_value in value.items():
+                    result[f"{key}.{nested_key}"] = nested_value
+            else:
+                result[key] = value
+
+        return result
+
     def parse_path_and_values(
         self, path: Optional[str], value: Union[str, list, dict]
     ) -> list:
         if not path and isinstance(value, str):
             # scim-for-keycloak sends this as a noncompliant JSON-encoded string
-            value = json.loads(value)
-            value.pop("schema", None)  # part of the spec, not a user prop
+            value = self.parse_scim_for_keycloak_payload(value)
 
         return super().parse_path_and_values(path, value)
 

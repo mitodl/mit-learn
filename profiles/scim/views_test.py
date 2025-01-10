@@ -92,6 +92,10 @@ def test_scim_post_user(staff_client):
                                 "schemas": [constants.SchemaURI.USER],
                                 "emailOptIn": 1,
                                 "fullName": "Billy Bob",
+                                "name": {
+                                    "givenName": "Billy",
+                                    "familyName": "Bob",
+                                },
                             }
                         ),
                     }
@@ -107,7 +111,7 @@ def test_scim_post_user(staff_client):
     assert user is not None
     assert user.email == "jsmith@example.com"
     assert user.username == "jsmith"
-    assert user.first_name == "Jimmy"
-    assert user.last_name == "Smith"
+    assert user.first_name == "Billy"
+    assert user.last_name == "Bob"
     assert user.profile.name == "Billy Bob"
     assert user.profile.email_optin is True
