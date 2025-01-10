@@ -94,7 +94,7 @@ def test_scim_post_user(staff_client):
                                 "fullName": "Billy Bob",
                                 "name": {
                                     "givenName": "Billy",
-                                    "fmailyName": "Bob",
+                                    "familyName": "Bob",
                                 },
                             }
                         ),
