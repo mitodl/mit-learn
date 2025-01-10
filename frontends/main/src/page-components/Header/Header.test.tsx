@@ -16,7 +16,7 @@ describe("Header", () => {
     setMockResponse.get(urls.userMe.get(), {})
     renderWithProviders(<Header />)
     const header = screen.getByRole("banner")
-    await within(header).findAllByTitle("MIT Learn Homepage")
+    within(header).getAllByTitle("MIT Learn Homepage")
   })
 })
 
