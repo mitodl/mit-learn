@@ -1,9 +1,9 @@
 import React, { useEffect } from "react"
+import posthog from "posthog-js"
 import { PostHogProvider, usePostHog } from "posthog-js/react"
 import { useUserMe } from "api/hooks/user"
-import type { PostHogConfig } from "posthog-js"
 
-const PosthogIdenifier = () => {
+const PosthogIdentifier = () => {
   const { data: user } = useUserMe()
   const posthog = usePostHog()
   /**
@@ -28,30 +28,37 @@ const PosthogIdenifier = () => {
   return null
 }
 
+const POSTHOG_API_KEY = process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+const POSTHOG_API_HOST = process.env.NEXT_PUBLIC_POSTHOG_API_HOST
+
 const ConfiguredPostHogProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const apiKey = process.env.NEXT_PUBLIC_POSTHOG_API_KEY || ""
-  const apiHost =
-    process.env.NEXT_PUBLIC_POSTHOG_API_HOST || "https://us.i.posthog.com"
-  const featureFlags = JSON.parse(process.env.FEATURE_FLAGS || "")
+  useEffect(() => {
+    const featureFlags = JSON.parse(process.env.FEATURE_FLAGS || "")
 
-  const postHogOptions: Partial<PostHogConfig> = {
-    api_host: apiHost,
-    bootstrap: {
-      featureFlags: featureFlags,
-    },
+    if (POSTHOG_API_KEY) {
+      console.info("Initializing PostHog")
+      posthog.init(POSTHOG_API_KEY, {
+        api_host: POSTHOG_API_HOST,
+        bootstrap: {
+          featureFlags,
+        },
+      })
+    }
+  }, [])
+
+  if (!POSTHOG_API_KEY) {
+    return children
   }
 
-  return apiKey ? (
-    <PostHogProvider apiKey={apiKey} options={postHogOptions}>
-      <PosthogIdenifier />
+  return (
+    <PostHogProvider client={posthog}>
+      <PosthogIdentifier />
       {children}
     </PostHogProvider>
-  ) : (
-    children
   )
 }
 
 export default ConfiguredPostHogProvider
-export { PosthogIdenifier }
+export { PosthogIdentifier }
