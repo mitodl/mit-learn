@@ -1,10 +1,11 @@
 import failOnConsole from "jest-fail-on-console"
 import "@testing-library/jest-dom"
 import "cross-fetch/polyfill"
-import { configure, act } from "@testing-library/react"
+import { configure } from "@testing-library/react"
 import { resetAllWhenMocks } from "jest-when"
 import * as matchers from "jest-extended"
 import { mockRouter } from "ol-test-utilities/mocks/nextNavigation"
+import preloadAll from "jest-next-dynamic-ts"
 
 expect.extend(matchers)
 
@@ -85,6 +86,10 @@ jest.mock("next/navigation", () => {
   }
 })
 
+beforeAll(async () => {
+  await preloadAll()
+})
+
 afterEach(() => {
   /**
    * Clear all mock call counts between tests.
@@ -93,8 +98,6 @@ afterEach(() => {
    */
   jest.clearAllMocks()
   resetAllWhenMocks()
-  act(() => {
-    mockRouter.setCurrentUrl("/")
-    window.history.replaceState({}, "", "/")
-  })
+  mockRouter.setCurrentUrl("/")
+  window.history.replaceState({}, "", "/")
 })
