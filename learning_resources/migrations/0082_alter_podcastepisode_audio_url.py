@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("learning_resources", "0080_podcastepisode_audio_url"),
+        ("learning_resources", "0081_podcastepisode_audio_url"),
     ]
 
     operations = [

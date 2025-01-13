@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("learning_resources", "0079_ocw_pages_trailing_slash"),
+        ("learning_resources", "0080_learningresource_duration_commitment"),
     ]
 
     operations = [
