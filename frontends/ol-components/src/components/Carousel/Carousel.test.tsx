@@ -142,8 +142,8 @@ describe("Carousel", () => {
   })
 
   test.each([
-    { initialIndex: 2, finalIndex: 5, nextDisabled: false },
-    { initialIndex: 4, finalIndex: 7, nextDisabled: true },
+    { initialIndex: 1, finalIndex: 5, nextDisabled: false },
+    { initialIndex: 4, finalIndex: 8, nextDisabled: true },
   ])(
     "Pages up correctly",
     async ({ initialIndex, finalIndex, nextDisabled }) => {
@@ -170,7 +170,7 @@ describe("Carousel", () => {
 
   test.each([
     { initialIndex: 2, finalIndex: 0, prevDisabled: true },
-    { initialIndex: 4, finalIndex: 1, prevDisabled: false },
+    { initialIndex: 5, finalIndex: 1, prevDisabled: false },
   ])(
     "Pages up correctly",
     async ({ initialIndex, finalIndex, prevDisabled }) => {
