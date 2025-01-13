@@ -6,6 +6,7 @@
  *
  * See https://github.com/scottrippey/next-router-mock/issues
  */
+import { useRef } from "react"
 import * as mocks from "next-router-mock"
 import { createDynamicRouteParser } from "next-router-mock/dynamic-routes"
 
@@ -73,7 +74,14 @@ export const nextNavigationMocks = {
   useSearchParams: () => {
     const router = nextNavigationMocks.useRouter()
     const url = new URL(router.asPath, "http://localhost")
-    return url.searchParams
+    // Ensure the reference to the URLSearchParams object is stable
+    // across renders.
+    // NextJS guarantees this.
+    const ref = useRef<URLSearchParams>(url.searchParams)
+    if (url.searchParams.toString() !== ref.current.toString()) {
+      ref.current = new URLSearchParams(url.searchParams)
+    }
+    return ref.current
   },
   useParams: () => {
     const router = nextNavigationMocks.useRouter()
