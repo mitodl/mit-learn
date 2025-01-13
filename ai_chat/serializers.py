@@ -35,3 +35,9 @@ class ChatRequestSerializer(serializers.Serializer):
             msg = "You are not allowed to modify the AI system prompt."
             raise serializers.ValidationError(msg)
         return value
+
+
+class SyllabusChatRequestSerializer(ChatRequestSerializer):
+    """DRF serializer for syllabus chatbot requests"""
+
+    readable_id = serializers.CharField(required=True)

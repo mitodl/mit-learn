@@ -10,6 +10,7 @@ import pydantic
 import requests
 from django.conf import settings
 from django.core.cache import caches
+from django.urls import reverse
 from django.utils.module_loading import import_string
 from llama_index.agent.openai import OpenAIAgent
 from llama_index.core.agent import AgentRunner
@@ -481,3 +482,118 @@ Search parameters: {{"q": "mathematics"}}
             }
         }
         return json.dumps(metadata)
+
+
+class SyllabusAgent(SearchAgent):
+    """Service class for the AI syllabus agent"""
+
+    JOB_ID = "syllabus_agent"
+    TASK_NAME = "syllabus_task"
+
+    INSTRUCTIONS = """You are an assistant helping users answer questions related
+to a syllabus.
+
+Your job:
+1. Use the available function to gather relevant information about the user's question.
+2. Provide a clear, user-friendly summary of the information retrieved by the tool to
+answer the user's question.
+
+The tool knows which course the user is asking about, so you don't need to ask for it.
+
+Always run the tool to answer questions, and answer only based on the tool
+output. VERY IMPORTANT: NEVER USE ANY INFORMATION OUTSIDE OF THE TOOL OUTPUT TO
+ANSWER QUESTIONS.  If no results are returned, say you could not find any relevant
+information.
+    """
+
+    class SyllabusToolSchema(pydantic.BaseModel):
+        """Schema for searching MIT contentfile chunks.
+
+        Attributes:
+            q: The search query string
+        """
+
+        q: str = Field(description=("Query to find syllabus information"))
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "q": "What are the prerequisites for this course?",
+                }
+            ]
+        }
+    }
+
+    def __init__(  # noqa: PLR0913
+        self,
+        name: str,
+        readable_id: str,
+        *,
+        model: Optional[str] = None,
+        temperature: Optional[float] = None,
+        instructions: Optional[str] = None,
+        user_id: Optional[str] = None,
+        save_history: Optional[bool] = False,
+        cache_key: Optional[str] = None,
+        cache_timeout: Optional[int] = None,
+    ):
+        """Initialize the AI search agent service"""
+        super().__init__(
+            name,
+            model=model or settings.AI_MODEL,
+            temperature=temperature,
+            instructions=instructions,
+            save_history=save_history,
+            user_id=user_id,
+            cache_key=cache_key,
+            cache_timeout=cache_timeout or settings.AI_CACHE_TIMEOUT,
+        )
+        self.readable_id = readable_id
+        log.error("READABLE ID IS %s", self.readable_id)
+        self.search_parameters = []
+        self.search_results = []
+        self.agent = self.create_agent()
+        self.create_agent()
+
+    def search_content_files(self, q: str) -> str:
+        """
+        Query the MIT contentfile chunks API, and
+        return results as a JSON string
+        """
+        log.error("In search_content_files")
+        url = settings.AI_MIT_SYLLABUS_URL or reverse(
+            "vector_search:v0:content_files_vector_search"
+        )
+        params = {"q": q, "resource_readable_id": self.readable_id, "limit": 20}
+        self.search_parameters.append(params)
+        try:
+            log.error("Run a search")
+            response = requests.get(url, params=params, timeout=30)
+            response.raise_for_status()
+            raw_results = response.json().get("results", [])
+            # Simplify the response to only include the main properties
+            simplified_results = []
+            for result in raw_results:
+                simplified_result = {"chunk_content": result.get("chunk_content")}
+                simplified_results.append(simplified_result)
+            self.search_results.extend(simplified_results)
+            return json.dumps(simplified_results)
+        except requests.exceptions.RequestException:
+            log.exception("Error querying MIT API")
+            return json.dumps({"error": "An error occurred while searching"})
+
+    def create_tools(self):
+        """Create tools required by the agent"""
+        return [self.create_search_tool()]
+
+    def create_search_tool(self) -> FunctionTool:
+        """Create the search tool for the AI agent"""
+        metadata = ToolMetadata(
+            name="search_content_files",
+            description="Search for learning resources in the MIT catalog",
+            fn_schema=self.SyllabusToolSchema,
+        )
+        return FunctionTool.from_defaults(
+            fn=self.search_content_files, tool_metadata=metadata
+        )
