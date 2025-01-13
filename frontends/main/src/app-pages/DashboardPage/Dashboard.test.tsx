@@ -7,19 +7,16 @@ import {
 } from "@/test-utils"
 import { factories, urls } from "api/test-utils"
 import { Permission } from "api/hooks/user"
-import DashboardPage, {
-  DashboardTabKeys,
-  DashboardTabLabels,
-} from "./DashboardPage"
+import DashboardPage from "./DashboardPage"
 import { faker } from "@faker-js/faker/locale/en"
 import {
   CourseResource,
   LearningResource,
   LearningResourcesSearchRetrieveDeliveryEnum,
 } from "api"
-import { ControlledPromise } from "ol-test-utilities"
+import { allowConsoleErrors, ControlledPromise } from "ol-test-utilities"
 import React from "react"
-import { DASHBOARD_HOME, MY_LISTS, PROFILE } from "@/common/urls"
+import { DASHBOARD_HOME, MY_LISTS, PROFILE, SETTINGS } from "@/common/urls"
 
 describe("DashboardPage", () => {
   const makeSearchResponse = (
@@ -226,41 +223,28 @@ describe("DashboardPage", () => {
     })
   })
 
-  test("Renders user menu tabs and panels", async () => {
+  test("Renders the expected tab links and labels", async () => {
     setupAPIs()
     renderWithProviders(<DashboardPage />)
-    const tabLists = await screen.findAllByRole("tablist")
-    const desktopTabList = await screen.findByTestId("desktop-tab-list")
-    const mobileTabList = await screen.findByTestId("mobile-tab-list")
-    const desktopTabs = await within(desktopTabList).findAllByRole("tab")
-    const mobileTabs = await within(mobileTabList).findAllByRole("tab")
-    const tabPanels = await screen.findAllByRole("tabpanel", { hidden: true })
-    // 1 for mobile, 1 for desktop
-    expect(tabLists).toHaveLength(2)
-    expect(mobileTabs).toHaveLength(4)
-    expect(desktopTabs).toHaveLength(4)
-    expect(tabPanels).toHaveLength(4)
-    Object.values(DashboardTabLabels).forEach((label) => {
-      const desktopLabel = within(desktopTabList).getByText(label)
-      const mobileLabel = within(mobileTabList).getByText(label)
-      expect(desktopLabel).toBeInTheDocument()
-      expect(mobileLabel).toBeInTheDocument()
-    })
-  })
+    const urls = [DASHBOARD_HOME, MY_LISTS, PROFILE, SETTINGS]
+    const labels = ["Home", "My Lists", "Profile", "Settings"]
+    const desktopNav = await screen.findByTestId("desktop-nav")
+    const mobileNav = await screen.findByTestId("mobile-nav")
+    expect(desktopNav).toHaveRole("navigation")
+    expect(mobileNav).toHaveRole("navigation")
+    const desktopTabList = within(desktopNav).getByRole("tablist")
+    const mobileTabList = within(mobileNav).getByRole("tablist")
 
-  test("Renders the expected tab links", async () => {
-    setupAPIs()
-    renderWithProviders(<DashboardPage />)
-    const urls = [DASHBOARD_HOME, MY_LISTS, PROFILE]
-    urls.forEach((url: string) => {
-      const key = DashboardTabKeys[url as keyof typeof DashboardTabKeys]
-      const desktopTab = screen.getByTestId(`desktop-tab-${key}`)
-      const mobileTab = screen.getByTestId(`mobile-tab-${key}`)
-      expect(desktopTab).toBeInTheDocument()
-      expect(mobileTab).toBeInTheDocument()
-      expect(desktopTab).toHaveAttribute("href", url)
-      expect(mobileTab).toHaveAttribute("href", url)
-    })
+    const desktopTabs = within(desktopTabList).getAllByRole("tab")
+    const mobileTabs = within(mobileTabList).getAllByRole("tab")
+
+    // Check URLs
+    expect(desktopTabs.map((el) => el.getAttribute("href"))).toEqual(urls)
+    expect(mobileTabs.map((el) => el.getAttribute("href"))).toEqual(urls)
+
+    // Check labels
+    expect(desktopTabs.map((el) => el.textContent)).toEqual(labels)
+    expect(mobileTabs.map((el) => el.textContent)).toEqual(labels)
   })
 
   test("Renders the expected carousels on the dashboard", async () => {
@@ -348,4 +332,30 @@ describe("DashboardPage", () => {
       expect(courseTitle).toBeInTheDocument()
     })
   }, 10000)
+
+  test.each([
+    { url: DASHBOARD_HOME, tab: "Home" },
+    { url: MY_LISTS, tab: "My Lists" },
+    { url: PROFILE, tab: "Profile" },
+    { url: SETTINGS, tab: "Settings" },
+  ])("Expected tab is active", async ({ url }) => {
+    // No need to mock APIs for this test.
+    // We'll get a bunch of console errors.
+    // Lets ignore them.
+    allowConsoleErrors()
+
+    renderWithProviders(<DashboardPage />, {
+      url,
+    })
+    const desktopNav = screen.getByTestId("desktop-nav")
+    const mobileNav = screen.getByTestId("mobile-nav")
+
+    expect(
+      within(desktopNav).getByRole("tab", { selected: true }),
+    ).toHaveAttribute("href", url)
+
+    expect(
+      within(mobileNav).getByRole("tab", { selected: true }),
+    ).toHaveAttribute("href", url)
+  })
 })

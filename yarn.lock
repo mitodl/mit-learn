@@ -4982,27 +4982,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@testing-library/react@npm:16.0.1, @testing-library/react@npm:^16.0.0, @testing-library/react@npm:^16.0.1":
-  version: 16.0.1
-  resolution: "@testing-library/react@npm:16.0.1"
-  dependencies:
-    "@babel/runtime": "npm:^7.12.5"
-  peerDependencies:
-    "@testing-library/dom": ^10.0.0
-    "@types/react": ^18.0.0
-    "@types/react-dom": ^18.0.0
-    react: ^18.0.0
-    react-dom: ^18.0.0
-  peerDependenciesMeta:
-    "@types/react":
-      optional: true
-    "@types/react-dom":
-      optional: true
-  checksum: 10/904b48881cf5bd208e25899e168f5c99c78ed6d77389544838d9d861a038d2c5c5385863ee9a367436770cbf7d21c5e05a991b9e24a33806e9ac985df2448185
-  languageName: node
-  linkType: hard
-
-"@testing-library/react@npm:16.1.0":
+"@testing-library/react@npm:^16.1.0":
   version: 16.1.0
   resolution: "@testing-library/react@npm:16.1.0"
   dependencies:
@@ -6560,7 +6540,7 @@ __metadata:
     "@faker-js/faker": "npm:^9.0.0"
     "@lukemorales/query-key-factory": "npm:^1.3.2"
     "@tanstack/react-query": "npm:^4.36.1"
-    "@testing-library/react": "npm:16.1.0"
+    "@testing-library/react": "npm:^16.1.0"
     axios: "npm:^1.6.3"
     enforce-unique: "npm:^1.3.0"
     jest: "npm:^29.7.0"
@@ -10077,8 +10057,8 @@ __metadata:
     "@swc/core": "npm:^1.4.11"
     "@swc/jest": "npm:^0.2.26"
     "@testing-library/jest-dom": "npm:^6.4.2"
-    "@testing-library/react": "npm:16.1.0"
-    "@testing-library/user-event": "npm:14.5.2"
+    "@testing-library/react": "npm:^16.1.0"
+    "@testing-library/user-event": "npm:^14.5.2"
     "@types/css-mediaquery": "npm:^0.1.1"
     "@types/jest": "npm:^29.5.2"
     "@types/jest-when": "npm:^3.5.2"
@@ -10100,7 +10080,7 @@ __metadata:
     jest: "npm:^29.7.0"
     jest-environment-jsdom: "npm:^29.5.0"
     jest-extended: "npm:^4.0.2"
-    jest-fail-on-console: "npm:^3.2.0"
+    jest-fail-on-console: "npm:^3.3.1"
     jest-watch-typeahead: "npm:^2.2.2"
     jest-when: "npm:^3.6.0"
     postcss-styled-syntax: "npm:^0.7.0"
@@ -11797,7 +11777,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"jest-fail-on-console@npm:^3.2.0":
+"jest-fail-on-console@npm:^3.3.1":
   version: 3.3.1
   resolution: "jest-fail-on-console@npm:3.3.1"
   checksum: 10/59d72906c20390dcd79be51c2ff0d65fe66fb68c2a4633339b95c3bd5dce5745adb06ac91b095de03f367cc2b4d6868d44abf97e1fb21d7e7835a9710b0630cd
@@ -12642,7 +12622,7 @@ __metadata:
     "@sentry/nextjs": "npm:^8.36.0"
     "@tanstack/react-query": "npm:^4.36.1"
     "@testing-library/jest-dom": "npm:^6.4.8"
-    "@testing-library/react": "npm:^16.0.0"
+    "@testing-library/react": "npm:^16.1.0"
     "@testing-library/user-event": "npm:^14.5.2"
     "@types/jest": "npm:^29.5.12"
     "@types/lodash": "npm:^4.17.7"
@@ -14265,8 +14245,8 @@ __metadata:
     "@storybook/test": "npm:^8.2.9"
     "@storybook/types": "npm:^8.2.9"
     "@testing-library/dom": "npm:^10.4.0"
-    "@testing-library/react": "npm:^16.0.1"
-    "@testing-library/user-event": "npm:14.5.2"
+    "@testing-library/react": "npm:^16.1.0"
+    "@testing-library/user-event": "npm:^14.5.2"
     "@types/react-dom": "npm:^19"
     "@types/react-slick": "npm:^0"
     "@types/tinycolor2": "npm:^1.4.6"
@@ -14301,7 +14281,7 @@ __metadata:
   resolution: "ol-test-utilities@workspace:frontends/ol-test-utilities"
   dependencies:
     "@faker-js/faker": "npm:^9.0.0"
-    "@testing-library/react": "npm:16.0.1"
+    "@testing-library/react": "npm:^16.1.0"
     css-mediaquery: "npm:^0.1.2"
     dom-accessibility-api: "npm:^0.7.0"
     next-router-mock: "npm:^0.9.13"
@@ -14317,8 +14297,8 @@ __metadata:
     "@dnd-kit/sortable": "npm:^8.0.0"
     "@dnd-kit/utilities": "npm:^3.2.1"
     "@faker-js/faker": "npm:^9.0.0"
-    "@testing-library/react": "npm:16.1.0"
-    "@testing-library/user-event": "npm:14.5.2"
+    "@testing-library/react": "npm:^16.1.0"
+    "@testing-library/user-event": "npm:^14.5.2"
     "@types/validator": "npm:^13.7.6"
     api: "workspace:*"
     casual-browserify: "npm:^1.5.19-2"
