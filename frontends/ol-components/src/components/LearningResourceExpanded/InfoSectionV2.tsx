@@ -63,7 +63,7 @@ const InfoItemContainer = styled.div({
   display: "flex",
   alignSelf: "stretch",
   alignItems: "baseline",
-  gap: "16px",
+  gap: "12px",
   ...theme.typography.subtitle3,
   color: theme.custom.colors.black,
   svg: {
