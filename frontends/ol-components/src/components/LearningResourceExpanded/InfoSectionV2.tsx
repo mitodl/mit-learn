@@ -63,7 +63,6 @@ const InfoItemContainer = styled.div({
   display: "flex",
   alignSelf: "stretch",
   alignItems: "baseline",
-  gap: "12px",
   ...theme.typography.subtitle3,
   color: theme.custom.colors.black,
   svg: {
@@ -71,9 +70,6 @@ const InfoItemContainer = styled.div({
     width: "20px",
     height: "20px",
     flexShrink: 0,
-  },
-  [theme.breakpoints.down("sm")]: {
-    gap: "12px",
   },
 })
 
@@ -88,8 +84,12 @@ const IconContainer = styled.span({
 })
 
 const InfoLabel = styled.div({
+  marginLeft: "12px",
   width: "85px",
   flexShrink: 0,
+  [theme.breakpoints.down("sm")]: {
+    marginLeft: 0,
+  },
 })
 
 const InfoValue = styled.div({
