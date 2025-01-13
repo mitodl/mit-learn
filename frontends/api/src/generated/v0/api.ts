@@ -4902,50 +4902,25 @@ export type ProgramResourceResourceTypeEnum =
   (typeof ProgramResourceResourceTypeEnum)[keyof typeof ProgramResourceResourceTypeEnum]
 
 /**
- * * `course` - course * `program` - program * `learning_path` - learning_path * `podcast` - podcast * `podcast_episode` - podcast_episode * `video` - video * `video_playlist` - video_playlist
+ * * `news` - news * `events` - events
  * @export
  * @enum {string}
  */
 
 export const ResourceTypeEnumDescriptions = {
-  course: "course",
-  program: "program",
-  learning_path: "learning_path",
-  podcast: "podcast",
-  podcast_episode: "podcast_episode",
-  video: "video",
-  video_playlist: "video_playlist",
+  news: "news",
+  events: "events",
 } as const
 
 export const ResourceTypeEnum = {
   /**
-   * course
+   * news
    */
-  Course: "course",
+  News: "news",
   /**
-   * program
+   * events
    */
-  Program: "program",
-  /**
-   * learning_path
-   */
-  LearningPath: "learning_path",
-  /**
-   * podcast
-   */
-  Podcast: "podcast",
-  /**
-   * podcast_episode
-   */
-  PodcastEpisode: "podcast_episode",
-  /**
-   * video
-   */
-  Video: "video",
-  /**
-   * video_playlist
-   */
-  VideoPlaylist: "video_playlist",
+  Events: "events",
 } as const
 
 export type ResourceTypeEnum =
@@ -8013,393 +7988,6 @@ export class CkeditorApi extends BaseAPI {
 }
 
 /**
- * ContentFilesVectorSearchApi - axios parameter creator
- * @export
- */
-export const ContentFilesVectorSearchApiAxiosParamCreator = function (
-  configuration?: Configuration,
-) {
-  return {
-    /**
-     * Vector Search for content
-     * @summary Content File Vector Search
-     * @param {Array<string>} [content_feature_type] The feature type of the content file. Possible options are at api/v1/course_features/
-     * @param {Array<string>} [course_number] Course number of the content file
-     * @param {Array<string>} [file_extension] The extension of the content file.
-     * @param {Array<string>} [key] The filename of the content file
-     * @param {number} [limit] Number of results to return per page
-     * @param {Array<string>} [offered_by] Offeror of the content file
-     * @param {number} [offset] The initial index from which to return the results
-     * @param {Array<string>} [platform] platform(s) of the content file
-     * @param {string} [q] The search text
-     * @param {Array<string>} [resource_readable_id] The readable_id value of the parent learning resource for the content file
-     * @param {Array<string>} [run_readable_id] The readable_id value of the run that the content file belongs to
-     * @param {ContentFilesVectorSearchRetrieveSortbyEnum} [sortby] if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;id&#x60; - id * &#x60;-id&#x60; - -id * &#x60;resource_readable_id&#x60; - resource_readable_id * &#x60;-resource_readable_id&#x60; - -resource_readable_id
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    contentFilesVectorSearchRetrieve: async (
-      content_feature_type?: Array<string>,
-      course_number?: Array<string>,
-      file_extension?: Array<string>,
-      key?: Array<string>,
-      limit?: number,
-      offered_by?: Array<string>,
-      offset?: number,
-      platform?: Array<string>,
-      q?: string,
-      resource_readable_id?: Array<string>,
-      run_readable_id?: Array<string>,
-      sortby?: ContentFilesVectorSearchRetrieveSortbyEnum,
-      options: RawAxiosRequestConfig = {},
-    ): Promise<RequestArgs> => {
-      const localVarPath = `/api/v0/content_files_vector_search/`
-      // use dummy base URL string because the URL constructor only accepts absolute URLs.
-      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
-      let baseOptions
-      if (configuration) {
-        baseOptions = configuration.baseOptions
-      }
-
-      const localVarRequestOptions = {
-        method: "GET",
-        ...baseOptions,
-        ...options,
-      }
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
-
-      if (content_feature_type) {
-        localVarQueryParameter["content_feature_type"] = content_feature_type
-      }
-
-      if (course_number) {
-        localVarQueryParameter["course_number"] = course_number
-      }
-
-      if (file_extension) {
-        localVarQueryParameter["file_extension"] = file_extension
-      }
-
-      if (key) {
-        localVarQueryParameter["key"] = key
-      }
-
-      if (limit !== undefined) {
-        localVarQueryParameter["limit"] = limit
-      }
-
-      if (offered_by) {
-        localVarQueryParameter["offered_by"] = offered_by
-      }
-
-      if (offset !== undefined) {
-        localVarQueryParameter["offset"] = offset
-      }
-
-      if (platform) {
-        localVarQueryParameter["platform"] = platform
-      }
-
-      if (q !== undefined) {
-        localVarQueryParameter["q"] = q
-      }
-
-      if (resource_readable_id) {
-        localVarQueryParameter["resource_readable_id"] = resource_readable_id
-      }
-
-      if (run_readable_id) {
-        localVarQueryParameter["run_readable_id"] = run_readable_id
-      }
-
-      if (sortby !== undefined) {
-        localVarQueryParameter["sortby"] = sortby
-      }
-
-      setSearchParams(localVarUrlObj, localVarQueryParameter)
-      let headersFromBaseOptions =
-        baseOptions && baseOptions.headers ? baseOptions.headers : {}
-      localVarRequestOptions.headers = {
-        ...localVarHeaderParameter,
-        ...headersFromBaseOptions,
-        ...options.headers,
-      }
-
-      return {
-        url: toPathString(localVarUrlObj),
-        options: localVarRequestOptions,
-      }
-    },
-  }
-}
-
-/**
- * ContentFilesVectorSearchApi - functional programming interface
- * @export
- */
-export const ContentFilesVectorSearchApiFp = function (
-  configuration?: Configuration,
-) {
-  const localVarAxiosParamCreator =
-    ContentFilesVectorSearchApiAxiosParamCreator(configuration)
-  return {
-    /**
-     * Vector Search for content
-     * @summary Content File Vector Search
-     * @param {Array<string>} [content_feature_type] The feature type of the content file. Possible options are at api/v1/course_features/
-     * @param {Array<string>} [course_number] Course number of the content file
-     * @param {Array<string>} [file_extension] The extension of the content file.
-     * @param {Array<string>} [key] The filename of the content file
-     * @param {number} [limit] Number of results to return per page
-     * @param {Array<string>} [offered_by] Offeror of the content file
-     * @param {number} [offset] The initial index from which to return the results
-     * @param {Array<string>} [platform] platform(s) of the content file
-     * @param {string} [q] The search text
-     * @param {Array<string>} [resource_readable_id] The readable_id value of the parent learning resource for the content file
-     * @param {Array<string>} [run_readable_id] The readable_id value of the run that the content file belongs to
-     * @param {ContentFilesVectorSearchRetrieveSortbyEnum} [sortby] if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;id&#x60; - id * &#x60;-id&#x60; - -id * &#x60;resource_readable_id&#x60; - resource_readable_id * &#x60;-resource_readable_id&#x60; - -resource_readable_id
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    async contentFilesVectorSearchRetrieve(
-      content_feature_type?: Array<string>,
-      course_number?: Array<string>,
-      file_extension?: Array<string>,
-      key?: Array<string>,
-      limit?: number,
-      offered_by?: Array<string>,
-      offset?: number,
-      platform?: Array<string>,
-      q?: string,
-      resource_readable_id?: Array<string>,
-      run_readable_id?: Array<string>,
-      sortby?: ContentFilesVectorSearchRetrieveSortbyEnum,
-      options?: RawAxiosRequestConfig,
-    ): Promise<
-      (
-        axios?: AxiosInstance,
-        basePath?: string,
-      ) => AxiosPromise<ContentFileVectorSearchResponse>
-    > {
-      const localVarAxiosArgs =
-        await localVarAxiosParamCreator.contentFilesVectorSearchRetrieve(
-          content_feature_type,
-          course_number,
-          file_extension,
-          key,
-          limit,
-          offered_by,
-          offset,
-          platform,
-          q,
-          resource_readable_id,
-          run_readable_id,
-          sortby,
-          options,
-        )
-      const index = configuration?.serverIndex ?? 0
-      const operationBasePath =
-        operationServerMap[
-          "ContentFilesVectorSearchApi.contentFilesVectorSearchRetrieve"
-        ]?.[index]?.url
-      return (axios, basePath) =>
-        createRequestFunction(
-          localVarAxiosArgs,
-          globalAxios,
-          BASE_PATH,
-          configuration,
-        )(axios, operationBasePath || basePath)
-    },
-  }
-}
-
-/**
- * ContentFilesVectorSearchApi - factory interface
- * @export
- */
-export const ContentFilesVectorSearchApiFactory = function (
-  configuration?: Configuration,
-  basePath?: string,
-  axios?: AxiosInstance,
-) {
-  const localVarFp = ContentFilesVectorSearchApiFp(configuration)
-  return {
-    /**
-     * Vector Search for content
-     * @summary Content File Vector Search
-     * @param {ContentFilesVectorSearchApiContentFilesVectorSearchRetrieveRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    contentFilesVectorSearchRetrieve(
-      requestParameters: ContentFilesVectorSearchApiContentFilesVectorSearchRetrieveRequest = {},
-      options?: RawAxiosRequestConfig,
-    ): AxiosPromise<ContentFileVectorSearchResponse> {
-      return localVarFp
-        .contentFilesVectorSearchRetrieve(
-          requestParameters.content_feature_type,
-          requestParameters.course_number,
-          requestParameters.file_extension,
-          requestParameters.key,
-          requestParameters.limit,
-          requestParameters.offered_by,
-          requestParameters.offset,
-          requestParameters.platform,
-          requestParameters.q,
-          requestParameters.resource_readable_id,
-          requestParameters.run_readable_id,
-          requestParameters.sortby,
-          options,
-        )
-        .then((request) => request(axios, basePath))
-    },
-  }
-}
-
-/**
- * Request parameters for contentFilesVectorSearchRetrieve operation in ContentFilesVectorSearchApi.
- * @export
- * @interface ContentFilesVectorSearchApiContentFilesVectorSearchRetrieveRequest
- */
-export interface ContentFilesVectorSearchApiContentFilesVectorSearchRetrieveRequest {
-  /**
-   * The feature type of the content file. Possible options are at api/v1/course_features/
-   * @type {Array<string>}
-   * @memberof ContentFilesVectorSearchApiContentFilesVectorSearchRetrieve
-   */
-  readonly content_feature_type?: Array<string>
-
-  /**
-   * Course number of the content file
-   * @type {Array<string>}
-   * @memberof ContentFilesVectorSearchApiContentFilesVectorSearchRetrieve
-   */
-  readonly course_number?: Array<string>
-
-  /**
-   * The extension of the content file.
-   * @type {Array<string>}
-   * @memberof ContentFilesVectorSearchApiContentFilesVectorSearchRetrieve
-   */
-  readonly file_extension?: Array<string>
-
-  /**
-   * The filename of the content file
-   * @type {Array<string>}
-   * @memberof ContentFilesVectorSearchApiContentFilesVectorSearchRetrieve
-   */
-  readonly key?: Array<string>
-
-  /**
-   * Number of results to return per page
-   * @type {number}
-   * @memberof ContentFilesVectorSearchApiContentFilesVectorSearchRetrieve
-   */
-  readonly limit?: number
-
-  /**
-   * Offeror of the content file
-   * @type {Array<string>}
-   * @memberof ContentFilesVectorSearchApiContentFilesVectorSearchRetrieve
-   */
-  readonly offered_by?: Array<string>
-
-  /**
-   * The initial index from which to return the results
-   * @type {number}
-   * @memberof ContentFilesVectorSearchApiContentFilesVectorSearchRetrieve
-   */
-  readonly offset?: number
-
-  /**
-   * platform(s) of the content file
-   * @type {Array<string>}
-   * @memberof ContentFilesVectorSearchApiContentFilesVectorSearchRetrieve
-   */
-  readonly platform?: Array<string>
-
-  /**
-   * The search text
-   * @type {string}
-   * @memberof ContentFilesVectorSearchApiContentFilesVectorSearchRetrieve
-   */
-  readonly q?: string
-
-  /**
-   * The readable_id value of the parent learning resource for the content file
-   * @type {Array<string>}
-   * @memberof ContentFilesVectorSearchApiContentFilesVectorSearchRetrieve
-   */
-  readonly resource_readable_id?: Array<string>
-
-  /**
-   * The readable_id value of the run that the content file belongs to
-   * @type {Array<string>}
-   * @memberof ContentFilesVectorSearchApiContentFilesVectorSearchRetrieve
-   */
-  readonly run_readable_id?: Array<string>
-
-  /**
-   * if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;id&#x60; - id * &#x60;-id&#x60; - -id * &#x60;resource_readable_id&#x60; - resource_readable_id * &#x60;-resource_readable_id&#x60; - -resource_readable_id
-   * @type {'id' | '-id' | 'resource_readable_id' | '-resource_readable_id'}
-   * @memberof ContentFilesVectorSearchApiContentFilesVectorSearchRetrieve
-   */
-  readonly sortby?: ContentFilesVectorSearchRetrieveSortbyEnum
-}
-
-/**
- * ContentFilesVectorSearchApi - object-oriented interface
- * @export
- * @class ContentFilesVectorSearchApi
- * @extends {BaseAPI}
- */
-export class ContentFilesVectorSearchApi extends BaseAPI {
-  /**
-   * Vector Search for content
-   * @summary Content File Vector Search
-   * @param {ContentFilesVectorSearchApiContentFilesVectorSearchRetrieveRequest} requestParameters Request parameters.
-   * @param {*} [options] Override http request option.
-   * @throws {RequiredError}
-   * @memberof ContentFilesVectorSearchApi
-   */
-  public contentFilesVectorSearchRetrieve(
-    requestParameters: ContentFilesVectorSearchApiContentFilesVectorSearchRetrieveRequest = {},
-    options?: RawAxiosRequestConfig,
-  ) {
-    return ContentFilesVectorSearchApiFp(this.configuration)
-      .contentFilesVectorSearchRetrieve(
-        requestParameters.content_feature_type,
-        requestParameters.course_number,
-        requestParameters.file_extension,
-        requestParameters.key,
-        requestParameters.limit,
-        requestParameters.offered_by,
-        requestParameters.offset,
-        requestParameters.platform,
-        requestParameters.q,
-        requestParameters.resource_readable_id,
-        requestParameters.run_readable_id,
-        requestParameters.sortby,
-        options,
-      )
-      .then((request) => request(this.axios, this.basePath))
-  }
-}
-
-/**
- * @export
- */
-export const ContentFilesVectorSearchRetrieveSortbyEnum = {
-  Id: "id",
-  Id2: "-id",
-  ResourceReadableId: "resource_readable_id",
-  ResourceReadableId2: "-resource_readable_id",
-} as const
-export type ContentFilesVectorSearchRetrieveSortbyEnum =
-  (typeof ContentFilesVectorSearchRetrieveSortbyEnum)[keyof typeof ContentFilesVectorSearchRetrieveSortbyEnum]
-
-/**
  * LearningResourcesSearchAdminParamsApi - axios parameter creator
  * @export
  */
@@ -8535,632 +8123,6 @@ export class LearningResourcesSearchAdminParamsApi extends BaseAPI {
       .then((request) => request(this.axios, this.basePath))
   }
 }
-
-/**
- * LearningResourcesVectorSearchApi - axios parameter creator
- * @export
- */
-export const LearningResourcesVectorSearchApiAxiosParamCreator = function (
-  configuration?: Configuration,
-) {
-  return {
-    /**
-     * Vector Search for learning resources
-     * @summary Vector Search
-     * @param {boolean | null} [certification] True if the learning resource offers a certificate
-     * @param {Array<LearningResourcesVectorSearchRetrieveCertificationTypeEnum>} [certification_type] The type of certificate               * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
-     * @param {Array<string>} [course_feature] The course feature. Possible options are at api/v1/course_features/
-     * @param {Array<LearningResourcesVectorSearchRetrieveDeliveryEnum>} [delivery] The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
-     * @param {Array<LearningResourcesVectorSearchRetrieveDepartmentEnum>} [department] The department that offers the learning resource               * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
-     * @param {boolean | null} [free]
-     * @param {Array<LearningResourcesVectorSearchRetrieveLevelEnum>} [level]
-     * @param {number} [limit] Number of results to return per page
-     * @param {Array<string>} [ocw_topic] The ocw topic name.
-     * @param {Array<LearningResourcesVectorSearchRetrieveOfferedByEnum>} [offered_by] The organization that offers the learning resource               * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education
-     * @param {number} [offset] The initial index from which to return the results
-     * @param {Array<LearningResourcesVectorSearchRetrievePlatformEnum>} [platform] The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube
-     * @param {boolean | null} [professional]
-     * @param {string} [q] The search text
-     * @param {string} [readable_id] The readable id of the resource
-     * @param {Array<LearningResourcesVectorSearchRetrieveResourceCategoryEnum>} [resource_category] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
-     * @param {Array<LearningResourcesVectorSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist
-     * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    learningResourcesVectorSearchRetrieve: async (
-      certification?: boolean | null,
-      certification_type?: Array<LearningResourcesVectorSearchRetrieveCertificationTypeEnum>,
-      course_feature?: Array<string>,
-      delivery?: Array<LearningResourcesVectorSearchRetrieveDeliveryEnum>,
-      department?: Array<LearningResourcesVectorSearchRetrieveDepartmentEnum>,
-      free?: boolean | null,
-      level?: Array<LearningResourcesVectorSearchRetrieveLevelEnum>,
-      limit?: number,
-      ocw_topic?: Array<string>,
-      offered_by?: Array<LearningResourcesVectorSearchRetrieveOfferedByEnum>,
-      offset?: number,
-      platform?: Array<LearningResourcesVectorSearchRetrievePlatformEnum>,
-      professional?: boolean | null,
-      q?: string,
-      readable_id?: string,
-      resource_category?: Array<LearningResourcesVectorSearchRetrieveResourceCategoryEnum>,
-      resource_type?: Array<LearningResourcesVectorSearchRetrieveResourceTypeEnum>,
-      topic?: Array<string>,
-      options: RawAxiosRequestConfig = {},
-    ): Promise<RequestArgs> => {
-      const localVarPath = `/api/v0/learning_resources_vector_search/`
-      // use dummy base URL string because the URL constructor only accepts absolute URLs.
-      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
-      let baseOptions
-      if (configuration) {
-        baseOptions = configuration.baseOptions
-      }
-
-      const localVarRequestOptions = {
-        method: "GET",
-        ...baseOptions,
-        ...options,
-      }
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
-
-      if (certification !== undefined) {
-        localVarQueryParameter["certification"] = certification
-      }
-
-      if (certification_type) {
-        localVarQueryParameter["certification_type"] = certification_type
-      }
-
-      if (course_feature) {
-        localVarQueryParameter["course_feature"] = course_feature
-      }
-
-      if (delivery) {
-        localVarQueryParameter["delivery"] = delivery
-      }
-
-      if (department) {
-        localVarQueryParameter["department"] = department
-      }
-
-      if (free !== undefined) {
-        localVarQueryParameter["free"] = free
-      }
-
-      if (level) {
-        localVarQueryParameter["level"] = level
-      }
-
-      if (limit !== undefined) {
-        localVarQueryParameter["limit"] = limit
-      }
-
-      if (ocw_topic) {
-        localVarQueryParameter["ocw_topic"] = ocw_topic
-      }
-
-      if (offered_by) {
-        localVarQueryParameter["offered_by"] = offered_by
-      }
-
-      if (offset !== undefined) {
-        localVarQueryParameter["offset"] = offset
-      }
-
-      if (platform) {
-        localVarQueryParameter["platform"] = platform
-      }
-
-      if (professional !== undefined) {
-        localVarQueryParameter["professional"] = professional
-      }
-
-      if (q !== undefined) {
-        localVarQueryParameter["q"] = q
-      }
-
-      if (readable_id !== undefined) {
-        localVarQueryParameter["readable_id"] = readable_id
-      }
-
-      if (resource_category) {
-        localVarQueryParameter["resource_category"] = resource_category
-      }
-
-      if (resource_type) {
-        localVarQueryParameter["resource_type"] = resource_type
-      }
-
-      if (topic) {
-        localVarQueryParameter["topic"] = topic
-      }
-
-      setSearchParams(localVarUrlObj, localVarQueryParameter)
-      let headersFromBaseOptions =
-        baseOptions && baseOptions.headers ? baseOptions.headers : {}
-      localVarRequestOptions.headers = {
-        ...localVarHeaderParameter,
-        ...headersFromBaseOptions,
-        ...options.headers,
-      }
-
-      return {
-        url: toPathString(localVarUrlObj),
-        options: localVarRequestOptions,
-      }
-    },
-  }
-}
-
-/**
- * LearningResourcesVectorSearchApi - functional programming interface
- * @export
- */
-export const LearningResourcesVectorSearchApiFp = function (
-  configuration?: Configuration,
-) {
-  const localVarAxiosParamCreator =
-    LearningResourcesVectorSearchApiAxiosParamCreator(configuration)
-  return {
-    /**
-     * Vector Search for learning resources
-     * @summary Vector Search
-     * @param {boolean | null} [certification] True if the learning resource offers a certificate
-     * @param {Array<LearningResourcesVectorSearchRetrieveCertificationTypeEnum>} [certification_type] The type of certificate               * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
-     * @param {Array<string>} [course_feature] The course feature. Possible options are at api/v1/course_features/
-     * @param {Array<LearningResourcesVectorSearchRetrieveDeliveryEnum>} [delivery] The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
-     * @param {Array<LearningResourcesVectorSearchRetrieveDepartmentEnum>} [department] The department that offers the learning resource               * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
-     * @param {boolean | null} [free]
-     * @param {Array<LearningResourcesVectorSearchRetrieveLevelEnum>} [level]
-     * @param {number} [limit] Number of results to return per page
-     * @param {Array<string>} [ocw_topic] The ocw topic name.
-     * @param {Array<LearningResourcesVectorSearchRetrieveOfferedByEnum>} [offered_by] The organization that offers the learning resource               * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education
-     * @param {number} [offset] The initial index from which to return the results
-     * @param {Array<LearningResourcesVectorSearchRetrievePlatformEnum>} [platform] The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube
-     * @param {boolean | null} [professional]
-     * @param {string} [q] The search text
-     * @param {string} [readable_id] The readable id of the resource
-     * @param {Array<LearningResourcesVectorSearchRetrieveResourceCategoryEnum>} [resource_category] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
-     * @param {Array<LearningResourcesVectorSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist
-     * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    async learningResourcesVectorSearchRetrieve(
-      certification?: boolean | null,
-      certification_type?: Array<LearningResourcesVectorSearchRetrieveCertificationTypeEnum>,
-      course_feature?: Array<string>,
-      delivery?: Array<LearningResourcesVectorSearchRetrieveDeliveryEnum>,
-      department?: Array<LearningResourcesVectorSearchRetrieveDepartmentEnum>,
-      free?: boolean | null,
-      level?: Array<LearningResourcesVectorSearchRetrieveLevelEnum>,
-      limit?: number,
-      ocw_topic?: Array<string>,
-      offered_by?: Array<LearningResourcesVectorSearchRetrieveOfferedByEnum>,
-      offset?: number,
-      platform?: Array<LearningResourcesVectorSearchRetrievePlatformEnum>,
-      professional?: boolean | null,
-      q?: string,
-      readable_id?: string,
-      resource_category?: Array<LearningResourcesVectorSearchRetrieveResourceCategoryEnum>,
-      resource_type?: Array<LearningResourcesVectorSearchRetrieveResourceTypeEnum>,
-      topic?: Array<string>,
-      options?: RawAxiosRequestConfig,
-    ): Promise<
-      (
-        axios?: AxiosInstance,
-        basePath?: string,
-      ) => AxiosPromise<LearningResourcesVectorSearchResponse>
-    > {
-      const localVarAxiosArgs =
-        await localVarAxiosParamCreator.learningResourcesVectorSearchRetrieve(
-          certification,
-          certification_type,
-          course_feature,
-          delivery,
-          department,
-          free,
-          level,
-          limit,
-          ocw_topic,
-          offered_by,
-          offset,
-          platform,
-          professional,
-          q,
-          readable_id,
-          resource_category,
-          resource_type,
-          topic,
-          options,
-        )
-      const index = configuration?.serverIndex ?? 0
-      const operationBasePath =
-        operationServerMap[
-          "LearningResourcesVectorSearchApi.learningResourcesVectorSearchRetrieve"
-        ]?.[index]?.url
-      return (axios, basePath) =>
-        createRequestFunction(
-          localVarAxiosArgs,
-          globalAxios,
-          BASE_PATH,
-          configuration,
-        )(axios, operationBasePath || basePath)
-    },
-  }
-}
-
-/**
- * LearningResourcesVectorSearchApi - factory interface
- * @export
- */
-export const LearningResourcesVectorSearchApiFactory = function (
-  configuration?: Configuration,
-  basePath?: string,
-  axios?: AxiosInstance,
-) {
-  const localVarFp = LearningResourcesVectorSearchApiFp(configuration)
-  return {
-    /**
-     * Vector Search for learning resources
-     * @summary Vector Search
-     * @param {LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieveRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    learningResourcesVectorSearchRetrieve(
-      requestParameters: LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieveRequest = {},
-      options?: RawAxiosRequestConfig,
-    ): AxiosPromise<LearningResourcesVectorSearchResponse> {
-      return localVarFp
-        .learningResourcesVectorSearchRetrieve(
-          requestParameters.certification,
-          requestParameters.certification_type,
-          requestParameters.course_feature,
-          requestParameters.delivery,
-          requestParameters.department,
-          requestParameters.free,
-          requestParameters.level,
-          requestParameters.limit,
-          requestParameters.ocw_topic,
-          requestParameters.offered_by,
-          requestParameters.offset,
-          requestParameters.platform,
-          requestParameters.professional,
-          requestParameters.q,
-          requestParameters.readable_id,
-          requestParameters.resource_category,
-          requestParameters.resource_type,
-          requestParameters.topic,
-          options,
-        )
-        .then((request) => request(axios, basePath))
-    },
-  }
-}
-
-/**
- * Request parameters for learningResourcesVectorSearchRetrieve operation in LearningResourcesVectorSearchApi.
- * @export
- * @interface LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieveRequest
- */
-export interface LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieveRequest {
-  /**
-   * True if the learning resource offers a certificate
-   * @type {boolean}
-   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
-   */
-  readonly certification?: boolean | null
-
-  /**
-   * The type of certificate               * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
-   * @type {Array<'micromasters' | 'professional' | 'completion' | 'none'>}
-   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
-   */
-  readonly certification_type?: Array<LearningResourcesVectorSearchRetrieveCertificationTypeEnum>
-
-  /**
-   * The course feature. Possible options are at api/v1/course_features/
-   * @type {Array<string>}
-   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
-   */
-  readonly course_feature?: Array<string>
-
-  /**
-   * The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
-   * @type {Array<'online' | 'hybrid' | 'in_person' | 'offline'>}
-   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
-   */
-  readonly delivery?: Array<LearningResourcesVectorSearchRetrieveDeliveryEnum>
-
-  /**
-   * The department that offers the learning resource               * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
-   * @type {Array<'1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | '14' | '15' | '16' | '17' | '18' | '20' | '21A' | '21G' | '21H' | '21L' | '21M' | '22' | '24' | 'CC' | 'CMS-W' | 'EC' | 'ES' | 'ESD' | 'HST' | 'IDS' | 'MAS' | 'PE' | 'SP' | 'STS' | 'WGS'>}
-   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
-   */
-  readonly department?: Array<LearningResourcesVectorSearchRetrieveDepartmentEnum>
-
-  /**
-   *
-   * @type {boolean}
-   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
-   */
-  readonly free?: boolean | null
-
-  /**
-   *
-   * @type {Array<'undergraduate' | 'graduate' | 'high_school' | 'noncredit' | 'advanced' | 'intermediate' | 'introductory'>}
-   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
-   */
-  readonly level?: Array<LearningResourcesVectorSearchRetrieveLevelEnum>
-
-  /**
-   * Number of results to return per page
-   * @type {number}
-   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
-   */
-  readonly limit?: number
-
-  /**
-   * The ocw topic name.
-   * @type {Array<string>}
-   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
-   */
-  readonly ocw_topic?: Array<string>
-
-  /**
-   * The organization that offers the learning resource               * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education
-   * @type {Array<'mitx' | 'ocw' | 'bootcamps' | 'xpro' | 'mitpe' | 'see'>}
-   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
-   */
-  readonly offered_by?: Array<LearningResourcesVectorSearchRetrieveOfferedByEnum>
-
-  /**
-   * The initial index from which to return the results
-   * @type {number}
-   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
-   */
-  readonly offset?: number
-
-  /**
-   * The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube
-   * @type {Array<'edx' | 'ocw' | 'oll' | 'mitxonline' | 'bootcamps' | 'xpro' | 'csail' | 'mitpe' | 'see' | 'scc' | 'ctl' | 'whu' | 'susskind' | 'globalalumni' | 'simplilearn' | 'emeritus' | 'podcast' | 'youtube'>}
-   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
-   */
-  readonly platform?: Array<LearningResourcesVectorSearchRetrievePlatformEnum>
-
-  /**
-   *
-   * @type {boolean}
-   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
-   */
-  readonly professional?: boolean | null
-
-  /**
-   * The search text
-   * @type {string}
-   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
-   */
-  readonly q?: string
-
-  /**
-   * The readable id of the resource
-   * @type {string}
-   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
-   */
-  readonly readable_id?: string
-
-  /**
-   * The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
-   * @type {Array<'course' | 'program' | 'learning_material'>}
-   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
-   */
-  readonly resource_category?: Array<LearningResourcesVectorSearchRetrieveResourceCategoryEnum>
-
-  /**
-   * The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist
-   * @type {Array<'course' | 'program' | 'learning_path' | 'podcast' | 'podcast_episode' | 'video' | 'video_playlist'>}
-   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
-   */
-  readonly resource_type?: Array<LearningResourcesVectorSearchRetrieveResourceTypeEnum>
-
-  /**
-   * The topic name. To see a list of options go to api/v1/topics/
-   * @type {Array<string>}
-   * @memberof LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieve
-   */
-  readonly topic?: Array<string>
-}
-
-/**
- * LearningResourcesVectorSearchApi - object-oriented interface
- * @export
- * @class LearningResourcesVectorSearchApi
- * @extends {BaseAPI}
- */
-export class LearningResourcesVectorSearchApi extends BaseAPI {
-  /**
-   * Vector Search for learning resources
-   * @summary Vector Search
-   * @param {LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieveRequest} requestParameters Request parameters.
-   * @param {*} [options] Override http request option.
-   * @throws {RequiredError}
-   * @memberof LearningResourcesVectorSearchApi
-   */
-  public learningResourcesVectorSearchRetrieve(
-    requestParameters: LearningResourcesVectorSearchApiLearningResourcesVectorSearchRetrieveRequest = {},
-    options?: RawAxiosRequestConfig,
-  ) {
-    return LearningResourcesVectorSearchApiFp(this.configuration)
-      .learningResourcesVectorSearchRetrieve(
-        requestParameters.certification,
-        requestParameters.certification_type,
-        requestParameters.course_feature,
-        requestParameters.delivery,
-        requestParameters.department,
-        requestParameters.free,
-        requestParameters.level,
-        requestParameters.limit,
-        requestParameters.ocw_topic,
-        requestParameters.offered_by,
-        requestParameters.offset,
-        requestParameters.platform,
-        requestParameters.professional,
-        requestParameters.q,
-        requestParameters.readable_id,
-        requestParameters.resource_category,
-        requestParameters.resource_type,
-        requestParameters.topic,
-        options,
-      )
-      .then((request) => request(this.axios, this.basePath))
-  }
-}
-
-/**
- * @export
- */
-export const LearningResourcesVectorSearchRetrieveCertificationTypeEnum = {
-  Micromasters: "micromasters",
-  Professional: "professional",
-  Completion: "completion",
-  None: "none",
-} as const
-export type LearningResourcesVectorSearchRetrieveCertificationTypeEnum =
-  (typeof LearningResourcesVectorSearchRetrieveCertificationTypeEnum)[keyof typeof LearningResourcesVectorSearchRetrieveCertificationTypeEnum]
-/**
- * @export
- */
-export const LearningResourcesVectorSearchRetrieveDeliveryEnum = {
-  Online: "online",
-  Hybrid: "hybrid",
-  InPerson: "in_person",
-  Offline: "offline",
-} as const
-export type LearningResourcesVectorSearchRetrieveDeliveryEnum =
-  (typeof LearningResourcesVectorSearchRetrieveDeliveryEnum)[keyof typeof LearningResourcesVectorSearchRetrieveDeliveryEnum]
-/**
- * @export
- */
-export const LearningResourcesVectorSearchRetrieveDepartmentEnum = {
-  _1: "1",
-  _2: "2",
-  _3: "3",
-  _4: "4",
-  _5: "5",
-  _6: "6",
-  _7: "7",
-  _8: "8",
-  _9: "9",
-  _10: "10",
-  _11: "11",
-  _12: "12",
-  _14: "14",
-  _15: "15",
-  _16: "16",
-  _17: "17",
-  _18: "18",
-  _20: "20",
-  _21A: "21A",
-  _21G: "21G",
-  _21H: "21H",
-  _21L: "21L",
-  _21M: "21M",
-  _22: "22",
-  _24: "24",
-  Cc: "CC",
-  CmsW: "CMS-W",
-  Ec: "EC",
-  Es: "ES",
-  Esd: "ESD",
-  Hst: "HST",
-  Ids: "IDS",
-  Mas: "MAS",
-  Pe: "PE",
-  Sp: "SP",
-  Sts: "STS",
-  Wgs: "WGS",
-} as const
-export type LearningResourcesVectorSearchRetrieveDepartmentEnum =
-  (typeof LearningResourcesVectorSearchRetrieveDepartmentEnum)[keyof typeof LearningResourcesVectorSearchRetrieveDepartmentEnum]
-/**
- * @export
- */
-export const LearningResourcesVectorSearchRetrieveLevelEnum = {
-  Undergraduate: "undergraduate",
-  Graduate: "graduate",
-  HighSchool: "high_school",
-  Noncredit: "noncredit",
-  Advanced: "advanced",
-  Intermediate: "intermediate",
-  Introductory: "introductory",
-} as const
-export type LearningResourcesVectorSearchRetrieveLevelEnum =
-  (typeof LearningResourcesVectorSearchRetrieveLevelEnum)[keyof typeof LearningResourcesVectorSearchRetrieveLevelEnum]
-/**
- * @export
- */
-export const LearningResourcesVectorSearchRetrieveOfferedByEnum = {
-  Mitx: "mitx",
-  Ocw: "ocw",
-  Bootcamps: "bootcamps",
-  Xpro: "xpro",
-  Mitpe: "mitpe",
-  See: "see",
-} as const
-export type LearningResourcesVectorSearchRetrieveOfferedByEnum =
-  (typeof LearningResourcesVectorSearchRetrieveOfferedByEnum)[keyof typeof LearningResourcesVectorSearchRetrieveOfferedByEnum]
-/**
- * @export
- */
-export const LearningResourcesVectorSearchRetrievePlatformEnum = {
-  Edx: "edx",
-  Ocw: "ocw",
-  Oll: "oll",
-  Mitxonline: "mitxonline",
-  Bootcamps: "bootcamps",
-  Xpro: "xpro",
-  Csail: "csail",
-  Mitpe: "mitpe",
-  See: "see",
-  Scc: "scc",
-  Ctl: "ctl",
-  Whu: "whu",
-  Susskind: "susskind",
-  Globalalumni: "globalalumni",
-  Simplilearn: "simplilearn",
-  Emeritus: "emeritus",
-  Podcast: "podcast",
-  Youtube: "youtube",
-} as const
-export type LearningResourcesVectorSearchRetrievePlatformEnum =
-  (typeof LearningResourcesVectorSearchRetrievePlatformEnum)[keyof typeof LearningResourcesVectorSearchRetrievePlatformEnum]
-/**
- * @export
- */
-export const LearningResourcesVectorSearchRetrieveResourceCategoryEnum = {
-  Course: "course",
-  Program: "program",
-  LearningMaterial: "learning_material",
-} as const
-export type LearningResourcesVectorSearchRetrieveResourceCategoryEnum =
-  (typeof LearningResourcesVectorSearchRetrieveResourceCategoryEnum)[keyof typeof LearningResourcesVectorSearchRetrieveResourceCategoryEnum]
-/**
- * @export
- */
-export const LearningResourcesVectorSearchRetrieveResourceTypeEnum = {
-  Course: "course",
-  Program: "program",
-  LearningPath: "learning_path",
-  Podcast: "podcast",
-  PodcastEpisode: "podcast_episode",
-  Video: "video",
-  VideoPlaylist: "video_playlist",
-} as const
-export type LearningResourcesVectorSearchRetrieveResourceTypeEnum =
-  (typeof LearningResourcesVectorSearchRetrieveResourceTypeEnum)[keyof typeof LearningResourcesVectorSearchRetrieveResourceTypeEnum]
 
 /**
  * NewsEventsApi - axios parameter creator
@@ -11709,6 +10671,1019 @@ export class UsersApi extends BaseAPI {
       .then((request) => request(this.axios, this.basePath))
   }
 }
+
+/**
+ * VectorContentFilesSearchApi - axios parameter creator
+ * @export
+ */
+export const VectorContentFilesSearchApiAxiosParamCreator = function (
+  configuration?: Configuration,
+) {
+  return {
+    /**
+     * Vector Search for content
+     * @summary Content File Vector Search
+     * @param {Array<string>} [content_feature_type] The feature type of the content file. Possible options are at api/v1/course_features/
+     * @param {Array<string>} [course_number] Course number of the content file
+     * @param {Array<string>} [file_extension] The extension of the content file.
+     * @param {Array<string>} [key] The filename of the content file
+     * @param {number} [limit] Number of results to return per page
+     * @param {Array<string>} [offered_by] Offeror of the content file
+     * @param {number} [offset] The initial index from which to return the results
+     * @param {Array<string>} [platform] platform(s) of the content file
+     * @param {string} [q] The search text
+     * @param {Array<string>} [resource_readable_id] The readable_id value of the parent learning resource for the content file
+     * @param {Array<string>} [run_readable_id] The readable_id value of the run that the content file belongs to
+     * @param {VectorContentFilesSearchRetrieveSortbyEnum} [sortby] if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;id&#x60; - id * &#x60;-id&#x60; - -id * &#x60;resource_readable_id&#x60; - resource_readable_id * &#x60;-resource_readable_id&#x60; - -resource_readable_id
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    vectorContentFilesSearchRetrieve: async (
+      content_feature_type?: Array<string>,
+      course_number?: Array<string>,
+      file_extension?: Array<string>,
+      key?: Array<string>,
+      limit?: number,
+      offered_by?: Array<string>,
+      offset?: number,
+      platform?: Array<string>,
+      q?: string,
+      resource_readable_id?: Array<string>,
+      run_readable_id?: Array<string>,
+      sortby?: VectorContentFilesSearchRetrieveSortbyEnum,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      const localVarPath = `/api/v0/vector_content_files_search/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      if (content_feature_type) {
+        localVarQueryParameter["content_feature_type"] = content_feature_type
+      }
+
+      if (course_number) {
+        localVarQueryParameter["course_number"] = course_number
+      }
+
+      if (file_extension) {
+        localVarQueryParameter["file_extension"] = file_extension
+      }
+
+      if (key) {
+        localVarQueryParameter["key"] = key
+      }
+
+      if (limit !== undefined) {
+        localVarQueryParameter["limit"] = limit
+      }
+
+      if (offered_by) {
+        localVarQueryParameter["offered_by"] = offered_by
+      }
+
+      if (offset !== undefined) {
+        localVarQueryParameter["offset"] = offset
+      }
+
+      if (platform) {
+        localVarQueryParameter["platform"] = platform
+      }
+
+      if (q !== undefined) {
+        localVarQueryParameter["q"] = q
+      }
+
+      if (resource_readable_id) {
+        localVarQueryParameter["resource_readable_id"] = resource_readable_id
+      }
+
+      if (run_readable_id) {
+        localVarQueryParameter["run_readable_id"] = run_readable_id
+      }
+
+      if (sortby !== undefined) {
+        localVarQueryParameter["sortby"] = sortby
+      }
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+  }
+}
+
+/**
+ * VectorContentFilesSearchApi - functional programming interface
+ * @export
+ */
+export const VectorContentFilesSearchApiFp = function (
+  configuration?: Configuration,
+) {
+  const localVarAxiosParamCreator =
+    VectorContentFilesSearchApiAxiosParamCreator(configuration)
+  return {
+    /**
+     * Vector Search for content
+     * @summary Content File Vector Search
+     * @param {Array<string>} [content_feature_type] The feature type of the content file. Possible options are at api/v1/course_features/
+     * @param {Array<string>} [course_number] Course number of the content file
+     * @param {Array<string>} [file_extension] The extension of the content file.
+     * @param {Array<string>} [key] The filename of the content file
+     * @param {number} [limit] Number of results to return per page
+     * @param {Array<string>} [offered_by] Offeror of the content file
+     * @param {number} [offset] The initial index from which to return the results
+     * @param {Array<string>} [platform] platform(s) of the content file
+     * @param {string} [q] The search text
+     * @param {Array<string>} [resource_readable_id] The readable_id value of the parent learning resource for the content file
+     * @param {Array<string>} [run_readable_id] The readable_id value of the run that the content file belongs to
+     * @param {VectorContentFilesSearchRetrieveSortbyEnum} [sortby] if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;id&#x60; - id * &#x60;-id&#x60; - -id * &#x60;resource_readable_id&#x60; - resource_readable_id * &#x60;-resource_readable_id&#x60; - -resource_readable_id
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async vectorContentFilesSearchRetrieve(
+      content_feature_type?: Array<string>,
+      course_number?: Array<string>,
+      file_extension?: Array<string>,
+      key?: Array<string>,
+      limit?: number,
+      offered_by?: Array<string>,
+      offset?: number,
+      platform?: Array<string>,
+      q?: string,
+      resource_readable_id?: Array<string>,
+      run_readable_id?: Array<string>,
+      sortby?: VectorContentFilesSearchRetrieveSortbyEnum,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<ContentFileVectorSearchResponse>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.vectorContentFilesSearchRetrieve(
+          content_feature_type,
+          course_number,
+          file_extension,
+          key,
+          limit,
+          offered_by,
+          offset,
+          platform,
+          q,
+          resource_readable_id,
+          run_readable_id,
+          sortby,
+          options,
+        )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap[
+          "VectorContentFilesSearchApi.vectorContentFilesSearchRetrieve"
+        ]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+  }
+}
+
+/**
+ * VectorContentFilesSearchApi - factory interface
+ * @export
+ */
+export const VectorContentFilesSearchApiFactory = function (
+  configuration?: Configuration,
+  basePath?: string,
+  axios?: AxiosInstance,
+) {
+  const localVarFp = VectorContentFilesSearchApiFp(configuration)
+  return {
+    /**
+     * Vector Search for content
+     * @summary Content File Vector Search
+     * @param {VectorContentFilesSearchApiVectorContentFilesSearchRetrieveRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    vectorContentFilesSearchRetrieve(
+      requestParameters: VectorContentFilesSearchApiVectorContentFilesSearchRetrieveRequest = {},
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<ContentFileVectorSearchResponse> {
+      return localVarFp
+        .vectorContentFilesSearchRetrieve(
+          requestParameters.content_feature_type,
+          requestParameters.course_number,
+          requestParameters.file_extension,
+          requestParameters.key,
+          requestParameters.limit,
+          requestParameters.offered_by,
+          requestParameters.offset,
+          requestParameters.platform,
+          requestParameters.q,
+          requestParameters.resource_readable_id,
+          requestParameters.run_readable_id,
+          requestParameters.sortby,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+  }
+}
+
+/**
+ * Request parameters for vectorContentFilesSearchRetrieve operation in VectorContentFilesSearchApi.
+ * @export
+ * @interface VectorContentFilesSearchApiVectorContentFilesSearchRetrieveRequest
+ */
+export interface VectorContentFilesSearchApiVectorContentFilesSearchRetrieveRequest {
+  /**
+   * The feature type of the content file. Possible options are at api/v1/course_features/
+   * @type {Array<string>}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly content_feature_type?: Array<string>
+
+  /**
+   * Course number of the content file
+   * @type {Array<string>}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly course_number?: Array<string>
+
+  /**
+   * The extension of the content file.
+   * @type {Array<string>}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly file_extension?: Array<string>
+
+  /**
+   * The filename of the content file
+   * @type {Array<string>}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly key?: Array<string>
+
+  /**
+   * Number of results to return per page
+   * @type {number}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly limit?: number
+
+  /**
+   * Offeror of the content file
+   * @type {Array<string>}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly offered_by?: Array<string>
+
+  /**
+   * The initial index from which to return the results
+   * @type {number}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly offset?: number
+
+  /**
+   * platform(s) of the content file
+   * @type {Array<string>}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly platform?: Array<string>
+
+  /**
+   * The search text
+   * @type {string}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly q?: string
+
+  /**
+   * The readable_id value of the parent learning resource for the content file
+   * @type {Array<string>}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly resource_readable_id?: Array<string>
+
+  /**
+   * The readable_id value of the run that the content file belongs to
+   * @type {Array<string>}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly run_readable_id?: Array<string>
+
+  /**
+   * if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;id&#x60; - id * &#x60;-id&#x60; - -id * &#x60;resource_readable_id&#x60; - resource_readable_id * &#x60;-resource_readable_id&#x60; - -resource_readable_id
+   * @type {'id' | '-id' | 'resource_readable_id' | '-resource_readable_id'}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly sortby?: VectorContentFilesSearchRetrieveSortbyEnum
+}
+
+/**
+ * VectorContentFilesSearchApi - object-oriented interface
+ * @export
+ * @class VectorContentFilesSearchApi
+ * @extends {BaseAPI}
+ */
+export class VectorContentFilesSearchApi extends BaseAPI {
+  /**
+   * Vector Search for content
+   * @summary Content File Vector Search
+   * @param {VectorContentFilesSearchApiVectorContentFilesSearchRetrieveRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof VectorContentFilesSearchApi
+   */
+  public vectorContentFilesSearchRetrieve(
+    requestParameters: VectorContentFilesSearchApiVectorContentFilesSearchRetrieveRequest = {},
+    options?: RawAxiosRequestConfig,
+  ) {
+    return VectorContentFilesSearchApiFp(this.configuration)
+      .vectorContentFilesSearchRetrieve(
+        requestParameters.content_feature_type,
+        requestParameters.course_number,
+        requestParameters.file_extension,
+        requestParameters.key,
+        requestParameters.limit,
+        requestParameters.offered_by,
+        requestParameters.offset,
+        requestParameters.platform,
+        requestParameters.q,
+        requestParameters.resource_readable_id,
+        requestParameters.run_readable_id,
+        requestParameters.sortby,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
+}
+
+/**
+ * @export
+ */
+export const VectorContentFilesSearchRetrieveSortbyEnum = {
+  Id: "id",
+  Id2: "-id",
+  ResourceReadableId: "resource_readable_id",
+  ResourceReadableId2: "-resource_readable_id",
+} as const
+export type VectorContentFilesSearchRetrieveSortbyEnum =
+  (typeof VectorContentFilesSearchRetrieveSortbyEnum)[keyof typeof VectorContentFilesSearchRetrieveSortbyEnum]
+
+/**
+ * VectorLearningResourcesSearchApi - axios parameter creator
+ * @export
+ */
+export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
+  configuration?: Configuration,
+) {
+  return {
+    /**
+     * Vector Search for learning resources
+     * @summary Vector Search
+     * @param {boolean | null} [certification] True if the learning resource offers a certificate
+     * @param {Array<VectorLearningResourcesSearchRetrieveCertificationTypeEnum>} [certification_type] The type of certificate               * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
+     * @param {Array<string>} [course_feature] The course feature. Possible options are at api/v1/course_features/
+     * @param {Array<VectorLearningResourcesSearchRetrieveDeliveryEnum>} [delivery] The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<VectorLearningResourcesSearchRetrieveDepartmentEnum>} [department] The department that offers the learning resource               * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
+     * @param {boolean | null} [free]
+     * @param {Array<VectorLearningResourcesSearchRetrieveLevelEnum>} [level]
+     * @param {number} [limit] Number of results to return per page
+     * @param {Array<string>} [ocw_topic] The ocw topic name.
+     * @param {Array<VectorLearningResourcesSearchRetrieveOfferedByEnum>} [offered_by] The organization that offers the learning resource               * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education
+     * @param {number} [offset] The initial index from which to return the results
+     * @param {Array<VectorLearningResourcesSearchRetrievePlatformEnum>} [platform] The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube
+     * @param {boolean | null} [professional]
+     * @param {string} [q] The search text
+     * @param {string} [readable_id] The readable id of the resource
+     * @param {Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>} [resource_category] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist
+     * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    vectorLearningResourcesSearchRetrieve: async (
+      certification?: boolean | null,
+      certification_type?: Array<VectorLearningResourcesSearchRetrieveCertificationTypeEnum>,
+      course_feature?: Array<string>,
+      delivery?: Array<VectorLearningResourcesSearchRetrieveDeliveryEnum>,
+      department?: Array<VectorLearningResourcesSearchRetrieveDepartmentEnum>,
+      free?: boolean | null,
+      level?: Array<VectorLearningResourcesSearchRetrieveLevelEnum>,
+      limit?: number,
+      ocw_topic?: Array<string>,
+      offered_by?: Array<VectorLearningResourcesSearchRetrieveOfferedByEnum>,
+      offset?: number,
+      platform?: Array<VectorLearningResourcesSearchRetrievePlatformEnum>,
+      professional?: boolean | null,
+      q?: string,
+      readable_id?: string,
+      resource_category?: Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>,
+      resource_type?: Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>,
+      topic?: Array<string>,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      const localVarPath = `/api/v0/vector_learning_resources_search/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      if (certification !== undefined) {
+        localVarQueryParameter["certification"] = certification
+      }
+
+      if (certification_type) {
+        localVarQueryParameter["certification_type"] = certification_type
+      }
+
+      if (course_feature) {
+        localVarQueryParameter["course_feature"] = course_feature
+      }
+
+      if (delivery) {
+        localVarQueryParameter["delivery"] = delivery
+      }
+
+      if (department) {
+        localVarQueryParameter["department"] = department
+      }
+
+      if (free !== undefined) {
+        localVarQueryParameter["free"] = free
+      }
+
+      if (level) {
+        localVarQueryParameter["level"] = level
+      }
+
+      if (limit !== undefined) {
+        localVarQueryParameter["limit"] = limit
+      }
+
+      if (ocw_topic) {
+        localVarQueryParameter["ocw_topic"] = ocw_topic
+      }
+
+      if (offered_by) {
+        localVarQueryParameter["offered_by"] = offered_by
+      }
+
+      if (offset !== undefined) {
+        localVarQueryParameter["offset"] = offset
+      }
+
+      if (platform) {
+        localVarQueryParameter["platform"] = platform
+      }
+
+      if (professional !== undefined) {
+        localVarQueryParameter["professional"] = professional
+      }
+
+      if (q !== undefined) {
+        localVarQueryParameter["q"] = q
+      }
+
+      if (readable_id !== undefined) {
+        localVarQueryParameter["readable_id"] = readable_id
+      }
+
+      if (resource_category) {
+        localVarQueryParameter["resource_category"] = resource_category
+      }
+
+      if (resource_type) {
+        localVarQueryParameter["resource_type"] = resource_type
+      }
+
+      if (topic) {
+        localVarQueryParameter["topic"] = topic
+      }
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+  }
+}
+
+/**
+ * VectorLearningResourcesSearchApi - functional programming interface
+ * @export
+ */
+export const VectorLearningResourcesSearchApiFp = function (
+  configuration?: Configuration,
+) {
+  const localVarAxiosParamCreator =
+    VectorLearningResourcesSearchApiAxiosParamCreator(configuration)
+  return {
+    /**
+     * Vector Search for learning resources
+     * @summary Vector Search
+     * @param {boolean | null} [certification] True if the learning resource offers a certificate
+     * @param {Array<VectorLearningResourcesSearchRetrieveCertificationTypeEnum>} [certification_type] The type of certificate               * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
+     * @param {Array<string>} [course_feature] The course feature. Possible options are at api/v1/course_features/
+     * @param {Array<VectorLearningResourcesSearchRetrieveDeliveryEnum>} [delivery] The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<VectorLearningResourcesSearchRetrieveDepartmentEnum>} [department] The department that offers the learning resource               * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
+     * @param {boolean | null} [free]
+     * @param {Array<VectorLearningResourcesSearchRetrieveLevelEnum>} [level]
+     * @param {number} [limit] Number of results to return per page
+     * @param {Array<string>} [ocw_topic] The ocw topic name.
+     * @param {Array<VectorLearningResourcesSearchRetrieveOfferedByEnum>} [offered_by] The organization that offers the learning resource               * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education
+     * @param {number} [offset] The initial index from which to return the results
+     * @param {Array<VectorLearningResourcesSearchRetrievePlatformEnum>} [platform] The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube
+     * @param {boolean | null} [professional]
+     * @param {string} [q] The search text
+     * @param {string} [readable_id] The readable id of the resource
+     * @param {Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>} [resource_category] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist
+     * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async vectorLearningResourcesSearchRetrieve(
+      certification?: boolean | null,
+      certification_type?: Array<VectorLearningResourcesSearchRetrieveCertificationTypeEnum>,
+      course_feature?: Array<string>,
+      delivery?: Array<VectorLearningResourcesSearchRetrieveDeliveryEnum>,
+      department?: Array<VectorLearningResourcesSearchRetrieveDepartmentEnum>,
+      free?: boolean | null,
+      level?: Array<VectorLearningResourcesSearchRetrieveLevelEnum>,
+      limit?: number,
+      ocw_topic?: Array<string>,
+      offered_by?: Array<VectorLearningResourcesSearchRetrieveOfferedByEnum>,
+      offset?: number,
+      platform?: Array<VectorLearningResourcesSearchRetrievePlatformEnum>,
+      professional?: boolean | null,
+      q?: string,
+      readable_id?: string,
+      resource_category?: Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>,
+      resource_type?: Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>,
+      topic?: Array<string>,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<LearningResourcesVectorSearchResponse>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.vectorLearningResourcesSearchRetrieve(
+          certification,
+          certification_type,
+          course_feature,
+          delivery,
+          department,
+          free,
+          level,
+          limit,
+          ocw_topic,
+          offered_by,
+          offset,
+          platform,
+          professional,
+          q,
+          readable_id,
+          resource_category,
+          resource_type,
+          topic,
+          options,
+        )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap[
+          "VectorLearningResourcesSearchApi.vectorLearningResourcesSearchRetrieve"
+        ]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+  }
+}
+
+/**
+ * VectorLearningResourcesSearchApi - factory interface
+ * @export
+ */
+export const VectorLearningResourcesSearchApiFactory = function (
+  configuration?: Configuration,
+  basePath?: string,
+  axios?: AxiosInstance,
+) {
+  const localVarFp = VectorLearningResourcesSearchApiFp(configuration)
+  return {
+    /**
+     * Vector Search for learning resources
+     * @summary Vector Search
+     * @param {VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    vectorLearningResourcesSearchRetrieve(
+      requestParameters: VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest = {},
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<LearningResourcesVectorSearchResponse> {
+      return localVarFp
+        .vectorLearningResourcesSearchRetrieve(
+          requestParameters.certification,
+          requestParameters.certification_type,
+          requestParameters.course_feature,
+          requestParameters.delivery,
+          requestParameters.department,
+          requestParameters.free,
+          requestParameters.level,
+          requestParameters.limit,
+          requestParameters.ocw_topic,
+          requestParameters.offered_by,
+          requestParameters.offset,
+          requestParameters.platform,
+          requestParameters.professional,
+          requestParameters.q,
+          requestParameters.readable_id,
+          requestParameters.resource_category,
+          requestParameters.resource_type,
+          requestParameters.topic,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+  }
+}
+
+/**
+ * Request parameters for vectorLearningResourcesSearchRetrieve operation in VectorLearningResourcesSearchApi.
+ * @export
+ * @interface VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest
+ */
+export interface VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest {
+  /**
+   * True if the learning resource offers a certificate
+   * @type {boolean}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly certification?: boolean | null
+
+  /**
+   * The type of certificate               * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
+   * @type {Array<'micromasters' | 'professional' | 'completion' | 'none'>}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly certification_type?: Array<VectorLearningResourcesSearchRetrieveCertificationTypeEnum>
+
+  /**
+   * The course feature. Possible options are at api/v1/course_features/
+   * @type {Array<string>}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly course_feature?: Array<string>
+
+  /**
+   * The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+   * @type {Array<'online' | 'hybrid' | 'in_person' | 'offline'>}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly delivery?: Array<VectorLearningResourcesSearchRetrieveDeliveryEnum>
+
+  /**
+   * The department that offers the learning resource               * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
+   * @type {Array<'1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | '14' | '15' | '16' | '17' | '18' | '20' | '21A' | '21G' | '21H' | '21L' | '21M' | '22' | '24' | 'CC' | 'CMS-W' | 'EC' | 'ES' | 'ESD' | 'HST' | 'IDS' | 'MAS' | 'PE' | 'SP' | 'STS' | 'WGS'>}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly department?: Array<VectorLearningResourcesSearchRetrieveDepartmentEnum>
+
+  /**
+   *
+   * @type {boolean}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly free?: boolean | null
+
+  /**
+   *
+   * @type {Array<'undergraduate' | 'graduate' | 'high_school' | 'noncredit' | 'advanced' | 'intermediate' | 'introductory'>}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly level?: Array<VectorLearningResourcesSearchRetrieveLevelEnum>
+
+  /**
+   * Number of results to return per page
+   * @type {number}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly limit?: number
+
+  /**
+   * The ocw topic name.
+   * @type {Array<string>}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly ocw_topic?: Array<string>
+
+  /**
+   * The organization that offers the learning resource               * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education
+   * @type {Array<'mitx' | 'ocw' | 'bootcamps' | 'xpro' | 'mitpe' | 'see'>}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly offered_by?: Array<VectorLearningResourcesSearchRetrieveOfferedByEnum>
+
+  /**
+   * The initial index from which to return the results
+   * @type {number}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly offset?: number
+
+  /**
+   * The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube
+   * @type {Array<'edx' | 'ocw' | 'oll' | 'mitxonline' | 'bootcamps' | 'xpro' | 'csail' | 'mitpe' | 'see' | 'scc' | 'ctl' | 'whu' | 'susskind' | 'globalalumni' | 'simplilearn' | 'emeritus' | 'podcast' | 'youtube'>}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly platform?: Array<VectorLearningResourcesSearchRetrievePlatformEnum>
+
+  /**
+   *
+   * @type {boolean}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly professional?: boolean | null
+
+  /**
+   * The search text
+   * @type {string}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly q?: string
+
+  /**
+   * The readable id of the resource
+   * @type {string}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly readable_id?: string
+
+  /**
+   * The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+   * @type {Array<'course' | 'program' | 'learning_material'>}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly resource_category?: Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>
+
+  /**
+   * The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist
+   * @type {Array<'course' | 'program' | 'learning_path' | 'podcast' | 'podcast_episode' | 'video' | 'video_playlist'>}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly resource_type?: Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>
+
+  /**
+   * The topic name. To see a list of options go to api/v1/topics/
+   * @type {Array<string>}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly topic?: Array<string>
+}
+
+/**
+ * VectorLearningResourcesSearchApi - object-oriented interface
+ * @export
+ * @class VectorLearningResourcesSearchApi
+ * @extends {BaseAPI}
+ */
+export class VectorLearningResourcesSearchApi extends BaseAPI {
+  /**
+   * Vector Search for learning resources
+   * @summary Vector Search
+   * @param {VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof VectorLearningResourcesSearchApi
+   */
+  public vectorLearningResourcesSearchRetrieve(
+    requestParameters: VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest = {},
+    options?: RawAxiosRequestConfig,
+  ) {
+    return VectorLearningResourcesSearchApiFp(this.configuration)
+      .vectorLearningResourcesSearchRetrieve(
+        requestParameters.certification,
+        requestParameters.certification_type,
+        requestParameters.course_feature,
+        requestParameters.delivery,
+        requestParameters.department,
+        requestParameters.free,
+        requestParameters.level,
+        requestParameters.limit,
+        requestParameters.ocw_topic,
+        requestParameters.offered_by,
+        requestParameters.offset,
+        requestParameters.platform,
+        requestParameters.professional,
+        requestParameters.q,
+        requestParameters.readable_id,
+        requestParameters.resource_category,
+        requestParameters.resource_type,
+        requestParameters.topic,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
+}
+
+/**
+ * @export
+ */
+export const VectorLearningResourcesSearchRetrieveCertificationTypeEnum = {
+  Micromasters: "micromasters",
+  Professional: "professional",
+  Completion: "completion",
+  None: "none",
+} as const
+export type VectorLearningResourcesSearchRetrieveCertificationTypeEnum =
+  (typeof VectorLearningResourcesSearchRetrieveCertificationTypeEnum)[keyof typeof VectorLearningResourcesSearchRetrieveCertificationTypeEnum]
+/**
+ * @export
+ */
+export const VectorLearningResourcesSearchRetrieveDeliveryEnum = {
+  Online: "online",
+  Hybrid: "hybrid",
+  InPerson: "in_person",
+  Offline: "offline",
+} as const
+export type VectorLearningResourcesSearchRetrieveDeliveryEnum =
+  (typeof VectorLearningResourcesSearchRetrieveDeliveryEnum)[keyof typeof VectorLearningResourcesSearchRetrieveDeliveryEnum]
+/**
+ * @export
+ */
+export const VectorLearningResourcesSearchRetrieveDepartmentEnum = {
+  _1: "1",
+  _2: "2",
+  _3: "3",
+  _4: "4",
+  _5: "5",
+  _6: "6",
+  _7: "7",
+  _8: "8",
+  _9: "9",
+  _10: "10",
+  _11: "11",
+  _12: "12",
+  _14: "14",
+  _15: "15",
+  _16: "16",
+  _17: "17",
+  _18: "18",
+  _20: "20",
+  _21A: "21A",
+  _21G: "21G",
+  _21H: "21H",
+  _21L: "21L",
+  _21M: "21M",
+  _22: "22",
+  _24: "24",
+  Cc: "CC",
+  CmsW: "CMS-W",
+  Ec: "EC",
+  Es: "ES",
+  Esd: "ESD",
+  Hst: "HST",
+  Ids: "IDS",
+  Mas: "MAS",
+  Pe: "PE",
+  Sp: "SP",
+  Sts: "STS",
+  Wgs: "WGS",
+} as const
+export type VectorLearningResourcesSearchRetrieveDepartmentEnum =
+  (typeof VectorLearningResourcesSearchRetrieveDepartmentEnum)[keyof typeof VectorLearningResourcesSearchRetrieveDepartmentEnum]
+/**
+ * @export
+ */
+export const VectorLearningResourcesSearchRetrieveLevelEnum = {
+  Undergraduate: "undergraduate",
+  Graduate: "graduate",
+  HighSchool: "high_school",
+  Noncredit: "noncredit",
+  Advanced: "advanced",
+  Intermediate: "intermediate",
+  Introductory: "introductory",
+} as const
+export type VectorLearningResourcesSearchRetrieveLevelEnum =
+  (typeof VectorLearningResourcesSearchRetrieveLevelEnum)[keyof typeof VectorLearningResourcesSearchRetrieveLevelEnum]
+/**
+ * @export
+ */
+export const VectorLearningResourcesSearchRetrieveOfferedByEnum = {
+  Mitx: "mitx",
+  Ocw: "ocw",
+  Bootcamps: "bootcamps",
+  Xpro: "xpro",
+  Mitpe: "mitpe",
+  See: "see",
+} as const
+export type VectorLearningResourcesSearchRetrieveOfferedByEnum =
+  (typeof VectorLearningResourcesSearchRetrieveOfferedByEnum)[keyof typeof VectorLearningResourcesSearchRetrieveOfferedByEnum]
+/**
+ * @export
+ */
+export const VectorLearningResourcesSearchRetrievePlatformEnum = {
+  Edx: "edx",
+  Ocw: "ocw",
+  Oll: "oll",
+  Mitxonline: "mitxonline",
+  Bootcamps: "bootcamps",
+  Xpro: "xpro",
+  Csail: "csail",
+  Mitpe: "mitpe",
+  See: "see",
+  Scc: "scc",
+  Ctl: "ctl",
+  Whu: "whu",
+  Susskind: "susskind",
+  Globalalumni: "globalalumni",
+  Simplilearn: "simplilearn",
+  Emeritus: "emeritus",
+  Podcast: "podcast",
+  Youtube: "youtube",
+} as const
+export type VectorLearningResourcesSearchRetrievePlatformEnum =
+  (typeof VectorLearningResourcesSearchRetrievePlatformEnum)[keyof typeof VectorLearningResourcesSearchRetrievePlatformEnum]
+/**
+ * @export
+ */
+export const VectorLearningResourcesSearchRetrieveResourceCategoryEnum = {
+  Course: "course",
+  Program: "program",
+  LearningMaterial: "learning_material",
+} as const
+export type VectorLearningResourcesSearchRetrieveResourceCategoryEnum =
+  (typeof VectorLearningResourcesSearchRetrieveResourceCategoryEnum)[keyof typeof VectorLearningResourcesSearchRetrieveResourceCategoryEnum]
+/**
+ * @export
+ */
+export const VectorLearningResourcesSearchRetrieveResourceTypeEnum = {
+  Course: "course",
+  Program: "program",
+  LearningPath: "learning_path",
+  Podcast: "podcast",
+  PodcastEpisode: "podcast_episode",
+  Video: "video",
+  VideoPlaylist: "video_playlist",
+} as const
+export type VectorLearningResourcesSearchRetrieveResourceTypeEnum =
+  (typeof VectorLearningResourcesSearchRetrieveResourceTypeEnum)[keyof typeof VectorLearningResourcesSearchRetrieveResourceTypeEnum]
 
 /**
  * WebsitesApi - axios parameter creator
