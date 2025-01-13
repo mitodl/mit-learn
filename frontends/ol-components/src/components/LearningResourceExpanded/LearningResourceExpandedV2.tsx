@@ -533,14 +533,14 @@ const CallToActionSection = ({
         >
           {cta}
         </StyledLink>
-        <PlatformContainer>
-          {platformImage ? (
+        {platformImage ? (
+          <PlatformContainer>
             <Platform>
               <OnPlatform>on</OnPlatform>
               <StyledPlatformLogo platformCode={platformCode} height={26} />
             </Platform>
-          ) : null}
-        </PlatformContainer>
+          </PlatformContainer>
+        ) : null}
         <ButtonContainer>
           {user?.is_learning_path_editor && (
             <CallToActionButton
