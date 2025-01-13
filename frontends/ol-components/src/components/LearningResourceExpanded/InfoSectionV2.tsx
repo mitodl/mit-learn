@@ -55,7 +55,7 @@ const Separator: React.FC = () => (
 const InfoItems = styled.section({
   display: "flex",
   flexDirection: "column",
-  gap: "16px",
+  gap: "12px",
   maxWidth: "100%",
 })
 
