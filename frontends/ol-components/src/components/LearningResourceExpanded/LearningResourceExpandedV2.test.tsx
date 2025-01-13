@@ -7,7 +7,7 @@ import {
   LearningResourceExpandedV2,
 } from "./LearningResourceExpandedV2"
 import type { LearningResourceExpandedV2Props } from "./LearningResourceExpandedV2"
-import { ResourceTypeEnum, PodcastEpisodeResource } from "api"
+import { ResourceTypeEnum } from "api"
 import { factories, setMockResponse, urls } from "api/test-utils"
 import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
 import invariant from "tiny-invariant"
@@ -75,16 +75,12 @@ describe("Learning Resource Expanded", () => {
 
       const linkName = getCallToActionText(resource)
 
-      const url =
-        resource.resource_type === ResourceTypeEnum.PodcastEpisode
-          ? (resource as PodcastEpisodeResource).podcast_episode?.episode_link
-          : resource.url
       if (linkName) {
         const link = screen.getByRole("link", {
           name: linkName,
         }) as HTMLAnchorElement
         expect(link.target).toBe("_blank")
-        expect(link.href).toMatch(new RegExp(`^${url}/?$`))
+        expect(link.href).toMatch(new RegExp(`^${resource.url}/?$`))
       }
     },
   )
@@ -140,11 +136,7 @@ describe("Learning Resource Expanded", () => {
         name: "Listen to Podcast",
       }) as HTMLAnchorElement
 
-      expect(link.href).toMatch(
-        new RegExp(
-          `^${(resource as PodcastEpisodeResource).podcast_episode?.episode_link}/?$`,
-        ),
-      )
+      expect(link.href).toMatch(resource.url || "")
     },
   )
 
