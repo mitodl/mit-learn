@@ -101,8 +101,7 @@ response_test_raw_data_1 = {
                             "image": None,
                             "run_id": "course-v1:xPRO+MCPO+R1",
                             "title": (
-                                "Project Management: Leading Organizations to"
-                                " Success"
+                                "Project Management: Leading Organizations to Success"
                             ),
                             "description": None,
                             "full_description": None,

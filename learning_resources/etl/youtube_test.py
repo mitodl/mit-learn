@@ -111,7 +111,7 @@ def mock_channel_file(content):
 
 
 @pytest.fixture
-def mocked_github_channel_response(mocker):  # noqa: PT004
+def mocked_github_channel_response(mocker):
     """Mock response from github api requst to open-video-data"""
 
     mock_file = mock_channel_file(

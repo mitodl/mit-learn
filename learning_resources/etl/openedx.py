@@ -378,9 +378,9 @@ def _transform_course_commitment(course_run) -> CommitmentConfig:
     )
     if min_effort or max_effort:
         return CommitmentConfig(
-            commitment=f"{
-            commit_str_prefix}{max_effort or min_effort
-            } hour{'s' if max_effort > 1 else ''}/week",
+            commitment=f"{commit_str_prefix}{max_effort or min_effort} hour{
+                's' if max_effort > 1 else ''
+            }/week",
             min_weekly_hours=min(min_effort, max_effort),
             max_weekly_hours=max(min_effort, max_effort),
         )

@@ -37,7 +37,7 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture(autouse=True)
-def mock_sloan_api_setting(settings):  # noqa: PT004
+def mock_sloan_api_setting(settings):
     """Set the prolearn api url"""
     settings.SEE_API_URL = "http://localhost/test/programs/api"
     settings.SEE_API_CLIENT_ID = "test"

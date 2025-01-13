@@ -563,9 +563,9 @@ def test_load_duplicate_course(
 
     for key, value in props.items():
         assert getattr(result, key) == value, f"Property {key} should equal {value}"
-        assert (
-            getattr(saved_course, key) == value
-        ), f"Property {key} should be updated to {value} in the database"
+        assert getattr(saved_course, key) == value, (
+            f"Property {key} should be updated to {value} in the database"
+        )
 
 
 @pytest.mark.parametrize("unique_url", [True, False])
@@ -964,9 +964,9 @@ def test_load_content_file():
     assert loaded_file.run == learning_resource_run
 
     for key, value in props.items():
-        assert (
-            getattr(loaded_file, key) == value
-        ), f"Property {key} should equal {value}"
+        assert getattr(loaded_file, key) == value, (
+            f"Property {key} should equal {value}"
+        )
 
 
 def test_load_image():

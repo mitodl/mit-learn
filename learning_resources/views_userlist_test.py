@@ -323,7 +323,7 @@ def test_set_userlist_relationships(client, user):
     )
     client.force_login(user)
     resp = client.patch(
-        f"{url}?{"".join([f"userlist_id={userlist.id}&" for userlist in userlists])}"
+        f"{url}?{''.join([f'userlist_id={userlist.id}&' for userlist in userlists])}"
     )
     assert resp.status_code == 200
     for userlist in userlists:
@@ -342,7 +342,7 @@ def test_set_userlist_relationships_unauthorized(client, user):
     client.force_login(user)
     with pytest.raises(PermissionError):
         client.patch(
-            f"{url}?{"".join([f"userlist_id={userlist.id}&" for userlist in userlists])}"
+            f"{url}?{''.join([f'userlist_id={userlist.id}&' for userlist in userlists])}"
         )
     for userlist in userlists:
         assert not userlist.resources.filter(id=course.learning_resource.id).exists()
@@ -399,7 +399,7 @@ def test_adding_to_userlist_not_effect_existing_membership(client, user):
     client.force_login(user)
     lists = [existing_parent, new_additional_parent]
     resp = client.patch(
-        f"{url}?{"".join([f"userlist_id={userlist.id}&" for userlist in lists])}"
+        f"{url}?{''.join([f'userlist_id={userlist.id}&' for userlist in lists])}"
     )
 
     assert resp.status_code == 200

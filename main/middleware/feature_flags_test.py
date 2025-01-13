@@ -14,7 +14,7 @@ FEATURE_FLAG_COOKIE_MAX_AGE_SECONDS = 60
 
 
 @pytest.fixture
-def middleware_settings(settings):  # noqa: PT004
+def middleware_settings(settings):
     """Default settings for middleware"""  # noqa: D401
     settings.MIDDLEWARE_FEATURE_FLAG_QS_PREFIX = "ZZ"
     settings.MIDDLEWARE_FEATURE_FLAG_COOKIE_NAME = FEATURE_FLAG_COOKIE_NAME

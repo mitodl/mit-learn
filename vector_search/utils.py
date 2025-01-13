@@ -168,8 +168,7 @@ def _process_resource_embeddings(serialized_resources):
         metadata.append(doc)
         ids.append(vector_point_id(vector_point_key))
         docs.append(
-            f'{doc.get("title")} {doc.get("description")} '
-            f'{doc.get("full_description")}'
+            f"{doc.get('title')} {doc.get('description')} {doc.get('full_description')}"
         )
     embeddings = encoder.encode_batch(docs)
     return points_generator(ids, metadata, embeddings, vector_name)
@@ -239,7 +238,7 @@ def _process_content_embeddings(serialized_content):
 
         split_ids = [
             vector_point_id(
-                f'{doc['resource_readable_id']}.{doc['run_readable_id']}.{doc['key']}.{md["chunk_number"]}'
+                f"{doc['resource_readable_id']}.{doc['run_readable_id']}.{doc['key']}.{md['chunk_number']}"
             )
             for md in split_metadatas
         ]

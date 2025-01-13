@@ -405,7 +405,7 @@ class CourseFactory(DjangoModelFactory):
     course_numbers = factory.List(
         [
             {
-                "value": f"{random.randint(1,20)}.0001",  # noqa: S311
+                "value": f"{random.randint(1, 20)}.0001",  # noqa: S311
                 "department": None,
                 "listing_type": CourseNumberType.primary.name,
                 "primary": True,

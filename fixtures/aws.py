@@ -10,13 +10,13 @@ from moto import mock_aws
 
 
 @pytest.fixture(autouse=True)
-def silence_s3_logging():  # noqa: PT004
+def silence_s3_logging():
     """Only show S3 errors"""
     logging.getLogger("botocore").setLevel(logging.ERROR)
 
 
 @pytest.fixture
-def mock_s3_fixture():  # noqa: PT004
+def mock_s3_fixture():
     """Mock the S3 fixture for the duration of the test"""
     with mock_aws():
         yield

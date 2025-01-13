@@ -260,8 +260,7 @@ def parse_date_time_range(
         f"{start_time.ampm} {start_time.tz}"
     ) or dateparser.parse(f"{start_date_str} {default_time_str}")
     end_date = dateparser.parse(
-        f"{end_date_str} {end_time.hour}{end_time.minute} "
-        f"{end_time.ampm} {end_time.tz}"
+        f"{end_date_str} {end_time.hour}{end_time.minute} {end_time.ampm} {end_time.tz}"
     ) or dateparser.parse(f"{end_date_str} {default_time_str}")
 
     if end_date and start_date and end_date < start_date:
