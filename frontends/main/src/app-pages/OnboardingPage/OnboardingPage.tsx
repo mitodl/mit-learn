@@ -210,7 +210,7 @@ const OnboardingPage: React.FC = () => {
             {userLoading ? (
               <Skeleton variant="text" width="100%" height={40} />
             ) : (
-              <Title component="h3" variant="h4" id={formLabelId}>
+              <Title component="h2" variant="h4" id={formLabelId}>
                 Welcome{user?.first_name ? `, ${user.first_name}` : ""}! What
                 are you interested in learning about?
               </Title>
@@ -229,7 +229,7 @@ const OnboardingPage: React.FC = () => {
         {...GridStyle()}
         label={
           <Label>
-            <Title component="h3" variant="h6" id={formLabelId}>
+            <Title component="h2" variant="h6" id={formLabelId}>
               What are your learning goals?
             </Title>
             <Prompt component="p">Select all that apply:</Prompt>
@@ -248,7 +248,7 @@ const OnboardingPage: React.FC = () => {
         {...GridStyle()}
         label={
           <Label>
-            <Title component="h3" variant="h6" id={formLabelId}>
+            <Title component="h2" variant="h6" id={formLabelId}>
               Are you seeking a certificate?
             </Title>
           </Label>
@@ -264,7 +264,7 @@ const OnboardingPage: React.FC = () => {
         fullWidth
         label={
           <Label>
-            <Title component="h3" variant="h6" id={formLabelId}>
+            <Title component="h2" variant="h6" id={formLabelId}>
               What is your current level of education?
             </Title>
           </Label>
@@ -280,7 +280,7 @@ const OnboardingPage: React.FC = () => {
         {...GridStyle()}
         label={
           <Label>
-            <Title component="h3" variant="h6" id={formLabelId}>
+            <Title component="h2" variant="h6" id={formLabelId}>
               What course format are you interested in?
             </Title>
             <Prompt>Select all that apply:</Prompt>
