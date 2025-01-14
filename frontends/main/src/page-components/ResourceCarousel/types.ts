@@ -1,5 +1,6 @@
 import type {
   LearningResourcesApiLearningResourcesListRequest as LRListRequest,
+  LearningResourcesApiLearningResourcesItemsListRequest as LRItemsListRequest,
   LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as SearchRequest,
   FeaturedApiFeaturedListRequest as FeaturedListParams,
   LearningResourcesApiLearningResourcesSimilarListRequest as SimilarListParams,
@@ -10,6 +11,11 @@ import type { LearningResourceCardProps } from "ol-components"
 interface ResourceDataSource {
   type: "resources"
   params: LRListRequest
+}
+
+interface ResourceItemsDataSource {
+  type: "resource_items"
+  params: LRItemsListRequest
 }
 
 interface SearchDataSource {
@@ -34,6 +40,7 @@ interface VectorSimilarDataSource {
 
 type DataSource =
   | ResourceDataSource
+  | ResourceItemsDataSource
   | SearchDataSource
   | FeaturedDataSource
   | SimilarDataSource

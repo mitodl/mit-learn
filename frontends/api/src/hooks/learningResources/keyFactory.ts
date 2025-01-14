@@ -8,6 +8,7 @@ import {
   schoolsApi,
   featuredApi,
 } from "../../clients"
+import axiosInstance from "../../axios"
 import type {
   LearningResource,
   LearningResourcesApiLearningResourcesListRequest as LearningResourcesListRequest,
@@ -16,6 +17,8 @@ import type {
   OfferorsApiOfferorsListRequest,
   PlatformsApiPlatformsListRequest,
   FeaturedApiFeaturedListRequest as FeaturedListParams,
+  LearningResourcesApiLearningResourcesItemsListRequest as ItemsListRequest,
+  PaginatedLearningResourceRelationshipList,
 } from "../../generated/v1"
 
 const shuffle = ([...arr]) => {
@@ -63,12 +66,33 @@ export const clearListMemberships = (resource: LearningResource) => ({
 
 const learningResources = createQueryKeys("learningResources", {
   detail: (id: number) => ({
-    queryKey: [id],
+    queryKey: ["detail", id],
     queryFn: async () => {
       const { data } = await learningResourcesApi.learningResourcesRetrieve({
         id,
       })
       return clearListMemberships(data)
+    },
+    contextQueries: {
+      items: (itemsP: ItemsListRequest) => ({
+        queryKey: [itemsP],
+        queryFn: async ({ pageParam }: { pageParam?: string } = {}) => {
+          // Use generated API for first request, then use next parameter
+          const request = pageParam
+            ? axiosInstance.request<PaginatedLearningResourceRelationshipList>({
+                method: "get",
+                url: pageParam,
+              })
+            : learningResourcesApi.learningResourcesItemsList(itemsP)
+          const { data } = await request
+          return {
+            ...data,
+            results: data.results.map((relation) => ({
+              ...clearListMemberships(relation.resource),
+            })),
+          }
+        },
+      }),
     },
   }),
   list: (params: LearningResourcesListRequest) => ({
