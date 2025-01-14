@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.26.6
+Version 0.26.6 (Released January 14, 2025)
 --------------
 
 - Fix SCIM API error on patch with nested attributes (#1952)
