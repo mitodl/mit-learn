@@ -42,7 +42,7 @@ const OuterContainer = styled.div({
 const Container = styled.div({
   display: "flex",
   flexDirection: "column",
-  padding: "0 32px 24px",
+  padding: "0 28px 24px",
   width: DRAWER_WIDTH,
   [theme.breakpoints.down("md")]: {
     width: "auto",
@@ -55,7 +55,7 @@ const TitleSectionContainer = styled.div({
   position: "sticky",
   justifyContent: "space-between",
   top: "0",
-  padding: "24px 32px",
+  padding: "24px 28px",
   gap: "16px",
   zIndex: 1,
   backgroundColor: theme.custom.colors.white,
@@ -187,7 +187,7 @@ const Description = styled.p({
 const DescriptionCollapsed = styled(Description)({
   display: "-webkit-box",
   overflow: "hidden",
-  height: `calc(${theme.typography.body2.lineHeight} * 5)`,
+  maxHeight: `calc(${theme.typography.body2.lineHeight} * 5)`,
   "@supports (-webkit-line-clamp: 5)": {
     WebkitLineClamp: 5,
     WebkitBoxOrient: "vertical",
@@ -279,7 +279,7 @@ const CarouselContainer = styled.div({
   flexGrow: 1,
   alignItems: "flex-start",
   width: DRAWER_WIDTH,
-  padding: "32px",
+  padding: "32px 28px",
   gap: "32px",
   borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
   background: theme.custom.colors.lightGray1,
@@ -533,14 +533,14 @@ const CallToActionSection = ({
         >
           {cta}
         </StyledLink>
-        <PlatformContainer>
-          {platformImage ? (
+        {platformImage ? (
+          <PlatformContainer>
             <Platform>
               <OnPlatform>on</OnPlatform>
               <StyledPlatformLogo platformCode={platformCode} height={26} />
             </Platform>
-          ) : null}
-        </PlatformContainer>
+          </PlatformContainer>
+        ) : null}
         <ButtonContainer>
           {user?.is_learning_path_editor && (
             <CallToActionButton
