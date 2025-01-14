@@ -1,7 +1,7 @@
 "use client"
-import React from "react"
+import React, { useMemo } from "react"
 import { Container, styled } from "ol-components"
-import { sends } from "./send"
+import { makeSend } from "./send"
 import { NluxAiChat } from "@/page-components/Nlux-AiChat/AiChat"
 
 import { FeatureFlags } from "@/common/feature_flags"
@@ -43,6 +43,9 @@ const StyledContainer = styled(Container)({
 })
 
 const ChatPage = () => {
+  const send = useMemo(() => {
+    return makeSend({ url: "/api/v0/chat_agent/" })
+  }, [])
   const recommendationBotEnabled = useFeatureFlagEnabled(
     FeatureFlags.RecommendationBot,
   )
@@ -53,12 +56,10 @@ const ChatPage = () => {
         recommendationBotEnabled ? (
           <StyledChat
             key={"agent"}
-            send={sends["agent"]}
+            send={send}
             conversationOptions={CONVERSATION_OPTIONS}
           />
-        ) : (
-          <></>
-        )
+        ) : null
       }
     </StyledContainer>
   )
