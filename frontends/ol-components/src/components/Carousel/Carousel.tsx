@@ -149,8 +149,7 @@ const Carousel: React.FC<CarouselProps> = ({
    */
   const [currentIndex, setCurrentIndex] = React.useState<number>(0)
   const canPrev = currentIndex > 0
-  const canNext =
-    currentIndex + slidesPerPage < React.Children.count(children) - 1
+  const canNext = currentIndex + slidesPerPage < React.Children.count(children)
   const onReInit = useCallback(() => {
     if (!slick) return
     const container = slick.innerSlider?.list
@@ -215,7 +214,7 @@ const Carousel: React.FC<CarouselProps> = ({
         autoplay={false}
         onReInit={onReInit}
         slidesToShow={slidesPerPage}
-        slidesToScroll={slidesPerPage + 1}
+        slidesToScroll={slidesPerPage}
         arrows={false}
       >
         {children}
