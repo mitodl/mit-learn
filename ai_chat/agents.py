@@ -543,7 +543,7 @@ information.
         return results as a JSON string
         """
         url = settings.AI_MIT_SYLLABUS_URL or reverse(
-            "vector_search:v0:content_files_vector_search"
+            "vector_search:v0:vector_content_files_search"
         )
         params = {
             "q": self.user_message,
