@@ -52,7 +52,10 @@ const STEP_TITLES = [
   "Are you seeking a certificate?",
   "What is your current level of education?",
   "What course format are you interested in?",
-]
+].map((title, index) => ({
+  title,
+  step: index,
+}))
 
 const PROFILES_FOR_STEPS = times(STEPS_DATA.length, profileForStep)
 
@@ -87,166 +90,66 @@ const queryBackButton = () => screen.queryByRole("button", { name: "Back" })
 const queryFinishButton = () => screen.queryByRole("button", { name: "Finish" })
 
 describe("OnboardingPage", () => {
-  describe("Topic Interests step", () => {
-    const STEP = 0
-    const TITLE = STEP_TITLES[STEP]
+  test.each(STEP_TITLES)(
+    "Has expected title (step: $step)",
+    async ({ step, title }) => {
+      await setupAndProgressToStep(step)
+      const heading = await screen.findByRole("heading", {
+        name: new RegExp(title),
+      })
+      expect(heading).toBeInTheDocument()
+    },
+  )
 
-    beforeEach(async () => {
-      await setupAndProgressToStep(STEP)
-    })
+  test.each(STEP_TITLES)(
+    "Navigation to next step (start: $step)",
+    async ({ step }) => {
+      const nextStep = step + 1
+      await setupAndProgressToStep(step)
+      if (step === STEP_TITLES.length - 1) {
+        await findFinishButton()
+        expect(queryBackButton()).not.toBeNil()
+        return
+      }
 
-    test(`Title should be '${TITLE}'`, async () => {
-      expect(await screen.findByText(TITLE, { exact: false })).not.toBeNil()
-    })
-
-    test("Has 'Next' but not 'Back' or 'Finish' buttons", async () => {
-      const backButton = queryBackButton()
       const nextButton = await findNextButton()
-      const finishButton = queryFinishButton()
+      expect(!!queryBackButton()).toBe(step !== 0)
+      expect(queryFinishButton()).toBeNil()
 
-      expect(backButton).toBeNil()
-      expect(nextButton).not.toBeNil()
-      expect(finishButton).toBeNil()
-    })
-  })
+      await user.click(nextButton)
 
-  describe("Goals step", () => {
-    const STEP = 1
-    const TITLE = STEP_TITLES[STEP]
+      // "Next" button should focus the form so its title is read
+      const form = screen.getByRole("form")
+      await waitFor(() => expect(form).toHaveFocus())
+      expect(form).toHaveAccessibleName(
+        expect.stringContaining(STEP_TITLES[nextStep].title),
+      )
+    },
+  )
 
-    beforeEach(async () => {
-      await setupAndProgressToStep(STEP)
-    })
+  test.each(STEP_TITLES)(
+    "Navigation to prev step (start: $step)",
+    async ({ step }) => {
+      const prevStep = step - 1
+      await setupAndProgressToStep(step)
+      if (step === 0) {
+        await findNextButton()
+        expect(queryBackButton()).toBeNil()
+        expect(queryFinishButton()).toBeNil()
+        return
+      }
 
-    test(`Title should be '${TITLE}'`, async () => {
-      expect(await screen.findByText(TITLE, { exact: false })).not.toBeNil()
-    })
-
-    test("Has 'Next' and 'Back' buttons", async () => {
       const backButton = await findBackButton()
-      const nextButton = await findNextButton()
-      const finishButton = queryFinishButton()
-
-      expect(backButton).not.toBeNil()
-      expect(nextButton).not.toBeNil()
-      expect(finishButton).toBeNil()
-    })
-
-    test("Back button should go to previous step", async () => {
-      const backButton = await findBackButton()
-
+      expect(!!queryNextButton()).toBe(step !== STEPS_DATA.length - 1)
+      expect(!!queryFinishButton()).toBe(step === STEPS_DATA.length - 1)
       await user.click(backButton)
 
-      await waitFor(async () => {
-        expect(
-          await screen.findByText(STEP_TITLES[STEP - 1], { exact: false }),
-        ).not.toBeNil()
-      })
-    })
-  })
-
-  describe("Certificate step", () => {
-    const STEP = 2
-    const TITLE = STEP_TITLES[STEP]
-
-    beforeEach(async () => {
-      await setupAndProgressToStep(STEP)
-    })
-
-    test(`Title should be '${TITLE}'`, async () => {
-      expect(await screen.findByText(TITLE, { exact: false })).not.toBeNil()
-    })
-
-    test("Has 'Next' and 'Back' buttons", async () => {
-      const backButton = await findBackButton()
-      const nextButton = await findNextButton()
-      const finishButton = queryFinishButton()
-
-      expect(backButton).not.toBeNil()
-      expect(nextButton).not.toBeNil()
-      expect(finishButton).toBeNil()
-    })
-
-    test("Back button should go to previous step", async () => {
-      const backButton = await findBackButton()
-
-      await user.click(backButton)
-
-      await waitFor(async () => {
-        expect(
-          await screen.findByText(STEP_TITLES[STEP - 1], { exact: false }),
-        ).not.toBeNil()
-      })
-    })
-  })
-
-  describe("Current education step", () => {
-    const STEP = 3
-    const TITLE = STEP_TITLES[STEP]
-
-    beforeEach(async () => {
-      await setupAndProgressToStep(STEP)
-    })
-
-    test(`Title should be '${TITLE}'`, async () => {
-      expect(await screen.findByText(TITLE, { exact: false })).not.toBeNil()
-    })
-
-    test("Has 'Next' and 'Back' buttons", async () => {
-      const backButton = await findBackButton()
-      const nextButton = await findNextButton()
-      const finishButton = queryFinishButton()
-
-      expect(backButton).not.toBeNil()
-      expect(nextButton).not.toBeNil()
-      expect(finishButton).toBeNil()
-    })
-
-    test("Back button should go to previous step", async () => {
-      const backButton = await findBackButton()
-
-      await user.click(backButton)
-
-      await waitFor(async () => {
-        expect(
-          await screen.findByText(STEP_TITLES[STEP - 1], { exact: false }),
-        ).not.toBeNil()
-      })
-    })
-  })
-
-  describe("Learning format step", () => {
-    const STEP = 4
-    const TITLE = STEP_TITLES[STEP]
-
-    beforeEach(async () => {
-      await setupAndProgressToStep(STEP)
-    })
-
-    test(`Title should be '${TITLE}'`, async () => {
-      expect(await screen.findByText(TITLE, { exact: false })).not.toBeNil()
-    })
-
-    test("Has 'Next' and 'Finish' buttons", async () => {
-      const backButton = await findBackButton()
-      const nextButton = queryNextButton()
-      const finishButton = await findFinishButton()
-
-      expect(backButton).not.toBeNil()
-      expect(nextButton).toBeNil()
-      expect(finishButton).not.toBeNil()
-    })
-
-    test("Back button should go to previous step", async () => {
-      const backButton = await findBackButton()
-
-      await user.click(backButton)
-
-      await waitFor(async () => {
-        expect(
-          await screen.findByText(STEP_TITLES[STEP - 1], { exact: false }),
-        ).not.toBeNil()
-      })
-    })
-  })
+      // "Prev" button should focus the form so its title is read
+      const form = screen.getByRole("form")
+      await waitFor(() => expect(form).toHaveFocus())
+      expect(form).toHaveAccessibleName(
+        expect.stringContaining(STEP_TITLES[prevStep].title),
+      )
+    },
+  )
 })
