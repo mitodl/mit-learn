@@ -576,6 +576,32 @@ paths:
                 items:
                   $ref: '#/components/schemas/ProgramCertificate'
           description: ''
+  /api/v0/syllabus_agent/:
+    post:
+      operationId: syllabus_agent_create
+      description: Handle a POST request to the chatbot agent.
+      tags:
+      - syllabus_agent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyllabusChatRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SyllabusChatRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SyllabusChatRequestRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            text/event-stream:
+              schema:
+                description: Chatbot response
+                type: string
+          description: ''
   /api/v0/testimonials/:
     get:
       operationId: testimonials_list
@@ -5000,6 +5026,34 @@ components:
       required:
       - channel
       - parent_channel
+    SyllabusChatRequestRequest:
+      type: object
+      description: DRF serializer for syllabus chatbot requests
+      properties:
+        message:
+          type: string
+          minLength: 1
+        model:
+          type: string
+          minLength: 1
+          default: gpt-4o
+        temperature:
+          type: number
+          format: double
+          maximum: 1.0
+          minimum: 0.0
+        instructions:
+          type: string
+          minLength: 1
+        clear_history:
+          type: boolean
+          default: false
+        readable_id:
+          type: string
+          minLength: 1
+      required:
+      - message
+      - readable_id
     TimeCommitmentEnum:
       enum:
       - 0-to-5-hours

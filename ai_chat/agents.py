@@ -507,28 +507,11 @@ information.
     """
 
     class SyllabusToolSchema(pydantic.BaseModel):
-        """Schema for searching MIT contentfile chunks.
-
-        Attributes:
-            q: The search query string
-        """
-
-        q: str = Field(description=("Query to find syllabus information"))
-
-    model_config = {
-        "json_schema_extra": {
-            "examples": [
-                {
-                    "q": "What are the prerequisites for this course?",
-                }
-            ]
-        }
-    }
+        """Schema for searching MIT contentfile chunks."""
 
     def __init__(  # noqa: PLR0913
         self,
         name: str,
-        readable_id: str,
         *,
         model: Optional[str] = None,
         temperature: Optional[float] = None,
@@ -549,26 +532,26 @@ information.
             cache_key=cache_key,
             cache_timeout=cache_timeout or settings.AI_CACHE_TIMEOUT,
         )
-        self.readable_id = readable_id
-        log.error("READABLE ID IS %s", self.readable_id)
         self.search_parameters = []
         self.search_results = []
         self.agent = self.create_agent()
         self.create_agent()
 
-    def search_content_files(self, q: str) -> str:
+    def search_content_files(self) -> str:
         """
         Query the MIT contentfile chunks API, and
         return results as a JSON string
         """
-        log.error("In search_content_files")
         url = settings.AI_MIT_SYLLABUS_URL or reverse(
             "vector_search:v0:content_files_vector_search"
         )
-        params = {"q": q, "resource_readable_id": self.readable_id, "limit": 20}
+        params = {
+            "q": self.user_message,
+            "resource_readable_id": self.readable_id,
+            "limit": 20,
+        }
         self.search_parameters.append(params)
         try:
-            log.error("Run a search")
             response = requests.get(url, params=params, timeout=30)
             response.raise_for_status()
             raw_results = response.json().get("results", [])
@@ -597,3 +580,15 @@ information.
         return FunctionTool.from_defaults(
             fn=self.search_content_files, tool_metadata=metadata
         )
+
+    def get_completion(
+        self, message: str, readable_id: str, *, debug: bool = settings.AI_DEBUG
+    ) -> str:
+        """
+        Get a response to the user's message.  Use the exact user message as the
+        q parameter value for the vector search.
+        """
+        self.user_message = message
+        self.readable_id = readable_id
+        historical_message = f"{message}\n\ncourse readable_id: {readable_id}"
+        return super().get_completion(historical_message, debug=debug)

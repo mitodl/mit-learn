@@ -1,11 +1,17 @@
 "use client"
-import React from "react"
-import { Container, styled } from "ol-components"
-import { sends } from "./send"
-import { NluxAiChat } from "@/page-components/Nlux-AiChat/AiChat"
+import React, { useMemo } from "react"
+import { makeSend } from "./send"
 
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagEnabled } from "posthog-js/react"
+import StyledContainer from "@/page-components/StyledContainer/StyledContainer"
+import { styled } from "ol-components"
+import { NluxAiChat } from "@/page-components/Nlux-AiChat/AiChat"
+
+const StyledChat = styled(NluxAiChat)({
+  maxHeight: "60vh",
+  flex: 1,
+})
 
 const CONVERSATION_OPTIONS = {
   conversationStarters: [
@@ -28,24 +34,13 @@ const CONVERSATION_OPTIONS = {
   ],
 }
 
-const StyledChat = styled(NluxAiChat)({
-  maxHeight: "60vh",
-  flex: 1,
-})
-
-const StyledContainer = styled(Container)({
-  height: "100%",
-  padding: "24px 0",
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "flex-start",
-  gap: "16px",
-})
-
 const ChatPage = () => {
   const recommendationBotEnabled = useFeatureFlagEnabled(
     FeatureFlags.RecommendationBot,
   )
+  const send = useMemo(() => {
+    return makeSend({ url: "/api/v0/chat_agent/" })
+  }, [])
   return (
     <StyledContainer>
       {
@@ -53,7 +48,7 @@ const ChatPage = () => {
         recommendationBotEnabled ? (
           <StyledChat
             key={"agent"}
-            send={sends["agent"]}
+            send={send}
             conversationOptions={CONVERSATION_OPTIONS}
           />
         ) : (

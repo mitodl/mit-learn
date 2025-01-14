@@ -8,7 +8,6 @@ from rest_framework import views
 from rest_framework.request import Request
 
 from ai_chat import serializers
-from ai_chat.agents import SyllabusAgent
 from ai_chat.permissions import SearchAgentPermissions
 
 log = logging.getLogger(__name__)
@@ -88,6 +87,7 @@ class SyllabusAgentView(views.APIView):
     )
     def post(self, request: Request) -> StreamingHttpResponse:
         """Handle a POST request to the chatbot agent."""
+        from ai_chat.agents import SyllabusAgent
 
         serializer = serializers.SyllabusChatRequestSerializer(
             data=request.data, context={"request": request}
@@ -103,10 +103,10 @@ class SyllabusAgentView(views.APIView):
         # Make anonymous users share a common LiteLLM budget/rate limit.
         user_id = request.user.email if request.user.is_authenticated else "anonymous"
         message = serializer.validated_data.pop("message", "")
+        readable_id = (serializer.validated_data.pop("readable_id"),)
         clear_history = serializer.validated_data.pop("clear_history", False)
         agent = SyllabusAgent(
             "Learning Resource Search AI Assistant",
-            serializer.validated_data.pop("readable_id"),
             user_id=user_id,
             cache_key=f"{cache_id}_search_chat_history",
             save_history=True,
@@ -115,7 +115,7 @@ class SyllabusAgentView(views.APIView):
         if clear_history:
             agent.clear_chat_history()
         return StreamingHttpResponse(
-            agent.get_completion(message),
+            agent.get_completion(message, readable_id),
             content_type="text/event-stream",
             headers={"X-Accel-Buffering": "no"},
         )
