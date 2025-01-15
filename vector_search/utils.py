@@ -340,14 +340,22 @@ def vector_search(
     )
     if query_string:
         encoder = dense_encoder()
-        search_result = client.query_points(
-            collection_name=search_collection,
-            using=encoder.model_short_name(),
-            query=encoder.encode(query_string),
-            query_filter=search_filter,
-            limit=limit,
-            offset=offset,
-        ).points
+
+        search_params = {
+            "collection_name": search_collection,
+            "using": encoder.model_short_name(),
+            "query": encoder.encode(query_string),
+            "query_filter": search_filter,
+            "limit": limit,
+            "with_payload": True,
+        }
+        if "group_by" in params:
+            search_params["group_by"] = params.get("group_by")
+            search_params["group_size"] = params.get("group_size", 10)
+            search_result = client.query_points_groups(**search_params).groups
+        else:
+            search_params["offset"] = offset
+            search_result = client.query_points(**search_params).points
     else:
         search_result = client.scroll(
             collection_name=search_collection,

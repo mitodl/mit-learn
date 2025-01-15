@@ -231,6 +231,16 @@ class ContentFileVectorSearchRequestSerializer(serializers.Serializer):
             "resource for the content file"
         ),
     )
+    group_by = serializers.CharField(
+        required=False,
+        help_text=("The attribute to group results by"),
+    )
+    group_size = serializers.CharField(
+        required=False,
+        help_text=(
+            "The number of chunks in each group. Only relevant when group_by is used"
+        ),
+    )
 
 
 class ContentFileVectorSearchResponseSerializer(SearchResponseSerializer):

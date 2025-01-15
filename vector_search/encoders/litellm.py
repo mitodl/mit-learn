@@ -33,6 +33,7 @@ class LiteLLMEncoder(BaseEncoder):
                 model=self.model_name,
                 input=texts,
                 api_base=settings.LITELLM_API_BASE,
+                aembedding=False,
                 custom_llm_provider=settings.LITELLM_CUSTOM_PROVIDER,
             ).to_dict()
         return embedding(model=self.model_name, input=texts).to_dict()
