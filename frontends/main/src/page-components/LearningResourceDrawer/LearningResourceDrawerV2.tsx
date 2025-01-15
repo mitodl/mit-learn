@@ -121,6 +121,9 @@ const DrawerContent: React.FC<{
         ]}
       />
     ) : null
+  const topCarousels = coursesInProgramCarousel
+    ? [coursesInProgramCarousel]
+    : null
   const similarResourcesCarousel = (
     <ResourceCarousel
       titleComponent="p"
@@ -161,11 +164,8 @@ const DrawerContent: React.FC<{
         imgConfig={imgConfigs.large}
         resourceId={resourceId}
         resource={resource.data}
-        carousels={[
-          coursesInProgramCarousel,
-          similarResourcesCarousel,
-          ...(topicCarousels || []),
-        ]}
+        topCarousels={topCarousels}
+        bottomCarousels={[similarResourcesCarousel, ...(topicCarousels || [])]}
         user={user}
         shareUrl={`${window.location.origin}/search?${RESOURCE_DRAWER_QUERY_PARAM}=${resourceId}`}
         inLearningPath={inLearningPath}
