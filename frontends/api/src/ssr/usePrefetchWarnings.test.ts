@@ -1,4 +1,4 @@
-import { renderHook } from "@testing-library/react"
+import { renderHook, waitFor } from "@testing-library/react"
 import { useQuery } from "@tanstack/react-query"
 import { usePrefetchWarnings } from "./usePrefetchWarnings"
 import { setupReactQueryTest } from "../hooks/test-utils"
@@ -35,6 +35,7 @@ describe("SSR prefetch warnings", () => {
       initialProps: { queryClient },
     })
 
+    await waitFor(() => expect(console.info).toHaveBeenCalledTimes(1))
     expect(console.info).toHaveBeenCalledWith(
       "The following queries were requested in first render but not prefetched.",
       "If these queries are user-specific, they cannot be prefetched - responses are cached on public CDN.",
@@ -97,6 +98,7 @@ describe("SSR prefetch warnings", () => {
       initialProps: { queryClient },
     })
 
+    await waitFor(() => expect(console.info).toHaveBeenCalledTimes(1))
     expect(console.info).toHaveBeenCalledWith(
       "The following queries were prefetched on the server but not accessed during initial render.",
       "If these queries are no longer in use they should removed from prefetch:",
