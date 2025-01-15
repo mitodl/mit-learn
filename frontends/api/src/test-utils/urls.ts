@@ -78,6 +78,8 @@ const learningResources = {
     `${API_BASE_URL}/api/v1/learning_resources/${query(params)}`,
   details: (params: Params<LRApi, "learningResourcesRetrieve">) =>
     `${API_BASE_URL}/api/v1/learning_resources/${params.id}/`,
+  items: (params: Params<LRApi, "learningResourcesRetrieve">) =>
+    `${API_BASE_URL}/api/v1/learning_resources/${params.id}/items/`,
   featured: (params?: Params<FeaturedApi, "featuredList">) =>
     `${API_BASE_URL}/api/v1/featured/${query(params)}`,
   similar: (params: Params<LRApi, "learningResourcesSimilarList">) =>
