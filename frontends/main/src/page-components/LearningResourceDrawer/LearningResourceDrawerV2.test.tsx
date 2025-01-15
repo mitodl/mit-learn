@@ -62,6 +62,25 @@ describe("LearningResourceDrawerV2", () => {
       [],
     )
 
+    if (resource.resource_type === ResourceTypeEnum.Program) {
+      const coursesInProgram = factories.learningResources.resources({
+        count: 10,
+      })
+      coursesInProgram.results.forEach((course) => {
+        setMockResponse.get(
+          urls.learningResources.details({ id: course.id }),
+          course,
+        )
+      })
+
+      setMockResponse.get(
+        urls.learningResources.items({ id: resource.id }),
+        coursesInProgram,
+      )
+
+      return { resource, user, coursesInProgram }
+    }
+
     return { resource, user }
   }
 
