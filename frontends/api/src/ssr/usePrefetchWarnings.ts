@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react"
 import type { Query, QueryClient, QueryKey } from "@tanstack/react-query"
-import { useIsFetching } from "@tanstack/react-query"
 import { useMounted } from "./useMounted"
 
 const logQueries = (...args: [...string[], Query[]]) => {
@@ -49,7 +48,6 @@ export const usePrefetchWarnings = ({
 }) => {
   const mounted = useMounted()
   const [count, setCount] = useState(0)
-  const fetchingCount = useIsFetching()
   const [potentialWarnings, setPotentialWarnings] = useState(true)
 
   useEffect(() => {
@@ -64,11 +62,7 @@ export const usePrefetchWarnings = ({
    */
   useEffect(
     () => {
-      if (
-        process.env.NODE_ENV === "production" ||
-        !mounted ||
-        fetchingCount > 0
-      ) {
+      if (process.env.NODE_ENV === "production" || !mounted) {
         return
       }
 
@@ -118,13 +112,6 @@ export const usePrefetchWarnings = ({
     // We only want to run this on initial render.
     // (Aside: queryClient should be a singleton anyway)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [mounted, fetchingCount, count],
+    [mounted, count],
   )
 }
-
-const PrefetchWarnings = ({ queryClient }: { queryClient: QueryClient }) => {
-  usePrefetchWarnings({ queryClient })
-  return null
-}
-
-export default PrefetchWarnings
