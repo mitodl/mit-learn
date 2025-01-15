@@ -23,6 +23,7 @@ import ResourceCarousel from "../ResourceCarousel/ResourceCarousel"
 import { useIsLearningPathMember } from "api/hooks/learningPaths"
 import { useIsUserListMember } from "api/hooks/userLists"
 import { TopicCarouselConfig } from "@/common/carousels"
+import { ResourceTypeEnum } from "api"
 
 const RESOURCE_DRAWER_PARAMS = [RESOURCE_DRAWER_QUERY_PARAM] as const
 
@@ -102,6 +103,27 @@ const DrawerContent: React.FC<{
       }
     }, [user])
   useCapturePageView(Number(resourceId))
+  const coursesInProgramCarousel =
+    resource.data?.resource_type === ResourceTypeEnum.Program ? (
+      <ResourceCarousel
+        titleComponent="p"
+        titleVariant="subtitle1"
+        title="Courses in this Program"
+        config={[
+          {
+            label: "Courses in this Program",
+            cardProps: { size: "small" },
+            data: {
+              type: "resource_items",
+              params: { learning_resource_id: resourceId },
+            },
+          },
+        ]}
+      />
+    ) : null
+  const topCarousels = coursesInProgramCarousel
+    ? [coursesInProgramCarousel]
+    : undefined
   const similarResourcesCarousel = (
     <ResourceCarousel
       titleComponent="p"
@@ -142,7 +164,8 @@ const DrawerContent: React.FC<{
         imgConfig={imgConfigs.large}
         resourceId={resourceId}
         resource={resource.data}
-        carousels={[similarResourcesCarousel, ...(topicCarousels || [])]}
+        topCarousels={topCarousels}
+        bottomCarousels={[similarResourcesCarousel, ...(topicCarousels || [])]}
         user={user}
         shareUrl={`${window.location.origin}/search?${RESOURCE_DRAWER_QUERY_PARAM}=${resourceId}`}
         inLearningPath={inLearningPath}

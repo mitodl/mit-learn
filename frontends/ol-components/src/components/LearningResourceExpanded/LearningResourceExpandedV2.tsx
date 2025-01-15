@@ -273,7 +273,13 @@ const CopyLinkButton = styled(Button)({
   flexBasis: "112px",
 })
 
-const CarouselContainer = styled.div({
+const TopCarouselContainer = styled.div({
+  display: "flex",
+  flexDirection: "column",
+  paddingTop: "24px",
+})
+
+const BottomCarouselContainer = styled.div({
   display: "flex",
   flexDirection: "column",
   flexGrow: 1,
@@ -299,7 +305,8 @@ type LearningResourceExpandedV2Props = {
   user?: User
   shareUrl?: string
   imgConfig: ImageConfig
-  carousels?: React.ReactNode[]
+  topCarousels?: React.ReactNode[]
+  bottomCarousels?: React.ReactNode[]
   inLearningPath?: boolean
   inUserList?: boolean
   onAddToLearningPathClick?: LearningResourceCardProps["onAddToLearningPathClick"]
@@ -691,7 +698,8 @@ const LearningResourceExpandedV2: React.FC<LearningResourceExpandedV2Props> = ({
   imgConfig,
   user,
   shareUrl,
-  carousels,
+  topCarousels,
+  bottomCarousels,
   inUserList,
   inLearningPath,
   titleId,
@@ -731,10 +739,19 @@ const LearningResourceExpandedV2: React.FC<LearningResourceExpandedV2Props> = ({
             />
           </RightContainer>
         </ContentContainer>
+        {topCarousels && (
+          <TopCarouselContainer>
+            {topCarousels?.map((carousel, index) => (
+              <div key={index}>{carousel}</div>
+            ))}
+          </TopCarouselContainer>
+        )}
       </Container>
-      <CarouselContainer>
-        {carousels?.map((carousel, index) => <div key={index}>{carousel}</div>)}
-      </CarouselContainer>
+      <BottomCarouselContainer>
+        {bottomCarousels?.map((carousel, index) => (
+          <div key={index}>{carousel}</div>
+        ))}
+      </BottomCarouselContainer>
     </OuterContainer>
   )
 }

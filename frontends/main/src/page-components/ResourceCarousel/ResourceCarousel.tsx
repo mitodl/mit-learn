@@ -220,6 +220,10 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
         switch (tab.data.type) {
           case "resources":
             return learningResources.list(tab.data.params)
+          case "resource_items":
+            return learningResources
+              .detail(tab.data.params.learning_resource_id)
+              ._ctx.items(tab.data.params)
           case "lr_search":
             return learningResources.search(tab.data.params)
           case "lr_featured":
