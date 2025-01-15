@@ -325,12 +325,21 @@ def documents_from_olx(
         path = "/".join(root.split("/")[3:])
         for filename in files:
             extension_lower = Path(filename).suffix.lower()
+            name = Path(filename).stem
+
             if extension_lower in VALID_TEXT_FILE_TYPES and "draft" not in root:
                 with Path.open(Path(root, filename), "rb") as f:
                     filebytes = f.read()
 
                 mimetype = mimetypes.types_map.get(extension_lower)
                 checksum = md5(filebytes).hexdigest()  # noqa: S324
+
+                edx_block_id_length = 32
+                edx_block_id = (
+                    name
+                    if len(name) == edx_block_id_length and name.isalnum()
+                    else None
+                )
 
                 yield (
                     filebytes,
@@ -341,6 +350,7 @@ def documents_from_olx(
                         "checksum": checksum,
                         "file_extension": extension_lower,
                         "source_path": f"{path}/{filename}",
+                        "edx_block_id": edx_block_id,
                     },
                 )
 
@@ -402,6 +412,7 @@ def transform_content_files(
             mime_type = metadata.get("mime_type")
             file_extension = metadata.get("file_extension")
             source_path = metadata.get("source_path")
+            edx_block_id = metadata.get("edx_block_id")
 
             existing_content = ContentFile.objects.filter(key=key, run=run).first()
             if (
@@ -453,6 +464,7 @@ def transform_content_files(
                     "checksum": metadata.get("checksum"),
                     "file_extension": file_extension,
                     "source_path": source_path,
+                    "edx_block_id": edx_block_id,
                     **content_dict,
                 }
             )
