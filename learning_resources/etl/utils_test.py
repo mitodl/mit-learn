@@ -180,7 +180,7 @@ def test_transform_content_files(
     run = LearningResourceRunFactory.create(published=True)
     document = "some text in the document"
     file_extension = ".html"
-    key = f"root/key{file_extension}"
+    key = f"key{file_extension}"
     content_type = "course"
     checksum = "7s35721d1647f962d59b8120a52210a7"
     metadata = {"title": "the title of the course"} if has_metadata else None
@@ -206,7 +206,7 @@ def test_transform_content_files(
                     "content_type": content_type,
                     "checksum": checksum,
                     "file_extension": file_extension,
-                    "source_path": "root",
+                    "source_path": f"root/folder/{key}",
                 },
             )
         ],
@@ -240,7 +240,8 @@ def test_transform_content_files(
                 "content_type": content_type,
                 "checksum": checksum,
                 "file_extension": file_extension,
-                "source_path": "root",
+                "source_path": f"root/folder/{key}",
+                "edx_block_id": f"block-v1:{run.run_id.replace('course-v1:', '')}+type@folder+block@key",
             }
         ]
     else:

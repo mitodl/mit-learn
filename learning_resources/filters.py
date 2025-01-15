@@ -215,6 +215,11 @@ class ContentFileFilter(FilterSet):
         method="filter_content_feature_type",
     )
 
+    edx_block_id = CharInFilter(
+        label="The edx block id of the content file",
+        method="filter_edx_block_id",
+    )
+
     offered_by = MultipleChoiceFilter(
         label="The organization that offers a learning resource the content file "
         "belongs to",
@@ -250,6 +255,10 @@ class ContentFileFilter(FilterSet):
     def filter_content_feature_type(self, queryset, _, value):
         """Content feature type filter for contentfiles"""
         return multi_or_filter(queryset, "content_tags__name__iexact", value)
+
+    def filter_edx_block_id(self, queryset, _, value):
+        """Edx block id Filter for contentfiles"""
+        return multi_or_filter(queryset, "edx_block_id__iexact", value)
 
     class Meta:
         model = ContentFile
