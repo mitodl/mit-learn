@@ -168,7 +168,7 @@ const PAPER_PROPS: RoutedDrawerProps["PaperProps"] = {
     }),
     minWidth: (theme) => ({
       [theme.breakpoints.down("md")]: {
-        minWidth: "100%",
+        maxWidth: "100%",
       },
     }),
   },

@@ -314,9 +314,520 @@ paths:
               schema:
                 $ref: '#/components/schemas/CKEditorSettings'
           description: ''
-  /api/v0/content_files_vector_search/:
+  /api/v0/learning_resources_search_admin_params/:
     get:
-      operationId: content_files_vector_search_retrieve
+      operationId: learning_resources_search_admin_params_retrieve
+      description: Learning resource search default admin param values
+      tags:
+      - learning_resources_search_admin_params
+      responses:
+        '200':
+          description: No response body
+  /api/v0/news_events/:
+    get:
+      operationId: news_events_list
+      description: Get a paginated list of feed items.
+      parameters:
+      - in: query
+        name: feed_type
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - events
+            - news
+        description: |-
+          The type of item
+
+          * `news` - News
+          * `events` - Events
+        explode: true
+        style: form
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: query
+        name: sortby
+        schema:
+          type: string
+          enum:
+          - -event_date
+          - -id
+          - -news_date
+          - event_date
+          - id
+          - news_date
+        description: |-
+          Sort By
+
+          * `id` - Object ID ascending
+          * `-id` - Object ID descending
+          * `event_date` - Event date ascending
+          * `-event_date` - Event date  descending
+          * `news_date` - Creation date ascending
+          * `-news_date` - Creation date descending
+      tags:
+      - news_events
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedFeedItemList'
+          description: ''
+  /api/v0/news_events/{id}/:
+    get:
+      operationId: news_events_retrieve
+      description: Retrieve a single feed item.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this feed item.
+        required: true
+      tags:
+      - news_events
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedItem'
+          description: ''
+  /api/v0/news_events_sources/:
+    get:
+      operationId: news_events_sources_list
+      description: Get a paginated list of news/event feed sources.
+      parameters:
+      - in: query
+        name: feed_type
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - events
+            - news
+        description: |-
+          The type of source
+
+          * `news` - News
+          * `events` - Events
+        explode: true
+        style: form
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      tags:
+      - news_events_sources
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedFeedSourceList'
+          description: ''
+  /api/v0/news_events_sources/{id}/:
+    get:
+      operationId: news_events_sources_retrieve
+      description: Retrieve a single news/event feed source.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this feed source.
+        required: true
+      tags:
+      - news_events_sources
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedSource'
+          description: ''
+  /api/v0/profiles/{user__username}/:
+    get:
+      operationId: profiles_retrieve
+      description: View for profile
+      parameters:
+      - in: path
+        name: user__username
+        schema:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+        required: true
+      tags:
+      - profiles
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+          description: ''
+    put:
+      operationId: profiles_update
+      description: View for profile
+      parameters:
+      - in: path
+        name: user__username
+        schema:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+        required: true
+      tags:
+      - profiles
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProfileRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProfileRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+          description: ''
+    patch:
+      operationId: profiles_partial_update
+      description: View for profile
+      parameters:
+      - in: path
+        name: user__username
+        schema:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+        required: true
+      tags:
+      - profiles
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProfileRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedProfileRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedProfileRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+          description: ''
+  /api/v0/program_certificates/:
+    get:
+      operationId: program_certificates_list
+      description: |-
+        View for listing program certificates for a user
+        (includes program letter links)
+      parameters:
+      - in: query
+        name: micromasters_program_id
+        schema:
+          type: integer
+      - in: query
+        name: program_title
+        schema:
+          type: string
+      tags:
+      - program_certificates
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProgramCertificate'
+          description: ''
+  /api/v0/syllabus_agent/:
+    post:
+      operationId: syllabus_agent_create
+      description: Handle a POST request to the chatbot agent.
+      tags:
+      - syllabus_agent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyllabusChatRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SyllabusChatRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SyllabusChatRequestRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            text/event-stream:
+              schema:
+                description: Chatbot response
+                type: string
+          description: ''
+  /api/v0/testimonials/:
+    get:
+      operationId: testimonials_list
+      description: List all testimonials.
+      summary: List
+      parameters:
+      - in: query
+        name: channels
+        schema:
+          type: array
+          items:
+            type: integer
+        description: The channels the attestation is for
+        explode: true
+        style: form
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: offerors
+        schema:
+          type: array
+          items:
+            type: string
+        description: The offerors the attestation is for
+        explode: true
+        style: form
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: query
+        name: position
+        schema:
+          type: integer
+        description: Only show items that exist at this position
+      tags:
+      - testimonials
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAttestationList'
+          description: ''
+  /api/v0/testimonials/{id}/:
+    get:
+      operationId: testimonials_retrieve
+      description: Retrieve a testimonial.
+      summary: Retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this attestation.
+        required: true
+      tags:
+      - testimonials
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Attestation'
+          description: ''
+  /api/v0/users/:
+    get:
+      operationId: users_list
+      description: View for users
+      tags:
+      - users
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+          description: ''
+    post:
+      operationId: users_create
+      description: View for users
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/v0/users/{username}/:
+    get:
+      operationId: users_retrieve
+      description: View for users
+      parameters:
+      - in: path
+        name: username
+        schema:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+        required: true
+      tags:
+      - users
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    put:
+      operationId: users_update
+      description: View for users
+      parameters:
+      - in: path
+        name: username
+        schema:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+        required: true
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    patch:
+      operationId: users_partial_update
+      description: View for users
+      parameters:
+      - in: path
+        name: username
+        schema:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+        required: true
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    delete:
+      operationId: users_destroy
+      description: View for users
+      parameters:
+      - in: path
+        name: username
+        schema:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+        required: true
+      tags:
+      - users
+      responses:
+        '204':
+          description: No response body
+  /api/v0/users/me/:
+    get:
+      operationId: users_me_retrieve
+      description: User retrieve and update viewsets for the current user
+      tags:
+      - users
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/v0/vector_content_files_search/:
+    get:
+      operationId: vector_content_files_search_retrieve
       description: Vector Search for content
       summary: Content File Vector Search
       parameters:
@@ -421,7 +932,7 @@ paths:
           * `resource_readable_id` - resource_readable_id
           * `-resource_readable_id` - -resource_readable_id
       tags:
-      - content_files_vector_search
+      - vector_content_files_search
       responses:
         '200':
           content:
@@ -429,18 +940,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/ContentFileVectorSearchResponse'
           description: ''
-  /api/v0/learning_resources_search_admin_params/:
+  /api/v0/vector_learning_resources_search/:
     get:
-      operationId: learning_resources_search_admin_params_retrieve
-      description: Learning resource search default admin param values
-      tags:
-      - learning_resources_search_admin_params
-      responses:
-        '200':
-          description: No response body
-  /api/v0/learning_resources_vector_search/:
-    get:
-      operationId: learning_resources_vector_search_retrieve
+      operationId: vector_learning_resources_search_retrieve
       description: Vector Search for learning resources
       summary: Vector Search
       parameters:
@@ -786,489 +1288,13 @@ paths:
             minLength: 1
         description: The topic name. To see a list of options go to api/v1/topics/
       tags:
-      - learning_resources_vector_search
+      - vector_learning_resources_search
       responses:
         '200':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/LearningResourcesVectorSearchResponse'
-          description: ''
-  /api/v0/news_events/:
-    get:
-      operationId: news_events_list
-      description: Get a paginated list of feed items.
-      parameters:
-      - in: query
-        name: feed_type
-        schema:
-          type: array
-          items:
-            type: string
-            enum:
-            - events
-            - news
-        description: |-
-          The type of item
-
-          * `news` - News
-          * `events` - Events
-        explode: true
-        style: form
-      - name: limit
-        required: false
-        in: query
-        description: Number of results to return per page.
-        schema:
-          type: integer
-      - name: offset
-        required: false
-        in: query
-        description: The initial index from which to return the results.
-        schema:
-          type: integer
-      - in: query
-        name: sortby
-        schema:
-          type: string
-          enum:
-          - -event_date
-          - -id
-          - -news_date
-          - event_date
-          - id
-          - news_date
-        description: |-
-          Sort By
-
-          * `id` - Object ID ascending
-          * `-id` - Object ID descending
-          * `event_date` - Event date ascending
-          * `-event_date` - Event date  descending
-          * `news_date` - Creation date ascending
-          * `-news_date` - Creation date descending
-      tags:
-      - news_events
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PaginatedFeedItemList'
-          description: ''
-  /api/v0/news_events/{id}/:
-    get:
-      operationId: news_events_retrieve
-      description: Retrieve a single feed item.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this feed item.
-        required: true
-      tags:
-      - news_events
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FeedItem'
-          description: ''
-  /api/v0/news_events_sources/:
-    get:
-      operationId: news_events_sources_list
-      description: Get a paginated list of news/event feed sources.
-      parameters:
-      - in: query
-        name: feed_type
-        schema:
-          type: array
-          items:
-            type: string
-            enum:
-            - events
-            - news
-        description: |-
-          The type of source
-
-          * `news` - News
-          * `events` - Events
-        explode: true
-        style: form
-      - name: limit
-        required: false
-        in: query
-        description: Number of results to return per page.
-        schema:
-          type: integer
-      - name: offset
-        required: false
-        in: query
-        description: The initial index from which to return the results.
-        schema:
-          type: integer
-      tags:
-      - news_events_sources
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PaginatedFeedSourceList'
-          description: ''
-  /api/v0/news_events_sources/{id}/:
-    get:
-      operationId: news_events_sources_retrieve
-      description: Retrieve a single news/event feed source.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this feed source.
-        required: true
-      tags:
-      - news_events_sources
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FeedSource'
-          description: ''
-  /api/v0/profiles/{user__username}/:
-    get:
-      operationId: profiles_retrieve
-      description: View for profile
-      parameters:
-      - in: path
-        name: user__username
-        schema:
-          type: string
-          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
-            only.
-        required: true
-      tags:
-      - profiles
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Profile'
-          description: ''
-    put:
-      operationId: profiles_update
-      description: View for profile
-      parameters:
-      - in: path
-        name: user__username
-        schema:
-          type: string
-          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
-            only.
-        required: true
-      tags:
-      - profiles
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ProfileRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/ProfileRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/ProfileRequest'
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Profile'
-          description: ''
-    patch:
-      operationId: profiles_partial_update
-      description: View for profile
-      parameters:
-      - in: path
-        name: user__username
-        schema:
-          type: string
-          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
-            only.
-        required: true
-      tags:
-      - profiles
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PatchedProfileRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/PatchedProfileRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/PatchedProfileRequest'
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Profile'
-          description: ''
-  /api/v0/program_certificates/:
-    get:
-      operationId: program_certificates_list
-      description: |-
-        View for listing program certificates for a user
-        (includes program letter links)
-      parameters:
-      - in: query
-        name: micromasters_program_id
-        schema:
-          type: integer
-      - in: query
-        name: program_title
-        schema:
-          type: string
-      tags:
-      - program_certificates
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/ProgramCertificate'
-          description: ''
-  /api/v0/testimonials/:
-    get:
-      operationId: testimonials_list
-      description: List all testimonials.
-      summary: List
-      parameters:
-      - in: query
-        name: channels
-        schema:
-          type: array
-          items:
-            type: integer
-        description: The channels the attestation is for
-        explode: true
-        style: form
-      - name: limit
-        required: false
-        in: query
-        description: Number of results to return per page.
-        schema:
-          type: integer
-      - in: query
-        name: offerors
-        schema:
-          type: array
-          items:
-            type: string
-        description: The offerors the attestation is for
-        explode: true
-        style: form
-      - name: offset
-        required: false
-        in: query
-        description: The initial index from which to return the results.
-        schema:
-          type: integer
-      - in: query
-        name: position
-        schema:
-          type: integer
-        description: Only show items that exist at this position
-      tags:
-      - testimonials
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PaginatedAttestationList'
-          description: ''
-  /api/v0/testimonials/{id}/:
-    get:
-      operationId: testimonials_retrieve
-      description: Retrieve a testimonial.
-      summary: Retrieve
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this attestation.
-        required: true
-      tags:
-      - testimonials
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Attestation'
-          description: ''
-  /api/v0/users/:
-    get:
-      operationId: users_list
-      description: View for users
-      tags:
-      - users
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/User'
-          description: ''
-    post:
-      operationId: users_create
-      description: View for users
-      tags:
-      - users
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/UserRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/UserRequest'
-        required: true
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-          description: ''
-  /api/v0/users/{username}/:
-    get:
-      operationId: users_retrieve
-      description: View for users
-      parameters:
-      - in: path
-        name: username
-        schema:
-          type: string
-          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
-            only.
-        required: true
-      tags:
-      - users
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-          description: ''
-    put:
-      operationId: users_update
-      description: View for users
-      parameters:
-      - in: path
-        name: username
-        schema:
-          type: string
-          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
-            only.
-        required: true
-      tags:
-      - users
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/UserRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/UserRequest'
-        required: true
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-          description: ''
-    patch:
-      operationId: users_partial_update
-      description: View for users
-      parameters:
-      - in: path
-        name: username
-        schema:
-          type: string
-          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
-            only.
-        required: true
-      tags:
-      - users
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PatchedUserRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/PatchedUserRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/PatchedUserRequest'
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-          description: ''
-    delete:
-      operationId: users_destroy
-      description: View for users
-      parameters:
-      - in: path
-        name: username
-        schema:
-          type: string
-          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
-            only.
-        required: true
-      tags:
-      - users
-      responses:
-        '204':
-          description: No response body
-  /api/v0/users/me/:
-    get:
-      operationId: users_me_retrieve
-      description: User retrieve and update viewsets for the current user
-      tags:
-      - users
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
           description: ''
   /api/v0/websites/:
     post:
@@ -3856,6 +3882,10 @@ components:
           readOnly: true
         transcript:
           type: string
+        audio_url:
+          type: string
+          format: uri
+          maxLength: 2048
         episode_link:
           type: string
           format: uri
@@ -3869,6 +3899,7 @@ components:
           type: string
           nullable: true
       required:
+      - audio_url
       - id
       - podcasts
     PodcastEpisodeResource:
@@ -4952,30 +4983,15 @@ components:
       - program
     ResourceTypeEnum:
       enum:
-      - course
-      - program
-      - learning_path
-      - podcast
-      - podcast_episode
-      - video
-      - video_playlist
+      - news
+      - events
       type: string
       description: |-
-        * `course` - course
-        * `program` - program
-        * `learning_path` - learning_path
-        * `podcast` - podcast
-        * `podcast_episode` - podcast_episode
-        * `video` - video
-        * `video_playlist` - video_playlist
+        * `news` - news
+        * `events` - events
       x-enum-descriptions:
-      - course
-      - program
-      - learning_path
-      - podcast
-      - podcast_episode
-      - video
-      - video_playlist
+      - news
+      - events
     SiteTypeEnum:
       enum:
       - facebook
@@ -5010,6 +5026,34 @@ components:
       required:
       - channel
       - parent_channel
+    SyllabusChatRequestRequest:
+      type: object
+      description: DRF serializer for syllabus chatbot requests
+      properties:
+        message:
+          type: string
+          minLength: 1
+        model:
+          type: string
+          minLength: 1
+          default: gpt-4o
+        temperature:
+          type: number
+          format: double
+          maximum: 1.0
+          minimum: 0.0
+        instructions:
+          type: string
+          minLength: 1
+        clear_history:
+          type: boolean
+          default: false
+        readable_id:
+          type: string
+          minLength: 1
+      required:
+      - message
+      - readable_id
     TimeCommitmentEnum:
       enum:
       - 0-to-5-hours

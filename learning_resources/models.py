@@ -992,6 +992,7 @@ class PodcastEpisode(LearningResourceDetailModel):
     )
 
     transcript = models.TextField(blank=True, default="")
+    audio_url = models.URLField(null=False, max_length=2048)
     episode_link = models.URLField(null=True, max_length=2048)  # noqa: DJ001
     duration = models.CharField(null=True, blank=True, max_length=10)  # noqa: DJ001
     rss = models.TextField(null=True, blank=True)  # noqa: DJ001

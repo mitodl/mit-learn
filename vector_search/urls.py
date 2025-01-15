@@ -9,14 +9,14 @@ from vector_search.views import (
 router = SimpleRouter()
 v0_urls = [
     path(
-        r"learning_resources_vector_search/",
+        r"vector_learning_resources_search/",
         LearningResourcesVectorSearchView.as_view(),
-        name="learning_resources_vector_search",
+        name="vector_learning_resources_search",
     ),
     path(
-        r"content_files_vector_search/",
+        r"vector_content_files_search/",
         ContentFilesVectorSearchView.as_view(),
-        name="content_files_vector_search",
+        name="vector_content_files_search",
     ),
 ]
 

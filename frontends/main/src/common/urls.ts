@@ -84,16 +84,17 @@ export const login = ({
   return `${LOGIN}?next=${next}`
 }
 
-export const DASHBOARD_HOME = "/dashboard"
+export const DASHBOARD_VIEW = "/dashboard/[tab]"
+const dashboardView = (tab: string) => generatePath(DASHBOARD_VIEW, { tab })
 
-export const MY_LISTS = "/dashboard/my-lists"
+export const DASHBOARD_HOME = "/dashboard"
+export const MY_LISTS = dashboardView("my-lists")
+export const PROFILE = dashboardView("profile")
+export const SETTINGS = dashboardView("settings")
+
 export const USERLIST_VIEW = "/dashboard/my-lists/[id]"
 export const userListView = (id: number) =>
   generatePath(USERLIST_VIEW, { id: String(id) })
-
-export const PROFILE = "/dashboard/profile"
-
-export const SETTINGS = "/dashboard/settings"
 
 export const SEARCH = "/search"
 

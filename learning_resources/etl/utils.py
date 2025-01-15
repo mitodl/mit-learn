@@ -330,16 +330,17 @@ def documents_from_olx(
                     filebytes = f.read()
 
                 mimetype = mimetypes.types_map.get(extension_lower)
+                checksum = md5(filebytes).hexdigest()  # noqa: S324
 
                 yield (
                     filebytes,
                     {
-                        "key": f"{path}/{filename}",
+                        "key": checksum,
                         "content_type": CONTENT_TYPE_FILE,
                         "mime_type": mimetype,
-                        "checksum": md5(filebytes).hexdigest(),  # noqa: S324
+                        "checksum": checksum,
                         "file_extension": extension_lower,
-                        "source_path": path,
+                        "source_path": f"{path}/{filename}",
                     },
                 )
 

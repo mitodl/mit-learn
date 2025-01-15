@@ -1,7 +1,7 @@
 import React from "react"
 
 import { render, waitFor } from "@testing-library/react"
-import { PosthogIdenifier } from "./ConfiguredPostHogProvider"
+import { PosthogIdentifier } from "./ConfiguredPostHogProvider"
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query"
 
 // mock stuff
@@ -26,7 +26,7 @@ const posthog: Pick<PostHog, "identify" | "reset" | "get_property"> = {
 mockUsePostHog.mockReturnValue(posthog as PostHog)
 const mockPosthog = jest.mocked(posthog)
 
-describe("PosthogIdenifier", () => {
+describe("PosthogIdentifier", () => {
   const setup = (user: Partial<User>) => {
     const queryClient = new QueryClient()
     const userData = makeUserSettings(user)
@@ -34,7 +34,7 @@ describe("PosthogIdenifier", () => {
     setMockResponse.get(urls.userMe.get(), userData)
     render(
       <QueryClientProvider client={queryClient}>
-        <PosthogIdenifier />
+        <PosthogIdentifier />
       </QueryClientProvider>,
     )
     return userData

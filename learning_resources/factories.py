@@ -770,6 +770,7 @@ class PodcastEpisodeFactory(DjangoModelFactory):
     )
 
     transcript = factory.Faker("text")
+    audio_url = factory.Faker("url")
     episode_link = factory.Faker("url")
     rss = factory.Faker("text")
 

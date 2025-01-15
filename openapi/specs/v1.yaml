@@ -11570,6 +11570,10 @@ components:
           readOnly: true
         transcript:
           type: string
+        audio_url:
+          type: string
+          format: uri
+          maxLength: 2048
         episode_link:
           type: string
           format: uri
@@ -11583,6 +11587,7 @@ components:
           type: string
           nullable: true
       required:
+      - audio_url
       - id
       - podcasts
     PodcastEpisodeRequest:
@@ -11591,6 +11596,11 @@ components:
       properties:
         transcript:
           type: string
+        audio_url:
+          type: string
+          format: uri
+          minLength: 1
+          maxLength: 2048
         episode_link:
           type: string
           format: uri
@@ -11604,6 +11614,8 @@ components:
         rss:
           type: string
           nullable: true
+      required:
+      - audio_url
     PodcastEpisodeResource:
       type: object
       description: Serializer for podcast episode resources

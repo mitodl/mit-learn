@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+Version 0.26.6 (Released January 14, 2025)
+--------------
+
+- Fix SCIM API error on patch with nested attributes (#1952)
+- consistent image sizes in subscription emails (#1946)
+- Do not store multiple copies of duplicate edx files (#1945)
+- Disable About page prefetching (#1938)
+
 Version 0.26.5 (Released January 07, 2025)
 --------------
 

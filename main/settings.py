@@ -33,7 +33,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.26.5"
+VERSION = "0.26.6"
 
 log = logging.getLogger()
 
@@ -833,6 +833,7 @@ AI_MIT_SEARCH_URL = get_string(
     name="AI_MIT_SEARCH_URL",
     default="https://api.learn.mit.edu/api/v1/learning_resources_search/",
 )
+AI_MIT_SYLLABUS_URL = get_string("AI_MIT_SYLLABUS_URL", "")
 AI_MIT_SEARCH_LIMIT = get_int(name="AI_MIT_SEARCH_LIMIT", default=10)
 AI_MODEL = get_string(name="AI_MODEL", default="gpt-4o")
 AI_MODEL_API = get_string(name="AI_MODEL_API", default="openai")

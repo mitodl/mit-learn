@@ -18,7 +18,7 @@ import {
   TabButtonList,
   TabContext,
   TabPanel,
-  Tabs,
+  TabList,
   Typography,
   TypographyProps,
   styled,
@@ -158,7 +158,7 @@ const UserNameText = styled(Typography)(({ theme }) => ({
   ...theme.typography.h5,
 }))
 
-const TabsContainer = styled(Tabs)(({ theme }) => ({
+const TabsContainer = styled(TabList)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-start",
@@ -176,7 +176,7 @@ const TabsContainer = styled(Tabs)(({ theme }) => ({
       textDecoration: "none",
     },
   },
-  ".user-menu-tab-selected": {
+  ".MuiTab-root[aria-selected='true']": {
     ".user-menu-link-icon, .user-menu-link-text": {
       color: theme.custom.colors.mitRed,
     },
@@ -277,37 +277,64 @@ const TabLabels = {
   [SETTINGS]: "Settings",
 }
 
-interface UserMenuTabProps {
+const DesktopTabLabel: React.FC<{
   icon: React.ReactNode
-  text: string
-  tabKey: string
-  value: string
-  currentValue: string
-  onClick?: () => void
-}
-
-const UserMenuTab: React.FC<UserMenuTabProps> = (props) => {
-  const { icon, text, tabKey, value, currentValue, onClick } = props
-  const selected = value === currentValue
+  text?: string
+}> = ({ text, icon }) => {
   return (
-    <Tab
-      component={Link}
-      href={value}
-      data-testid={`desktop-tab-${tabKey}`}
-      label={
-        <TabContainer
-          onClick={onClick}
-          className={selected ? "user-menu-tab-selected" : ""}
-        >
-          <LinkIconContainer className="user-menu-link-icon">
-            {icon}
-          </LinkIconContainer>
-          <LinkText className="user-menu-link-text">{text}</LinkText>
-        </TabContainer>
-      }
-    ></Tab>
+    <TabContainer>
+      <LinkIconContainer className="user-menu-link-icon">
+        {icon}
+      </LinkIconContainer>
+      <LinkText className="user-menu-link-text">{text}</LinkText>
+    </TabContainer>
   )
 }
+
+type TabData = {
+  value: string
+  href: string
+  label: {
+    mobile: string
+    desktop: React.ReactNode
+  }
+}
+const TAB_DATA: TabData[] = [
+  {
+    value: DASHBOARD_HOME,
+    href: DASHBOARD_HOME,
+    label: {
+      mobile: "Home",
+      desktop: <DesktopTabLabel icon={<RiDashboardLine />} text="Home" />,
+    },
+  },
+  {
+    value: MY_LISTS,
+    href: MY_LISTS,
+    label: {
+      mobile: "My Lists",
+      desktop: <DesktopTabLabel icon={<RiBookmarkLine />} text="My Lists" />,
+    },
+  },
+  {
+    value: PROFILE,
+    href: PROFILE,
+    label: {
+      mobile: "Profile",
+      desktop: <DesktopTabLabel icon={<RiEditLine />} text="Profile" />,
+    },
+  },
+  {
+    value: SETTINGS,
+    href: SETTINGS,
+    label: {
+      mobile: "Settings",
+      desktop: (
+        <DesktopTabLabel icon={<RiNotificationLine />} text="Settings" />
+      ),
+    },
+  },
+]
 
 type RouteParams = {
   id: string
@@ -346,69 +373,34 @@ const DashboardPage: React.FC = () => {
           </UserNameContainer>
         </ProfilePhotoContainer>
         <TabsContainer
-          value={tabValue}
           orientation="vertical"
-          data-testid="desktop-tab-list"
+          data-testid="desktop-nav"
+          role="navigation"
         >
-          <UserMenuTab
-            icon={<RiDashboardLine />}
-            text={TabLabels[DASHBOARD_HOME]}
-            tabKey={TabKeys[DASHBOARD_HOME]}
-            value={DASHBOARD_HOME}
-            currentValue={tabValue}
-          />
-          <UserMenuTab
-            icon={<RiBookmarkLine />}
-            text={TabLabels[MY_LISTS]}
-            tabKey={TabKeys[MY_LISTS]}
-            value={MY_LISTS}
-            currentValue={tabValue}
-          />
-          <UserMenuTab
-            icon={<RiEditLine />}
-            text={TabLabels[PROFILE]}
-            tabKey={TabKeys[PROFILE]}
-            value={PROFILE}
-            currentValue={tabValue}
-          />
-          <UserMenuTab
-            icon={<RiNotificationLine />}
-            text={TabLabels[SETTINGS]}
-            tabKey={TabKeys[SETTINGS]}
-            value={SETTINGS}
-            currentValue={tabValue}
-          />
+          {TAB_DATA.map((tab) => (
+            <Tab
+              key={tab.value}
+              value={tab.value}
+              label={tab.label.desktop}
+              component={Link}
+              href={tab.href}
+            />
+          ))}
         </TabsContainer>
       </Card.Content>
     </ProfileSidebar>
   )
 
   const mobileMenu = (
-    <TabButtonList data-testid="mobile-tab-list">
-      <TabButtonLink
-        data-testid={`mobile-tab-${TabKeys[DASHBOARD_HOME]}`}
-        value={DASHBOARD_HOME}
-        href={DASHBOARD_HOME}
-        label="Home"
-      />
-      <TabButtonLink
-        data-testid={`mobile-tab-${TabKeys[MY_LISTS]}`}
-        value={MY_LISTS}
-        href={MY_LISTS}
-        label="My Lists"
-      />
-      <TabButtonLink
-        data-testid={`mobile-tab-${TabKeys[PROFILE]}`}
-        value={PROFILE}
-        href={PROFILE}
-        label="Profile"
-      />
-      <TabButtonLink
-        data-testid={`mobile-tab-${TabKeys[SETTINGS]}`}
-        value={SETTINGS}
-        href={SETTINGS}
-        label="Settings"
-      />
+    <TabButtonList data-testid="mobile-nav" role="navigation">
+      {TAB_DATA.map((tab) => (
+        <TabButtonLink
+          key={tab.value}
+          value={tab.value}
+          href={tab.href}
+          label={tab.label.mobile}
+        />
+      ))}
     </TabButtonList>
   )
 

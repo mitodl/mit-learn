@@ -118,6 +118,7 @@ def test_serialize_podcast_episode_to_json():
         serializer.data,
         {
             "duration": podcast_episode.duration,
+            "audio_url": podcast_episode.audio_url,
             "episode_link": podcast_episode.episode_link,
             "podcasts": podcast_episode.learning_resource.parents.filter(
                 relation_type=LearningResourceRelationTypes.PODCAST_EPISODES.value

@@ -24,7 +24,7 @@ def test_vector_search_filters(mocker, client):
     }
 
     client.get(
-        reverse("vector_search:v0:learning_resources_vector_search"), data=params
+        reverse("vector_search:v0:vector_learning_resources_search"), data=params
     )
 
     assert all(
@@ -70,7 +70,7 @@ def test_vector_search_filters_empty_query(mocker, client):
     }
 
     client.get(
-        reverse("vector_search:v0:learning_resources_vector_search"), data=params
+        reverse("vector_search:v0:vector_learning_resources_search"), data=params
     )
 
     assert all(
@@ -115,7 +115,7 @@ def test_content_file_vector_search_filters(mocker, client):
         "resource_readable_id": ["test_resource_id_1", "test_resource_id_2"],
     }
 
-    client.get(reverse("vector_search:v0:content_files_vector_search"), data=params)
+    client.get(reverse("vector_search:v0:vector_content_files_search"), data=params)
     assert all(
         condition in mock_qdrant.query_points.mock_calls[0].kwargs["query_filter"].must
         for condition in [
@@ -163,7 +163,7 @@ def test_content_file_vector_search_filters_empty_query(mocker, client):
         "resource_readable_id": ["test_resource_id_1", "test_resource_id_2"],
     }
 
-    client.get(reverse("vector_search:v0:content_files_vector_search"), data=params)
+    client.get(reverse("vector_search:v0:vector_content_files_search"), data=params)
     assert all(
         condition in mock_qdrant.scroll.mock_calls[0].kwargs["scroll_filter"].must
         for condition in [

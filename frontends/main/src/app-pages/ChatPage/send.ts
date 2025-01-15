@@ -1,7 +1,5 @@
 import { NluxAiChatProps } from "@/page-components/Nlux-AiChat/AiChat"
 
-type ChatEndpoint = "agent"
-
 function getCookie(name: string) {
   const value = `; ${document.cookie}`
   const parts = value.split(`; ${name}=`)
@@ -10,8 +8,13 @@ function getCookie(name: string) {
   }
 }
 
-const makeRequest = async (endpoint: ChatEndpoint, message: string) =>
-  fetch(`${process.env.NEXT_PUBLIC_MITOL_API_BASE_URL}/api/v0/chat_agent/`, {
+type EndpointOpts = {
+  url: "/api/v0/chat_agent/"
+  extraBody?: Record<string, unknown>
+}
+
+const makeRequest = async (opts: EndpointOpts, message: string) =>
+  fetch(`${process.env.NEXT_PUBLIC_MITOL_API_BASE_URL}${opts.url}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -20,7 +23,7 @@ const makeRequest = async (endpoint: ChatEndpoint, message: string) =>
         "",
     },
     credentials: "include", // TODO Remove this, should be handled by same-origin
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({ message, ...opts.extraBody }),
   })
 
 const RESPONSE_DELAY = 500
@@ -28,11 +31,11 @@ const RESPONSE_DELAY = 500
 // Function to send query to the server and receive a stream of chunks as response
 const makeSend =
   (
-    endpoint: ChatEndpoint,
+    opts: EndpointOpts,
     processContent: (content: string) => string = (content) => content,
   ): NluxAiChatProps["send"] =>
   async (message, observer) => {
-    const response = await makeRequest(endpoint, message)
+    const response = await makeRequest(opts, message)
 
     if (response.status !== 200) {
       observer.error(new Error("Failed to connect to the server"))
@@ -71,9 +74,5 @@ const makeSend =
     observer.complete()
   }
 
-const sends: Record<ChatEndpoint, NluxAiChatProps["send"]> = {
-  agent: makeSend("agent"),
-}
-
-export { sends }
-export type { ChatEndpoint }
+export { makeSend }
+export type { EndpointOpts }
