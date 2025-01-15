@@ -123,7 +123,7 @@ const DrawerContent: React.FC<{
     ) : null
   const topCarousels = coursesInProgramCarousel
     ? [coursesInProgramCarousel]
-    : null
+    : undefined
   const similarResourcesCarousel = (
     <ResourceCarousel
       titleComponent="p"
