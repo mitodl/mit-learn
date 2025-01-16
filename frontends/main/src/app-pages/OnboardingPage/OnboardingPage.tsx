@@ -1,8 +1,7 @@
 "use client"
 
-import React, { useId, useMemo } from "react"
+import React, { useEffect, useId, useMemo } from "react"
 import { useRouter } from "next-nprogress-bar"
-import range from "lodash/range"
 import {
   styled,
   Step,
@@ -18,6 +17,7 @@ import {
   RadioChoiceBoxField,
   SimpleSelectField,
   Skeleton,
+  VisuallyHidden,
 } from "ol-components"
 
 import { RiArrowRightLine, RiArrowLeftLine } from "@remixicon/react"
@@ -189,9 +189,15 @@ const OnboardingPage: React.FC = () => {
       value: topic.id.toString(),
     })) ?? []
 
+  useEffect(() => {
+    document.getElementById(formId)?.focus()
+  }, [activeStep, formId])
+
   if (!profile) {
     return null
   }
+
+  const formLabelId = `${formId}-label`
 
   const pages = [
     <Container key="topic_interests" maxWidth="lg">
@@ -204,7 +210,7 @@ const OnboardingPage: React.FC = () => {
             {userLoading ? (
               <Skeleton variant="text" width="100%" height={40} />
             ) : (
-              <Title variant="h4">
+              <Title component="h2" variant="h4" id={formLabelId}>
                 Welcome{user?.first_name ? `, ${user.first_name}` : ""}! What
                 are you interested in learning about?
               </Title>
@@ -223,7 +229,7 @@ const OnboardingPage: React.FC = () => {
         {...GridStyle()}
         label={
           <Label>
-            <Title component="h3" variant="h6">
+            <Title component="h2" variant="h6" id={formLabelId}>
               What are your learning goals?
             </Title>
             <Prompt component="p">Select all that apply:</Prompt>
@@ -242,7 +248,7 @@ const OnboardingPage: React.FC = () => {
         {...GridStyle()}
         label={
           <Label>
-            <Title component="h3" variant="h6">
+            <Title component="h2" variant="h6" id={formLabelId}>
               Are you seeking a certificate?
             </Title>
           </Label>
@@ -258,7 +264,7 @@ const OnboardingPage: React.FC = () => {
         fullWidth
         label={
           <Label>
-            <Title component="h3" variant="h6">
+            <Title component="h2" variant="h6" id={formLabelId}>
               What is your current level of education?
             </Title>
           </Label>
@@ -274,7 +280,7 @@ const OnboardingPage: React.FC = () => {
         {...GridStyle()}
         label={
           <Label>
-            <Title component="h3" variant="h6">
+            <Title component="h2" variant="h6" id={formLabelId}>
               What course format are you interested in?
             </Title>
             <Prompt>Select all that apply:</Prompt>
@@ -291,24 +297,38 @@ const OnboardingPage: React.FC = () => {
       <StepContainer>
         <div />
         <Stepper connector={null}>
-          {range(NUM_STEPS).map((index) => (
-            <Step
-              key={index}
-              completed={activeStep > index}
-              active={activeStep === index}
-            >
-              <StepLabel StepIconComponent={StepIcon} />
-            </Step>
-          ))}
+          {Array<null>(NUM_STEPS)
+            .fill(null)
+            .map((_null, index) => (
+              <Step
+                key={index}
+                completed={activeStep > index}
+                active={activeStep === index}
+              >
+                <StepLabel
+                  slots={{
+                    stepIcon: StepIcon,
+                  }}
+                />
+              </Step>
+            ))}
         </Stepper>
-        <StepNumbers>
+        <StepNumbers aria-hidden="true">
           <span className="current-step">{activeStep + 1}</span>/{NUM_STEPS}
         </StepNumbers>
+        <VisuallyHidden aria-live="polite" aria-atomic="true">
+          Step {activeStep + 1} of {NUM_STEPS}
+        </VisuallyHidden>
       </StepContainer>
       {isLoadingProfile ? (
         <LoadingSpinner loading={true} />
       ) : (
-        <Form id={formId} onSubmit={formik.handleSubmit}>
+        <Form
+          id={formId}
+          aria-labelledby={formLabelId}
+          tabIndex={-1}
+          onSubmit={formik.handleSubmit}
+        >
           {pages[activeStep]}
         </Form>
       )}
