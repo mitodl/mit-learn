@@ -174,20 +174,23 @@ const Description = styled.p({
   ...theme.typography.body2,
   color: theme.custom.colors.black,
   margin: 0,
-  whiteSpace: "pre-wrap",
   wordBreak: "break-word",
-  "p:first-child": {
-    marginTop: 0,
-  },
-  "p:last-child": {
-    marginBottom: 0,
+  "> *": {
+    ":first-child": {
+      marginTop: 0,
+    },
+    ":last-child": {
+      marginBottom: 0,
+    },
+    ":empty": {
+      display: "none",
+    },
   },
 })
 
 const DescriptionCollapsed = styled(Description)({
   display: "-webkit-box",
   overflow: "hidden",
-  maxHeight: `calc(${theme.typography.body2.lineHeight} * 5)`,
   "@supports (-webkit-line-clamp: 5)": {
     WebkitLineClamp: 5,
     WebkitBoxOrient: "vertical",
