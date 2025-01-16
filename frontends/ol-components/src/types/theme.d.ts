@@ -101,3 +101,9 @@ declare module "@emotion/react" {
     custom: CustomTheme
   }
 }
+
+declare module "@mui/material-pigment-css" {
+  interface ThemeArgs {
+    theme: Theme
+  }
+}

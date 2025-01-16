@@ -19,7 +19,8 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "@/public/*": ["./public/*"]
+      "@/public/*": ["./public/*"],
+      "ol-components": ["../ol-components/src/index"],
     },
     "target": "ESNext",
     "types": [
@@ -35,7 +36,8 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "../jest.jsdom.config"
+    "../jest.jsdom.config",
+    "../ol-components/src/**/*",
   ],
   "exclude": ["node_modules"]
 }

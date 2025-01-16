@@ -1,12 +1,19 @@
 // @ts-check
-const { validateEnv } = require("./validateEnv")
+import type { NextConfig } from "next"
+import { withPigment } from "@pigment-css/nextjs-plugin"
+import { withSentryConfig } from "@sentry/nextjs"
+import { validateEnv } from "./validateEnv"
+// import { theme } from "ol-components/ThemeProvider/ThemeProvider"
+// import { theme } from "../ol-components/ThemeProvider/ThemeProvider"
+import { theme } from "ol-components"
+import BundleAnalyzer from "@next/bundle-analyzer"
 
 validateEnv()
 
 const processFeatureFlags = () => {
   const featureFlagPrefix =
     process.env.NEXT_PUBLIC_POSTHOG_FEATURE_PREFIX || "FEATURE_"
-  const bootstrapFeatureFlags = {}
+  const bootstrapFeatureFlags: Record<string, unknown> = {}
 
   for (const [key, value] of Object.entries(process.env)) {
     if (key.startsWith(`NEXT_PUBLIC_${featureFlagPrefix}`)) {
@@ -19,9 +26,13 @@ const processFeatureFlags = () => {
   return bootstrapFeatureFlags
 }
 
-/** @type {import('next').NextConfig} */
-const nextConfig = {
+const nextConfig: NextConfig = {
   productionBrowserSourceMaps: true,
+  experimental: {
+    // this will allow nextjs to resolve files (js, ts, css)
+    // outside packages/app directory.
+    externalDir: true,
+  },
   async rewrites() {
     return [
       /* Static assets moved from /static, though image paths are sometimes
@@ -100,41 +111,45 @@ const nextConfig = {
   },
 }
 
-// Injected content via Sentry wizard below
+const sentryConfig = {
+  // For all available options, see:
+  // https://github.com/getsentry/sentry-webpack-plugin#options
 
-const { withSentryConfig } = require("@sentry/nextjs")
-const withSentry = (config) =>
-  withSentryConfig(config, {
-    // For all available options, see:
-    // https://github.com/getsentry/sentry-webpack-plugin#options
+  org: "mit-office-of-digital-learning",
+  project: "open-next",
 
-    org: "mit-office-of-digital-learning",
-    project: "open-next",
+  // Only print logs for uploading source maps in CI
+  silent: !process.env.CI,
 
-    // Only print logs for uploading source maps in CI
-    silent: !process.env.CI,
+  // For all available options, see:
+  // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
 
-    // For all available options, see:
-    // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
+  // Upload a larger set of source maps for prettier stack traces (increases build time)
+  widenClientFileUpload: true,
 
-    // Upload a larger set of source maps for prettier stack traces (increases build time)
-    widenClientFileUpload: true,
+  // Uncomment to route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
+  // This can increase your server load as well as your hosting bill.
+  // Note: Check that the configured route will not match with your Next.js middleware, otherwise reporting of client-
+  // side errors will fail.
+  // tunnelRoute: "/monitoring",
 
-    // Uncomment to route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
-    // This can increase your server load as well as your hosting bill.
-    // Note: Check that the configured route will not match with your Next.js middleware, otherwise reporting of client-
-    // side errors will fail.
-    // tunnelRoute: "/monitoring",
+  // Automatically tree-shake Sentry logger statements to reduce bundle size
+  disableLogger: true,
+}
 
-    // Automatically tree-shake Sentry logger statements to reduce bundle size
-    disableLogger: true,
-  })
-
-const withBundleAnalyzer = require("@next/bundle-analyzer")({
+const withBundleAnalyzer = BundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
 })
 
-module.exports = [withBundleAnalyzer, withSentry].reduce(
-  (acc, withPlugin) => withPlugin(acc),
-  nextConfig,
-)
+const pigmentConfig = {
+  transformLibraries: ["@mui/material"],
+  theme,
+}
+
+const config = [
+  withBundleAnalyzer,
+  (config: NextConfig) => withSentryConfig(config, sentryConfig),
+  (config: NextConfig) => withPigment(config, pigmentConfig),
+].reduce((current, extend) => extend(current), nextConfig)
+
+export default config
