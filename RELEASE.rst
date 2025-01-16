@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.27.0
+Version 0.27.0 (Released January 16, 2025)
 --------------
 
 - Basic Syllabus Bot for demo (#1961)
