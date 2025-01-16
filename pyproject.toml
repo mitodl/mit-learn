@@ -89,6 +89,7 @@ tiktoken = "^0.8.0"
 llama-index = "^0.12.6"
 llama-index-llms-openai = "^0.3.12"
 llama-index-agent-openai = "^0.4.1"
+open-learning-ai-tutor = {git = "https://github.com/MIT-OL-AI-Tutoring/Open_Learning_AI_Tutor.git", rev = "ab/package"}
 
 
 [tool.poetry.group.dev.dependencies]
