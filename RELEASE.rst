@@ -1,6 +1,19 @@
 Release Notes
 =============
 
+Version 0.27.0 (Released January 16, 2025)
+--------------
+
+- Basic Syllabus Bot for demo (#1961)
+- drawer v2 design review fixes (#1959)
+- fix text box text (#1951)
+- Fix Posthog multiple inits (#1953)
+- make useSearchParams mock return stable reference (#1958)
+- Shanbady/rename vector search endpoints (#1955)
+- Dashboard Tab Keyboard Navigation (#1949)
+- fix podcast cta (#1920)
+- constraining resources for celery service (#1950)
+
 Version 0.26.6 (Released January 14, 2025)
 --------------
 
