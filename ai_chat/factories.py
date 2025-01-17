@@ -11,8 +11,8 @@ class ChatMessageFactory(factory.Factory):
 
     role = FuzzyChoice(MessageRole.USER, MessageRole.ASSISTANT)
     content = factory.Faker("sentence")
-    id = name = factory.Sequence(lambda n: "%d" % n)
-    index = factory.Sequence(lambda n: "%d" % n)
+    id = name = factory.Sequence(lambda n: str(n))
+    index = factory.Sequence(lambda n: str(n))
 
     class Meta:
         model = ChatMessage

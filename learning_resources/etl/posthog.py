@@ -246,8 +246,7 @@ def load_posthog_lrd_view_event(
         return None
     except ValueError:
         skip_warning = (
-            f"WARNING: skipping event for resource ID {event.resourceId}"
-            " - invalid ID"
+            f"WARNING: skipping event for resource ID {event.resourceId} - invalid ID"
         )
         log.warning(skip_warning)
         return None

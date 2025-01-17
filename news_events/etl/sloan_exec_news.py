@@ -110,7 +110,7 @@ def transform_item(item_data: dict) -> dict:
         ),
         "url": urljoin(
             SLOAN_EXEC_ARTICLE_PREFIX_URL,
-            f'{item_data.get("contentUrlName")}-{item_data.get("managedContentId")}',
+            f"{item_data.get('contentUrlName')}-{item_data.get('managedContentId')}",
         ),
         "image": {
             "url": urljoin(

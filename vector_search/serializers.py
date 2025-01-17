@@ -123,8 +123,7 @@ class LearningResourcesVectorSearchRequestSerializer(serializers.Serializer):
     course_feature = serializers.ListField(
         required=False,
         child=serializers.CharField(),
-        help_text="The course feature. "
-        "Possible options are at api/v1/course_features/",
+        help_text="The course feature. Possible options are at api/v1/course_features/",
     )
 
     delivery_choices = LearningResourceDelivery.as_list()
@@ -227,8 +226,7 @@ class ContentFileVectorSearchRequestSerializer(serializers.Serializer):
         required=False,
         child=serializers.CharField(),
         help_text=(
-            "The readable_id value of the parent learning "
-            "resource for the content file"
+            "The readable_id value of the parent learning resource for the content file"
         ),
     )
 

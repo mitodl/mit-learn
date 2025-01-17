@@ -225,7 +225,7 @@ def _transform_run(course_run: dict, course: dict) -> dict:
             transform_price(price)
             for price in sorted(
                 {
-                    Decimal(0.00),
+                    Decimal("0.00"),
                     *[
                         Decimal(price)
                         for price in [

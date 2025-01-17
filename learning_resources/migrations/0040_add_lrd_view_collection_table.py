@@ -29,8 +29,7 @@ class Migration(migrations.Migration):
                     models.DateTimeField(
                         editable=False,
                         help_text=(
-                            "The date of the lrd_view event, as "
-                            "collected by PostHog."
+                            "The date of the lrd_view event, as collected by PostHog."
                         ),
                     ),
                 ),

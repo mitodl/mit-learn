@@ -236,7 +236,7 @@ def test_learning_resource_serializer(  # noqa: PLR0913
                 and (
                     not resource.resource_prices.all()
                     or all(
-                        price.amount == Decimal(0.00)
+                        price.amount == Decimal("0.00")
                         for price in resource.resource_prices.all()
                     )
                 )

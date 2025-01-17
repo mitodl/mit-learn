@@ -53,7 +53,7 @@ class FeedItemFactory(factory.django.DjangoModelFactory):
     """Factory for feed items"""
 
     source = factory.SubFactory(FeedSourceFactory)
-    guid = factory.Sequence(lambda n: "http://feed.mit.edu/%03d/rss" % n)
+    guid = factory.Sequence(lambda n: f"http://feed.mit.edu/{n:03d}/rss")
     title = factory.Faker("word")
     url = factory.Faker("url")
     summary = factory.Faker("paragraph")

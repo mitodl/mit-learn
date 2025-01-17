@@ -367,7 +367,7 @@ def text_from_srt_content(content: str):
 
 def text_from_sjson_content(content: str):
     """
-    return text from sjson content
+    Return text from sjson content
 
     Args:
         content (str): The sjson content

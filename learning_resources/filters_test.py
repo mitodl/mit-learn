@@ -237,15 +237,15 @@ def test_learning_resource_filter_free(client):
     )
     LearningResourceRunFactory.create(
         learning_resource=free_course
-    ).resource_prices.set([LearningResourcePriceFactory.create(amount=Decimal(0.00))])
+    ).resource_prices.set([LearningResourcePriceFactory.create(amount=Decimal("0.00"))])
 
     paid_course = LearningResourceFactory.create(is_course=True, runs=[])
     LearningResourceRunFactory.create(
         learning_resource=paid_course
     ).resource_prices.set(
         [
-            LearningResourcePriceFactory.create(amount=Decimal(50.00)),
-            LearningResourcePriceFactory.create(amount=Decimal(100.00)),
+            LearningResourcePriceFactory.create(amount=Decimal("50.00")),
+            LearningResourcePriceFactory.create(amount=Decimal("100.00")),
         ]
     )
 
@@ -256,8 +256,8 @@ def test_learning_resource_filter_free(client):
         learning_resource=free2pay_course
     ).resource_prices.set(
         [
-            LearningResourcePriceFactory.create(amount=Decimal(0.00)),
-            LearningResourcePriceFactory.create(amount=Decimal(100.00)),
+            LearningResourcePriceFactory.create(amount=Decimal("0.00")),
+            LearningResourcePriceFactory.create(amount=Decimal("100.00")),
         ]
     )
 
@@ -312,7 +312,7 @@ def test_learning_resource_filter_readable_id(client):
     courses = CourseFactory.create_batch(5)
     resource = courses[0].learning_resource
     results = client.get(
-        f"{RESOURCE_API_URL}?{urlencode({'readable_id':resource.readable_id})}"
+        f"{RESOURCE_API_URL}?{urlencode({'readable_id': resource.readable_id})}"
     ).json()["results"]
     assert len(results) == 1
     assert results[0]["readable_id"] == resource.readable_id
@@ -323,7 +323,7 @@ def test_course_filter_readable_id(client):
     courses = CourseFactory.create_batch(5)
     resource = courses[0].learning_resource
     results = client.get(
-        f"{COURSE_API_URL}?{urlencode({'readable_id':resource.readable_id})}"
+        f"{COURSE_API_URL}?{urlencode({'readable_id': resource.readable_id})}"
     ).json()["results"]
     assert len(results) == 1
     assert results[0]["readable_id"] == resource.readable_id
@@ -334,7 +334,7 @@ def test_podcast_filter_readable_id(client):
     podcasts = PodcastFactory.create_batch(5)
     resource = podcasts[0].learning_resource
     results = client.get(
-        f"{PODCAST_API_URL}?{urlencode({'readable_id':resource.readable_id})}"
+        f"{PODCAST_API_URL}?{urlencode({'readable_id': resource.readable_id})}"
     ).json()["results"]
     assert len(results) == 1
     assert results[0]["readable_id"] == resource.readable_id
@@ -345,7 +345,7 @@ def test_podcast_episode_filter_readable_id(client):
     podcast_episodes = PodcastEpisodeFactory.create_batch(5)
     resource = podcast_episodes[0].learning_resource
     results = client.get(
-        f"{PODCAST_EPISODE_API_URL}?{urlencode({'readable_id':resource.readable_id})}"
+        f"{PODCAST_EPISODE_API_URL}?{urlencode({'readable_id': resource.readable_id})}"
     ).json()["results"]
     assert len(results) == 1
     assert results[0]["readable_id"] == resource.readable_id
@@ -356,7 +356,7 @@ def test_video_filter_readable_id(client):
     videos = VideoFactory.create_batch(5)
     resource = videos[0].learning_resource
     results = client.get(
-        f"{VIDEOS_API_URL}?{urlencode({'readable_id':resource.readable_id})}"
+        f"{VIDEOS_API_URL}?{urlencode({'readable_id': resource.readable_id})}"
     ).json()["results"]
     assert len(results) == 1
     assert results[0]["readable_id"] == resource.readable_id
@@ -367,7 +367,7 @@ def test_video_playlist_filter_readable_id(client):
     channels = VideoPlaylistFactory.create_batch(5)
     resource = channels[0].learning_resource
     results = client.get(
-        f"{VIDEO_PLAYLISTS_API_URL}?{urlencode({'readable_id':resource.readable_id})}"
+        f"{VIDEO_PLAYLISTS_API_URL}?{urlencode({'readable_id': resource.readable_id})}"
     ).json()["results"]
     assert len(results) == 1
     assert results[0]["readable_id"] == resource.readable_id

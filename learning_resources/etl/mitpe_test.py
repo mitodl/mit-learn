@@ -55,7 +55,7 @@ EXPECTED_COURSES = [
                     2123, 4, 25, 4, 0, tzinfo=datetime.UTC
                 ),
                 "published": True,
-                "prices": [{"amount": Decimal(1870), "currency": "USD"}],
+                "prices": [{"amount": Decimal("1870"), "currency": "USD"}],
                 "url": "https://professional.mit.edu/course-catalog/comunicacao-persuasiva-pensamento-critico-para-aprimorar-mensagem-portuguese",
                 "instructors": [{"full_name": "Edward Schiappa"}, {"full_name": ""}],
                 "format": [Format.asynchronous.name],
@@ -102,7 +102,7 @@ EXPECTED_COURSES = [
                     2123, 6, 17, 4, 0, tzinfo=datetime.UTC
                 ),
                 "published": True,
-                "prices": [{"amount": Decimal(3600), "currency": "USD"}],
+                "prices": [{"amount": Decimal("3600"), "currency": "USD"}],
                 "url": "https://professional.mit.edu/course-catalog/design-thinking-and-innovation-technical-leaders",
                 "instructors": [
                     {"full_name": "Blade Kotelly"},
@@ -154,7 +154,7 @@ EXPECTED_PROGRAMS = [
                     2123, 7, 6, 4, 0, tzinfo=datetime.UTC
                 ),
                 "published": True,
-                "prices": [{"amount": Decimal(1870), "currency": "USD"}],
+                "prices": [{"amount": Decimal("1870"), "currency": "USD"}],
                 "url": "https://professional.mit.edu/course-catalog/manufatura-inteligente-producao-na-industria-40-portuguese",
                 "instructors": [{"full_name": ""}, {"full_name": "Brian Anthony"}],
                 "format": [Format.asynchronous.name],

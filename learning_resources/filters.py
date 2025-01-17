@@ -132,7 +132,7 @@ class LearningResourceFilter(FilterSet):
         free_filter = (
             Q(runs__isnull=True)
             | Q(runs__resource_prices__isnull=True)
-            | Q(runs__resource_prices__amount=Decimal(0.00))
+            | Q(runs__resource_prices__amount=Decimal("0.00"))
         ) & Q(professional=False)
         if value:
             # Free resources

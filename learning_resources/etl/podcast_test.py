@@ -53,9 +53,9 @@ def mock_podcast_file(  # pylint: disable=too-many-arguments  # noqa: PLR0913
 
     content = f"""---
 rss_url: {rss_url}
-{ "podcast_title: " + podcast_title if podcast_title else "" }
-{ "topics: " + topics if topics else "" }
-{ "offered_by: " + offered_by if offered_by else "" }
+{"podcast_title: " + podcast_title if podcast_title else ""}
+{"topics: " + topics if topics else ""}
+{"offered_by: " + offered_by if offered_by else ""}
 website:  {website_url}
 google_podcasts_url: {google_podcasts_url}
 apple_podcasts_url: {apple_podcasts_url}
@@ -64,7 +64,7 @@ apple_podcasts_url: {apple_podcasts_url}
 
 
 @pytest.fixture
-def mock_rss_request(mocker):  # noqa: PT004
+def mock_rss_request(mocker):
     """
     Mock request data
     """
@@ -76,7 +76,7 @@ def mock_rss_request(mocker):  # noqa: PT004
 
 
 @pytest.fixture
-def mock_rss_request_with_bad_rss_file(mocker):  # noqa: PT004
+def mock_rss_request_with_bad_rss_file(mocker):
     """
     Mock request data
     """

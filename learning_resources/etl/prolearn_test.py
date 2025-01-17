@@ -297,8 +297,8 @@ def test_parse_date(date_int, expected_dt):
 @pytest.mark.parametrize(
     ("price_str", "expected_price"),
     [
-        ["$5,342", round(Decimal(5342), 2)],  # noqa: PT007
-        ["5.34", round(Decimal(5.34), 2)],  # noqa: PT007
+        ["$5,342", round(Decimal("5342"), 2)],  # noqa: PT007
+        ["5.34", round(Decimal("5.34"), 2)],  # noqa: PT007
         [None, None],  # noqa: PT007
         ["", None],  # noqa: PT007
     ],

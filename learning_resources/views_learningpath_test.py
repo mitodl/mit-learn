@@ -428,7 +428,7 @@ def test_set_learning_path_relationships(client, staff_user):
     )
     client.force_login(staff_user)
     resp = client.patch(
-        f"{url}?{"".join([f"learning_path_id={learning_path.learning_resource.id}&" for learning_path in learning_paths])}"
+        f"{url}?{''.join([f'learning_path_id={learning_path.learning_resource.id}&' for learning_path in learning_paths])}"
     )
     assert resp.status_code == 200
     for learning_path in learning_paths:
@@ -465,7 +465,7 @@ def test_adding_to_learning_path_not_effect_existing_membership(client, staff_us
     client.force_login(staff_user)
     lps = [existing_parent, new_additional_parent]
     resp = client.patch(
-        f"{url}?{"".join([f"learning_path_id={lp.learning_resource.id}&" for lp in lps])}"
+        f"{url}?{''.join([f'learning_path_id={lp.learning_resource.id}&' for lp in lps])}"
     )
 
     assert resp.status_code == 200

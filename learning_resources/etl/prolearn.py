@@ -266,7 +266,7 @@ def transform_programs(programs: list[dict]) -> list[dict]:
         runs = _transform_runs(program)
         if platform and runs:
             transformed_program = {
-                "readable_id": f'prolearn-{platform}-{program["nid"]}',
+                "readable_id": f"prolearn-{platform}-{program['nid']}",
                 "title": program["title"],
                 "description": clean_data(program["body"]),
                 "offered_by": {"name": offered_by.name} if offered_by else None,
@@ -328,7 +328,7 @@ def _transform_runs(resource: dict) -> list[dict]:
         if start_date and start_date >= now_in_utc():
             runs.append(
                 {
-                    "run_id": f'{resource["nid"]}_{start_value}',
+                    "run_id": f"{resource['nid']}_{start_value}",
                     "title": resource["title"],
                     "image": parse_image(resource),
                     "description": clean_data(resource["body"]),
@@ -361,7 +361,7 @@ def _transform_course(
     runs = _transform_runs(course)
     if len(runs) > 0:
         return {
-            "readable_id": f'prolearn-{platform}-{course["nid"]}',
+            "readable_id": f"prolearn-{platform}-{course['nid']}",
             "offered_by": {"name": offered_by.name} if offered_by else None,
             "platform": platform,
             "etl_source": ETLSource.prolearn.name,

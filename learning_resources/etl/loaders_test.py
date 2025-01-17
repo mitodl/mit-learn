@@ -374,8 +374,8 @@ def test_load_course(  # noqa: PLR0913,PLR0912,PLR0915
                 "start_date": old_run.start_date,
                 "end_date": old_run.end_date,
                 "prices": [
-                    {"amount": Decimal(30.00), "currency": CURRENCY_USD},
-                    {"amount": Decimal(120.00), "currency": CURRENCY_USD},
+                    {"amount": Decimal("30.00"), "currency": CURRENCY_USD},
+                    {"amount": Decimal("120.00"), "currency": CURRENCY_USD},
                 ],
             },
             {
@@ -384,8 +384,8 @@ def test_load_course(  # noqa: PLR0913,PLR0912,PLR0915
                 "start_date": start_date,
                 "end_date": run.end_date,
                 "prices": [
-                    {"amount": Decimal(0.00), "currency": CURRENCY_USD},
-                    {"amount": Decimal(49.00), "currency": CURRENCY_USD},
+                    {"amount": Decimal("0.00"), "currency": CURRENCY_USD},
+                    {"amount": Decimal("49.00"), "currency": CURRENCY_USD},
                 ],
             },
         ]
@@ -403,12 +403,12 @@ def test_load_course(  # noqa: PLR0913,PLR0912,PLR0915
     )
     assert result.next_start_date == expected_next_start_date
     assert result.prices == (
-        [Decimal(0.00), Decimal(49.00)]
+        [Decimal("0.00"), Decimal("49.00")]
         if is_run_published and result.certification
         else []
     )
     assert [price.amount for price in result.resource_prices.all()] == (
-        [Decimal(0.00), Decimal(49.00)]
+        [Decimal("0.00"), Decimal("49.00")]
         if is_run_published and result.certification
         else []
     )
@@ -563,9 +563,9 @@ def test_load_duplicate_course(
 
     for key, value in props.items():
         assert getattr(result, key) == value, f"Property {key} should equal {value}"
-        assert (
-            getattr(saved_course, key) == value
-        ), f"Property {key} should be updated to {value} in the database"
+        assert getattr(saved_course, key) == value, (
+            f"Property {key} should be updated to {value} in the database"
+        )
 
 
 @pytest.mark.parametrize("unique_url", [True, False])
@@ -695,7 +695,7 @@ def test_load_run(run_exists, status, certification):
         if run_exists
         else LearningResourceRunFactory.build()
     )
-    prices = [Decimal(70.00), Decimal(20.00)]
+    prices = [Decimal("70.00"), Decimal("20.00")]
     props = model_to_dict(
         LearningResourceRunFactory.build(
             run_id=learning_resource_run.run_id,
@@ -964,9 +964,9 @@ def test_load_content_file():
     assert loaded_file.run == learning_resource_run
 
     for key, value in props.items():
-        assert (
-            getattr(loaded_file, key) == value
-        ), f"Property {key} should equal {value}"
+        assert getattr(loaded_file, key) == value, (
+            f"Property {key} should equal {value}"
+        )
 
 
 def test_load_image():

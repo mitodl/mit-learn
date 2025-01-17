@@ -387,8 +387,7 @@ class LearningResourcesSearchRequestSerializer(SearchRequestSerializer):
     course_feature = serializers.ListField(
         required=False,
         child=serializers.CharField(),
-        help_text="The course feature. "
-        "Possible options are at api/v1/course_features/",
+        help_text="The course feature. Possible options are at api/v1/course_features/",
     )
     aggregations = serializers.ListField(
         required=False,
