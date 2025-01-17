@@ -488,7 +488,7 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
         ]:
             prices = [price.amount for price in instance.resource_prices.all()]
             return not instance.professional and (
-                Decimal(0.00) in prices or not prices or prices == []
+                Decimal("0.00") in prices or not prices or prices == []
             )
         else:
             return True
