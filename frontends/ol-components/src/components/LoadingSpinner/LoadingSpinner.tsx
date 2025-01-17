@@ -1,7 +1,7 @@
 import React from "react"
 import CircularProgress from "@mui/material/CircularProgress"
 import Fade from "@mui/material/Fade"
-import styled from "@emotion/styled"
+import { styled } from "@pigment-css/react"
 
 const Container = styled.div({
   display: "flex",

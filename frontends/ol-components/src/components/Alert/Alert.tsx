@@ -1,13 +1,24 @@
 "use client"
 
 import React, { useEffect } from "react"
-import styled from "@emotion/styled"
+import { styled } from "@pigment-css/react"
 import { default as MuiAlert, AlertColor } from "@mui/material/Alert"
 import { theme } from "../ThemeProvider/ThemeProvider"
 import type { AlertProps as MuiAlertProps } from "@mui/material/Alert"
 
 type Colors = {
   [_Severity in AlertColor]: string
+}
+
+type Severities = {
+  [Key in AlertColor as Capitalize<Key>]: Key
+}
+
+const Severities: Severities = {
+  Success: "success",
+  Info: "info",
+  Warning: "warning",
+  Error: "error",
 }
 
 const COLORS: Colors = {
@@ -21,12 +32,11 @@ type AlertStyleProps = {
   severity: AlertColor
 }
 
-const AlertStyled = styled(MuiAlert)<AlertStyleProps>(({ severity }) => ({
+const AlertStyled = styled(MuiAlert)<AlertStyleProps>({
   padding: "11px 16px",
   borderRadius: 4,
   borderWidth: 2,
   borderStyle: "solid",
-  borderColor: COLORS[severity],
   background: "#FFF",
   ".MuiAlert-message": {
     ...theme.typography.body2,
@@ -40,7 +50,6 @@ const AlertStyled = styled(MuiAlert)<AlertStyleProps>(({ severity }) => ({
     marginRight: 8,
     svg: {
       width: 16,
-      fill: COLORS[severity],
     },
   },
   button: {
@@ -50,7 +59,24 @@ const AlertStyled = styled(MuiAlert)<AlertStyleProps>(({ severity }) => ({
       background: "none",
     },
   },
-}))
+  variants: [
+    Severities.Success,
+    Severities.Info,
+    Severities.Warning,
+    Severities.Error,
+  ].map((severity) => ({
+    props: { severity },
+    style: {
+      borderColor: COLORS[severity],
+      ".MuiAlert-icon": {
+        marginRight: 8,
+        svg: {
+          fill: severity,
+        },
+      },
+    },
+  })),
+})
 
 const Hidden = styled.span({ display: "none" })
 

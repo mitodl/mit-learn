@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react"
-import styled from "@emotion/styled"
+import { styled } from "@pigment-css/react"
 import Skeleton from "@mui/material/Skeleton"
 import { default as NextImage } from "next/image"
 import { ActionButton, Button, ButtonLink, ButtonProps } from "../Button/Button"

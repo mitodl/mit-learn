@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react"
-import styled from "@emotion/styled"
+import { styled } from "@pigment-css/react"
 import isURL from "validator/lib/isURL"
 import {
   createStylesheet,
@@ -38,9 +38,9 @@ const insertCardStylesheet = (e: Event) => {
   createStylesheet(e.target.contentDocument, stylesheet)
 }
 
-const Container = styled.div<{ aspectRatio?: number }>`
-  ${({ aspectRatio }) => (aspectRatio ? `aspect-ratio: ${aspectRatio};` : "")}
-`
+const Container = styled.div<{ aspectRatio?: number }>({
+  aspectRatio: ({ aspectRatio }) => aspectRatio ?? "auto",
+})
 
 /**
  * Renders the given URL as an [embedly card](https://embed.ly/cards).

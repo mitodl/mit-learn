@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react"
-import styled from "@emotion/styled"
+import { styled } from "@pigment-css/react"
 import Skeleton from "@mui/material/Skeleton"
 import Typography from "@mui/material/Typography"
 import { default as NextImage } from "next/image"

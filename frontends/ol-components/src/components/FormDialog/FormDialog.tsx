@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react"
-import styled from "@emotion/styled"
+import { styled } from "@pigment-css/react"
 import { Dialog } from "../Dialog/Dialog"
 import type { DialogProps } from "../Dialog/Dialog"
 

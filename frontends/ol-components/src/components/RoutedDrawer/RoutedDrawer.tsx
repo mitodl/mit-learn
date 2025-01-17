@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo } from "react"
 import Drawer from "@mui/material/Drawer"
-import styled from "@emotion/styled"
+import { styled } from "@pigment-css/react"
 import type { DrawerProps } from "@mui/material/Drawer"
 import { ActionButton } from "../Button/Button"
 import { RiCloseLargeLine } from "@remixicon/react"

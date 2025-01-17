@@ -23,7 +23,7 @@ import {
 import type { SortableData } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { CancelDropArguments } from "@dnd-kit/core/dist/components/DndContext/DndContext"
-import styled from "@emotion/styled"
+import { styled } from "@pigment-css/react"
 
 const DragStyles = styled.div`
   .ol-draggable {

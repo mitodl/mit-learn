@@ -1,5 +1,5 @@
 import React from "react"
-import styled from "@emotion/styled"
+import { styled } from "@pigment-css/react"
 import Skeleton from "@mui/material/Skeleton"
 import {
   RiMenuAddLine,

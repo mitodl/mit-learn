@@ -7,14 +7,19 @@ import React, {
   useCallback,
   AriaAttributes,
 } from "react"
-import styled from "@emotion/styled"
+import { styled } from "@pigment-css/react"
 import { theme } from "../ThemeProvider/ThemeProvider"
 import { pxToRem } from "../ThemeProvider/typography"
 import { Link } from "../Link/Link"
 import { default as NextImage, ImageProps as NextImageProps } from "next/image"
-import { truncateText } from "../TruncateText/TruncateText"
+// import { truncateText } from "../TruncateText/TruncateText"
 
-export type Size = "small" | "medium"
+export const Sizes = {
+  Small: "small",
+  Medium: "medium",
+} as const
+
+export type Size = (typeof Sizes)[keyof typeof Sizes]
 
 type LinkableProps = {
   href?: string
@@ -54,34 +59,57 @@ export const Linkable: React.FC<LinkableProps> = ({
 }
 
 export const BaseContainer = styled.div<{ display?: CSSProperties["display"] }>(
-  ({ theme, onClick, display = "block" }) => [
-    {
-      borderRadius: "8px",
-      border: `1px solid ${theme.custom.colors.lightGray2}`,
-      background: theme.custom.colors.white,
-      display,
-      overflow: "hidden", // to clip image so they match border radius
-    },
-    onClick && {
-      "&:hover": {
-        borderColor: theme.custom.colors.silverGrayLight,
-        boxShadow:
-          "0 2px 4px 0 rgb(37 38 43 / 10%), 0 2px 4px 0 rgb(37 38 43 / 10%)",
-        cursor: "pointer",
+  {
+    borderRadius: "8px",
+    border: `1px solid ${theme.custom.colors.lightGray2}`,
+    background: theme.custom.colors.white,
+    overflow: "hidden", // to clip image so they match border radius
+    variants: [
+      {
+        props: { display: "block" },
+        style: { display: "block" },
       },
-    },
-  ],
+      {
+        props: { display: "inline" },
+        style: { display: "inline" },
+      },
+      {
+        props: (props) => !!props.onClick,
+        style: {
+          "&:hover": {
+            borderColor: theme.custom.colors.silverGrayLight,
+            boxShadow:
+              "0 2px 4px 0 rgb(37 38 43 / 10%), 0 2px 4px 0 rgb(37 38 43 / 10%)",
+            cursor: "pointer",
+          },
+        },
+      },
+    ],
+  },
 )
+
 const CONTAINER_WIDTHS: Record<Size, number> = {
   small: 192,
   medium: 300,
 }
-const Container = styled(BaseContainer)<{ size?: Size }>(({ size }) => [
-  size && {
-    minWidth: CONTAINER_WIDTHS[size],
-    maxWidth: CONTAINER_WIDTHS[size],
-  },
-])
+const Container = styled(BaseContainer)<{ size?: Size }>({
+  variants: [
+    {
+      props: { size: Sizes.Small },
+      style: {
+        minWidth: CONTAINER_WIDTHS[Sizes.Small],
+        maxWidth: CONTAINER_WIDTHS[Sizes.Small],
+      },
+    },
+    {
+      props: { size: Sizes.Medium },
+      style: {
+        minWidth: CONTAINER_WIDTHS[Sizes.Medium],
+        maxWidth: CONTAINER_WIDTHS[Sizes.Medium],
+      },
+    },
+  ],
+})
 
 const Content = () => <></>
 
@@ -89,48 +117,86 @@ const Body = styled.div`
   margin: 16px;
 `
 
-const Image = styled(NextImage)<{ height?: number | string; size?: Size }>`
+const ImageBase = styled(NextImage)`
   display: block;
   width: 100%;
-  height: ${({ height, size }) =>
-    height ?? (size === "small" ? "120px" : "170px")};
   background-color: ${theme.custom.colors.lightGray1};
   object-fit: cover;
 `
 
-const Info = styled.div<{ size?: Size }>`
-  ${{ ...theme.typography.subtitle3 }}
-  color: ${theme.custom.colors.silverGrayDark};
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: ${({ size }) => (size === "small" ? 4 : 8)}px;
-`
+const Image = styled(ImageBase)<{ height?: number | string; size?: Size }>({
+  height: ({ height }) => height, // TODO pigment - creates a dynamic style, but need to check the precedence when used in combination with known variants below, see: https://github.com/mui/pigment-css?tab=readme-ov-file#styling-based-on-runtime-values
+  variants: [
+    {
+      props: ({ height, size }) => !height && size === Sizes.Small,
+      style: {
+        height: "120px",
+      },
+    },
+    {
+      props: ({ height, size }) => !height && size === Sizes.Medium,
+      style: {
+        height: "170px",
+      },
+    },
+  ],
+})
+
+const Info = styled.div<{ size?: Size }>({
+  ...theme.typography.subtitle3,
+  color: theme.custom.colors.silverGrayDark,
+  display: "flex",
+  justifyContent: "space-between",
+  variants: [
+    {
+      props: { size: Sizes.Small },
+      style: {
+        marginBottom: 4,
+      },
+    },
+    {
+      props: { size: Sizes.Medium },
+      style: {
+        marginBottom: 8,
+      },
+    },
+  ],
+})
 
 const titleOpts = {
   shouldForwardProp: (prop: string) => prop !== "lines" && prop !== "size",
 }
+
 const Title = styled(
   Linkable,
   titleOpts,
-)<{ size?: Size; lines?: number }>(({ theme, size, lines = 3 }) => {
-  return [
+)<{ size?: Size; lines?: number }>({
+  display: "flex",
+  textOverflow: "ellipsis",
+  overflow: "hidden",
+  margin: 0,
+  // ...truncateText(lines), // TODO pigment
+  variants: [
     {
-      display: "flex",
-      textOverflow: "ellipsis",
-      overflow: "hidden",
-      margin: 0,
-      ...truncateText(lines),
+      props: { size: Sizes.Small },
+      style: {
+        ...theme.typography.subtitle2,
+        // TODO pigment: Can we mix variants and style based on runtime values or do we need the height separately (commented below)
+        height: ({ lines }) =>
+          `calc(${lines} * ${theme.typography.subtitle2.lineHeight})`,
+      },
     },
-    size === "small"
-      ? {
-          ...theme.typography.subtitle2,
-          height: `calc(${lines} * ${theme.typography.subtitle2.lineHeight})`,
-        }
-      : {
-          ...theme.typography.subtitle1,
-          height: `calc(${lines} * ${theme.typography.subtitle1.lineHeight})`,
-        },
-  ]
+    {
+      props: ({ size }) => size !== Sizes.Small,
+      style: {
+        ...theme.typography.subtitle1,
+        height: ({ lines }) =>
+          `calc(${lines} * ${theme.typography.subtitle1.lineHeight})`,
+      },
+    },
+  ],
+  // height: ({ lines, size }) =>
+  //   `calc(${lines} * ${size === Sizes.Small ? theme.typography.subtitle2.lineHeight : theme.typography.subtitle1.lineHeight})`,
 })
 
 const Footer = styled.span`

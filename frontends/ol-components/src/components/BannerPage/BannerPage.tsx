@@ -1,4 +1,5 @@
 import React from "react"
+// import { styled } from "@pigment-css/react"
 import styled from "@emotion/styled"
 
 const BANNER_HEIGHT = "200px"

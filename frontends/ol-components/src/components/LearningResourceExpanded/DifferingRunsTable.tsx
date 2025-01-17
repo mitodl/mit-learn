@@ -1,5 +1,5 @@
 import React from "react"
-import styled from "@emotion/styled"
+import { styled } from "@pigment-css/react"
 import { theme } from "../ThemeProvider/ThemeProvider"
 import { LearningResource } from "api"
 import {

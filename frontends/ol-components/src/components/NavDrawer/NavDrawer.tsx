@@ -1,7 +1,7 @@
 import Drawer, { DrawerProps } from "@mui/material/Drawer"
 import ClickAwayListener from "@mui/material/ClickAwayListener"
 import { FocusTrap } from "@mui/base/FocusTrap"
-import styled from "@emotion/styled"
+import { styled } from "@pigment-css/react"
 import Link from "next/link"
 import React, { ReactElement } from "react"
 import { RiCloseLargeLine } from "@remixicon/react"
@@ -27,21 +27,22 @@ const NavSection = styled.div({
   gap: "12px",
 })
 
-const NavSectionHeader = styled.div<{ hasButton: boolean }>(
-  ({ theme, hasButton }) => [
+const NavSectionHeader = styled.div<{ hasButton: boolean }>(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  alignSelf: "stretch",
+  color: theme.custom.colors.darkGray1,
+  ...theme.typography.subtitle3,
+  variants: [
     {
-      display: "flex",
-      alignItems: "center",
-      alignSelf: "stretch",
-      color: theme.custom.colors.darkGray1,
-      ...theme.typography.subtitle3,
-    },
-    hasButton && {
-      justifyContent: "space-between",
-      height: "16px",
+      props: ({ hasButton }) => !!hasButton,
+      style: {
+        justifyContent: "space-between",
+        height: "16px",
+      },
     },
   ],
-)
+}))
 
 const NavItemsContainer = styled.div(({ theme }) => ({
   display: "flex",

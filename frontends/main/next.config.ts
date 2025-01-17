@@ -5,7 +5,9 @@ import { withSentryConfig } from "@sentry/nextjs"
 import { validateEnv } from "./validateEnv"
 // import { theme } from "ol-components/ThemeProvider/ThemeProvider"
 // import { theme } from "../ol-components/ThemeProvider/ThemeProvider"
-import { theme } from "ol-components"
+// import { theme } from "ol-components"
+// import { theme } from "../ol-components/src/components/ThemeProvider/ThemeProvider"
+import { theme } from "./src/common/theme/theme"
 import BundleAnalyzer from "@next/bundle-analyzer"
 
 validateEnv()

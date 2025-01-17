@@ -8,7 +8,8 @@ import InputBase from "@mui/material/InputBase"
 import type { InputBaseProps } from "@mui/material/InputBase"
 import { FormFieldWrapper } from "../FormHelpers/FormHelpers"
 import type { FormFieldWrapperProps } from "../FormHelpers/FormHelpers"
-import styled from "@emotion/styled"
+// import { styled } from "@pigment-css/react"
+import { styled } from "@mui/material-pigment-css"
 import { baseInputStyles } from "../Input/Input"
 import { RiArrowDownSLine } from "@remixicon/react"
 
@@ -22,73 +23,80 @@ type SelectInputProps = Omit<InputBaseProps, "size"> & {
 
 const DEFAULT_SIZE = "medium"
 
-const SelectInput = styled(InputBase as React.FC<SelectInputProps>)(
-  ({ theme, size = DEFAULT_SIZE }) => [
-    baseInputStyles(theme),
+const SelectInput = styled(InputBase)(({ theme }) => ({
+  ...baseInputStyles(theme),
+  ".MuiInputBase-input": {
+    boxSizing: "border-box",
+    display: "inline-flex",
+    alignItems: "center",
+    "&:focus": {
+      backgroundColor: "transparent",
+    },
+  },
+  ".MuiSelect-icon": {
+    // MUI sizes icons via fontSize, remixicon doesn't.
+    // This usually isn't an issue. In this case, we need to size the icon
+    // MUI's way so that its transformations apply correctly.
+    height: "1em",
+    width: "1em",
+  },
+  variants: [
     {
-      ".MuiInputBase-input": {
-        boxSizing: "border-box",
-        display: "inline-flex",
-        alignItems: "center",
-        "&:focus": {
-          backgroundColor: "transparent",
+      props: { size: "small" },
+      style: {
+        ...theme.typography.body3,
+        height: "32px",
+        ".MuiInputBase-input": {
+          height: "100%",
+          padding: "8px 12px",
+        },
+        "&&& .MuiInputBase-input": {
+          paddingRight: "28px", // 12px + 16px icon
+        },
+        ".MuiSelect-icon": {
+          fontSize: 16,
+          right: "12px",
         },
       },
-      ".MuiSelect-icon": {
-        // MUI sizes icons via fontSize, remixicon doesn't.
-        // This usually isn't an issue. In this case, we need to size the icon
-        // MUI's way so that its transformations apply correctly.
-        height: "1em",
-        width: "1em",
+    },
+    {
+      props: ({ size }) => !size || size === DEFAULT_SIZE,
+      style: {
+        ...theme.typography.body2,
+        height: "40px",
+        ".MuiInputBase-input": {
+          height: "100%",
+          padding: "8px 12px",
+        },
+        "&&& .MuiInputBase-input": {
+          paddingRight: "32px", // 12px + 20px icon
+        },
+        ".MuiSelect-icon": {
+          fontSize: 20,
+          right: "12px",
+        },
       },
     },
-    size === "small" && {
-      ...theme.typography.body3,
-      height: "32px",
-      ".MuiInputBase-input": {
-        height: "100%",
-        padding: "8px 12px",
-      },
-      "&&& .MuiInputBase-input": {
-        paddingRight: "28px", // 12px + 16px icon
-      },
-      ".MuiSelect-icon": {
-        fontSize: 16,
-        right: "12px",
-      },
-    },
-    size === "medium" && {
-      ...theme.typography.body2,
-      height: "40px",
-      ".MuiInputBase-input": {
-        height: "100%",
-        padding: "8px 12px",
-      },
-      "&&& .MuiInputBase-input": {
-        paddingRight: "32px", // 12px + 20px icon
-      },
-      ".MuiSelect-icon": {
-        fontSize: 20,
-        right: "12px",
-      },
-    },
-    size === "large" && {
-      ...theme.typography.body1,
-      height: "48px",
-      ".MuiInputBase-input": {
-        height: "100%",
-        padding: "8px 16px",
-      },
-      "&&& .MuiInputBase-input": {
-        paddingRight: "40px", // 16px + 24px icon
-      },
-      ".MuiSelect-icon": {
-        fontSize: 24,
-        right: "16px",
+    {
+      props: { size: "large" },
+      style: {
+        ...theme.typography.body1,
+        height: "48px",
+        ".MuiInputBase-input": {
+          height: "100%",
+          padding: "8px 16px",
+        },
+        "&&& .MuiInputBase-input": {
+          paddingRight: "40px", // 16px + 24px icon
+        },
+        ".MuiSelect-icon": {
+          fontSize: 24,
+          right: "16px",
+        },
       },
     },
   ],
-)
+}))
 
 const SelectIcon = styled(RiArrowDownSLine)({
   fontSize: "24px",

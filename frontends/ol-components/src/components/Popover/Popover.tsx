@@ -1,5 +1,5 @@
 import * as React from "react"
-import styled from "@emotion/styled"
+import { styled } from "@pigment-css/react"
 import MuiPopper from "@mui/material/Popper"
 import type { PopperProps } from "@mui/material/Popper"
 import Fade from "@mui/material/Fade"

@@ -1,5 +1,5 @@
 import React from "react"
-import styled from "@emotion/styled"
+import { styled } from "@pigment-css/react"
 import Skeleton from "@mui/material/Skeleton"
 import {
   RiMenuAddLine,
@@ -23,25 +23,28 @@ import { imgConfigs } from "../../constants/imgConfigs"
 import { theme } from "../ThemeProvider/ThemeProvider"
 import Tooltip from "@mui/material/Tooltip"
 
-const SkeletonImage = styled(Skeleton)<{ aspect: number }>`
-  padding-bottom: ${({ aspect }) => 100 / aspect}%;
-`
+const SkeletonImage = styled(Skeleton)<{ aspect: number }>({
+  paddingBottom: ({ aspect }) => `${100 / aspect}%`,
+})
 
 const Label = styled.span(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
 }))
 
-const Value = styled.span<{ size?: Size }>(({ theme, size }) => [
-  {
-    color: theme.custom.colors.darkGray2,
-  },
-  size === "small" && {
-    color: theme.custom.colors.silverGrayDark,
-    ".MitCard-root:hover &": {
-      color: theme.custom.colors.darkGray2,
+const Value = styled.span<{ size?: Size }>({
+  color: theme.custom.colors.darkGray2,
+  variants: [
+    {
+      props: { size: "small" },
+      style: {
+        color: theme.custom.colors.silverGrayDark,
+        ".MitCard-root:hover &": {
+          color: theme.custom.colors.darkGray2,
+        },
+      },
     },
-  },
-])
+  ],
+})
 
 const getImageDimensions = (size: Size, isMedia: boolean) => {
   const dimensions = {
@@ -181,13 +184,18 @@ const CardActionButton: React.FC<
   )
 }
 
-const StyledCard = styled(Card)<{ size: Size }>(({ size }) => [
-  size === "medium" && {
-    ".MitCard-info": {
-      height: "18px",
+const StyledCard = styled(Card)<{ size: Size }>({
+  variants: [
+    {
+      props: { size: "medium" },
+      style: {
+        ".MitCard-info": {
+          height: "18px",
+        },
+      },
     },
-  },
-])
+  ],
+})
 
 const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
   isLoading,

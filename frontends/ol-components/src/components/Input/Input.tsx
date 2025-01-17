@@ -2,7 +2,7 @@ import React from "react"
 import styled from "@emotion/styled"
 import InputBase from "@mui/material/InputBase"
 import type { InputBaseProps } from "@mui/material/InputBase"
-import type { Theme } from "@mui/material/styles"
+import type { Theme } from "@pigment-css/react/theme"
 import ClassNames from "classnames"
 
 type Size = NonNullable<InputBaseProps["size"]>

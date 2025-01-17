@@ -1,5 +1,5 @@
 import React from "react"
-import styled from "@emotion/styled"
+import { styled } from "@pigment-css/react"
 import { RiArrowRightSLine } from "@remixicon/react"
 import { Link } from "../Link/Link"
 import { theme } from "../ThemeProvider/ThemeProvider"

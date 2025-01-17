@@ -5,7 +5,7 @@ import React, {
   isValidElement,
   AriaAttributes,
 } from "react"
-import styled from "@emotion/styled"
+import { styled } from "@pigment-css/react"
 import { RiDraggable } from "@remixicon/react"
 import { theme } from "../ThemeProvider/ThemeProvider"
 import { BaseContainer, useClickChildLink } from "./Card"
@@ -21,14 +21,17 @@ import {
 } from "./ListCard"
 import type { Card as BaseCard, TitleProps } from "./ListCard"
 
-const Container = styled(BaseContainer)<{ draggable?: boolean }>(
-  ({ draggable }) => [
-    draggable && {
-      display: "flex",
-      flexDirection: "row",
+const Container = styled(BaseContainer)<{ draggable?: boolean }>({
+  variants: [
+    {
+      props: ({ draggable }) => !!draggable,
+      style: {
+        display: "flex",
+        flexDirection: "row",
+      },
     },
   ],
-)
+})
 
 const DragArea = styled(BaseDragArea)`
   padding-right: 4px;

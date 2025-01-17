@@ -1,7 +1,7 @@
 import React from "react"
 import styled from "@emotion/styled"
 import Typography from "@mui/material/Typography"
-import Container from "@mui/material/Container"
+import Container from "@mui/material-pigment-css/Container"
 import { ResponsiveStyleValue, SxProps } from "@mui/system"
 import { Theme } from "../ThemeProvider/ThemeProvider"
 

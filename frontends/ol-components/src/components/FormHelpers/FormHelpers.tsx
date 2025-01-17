@@ -64,7 +64,18 @@ const ControlLabel: React.FC<ControlLabelProps> = ({
       component="label"
       htmlFor={htmlFor}
       variant="subtitle2"
-      sx={{ marginBottom: "4px", width: fullWidth ? "100%" : "auto" }}
+      sx={[
+        {
+          marginBottom: "4px",
+        },
+        fullWidth
+          ? {
+              width: "100%",
+            }
+          : {
+              width: "auto",
+            },
+      ]}
     >
       {label}
       {required ? <Required aria-hidden="true">*</Required> : null}
