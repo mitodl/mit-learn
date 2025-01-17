@@ -124,7 +124,29 @@ const DrawerContent: React.FC<{
   const topCarousels = coursesInProgramCarousel
     ? [coursesInProgramCarousel]
     : undefined
-  const videosInSeriesCarousel =
+  const otherVideosInThisSeries =
+    resource.data?.resource_type === ResourceTypeEnum.Video ? (
+      resource.data?.playlists.length > 0 ? (
+        <ResourceCarousel
+          titleComponent="p"
+          titleVariant="subtitle1"
+          title="Other Videos in this Series"
+          config={[
+            {
+              label: "Other Videos in this Series",
+              cardProps: { size: "small" },
+              data: {
+                type: "resource_items",
+                params: {
+                  learning_resource_id: parseInt(resource.data.playlists[0]),
+                },
+              },
+            },
+          ]}
+        />
+      ) : null
+    ) : null
+  const videosInThisPlaylist =
     resource.data?.resource_type === ResourceTypeEnum.VideoPlaylist ? (
       <ResourceCarousel
         titleComponent="p"
@@ -175,8 +197,11 @@ const DrawerContent: React.FC<{
     />
   ))
   const bottomCarousels = []
-  if (videosInSeriesCarousel) {
-    bottomCarousels.push(videosInSeriesCarousel)
+  if (otherVideosInThisSeries) {
+    bottomCarousels.push(otherVideosInThisSeries)
+  }
+  if (videosInThisPlaylist) {
+    bottomCarousels.push(videosInThisPlaylist)
   }
   bottomCarousels.push(similarResourcesCarousel)
   bottomCarousels.push(...(topicCarousels || []))
