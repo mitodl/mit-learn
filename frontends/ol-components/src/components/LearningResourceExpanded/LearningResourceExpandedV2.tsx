@@ -191,7 +191,9 @@ const Description = styled.p({
 const DescriptionCollapsed = styled(Description)({
   display: "-webkit-box",
   overflow: "hidden",
+  maxHeight: `calc(${theme.typography.body2.lineHeight} * 5)`,
   "@supports (-webkit-line-clamp: 5)": {
+    maxHeight: "unset",
     WebkitLineClamp: 5,
     WebkitBoxOrient: "vertical",
   },
