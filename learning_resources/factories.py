@@ -64,7 +64,7 @@ def _post_gen_tags(obj, create, extracted, **kwargs):  # noqa: ARG001
 class LearningResourceContentTagFactory(DjangoModelFactory):
     """Factory for LearningResourceContentTag objects"""
 
-    name = factory.Sequence(lambda n: "Tag %03d" % n)
+    name = factory.Sequence(lambda n: f"Tag {n:03d}")
 
     class Meta:
         model = models.LearningResourceContentTag
@@ -86,7 +86,7 @@ class LearningResourceInstructorFactory(DjangoModelFactory):
 class LearningResourceTopicFactory(DjangoModelFactory):
     """Factory for learning resource topics"""
 
-    name = factory.Sequence(lambda n: "Topic %03d" % n)
+    name = factory.Sequence(lambda n: f"Topic {n:03d}")
 
     class Meta:
         model = models.LearningResourceTopic
@@ -137,7 +137,7 @@ class LearningResourcePlatformFactory(DjangoModelFactory):
 class LearningResourceSchoolFactory(DjangoModelFactory):
     """Factory for LearningResourceDepartment"""
 
-    name = factory.Sequence(lambda n: "%03d name" % n)
+    name = factory.Sequence(lambda n: f"{n:03d} name")
     url = factory.Faker("url")
 
     class Meta:
@@ -147,8 +147,8 @@ class LearningResourceSchoolFactory(DjangoModelFactory):
 class LearningResourceDepartmentFactory(DjangoModelFactory):
     """Factory for LearningResourceDepartment"""
 
-    department_id = factory.Sequence(lambda n: "%03d" % n)
-    name = factory.Sequence(lambda n: "%03d name" % n)
+    department_id = factory.Sequence(lambda n: f"{n:03d}")
+    name = factory.Sequence(lambda n: f"{n:03d} name")
     school = factory.SubFactory(
         "learning_resources.factories.LearningResourceSchoolFactory"
     )
@@ -198,7 +198,7 @@ class LearningResourceFactory(DjangoModelFactory):
         choices=constants.LearningResourceType.names()
     )
     readable_id = factory.Sequence(
-        lambda n: "RESOURCEN%03d_%03d.MIT" % (n, random.randint(1, 1000))  # noqa: S311
+        lambda n: f"RESOURCEN{n:03d}_{random.randint(1, 1000)}.MIT"  # noqa: S311
     )
     etl_source = "mock"
     title = factory.Faker("word")
@@ -493,7 +493,7 @@ class LearningResourceRunFactory(DjangoModelFactory):
             ]
         ),
     )
-    run_id = factory.Sequence(lambda n: "RUN%03d.MIT_run" % n)
+    run_id = factory.Sequence(lambda n: f"RUN{n:03d}.MIT_run")
     title = factory.Faker("word")
     description = factory.Faker("sentence")
     full_description = factory.Faker("text")
@@ -839,7 +839,7 @@ class VideoFactory(DjangoModelFactory):
         is_video=True,
         create_video=False,
     )
-    duration = factory.Sequence(lambda n: "PT%02dM%02dS" % (n, n))
+    duration = factory.Sequence(lambda n: f"PT{n:02d}M{n:02d}S")
 
     class Meta:
         model = models.Video
@@ -852,7 +852,7 @@ class VideoFactory(DjangoModelFactory):
 class VideoChannelFactory(DjangoModelFactory):
     """Factory for VideoChannels"""
 
-    channel_id = factory.Sequence(lambda n: "VIDEO-CHANNEL-%03d.MIT" % n)
+    channel_id = factory.Sequence(lambda n: f"VIDEO-CHANNEL-{n:03d}.MIT")
     title = factory.Faker("word")
 
     class Params:

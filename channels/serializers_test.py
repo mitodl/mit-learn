@@ -155,7 +155,7 @@ def test_create_channel(base_channel_data, channel_detail, channel_type):
     """
     paths = sorted(
         (p.learning_resource for p in LearningPathFactory.create_batch(2)),
-        key=lambda list: list.id,
+        key=lambda lst: lst.id,
         reverse=True,
     )
 
