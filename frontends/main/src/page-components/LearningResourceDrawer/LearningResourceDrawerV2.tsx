@@ -124,6 +124,24 @@ const DrawerContent: React.FC<{
   const topCarousels = coursesInProgramCarousel
     ? [coursesInProgramCarousel]
     : undefined
+  const videosInSeriesCarousel =
+    resource.data?.resource_type === ResourceTypeEnum.VideoPlaylist ? (
+      <ResourceCarousel
+        titleComponent="p"
+        titleVariant="subtitle1"
+        title="Videos in this Series"
+        config={[
+          {
+            label: "Videos in this Series",
+            cardProps: { size: "small" },
+            data: {
+              type: "resource_items",
+              params: { learning_resource_id: resourceId },
+            },
+          },
+        ]}
+      />
+    ) : null
   const similarResourcesCarousel = (
     <ResourceCarousel
       titleComponent="p"
@@ -156,6 +174,12 @@ const DrawerContent: React.FC<{
       excludeResourceId={resourceId}
     />
   ))
+  const bottomCarousels = []
+  if (videosInSeriesCarousel) {
+    bottomCarousels.push(videosInSeriesCarousel)
+  }
+  bottomCarousels.push(similarResourcesCarousel)
+  bottomCarousels.push(...(topicCarousels || []))
 
   return (
     <>
@@ -165,7 +189,7 @@ const DrawerContent: React.FC<{
         resourceId={resourceId}
         resource={resource.data}
         topCarousels={topCarousels}
-        bottomCarousels={[similarResourcesCarousel, ...(topicCarousels || [])]}
+        bottomCarousels={bottomCarousels}
         user={user}
         shareUrl={`${window.location.origin}/search?${RESOURCE_DRAWER_QUERY_PARAM}=${resourceId}`}
         inLearningPath={inLearningPath}
