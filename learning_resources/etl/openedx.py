@@ -411,7 +411,7 @@ def _sum_course_prices(program: dict) -> Decimal:
                             if seat["price"] != "0.00"
                         ]
                     ), run.get("seats", [{}])[0].get("currency", CURRENCY_USD)
-        return Decimal(0.00), CURRENCY_USD
+        return Decimal("0.00"), CURRENCY_USD
 
     prices_currencies = [
         _get_course_price(course) for course in program.get("courses", [])
@@ -464,7 +464,7 @@ def _transform_course_run(config, course_run, course_last_modified, marketing_ur
             transform_price(price, currency)
             for (price, currency) in sorted(
                 {
-                    (Decimal(0.00), CURRENCY_USD),
+                    (Decimal("0.00"), CURRENCY_USD),
                     *[
                         (Decimal(seat.get("price")), seat.get("currency"))
                         for seat in course_run.get("seats", [])

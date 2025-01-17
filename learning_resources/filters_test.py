@@ -237,15 +237,15 @@ def test_learning_resource_filter_free(client):
     )
     LearningResourceRunFactory.create(
         learning_resource=free_course
-    ).resource_prices.set([LearningResourcePriceFactory.create(amount=Decimal(0.00))])
+    ).resource_prices.set([LearningResourcePriceFactory.create(amount=Decimal("0.00"))])
 
     paid_course = LearningResourceFactory.create(is_course=True, runs=[])
     LearningResourceRunFactory.create(
         learning_resource=paid_course
     ).resource_prices.set(
         [
-            LearningResourcePriceFactory.create(amount=Decimal(50.00)),
-            LearningResourcePriceFactory.create(amount=Decimal(100.00)),
+            LearningResourcePriceFactory.create(amount=Decimal("50.00")),
+            LearningResourcePriceFactory.create(amount=Decimal("100.00")),
         ]
     )
 
@@ -256,8 +256,8 @@ def test_learning_resource_filter_free(client):
         learning_resource=free2pay_course
     ).resource_prices.set(
         [
-            LearningResourcePriceFactory.create(amount=Decimal(0.00)),
-            LearningResourcePriceFactory.create(amount=Decimal(100.00)),
+            LearningResourcePriceFactory.create(amount=Decimal("0.00")),
+            LearningResourcePriceFactory.create(amount=Decimal("100.00")),
         ]
     )
 
