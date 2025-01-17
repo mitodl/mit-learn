@@ -62,23 +62,26 @@ describe("LearningResourceDrawerV2", () => {
       [],
     )
 
-    if (resource.resource_type === ResourceTypeEnum.Program) {
-      const coursesInProgram = factories.learningResources.resources({
+    if (
+      resource.resource_type === ResourceTypeEnum.Program ||
+      resource.resource_type === ResourceTypeEnum.VideoPlaylist
+    ) {
+      const items = factories.learningResources.resources({
         count: 10,
       })
-      coursesInProgram.results.forEach((course) => {
+      items.results.forEach((item) => {
         setMockResponse.get(
-          urls.learningResources.details({ id: course.id }),
-          course,
+          urls.learningResources.details({ id: item.id }),
+          item,
         )
       })
 
       setMockResponse.get(
-        urls.learningResources.items({ id: resource.id }),
-        coursesInProgram,
+        `${urls.learningResources.items({ id: resource.id })}?limit=12`,
+        items,
       )
 
-      return { resource, user, coursesInProgram }
+      return { resource, user, items }
     }
 
     return { resource, user }

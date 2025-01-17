@@ -128,7 +128,7 @@ const DrawerContent: React.FC<{
     : undefined
   const otherVideosInThisSeries =
     resource.data?.resource_type === ResourceTypeEnum.Video ? (
-      resource.data?.playlists.length > 0 ? (
+      resource.data?.playlists?.length > 0 ? (
         <ResourceCarousel
           titleComponent="p"
           titleVariant="subtitle1"
