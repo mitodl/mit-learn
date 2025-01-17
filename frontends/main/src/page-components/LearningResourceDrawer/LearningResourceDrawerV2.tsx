@@ -82,6 +82,7 @@ const DrawerContent: React.FC<{
   const { data: user } = useUserMe()
   const { data: inLearningPath } = useIsLearningPathMember(resourceId)
   const { data: inUserList } = useIsUserListMember(resourceId)
+  const limit = 12
 
   const handleAddToLearningPathClick: LearningResourceCardProps["onAddToLearningPathClick"] =
     useMemo(() => {
@@ -115,7 +116,7 @@ const DrawerContent: React.FC<{
             cardProps: { size: "small" },
             data: {
               type: "resource_items",
-              params: { learning_resource_id: resourceId },
+              params: { learning_resource_id: resourceId, limit: limit },
             },
           },
         ]}
@@ -139,6 +140,7 @@ const DrawerContent: React.FC<{
                 type: "resource_items",
                 params: {
                   learning_resource_id: parseInt(resource.data.playlists[0]),
+                  limit: limit,
                 },
               },
             },
@@ -158,7 +160,7 @@ const DrawerContent: React.FC<{
             cardProps: { size: "small" },
             data: {
               type: "resource_items",
-              params: { learning_resource_id: resourceId },
+              params: { learning_resource_id: resourceId, limit: limit },
             },
           },
         ]}
@@ -175,7 +177,7 @@ const DrawerContent: React.FC<{
           cardProps: { size: "small" },
           data: {
             type: "lr_vector_similar",
-            params: { id: resourceId },
+            params: { id: resourceId, limit: limit },
           },
         },
       ]}
