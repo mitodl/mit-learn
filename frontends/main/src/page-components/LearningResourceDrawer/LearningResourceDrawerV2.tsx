@@ -120,6 +120,7 @@ const DrawerContent: React.FC<{
             },
           },
         ]}
+        excludeResourceId={resourceId}
       />
     ) : null
   const topCarousels = coursesInProgramCarousel
@@ -145,6 +146,7 @@ const DrawerContent: React.FC<{
               },
             },
           ]}
+          excludeResourceId={resourceId}
         />
       ) : null
     ) : null
@@ -164,6 +166,7 @@ const DrawerContent: React.FC<{
             },
           },
         ]}
+        excludeResourceId={resourceId}
       />
     ) : null
   const similarResourcesCarousel = (
