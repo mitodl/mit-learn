@@ -1,9 +1,9 @@
 import { NavData, NavDrawer } from "./NavDrawer"
-import { render, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 import user from "@testing-library/user-event"
 import React from "react"
-import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
 import Image from "next/image"
+import { renderWithTheme } from "../../test-utils"
 
 describe("NavDrawer", () => {
   it("Renders the expected drawer contents", () => {
@@ -39,9 +39,9 @@ describe("NavDrawer", () => {
         },
       ],
     }
-    render(<NavDrawer onClose={jest.fn()} navData={navData} open={true} />, {
-      wrapper: ThemeProvider,
-    })
+    renderWithTheme(
+      <NavDrawer onClose={jest.fn()} navData={navData} open={true} />,
+    )
     const links = screen.getAllByTestId("nav-link")
     const icons = screen.getAllByTestId("nav-link-icon")
     const titles = screen.getAllByTestId("nav-link-text")
@@ -79,9 +79,9 @@ describe("NavDrawer", () => {
 
   test("close button calls onClose", async () => {
     const onClose = jest.fn()
-    render(<NavDrawer onClose={onClose} navData={NAV_DATA} open={true} />, {
-      wrapper: ThemeProvider,
-    })
+    renderWithTheme(
+      <NavDrawer onClose={onClose} navData={NAV_DATA} open={true} />,
+    )
     const close = screen.getByRole("button", { name: "Close Navigation" })
     await user.click(close)
     expect(onClose).toHaveBeenCalled()
@@ -89,9 +89,9 @@ describe("NavDrawer", () => {
 
   test("escape calls onClose", async () => {
     const onClose = jest.fn()
-    render(<NavDrawer onClose={onClose} navData={NAV_DATA} open={true} />, {
-      wrapper: ThemeProvider,
-    })
+    renderWithTheme(
+      <NavDrawer onClose={onClose} navData={NAV_DATA} open={true} />,
+    )
     const links = screen.getAllByRole("link")
     links[0].focus()
     await user.keyboard("{Escape}")
@@ -118,7 +118,7 @@ describe("NavDrawer", () => {
         </div>
       )
     }
-    render(<Component />, { wrapper: ThemeProvider })
+    renderWithTheme(<Component />)
     await user.click(screen.getByRole("button", { name: "Outside" }))
     expect(onClose).toHaveBeenCalled()
     onClose.mockReset()
@@ -130,9 +130,9 @@ describe("NavDrawer", () => {
 
   test("clicking a link navigates and closes the drawer", async () => {
     const onClose = jest.fn()
-    render(<NavDrawer onClose={onClose} navData={NAV_DATA} open={true} />, {
-      wrapper: ThemeProvider,
-    })
+    renderWithTheme(
+      <NavDrawer onClose={onClose} navData={NAV_DATA} open={true} />,
+    )
 
     const link = screen.getByRole("link", { name: "Title 1 Description 1" })
     await user.click(link)

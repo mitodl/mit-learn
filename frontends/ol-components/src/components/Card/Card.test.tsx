@@ -1,14 +1,14 @@
-import { render, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 import user from "@testing-library/user-event"
 import { Card } from "./Card"
 import React from "react"
 import { getOriginalSrc } from "ol-test-utilities"
 import invariant from "tiny-invariant"
-import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
+import { renderWithTheme } from "../../test-utils"
 
 describe("Card", () => {
   test("has class MitCard-root on root element", () => {
-    const { container } = render(
+    const { container } = renderWithTheme(
       <Card className="Foo">
         <Card.Title>Title</Card.Title>
         <Card.Image src="https://via.placeholder.com/150" alt="placeholder" />
@@ -16,7 +16,6 @@ describe("Card", () => {
         <Card.Footer>Footer</Card.Footer>
         <Card.Actions>Actions</Card.Actions>
       </Card>,
-      { wrapper: ThemeProvider },
     )
     const card = container.firstChild as HTMLElement
     const title = card.querySelector(".MitCard-title")
@@ -47,7 +46,7 @@ describe("Card", () => {
   ])(
     "The whole card is clickable as a link if forwardClicksToLink ($forwardClicksToLink)",
     async ({ forwardClicksToLink, finalHref }) => {
-      render(
+      renderWithTheme(
         <Card forwardClicksToLink={forwardClicksToLink}>
           <Card.Title href="#woof">Title</Card.Title>
           <Card.Image src="https://via.placeholder.com/150" alt="placeholder" />
@@ -55,7 +54,6 @@ describe("Card", () => {
           <Card.Footer>Footer</Card.Footer>
           <Card.Actions>Actions</Card.Actions>
         </Card>,
-        { wrapper: ThemeProvider },
       )
       const card = document.querySelector(".MitCard-root")
       invariant(card instanceof HTMLDivElement) // Sanity: Chceck it's not an anchor
@@ -73,7 +71,7 @@ describe("Card", () => {
     async ({ finalHref, forwardClicksToLink }) => {
       const href = "#meow"
       const onClick = jest.fn()
-      render(
+      renderWithTheme(
         <Card forwardClicksToLink={forwardClicksToLink}>
           <Card.Content>
             <div>Hello!</div>
@@ -85,7 +83,6 @@ describe("Card", () => {
             </a>
           </Card.Content>
         </Card>,
-        { wrapper: ThemeProvider },
       )
       const button = screen.getByRole("button", { name: "Button" })
       await user.click(button)
@@ -104,7 +101,7 @@ describe("Card", () => {
   test("Clicks on interactive elements are not forwarded", async () => {
     const btnOnClick = jest.fn()
     const divOnClick = jest.fn()
-    render(
+    renderWithTheme(
       <Card forwardClicksToLink>
         <Card.Title href="#one">Title</Card.Title>
         <Card.Image src="https://via.placeholder.com/150" alt="placeholder" />
@@ -120,7 +117,6 @@ describe("Card", () => {
           </div>
         </Card.Footer>
       </Card>,
-      { wrapper: ThemeProvider },
     )
     const button = screen.getByRole("button", { name: "Button" })
     screen.getByRole("link", { name: "Title" })

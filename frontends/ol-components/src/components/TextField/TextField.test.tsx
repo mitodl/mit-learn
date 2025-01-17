@@ -1,10 +1,10 @@
 import React from "react"
-import { render, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 import user from "@testing-library/user-event"
 import { TextField } from "./TextField"
 import type { TextFieldProps } from "./TextField"
-import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
 import { faker } from "@faker-js/faker/locale/en"
+import { renderWithTheme } from "../../test-utils"
 
 describe("TextField", () => {
   const setup = (props: Partial<TextFieldProps>) => {
@@ -13,11 +13,8 @@ describe("TextField", () => {
       value: "test-value",
       label: "test-label",
     }
-    const { rerender: _rerender } = render(
+    const { rerender: _rerender } = renderWithTheme(
       <TextField {...defaults} {...props} />,
-      {
-        wrapper: ThemeProvider,
-      },
     )
     const rerender = (newProps: Partial<TextFieldProps>) => {
       _rerender(<TextField {...defaults} {...newProps} />)

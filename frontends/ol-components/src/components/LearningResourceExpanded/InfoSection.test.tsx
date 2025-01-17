@@ -1,20 +1,18 @@
 import React from "react"
-import { render, screen, within } from "@testing-library/react"
+import { screen, within } from "@testing-library/react"
 import { courses } from "../LearningResourceCard/testUtils"
 import InfoSectionV2 from "./InfoSection"
-import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
 import { formatRunDate } from "ol-utilities"
 import invariant from "tiny-invariant"
 import user from "@testing-library/user-event"
+import { renderWithTheme } from "../../test-utils"
 
 // This is a pipe followed by a zero-width space
 const SEPARATOR = "|​"
 
 describe("Learning resource info section pricing", () => {
   test("Free course, no certificate", () => {
-    render(<InfoSectionV2 resource={courses.free.noCertificate} />, {
-      wrapper: ThemeProvider,
-    })
+    renderWithTheme(<InfoSectionV2 resource={courses.free.noCertificate} />)
 
     screen.getByText("Free")
     expect(screen.queryByText("Paid")).toBeNull()
@@ -23,9 +21,9 @@ describe("Learning resource info section pricing", () => {
   })
 
   test("Free course, with certificate, one price", () => {
-    render(<InfoSectionV2 resource={courses.free.withCertificateOnePrice} />, {
-      wrapper: ThemeProvider,
-    })
+    renderWithTheme(
+      <InfoSectionV2 resource={courses.free.withCertificateOnePrice} />,
+    )
 
     screen.getByText("Free")
     expect(screen.queryByText("Paid")).toBeNull()
@@ -34,11 +32,8 @@ describe("Learning resource info section pricing", () => {
   })
 
   test("Free course, with certificate, price range", () => {
-    render(
+    renderWithTheme(
       <InfoSectionV2 resource={courses.free.withCertificatePriceRange} />,
-      {
-        wrapper: ThemeProvider,
-      },
     )
 
     screen.getByText("Free")
@@ -48,9 +43,9 @@ describe("Learning resource info section pricing", () => {
   })
 
   test("Unknown price, no certificate", () => {
-    render(<InfoSectionV2 resource={courses.unknownPrice.noCertificate} />, {
-      wrapper: ThemeProvider,
-    })
+    renderWithTheme(
+      <InfoSectionV2 resource={courses.unknownPrice.noCertificate} />,
+    )
 
     screen.getByText("Paid")
     expect(screen.queryByText("Free")).toBeNull()
@@ -59,9 +54,9 @@ describe("Learning resource info section pricing", () => {
   })
 
   test("Unknown price, with certificate", () => {
-    render(<InfoSectionV2 resource={courses.unknownPrice.withCertificate} />, {
-      wrapper: ThemeProvider,
-    })
+    renderWithTheme(
+      <InfoSectionV2 resource={courses.unknownPrice.withCertificate} />,
+    )
 
     screen.getByText("Paid")
     expect(screen.queryByText("Free")).toBeNull()
@@ -72,9 +67,9 @@ describe("Learning resource info section pricing", () => {
   })
 
   test("Paid course, no certificate", () => {
-    render(<InfoSectionV2 resource={courses.paid.withoutCertificate} />, {
-      wrapper: ThemeProvider,
-    })
+    renderWithTheme(
+      <InfoSectionV2 resource={courses.paid.withoutCertificate} />,
+    )
 
     screen.getByText("$49")
     expect(screen.queryByText("Paid")).toBeNull()
@@ -84,9 +79,9 @@ describe("Learning resource info section pricing", () => {
   })
 
   test("Paid course, with certificate, one price", () => {
-    render(<InfoSectionV2 resource={courses.paid.withCerticateOnePrice} />, {
-      wrapper: ThemeProvider,
-    })
+    renderWithTheme(
+      <InfoSectionV2 resource={courses.paid.withCerticateOnePrice} />,
+    )
 
     screen.getByText("$49")
     expect(screen.queryByText("Paid")).toBeNull()
@@ -95,11 +90,8 @@ describe("Learning resource info section pricing", () => {
   })
 
   test("Paid course, with certificate, price range", () => {
-    render(
+    renderWithTheme(
       <InfoSectionV2 resource={courses.paid.withCertificatePriceRange} />,
-      {
-        wrapper: ThemeProvider,
-      },
     )
 
     screen.getByText("$49 – $99")
@@ -118,9 +110,7 @@ describe("Learning resource info section start date", () => {
     invariant(run)
     const runDate = formatRunDate(run, false)
     invariant(runDate)
-    render(<InfoSectionV2 resource={course} />, {
-      wrapper: ThemeProvider,
-    })
+    renderWithTheme(<InfoSectionV2 resource={course} />)
 
     const section = screen.getByTestId("drawer-info-items")
     within(section).getByText("Starts:")
@@ -133,9 +123,7 @@ describe("Learning resource info section start date", () => {
     invariant(run)
     const runDate = formatRunDate(run, true)
     invariant(runDate)
-    render(<InfoSectionV2 resource={course} />, {
-      wrapper: ThemeProvider,
-    })
+    renderWithTheme(<InfoSectionV2 resource={course} />)
 
     const section = screen.getByTestId("drawer-info-items")
     const expectedDateText = `As taught in:${runDate}`
@@ -157,9 +145,7 @@ describe("Learning resource info section start date", () => {
       .slice(0, 2)
       .join(SEPARATOR)}Show more`
     invariant(expectedDateText)
-    render(<InfoSectionV2 resource={course} />, {
-      wrapper: ThemeProvider,
-    })
+    renderWithTheme(<InfoSectionV2 resource={course} />)
 
     const section = screen.getByTestId("drawer-info-items")
     within(section).getAllByText((_content, node) => {
@@ -169,9 +155,7 @@ describe("Learning resource info section start date", () => {
 
   test("If data is different then dates, formats, locations and prices are not shown", () => {
     const course = courses.multipleRuns.differentData
-    render(<InfoSectionV2 resource={course} />, {
-      wrapper: ThemeProvider,
-    })
+    renderWithTheme(<InfoSectionV2 resource={course} />)
     const section = screen.getByTestId("drawer-info-items")
     expect(within(section).queryByText("Starts:")).toBeNull()
     expect(within(section).queryByText("Price:")).toBeNull()
@@ -182,9 +166,7 @@ describe("Learning resource info section start date", () => {
   test("Clicking the show more button should show more dates", async () => {
     const course = courses.multipleRuns.sameData
     const totalRuns = course.runs?.length ? course.runs.length : 0
-    render(<InfoSectionV2 resource={course} />, {
-      wrapper: ThemeProvider,
-    })
+    renderWithTheme(<InfoSectionV2 resource={course} />)
 
     const runDates = screen.getByTestId("drawer-run-dates")
     expect(runDates.children.length).toBe(3)
@@ -197,9 +179,7 @@ describe("Learning resource info section start date", () => {
 describe("Learning resource info section format and location", () => {
   test("Multiple formats", () => {
     const course = courses.multipleFormats
-    render(<InfoSectionV2 resource={course} />, {
-      wrapper: ThemeProvider,
-    })
+    renderWithTheme(<InfoSectionV2 resource={course} />)
 
     const section = screen.getByTestId("drawer-info-items")
     within(section).getAllByText((_content, node) => {
@@ -213,9 +193,7 @@ describe("Learning resource info section format and location", () => {
 
   test("Single format", () => {
     const course = courses.singleFormat
-    render(<InfoSectionV2 resource={course} />, {
-      wrapper: ThemeProvider,
-    })
+    renderWithTheme(<InfoSectionV2 resource={course} />)
 
     const section = screen.getByTestId("drawer-info-items")
     within(section).getAllByText((_content, node) => {

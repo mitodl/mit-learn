@@ -1,24 +1,20 @@
 import React from "react"
-import { render, screen, within } from "@testing-library/react"
+import { screen, within } from "@testing-library/react"
 import { courses } from "../LearningResourceCard/testUtils"
 import InfoSectionV2 from "./InfoSection"
-import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
 import { DeliveryEnumDescriptions } from "api"
+import { renderWithTheme } from "../../test-utils"
 
 describe("Differing runs comparison table", () => {
   test("Does not appear if data is the same", () => {
     const course = courses.multipleRuns.sameData
-    render(<InfoSectionV2 resource={course} />, {
-      wrapper: ThemeProvider,
-    })
+    renderWithTheme(<InfoSectionV2 resource={course} />)
     expect(screen.queryByTestId("differing-runs-table")).toBeNull()
   })
 
   test("Appears if data is different", () => {
     const course = courses.multipleRuns.differentData
-    render(<InfoSectionV2 resource={course} />, {
-      wrapper: ThemeProvider,
-    })
+    renderWithTheme(<InfoSectionV2 resource={course} />)
     const differingRunsTable = screen.getByTestId("differing-runs-table")
     expect(differingRunsTable).toBeInTheDocument()
     const onlineLabels = within(differingRunsTable).getAllByText(

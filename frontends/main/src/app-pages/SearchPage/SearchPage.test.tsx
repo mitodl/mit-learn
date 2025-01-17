@@ -707,7 +707,7 @@ describe("Search Page pagination controls", () => {
     // p3 is current page
     await within(pagination).findByRole("button", {
       name: "page 3",
-      current: true,
+      current: "page",
     })
     // as opposed to p4
     await within(pagination).findByRole("button", { name: "Go to page 4" })
