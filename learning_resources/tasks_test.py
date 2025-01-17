@@ -66,7 +66,6 @@ def test_cache_is_cleared_after_task_run(mocker, mocked_celery):
     tasks.get_mit_edx_data.delay()
     tasks.get_mitxonline_data.delay()
     tasks.get_oll_data.delay()
-    tasks.get_prolearn_data.delay()
     tasks.get_xpro_data.delay()
     tasks.get_podcast_data.delay()
 
@@ -78,7 +77,7 @@ def test_cache_is_cleared_after_task_run(mocker, mocked_celery):
 
     tasks.get_youtube_data.delay()
     tasks.get_youtube_transcripts.delay()
-    assert mocked_clear_search_cache.call_count == 12
+    assert mocked_clear_search_cache.call_count == 11
 
 
 def test_get_micromasters_data(mocker):
@@ -123,14 +122,6 @@ def test_get_mitpe_data(mocker):
     task = tasks.get_mitpe_data.delay()
     mock_pipelines.mitpe_etl.assert_called_once_with()
     assert task.result == 3
-
-
-def test_get_prolearn_data(mocker):
-    """Verify that the get_prolearn_data invokes the Prolearn ETL pipeline"""
-    mock_pipelines = mocker.patch("learning_resources.tasks.pipelines")
-    tasks.get_prolearn_data.delay()
-    mock_pipelines.prolearn_programs_etl.assert_called_once_with()
-    mock_pipelines.prolearn_courses_etl.assert_called_once_with()
 
 
 def test_get_xpro_data(mocker):
