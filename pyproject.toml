@@ -92,7 +92,7 @@ llama-index-agent-openai = "^0.4.1"
 
 
 [tool.poetry.group.dev.dependencies]
-bpython = "^0.24"
+bpython = "^0.25"
 ddt = "^1.6.0"
 django-debug-toolbar = "^4.1.0"
 factory_boy = "^3.3.0"
