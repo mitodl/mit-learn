@@ -30,7 +30,7 @@ services:
     profiles:
       - frontend
     working_dir: /src
-    image: node:22.12
+    image: node:22.13
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
