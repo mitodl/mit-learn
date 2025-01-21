@@ -3,15 +3,6 @@
   "extends": ["local>mitodl/.github:renovate-config"],
   "packageRules": [
     {
-      "matchFileNames": ["frontends/mit-learn/package.json"],
-      "matchUpdateTypes": ["major"],
-      "enabled": false
-    },
-    {
-      "groupName": "ckeditor5",
-      "matchSourceUrls": ["https://github.com/ckeditor/ckeditor5/{/,}**"]
-    },
-    {
       "allowedVersions": "<5",
       "matchPackageNames": ["django", "Django"]
     }
