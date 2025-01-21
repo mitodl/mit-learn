@@ -69,7 +69,9 @@ def generate_embeddings(ids, resource_type):
 
 
 @app.task(bind=True)
-def start_embed_resources(self, indexes, skip_content_files):
+def start_embed_resources(
+    self, indexes, skip_content_files, chunk_size=settings.QDRANT_CHUNK_SIZE
+):
     """
     Celery task to embed all learning resources for given indexes
 
@@ -84,6 +86,7 @@ def start_embed_resources(self, indexes, skip_content_files):
             "QDRANT_HOST and QDRANT_BASE_COLLECTION_NAME"
         )
         return None
+
     try:
         if COURSE_TYPE in indexes:
             blocklisted_ids = load_course_blocklist()
@@ -129,7 +132,7 @@ def start_embed_resources(self, indexes, skip_content_files):
                         )
                         for ids in chunks(
                             run_contentfiles,
-                            chunk_size=settings.QDRANT_CHUNK_SIZE,
+                            chunk_size=chunk_size,
                         )
                     ]
         for resource_type in [
@@ -147,7 +150,7 @@ def start_embed_resources(self, indexes, skip_content_files):
                     )
                     .order_by("id")
                     .values_list("id", flat=True),
-                    chunk_size=settings.QDRANT_CHUNK_SIZE,
+                    chunk_size=chunk_size,
                 ):
                     index_tasks.append(
                         generate_embeddings.si(
