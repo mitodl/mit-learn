@@ -5,9 +5,9 @@ import {
   styled,
   theme,
   Typography,
-  ButtonLink,
   TypographyProps,
 } from "ol-components"
+import { ButtonLink } from "@mitodl/smoot-design"
 import { useLearningResourceTopics } from "api/hooks/learningResources"
 import { RiArrowRightLine } from "@remixicon/react"
 import RootTopicIcon from "@/components/RootTopicIcon/RootTopicIcon"

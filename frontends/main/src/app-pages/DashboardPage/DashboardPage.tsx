@@ -9,7 +9,6 @@ import {
   RiNotificationLine,
 } from "@remixicon/react"
 import {
-  ButtonLink,
   Card,
   Container,
   Skeleton,
@@ -23,6 +22,7 @@ import {
   TypographyProps,
   styled,
 } from "ol-components"
+import { ButtonLink } from "@mitodl/smoot-design"
 import Link from "next/link"
 import { useUserMe } from "api/hooks/user"
 import { useParams } from "next/navigation"

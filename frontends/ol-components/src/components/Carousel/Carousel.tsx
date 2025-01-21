@@ -2,7 +2,7 @@ import React, { useCallback } from "react"
 import { createPortal } from "react-dom"
 import Slick from "react-slick"
 import { onReInitSlickA11y } from "./util"
-import { ActionButton } from "../Button/Button"
+import { ActionButton } from "@mitodl/smoot-design"
 import { RiArrowRightLine, RiArrowLeftLine } from "@remixicon/react"
 import styled from "@emotion/styled"
 

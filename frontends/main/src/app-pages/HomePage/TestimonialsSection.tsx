@@ -6,16 +6,20 @@ import {
   styled,
   theme,
   pxToRem,
-  ActionButton,
   TruncateText,
   onReInitSlickA11y,
 } from "ol-components"
+import { ActionButton } from "@mitodl/smoot-design"
 import { useTestimonialList } from "api/hooks/testimonials"
 import type { Attestation } from "api/v0"
 import { RiArrowRightLine, RiArrowLeftLine } from "@remixicon/react"
 import Slider from "react-slick"
 import AttestantBlock from "@/page-components/TestimonialDisplay/AttestantBlock"
 import Image from "next/image"
+
+const StyledActionButton = styled(ActionButton)(({ theme }) => ({
+  backgroundColor: theme.custom.colors.white,
+}))
 
 const HeaderContainer = styled(Container)(({ theme }) => ({
   display: "flex",
@@ -298,20 +302,20 @@ const SlickCarousel = () => {
       <TestimonialFadeLeft />
       <TestimonialFadeRight />
       <ButtonsContainer>
-        <ActionButton
+        <StyledActionButton
           aria-label="Show previous"
-          variant="inverted"
+          variant="secondary"
           onClick={slick?.slickPrev}
         >
           <RiArrowLeftLineStyled aria-hidden />
-        </ActionButton>
-        <ActionButton
+        </StyledActionButton>
+        <StyledActionButton
           aria-label="Show next"
-          variant="inverted"
+          variant="secondary"
           onClick={slick?.slickNext}
         >
           <RiArrowRightLineStyled aria-hidden />
-        </ActionButton>
+        </StyledActionButton>
       </ButtonsContainer>
     </OverlayContainer>
   )

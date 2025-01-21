@@ -1,6 +1,5 @@
 import React, { useCallback } from "react"
 import {
-  Button,
   LoadingSpinner,
   styled,
   Typography,
@@ -9,6 +8,7 @@ import {
   theme,
   TypographyProps,
 } from "ol-components"
+import { Button } from "@mitodl/smoot-design"
 import { RiListCheck3 } from "@remixicon/react"
 import { useUserListList } from "api/hooks/userLists"
 import { GridColumn, GridContainer } from "@/components/GridLayout/GridLayout"

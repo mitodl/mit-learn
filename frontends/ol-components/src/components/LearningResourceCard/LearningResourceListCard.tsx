@@ -18,7 +18,7 @@ import {
   showStartAnytime,
 } from "ol-utilities"
 import { ListCard } from "../Card/ListCard"
-import { ActionButtonProps } from "../Button/Button"
+import type { ActionButtonProps } from "@mitodl/smoot-design"
 import { theme } from "../ThemeProvider/ThemeProvider"
 
 const IMAGE_SIZES = {

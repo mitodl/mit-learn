@@ -3,7 +3,6 @@ import { useFormik } from "formik"
 import { Profile, useProfileMeMutation } from "api/hooks/profile"
 import {
   styled,
-  Button,
   CircularProgress,
   CheckboxChoiceBoxField,
   CheckboxChoiceField,
@@ -11,6 +10,7 @@ import {
   SimpleSelectField,
   TextField,
 } from "ol-components"
+import { Button } from "@mitodl/smoot-design"
 
 import { useLearningResourceTopics } from "api/hooks/learningResources"
 import {
