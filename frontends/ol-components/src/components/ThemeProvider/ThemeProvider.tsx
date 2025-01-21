@@ -7,34 +7,25 @@ import type {} from "@mitodl/smoot-design/type-augmentation"
 import type {} from "@mui/lab/themeAugmentation"
 import Link from "next/link"
 
-const theme = createTheme((base) => {
-  return {
-    ...base,
-    custom: {
-      ...base.custom,
-      /**
-       * Workaround for https://github.com/mui/material-ui/issues/45052.
-       * A merge is fixed, but new MUI version not yet released.
-       */
-      LinkAdapter: (props) => <Link {...props} />,
-    },
-    components: {
-      ...base.components,
-      /**
-       * MuiTabPanel customization is not includedd in smoot-design because
-       * it comes from @mui/lab, which doesn't exactly follow semver.
-       * This makes it hard to include as a depednency of smoot-design without
-       * causing duplicate versions.
-       */
-      MuiTabPanel: {
-        styleOverrides: {
-          root: {
-            padding: "0px",
-          },
+const theme = createTheme({
+  custom: {
+    LinkAdapter: Link,
+  },
+  components: {
+    /**
+     * MuiTabPanel customization is not includedd in smoot-design because
+     * it comes from @mui/lab, which doesn't exactly follow semver.
+     * This makes it hard to include as a depednency of smoot-design without
+     * causing duplicate versions.
+     */
+    MuiTabPanel: {
+      styleOverrides: {
+        root: {
+          padding: "0px",
         },
       },
     },
-  }
+  },
 })
 
 type ThemeProviderProps = {
