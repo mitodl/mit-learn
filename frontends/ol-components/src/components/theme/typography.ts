@@ -1,5 +1,5 @@
-import type { ThemeOptions } from "@mui/material/styles"
-import { createTheme } from "@mui/material/styles"
+import type { ThemeOptions } from "@mui/material"
+// import { createTheme } from "@mui/material"
 
 const fontWeights = {
   text: {
@@ -23,7 +23,7 @@ const fontWeights = {
  */
 const pxToRem = (px: number) => `${px / 16}rem`
 
-const globalSettings: ThemeOptions["typography"] = {
+const typography: ThemeOptions["typography"] = {
   // Note: Figma calls this "Neue Haas Grotesk Text", but that is incorrect based on Adobe's font family.
   fontFamily: "neue-haas-grotesk-text, sans-serif",
   fontWeightLight: fontWeights.text.roman,
@@ -165,10 +165,10 @@ const component: NonNullable<ThemeOptions["components"]>["MuiTypography"] = {
   },
 }
 
-const { typography } = createTheme({
-  typography: globalSettings,
-  // @ts-expect-error: we only care about typography from this theme
-  custom: {},
-})
+// const { typography } = createTheme({
+//   typography: globalSettings,
+//   // @ts-expect-error: we only care about typography from this theme
+//   custom: {},
+// })
 
-export { globalSettings, component, pxToRem, typography }
+export { component, pxToRem, typography }

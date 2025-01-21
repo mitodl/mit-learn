@@ -1,17 +1,17 @@
-import React from "react"
-import {
-  createTheme,
-  ThemeProvider as MuiThemeProvider,
-} from "@mui/material/styles"
-import type { ThemeOptions, Theme } from "@mui/material/styles"
-import type {} from "@mui/lab/themeAugmentation"
-import * as typography from "./typography"
+// import React from "react"
+// import {
+//   createTheme,
+//   ThemeProvider as MuiThemeProvider,
+// } from "@mui/material/styles"
+import { createTheme } from "@mui/material/styles"
+// import { withPigment, extendTheme } from '@pigment-css/nextjs-plugin';
+import { typography } from "./typography"
 import * as buttons from "./buttons"
 import * as chips from "./chips"
 import { colors } from "./colors"
-import type { CustomTheme } from "../../types/theme"
+// import type { CustomTheme } from "../../types/theme"
 
-const custom: ThemeOptions["custom"] = {
+const custom = {
   colors,
   dimensions: {
     headerHeight: "72px",
@@ -29,8 +29,9 @@ const BREAKPOINTS = {
   },
 }
 
-const themeOptions: ThemeOptions = {
-  custom: custom,
+const themeOptions = {
+  // cssVariables: true,
+  custom,
   palette: {
     action: {
       disabled: colors.lightGray2,
@@ -56,18 +57,19 @@ const themeOptions: ThemeOptions = {
     borderRadius: 8,
   },
   spacing: 8,
-  typography: typography.globalSettings,
+  typography,
   breakpoints: BREAKPOINTS,
   components: {
     MuiButtonBase: buttons.buttonBaseComponent,
-    MuiTypography: typography.component,
-    MuiTabPanel: {
-      styleOverrides: {
-        root: {
-          padding: "0px",
-        },
-      },
-    },
+    // TODO pigment
+    // MuiTypography: typography.component,
+    // MuiTabPanel: {
+    //   styleOverrides: {
+    //     root: {
+    //       padding: "0px",
+    //     },
+    //   },
+    // },
     MuiMenu: {
       styleOverrides: { paper: { borderRadius: "4px" } },
     },
@@ -84,22 +86,10 @@ const themeOptions: ThemeOptions = {
   },
 }
 
-type ExtendedTheme = Theme & {
-  custom: CustomTheme
-}
+// type ExtendedTheme = Theme & {
+//   custom: CustomTheme
+// }
 
-/**
- * MaterialUI Theme for MIT Learn
- */
-export const theme: ExtendedTheme = createTheme(themeOptions)
-
-type ThemeProviderProps = {
-  children?: React.ReactNode
-}
-
-const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-  return <MuiThemeProvider theme={theme}>{children}</MuiThemeProvider>
-}
-
-export { ThemeProvider }
-export type { ThemeProviderProps, Theme }
+export const theme = createTheme(themeOptions) //extendTheme(themeOptions)
+// export const theme = themeOptions //extendTheme(themeOptions)
+export { pxToRem } from "./typography"

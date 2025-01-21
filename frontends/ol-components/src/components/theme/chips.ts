@@ -1,14 +1,15 @@
-import React from "react"
+// import React from "react"
 import type { ThemeOptions } from "@mui/material/styles"
 import { colors } from "./colors"
-import { RiCloseLine } from "@remixicon/react"
+// import { RiCloseLine } from "@remixicon/react"
 
 const chipComponent: NonNullable<ThemeOptions["components"]>["MuiChip"] = {
   defaultProps: {
     size: "medium",
     color: "default",
     variant: "outlined",
-    deleteIcon: <RiCloseLine aria-hidden="true" />,
+    // TODO pigment (next.config.ts cannot import .tsx files)
+    // deleteIcon: <RiCloseLine aria-hidden="true" />,
   },
   styleOverrides: {
     root: {

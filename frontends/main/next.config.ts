@@ -3,11 +3,7 @@ import type { NextConfig } from "next"
 import { withPigment } from "@pigment-css/nextjs-plugin"
 import { withSentryConfig } from "@sentry/nextjs"
 import { validateEnv } from "./validateEnv"
-// import { theme } from "ol-components/ThemeProvider/ThemeProvider"
-// import { theme } from "../ol-components/ThemeProvider/ThemeProvider"
-// import { theme } from "ol-components"
-// import { theme } from "../ol-components/src/components/ThemeProvider/ThemeProvider"
-import { theme } from "./src/common/theme/theme"
+import { theme } from "../ol-components/src/components/theme/theme"
 import BundleAnalyzer from "@next/bundle-analyzer"
 
 validateEnv()
