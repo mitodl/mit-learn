@@ -2723,7 +2723,7 @@ __metadata:
     "@remixicon/react": ^4.2.0
     react: ^18 || ^19
     react-dom: ^18 || ^19
-  checksum: 10/d12f470d62bb373be5de70abbdacc4da518b80d10c21b011d9e2ac5853f6abc387e6dcff4d4d4ea10a7aa58978d918eb2b84d573752a88c36efce51183a7d701
+  checksum: 10/a82c32deee7e18cc3e0d5234cb3e1ca5a1dab5db931e4468560215f35b01042f06b53b651f3443a824c8df0fb556a97759d6cee10da5ce4bf6ac044283dcdaf0
   languageName: node
   linkType: hard
 
