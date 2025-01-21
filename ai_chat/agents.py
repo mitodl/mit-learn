@@ -439,7 +439,14 @@ Search parameters: {{"q": "mathematics"}}
         """
         llm = OpenAI(
             model=self.model,
-            **(self.proxy.get_api_kwargs() if self.proxy else {}),
+            **(
+                self.proxy.get_api_kwargs(
+                    base_url_key="api_base",
+                    api_key_key="api_key",  # pragma: allowlist secret
+                )
+                if self.proxy
+                else {}
+            ),
             additional_kwargs=(
                 self.proxy.get_additional_kwargs(self) if self.proxy else {}
             ),

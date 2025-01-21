@@ -30,7 +30,7 @@ class AIProxy(ABC):
             raise ValueError(message)
 
     @abstractmethod
-    def get_api_kwargs(self) -> dict:
+    def get_api_kwargs(self, **kwargs) -> dict:
         """Get the api kwargs required to connect to the proxy."""
 
     @abstractmethod
@@ -47,10 +47,12 @@ class LiteLLMProxy(AIProxy):
 
     REQUIRED_SETTINGS = ("AI_PROXY_URL", "AI_PROXY_AUTH_TOKEN")
 
-    def get_api_kwargs(self) -> dict:
+    def get_api_kwargs(
+        self, base_url_key: str = "base_url", api_key_key: str = "openai_api_key"
+    ) -> dict:
         return {
-            "api_base": settings.AI_PROXY_URL,
-            "api_key": settings.AI_PROXY_AUTH_TOKEN,
+            f"{base_url_key}": settings.AI_PROXY_URL,
+            f"{api_key_key}": settings.AI_PROXY_AUTH_TOKEN,
         }
 
     def get_additional_kwargs(self, service: BaseChatAgent) -> dict:
