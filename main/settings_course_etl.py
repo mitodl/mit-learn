@@ -40,9 +40,6 @@ DUPLICATE_COURSES_URL = get_string("DUPLICATE_COURSES_URL", None)
 # Base URL for Micromasters data
 MICROMASTERS_CATALOG_API_URL = get_string("MICROMASTERS_CATALOG_API_URL", None)
 
-# Base URL for Prolearn data
-PROLEARN_CATALOG_API_URL = get_string("PROLEARN_CATALOG_API_URL", None)
-
 # Iterator chunk size for MITx and xPRO courses
 LEARNING_COURSE_ITERATOR_CHUNK_SIZE = get_int("LEARNING_COURSE_ITERATOR_CHUNK_SIZE", 20)
 
@@ -76,7 +73,6 @@ SEE_API_CLIENT_SECRET = get_string("SEE_API_CLIENT_SECRET", None)
 CSAIL_BASE_URL = get_string("CSAIL_BASE_URL", None)
 SEE_BASE_URL = get_string("SEE_BASE_URL", None)
 MITPE_BASE_URL = get_string("MITPE_BASE_URL", "https://professional.mit.edu/")
-MITPE_API_ENABLED = get_bool("MITPE_API_ENABLED", default=False)
 
 # course catalog video etl settings
 OPEN_VIDEO_DATA_BRANCH = get_string("OPEN_VIDEO_DATA_BRANCH", "master")

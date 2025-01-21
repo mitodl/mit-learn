@@ -57,10 +57,6 @@ CELERY_BEAT_SCHEDULE = {
         "task": "learning_resources.tasks.get_mitpe_data",
         "schedule": crontab(minute=0, hour=21),  # 5:00pm EST
     },
-    "update-prolearn-courses-every-1-days": {
-        "task": "learning_resources.tasks.get_prolearn_data",
-        "schedule": crontab(minute=0, hour=5),  # 1:00am EST
-    },
     "update-xpro-courses-every-1-days": {
         "task": "learning_resources.tasks.get_xpro_data",
         "schedule": crontab(minute=0, hour=5),  # 1:00am EST

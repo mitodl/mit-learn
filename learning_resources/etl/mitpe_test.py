@@ -176,13 +176,6 @@ EXPECTED_PROGRAMS = [
 
 
 @pytest.fixture
-def prof_ed_settings(settings):
-    """Fixture to set Professional Education API URL"""
-    settings.MITPE_API_ENABLED = True
-    return settings
-
-
-@pytest.fixture
 def mock_fetch_data(mocker):
     """Mock fetch_data function"""
 
@@ -204,7 +197,6 @@ def mock_fetch_data(mocker):
 def test_extract(settings, mock_fetch_data, prof_ed_api_url):
     """Test extract function"""
     settings.MITPE_BASE_URL = prof_ed_api_url
-    settings.MITPE_API_ENABLED = True
     expected = []
     for page in range(3):
         with Path.open(
@@ -221,7 +213,7 @@ def test_extract(settings, mock_fetch_data, prof_ed_api_url):
 
 
 @pytest.mark.django_db
-def test_transform(mock_fetch_data, prof_ed_settings):
+def test_transform(mock_fetch_data):
     """Test transform function, and effectively most other functions"""
     offeror = LearningResourceOfferorFactory.create(code="mitpe")
     LearningResourceTopicMappingFactory.create(
@@ -241,9 +233,3 @@ def test_transform(mock_fetch_data, prof_ed_settings):
         sorted(courses, key=lambda course: course["readable_id"]), EXPECTED_COURSES
     )
     assert_json_equal(programs, EXPECTED_PROGRAMS)
-
-
-def test_enabled_flag(prof_ed_settings, settings):
-    """Extract should return empty lists if the MITPE_API_ENABLED flag is False"""
-    settings.MITPE_API_ENABLED = False
-    assert mitpe.extract() == []

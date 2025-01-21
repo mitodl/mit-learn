@@ -289,10 +289,6 @@
       "description": "URL to MicroMasters catalog API",
       "required": "false"
     },
-    "MITPE_API_ENABLED": {
-      "description": "Whether MIT Professional Education ETL should be enabled",
-      "required": "false"
-    },
     "MITPE_BASE_URL": {
       "description": "Base URL for MIT Professional Education website",
       "required": "false"
@@ -541,10 +537,6 @@
     },
     "PODCAST_FETCH_SCHEDULE_SECONDS": {
       "description": "The time in seconds between periodic syncs of podcasts",
-      "required": false
-    },
-    "PROLEARN_CATALOG_API_URL": {
-      "description": "Base URL for the Prolearn search API",
       "required": false
     },
     "RECAPTCHA_SITE_KEY": {
