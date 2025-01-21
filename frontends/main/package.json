@@ -11,8 +11,6 @@
   },
   "dependencies": {
     "@ebay/nice-modal-react": "^1.2.13",
-    "@emotion/cache": "^11.13.1",
-    "@emotion/styled": "^11.11.0",
     "@mitodl/course-search-utils": "3.3.2",
     "@mitodl/smoot-design": "^0.0.0-preview215f7ae3fa",
     "@mui/material": "^6.4.0",

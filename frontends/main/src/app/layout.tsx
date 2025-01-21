@@ -3,10 +3,11 @@ import Header from "@/page-components/Header/Header"
 import Footer from "@/page-components/Footer/Footer"
 import { PageWrapper, PageWrapperInner } from "./styled"
 import Providers from "./providers"
-import { MITLearnGlobalStyles } from "ol-components"
+// import { MITLearnGlobalStyles } from "ol-components"
 import Script from "next/script"
 
 import "./GlobalStyles"
+import "@mui/material-pigment-css/styles.css"
 
 const { NEXT_PUBLIC_ORIGIN } = process.env
 
@@ -38,7 +39,7 @@ export default function RootLayout({
       </head>
       <body>
         <Providers>
-          <MITLearnGlobalStyles />
+          {/* <MITLearnGlobalStyles /> */}
           <PageWrapper>
             <Header />
             <PageWrapperInner>{children}</PageWrapperInner>

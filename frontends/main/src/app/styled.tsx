@@ -1,6 +1,6 @@
 "use client"
 
-import { styled } from "ol-components"
+import { styled, theme } from "ol-components"
 
 /*
  * Use in server components gives:
@@ -8,7 +8,7 @@ import { styled } from "ol-components"
  * Solution for now is to "use client", though I would expect these to be prerendered
  */
 
-export const PageWrapper = styled.div(({ theme }) => ({
+export const PageWrapper = styled.div({
   display: "flex",
   flexDirection: "column",
   height: "calc(100vh - 72px)",
@@ -17,7 +17,7 @@ export const PageWrapper = styled.div(({ theme }) => ({
     marginTop: "60px",
     height: "calc(100vh - 60px)",
   },
-}))
+})
 
 export const PageWrapperInner = styled.main({
   flex: "1",

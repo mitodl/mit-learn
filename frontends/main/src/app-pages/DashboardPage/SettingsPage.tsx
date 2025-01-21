@@ -1,9 +1,9 @@
 import React from "react"
 import {
+  styled,
   PlainList,
   Typography,
   Link,
-  styled,
   Button,
   Dialog,
   DialogActions,
@@ -14,6 +14,7 @@ import {
   useSearchSubscriptionList,
 } from "api/hooks/searchSubscription"
 import * as NiceModal from "@ebay/nice-modal-react"
+
 const SOURCE_LABEL_DISPLAY = {
   topic: "Topic",
   unit: "MIT Unit",

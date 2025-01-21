@@ -152,33 +152,41 @@ const TopicLink = styled(Link)({
   textDecoration: "underline",
 })
 
-const TrendingChip = styled(ChipLink)(({ theme, variant }) => [
-  {
+const TrendingChip = styled(ChipLink)<{ variant: SearchChip["variant"] }>(
+  ({ theme }) => ({
     height: "32px",
     padding: "8px 16px",
     ".MuiChip-icon": {
       marginRight: "4px",
     },
-  },
-  variant === "outlinedWhite" && {
-    borderColor: theme.custom.colors.lightGray2,
-    color: theme.custom.colors.silverGrayDark,
-    "&:hover": {
-      backgroundColor: `${theme.custom.colors.lightGray1} !important`,
-      borderColor: `${theme.custom.colors.silverGrayLight} !important`,
-      color: theme.custom.colors.darkGray2,
-    },
-  },
-  variant === "outlined" && {
-    backgroundColor: theme.custom.colors.lightGray2,
-    color: theme.custom.colors.darkGray2,
-    borderColor: theme.custom.colors.lightGray2,
-    "&:hover": {
-      backgroundColor: `${theme.custom.colors.lightGray2} !important`,
-      borderColor: theme.custom.colors.silverGray,
-    },
-  },
-])
+    variants: [
+      {
+        props: { variant: "outlinedWhite" },
+        style: {
+          borderColor: theme.custom.colors.lightGray2,
+          color: theme.custom.colors.silverGrayDark,
+          "&:hover": {
+            backgroundColor: `${theme.custom.colors.lightGray1} !important`,
+            borderColor: `${theme.custom.colors.silverGrayLight} !important`,
+            color: theme.custom.colors.darkGray2,
+          },
+        },
+      },
+      {
+        props: { variant: "outlined" },
+        style: {
+          backgroundColor: theme.custom.colors.lightGray2,
+          color: theme.custom.colors.darkGray2,
+          borderColor: theme.custom.colors.lightGray2,
+          "&:hover": {
+            backgroundColor: `${theme.custom.colors.lightGray2} !important`,
+            borderColor: theme.custom.colors.silverGray,
+          },
+        },
+      },
+    ],
+  }),
+)
 
 const TrendingContainer = styled.div({
   display: "flex",

@@ -141,7 +141,9 @@ const getChannelDetails = (channel: Channel) => {
 }
 const InfoLabel = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.mitRed,
+  marginBottom: theme.typography.pxToRem(4),
 }))
+
 const ChannelDetailsCard = styled.div(({ theme }) => ({
   borderRadius: "12px",
   backgroundColor: "white",
@@ -187,12 +189,7 @@ const ChannelDetails: React.FC<ChannelDetailsProps> = (props) => {
 
         return (
           <div key={value.title}>
-            <InfoLabel
-              variant="subtitle2"
-              sx={{ marginBottom: (theme) => theme.typography.pxToRem(4) }}
-            >
-              {value.title}
-            </InfoLabel>
+            <InfoLabel variant="subtitle2">{value.title}</InfoLabel>
             <Typography variant="body3" color="text.secondary">
               {Array.isArray(label) ? label.join(" | ") : label}
             </Typography>

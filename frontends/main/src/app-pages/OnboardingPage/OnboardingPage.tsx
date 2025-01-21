@@ -87,23 +87,21 @@ const NavControls = styled.div({
   },
 })
 
-const StepPill = styled.div<{ ownerState: StepIconProps }>(
-  ({ theme, ownerState }) => ({
-    backgroundColor:
-      ownerState.active || ownerState.completed
-        ? theme.custom.colors.red
-        : theme.custom.colors.silverGrayLight,
-    height: "8px",
-    borderRadius: "4px",
-    width: "64px",
-    [theme.breakpoints.only("sm")]: {
-      width: "48px",
-    },
-    [theme.breakpoints.only("xs")]: {
-      width: "24px",
-    },
-  }),
-)
+const StepPill = styled.div<{ ownerState: StepIconProps }>(({ theme }) => ({
+  backgroundColor: ({ ownerState }) =>
+    ownerState.active || ownerState.completed
+      ? theme.custom.colors.red
+      : theme.custom.colors.silverGrayLight,
+  height: "8px",
+  borderRadius: "4px",
+  width: "64px",
+  [theme.breakpoints.only("sm")]: {
+    width: "48px",
+  },
+  [theme.breakpoints.only("xs")]: {
+    width: "24px",
+  },
+}))
 
 function StepIcon(props: StepIconProps) {
   return <StepPill ownerState={props} />

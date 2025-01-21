@@ -1,6 +1,6 @@
 import React from "react"
 import { RiAccountCircleFill } from "@remixicon/react"
-import { TruncateText, styled, theme } from "ol-components"
+import { TruncateText, styled } from "ol-components"
 import type { Attestation } from "api/v0"
 import Image from "next/image"
 
@@ -26,102 +26,122 @@ const StyledRiAccountCircleFill = styled(RiAccountCircleFill)({
 })
 
 const AttestantBlockContainer = styled.cite<AttestantBlockChildProps>(
-  (props) => {
-    const flexDir = props.avatarPosition === "end" ? "row-reverse" : "row"
-
-    return [
+  ({ theme }) => ({
+    display: "flex",
+    flexShrink: 0,
+    ...theme.typography.body3,
+    [theme.breakpoints.down("sm")]: {
+      width: "100%",
+      height: "56px",
+      marginLeft: "0px",
+    },
+    variants: [
       {
-        display: "flex",
-        flexShrink: 0,
-        flexDirection: flexDir,
-        width: props.avatarPosition === "end" ? "100%" : "300px",
-        marginLeft: props.avatarPosition === "end" ? "0px" : "24px",
-        ...theme.typography.body3,
-        [theme.breakpoints.down("sm")]: {
-          width: "100%",
-          height: "56px",
-          marginTop: props.avatarPosition === "end" ? "0px" : "24px",
-          marginLeft: "0px",
+        props: { avatarPosition: "start" },
+        style: {
+          flexDirection: "row",
+          width: 300,
+          marginLeft: 24,
+          [theme.breakpoints.down("sm")]: {
+            marginTop: 24,
+          },
         },
       },
-    ]
-  },
+      {
+        props: { avatarPosition: "end" },
+        style: {
+          flexDirection: "row-reverse",
+          width: "100%",
+          marginLeft: 0,
+          [theme.breakpoints.down("sm")]: {
+            marginTop: 0,
+          },
+        },
+      },
+    ],
+  }),
 )
 
-const AttestantAvatar = styled.div<AttestantBlockChildProps>((props) => {
-  return [
+const AttestantAvatar = styled.div<AttestantBlockChildProps>(({ theme }) => ({
+  img: {
+    objectFit: "cover",
+    borderRadius: "50%",
+    background: theme.custom.colors.white,
+    width: "40px",
+    height: "40px",
+    boxShadow:
+      "0px 2px 4px 0px rgba(37, 38, 43, 0.10), 0px 2px 4px 0px rgba(37, 38, 43, 0.10)",
+  },
+  [theme.breakpoints.down("sm")]: {
+    display: ({ avatarStyle }) =>
+      avatarStyle === "homepage" ? "none" : "block",
+  },
+  variants: [
     {
-      marginRight: props.avatarPosition === "end" ? "0px" : "12px",
-      marginLeft: props.avatarPosition === "end" ? "14px" : "0px",
-      img: {
-        objectFit: "cover",
-        borderRadius: "50%",
-        background: theme.custom.colors.white,
-        width: "40px",
-        height: "40px",
-        boxShadow:
-          "0px 2px 4px 0px rgba(37, 38, 43, 0.10), 0px 2px 4px 0px rgba(37, 38, 43, 0.10)",
-      },
-      [theme.breakpoints.down("sm")]: {
-        display: props.avatarStyle === "homepage" ? "none" : "block",
+      props: { avatarPosition: "start" },
+      style: {
+        marginLeft: 0,
+        marginRight: 12,
       },
     },
-  ]
-})
+    {
+      props: { avatarPosition: "end" },
+      style: {
+        marginLeft: 14,
+        marginRight: 0,
+      },
+    },
+  ],
+}))
 
-const AttestantNameBlock = styled.div<AttestantBlockChildProps>((props) => {
-  return [
-    {
-      flexGrow: "1",
-      width: "auto",
-      textAlign: props.avatarPosition === "end" ? "end" : "start",
-      color:
-        props.color === "light"
-          ? theme.custom.colors.lightGray2
-          : theme.custom.colors.silverGrayDark,
-    },
-  ]
-})
+const AttestantNameBlock = styled.div<AttestantBlockChildProps>(
+  ({ theme }) => ({
+    flexGrow: "1",
+    width: "auto",
+    textAlign: ({ avatarPosition }) => avatarPosition,
+    color: ({ color }) =>
+      color === "light"
+        ? theme.custom.colors.lightGray2
+        : theme.custom.colors.silverGrayDark,
+  }),
+)
 
-const AttestantName = styled.div<AttestantBlockChildProps>((props) => {
-  const desktopFont =
-    props.variant === "standard"
-      ? theme.typography.h5
-      : theme.typography.subtitle1
-  return [
+const AttestantName = styled.div<AttestantBlockChildProps>(({ theme }) => ({
+  ...theme.typography.subtitle1,
+  whiteSpace: "nowrap",
+  lineHeight: "125%",
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.subtitle1,
+  },
+  variants: [
     {
-      ...desktopFont,
-      whiteSpace: "nowrap",
-      color:
-        props.color === "light"
-          ? theme.custom.colors.white
-          : theme.custom.colors.darkGray2,
-      lineHeight: "125%",
-      [theme.breakpoints.down("sm")]: {
-        ...theme.typography.subtitle1,
-      },
+      props: { variant: "standard" },
+      style: theme.typography.h5,
     },
-  ]
-})
+    {
+      props: { color: "light" },
+      style: { color: theme.custom.colors.white },
+    },
+  ],
+}))
 
-const AttestantTitle = styled.div<AttestantBlockChildProps>((props) => {
-  const desktopFont =
-    props.variant === "standard"
-      ? theme.typography.body1
-      : theme.typography.body3
-  return [
+const AttestantTitle = styled.div<AttestantBlockChildProps>(({ theme }) => ({
+  ...theme.typography.body3,
+  color: theme.custom.colors.silverGrayDark,
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.body2,
+  },
+  variants: [
     {
-      ...desktopFont,
-      color:
-        props.color === "light"
-          ? theme.custom.colors.lightGray2
-          : theme.custom.colors.silverGrayDark,
-      [theme.breakpoints.down("sm")]: {
-        ...theme.typography.body2,
-      },
+      props: { variant: "standard" },
+      style: theme.typography.body1,
     },
-  ]
-})
+    {
+      props: { color: "light" },
+      style: { color: theme.custom.colors.lightGray2 },
+    },
+  ],
+}))
 
 const AttestantBlock: React.FC<AttestantBlockProps> = ({
   attestation,

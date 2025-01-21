@@ -1,6 +1,6 @@
 import * as React from "react"
 import type { Meta, StoryObj } from "@storybook/react"
-import styled from "@emotion/styled"
+import { styled } from "@pigment-css/react"
 import { send } from "./mock-send"
 
 import { NluxAiChat } from "./AiChat"

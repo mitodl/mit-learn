@@ -2,13 +2,13 @@
 
 import React, { useCallback, useMemo } from "react"
 import {
+  styled,
   Button,
   SimpleMenu,
   Grid,
   LoadingSpinner,
   BannerPage,
   Container,
-  styled,
   Typography,
   PlainList,
   LearningResourceListCard,

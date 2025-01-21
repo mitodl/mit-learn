@@ -99,18 +99,16 @@ const TopicCounts = styled.div(({ theme }) => ({
   gap: "8px",
 }))
 
-const ChildTopicsContainer = styled.div<{ mobile: boolean }>(
-  ({ theme, mobile }) => ({
-    marginTop: "16px",
-    flexWrap: "wrap",
-    gap: "12px",
-    display: mobile ? "none" : "flex",
-    [theme.breakpoints.down("sm")]: {
-      display: mobile ? "flex" : "none",
-      gap: "8px",
-    },
-  }),
-)
+const ChildTopicsContainer = styled.div<{ mobile: boolean }>(({ theme }) => ({
+  marginTop: "16px",
+  flexWrap: "wrap",
+  gap: "12px",
+  display: ({ mobile }) => (mobile ? "none" : "flex"),
+  [theme.breakpoints.down("sm")]: {
+    display: ({ mobile }) => (mobile ? "flex" : "none"),
+    gap: "8px",
+  },
+}))
 
 type TopicBoxProps = {
   topicGroup: TopicGroup

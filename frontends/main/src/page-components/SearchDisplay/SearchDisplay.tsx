@@ -8,7 +8,7 @@ import {
   Typography,
   Button,
   SimpleSelect,
-  truncateText,
+  // truncateText,
   css,
   Drawer,
   Checkbox,
@@ -139,7 +139,7 @@ const FacetStyles = styled.div`
     align-items: baseline;
 
     .facet-text {
-      ${truncateText(1)};
+      $-{truncateText(1)}- TODO pigment;
       color: ${({ theme }) => theme.custom.colors.silverGrayDark};
     }
   }

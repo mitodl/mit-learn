@@ -9,7 +9,7 @@ const generatePath = (
       throw new Error(`Missing parameter '${key}'`)
     }
     return encodeURIComponent(params[key] as string)
-  })
+  });
 }
 
 export const HOME = "/"

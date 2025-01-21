@@ -1,13 +1,6 @@
 import React from "react"
 import Link from "next/link"
-import {
-  Container,
-  styled,
-  theme,
-  Typography,
-  ButtonLink,
-  TypographyProps,
-} from "ol-components"
+import { Container, styled, theme, Typography, ButtonLink } from "ol-components"
 import { useLearningResourceTopics } from "api/hooks/learningResources"
 import { RiArrowRightLine } from "@remixicon/react"
 import RootTopicIcon from "@/components/RootTopicIcon/RootTopicIcon"
@@ -25,7 +18,7 @@ const Section = styled.section`
   }
 `
 
-const Title = styled(Typography)<Pick<TypographyProps, "component">>`
+const Title = styled(Typography)`
   text-align: center;
 `
 

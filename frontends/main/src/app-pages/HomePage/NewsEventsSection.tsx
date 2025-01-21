@@ -1,13 +1,13 @@
 import React from "react"
 import {
   Container,
-  styled,
   theme,
   Typography,
   Grid2,
   Card,
   TypographyProps,
 } from "ol-components"
+import { styled } from "@pigment-css/react"
 import {
   useNewsEventsList,
   NewsEventsListFeedTypeEnum,
