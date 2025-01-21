@@ -1,10 +1,9 @@
 "use client"
 
 import React from "react"
-import { css, Global } from "@emotion/react"
-import { theme } from "./ThemeProvider"
+import { css, Global, Theme } from "@emotion/react"
 
-const pageCss = css`
+const pageCss = (theme: Theme) => css`
   html {
     font-family: ${theme.typography.body1.fontFamily};
     color: ${theme.typography.body1.color};
@@ -39,7 +38,7 @@ const pageCss = css`
 `
 
 const MITLearnGlobalStyles: React.FC = () => {
-  return <Global styles={[pageCss]}></Global>
+  return <Global styles={pageCss}></Global>
 }
 
 export { MITLearnGlobalStyles }
