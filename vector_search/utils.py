@@ -178,6 +178,13 @@ def _get_text_splitter(encoder):
     """
     Get the text splitter to use based on the encoder
     """
+    if settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE:
+        return RecursiveCharacterTextSplitter(
+            chunk_size=settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE,
+            chunk_overlap=settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP,
+            add_start_index=True,
+            separators=["\n\n", "\n", ".", " ", ""],
+        )
     if hasattr(encoder, "token_encoding_name") and encoder.token_encoding_name:
         # leverage tiktoken to ensure we stay within token limits
         return TokenTextSplitter(encoding_name=encoder.token_encoding_name)
@@ -185,7 +192,7 @@ def _get_text_splitter(encoder):
         # default for use with fastembed
         return RecursiveCharacterTextSplitter(
             chunk_size=512,
-            chunk_overlap=50,
+            chunk_overlap=settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP,
             add_start_index=True,
             separators=["\n\n", "\n", ".", " ", ""],
         )
