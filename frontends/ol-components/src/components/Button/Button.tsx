@@ -1,7 +1,7 @@
 import React from "react"
 import styled from "@emotion/styled"
 import { css } from "@emotion/react"
-import { pxToRem } from "../ThemeProvider/typography"
+import { pxToRem } from "../theme/typography"
 import tinycolor from "tinycolor2"
 import Link from "next/link"
 import type { Theme, ThemeOptions } from "@mui/material/styles"
@@ -398,12 +398,17 @@ type ActionButtonLinkProps = ActionButtonProps &
     rawAnchor?: boolean
     href: string
   }
-const ActionButtonLink = ActionButton.withComponent(
-  ({ rawAnchor, ...props }: ButtonLinkProps) => {
-    const Component = rawAnchor ? "a" : Link
-    return <Component {...props} />
-  },
-)
+
+const ActionButtonLink: React.FC<ActionButtonLinkProps> = ({
+  rawAnchor,
+  href,
+  ...props
+}) => {
+  const Component = rawAnchor ? "a" : Link
+
+  return <Component href={href} {...props} />
+}
+
 ActionButtonLink.displayName = "ActionButtonLink"
 
 export { Button, ButtonLink, ActionButton, ActionButtonLink }

@@ -1,6 +1,6 @@
 import React from "react"
 import { styled } from "@pigment-css/react"
-import { theme } from "../ThemeProvider/ThemeProvider"
+import { theme } from "../theme/theme"
 import { LearningResource } from "api"
 import {
   allRunsAreIdentical,

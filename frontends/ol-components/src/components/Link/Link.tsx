@@ -1,8 +1,8 @@
 import React from "react"
-import styled from "@emotion/styled"
+import { styled } from "@pigment-css/react"
 import { css } from "@emotion/react"
 import { default as NextLink } from "next/link"
-import { theme } from "../ThemeProvider/ThemeProvider"
+import { theme } from "../theme/theme"
 import invariant from "tiny-invariant"
 
 type LinkStyleProps = {

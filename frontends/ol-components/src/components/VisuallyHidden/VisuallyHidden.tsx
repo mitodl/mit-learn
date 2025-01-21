@@ -1,4 +1,4 @@
-import styled from "@emotion/styled"
+import { styled } from "@pigment-css/react"
 
 /**
  * VisuallyHidden is a utility component that hides its children from sighted

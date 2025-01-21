@@ -1,9 +1,9 @@
 import React from "react"
-import styled from "@emotion/styled"
+import { styled } from "@pigment-css/react"
 import Typography from "@mui/material/Typography"
 import Container from "@mui/material-pigment-css/Container"
 import { ResponsiveStyleValue, SxProps } from "@mui/system"
-import { Theme } from "../ThemeProvider/ThemeProvider"
+import { theme } from "../theme/theme"
 
 const DEFAULT_BACKGROUND_IMAGE_URL = "/images/backgrounds/background_steps.jpg"
 
@@ -97,13 +97,13 @@ type BannerProps = BannerBackgroundProps & {
   avatar?: React.ReactNode
   title?: React.ReactNode
   titleTypography?: ResponsiveStyleValue<string | undefined>
-  titleStyles?: SxProps<Theme>
+  titleStyles?: SxProps<typeof theme>
   header: React.ReactNode
   headerTypography?: ResponsiveStyleValue<string | undefined>
-  headerStyles?: SxProps<Theme>
+  headerStyles?: SxProps<typeof theme>
   subHeader?: React.ReactNode
   subHeaderTypography?: ResponsiveStyleValue<string | undefined>
-  subHeaderStyles?: SxProps<Theme>
+  subHeaderStyles?: SxProps<typeof theme>
   extraHeader?: React.ReactNode
   extraActions?: React.ReactNode
 }

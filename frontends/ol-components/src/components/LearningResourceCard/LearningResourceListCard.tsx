@@ -19,7 +19,7 @@ import {
 } from "ol-utilities"
 import { ListCard } from "../Card/ListCard"
 import { ActionButtonProps } from "../Button/Button"
-import { theme } from "../ThemeProvider/ThemeProvider"
+import { theme } from "../theme/theme"
 
 const IMAGE_SIZES = {
   mobile: { width: 116, height: 104 },

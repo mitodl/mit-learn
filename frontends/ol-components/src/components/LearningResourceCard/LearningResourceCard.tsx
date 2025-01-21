@@ -20,7 +20,7 @@ import { Card } from "../Card/Card"
 import type { Size } from "../Card/Card"
 import { ActionButton, ActionButtonProps } from "../Button/Button"
 import { imgConfigs } from "../../constants/imgConfigs"
-import { theme } from "../ThemeProvider/ThemeProvider"
+import { theme } from "../theme/theme"
 import Tooltip from "@mui/material/Tooltip"
 
 const SkeletonImage = styled(Skeleton)<{ aspect: number }>({

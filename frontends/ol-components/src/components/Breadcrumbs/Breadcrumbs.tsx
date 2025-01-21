@@ -2,7 +2,6 @@ import React from "react"
 import { styled } from "@pigment-css/react"
 import { RiArrowRightSLine } from "@remixicon/react"
 import { Link } from "../Link/Link"
-import { theme } from "../ThemeProvider/ThemeProvider"
 
 const BreadcrumbsContainer = styled.span({
   display: "inline-flex",
@@ -35,25 +34,25 @@ const Separator = styled(RiArrowRightSLine)({
   height: "16px",
 })
 
-const LightSeparator = styled(Separator)({
+const LightSeparator = styled(Separator)(({ theme }) => ({
   color: theme.custom.colors.silverGrayLight,
-})
+}))
 
-const DarkSeparator = styled(Separator)({
+const DarkSeparator = styled(Separator)(({ theme }) => ({
   color: theme.custom.colors.silverGray,
-})
+}))
 
-const Current = styled(BreadcrumbText)({
+const Current = styled(BreadcrumbText)(({ theme }) => ({
   ...theme.typography.body3,
-})
+}))
 
-const LightCurrent = styled(Current)({
+const LightCurrent = styled(Current)(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
-})
+}))
 
-const DarkCurrent = styled(Current)({
+const DarkCurrent = styled(Current)(({ theme }) => ({
   color: theme.custom.colors.silverGrayLight,
-})
+}))
 
 type BreadcrumbsProps = {
   variant: "light" | "dark"

@@ -8,7 +8,7 @@ import Stack from "@mui/material/Stack"
 import TabPanel from "@mui/lab/TabPanel"
 import Typography from "@mui/material/Typography"
 import { faker } from "@faker-js/faker/locale/en"
-import Container from "@mui/material/Container"
+import Container from "@mui/material-pigment-css/Container"
 import { TabListProps } from "@mui/lab/TabList"
 import { usePathname } from "next/navigation"
 

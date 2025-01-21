@@ -5,7 +5,7 @@ import { Popover } from "./Popover"
 import type { PopoverProps } from "./Popover"
 import { Button } from "../Button/Button"
 import Typography from "@mui/material/Typography"
-import styled from "@emotion/styled"
+import { styled } from "@pigment-css/react"
 
 const ScrollWrapper = styled.div({
   width: "250px",

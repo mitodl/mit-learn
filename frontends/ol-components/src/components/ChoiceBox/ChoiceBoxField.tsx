@@ -4,7 +4,7 @@ import FormControl from "@mui/material/FormControl"
 import FormGroup from "@mui/material/FormGroup"
 import FormLabel from "@mui/material/FormLabel"
 import Grid, { type GridProps } from "@mui/material/Grid"
-import { theme } from "../ThemeProvider/ThemeProvider"
+import { theme } from "../theme/theme"
 import { ChoiceBox } from "./ChoiceBox"
 import type {
   ChoiceBoxGridProps,

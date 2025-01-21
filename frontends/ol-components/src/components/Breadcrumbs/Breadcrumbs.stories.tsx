@@ -1,7 +1,7 @@
 import React from "react"
 import type { Meta, StoryObj } from "@storybook/react"
 import { Breadcrumbs, BreadcrumbsProps } from "./Breadcrumbs"
-import styled from "@emotion/styled"
+import { styled } from "@pigment-css/react"
 
 const meta: Meta<typeof Breadcrumbs> = {
   title: "smoot-design/Breadcrumbs",

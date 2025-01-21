@@ -1,15 +1,14 @@
 import React from "react"
 import type { Meta, StoryObj } from "@storybook/react"
 import { RoutedDrawer } from "./RoutedDrawer"
-import styled from "@emotion/styled"
-import { theme } from "../ThemeProvider/ThemeProvider"
+import { styled } from "@pigment-css/react"
 
-const Content = styled.div({
+const Content = styled.div(({ theme }) => ({
   width: 400,
   padding: 80,
   color: theme.palette.primary.main,
   borderShadow: "3 4 12 rgb(0 0 0 / 36%)",
-})
+}))
 
 const meta: Meta<typeof RoutedDrawer> = {
   title: "smoot-design/RoutedDrawer",

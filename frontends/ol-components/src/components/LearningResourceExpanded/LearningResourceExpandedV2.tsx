@@ -19,7 +19,7 @@ import {
   RiTwitterXLine,
 } from "@remixicon/react"
 import type { ImageConfig } from "../../constants/imgConfigs"
-import { theme } from "../ThemeProvider/ThemeProvider"
+import { theme } from "../theme/theme"
 import { PlatformLogo, PLATFORM_LOGOS } from "../Logo/Logo"
 import InfoSectionV2 from "./InfoSectionV2"
 import type { User } from "api/hooks/user"
@@ -101,18 +101,19 @@ const ImageContainer = styled.div({
   width: "100%",
 })
 
-const Image = styled(NextImage)<{ aspect: number }>`
-  position: relative !important;
-  border-radius: 8px;
-  width: 100%;
-  aspect-ratio: ${({ aspect }) => aspect};
-  object-fit: cover;
-`
+const Image = styled(NextImage)<{ aspect: number }>({
+  // position: "relative !important", // TODO pigment how to specify !important
+  position: "relative",
+  borderRadius: 8,
+  width: "100%",
+  objectFit: "cover",
+  aspectRatio: ({ aspect }) => aspect,
+})
 
-const SkeletonImage = styled(Skeleton)<{ aspect: number }>((aspect) => ({
+const SkeletonImage = styled(Skeleton)<{ aspect: number }>({
   borderRadius: "8px",
-  paddingBottom: `${100 / aspect.aspect}%`,
-}))
+  paddingBottom: ({ aspect }) => `${100 / aspect}%`,
+})
 
 const CallToAction = styled.div({
   display: "flex",
@@ -216,13 +217,13 @@ const ButtonContainer = styled.div({
   justifyContent: "center",
 })
 
-const SelectableButton = styled(Button)<{ selected?: boolean }>((props) => [
-  {
-    flex: 1,
-    whiteSpace: "nowrap",
-  },
-  props.selected
-    ? {
+const SelectableButton = styled(Button)<{ selected?: boolean }>({
+  flex: 1,
+  whiteSpace: "nowrap",
+  variants: [
+    {
+      props: { selected: true },
+      style: {
         backgroundColor: theme.custom.colors.red,
         border: `1px solid ${theme.custom.colors.red}`,
         color: theme.custom.colors.white,
@@ -231,9 +232,10 @@ const SelectableButton = styled(Button)<{ selected?: boolean }>((props) => [
           border: `1px solid ${theme.custom.colors.red}`,
           color: theme.custom.colors.white,
         },
-      }
-    : {},
-])
+      },
+    },
+  ],
+})
 
 const ShareContainer = styled.div({
   display: "flex",

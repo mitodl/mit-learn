@@ -7,7 +7,7 @@ import React, {
 } from "react"
 import { styled } from "@pigment-css/react"
 import { RiDraggable } from "@remixicon/react"
-import { theme } from "../ThemeProvider/ThemeProvider"
+import { theme } from "../theme/theme"
 import { BaseContainer, useClickChildLink } from "./Card"
 import { TruncateText } from "../TruncateText/TruncateText"
 import {
@@ -24,7 +24,7 @@ import type { Card as BaseCard, TitleProps } from "./ListCard"
 const Container = styled(BaseContainer)<{ draggable?: boolean }>({
   variants: [
     {
-      props: ({ draggable }) => !!draggable,
+      props: { draggable: true },
       style: {
         display: "flex",
         flexDirection: "row",

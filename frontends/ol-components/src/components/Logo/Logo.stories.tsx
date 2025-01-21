@@ -2,7 +2,7 @@ import React from "react"
 import type { Meta, StoryObj } from "@storybook/react"
 import { PlatformLogo, PLATFORM_LOGOS } from "./Logo"
 import Grid from "@mui/material/Grid"
-import styled from "@emotion/styled"
+import { styled } from "@pigment-css/react"
 import { PlatformEnum } from "api"
 
 type StoryProps = { showIconBackground?: boolean; iconHeight?: string }

@@ -2,7 +2,7 @@ import React from "react"
 import { Checkbox, CheckboxProps } from "./Checkbox"
 import FormControl from "@mui/material/FormControl"
 import FormLabel from "@mui/material/FormLabel"
-import styled from "@emotion/styled"
+import { styled } from "@pigment-css/react"
 
 export type CheckboxChoiceFieldProps = {
   label?: React.ReactNode // We could make this optional, but we should demand one of (label, aria-label, aria-labelledby)

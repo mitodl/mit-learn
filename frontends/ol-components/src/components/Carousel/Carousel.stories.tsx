@@ -1,7 +1,7 @@
 import React from "react"
 import type { Meta, StoryObj } from "@storybook/react"
 import { Carousel } from "./Carousel"
-import styled from "@emotion/styled"
+import { styled } from "@pigment-css/react"
 import { theme } from "../ThemeProvider/ThemeProvider"
 
 const Panel = styled.div({

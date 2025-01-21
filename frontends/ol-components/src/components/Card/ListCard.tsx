@@ -5,9 +5,9 @@ import React, {
   isValidElement,
   AriaAttributes,
 } from "react"
-import styled from "@emotion/styled"
+import { styled } from "@pigment-css/react"
 import { RiDraggable } from "@remixicon/react"
-import { theme } from "../ThemeProvider/ThemeProvider"
+import { theme } from "../theme/theme"
 import { BaseContainer, ImageProps, useClickChildLink, Linkable } from "./Card"
 import { TruncateText } from "../TruncateText/TruncateText"
 import { ActionButton, ActionButtonProps } from "../Button/Button"

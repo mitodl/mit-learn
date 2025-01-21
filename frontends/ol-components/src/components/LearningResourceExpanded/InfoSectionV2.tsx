@@ -32,7 +32,7 @@ import {
   showStartAnytime,
   NoSSR,
 } from "ol-utilities"
-import { theme } from "../ThemeProvider/ThemeProvider"
+import { theme } from "../theme/theme"
 import DifferingRunsTable from "./DifferingRunsTable"
 import { Link } from "../Link/Link"
 

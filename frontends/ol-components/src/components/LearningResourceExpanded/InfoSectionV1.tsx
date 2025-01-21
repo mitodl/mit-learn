@@ -22,7 +22,7 @@ import {
   getLearningResourcePrices,
   getReadableResourceType,
 } from "ol-utilities"
-import { theme } from "../ThemeProvider/ThemeProvider"
+import { theme } from "../theme/theme"
 import Typography from "@mui/material/Typography"
 import type { User } from "api/hooks/user"
 import { CardActionButton } from "../LearningResourceCard/LearningResourceListCard"

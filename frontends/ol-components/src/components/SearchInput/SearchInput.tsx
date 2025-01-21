@@ -2,7 +2,7 @@ import React from "react"
 import { RiSearch2Line, RiCloseLine } from "@remixicon/react"
 import { Input, AdornmentButton } from "../Input/Input"
 import type { InputProps } from "../Input/Input"
-import styled from "@emotion/styled"
+import { styled } from "@pigment-css/react"
 
 const StyledInput = styled(Input)(({ theme }) => ({
   boxShadow: "0px 8px 20px 0px rgba(120, 147, 172, 0.10)",

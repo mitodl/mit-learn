@@ -5,7 +5,7 @@ import {
   LearningResourceCardProps,
 } from "./LearningResourceCard"
 import { LearningResource } from "api"
-import styled from "@emotion/styled"
+import { styled } from "@pigment-css/react"
 import Stack from "@mui/system/Stack"
 import _ from "lodash"
 import { resources, courses, resourceArgType } from "./testUtils"

@@ -3,7 +3,7 @@
 import React, { useEffect } from "react"
 import { styled } from "@pigment-css/react"
 import { default as MuiAlert, AlertColor } from "@mui/material/Alert"
-import { theme } from "../ThemeProvider/ThemeProvider"
+import { theme } from "../theme/theme"
 import type { AlertProps as MuiAlertProps } from "@mui/material/Alert"
 
 type Colors = {

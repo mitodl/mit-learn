@@ -8,8 +8,8 @@ import React, {
   AriaAttributes,
 } from "react"
 import { styled } from "@pigment-css/react"
-import { theme } from "../ThemeProvider/ThemeProvider"
-import { pxToRem } from "../ThemeProvider/typography"
+import { theme } from "../theme/theme"
+import { pxToRem } from "../theme/typography"
 import { Link } from "../Link/Link"
 import { default as NextImage, ImageProps as NextImageProps } from "next/image"
 // import { truncateText } from "../TruncateText/TruncateText"

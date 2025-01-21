@@ -1,42 +1,47 @@
 import React from "react"
-import styled from "@emotion/styled"
+import { styled } from "@pigment-css/react"
 import { type GridProps } from "@mui/material/Grid"
 import { Checkbox } from "../Checkbox/Checkbox"
 import { Radio } from "../Radio/Radio"
 
-const Container = styled.label(({ theme }) => {
-  const colors = theme.custom.colors
-  return {
-    margin: 0,
-    position: "relative",
-    padding: "12px 16px",
-    width: "100%",
-    minHeight: "100%",
-    borderRadius: "4px",
-    display: "flex",
-    gap: "2px",
-    justifyContent: "space-between",
-    boxShadow: `inset 0 0 0 1px ${colors.silverGrayLight}`,
-    background: colors.white,
-    "&:hover:not(.checked)": {
-      boxShadow: `inset 0 0 0 1px ${colors.silverGrayDark}`,
-    },
-    "&:hover": {
-      cursor: "pointer",
-    },
-    "&.checked": {
-      boxShadow: `inset 0 0 0 2px ${colors.darkGray2}`,
-    },
-  }
-})
+const Container = styled.label(({ theme }) => ({
+  margin: 0,
+  position: "relative",
+  padding: "12px 16px",
+  width: "100%",
+  minHeight: "100%",
+  borderRadius: "4px",
+  display: "flex",
+  gap: "2px",
+  justifyContent: "space-between",
+  boxShadow: `inset 0 0 0 1px ${theme.custom.colors.silverGrayLight}`,
+  background: theme.custom.colors.white,
+  "&:hover:not(.checked)": {
+    boxShadow: `inset 0 0 0 1px ${theme.custom.colors.silverGrayDark}`,
+  },
+  "&:hover": {
+    cursor: "pointer",
+  },
+  "&.checked": {
+    boxShadow: `inset 0 0 0 2px ${theme.custom.colors.darkGray2}`,
+  },
+}))
 
-const Text = styled.div<{ centered: boolean }>(({ centered }) => ({
+const Text = styled.div<{ centered: boolean }>({
   display: "flex",
   flexDirection: "column",
   gap: "6px",
   wordBreak: "break-word",
-  marginTop: centered ? "3px" : "0",
-}))
+  marginTop: 0,
+  variants: [
+    {
+      props: { centered: true },
+      style: {
+        marginTop: 3,
+      },
+    },
+  ],
+})
 
 const Label = styled.span(({ theme }) => ({
   ...theme.typography.subtitle3,

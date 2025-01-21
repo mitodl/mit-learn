@@ -1,6 +1,6 @@
 import React, { useCallback, useId, useState } from "react"
 import { styled } from "@pigment-css/react"
-import { theme } from "../ThemeProvider/ThemeProvider"
+import { theme } from "../theme/theme"
 import { default as MuiDialog } from "@mui/material/Dialog"
 import type { DialogProps as MuiDialogProps } from "@mui/material/Dialog"
 import { Button, ActionButton } from "../Button/Button"

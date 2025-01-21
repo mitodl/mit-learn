@@ -14,7 +14,7 @@ import {
   showStartAnytime,
 } from "ol-utilities"
 import { RiExternalLinkLine } from "@remixicon/react"
-import { theme } from "../ThemeProvider/ThemeProvider"
+import { theme } from "../theme/theme"
 import { SimpleSelect } from "../SimpleSelect/SimpleSelect"
 import type { SimpleSelectProps } from "../SimpleSelect/SimpleSelect"
 import { PlatformLogo, PLATFORM_LOGOS } from "../Logo/Logo"
@@ -24,17 +24,24 @@ import { LearningResourceCardProps } from "../LearningResourceCard/LearningResou
 import type { ImageConfig } from "../../constants/imgConfigs"
 import VideoFrame from "./VideoFrame"
 
-const Container = styled.div<{ padTop?: boolean }>`
-  display: flex;
-  flex-direction: column;
-  padding: 18px 32px 160px;
-  gap: 20px;
-  ${({ padTop }) => (padTop ? "padding-top: 64px;" : "")}
-  width: 516px;
-  ${({ theme }) => theme.breakpoints.down("sm")} {
-    width: auto;
-  }
-`
+const Container = styled.div<{ padTop?: boolean }>(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  padding: "18px 32px 160px",
+  gap: 20,
+  width: 516,
+  [theme.breakpoints.down("sm")]: {
+    width: "auto",
+  },
+  variants: [
+    {
+      props: ({ padTop }) => !!padTop,
+      style: {
+        paddingTop: 64,
+      },
+    },
+  ],
+}))
 
 const DateContainer = styled.div`
   display: flex;
@@ -77,11 +84,11 @@ const DateLabel = styled.span`
   margin-right: 16px;
 `
 
-const ImageContainer = styled.div<{ aspect: number }>`
-  position: relative;
-  width: 100%;
-  padding-bottom: ${({ aspect }) => 100 / aspect}%;
-`
+const ImageContainer = styled.div<{ aspect: number }>({
+  position: "relative",
+  width: "100%",
+  paddingBottom: ({ aspect }) => `${100 / aspect}%`,
+})
 
 const Image = styled(NextImage)`
   border-radius: 8px;
@@ -89,16 +96,16 @@ const Image = styled(NextImage)`
   object-fit: cover;
 `
 
-const SkeletonImage = styled(Skeleton)<{ aspect: number }>`
-  border-radius: 8px;
-  padding-bottom: ${({ aspect }) => 100 / aspect}%;
-`
+const SkeletonImage = styled(Skeleton)<{ aspect: number }>({
+  borderRadius: 8,
+  paddingBottom: ({ aspect }) => `${100 / aspect}%`,
+})
 
 const CallToAction = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  ${({ theme }) => theme.breakpoints.down("sm")} {
+  ${theme.breakpoints.down("sm")} {
     flex-wrap: wrap;
     justify-content: center;
   }
@@ -107,7 +114,7 @@ const CallToAction = styled.div`
 const StyledLink = styled(ButtonLink)`
   text-align: center;
   width: 224px;
-  ${({ theme }) => theme.breakpoints.down("sm")} {
+  ${theme.breakpoints.down("sm")} {
     width: 100%;
     margin-top: 10px;
     margin-bottom: 10px;
