@@ -1,4 +1,5 @@
 import pytest
+from django.conf import settings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from qdrant_client import models
 from qdrant_client.models import PointStruct
@@ -234,11 +235,27 @@ def test_get_text_splitter(mocker):
     """
     Test that the correct splitter is returned based on encoder
     """
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = None
     encoder = dense_encoder()
     encoder.token_encoding_name = None
     mocked_splitter = mocker.patch("vector_search.utils.TokenTextSplitter")
     splitter = _get_text_splitter(encoder)
     assert isinstance(splitter, RecursiveCharacterTextSplitter)
     encoder.token_encoding_name = "cl100k_base"  # noqa: S105
+    splitter = _get_text_splitter(encoder)
+    mocked_splitter.assert_called()
+
+
+def test_text_splitter_chunk_size_override(mocker):
+    """
+    Test that we always use the recursive splitter if chunk size is overriden
+    """
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = 100
+    encoder = dense_encoder()
+    encoder.token_encoding_name = "cl100k_base"  # noqa: S105
+    splitter = _get_text_splitter(encoder)
+    assert isinstance(splitter, RecursiveCharacterTextSplitter)
+    mocked_splitter = mocker.patch("vector_search.utils.TokenTextSplitter")
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = None
     splitter = _get_text_splitter(encoder)
     mocked_splitter.assert_called()
