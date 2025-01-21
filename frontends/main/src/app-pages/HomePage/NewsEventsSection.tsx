@@ -1,12 +1,5 @@
 import React from "react"
-import {
-  Container,
-  theme,
-  Typography,
-  Grid2,
-  Card,
-  TypographyProps,
-} from "ol-components"
+import { Container, theme, Typography, Grid2, Card } from "ol-components"
 import { styled } from "@pigment-css/react"
 import {
   useNewsEventsList,
@@ -25,16 +18,16 @@ const Section = styled.section`
   }
 `
 
-const Title = styled(Typography)<Pick<TypographyProps, "component">>`
+const Title = styled(Typography)`
   text-align: center;
   margin-bottom: 8px;
 `
 
-const StrapLine = styled(Typography)`
-  ${{ ...theme.typography.body1 }}
-  color: ${theme.custom.colors.silverGrayDark};
-  text-align: center;
-`
+const StrapLine = styled(Typography)(({ theme }) => ({
+  ...theme.typography.body1,
+  color: theme.custom.colors.silverGrayDark,
+  textAlign: "center",
+}))
 
 const Content = styled.div`
   display: flex;
@@ -76,12 +69,17 @@ const EventsContainer = styled.section`
   gap: 12px;
 `
 
-const StoryCard = styled(Card)<{ mobile: boolean }>`
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-  ${({ mobile }) => (mobile ? "width: 274px" : "")}
-`
+const StoryCard = styled(Card)<{ mobile: boolean }>({
+  display: "flex",
+  flexDirection: "column",
+  flexShrink: 0,
+  variants: [
+    {
+      props: { mobile: true },
+      style: { width: 274 },
+    },
+  ],
+})
 
 const StoriesSlider = styled.div`
   display: flex;

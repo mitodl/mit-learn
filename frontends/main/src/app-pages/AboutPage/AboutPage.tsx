@@ -1,12 +1,6 @@
 "use client"
 
-import {
-  Breadcrumbs,
-  Container,
-  Typography,
-  theme,
-  styled,
-} from "ol-components"
+import { Breadcrumbs, Container, Typography, styled } from "ol-components"
 import { HOME, ABOUT_NON_DEGREE_LEARNING_FRAGMENT } from "@/common/urls"
 import React from "react"
 import domeImage from "@/public/mit-dome-2.jpg"
@@ -17,7 +11,7 @@ const ACADEMIC_AND_PROFESSIONAL_CONTENT = "kinds-of-content"
 
 const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME
 
-const PageContainer = styled(Container)({
+const PageContainer = styled(Container)(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
   paddingTop: "40px",
   paddingBottom: "80px",
@@ -25,7 +19,7 @@ const PageContainer = styled(Container)({
     paddingTop: "28px",
     paddingBottom: "32px",
   },
-})
+}))
 
 const BannerContainer = styled.div({
   display: "flex",
@@ -50,7 +44,7 @@ const BodyContainer = styled.div({
   gap: "40px",
 })
 
-const HighlightContainer = styled.div({
+const HighlightContainer = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "24px",
@@ -61,9 +55,9 @@ const HighlightContainer = styled.div({
   [theme.breakpoints.down("md")]: {
     padding: "16px 16px",
   },
-})
+}))
 
-const SubHeaderContainer = styled.div({
+const SubHeaderContainer = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   alignSelf: "stretch",
@@ -72,7 +66,7 @@ const SubHeaderContainer = styled.div({
     flexDirection: "column-reverse",
     gap: "16px",
   },
-})
+}))
 
 const SubHeaderTextContainer = styled.div({
   display: "flex",
@@ -87,13 +81,13 @@ const SubHeaderImageContainer = styled.div({
   position: "relative",
 })
 
-const SubHeaderImage = styled(Image)({
+const SubHeaderImage = styled(Image)(({ theme }) => ({
   borderRadius: "8px",
   objectFit: "cover",
   [theme.breakpoints.down("md")]: {
     height: "300px",
   },
-})
+}))
 
 const BodySection = styled.div({
   display: "flex",
@@ -102,11 +96,11 @@ const BodySection = styled.div({
   gap: "16px",
 })
 
-const List = styled.ul({
+const List = styled.ul(({ theme }) => ({
   "li + li": {
     marginTop: theme.typography.pxToRem(4),
   },
-})
+}))
 
 const AboutPage: React.FC = () => {
   return (

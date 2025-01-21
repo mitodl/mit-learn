@@ -2,9 +2,8 @@ import React from "react"
 import type { Meta, StoryObj } from "@storybook/react"
 import { Carousel } from "./Carousel"
 import { styled } from "@pigment-css/react"
-import { theme } from "../ThemeProvider/ThemeProvider"
 
-const Panel = styled.div({
+const Panel = styled.div(({ theme }) => ({
   height: 200,
   width: 300,
   display: "flex",
@@ -13,7 +12,8 @@ const Panel = styled.div({
   color: theme.palette.primary.main,
   backgroundColor: theme.palette.grey[300],
   borderShadow: "3 4 12 rgb(0 0 0 / 36%)",
-})
+}))
+
 const Slide: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <Panel>{children}</Panel>
 }

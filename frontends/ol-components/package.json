@@ -4,17 +4,10 @@
   "private": true,
   "scripts": {
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build",
-    "build:cjs": "tsc --module commonjs --outDir dist/cjs"
+    "build-storybook": "storybook build"
   },
   "exports": {
-    ".": {
-      "import": "./src/index.ts",
-      "require": {
-        "types": "./dist/cjs/index.d.ts",
-        "default": "./dist/cjs/index.js"
-      }
-    },
+    ".": "./src/index.ts",
     "./deprecated": "./src/components/deprecated/index.ts"
   },
   "sideEffects": false,

@@ -1,7 +1,7 @@
 import React from "react"
 import type { Meta, StoryObj } from "@storybook/react"
-import Container from "@mui/material/Container"
-import styled from "@emotion/styled"
+import Container from "@mui/material-pigment-css/Container"
+import { styled } from "@pigment-css/react"
 
 const Background = styled.div`
   background-color: #f3ddce;

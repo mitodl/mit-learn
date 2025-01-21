@@ -73,18 +73,17 @@ const SettingsHeaderRight = styled.div(({ theme }) => ({
   },
 }))
 
-const ListItem = styled.li(({ theme }) => [
-  {
-    padding: "16px 32px",
-    display: "flex",
-    gap: "16px",
-    alignItems: "center",
-    borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
-    ":last-child": {
-      borderBottom: "none",
-    },
+const ListItem = styled.li(({ theme }) => ({
+  padding: "16px 32px",
+  display: "flex",
+  gap: "16px",
+  alignItems: "center",
+  borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
+  ":last-child": {
+    borderBottom: "none",
   },
-])
+}))
+
 const _ListItemBody = styled.div({
   display: "flex",
   flexDirection: "column",

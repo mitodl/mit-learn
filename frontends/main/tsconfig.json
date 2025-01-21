@@ -19,8 +19,7 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "@/public/*": ["./public/*"],
-      "ol-components": ["../ol-components/src/index"],
+      "@/public/*": ["./public/*"]
     },
     "target": "ESNext",
     "types": [

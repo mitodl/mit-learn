@@ -1,4 +1,3 @@
-// @ts-check
 import type { NextConfig } from "next"
 import { withPigment } from "@pigment-css/nextjs-plugin"
 import { withSentryConfig } from "@sentry/nextjs"

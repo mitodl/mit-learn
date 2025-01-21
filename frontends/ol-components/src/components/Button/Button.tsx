@@ -405,7 +405,6 @@ const ActionButtonLink: React.FC<ActionButtonLinkProps> = ({
   ...props
 }) => {
   const Component = rawAnchor ? "a" : Link
-
   return <Component href={href} {...props} />
 }
 
