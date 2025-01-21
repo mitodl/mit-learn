@@ -43,6 +43,18 @@ class Command(BaseCommand):
             help="Skip embedding content files",
         )
 
+        parser.add_argument(
+            "--contentfile-chunk-size",
+            dest="contentfile_chunk_size",
+            action="store_true",
+            help=(
+                "Specify the chunk size for content file embeddings. "
+                "NOTE: if this is specified - the collection name for contentfiles "
+                "will be suffixed with the chunk size. "
+                "example - learn.content_files_512"
+            ),
+        )
+
         for object_type in sorted(LEARNING_RESOURCE_TYPES):
             parser.add_argument(
                 f"--{object_type}s",
