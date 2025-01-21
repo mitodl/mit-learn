@@ -78,7 +78,7 @@ describe("LearningResourceDrawerV2", () => {
 
       setMockResponse.get(
         `${urls.learningResources.items({ id: resource.id })}?limit=12`,
-        items,
+        items.results,
       )
 
       return { resource, user, items }
