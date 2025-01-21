@@ -19,6 +19,12 @@ import Image from "next/image"
 
 const StyledActionButton = styled(ActionButton)(({ theme }) => ({
   backgroundColor: theme.custom.colors.white,
+  "&:hover:not(:disabled)": {
+    // Picked via figma eyedropper.
+    // Figma specifies multiple backgrounds, background: linear-gradient(...), brightRed
+    // But that causes problems for the transition animation
+    backgroundColor: "#FCF2F4",
+  },
 }))
 
 const HeaderContainer = styled(Container)(({ theme }) => ({
