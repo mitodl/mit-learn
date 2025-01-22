@@ -185,12 +185,12 @@ def _get_text_splitter(encoder):
         "chunk_overlap": settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP,
     }
     if hasattr(encoder, "token_encoding_name") and encoder.token_encoding_name:
-        chunk_params["encoding_name"] = (encoder.token_encoding_name,)
+        chunk_params["encoding_name"] = encoder.token_encoding_name
 
     if settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE:
         chunk_params["chunk_size"] = settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
-        # leverage tiktoken to ensure we stay within token limits
 
+    # leverage tiktoken to ensure we stay within token limits
     return TokenTextSplitter(**chunk_params)
 
 

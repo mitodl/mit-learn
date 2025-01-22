@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from qdrant_client.http.models.models import CountResult
 
 from vector_search.encoders.base import BaseEncoder
@@ -30,11 +31,14 @@ def _use_dummy_encoder(settings):
 def _use_test_qdrant_settings(settings, mocker):
     settings.QDRANT_HOST = "https://test"
     settings.QDRANT_BASE_COLLECTION_NAME = "test"
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = 0
     mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
     mock_qdrant.scroll.return_value = [
         [],
         None,
     ]
+    get_text_splitter_patch = mocker.patch("vector_search.utils._get_text_splitter")
+    get_text_splitter_patch.return_value = RecursiveCharacterTextSplitter()
     mock_qdrant.count.return_value = CountResult(count=10)
     mocker.patch(
         "vector_search.utils.qdrant_client",

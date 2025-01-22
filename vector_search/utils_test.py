@@ -1,6 +1,5 @@
 import pytest
 from django.conf import settings
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 from qdrant_client import models
 from qdrant_client.models import PointStruct
 
@@ -239,11 +238,11 @@ def test_get_text_splitter(mocker):
     encoder = dense_encoder()
     encoder.token_encoding_name = None
     mocked_splitter = mocker.patch("vector_search.utils.TokenTextSplitter")
-    splitter = _get_text_splitter(encoder)
-    assert isinstance(splitter, RecursiveCharacterTextSplitter)
+    _get_text_splitter(encoder)
+    assert "encoding_name" not in mocked_splitter.mock_calls[0].kwargs
     encoder.token_encoding_name = "cl100k_base"  # noqa: S105
-    splitter = _get_text_splitter(encoder)
-    mocked_splitter.assert_called()
+    _get_text_splitter(encoder)
+    assert "encoding_name" in mocked_splitter.mock_calls[1].kwargs
 
 
 def test_text_splitter_chunk_size_override(mocker):
