@@ -250,13 +250,15 @@ def test_text_splitter_chunk_size_override(mocker):
     """
     Test that we always use the recursive splitter if chunk size is overriden
     """
-    settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = 100
-    settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = 10
+    chunk_size = 100
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = chunk_size
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = chunk_size / 10
     encoder = dense_encoder()
+    mocked_splitter = mocker.patch("vector_search.utils.TokenTextSplitter")
     encoder.token_encoding_name = "cl100k_base"  # noqa: S105
-    splitter = _get_text_splitter(encoder)
-    assert isinstance(splitter, RecursiveCharacterTextSplitter)
+    _get_text_splitter(encoder)
+    assert mocked_splitter.mock_calls[0].kwargs["chunk_size"] == 100
     mocked_splitter = mocker.patch("vector_search.utils.TokenTextSplitter")
     settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = None
-    splitter = _get_text_splitter(encoder)
-    mocked_splitter.assert_called()
+    _get_text_splitter(encoder)
+    assert "chunk_size" not in mocked_splitter.mock_calls[0].kwargs
