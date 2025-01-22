@@ -64,7 +64,8 @@ describe("LearningResourceDrawerV2", () => {
 
     if (
       resource.resource_type === ResourceTypeEnum.Program ||
-      resource.resource_type === ResourceTypeEnum.VideoPlaylist
+      resource.resource_type === ResourceTypeEnum.VideoPlaylist ||
+      resource.resource_type === ResourceTypeEnum.Podcast
     ) {
       const items = factories.learningResources.resources({
         count: 10,

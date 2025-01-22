@@ -104,77 +104,33 @@ const DrawerContent: React.FC<{
       }
     }, [user])
   useCapturePageView(Number(resourceId))
-  const coursesInProgramCarousel =
-    resource.data?.resource_type === ResourceTypeEnum.Program ? (
+  const itemsCarousel = (
+    title: string,
+    learningResourceId: number,
+    excludeResourceId: number,
+  ) => {
+    return (
       <ResourceCarousel
         titleComponent="p"
         titleVariant="subtitle1"
-        title="Courses in this Program"
+        title={title}
         config={[
           {
-            label: "Courses in this Program",
+            label: title,
             cardProps: { size: "small" },
             data: {
               type: "resource_items",
               params: {
-                learning_resource_id: resourceId,
+                learning_resource_id: learningResourceId,
                 limit: carouselResultsLimit,
               },
             },
           },
         ]}
-        excludeResourceId={resourceId}
+        excludeResourceId={excludeResourceId}
       />
-    ) : null
-  const topCarousels = coursesInProgramCarousel
-    ? [coursesInProgramCarousel]
-    : undefined
-  const otherVideosInThisSeries =
-    resource.data?.resource_type === ResourceTypeEnum.Video ? (
-      resource.data?.playlists?.length > 0 ? (
-        <ResourceCarousel
-          titleComponent="p"
-          titleVariant="subtitle1"
-          title="Other Videos in this Series"
-          config={[
-            {
-              label: "Other Videos in this Series",
-              cardProps: { size: "small" },
-              data: {
-                type: "resource_items",
-                params: {
-                  learning_resource_id: parseInt(resource.data.playlists[0]),
-                  limit: carouselResultsLimit,
-                },
-              },
-            },
-          ]}
-          excludeResourceId={resourceId}
-        />
-      ) : null
-    ) : null
-  const videosInThisPlaylist =
-    resource.data?.resource_type === ResourceTypeEnum.VideoPlaylist ? (
-      <ResourceCarousel
-        titleComponent="p"
-        titleVariant="subtitle1"
-        title="Videos in this Series"
-        config={[
-          {
-            label: "Videos in this Series",
-            cardProps: { size: "small" },
-            data: {
-              type: "resource_items",
-              params: {
-                learning_resource_id: resourceId,
-                limit: carouselResultsLimit,
-              },
-            },
-          },
-        ]}
-        excludeResourceId={resourceId}
-      />
-    ) : null
+    )
+  }
   const similarResourcesCarousel = (
     <ResourceCarousel
       titleComponent="p"
@@ -207,12 +163,46 @@ const DrawerContent: React.FC<{
       excludeResourceId={resourceId}
     />
   ))
-  const bottomCarousels = []
-  if (otherVideosInThisSeries) {
-    bottomCarousels.push(otherVideosInThisSeries)
+  const topCarousels = []
+  if (resource.data?.resource_type === ResourceTypeEnum.Program) {
+    topCarousels.push(
+      itemsCarousel("Courses in this Program", resourceId, resourceId),
+    )
   }
-  if (videosInThisPlaylist) {
-    bottomCarousels.push(videosInThisPlaylist)
+  const bottomCarousels = []
+  if (
+    resource.data?.resource_type === ResourceTypeEnum.Video &&
+    resource.data?.playlists?.length > 0
+  ) {
+    bottomCarousels.push(
+      itemsCarousel(
+        "Other Videos in this Series",
+        parseInt(resource.data.playlists[0]),
+        resourceId,
+      ),
+    )
+  }
+  if (resource.data?.resource_type === ResourceTypeEnum.VideoPlaylist) {
+    bottomCarousels.push(
+      itemsCarousel("Videos in this Series", resourceId, resourceId),
+    )
+  }
+  if (
+    resource.data?.resource_type === ResourceTypeEnum.PodcastEpisode &&
+    resource.data?.podcast_episode?.podcasts?.length > 0
+  ) {
+    bottomCarousels.push(
+      itemsCarousel(
+        "Other Episodes in this Podcast",
+        parseInt(resource.data.podcast_episode.podcasts[0]),
+        resourceId,
+      ),
+    )
+  }
+  if (resource.data?.resource_type === ResourceTypeEnum.Podcast) {
+    bottomCarousels.push(
+      itemsCarousel("Recent Episodes", resourceId, resourceId),
+    )
   }
   bottomCarousels.push(similarResourcesCarousel)
   bottomCarousels.push(...(topicCarousels || []))
