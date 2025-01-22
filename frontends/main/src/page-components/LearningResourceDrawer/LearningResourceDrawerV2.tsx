@@ -82,6 +82,7 @@ const DrawerContent: React.FC<{
   const { data: user } = useUserMe()
   const { data: inLearningPath } = useIsLearningPathMember(resourceId)
   const { data: inUserList } = useIsUserListMember(resourceId)
+  const carouselResultsLimit = 12
 
   const handleAddToLearningPathClick: LearningResourceCardProps["onAddToLearningPathClick"] =
     useMemo(() => {
@@ -115,15 +116,65 @@ const DrawerContent: React.FC<{
             cardProps: { size: "small" },
             data: {
               type: "resource_items",
-              params: { learning_resource_id: resourceId },
+              params: {
+                learning_resource_id: resourceId,
+                limit: carouselResultsLimit,
+              },
             },
           },
         ]}
+        excludeResourceId={resourceId}
       />
     ) : null
   const topCarousels = coursesInProgramCarousel
     ? [coursesInProgramCarousel]
     : undefined
+  const otherVideosInThisSeries =
+    resource.data?.resource_type === ResourceTypeEnum.Video ? (
+      resource.data?.playlists?.length > 0 ? (
+        <ResourceCarousel
+          titleComponent="p"
+          titleVariant="subtitle1"
+          title="Other Videos in this Series"
+          config={[
+            {
+              label: "Other Videos in this Series",
+              cardProps: { size: "small" },
+              data: {
+                type: "resource_items",
+                params: {
+                  learning_resource_id: parseInt(resource.data.playlists[0]),
+                  limit: carouselResultsLimit,
+                },
+              },
+            },
+          ]}
+          excludeResourceId={resourceId}
+        />
+      ) : null
+    ) : null
+  const videosInThisPlaylist =
+    resource.data?.resource_type === ResourceTypeEnum.VideoPlaylist ? (
+      <ResourceCarousel
+        titleComponent="p"
+        titleVariant="subtitle1"
+        title="Videos in this Series"
+        config={[
+          {
+            label: "Videos in this Series",
+            cardProps: { size: "small" },
+            data: {
+              type: "resource_items",
+              params: {
+                learning_resource_id: resourceId,
+                limit: carouselResultsLimit,
+              },
+            },
+          },
+        ]}
+        excludeResourceId={resourceId}
+      />
+    ) : null
   const similarResourcesCarousel = (
     <ResourceCarousel
       titleComponent="p"
@@ -135,7 +186,7 @@ const DrawerContent: React.FC<{
           cardProps: { size: "small" },
           data: {
             type: "lr_vector_similar",
-            params: { id: resourceId },
+            params: { id: resourceId, limit: carouselResultsLimit },
           },
         },
       ]}
@@ -156,6 +207,15 @@ const DrawerContent: React.FC<{
       excludeResourceId={resourceId}
     />
   ))
+  const bottomCarousels = []
+  if (otherVideosInThisSeries) {
+    bottomCarousels.push(otherVideosInThisSeries)
+  }
+  if (videosInThisPlaylist) {
+    bottomCarousels.push(videosInThisPlaylist)
+  }
+  bottomCarousels.push(similarResourcesCarousel)
+  bottomCarousels.push(...(topicCarousels || []))
 
   return (
     <>
@@ -165,7 +225,7 @@ const DrawerContent: React.FC<{
         resourceId={resourceId}
         resource={resource.data}
         topCarousels={topCarousels}
-        bottomCarousels={[similarResourcesCarousel, ...(topicCarousels || [])]}
+        bottomCarousels={bottomCarousels}
         user={user}
         shareUrl={`${window.location.origin}/search?${RESOURCE_DRAWER_QUERY_PARAM}=${resourceId}`}
         inLearningPath={inLearningPath}
