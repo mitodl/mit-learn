@@ -201,7 +201,7 @@ const DrawerContent: React.FC<{
   }
   if (resource.data?.resource_type === ResourceTypeEnum.Podcast) {
     bottomCarousels.push(
-      itemsCarousel("Episodes in this Podcast", resourceId, resourceId),
+      itemsCarousel("Recent Episodes", resourceId, resourceId),
     )
   }
   bottomCarousels.push(similarResourcesCarousel)
