@@ -187,6 +187,23 @@ const DrawerContent: React.FC<{
       itemsCarousel("Videos in this Series", resourceId, resourceId),
     )
   }
+  if (
+    resource.data?.resource_type === ResourceTypeEnum.PodcastEpisode &&
+    resource.data?.podcast_episode?.podcasts?.length > 0
+  ) {
+    bottomCarousels.push(
+      itemsCarousel(
+        "Other Episodes in this Podcast",
+        parseInt(resource.data.podcast_episode.podcasts[0]),
+        resourceId,
+      ),
+    )
+  }
+  if (resource.data?.resource_type === ResourceTypeEnum.Podcast) {
+    bottomCarousels.push(
+      itemsCarousel("Episodes in this Podcast", resourceId, resourceId),
+    )
+  }
   bottomCarousels.push(similarResourcesCarousel)
   bottomCarousels.push(...(topicCarousels || []))
 
