@@ -852,5 +852,6 @@ CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = get_int(
     name="CONTENT_FILE_EMBEDDING_CHUNK_SIZE", default=None
 )
 CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = get_int(
-    name="CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP", default=50
+    name="CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP",
+    default=200,  # default that the tokenizer uses
 )
