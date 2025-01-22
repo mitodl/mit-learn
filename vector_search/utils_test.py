@@ -251,6 +251,7 @@ def test_text_splitter_chunk_size_override(mocker):
     Test that we always use the recursive splitter if chunk size is overriden
     """
     settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = 100
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = 10
     encoder = dense_encoder()
     encoder.token_encoding_name = "cl100k_base"  # noqa: S105
     splitter = _get_text_splitter(encoder)
