@@ -82,6 +82,7 @@ const DrawerContent: React.FC<{
   const { data: user } = useUserMe()
   const { data: inLearningPath } = useIsLearningPathMember(resourceId)
   const { data: inUserList } = useIsUserListMember(resourceId)
+  const carouselResultsLimit = 12
 
   const handleAddToLearningPathClick: LearningResourceCardProps["onAddToLearningPathClick"] =
     useMemo(() => {
@@ -103,27 +104,33 @@ const DrawerContent: React.FC<{
       }
     }, [user])
   useCapturePageView(Number(resourceId))
-  const coursesInProgramCarousel =
-    resource.data?.resource_type === ResourceTypeEnum.Program ? (
+  const itemsCarousel = (
+    title: string,
+    learningResourceId: number,
+    excludeResourceId: number,
+  ) => {
+    return (
       <ResourceCarousel
         titleComponent="p"
         titleVariant="subtitle1"
-        title="Courses in this Program"
+        title={title}
         config={[
           {
-            label: "Courses in this Program",
+            label: title,
             cardProps: { size: "small" },
             data: {
               type: "resource_items",
-              params: { learning_resource_id: resourceId },
+              params: {
+                learning_resource_id: learningResourceId,
+                limit: carouselResultsLimit,
+              },
             },
           },
         ]}
+        excludeResourceId={excludeResourceId}
       />
-    ) : null
-  const topCarousels = coursesInProgramCarousel
-    ? [coursesInProgramCarousel]
-    : undefined
+    )
+  }
   const similarResourcesCarousel = (
     <ResourceCarousel
       titleComponent="p"
@@ -135,7 +142,7 @@ const DrawerContent: React.FC<{
           cardProps: { size: "small" },
           data: {
             type: "lr_vector_similar",
-            params: { id: resourceId },
+            params: { id: resourceId, limit: carouselResultsLimit },
           },
         },
       ]}
@@ -156,6 +163,49 @@ const DrawerContent: React.FC<{
       excludeResourceId={resourceId}
     />
   ))
+  const topCarousels = []
+  if (resource.data?.resource_type === ResourceTypeEnum.Program) {
+    topCarousels.push(
+      itemsCarousel("Courses in this Program", resourceId, resourceId),
+    )
+  }
+  const bottomCarousels = []
+  if (
+    resource.data?.resource_type === ResourceTypeEnum.Video &&
+    resource.data?.playlists?.length > 0
+  ) {
+    bottomCarousels.push(
+      itemsCarousel(
+        "Other Videos in this Series",
+        parseInt(resource.data.playlists[0]),
+        resourceId,
+      ),
+    )
+  }
+  if (resource.data?.resource_type === ResourceTypeEnum.VideoPlaylist) {
+    bottomCarousels.push(
+      itemsCarousel("Videos in this Series", resourceId, resourceId),
+    )
+  }
+  if (
+    resource.data?.resource_type === ResourceTypeEnum.PodcastEpisode &&
+    resource.data?.podcast_episode?.podcasts?.length > 0
+  ) {
+    bottomCarousels.push(
+      itemsCarousel(
+        "Other Episodes in this Podcast",
+        parseInt(resource.data.podcast_episode.podcasts[0]),
+        resourceId,
+      ),
+    )
+  }
+  if (resource.data?.resource_type === ResourceTypeEnum.Podcast) {
+    bottomCarousels.push(
+      itemsCarousel("Recent Episodes", resourceId, resourceId),
+    )
+  }
+  bottomCarousels.push(similarResourcesCarousel)
+  bottomCarousels.push(...(topicCarousels || []))
 
   return (
     <>
@@ -165,7 +215,7 @@ const DrawerContent: React.FC<{
         resourceId={resourceId}
         resource={resource.data}
         topCarousels={topCarousels}
-        bottomCarousels={[similarResourcesCarousel, ...(topicCarousels || [])]}
+        bottomCarousels={bottomCarousels}
         user={user}
         shareUrl={`${window.location.origin}/search?${RESOURCE_DRAWER_QUERY_PARAM}=${resourceId}`}
         inLearningPath={inLearningPath}
