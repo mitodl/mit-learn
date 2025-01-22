@@ -6,9 +6,9 @@ import {
   waitFor,
   within,
 } from "@/test-utils"
-import LearningResourceDrawerV2 from "./LearningResourceDrawerV2"
+import LearningResourceDrawer from "./LearningResourceDrawer"
 import { urls, factories, setMockResponse } from "api/test-utils"
-import { LearningResourceExpandedV2 } from "ol-components"
+import { LearningResourceExpanded } from "ol-components"
 import { RESOURCE_DRAWER_QUERY_PARAM } from "@/common/urls"
 import { LearningResource, ResourceTypeEnum } from "api"
 import { makeUserSettings } from "@/test-utils/factories"
@@ -18,7 +18,7 @@ jest.mock("ol-components", () => {
   const actual = jest.requireActual("ol-components")
   return {
     ...actual,
-    LearningResourceExpandedV2: jest.fn(actual.LearningResourceExpandedV2),
+    LearningResourceExpanded: jest.fn(actual.LearningResourceExpanded),
   }
 })
 
@@ -34,7 +34,7 @@ jest.mock("posthog-js/react", () => ({
   },
 }))
 
-describe("LearningResourceDrawerV2", () => {
+describe("LearningResourceDrawer", () => {
   const setupApis = (
     overries: {
       user?: Partial<User>
@@ -99,12 +99,12 @@ describe("LearningResourceDrawerV2", () => {
         ? "12345abcdef" // pragma: allowlist secret
         : ""
 
-      renderWithProviders(<LearningResourceDrawerV2 />, {
+      renderWithProviders(<LearningResourceDrawer />, {
         url: `?dog=woof&${RESOURCE_DRAWER_QUERY_PARAM}=${resource.id}`,
       })
-      expect(LearningResourceExpandedV2).toHaveBeenCalled()
+      expect(LearningResourceExpanded).toHaveBeenCalled()
       await waitFor(() => {
-        expectProps(LearningResourceExpandedV2, { resource })
+        expectProps(LearningResourceExpanded, { resource })
       })
       await screen.findByText(resource.title)
 
@@ -117,10 +117,10 @@ describe("LearningResourceDrawerV2", () => {
   )
 
   it("Does not render drawer content when resource=id is NOT in the URL", async () => {
-    renderWithProviders(<LearningResourceDrawerV2 />, {
+    renderWithProviders(<LearningResourceDrawer />, {
       url: "?dog=woof",
     })
-    expect(LearningResourceExpandedV2).not.toHaveBeenCalled()
+    expect(LearningResourceExpanded).not.toHaveBeenCalled()
   })
 
   test("Drawer is a dialog and has title", async () => {
@@ -129,7 +129,7 @@ describe("LearningResourceDrawerV2", () => {
         resource_type: ResourceTypeEnum.Course,
       },
     })
-    renderWithProviders(<LearningResourceDrawerV2 />, {
+    renderWithProviders(<LearningResourceDrawer />, {
       url: `?resource=${resource.id}`,
     })
     await screen.findByRole("dialog", {
@@ -175,14 +175,14 @@ describe("LearningResourceDrawerV2", () => {
         },
       })
 
-      renderWithProviders(<LearningResourceDrawerV2 />, {
+      renderWithProviders(<LearningResourceDrawer />, {
         url: `?resource=${resource.id}`,
       })
 
-      expect(LearningResourceExpandedV2).toHaveBeenCalled()
+      expect(LearningResourceExpanded).toHaveBeenCalled()
 
       await waitFor(() => {
-        expectProps(LearningResourceExpandedV2, { resource })
+        expectProps(LearningResourceExpanded, { resource })
       })
 
       const section = screen.getByTestId("drawer-cta")
@@ -218,7 +218,7 @@ describe("LearningResourceDrawerV2", () => {
       similarResources,
     )
 
-    renderWithProviders(<LearningResourceDrawerV2 />, {
+    renderWithProviders(<LearningResourceDrawer />, {
       url: `?resource=${resource.id}`,
     })
     await screen.findByText("Similar Learning Resources")

@@ -21,7 +21,7 @@ import {
 import type { ImageConfig } from "../../constants/imgConfigs"
 import { theme } from "../ThemeProvider/ThemeProvider"
 import { PlatformLogo, PLATFORM_LOGOS } from "../Logo/Logo"
-import InfoSectionV2 from "./InfoSectionV2"
+import InfoSectionV2 from "./InfoSection"
 import type { User } from "api/hooks/user"
 import { LearningResourceCardProps } from "../LearningResourceCard/LearningResourceCard"
 import VideoFrame from "./VideoFrame"
@@ -303,7 +303,7 @@ const BottomCarouselContainer = styled.div({
   },
 })
 
-type LearningResourceExpandedV2Props = {
+type LearningResourceExpandedProps = {
   resourceId: number
   titleId?: string
   resource?: LearningResource
@@ -697,7 +697,7 @@ const ResourceDescription = ({ resource }: { resource?: LearningResource }) => {
   )
 }
 
-const LearningResourceExpandedV2: React.FC<LearningResourceExpandedV2Props> = ({
+const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
   resourceId,
   resource,
   imgConfig,
@@ -761,5 +761,5 @@ const LearningResourceExpandedV2: React.FC<LearningResourceExpandedV2Props> = ({
   )
 }
 
-export { LearningResourceExpandedV2, getCallToActionText }
-export type { LearningResourceExpandedV2Props }
+export { LearningResourceExpanded, getCallToActionText }
+export type { LearningResourceExpandedProps }

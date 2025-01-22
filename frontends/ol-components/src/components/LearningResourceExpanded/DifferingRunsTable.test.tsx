@@ -1,7 +1,7 @@
 import React from "react"
 import { render, screen, within } from "@testing-library/react"
 import { courses } from "../LearningResourceCard/testUtils"
-import InfoSectionV2 from "./InfoSectionV2"
+import InfoSectionV2 from "./InfoSection"
 import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
 import { DeliveryEnumDescriptions } from "api"
 
