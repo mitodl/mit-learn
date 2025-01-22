@@ -1,7 +1,8 @@
+import logging
 import uuid
 
 from django.conf import settings
-from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSplitter
+from langchain.text_splitter import TokenTextSplitter
 from qdrant_client import QdrantClient, models
 
 from learning_resources.models import LearningResource
@@ -20,6 +21,8 @@ from vector_search.constants import (
     RESOURCES_COLLECTION_NAME,
 )
 from vector_search.encoders.utils import dense_encoder
+
+logger = logging.getLogger(__name__)
 
 
 def qdrant_client():
@@ -178,27 +181,17 @@ def _get_text_splitter(encoder):
     """
     Get the text splitter to use based on the encoder
     """
-
+    chunk_params = {
+        "chunk_overlap": settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP,
+    }
     if hasattr(encoder, "token_encoding_name") and encoder.token_encoding_name:
+        chunk_params["encoding_name"] = (encoder.token_encoding_name,)
+
+    if settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE:
+        chunk_params["chunk_size"] = settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
         # leverage tiktoken to ensure we stay within token limits
-        if settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE:
-            return TokenTextSplitter(
-                encoding_name=encoder.token_encoding_name,
-                chunk_size=settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE,
-                chunk_overlap=settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP,
-            )
-        return TokenTextSplitter(
-            encoding_name=encoder.token_encoding_name,
-            chunk_overlap=settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP,
-        )
-    else:
-        # default for use with fastembed
-        return RecursiveCharacterTextSplitter(
-            chunk_size=512,
-            chunk_overlap=settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP,
-            add_start_index=True,
-            separators=["\n\n", "\n", ".", " ", ""],
-        )
+
+    return TokenTextSplitter(**chunk_params)
 
 
 def _process_content_embeddings(serialized_content):
@@ -264,10 +257,16 @@ def _process_content_embeddings(serialized_content):
         metadata.extend(split_metadatas)
         ids.extend(split_ids)
     if len(resource_points) > 0:
-        client.update_vectors(
-            collection_name=RESOURCES_COLLECTION_NAME,
-            points=resource_points,
-        )
+        try:
+            # sometimes we can't update the multi-vector if max size is exceeded
+
+            client.update_vectors(
+                collection_name=RESOURCES_COLLECTION_NAME,
+                points=resource_points,
+            )
+        except Exception as e:  # noqa: BLE001
+            msg = f"Exceeded multi-vector max size: {e}"
+            logger.warning(msg)
     return points_generator(ids, metadata, embeddings, vector_name)
 
 
