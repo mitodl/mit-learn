@@ -1,5 +1,5 @@
 import type { Theme as MuiTheme } from "@mui/material/styles"
-import "@emotion/react"
+// import "@emotion/react"
 import "@pigment-css/react"
 import "@mui/material-pigment-css"
 import "./typography"
@@ -97,17 +97,17 @@ declare module "@mui/material/Chip" {
   }
 }
 
-declare module "@emotion/react" {
-  export interface Theme extends MuiTheme {
-    custom: CustomTheme
-  }
-}
+// declare module "@emotion/react" {
+//   export interface Theme extends MuiTheme {
+//     custom: CustomTheme
+//   }
+// }
 
-declare module "@pigment-css/react" {
-  export interface Theme extends MuiTheme {
-    custom: CustomTheme
-  }
-}
+// declare module "@pigment-css/react" {
+//   export interface Theme extends MuiTheme {
+//     custom: CustomTheme
+//   }
+// }
 
 declare module "@mui/material-pigment-css" {
   interface ThemeArgs {
