@@ -1,16 +1,11 @@
 import React from "react"
-import styled from "@emotion/styled"
+import { styled } from "@pigment-css/react"
+import { theme } from "../theme/theme"
 import InputBase from "@mui/material/InputBase"
 import type { InputBaseProps } from "@mui/material/InputBase"
-import type { Theme } from "@pigment-css/react/theme"
 import ClassNames from "classnames"
 
 type Size = NonNullable<InputBaseProps["size"]>
-
-const defaultProps = {
-  size: "medium",
-  multiline: false,
-} as const
 
 const responsiveSize: Record<Size, Size> = {
   small: "small",
@@ -21,78 +16,81 @@ const responsiveSize: Record<Size, Size> = {
 
 type SizeStyleProps = {
   size: Size
-  theme: Theme
   multiline?: boolean
 }
-const sizeStyles = ({ size, theme, multiline }: SizeStyleProps) => [
-  (size === "small" || size === "medium") && {
-    ...theme.typography.body2,
-  },
-  (size === "large" || size === "hero") && {
-    ".remixicon": {
-      width: "24px",
-      height: "24px",
+
+const sizeStyles = ({ size, multiline }: SizeStyleProps) => {
+  return Object.assign(
+    {},
+    (size === "small" || size === "medium") && {
+      ...theme.typography.body2,
     },
-    ...theme.typography.body1,
-  },
-  size === "medium" && {
-    paddingLeft: "12px",
-    paddingRight: "12px",
-  },
-  size === "small" &&
-    !multiline && {
-      height: "32px",
-    },
-  size === "medium" &&
-    !multiline && {
-      height: "40px",
-    },
-  size === "large" &&
-    !multiline && {
-      height: "48px",
-    },
-  size === "hero" &&
-    !multiline && {
-      height: "72px",
-    },
-  size === "small" && {
-    padding: "0 8px",
-    ".Mit-AdornmentButton": {
-      width: "32px",
+    (size === "large" || size === "hero") && {
       ".remixicon": {
-        width: "16px",
-        height: "16px",
+        width: "24px",
+        height: "24px",
+      },
+      ...theme.typography.body1,
+    },
+    size === "medium" && {
+      paddingLeft: "12px",
+      paddingRight: "12px",
+    },
+    size === "small" &&
+      !multiline && {
+        height: "32px",
+      },
+    size === "medium" &&
+      !multiline && {
+        height: "40px",
+      },
+    size === "large" &&
+      !multiline && {
+        height: "48px",
+      },
+    size === "hero" &&
+      !multiline && {
+        height: "72px",
+      },
+    size === "small" && {
+      padding: "0 8px",
+      ".Mit-AdornmentButton": {
+        width: "32px",
+        ".remixicon": {
+          width: "16px",
+          height: "16px",
+        },
       },
     },
-  },
-  size === "medium" && {
-    padding: "0 12px",
-    ".Mit-AdornmentButton": {
-      width: "40px",
-      ".remixicon": {
-        width: "20px",
-        height: "20px",
+    size === "medium" && {
+      padding: "0 12px",
+      ".Mit-AdornmentButton": {
+        width: "40px",
+        ".remixicon": {
+          width: "20px",
+          height: "20px",
+        },
       },
     },
-  },
-  size === "large" && {
-    padding: "0 16px",
-    ".Mit-AdornmentButton": {
-      width: "48px",
+    size === "large" && {
+      padding: "0 16px",
+      ".Mit-AdornmentButton": {
+        width: "48px",
+      },
     },
-  },
-  size === "hero" && {
-    padding: "0 24px",
-    ".Mit-AdornmentButton": {
-      width: "72px",
+    size === "hero" && {
+      padding: "0 24px",
+      ".Mit-AdornmentButton": {
+        width: "72px",
+      },
     },
-  },
-]
+  )
+}
 
 /**
  * Base styles for Input and Select components. Includes border, color, hover effects.
  */
-const baseInputStyles = (theme: Theme) => ({
+const baseInputStyles = {
   backgroundColor: "white",
   color: theme.custom.colors.darkGray2,
   borderColor: theme.custom.colors.silverGrayLight,
@@ -144,7 +142,7 @@ const baseInputStyles = (theme: Theme) => ({
       paddingRight: "8px",
     },
   },
-})
+}
 
 /**
  * A styled input that supports start and end adornments. In most cases, the
@@ -155,26 +153,121 @@ const noForward = Object.keys({
   responsive: true,
 } satisfies { [_key in keyof CustomInputProps]: boolean })
 
+// TODO pigment: default size = medium
 const Input = styled(InputBase, {
   shouldForwardProp: (prop) => !noForward.includes(prop),
-})<InputBaseProps & { responsive?: true }>(({
-  theme,
-  size = defaultProps.size,
-  multiline,
-  responsive,
-}) => {
-  return [
-    baseInputStyles(theme),
-    ...sizeStyles({ size, theme, multiline }),
-    responsive && {
-      [theme.breakpoints.down("sm")]: sizeStyles({
-        size: responsiveSize[size],
-        theme,
-        multiline,
-      }),
+})<InputBaseProps & { responsive?: true }>(({ theme }) => ({
+  ...baseInputStyles,
+  height: ({ size, multiline }) => {
+    if (size === "small" && !multiline) return "32px"
+    if (size === "medium" && !multiline) return "40px"
+    if (size === "large" && !multiline) return "48px"
+    if (size === "hero" && !multiline) return "72px"
+    return "auto"
+  },
+  variants: [
+    {
+      props: { size: "small" },
+      style: sizeStyles({ size: "small" }),
     },
-  ]
-})
+    {
+      props: { size: "medium" },
+      style: sizeStyles({ size: "medium" }),
+    },
+    {
+      props: { size: "large" },
+      style: sizeStyles({ size: "large" }),
+    },
+    {
+      props: { size: "hero" },
+      style: sizeStyles({ size: "hero" }),
+    },
+    {
+      props: { size: "small", multiline: true },
+      style: sizeStyles({ size: "small", multiline: true }),
+    },
+    {
+      props: { size: "medium", multiline: true },
+      style: sizeStyles({ size: "medium", multiline: true }),
+    },
+    {
+      props: { size: "large", multiline: true },
+      style: sizeStyles({ size: "large", multiline: true }),
+    },
+    {
+      props: { size: "hero", multiline: true },
+      style: sizeStyles({ size: "hero", multiline: true }),
+    },
+    {
+      props: { size: "small", responsive: true },
+      style: {
+        [theme.breakpoints.down("sm")]: sizeStyles({
+          size: responsiveSize["small"],
+        }),
+      },
+    },
+    {
+      props: { size: "medium", responsive: true },
+      style: {
+        [theme.breakpoints.down("sm")]: sizeStyles({
+          size: responsiveSize["medium"],
+        }),
+      },
+    },
+    {
+      props: { size: "large", responsive: true },
+      style: {
+        [theme.breakpoints.down("sm")]: sizeStyles({
+          size: responsiveSize["large"],
+        }),
+      },
+    },
+    {
+      props: { size: "hero", responsive: true },
+      style: {
+        [theme.breakpoints.down("sm")]: sizeStyles({
+          size: responsiveSize["hero"],
+        }),
+      },
+    },
+    {
+      props: { size: "small", responsive: true, multiline: true },
+      style: {
+        [theme.breakpoints.down("sm")]: sizeStyles({
+          size: responsiveSize["small"],
+          multiline: true,
+        }),
+      },
+    },
+    {
+      props: { size: "medium", responsive: true, multiline: true },
+      style: {
+        [theme.breakpoints.down("sm")]: sizeStyles({
+          size: responsiveSize["medium"],
+          multiline: true,
+        }),
+      },
+    },
+    {
+      props: { size: "large", responsive: true, multiline: true },
+      style: {
+        [theme.breakpoints.down("sm")]: sizeStyles({
+          size: responsiveSize["large"],
+          multiline: true,
+        }),
+      },
+    },
+    {
+      props: { size: "hero", responsive: true, multiline: true },
+      style: {
+        [theme.breakpoints.down("sm")]: sizeStyles({
+          size: responsiveSize["hero"],
+          multiline: true,
+        }),
+      },
+    },
+  ],
+}))
 
 const AdornmentButtonStyled = styled("button")(({ theme }) => ({
   // font

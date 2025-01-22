@@ -24,7 +24,7 @@ type SelectInputProps = Omit<InputBaseProps, "size"> & {
 const DEFAULT_SIZE = "medium"
 
 const SelectInput = styled(InputBase)(({ theme }) => ({
-  ...baseInputStyles(theme),
+  ...baseInputStyles,
   ".MuiInputBase-input": {
     boxSizing: "border-box",
     display: "inline-flex",

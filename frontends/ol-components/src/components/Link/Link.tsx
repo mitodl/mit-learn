@@ -1,23 +1,23 @@
 import React from "react"
 import { styled } from "@pigment-css/react"
-import { css } from "@emotion/react"
 import { default as NextLink } from "next/link"
 import { theme } from "../theme/theme"
 import invariant from "tiny-invariant"
 
 type LinkStyleProps = {
-  size?: "small" | "medium" | "large"
+  size?: "small" | "medium" | "large" | string
   color?: "black" | "white" | "red"
   hovercolor?: "black" | "white" | "red"
   nohover?: boolean
 }
 
-const DEFAULT_PROPS: Required<LinkStyleProps> = {
-  size: "medium",
-  color: "black",
-  hovercolor: "red",
-  nohover: false,
-}
+// TODO pigment check defaults still work
+// const DEFAULT_PROPS: Required<LinkStyleProps> = {
+//   size: "medium",
+//   color: "black",
+//   hovercolor: "red",
+//   nohover: false,
+// }
 
 /**
  * Generate styles used for the Link component.
@@ -26,37 +26,51 @@ const DEFAULT_PROPS: Required<LinkStyleProps> = {
  * If you want another element styled as a Link, use this function in conjunction
  * with `styled`. For example, `styled.span(linkStyles)`.
  */
-const linkStyles = (props: LinkStyleProps) => {
-  const { size, color, hovercolor, nohover } = { ...DEFAULT_PROPS, ...props }
-  return css([
-    size === "small" && {
-      ...theme.typography.body3,
+const linkStyles = () => ({
+  color: ({ color }: LinkStyleProps) => {
+    switch (color) {
+      case "black":
+        return theme.custom.colors.darkGray2
+      case "white":
+        return theme.custom.colors.white
+      case "red":
+        return theme.custom.colors.red
+      default:
+        return theme.custom.colors.darkGray2
+    }
+  },
+  ":hover": {
+    color: ({ hovercolor, nohover }: LinkStyleProps) => {
+      if (nohover) return "inherit"
+      switch (hovercolor) {
+        case "black":
+          return theme.custom.colors.darkGray2
+        case "white":
+          return theme.custom.colors.white
+        case "red":
+          return theme.custom.colors.red
+        default:
+          return theme.custom.colors.darkGray2
+      }
     },
-    size === "medium" && {
-      ...theme.typography.body2,
-    },
-    size === "large" && {
-      ...theme.typography.h5,
+    textDecoration: ({ nohover }: LinkStyleProps) =>
+      nohover ? "inherit" : "underline",
+  },
+  variants: [
+    {
+      props: { size: "small" },
+      style: theme.typography.body3,
     },
     {
-      color: {
-        ["black"]: theme.custom.colors.darkGray2,
-        ["white"]: theme.custom.colors.white,
-        ["red"]: theme.custom.colors.red,
-      }[color],
-      ":hover": nohover
-        ? undefined
-        : {
-            color: {
-              ["black"]: theme.custom.colors.darkGray2,
-              ["white"]: theme.custom.colors.white,
-              ["red"]: theme.custom.colors.lightRed,
-            }[hovercolor],
-            textDecoration: "underline",
-          },
+      props: { size: "medium" },
+      style: theme.typography.body2,
     },
-  ])
-}
+    {
+      props: { size: "large" },
+      style: theme.typography.h5,
+    },
+  ],
+})
 
 type LinkProps = LinkStyleProps &
   React.ComponentProps<"a"> & {

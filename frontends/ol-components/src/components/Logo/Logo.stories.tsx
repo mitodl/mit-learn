@@ -6,16 +6,17 @@ import { styled } from "@pigment-css/react"
 import { PlatformEnum } from "api"
 
 type StoryProps = { showIconBackground?: boolean; iconHeight?: string }
-const SizedPlatformLogo = styled(PlatformLogo)<StoryProps>(
-  ({ showIconBackground }) => [
+const SizedPlatformLogo = styled(PlatformLogo)<StoryProps>({
+  height: "27px",
+  variants: [
     {
-      height: "27px",
-    },
-    showIconBackground && {
-      backgroundColor: "pink",
+      props: { showIconBackground: true },
+      style: {
+        backgroundColor: "pink",
+      },
     },
   ],
-)
+})
 
 const meta: Meta<StoryProps> = {
   title: "smoot-design/Logo",

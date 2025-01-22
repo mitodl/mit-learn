@@ -38,7 +38,6 @@ export { default as ClickAwayListener } from "@mui/material/ClickAwayListener"
 export type { ClickAwayListenerProps } from "@mui/material/ClickAwayListener"
 
 export { default as Container } from "@mui/material-pigment-css/Container"
-export type { ContainerProps } from "@mui/material-pigment-css/Container"
 
 export { default as Divider } from "@mui/material/Divider"
 export type { DividerProps } from "@mui/material/Divider"

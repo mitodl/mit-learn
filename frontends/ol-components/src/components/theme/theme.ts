@@ -3,8 +3,10 @@
 //   createTheme,
 //   ThemeProvider as MuiThemeProvider,
 // } from "@mui/material/styles"
+// import { extendTheme } from "@mui/material/styles"
+//
+// eslint-disable-next-line @typescript-eslint/no-restricted-imports
 import { createTheme } from "@mui/material/styles"
-// import { withPigment, extendTheme } from '@pigment-css/nextjs-plugin';
 import { typography } from "./typography"
 import * as buttons from "./buttons"
 import * as chips from "./chips"

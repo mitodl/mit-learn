@@ -1,6 +1,7 @@
 import type { Theme as MuiTheme } from "@mui/material/styles"
 import "@emotion/react"
-import "@emotion/styled"
+import "@pigment-css/react"
+import "@mui/material-pigment-css"
 import "./typography"
 
 export interface ColorGroup {
@@ -102,8 +103,28 @@ declare module "@emotion/react" {
   }
 }
 
+declare module "@pigment-css/react" {
+  export interface Theme extends MuiTheme {
+    custom: CustomTheme
+  }
+}
+
 declare module "@mui/material-pigment-css" {
   interface ThemeArgs {
     theme: Theme
+  }
+}
+
+import type { ExtendTheme } from "@pigment-css/react/theme"
+
+declare module "@pigment-css/react/theme" {
+  interface ThemeTokens {
+    custom: CustomTheme
+  }
+
+  interface ThemeArgs {
+    theme: ExtendTheme<{
+      tokens: ThemeTokens
+    }>
   }
 }
