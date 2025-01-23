@@ -14,7 +14,6 @@ from langchain_core.messages import SystemMessage, ToolMessage
 from langchain_core.messages.ai import AIMessageChunk
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
-from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import StateGraph
 from langgraph.graph.graph import CompiledGraph
 from langgraph.prebuilt import ToolNode, tools_condition
@@ -22,7 +21,7 @@ from openai import BadRequestError
 
 from ai_chat import tools
 from ai_chat.constants import AgentState, AIModelAPI
-from ai_chat.utils import get_postgres_saver
+from ai_chat.utils import ChatMemory
 from learning_resources.constants import OfferedBy
 
 log = logging.getLogger(__name__)
@@ -35,7 +34,8 @@ Use postgres to save memory persistently by thread if configured,
 otherwise use temporary memory.  Reccomend not using the postgres
 saver until we have a Django ORM-friendly alternate implementation.
 """
-CHAT_MEMORY = get_postgres_saver() if settings.AI_PERSISTENT_MEMORY else MemorySaver()
+
+CHECKPOINTER = ChatMemory().checkpointer
 
 
 class BaseLangGraphAgent(ABC):
@@ -69,9 +69,10 @@ class BaseLangGraphAgent(ABC):
         self.instructions = instructions or self.INSTRUCTIONS
         self.user_id = user_id
         self.config = {"configurable": {"thread_id": thread_id or uuid4().hex}}
-        self.memory = CHAT_MEMORY  # retain chat history
+        self.memory = CHECKPOINTER  # retain chat history
         if settings.AI_PROXY_CLASS:
             self.proxy = import_string(f"ai_chat.proxy.{settings.AI_PROXY_CLASS}")()
+            self.proxy.create_proxy_user(self.user_id)
         else:
             self.proxy = None
         self.agent = None

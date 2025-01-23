@@ -4,10 +4,22 @@ import logging
 from enum import Enum
 
 from django.conf import settings
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.checkpoint.postgres import PostgresSaver
 from psycopg_pool import ConnectionPool
 
+from main.utils import Singleton
+
 log = logging.getLogger(__name__)
+
+
+class ChatMemory(metaclass=Singleton):
+    """Singleton class to manage chat memory"""
+
+    def __init__(self):
+        self.checkpointer = (
+            get_postgres_saver() if settings.AI_PERSISTENT_MEMORY else MemorySaver()
+        )
 
 
 def enum_zip(label: str, enum: Enum) -> type[Enum]:
