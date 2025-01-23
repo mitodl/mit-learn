@@ -1,10 +1,10 @@
 import React from "react"
 import { Carousel, getSlideInfo } from "./Carousel"
-import { render, screen, fireEvent, waitFor } from "@testing-library/react"
+import { screen, fireEvent, waitFor } from "@testing-library/react"
 import user from "@testing-library/user-event"
-import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
+import { renderWithTheme } from "../../test-utils"
 
 const mockWidths = ({
   slide,
@@ -105,7 +105,7 @@ describe("Carousel", () => {
     const fits3 = 3 * slide + 2 * gap
 
     mockWidths({ slide, gap, list: fits3 })
-    render(
+    renderWithTheme(
       <Carousel>
         {Array.from({ length: 10 }).map((_, i) => (
           <div key={i}>
@@ -115,7 +115,6 @@ describe("Carousel", () => {
           </div>
         ))}
       </Carousel>,
-      { wrapper: ThemeProvider },
     )
 
     expect(getVisibleSlides()).toHaveLength(3)
@@ -152,13 +151,12 @@ describe("Carousel", () => {
       const fits3 = 3 * slide + 2 * gap
 
       mockWidths({ slide, gap, list: fits3 })
-      render(
+      renderWithTheme(
         <Carousel initialSlide={initialIndex}>
           {Array.from({ length: 10 }).map((_, i) => (
             <div key={i}>Slide {i}</div>
           ))}
         </Carousel>,
-        { wrapper: ThemeProvider },
       )
 
       const next = getNextButton()
@@ -179,13 +177,12 @@ describe("Carousel", () => {
       const fits3 = 3 * slide + 2 * gap
 
       mockWidths({ slide, gap, list: fits3 })
-      render(
+      renderWithTheme(
         <Carousel initialSlide={initialIndex}>
           {Array.from({ length: 10 }).map((_, i) => (
             <div key={i}>Slide {i}</div>
           ))}
         </Carousel>,
-        { wrapper: ThemeProvider },
       )
 
       const prev = getPrevButton()
@@ -209,9 +206,7 @@ describe("Carousel", () => {
         </div>
       )
     }
-    render(<WithArrowsContainer />, {
-      wrapper: ThemeProvider,
-    })
+    renderWithTheme(<WithArrowsContainer />)
     const container = screen.getByTestId("arrows-container")
     const next = getNextButton()
     const prev = getPrevButton()
@@ -239,13 +234,12 @@ describe("Carousel", () => {
     "getSlideInfo never returns more slidesPerPage than children",
     ({ sizes, childCount, expectedPerPage }) => {
       mockWidths(sizes)
-      render(
+      renderWithTheme(
         <Carousel>
           {Array.from({ length: childCount }).map((_, i) => (
             <div key={i}>Slide {i}</div>
           ))}
         </Carousel>,
-        { wrapper: ThemeProvider },
       )
       const slickList = document.querySelector(".slick-list")
       invariant(slickList instanceof HTMLElement, "slick-list not found")

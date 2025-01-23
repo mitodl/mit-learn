@@ -41,6 +41,16 @@ module.exports = {
           message:
             "Default import from 'lodash' is not allowed. Use named imports instead.",
         },
+        {
+          name: "ol-components",
+          importNames: [
+            "Button",
+            "ButtonLink",
+            "ActionButton",
+            "ActionButtonLink",
+          ],
+          message: "Please import from @mitodl/smoot-design instead.",
+        },
       ],
       patterns: [
         {

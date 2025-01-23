@@ -4,7 +4,9 @@ import {
   useSearchSubscriptionCreate,
   useSearchSubscriptionList,
 } from "api/hooks/searchSubscription"
-import { Button, styled } from "ol-components"
+import { styled } from "ol-components"
+import { Button } from "@mitodl/smoot-design"
+import type { ButtonProps } from "@mitodl/smoot-design"
 
 import { RiMailLine } from "@remixicon/react"
 import { useUserMe } from "api/hooks/user"
@@ -14,6 +16,25 @@ import { FollowPopover } from "../FollowPopover/FollowPopover"
 const StyledButton = styled(Button)({
   minWidth: "130px",
 })
+
+const SuccessButton = styled((props: Omit<ButtonProps, "variant">) => (
+  <StyledButton {...props} variant="primary" />
+))(({ theme }) => ({
+  backgroundColor: theme.custom.colors.darkGreen,
+  color: theme.custom.colors.white,
+  border: "none",
+  /* Shadow/04dp */
+  boxShadow:
+    "0px 2px 4px 0px rgba(37, 38, 43, 0.10), 0px 3px 8px 0px rgba(37, 38, 43, 0.12)",
+  ":hover:not(:disabled)": {
+    backgroundColor: theme.custom.colors.darkGreen,
+    boxShadow: "none",
+  },
+  ":disabled": {
+    backgroundColor: theme.custom.colors.silverGray,
+    boxShadow: "none",
+  },
+}))
 
 type SearchSubscriptionToggleProps = {
   itemName: string
@@ -52,13 +73,9 @@ const SearchSubscriptionToggle: React.FC<SearchSubscriptionToggleProps> = ({
   if (isSubscribed) {
     return (
       <>
-        <StyledButton
-          variant="success"
-          onClick={onFollowClick}
-          startIcon={<RiMailLine />}
-        >
+        <SuccessButton onClick={onFollowClick} startIcon={<RiMailLine />}>
           Following
-        </StyledButton>
+        </SuccessButton>
         <FollowPopover
           searchParams={searchParams}
           itemName={itemName}

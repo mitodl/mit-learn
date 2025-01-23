@@ -21,15 +21,7 @@ export type {
   BannerBackgroundProps,
 } from "./components/Banner/Banner"
 
-export {
-  Button,
-  ButtonLink,
-  ActionButton,
-  ActionButtonLink,
-} from "./components/Button/Button"
 export { ListCard, ListCardActionButton } from "./components/Card/ListCard"
-
-export type { ButtonProps, ButtonLinkProps } from "./components/Button/Button"
 
 export { default as Chip } from "@mui/material/Chip"
 export type { ChipProps } from "@mui/material/Chip"
@@ -184,3 +176,16 @@ export { default as styled } from "@emotion/styled"
 export { css, Global } from "@emotion/react"
 
 export { AppRouterCacheProvider as NextJsAppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter"
+
+/**
+ * @deprecated Please use component from @mitodl/smoot-design instead
+ */
+const Migrated = () => {
+  throw new Error("Please use component from @mitodl/smoot-design instead")
+}
+export {
+  Migrated as ActionButton,
+  Migrated as ActionButtonLink,
+  Migrated as Button,
+  Migrated as ButtonLink,
+}

@@ -1,7 +1,7 @@
 import React from "react"
-import { render, screen } from "@testing-library/react"
-import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
+import { screen } from "@testing-library/react"
 import { Breadcrumbs } from "./Breadcrumbs"
+import { renderWithTheme } from "../../test-utils"
 
 // Mock react-router-dom's Link so we don't need to set up a Router
 jest.mock("react-router-dom", () => {
@@ -29,14 +29,8 @@ describe("Breadcrumbs", () => {
   ])(
     "renders a Breadcrumbs component with a one or more ancestors",
     ({ ancestors }) => {
-      render(
-        <ThemeProvider>
-          <Breadcrumbs
-            variant="light"
-            ancestors={ancestors}
-            current="Current"
-          />
-        </ThemeProvider>,
+      renderWithTheme(
+        <Breadcrumbs variant="light" ancestors={ancestors} current="Current" />,
       )
       const totalAncestors = ancestors.length
       const expectedHrefs = ancestors.map(({ href }) => href)

@@ -5,7 +5,7 @@ import styled from "@emotion/styled"
 import Link from "next/link"
 import React, { ReactElement } from "react"
 import { RiCloseLargeLine } from "@remixicon/react"
-import { ActionButton } from "../Button/Button"
+import { ActionButton } from "@mitodl/smoot-design"
 
 const DrawerContent = styled.div(({ theme }) => ({
   paddingTop: theme.custom.dimensions.headerHeight,

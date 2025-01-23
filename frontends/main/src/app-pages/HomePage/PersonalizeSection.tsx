@@ -1,5 +1,6 @@
 import React from "react"
-import { Typography, styled, Container, ButtonLink } from "ol-components"
+import { Typography, styled, Container } from "ol-components"
+import { ButtonLink } from "@mitodl/smoot-design"
 import { backgroundSrcSetCSS } from "ol-utilities"
 import { useUserMe } from "api/hooks/user"
 import * as urls from "@/common/urls"

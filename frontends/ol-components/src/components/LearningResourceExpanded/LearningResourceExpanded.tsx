@@ -2,7 +2,12 @@ import React, { useCallback, useEffect, useRef, useState } from "react"
 import styled from "@emotion/styled"
 import Skeleton from "@mui/material/Skeleton"
 import { default as NextImage } from "next/image"
-import { ActionButton, Button, ButtonLink, ButtonProps } from "../Button/Button"
+import {
+  ActionButton,
+  Button,
+  ButtonLink,
+  ButtonProps,
+} from "@mitodl/smoot-design"
 import type { LearningResource } from "api"
 import { ResourceTypeEnum, PlatformEnum } from "api"
 import { DEFAULT_RESOURCE_IMG, getReadableResourceType } from "ol-utilities"

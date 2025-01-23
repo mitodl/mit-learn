@@ -1,5 +1,6 @@
 import React, { useMemo } from "react"
-import { Popover, Typography, styled, Button } from "ol-components"
+import { Popover, Typography, styled } from "ol-components"
+import { Button } from "@mitodl/smoot-design"
 import type { PopoverProps } from "ol-components"
 import { getSearchParamMap } from "@/common/utils"
 
@@ -91,7 +92,7 @@ const FollowPopover: React.FC<FollowPopoverProps> = ({
           <Button
             size="medium"
             responsive={true}
-            variant="inverted"
+            variant="secondary"
             edge="rounded"
             data-testid="action-unfollow"
             onClick={handleFollowAction}
@@ -121,7 +122,7 @@ const FollowPopover: React.FC<FollowPopoverProps> = ({
           responsive={true}
           size="medium"
           edge="rounded"
-          variant="inverted"
+          variant="secondary"
           onClick={() => props.onClose()}
         >
           Close

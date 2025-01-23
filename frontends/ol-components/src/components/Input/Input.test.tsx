@@ -1,19 +1,16 @@
 import React from "react"
-import { render, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 import user from "@testing-library/user-event"
 import { Input, AdornmentButton } from "./Input"
-import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
+import { renderWithTheme } from "../../test-utils"
 
 describe("AdornmentButton", () => {
   it("Does not steal focus from input when clicked", async () => {
     const onClick = jest.fn()
-    render(
+    renderWithTheme(
       <Input
         endAdornment={<AdornmentButton onClick={onClick}>Test</AdornmentButton>}
       />,
-      {
-        wrapper: ThemeProvider,
-      },
     )
     const input = screen.getByRole("textbox")
     const button = screen.getByRole("button", { name: "Test" })

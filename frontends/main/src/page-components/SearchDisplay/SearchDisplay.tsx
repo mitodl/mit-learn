@@ -6,7 +6,6 @@ import {
   PlainList,
   Container,
   Typography,
-  Button,
   SimpleSelect,
   truncateText,
   css,
@@ -15,6 +14,7 @@ import {
   VisuallyHidden,
   Stack,
 } from "ol-components"
+import { Button, ButtonProps } from "@mitodl/smoot-design"
 
 import {
   RiCloseLine,
@@ -413,6 +413,11 @@ const MobileFacetSearchButtons = styled.div`
     flex: 1;
   }
 `
+const ResetButton = styled((props: Omit<ButtonProps, "variant">) => (
+  <Button {...props} variant="text" />
+))(({ theme }) => ({
+  backgroundColor: theme.custom.colors.white,
+}))
 
 const MobileDrawerCloseButton = styled(Button)`
   svg {
@@ -926,13 +931,9 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                       >
                         Apply Filters
                       </Button>
-                      <Button
-                        variant="noBorder"
-                        size="small"
-                        onClick={clearAllFacets}
-                      >
+                      <ResetButton size="small" onClick={clearAllFacets}>
                         Clear All
-                      </Button>
+                      </ResetButton>
                     </MobileFacetSearchButtons>
                   ) : null}
                   {filterContents}
