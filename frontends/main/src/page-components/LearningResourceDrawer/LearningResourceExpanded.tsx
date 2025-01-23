@@ -83,11 +83,11 @@ const BottomContainer = styled.div({
   gap: "32px",
   borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
   background: theme.custom.colors.lightGray1,
-  div: {
-    maxWidth: "100%",
+  "> div": {
+    width: "100%",
   },
   [theme.breakpoints.down("md")]: {
-    width: "100vw",
+    width: "auto",
     padding: "16px 0 16px 16px",
   },
 })
