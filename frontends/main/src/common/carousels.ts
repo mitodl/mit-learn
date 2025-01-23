@@ -1,5 +1,11 @@
-import type { ResourceCarouselProps } from "@/page-components/ResourceCarousel/ResourceCarousel"
-import { LearningResourcesSearchRetrieveDeliveryEnum } from "api"
+import type {
+  ResourceCarouselProps,
+  TabConfig,
+} from "@/page-components/ResourceCarousel/ResourceCarousel"
+import {
+  LearningResourcesSearchRetrieveDeliveryEnum,
+  LearningResourcesSearchRetrieveResourceTypeEnum,
+} from "api"
 import { Profile } from "api/v0"
 
 type TopPicksCarouselConfigProps = (
@@ -38,19 +44,21 @@ const TopPicksCarouselConfig: TopPicksCarouselConfigProps = (
 
 type TopicCarouselConfigProps = (
   topic: string | undefined,
+  resourceType?: LearningResourcesSearchRetrieveResourceTypeEnum[] | undefined,
 ) => ResourceCarouselProps["config"]
 
 const TopicCarouselConfig: TopicCarouselConfigProps = (
   topic: string | undefined,
+  resourceType?: LearningResourcesSearchRetrieveResourceTypeEnum[] | undefined,
 ) => {
-  return [
+  const config: TabConfig[] = [
     {
       label: "All",
       cardProps: { size: "small" },
       data: {
         type: "lr_search",
         params: {
-          resource_type: ["course"],
+          resource_type: resourceType || [],
           limit: 12,
           topic: [topic || ""],
           sortby: "-views",
@@ -58,6 +66,7 @@ const TopicCarouselConfig: TopicCarouselConfigProps = (
       },
     },
   ]
+  return config
 }
 
 const CERTIFICATE_COURSES_CAROUSEL: ResourceCarouselProps["config"] = [

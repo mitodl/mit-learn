@@ -43,6 +43,7 @@ import UserListDetailsTab from "./UserListDetailsTab"
 import { SettingsPage } from "./SettingsPage"
 import { DASHBOARD_HOME, MY_LISTS, PROFILE, SETTINGS } from "@/common/urls"
 import dynamic from "next/dynamic"
+import { ResourceTypeEnum } from "api"
 
 const LearningResourceDrawer = dynamic(
   () =>
@@ -451,7 +452,9 @@ const DashboardPage: React.FC = () => {
                           titleComponent="h2"
                           title={`Popular courses in ${topic}`}
                           isLoading={isLoadingProfile}
-                          config={TopicCarouselConfig(topic)}
+                          config={TopicCarouselConfig(topic, [
+                            ResourceTypeEnum.Course,
+                          ])}
                           data-testid={`topic-carousel-${topic}`}
                         />
                       ))}
