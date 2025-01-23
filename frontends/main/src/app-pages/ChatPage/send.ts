@@ -9,7 +9,7 @@ function getCookie(name: string) {
 }
 
 type EndpointOpts = {
-  url: "/api/v0/chat_agent/"
+  url: string
   extraBody?: Record<string, unknown>
 }
 
