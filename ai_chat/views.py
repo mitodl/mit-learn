@@ -104,12 +104,14 @@ class SyllabusAgentView(views.APIView):
         user_id = request.user.email if request.user.is_authenticated else "anonymous"
         message = serializer.validated_data.pop("message", "")
         readable_id = (serializer.validated_data.pop("readable_id"),)
+        collection_name = (serializer.validated_data.pop("collection_name"),)
         clear_history = serializer.validated_data.pop("clear_history", False)
         agent = SyllabusAgent(
             "Learning Resource Search AI Assistant",
             user_id=user_id,
             cache_key=f"{cache_id}_search_chat_history",
             save_history=True,
+            collection_name=collection_name,
             **serializer.validated_data,
         )
         if clear_history:

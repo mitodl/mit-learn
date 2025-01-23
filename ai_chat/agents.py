@@ -520,6 +520,7 @@ information.
         save_history: Optional[bool] = False,
         cache_key: Optional[str] = None,
         cache_timeout: Optional[int] = None,
+        collection_name: Optional[int] = None,
     ):
         """Initialize the AI search agent service"""
         super().__init__(
@@ -531,6 +532,7 @@ information.
             user_id=user_id,
             cache_key=cache_key,
             cache_timeout=cache_timeout or settings.AI_CACHE_TIMEOUT,
+            collection_name=collection_name,
         )
         self.search_parameters = []
         self.search_results = []
@@ -550,6 +552,8 @@ information.
             "resource_readable_id": self.readable_id,
             "limit": 20,
         }
+        if self.collection_name:
+            params["collection_name"] = self.collection_name
         self.search_parameters.append(params)
         try:
             response = requests.get(url, params=params, timeout=30)
