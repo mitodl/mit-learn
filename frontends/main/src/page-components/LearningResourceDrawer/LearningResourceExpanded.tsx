@@ -102,7 +102,7 @@ const ContentContainer = styled.div({
   },
 })
 
-const LeftContainer = styled.div({
+const ContentLeft = styled.div({
   display: "flex",
   flexDirection: "column",
   flexGrow: 1,
@@ -111,7 +111,7 @@ const LeftContainer = styled.div({
   maxWidth: "100%",
 })
 
-const RightContainer = styled.div({
+const ContentRight = styled.div({
   display: "flex",
   flexDirection: "column",
   width: "100%",
@@ -405,23 +405,12 @@ const ImageSection: React.FC<{
     return (
       <VideoFrame src={resource.url} title={resource.title} aspect={aspect} />
     )
-  } else if (resource?.image) {
-    return (
-      <ImageContainer>
-        <Image
-          src={resource.image?.url ?? DEFAULT_RESOURCE_IMG}
-          alt={resource?.image.alt ?? ""}
-          aspect={aspect}
-          fill
-        />
-      </ImageContainer>
-    )
   } else if (resource) {
     return (
       <ImageContainer>
         <Image
-          src={DEFAULT_RESOURCE_IMG}
-          alt={resource.image?.alt ?? ""}
+          src={resource.image?.url ?? DEFAULT_RESOURCE_IMG}
+          alt={resource?.image?.alt ?? ""}
           aspect={aspect}
           fill
         />
@@ -735,11 +724,11 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
       />
       <TopContainer>
         <ContentContainer>
-          <LeftContainer>
+          <ContentLeft>
             <ResourceDescription resource={resource} />
             <InfoSection resource={resource} />
-          </LeftContainer>
-          <RightContainer>
+          </ContentLeft>
+          <ContentRight>
             <CallToActionSection
               imgConfig={imgConfig}
               resource={resource}
@@ -750,7 +739,7 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
               onAddToLearningPathClick={onAddToLearningPathClick}
               onAddToUserListClick={onAddToUserListClick}
             />
-          </RightContainer>
+          </ContentRight>
         </ContentContainer>
         {topCarousels && (
           <TopCarouselContainer>
