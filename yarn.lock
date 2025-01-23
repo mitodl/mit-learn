@@ -6730,8 +6730,8 @@ __metadata:
   linkType: hard
 
 "ai@npm:^4.0.13":
-  version: 4.0.36
-  resolution: "ai@npm:4.0.36"
+  version: 4.0.38
+  resolution: "ai@npm:4.0.38"
   dependencies:
     "@ai-sdk/provider": "npm:1.0.4"
     "@ai-sdk/provider-utils": "npm:2.0.7"
@@ -6747,7 +6747,7 @@ __metadata:
       optional: true
     zod:
       optional: true
-  checksum: 10/01e0ca0ae86a7ad4dd2bfbb28b482f2478a37d4f8cb0db002968ce4b1756c4edc9450d706e2c8755f8cbcc66015ec30b4bfb7c71e35cb93a9eb4f8e3e6ff3625
+  checksum: 10/6baa0020dd7d8d6607cc478c5251b16f987a9f80e2f1966d003eaf376850d698996a1d806aa0e07cfb8d90495f60247e6de1d84eefdbef2363f823e64c15f594
   languageName: node
   linkType: hard
 
@@ -10475,6 +10475,7 @@ __metadata:
     jest-environment-jsdom: "npm:^29.5.0"
     jest-extended: "npm:^4.0.2"
     jest-fail-on-console: "npm:^3.3.1"
+    jest-next-dynamic-ts: "npm:^0.1.1"
     jest-watch-typeahead: "npm:^2.2.2"
     jest-when: "npm:^3.6.0"
     postcss-styled-syntax: "npm:^0.7.0"
@@ -12301,6 +12302,13 @@ __metadata:
     "@types/node": "npm:*"
     jest-util: "npm:^29.7.0"
   checksum: 10/ae51d1b4f898724be5e0e52b2268a68fcd876d9b20633c864a6dd6b1994cbc48d62402b0f40f3a1b669b30ebd648821f086c26c08ffde192ced951ff4670d51c
+  languageName: node
+  linkType: hard
+
+"jest-next-dynamic-ts@npm:^0.1.1":
+  version: 0.1.1
+  resolution: "jest-next-dynamic-ts@npm:0.1.1"
+  checksum: 10/e8d70c827e46f8f5053559fdad193a84805a241ab888cdbe4905c05c1635302eb4a0d4255327e48b144f338e62f88d3ed09c8dc6df56f79f10eca7968a099850
   languageName: node
   linkType: hard
 

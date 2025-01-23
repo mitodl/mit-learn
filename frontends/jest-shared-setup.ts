@@ -5,6 +5,7 @@ import { configure } from "@testing-library/react"
 import { resetAllWhenMocks } from "jest-when"
 import * as matchers from "jest-extended"
 import { mockRouter } from "ol-test-utilities/mocks/nextNavigation"
+import preloadAll from "jest-next-dynamic-ts"
 
 expect.extend(matchers)
 
@@ -83,6 +84,10 @@ jest.mock("next/navigation", () => {
     ...jest.requireActual("ol-test-utilities/mocks/nextNavigation")
       .nextNavigationMocks,
   }
+})
+
+beforeAll(async () => {
+  await preloadAll()
 })
 
 afterEach(() => {

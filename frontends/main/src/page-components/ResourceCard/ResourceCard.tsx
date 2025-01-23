@@ -12,6 +12,7 @@ import {
 } from "../Dialogs/AddToListDialog"
 import { useResourceDrawerHref } from "../LearningResourceDrawer/useResourceDrawerHref"
 import { useUserMe } from "api/hooks/user"
+import { useMounted } from "api/ssr/useMounted"
 import { LearningResource } from "api"
 import { SignupPopover } from "../SignupPopover/SignupPopover"
 import { useIsUserListMember } from "api/hooks/userLists"
@@ -100,6 +101,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
     inLearningPath,
     onClick,
   } = useResourceCard(resource)
+  const mounted = useMounted()
   const CardComponent =
     list && condensed
       ? LearningResourceListCardCondensed
@@ -112,8 +114,8 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
         onClick={onClick}
         resource={resource}
         href={resource ? getDrawerHref(resource.id) : undefined}
-        onAddToLearningPathClick={handleAddToLearningPathClick}
-        onAddToUserListClick={handleAddToUserListClick}
+        onAddToLearningPathClick={mounted ? handleAddToLearningPathClick : null}
+        onAddToUserListClick={mounted ? handleAddToUserListClick : null}
         inUserList={inUserList}
         inLearningPath={inLearningPath}
         {...others}

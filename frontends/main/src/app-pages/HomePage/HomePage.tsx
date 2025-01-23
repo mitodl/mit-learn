@@ -1,15 +1,41 @@
 "use client"
 
-import React from "react"
+import React, { Suspense } from "react"
 import { Container, styled, theme } from "ol-components"
-import HeroSearch from "@/page-components/HeroSearch/HeroSearch"
-import BrowseTopicsSection from "./BrowseTopicsSection"
-import NewsEventsSection from "./NewsEventsSection"
-import TestimonialsSection from "./TestimonialsSection"
-import ResourceCarousel from "@/page-components/ResourceCarousel/ResourceCarousel"
-import PersonalizeSection from "./PersonalizeSection"
 import * as carousels from "./carousels"
 import dynamic from "next/dynamic"
+
+const HeroSearch = dynamic(
+  () => import("@/page-components/HeroSearch/HeroSearch"),
+  { ssr: true },
+)
+
+const TestimonialsSection = dynamic(() => import("./TestimonialsSection"), {
+  ssr: true,
+})
+
+const ResourceCarousel = dynamic(
+  () => import("@/page-components/ResourceCarousel/ResourceCarousel"),
+  { ssr: true },
+)
+
+const PersonalizeSection = dynamic(() => import("./PersonalizeSection"), {
+  ssr: true,
+})
+
+const BrowseTopicsSection = dynamic(() => import("./BrowseTopicsSection"), {
+  ssr: true,
+})
+
+const NewsEventsSection = dynamic(() => import("./NewsEventsSection"), {
+  ssr: true,
+})
+
+const LearningResourceDrawer = dynamic(
+  () =>
+    import("@/page-components/LearningResourceDrawer/LearningResourceDrawer"),
+  { ssr: false },
+)
 
 const FullWidthBackground = styled.div({
   background: "linear-gradient(0deg, #FFF 0%, #E9ECEF 100%);",
@@ -44,11 +70,6 @@ const StyledContainer = styled(Container)({
   },
 })
 
-const LearningResourceDrawer = dynamic(
-  () =>
-    import("@/page-components/LearningResourceDrawer/LearningResourceDrawer"),
-)
-
 const HomePage: React.FC<{ heroImageIndex: number }> = ({ heroImageIndex }) => {
   return (
     <>
@@ -57,21 +78,25 @@ const HomePage: React.FC<{ heroImageIndex: number }> = ({ heroImageIndex }) => {
         <StyledContainer>
           <HeroSearch imageIndex={heroImageIndex} />
           <section>
-            <FeaturedCoursesCarousel
-              titleComponent="h2"
-              title="Featured Courses"
-              config={carousels.FEATURED_RESOURCES_CAROUSEL}
-            />
+            <Suspense>
+              <FeaturedCoursesCarousel
+                titleComponent="h2"
+                title="Featured Courses"
+                config={carousels.FEATURED_RESOURCES_CAROUSEL}
+              />
+            </Suspense>
           </section>
         </StyledContainer>
       </FullWidthBackground>
       <PersonalizeSection />
       <Container component="section">
-        <MediaCarousel
-          titleComponent="h2"
-          title="Media"
-          config={carousels.MEDIA_CAROUSEL}
-        />
+        <Suspense>
+          <MediaCarousel
+            titleComponent="h2"
+            title="Media"
+            config={carousels.MEDIA_CAROUSEL}
+          />
+        </Suspense>
       </Container>
       <BrowseTopicsSection />
       <TestimonialsSection />
