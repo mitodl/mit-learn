@@ -94,9 +94,7 @@ const BottomContainer = styled.div({
 
 const ContentContainer = styled.div({
   display: "flex",
-  alignItems: "flex-start",
   gap: "32px",
-  alignSelf: "stretch",
   [theme.breakpoints.down("md")]: {
     alignItems: "center",
     flexDirection: "column-reverse",
@@ -116,13 +114,8 @@ const LeftContainer = styled.div({
 const RightContainer = styled.div({
   display: "flex",
   flexDirection: "column",
-  justifyContent: "center",
-  alignItems: "flex-start",
+  width: "100%",
   gap: "24px",
-  [theme.breakpoints.down("md")]: {
-    width: "100%",
-    alignItems: "center",
-  },
 })
 
 const ImageContainer = styled.div({
