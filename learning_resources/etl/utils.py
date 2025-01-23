@@ -334,12 +334,7 @@ def documents_from_olx(
                 mimetype = mimetypes.types_map.get(extension_lower)
                 checksum = md5(filebytes).hexdigest()  # noqa: S324
 
-                edx_block_id_length = 32
-                edx_block_id = (
-                    name
-                    if len(name) == edx_block_id_length and name.isalnum()
-                    else None
-                )
+                edx_block_id = name
 
                 yield (
                     filebytes,
