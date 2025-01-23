@@ -114,12 +114,19 @@ class ContentFilesVectorSearchView(QdrantView):
             query_text = request_data.data.get("q", "")
             limit = request_data.data.get("limit", 10)
             offset = request_data.data.get("offset", 0)
+            collection_name_override = request_data.data.get("collection_name")
+            collection_name = CONTENT_FILES_COLLECTION_NAME
+            if collection_name_override:
+                collection_name = (
+                    f"{settings.QDRANT_BASE_COLLECTION_NAME}.{collection_name_override}"
+                )
+
             response = vector_search(
                 query_text,
                 limit=limit,
                 offset=offset,
                 params=request_data.data,
-                search_collection=CONTENT_FILES_COLLECTION_NAME,
+                search_collection=collection_name,
             )
             if request_data.data.get("dev_mode"):
                 return Response(response)

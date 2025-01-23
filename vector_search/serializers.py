@@ -229,6 +229,10 @@ class ContentFileVectorSearchRequestSerializer(serializers.Serializer):
             "The readable_id value of the parent learning resource for the content file"
         ),
     )
+    collection_name = serializers.CharField(
+        required=False,
+        help_text=("Manually specify the name of the Qdrant collection to query"),
+    )
 
 
 class ContentFileVectorSearchResponseSerializer(SearchResponseSerializer):

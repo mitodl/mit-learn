@@ -10901,6 +10901,7 @@ export const VectorContentFilesSearchApiAxiosParamCreator = function (
     /**
      * Vector Search for content
      * @summary Content File Vector Search
+     * @param {string} [collection_name] Manually specify the name of the Qdrant collection to query
      * @param {Array<string>} [content_feature_type] The feature type of the content file. Possible options are at api/v1/course_features/
      * @param {Array<string>} [course_number] Course number of the content file
      * @param {Array<string>} [file_extension] The extension of the content file.
@@ -10917,6 +10918,7 @@ export const VectorContentFilesSearchApiAxiosParamCreator = function (
      * @throws {RequiredError}
      */
     vectorContentFilesSearchRetrieve: async (
+      collection_name?: string,
       content_feature_type?: Array<string>,
       course_number?: Array<string>,
       file_extension?: Array<string>,
@@ -10946,6 +10948,10 @@ export const VectorContentFilesSearchApiAxiosParamCreator = function (
       }
       const localVarHeaderParameter = {} as any
       const localVarQueryParameter = {} as any
+
+      if (collection_name !== undefined) {
+        localVarQueryParameter["collection_name"] = collection_name
+      }
 
       if (content_feature_type) {
         localVarQueryParameter["content_feature_type"] = content_feature_type
@@ -11025,6 +11031,7 @@ export const VectorContentFilesSearchApiFp = function (
     /**
      * Vector Search for content
      * @summary Content File Vector Search
+     * @param {string} [collection_name] Manually specify the name of the Qdrant collection to query
      * @param {Array<string>} [content_feature_type] The feature type of the content file. Possible options are at api/v1/course_features/
      * @param {Array<string>} [course_number] Course number of the content file
      * @param {Array<string>} [file_extension] The extension of the content file.
@@ -11041,6 +11048,7 @@ export const VectorContentFilesSearchApiFp = function (
      * @throws {RequiredError}
      */
     async vectorContentFilesSearchRetrieve(
+      collection_name?: string,
       content_feature_type?: Array<string>,
       course_number?: Array<string>,
       file_extension?: Array<string>,
@@ -11062,6 +11070,7 @@ export const VectorContentFilesSearchApiFp = function (
     > {
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.vectorContentFilesSearchRetrieve(
+          collection_name,
           content_feature_type,
           course_number,
           file_extension,
@@ -11116,6 +11125,7 @@ export const VectorContentFilesSearchApiFactory = function (
     ): AxiosPromise<ContentFileVectorSearchResponse> {
       return localVarFp
         .vectorContentFilesSearchRetrieve(
+          requestParameters.collection_name,
           requestParameters.content_feature_type,
           requestParameters.course_number,
           requestParameters.file_extension,
@@ -11141,6 +11151,13 @@ export const VectorContentFilesSearchApiFactory = function (
  * @interface VectorContentFilesSearchApiVectorContentFilesSearchRetrieveRequest
  */
 export interface VectorContentFilesSearchApiVectorContentFilesSearchRetrieveRequest {
+  /**
+   * Manually specify the name of the Qdrant collection to query
+   * @type {string}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly collection_name?: string
+
   /**
    * The feature type of the content file. Possible options are at api/v1/course_features/
    * @type {Array<string>}
@@ -11247,6 +11264,7 @@ export class VectorContentFilesSearchApi extends BaseAPI {
   ) {
     return VectorContentFilesSearchApiFp(this.configuration)
       .vectorContentFilesSearchRetrieve(
+        requestParameters.collection_name,
         requestParameters.content_feature_type,
         requestParameters.course_number,
         requestParameters.file_extension,

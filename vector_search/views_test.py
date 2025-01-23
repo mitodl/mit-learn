@@ -188,3 +188,34 @@ def test_content_file_vector_search_filters_empty_query(mocker, client):
             ),
         ]
     )
+
+
+def test_content_file_vector_search_filters_custom_collection(mocker, client):
+    """Test content file vector search uses custom collection if specified"""
+
+    mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
+    custom_collection_name = "foo_bar_collection"
+    mock_qdrant.scroll.return_value = [[]]
+    mocker.patch(
+        "vector_search.utils.qdrant_client",
+        return_value=mock_qdrant,
+    )
+    mock_qdrant.count.return_value = CountResult(count=10)
+    # omit the q param
+    params = {
+        "offered_by": ["ocw"],
+        "platform": ["edx"],
+        "key": ["testfilename.pdf"],
+        "course_number": ["test"],
+        "content_feature_type": ["test_feature"],
+        "run_readable_id": ["test_run_id"],
+        "resource_readable_id": ["test_resource_id_1", "test_resource_id_2"],
+        "collection_name": custom_collection_name,
+    }
+
+    client.get(reverse("vector_search:v0:vector_content_files_search"), data=params)
+    assert (
+        mock_qdrant.scroll.mock_calls[0]
+        .kwargs["collection_name"]
+        .endswith(custom_collection_name)
+    )
