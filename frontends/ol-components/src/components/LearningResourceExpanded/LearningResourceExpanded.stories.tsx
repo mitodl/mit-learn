@@ -1,6 +1,6 @@
 import React from "react"
 import type { Meta, StoryObj } from "@storybook/react"
-import { LearningResourceExpandedV1 } from "./LearningResourceExpandedV1"
+import { LearningResourceExpanded } from "./LearningResourceExpanded"
 import { factories } from "api/test-utils"
 import { ResourceTypeEnum as LRT } from "api"
 import invariant from "tiny-invariant"
@@ -16,9 +16,9 @@ const makeResource: typeof _makeResource = (overrides) => {
   return resource
 }
 
-const meta: Meta<typeof LearningResourceExpandedV1> = {
-  title: "smoot-design/LearningResourceExpandedV1",
-  component: LearningResourceExpandedV1,
+const meta: Meta<typeof LearningResourceExpanded> = {
+  title: "smoot-design/LearningResourceExpanded",
+  component: LearningResourceExpanded,
   args: {
     imgConfig: {
       width: 385,
@@ -53,7 +53,7 @@ const meta: Meta<typeof LearningResourceExpandedV1> = {
     return (
       <BrowserRouter>
         <Drawer open={true} anchor="right">
-          <LearningResourceExpandedV1 {...args} />
+          <LearningResourceExpanded {...args} />
         </Drawer>
       </BrowserRouter>
     )
@@ -62,7 +62,7 @@ const meta: Meta<typeof LearningResourceExpandedV1> = {
 
 export default meta
 
-type Story = StoryObj<typeof LearningResourceExpandedV1>
+type Story = StoryObj<typeof LearningResourceExpanded>
 
 export const Course: Story = {
   args: {

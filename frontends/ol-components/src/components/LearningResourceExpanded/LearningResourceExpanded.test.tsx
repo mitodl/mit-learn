@@ -4,9 +4,9 @@ import { render, screen, within } from "@testing-library/react"
 
 import {
   getCallToActionText,
-  LearningResourceExpandedV2,
-} from "./LearningResourceExpandedV2"
-import type { LearningResourceExpandedV2Props } from "./LearningResourceExpandedV2"
+  LearningResourceExpanded,
+} from "./LearningResourceExpanded"
+import type { LearningResourceExpandedProps } from "./LearningResourceExpanded"
 import { ResourceTypeEnum } from "api"
 import { factories, setMockResponse, urls } from "api/test-utils"
 import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
@@ -16,7 +16,7 @@ import { PLATFORM_LOGOS } from "../Logo/Logo"
 import _ from "lodash"
 import user from "@testing-library/user-event"
 
-const IMG_CONFIG: LearningResourceExpandedV2Props["imgConfig"] = {
+const IMG_CONFIG: LearningResourceExpandedProps["imgConfig"] = {
   width: 385,
   height: 200,
 }
@@ -34,7 +34,7 @@ const setup = (resource: LearningResource, isLearningPathEditor?: boolean) => {
   setMockResponse.get(urls.userMe.get(), user)
   return render(
     <BrowserRouter>
-      <LearningResourceExpandedV2
+      <LearningResourceExpanded
         resourceId={resource.id}
         resource={resource}
         user={user}
