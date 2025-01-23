@@ -1,6 +1,23 @@
 Release Notes
 =============
 
+Version 0.28.0 (Released January 23, 2025)
+--------------
+
+- remove two unused entries (#1977)
+- Update dependency litellm to v1.59.0 (#1972)
+- Update dependency ruff to v0.9.2 (#1973)
+- Update dependency bpython to ^0.25 (#1971)
+- Update Node.js to v22.13.0 (#1970)
+- Update redis Docker tag to v7.4.2 (#1969)
+- [pre-commit.ci] pre-commit autoupdate (#1820)
+- fix line clamping of HTML description (#1967)
+- Onboarding Accessibility Improvements (#1960)
+- add proper mocking in drawer v2 tests handling items queries if resource is a program (#1965)
+- add "courses in program" carousel (#1964)
+- Update dependency @storybook/addon-webpack5-compiler-swc to v2 (#1942)
+- Update dependency Django to v4.2.18 [SECURITY] (#1963)
+
 Version 0.27.0 (Released January 16, 2025)
 --------------
 
