@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+Version 0.28.1
+--------------
+
+- remove the v1 drawer and rename v2 drawer (#1982)
+- drawer v2 podcast carousels (#1981)
+- drawer v2 other videos in series / videos in playlist (#1968)
+- Remove prolearn from ETLSource enum (#1966)
+
 Version 0.28.0 (Released January 23, 2025)
 --------------
 
