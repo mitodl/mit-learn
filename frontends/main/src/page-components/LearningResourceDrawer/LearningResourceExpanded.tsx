@@ -140,7 +140,6 @@ const CallToAction = styled.div({
   width: "350px",
   padding: "16px",
   flexDirection: "column",
-  alignItems: "center",
   gap: "10px",
   borderRadius: "8px",
   border: `1px solid ${theme.custom.colors.lightGray2}`,
