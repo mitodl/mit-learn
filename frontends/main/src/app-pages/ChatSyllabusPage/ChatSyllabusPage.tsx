@@ -51,6 +51,7 @@ const StyledDebugPre = styled.pre({
 const ChatSyllabusPage = () => {
   const botEnabled = useFeatureFlagEnabled(FeatureFlags.RecommendationBot)
   const [readableId, setReadableId] = useState("18.06SC+fall_2011")
+  const [collectionName, setCollectionName] = useState("content_files")
   const [debugInfo, setDebugInfo] = useState("")
 
   const parseContent = (content: string | unknown) => {
@@ -105,6 +106,18 @@ const ChatSyllabusPage = () => {
                       Introduction to Differential Equations(EdX)
                     </MenuItem>
                   </Select>
+                  <InputLabel>Contentfile Chunk Size</InputLabel>
+                  <Select
+                    label="Contentfile Chunk Size"
+                    value={collectionName}
+                    onChange={(e) => setCollectionName(e.target.value)}
+                  >
+                    <MenuItem value="content_files">
+                      Default (model dependant - 8191 for OpenAI)
+                    </MenuItem>
+                    <MenuItem value="content_files_512">512</MenuItem>
+                    <MenuItem value="content_files_1024">1024</MenuItem>
+                  </Select>
                 </div>
               </FormContainer>
             </form>
@@ -124,6 +137,7 @@ const ChatSyllabusPage = () => {
                   return {
                     message: messages[messages.length - 1].content,
                     readable_id: readableId,
+                    collection_name: collectionName,
                   }
                 },
               }}
