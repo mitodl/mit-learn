@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.28.0
+Version 0.28.0 (Released January 23, 2025)
 --------------
 
 - remove two unused entries (#1977)
