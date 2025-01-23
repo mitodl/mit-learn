@@ -37,6 +37,7 @@ import {
   SEARCH_LEARNING_MATERIAL,
 } from "@/common/urls"
 import { useUserMe } from "api/hooks/user"
+import { usePostHog } from "posthog-js/react"
 
 const Bar = styled(AppBar)(({ theme }) => ({
   padding: "16px 8px",
@@ -187,6 +188,7 @@ const navData: NavData = {
           description:
             "Single courses on a specific subject, taught by MIT instructors",
           href: SEARCH_COURSE,
+          posthogEvent: "clicked_nav_browse_courses",
         },
         {
           title: "Programs",
@@ -194,6 +196,7 @@ const navData: NavData = {
           description:
             "A series of courses for in-depth learning across a range of topics",
           href: SEARCH_PROGRAM,
+          posthogEvent: "clicked_nav_browse_programs",
         },
         {
           title: "Learning Materials",
@@ -201,6 +204,7 @@ const navData: NavData = {
           description:
             "Free learning and teaching materials, including videos, podcasts, lecture notes, and more",
           href: SEARCH_LEARNING_MATERIAL,
+          posthogEvent: "clicked_nav_browse_learning_materials",
         },
       ],
     },
@@ -211,16 +215,19 @@ const navData: NavData = {
           title: "By Topic",
           icon: <RiPresentationLine />,
           href: TOPICS,
+          posthogEvent: "clicked_nav_browse_topics",
         },
         {
           title: "By Department",
           icon: <RiNodeTree />,
           href: DEPARTMENTS,
+          posthogEvent: "clicked_nav_browse_departments",
         },
         {
           title: "By Provider",
           icon: <RiVerifiedBadgeLine />,
           href: UNITS,
+          posthogEvent: "clicked_nav_browse_providers",
         },
       ],
     },
@@ -231,26 +238,31 @@ const navData: NavData = {
           title: "Recently Added",
           icon: <RiFileAddLine />,
           href: SEARCH_NEW,
+          posthogEvent: "clicked_nav_browse_new",
         },
         {
           title: "Upcoming",
           icon: <RiTimeLine />,
           href: SEARCH_UPCOMING,
+          posthogEvent: "clicked_nav_browse_upcoming",
         },
         {
           title: "Popular",
           href: SEARCH_POPULAR,
           icon: <RiHeartLine />,
+          posthogEvent: "clicked_nav_browse_popular",
         },
         {
           title: "Free",
           icon: <RiPriceTag3Line />,
           href: SEARCH_FREE,
+          posthogEvent: "clicked_nav_browse_free",
         },
         {
           title: "With Certificate",
           icon: <RiAwardLine />,
           href: SEARCH_CERTIFICATE,
+          posthogEvent: "clicked_nav_browse_certificate",
         },
       ],
     },
@@ -258,6 +270,7 @@ const navData: NavData = {
 }
 
 const Header: FunctionComponent = () => {
+  const posthog = usePostHog()
   const [drawerOpen, toggleDrawer] = useToggle(false)
   const desktopTrigger = React.useRef<HTMLButtonElement>(null)
   const mobileTrigger = React.useRef<HTMLButtonElement>(null)
@@ -293,6 +306,9 @@ const Header: FunctionComponent = () => {
         navData={navData}
         open={drawerOpen}
         onClose={toggleDrawer.off}
+        posthogCapture={(event: string) => {
+          posthog.capture(event)
+        }}
       />
     </div>
   )
