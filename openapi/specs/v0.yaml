@@ -301,6 +301,31 @@ paths:
                 description: Chatbot response
                 type: string
           description: ''
+  /api/v0/chat_agent_langgraph/:
+    post:
+      operationId: chat_agent_langgraph_create
+      description: Handle a POST request to the chatbot agent.
+      tags:
+      - chat_agent_langgraph
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ChatRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ChatRequestRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatRequest'
+          description: ''
   /api/v0/ckeditor:
     get:
       operationId: ckeditor_retrieve
@@ -1735,6 +1760,27 @@ components:
           readOnly: true
       required:
       - unit
+    ChatRequest:
+      type: object
+      description: DRF serializer for chatbot requests
+      properties:
+        message:
+          type: string
+        model:
+          type: string
+          default: gpt-4o
+        temperature:
+          type: number
+          format: double
+          maximum: 1.0
+          minimum: 0.0
+        instructions:
+          type: string
+        clear_history:
+          type: boolean
+          default: false
+      required:
+      - message
     ChatRequestRequest:
       type: object
       description: DRF serializer for chatbot requests

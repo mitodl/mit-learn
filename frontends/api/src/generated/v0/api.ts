@@ -519,6 +519,43 @@ export interface ChannelUnitDetail {
 /**
  * DRF serializer for chatbot requests
  * @export
+ * @interface ChatRequest
+ */
+export interface ChatRequest {
+  /**
+   *
+   * @type {string}
+   * @memberof ChatRequest
+   */
+  message: string
+  /**
+   *
+   * @type {string}
+   * @memberof ChatRequest
+   */
+  model?: string
+  /**
+   *
+   * @type {number}
+   * @memberof ChatRequest
+   */
+  temperature?: number
+  /**
+   *
+   * @type {string}
+   * @memberof ChatRequest
+   */
+  instructions?: string
+  /**
+   *
+   * @type {boolean}
+   * @memberof ChatRequest
+   */
+  clear_history?: boolean
+}
+/**
+ * DRF serializer for chatbot requests
+ * @export
  * @interface ChatRequestRequest
  */
 export interface ChatRequestRequest {
@@ -7895,6 +7932,179 @@ export class ChatAgentApi extends BaseAPI {
   ) {
     return ChatAgentApiFp(this.configuration)
       .chatAgentCreate(requestParameters.ChatRequestRequest, options)
+      .then((request) => request(this.axios, this.basePath))
+  }
+}
+
+/**
+ * ChatAgentLanggraphApi - axios parameter creator
+ * @export
+ */
+export const ChatAgentLanggraphApiAxiosParamCreator = function (
+  configuration?: Configuration,
+) {
+  return {
+    /**
+     * Handle a POST request to the chatbot agent.
+     * @param {ChatRequestRequest} ChatRequestRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    chatAgentLanggraphCreate: async (
+      ChatRequestRequest: ChatRequestRequest,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'ChatRequestRequest' is not null or undefined
+      assertParamExists(
+        "chatAgentLanggraphCreate",
+        "ChatRequestRequest",
+        ChatRequestRequest,
+      )
+      const localVarPath = `/api/v0/chat_agent_langgraph/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "POST",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      localVarHeaderParameter["Content-Type"] = "application/json"
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+      localVarRequestOptions.data = serializeDataIfNeeded(
+        ChatRequestRequest,
+        localVarRequestOptions,
+        configuration,
+      )
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+  }
+}
+
+/**
+ * ChatAgentLanggraphApi - functional programming interface
+ * @export
+ */
+export const ChatAgentLanggraphApiFp = function (
+  configuration?: Configuration,
+) {
+  const localVarAxiosParamCreator =
+    ChatAgentLanggraphApiAxiosParamCreator(configuration)
+  return {
+    /**
+     * Handle a POST request to the chatbot agent.
+     * @param {ChatRequestRequest} ChatRequestRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async chatAgentLanggraphCreate(
+      ChatRequestRequest: ChatRequestRequest,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<ChatRequest>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.chatAgentLanggraphCreate(
+          ChatRequestRequest,
+          options,
+        )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["ChatAgentLanggraphApi.chatAgentLanggraphCreate"]?.[
+          index
+        ]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+  }
+}
+
+/**
+ * ChatAgentLanggraphApi - factory interface
+ * @export
+ */
+export const ChatAgentLanggraphApiFactory = function (
+  configuration?: Configuration,
+  basePath?: string,
+  axios?: AxiosInstance,
+) {
+  const localVarFp = ChatAgentLanggraphApiFp(configuration)
+  return {
+    /**
+     * Handle a POST request to the chatbot agent.
+     * @param {ChatAgentLanggraphApiChatAgentLanggraphCreateRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    chatAgentLanggraphCreate(
+      requestParameters: ChatAgentLanggraphApiChatAgentLanggraphCreateRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<ChatRequest> {
+      return localVarFp
+        .chatAgentLanggraphCreate(requestParameters.ChatRequestRequest, options)
+        .then((request) => request(axios, basePath))
+    },
+  }
+}
+
+/**
+ * Request parameters for chatAgentLanggraphCreate operation in ChatAgentLanggraphApi.
+ * @export
+ * @interface ChatAgentLanggraphApiChatAgentLanggraphCreateRequest
+ */
+export interface ChatAgentLanggraphApiChatAgentLanggraphCreateRequest {
+  /**
+   *
+   * @type {ChatRequestRequest}
+   * @memberof ChatAgentLanggraphApiChatAgentLanggraphCreate
+   */
+  readonly ChatRequestRequest: ChatRequestRequest
+}
+
+/**
+ * ChatAgentLanggraphApi - object-oriented interface
+ * @export
+ * @class ChatAgentLanggraphApi
+ * @extends {BaseAPI}
+ */
+export class ChatAgentLanggraphApi extends BaseAPI {
+  /**
+   * Handle a POST request to the chatbot agent.
+   * @param {ChatAgentLanggraphApiChatAgentLanggraphCreateRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ChatAgentLanggraphApi
+   */
+  public chatAgentLanggraphCreate(
+    requestParameters: ChatAgentLanggraphApiChatAgentLanggraphCreateRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return ChatAgentLanggraphApiFp(this.configuration)
+      .chatAgentLanggraphCreate(requestParameters.ChatRequestRequest, options)
       .then((request) => request(this.axios, this.basePath))
   }
 }

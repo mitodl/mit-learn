@@ -2652,6 +2652,17 @@ socks = ["socksio (==1.*)"]
 zstd = ["zstandard (>=0.18.0)"]
 
 [[package]]
+name = "httpx-sse"
+version = "0.4.0"
+description = "Consume Server-Sent Event (SSE) messages with HTTPX."
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "httpx-sse-0.4.0.tar.gz", hash = "sha256:1e81a3a3070ce322add1d3529ed42eb5f70817f45ed6ec915ab753f961139721"},
+    {file = "httpx_sse-0.4.0-py3-none-any.whl", hash = "sha256:f329af6eae57eaa2bdfd962b42524764af68075ea87370a2de920af5341e318f"},
+]
+
+[[package]]
 name = "huggingface-hub"
 version = "0.27.0"
 description = "Client library to download and publish models, datasets and other repos on the huggingface.co hub"
@@ -3098,22 +3109,47 @@ zookeeper = ["kazoo (>=2.8.0)"]
 
 [[package]]
 name = "langchain"
-version = "0.3.13"
+version = "0.3.15"
 description = "Building applications with LLMs through composability"
 optional = false
 python-versions = "<4.0,>=3.9"
 files = [
-    {file = "langchain-0.3.13-py3-none-any.whl", hash = "sha256:dd3549a28dc28b5d4769122b60fad0890aee86928d1bdbba3f9349d9f023315d"},
-    {file = "langchain-0.3.13.tar.gz", hash = "sha256:3d618a8e7e496704dc4407d224218ff28baf9416c1241e7bdcdd117e6c70daa8"},
+    {file = "langchain-0.3.15-py3-none-any.whl", hash = "sha256:2657735184054cae8181ac43fce6cbc9ee64ca81a2ad2aed3ccd6e5d6fe1f19f"},
+    {file = "langchain-0.3.15.tar.gz", hash = "sha256:1204d67f8469cd8da5621d2b39501650a824d4c0d5a74264dfe3df9a7528897e"},
 ]
 
 [package.dependencies]
 aiohttp = ">=3.8.3,<4.0.0"
-langchain-core = ">=0.3.26,<0.4.0"
+langchain-core = ">=0.3.31,<0.4.0"
 langchain-text-splitters = ">=0.3.3,<0.4.0"
-langsmith = ">=0.1.17,<0.3"
+langsmith = ">=0.1.17,<0.4"
 numpy = {version = ">=1.26.2,<3", markers = "python_version >= \"3.12\""}
 pydantic = ">=2.7.4,<3.0.0"
+PyYAML = ">=5.3"
+requests = ">=2,<3"
+SQLAlchemy = ">=1.4,<3"
+tenacity = ">=8.1.0,<8.4.0 || >8.4.0,<10"
+
+[[package]]
+name = "langchain-community"
+version = "0.3.15"
+description = "Community contributed LangChain integrations."
+optional = false
+python-versions = "<4.0,>=3.9"
+files = [
+    {file = "langchain_community-0.3.15-py3-none-any.whl", hash = "sha256:5b6ac359f75922a826566f94eb9a9b5c763cc78f395f0baf2f5638e62fdae1dd"},
+    {file = "langchain_community-0.3.15.tar.gz", hash = "sha256:c2fee46a0ea1b94c475bd4263edb53d5615dbe37c5263480bf55cb8e465ac235"},
+]
+
+[package.dependencies]
+aiohttp = ">=3.8.3,<4.0.0"
+dataclasses-json = ">=0.5.7,<0.7"
+httpx-sse = ">=0.4.0,<0.5.0"
+langchain = ">=0.3.15,<0.4.0"
+langchain-core = ">=0.3.31,<0.4.0"
+langsmith = ">=0.1.125,<0.4"
+numpy = {version = ">=1.26.2,<3", markers = "python_version >= \"3.12\""}
+pydantic-settings = ">=2.4.0,<3.0.0"
 PyYAML = ">=5.3"
 requests = ">=2,<3"
 SQLAlchemy = ">=1.4,<3"
@@ -3199,6 +3235,23 @@ files = [
 [package.dependencies]
 langchain-core = ">=0.2.38,<0.4"
 msgpack = ">=1.1.0,<2.0.0"
+
+[[package]]
+name = "langgraph-checkpoint-postgres"
+version = "2.0.13"
+description = "Library with a Postgres implementation of LangGraph checkpoint saver."
+optional = false
+python-versions = "<4.0.0,>=3.9.0"
+files = [
+    {file = "langgraph_checkpoint_postgres-2.0.13-py3-none-any.whl", hash = "sha256:98fe99c07404541d87f50c277a0120f9c4d964b665e5f42aecd911e0f365ae59"},
+    {file = "langgraph_checkpoint_postgres-2.0.13.tar.gz", hash = "sha256:cadab495a0b3d13534178ab3bd711f12dbfeccb9e5d0fb24905ea809a700b137"},
+]
+
+[package.dependencies]
+langgraph-checkpoint = ">=2.0.10,<3.0.0"
+orjson = ">=3.10.1"
+psycopg = ">=3.2.0,<4.0.0"
+psycopg-pool = ">=3.2.0,<4.0.0"
 
 [[package]]
 name = "langgraph-sdk"
@@ -5138,6 +5191,43 @@ dev = ["abi3audit", "black", "check-manifest", "coverage", "packaging", "pylint"
 test = ["pytest", "pytest-xdist", "setuptools"]
 
 [[package]]
+name = "psycopg"
+version = "3.2.4"
+description = "PostgreSQL database adapter for Python"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "psycopg-3.2.4-py3-none-any.whl", hash = "sha256:43665368ccd48180744cab26b74332f46b63b7e06e8ce0775547a3533883d381"},
+    {file = "psycopg-3.2.4.tar.gz", hash = "sha256:f26f1346d6bf1ef5f5ef1714dd405c67fb365cfd1c6cea07de1792747b167b92"},
+]
+
+[package.dependencies]
+typing-extensions = {version = ">=4.6", markers = "python_version < \"3.13\""}
+tzdata = {version = "*", markers = "sys_platform == \"win32\""}
+
+[package.extras]
+binary = ["psycopg-binary (==3.2.4)"]
+c = ["psycopg-c (==3.2.4)"]
+dev = ["ast-comments (>=1.1.2)", "black (>=24.1.0)", "codespell (>=2.2)", "dnspython (>=2.1)", "flake8 (>=4.0)", "mypy (>=1.14)", "pre-commit (>=4.0.1)", "types-setuptools (>=57.4)", "wheel (>=0.37)"]
+docs = ["Sphinx (>=5.0)", "furo (==2022.6.21)", "sphinx-autobuild (>=2021.3.14)", "sphinx-autodoc-typehints (>=1.12)"]
+pool = ["psycopg-pool"]
+test = ["anyio (>=4.0)", "mypy (>=1.14)", "pproxy (>=2.7)", "pytest (>=6.2.5)", "pytest-cov (>=3.0)", "pytest-randomly (>=3.5)"]
+
+[[package]]
+name = "psycopg-pool"
+version = "3.2.4"
+description = "Connection Pool for Psycopg"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "psycopg_pool-3.2.4-py3-none-any.whl", hash = "sha256:f6a22cff0f21f06d72fb2f5cb48c618946777c49385358e0c88d062c59cbd224"},
+    {file = "psycopg_pool-3.2.4.tar.gz", hash = "sha256:61774b5bbf23e8d22bedc7504707135aaf744679f8ef9b3fe29942920746a6ed"},
+]
+
+[package.dependencies]
+typing-extensions = ">=4.6"
+
+[[package]]
 name = "psycopg2"
 version = "2.9.10"
 description = "psycopg2 - Python-PostgreSQL Database Adapter"
@@ -5359,6 +5449,26 @@ files = [
 
 [package.dependencies]
 typing-extensions = ">=4.6.0,<4.7.0 || >4.7.0"
+
+[[package]]
+name = "pydantic-settings"
+version = "2.7.1"
+description = "Settings management using Pydantic"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "pydantic_settings-2.7.1-py3-none-any.whl", hash = "sha256:590be9e6e24d06db33a4262829edef682500ef008565a969c73d39d5f8bfb3fd"},
+    {file = "pydantic_settings-2.7.1.tar.gz", hash = "sha256:10c9caad35e64bfb3c2fbf70a078c0e25cc92499782e5200747f942a065dec93"},
+]
+
+[package.dependencies]
+pydantic = ">=2.7.0"
+python-dotenv = ">=0.21.0"
+
+[package.extras]
+azure-key-vault = ["azure-identity (>=1.16.0)", "azure-keyvault-secrets (>=4.8.0)"]
+toml = ["tomli (>=2.0.1)"]
+yaml = ["pyyaml (>=6.0.1)"]
 
 [[package]]
 name = "pygithub"
@@ -7806,4 +7916,4 @@ testing = ["coverage[toml]", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.0"
 python-versions = "3.12.6"
-content-hash = "1f2d6994549e627433477378e4cb5a0ba6e8e20a82ff5412dff4996996329372"
+content-hash = "658735f299f030ccd848adec3bb4529f2db5a499c50c35caccaf2a93a46705cf"

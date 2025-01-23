@@ -34,13 +34,13 @@ const CONVERSATION_OPTIONS = {
   ],
 }
 
-const ChatPage = () => {
+const ChatPage: React.FC<{ apiUrl?: string }> = ({ apiUrl }) => {
   const recommendationBotEnabled = useFeatureFlagEnabled(
     FeatureFlags.RecommendationBot,
   )
   const send = useMemo(() => {
-    return makeSend({ url: "/api/v0/chat_agent/" })
-  }, [])
+    return makeSend({ url: apiUrl || "/api/v0/chat_agent/" })
+  }, [apiUrl])
   return (
     <StyledContainer>
       {
