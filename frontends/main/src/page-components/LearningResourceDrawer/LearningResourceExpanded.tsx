@@ -39,7 +39,7 @@ import VideoFrame from "./VideoFrame"
 
 const DRAWER_WIDTH = "900px"
 
-const OuterContainer = styled.div({
+const Outer = styled.div({
   display: "flex",
   flexDirection: "column",
   flexGrow: 1,
@@ -47,18 +47,7 @@ const OuterContainer = styled.div({
   overflowX: "hidden",
 })
 
-const Container = styled.div({
-  display: "flex",
-  flexDirection: "column",
-  padding: "0 28px 24px",
-  width: DRAWER_WIDTH,
-  [theme.breakpoints.down("md")]: {
-    width: "auto",
-    padding: "0 16px 24px",
-  },
-})
-
-const TitleSectionContainer = styled.div({
+const TitleContainer = styled.div({
   display: "flex",
   position: "sticky",
   justifyContent: "space-between",
@@ -69,6 +58,36 @@ const TitleSectionContainer = styled.div({
   backgroundColor: theme.custom.colors.white,
   [theme.breakpoints.down("md")]: {
     padding: "24px 16px",
+  },
+})
+
+const TopContainer = styled.div({
+  display: "flex",
+  flexDirection: "column",
+  padding: "0 28px 24px",
+  width: DRAWER_WIDTH,
+  [theme.breakpoints.down("md")]: {
+    width: "auto",
+    padding: "0 16px 24px",
+  },
+})
+
+const BottomContainer = styled.div({
+  display: "flex",
+  flexDirection: "column",
+  flexGrow: 1,
+  alignItems: "flex-start",
+  width: DRAWER_WIDTH,
+  padding: "32px 28px",
+  gap: "32px",
+  borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
+  background: theme.custom.colors.lightGray1,
+  div: {
+    maxWidth: "100%",
+  },
+  [theme.breakpoints.down("md")]: {
+    width: "100vw",
+    padding: "16px 0 16px 16px",
   },
 })
 
@@ -292,25 +311,6 @@ const TopCarouselContainer = styled.div({
   paddingTop: "24px",
 })
 
-const BottomCarouselContainer = styled.div({
-  display: "flex",
-  flexDirection: "column",
-  flexGrow: 1,
-  alignItems: "flex-start",
-  width: DRAWER_WIDTH,
-  padding: "32px 28px",
-  gap: "32px",
-  borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
-  background: theme.custom.colors.lightGray1,
-  div: {
-    maxWidth: "100%",
-  },
-  [theme.breakpoints.down("md")]: {
-    width: "100vw",
-    padding: "16px 0 16px 16px",
-  },
-})
-
 type LearningResourceExpandedProps = {
   resourceId: number
   titleId?: string
@@ -382,7 +382,7 @@ const TitleSection: React.FC<{
   )
 
   return (
-    <TitleSectionContainer>
+    <TitleContainer>
       <Typography
         variant="h4"
         id={titleId}
@@ -398,7 +398,7 @@ const TitleSection: React.FC<{
         {title}
       </Typography>
       {closeButton}
-    </TitleSectionContainer>
+    </TitleContainer>
   )
 }
 
@@ -727,13 +727,13 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
     }
   }, [resourceId])
   return (
-    <OuterContainer ref={outerContainerRef}>
+    <Outer ref={outerContainerRef}>
       <TitleSection
         titleId={titleId}
         resource={resource}
         closeDrawer={closeDrawer ?? (() => {})}
       />
-      <Container>
+      <TopContainer>
         <ContentContainer>
           <LeftContainer>
             <ResourceDescription resource={resource} />
@@ -759,13 +759,13 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
             ))}
           </TopCarouselContainer>
         )}
-      </Container>
-      <BottomCarouselContainer>
+      </TopContainer>
+      <BottomContainer>
         {bottomCarousels?.map((carousel, index) => (
           <div key={index}>{carousel}</div>
         ))}
-      </BottomCarouselContainer>
-    </OuterContainer>
+      </BottomContainer>
+    </Outer>
   )
 }
 
