@@ -52,19 +52,6 @@ const useCapturePageView = (resourceId: number) => {
   ])
 }
 
-/**
- * Convert HTML to plaintext, removing any HTML tags.
- * This conversion method has some issues:
- * 1. It is unsafe for untrusted HTML
- * 2. It must be run in a browser, not on a server.
- */
-// eslint-disable-next-line camelcase
-// const unsafe_html2plaintext = (text: string) => {
-//   const div = document.createElement("div")
-//   div.innerHTML = text
-//   return div.textContent || div.innerText || ""
-// }
-
 const DrawerContent: React.FC<{
   resourceId: number
   titleId: string
