@@ -13,14 +13,14 @@ import {
 } from "./ChannelPageTemplate"
 import backgroundSteps from "@/public/images/backgrounds/background_steps.jpg"
 
-const ChildrenContainer = styled.div(({ theme }) => ({
+const ChildrenContainer = styled("div")(({ theme }) => ({
   paddingTop: "40px",
   [theme.breakpoints.down("sm")]: {
     paddingTop: "24px",
   },
 }))
 
-const ChannelControlsContainer = styled.div(({ theme }) => ({
+const ChannelControlsContainer = styled("div")(({ theme }) => ({
   display: "flex",
   flexDirection: "row",
   alignItems: "end",

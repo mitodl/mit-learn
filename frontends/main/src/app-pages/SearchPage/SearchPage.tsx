@@ -26,7 +26,7 @@ const cssGradient = `
   )
 `
 
-const Page = styled.div`
+const Page = styled("div")`
   background: ${cssGradient};
 
   ${({ theme }) => theme.breakpoints.up("md")} {
@@ -36,7 +36,7 @@ const Page = styled.div`
   }
 `
 
-const Header = styled.div`
+const Header = styled("div")`
   height: 165px;
 
   ${({ theme }) => theme.breakpoints.down("md")} {

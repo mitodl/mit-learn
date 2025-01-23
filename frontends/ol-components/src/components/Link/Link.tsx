@@ -1,7 +1,6 @@
 import React from "react"
 import { styled } from "@pigment-css/react"
 import { default as NextLink } from "next/link"
-import { theme } from "../theme/theme"
 import invariant from "tiny-invariant"
 
 type LinkStyleProps = {
@@ -24,53 +23,54 @@ type LinkStyleProps = {
  *
  * If you need a Link, use Link directly.
  * If you want another element styled as a Link, use this function in conjunction
- * with `styled`. For example, `styled.span(linkStyles)`.
+ * with `styled`. For example, `styled("span")(linkStyles)`.
  */
-const linkStyles = () => ({
-  color: ({ color }: LinkStyleProps) => {
-    switch (color) {
-      case "black":
-        return theme.custom.colors.darkGray2
-      case "white":
-        return theme.custom.colors.white
-      case "red":
-        return theme.custom.colors.red
-      default:
-        return theme.custom.colors.darkGray2
-    }
-  },
-  ":hover": {
-    color: ({ hovercolor, nohover }: LinkStyleProps) => {
-      if (nohover) return "inherit"
-      switch (hovercolor) {
-        case "black":
-          return theme.custom.colors.darkGray2
-        case "white":
-          return theme.custom.colors.white
-        case "red":
-          return theme.custom.colors.red
-        default:
-          return theme.custom.colors.darkGray2
-      }
-    },
-    textDecoration: ({ nohover }: LinkStyleProps) =>
-      nohover ? "inherit" : "underline",
-  },
-  variants: [
-    {
-      props: { size: "small" },
-      style: theme.typography.body3,
-    },
-    {
-      props: { size: "medium" },
-      style: theme.typography.body2,
-    },
-    {
-      props: { size: "large" },
-      style: theme.typography.h5,
-    },
-  ],
-})
+// TODO: pigment: This is used in TopicsListingPage
+// const linkStyles = ({ theme }) => ({
+//   color: ({ color }: LinkStyleProps) => {
+//     switch (color) {
+//       case "black":
+//         return theme.custom.colors.darkGray2
+//       case "white":
+//         return theme.custom.colors.white
+//       case "red":
+//         return theme.custom.colors.red
+//       default:
+//         return theme.custom.colors.darkGray2
+//     }
+//   },
+//   ":hover": {
+//     color: ({ hovercolor, nohover }: LinkStyleProps) => {
+//       if (nohover) return "inherit"
+//       switch (hovercolor) {
+//         case "black":
+//           return theme.custom.colors.darkGray2
+//         case "white":
+//           return theme.custom.colors.white
+//         case "red":
+//           return theme.custom.colors.red
+//         default:
+//           return theme.custom.colors.darkGray2
+//       }
+//     },
+//     textDecoration: ({ nohover }: LinkStyleProps) =>
+//       nohover ? "inherit" : "underline",
+//   },
+//   variants: [
+//     {
+//       props: { size: "small" },
+//       style: theme.typography.body3,
+//     },
+//     {
+//       props: { size: "medium" },
+//       style: theme.typography.body2,
+//     },
+//     {
+//       props: { size: "large" },
+//       style: theme.typography.h5,
+//     },
+//   ],
+// })
 
 type LinkProps = LinkStyleProps &
   React.ComponentProps<"a"> & {
@@ -130,7 +130,52 @@ const BaseLink = ({
  *
  * For a link styled as a button, use ButtonLink.
  */
-const Link = styled(BaseLink)<LinkStyleProps>(linkStyles)
+const Link = styled(BaseLink)<LinkStyleProps>(({ theme }) => ({
+  color: ({ color }: LinkStyleProps) => {
+    switch (color) {
+      case "black":
+        return theme.custom.colors.darkGray2
+      case "white":
+        return theme.custom.colors.white
+      case "red":
+        return theme.custom.colors.red
+      default:
+        return theme.custom.colors.darkGray2
+    }
+  },
+  ":hover": {
+    color: ({ hovercolor, nohover }: LinkStyleProps) => {
+      if (nohover) return "inherit"
+      switch (hovercolor) {
+        case "black":
+          return theme.custom.colors.darkGray2
+        case "white":
+          return theme.custom.colors.white
+        case "red":
+          return theme.custom.colors.red
+        default:
+          return theme.custom.colors.darkGray2
+      }
+    },
+    textDecoration: ({ nohover }: LinkStyleProps) =>
+      nohover ? "inherit" : "underline",
+  },
+  variants: [
+    {
+      props: { size: "small" },
+      style: theme.typography.body3,
+    },
+    {
+      props: { size: "medium" },
+      style: theme.typography.body2,
+    },
+    {
+      props: { size: "large" },
+      style: theme.typography.h5,
+    },
+  ],
+}))
 
-export { Link, linkStyles }
+// export { Link, linkStyles }
+export { Link }
 export type { LinkProps }

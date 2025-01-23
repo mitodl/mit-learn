@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react"
 import { Carousel } from "./Carousel"
 import { styled } from "@pigment-css/react"
 
-const Panel = styled.div(({ theme }) => ({
+const Panel = styled("div")(({ theme }) => ({
   height: 200,
   width: 300,
   display: "flex",

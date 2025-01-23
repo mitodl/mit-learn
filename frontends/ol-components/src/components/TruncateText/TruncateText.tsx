@@ -10,7 +10,7 @@ type TruncateTextProps = {
 /**
  * Truncate the content after specified number of lines.
  */
-const TruncateText = styled.div<TruncateTextProps>({
+const TruncateText = styled("div")<TruncateTextProps>({
   display: "-webkit-box",
   WebkitBoxOrient: "vertical",
   overflow: "hidden",

@@ -36,11 +36,11 @@ const sortUnitChannels = (
   })
 }
 
-const Page = styled.div(({ theme }) => ({
+const Page = styled("div")(({ theme }) => ({
   backgroundColor: theme.custom.colors.lightGray1,
 }))
 
-const PageContent = styled.div(({ theme }) => ({
+const PageContent = styled("div")(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
@@ -52,7 +52,7 @@ const PageContent = styled.div(({ theme }) => ({
   },
 }))
 
-const PageHeaderContainer = styled.div(({ theme }) => ({
+const PageHeaderContainer = styled("div")(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-start",
@@ -64,7 +64,7 @@ const PageHeaderContainer = styled.div(({ theme }) => ({
   },
 }))
 
-const PageHeaderContainerInner = styled.div({
+const PageHeaderContainerInner = styled("div")({
   display: "flex",
   flexDirection: "column",
   maxWidth: "1000px",
@@ -84,7 +84,7 @@ const PageHeaderText = styled(Typography)(({ theme }) => ({
   ...theme.typography.subtitle1,
 }))
 
-const UnitContainer = styled.section(({ theme }) => ({
+const UnitContainer = styled("section")(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
@@ -99,7 +99,7 @@ const UnitContainer = styled.section(({ theme }) => ({
   },
 }))
 
-const UnitTitleContainer = styled.div({
+const UnitTitleContainer = styled("div")({
   display: "flex",
   justifyContent: "flex-start",
   alignItems: "center",
@@ -107,13 +107,13 @@ const UnitTitleContainer = styled.div({
   paddingBottom: "16px",
 })
 
-const UnitTitle = styled.h2(({ theme }) => ({
+const UnitTitle = styled("h2")(({ theme }) => ({
   margin: 0,
   color: theme.custom.colors.darkGray2,
   ...theme.typography.h4,
 }))
 
-const UnitDescriptionContainer = styled.div({
+const UnitDescriptionContainer = styled("div")({
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-start",
@@ -135,7 +135,7 @@ const ProfessionalIcon = styled(RiSuitcaseLine)({
   height: "32px",
 })
 
-const GridContainer = styled.div(({ theme }) => ({
+const GridContainer = styled("div")(({ theme }) => ({
   display: "grid",
   gap: "25px",
   gridTemplateColumns: "repeat(2, 1fr)",

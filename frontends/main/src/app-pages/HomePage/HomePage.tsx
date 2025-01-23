@@ -11,7 +11,7 @@ import PersonalizeSection from "./PersonalizeSection"
 import * as carousels from "./carousels"
 import dynamic from "next/dynamic"
 
-const FullWidthBackground = styled.div({
+const FullWidthBackground = styled("div")({
   background: "linear-gradient(0deg, #FFF 0%, #E9ECEF 100%);",
   paddingBottom: "80px",
   [theme.breakpoints.down("md")]: {

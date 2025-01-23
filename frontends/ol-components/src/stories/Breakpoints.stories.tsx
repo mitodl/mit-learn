@@ -3,10 +3,10 @@ import type { Meta, StoryObj } from "@storybook/react"
 import Container from "@mui/material-pigment-css/Container"
 import { styled } from "@pigment-css/react"
 
-const Background = styled.div`
+const Background = styled("div")`
   background-color: #f3ddce;
 `
-const Content = styled.div`
+const Content = styled("div")`
   background-color: #b1dcea;
   border: 1px solid black;
   height: 100px;

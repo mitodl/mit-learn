@@ -16,7 +16,7 @@ export type CheckboxChoiceFieldProps = {
   disabled?: boolean
 }
 
-const Container = styled.div(({ theme }) => ({
+const Container = styled("div")(({ theme }) => ({
   display: "flex",
   gap: "32px",
   flexDirection: "row",

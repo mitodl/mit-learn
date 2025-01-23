@@ -17,11 +17,11 @@ import { useLearningPathListItemMove } from "api/hooks/learningPaths"
 import { useUserListListItemMove } from "api/hooks/userLists"
 import { ListType } from "api/constants"
 
-const EmptyMessage = styled.p({
+const EmptyMessage = styled("p")({
   fontStyle: "italic",
 })
 
-const Loading = styled.div({
+const Loading = styled("div")({
   marginTop: "150px",
 })
 

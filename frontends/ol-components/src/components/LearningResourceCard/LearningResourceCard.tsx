@@ -27,11 +27,11 @@ const SkeletonImage = styled(Skeleton)<{ aspect: number }>({
   paddingBottom: ({ aspect }) => `${100 / aspect}%`,
 })
 
-const Label = styled.span(({ theme }) => ({
+const Label = styled("span")(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
 }))
 
-const Value = styled.span<{ size?: Size }>({
+const Value = styled("span")<{ size?: Size }>({
   color: theme.custom.colors.darkGray2,
   variants: [
     {
@@ -99,13 +99,13 @@ const Info = ({
   )
 }
 
-const PriceContainer = styled.div`
+const PriceContainer = styled("div")`
   display: flex;
   align-items: center;
   gap: 12px;
 `
 
-const Certificate = styled.div`
+const Certificate = styled("div")`
   padding: 2px 4px;
   border-radius: 4px;
   color: ${theme.custom.colors.silverGrayDark};
@@ -122,11 +122,11 @@ const Certificate = styled.div`
   gap: 4px;
 `
 
-const CertificatePrice = styled.div`
+const CertificatePrice = styled("div")`
   ${{ ...theme.typography.body4 }}
 `
 
-export const Price = styled.div`
+export const Price = styled("div")`
   ${{ ...theme.typography.subtitle3 }}
   color: ${theme.custom.colors.darkGray2};
 `

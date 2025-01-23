@@ -12,7 +12,7 @@ type MediaTheme = {
    *
    * Use with styled components, e.g.,
    * ```ts
-   * const ForExample = styled.div`
+   * const ForExample = styled("div")`
    *   ${{ theme } => theme.media.desktop} {
    *     height: 500px;
    *   }

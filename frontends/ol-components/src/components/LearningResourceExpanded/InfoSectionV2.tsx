@@ -36,7 +36,7 @@ import { theme } from "../theme/theme"
 import DifferingRunsTable from "./DifferingRunsTable"
 import { Link } from "../Link/Link"
 
-const SeparatorContainer = styled.span({
+const SeparatorContainer = styled("span")({
   padding: "0 8px",
   color: theme.custom.colors.silverGray,
 })
@@ -52,14 +52,14 @@ const Separator: React.FC = () => (
   <SeparatorContainer aria-label=", ">|&#8203;</SeparatorContainer>
 )
 
-const InfoItems = styled.section({
+const InfoItems = styled("section")({
   display: "flex",
   flexDirection: "column",
   gap: "12px",
   maxWidth: "100%",
 })
 
-const InfoItemContainer = styled.div({
+const InfoItemContainer = styled("div")({
   display: "flex",
   alignSelf: "stretch",
   alignItems: "baseline",
@@ -73,7 +73,7 @@ const InfoItemContainer = styled.div({
   },
 })
 
-const IconContainer = styled.span({
+const IconContainer = styled("span")({
   transform: "translateY(25%)",
   svg: {
     display: "block",
@@ -83,7 +83,7 @@ const IconContainer = styled.span({
   },
 })
 
-const InfoLabel = styled.div({
+const InfoLabel = styled("div")({
   marginLeft: "12px",
   width: "85px",
   flexShrink: 0,
@@ -92,14 +92,14 @@ const InfoLabel = styled.div({
   },
 })
 
-const InfoValue = styled.div({
+const InfoValue = styled("div")({
   display: "inline-block",
   color: theme.custom.colors.darkGray2,
   rowGap: ".2rem",
   ...theme.typography.body3,
 })
 
-const NoWrap = styled.span({
+const NoWrap = styled("span")({
   whiteSpace: "nowrap",
 })
 
@@ -112,7 +112,7 @@ const ShowLessLink = styled(Link)({
   paddingTop: "4px",
 })
 
-const PriceDisplay = styled.div({
+const PriceDisplay = styled("div")({
   display: "flex",
   alignItems: "center",
   gap: "8px",
@@ -123,7 +123,7 @@ const PriceDisplay = styled.div({
   },
 })
 
-const Certificate = styled.div({
+const Certificate = styled("div")({
   display: "flex",
   alignItems: "center",
   gap: "4px",

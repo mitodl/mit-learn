@@ -31,7 +31,7 @@ import Typography from "@mui/material/Typography"
 
 const DRAWER_WIDTH = "900px"
 
-const OuterContainer = styled.div({
+const OuterContainer = styled("div")({
   display: "flex",
   flexDirection: "column",
   flexGrow: 1,
@@ -39,7 +39,7 @@ const OuterContainer = styled.div({
   overflowX: "hidden",
 })
 
-const Container = styled.div({
+const Container = styled("div")({
   display: "flex",
   flexDirection: "column",
   padding: "0 28px 24px",
@@ -50,7 +50,7 @@ const Container = styled.div({
   },
 })
 
-const TitleSectionContainer = styled.div({
+const TitleSectionContainer = styled("div")({
   display: "flex",
   position: "sticky",
   justifyContent: "space-between",
@@ -64,7 +64,7 @@ const TitleSectionContainer = styled.div({
   },
 })
 
-const ContentContainer = styled.div({
+const ContentContainer = styled("div")({
   display: "flex",
   alignItems: "flex-start",
   gap: "32px",
@@ -76,7 +76,7 @@ const ContentContainer = styled.div({
   },
 })
 
-const LeftContainer = styled.div({
+const LeftContainer = styled("div")({
   display: "flex",
   flexDirection: "column",
   flexGrow: 1,
@@ -85,7 +85,7 @@ const LeftContainer = styled.div({
   maxWidth: "100%",
 })
 
-const RightContainer = styled.div({
+const RightContainer = styled("div")({
   display: "flex",
   flexDirection: "column",
   justifyContent: "center",
@@ -97,7 +97,7 @@ const RightContainer = styled.div({
   },
 })
 
-const ImageContainer = styled.div({
+const ImageContainer = styled("div")({
   width: "100%",
 })
 
@@ -115,7 +115,7 @@ const SkeletonImage = styled(Skeleton)<{ aspect: number }>({
   paddingBottom: ({ aspect }) => `${100 / aspect}%`,
 })
 
-const CallToAction = styled.div({
+const CallToAction = styled("div")({
   display: "flex",
   width: "350px",
   padding: "16px",
@@ -133,14 +133,14 @@ const CallToAction = styled.div({
   },
 })
 
-const ActionsContainer = styled.div({
+const ActionsContainer = styled("div")({
   display: "flex",
   flexDirection: "column",
   gap: "16px",
   width: "100%",
 })
 
-const PlatformContainer = styled.div({
+const PlatformContainer = styled("div")({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
@@ -157,21 +157,21 @@ const StyledLink = styled(ButtonLink)({
   },
 })
 
-const Platform = styled.div({
+const Platform = styled("div")({
   display: "flex",
   justifyContent: "flex-end",
   alignItems: "center",
   gap: "16px",
 })
 
-const DescriptionContainer = styled.div({
+const DescriptionContainer = styled("div")({
   display: "flex",
   flexDirection: "column",
   gap: "4px",
   width: "100%",
 })
 
-const Description = styled.p({
+const Description = styled("p")({
   ...theme.typography.body2,
   color: theme.custom.colors.black,
   margin: 0,
@@ -204,12 +204,12 @@ const StyledPlatformLogo = styled(PlatformLogo)({
   maxWidth: "180px",
 })
 
-const OnPlatform = styled.span({
+const OnPlatform = styled("span")({
   ...theme.typography.body2,
   color: theme.custom.colors.black,
 })
 
-const ButtonContainer = styled.div({
+const ButtonContainer = styled("div")({
   display: "flex",
   width: "100%",
   gap: "8px",
@@ -237,7 +237,7 @@ const SelectableButton = styled(Button)<{ selected?: boolean }>({
   ],
 })
 
-const ShareContainer = styled.div({
+const ShareContainer = styled("div")({
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
@@ -251,7 +251,7 @@ const ShareLabel = styled(Typography)({
   color: theme.custom.colors.darkGray1,
 })
 
-const ShareButtonContainer = styled.div({
+const ShareButtonContainer = styled("div")({
   display: "flex",
   justifyContent: "center",
   alignItems: "center",
@@ -275,13 +275,13 @@ const CopyLinkButton = styled(Button)({
   flexBasis: "112px",
 })
 
-const TopCarouselContainer = styled.div({
+const TopCarouselContainer = styled("div")({
   display: "flex",
   flexDirection: "column",
   paddingTop: "24px",
 })
 
-const BottomCarouselContainer = styled.div({
+const BottomCarouselContainer = styled("div")({
   display: "flex",
   flexDirection: "column",
   flexGrow: 1,

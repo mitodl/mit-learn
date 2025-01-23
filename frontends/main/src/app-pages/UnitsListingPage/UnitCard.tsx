@@ -15,7 +15,7 @@ const CardStyled = styled(Card)({
   height: "100%",
 })
 
-const UnitCardContainer = styled.div({
+const UnitCardContainer = styled("div")({
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
@@ -26,14 +26,14 @@ const UnitCardContainer = styled.div({
   },
 })
 
-const UnitCardContent = styled.div({
+const UnitCardContent = styled("div")({
   display: "flex",
   flexDirection: "column",
   flexGrow: 1,
   width: "100%",
 })
 
-const LogoContainer = styled.div({
+const LogoContainer = styled("div")({
   padding: "40px 32px",
   backgroundColor: theme.custom.colors.white,
   [theme.breakpoints.down("md")]: {
@@ -51,7 +51,7 @@ const LogoContainer = styled.div({
   },
 })
 
-const CardBottom = styled.div({
+const CardBottom = styled("div")({
   padding: "24px",
   borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
   display: "flex",
@@ -65,7 +65,7 @@ const CardBottom = styled.div({
   },
 })
 
-const ValuePropContainer = styled.div({
+const ValuePropContainer = styled("div")({
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-start",
@@ -74,17 +74,17 @@ const ValuePropContainer = styled.div({
   paddingBottom: "16px",
 })
 
-const LoadingContent = styled.div({
+const LoadingContent = styled("div")({
   padding: "24px",
 })
 
-const HeadingText = styled.span(({ theme }) => ({
+const HeadingText = styled("span")(({ theme }) => ({
   alignSelf: "stretch",
   color: theme.custom.colors.darkGray2,
   ...theme.typography.body2,
 }))
 
-const CountsTextContainer = styled.div({
+const CountsTextContainer = styled("div")({
   display: "flex",
   gap: "10px",
   [theme.breakpoints.down("md")]: {

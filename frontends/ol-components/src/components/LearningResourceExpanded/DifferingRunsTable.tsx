@@ -11,7 +11,7 @@ import {
   NoSSR,
 } from "ol-utilities"
 
-const DifferingRuns = styled.div({
+const DifferingRuns = styled("div")({
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-start",
@@ -21,7 +21,7 @@ const DifferingRuns = styled.div({
   borderBottom: "none",
 })
 
-const DifferingRun = styled.div({
+const DifferingRun = styled("div")({
   display: "flex",
   flexWrap: "wrap",
   alignItems: "center",
@@ -31,7 +31,7 @@ const DifferingRun = styled.div({
   borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
 })
 
-const DifferingRunHeader = styled.div({
+const DifferingRunHeader = styled("div")({
   display: "flex",
   alignSelf: "stretch",
   alignItems: "center",
@@ -42,13 +42,13 @@ const DifferingRunHeader = styled.div({
   ...theme.typography.subtitle3,
 })
 
-const DifferingRunData = styled.div({
+const DifferingRunData = styled("div")({
   display: "flex",
   color: theme.custom.colors.darkGray2,
   ...theme.typography.body3,
 })
 
-const DifferingRunLabel = styled.strong({
+const DifferingRunLabel = styled("strong")({
   display: "flex",
 })
 

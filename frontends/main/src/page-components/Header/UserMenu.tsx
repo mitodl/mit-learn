@@ -19,12 +19,12 @@ import { useUserMe, User } from "api/hooks/user"
 import { usePathname, useSearchParams } from "next/navigation"
 import MITLogoLink from "@/components/MITLogoLink/MITLogoLink"
 
-const FlexContainer = styled.div({
+const FlexContainer = styled("div")({
   display: "flex",
   alignItems: "center",
 })
 
-const UserMenuContainer = styled.button(({ theme }) => ({
+const UserMenuContainer = styled("button")(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   cursor: "pointer",
@@ -93,7 +93,7 @@ type UserMenuItem = SimpleMenuItem & {
   allow: boolean
 }
 
-const UserNameContainer = styled.span(({ theme }) => ({
+const UserNameContainer = styled("span")(({ theme }) => ({
   color: theme.custom.colors.white,
   [theme.breakpoints.down("sm")]: {
     display: "none",

@@ -10,7 +10,7 @@ import { LocalDate } from "ol-utilities"
 import { RiArrowRightSLine } from "@remixicon/react"
 import Link from "next/link"
 
-const Section = styled.section`
+const Section = styled("section")`
   background: ${theme.custom.colors.white};
   padding: 80px 0;
   ${theme.breakpoints.down("md")} {
@@ -29,14 +29,14 @@ const StrapLine = styled(Typography)(({ theme }) => ({
   textAlign: "center",
 }))
 
-const Content = styled.div`
+const Content = styled("div")`
   display: flex;
   align-items: flex-start;
   gap: 24px;
   margin-top: 40px;
 `
 
-const MobileContent = styled.div`
+const MobileContent = styled("div")`
   display: flex;
   align-items: center;
   flex-direction: column;
@@ -44,7 +44,7 @@ const MobileContent = styled.div`
   margin: 40px 0;
 `
 
-const StoriesContainer = styled.section`
+const StoriesContainer = styled("section")`
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -52,7 +52,7 @@ const StoriesContainer = styled.section`
   flex: 1 0 0;
 `
 
-const MobileContainer = styled.section`
+const MobileContainer = styled("section")`
   width: 100%;
   margin: 0 -16px;
 
@@ -61,7 +61,7 @@ const MobileContainer = styled.section`
   }
 `
 
-const EventsContainer = styled.section`
+const EventsContainer = styled("section")`
   display: flex;
   width: 408px;
   flex-direction: column;
@@ -81,7 +81,7 @@ const StoryCard = styled(Card)<{ mobile: boolean }>({
   ],
 })
 
-const StoriesSlider = styled.div`
+const StoriesSlider = styled("div")`
   display: flex;
   align-items: flex-start;
   gap: 16px;
@@ -89,7 +89,7 @@ const StoriesSlider = styled.div`
   padding: 0 16px 24px;
 `
 
-const Events = styled.div`
+const Events = styled("div")`
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -113,7 +113,7 @@ const EventCard = styled(Card)`
   padding: 16px;
 `
 
-const EventDate = styled.div`
+const EventDate = styled("div")`
   display: flex;
   height: 64px;
   flex-basis: 64px;
@@ -125,7 +125,7 @@ const EventDate = styled.div`
   background: ${theme.custom.colors.lightGray1};
 `
 
-const EventDay = styled.p`
+const EventDay = styled("p")`
   color: ${theme.custom.colors.red};
   font-family: ${theme.typography.fontFamily};
   font-size: ${theme.typography.pxToRem(28)};
@@ -133,14 +133,14 @@ const EventDay = styled.p`
   line-height: ${theme.typography.pxToRem(36)};
   margin: 0 0 -4px;
 `
-const EventMonth = styled.p`
+const EventMonth = styled("p")`
   margin: 0;
   color: ${theme.custom.colors.silverGrayDark};
   text-transform: uppercase;
   ${{ ...theme.typography.subtitle3 }}
 `
 
-const EventTitle = styled.p`
+const EventTitle = styled("p")`
   color: ${theme.custom.colors.darkGray2};
   ${{ ...theme.typography.subtitle1 }}
   margin: 0;
@@ -163,19 +163,19 @@ const Chevron = styled(RiArrowRightSLine)`
   justify-content: flex-end;
 `
 
-const AboveMdOnly = styled.div(({ theme }) => ({
+const AboveMdOnly = styled("div")(({ theme }) => ({
   [theme.breakpoints.down("md")]: {
     display: "none",
   },
 }))
 
-const BelowMdOnly = styled.div(({ theme }) => ({
+const BelowMdOnly = styled("div")(({ theme }) => ({
   [theme.breakpoints.up("md")]: {
     display: "none",
   },
 }))
 
-const AboveLgOnly = styled.div(({ theme }) => ({
+const AboveLgOnly = styled("div")(({ theme }) => ({
   [theme.breakpoints.down("lg")]: {
     display: "none",
   },

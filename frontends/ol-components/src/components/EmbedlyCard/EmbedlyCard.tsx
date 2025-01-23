@@ -38,7 +38,7 @@ const insertCardStylesheet = (e: Event) => {
   createStylesheet(e.target.contentDocument, stylesheet)
 }
 
-const Container = styled.div<{ aspectRatio?: number }>({
+const Container = styled("div")<{ aspectRatio?: number }>({
   aspectRatio: ({ aspectRatio }) => aspectRatio ?? "auto",
 })
 

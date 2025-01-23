@@ -59,24 +59,24 @@ const StyledResourceTabs = styled(ResourceCategoryTabs.TabList)`
   margin-top: 0 px;
 `
 
-const DesktopSortContainer = styled.div`
+const DesktopSortContainer = styled("div")`
   ${({ theme }) => theme.breakpoints.down("md")} {
     display: none;
   }
 `
-const MobileSortContainer = styled.div`
+const MobileSortContainer = styled("div")`
   float: right;
   ${({ theme }) => theme.breakpoints.up("md")} {
     display: none;
   }
 `
 
-const SearchModeDropdownContainer = styled.div`
+const SearchModeDropdownContainer = styled("div")`
   margin-top: 10px;
   margin-bottom: 10px;
 `
 
-const FacetStyles = styled.div`
+const FacetStyles = styled("div")`
   div.facets:last-child {
     border-bottom-right-radius: 8px;
     border-bottom-left-radius: 8px;
@@ -305,7 +305,7 @@ const FacetStyles = styled.div`
   }
 `
 
-const FilterTitle = styled.div`
+const FilterTitle = styled("div")`
   svg {
     margin-left: 8px;
   }
@@ -317,7 +317,7 @@ const FilterTitle = styled.div`
   color: ${({ theme }) => theme.custom.colors.darkGray2};
 `
 
-const FacetsTitleContainer = styled.div`
+const FacetsTitleContainer = styled("div")`
   display: flex;
   flex-direction: row;
   justify-content: space-between;
@@ -325,7 +325,7 @@ const FacetsTitleContainer = styled.div`
   align-items: end;
 `
 
-const PaginationContainer = styled.div`
+const PaginationContainer = styled("div")`
   display: flex;
   justify-content: end;
   margin-top: 24px;
@@ -350,7 +350,7 @@ const PaginationContainer = styled.div`
   }
 `
 
-const StyledResultsContainer = styled.div`
+const StyledResultsContainer = styled("div")`
   margin-top: 16px;
 
   ul > li + li {
@@ -379,7 +379,7 @@ const StyledMainColumn = styled(GridColumn)`
   }
 `
 
-const MobileFilter = styled.div`
+const MobileFilter = styled("div")`
   ${({ theme }) => theme.breakpoints.up("md")} {
     display: none;
   }
@@ -405,7 +405,7 @@ const StyledDrawer = styled(Drawer)`
   }
 `
 
-const MobileFacetSearchButtons = styled.div`
+const MobileFacetSearchButtons = styled("div")`
   display: flex;
   gap: 12px;
 
@@ -423,7 +423,7 @@ const MobileDrawerCloseButton = styled(Button)`
   padding-right: 0;
 `
 
-const MobileFacetsTitleContainer = styled.div`
+const MobileFacetsTitleContainer = styled("div")`
   display: flex;
   flex-direction: row;
   justify-content: space-between;
@@ -450,15 +450,15 @@ const ReversedGridContainer = styled(GridContainer)`
   flex-direction: row-reverse;
 `
 
-const ExplanationContainer = styled.div`
+const ExplanationContainer = styled("div")`
   ${({ theme }) => css({ ...theme.typography.body3 })}
   color: ${({ theme }) => theme.custom.colors.silverGrayDark};
 `
-const AdminTitleContainer = styled.div`
+const AdminTitleContainer = styled("div")`
   ${({ theme }) => css({ ...theme.typography.subtitle3 })}
   margin-top: 20px;
 `
-const NoneFound = styled.div(({ theme }) => ({
+const NoneFound = styled("div")(({ theme }) => ({
   backgroundColor: theme.custom.colors.white,
   borderRadius: "8px",
   padding: "16px",

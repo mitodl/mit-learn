@@ -27,14 +27,14 @@ import { propsNotNil, backgroundSrcSetCSS } from "ol-utilities"
 import invariant from "tiny-invariant"
 import backgroundSteps from "@/public/images/backgrounds/background_steps.jpg"
 
-const ChildrenContainer = styled.div(({ theme }) => ({
+const ChildrenContainer = styled("div")(({ theme }) => ({
   paddingTop: "40px",
   [theme.breakpoints.down("sm")]: {
     paddingTop: "24px",
   },
 }))
 
-const ChannelControlsContainer = styled.div(({ theme }) => ({
+const ChannelControlsContainer = styled("div")(({ theme }) => ({
   display: "flex",
   flexDirection: "row",
   alignItems: "end",
@@ -54,7 +54,7 @@ const ChannelControlsContainer = styled.div(({ theme }) => ({
   },
 }))
 
-const SubTopicsContainer = styled.div(({ theme }) => ({
+const SubTopicsContainer = styled("div")(({ theme }) => ({
   paddingTop: "30px",
   [theme.breakpoints.down("md")]: {
     paddingTop: "16px",
@@ -67,7 +67,7 @@ const SubTopicsHeader = styled(Typography)(({ theme }) => ({
   ...theme.typography.subtitle1,
 }))
 
-const ChipsContainer = styled.div({
+const ChipsContainer = styled("div")({
   display: "flex",
   flexWrap: "wrap",
   gap: "12px",

@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react"
 import { RoutedDrawer } from "./RoutedDrawer"
 import { styled } from "@pigment-css/react"
 
-const Content = styled.div(({ theme }) => ({
+const Content = styled("div")(({ theme }) => ({
   width: 400,
   padding: 80,
   color: theme.palette.primary.main,

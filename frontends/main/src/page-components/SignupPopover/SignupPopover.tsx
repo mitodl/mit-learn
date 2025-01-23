@@ -19,7 +19,7 @@ const BodyText = styled(Typography)(({ theme }) => ({
   ...theme.typography.body2,
 }))
 
-const Footer = styled.div({
+const Footer = styled("div")({
   display: "flex",
   justifyContent: "end",
 })

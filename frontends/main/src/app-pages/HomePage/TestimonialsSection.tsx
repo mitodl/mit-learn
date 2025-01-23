@@ -29,7 +29,7 @@ const HeaderContainer = styled(Container)(({ theme }) => ({
   },
 }))
 
-const Section = styled.section(({ theme }) => ({
+const Section = styled("section")(({ theme }) => ({
   backgroundColor: theme.custom.colors.mitRed,
   color: theme.custom.colors.white,
   overflow: "auto",
@@ -47,7 +47,7 @@ const Section = styled.section(({ theme }) => ({
   },
 }))
 
-const OverlayContainer = styled.div({
+const OverlayContainer = styled("div")({
   position: "relative",
   maxWidth: "1440px",
   margin: "0 auto",
@@ -59,7 +59,7 @@ const OverlayContainer = styled.div({
   },
 })
 
-const TestimonialCardContainer = styled.div({
+const TestimonialCardContainer = styled("div")({
   maxWidth: "1440px",
   [theme.breakpoints.down("md")]: {
     padding: "0",
@@ -70,7 +70,7 @@ const TestimonialCardContainer = styled.div({
   },
 })
 
-const TestimonialCard = styled.div({
+const TestimonialCard = styled("div")({
   height: "326px",
   backgroundColor: theme.custom.colors.white,
   color: theme.custom.colors.black,
@@ -88,7 +88,7 @@ const TestimonialCard = styled.div({
   },
 })
 
-const TestimonialCardImage = styled.div({
+const TestimonialCardImage = styled("div")({
   height: "326px",
   img: {
     height: "326px",
@@ -109,7 +109,7 @@ const TestimonialCardImage = styled.div({
   },
 })
 
-const TestimonialCardQuote = styled.div({
+const TestimonialCardQuote = styled("div")({
   height: "326px",
   backgroundColor: theme.custom.colors.white,
   color: theme.custom.colors.black,
@@ -154,7 +154,7 @@ const TestimonialCardQuote = styled.div({
   },
 })
 
-const TestimonialFadeLeft = styled.div({
+const TestimonialFadeLeft = styled("div")({
   position: "absolute",
   top: "0",
   bottom: "0",
@@ -166,7 +166,7 @@ const TestimonialFadeLeft = styled.div({
     display: "none",
   },
 })
-const TestimonialFadeRight = styled.div({
+const TestimonialFadeRight = styled("div")({
   position: "absolute",
   top: "0",
   bottom: "0",
@@ -186,7 +186,7 @@ const RiArrowRightLineStyled = styled(RiArrowRightLine)({
   fontSize: "10rem",
 })
 
-const ButtonsContainer = styled.div({
+const ButtonsContainer = styled("div")({
   display: "flex",
   justifyContent: "center",
   margin: "0 auto",

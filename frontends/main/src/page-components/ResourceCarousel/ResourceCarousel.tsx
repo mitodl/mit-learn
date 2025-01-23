@@ -39,7 +39,7 @@ const StyledCarousel = styled(Carousel)({
   },
 })
 
-const HeaderRow = styled.div(({ theme }) => ({
+const HeaderRow = styled("div")(({ theme }) => ({
   display: "flex",
   flexWrap: "wrap",
   alignItems: "center",
@@ -62,7 +62,7 @@ const HeaderText = styled(Typography)<Pick<TypographyProps, "component">>(
   }),
 )
 
-const ControlsContainer = styled.div(({ theme }) => ({
+const ControlsContainer = styled("div")(({ theme }) => ({
   display: "flex",
   flex: 1,
   minWidth: "0px",
@@ -79,7 +79,7 @@ const StyledTabPanel = styled(TabPanel)({
   paddingRight: "0px",
 })
 
-const ButtonsContainer = styled.div(({ theme }) => ({
+const ButtonsContainer = styled("div")(({ theme }) => ({
   display: "flex",
   gap: "8px",
   [theme.breakpoints.down("sm")]: {
@@ -154,7 +154,7 @@ const PanelChildren: React.FC<PanelChildrenProps> = ({
   )
 }
 
-const MobileOverflow = styled.div(({ theme }) => ({
+const MobileOverflow = styled("div")(({ theme }) => ({
   /**
    * On mobile screens, the carousel is supposed to overflow the main content
    * so its right edge is flush with screen.

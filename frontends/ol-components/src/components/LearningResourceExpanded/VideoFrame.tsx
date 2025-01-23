@@ -2,7 +2,7 @@ import React from "react"
 import { styled } from "@pigment-css/react"
 import { EmbedlyCard } from "../EmbedlyCard/EmbedlyCard"
 
-const IFrame = styled.iframe`
+const IFrame = styled("iframe")`
   border-radius: 8px;
   border: none;
   width: 100%;

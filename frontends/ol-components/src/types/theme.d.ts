@@ -1,4 +1,4 @@
-import type { Theme as MuiTheme } from "@mui/material/styles"
+// import type { Theme as MuiTheme } from "@mui/material/styles"
 // import "@emotion/react"
 import "@pigment-css/react"
 import "@mui/material-pigment-css"

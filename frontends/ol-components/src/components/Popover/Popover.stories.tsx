@@ -7,13 +7,13 @@ import { Button } from "../Button/Button"
 import Typography from "@mui/material/Typography"
 import { styled } from "@pigment-css/react"
 
-const ScrollWrapper = styled.div({
+const ScrollWrapper = styled("div")({
   width: "250px",
   height: "250px",
   overflow: "auto",
   border: "1pt solid blue",
 })
-const Wrapper = styled.div({
+const Wrapper = styled("div")({
   width: "500px",
   height: "500px",
   display: "flex",

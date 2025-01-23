@@ -28,24 +28,24 @@ import type { User } from "api/hooks/user"
 import { CardActionButton } from "../LearningResourceCard/LearningResourceListCard"
 import { LearningResourceCardProps } from "../LearningResourceCard/LearningResourceCard"
 
-const InfoItems = styled.section`
+const InfoItems = styled("section")`
   display: flex;
   flex-direction: column;
   gap: 16px;
 `
 
-const InfoHeader = styled.div`
+const InfoHeader = styled("div")`
   display: flex;
   justify-content: space-between;
   align-items: center;
 `
 
-const ListButtonContainer = styled.div`
+const ListButtonContainer = styled("div")`
   display: flex;
   gap: 8px;
 `
 
-const InfoItemContainer = styled.div`
+const InfoItemContainer = styled("div")`
   display: flex;
   align-items: flex-start;
   gap: 16px;
@@ -60,18 +60,18 @@ const InfoItemContainer = styled.div`
   }
 `
 
-const InfoLabel = styled.div`
+const InfoLabel = styled("div")`
   width: 85px;
   flex-shrink: 0;
 `
 
-const InfoValue = styled.div`
+const InfoValue = styled("div")`
   ${{ ...theme.typography.body2 }}
   color: ${theme.custom.colors.black};
   flex-grow: 1;
 `
 
-const Certificate = styled.div`
+const Certificate = styled("div")`
   display: flex;
   gap: 4px;
   border-radius: 8px;
@@ -88,7 +88,7 @@ const Certificate = styled.div`
   }
 `
 
-const CertificatePrice = styled.span`
+const CertificatePrice = styled("span")`
   ${{ ...theme.typography.body2 }}
 `
 

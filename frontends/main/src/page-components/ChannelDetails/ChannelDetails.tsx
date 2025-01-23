@@ -23,7 +23,7 @@ const FACETS_BY_CHANNEL_TYPE: Record<ChannelTypeEnum, string[]> = {
   [ChannelTypeEnum.Pathway]: [],
 }
 
-const ChannelLink = styled.a({
+const ChannelLink = styled("a")({
   display: "flex",
   alignItems: "center",
   span: {
@@ -144,7 +144,7 @@ const InfoLabel = styled(Typography)(({ theme }) => ({
   marginBottom: theme.typography.pxToRem(4),
 }))
 
-const ChannelDetailsCard = styled.div(({ theme }) => ({
+const ChannelDetailsCard = styled("div")(({ theme }) => ({
   borderRadius: "12px",
   backgroundColor: "white",
   padding: "36px",

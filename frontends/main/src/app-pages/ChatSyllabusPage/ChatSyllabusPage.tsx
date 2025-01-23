@@ -32,7 +32,7 @@ const INITIAL_MESSAGES: AiChatProps["initialMessages"] = [
   },
 ]
 
-const FormContainer = styled.div(({ theme }) => ({
+const FormContainer = styled("div")(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   paddingTop: "40px",
@@ -44,7 +44,7 @@ const FormContainer = styled.div(({ theme }) => ({
   },
 }))
 
-const StyledDebugPre = styled.pre({
+const StyledDebugPre = styled("pre")({
   width: "80%",
   whiteSpace: "pre-wrap",
 })

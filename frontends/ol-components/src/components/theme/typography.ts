@@ -23,7 +23,7 @@ const fontWeights = {
  */
 const pxToRem = (px: number) => `${px / 16}rem`
 
-const typography: ThemeOptions["typography"] = {
+const typography = {
   // Note: Figma calls this "Neue Haas Grotesk Text", but that is incorrect based on Adobe's font family.
   fontFamily: "neue-haas-grotesk-text, sans-serif",
   fontWeightLight: fontWeights.text.roman,

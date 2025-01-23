@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react"
 import { PlainList } from "./PlainList"
 import { styled } from "@pigment-css/react"
 
-const Item = styled.li`
+const Item = styled("li")`
   background-color: lightsteelblue;
 `
 

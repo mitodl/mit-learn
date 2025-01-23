@@ -6,8 +6,9 @@ import Link from "next/link"
 import React, { ReactElement } from "react"
 import { RiCloseLargeLine } from "@remixicon/react"
 import { ActionButton } from "../Button/Button"
+import { theme } from "../theme/theme"
 
-const DrawerContent = styled.div(({ theme }) => ({
+const DrawerContent = styled("div")(({ theme }) => ({
   paddingTop: theme.custom.dimensions.headerHeight,
   width: "366px",
   height: "100%",
@@ -18,7 +19,7 @@ const DrawerContent = styled.div(({ theme }) => ({
   },
 }))
 
-const NavSection = styled.div({
+const NavSection = styled("div")({
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-start",
@@ -27,7 +28,7 @@ const NavSection = styled.div({
   gap: "12px",
 })
 
-const NavSectionHeader = styled.div<{ hasButton: boolean }>(({ theme }) => ({
+const NavSectionHeader = styled("div")<{ hasButton: boolean }>(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   alignSelf: "stretch",
@@ -44,7 +45,7 @@ const NavSectionHeader = styled.div<{ hasButton: boolean }>(({ theme }) => ({
   ],
 }))
 
-const NavItemsContainer = styled.div(({ theme }) => ({
+const NavItemsContainer = styled("div")(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-start",
@@ -60,7 +61,7 @@ const NavItemLink = styled(Link)({
   textDecoration: "none !important",
 })
 
-const NavItemContainer = styled.div(({ theme }) => ({
+const NavItemContainer = styled("div")(({ theme }) => ({
   display: "flex",
   padding: "4px 0",
   alignItems: "flex-start",
@@ -79,12 +80,12 @@ const NavItemContainer = styled.div(({ theme }) => ({
   },
 }))
 
-const NavIconContainer = styled.div({
+const NavIconContainer = styled("div")({
   display: "flex",
   alignItems: "flex-start",
 })
 
-const NavTextContainer = styled.div({
+const NavTextContainer = styled("div")({
   display: "flex",
   flex: "1 0 0",
   flexDirection: "column",
@@ -99,12 +100,12 @@ const CloseButton = styled(ActionButton)(({ theme }) => ({
   transform: "translateX(12px)",
 }))
 
-const NavLinkText = styled.div(({ theme }) => ({
+const NavLinkText = styled("div")(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
   ...theme.typography.subtitle3,
 }))
 
-const NavLinkDescription = styled.div(({ theme }) => ({
+const NavLinkDescription = styled("div")(({ theme }) => ({
   alignSelf: "stretch",
   ...theme.typography.body3,
 }))
@@ -237,7 +238,7 @@ const NavDrawer = ({
             sx: {
               borderRight: "none",
               boxShadow: "0px 6px 24px 0px rgba(37, 38, 43, 0.10)",
-              zIndex: (theme) => theme.zIndex.appBar - 1,
+              zIndex: theme.zIndex.appBar - 1,
               overscrollBehavior: "contain",
             },
           }}

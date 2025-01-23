@@ -24,7 +24,7 @@ type InternalTestimonialDisplayProps = {
   variant?: "standard" | "condensed"
 }
 
-const TestimonialTruncateText = styled(TruncateText)({
+const TestimonialTruncateText = styled(TruncateText)(({ theme }) => ({
   textOverflow: "none",
   [theme.breakpoints.down("sm")]: {
     ...theme.typography.subtitle1,
@@ -40,9 +40,9 @@ const TestimonialTruncateText = styled(TruncateText)({
       WebkitLineClamp: 8,
     },
   },
-})
+}))
 
-const QuoteContainer = styled.div(({ theme }) => ({
+const QuoteContainer = styled("div")(({ theme }) => ({
   backgroundColor: theme.custom.colors.darkGray2,
   color: theme.custom.colors.white,
   overflow: "auto",
@@ -58,7 +58,7 @@ const QuoteContainer = styled.div(({ theme }) => ({
   },
 }))
 
-const QuoteBlock = styled.div(() => ({
+const QuoteBlock = styled("div")(() => ({
   justifyContent: "center",
   alignItems: "center",
   width: "100%",
@@ -67,7 +67,7 @@ const QuoteBlock = styled.div(() => ({
   padding: "0 28px",
 }))
 
-const QuoteLeader = styled.div(({ theme }) => ({
+const QuoteLeader = styled("div")(({ theme }) => ({
   width: "100%",
   height: "32px",
   fontSize: "60px",
@@ -75,7 +75,7 @@ const QuoteLeader = styled.div(({ theme }) => ({
   color: theme.custom.colors.silverGray,
 }))
 
-const QuoteBody = styled.div(({ theme }) => ({
+const QuoteBody = styled("div")(({ theme }) => ({
   width: "100%",
   display: "flex",
   [theme.breakpoints.down("sm")]: {
@@ -83,7 +83,7 @@ const QuoteBody = styled.div(({ theme }) => ({
   },
 }))
 
-const AttestationBlock = styled.blockquote(({ theme }) => ({
+const AttestationBlock = styled("blockquote")(({ theme }) => ({
   margin: "0px",
   width: "auto",
   flexGrow: "5",
@@ -95,14 +95,15 @@ const AttestationBlock = styled.blockquote(({ theme }) => ({
   },
 }))
 
-const ButtonsContainer = styled.div(({ theme }) => ({
+const ButtonsContainer = styled("div")(() => ({
   display: "flex",
   justifyContent: "right",
   margin: "4px auto 0",
   gap: "16px",
-  [theme.breakpoints.down("sm")]: {
-    marginTop: "16px",
-  },
+  // TODO pigment (build error?)
+  // [theme.breakpoints.down("sm")]: {
+  //   marginTop: "16px",
+  // },
 }))
 
 const NoButtonsContainer = styled(ButtonsContainer)({

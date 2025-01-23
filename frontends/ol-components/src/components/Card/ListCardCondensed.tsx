@@ -70,7 +70,7 @@ const Bottom = styled(BaseBottom)`
     height: auto;
   }
 `
-const Actions = styled.div`
+const Actions = styled("div")`
   display: flex;
   gap: 16px;
 `

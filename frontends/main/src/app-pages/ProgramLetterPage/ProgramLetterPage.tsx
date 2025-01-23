@@ -9,7 +9,7 @@ type RouteParams = {
   id: string
 }
 
-const ProgramLetterPageContainer = styled.div`
+const ProgramLetterPageContainer = styled("div")`
   background: #fff;
   max-width: 800px;
   margin-left: auto;
@@ -31,7 +31,7 @@ const ProgramLetterPageContainer = styled.div`
   }
 `
 
-const ProgramLetterHeader = styled.div`
+const ProgramLetterHeader = styled("div")`
   display: flex;
 
   .header-text {
@@ -57,7 +57,7 @@ const ProgramLetterHeader = styled.div`
   }
 `
 
-const ProgramLetterSignatures = styled.div`
+const ProgramLetterSignatures = styled("div")`
   .signatory {
     margin: 10px 0 5px;
   }
@@ -73,7 +73,7 @@ const ProgramLetterSignatures = styled.div`
   }
 `
 
-const ProgramLetterFooter = styled.div`
+const ProgramLetterFooter = styled("div")`
   margin-top: 40px;
   display: flex;
 
@@ -104,7 +104,7 @@ const ProgramLetterFooter = styled.div`
   }
 `
 
-const ImageContainer = styled.img(({ theme }) => ({
+const ImageContainer = styled("img")(({ theme }) => ({
   display: "flex",
   alignItems: "end",
   minWidth: "0px",

@@ -56,7 +56,7 @@ const FONT_STYLES = {
 type AvatarStyleProps = Required<
   Pick<AvatarProps, "imageSize" | "imageVariant">
 >
-const AvatarContainer = styled.div<AvatarStyleProps>(({ theme }) => ({
+const AvatarContainer = styled("div")<AvatarStyleProps>(({ theme }) => ({
   display: "flex",
   flexDirection: "row",
   alignItems: "center",
@@ -68,7 +68,7 @@ const AvatarContainer = styled.div<AvatarStyleProps>(({ theme }) => ({
   },
 }))
 
-const AvatarImg = styled.img<AvatarStyleProps>({
+const AvatarImg = styled("img")<AvatarStyleProps>({
   minHeight: 0,
   minWidth: 0,
   height: ({ imageSize }) => IMG_SIZES[imageSize],
@@ -81,7 +81,7 @@ const AvatarImg = styled.img<AvatarStyleProps>({
   ],
 })
 
-const AvatarInitials = styled.div<AvatarStyleProps>(({ theme }) => ({
+const AvatarInitials = styled("div")<AvatarStyleProps>(({ theme }) => ({
   minHeight: 0,
   minWidth: 0,
   height: ({ imageSize }) => IMG_SIZES[imageSize],

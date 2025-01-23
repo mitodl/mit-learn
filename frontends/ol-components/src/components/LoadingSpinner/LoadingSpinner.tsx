@@ -3,7 +3,7 @@ import CircularProgress from "@mui/material/CircularProgress"
 import Fade from "@mui/material/Fade"
 import { styled } from "@pigment-css/react"
 
-const Container = styled.div({
+const Container = styled("div")({
   display: "flex",
   justifyContent: "center",
   alignItems: "center",

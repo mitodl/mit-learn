@@ -3,7 +3,7 @@ import { styled } from "@pigment-css/react"
 import { Dialog } from "../Dialog/Dialog"
 import type { DialogProps } from "../Dialog/Dialog"
 
-const FormContent = styled.div`
+const FormContent = styled("div")`
   display: flex;
   flex-direction: column;
   gap: 20px;

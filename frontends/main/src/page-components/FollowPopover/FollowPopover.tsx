@@ -28,7 +28,7 @@ const BodyText = styled(Typography)(({ theme }) => ({
   marginBottom: "16px",
 }))
 
-const Footer = styled.div({
+const Footer = styled("div")({
   display: "flex",
   justifyContent: "end",
   gap: "16px",

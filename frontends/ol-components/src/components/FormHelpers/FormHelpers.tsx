@@ -3,12 +3,12 @@ import { styled } from "@pigment-css/react"
 import { RiErrorWarningLine } from "@remixicon/react"
 import Typography from "@mui/material/Typography"
 
-const Required = styled.span(({ theme }) => ({
+const Required = styled("span")(({ theme }) => ({
   color: theme.custom.colors.lightRed,
   marginLeft: "4px",
 }))
 
-const Description = styled.div<{ error?: boolean }>(({ theme }) => ({
+const Description = styled("div")<{ error?: boolean }>(({ theme }) => ({
   ...theme.typography.body2,
   color: theme.custom.colors.silverGrayDark,
   variants: [
@@ -32,7 +32,7 @@ const Description = styled.div<{ error?: boolean }>(({ theme }) => ({
   ],
 }))
 
-const Container = styled.div<{ fullWidth?: boolean }>({
+const Container = styled("div")<{ fullWidth?: boolean }>({
   display: "inline-flex",
   flexDirection: "column",
   alignItems: "start",

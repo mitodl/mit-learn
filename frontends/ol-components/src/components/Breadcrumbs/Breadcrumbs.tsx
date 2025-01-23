@@ -3,7 +3,7 @@ import { styled } from "@pigment-css/react"
 import { RiArrowRightSLine } from "@remixicon/react"
 import { Link } from "../Link/Link"
 
-const BreadcrumbsContainer = styled.span({
+const BreadcrumbsContainer = styled("span")({
   display: "inline-flex",
   paddingBottom: "16px",
   alignItems: "flex-start",
@@ -11,7 +11,7 @@ const BreadcrumbsContainer = styled.span({
   width: "100%",
 })
 
-const Breadcrumb = styled.span({
+const Breadcrumb = styled("span")({
   display: "flex",
   alignItems: "center",
   overflow: "hidden",
@@ -22,7 +22,7 @@ const BreadcrumbLink = styled(Link)({
   textOverflow: "ellipsis",
 })
 
-const BreadcrumbText = styled.span({
+const BreadcrumbText = styled("span")({
   textWrap: "nowrap",
   whiteSpace: "nowrap",
   overflow: "hidden",

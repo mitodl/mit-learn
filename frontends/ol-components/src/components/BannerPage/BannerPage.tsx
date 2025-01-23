@@ -16,7 +16,7 @@ interface ImgProps {
 /**
  * Prefer direct use of `BannerPage` component.
  */
-const BannerPageWrapper = styled.div`
+const BannerPageWrapper = styled("div")`
   position: relative;
   width: 100%;
 `
@@ -40,7 +40,7 @@ interface BannerPageProps extends ImgProps {
   dim?: number
 }
 
-const BannerPageHeaderFlex = styled.header`
+const BannerPageHeaderFlex = styled("header")`
   min-height: ${BANNER_HEIGHT};
   height: 100%;
   position: relative;

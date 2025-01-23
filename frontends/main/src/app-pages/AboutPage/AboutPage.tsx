@@ -21,14 +21,14 @@ const PageContainer = styled(Container)(({ theme }) => ({
   },
 }))
 
-const BannerContainer = styled.div({
+const BannerContainer = styled("div")({
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
   paddingBottom: "16px",
 })
 
-const BannerContainerInner = styled.div({
+const BannerContainerInner = styled("div")({
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-start",
@@ -36,7 +36,7 @@ const BannerContainerInner = styled.div({
   justifyContent: "center",
 })
 
-const BodyContainer = styled.div({
+const BodyContainer = styled("div")({
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
@@ -44,7 +44,7 @@ const BodyContainer = styled.div({
   gap: "40px",
 })
 
-const HighlightContainer = styled.div(({ theme }) => ({
+const HighlightContainer = styled("div")(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "24px",
@@ -57,7 +57,7 @@ const HighlightContainer = styled.div(({ theme }) => ({
   },
 }))
 
-const SubHeaderContainer = styled.div(({ theme }) => ({
+const SubHeaderContainer = styled("div")(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   alignSelf: "stretch",
@@ -68,14 +68,14 @@ const SubHeaderContainer = styled.div(({ theme }) => ({
   },
 }))
 
-const SubHeaderTextContainer = styled.div({
+const SubHeaderTextContainer = styled("div")({
   display: "flex",
   flexDirection: "column",
   flex: "1 0 0",
   alignSelf: "flex-start",
 })
 
-const SubHeaderImageContainer = styled.div({
+const SubHeaderImageContainer = styled("div")({
   flexGrow: 1,
   alignSelf: "stretch",
   position: "relative",
@@ -89,14 +89,14 @@ const SubHeaderImage = styled(Image)(({ theme }) => ({
   },
 }))
 
-const BodySection = styled.div({
+const BodySection = styled("div")({
   display: "flex",
   flexDirection: "column",
   alignSelf: "stretch",
   gap: "16px",
 })
 
-const List = styled.ul(({ theme }) => ({
+const List = styled("ul")(({ theme }) => ({
   "li + li": {
     marginTop: theme.typography.pxToRem(4),
   },

@@ -5,7 +5,7 @@ import { send } from "./mock-send"
 
 import { NluxAiChat } from "./AiChat"
 
-const Container = styled.div({
+const Container = styled("div")({
   width: "388px",
   height: "600px",
 })

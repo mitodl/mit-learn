@@ -10,19 +10,19 @@ import Typography from "@mui/material/Typography"
 import Slide from "@mui/material/Slide"
 import { TransitionProps } from "@mui/material/transitions"
 
-const Close = styled.div`
+const Close = styled("div")`
   position: absolute;
   top: 11px;
   right: 20px;
 `
 
-const Header = styled.div`
+const Header = styled("div")`
   border-bottom: 1px solid ${theme.custom.colors.lightGray2};
   background-color: ${theme.custom.colors.lightGray1};
   padding: 20px 58px 20px 28px;
 `
 
-const Content = styled.div`
+const Content = styled("div")`
   margin: 28px;
   min-height: 0;
   overflow: auto;

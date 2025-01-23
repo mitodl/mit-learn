@@ -50,7 +50,7 @@ const SubTitleText = styled(Typography)(({ theme }) => ({
   ...theme.typography.body2,
 }))
 
-const SettingsHeader = styled.div(({ theme }) => ({
+const SettingsHeader = styled("div")(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   alignSelf: "stretch",
@@ -59,21 +59,21 @@ const SettingsHeader = styled.div(({ theme }) => ({
   },
 }))
 
-const SettingsHeaderLeft = styled.div({
+const SettingsHeaderLeft = styled("div")({
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-start",
   flex: "1 0 0",
 })
 
-const SettingsHeaderRight = styled.div(({ theme }) => ({
+const SettingsHeaderRight = styled("div")(({ theme }) => ({
   display: "flex",
   [theme.breakpoints.down("md")]: {
     display: "none",
   },
 }))
 
-const ListItem = styled.li(({ theme }) => ({
+const ListItem = styled("li")(({ theme }) => ({
   padding: "16px 32px",
   display: "flex",
   gap: "16px",
@@ -84,18 +84,18 @@ const ListItem = styled.li(({ theme }) => ({
   },
 }))
 
-const _ListItemBody = styled.div({
+const _ListItemBody = styled("div")({
   display: "flex",
   flexDirection: "column",
   justifyContent: "center",
   gap: "4px",
   flex: "1 0 0",
 })
-const Title = styled.span(({ theme }) => ({
+const Title = styled("span")(({ theme }) => ({
   ...theme.typography.subtitle1,
   color: theme.custom.colors.darkGray2,
 }))
-const Subtitle = styled.span(({ theme }) => ({
+const Subtitle = styled("span")(({ theme }) => ({
   ...theme.typography.body2,
   color: theme.custom.colors.silverGrayDark,
 }))

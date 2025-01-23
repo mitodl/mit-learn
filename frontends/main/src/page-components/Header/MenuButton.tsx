@@ -8,7 +8,7 @@ const MenuIcon = styled(RiMenuLine)(({ theme }) => ({
   color: theme.custom.colors.darkGray1,
 }))
 
-const MenuButtonText = styled.div(({ theme }) => ({
+const MenuButtonText = styled("div")(({ theme }) => ({
   alignSelf: "center",
   paddingLeft: "16px",
   textTransform: "none",
@@ -18,12 +18,12 @@ const MenuButtonText = styled.div(({ theme }) => ({
   ...theme.typography.subtitle2,
 }))
 
-const MenuButtonInner = styled.div({
+const MenuButtonInner = styled("div")({
   display: "flex",
   alignItems: "flex-start",
 })
 
-const StyledMenuButton = styled.button(({ theme }) => ({
+const StyledMenuButton = styled("button")(({ theme }) => ({
   padding: "8px 16px",
   background: "transparent",
   "&:hover:not(:disabled)": {

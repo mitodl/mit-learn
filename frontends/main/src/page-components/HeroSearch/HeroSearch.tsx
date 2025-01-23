@@ -76,7 +76,7 @@ const SEARCH_CHIPS: SearchChip[] = [
   },
 ]
 
-const HeroWrapper = styled.div(({ theme }) => ({
+const HeroWrapper = styled("div")(({ theme }) => ({
   display: "flex",
   flexDirection: "row",
   alignItems: "center",
@@ -84,7 +84,7 @@ const HeroWrapper = styled.div(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
 }))
 
-const TitleAndControls = styled.div({
+const TitleAndControls = styled("div")({
   flex: "1 1 auto",
   display: "flex",
   flexDirection: "column",
@@ -94,7 +94,7 @@ const TitleAndControls = styled.div({
   marginBottom: "32px",
 })
 
-const ImageContainer = styled.div(({ theme }) => ({
+const ImageContainer = styled("div")(({ theme }) => ({
   flex: "0 1.33 auto",
   display: "flex",
   flexDirection: "row",
@@ -113,7 +113,7 @@ const ImageContainer = styled.div(({ theme }) => ({
   position: "relative",
 }))
 
-const ControlsContainer = styled.div(({ theme }) => ({
+const ControlsContainer = styled("div")(({ theme }) => ({
   marginTop: "24px",
   display: "flex",
   width: "100%",
@@ -132,7 +132,7 @@ const ControlsContainer = styled.div(({ theme }) => ({
   },
 }))
 
-const BrowseByTopicContainer = styled.div(({ theme }) => ({
+const BrowseByTopicContainer = styled("div")(({ theme }) => ({
   marginTop: "16px",
   marginBottom: "24px",
   [theme.breakpoints.down("sm")]: {
@@ -188,7 +188,7 @@ const TrendingChip = styled(ChipLink)<{ variant: SearchChip["variant"] }>(
   }),
 )
 
-const TrendingContainer = styled.div({
+const TrendingContainer = styled("div")({
   display: "flex",
   flexDirection: "row",
   alignItems: "center",

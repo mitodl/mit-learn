@@ -5,7 +5,7 @@ import { useLearningResourceTopics } from "api/hooks/learningResources"
 import { RiArrowRightLine } from "@remixicon/react"
 import RootTopicIcon from "@/components/RootTopicIcon/RootTopicIcon"
 
-const Section = styled.section`
+const Section = styled("section")`
   background: #fff url("/images/backgrounds/open-bg-texture-with-gradient.svg")
     no-repeat center left;
   background-size: 135% auto;
@@ -22,7 +22,7 @@ const Title = styled(Typography)`
   text-align: center;
 `
 
-const Topics = styled.div`
+const Topics = styled("div")`
   display: flex;
   flex-wrap: wrap;
   gap: 16px 24px;
@@ -67,7 +67,7 @@ const TopicBox = styled(Link)`
   }
 `
 
-const TopicBoxContent = styled.div`
+const TopicBoxContent = styled("div")`
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -84,7 +84,7 @@ const TopicBoxContent = styled.div`
   }}
 `
 
-const TopicBoxName = styled.p`
+const TopicBoxName = styled("p")`
   flex-grow: 1;
   margin: 0;
 `

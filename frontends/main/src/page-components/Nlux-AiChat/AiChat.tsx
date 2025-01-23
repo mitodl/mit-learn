@@ -21,7 +21,7 @@ type NluxAiChatProps = Pick<
   send: StreamSend
 }
 
-const StyledDebugPre = styled.pre({
+const StyledDebugPre = styled("pre")({
   width: "80%",
   whiteSpace: "pre-wrap",
 })

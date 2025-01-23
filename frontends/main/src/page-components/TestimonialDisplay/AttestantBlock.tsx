@@ -25,7 +25,7 @@ const StyledRiAccountCircleFill = styled(RiAccountCircleFill)({
   height: "40px",
 })
 
-const AttestantBlockContainer = styled.cite<AttestantBlockChildProps>(
+const AttestantBlockContainer = styled("cite")<AttestantBlockChildProps>(
   ({ theme }) => ({
     display: "flex",
     flexShrink: 0,
@@ -62,39 +62,41 @@ const AttestantBlockContainer = styled.cite<AttestantBlockChildProps>(
   }),
 )
 
-const AttestantAvatar = styled.div<AttestantBlockChildProps>(({ theme }) => ({
-  img: {
-    objectFit: "cover",
-    borderRadius: "50%",
-    background: theme.custom.colors.white,
-    width: "40px",
-    height: "40px",
-    boxShadow:
-      "0px 2px 4px 0px rgba(37, 38, 43, 0.10), 0px 2px 4px 0px rgba(37, 38, 43, 0.10)",
-  },
-  [theme.breakpoints.down("sm")]: {
-    display: ({ avatarStyle }) =>
-      avatarStyle === "homepage" ? "none" : "block",
-  },
-  variants: [
-    {
-      props: { avatarPosition: "start" },
-      style: {
-        marginLeft: 0,
-        marginRight: 12,
-      },
+const AttestantAvatar = styled("div")<AttestantBlockChildProps>(
+  ({ theme }) => ({
+    img: {
+      objectFit: "cover",
+      borderRadius: "50%",
+      background: theme.custom.colors.white,
+      width: "40px",
+      height: "40px",
+      boxShadow:
+        "0px 2px 4px 0px rgba(37, 38, 43, 0.10), 0px 2px 4px 0px rgba(37, 38, 43, 0.10)",
     },
-    {
-      props: { avatarPosition: "end" },
-      style: {
-        marginLeft: 14,
-        marginRight: 0,
-      },
+    [theme.breakpoints.down("sm")]: {
+      display: ({ avatarStyle }) =>
+        avatarStyle === "homepage" ? "none" : "block",
     },
-  ],
-}))
+    variants: [
+      {
+        props: { avatarPosition: "start" },
+        style: {
+          marginLeft: 0,
+          marginRight: 12,
+        },
+      },
+      {
+        props: { avatarPosition: "end" },
+        style: {
+          marginLeft: 14,
+          marginRight: 0,
+        },
+      },
+    ],
+  }),
+)
 
-const AttestantNameBlock = styled.div<AttestantBlockChildProps>(
+const AttestantNameBlock = styled("div")<AttestantBlockChildProps>(
   ({ theme }) => ({
     flexGrow: "1",
     width: "auto",
@@ -106,7 +108,7 @@ const AttestantNameBlock = styled.div<AttestantBlockChildProps>(
   }),
 )
 
-const AttestantName = styled.div<AttestantBlockChildProps>(({ theme }) => ({
+const AttestantName = styled("div")<AttestantBlockChildProps>(({ theme }) => ({
   ...theme.typography.subtitle1,
   whiteSpace: "nowrap",
   lineHeight: "125%",
@@ -125,7 +127,7 @@ const AttestantName = styled.div<AttestantBlockChildProps>(({ theme }) => ({
   ],
 }))
 
-const AttestantTitle = styled.div<AttestantBlockChildProps>(({ theme }) => ({
+const AttestantTitle = styled("div")<AttestantBlockChildProps>(({ theme }) => ({
   ...theme.typography.body3,
   color: theme.custom.colors.silverGrayDark,
   [theme.breakpoints.down("sm")]: {

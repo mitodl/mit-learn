@@ -10,7 +10,7 @@ import {
 import * as urls from "@/common/urls"
 import React from "react"
 
-const PageContainer = styled.div(({ theme }) => ({
+const PageContainer = styled("div")(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-start",
@@ -21,14 +21,14 @@ const PageContainer = styled.div(({ theme }) => ({
   },
 }))
 
-const BannerContainer = styled.div({
+const BannerContainer = styled("div")({
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
   paddingBottom: "16px",
 })
 
-const BannerContainerInner = styled.div({
+const BannerContainerInner = styled("div")({
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-start",
@@ -43,7 +43,7 @@ const Header = styled(Typography)<Pick<TypographyProps, "component">>(
   }),
 )
 
-const BodyContainer = styled.div({
+const BodyContainer = styled("div")({
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
@@ -58,7 +58,7 @@ const BodyText = styled(Typography)<Pick<TypographyProps, "component">>(
   }),
 )
 
-const UnorderedList = styled.ul(({ theme }) => ({
+const UnorderedList = styled("ul")(({ theme }) => ({
   width: "100%",
   ...theme.typography.body1,
 }))

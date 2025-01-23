@@ -1,43 +1,44 @@
 import { globalCss } from "@pigment-css/react"
-// import { typography } from "./typography"
-// import { colors } from "./colors"
+import { typography } from "./typography"
+import { colors } from "./colors"
 
-export const pageCss = globalCss``
+// export const pageCss = globalCss``
 
 // TODO pigment
-// export const pageCss = globalCss`
-//   html {
-//     font-family: ${typography.body1.fontFamily};
-//     color: ${typography.body1.color};
-//   }
+// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+globalCss`
+  html {
+    font-family: ${typography.body1.fontFamily};
+    color: ${colors.black};
+  }
 
-//   body {
-//     background-color: ${colors.lightGray1};
-//     margin: 0;
-//     padding: 0;
-//   }
+  body {
+    background-color: ${colors.lightGray1};
+    margin: 0;
+    padding: 0;
+  }
 
-//   * {
-//     box-sizing: border-box;
-//   }
+  * {
+    box-sizing: border-box;
+  }
 
-//   a {
-//     text-decoration: none;
-//     color: inherit;
-//   }
+  a {
+    text-decoration: none;
+    color: inherit;
+  }
 
-//   h1 {
-//     font-size: ${typography.h1.fontSize};
-//   }
+  h1 {
+    font-size: ${typography.h1.fontSize};
+  }
 
-//   h2 {
-//     font-size: ${typography.h2.fontSize};
-//   }
+  h2 {
+    font-size: ${typography.h2.fontSize};
+  }
 
-//   h4 {
-//     font-size: ${typography.h4.fontSize};
-//   }
-// `
+  h4 {
+    font-size: ${typography.h4.fontSize};
+  }
+`
 
 // const MITLearnGlobalStyles: React.FC = () => {
 //   return <Global styles={[pageCss]}></Global>

@@ -49,7 +49,7 @@ module.exports = {
           message: "Please use `useRouter` from `next-nprogress-bar` instead.",
         },
         {
-          group: ["@mui/material*", "@mui/lab/*"],
+          regex: ["@mui/material", "@mui/material/*", "!@mui/material/styles", "@mui/lab/*"],
           message:
             "Please use 'ol-components' isInterfaceDeclaration; Direct use of @mui/material is limited to ol-components.",
         },

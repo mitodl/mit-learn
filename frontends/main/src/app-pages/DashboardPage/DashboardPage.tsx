@@ -57,19 +57,19 @@ const LearningResourceDrawer = dynamic(
  *
  * **/
 
-const MobileOnly = styled.div(({ theme }) => ({
+const MobileOnly = styled("div")(({ theme }) => ({
   [theme.breakpoints.up("md")]: {
     display: "none",
   },
 }))
 
-const DesktopOnly = styled.div(({ theme }) => ({
+const DesktopOnly = styled("div")(({ theme }) => ({
   [theme.breakpoints.down("md")]: {
     display: "none",
   },
 }))
 
-const Background = styled.div(({ theme }) => ({
+const Background = styled("div")(({ theme }) => ({
   backgroundColor: theme.custom.colors.lightGray1,
   backgroundImage: `url(${backgroundImage.src})`,
   backgroundAttachment: "fixed",
@@ -80,7 +80,7 @@ const Background = styled.div(({ theme }) => ({
   },
 }))
 
-const Page = styled.div(({ theme }) => ({
+const Page = styled("div")(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-start",
@@ -100,7 +100,7 @@ const DashboardContainer = styled(Container)(({ theme }) => ({
   },
 }))
 
-const DashboardGrid = styled.div(({ theme }) => ({
+const DashboardGrid = styled("div")(({ theme }) => ({
   display: "grid",
   gridTemplateColumns: "300px minmax(0, 1fr)",
   gap: "48px",
@@ -110,7 +110,7 @@ const DashboardGrid = styled.div(({ theme }) => ({
   },
 }))
 
-const DashboardGridItem = styled.div({
+const DashboardGridItem = styled("div")({
   display: "flex",
   "> *": {
     minWidth: "0px",
@@ -129,7 +129,7 @@ const ProfileSidebar = styled(Card)(({ theme }) => ({
   },
 }))
 
-const ProfilePhotoContainer = styled.div(({ theme }) => ({
+const ProfilePhotoContainer = styled("div")(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   alignSelf: "stretch",
@@ -139,7 +139,7 @@ const ProfilePhotoContainer = styled.div(({ theme }) => ({
   background: `linear-gradient(90deg, ${theme.custom.colors.white} 0%, ${theme.custom.colors.lightGray1} 100%)`,
 }))
 
-const UserNameContainer = styled.div({
+const UserNameContainer = styled("div")({
   display: "flex",
   flexDirection: "column",
   justifyContent: "center",
@@ -183,7 +183,7 @@ const TabsContainer = styled(TabList)(({ theme }) => ({
   },
 }))
 
-const TabContainer = styled.div(({ theme }) => ({
+const TabContainer = styled("div")(({ theme }) => ({
   display: "flex",
   flexDirection: "row",
   flex: "1 0 0",
@@ -200,7 +200,7 @@ const TabContainer = styled.div(({ theme }) => ({
   },
 }))
 
-const LinkIconContainer = styled.div(({ theme }) => ({
+const LinkIconContainer = styled("div")(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
 }))
 
@@ -233,7 +233,7 @@ const SubTitleText = styled(Typography)(({ theme }) => ({
   },
 }))
 
-const HomeHeader = styled.div(({ theme }) => ({
+const HomeHeader = styled("div")(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   alignSelf: "stretch",
@@ -242,14 +242,14 @@ const HomeHeader = styled.div(({ theme }) => ({
   },
 }))
 
-const HomeHeaderLeft = styled.div({
+const HomeHeaderLeft = styled("div")({
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-start",
   flex: "1 0 0",
 })
 
-const HomeHeaderRight = styled.div(({ theme }) => ({
+const HomeHeaderRight = styled("div")(({ theme }) => ({
   display: "flex",
   [theme.breakpoints.down("md")]: {
     display: "none",

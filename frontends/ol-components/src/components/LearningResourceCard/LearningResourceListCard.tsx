@@ -26,17 +26,17 @@ const IMAGE_SIZES = {
   desktop: { width: 236, height: 122 },
 }
 
-export const CardLabel = styled.span`
+export const CardLabel = styled("span")`
   color: ${theme.custom.colors.silverGrayDark};
   ${theme.breakpoints.down("sm")} {
     display: none;
   }
 `
-const CardValue = styled.span(({ theme }) => ({
+const CardValue = styled("span")(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
 }))
 
-export const Certificate = styled.div`
+export const Certificate = styled("div")`
   border-radius: 4px;
   background-color: ${theme.custom.colors.lightGray1};
   padding: 4px;
@@ -69,18 +69,18 @@ export const Certificate = styled.div`
   align-items: center;
 `
 
-const CertificateText = styled.div`
+const CertificateText = styled("div")`
   display: flex;
 `
 
-const CertificatePrice = styled.div`
+const CertificatePrice = styled("div")`
   ${{ ...theme.typography.body3 }}
   ${theme.breakpoints.down("md")} {
     ${{ ...theme.typography.body4 }}
   }
 `
 
-export const Price = styled.div`
+export const Price = styled("div")`
   ${{ ...theme.typography.subtitle2 }}
   color: ${theme.custom.colors.darkGray2};
   ${theme.breakpoints.down("md")} {
@@ -88,7 +88,7 @@ export const Price = styled.div`
   }
 `
 
-export const BorderSeparator = styled.div`
+export const BorderSeparator = styled("div")`
   div {
     display: inline;
   }
@@ -171,7 +171,7 @@ export const Format = ({ resource }: { resource: LearningResource }) => {
   )
 }
 
-const Loading = styled.div`
+const Loading = styled("div")`
   display: flex;
   padding: 24px;
   justify-content: space-between;

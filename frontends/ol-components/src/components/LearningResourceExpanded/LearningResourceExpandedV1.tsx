@@ -24,7 +24,7 @@ import { LearningResourceCardProps } from "../LearningResourceCard/LearningResou
 import type { ImageConfig } from "../../constants/imgConfigs"
 import VideoFrame from "./VideoFrame"
 
-const Container = styled.div<{ padTop?: boolean }>(({ theme }) => ({
+const Container = styled("div")<{ padTop?: boolean }>(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   padding: "18px 32px 160px",
@@ -43,7 +43,7 @@ const Container = styled.div<{ padTop?: boolean }>(({ theme }) => ({
   ],
 }))
 
-const DateContainer = styled.div`
+const DateContainer = styled("div")`
   display: flex;
   justify-content: start;
   align-self: stretch;
@@ -74,17 +74,17 @@ const DateSingle = styled(DateContainer)`
   margin-top: 10px;
 `
 
-const NoDateSpacer = styled.div`
+const NoDateSpacer = styled("div")`
   height: 34px;
 `
 
-const DateLabel = styled.span`
+const DateLabel = styled("span")`
   ${{ ...theme.typography.body2 }}
   color: ${theme.custom.colors.darkGray1};
   margin-right: 16px;
 `
 
-const ImageContainer = styled.div<{ aspect: number }>({
+const ImageContainer = styled("div")<{ aspect: number }>({
   position: "relative",
   width: "100%",
   paddingBottom: ({ aspect }) => `${100 / aspect}%`,
@@ -101,7 +101,7 @@ const SkeletonImage = styled(Skeleton)<{ aspect: number }>({
   paddingBottom: ({ aspect }) => `${100 / aspect}%`,
 })
 
-const CallToAction = styled.div`
+const CallToAction = styled("div")`
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -121,20 +121,20 @@ const StyledLink = styled(ButtonLink)`
   }
 `
 
-const Platform = styled.div`
+const Platform = styled("div")`
   display: flex;
   justify-content: flex-end;
   align-items: center;
   gap: 16px;
 `
 
-const Detail = styled.section`
+const Detail = styled("section")`
   display: flex;
   flex-direction: column;
   gap: 8px;
 `
 
-const Description = styled.p`
+const Description = styled("p")`
   ${{ ...theme.typography.body2 }}
   color: ${theme.custom.colors.darkGray2};
   margin: 0;
@@ -146,7 +146,7 @@ const StyledPlatformLogo = styled(PlatformLogo)`
   max-width: 180px;
 `
 
-const OnPlatform = styled.span`
+const OnPlatform = styled("span")`
   ${{ ...theme.typography.body2 }}
   color: ${theme.custom.colors.black};
 `

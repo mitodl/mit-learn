@@ -32,7 +32,7 @@ const EmptyListCard = styled(Card)`
   margin-top: 16px;
 `
 
-const EmptyList = styled.div`
+const EmptyList = styled("div")`
   display: flex;
   padding: 32px;
   flex-direction: column;
@@ -41,7 +41,7 @@ const EmptyList = styled.div`
   text-align: center;
 `
 
-const IconContainer = styled.div`
+const IconContainer = styled("div")`
   display: inline-block;
   margin: 0 auto -16px;
   padding: 8px;

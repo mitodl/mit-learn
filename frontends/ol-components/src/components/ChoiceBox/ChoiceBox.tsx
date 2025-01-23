@@ -4,7 +4,7 @@ import { type GridProps } from "@mui/material/Grid"
 import { Checkbox } from "../Checkbox/Checkbox"
 import { Radio } from "../Radio/Radio"
 
-const Container = styled.label(({ theme }) => ({
+const Container = styled("label")(({ theme }) => ({
   margin: 0,
   position: "relative",
   padding: "12px 16px",
@@ -27,7 +27,7 @@ const Container = styled.label(({ theme }) => ({
   },
 }))
 
-const Text = styled.div<{ centered: boolean }>({
+const Text = styled("div")<{ centered: boolean }>({
   display: "flex",
   flexDirection: "column",
   gap: "6px",
@@ -43,12 +43,12 @@ const Text = styled.div<{ centered: boolean }>({
   ],
 })
 
-const Label = styled.span(({ theme }) => ({
+const Label = styled("span")(({ theme }) => ({
   ...theme.typography.subtitle3,
   color: theme.custom.colors.darkGray2,
 }))
 
-const Description = styled.span(({ theme }) => ({
+const Description = styled("span")(({ theme }) => ({
   ...theme.typography.body3,
   color: theme.custom.colors.silverGrayDark,
   paddingRight: "26px",
@@ -58,7 +58,7 @@ const Description = styled.span(({ theme }) => ({
   },
 }))
 
-const Input = styled.div({
+const Input = styled("div")({
   flexShrink: 0,
 })
 

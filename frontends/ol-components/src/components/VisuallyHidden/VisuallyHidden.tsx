@@ -17,7 +17,7 @@ import { styled } from "@pigment-css/react"
  *
  * The CSS here is based on https://inclusive-components.design/tooltips-toggletips/
  */
-const VisuallyHidden = styled.span({
+const VisuallyHidden = styled("span")({
   clipPath: "inset(100%)",
   clip: "rect(1px, 1px, 1px, 1px)",
   height: "1px",

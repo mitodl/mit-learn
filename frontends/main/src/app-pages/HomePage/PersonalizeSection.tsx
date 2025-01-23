@@ -6,7 +6,7 @@ import * as urls from "@/common/urls"
 import personalizeImage from "@/public/images/homepage/personalize-image.png"
 import personalizeBgImage from "@/public/images/homepage/personalize-bg.png"
 
-const FullWidthBackground = styled.div(({ theme }) => ({
+const FullWidthBackground = styled("div")(({ theme }) => ({
   padding: "80px 0",
   background: `${backgroundSrcSetCSS(personalizeBgImage)} center top no-repeat`,
   backgroundSize: "cover",
@@ -29,7 +29,7 @@ const PersonalizeContainer = styled(Container)(({ theme }) => ({
   },
 }))
 
-const ImageContainer = styled.img(({ theme }) => ({
+const ImageContainer = styled("img")(({ theme }) => ({
   display: "flex",
   alignItems: "end",
   minWidth: "0px",
@@ -46,7 +46,7 @@ const ImageContainer = styled.img(({ theme }) => ({
   },
 }))
 
-const ControlsContainer = styled.section(({ theme }) => ({
+const ControlsContainer = styled("section")(({ theme }) => ({
   maxWidth: "442px",
   flex: 1,
   color: theme.custom.colors.white,
@@ -55,7 +55,7 @@ const ControlsContainer = styled.section(({ theme }) => ({
   flexDirection: "column",
   gap: "32px",
 }))
-const TextContainer = styled.div({
+const TextContainer = styled("div")({
   display: "flex",
   flexDirection: "column",
   gap: "20px",

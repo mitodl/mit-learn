@@ -8,7 +8,6 @@ import React, {
   AriaAttributes,
 } from "react"
 import { styled } from "@pigment-css/react"
-import { theme } from "../theme/theme"
 import { pxToRem } from "../theme/typography"
 import { Link } from "../Link/Link"
 import { default as NextImage, ImageProps as NextImageProps } from "next/image"
@@ -58,35 +57,35 @@ export const Linkable: React.FC<LinkableProps> = ({
   )
 }
 
-export const BaseContainer = styled.div<{ display?: CSSProperties["display"] }>(
-  {
-    borderRadius: "8px",
-    border: `1px solid ${theme.custom.colors.lightGray2}`,
-    background: theme.custom.colors.white,
-    overflow: "hidden", // to clip image so they match border radius
-    variants: [
-      {
-        props: { display: "block" },
-        style: { display: "block" },
-      },
-      {
-        props: { display: "inline" },
-        style: { display: "inline" },
-      },
-      {
-        props: (props) => !!props.onClick,
-        style: {
-          "&:hover": {
-            borderColor: theme.custom.colors.silverGrayLight,
-            boxShadow:
-              "0 2px 4px 0 rgb(37 38 43 / 10%), 0 2px 4px 0 rgb(37 38 43 / 10%)",
-            cursor: "pointer",
-          },
+export const BaseContainer = styled("div")<{
+  display?: CSSProperties["display"]
+}>(({ theme }) => ({
+  borderRadius: "8px",
+  border: `1px solid ${theme.custom.colors.lightGray2}`,
+  background: theme.custom.colors.white,
+  overflow: "hidden", // to clip image so they match border radius
+  variants: [
+    {
+      props: { display: "block" },
+      style: { display: "block" },
+    },
+    {
+      props: { display: "inline" },
+      style: { display: "inline" },
+    },
+    {
+      props: (props) => !!props.onClick,
+      style: {
+        "&:hover": {
+          borderColor: theme.custom.colors.silverGrayLight,
+          boxShadow:
+            "0 2px 4px 0 rgb(37 38 43 / 10%), 0 2px 4px 0 rgb(37 38 43 / 10%)",
+          cursor: "pointer",
         },
       },
-    ],
-  },
-)
+    },
+  ],
+}))
 
 const CONTAINER_WIDTHS: Record<Size, number> = {
   small: 192,
@@ -113,16 +112,16 @@ const Container = styled(BaseContainer)<{ size?: Size }>({
 
 const Content = () => <></>
 
-const Body = styled.div`
+const Body = styled("div")`
   margin: 16px;
 `
 
-const ImageBase = styled(NextImage)`
-  display: block;
-  width: 100%;
-  background-color: ${theme.custom.colors.lightGray1};
-  object-fit: cover;
-`
+const ImageBase = styled(NextImage)(({ theme }) => ({
+  display: "block",
+  width: "100%",
+  backgroundColor: theme.custom.colors.lightGray1,
+  objectFit: "cover",
+}))
 
 const Image = styled(ImageBase)<{ height?: number | string; size?: Size }>({
   height: ({ height }) => height, // TODO pigment - creates a dynamic style, but need to check the precedence when used in combination with known variants below, see: https://github.com/mui/pigment-css?tab=readme-ov-file#styling-based-on-runtime-values
@@ -142,7 +141,7 @@ const Image = styled(ImageBase)<{ height?: number | string; size?: Size }>({
   ],
 })
 
-const Info = styled.div<{ size?: Size }>({
+const Info = styled("div")<{ size?: Size }>(({ theme }) => ({
   ...theme.typography.subtitle3,
   color: theme.custom.colors.silverGrayDark,
   display: "flex",
@@ -161,7 +160,7 @@ const Info = styled.div<{ size?: Size }>({
       },
     },
   ],
-})
+}))
 
 const titleOpts = {
   shouldForwardProp: (prop: string) => prop !== "lines" && prop !== "size",
@@ -170,45 +169,34 @@ const titleOpts = {
 const Title = styled(
   Linkable,
   titleOpts,
-)<{ size?: Size; lines?: number }>({
+)<{ size?: Size; lines?: number }>(({ theme }) => ({
   display: "flex",
   textOverflow: "ellipsis",
   overflow: "hidden",
   margin: 0,
+  height: ({ size, lines }) =>
+    `calc(${lines} * ${size === Sizes.Small ? theme.typography.subtitle2.lineHeight : theme.typography.subtitle1.lineHeight})`,
   // ...truncateText(lines), // TODO pigment
   variants: [
     {
       props: { size: Sizes.Small },
-      style: {
-        ...theme.typography.subtitle2,
-        // TODO pigment: Can we mix variants and style based on runtime values or do we need the height separately (commented below)
-        height: ({ lines }) =>
-          `calc(${lines} * ${theme.typography.subtitle2.lineHeight})`,
-      },
+      style: theme.typography.subtitle2,
     },
     {
       props: ({ size }) => size !== Sizes.Small,
-      style: {
-        ...theme.typography.subtitle1,
-        height: ({ lines }) =>
-          `calc(${lines} * ${theme.typography.subtitle1.lineHeight})`,
-      },
+      style: theme.typography.subtitle1,
     },
   ],
-  // height: ({ lines, size }) =>
-  //   `calc(${lines} * ${size === Sizes.Small ? theme.typography.subtitle2.lineHeight : theme.typography.subtitle1.lineHeight})`,
-})
+}))
 
-const Footer = styled.span`
-  display: block;
-  height: ${pxToRem(16)};
-  ${{
-    ...theme.typography.body3,
-    color: theme.custom.colors.silverGrayDark,
-  }}
-`
+const Footer = styled("span")(({ theme }) => ({
+  display: "block",
+  height: pxToRem(16),
+  ...theme.typography.body3,
+  color: theme.custom.colors.silverGrayDark,
+}))
 
-const Bottom = styled.div`
+const Bottom = styled("div")`
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
@@ -216,7 +204,7 @@ const Bottom = styled.div`
   height: 32px;
 `
 
-const Actions = styled.div`
+const Actions = styled("div")`
   display: flex;
   gap: 8px;
 `

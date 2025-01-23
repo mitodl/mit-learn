@@ -48,7 +48,7 @@ const UnitLogoInverted = styled(UnitLogo)(({ theme }) => ({
   },
 }))
 
-const BannerContent = styled.div(({ theme }) => ({
+const BannerContent = styled("div")(({ theme }) => ({
   display: "flex",
   flexDirection: "row",
   alignItems: "center",
@@ -58,7 +58,7 @@ const BannerContent = styled.div(({ theme }) => ({
   },
 }))
 
-const ChannelHeader = styled.h1({
+const ChannelHeader = styled("h1")({
   margin: 0,
   display: "flex",
   flexGrow: 1,

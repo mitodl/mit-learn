@@ -31,7 +31,7 @@ const containerStyles = css`
   }
 `
 
-const Container = styled.div`
+const Container = styled("div")`
   height: 24px;
 
   label {

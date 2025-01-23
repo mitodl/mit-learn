@@ -12,7 +12,7 @@ import type {
   ChoiceBoxProps,
 } from "./ChoiceBox"
 
-const Label = styled.div`
+const Label = styled("div")`
   width: 100%;
   cursor: default;
   ${{ ...theme.typography.subtitle2 }}

@@ -36,7 +36,7 @@ const CHANNEL_TYPE_BREADCRUMB_TARGETS: {
   },
 }
 
-const ChannelTitleRow = styled.div({
+const ChannelTitleRow = styled("div")({
   display: "flex",
   flexDirection: "row",
   alignItems: "center",
@@ -50,7 +50,7 @@ const ChannelTitleRow = styled.div({
   },
 })
 
-const ChannelControls = styled.div({
+const ChannelControls = styled("div")({
   position: "relative",
   minHeight: "38px",
   display: "flex",

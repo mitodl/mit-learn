@@ -26,7 +26,7 @@ type Props = {
   profile: Profile
 }
 
-const FormContainer = styled.div(({ theme }) => ({
+const FormContainer = styled("div")(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   paddingTop: "40px",
@@ -37,7 +37,7 @@ const FormContainer = styled.div(({ theme }) => ({
   },
 }))
 
-const NameRow = styled.div({
+const NameRow = styled("div")({
   display: "flex",
   flexDirection: "row",
   gap: "24px",
@@ -50,7 +50,7 @@ const RadioChoiceFieldStyled = styled(RadioChoiceField)(({ theme }) => ({
   },
 }))
 
-const ButtonContainer = styled.div(({ theme }) => ({
+const ButtonContainer = styled("div")(({ theme }) => ({
   paddingTop: "18px",
   [theme.breakpoints.down("md")]: {
     paddingTop: "0",

@@ -42,7 +42,7 @@ const SCHOOL_ICONS: Record<string, React.ReactNode> = {
   "https://computing.mit.edu/": <RiTerminalBoxLine />,
 }
 
-const SchoolTitle = styled.h2(({ theme }) => {
+const SchoolTitle = styled("h2")(({ theme }) => {
   return {
     marginBottom: "10px",
     display: "flex",
@@ -54,7 +54,7 @@ const SchoolTitle = styled.h2(({ theme }) => {
   }
 })
 
-const SchoolIcon = styled.span(({ theme }) => ({
+const SchoolIcon = styled("span")(({ theme }) => ({
   paddingRight: "10px",
   verticalAlign: "text-top",
   display: "inline-flex",
@@ -178,7 +178,7 @@ const SchoolDepartments: React.FC<SchoolDepartmentProps> = ({
   )
 }
 
-const SchoolList = styled.div(({ theme }) => ({
+const SchoolList = styled("div")(({ theme }) => ({
   "> section": {
     marginTop: "40px",
     [theme.breakpoints.down("sm")]: {

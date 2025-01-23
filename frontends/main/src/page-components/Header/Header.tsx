@@ -60,7 +60,7 @@ const Bar = styled(AppBar)(({ theme }) => ({
   },
 }))
 
-const FlexContainer = styled.div({
+const FlexContainer = styled("div")({
   display: "flex",
   alignItems: "center",
 })
@@ -97,11 +97,11 @@ const StyledMITLogoLink = styled(MITLogoLink)(({ theme }) => ({
   },
 }))
 
-const Spacer = styled.div({
+const Spacer = styled("div")({
   flex: "1",
 })
 
-const LeftSpacer = styled.div(({ theme }) => ({
+const LeftSpacer = styled("div")(({ theme }) => ({
   width: "24px",
   [theme.breakpoints.down("sm")]: {
     width: "16px",

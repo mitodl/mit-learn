@@ -14,7 +14,7 @@ const StyledCard = styled(ListCardCondensed)({
   width: "100%",
 })
 
-const TextContainer = styled.div({
+const TextContainer = styled("div")({
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-start",
@@ -26,7 +26,7 @@ const ItemsText = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
 }))
 
-const IconContainer = styled.div(({ theme }) => ({
+const IconContainer = styled("div")(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: "8px",

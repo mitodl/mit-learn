@@ -2,6 +2,7 @@
 /// <reference types="./types/theme.d.ts" />
 /// <reference types="./types/typography.d.ts" />
 
+import "./components/theme/MITLearnGlobalStyles"
 /**
  * Re-exports from MUI.
  *
@@ -174,7 +175,7 @@ export type {
   SelectFieldProps,
 } from "./components/SelectField/SelectField"
 
-export { Link, linkStyles } from "./components/Link/Link"
+export * from "./components/Link/Link"
 export type { LinkProps } from "./components/Link/Link"
 
 // export { pxToRem } from "./components/ThemeProvider/typography"
@@ -182,4 +183,4 @@ export type { LinkProps } from "./components/Link/Link"
 
 export { styled, css } from "@pigment-css/react"
 
-// export { AppRouterCacheProvider as NextJsAppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter"
+export { AppRouterCacheProvider as NextJsAppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter"

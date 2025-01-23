@@ -12,11 +12,11 @@ const StyledToggleButtonGroup = styled(ToggleButtonGroup)`
   height: 40px;
   border-radius: 4px;
 `
-const StyledButtonGroupContainer = styled.div`
+const StyledButtonGroupContainer = styled("div")`
   margin-top: 10px;
   margin-bottom: 10px;
 `
-const ExplanationContainer = styled.div`
+const ExplanationContainer = styled("div")`
   margin: 10px;
   font-size: 0.875em;
   min-height: 35px;

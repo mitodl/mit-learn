@@ -26,7 +26,7 @@ type ItemsListingComponentProps = {
   condensed?: boolean
 }
 
-const HeaderText = styled.h1(({ theme }) => ({
+const HeaderText = styled("h1")(({ theme }) => ({
   margin: 0,
   ...theme.typography.h3,
   [theme.breakpoints.down("sm")]: {

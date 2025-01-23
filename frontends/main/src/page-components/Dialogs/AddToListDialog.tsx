@@ -32,7 +32,7 @@ import { useFormik } from "formik"
 
 const LIST_LIMIT = 100
 
-const ResourceTitle = styled.span({
+const ResourceTitle = styled("span")({
   fontStyle: "italic",
 })
 

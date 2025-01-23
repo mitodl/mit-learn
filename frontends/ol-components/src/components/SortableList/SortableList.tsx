@@ -25,13 +25,13 @@ import { CSS } from "@dnd-kit/utilities"
 import { CancelDropArguments } from "@dnd-kit/core/dist/components/DndContext/DndContext"
 import { styled } from "@pigment-css/react"
 
-const DragStyles = styled.div`
+const DragStyles = styled("div")`
   .ol-draggable {
     cursor: grab;
   }
 `
 
-const DraggingContainer = styled.div`
+const DraggingContainer = styled("div")`
   cursor: grabbing;
 `
 

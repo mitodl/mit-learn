@@ -6,7 +6,7 @@ import * as urls from "@/common/urls"
 import React, { FunctionComponent } from "react"
 import Link from "next/link"
 
-const FooterContainer = styled.div(({ theme }) => ({
+const FooterContainer = styled("div")(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
@@ -15,7 +15,7 @@ const FooterContainer = styled.div(({ theme }) => ({
   borderTop: `1px solid ${theme.custom.colors.darkGray2}`,
 }))
 
-const FooterContainerInner = styled.div(({ theme }) => ({
+const FooterContainerInner = styled("div")(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
@@ -26,7 +26,7 @@ const FooterContainerInner = styled.div(({ theme }) => ({
   },
 }))
 
-const FooterContent = styled.div(({ theme }) => ({
+const FooterContent = styled("div")(({ theme }) => ({
   display: "flex",
   justifyContent: "space-between",
   alignItems: "flex-start",
@@ -37,7 +37,7 @@ const FooterContent = styled.div(({ theme }) => ({
   },
 }))
 
-const FooterLeftContainer = styled.div(({ theme }) => ({
+const FooterLeftContainer = styled("div")(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: "30px",
@@ -56,7 +56,7 @@ const FooterLogo = styled(MITLogoLink)(({ theme }) => ({
   },
 }))
 
-const FooterAddress = styled.address(({ theme }) => ({
+const FooterAddress = styled("address")(({ theme }) => ({
   color: theme.custom.colors.black,
   ...theme.typography.body2,
   [theme.breakpoints.down("md")]: {
@@ -64,7 +64,7 @@ const FooterAddress = styled.address(({ theme }) => ({
   },
 }))
 
-const FooterRightContainer = styled.div(({ theme }) => ({
+const FooterRightContainer = styled("div")(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-end",
@@ -77,7 +77,7 @@ const FooterRightContainer = styled.div(({ theme }) => ({
   },
 }))
 
-const FooterLinksContainer = styled.div(({ theme }) => ({
+const FooterLinksContainer = styled("div")(({ theme }) => ({
   display: "flex",
   alignItems: "flex-start",
   gap: "16px",
@@ -88,7 +88,7 @@ const FooterLinksContainer = styled.div(({ theme }) => ({
   },
 }))
 
-const FooterLinkContainer = styled.div(({ theme }) => ({
+const FooterLinkContainer = styled("div")(({ theme }) => ({
   display: "flex",
   padding: "0 16px",
   alignItems: "flex-start",
@@ -124,7 +124,7 @@ const FooterLinkComponent: FunctionComponent<FooterLinkComponentProps> = (
   )
 }
 
-const FooterCopyrightContainer = styled.div(({ theme }) => ({
+const FooterCopyrightContainer = styled("div")(({ theme }) => ({
   display: "flex",
   alignItems: "flex-end",
   justifyContent: "center",
@@ -135,7 +135,7 @@ const FooterCopyrightContainer = styled.div(({ theme }) => ({
   },
 }))
 
-const FooterCopyright = styled.span(({ theme }) => ({
+const FooterCopyright = styled("span")(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
   ...theme.typography.body2,
 }))

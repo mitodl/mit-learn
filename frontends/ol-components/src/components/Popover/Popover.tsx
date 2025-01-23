@@ -125,7 +125,7 @@ const Arrow = styled("div")({
   },
 })
 
-const Content = styled.div(({ theme }) => ({
+const Content = styled("div")(({ theme }) => ({
   padding: "16px",
   backgroundColor: theme.custom.colors.white,
   borderRadius: "8px",

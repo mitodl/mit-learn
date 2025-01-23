@@ -11,6 +11,7 @@ import { typography } from "./typography"
 import * as buttons from "./buttons"
 import * as chips from "./chips"
 import { colors } from "./colors"
+import type { ThemeOptions } from "@mui/material/styles"
 // import type { CustomTheme } from "../../types/theme"
 
 const custom = {
@@ -59,7 +60,7 @@ const themeOptions = {
     borderRadius: 8,
   },
   spacing: 8,
-  typography,
+  typography: typography as ThemeOptions["typography"],
   breakpoints: BREAKPOINTS,
   components: {
     MuiButtonBase: buttons.buttonBaseComponent,
@@ -92,6 +93,6 @@ const themeOptions = {
 //   custom: CustomTheme
 // }
 
-export const theme = createTheme(themeOptions) //extendTheme(themeOptions)
+export const theme = createTheme(themeOptions)
 // export const theme = themeOptions //extendTheme(themeOptions)
 export { pxToRem } from "./typography"

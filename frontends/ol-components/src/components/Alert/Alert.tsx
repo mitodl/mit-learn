@@ -78,7 +78,7 @@ const AlertStyled = styled(MuiAlert)<AlertStyleProps>({
   })),
 })
 
-const Hidden = styled.span({ display: "none" })
+const Hidden = styled("span")({ display: "none" })
 
 type AlertProps = {
   visible?: boolean

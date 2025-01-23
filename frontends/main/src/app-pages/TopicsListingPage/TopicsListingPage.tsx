@@ -8,7 +8,7 @@ import {
   Grid,
   PlainList,
   ChipLink,
-  linkStyles,
+  // linkStyles,
   Banner,
   Skeleton,
   Breadcrumbs,
@@ -74,7 +74,8 @@ const TopicBoxHeader = styled(
     },
   },
   ".view-topic": [
-    linkStyles({ size: "medium" }),
+    // TODO pigment
+    // linkStyles({ size: "medium" }),
     {
       color: theme.custom.colors.darkGray1,
       marginLeft: "16px",
@@ -85,7 +86,7 @@ const TopicBoxHeader = styled(
   ],
 }))
 
-const TopicBoxBody = styled.div(({ theme }) => ({
+const TopicBoxBody = styled("div")(({ theme }) => ({
   marginTop: "8px",
   marginLeft: "40px",
   [theme.breakpoints.down("sm")]: {
@@ -93,22 +94,24 @@ const TopicBoxBody = styled.div(({ theme }) => ({
   },
 }))
 
-const TopicCounts = styled.div(({ theme }) => ({
+const TopicCounts = styled("div")(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
   display: "flex",
   gap: "8px",
 }))
 
-const ChildTopicsContainer = styled.div<{ mobile: boolean }>(({ theme }) => ({
-  marginTop: "16px",
-  flexWrap: "wrap",
-  gap: "12px",
-  display: ({ mobile }) => (mobile ? "none" : "flex"),
-  [theme.breakpoints.down("sm")]: {
-    display: ({ mobile }) => (mobile ? "flex" : "none"),
-    gap: "8px",
-  },
-}))
+const ChildTopicsContainer = styled("div")<{ mobile: boolean }>(
+  ({ theme }) => ({
+    marginTop: "16px",
+    flexWrap: "wrap",
+    gap: "12px",
+    display: ({ mobile }) => (mobile ? "none" : "flex"),
+    [theme.breakpoints.down("sm")]: {
+      display: ({ mobile }) => (mobile ? "flex" : "none"),
+      gap: "8px",
+    },
+  }),
+)
 
 type TopicBoxProps = {
   topicGroup: TopicGroup
@@ -177,7 +180,7 @@ const TopicBoxLoading = () => {
   )
 }
 
-const Page = styled.div({})
+const Page = styled("div")({})
 
 type TopicGroup = {
   id: number

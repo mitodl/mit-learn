@@ -44,7 +44,7 @@ const FlexContainer = styled(Container)({
   maxWidth: "800px",
 })
 
-const Form = styled.form({
+const Form = styled("form")({
   width: "100%",
 })
 
@@ -68,7 +68,7 @@ const StepContainer = styled(Container)({
   },
 })
 
-const StepNumbers = styled.div(({ theme }) => ({
+const StepNumbers = styled("div")(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
   fontWeight: theme.typography.subtitle1.fontWeight,
   fontSize: "12px",
@@ -78,7 +78,7 @@ const StepNumbers = styled.div(({ theme }) => ({
   },
 }))
 
-const NavControls = styled.div({
+const NavControls = styled("div")({
   display: "flex",
   alignItems: "center",
   margin: "30px 0",
@@ -87,7 +87,7 @@ const NavControls = styled.div({
   },
 })
 
-const StepPill = styled.div<{ ownerState: StepIconProps }>(({ theme }) => ({
+const StepPill = styled("div")<{ ownerState: StepIconProps }>(({ theme }) => ({
   backgroundColor: ({ ownerState }) =>
     ownerState.active || ownerState.completed
       ? theme.custom.colors.red
@@ -116,7 +116,7 @@ const Prompt = styled(Typography)(({ theme }) => ({
   paddingTop: "16px",
 })) as typeof Typography
 
-const Label = styled.div({
+const Label = styled("div")({
   textAlign: "center",
   margin: "0 0 40px",
 })

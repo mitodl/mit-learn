@@ -93,21 +93,22 @@ const ButtonStyled = styled("button", { shouldForwardProp })<
   },
 
   variants: [
-    {
-      props: { responsive: true },
-      style: {
-        [theme.breakpoints.down("sm")]: {
-          padding: ({ size, hasBorder }) => {
-            const paddingAdjust = hasBorder
-              ? BORDER_WIDTHS[size || "medium"]
-              : 0
-            if (size === "large") return `${14 - paddingAdjust}px 24px`
-            if (size === "small") return `${8 - paddingAdjust}px 12px`
-            return `${11 - paddingAdjust}px 16px`
-          },
-        },
-      },
-    },
+    // {
+    //   props: { responsive: true },
+    //   style: {
+    //     [theme.breakpoints.down("sm")]: {
+    //       // TODO pigment: This produces an error in the build output, possibly nesting here
+    //       padding: ({ size, hasBorder }) => {
+    //         const paddingAdjust = hasBorder
+    //           ? BORDER_WIDTHS[size || "medium"]
+    //           : 0
+    //         if (size === "large") return `${14 - paddingAdjust}px 24px`
+    //         if (size === "small") return `${8 - paddingAdjust}px 12px`
+    //         return `${11 - paddingAdjust}px 16px`
+    //       },
+    //     },
+    //   },
+    // },
     {
       props: { size: "large" },
       style: {
@@ -342,21 +343,24 @@ const LinkStyled = styled(Link, { shouldForwardProp })<
   },
 
   variants: [
-    {
-      props: { responsive: true },
-      style: {
-        [theme.breakpoints.down("sm")]: {
-          padding: ({ size, hasBorder }) => {
-            const paddingAdjust = hasBorder
-              ? BORDER_WIDTHS[size || "medium"]
-              : 0
-            if (size === "large") return `${14 - paddingAdjust}px 24px`
-            if (size === "small") return `${8 - paddingAdjust}px 12px`
-            return `${11 - paddingAdjust}px 16px`
-          },
-        },
-      },
-    },
+    // {
+    //   props: { responsive: true },
+    //   style: {
+    //     [theme.breakpoints.down("sm")]: {
+    //       // TODO pigment: This produces an error in the build output, possibly styling based on runtime values isn't support in nested variants
+    // Cannot access 't' before initialization
+    // at h.vars.bcdo3jh-1 (/Users/jk/mit/mit-open/frontends/main/.next/server/chunks/821.js:1:91850)
+    //       padding: ({ size, hasBorder }) => {
+    //         const paddingAdjust = hasBorder
+    //           ? BORDER_WIDTHS[size || "medium"]
+    //           : 0
+    //         if (size === "large") return `${14 - paddingAdjust}px 24px`
+    //         if (size === "small") return `${8 - paddingAdjust}px 12px`
+    //         return `${11 - paddingAdjust}px 16px`
+    //       },
+    //     },
+    //   },
+    // },
     {
       props: { size: "large" },
       style: {
@@ -553,7 +557,10 @@ const LinkStyled = styled(Link, { shouldForwardProp })<
   ],
 }))
 
-const IconContainer = styled.span<{ side: "start" | "end"; size: ButtonSize }>({
+const IconContainer = styled("span")<{
+  side: "start" | "end"
+  size: ButtonSize
+}>({
   height: "1em",
   display: "flex",
   alignItems: "center",

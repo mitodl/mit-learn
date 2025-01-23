@@ -18,7 +18,7 @@ const RadioGroupStyled = styled(RadioGroup)(({ theme }) => ({
   },
 }))
 
-const Label = styled.div(({ theme }) => ({
+const Label = styled("div")(({ theme }) => ({
   marginTop: "0",
   marginBottom: "16px",
   width: "100%",

@@ -15,7 +15,7 @@ import { default as NextImage } from "next/image"
 
 const Content = () => <></>
 
-export const Body = styled.div`
+export const Body = styled("div")`
   flex-grow: 1;
   margin: 24px;
   ${theme.breakpoints.down("md")} {
@@ -27,7 +27,7 @@ export const Body = styled.div`
   justify-content: space-between;
 `
 
-export const DragArea = styled.div`
+export const DragArea = styled("div")`
   margin: 16px -6px 16px 16px;
   padding-right: 8px;
   display: flex;
@@ -69,7 +69,7 @@ const Image = styled(NextImage)`
   flex-shrink: 0;
 `
 
-export const Info = styled.div`
+export const Info = styled("div")`
   ${{ ...theme.typography.subtitle3 }}
   margin-bottom: 16px;
   ${theme.breakpoints.down("md")} {
@@ -101,14 +101,14 @@ export const Title: React.FC<TitleProps> = styled(Linkable)`
   margin: 0;
 `
 
-export const Footer = styled.span`
+export const Footer = styled("span")`
   display: block;
   ${{ ...theme.typography.body3 }}
   color: ${theme.custom.colors.darkGray2};
   white-space: nowrap;
 `
 
-export const Bottom = styled.div`
+export const Bottom = styled("div")`
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
@@ -121,7 +121,7 @@ export const Bottom = styled.div`
 /**
  * Slot intended to contain ListCardAction buttons.
  */
-export const Actions = styled.div`
+export const Actions = styled("div")`
   display: flex;
   gap: 8px;
   ${theme.breakpoints.down("md")} {

@@ -19,7 +19,7 @@ const TabsList = styled(TabButtonList)(({ theme }) => ({
   },
 }))
 
-const CountSpan = styled.span(({ theme }) => ({
+const CountSpan = styled("span")(({ theme }) => ({
   ...theme.typography.body3,
 }))
 

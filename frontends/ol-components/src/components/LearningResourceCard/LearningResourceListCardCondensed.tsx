@@ -24,7 +24,7 @@ import {
 import type { LearningResourceListCardProps } from "./LearningResourceListCard"
 import { ActionButton, ActionButtonProps } from "../Button/Button"
 
-const ResourceType = styled.span`
+const ResourceType = styled("span")`
   align-self: flex-start;
 `
 
@@ -50,7 +50,7 @@ const Info = ({ resource }: { resource: LearningResource }) => {
   )
 }
 
-const Loading = styled.div`
+const Loading = styled("div")`
   padding: 16px;
 `
 
