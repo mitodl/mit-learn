@@ -5,7 +5,9 @@ import json
 
 from django.http import HttpRequest, HttpResponse
 from django.urls import Resolver404, resolve
-from django_scim import exceptions, constants as djs_constants, views as djs_views
+from django_scim import constants as djs_constants
+from django_scim import exceptions
+from django_scim import views as djs_views
 
 from scim import constants
 
@@ -100,9 +102,7 @@ class BulkView(djs_views.SCIMView):
         # this is an ephemeral request not tied to the real request directly
         op_request = InMemoryHttpRequest(bulk_request, path, method, data)
 
-        response = url_match.func(
-            op_request, *url_match.args, **url_match.kwargs
-        )
+        response = url_match.func(op_request, *url_match.args, **url_match.kwargs)
 
         return {
             "location": response.headers["Location"],
@@ -110,7 +110,7 @@ class BulkView(djs_views.SCIMView):
             "bulkId": bulk_id,
             "status": {
                 "code": response.status_code,
-            }
+            },
         }
 
     def _operation_error(self, method, bulk_id, status_code, detail):
@@ -126,4 +126,3 @@ class BulkView(djs_views.SCIMView):
                 "detail": detail,
             },
         }
-

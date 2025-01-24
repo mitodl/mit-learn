@@ -1,7 +1,8 @@
 """Factories for making test data"""
+
 import uuid
 
-from factory import Faker, Sequence, SubFactory, SelfAttribute, LazyFunction
+from factory import Faker, LazyFunction, SelfAttribute, Sequence, SubFactory
 from factory.django import DjangoModelFactory
 from factory.fuzzy import FuzzyChoice
 from faker.providers import BaseProvider

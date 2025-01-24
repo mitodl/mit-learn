@@ -1,6 +1,7 @@
 """URL configurations for profiles"""
 
 from django.urls import include, re_path
+
 from scim.views import BulkView
 
 app_name = "ol-scim"
