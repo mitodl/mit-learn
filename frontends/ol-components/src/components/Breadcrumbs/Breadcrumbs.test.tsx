@@ -3,13 +3,6 @@ import { screen } from "@testing-library/react"
 import { Breadcrumbs } from "./Breadcrumbs"
 import { renderWithTheme } from "../../test-utils"
 
-// Mock react-router-dom's Link so we don't need to set up a Router
-jest.mock("react-router-dom", () => {
-  return {
-    Link: jest.fn((props) => <a href={props.to}>{props.children}</a>),
-  }
-})
-
 describe("Breadcrumbs", () => {
   test.each([
     { ancestors: [{ href: "/home", label: "Home" }] },
