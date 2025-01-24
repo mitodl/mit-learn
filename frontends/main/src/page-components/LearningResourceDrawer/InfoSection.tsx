@@ -32,9 +32,8 @@ import {
   showStartAnytime,
   NoSSR,
 } from "ol-utilities"
-import { theme } from "../ThemeProvider/ThemeProvider"
+import { theme, Link } from "ol-components"
 import DifferingRunsTable from "./DifferingRunsTable"
-import { Link } from "../Link/Link"
 
 const SeparatorContainer = styled.span({
   padding: "0 8px",
@@ -541,7 +540,7 @@ const InfoItem = ({ label, Icon, value }: InfoItemProps) => {
   )
 }
 
-const InfoSectionV2 = ({ resource }: { resource?: LearningResource }) => {
+const InfoSection = ({ resource }: { resource?: LearningResource }) => {
   if (!resource) {
     return null
   }
@@ -570,4 +569,4 @@ const InfoSectionV2 = ({ resource }: { resource?: LearningResource }) => {
   )
 }
 
-export default InfoSectionV2
+export default InfoSection

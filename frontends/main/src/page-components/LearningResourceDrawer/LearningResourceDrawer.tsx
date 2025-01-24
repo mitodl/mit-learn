@@ -1,9 +1,6 @@
 import React, { Suspense, useEffect, useId, useMemo } from "react"
-import {
-  RoutedDrawer,
-  LearningResourceExpanded,
-  imgConfigs,
-} from "ol-components"
+import { RoutedDrawer, imgConfigs } from "ol-components"
+import { LearningResourceExpanded } from "./LearningResourceExpanded"
 import type {
   LearningResourceCardProps,
   RoutedDrawerProps,

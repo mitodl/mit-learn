@@ -1,6 +1,6 @@
 import React from "react"
 import styled from "@emotion/styled"
-import { EmbedlyCard } from "../EmbedlyCard/EmbedlyCard"
+import { EmbedlyCard } from "ol-components"
 
 const IFrame = styled.iframe`
   border-radius: 8px;
