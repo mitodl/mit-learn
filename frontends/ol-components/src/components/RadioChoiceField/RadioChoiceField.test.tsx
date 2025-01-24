@@ -1,8 +1,8 @@
 import React from "react"
-import { render, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 import user from "@testing-library/user-event"
 import { BooleanRadioChoiceField } from "./RadioChoiceField"
-import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
+import { renderWithTheme } from "../../test-utils"
 
 describe("BooleanRadioChoiceField", () => {
   it.each([
@@ -20,7 +20,7 @@ describe("BooleanRadioChoiceField", () => {
     },
   ])("renders correctly", ({ value, expectedChecks }) => {
     const onChange = jest.fn()
-    render(
+    renderWithTheme(
       <BooleanRadioChoiceField
         value={value}
         label="Test"
@@ -31,7 +31,6 @@ describe("BooleanRadioChoiceField", () => {
         ]}
         onChange={onChange}
       />,
-      { wrapper: ThemeProvider },
     )
     const yes = screen.getByLabelText<HTMLInputElement>("Yes")
     const no = screen.getByLabelText<HTMLInputElement>("No")
@@ -41,7 +40,7 @@ describe("BooleanRadioChoiceField", () => {
 
   it("calls onChange when clicking and converts value to boolean", async () => {
     const onChange = jest.fn()
-    render(
+    renderWithTheme(
       <BooleanRadioChoiceField
         label="Test"
         name="test"
@@ -51,7 +50,6 @@ describe("BooleanRadioChoiceField", () => {
         ]}
         onChange={onChange}
       />,
-      { wrapper: ThemeProvider },
     )
     await user.click(screen.getByLabelText("Yes"))
     expect(onChange).toHaveBeenCalledWith({ name: "test", value: true })

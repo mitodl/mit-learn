@@ -1,20 +1,19 @@
 import React from "react"
 import { BrowserRouter } from "react-router-dom"
-import { screen, render, within } from "@testing-library/react"
+import { screen, within } from "@testing-library/react"
 import { LearningResourceListCard } from "./LearningResourceListCard"
 import type { LearningResourceListCardProps } from "./LearningResourceListCard"
 import { DEFAULT_RESOURCE_IMG, getReadableResourceType } from "ol-utilities"
 import { ResourceTypeEnum, PlatformEnum, AvailabilityEnum } from "api"
 import { factories } from "api/test-utils"
-import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
 import { getByImageSrc } from "ol-test-utilities"
+import { renderWithTheme } from "../../test-utils"
 
 const setup = (props: LearningResourceListCardProps) => {
-  return render(
+  return renderWithTheme(
     <BrowserRouter>
       <LearningResourceListCard {...props} />
     </BrowserRouter>,
-    { wrapper: ThemeProvider },
   )
 }
 
@@ -118,7 +117,7 @@ describe("Learning Resource List Card", () => {
     const onAddToLearningPathClick = jest.fn()
     const onAddToUserListClick = jest.fn()
 
-    render(
+    renderWithTheme(
       <BrowserRouter>
         <LearningResourceListCard
           resource={resource}
@@ -126,7 +125,6 @@ describe("Learning Resource List Card", () => {
           onAddToUserListClick={onAddToUserListClick}
         />
       </BrowserRouter>,
-      { wrapper: ThemeProvider },
     )
 
     const addToLearningPathButton = screen.getByLabelText(

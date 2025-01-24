@@ -358,27 +358,6 @@ def test_sloan_courses_etl():
     assert result == mock_load_courses.return_value
 
 
-def test_prolearn_programs_etl():
-    """Verify that prolearn programs etl pipeline executes correctly"""
-    with reload_mocked_pipeline(
-        patch("learning_resources.etl.prolearn.extract_programs", autospec=True),
-        patch("learning_resources.etl.prolearn.transform_programs", autospec=True),
-        patch("learning_resources.etl.loaders.load_programs", autospec=True),
-    ) as patches:
-        mock_extract, mock_transform, mock_load_programs = patches
-        result = pipelines.prolearn_programs_etl()
-
-    mock_extract.assert_called_once_with()
-    mock_transform.assert_called_once_with(mock_extract.return_value)
-    mock_load_programs.assert_called_once_with(
-        ETLSource.prolearn.name,
-        mock_transform.return_value,
-        config=ProgramLoaderConfig(courses=CourseLoaderConfig(fetch_only=True)),
-    )
-
-    assert result == mock_load_programs.return_value
-
-
 def test_mitpe_etl(mocker):
     """Verify that the professional education etl pipeline executes correctly"""
     mocker.patch("learning_resources.etl.mitpe.extract")
@@ -403,27 +382,6 @@ def test_mitpe_etl(mocker):
         config=ProgramLoaderConfig(prune=True, courses=CourseLoaderConfig()),
     )
     assert results == (mock_load_courses.return_value, mock_load_programs.return_value)
-
-
-def test_prolearn_courses_etl():
-    """Verify that prolearn courses etl pipeline executes correctly"""
-    with reload_mocked_pipeline(
-        patch("learning_resources.etl.prolearn.extract_courses", autospec=True),
-        patch("learning_resources.etl.prolearn.transform_courses", autospec=True),
-        patch("learning_resources.etl.loaders.load_courses", autospec=True),
-    ) as patches:
-        mock_extract, mock_transform, mock_load_courses = patches
-        result = pipelines.prolearn_courses_etl()
-
-    mock_extract.assert_called_once_with()
-    mock_transform.assert_called_once_with(mock_extract.return_value)
-    mock_load_courses.assert_called_once_with(
-        ETLSource.prolearn.name,
-        mock_transform.return_value,
-        config=CourseLoaderConfig(prune=True),
-    )
-
-    assert result == mock_load_courses.return_value
 
 
 def test_posthog_etl():

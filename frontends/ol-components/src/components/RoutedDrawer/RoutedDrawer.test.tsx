@@ -1,14 +1,10 @@
 import { RoutedDrawer } from "./RoutedDrawer"
 import type { RoutedDrawerProps } from "./RoutedDrawer"
-import {
-  render,
-  screen,
-  waitForElementToBeRemoved,
-} from "@testing-library/react"
+import { screen, waitForElementToBeRemoved } from "@testing-library/react"
 import user from "@testing-library/user-event"
 import React from "react"
-import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
 import { mockRouter } from "ol-test-utilities/mocks/nextNavigation"
+import { renderWithTheme } from "../../test-utils"
 
 const TestDrawerContents = ({ closeDrawer }: { closeDrawer: () => void }) => (
   <section>
@@ -29,13 +25,10 @@ const renderRoutedDrawer = <P extends string, R extends P>(
   mockRouter.setCurrentUrl(`/?${initialSearchParams}#${initialHashParams}`)
   window.location.hash = initialHashParams
   const childFn = jest.fn(TestDrawerContents)
-  render(
+  renderWithTheme(
     <RoutedDrawer aria-label="Test Drawer" {...props}>
       {childFn}
     </RoutedDrawer>,
-    {
-      wrapper: ThemeProvider,
-    },
   )
   return { childFn }
 }

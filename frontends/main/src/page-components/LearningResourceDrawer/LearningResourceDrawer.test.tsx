@@ -6,9 +6,9 @@ import {
   waitFor,
   within,
 } from "@/test-utils"
-import LearningResourceDrawerV2 from "./LearningResourceDrawerV2"
+import LearningResourceDrawer from "./LearningResourceDrawer"
 import { urls, factories, setMockResponse } from "api/test-utils"
-import { LearningResourceExpandedV2 } from "ol-components"
+import { LearningResourceExpanded } from "ol-components"
 import { RESOURCE_DRAWER_QUERY_PARAM } from "@/common/urls"
 import { LearningResource, ResourceTypeEnum } from "api"
 import { makeUserSettings } from "@/test-utils/factories"
@@ -18,7 +18,7 @@ jest.mock("ol-components", () => {
   const actual = jest.requireActual("ol-components")
   return {
     ...actual,
-    LearningResourceExpandedV2: jest.fn(actual.LearningResourceExpandedV2),
+    LearningResourceExpanded: jest.fn(actual.LearningResourceExpanded),
   }
 })
 
@@ -34,7 +34,7 @@ jest.mock("posthog-js/react", () => ({
   },
 }))
 
-describe("LearningResourceDrawerV2", () => {
+describe("LearningResourceDrawer", () => {
   const setupApis = (
     overries: {
       user?: Partial<User>
@@ -62,23 +62,27 @@ describe("LearningResourceDrawerV2", () => {
       [],
     )
 
-    if (resource.resource_type === ResourceTypeEnum.Program) {
-      const coursesInProgram = factories.learningResources.resources({
+    if (
+      resource.resource_type === ResourceTypeEnum.Program ||
+      resource.resource_type === ResourceTypeEnum.VideoPlaylist ||
+      resource.resource_type === ResourceTypeEnum.Podcast
+    ) {
+      const items = factories.learningResources.resources({
         count: 10,
       })
-      coursesInProgram.results.forEach((course) => {
+      items.results.forEach((item) => {
         setMockResponse.get(
-          urls.learningResources.details({ id: course.id }),
-          course,
+          urls.learningResources.details({ id: item.id }),
+          item,
         )
       })
 
       setMockResponse.get(
-        urls.learningResources.items({ id: resource.id }),
-        coursesInProgram,
+        `${urls.learningResources.items({ id: resource.id })}?limit=12`,
+        items.results,
       )
 
-      return { resource, user, coursesInProgram }
+      return { resource, user, items }
     }
 
     return { resource, user }
@@ -95,12 +99,12 @@ describe("LearningResourceDrawerV2", () => {
         ? "12345abcdef" // pragma: allowlist secret
         : ""
 
-      renderWithProviders(<LearningResourceDrawerV2 />, {
+      renderWithProviders(<LearningResourceDrawer />, {
         url: `?dog=woof&${RESOURCE_DRAWER_QUERY_PARAM}=${resource.id}`,
       })
-      expect(LearningResourceExpandedV2).toHaveBeenCalled()
+      expect(LearningResourceExpanded).toHaveBeenCalled()
       await waitFor(() => {
-        expectProps(LearningResourceExpandedV2, { resource })
+        expectProps(LearningResourceExpanded, { resource })
       })
       await screen.findByText(resource.title)
 
@@ -113,10 +117,10 @@ describe("LearningResourceDrawerV2", () => {
   )
 
   it("Does not render drawer content when resource=id is NOT in the URL", async () => {
-    renderWithProviders(<LearningResourceDrawerV2 />, {
+    renderWithProviders(<LearningResourceDrawer />, {
       url: "?dog=woof",
     })
-    expect(LearningResourceExpandedV2).not.toHaveBeenCalled()
+    expect(LearningResourceExpanded).not.toHaveBeenCalled()
   })
 
   test("Drawer is a dialog and has title", async () => {
@@ -125,7 +129,7 @@ describe("LearningResourceDrawerV2", () => {
         resource_type: ResourceTypeEnum.Course,
       },
     })
-    renderWithProviders(<LearningResourceDrawerV2 />, {
+    renderWithProviders(<LearningResourceDrawer />, {
       url: `?resource=${resource.id}`,
     })
     await screen.findByRole("dialog", {
@@ -171,14 +175,14 @@ describe("LearningResourceDrawerV2", () => {
         },
       })
 
-      renderWithProviders(<LearningResourceDrawerV2 />, {
+      renderWithProviders(<LearningResourceDrawer />, {
         url: `?resource=${resource.id}`,
       })
 
-      expect(LearningResourceExpandedV2).toHaveBeenCalled()
+      expect(LearningResourceExpanded).toHaveBeenCalled()
 
       await waitFor(() => {
-        expectProps(LearningResourceExpandedV2, { resource })
+        expectProps(LearningResourceExpanded, { resource })
       })
 
       const section = screen.getByTestId("drawer-cta")
@@ -214,7 +218,7 @@ describe("LearningResourceDrawerV2", () => {
       similarResources,
     )
 
-    renderWithProviders(<LearningResourceDrawerV2 />, {
+    renderWithProviders(<LearningResourceDrawer />, {
       url: `?resource=${resource.id}`,
     })
     await screen.findByText("Similar Learning Resources")

@@ -1,17 +1,16 @@
-import { render, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 import user from "@testing-library/user-event"
 import { ListCard } from "./ListCard"
 import React from "react"
 import invariant from "tiny-invariant"
-import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
+import { renderWithTheme } from "../../test-utils"
 
 describe("ListCard", () => {
   test("has class MitListCard-root on root element", () => {
-    const { container } = render(
+    const { container } = renderWithTheme(
       <ListCard className="Foo">
         <ListCard.Content>Hello world</ListCard.Content>
       </ListCard>,
-      { wrapper: ThemeProvider },
     )
     const card = container.firstChild
 
@@ -26,14 +25,13 @@ describe("ListCard", () => {
     "The whole card is clickable as a link",
     async ({ forwardClicksToLink, finalHref }) => {
       const href = "#woof"
-      render(
+      renderWithTheme(
         <ListCard forwardClicksToLink={forwardClicksToLink}>
           <ListCard.Title href={href}>Title</ListCard.Title>
           <ListCard.Info>Info</ListCard.Info>
           <ListCard.Footer>Footer</ListCard.Footer>
           <ListCard.Actions>Actions</ListCard.Actions>
         </ListCard>,
-        { wrapper: ThemeProvider },
       )
       // outermost wrapper is not actually clickable
       const card = document.querySelector(".MitListCard-root > *")
@@ -52,7 +50,7 @@ describe("ListCard", () => {
     async ({ forwardClicksToLink, finalHref }) => {
       const onClick = jest.fn()
       const href = "#meow"
-      render(
+      renderWithTheme(
         <ListCard forwardClicksToLink={forwardClicksToLink}>
           <ListCard.Content>
             <div>Hello!</div>
@@ -62,7 +60,6 @@ describe("ListCard", () => {
             </a>
           </ListCard.Content>
         </ListCard>,
-        { wrapper: ThemeProvider },
       )
       const button = screen.getByRole("button", { name: "Button" })
       await user.click(button)
@@ -81,7 +78,7 @@ describe("ListCard", () => {
   test("Clicks on interactive elements are not forwarded", async () => {
     const btnOnClick = jest.fn()
     const divOnClick = jest.fn()
-    render(
+    renderWithTheme(
       <ListCard forwardClicksToLink>
         <ListCard.Title href="#one">Title</ListCard.Title>
         <ListCard.Info>Info</ListCard.Info>
@@ -96,7 +93,6 @@ describe("ListCard", () => {
           </div>
         </ListCard.Footer>
       </ListCard>,
-      { wrapper: ThemeProvider },
     )
     const button = screen.getByRole("button", { name: "Button" })
     screen.getByRole("link", { name: "Title" })

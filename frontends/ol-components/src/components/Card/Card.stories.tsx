@@ -2,7 +2,7 @@ import React from "react"
 import type { Meta, StoryObj } from "@storybook/react"
 import { Card } from "./Card"
 import type { CardProps } from "./Card"
-import { ActionButton } from "../Button/Button"
+import { ActionButton } from "@mitodl/smoot-design"
 import { RiMenuAddLine, RiBookmarkLine } from "@remixicon/react"
 
 const meta: Meta<CardProps & { href?: string }> = {

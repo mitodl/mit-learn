@@ -1,9 +1,9 @@
 import React from "react"
-import { render, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 import user from "@testing-library/user-event"
 import { SimpleSelect, SimpleSelectField } from "./SimpleSelect"
 import type { SimpleSelectProps } from "./SimpleSelect"
-import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
+import { renderWithTheme } from "../../test-utils"
 
 const OPTIONS = [
   {
@@ -23,14 +23,13 @@ const OPTIONS = [
 
 const setupInput = (props: Partial<SimpleSelectProps> = {}) => {
   const onChange = jest.fn()
-  const view = render(
+  const view = renderWithTheme(
     <SimpleSelect
       options={OPTIONS}
       value={props.value ?? "option1"}
       onChange={onChange}
       name="select-example"
     />,
-    { wrapper: ThemeProvider },
   )
 
   return { onChange, view }
@@ -38,7 +37,7 @@ const setupInput = (props: Partial<SimpleSelectProps> = {}) => {
 
 const setupField = (props: Partial<SimpleSelectProps> = {}) => {
   const onChange = jest.fn()
-  const view = render(
+  const view = renderWithTheme(
     <SimpleSelectField
       options={OPTIONS}
       value={props.value ?? "option1"}
@@ -46,7 +45,6 @@ const setupField = (props: Partial<SimpleSelectProps> = {}) => {
       name="select-example"
       label="Select Example"
     />,
-    { wrapper: ThemeProvider },
   )
 
   return { onChange, view }

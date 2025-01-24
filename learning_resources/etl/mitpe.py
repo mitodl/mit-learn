@@ -61,7 +61,6 @@ def extract() -> list[dict]:
     """
     required_settings = [
         "MITPE_BASE_URL",
-        "MITPE_API_ENABLED",
     ]
     for setting in required_settings:
         if not getattr(settings, setting):

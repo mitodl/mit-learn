@@ -10,8 +10,8 @@ import {
   FormDialog,
   Dialog,
   MenuItem,
-  Button,
 } from "ol-components"
+import { Button } from "@mitodl/smoot-design"
 import * as Yup from "yup"
 import { PrivacyLevelEnum, type LearningPathResource, UserList } from "api"
 

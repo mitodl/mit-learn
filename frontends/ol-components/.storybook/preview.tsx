@@ -1,6 +1,7 @@
 import React from "react"
 import { Preview } from "@storybook/react"
-import { ThemeProvider, MITLearnGlobalStyles } from "ol-components"
+import { ThemeProvider } from "@mitodl/smoot-design"
+import { MITLearnGlobalStyles } from "ol-components"
 
 const preview: Preview = {
   decorators: [

@@ -1,4 +1,4 @@
-"""Tests for prolearn etl functions"""
+"""Tests for Sloan etl functions"""
 
 import json
 from decimal import Decimal
@@ -38,7 +38,7 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture(autouse=True)
 def mock_sloan_api_setting(settings):
-    """Set the prolearn api url"""
+    """Set the sloan api url"""
     settings.SEE_API_URL = "http://localhost/test/programs/api"
     settings.SEE_API_CLIENT_ID = "test"
     settings.SEE_API_CLIENT_SECRET = "test"  # noqa: S105
@@ -47,14 +47,14 @@ def mock_sloan_api_setting(settings):
 
 @pytest.fixture
 def mock_sloan_courses_data():
-    """Mock prolearn MIT Professional Education courses data"""
+    """Mock sloan courses data"""
     with open("./test_json/test_sloan_courses.json") as f:  # noqa: PTH123
         return json.loads(f.read())
 
 
 @pytest.fixture
 def mock_sloan_runs_data():
-    """Mock prolearn MIT Professional Education courses data"""
+    """Mock sloan runs data"""
     with open("./test_json/test_sloan_runs.json") as f:  # noqa: PTH123
         return json.loads(f.read())
 

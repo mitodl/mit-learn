@@ -1,9 +1,10 @@
 import React from "react"
-import { render, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { SearchInput, type SearchInputProps } from "./SearchInput"
 import invariant from "tiny-invariant"
-import { ThemeProvider } from "ol-components"
+
+import { renderWithTheme } from "../../test-utils"
 const getSearchInput = () => {
   const element = screen.getByLabelText("Search for")
   invariant(element instanceof HTMLInputElement)
@@ -34,7 +35,7 @@ describe("SearchInput", () => {
     const onSubmit = jest.fn()
     const onChange = jest.fn((e) => e.persist())
     const onClear = jest.fn()
-    render(
+    renderWithTheme(
       <SearchInput
         value={value}
         onSubmit={onSubmit}
@@ -42,7 +43,6 @@ describe("SearchInput", () => {
         onClear={onClear}
         {...otherProps}
       />,
-      { wrapper: ThemeProvider },
     )
     const user = userEvent.setup()
     const spies = { onClear, onChange, onSubmit }

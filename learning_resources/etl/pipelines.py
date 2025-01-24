@@ -18,7 +18,6 @@ from learning_resources.etl import (
     oll,
     podcast,
     posthog,
-    prolearn,
     sloan,
     xpro,
     youtube,
@@ -87,23 +86,6 @@ oll_etl = compose(
     load_courses(ETLSource.oll.name, config=CourseLoaderConfig(prune=True)),
     oll.transform,
     oll.extract,
-)
-
-
-prolearn_programs_etl = compose(
-    load_programs(
-        ETLSource.prolearn.name,
-        config=ProgramLoaderConfig(courses=CourseLoaderConfig(fetch_only=True)),
-    ),
-    prolearn.transform_programs,
-    prolearn.extract_programs,
-)
-
-
-prolearn_courses_etl = compose(
-    load_courses(ETLSource.prolearn.name, config=CourseLoaderConfig(prune=True)),
-    prolearn.transform_courses,
-    prolearn.extract_courses,
 )
 
 

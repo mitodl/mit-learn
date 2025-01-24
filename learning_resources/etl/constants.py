@@ -86,7 +86,6 @@ class ETLSource(ExtendedEnum):
     mitxonline = "mitxonline"
     oll = "oll"
     ocw = "ocw"
-    prolearn = "prolearn"
     podcast = "podcast"
     see = "see"
     xpro = "xpro"

@@ -2,13 +2,8 @@ import React from "react"
 
 import { RiArrowRightLine, RiArrowLeftLine } from "@remixicon/react"
 import Slider from "react-slick"
-import {
-  ActionButton,
-  TruncateText,
-  onReInitSlickA11y,
-  styled,
-  theme,
-} from "ol-components"
+import { TruncateText, onReInitSlickA11y, styled, theme } from "ol-components"
+import { ActionButton } from "@mitodl/smoot-design"
 import AttestantBlock from "./AttestantBlock"
 import { useTestimonialList } from "api/hooks/testimonials"
 import type { Attestation } from "api/v0"

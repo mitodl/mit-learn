@@ -87,7 +87,7 @@ const learningResources = createQueryKeys("learningResources", {
           const { data } = await request
           return {
             ...data,
-            results: data.results.map((relation) => ({
+            results: data.results?.map((relation) => ({
               ...clearListMemberships(relation.resource),
             })),
           }

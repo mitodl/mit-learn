@@ -1,14 +1,9 @@
 "use client"
 
 import React, { useState } from "react"
-import {
-  ActionButtonLink,
-  ButtonLink,
-  SimpleMenu,
-  styled,
-  theme,
-} from "ol-components"
+import { SimpleMenu, styled, theme } from "ol-components"
 import type { MenuOverrideProps, SimpleMenuItem } from "ol-components"
+import { ActionButtonLink, ButtonLink } from "@mitodl/smoot-design"
 import * as urls from "@/common/urls"
 import {
   RiAccountCircleFill,
@@ -223,7 +218,6 @@ const UserMenu: React.FC<UserMenuProps> = ({ variant }) => {
             <DesktopLoginButton
               data-testid="login-button-desktop"
               size="small"
-              rawAnchor={true}
               variant="tertiary"
               href={loginUrl}
             >
@@ -240,7 +234,6 @@ const UserMenu: React.FC<UserMenuProps> = ({ variant }) => {
               data-testid="login-button-mobile"
               edge="circular"
               variant="text"
-              rawAnchor={true}
               href={loginUrl}
               aria-label="Log in"
             >

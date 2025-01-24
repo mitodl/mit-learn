@@ -2,7 +2,6 @@
 
 import React, { useCallback, useMemo } from "react"
 import {
-  Button,
   SimpleMenu,
   Grid,
   LoadingSpinner,
@@ -14,6 +13,7 @@ import {
   LearningResourceListCard,
   ListCardActionButton,
 } from "ol-components"
+import { Button } from "@mitodl/smoot-design"
 import type { SimpleMenuItem } from "ol-components"
 import { RiPencilFill, RiMore2Line, RiDeleteBinLine } from "@remixicon/react"
 

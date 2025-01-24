@@ -10,7 +10,8 @@ import { RiDraggable } from "@remixicon/react"
 import { theme } from "../ThemeProvider/ThemeProvider"
 import { BaseContainer, ImageProps, useClickChildLink, Linkable } from "./Card"
 import { TruncateText } from "../TruncateText/TruncateText"
-import { ActionButton, ActionButtonProps } from "../Button/Button"
+import { ActionButton } from "@mitodl/smoot-design"
+import type { ActionButtonProps } from "@mitodl/smoot-design"
 import { default as NextImage } from "next/image"
 
 const Content = () => <></>

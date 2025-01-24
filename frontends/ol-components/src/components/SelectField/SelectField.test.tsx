@@ -1,10 +1,11 @@
 import React from "react"
-import { render, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 import { SelectField } from "./SelectField"
 import type { SelectFieldProps } from "./SelectField"
-import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
+
 import { faker } from "@faker-js/faker/locale/en"
 import MenuItem from "@mui/material/MenuItem"
+import { renderWithTheme } from "../../test-utils"
 
 describe("SelectField", () => {
   const setup = (props: Partial<SelectFieldProps>) => {
@@ -13,14 +14,11 @@ describe("SelectField", () => {
       value: "value-1",
       label: "test-label",
     }
-    const { rerender: _rerender } = render(
+    const { rerender: _rerender } = renderWithTheme(
       <SelectField {...defaults} {...props}>
         <MenuItem value="value-1">Option 1</MenuItem>
         <MenuItem value="value-2">Option 2</MenuItem>
       </SelectField>,
-      {
-        wrapper: ThemeProvider,
-      },
     )
     const rerender = (newProps: Partial<SelectFieldProps>) => {
       _rerender(<SelectField {...defaults} {...newProps} />)

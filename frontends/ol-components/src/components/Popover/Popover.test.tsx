@@ -1,13 +1,9 @@
 import React from "react"
-import {
-  render,
-  screen,
-  waitForElementToBeRemoved,
-} from "@testing-library/react"
+import { screen, waitForElementToBeRemoved } from "@testing-library/react"
 import user from "@testing-library/user-event"
 import { Popover } from "./Popover"
 import type { PopoverProps } from "./Popover"
-import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
+import { renderWithTheme } from "../../test-utils"
 
 const PopoverTest = (props: Omit<PopoverProps, "anchorEl">) => {
   const [anchorEl, setAnchorEl] = React.useState<HTMLButtonElement | null>(null)
@@ -30,9 +26,7 @@ const PopoverTest = (props: Omit<PopoverProps, "anchorEl">) => {
 test.each([{ modal: true }, {}, {}])(
   "Traps focus if modal = $modal",
   async ({ modal }) => {
-    render(<PopoverTest open onClose={jest.fn()} modal={modal} />, {
-      wrapper: ThemeProvider,
-    })
+    renderWithTheme(<PopoverTest open onClose={jest.fn()} modal={modal} />)
 
     const popover = screen.getByTestId("popover")
     expect(popover.contains(document.activeElement)).toBe(true)
@@ -55,9 +49,7 @@ test.each([{ modal: true }, {}, {}])(
 )
 
 test("Popover does not trap focus if modal=false", async () => {
-  render(<PopoverTest open onClose={jest.fn()} modal={false} />, {
-    wrapper: ThemeProvider,
-  })
+  renderWithTheme(<PopoverTest open onClose={jest.fn()} modal={false} />)
 
   expect(document.activeElement).toBe(document.body)
   await user.tab()
@@ -85,9 +77,7 @@ test.each([
   { role: "dialog" },
   { role: "tooltip", modal: false },
 ])("popover role is $role if $modal", ({ modal, role }) => {
-  render(<PopoverTest open onClose={jest.fn()} modal={modal} />, {
-    wrapper: ThemeProvider,
-  })
+  renderWithTheme(<PopoverTest open onClose={jest.fn()} modal={modal} />)
   const popover = screen.getByTestId("popover")
   const el = screen.getByRole(role)
   expect(popover).toBe(el)
@@ -95,9 +85,7 @@ test.each([
 
 test("Calls onClose when escape is pressed", async () => {
   const onClose = jest.fn()
-  render(<PopoverTest open onClose={onClose} />, {
-    wrapper: ThemeProvider,
-  })
+  renderWithTheme(<PopoverTest open onClose={onClose} />)
 
   await user.type(document.body, "{esc}")
   expect(onClose).toHaveBeenCalled()
@@ -105,9 +93,7 @@ test("Calls onClose when escape is pressed", async () => {
 
 test("Calls onClose when clicking outside popover", async () => {
   const onClose = jest.fn()
-  render(<PopoverTest open onClose={onClose} />, {
-    wrapper: ThemeProvider,
-  })
+  renderWithTheme(<PopoverTest open onClose={onClose} />)
 
   const popover = screen.getByTestId("popover")
   expect(popover).toBeVisible()
@@ -118,9 +104,7 @@ test("Calls onClose when clicking outside popover", async () => {
 
 test("Popover is open/closed based on 'open'", async () => {
   const onClose = jest.fn()
-  const { rerender } = render(<PopoverTest open onClose={onClose} />, {
-    wrapper: ThemeProvider,
-  })
+  const { rerender } = renderWithTheme(<PopoverTest open onClose={onClose} />)
 
   const popover = screen.getByTestId("popover")
   expect(popover).toBeVisible()

@@ -4,10 +4,10 @@ import {
   Typography,
   Link,
   styled,
-  Button,
   Dialog,
   DialogActions,
 } from "ol-components"
+import { Button } from "@mitodl/smoot-design"
 import { useUserMe } from "api/hooks/user"
 import {
   useSearchSubscriptionDelete,

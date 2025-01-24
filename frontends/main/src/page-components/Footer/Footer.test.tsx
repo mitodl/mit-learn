@@ -1,16 +1,12 @@
-import { render, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 import Footer from "./Footer"
 import React from "react"
-import { ThemeProvider } from "ol-components"
 import * as urls from "@/common/urls"
+import { renderWithTheme } from "@/test-utils"
 
 describe("Footer", () => {
   test("Renders the appropriate text and links", async () => {
-    render(
-      <ThemeProvider>
-        <Footer />
-      </ThemeProvider>,
-    )
+    renderWithTheme(<Footer />)
     interface Links {
       [key: string]: string
     }

@@ -4,10 +4,10 @@ import {
   Typography,
   styled,
   CheckboxChoiceField,
-  Button,
   FormDialog,
   DialogActions,
 } from "ol-components"
+import { Button } from "@mitodl/smoot-design"
 
 import { RiAddLine } from "@remixicon/react"
 import { usePostHog } from "posthog-js/react"

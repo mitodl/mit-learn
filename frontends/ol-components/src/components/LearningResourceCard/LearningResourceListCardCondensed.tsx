@@ -22,7 +22,8 @@ import {
   Format,
 } from "./LearningResourceListCard"
 import type { LearningResourceListCardProps } from "./LearningResourceListCard"
-import { ActionButton, ActionButtonProps } from "../Button/Button"
+import { ActionButton } from "@mitodl/smoot-design"
+import type { ActionButtonProps } from "@mitodl/smoot-design"
 
 const ResourceType = styled.span`
   align-self: flex-start;

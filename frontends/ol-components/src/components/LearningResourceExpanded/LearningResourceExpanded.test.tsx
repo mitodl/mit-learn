@@ -1,22 +1,22 @@
 import React from "react"
 import { BrowserRouter } from "react-router-dom"
-import { render, screen, within } from "@testing-library/react"
+import { screen, within } from "@testing-library/react"
 
 import {
   getCallToActionText,
-  LearningResourceExpandedV2,
-} from "./LearningResourceExpandedV2"
-import type { LearningResourceExpandedV2Props } from "./LearningResourceExpandedV2"
+  LearningResourceExpanded,
+} from "./LearningResourceExpanded"
+import type { LearningResourceExpandedProps } from "./LearningResourceExpanded"
 import { ResourceTypeEnum } from "api"
 import { factories, setMockResponse, urls } from "api/test-utils"
-import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
 import invariant from "tiny-invariant"
 import type { LearningResource } from "api"
 import { PLATFORM_LOGOS } from "../Logo/Logo"
 import _ from "lodash"
 import user from "@testing-library/user-event"
+import { renderWithTheme } from "../../test-utils"
 
-const IMG_CONFIG: LearningResourceExpandedV2Props["imgConfig"] = {
+const IMG_CONFIG: LearningResourceExpandedProps["imgConfig"] = {
   width: 385,
   height: 200,
 }
@@ -32,9 +32,9 @@ const setup = (resource: LearningResource, isLearningPathEditor?: boolean) => {
     is_authenticated: true,
   }
   setMockResponse.get(urls.userMe.get(), user)
-  return render(
+  return renderWithTheme(
     <BrowserRouter>
-      <LearningResourceExpandedV2
+      <LearningResourceExpanded
         resourceId={resource.id}
         resource={resource}
         user={user}
@@ -42,7 +42,6 @@ const setup = (resource: LearningResource, isLearningPathEditor?: boolean) => {
         imgConfig={IMG_CONFIG}
       />
     </BrowserRouter>,
-    { wrapper: ThemeProvider },
   )
 }
 

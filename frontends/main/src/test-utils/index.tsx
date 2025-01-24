@@ -1,7 +1,7 @@
 /* eslint-disable import/no-extraneous-dependencies */
 import React from "react"
 import { QueryClientProvider } from "@tanstack/react-query"
-import { ThemeProvider } from "ol-components"
+import { ThemeProvider } from "@mitodl/smoot-design"
 import { Provider as NiceModalProvider } from "@ebay/nice-modal-react"
 import type { QueryClient } from "@tanstack/react-query"
 
@@ -94,6 +94,12 @@ const renderWithProviders = (
 
   return { view, queryClient, location }
 }
+
+/**
+ * Render component with theme provider only
+ */
+const renderWithTheme = (ui: React.ReactElement) =>
+  render(ui, { wrapper: ThemeProvider })
 
 /**
  * Assert that a functional component was called at some point with the given
@@ -229,6 +235,7 @@ const assertPartialMetas = (expected: Partial<TestableMetas>) => {
 
 export {
   renderWithProviders,
+  renderWithTheme,
   expectProps,
   expectLastProps,
   expectWindowNavigation,

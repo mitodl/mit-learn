@@ -1,5 +1,6 @@
 import React from "react"
-import { Container, ButtonLink, Typography, styled } from "ol-components"
+import { Container, Typography, styled } from "ol-components"
+import { ButtonLink } from "@mitodl/smoot-design"
 import { HOME } from "@/common/urls"
 
 type ErrorPageTemplateProps = {

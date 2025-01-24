@@ -1,10 +1,10 @@
 import React from "react"
-import { render, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 import user from "@testing-library/user-event"
 import { SimpleMenu } from "./SimpleMenu"
 import type { SimpleMenuItem } from "./SimpleMenu"
 import type { LinkProps } from "react-router-dom"
-import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
+import { renderWithTheme } from "../../test-utils"
 
 // Mock react-router-dom's Link so we don't need to set up a Router
 jest.mock("next/link", () => {
@@ -29,9 +29,9 @@ describe("SimpleMenu", () => {
       { key: "two", label: "Item 2", onClick: jest.fn() },
     ]
 
-    render(<SimpleMenu trigger={<button>Open Menu</button>} items={items} />, {
-      wrapper: ThemeProvider,
-    })
+    renderWithTheme(
+      <SimpleMenu trigger={<button>Open Menu</button>} items={items} />,
+    )
 
     expect(screen.queryByRole("menu")).toBe(null)
     await user.click(screen.getByRole("button", { name: "Open Menu" }))
@@ -44,9 +44,9 @@ describe("SimpleMenu", () => {
       { key: "two", label: "Item 2", onClick: jest.fn() },
     ]
 
-    render(<SimpleMenu trigger={<button>Open Menu</button>} items={items} />, {
-      wrapper: ThemeProvider,
-    })
+    renderWithTheme(
+      <SimpleMenu trigger={<button>Open Menu</button>} items={items} />,
+    )
     await user.click(screen.getByRole("button", { name: "Open Menu" }))
     const menu = screen.getByRole("menu")
 
@@ -64,12 +64,11 @@ describe("SimpleMenu", () => {
     ]
 
     const triggerHandler = jest.fn()
-    render(
+    renderWithTheme(
       <SimpleMenu
         trigger={<button onClick={triggerHandler}>Open Menu</button>}
         items={items}
       />,
-      { wrapper: ThemeProvider },
     )
 
     await user.click(screen.getByRole("button", { name: "Open Menu" }))
@@ -85,13 +84,12 @@ describe("SimpleMenu", () => {
     ]
 
     const visibilityHandler = jest.fn()
-    render(
+    renderWithTheme(
       <SimpleMenu
         onVisibilityChange={visibilityHandler}
         trigger={<button>Open Menu</button>}
         items={items}
       />,
-      { wrapper: ThemeProvider },
     )
 
     expect(visibilityHandler).not.toHaveBeenCalled()
@@ -114,9 +112,9 @@ describe("SimpleMenu", () => {
       { key: "two", label: "Item 2", href: "./woof" },
     ]
 
-    render(<SimpleMenu trigger={<button>Open Menu</button>} items={items} />, {
-      wrapper: ThemeProvider,
-    })
+    renderWithTheme(
+      <SimpleMenu trigger={<button>Open Menu</button>} items={items} />,
+    )
     await user.click(screen.getByRole("button", { name: "Open Menu" }))
     const item2 = screen.getByRole("menuitem", { name: "Item 2" })
     expect(item2.dataset.reactComponent).toBe("next/link")
@@ -139,9 +137,9 @@ describe("SimpleMenu", () => {
       { key: "two", label: "Item 2", href: "./woof", LinkComponent },
     ]
 
-    render(<SimpleMenu trigger={<button>Open Menu</button>} items={items} />, {
-      wrapper: ThemeProvider,
-    })
+    renderWithTheme(
+      <SimpleMenu trigger={<button>Open Menu</button>} items={items} />,
+    )
     await user.click(screen.getByRole("button", { name: "Open Menu" }))
     const item2 = screen.getByRole("link", { name: "Item 2" })
     expect(item2.dataset.reactComponent).toBe("custom-link")

@@ -2,8 +2,6 @@ import React from "react"
 import styled from "@emotion/styled"
 import Typography from "@mui/material/Typography"
 import Container from "@mui/material/Container"
-import { ResponsiveStyleValue, SxProps } from "@mui/system"
-import { Theme } from "../ThemeProvider/ThemeProvider"
 
 const DEFAULT_BACKGROUND_IMAGE_URL = "/images/backgrounds/background_steps.jpg"
 
@@ -96,14 +94,8 @@ type BannerProps = BannerBackgroundProps & {
   navText: React.ReactNode
   avatar?: React.ReactNode
   title?: React.ReactNode
-  titleTypography?: ResponsiveStyleValue<string | undefined>
-  titleStyles?: SxProps<Theme>
   header: React.ReactNode
-  headerTypography?: ResponsiveStyleValue<string | undefined>
-  headerStyles?: SxProps<Theme>
   subHeader?: React.ReactNode
-  subHeaderTypography?: ResponsiveStyleValue<string | undefined>
-  subHeaderStyles?: SxProps<Theme>
   extraHeader?: React.ReactNode
   extraActions?: React.ReactNode
 }
@@ -123,12 +115,8 @@ const Banner = ({
   navText,
   avatar,
   title,
-  titleTypography = TYPOGRAPHY_DEFAULTS.defaultHeaderTypography,
-  titleStyles,
   header,
   subHeader,
-  subHeaderTypography = TYPOGRAPHY_DEFAULTS.defaultSubHeaderTypography,
-  subHeaderStyles,
   extraHeader,
   extraActions,
 }: BannerProps) => {
@@ -146,8 +134,7 @@ const Banner = ({
             <Typography
               component="h1"
               variant="h1"
-              typography={titleTypography}
-              sx={titleStyles}
+              typography={TYPOGRAPHY_DEFAULTS.defaultHeaderTypography}
             >
               {title}
             </Typography>
@@ -155,8 +142,7 @@ const Banner = ({
             {header && (
               <SubHeader
                 variant="body1"
-                typography={subHeaderTypography}
-                sx={subHeaderStyles}
+                typography={TYPOGRAPHY_DEFAULTS.defaultSubHeaderTypography}
               >
                 {header}
               </SubHeader>
@@ -164,8 +150,7 @@ const Banner = ({
             {subHeader && (
               <SubHeader
                 variant="body1"
-                typography={subHeaderTypography}
-                sx={subHeaderStyles}
+                typography={TYPOGRAPHY_DEFAULTS.defaultSubHeaderTypography}
               >
                 {subHeader}
               </SubHeader>

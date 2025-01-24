@@ -1,5 +1,6 @@
 import React from "react"
-import { Popover, Typography, styled, ButtonLink } from "ol-components"
+import { Popover, Typography, styled } from "ol-components"
+import { ButtonLink } from "@mitodl/smoot-design"
 import type { PopoverProps } from "ol-components"
 import * as urls from "@/common/urls"
 import { usePathname, useSearchParams } from "next/navigation"

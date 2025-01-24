@@ -832,6 +832,12 @@ paths:
       summary: Content File Vector Search
       parameters:
       - in: query
+        name: collection_name
+        schema:
+          type: string
+          minLength: 1
+        description: Manually specify the name of the Qdrant collection to query
+      - in: query
         name: content_feature_type
         schema:
           type: array

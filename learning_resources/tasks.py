@@ -99,17 +99,8 @@ def get_mitpe_data():
 
 
 @app.task
-def get_prolearn_data():
-    """Execute the ProLearn ETL pipelines"""
-    courses = pipelines.prolearn_courses_etl()
-    programs = pipelines.prolearn_programs_etl()
-    clear_search_cache()
-    return len(courses) + len(programs)
-
-
-@app.task
 def get_sloan_data():
-    """Execute the ProLearn ETL pipelines"""
+    """Execute the Sloan ETL pipelines"""
     courses = pipelines.sloan_courses_etl()
     return len(courses)
 

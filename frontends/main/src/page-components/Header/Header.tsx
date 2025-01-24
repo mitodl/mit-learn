@@ -2,13 +2,8 @@
 
 import React, { FunctionComponent } from "react"
 import type { NavData } from "ol-components"
-import {
-  styled,
-  AppBar,
-  NavDrawer,
-  Toolbar,
-  ActionButtonLink,
-} from "ol-components"
+import { styled, AppBar, NavDrawer, Toolbar } from "ol-components"
+import { ActionButtonLink } from "@mitodl/smoot-design"
 import {
   RiSearch2Line,
   RiPencilRulerLine,

@@ -1,9 +1,9 @@
 import React from "react"
-import { render, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 import { FormFieldWrapper } from "./FormHelpers"
 import type { FormFieldWrapperProps } from "./FormHelpers"
-import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
 import { faker } from "@faker-js/faker/locale/en"
+import { renderWithTheme } from "../../test-utils"
 
 const assertDescription = ({
   text,
@@ -37,15 +37,12 @@ describe("FormFieldWrapper", () => {
       value: "test-value",
       label: "test-label",
     }
-    const { rerender: _rerender } = render(
+    const { rerender: _rerender } = renderWithTheme(
       <FormFieldWrapper {...defaults} {...props}>
         {({ error, labelId, fullWidth, ...childProps }) => (
           <input {...childProps} />
         )}
       </FormFieldWrapper>,
-      {
-        wrapper: ThemeProvider,
-      },
     )
     const rerender = (newProps: Partial<FormFieldWrapperProps>) => {
       _rerender(

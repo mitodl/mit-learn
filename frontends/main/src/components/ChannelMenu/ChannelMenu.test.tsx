@@ -1,13 +1,12 @@
 import React from "react"
-import { render, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { BrowserRouter } from "react-router-dom"
 
 import ChannelMenu from "./ChannelMenu"
 import { urls } from "api/test-utils"
-import { setMockResponse, user } from "@/test-utils"
+import { renderWithTheme, setMockResponse, user } from "@/test-utils"
 import { channels as factory } from "api/test-utils/factories"
-import { ThemeProvider } from "ol-components"
 
 describe("ChannelMenu", () => {
   it("Includes links to channel management", async () => {
@@ -17,11 +16,10 @@ describe("ChannelMenu", () => {
       channel,
     )
 
-    render(
+    renderWithTheme(
       <BrowserRouter>
         <ChannelMenu channelType={channel.channel_type} name={channel.name} />
       </BrowserRouter>,
-      { wrapper: ThemeProvider },
     )
     const dropdown = await screen.findByRole("button")
     await user.click(dropdown)

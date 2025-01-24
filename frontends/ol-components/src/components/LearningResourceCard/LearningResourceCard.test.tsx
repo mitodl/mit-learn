@@ -1,16 +1,16 @@
 import React from "react"
-import { screen, render, within } from "@testing-library/react"
+import { screen, within } from "@testing-library/react"
 import { LearningResourceCard } from "./LearningResourceCard"
 import type { LearningResourceCardProps } from "./LearningResourceCard"
 import { DEFAULT_RESOURCE_IMG, getReadableResourceType } from "ol-utilities"
 import { ResourceTypeEnum, PlatformEnum, AvailabilityEnum } from "api"
 import { factories } from "api/test-utils"
-import { ThemeProvider } from "../ThemeProvider/ThemeProvider"
 import { getByImageSrc } from "ol-test-utilities"
+import { renderWithTheme } from "../../test-utils"
 
 const setup = (props: LearningResourceCardProps) => {
   // TODO Browser Router will need to be replaced with a Next.js router mock or alternative strategy
-  return render(<LearningResourceCard {...props} />, { wrapper: ThemeProvider })
+  return renderWithTheme(<LearningResourceCard {...props} />)
 }
 
 describe("Learning Resource Card", () => {
@@ -120,13 +120,12 @@ describe("Learning Resource Card", () => {
     const onAddToLearningPathClick = jest.fn()
     const onAddToUserListClick = jest.fn()
 
-    render(
+    renderWithTheme(
       <LearningResourceCard
         resource={resource}
         onAddToLearningPathClick={onAddToLearningPathClick}
         onAddToUserListClick={onAddToUserListClick}
       />,
-      { wrapper: ThemeProvider },
     )
 
     const addToLearningPathButton = screen.getByLabelText(
