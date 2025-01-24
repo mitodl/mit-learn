@@ -274,6 +274,7 @@ def test_get_completion(mocker):
 def test_collection_name_param(settings, mocker):
     """The collection name should be passed through to the contentfile search"""
     settings.AI_MIT_SEARCH_LIMIT = 5
+    settings.AI_MIT_SYLLABUS_URL = "https://test.com/api/v0/contentfiles/"
     mock_post = mocker.patch(
         "ai_chat.agents.requests.get",
         return_value=mocker.Mock(json=mocker.Mock(return_value={})),
