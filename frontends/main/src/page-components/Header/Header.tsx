@@ -274,6 +274,9 @@ const Header: FunctionComponent = () => {
   const [drawerOpen, toggleDrawer] = useToggle(false)
   const desktopTrigger = React.useRef<HTMLButtonElement>(null)
   const mobileTrigger = React.useRef<HTMLButtonElement>(null)
+  const drawerToggleEvent = drawerOpen
+    ? "opened_nav_drawer"
+    : "closed_nav_drawer"
 
   return (
     <div>
@@ -285,11 +288,20 @@ const Header: FunctionComponent = () => {
             <MenuButton
               ref={desktopTrigger}
               text="Explore MIT"
-              onClick={toggleDrawer.toggle}
+              onClick={() => {
+                toggleDrawer.toggle()
+                posthog.capture(drawerToggleEvent)
+              }}
             />
           </DesktopOnly>
           <MobileOnly>
-            <MenuButton ref={mobileTrigger} onClick={toggleDrawer.toggle} />
+            <MenuButton
+              ref={mobileTrigger}
+              onClick={() => {
+                toggleDrawer.toggle()
+                posthog.capture(drawerToggleEvent)
+              }}
+            />
             <LeftSpacer />
             <StyledMITLogoLink logo="learn" />
           </MobileOnly>
