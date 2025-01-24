@@ -3,8 +3,8 @@
 import copy
 import json
 
-from django.http import HttpResponse
-from django.urls.resolvers import get_resolver
+from django.http import HttpRequest, HttpResponse
+from django.urls import Resolver404, resolve
 from django_scim import exceptions, constants as djs_constants, views as djs_views
 
 from scim import constants
@@ -90,18 +90,28 @@ class BulkView(djs_views.SCIMView):
         path = operation.get("path")
         data = operation.get("data")
 
-        if path.startswith("/Users/"):
-            return self._attempt_user_operation(
-                bulk_request, method, path, bulk_id, data
-            )
-        elif path.startswith("/Groups/"):
-            return self._attempt_group_operation(
-                bulk_request, method, path, bulk_id, data
-            )
-        else:
+        try:
+            url_match = resolve(path, urlconf="django_scim.urls")
+        except Resolver404:
             return self._operation_error(
                 bulk_id, 501, "Endpoint is not supported for /Bulk"
             )
+
+        # this is an ephemeral request not tied to the real request directly
+        op_request = InMemoryHttpRequest(bulk_request, path, method, data)
+
+        response = url_match.func(
+            op_request, *url_match.args, **url_match.kwargs
+        )
+
+        return {
+            "location": response.headers["Location"],
+            "method": method,
+            "bulkId": bulk_id,
+            "status": {
+                "code": response.status_code,
+            }
+        }
 
     def _operation_error(self, method, bulk_id, status_code, detail):
         """Return a failure response"""
@@ -117,20 +127,3 @@ class BulkView(djs_views.SCIMView):
             },
         }
 
-    def _attempt_user_operation(self, bulk_request, method, path, bulk_id, data):
-        op_request = InMemoryHttpRequest(bulk_request, path, method, data)
-        # resolve the operation's path against the django_scim urls
-        url_match = get_resolver("django_scim.urls").resolve(path)
-        response = djs_views.UserView.dispatch(
-            op_request, *url_match.args, **url_match.kwargs
-        )
-
-        return {
-            **response,
-            "bulkId": bulk_id,
-        }
-
-    def _attempt_group_operation(self, bulk_request, method, path, bulk_id, data):
-        return self._operation_error(
-            method, bulk_id, 501, "Group operations not implemented for /Bulk"
-        )
