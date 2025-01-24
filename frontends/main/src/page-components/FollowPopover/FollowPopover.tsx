@@ -1,5 +1,6 @@
 import React, { useMemo } from "react"
-import { Popover, Typography, styled, Button } from "ol-components"
+import { styled } from "@pigment-css/react"
+import { Popover, Typography, Button } from "ol-components"
 import type { PopoverProps } from "ol-components"
 import { getSearchParamMap } from "@/common/utils"
 

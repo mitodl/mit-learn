@@ -1,6 +1,7 @@
 import React from "react"
+import { styled } from "@pigment-css/react"
 import { RiAccountCircleFill } from "@remixicon/react"
-import { TruncateText, styled } from "ol-components"
+import { TruncateText } from "ol-components"
 import type { Attestation } from "api/v0"
 import Image from "next/image"
 

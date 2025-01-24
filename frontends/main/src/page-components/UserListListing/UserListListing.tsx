@@ -1,8 +1,8 @@
 import React, { useCallback } from "react"
+import { styled } from "@pigment-css/react"
 import {
   Button,
   LoadingSpinner,
-  styled,
   Typography,
   PlainList,
   Card,

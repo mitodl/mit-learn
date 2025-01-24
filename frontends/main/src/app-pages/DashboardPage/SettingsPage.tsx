@@ -1,6 +1,6 @@
 import React from "react"
+import { styled } from "@pigment-css/react"
 import {
-  styled,
   PlainList,
   Typography,
   Link,
@@ -91,14 +91,17 @@ const _ListItemBody = styled("div")({
   gap: "4px",
   flex: "1 0 0",
 })
+
 const Title = styled("span")(({ theme }) => ({
   ...theme.typography.subtitle1,
   color: theme.custom.colors.darkGray2,
 }))
+
 const Subtitle = styled("span")(({ theme }) => ({
   ...theme.typography.body2,
   color: theme.custom.colors.silverGrayDark,
 }))
+
 type ListItemBodyProps = {
   children?: React.ReactNode
   title?: string

@@ -32,7 +32,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       />
       <QueryClientProvider client={queryClient}>
         <ConfiguredPostHogProvider>
-          <NextJsAppRouterCacheProvider>
+          <NextJsAppRouterCacheProvider options={{ enableCssLayer: true }}>
             <ThemeProvider theme={theme}>
               <NiceModalProvider>{children}</NiceModalProvider>
             </ThemeProvider>

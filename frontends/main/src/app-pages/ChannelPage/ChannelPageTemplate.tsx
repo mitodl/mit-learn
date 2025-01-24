@@ -1,4 +1,5 @@
 import React from "react"
+import { styled } from "@pigment-css/react"
 import UnitChannelTemplate from "./UnitChannelTemplate"
 import DefaultChannelTemplate from "./DefaultChannelTemplate"
 import { ChannelTypeEnum } from "api/v0"
@@ -7,7 +8,6 @@ import {
   TOPICS as TOPICS_URL,
   UNITS as UNITS_URL,
 } from "@/common/urls"
-import { styled } from "ol-components"
 import TopicChannelTemplate from "./TopicChannelTemplate"
 
 const TOPICS_LABEL = "Browse by Topic"

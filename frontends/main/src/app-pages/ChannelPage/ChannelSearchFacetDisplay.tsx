@@ -1,4 +1,5 @@
 import React from "react"
+import { styled } from "@pigment-css/react"
 import type {
   Aggregation,
   Bucket,
@@ -8,7 +9,7 @@ import type {
   BooleanFacetKey,
 } from "@mitodl/course-search-utils"
 import { BOOLEAN_FACET_NAMES } from "@mitodl/course-search-utils"
-import { Skeleton, styled, SimpleSelect } from "ol-components"
+import { Skeleton, SimpleSelect } from "ol-components"
 import type { SimpleSelectOption } from "ol-components"
 
 const StyledSkeleton = styled(Skeleton)`

@@ -1,6 +1,7 @@
 import React, { useMemo } from "react"
+import { styled } from "@pigment-css/react"
 import * as routes from "@/common/urls"
-import { SimpleMenu, ActionButton, styled } from "ol-components"
+import { SimpleMenu, ActionButton } from "ol-components"
 import type { SimpleMenuItem } from "ol-components"
 import { RiSettings4Fill } from "@remixicon/react"
 

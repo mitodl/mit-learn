@@ -1,14 +1,8 @@
 import React from "react"
+import { styled } from "@pigment-css/react"
 import type { OfferedByEnum } from "api"
 import type { UnitChannel } from "api/v0"
-import {
-  Card,
-  Skeleton,
-  Typography,
-  styled,
-  theme,
-  UnitLogo,
-} from "ol-components"
+import { Card, Skeleton, Typography, theme, UnitLogo } from "ol-components"
 import Link from "next/link"
 
 const CardStyled = styled(Card)({

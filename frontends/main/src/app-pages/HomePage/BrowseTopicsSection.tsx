@@ -1,6 +1,7 @@
 import React from "react"
+import { styled } from "@pigment-css/react"
 import Link from "next/link"
-import { Container, styled, theme, Typography, ButtonLink } from "ol-components"
+import { Container, theme, Typography, ButtonLink } from "ol-components"
 import { useLearningResourceTopics } from "api/hooks/learningResources"
 import { RiArrowRightLine } from "@remixicon/react"
 import RootTopicIcon from "@/components/RootTopicIcon/RootTopicIcon"

@@ -1,7 +1,7 @@
 /* eslint-disable import/no-extraneous-dependencies */
 import React from "react"
 import { QueryClientProvider } from "@tanstack/react-query"
-import { ThemeProvider } from "ol-components"
+// import { ThemeProvider } from "ol-components"
 import { Provider as NiceModalProvider } from "@ebay/nice-modal-react"
 import type { QueryClient } from "@tanstack/react-query"
 
@@ -49,9 +49,9 @@ const TestProviders: React.FC<{
   queryClient: QueryClient
 }> = ({ children, queryClient }) => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider>
-      <NiceModalProvider>{children}</NiceModalProvider>
-    </ThemeProvider>
+    {/* <ThemeProvider> */}
+    <NiceModalProvider>{children}</NiceModalProvider>
+    {/* </ThemeProvider> */}
   </QueryClientProvider>
 )
 

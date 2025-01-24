@@ -1,12 +1,12 @@
 "use client"
 
 import React from "react"
+import { styled } from "@pigment-css/react"
 import { useChannelCounts, useChannelsList } from "api/hooks/channels"
 import {
   Banner,
   Container,
   Typography,
-  styled,
   theme,
   Breadcrumbs,
 } from "ol-components"

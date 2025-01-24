@@ -1,4 +1,5 @@
 import React from "react"
+import { styled } from "@pigment-css/react"
 import MuiSelect from "@mui/material/Select"
 import type {
   SelectProps as MuiSelectProps,
@@ -8,8 +9,6 @@ import InputBase from "@mui/material/InputBase"
 import type { InputBaseProps } from "@mui/material/InputBase"
 import { FormFieldWrapper } from "../FormHelpers/FormHelpers"
 import type { FormFieldWrapperProps } from "../FormHelpers/FormHelpers"
-// import { styled } from "@pigment-css/react"
-import { styled } from "@mui/material-pigment-css"
 import { baseInputStyles } from "../Input/Input"
 import { RiArrowDownSLine } from "@remixicon/react"
 

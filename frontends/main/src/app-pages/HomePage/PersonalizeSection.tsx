@@ -1,5 +1,6 @@
 import React from "react"
-import { Typography, styled, Container, ButtonLink } from "ol-components"
+import { styled } from "@pigment-css/react"
+import { Typography, Container, ButtonLink } from "ol-components"
 import { backgroundSrcSetCSS } from "ol-utilities"
 import { useUserMe } from "api/hooks/user"
 import * as urls from "@/common/urls"
@@ -8,7 +9,9 @@ import personalizeBgImage from "@/public/images/homepage/personalize-bg.png"
 
 const FullWidthBackground = styled("div")(({ theme }) => ({
   padding: "80px 0",
-  background: `${backgroundSrcSetCSS(personalizeBgImage)} center top no-repeat`,
+  background: `${personalizeBgImage} center top no-repeat`,
+  // TODO pigment - cannot call within pigment CreateStyled as it can't access "next/image"  getImageProps
+  // background: `${backgroundSrcSetCSS(personalizeBgImage)} center top no-repeat`,
   backgroundSize: "cover",
   [theme.breakpoints.down("md")]: {
     padding: "40px 0",

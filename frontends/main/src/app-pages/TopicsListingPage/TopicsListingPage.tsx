@@ -1,10 +1,10 @@
 "use client"
 
 import React, { useMemo } from "react"
+import { styled } from "@pigment-css/react"
 import {
   Container,
   Typography,
-  styled,
   Grid,
   PlainList,
   ChipLink,

@@ -1,12 +1,11 @@
 import React from "react"
-
+import { styled } from "@pigment-css/react"
 import { RiArrowRightLine, RiArrowLeftLine } from "@remixicon/react"
 import Slider from "react-slick"
 import {
   ActionButton,
   TruncateText,
   onReInitSlickA11y,
-  styled,
   theme,
 } from "ol-components"
 import AttestantBlock from "./AttestantBlock"

@@ -1,6 +1,6 @@
 import React from "react"
 import { styled } from "@pigment-css/react"
-import { pxToRem } from "../theme/typography"
+// import { pxToRem } from "../theme/typography"
 import tinycolor from "tinycolor2"
 import Link from "next/link"
 
@@ -111,44 +111,32 @@ const ButtonStyled = styled("button", { shouldForwardProp })<
     // },
     {
       props: { size: "large" },
-      style: {
-        ...theme.typography.buttonLarge,
-      },
+      style: theme.typography.buttonLarge,
     },
     {
       props: { size: "medium" },
-      style: {
-        ...theme.typography.button,
-      },
+      style: theme.typography.button,
     },
     {
       props: { size: "small" },
-      style: {
-        ...theme.typography.buttonSmall,
-      },
+      style: theme.typography.buttonSmall,
     },
     {
       props: { size: "large", responsive: true },
       style: {
-        [theme.breakpoints.down("sm")]: {
-          ...theme.typography.buttonLarge,
-        },
+        [theme.breakpoints.down("sm")]: theme.typography.buttonLarge,
       },
     },
     {
       props: { size: "medium", responsive: true },
       style: {
-        [theme.breakpoints.down("sm")]: {
-          ...theme.typography.button,
-        },
+        [theme.breakpoints.down("sm")]: theme.typography.button,
       },
     },
     {
       props: { size: "small", responsive: true },
       style: {
-        [theme.breakpoints.down("sm")]: {
-          ...theme.typography.buttonSmall,
-        },
+        [theme.breakpoints.down("sm")]: theme.typography.buttonSmall,
       },
     },
     {
@@ -363,44 +351,32 @@ const LinkStyled = styled(Link, { shouldForwardProp })<
     // },
     {
       props: { size: "large" },
-      style: {
-        ...theme.typography.buttonLarge,
-      },
+      style: theme.typography.buttonLarge,
     },
     {
       props: { size: "medium" },
-      style: {
-        ...theme.typography.button,
-      },
+      style: theme.typography.button,
     },
     {
       props: { size: "small" },
-      style: {
-        ...theme.typography.buttonSmall,
-      },
+      style: theme.typography.buttonSmall,
     },
     {
       props: { size: "large", responsive: true },
       style: {
-        [theme.breakpoints.down("sm")]: {
-          ...theme.typography.buttonLarge,
-        },
+        [theme.breakpoints.down("sm")]: theme.typography.buttonLarge,
       },
     },
     {
       props: { size: "medium", responsive: true },
       style: {
-        [theme.breakpoints.down("sm")]: {
-          ...theme.typography.button,
-        },
+        [theme.breakpoints.down("sm")]: theme.typography.button,
       },
     },
     {
       props: { size: "small", responsive: true },
       style: {
-        [theme.breakpoints.down("sm")]: {
-          ...theme.typography.buttonSmall,
-        },
+        [theme.breakpoints.down("sm")]: theme.typography.buttonSmall,
       },
     },
     {
@@ -567,14 +543,15 @@ const IconContainer = styled("span")<{
   "& svg, & .MuiSvgIcon-root": {
     width: "1em",
     height: "1em",
-    fontSize: ({ size }) =>
-      pxToRem(
-        {
-          small: 16,
-          medium: 20,
-          large: 24,
-        }[size],
-      ),
+    // TODO pigment typography not defined?
+    // fontSize: ({ size }) =>
+    //   pxToRem(
+    //     {
+    //       small: 16,
+    //       medium: 20,
+    //       large: 24,
+    //     }[size],
+    //   ),
   },
   variants: [
     {
@@ -680,13 +657,14 @@ const actionStyles = (size: ButtonSize) => {
     "& svg, & .MuiSvgIcon-root": {
       width: "1em",
       height: "1em",
-      fontSize: pxToRem(
-        {
-          small: 20,
-          medium: 24,
-          large: 32,
-        }[size],
-      ),
+      // TODO pigment typography not defined?
+      // fontSize: pxToRem(
+      //   {
+      //     small: 20,
+      //     medium: 24,
+      //     large: 32,
+      //   }[size],
+      // ),
     },
   }
 }

@@ -2,11 +2,12 @@
 
 import { keyBy } from "lodash"
 import React, { useCallback, useMemo, useEffect } from "react"
+import { styled } from "@pigment-css/react"
 import type { FacetManifest } from "@mitodl/course-search-utils"
 import { useSearchParams } from "@mitodl/course-search-utils/next"
 import { useResourceSearchParams } from "@mitodl/course-search-utils"
 import SearchDisplay from "@/page-components/SearchDisplay/SearchDisplay"
-import { styled, Container, theme, VisuallyHidden } from "ol-components"
+import { Container, theme, VisuallyHidden } from "ol-components"
 import { SearchField } from "@/page-components/SearchField/SearchField"
 import { useOfferorsList } from "api/hooks/learningResources"
 import { facetNames } from "./searchRequests"

@@ -1,10 +1,6 @@
 import * as React from "react"
-import {
-  Collapse,
-  ToggleButton,
-  ToggleButtonGroup,
-  styled,
-} from "ol-components"
+import { styled } from "@pigment-css/react"
+import { Collapse, ToggleButton, ToggleButtonGroup } from "ol-components"
 import { RiBookOpenLine, RiBriefcase3Line } from "@remixicon/react"
 
 const StyledToggleButtonGroup = styled(ToggleButtonGroup)`

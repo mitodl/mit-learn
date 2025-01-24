@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react"
+import { styled } from "@pigment-css/react"
 import { shuffle } from "lodash"
 import {
   Container,
   Typography,
-  styled,
   theme,
   pxToRem,
   ActionButton,

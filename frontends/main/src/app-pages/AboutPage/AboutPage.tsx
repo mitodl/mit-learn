@@ -1,6 +1,7 @@
 "use client"
 
-import { Breadcrumbs, Container, Typography, styled } from "ol-components"
+import { styled } from "@pigment-css/react"
+import { Breadcrumbs, Container, Typography } from "ol-components"
 import { HOME, ABOUT_NON_DEGREE_LEARNING_FRAGMENT } from "@/common/urls"
 import React from "react"
 import domeImage from "@/public/mit-dome-2.jpg"

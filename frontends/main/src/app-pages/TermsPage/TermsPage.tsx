@@ -1,13 +1,13 @@
 "use client"
 
 import React from "react"
+import { styled } from "@pigment-css/react"
 // Not currently linked to. See https://github.com/mitodl/hq/issues/4639
 import {
   Breadcrumbs,
   Container,
   Typography,
   TypographyProps,
-  styled,
 } from "ol-components"
 import * as urls from "@/common/urls"
 

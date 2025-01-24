@@ -1,9 +1,9 @@
 import React from "react"
+import { styled } from "@pigment-css/react"
 import MuiTab from "@mui/material/Tab"
 import type { TabProps } from "@mui/material/Tab"
 import MuiTabList from "@mui/lab/TabList"
 import type { TabListProps } from "@mui/lab/TabList"
-import { styled } from "@pigment-css/react"
 import { Button, ButtonLink } from "../Button/Button"
 import type { ButtonLinkProps, ButtonProps } from "../Button/Button"
 
@@ -13,9 +13,7 @@ const defaultTabListProps = {
   scrollButtons: "auto",
 } as const
 
-const TabButtonList: React.FC<TabListProps> = styled((props: TabListProps) => (
-  <MuiTabList {...defaultTabListProps} {...props} />
-))({
+const StyledMuiTabList = styled(MuiTabList)({
   minHeight: "unset",
   ".MuiTabs-indicator": {
     display: "none",
@@ -28,6 +26,10 @@ const TabButtonList: React.FC<TabListProps> = styled((props: TabListProps) => (
     display: "flex",
   },
 })
+
+const TabButtonList: React.FC<TabListProps> = (props: TabListProps) => (
+  <StyledMuiTabList {...defaultTabListProps} {...props} />
+)
 
 const TabButtonStyled = styled(Button)(({ theme }) => ({
   minWidth: "auto",

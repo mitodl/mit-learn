@@ -1,5 +1,5 @@
-import * as React from "react"
-import { useCallback, useState } from "react"
+import React, { useCallback, useState } from "react"
+import { styled } from "@pigment-css/react"
 import {
   AiChat,
   AiChatProps,
@@ -11,7 +11,7 @@ import { personas } from "./personas"
 
 import "@nlux/themes/unstyled.css"
 import "./nlux-theme.css"
-import { Alert, styled } from "ol-components"
+import { Alert } from "ol-components"
 import { extractJSONFromComment } from "ol-utilities"
 
 type NluxAiChatProps = Pick<

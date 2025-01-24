@@ -1,8 +1,8 @@
 import React, { useId, useMemo } from "react"
+import { styled } from "@pigment-css/react"
 import { useFormik } from "formik"
 import { Profile, useProfileMeMutation } from "api/hooks/profile"
 import {
-  styled,
   Button,
   CircularProgress,
   CheckboxChoiceBoxField,

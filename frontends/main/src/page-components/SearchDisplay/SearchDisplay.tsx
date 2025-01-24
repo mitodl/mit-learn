@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from "react"
+import { styled } from "@pigment-css/react"
 import {
-  styled,
   Pagination,
   PaginationItem,
   PlainList,
@@ -9,7 +9,6 @@ import {
   Button,
   SimpleSelect,
   // truncateText,
-  css,
   Drawer,
   Checkbox,
   VisuallyHidden,
@@ -76,6 +75,9 @@ const SearchModeDropdownContainer = styled("div")`
   margin-bottom: 10px;
 `
 
+// TODO pigment: Typography styles for .filter-section-button should use object spread.
+// Previously using the line below, which we can;t do here - need to convert all to object style not template
+// ${({ theme }) => css({ ...theme.typography.subtitle2 })}
 const FacetStyles = styled("div")`
   div.facets:last-child {
     border-bottom-right-radius: 8px;
@@ -105,7 +107,12 @@ const FacetStyles = styled("div")`
   }
 
   .filter-section-button {
-    ${({ theme }) => css({ ...theme.typography.subtitle2 })}
+    fontFamily: ${({ theme }) => theme.typography.subtitle2.fontFamily};
+    fontWeight: ${({ theme }) => theme.typography.subtitle2.fontWeight};
+    fontStyle: ${({ theme }) => theme.typography.subtitle2.fontStyle};
+    fontSize: ${({ theme }) => theme.typography.subtitle2.fontSize};
+    lineHeight: ${({ theme }) => theme.typography.subtitle2.lineHeight};
+
     color: ${({ theme }) => theme.custom.colors.darkGray2};
     padding: 0;
     background-color: transparent;
@@ -325,30 +332,30 @@ const FacetsTitleContainer = styled("div")`
   align-items: end;
 `
 
-const PaginationContainer = styled("div")`
-  display: flex;
-  justify-content: end;
-  margin-top: 24px;
-  margin-bottom: 80px;
+const PaginationContainer = styled("div")(({ theme }) => ({
+  display: "flex",
+  justifyContent: "end",
+  marginTop: "24px",
+  marginBottom: "80px",
 
-  ${({ theme }) => theme.breakpoints.down("md")} {
-    margin-top: 16px;
-    margin-bottom: 24px;
-  }
+  [theme.breakpoints.down("md")]: {
+    marginTop: "16px",
+    marginBottom: "24px",
+  },
 
-  ul li button.Mui-selected {
-    ${({ theme }) => css({ ...theme.typography.subtitle1 })}
-    background-color: inherit;
-  }
+  "ul li button.Mui-selected": {
+    ...theme.typography.subtitle1,
+    backgroundColor: "inherit",
+  },
 
-  ul li button svg {
-    background-color: ${({ theme }) => theme.custom.colors.lightGray2};
-    border-radius: 4px;
-    width: 1.5em;
-    height: 1.5em;
-    padding: 0.25em;
-  }
-`
+  "ul li button svg": {
+    backgroundColor: theme.custom.colors.lightGray2,
+    borderRadius: "4px",
+    width: "1.5em",
+    height: "1.5em",
+    padding: "0.25em",
+  },
+}))
 
 const StyledResultsContainer = styled("div")`
   margin-top: 16px;
@@ -450,14 +457,16 @@ const ReversedGridContainer = styled(GridContainer)`
   flex-direction: row-reverse;
 `
 
-const ExplanationContainer = styled("div")`
-  ${({ theme }) => css({ ...theme.typography.body3 })}
-  color: ${({ theme }) => theme.custom.colors.silverGrayDark};
-`
-const AdminTitleContainer = styled("div")`
-  ${({ theme }) => css({ ...theme.typography.subtitle3 })}
-  margin-top: 20px;
-`
+const ExplanationContainer = styled("div")(({ theme }) => ({
+  ...theme.typography.body3,
+  color: theme.custom.colors.silverGrayDark,
+}))
+
+const AdminTitleContainer = styled("div")(({ theme }) => ({
+  ...theme.typography.subtitle3,
+  marginTop: "20px",
+}))
+
 const NoneFound = styled("div")(({ theme }) => ({
   backgroundColor: theme.custom.colors.white,
   borderRadius: "8px",

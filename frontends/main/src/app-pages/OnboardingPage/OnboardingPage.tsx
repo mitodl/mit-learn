@@ -1,10 +1,10 @@
 "use client"
 
 import React, { useId, useMemo } from "react"
+import { styled } from "@pigment-css/react"
 import { useRouter } from "next-nprogress-bar"
 import range from "lodash/range"
 import {
-  styled,
   Step,
   Stepper,
   StepLabel,

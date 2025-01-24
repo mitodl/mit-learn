@@ -1,8 +1,9 @@
 import React from "react"
+import { styled } from "@pigment-css/react"
 import { UserList } from "api"
 import { pluralize } from "ol-utilities"
 import { RiListCheck3 } from "@remixicon/react"
-import { ListCardCondensed, styled, theme, Typography } from "ol-components"
+import { ListCardCondensed, theme, Typography } from "ol-components"
 import Link from "next/link"
 
 const StyledCard = styled(ListCardCondensed)({

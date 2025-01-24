@@ -181,6 +181,4 @@ export type { LinkProps } from "./components/Link/Link"
 // export { pxToRem } from "./components/ThemeProvider/typography"
 // export { MITLearnGlobalStyles } from "./components/ThemeProvider/MITLearnGlobalStyles"
 
-export { styled, css } from "@pigment-css/react"
-
 export { AppRouterCacheProvider as NextJsAppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter"

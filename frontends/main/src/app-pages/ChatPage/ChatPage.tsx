@@ -1,12 +1,11 @@
 "use client"
 import React, { useMemo } from "react"
-import { makeSend } from "./send"
-
-import { FeatureFlags } from "@/common/feature_flags"
+import { styled } from "@pigment-css/react"
 import { useFeatureFlagEnabled } from "posthog-js/react"
+import { FeatureFlags } from "@/common/feature_flags"
 import StyledContainer from "@/page-components/StyledContainer/StyledContainer"
-import { styled } from "ol-components"
 import { NluxAiChat } from "@/page-components/Nlux-AiChat/AiChat"
+import { makeSend } from "./send"
 
 const StyledChat = styled(NluxAiChat)({
   maxHeight: "60vh",

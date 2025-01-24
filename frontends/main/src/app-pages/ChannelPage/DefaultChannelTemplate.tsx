@@ -1,5 +1,6 @@
 import React from "react"
-import { styled, Breadcrumbs, Banner } from "ol-components"
+import { styled } from "@pigment-css/react"
+import { Breadcrumbs, Banner } from "ol-components"
 import { backgroundSrcSetCSS } from "ol-utilities"
 import { SearchSubscriptionToggle } from "@/page-components/SearchSubscriptionToggle/SearchSubscriptionToggle"
 import { useChannelDetail } from "api/hooks/channels"

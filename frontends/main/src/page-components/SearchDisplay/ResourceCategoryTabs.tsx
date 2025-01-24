@@ -1,11 +1,6 @@
 import React from "react"
-import {
-  TabButton,
-  TabContext,
-  TabButtonList,
-  TabPanel,
-  styled,
-} from "ol-components"
+import { styled } from "@pigment-css/react"
+import { TabButton, TabContext, TabButtonList, TabPanel } from "ol-components"
 import { ResourceCategoryEnum, LearningResourcesSearchResponse } from "api"
 
 const TabsList = styled(TabButtonList)(({ theme }) => ({
@@ -19,9 +14,7 @@ const TabsList = styled(TabButtonList)(({ theme }) => ({
   },
 }))
 
-const CountSpan = styled("span")(({ theme }) => ({
-  ...theme.typography.body3,
-}))
+const CountSpan = styled("span")(({ theme }) => theme.typography.body3)
 
 type TabConfig = {
   label: string

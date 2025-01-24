@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { styled } from "ol-components"
+import { styled } from "@pigment-css/react"
 import { useProgramLettersDetail } from "api/hooks/programLetters"
 import { useParams } from "next/navigation"
 

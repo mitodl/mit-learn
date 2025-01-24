@@ -1,5 +1,6 @@
 import React from "react"
-import { Grid, Button, Typography, styled, Link } from "ol-components"
+import { styled } from "@pigment-css/react"
+import { Grid, Button, Typography, Link } from "ol-components"
 import { RiArrowLeftLine, RiArrowUpDownLine } from "@remixicon/react"
 import { useToggle, pluralize } from "ol-utilities"
 import { GridColumn, GridContainer } from "@/components/GridLayout/GridLayout"

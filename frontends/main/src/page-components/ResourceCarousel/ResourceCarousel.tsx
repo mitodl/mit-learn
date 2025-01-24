@@ -1,6 +1,7 @@
 "use client"
 
 import React from "react"
+import { styled } from "@pigment-css/react"
 import { learningResources } from "api/hooks/learningResources"
 import {
   Carousel,
@@ -8,7 +9,6 @@ import {
   TabPanel,
   TabContext,
   TabButtonList,
-  styled,
   Typography,
   TypographyProps,
 } from "ol-components"

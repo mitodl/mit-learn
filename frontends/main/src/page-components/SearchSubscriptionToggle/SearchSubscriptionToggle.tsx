@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from "react"
+import { styled } from "@pigment-css/react"
 import { getSearchParamMap } from "@/common/utils"
 import {
   useSearchSubscriptionCreate,
   useSearchSubscriptionList,
 } from "api/hooks/searchSubscription"
-import { Button, styled } from "ol-components"
+import { Button } from "ol-components"
 
 import { RiMailLine } from "@remixicon/react"
 import { useUserMe } from "api/hooks/user"

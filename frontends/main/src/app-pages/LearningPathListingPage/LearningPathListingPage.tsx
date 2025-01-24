@@ -1,8 +1,8 @@
 "use client"
 
 import React, { useCallback, useMemo } from "react"
+import { styled } from "@pigment-css/react"
 import {
-  styled,
   Button,
   SimpleMenu,
   Grid,

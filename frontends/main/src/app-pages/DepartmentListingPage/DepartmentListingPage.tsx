@@ -1,10 +1,10 @@
 "use client"
 
 import React from "react"
+import { styled } from "@pigment-css/react"
 import {
   Container,
   Typography,
-  styled,
   List,
   ListItem,
   ListItemLink,

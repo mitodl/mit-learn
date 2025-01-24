@@ -1,6 +1,6 @@
 import React, { useMemo } from "react"
+import { styled } from "@pigment-css/react"
 import {
-  styled,
   Container,
   Breadcrumbs,
   Stack,

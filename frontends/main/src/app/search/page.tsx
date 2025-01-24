@@ -4,7 +4,7 @@ import { prefetch } from "api/ssr/prefetch"
 import { learningResources } from "api/hooks/learningResources"
 import type { PageParams } from "@/app/types"
 import { getMetadataAsync } from "@/common/metadata"
-import SearchPage from "@/app-pages/SearchPage/SearchPage"
+// import SearchPage from "@/app-pages/SearchPage/SearchPage"
 import { facetNames } from "@/app-pages/SearchPage/searchRequests"
 import getSearchParams from "@/page-components/SearchDisplay/getSearchParams"
 import validateRequestParams from "@/page-components/SearchDisplay/validateRequestParams"
@@ -47,11 +47,7 @@ const Page: React.FC = async ({
     learningResources.search(params as LRSearchRequest),
   ])
 
-  return (
-    <Hydrate state={dehydratedState}>
-      <SearchPage />
-    </Hydrate>
-  )
+  return <Hydrate state={dehydratedState}>{/* <SearchPage /> */}</Hydrate>
 }
 
 export default Page

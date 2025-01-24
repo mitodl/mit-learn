@@ -1,14 +1,9 @@
 "use client"
 
 import React, { FunctionComponent } from "react"
+import { styled } from "@pigment-css/react"
 import type { NavData } from "ol-components"
-import {
-  styled,
-  AppBar,
-  NavDrawer,
-  Toolbar,
-  ActionButtonLink,
-} from "ol-components"
+import { AppBar, NavDrawer, Toolbar, ActionButtonLink } from "ol-components"
 import {
   RiSearch2Line,
   RiPencilRulerLine,
@@ -266,7 +261,6 @@ const Header: FunctionComponent = () => {
   const [drawerOpen, toggleDrawer] = useToggle(false)
   const desktopTrigger = React.useRef<HTMLButtonElement>(null)
   const mobileTrigger = React.useRef<HTMLButtonElement>(null)
-
   return (
     <div>
       <Bar position="fixed">

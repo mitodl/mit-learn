@@ -1,5 +1,6 @@
 import React from "react"
-import { Container, ButtonLink, Typography, styled } from "ol-components"
+import { styled } from "@pigment-css/react"
+import { Container, ButtonLink, Typography } from "ol-components"
 import { HOME } from "@/common/urls"
 
 type ErrorPageTemplateProps = {

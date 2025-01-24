@@ -1,6 +1,6 @@
 "use client"
 
-import { styled, theme } from "ol-components"
+import { styled } from "@pigment-css/react"
 
 /*
  * Use in server components gives:
@@ -8,7 +8,7 @@ import { styled, theme } from "ol-components"
  * Solution for now is to "use client", though I would expect these to be prerendered
  */
 
-export const PageWrapper = styled("div")({
+export const PageWrapper = styled("div")(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   height: "calc(100vh - 72px)",
@@ -17,7 +17,7 @@ export const PageWrapper = styled("div")({
     marginTop: "60px",
     height: "calc(100vh - 60px)",
   },
-})
+}))
 
 export const PageWrapperInner = styled("main")({
   flex: "1",

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect } from "react"
+import { styled } from "@pigment-css/react"
 import type { LearningResource } from "api"
 import {
   SortableItem,
@@ -7,7 +8,6 @@ import {
   arrayMove,
   OnSortEnd,
   LoadingSpinner,
-  styled,
   PlainList,
   LearningResourceListCard,
   LearningResourceListCardCondensed,

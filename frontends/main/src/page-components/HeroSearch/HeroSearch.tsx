@@ -1,14 +1,12 @@
 "use client"
 
 import React, { useState, useCallback } from "react"
-import { useRouter } from "next-nprogress-bar"
-import {
-  Typography,
-  styled,
-  ChipLink,
-  Link,
-  SearchInputProps,
-} from "ol-components"
+import { styled } from "@pigment-css/react"
+
+import { useRouter } from "next/navigation"
+
+// import { useRouter } from "next-nprogress-bar"
+import { Typography, ChipLink, Link, SearchInputProps } from "ol-components"
 import type { ChipLinkProps } from "ol-components"
 import {
   ABOUT,
@@ -268,14 +266,14 @@ const HeroSearch: React.FC<{ imageIndex: number }> = ({ imageIndex }) => {
           </div>
         </ControlsContainer>
       </TitleAndControls>
-      <ImageContainer>
+      {/* <ImageContainer>
         <Image
           alt=""
           src={`/images/hero/hero-${imageIndex}.png`}
           fill
           priority
         />
-      </ImageContainer>
+      </ImageContainer> */}
     </HeroWrapper>
   )
 }

@@ -1,11 +1,11 @@
 "use client"
 
+import { styled } from "@pigment-css/react"
 import {
   Breadcrumbs,
   Container,
   Typography,
   TypographyProps,
-  styled,
 } from "ol-components"
 import * as urls from "@/common/urls"
 import React from "react"

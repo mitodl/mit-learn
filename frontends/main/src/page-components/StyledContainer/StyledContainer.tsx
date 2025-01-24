@@ -1,4 +1,5 @@
-import { Container, styled } from "ol-components"
+import { styled } from "@pigment-css/react"
+import { Container } from "ol-components"
 
 const StyledContainer = styled(Container)({
   height: "100%",

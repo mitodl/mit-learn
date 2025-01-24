@@ -1,13 +1,8 @@
 "use client"
 
 import React, { useState } from "react"
-import {
-  ActionButtonLink,
-  ButtonLink,
-  SimpleMenu,
-  styled,
-  theme,
-} from "ol-components"
+import { styled } from "@pigment-css/react"
+import { ActionButtonLink, ButtonLink, SimpleMenu, theme } from "ol-components"
 import type { MenuOverrideProps, SimpleMenuItem } from "ol-components"
 import * as urls from "@/common/urls"
 import {

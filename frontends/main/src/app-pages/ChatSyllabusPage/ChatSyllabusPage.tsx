@@ -1,8 +1,8 @@
 "use client"
 
 import React, { useState } from "react"
-import { styled, MenuItem, Alert } from "ol-components"
-
+import { styled } from "@pigment-css/react"
+import { MenuItem, Alert } from "ol-components"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import StyledContainer from "@/page-components/StyledContainer/StyledContainer"

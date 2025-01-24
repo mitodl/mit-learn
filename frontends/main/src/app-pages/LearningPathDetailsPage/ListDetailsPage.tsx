@@ -1,5 +1,6 @@
 import React from "react"
-import { Container, BannerPage, styled } from "ol-components"
+import { styled } from "@pigment-css/react"
+import { Container, BannerPage } from "ol-components"
 import PrivateTitle from "@/components/PrivateTitle/PrivateTitle"
 import ItemsListingComponent from "@/page-components/ItemsListing/ItemsListingComponent"
 import type { ItemsListingComponentProps } from "@/page-components/ItemsListing/ItemsListingComponent"

@@ -1,6 +1,6 @@
 import React from "react"
+import { styled } from "@pigment-css/react"
 import type { Channel } from "api/v0"
-import { styled } from "ol-components"
 
 export const AVATAR_SMALL = "small" as const
 export const AVATAR_MEDIUM = "medium" as const

@@ -1,7 +1,7 @@
 import React from "react"
+import { styled } from "@pigment-css/react"
 import ListItemButton from "@mui/material/ListItemButton"
 import type { ListItemButtonProps } from "@mui/material/ListItemButton"
-import { styled } from "@mui/material-pigment-css"
 import Link from "next/link"
 
 type ListItemLinkProps = ListItemButtonProps<"a">
