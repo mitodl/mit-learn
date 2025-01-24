@@ -1,6 +1,6 @@
 import React from "react"
 import styled from "@emotion/styled"
-import { theme } from "../ThemeProvider/ThemeProvider"
+import { theme } from "ol-components"
 import { LearningResource } from "api"
 import {
   allRunsAreIdentical,

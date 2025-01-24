@@ -8,14 +8,14 @@ import {
 } from "@/test-utils"
 import LearningResourceDrawer from "./LearningResourceDrawer"
 import { urls, factories, setMockResponse } from "api/test-utils"
-import { LearningResourceExpanded } from "ol-components"
+import { LearningResourceExpanded } from "./LearningResourceExpanded"
 import { RESOURCE_DRAWER_QUERY_PARAM } from "@/common/urls"
 import { LearningResource, ResourceTypeEnum } from "api"
 import { makeUserSettings } from "@/test-utils/factories"
 import type { User } from "api/hooks/user"
 
-jest.mock("ol-components", () => {
-  const actual = jest.requireActual("ol-components")
+jest.mock("./LearningResourceExpanded", () => {
+  const actual = jest.requireActual("./LearningResourceExpanded")
   return {
     ...actual,
     LearningResourceExpanded: jest.fn(actual.LearningResourceExpanded),
