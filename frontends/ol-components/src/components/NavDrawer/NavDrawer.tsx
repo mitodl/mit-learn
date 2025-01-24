@@ -122,7 +122,7 @@ interface NavItem {
   icon?: ReactElement
   description?: string
   href: string
-  posthogEvent: string
+  posthogEvent?: string
 }
 
 type NavItemProps = NavItem & {
@@ -184,7 +184,9 @@ const NavDrawer = ({
         href={item.href}
         posthogEvent={item.posthogEvent}
         onClick={() => {
-          posthogCapture(item.posthogEvent)
+          if (item.posthogEvent) {
+            posthogCapture(item.posthogEvent)
+          }
         }}
       />
     ))
