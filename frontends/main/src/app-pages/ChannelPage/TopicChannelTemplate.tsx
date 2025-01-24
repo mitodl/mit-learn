@@ -26,6 +26,7 @@ import {
 import { propsNotNil, backgroundSrcSetCSS } from "ol-utilities"
 import invariant from "tiny-invariant"
 import backgroundSteps from "@/public/images/backgrounds/background_steps.jpg"
+import { usePostHog } from "posthog-js/react"
 
 const ChildrenContainer = styled.div(({ theme }) => ({
   paddingTop: "40px",
@@ -84,6 +85,7 @@ type TopicChipsInternalProps = {
 }
 
 const TopicChipsInternal: React.FC<TopicChipsInternalProps> = (props) => {
+  const posthog = usePostHog()
   const { title, topicId, parentTopicId } = props
   const subTopicsQuery = useLearningResourceTopics({
     parent_topic_id: [parentTopicId],
@@ -102,6 +104,9 @@ const TopicChipsInternal: React.FC<TopicChipsInternalProps> = (props) => {
             variant="darker"
             key={topic.id}
             href={topic.channel_url ?? ""}
+            onClick={() => {
+              posthog.capture("related_topic_link_clicked", { topic })
+            }}
             label={topic.name}
           />
         ))}
