@@ -6,7 +6,7 @@ import type { ChipProps } from "@mui/material/Chip"
 
 type ChipLinkProps = { href: string } & Pick<
   ChipProps<typeof Link>,
-  "label" | "disabled" | "className" | "variant" | "size" | "icon"
+  "label" | "disabled" | "className" | "variant" | "size" | "icon" | "onClick"
 >
 
 /**
@@ -15,8 +15,15 @@ type ChipLinkProps = { href: string } & Pick<
  * See https://mui.com/material-ui/react-chip/#clickable-link
  */
 const ChipLink = React.forwardRef<HTMLAnchorElement, ChipLinkProps>(
-  ({ href, ...others }, ref) => (
-    <Chip {...others} ref={ref} component={Link} href={href || ""} clickable />
+  ({ href, onClick, ...others }, ref) => (
+    <Chip
+      {...others}
+      ref={ref}
+      component={Link}
+      href={href || ""}
+      onClick={onClick}
+      clickable
+    />
   ),
 )
 
