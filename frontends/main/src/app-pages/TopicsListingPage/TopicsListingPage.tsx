@@ -154,7 +154,7 @@ const TopicBox = ({
               key={c.id}
               href={c.channel_url && new URL(c.channel_url).pathname}
               onClick={() => {
-                captureTopicClicked(c.name)
+                captureTopicClicked(title)
               }}
               label={c.name}
             />
@@ -168,7 +168,7 @@ const TopicBox = ({
               key={c.id}
               href={c.channel_url && new URL(c.channel_url).pathname}
               onClick={() => {
-                captureTopicClicked(c.name)
+                captureTopicClicked(title)
               }}
               label={c.name}
             />
