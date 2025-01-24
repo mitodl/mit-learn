@@ -44,12 +44,12 @@ const TopPicksCarouselConfig: TopPicksCarouselConfigProps = (
 
 type TopicCarouselConfigProps = (
   topic: string | undefined,
-  resourceType?: LearningResourcesSearchRetrieveResourceTypeEnum[] | undefined,
+  resourceTypes?: LearningResourcesSearchRetrieveResourceTypeEnum[] | undefined,
 ) => ResourceCarouselProps["config"]
 
 const TopicCarouselConfig: TopicCarouselConfigProps = (
   topic: string | undefined,
-  resourceType?: LearningResourcesSearchRetrieveResourceTypeEnum[] | undefined,
+  resourceTypes?: LearningResourcesSearchRetrieveResourceTypeEnum[] | undefined,
 ) => {
   const config: TabConfig[] = [
     {
@@ -58,7 +58,7 @@ const TopicCarouselConfig: TopicCarouselConfigProps = (
       data: {
         type: "lr_search",
         params: {
-          resource_type: resourceType || [],
+          resource_type: resourceTypes || [],
           limit: 12,
           topic: [topic || ""],
           sortby: "-views",
