@@ -325,7 +325,6 @@ def documents_from_olx(
         path = "/".join(root.split("/")[3:])
         for filename in files:
             extension_lower = Path(filename).suffix.lower()
-            name = Path(filename).stem
 
             if extension_lower in VALID_TEXT_FILE_TYPES and "draft" not in root:
                 with Path.open(Path(root, filename), "rb") as f:
@@ -333,8 +332,6 @@ def documents_from_olx(
 
                 mimetype = mimetypes.types_map.get(extension_lower)
                 checksum = md5(filebytes).hexdigest()  # noqa: S324
-
-                edx_block_id = name
 
                 yield (
                     filebytes,
@@ -345,9 +342,23 @@ def documents_from_olx(
                         "checksum": checksum,
                         "file_extension": extension_lower,
                         "source_path": f"{path}/{filename}",
-                        "edx_block_id": edx_block_id,
                     },
                 )
+
+
+def get_edx_block_id(path: str, run: LearningResourceRun) -> str:
+    """
+    Return the XBlock ID from a path
+
+    Args:
+        path (str): The path to the file
+
+    Returns:
+        str: The XBlock ID
+    """
+    name = Path(path).stem
+    module_type = path.split("/")[-2]
+    return f"block-v1:{run.run_id.replace('course-v1:','')}@{module_type}+block@{name}"
 
 
 def text_from_srt_content(content: str):
@@ -407,7 +418,7 @@ def transform_content_files(
             mime_type = metadata.get("mime_type")
             file_extension = metadata.get("file_extension")
             source_path = metadata.get("source_path")
-            edx_block_id = metadata.get("edx_block_id")
+            edx_block_id = get_edx_block_id(source_path, run)
 
             existing_content = ContentFile.objects.filter(key=key, run=run).first()
             if (
