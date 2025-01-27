@@ -549,8 +549,14 @@ const CallToActionSection = ({
           endIcon={<RiExternalLinkLine />}
           href={resource.url || ""}
           onClick={() => {
-            posthog.capture("cta_clicked", { resource })
+            if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+              posthog.capture("cta_clicked", { resource })
+            }
           }}
+          data-ph-action="click-cta"
+          data-ph-offered-by={offeredBy?.code}
+          data-ph-resource-type={resource.resource_type}
+          data-ph-resource-id={resource.id}
         >
           {cta}
         </StyledLink>

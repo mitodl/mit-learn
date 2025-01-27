@@ -290,7 +290,9 @@ const Header: FunctionComponent = () => {
               text="Explore MIT"
               onClick={() => {
                 toggleDrawer.toggle()
-                posthog.capture(drawerToggleEvent)
+                if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+                  posthog.capture(drawerToggleEvent)
+                }
               }}
             />
           </DesktopOnly>
@@ -299,7 +301,9 @@ const Header: FunctionComponent = () => {
               ref={mobileTrigger}
               onClick={() => {
                 toggleDrawer.toggle()
-                posthog.capture(drawerToggleEvent)
+                if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+                  posthog.capture(drawerToggleEvent)
+                }
               }}
             />
             <LeftSpacer />
@@ -319,7 +323,9 @@ const Header: FunctionComponent = () => {
         open={drawerOpen}
         onClose={toggleDrawer.off}
         posthogCapture={(event: string) => {
-          posthog.capture(event)
+          if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+            posthog.capture(event)
+          }
         }}
       />
     </div>

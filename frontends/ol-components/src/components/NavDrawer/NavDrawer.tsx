@@ -187,6 +187,7 @@ const NavDrawer = ({
           if (item.posthogEvent) {
             posthogCapture(item.posthogEvent)
           }
+          onClose()
         }}
       />
     ))

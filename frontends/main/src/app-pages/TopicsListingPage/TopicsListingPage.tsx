@@ -132,7 +132,9 @@ const TopicBox = ({
   ].filter((item) => item.count)
   const { title, href, icon, channels } = topicGroup
   const captureTopicClicked = (topic: string) => {
-    posthog.capture("topic_clicked", { topic })
+    if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+      posthog.capture("topic_clicked", { topic })
+    }
   }
 
   return (

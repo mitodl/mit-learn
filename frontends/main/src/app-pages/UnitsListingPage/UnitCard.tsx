@@ -131,7 +131,9 @@ const UnitCard: React.FC<UnitCardProps> = (props) => {
               <Link
                 href={href}
                 onClick={() => {
-                  posthog.capture("provider_link_clicked", { provider: unit })
+                  if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+                    posthog.capture("provider_link_clicked", { provider: unit })
+                  }
                 }}
                 data-card-link
               >
