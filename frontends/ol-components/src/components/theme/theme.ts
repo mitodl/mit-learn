@@ -93,6 +93,7 @@ const themeOptions = {
 //   custom: CustomTheme
 // }
 
-export const theme = createTheme(themeOptions)
+// export const theme = createTheme(themeOptions)
+export { themeOptions as theme }
 // export const theme = themeOptions //extendTheme(themeOptions)
 export { pxToRem } from "./typography"

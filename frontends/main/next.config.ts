@@ -2,6 +2,7 @@ import type { NextConfig } from "next"
 import { withPigment } from "@pigment-css/nextjs-plugin"
 import { withSentryConfig } from "@sentry/nextjs"
 import { validateEnv } from "./validateEnv"
+import { createTheme } from "@mui/material"
 import { theme } from "../ol-components/src/components/theme/theme"
 import BundleAnalyzer from "@next/bundle-analyzer"
 
@@ -140,7 +141,10 @@ const withBundleAnalyzer = BundleAnalyzer({
 
 const pigmentConfig = {
   transformLibraries: ["@mui/material"],
-  theme,
+  theme: createTheme({
+    cssVariables: true,
+    ...theme,
+  }),
 }
 
 const config = [
