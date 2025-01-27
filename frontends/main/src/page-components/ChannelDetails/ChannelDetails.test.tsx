@@ -2,7 +2,6 @@ import React from "react"
 import { screen } from "@testing-library/react"
 import { ChannelDetails } from "./ChannelDetails"
 // eslint-disable-next-line import/no-extraneous-dependencies
-import { BrowserRouter } from "react-router-dom"
 import { urls } from "api/test-utils"
 import { renderWithTheme, setMockResponse } from "@/test-utils"
 import { channels as factory } from "api/test-utils/factories"
@@ -17,11 +16,7 @@ describe("ChannelDetails", () => {
       urls.channels.details(channel.channel_type, channel.name),
       channel,
     )
-    renderWithTheme(
-      <BrowserRouter>
-        <ChannelDetails channel={channel} />
-      </BrowserRouter>,
-    )
+    renderWithTheme(<ChannelDetails channel={channel} />)
     const channelData = channel as unknown as Record<string, unknown>
     const unitDetail = channelData.unit_detail as unknown as Record<
       string,
@@ -49,11 +44,7 @@ describe("ChannelDetails", () => {
       urls.channels.details(channel.channel_type, channel.name),
       channel,
     )
-    renderWithTheme(
-      <BrowserRouter>
-        <ChannelDetails channel={channel} />
-      </BrowserRouter>,
-    )
+    renderWithTheme(<ChannelDetails channel={channel} />)
 
     expect(screen.getByTestId("unit-details").firstChild).toHaveTextContent(
       "Offerings",
