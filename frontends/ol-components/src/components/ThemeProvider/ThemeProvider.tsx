@@ -6,10 +6,12 @@ import {
 import type {} from "@mitodl/smoot-design/type-augmentation"
 import type {} from "@mui/lab/themeAugmentation"
 import Link from "next/link"
+import Image from "next/image"
 
 const theme = createTheme({
   custom: {
     LinkAdapter: Link,
+    ImgAdapter: Image,
   },
   components: {
     /**
