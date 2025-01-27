@@ -727,6 +727,12 @@ export interface ContentFile {
    * @memberof ContentFile
    */
   run_readable_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  edx_block_id?: string | null
 }
 
 /**

@@ -358,7 +358,10 @@ def get_edx_block_id(path: str, run: LearningResourceRun) -> str:
     """
     name = Path(path).stem
     module_type = path.split("/")[-2]
-    return f"block-v1:{run.run_id.replace('course-v1:','')}@{module_type}+block@{name}"
+    return (
+        f"block-v1:{run.run_id.replace('course-v1:','')}"
+        f"+type@{module_type}+block@{name}"
+    )
 
 
 def text_from_srt_content(content: str):
