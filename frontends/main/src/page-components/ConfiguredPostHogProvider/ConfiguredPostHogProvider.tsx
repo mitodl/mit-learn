@@ -6,6 +6,8 @@ import { useUserMe } from "api/hooks/user"
 const POSTHOG_API_KEY = process.env.NEXT_PUBLIC_POSTHOG_API_KEY
 const POSTHOG_API_HOST = process.env.NEXT_PUBLIC_POSTHOG_API_HOST
 const FEATURE_FLAGS = process.env.FEATURE_FLAGS
+const POSTHOG_ENABLE_SESSION_RECORDING =
+  process.env.NEXT_PUBLIC_POSTHOG_ENABLE_SESSION_RECORDING
 
 if (POSTHOG_API_KEY) {
   posthog.init(POSTHOG_API_KEY, {
@@ -13,6 +15,8 @@ if (POSTHOG_API_KEY) {
     bootstrap: {
       featureFlags: FEATURE_FLAGS ? JSON.parse(FEATURE_FLAGS) : null,
     },
+    disable_session_recording:
+      POSTHOG_ENABLE_SESSION_RECORDING?.toLowerCase() !== "true",
   })
 }
 
