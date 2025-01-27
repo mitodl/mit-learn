@@ -18,7 +18,6 @@ import {
   ButtonLink,
   ButtonProps,
 } from "@mitodl/smoot-design"
-import { AiChat } from "@mitodl/smoot-design/ai"
 import type { LearningResource } from "api"
 import { ResourceTypeEnum, PlatformEnum } from "api"
 import {
@@ -45,6 +44,7 @@ import type { User } from "api/hooks/user"
 import VideoFrame from "./VideoFrame"
 import { usePostHog } from "posthog-js/react"
 import classNames from "classnames"
+import dynamic from "next/dynamic"
 
 const DRAWER_WIDTH = "900px"
 
@@ -104,8 +104,10 @@ const MainCol = styled.div({
   [theme.breakpoints.down("md")]: {
     width: "100%",
   },
-  ".tutor-enabled &": {
-    maxWidth: `calc(${DRAWER_WIDTH} - ${TUTOR_WIDTH})`,
+  [theme.breakpoints.up("md")]: {
+    ".tutor-enabled &": {
+      maxWidth: `calc(${DRAWER_WIDTH} - ${TUTOR_WIDTH})`,
+    },
   },
 })
 const ChatCol = styled.div({
@@ -120,14 +122,14 @@ const ContentContainer = styled.div({
   display: "flex",
   gap: "32px",
   [theme.breakpoints.down("md")]: {
-    alignItems: "center",
     flexDirection: "column-reverse",
     gap: "16px",
   },
-  ".tutor-enabled &": {
-    alignItems: "center",
-    flexDirection: "column-reverse",
-    gap: "16px",
+  [theme.breakpoints.up("md")]: {
+    ".tutor-enabled &": {
+      flexDirection: "column-reverse",
+      gap: "16px",
+    },
   },
 })
 
@@ -143,7 +145,6 @@ const ContentLeft = styled.div({
 const ContentRight = styled.div({
   display: "flex",
   flexDirection: "column",
-  width: "100%",
   gap: "24px",
 })
 
@@ -728,6 +729,8 @@ const ResourceDescription = ({ resource }: { resource?: LearningResource }) => {
   )
 }
 
+const Chat = dynamic(() => import("./AiChatSyllabus"), { ssr: false })
+
 const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
   resourceId,
   resource,
@@ -805,21 +808,9 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
           </BottomContainer>
         </MainCol>
         <ChatCol>
-          <AiChat
-            chatId={`chat-${resourceId}`}
-            title="MIT Teaching Assistant"
-            onClose={setShowTutor.off}
-            ImgComponent={NextImage}
-            initialMessages={[
-              {
-                content: "Hello",
-                role: "assistant",
-              },
-            ]}
-            requestOpts={{
-              apiUrl: "https://api.example.com",
-            }}
-          />
+          {resource ? (
+            <Chat onClose={setShowTutor.off} resource={resource} />
+          ) : null}
         </ChatCol>
       </Stack>
     </Outer>

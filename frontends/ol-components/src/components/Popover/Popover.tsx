@@ -133,7 +133,10 @@ const Content = styled.div(({ theme }) => ({
     "0px 2px 4px 0px rgba(37, 38, 43, 0.10), 0px 6px 24px 0px rgba(37, 38, 43, 0.24)",
 }))
 
-type PopoverProps = Pick<PopperProps, "anchorEl" | "placement" | "open"> & {
+type PopoverProps = Pick<
+  PopperProps,
+  "anchorEl" | "placement" | "open" | "style"
+> & {
   children?: React.ReactNode
   /**
    * Called when
