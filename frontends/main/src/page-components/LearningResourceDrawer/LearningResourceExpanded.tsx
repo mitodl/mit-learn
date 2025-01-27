@@ -8,6 +8,7 @@ import {
   Link,
   Input,
   Typography,
+  Stack,
 } from "ol-components"
 import type { ImageConfig, LearningResourceCardProps } from "ol-components"
 import { default as NextImage } from "next/image"
@@ -17,9 +18,14 @@ import {
   ButtonLink,
   ButtonProps,
 } from "@mitodl/smoot-design"
+import { AiChat } from "@mitodl/smoot-design/ai"
 import type { LearningResource } from "api"
 import { ResourceTypeEnum, PlatformEnum } from "api"
-import { DEFAULT_RESOURCE_IMG, getReadableResourceType } from "ol-utilities"
+import {
+  DEFAULT_RESOURCE_IMG,
+  getReadableResourceType,
+  useToggle,
+} from "ol-utilities"
 import {
   RiBookmarkFill,
   RiBookmarkLine,
@@ -31,12 +37,14 @@ import {
   RiMenuAddLine,
   RiShareLine,
   RiTwitterXLine,
+  RiSparkling2Line,
 } from "@remixicon/react"
 
 import InfoSection from "./InfoSection"
 import type { User } from "api/hooks/user"
 import VideoFrame from "./VideoFrame"
 import { usePostHog } from "posthog-js/react"
+import classNames from "classnames"
 
 const DRAWER_WIDTH = "900px"
 
@@ -66,7 +74,6 @@ const TopContainer = styled.div({
   display: "flex",
   flexDirection: "column",
   padding: "0 28px 24px",
-  width: DRAWER_WIDTH,
   [theme.breakpoints.down("md")]: {
     width: "auto",
     padding: "0 16px 24px",
@@ -78,7 +85,6 @@ const BottomContainer = styled.div({
   flexDirection: "column",
   flexGrow: 1,
   alignItems: "flex-start",
-  width: DRAWER_WIDTH,
   padding: "32px 28px",
   gap: "32px",
   borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
@@ -87,15 +93,38 @@ const BottomContainer = styled.div({
     width: "100%",
   },
   [theme.breakpoints.down("md")]: {
-    width: "auto",
     padding: "16px 0 16px 16px",
   },
+})
+
+const TUTOR_WIDTH = "388px"
+const MainCol = styled.div({
+  // Note: Without a width specified, the carousels will overflow up to 100vw
+  maxWidth: DRAWER_WIDTH,
+  [theme.breakpoints.down("md")]: {
+    width: "100%",
+  },
+  ".tutor-enabled &": {
+    maxWidth: `calc(${DRAWER_WIDTH} - ${TUTOR_WIDTH})`,
+  },
+})
+const ChatCol = styled.div({
+  width: TUTOR_WIDTH,
+  zIndex: 2,
+  position: "sticky",
+  top: 96,
+  height: "calc(100vh - 96px)",
 })
 
 const ContentContainer = styled.div({
   display: "flex",
   gap: "32px",
   [theme.breakpoints.down("md")]: {
+    alignItems: "center",
+    flexDirection: "column-reverse",
+    gap: "16px",
+  },
+  ".tutor-enabled &": {
     alignItems: "center",
     flexDirection: "column-reverse",
     gap: "16px",
@@ -145,6 +174,12 @@ const CallToAction = styled.div({
   border: `1px solid ${theme.custom.colors.lightGray2}`,
   boxShadow: "0px 2px 10px 0px rgba(37, 38, 43, 0.10)",
   [theme.breakpoints.down("md")]: {
+    width: "100%",
+    padding: "0",
+    border: "none",
+    boxShadow: "none",
+  },
+  ".tutor-enabled &": {
     width: "100%",
     padding: "0",
     border: "none",
@@ -708,6 +743,7 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
   onAddToUserListClick,
   closeDrawer,
 }) => {
+  const [showTutor, setShowTutor] = useToggle(false)
   const outerContainerRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (outerContainerRef.current && outerContainerRef.current.scrollTo) {
@@ -715,44 +751,77 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
     }
   }, [resourceId])
   return (
-    <Outer ref={outerContainerRef}>
+    <Outer
+      className={classNames({ "tutor-enabled": showTutor })}
+      ref={outerContainerRef}
+    >
       <TitleSection
         titleId={titleId}
         resource={resource}
         closeDrawer={closeDrawer ?? (() => {})}
       />
-      <TopContainer>
-        <ContentContainer>
-          <ContentLeft>
-            <ResourceDescription resource={resource} />
-            <InfoSection resource={resource} />
-          </ContentLeft>
-          <ContentRight>
-            <CallToActionSection
-              imgConfig={imgConfig}
-              resource={resource}
-              user={user}
-              shareUrl={shareUrl}
-              inLearningPath={inLearningPath}
-              inUserList={inUserList}
-              onAddToLearningPathClick={onAddToLearningPathClick}
-              onAddToUserListClick={onAddToUserListClick}
-            />
-          </ContentRight>
-        </ContentContainer>
-        {topCarousels && (
-          <TopCarouselContainer>
-            {topCarousels?.map((carousel, index) => (
+      <Stack direction="row" alignItems="start">
+        <MainCol>
+          <TopContainer>
+            <ContentContainer>
+              <ContentLeft>
+                <ResourceDescription resource={resource} />
+                <InfoSection resource={resource} />
+              </ContentLeft>
+              <ContentRight>
+                <CallToActionSection
+                  imgConfig={imgConfig}
+                  resource={resource}
+                  user={user}
+                  shareUrl={shareUrl}
+                  inLearningPath={inLearningPath}
+                  inUserList={inUserList}
+                  onAddToLearningPathClick={onAddToLearningPathClick}
+                  onAddToUserListClick={onAddToUserListClick}
+                />
+                {showTutor ? null : (
+                  <Button
+                    onClick={setShowTutor.on}
+                    variant="secondary"
+                    endIcon={<RiSparkling2Line />}
+                  >
+                    Need help? Ask our Tutor.
+                  </Button>
+                )}
+              </ContentRight>
+            </ContentContainer>
+            {topCarousels && (
+              <TopCarouselContainer>
+                {topCarousels?.map((carousel, index) => (
+                  <div key={index}>{carousel}</div>
+                ))}
+              </TopCarouselContainer>
+            )}
+          </TopContainer>
+          <BottomContainer>
+            {bottomCarousels?.map((carousel, index) => (
               <div key={index}>{carousel}</div>
             ))}
-          </TopCarouselContainer>
-        )}
-      </TopContainer>
-      <BottomContainer>
-        {bottomCarousels?.map((carousel, index) => (
-          <div key={index}>{carousel}</div>
-        ))}
-      </BottomContainer>
+          </BottomContainer>
+        </MainCol>
+        <ChatCol>
+          <AiChat
+            chatId={`chat-${resourceId}`}
+            title="MIT Teaching Assistant"
+            onClose={setShowTutor.off}
+            ImgComponent={NextImage}
+            initialMessages={[
+              {
+                content: "Hello",
+                role: "assistant",
+              },
+            ]}
+            requestOpts={{
+              apiUrl: "https://api.example.com",
+            }}
+          />
+        </ChatCol>
+      </Stack>
     </Outer>
   )
 }

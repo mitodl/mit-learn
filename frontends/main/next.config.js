@@ -78,6 +78,8 @@ const nextConfig = {
     ]
   },
 
+  transpilePackages: ["@mitodl/smoot-design/ai"],
+
   images: {
     remotePatterns: [
       {
