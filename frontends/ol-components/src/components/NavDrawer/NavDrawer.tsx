@@ -164,7 +164,7 @@ type NavDrawerProps = {
    * on click-away
    */
   getClickAwayExcluded?: () => (Element | null)[]
-  posthogCapture: (event: string) => void
+  posthogCapture?: (event: string) => void
 } & DrawerProps
 
 const NavDrawer = ({
@@ -184,7 +184,7 @@ const NavDrawer = ({
         href={item.href}
         posthogEvent={item.posthogEvent}
         onClick={() => {
-          if (item.posthogEvent) {
+          if (item.posthogEvent && posthogCapture) {
             posthogCapture(item.posthogEvent)
           }
           onClose()
