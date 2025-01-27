@@ -5027,6 +5027,12 @@ export interface SyllabusChatRequestRequest {
    * @memberof SyllabusChatRequestRequest
    */
   readable_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof SyllabusChatRequestRequest
+   */
+  collection_name?: string
 }
 /**
  * * `0-to-5-hours` - <5 hours/week * `5-to-10-hours` - 5-10 hours/week * `10-to-20-hours` - 10-20 hours/week * `20-to-30-hours` - 20-30 hours/week * `30-plus-hours` - 30+ hours/week

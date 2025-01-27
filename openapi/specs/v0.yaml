@@ -5057,6 +5057,9 @@ components:
         readable_id:
           type: string
           minLength: 1
+        collection_name:
+          type: string
+          minLength: 1
       required:
       - message
       - readable_id
