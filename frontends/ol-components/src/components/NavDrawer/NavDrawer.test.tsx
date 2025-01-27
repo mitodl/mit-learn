@@ -5,6 +5,8 @@ import React from "react"
 import Image from "next/image"
 import { renderWithTheme } from "../../test-utils"
 
+const mockedPostHogCapture = jest.fn()
+
 describe("NavDrawer", () => {
   it("Renders the expected drawer contents", () => {
     const navData: NavData = {
@@ -40,7 +42,14 @@ describe("NavDrawer", () => {
       ],
     }
     renderWithTheme(
-      <NavDrawer onClose={jest.fn()} navData={navData} open={true} />,
+      <NavDrawer
+        onClose={jest.fn()}
+        navData={navData}
+        open={true}
+        posthogCapture={(event: string) => {
+          mockedPostHogCapture(event)
+        }}
+      />,
     )
     const links = screen.getAllByTestId("nav-link")
     const icons = screen.getAllByTestId("nav-link-icon")
@@ -80,7 +89,14 @@ describe("NavDrawer", () => {
   test("close button calls onClose", async () => {
     const onClose = jest.fn()
     renderWithTheme(
-      <NavDrawer onClose={onClose} navData={NAV_DATA} open={true} />,
+      <NavDrawer
+        onClose={onClose}
+        posthogCapture={(event: string) => {
+          mockedPostHogCapture(event)
+        }}
+        navData={NAV_DATA}
+        open={true}
+      />,
     )
     const close = screen.getByRole("button", { name: "Close Navigation" })
     await user.click(close)
@@ -90,7 +106,14 @@ describe("NavDrawer", () => {
   test("escape calls onClose", async () => {
     const onClose = jest.fn()
     renderWithTheme(
-      <NavDrawer onClose={onClose} navData={NAV_DATA} open={true} />,
+      <NavDrawer
+        onClose={onClose}
+        posthogCapture={(event: string) => {
+          mockedPostHogCapture(event)
+        }}
+        navData={NAV_DATA}
+        open={true}
+      />,
     )
     const links = screen.getAllByRole("link")
     links[0].focus()
@@ -107,6 +130,9 @@ describe("NavDrawer", () => {
           <NavDrawer
             getClickAwayExcluded={() => [excluded.current]}
             onClose={onClose}
+            posthogCapture={(event: string) => {
+              mockedPostHogCapture(event)
+            }}
             navData={NAV_DATA}
             open={true}
           />
@@ -131,7 +157,14 @@ describe("NavDrawer", () => {
   test("clicking a link navigates and closes the drawer", async () => {
     const onClose = jest.fn()
     renderWithTheme(
-      <NavDrawer onClose={onClose} navData={NAV_DATA} open={true} />,
+      <NavDrawer
+        onClose={onClose}
+        posthogCapture={(event: string) => {
+          mockedPostHogCapture(event)
+        }}
+        navData={NAV_DATA}
+        open={true}
+      />,
     )
 
     const link = screen.getByRole("link", { name: "Title 1 Description 1" })

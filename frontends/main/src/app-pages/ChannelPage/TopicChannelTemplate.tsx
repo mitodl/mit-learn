@@ -105,7 +105,9 @@ const TopicChipsInternal: React.FC<TopicChipsInternalProps> = (props) => {
             key={topic.id}
             href={topic.channel_url ?? ""}
             onClick={() => {
-              posthog.capture("related_topic_link_clicked", { topic })
+              if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+                posthog.capture("related_topic_link_clicked", { topic })
+              }
             }}
             label={topic.name}
           />
