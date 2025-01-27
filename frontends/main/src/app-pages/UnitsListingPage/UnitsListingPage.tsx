@@ -3,13 +3,7 @@
 import React from "react"
 import { styled } from "@pigment-css/react"
 import { useChannelCounts, useChannelsList } from "api/hooks/channels"
-import {
-  Banner,
-  Container,
-  Typography,
-  theme,
-  Breadcrumbs,
-} from "ol-components"
+import { Banner, Container, Typography, Breadcrumbs } from "ol-components"
 import { backgroundSrcSetCSS } from "ol-utilities"
 import backgroundSteps from "@/public/images/backgrounds/background_steps.jpg"
 import { RiBookOpenLine, RiSuitcaseLine } from "@remixicon/react"
@@ -64,7 +58,7 @@ const PageHeaderContainer = styled("div")(({ theme }) => ({
   },
 }))
 
-const PageHeaderContainerInner = styled("div")({
+const PageHeaderContainerInner = styled("div")(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   maxWidth: "1000px",
@@ -77,7 +71,7 @@ const PageHeaderContainerInner = styled("div")({
     border: "none",
     padding: "0",
   },
-})
+}))
 
 const PageHeaderText = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.black,

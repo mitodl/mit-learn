@@ -26,10 +26,11 @@ const PlainList = styled("ul")<PlainListProps>(({ theme }) => ({
     marginTop: 0,
     marginBottom: 0,
   },
-  "> li + li": {
-    marginTop: ({ itemSpacing }) =>
-      itemSpacing ? theme.spacing(itemSpacing) : "0",
-  },
+  // TODO pigment: theme.spacing() is not available https://github.com/mui/material-ui/issues/43803
+  // "> li + li": {
+  //   marginTop: ({ itemSpacing }) =>
+  //     itemSpacing ? theme.spacing(itemSpacing) : "0",
+  // },
   variants: [
     {
       props: { disabled: true },

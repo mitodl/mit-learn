@@ -184,7 +184,8 @@ const UserMenu: React.FC<UserMenuProps> = ({ variant }) => {
               },
             },
           },
-          ...theme.typography.body2,
+          // TODO pigment
+          // ...theme.typography.body2,
         },
       },
     },

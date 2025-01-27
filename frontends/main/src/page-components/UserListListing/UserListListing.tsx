@@ -6,7 +6,6 @@ import {
   Typography,
   PlainList,
   Card,
-  theme,
   TypographyProps,
 } from "ol-components"
 import { RiListCheck3 } from "@remixicon/react"
@@ -41,20 +40,20 @@ const EmptyList = styled("div")`
   text-align: center;
 `
 
-const IconContainer = styled("div")`
-  display: inline-block;
-  margin: 0 auto -16px;
-  padding: 8px;
-  height: 48px;
-  border-radius: 4px;
-  color: ${theme.custom.colors.silverGrayDark};
-  background: ${theme.custom.colors.lightGray1};
+const IconContainer = styled("div")(({ theme }) => ({
+  display: "inline-block",
+  margin: "0 auto -16px",
+  padding: "8px",
+  height: "48px",
+  borderRadius: "4px",
+  color: theme.custom.colors.silverGrayDark,
+  background: theme.custom.colors.lightGray1,
 
-  svg {
-    width: 32px;
-    height: 32px;
-  }
-`
+  svg: {
+    width: "32px",
+    height: "32px",
+  },
+}))
 
 type UserListListingComponentProps = {
   title?: string

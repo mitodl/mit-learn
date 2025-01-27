@@ -32,14 +32,13 @@ import {
   showStartAnytime,
   NoSSR,
 } from "ol-utilities"
-import { theme } from "../theme/theme"
 import DifferingRunsTable from "./DifferingRunsTable"
 import { Link } from "../Link/Link"
 
-const SeparatorContainer = styled("span")({
+const SeparatorContainer = styled("span")(({ theme }) => ({
   padding: "0 8px",
   color: theme.custom.colors.silverGray,
-})
+}))
 
 /*
  * Pipe followed by zero-width space, ZWSP.
@@ -59,7 +58,7 @@ const InfoItems = styled("section")({
   maxWidth: "100%",
 })
 
-const InfoItemContainer = styled("div")({
+const InfoItemContainer = styled("div")(({ theme }) => ({
   display: "flex",
   alignSelf: "stretch",
   alignItems: "baseline",
@@ -71,9 +70,9 @@ const InfoItemContainer = styled("div")({
     height: "20px",
     flexShrink: 0,
   },
-})
+}))
 
-const IconContainer = styled("span")({
+const IconContainer = styled("span")(({ theme }) => ({
   transform: "translateY(25%)",
   svg: {
     display: "block",
@@ -81,23 +80,23 @@ const IconContainer = styled("span")({
   [theme.breakpoints.down("sm")]: {
     display: "none",
   },
-})
+}))
 
-const InfoLabel = styled("div")({
+const InfoLabel = styled("div")(({ theme }) => ({
   marginLeft: "12px",
   width: "85px",
   flexShrink: 0,
   [theme.breakpoints.down("sm")]: {
     marginLeft: 0,
   },
-})
+}))
 
-const InfoValue = styled("div")({
+const InfoValue = styled("div")(({ theme }) => ({
   display: "inline-block",
   color: theme.custom.colors.darkGray2,
   rowGap: ".2rem",
   ...theme.typography.body3,
-})
+}))
 
 const NoWrap = styled("span")({
   whiteSpace: "nowrap",
@@ -112,7 +111,7 @@ const ShowLessLink = styled(Link)({
   paddingTop: "4px",
 })
 
-const PriceDisplay = styled("div")({
+const PriceDisplay = styled("div")(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: "8px",
@@ -121,9 +120,9 @@ const PriceDisplay = styled("div")({
     flexWrap: "wrap",
     alignItems: "flex-start",
   },
-})
+}))
 
-const Certificate = styled("div")({
+const Certificate = styled("div")(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: "4px",
@@ -141,7 +140,7 @@ const Certificate = styled("div")({
     padding: "4px 8px",
     ...theme.typography.subtitle4,
   },
-})
+}))
 
 type InfoSelector = (resource: LearningResource) => React.ReactNode
 

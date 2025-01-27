@@ -4,7 +4,6 @@ import FormControl from "@mui/material/FormControl"
 import FormGroup from "@mui/material/FormGroup"
 import FormLabel from "@mui/material/FormLabel"
 import Grid, { type GridProps } from "@mui/material/Grid"
-import { theme } from "../theme/theme"
 import { ChoiceBox } from "./ChoiceBox"
 import type {
   ChoiceBoxGridProps,
@@ -12,13 +11,13 @@ import type {
   ChoiceBoxProps,
 } from "./ChoiceBox"
 
-const Label = styled("div")`
-  width: 100%;
-  cursor: default;
-  ${{ ...theme.typography.subtitle2 }}
-  color: ${theme.custom.colors.darkGray2};
-  margin-bottom: 8px;
-`
+const Label = styled("div")(({ theme }) => ({
+  width: "100%",
+  cursor: "default",
+  ...theme.typography.subtitle2,
+  color: theme.custom.colors.darkGray2,
+  marginBottom: "8px",
+}))
 
 interface BaseChoiceBoxFieldProps extends ChoiceBoxGridProps {
   label: React.ReactNode

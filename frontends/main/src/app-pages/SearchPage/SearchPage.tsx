@@ -7,7 +7,7 @@ import type { FacetManifest } from "@mitodl/course-search-utils"
 import { useSearchParams } from "@mitodl/course-search-utils/next"
 import { useResourceSearchParams } from "@mitodl/course-search-utils"
 import SearchDisplay from "@/page-components/SearchDisplay/SearchDisplay"
-import { Container, theme, VisuallyHidden } from "ol-components"
+import { Container, VisuallyHidden, theme } from "ol-components"
 import { SearchField } from "@/page-components/SearchField/SearchField"
 import { useOfferorsList } from "api/hooks/learningResources"
 import { facetNames } from "./searchRequests"
@@ -27,15 +27,13 @@ const cssGradient = `
   )
 `
 
-const Page = styled("div")`
-  background: ${cssGradient};
+const Page = styled("div")(({ theme }) => ({
+  background: cssGradient,
 
-  ${({ theme }) => theme.breakpoints.up("md")} {
-    background:
-      url("/images/search_page_vector.png") no-repeat top left / 35%,
-      ${cssGradient};
-  }
-`
+  [theme.breakpoints.up("md")]: {
+    background: `url("/images/search_page_vector.png") no-repeat top left / 35%, ${cssGradient}`,
+  },
+}))
 
 const Header = styled("div")`
   height: 165px;

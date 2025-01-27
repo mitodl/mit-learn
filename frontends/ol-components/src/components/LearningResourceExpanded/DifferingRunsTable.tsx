@@ -31,7 +31,7 @@ const DifferingRun = styled("div")({
   borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
 })
 
-const DifferingRunHeader = styled("div")({
+const DifferingRunHeader = styled("div")(({ theme }) => ({
   display: "flex",
   alignSelf: "stretch",
   alignItems: "center",
@@ -40,47 +40,55 @@ const DifferingRunHeader = styled("div")({
   color: theme.custom.colors.darkGray2,
   backgroundColor: theme.custom.colors.lightGray1,
   ...theme.typography.subtitle3,
-})
+}))
 
-const DifferingRunData = styled("div")({
+const DifferingRunData = styled("div")(({ theme }) => ({
   display: "flex",
   color: theme.custom.colors.darkGray2,
   ...theme.typography.body3,
-})
+}))
 
 const DifferingRunLabel = styled("strong")({
   display: "flex",
 })
 
-const dateColumnStyle = {
+const formatStyle = {
+  flex: "1 0 0",
+}
+
+const DateLabel = styled(DifferingRunLabel)(({ theme }) => ({
   width: "130px",
   [theme.breakpoints.down("sm")]: {
     width: "auto",
     flex: "2 0 0",
   },
-}
+}))
 
-const priceColumnStyle = {
+const PriceLabel = styled(DifferingRunLabel)(({ theme }) => ({
   width: "110px",
   [theme.breakpoints.down("sm")]: {
     width: "auto",
     flex: "1 0 0",
   },
-}
-
-const formatStyle = {
-  flex: "1 0 0",
-}
-
-const DateLabel = styled(DifferingRunLabel)(dateColumnStyle)
-
-const PriceLabel = styled(DifferingRunLabel)(priceColumnStyle)
+}))
 
 const FormatLabel = styled(DifferingRunLabel)(formatStyle)
 
-const DateData = styled(DifferingRunData)(dateColumnStyle)
+const DateData = styled(DifferingRunData)(({ theme }) => ({
+  width: "130px",
+  [theme.breakpoints.down("sm")]: {
+    width: "auto",
+    flex: "2 0 0",
+  },
+}))
 
-const PriceData = styled(DifferingRunData)(priceColumnStyle)
+const PriceData = styled(DifferingRunData)(({ theme }) => ({
+  width: "110px",
+  [theme.breakpoints.down("sm")]: {
+    width: "auto",
+    flex: "1 0 0",
+  },
+}))
 
 const FormatData = styled(DifferingRunData)(formatStyle)
 

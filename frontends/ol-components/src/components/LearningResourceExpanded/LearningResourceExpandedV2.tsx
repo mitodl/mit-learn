@@ -19,7 +19,6 @@ import {
   RiTwitterXLine,
 } from "@remixicon/react"
 import type { ImageConfig } from "../../constants/imgConfigs"
-import { theme } from "../theme/theme"
 import { PlatformLogo, PLATFORM_LOGOS } from "../Logo/Logo"
 import InfoSectionV2 from "./InfoSectionV2"
 import type { User } from "api/hooks/user"
@@ -39,7 +38,7 @@ const OuterContainer = styled("div")({
   overflowX: "hidden",
 })
 
-const Container = styled("div")({
+const Container = styled("div")(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   padding: "0 28px 24px",
@@ -48,9 +47,9 @@ const Container = styled("div")({
     width: "auto",
     padding: "0 16px 24px",
   },
-})
+}))
 
-const TitleSectionContainer = styled("div")({
+const TitleSectionContainer = styled("div")(({ theme }) => ({
   display: "flex",
   position: "sticky",
   justifyContent: "space-between",
@@ -62,9 +61,9 @@ const TitleSectionContainer = styled("div")({
   [theme.breakpoints.down("md")]: {
     padding: "24px 16px",
   },
-})
+}))
 
-const ContentContainer = styled("div")({
+const ContentContainer = styled("div")(({ theme }) => ({
   display: "flex",
   alignItems: "flex-start",
   gap: "32px",
@@ -74,7 +73,7 @@ const ContentContainer = styled("div")({
     flexDirection: "column-reverse",
     gap: "16px",
   },
-})
+}))
 
 const LeftContainer = styled("div")({
   display: "flex",
@@ -85,7 +84,7 @@ const LeftContainer = styled("div")({
   maxWidth: "100%",
 })
 
-const RightContainer = styled("div")({
+const RightContainer = styled("div")(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   justifyContent: "center",
@@ -95,7 +94,7 @@ const RightContainer = styled("div")({
     width: "100%",
     alignItems: "center",
   },
-})
+}))
 
 const ImageContainer = styled("div")({
   width: "100%",
@@ -115,7 +114,7 @@ const SkeletonImage = styled(Skeleton)<{ aspect: number }>({
   paddingBottom: ({ aspect }) => `${100 / aspect}%`,
 })
 
-const CallToAction = styled("div")({
+const CallToAction = styled("div")(({ theme }) => ({
   display: "flex",
   width: "350px",
   padding: "16px",
@@ -131,7 +130,7 @@ const CallToAction = styled("div")({
     border: "none",
     boxShadow: "none",
   },
-})
+}))
 
 const ActionsContainer = styled("div")({
   display: "flex",
@@ -148,14 +147,14 @@ const PlatformContainer = styled("div")({
   alignSelf: "stretch",
 })
 
-const StyledLink = styled(ButtonLink)({
+const StyledLink = styled(ButtonLink)(({ theme }) => ({
   textAlign: "center",
   width: "100%",
   [theme.breakpoints.down("sm")]: {
     marginTop: "10px",
     marginBottom: "10px",
   },
-})
+}))
 
 const Platform = styled("div")({
   display: "flex",
@@ -171,7 +170,7 @@ const DescriptionContainer = styled("div")({
   width: "100%",
 })
 
-const Description = styled("p")({
+const Description = styled("p")(({ theme }) => ({
   ...theme.typography.body2,
   color: theme.custom.colors.black,
   margin: 0,
@@ -183,9 +182,9 @@ const Description = styled("p")({
   "p:last-child": {
     marginBottom: 0,
   },
-})
+}))
 
-const DescriptionCollapsed = styled(Description)({
+const DescriptionCollapsed = styled(Description)(({ theme }) => ({
   display: "-webkit-box",
   overflow: "hidden",
   maxHeight: `calc(${theme.typography.body2.lineHeight} * 5)`,
@@ -193,7 +192,7 @@ const DescriptionCollapsed = styled(Description)({
     WebkitLineClamp: 5,
     WebkitBoxOrient: "vertical",
   },
-})
+}))
 
 const DescriptionExpanded = styled(Description)({
   display: "block",
@@ -204,10 +203,10 @@ const StyledPlatformLogo = styled(PlatformLogo)({
   maxWidth: "180px",
 })
 
-const OnPlatform = styled("span")({
+const OnPlatform = styled("span")(({ theme }) => ({
   ...theme.typography.body2,
   color: theme.custom.colors.black,
-})
+}))
 
 const ButtonContainer = styled("div")({
   display: "flex",
@@ -217,25 +216,27 @@ const ButtonContainer = styled("div")({
   justifyContent: "center",
 })
 
-const SelectableButton = styled(Button)<{ selected?: boolean }>({
-  flex: 1,
-  whiteSpace: "nowrap",
-  variants: [
-    {
-      props: { selected: true },
-      style: {
-        backgroundColor: theme.custom.colors.red,
-        border: `1px solid ${theme.custom.colors.red}`,
-        color: theme.custom.colors.white,
-        "&:hover:not(:disabled)": {
+const SelectableButton = styled(Button)<{ selected?: boolean }>(
+  ({ theme }) => ({
+    flex: 1,
+    whiteSpace: "nowrap",
+    variants: [
+      {
+        props: { selected: true },
+        style: {
           backgroundColor: theme.custom.colors.red,
           border: `1px solid ${theme.custom.colors.red}`,
           color: theme.custom.colors.white,
+          "&:hover:not(:disabled)": {
+            backgroundColor: theme.custom.colors.red,
+            border: `1px solid ${theme.custom.colors.red}`,
+            color: theme.custom.colors.white,
+          },
         },
       },
-    },
-  ],
-})
+    ],
+  }),
+)
 
 const ShareContainer = styled("div")({
   display: "flex",
@@ -246,10 +247,10 @@ const ShareContainer = styled("div")({
   gap: "12px",
 })
 
-const ShareLabel = styled(Typography)({
+const ShareLabel = styled(Typography)(({ theme }) => ({
   ...theme.typography.body3,
   color: theme.custom.colors.darkGray1,
-})
+}))
 
 const ShareButtonContainer = styled("div")({
   display: "flex",
@@ -262,13 +263,13 @@ const ShareButtonContainer = styled("div")({
   },
 })
 
-const ShareLink = styled(Link)({
+const ShareLink = styled(Link)(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
-})
+}))
 
-const RedLinkIcon = styled(RiLink)({
+const RedLinkIcon = styled(RiLink)(({ theme }) => ({
   color: theme.custom.colors.red,
-})
+}))
 
 const CopyLinkButton = styled(Button)({
   flexGrow: 0,
@@ -281,7 +282,7 @@ const TopCarouselContainer = styled("div")({
   paddingTop: "24px",
 })
 
-const BottomCarouselContainer = styled("div")({
+const BottomCarouselContainer = styled("div")(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   flexGrow: 1,
@@ -298,7 +299,7 @@ const BottomCarouselContainer = styled("div")({
     width: "100vw",
     padding: "16px 0 16px 16px",
   },
-})
+}))
 
 type LearningResourceExpandedV2Props = {
   resourceId: number
@@ -334,6 +335,14 @@ const CloseIcon = styled(RiCloseLargeLine)`
     height: 18px;
   }
 `
+
+const DarkGrayTypography = styled(Typography)(({ theme }) => ({
+  color: theme.custom.colors.darkGray2,
+}))
+
+const SilverGrayDarkTypography = styled(Typography)(({ theme }) => ({
+  color: theme.custom.colors.silverGrayDark,
+}))
 
 const TitleSection: React.FC<{
   titleId?: string
@@ -372,20 +381,12 @@ const TitleSection: React.FC<{
 
   return (
     <TitleSectionContainer>
-      <Typography
-        variant="h4"
-        id={titleId}
-        width="100%"
-        color={theme.custom.colors.darkGray2}
-      >
-        <Typography
-          variant="subtitle2"
-          color={theme.custom.colors.silverGrayDark}
-        >
+      <DarkGrayTypography variant="h4" id={titleId} width="100%">
+        <SilverGrayDarkTypography variant="subtitle2">
           {type}
-        </Typography>
+        </SilverGrayDarkTypography>
         {title}
-      </Typography>
+      </DarkGrayTypography>
       {closeButton}
     </TitleSectionContainer>
   )

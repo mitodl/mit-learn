@@ -1,6 +1,7 @@
 "use client"
 
 import React, { Suspense } from "react"
+import { styled } from "@pigment-css/react"
 import {
   RiAccountCircleFill,
   RiDashboardLine,
@@ -21,7 +22,6 @@ import {
   TabList,
   Typography,
   TypographyProps,
-  styled,
 } from "ol-components"
 import Link from "next/link"
 import { useUserMe } from "api/hooks/user"

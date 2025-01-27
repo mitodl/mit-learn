@@ -20,7 +20,6 @@ import { Card } from "../Card/Card"
 import type { Size } from "../Card/Card"
 import { ActionButton, ActionButtonProps } from "../Button/Button"
 import { imgConfigs } from "../../constants/imgConfigs"
-import { theme } from "../theme/theme"
 import Tooltip from "@mui/material/Tooltip"
 
 const SkeletonImage = styled(Skeleton)<{ aspect: number }>({
@@ -31,7 +30,7 @@ const Label = styled("span")(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
 }))
 
-const Value = styled("span")<{ size?: Size }>({
+const Value = styled("span")<{ size?: Size }>(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
   variants: [
     {
@@ -44,7 +43,7 @@ const Value = styled("span")<{ size?: Size }>({
       },
     },
   ],
-})
+}))
 
 const getImageDimensions = (size: Size, isMedia: boolean) => {
   const dimensions = {
@@ -105,31 +104,31 @@ const PriceContainer = styled("div")`
   gap: 12px;
 `
 
-const Certificate = styled("div")`
-  padding: 2px 4px;
-  border-radius: 4px;
-  color: ${theme.custom.colors.silverGrayDark};
-  background-color: ${theme.custom.colors.lightGray1};
+const Certificate = styled("div")(({ theme }) => ({
+  padding: "2px 4px",
+  borderRadius: "4px",
+  color: theme.custom.colors.silverGrayDark,
+  backgroundColor: theme.custom.colors.lightGray1,
 
-  ${{ ...theme.typography.subtitle4 }}
-  svg {
-    width: 12px;
-    height: 12px;
-  }
+  ...theme.typography.subtitle4,
+  svg: {
+    width: "12px",
+    height: "12px",
+  },
 
-  display: flex;
-  align-items: center;
-  gap: 4px;
-`
+  display: "flex",
+  alignItems: "center",
+  gap: "4px",
+}))
 
-const CertificatePrice = styled("div")`
-  ${{ ...theme.typography.body4 }}
-`
+const CertificatePrice = styled("div")(({ theme }) => ({
+  ...theme.typography.body4,
+}))
 
-export const Price = styled("div")`
-  ${{ ...theme.typography.subtitle3 }}
-  color: ${theme.custom.colors.darkGray2};
-`
+export const Price = styled("div")(({ theme }) => ({
+  ...theme.typography.subtitle3,
+  color: theme.custom.colors.darkGray2,
+}))
 
 const StartDate: React.FC<{ resource: LearningResource; size?: Size }> = ({
   resource,
@@ -231,7 +230,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
   const readableType = getReadableResourceType(resource.resource_type)
   return (
     <StyledCard
-      as="article"
+      // as="article"
       aria-label={`${readableType}: ${resource.title}`}
       forwardClicksToLink
       className={className}

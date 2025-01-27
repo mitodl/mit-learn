@@ -266,14 +266,14 @@ const HeroSearch: React.FC<{ imageIndex: number }> = ({ imageIndex }) => {
           </div>
         </ControlsContainer>
       </TitleAndControls>
-      {/* <ImageContainer>
+      <ImageContainer>
         <Image
           alt=""
           src={`/images/hero/hero-${imageIndex}.png`}
           fill
           priority
         />
-      </ImageContainer> */}
+      </ImageContainer>
     </HeroWrapper>
   )
 }

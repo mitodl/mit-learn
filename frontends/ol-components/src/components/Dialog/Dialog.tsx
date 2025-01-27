@@ -1,6 +1,6 @@
 import React, { useCallback, useId, useState } from "react"
 import { styled } from "@pigment-css/react"
-import { theme } from "../theme/theme"
+
 import { default as MuiDialog } from "@mui/material/Dialog"
 import type { DialogProps as MuiDialogProps } from "@mui/material/Dialog"
 import { Button, ActionButton } from "../Button/Button"
@@ -16,11 +16,11 @@ const Close = styled("div")`
   right: 20px;
 `
 
-const Header = styled("div")`
-  border-bottom: 1px solid ${theme.custom.colors.lightGray2};
-  background-color: ${theme.custom.colors.lightGray1};
-  padding: 20px 58px 20px 28px;
-`
+const Header = styled("div")(({ theme }) => ({
+  borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
+  backgroundColor: theme.custom.colors.lightGray1,
+  padding: "20px 58px 20px 28px",
+}))
 
 const Content = styled("div")`
   margin: 28px;

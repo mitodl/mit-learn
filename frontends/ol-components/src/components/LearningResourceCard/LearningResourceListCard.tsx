@@ -19,86 +19,86 @@ import {
 } from "ol-utilities"
 import { ListCard } from "../Card/ListCard"
 import { ActionButtonProps } from "../Button/Button"
-import { theme } from "../theme/theme"
 
 const IMAGE_SIZES = {
   mobile: { width: 116, height: 104 },
   desktop: { width: 236, height: 122 },
 }
 
-export const CardLabel = styled("span")`
-  color: ${theme.custom.colors.silverGrayDark};
-  ${theme.breakpoints.down("sm")} {
-    display: none;
-  }
-`
+export const CardLabel = styled("span")(({ theme }) => ({
+  color: theme.custom.colors.silverGrayDark,
+  [theme.breakpoints.down("sm")]: {
+    display: "none",
+  },
+}))
+
 const CardValue = styled("span")(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
 }))
 
-export const Certificate = styled("div")`
-  border-radius: 4px;
-  background-color: ${theme.custom.colors.lightGray1};
-  padding: 4px;
-  color: ${theme.custom.colors.silverGrayDark};
-  gap: 4px;
-  margin: 0 16px 0 auto;
+export const Certificate = styled("div")(({ theme }) => ({
+  borderRadius: "4px",
+  backgroundColor: theme.custom.colors.lightGray1,
+  padding: "4px",
+  color: theme.custom.colors.silverGrayDark,
+  gap: "4px",
+  margin: "0 16px 0 auto",
 
-  ${{ ...theme.typography.subtitle3 }}
+  ...theme.typography.subtitle3,
 
-  svg {
-    width: 16px;
-    height: 16px;
-  }
+  svg: {
+    width: "16px",
+    height: "16px",
+  },
 
-  ${theme.breakpoints.down("md")} {
-    ${{ ...theme.typography.body4 }}
-    color: ${theme.custom.colors.darkGray2};
-    gap: 2px;
+  [theme.breakpoints.down("md")]: {
+    ...theme.typography.body4,
+    color: theme.custom.colors.darkGray2,
+    gap: "2px",
 
-    svg {
-      width: 12px;
-      height: 12px;
-      fill: ${theme.custom.colors.silverGrayDark};
-    }
+    svg: {
+      width: "12px",
+      height: "12px",
+      fill: theme.custom.colors.silverGrayDark,
+    },
 
-    margin: 0 12px 0 auto;
-  }
+    margin: "0 12px 0 auto",
+  },
 
-  display: flex;
-  align-items: center;
-`
+  display: "flex",
+  alignItems: "center",
+}))
 
 const CertificateText = styled("div")`
   display: flex;
 `
 
-const CertificatePrice = styled("div")`
-  ${{ ...theme.typography.body3 }}
-  ${theme.breakpoints.down("md")} {
-    ${{ ...theme.typography.body4 }}
-  }
-`
+const CertificatePrice = styled("div")(({ theme }) => ({
+  ...theme.typography.body3,
+  [theme.breakpoints.down("md")]: {
+    ...theme.typography.body4,
+  },
+}))
 
-export const Price = styled("div")`
-  ${{ ...theme.typography.subtitle2 }}
-  color: ${theme.custom.colors.darkGray2};
-  ${theme.breakpoints.down("md")} {
-    ${{ ...theme.typography.subtitle3 }}
-  }
-`
+export const Price = styled("div")(({ theme }) => ({
+  ...theme.typography.subtitle2,
+  color: theme.custom.colors.darkGray2,
+  [theme.breakpoints.down("md")]: {
+    ...theme.typography.subtitle3,
+  },
+}))
 
-export const BorderSeparator = styled("div")`
-  div {
-    display: inline;
-  }
+export const BorderSeparator = styled("div")(({ theme }) => ({
+  div: {
+    display: "inline",
+  },
 
-  div + div {
-    margin-left: 8px;
-    padding-left: 8px;
-    border-left: 1px solid ${theme.custom.colors.lightGray2};
-  }
-`
+  "div + div": {
+    marginLeft: "8px",
+    paddingLeft: "8px",
+    borderLeft: `1px solid ${theme.custom.colors.lightGray2}`,
+  },
+}))
 
 type ResourceIdCallback = (
   event: React.MouseEvent<HTMLButtonElement>,

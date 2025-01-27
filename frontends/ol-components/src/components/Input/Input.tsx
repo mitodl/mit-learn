@@ -22,15 +22,18 @@ type SizeStyleProps = {
 const sizeStyles = ({ size, multiline }: SizeStyleProps) => {
   return Object.assign(
     {},
-    (size === "small" || size === "medium") && {
-      ...theme.typography.body2,
-    },
+    (size === "small" || size === "medium") &&
+      {
+        // TODO pigment
+        // ...theme.typography.body2,
+      },
     (size === "large" || size === "hero") && {
       ".remixicon": {
         width: "24px",
         height: "24px",
       },
-      ...theme.typography.body1,
+      // TODO pigment
+      // ...theme.typography.body1,
     },
     size === "medium" && {
       paddingLeft: "12px",

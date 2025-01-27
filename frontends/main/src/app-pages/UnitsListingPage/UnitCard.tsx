@@ -2,14 +2,14 @@ import React from "react"
 import { styled } from "@pigment-css/react"
 import type { OfferedByEnum } from "api"
 import type { UnitChannel } from "api/v0"
-import { Card, Skeleton, Typography, theme, UnitLogo } from "ol-components"
+import { Card, Skeleton, Typography, UnitLogo } from "ol-components"
 import Link from "next/link"
 
 const CardStyled = styled(Card)({
   height: "100%",
 })
 
-const UnitCardContainer = styled("div")({
+const UnitCardContainer = styled("div")(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
@@ -18,7 +18,7 @@ const UnitCardContainer = styled("div")({
   [theme.breakpoints.down("md")]: {
     backgroundColor: theme.custom.colors.white,
   },
-})
+}))
 
 const UnitCardContent = styled("div")({
   display: "flex",
@@ -27,7 +27,7 @@ const UnitCardContent = styled("div")({
   width: "100%",
 })
 
-const LogoContainer = styled("div")({
+const LogoContainer = styled("div")(({ theme }) => ({
   padding: "40px 32px",
   backgroundColor: theme.custom.colors.white,
   [theme.breakpoints.down("md")]: {
@@ -43,9 +43,9 @@ const LogoContainer = styled("div")({
       margin: "0 auto",
     },
   },
-})
+}))
 
-const CardBottom = styled("div")({
+const CardBottom = styled("div")(({ theme }) => ({
   padding: "24px",
   borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
   display: "flex",
@@ -57,7 +57,7 @@ const CardBottom = styled("div")({
     gap: "10px",
     borderTop: "none",
   },
-})
+}))
 
 const ValuePropContainer = styled("div")({
   display: "flex",
@@ -78,13 +78,13 @@ const HeadingText = styled("span")(({ theme }) => ({
   ...theme.typography.body2,
 }))
 
-const CountsTextContainer = styled("div")({
+const CountsTextContainer = styled("div")(({ theme }) => ({
   display: "flex",
   gap: "10px",
   [theme.breakpoints.down("md")]: {
     justifyContent: "flex-end",
   },
-})
+}))
 
 const CountsText = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.darkGray2,

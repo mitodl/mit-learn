@@ -7,7 +7,6 @@ import React, {
 } from "react"
 import { styled } from "@pigment-css/react"
 import { RiDraggable } from "@remixicon/react"
-import { theme } from "../theme/theme"
 import { BaseContainer, ImageProps, useClickChildLink, Linkable } from "./Card"
 import { TruncateText } from "../TruncateText/TruncateText"
 import { ActionButton, ActionButtonProps } from "../Button/Button"
@@ -15,119 +14,119 @@ import { default as NextImage } from "next/image"
 
 const Content = () => <></>
 
-export const Body = styled("div")`
-  flex-grow: 1;
-  margin: 24px;
-  ${theme.breakpoints.down("md")} {
-    margin: 12px;
-  }
+export const Body = styled("div")(({ theme }) => ({
+  flexGrow: "1",
+  margin: "24px",
+  [theme.breakpoints.down("md")]: {
+    margin: "12px",
+  },
 
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-`
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "space-between",
+}))
 
-export const DragArea = styled("div")`
-  margin: 16px -6px 16px 16px;
-  padding-right: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-right: 1px solid ${theme.custom.colors.lightGray2};
+export const DragArea = styled("div")(({ theme }) => ({
+  margin: "16px -6px 16px 16px",
+  paddingRight: "8px",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  borderRight: `1px solid ${theme.custom.colors.lightGray2}`,
 
-  ${theme.breakpoints.down("md")} {
-    margin: 12px 0 12px 12px;
-    padding-right: 4px;
-  }
+  [theme.breakpoints.down("md")]: {
+    margin: "12px 0 12px 12px",
+    paddingRight: "4px",
+  },
 
-  svg {
-    fill: ${theme.custom.colors.silverGrayDark};
-    width: 24px;
-    height: 24px;
-    ${theme.breakpoints.down("md")} {
-      width: 20px;
-      height: 20px;
-    }
-  }
-`
+  svg: {
+    fill: theme.custom.colors.silverGrayDark,
+    width: "24px",
+    height: "24px",
+    [theme.breakpoints.down("md")]: {
+      width: "20px",
+      height: "20px",
+    },
+  },
+}))
 
-const Image = styled(NextImage)`
-  display: block;
-  width: 236px;
-  height: 122px;
-  margin: 24px 24px 24px 0;
-  border-radius: 4px;
-  object-fit: cover;
-  ${theme.breakpoints.down("md")} {
-    width: 111px;
-    height: 104px;
-    margin: 0;
-    border-radius: 0;
-  }
+const Image = styled(NextImage)(({ theme }) => ({
+  display: "block",
+  width: "236px",
+  height: "122px",
+  margin: "24px 24px 24px 0",
+  borderRadius: "4px",
+  objectFit: "cover",
+  [theme.breakpoints.down("md")]: {
+    width: "111px",
+    height: "104px",
+    margin: "0",
+    borderRadius: "0",
+  },
 
-  background-color: ${theme.custom.colors.lightGray1};
-  flex-shrink: 0;
-`
+  backgroundColor: theme.custom.colors.lightGray1,
+  flexShrink: 0,
+}))
 
-export const Info = styled("div")`
-  ${{ ...theme.typography.subtitle3 }}
-  margin-bottom: 16px;
-  ${theme.breakpoints.down("md")} {
-    ${{ ...theme.typography.subtitle4 }}
-    margin-bottom: 8px;
-  }
+export const Info = styled("div")(({ theme }) => ({
+  ...theme.typography.subtitle3,
+  marginBottom: "16px",
+  [theme.breakpoints.down("md")]: {
+    ...theme.typography.subtitle4,
+    marginBottom: "8px",
+  },
 
-  color: ${theme.custom.colors.silverGrayDark};
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-`
+  color: theme.custom.colors.silverGrayDark,
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+}))
 
 export type TitleProps = {
   children?: ReactNode
   href?: string
 }
-export const Title: React.FC<TitleProps> = styled(Linkable)`
-  flex-grow: 1;
-  color: ${theme.custom.colors.darkGray2};
-  text-overflow: ellipsis;
-  ${{ ...theme.typography.subtitle1 }}
-  height: ${theme.typography.pxToRem(40)};
-  ${theme.breakpoints.down("md")} {
-    ${{ ...theme.typography.subtitle2 }}
-    height: ${theme.typography.pxToRem(32)};
-  }
+export const Title: React.FC<TitleProps> = styled(Linkable)(({ theme }) => ({
+  flexGrow: 1,
+  color: theme.custom.colors.darkGray2,
+  textOverflow: "ellipsis",
+  ...theme.typography.subtitle1,
+  height: theme.typography.pxToRem(40),
+  [theme.breakpoints.down("md")]: {
+    ...theme.typography.subtitle2,
+    height: theme.typography.pxToRem(32),
+  },
 
-  margin: 0;
-`
+  margin: 0,
+}))
 
-export const Footer = styled("span")`
-  display: block;
-  ${{ ...theme.typography.body3 }}
-  color: ${theme.custom.colors.darkGray2};
-  white-space: nowrap;
-`
+export const Footer = styled("span")(({ theme }) => ({
+  display: "block",
+  ...theme.typography.body3,
+  color: theme.custom.colors.darkGray2,
+  whiteSpace: "nowrap",
+}))
 
-export const Bottom = styled("div")`
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  height: ${theme.typography.pxToRem(32)};
-  ${theme.breakpoints.down("md")} {
-    height: ${theme.typography.pxToRem(18)};
-  }
-`
+export const Bottom = styled("div")(({ theme }) => ({
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "flex-end",
+  height: theme.typography.pxToRem(32),
+  [theme.breakpoints.down("md")]: {
+    height: theme.typography.pxToRem(18),
+  },
+}))
 
 /**
  * Slot intended to contain ListCardAction buttons.
  */
-export const Actions = styled("div")`
-  display: flex;
-  gap: 8px;
-  ${theme.breakpoints.down("md")} {
-    gap: 4px;
-  }
-`
+export const Actions = styled("div")(({ theme }) => ({
+  display: "flex",
+  gap: "8px",
+  [theme.breakpoints.down("md")]: {
+    gap: "4px",
+  },
+}))
 
 const ListCardActionButton = styled(ActionButton)<{ isMobile?: boolean }>(
   ({ theme }) => ({

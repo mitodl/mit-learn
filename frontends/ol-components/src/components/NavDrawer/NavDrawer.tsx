@@ -6,7 +6,6 @@ import Link from "next/link"
 import React, { ReactElement } from "react"
 import { RiCloseLargeLine } from "@remixicon/react"
 import { ActionButton } from "../Button/Button"
-import { theme } from "../theme/theme"
 
 const DrawerContent = styled("div")(({ theme }) => ({
   paddingTop: theme.custom.dimensions.headerHeight,
@@ -238,7 +237,8 @@ const NavDrawer = ({
             sx: {
               borderRight: "none",
               boxShadow: "0px 6px 24px 0px rgba(37, 38, 43, 0.10)",
-              zIndex: theme.zIndex.appBar - 1,
+              // TODO pigment
+              // zIndex: theme.zIndex.appBar - 1,
               overscrollBehavior: "contain",
             },
           }}

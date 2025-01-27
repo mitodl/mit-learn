@@ -7,7 +7,6 @@ import React, {
 } from "react"
 import { styled } from "@pigment-css/react"
 import { RiDraggable } from "@remixicon/react"
-import { theme } from "../theme/theme"
 import { BaseContainer, useClickChildLink } from "./Card"
 import { TruncateText } from "../TruncateText/TruncateText"
 import {
@@ -33,43 +32,44 @@ const Container = styled(BaseContainer)<{ draggable?: boolean }>({
   ],
 })
 
-const DragArea = styled(BaseDragArea)`
-  padding-right: 4px;
-  margin-right: -4px;
-  ${theme.breakpoints.down("md")} {
-    margin: 12px -4px 12px 12px;
-    padding-right: 4px;
-  }
-`
+const DragArea = styled(BaseDragArea)(({ theme }) => ({
+  paddingRight: "4px",
+  marginRight: "-4px",
+  [theme.breakpoints.down("md")]: {
+    margin: "12px -4px 12px 12px",
+    paddingRight: "4px",
+  },
+}))
 
-const Body = styled(BaseBody)`
-  margin: 16px;
-  ${theme.breakpoints.down("md")} {
-    margin: 16px;
-  }
-`
+const Body = styled(BaseBody)(({ theme }) => ({
+  margin: "16px",
+  [theme.breakpoints.down("md")]: {
+    margin: "16px",
+  },
+}))
 
 const Info = styled(BaseInfo)`
   margin-bottom: 4px;
 `
 
-const Title = styled(BaseTitle)`
-  height: auto;
-  margin-bottom: 8px;
-  margin-right: 82px;
-  ${theme.breakpoints.down("md")} {
-    height: auto;
-    ${{ ...theme.typography.subtitle2 }}
-  }
-`
+const Title = styled(BaseTitle)(({ theme }) => ({
+  height: "auto",
+  marginBottom: "8px",
+  marginRight: "82px",
+  [theme.breakpoints.down("md")]: {
+    height: "auto",
+    ...theme.typography.subtitle2,
+  },
+}))
 
-const Bottom = styled(BaseBottom)`
-  height: auto;
-  min-height: 16px;
-  ${theme.breakpoints.down("md")} {
-    height: auto;
-  }
-`
+const Bottom = styled(BaseBottom)(({ theme }) => ({
+  height: "auto",
+  minHeight: "16px",
+  [theme.breakpoints.down("md")]: {
+    height: "auto",
+  },
+}))
+
 const Actions = styled("div")`
   display: flex;
   gap: 16px;

@@ -1,89 +1,86 @@
 import React from "react"
 import { styled } from "@pigment-css/react"
 import Link from "next/link"
-import { Container, theme, Typography, ButtonLink } from "ol-components"
+import { Container, Typography, ButtonLink } from "ol-components"
 import { useLearningResourceTopics } from "api/hooks/learningResources"
 import { RiArrowRightLine } from "@remixicon/react"
 import RootTopicIcon from "@/components/RootTopicIcon/RootTopicIcon"
 
-const Section = styled("section")`
-  background: #fff url("/images/backgrounds/open-bg-texture-with-gradient.svg")
-    no-repeat center left;
-  background-size: 135% auto;
-  padding: 80px 0;
-  ${theme.breakpoints.down("md")} {
-    padding: 40px 0;
-  }
-  ${theme.breakpoints.down("sm")} {
-    padding: 32px 0;
-  }
-`
+const Section = styled("section")(({ theme }) => ({
+  background: `#fff url("/images/backgrounds/open-bg-texture-with-gradient.svg") no-repeat center left`,
+  backgroundSize: "135% auto",
+  padding: "80px 0",
+  [theme.breakpoints.down("md")]: {
+    padding: "40px 0",
+  },
+  [theme.breakpoints.down("sm")]: {
+    padding: "32px 0",
+  },
+}))
 
 const Title = styled(Typography)`
   text-align: center;
 `
 
-const Topics = styled("div")`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px 24px;
-  margin: 40px 0;
+const Topics = styled("div")(({ theme }) => ({
+  display: "flex",
+  flexWrap: "wrap",
+  gap: "16px 24px",
+  margin: "40px 0",
 
-  ${theme.breakpoints.down("md")} {
-    gap: 5px;
-    margin: 24px 0;
-  }
-`
+  [theme.breakpoints.down("md")]: {
+    gap: "5px",
+    margin: "24px 0",
+  },
+}))
 
-const TopicBox = styled(Link)`
-  flex: 0 1 calc(100% * (1 / 3) - 16px);
-  padding: 24px;
-  ${theme.breakpoints.down("md")} {
-    flex: 0 1 100%;
-    padding: 18px 15px;
-  }
+const TopicBox = styled(Link)(({ theme }) => ({
+  flex: "0 1 calc(100% * (1 / 3) - 16px)",
+  padding: "24px",
+  [theme.breakpoints.down("md")]: {
+    flex: "0 1 100%",
+    padding: "18px 15px",
+  },
 
-  border-radius: 5px;
-  border: 1px solid ${theme.custom.colors.lightGray2};
-  background: ${theme.custom.colors.white};
-  overflow: hidden;
-  display: flex;
+  borderRadius: "5px",
+  border: `1px solid ${theme.custom.colors.lightGray2}`,
+  background: theme.custom.colors.white,
+  overflow: "hidden",
+  display: "flex",
 
-  svg:last-child {
-    color: ${theme.custom.colors.white};
-    flex: 0 0 20px;
-    margin-top: auto;
-    margin-bottom: auto;
-    margin-left: 8px;
-  }
+  "svg:last-child": {
+    color: theme.custom.colors.white,
+    flex: "0 0 20px",
+    marginTop: "auto",
+    marginBottom: "auto",
+    marginLeft: "8px",
+  },
 
-  :hover {
-    color: ${theme.custom.colors.mitRed};
-    border-color: ${theme.custom.colors.silverGrayLight};
+  ":hover": {
+    color: theme.custom.colors.mitRed,
+    borderColor: theme.custom.colors.silverGrayLight,
 
-    svg:last-child {
-      color: ${theme.custom.colors.black};
-      display: block;
-    }
-  }
-`
+    "svg:last-child": {
+      color: theme.custom.colors.black,
+      display: "block",
+    },
+  },
+}))
 
-const TopicBoxContent = styled("div")`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
+const TopicBoxContent = styled("div")(({ theme }) => ({
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: "10px",
+  width: "100%",
 
-  svg {
-    flex: 0 0 22px;
-  }
+  svg: {
+    flex: "0 0 22px",
+  },
 
-  ${{
-    ...theme.typography.subtitle1,
-    [theme.breakpoints.down("md")]: theme.typography.subtitle2,
-  }}
-`
+  ...theme.typography.subtitle1,
+  [theme.breakpoints.down("md")]: theme.typography.subtitle2,
+}))
 
 const TopicBoxName = styled("p")`
   flex-grow: 1;

@@ -22,7 +22,6 @@ import {
   getLearningResourcePrices,
   getReadableResourceType,
 } from "ol-utilities"
-import { theme } from "../theme/theme"
 import Typography from "@mui/material/Typography"
 import type { User } from "api/hooks/user"
 import { CardActionButton } from "../LearningResourceCard/LearningResourceListCard"
@@ -45,52 +44,52 @@ const ListButtonContainer = styled("div")`
   gap: 8px;
 `
 
-const InfoItemContainer = styled("div")`
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  align-self: stretch;
-  ${{ ...theme.typography.body2 }}
-  color: ${theme.custom.colors.silverGrayDark};
+const InfoItemContainer = styled("div")(({ theme }) => ({
+  display: "flex",
+  alignItems: "flex-start",
+  gap: "16px",
+  alignSelf: "stretch",
+  ...theme.typography.body2,
+  color: theme.custom.colors.silverGrayDark,
 
-  svg {
-    width: 20px;
-    height: 20px;
-    flex-shrink: 0;
-  }
-`
+  svg: {
+    width: "20px",
+    height: "20px",
+    flexShrink: 0,
+  },
+}))
 
 const InfoLabel = styled("div")`
   width: 85px;
   flex-shrink: 0;
 `
 
-const InfoValue = styled("div")`
-  ${{ ...theme.typography.body2 }}
-  color: ${theme.custom.colors.black};
-  flex-grow: 1;
-`
+const InfoValue = styled("div")(({ theme }) => ({
+  ...theme.typography.body2,
+  color: theme.custom.colors.black,
+  flexGrow: 1,
+}))
 
-const Certificate = styled("div")`
-  display: flex;
-  gap: 4px;
-  border-radius: 8px;
-  padding: 12px 16px;
-  margin-top: 8px;
-  background-color: ${theme.custom.colors.lightGray1};
-  color: ${theme.custom.colors.darkGray2};
+const Certificate = styled("div")(({ theme }) => ({
+  display: "flex",
+  gap: "4px",
+  borderRadius: "8px",
+  padding: "12px 16px",
+  marginTop: "8px",
+  backgroundColor: theme.custom.colors.lightGray1,
+  color: theme.custom.colors.darkGray2,
 
-  ${{ ...theme.typography.subtitle2 }}
+  ...theme.typography!.subtitle2,
 
-  svg {
-    width: 16px;
-    height: 16px;
-  }
-`
+  svg: {
+    width: "16px",
+    height: "16px",
+  },
+}))
 
-const CertificatePrice = styled("span")`
-  ${{ ...theme.typography.body2 }}
-`
+const CertificatePrice = styled("span")(({ theme }) => ({
+  ...theme.typography.body2,
+}))
 
 type InfoSelector = (
   resource: LearningResource,

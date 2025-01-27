@@ -4,11 +4,11 @@ import { shuffle } from "lodash"
 import {
   Container,
   Typography,
-  theme,
   pxToRem,
   ActionButton,
   TruncateText,
   onReInitSlickA11y,
+  theme,
 } from "ol-components"
 import { useTestimonialList } from "api/hooks/testimonials"
 import type { Attestation } from "api/v0"
@@ -47,7 +47,7 @@ const Section = styled("section")(({ theme }) => ({
   },
 }))
 
-const OverlayContainer = styled("div")({
+const OverlayContainer = styled("div")(({ theme }) => ({
   position: "relative",
   maxWidth: "1440px",
   margin: "0 auto",
@@ -57,9 +57,9 @@ const OverlayContainer = styled("div")({
   [theme.breakpoints.down("sm")]: {
     maxWidth: "344px",
   },
-})
+}))
 
-const TestimonialCardContainer = styled("div")({
+const TestimonialCardContainer = styled("div")(({ theme }) => ({
   maxWidth: "1440px",
   [theme.breakpoints.down("md")]: {
     padding: "0",
@@ -68,9 +68,9 @@ const TestimonialCardContainer = styled("div")({
   [theme.breakpoints.down("sm")]: {
     width: "344px",
   },
-})
+}))
 
-const TestimonialCard = styled("div")({
+const TestimonialCard = styled("div")(({ theme }) => ({
   height: "326px",
   backgroundColor: theme.custom.colors.white,
   color: theme.custom.colors.black,
@@ -86,9 +86,9 @@ const TestimonialCard = styled("div")({
     width: "344px",
     padding: "0 8px",
   },
-})
+}))
 
-const TestimonialCardImage = styled("div")({
+const TestimonialCardImage = styled("div")(({ theme }) => ({
   height: "326px",
   img: {
     height: "326px",
@@ -107,9 +107,9 @@ const TestimonialCardImage = styled("div")({
   [theme.breakpoints.down("md")]: {
     display: "none",
   },
-})
+}))
 
-const TestimonialCardQuote = styled("div")({
+const TestimonialCardQuote = styled("div")(({ theme }) => ({
   height: "326px",
   backgroundColor: theme.custom.colors.white,
   color: theme.custom.colors.black,
@@ -152,9 +152,9 @@ const TestimonialCardQuote = styled("div")({
       transform: "translateY(-8px)",
     },
   },
-})
+}))
 
-const TestimonialFadeLeft = styled("div")({
+const TestimonialFadeLeft = styled("div")(({ theme }) => ({
   position: "absolute",
   top: "0",
   bottom: "0",
@@ -165,8 +165,9 @@ const TestimonialFadeLeft = styled("div")({
   [theme.breakpoints.down("md")]: {
     display: "none",
   },
-})
-const TestimonialFadeRight = styled("div")({
+}))
+
+const TestimonialFadeRight = styled("div")(({ theme }) => ({
   position: "absolute",
   top: "0",
   bottom: "0",
@@ -177,7 +178,7 @@ const TestimonialFadeRight = styled("div")({
   [theme.breakpoints.down("md")]: {
     display: "none",
   },
-})
+}))
 
 const RiArrowLeftLineStyled = styled(RiArrowLeftLine)({
   fontSize: "10rem",
@@ -186,7 +187,7 @@ const RiArrowRightLineStyled = styled(RiArrowRightLine)({
   fontSize: "10rem",
 })
 
-const ButtonsContainer = styled("div")({
+const ButtonsContainer = styled("div")(({ theme }) => ({
   display: "flex",
   justifyContent: "center",
   margin: "0 auto",
@@ -194,9 +195,9 @@ const ButtonsContainer = styled("div")({
   [theme.breakpoints.down("md")]: {
     marginTop: "20px",
   },
-})
+}))
 
-const TestimonialTruncateText = styled(TruncateText)({
+const TestimonialTruncateText = styled(TruncateText)(({ theme }) => ({
   margin: "0px",
   textOverflow: "none",
   ...theme.typography.h4,
@@ -219,7 +220,7 @@ const TestimonialTruncateText = styled(TruncateText)({
       WebkitLineClamp: 11,
     },
   },
-})
+}))
 
 const SlickCarousel = () => {
   const { data } = useTestimonialList({ position: 1 })

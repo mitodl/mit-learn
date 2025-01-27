@@ -32,7 +32,7 @@ type AlertStyleProps = {
   severity: AlertColor
 }
 
-const AlertStyled = styled(MuiAlert)<AlertStyleProps>({
+const AlertStyled = styled(MuiAlert)<AlertStyleProps>(({ theme }) => ({
   padding: "11px 16px",
   borderRadius: 4,
   borderWidth: 2,
@@ -76,7 +76,7 @@ const AlertStyled = styled(MuiAlert)<AlertStyleProps>({
       },
     },
   })),
-})
+}))
 
 const Hidden = styled("span")({ display: "none" })
 

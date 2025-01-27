@@ -14,7 +14,6 @@ import {
   showStartAnytime,
 } from "ol-utilities"
 import { RiExternalLinkLine } from "@remixicon/react"
-import { theme } from "../theme/theme"
 import { SimpleSelect } from "../SimpleSelect/SimpleSelect"
 import type { SimpleSelectProps } from "../SimpleSelect/SimpleSelect"
 import { PlatformLogo, PLATFORM_LOGOS } from "../Logo/Logo"
@@ -43,32 +42,32 @@ const Container = styled("div")<{ padTop?: boolean }>(({ theme }) => ({
   ],
 }))
 
-const DateContainer = styled("div")`
-  display: flex;
-  justify-content: start;
-  align-self: stretch;
-  align-items: center;
-  ${{ ...theme.typography.body2 }}
-  color: ${theme.custom.colors.black};
-  margin: 0;
+const DateContainer = styled("div")(({ theme }) => ({
+  display: "flex",
+  justifyContent: "start",
+  alignSelf: "stretch",
+  alignItems: "center",
+  ...theme.typography.body2,
+  color: theme.custom.colors.black,
+  margin: 0,
 
-  .MuiInputBase-root {
-    margin-bottom: 0;
-    border-color: ${theme.custom.colors.mitRed};
-    border-width: 1.5px;
-    color: ${theme.custom.colors.mitRed};
-    ${{ ...theme.typography.button }}
-    line-height: ${theme.typography.pxToRem(20)};
+  ".MuiInputBase-root": {
+    marginBottom: 0,
+    borderColor: theme.custom.colors.mitRed,
+    borderWidth: "1.5px",
+    color: theme.custom.colors.mitRed,
+    ...theme.typography.button,
+    lineHeight: theme.typography.pxToRem(20),
 
-    label {
-      display: none;
-    }
+    label: {
+      display: "none",
+    },
 
-    svg {
-      color: ${theme.custom.colors.mitRed};
-    }
-  }
-`
+    svg: {
+      color: theme.custom.colors.mitRed,
+    },
+  },
+}))
 
 const DateSingle = styled(DateContainer)`
   margin-top: 10px;
@@ -78,11 +77,11 @@ const NoDateSpacer = styled("div")`
   height: 34px;
 `
 
-const DateLabel = styled("span")`
-  ${{ ...theme.typography.body2 }}
-  color: ${theme.custom.colors.darkGray1};
-  margin-right: 16px;
-`
+const DateLabel = styled("span")(({ theme }) => ({
+  ...theme.typography.body2,
+  color: theme.custom.colors.darkGray1,
+  marginRight: "16px",
+}))
 
 const ImageContainer = styled("div")<{ aspect: number }>({
   position: "relative",
@@ -101,25 +100,25 @@ const SkeletonImage = styled(Skeleton)<{ aspect: number }>({
   paddingBottom: ({ aspect }) => `${100 / aspect}%`,
 })
 
-const CallToAction = styled("div")`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  ${theme.breakpoints.down("sm")} {
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-`
+const CallToAction = styled("div")(({ theme }) => ({
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  [theme.breakpoints.down("sm")]: {
+    flexWrap: "wrap",
+    justifyContent: "center",
+  },
+}))
 
-const StyledLink = styled(ButtonLink)`
-  text-align: center;
-  width: 224px;
-  ${theme.breakpoints.down("sm")} {
-    width: 100%;
-    margin-top: 10px;
-    margin-bottom: 10px;
-  }
-`
+const StyledLink = styled(ButtonLink)(({ theme }) => ({
+  textAlign: "center",
+  width: "224px",
+  [theme.breakpoints.down("sm")]: {
+    width: "100%",
+    marginTop: "10px",
+    marginBottom: "10px",
+  },
+}))
 
 const Platform = styled("div")`
   display: flex;
@@ -134,22 +133,22 @@ const Detail = styled("section")`
   gap: 8px;
 `
 
-const Description = styled("p")`
-  ${{ ...theme.typography.body2 }}
-  color: ${theme.custom.colors.darkGray2};
-  margin: 0;
-  white-space: pre-line;
-`
+const Description = styled("p")(({ theme }) => ({
+  ...theme.typography.body2,
+  color: theme.custom.colors.darkGray2,
+  margin: 0,
+  whiteSpace: "pre-line",
+}))
 
 const StyledPlatformLogo = styled(PlatformLogo)`
   height: 26px;
   max-width: 180px;
 `
 
-const OnPlatform = styled("span")`
-  ${{ ...theme.typography.body2 }}
-  color: ${theme.custom.colors.black};
-`
+const OnPlatform = styled("span")(({ theme }) => ({
+  ...theme.typography.body2,
+  color: theme.custom.colors.black,
+}))
 
 type LearningResourceExpandedV1Props = {
   resource?: LearningResource
