@@ -132,3 +132,6 @@ storybook-static/
 
 /**/.yarn/cache
 .swc
+
+# local ssl certs
+certs/
