@@ -29,6 +29,7 @@ jobs:
 
       - name: Release Backend on Heroku
         uses: akhileshns/heroku-deploy@e86b991436e126ff9d78399b801a6610a64881c9
+        if: ${{ env.RC_API_DEPLOY_ENABLED == 'true' }}
         with:
           heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
           heroku_app_name: mitopen-rc
