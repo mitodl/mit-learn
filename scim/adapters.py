@@ -6,7 +6,9 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from django_scim import constants
 from django_scim.adapters import SCIMUser
+from pydantic import ValidationError
 from scim2_filter_parser.attr_paths import AttrPath
+from scim2_models import User as ScimUserModel, Context as ScimContext
 
 from profiles.models import Profile
 
@@ -94,6 +96,18 @@ class LearnSCIMUser(SCIMUser):
             ),
             "location": self.location,
         }
+
+    def validate_dict(self, d):
+        """
+        Validate an incoming dict
+        """
+        try:
+            if self.is_new_user:
+                ScimUser.model_validate(d, scim_ctx=ScimContext.RESOURCE_CREATION_REQUEST)
+            else:
+                ScimUser.model_validate(d, scim_ctx=ScimContext.RESOURCE_REPLACEMENT_REQUEST)
+        except ValidationError as e:
+
 
     def to_dict(self):
         """

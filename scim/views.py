@@ -33,7 +33,7 @@ class BulkView(djs_views.SCIMView):
     http_method_names = ["post"]
 
     def post(self, request, *args, **kwargs):
-        body = self.load_body(request.body)
+        body = json.loads(self.load_body(request.body))
 
         if body.get("schemas") != [constants.SchemaURI.BULK_REQUEST]:
             raise exceptions.BadRequestError(
@@ -52,7 +52,7 @@ class BulkView(djs_views.SCIMView):
         results = self._attempt_operations(request, operations, fail_on_errors)
 
         response = {
-            "schemas": [constants.SchemaURI.BATCH_RESPONSE],
+            "schemas": [constants.SchemaURI.BULK_RESPONSE],
             "Operations": results,
         }
 
@@ -75,7 +75,7 @@ class BulkView(djs_views.SCIMView):
             op_response = self._attempt_operation(request, operation)
 
             # if the operation returned a non-2xx status code, record it as a failure
-            if int(op_response.get("status")) >= 300:
+            if int(op_response.get("status").get("code")) >= 300:
                 num_errors += 1
 
             responses.append(op_response)
@@ -98,20 +98,27 @@ class BulkView(djs_views.SCIMView):
             )
 
         # this is an ephemeral request not tied to the real request directly
-        op_request = InMemoryHttpRequest(bulk_request, path, method, data)
-
-        response = url_match.func(
-            op_request, *url_match.args, **url_match.kwargs
+        op_request = InMemoryHttpRequest(
+            bulk_request, path, method, json.dumps(data).encode(djs_constants.ENCODING)
         )
 
-        return {
-            "location": response.headers["Location"],
+        result = url_match.func(op_request, *url_match.args, **url_match.kwargs)
+        print(result.content)
+
+        response = {
             "method": method,
             "bulkId": bulk_id,
             "status": {
-                "code": response.status_code,
-            }
+                "code": result.status_code,
+            },
         }
+
+        if 200 <= result.status_code < 300:
+            response["location"] = result.headers["Location"]
+
+
+        return response
+
 
     def _operation_error(self, method, bulk_id, status_code, detail):
         """Return a failure response"""
@@ -126,4 +133,3 @@ class BulkView(djs_views.SCIMView):
                 "detail": detail,
             },
         }
-

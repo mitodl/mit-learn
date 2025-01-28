@@ -129,6 +129,7 @@ def test_scim_user_patch(staff_client):
 
 def test_bulk_post(staff_client):
     user = UserFactory.create()
+    user2 = UserFactory.build()
 
     resp = staff_client.post(
         reverse("ol-scim:bulk"),
@@ -142,12 +143,13 @@ def test_bulk_post(staff_client):
                         "bulkId": "1234",
                         "data": {
                             "schemas": [djs_constants.SchemaURI.USER],
-                            "email": "test@example.com",
+                            "email": user2.email,
+                            "username": user2.username,
                             "emailOptIn": 1,
-                            "fullName": "Billy Bob",
+                            "fullName": user2.profile.name,
                             "name": {
-                                "givenName": "Billy",
-                                "familyName": "Bob",
+                                "givenName": user2.first_name,
+                                "familyName": user2.last_name,
                             },
                         },
                     }
@@ -155,3 +157,10 @@ def test_bulk_post(staff_client):
             }
         ),
     )
+
+    assert resp.status_code == 200
+
+    assert User.objects.count() == 2
+
+    print(resp.json())
+    created_user = User.objects.filter(profile__scim_id=scim_id)
