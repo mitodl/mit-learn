@@ -89,10 +89,13 @@ def mock_content_files():
                         platform=LearningResourcePlatformFactory.create(code=platform),
                         offered_by=LearningResourceOfferorFactory.create(code=offeror),
                     )
-                )
+                ),
+                edx_block_id=f"block_{platform}"
+                if platform != PlatformType.ocw.name
+                else None,
             ),
         )
-    ContentFile.objects.exclude(id__in=[cf.id for cf in content_files[:2]]).delete()
+    ContentFile.objects.exclude(id__in=[cf.id for cf in content_files]).delete()
     return content_files
 
 
@@ -570,6 +573,26 @@ def test_content_file_filter_resource_id(mock_content_files, client):
             mock_content_files[1].run.learning_resource.id,
         ]
     )
+
+
+def test_content_file_filter_edx_block_id(mock_content_files, client):
+    """Test that the resource_id filter works for contentfiles"""
+    assert mock_content_files[0].edx_block_id is None
+    assert mock_content_files[1].edx_block_id == "block_xpro"
+    assert mock_content_files[2].edx_block_id == "block_mitxonline"
+
+    results = client.get(f"{CONTENT_API_URL}?edx_block_id=block_xpro").json()["results"]
+    assert len(results) == 1
+    assert results[0]["edx_block_id"] == "block_xpro"
+
+    results = client.get(
+        f"{CONTENT_API_URL}?edx_block_id=block_mitxonline&edx_block_id=block_xpro"
+    ).json()["results"]
+    assert len(results) == 2
+    assert sorted([result["edx_block_id"] for result in results]) == [
+        "block_mitxonline",
+        "block_xpro",
+    ]
 
 
 def test_content_file_filter_platform(mock_content_files, client):
