@@ -12,8 +12,8 @@ class FastEmbedEncoder(BaseEncoder):
         self.model_name = model_name
         self.model = TextEmbedding(model_name=model_name, lazy_load=True)
 
-    def encode_batch(self, texts: list[str]) -> list[list[float]]:
-        return self.model.embed(texts)
+    def embed_documents(self, documents):
+        return list(self.model.embed(documents))
 
     def dim(self):
         """

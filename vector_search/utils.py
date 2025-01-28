@@ -2,7 +2,8 @@ import logging
 import uuid
 
 from django.conf import settings
-from langchain.text_splitter import TokenTextSplitter
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_experimental.text_splitter import SemanticChunker
 from qdrant_client import QdrantClient, models
 
 from learning_resources.models import LearningResource
@@ -173,7 +174,7 @@ def _process_resource_embeddings(serialized_resources):
         docs.append(
             f"{doc.get('title')} {doc.get('description')} {doc.get('full_description')}"
         )
-    embeddings = encoder.encode_batch(docs)
+    embeddings = encoder.embed_documents(docs)
     return points_generator(ids, metadata, embeddings, vector_name)
 
 
@@ -184,14 +185,13 @@ def _get_text_splitter(encoder):
     chunk_params = {
         "chunk_overlap": settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP,
     }
-    if hasattr(encoder, "token_encoding_name") and encoder.token_encoding_name:
-        chunk_params["encoding_name"] = encoder.token_encoding_name
 
     if settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE:
         chunk_params["chunk_size"] = settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
 
-    # leverage tiktoken to ensure we stay within token limits
-    return TokenTextSplitter(**chunk_params)
+    if settings.CONTENT_FILE_EMBEDDING_SEMANTIC_CHUNKING_ENABLED:
+        return SemanticChunker(encoder)
+    return RecursiveCharacterTextSplitter(**chunk_params)
 
 
 def _process_content_embeddings(serialized_content):
@@ -245,7 +245,7 @@ def _process_content_embeddings(serialized_content):
             )
             for md in split_metadatas
         ]
-        split_embeddings = list(encoder.encode_batch(split_texts))
+        split_embeddings = list(encoder.embed_documents(split_texts))
         if len(split_embeddings) > 0:
             resource_points.append(
                 models.PointVectors(
@@ -351,7 +351,7 @@ def vector_search(
         search_result = client.query_points(
             collection_name=search_collection,
             using=encoder.model_short_name(),
-            query=encoder.encode(query_string),
+            query=encoder.embed_query(query_string),
             query_filter=search_filter,
             limit=limit,
             offset=offset,
