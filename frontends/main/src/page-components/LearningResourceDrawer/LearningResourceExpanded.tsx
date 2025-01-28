@@ -83,8 +83,6 @@ const TopContainer = styled.div({
 const BottomContainer = styled.div({
   display: "flex",
   flexDirection: "column",
-  flexGrow: 1,
-  alignItems: "flex-start",
   padding: "32px 28px",
   gap: "32px",
   borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
@@ -101,21 +99,30 @@ const TUTOR_WIDTH = "388px"
 const MainCol = styled.div({
   // Note: Without a width specified, the carousels will overflow up to 100vw
   maxWidth: DRAWER_WIDTH,
-  [theme.breakpoints.down("md")]: {
-    width: "100%",
-  },
-  [theme.breakpoints.up("md")]: {
+  minWidth: 0,
+  flex: 1,
+  [theme.breakpoints.up("sm")]: {
     ".tutor-enabled &": {
       maxWidth: `calc(${DRAWER_WIDTH} - ${TUTOR_WIDTH})`,
     },
   },
 })
 const ChatCol = styled.div({
-  width: TUTOR_WIDTH,
   zIndex: 2,
   position: "sticky",
   top: 96,
   height: "calc(100vh - 96px)",
+  display: "none",
+  ".tutor-enabled &": {
+    display: "block",
+  },
+  [theme.breakpoints.up("sm")]: {
+    maxWidth: TUTOR_WIDTH,
+    flex: 1,
+  },
+  [theme.breakpoints.down("sm")]: {
+    maxWidth: "0px",
+  },
 })
 
 const ContentContainer = styled.div({
@@ -730,6 +737,11 @@ const ResourceDescription = ({ resource }: { resource?: LearningResource }) => {
 }
 
 const Chat = dynamic(() => import("./AiChatSyllabus"), { ssr: false })
+const ChatTrigger = styled(Button)(({ theme }) => ({
+  [theme.breakpoints.down("sm")]: {
+    display: "none",
+  },
+}))
 
 const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
   resourceId,
@@ -783,13 +795,13 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
                   onAddToUserListClick={onAddToUserListClick}
                 />
                 {showTutor ? null : (
-                  <Button
+                  <ChatTrigger
                     onClick={setShowTutor.on}
                     variant="secondary"
                     endIcon={<RiSparkling2Line />}
                   >
                     Need help? Ask our Tutor.
-                  </Button>
+                  </ChatTrigger>
                 )}
               </ContentRight>
             </ContentContainer>
