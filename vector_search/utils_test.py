@@ -235,14 +235,20 @@ def test_get_text_splitter(mocker):
     Test that the correct splitter is returned based on encoder
     """
     settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = None
+    settings.CONTENT_FILE_EMBEDDING_SEMANTIC_CHUNKING_ENABLED = True
     encoder = dense_encoder()
     encoder.token_encoding_name = None
-    mocked_splitter = mocker.patch("vector_search.utils.TokenTextSplitter")
+    mocked_splitter = mocker.patch("vector_search.utils.RecursiveCharacterTextSplitter")
+    mocked_chunker = mocker.patch("vector_search.utils.SemanticChunker")
     _get_text_splitter(encoder)
-    assert "encoding_name" not in mocked_splitter.mock_calls[0].kwargs
-    encoder.token_encoding_name = "cl100k_base"  # noqa: S105
+    mocked_chunker.assert_called()
+    mocked_splitter.assert_not_called()
+    settings.CONTENT_FILE_EMBEDDING_SEMANTIC_CHUNKING_ENABLED = False
+    mocked_splitter = mocker.patch("vector_search.utils.RecursiveCharacterTextSplitter")
+    mocked_chunker = mocker.patch("vector_search.utils.SemanticChunker")
     _get_text_splitter(encoder)
-    assert "encoding_name" in mocked_splitter.mock_calls[1].kwargs
+    mocked_chunker.assert_not_called()
+    mocked_splitter.assert_called()
 
 
 def test_text_splitter_chunk_size_override(mocker):
@@ -253,11 +259,11 @@ def test_text_splitter_chunk_size_override(mocker):
     settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = chunk_size
     settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = chunk_size / 10
     encoder = dense_encoder()
-    mocked_splitter = mocker.patch("vector_search.utils.TokenTextSplitter")
+    mocked_splitter = mocker.patch("vector_search.utils.RecursiveCharacterTextSplitter")
     encoder.token_encoding_name = "cl100k_base"  # noqa: S105
     _get_text_splitter(encoder)
     assert mocked_splitter.mock_calls[0].kwargs["chunk_size"] == 100
-    mocked_splitter = mocker.patch("vector_search.utils.TokenTextSplitter")
+    mocked_splitter = mocker.patch("vector_search.utils.RecursiveCharacterTextSplitter")
     settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = None
     _get_text_splitter(encoder)
     assert "chunk_size" not in mocked_splitter.mock_calls[0].kwargs

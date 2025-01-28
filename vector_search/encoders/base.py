@@ -1,4 +1,4 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 
 from langchain_core.embeddings import Embeddings
 
@@ -32,11 +32,11 @@ class BaseEncoder(Embeddings, ABC):
         """
         return len(self.embed("test"))
 
+    @abstractmethod
     def embed_documents(self, documents):
         """
         Embed a list of documents
         """
-        return [self.embed(text) for text in documents]
 
     def embed_query(self, query):
         """

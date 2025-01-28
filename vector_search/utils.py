@@ -182,6 +182,7 @@ def _get_text_splitter(encoder):
     """
     Get the text splitter to use based on the encoder
     """
+
     chunk_params = {
         "chunk_overlap": settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP,
     }

@@ -14,10 +14,10 @@ class DummyEmbedEncoder(BaseEncoder):
     def __init__(self, model_name="dummy-embedding"):
         self.model_name = model_name
 
-    def encode(self, text: str) -> list:  # noqa: ARG002
+    def embed(self, text: str) -> list:  # noqa: ARG002
         return np.random.random((10, 1))
 
-    def encode_batch(self, texts: list[str]) -> list[list[float]]:
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
         return np.random.random((10, len(texts)))
 
 
@@ -32,7 +32,10 @@ def _use_test_qdrant_settings(settings, mocker):
     settings.QDRANT_HOST = "https://test"
     settings.QDRANT_BASE_COLLECTION_NAME = "test"
     settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = 0
+    settings.CONTENT_FILE_EMBEDDING_SEMANTIC_CHUNKING_ENABLED = False
     mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
+    mocker.patch("vector_search.utils.SemanticChunker")
+
     mock_qdrant.scroll.return_value = [
         [],
         None,
