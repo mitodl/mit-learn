@@ -8,6 +8,7 @@ import {
   Link,
   Input,
   Typography,
+  Stack,
 } from "ol-components"
 import type { ImageConfig, LearningResourceCardProps } from "ol-components"
 import { default as NextImage } from "next/image"
@@ -19,7 +20,11 @@ import {
 } from "@mitodl/smoot-design"
 import type { LearningResource } from "api"
 import { ResourceTypeEnum, PlatformEnum } from "api"
-import { DEFAULT_RESOURCE_IMG, getReadableResourceType } from "ol-utilities"
+import {
+  DEFAULT_RESOURCE_IMG,
+  getReadableResourceType,
+  useToggle,
+} from "ol-utilities"
 import {
   RiBookmarkFill,
   RiBookmarkLine,
@@ -31,15 +36,18 @@ import {
   RiMenuAddLine,
   RiShareLine,
   RiTwitterXLine,
+  RiSparkling2Line,
 } from "@remixicon/react"
 
 import InfoSection from "./InfoSection"
 import type { User } from "api/hooks/user"
 import VideoFrame from "./VideoFrame"
+import classNames from "classnames"
+import dynamic from "next/dynamic"
 
 const DRAWER_WIDTH = "900px"
 
-const OuterContainer = styled.div({
+const Outer = styled.div({
   display: "flex",
   flexDirection: "column",
   flexGrow: 1,
@@ -47,18 +55,7 @@ const OuterContainer = styled.div({
   overflowX: "hidden",
 })
 
-const Container = styled.div({
-  display: "flex",
-  flexDirection: "column",
-  padding: "0 28px 24px",
-  width: DRAWER_WIDTH,
-  [theme.breakpoints.down("md")]: {
-    width: "auto",
-    padding: "0 16px 24px",
-  },
-})
-
-const TitleSectionContainer = styled.div({
+const TitleContainer = styled.div({
   display: "flex",
   position: "sticky",
   justifyContent: "space-between",
@@ -72,19 +69,70 @@ const TitleSectionContainer = styled.div({
   },
 })
 
-const ContentContainer = styled.div({
+const TopContainer = styled.div({
   display: "flex",
-  alignItems: "flex-start",
-  gap: "32px",
-  alignSelf: "stretch",
+  flexDirection: "column",
+  padding: "0 28px 24px",
   [theme.breakpoints.down("md")]: {
-    alignItems: "center",
-    flexDirection: "column-reverse",
-    gap: "16px",
+    width: "auto",
+    padding: "0 16px 24px",
   },
 })
 
-const LeftContainer = styled.div({
+const BottomContainer = styled.div({
+  display: "flex",
+  flexDirection: "column",
+  flexGrow: 1,
+  alignItems: "flex-start",
+  padding: "32px 28px",
+  gap: "32px",
+  borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
+  background: theme.custom.colors.lightGray1,
+  "> div": {
+    width: "100%",
+  },
+  [theme.breakpoints.down("md")]: {
+    padding: "16px 0 16px 16px",
+  },
+})
+
+const TUTOR_WIDTH = "388px"
+const MainCol = styled.div({
+  // Note: Without a width specified, the carousels will overflow up to 100vw
+  maxWidth: DRAWER_WIDTH,
+  [theme.breakpoints.down("md")]: {
+    width: "100%",
+  },
+  [theme.breakpoints.up("md")]: {
+    ".tutor-enabled &": {
+      maxWidth: `calc(${DRAWER_WIDTH} - ${TUTOR_WIDTH})`,
+    },
+  },
+})
+const ChatCol = styled.div({
+  width: TUTOR_WIDTH,
+  zIndex: 2,
+  position: "sticky",
+  top: 96,
+  height: "calc(100vh - 96px)",
+})
+
+const ContentContainer = styled.div({
+  display: "flex",
+  gap: "32px",
+  [theme.breakpoints.down("md")]: {
+    flexDirection: "column-reverse",
+    gap: "16px",
+  },
+  [theme.breakpoints.up("md")]: {
+    ".tutor-enabled &": {
+      flexDirection: "column-reverse",
+      gap: "16px",
+    },
+  },
+})
+
+const ContentLeft = styled.div({
   display: "flex",
   flexDirection: "column",
   flexGrow: 1,
@@ -93,16 +141,10 @@ const LeftContainer = styled.div({
   maxWidth: "100%",
 })
 
-const RightContainer = styled.div({
+const ContentRight = styled.div({
   display: "flex",
   flexDirection: "column",
-  justifyContent: "center",
-  alignItems: "flex-start",
   gap: "24px",
-  [theme.breakpoints.down("md")]: {
-    width: "100%",
-    alignItems: "center",
-  },
 })
 
 const ImageContainer = styled.div({
@@ -127,12 +169,17 @@ const CallToAction = styled.div({
   width: "350px",
   padding: "16px",
   flexDirection: "column",
-  alignItems: "center",
   gap: "10px",
   borderRadius: "8px",
   border: `1px solid ${theme.custom.colors.lightGray2}`,
   boxShadow: "0px 2px 10px 0px rgba(37, 38, 43, 0.10)",
   [theme.breakpoints.down("md")]: {
+    width: "100%",
+    padding: "0",
+    border: "none",
+    boxShadow: "none",
+  },
+  ".tutor-enabled &": {
     width: "100%",
     padding: "0",
     border: "none",
@@ -292,25 +339,6 @@ const TopCarouselContainer = styled.div({
   paddingTop: "24px",
 })
 
-const BottomCarouselContainer = styled.div({
-  display: "flex",
-  flexDirection: "column",
-  flexGrow: 1,
-  alignItems: "flex-start",
-  width: DRAWER_WIDTH,
-  padding: "32px 28px",
-  gap: "32px",
-  borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
-  background: theme.custom.colors.lightGray1,
-  div: {
-    maxWidth: "100%",
-  },
-  [theme.breakpoints.down("md")]: {
-    width: "100vw",
-    padding: "16px 0 16px 16px",
-  },
-})
-
 type LearningResourceExpandedProps = {
   resourceId: number
   titleId?: string
@@ -382,7 +410,7 @@ const TitleSection: React.FC<{
   )
 
   return (
-    <TitleSectionContainer>
+    <TitleContainer>
       <Typography
         variant="h4"
         id={titleId}
@@ -398,7 +426,7 @@ const TitleSection: React.FC<{
         {title}
       </Typography>
       {closeButton}
-    </TitleSectionContainer>
+    </TitleContainer>
   )
 }
 
@@ -411,23 +439,12 @@ const ImageSection: React.FC<{
     return (
       <VideoFrame src={resource.url} title={resource.title} aspect={aspect} />
     )
-  } else if (resource?.image) {
-    return (
-      <ImageContainer>
-        <Image
-          src={resource.image?.url ?? DEFAULT_RESOURCE_IMG}
-          alt={resource?.image.alt ?? ""}
-          aspect={aspect}
-          fill
-        />
-      </ImageContainer>
-    )
   } else if (resource) {
     return (
       <ImageContainer>
         <Image
-          src={DEFAULT_RESOURCE_IMG}
-          alt={resource.image?.alt ?? ""}
+          src={resource.image?.url ?? DEFAULT_RESOURCE_IMG}
+          alt={resource?.image?.alt ?? ""}
           aspect={aspect}
           fill
         />
@@ -705,6 +722,8 @@ const ResourceDescription = ({ resource }: { resource?: LearningResource }) => {
   )
 }
 
+const Chat = dynamic(() => import("./AiChatSyllabus"), { ssr: false })
+
 const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
   resourceId,
   resource,
@@ -720,6 +739,7 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
   onAddToUserListClick,
   closeDrawer,
 }) => {
+  const [showTutor, setShowTutor] = useToggle(false)
   const outerContainerRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (outerContainerRef.current && outerContainerRef.current.scrollTo) {
@@ -727,45 +747,66 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
     }
   }, [resourceId])
   return (
-    <OuterContainer ref={outerContainerRef}>
+    <Outer
+      className={classNames({ "tutor-enabled": showTutor })}
+      ref={outerContainerRef}
+    >
       <TitleSection
         titleId={titleId}
         resource={resource}
         closeDrawer={closeDrawer ?? (() => {})}
       />
-      <Container>
-        <ContentContainer>
-          <LeftContainer>
-            <ResourceDescription resource={resource} />
-            <InfoSection resource={resource} />
-          </LeftContainer>
-          <RightContainer>
-            <CallToActionSection
-              imgConfig={imgConfig}
-              resource={resource}
-              user={user}
-              shareUrl={shareUrl}
-              inLearningPath={inLearningPath}
-              inUserList={inUserList}
-              onAddToLearningPathClick={onAddToLearningPathClick}
-              onAddToUserListClick={onAddToUserListClick}
-            />
-          </RightContainer>
-        </ContentContainer>
-        {topCarousels && (
-          <TopCarouselContainer>
-            {topCarousels?.map((carousel, index) => (
+      <Stack direction="row" alignItems="start">
+        <MainCol>
+          <TopContainer>
+            <ContentContainer>
+              <ContentLeft>
+                <ResourceDescription resource={resource} />
+                <InfoSection resource={resource} />
+              </ContentLeft>
+              <ContentRight>
+                <CallToActionSection
+                  imgConfig={imgConfig}
+                  resource={resource}
+                  user={user}
+                  shareUrl={shareUrl}
+                  inLearningPath={inLearningPath}
+                  inUserList={inUserList}
+                  onAddToLearningPathClick={onAddToLearningPathClick}
+                  onAddToUserListClick={onAddToUserListClick}
+                />
+                {showTutor ? null : (
+                  <Button
+                    onClick={setShowTutor.on}
+                    variant="secondary"
+                    endIcon={<RiSparkling2Line />}
+                  >
+                    Need help? Ask our Tutor.
+                  </Button>
+                )}
+              </ContentRight>
+            </ContentContainer>
+            {topCarousels && (
+              <TopCarouselContainer>
+                {topCarousels?.map((carousel, index) => (
+                  <div key={index}>{carousel}</div>
+                ))}
+              </TopCarouselContainer>
+            )}
+          </TopContainer>
+          <BottomContainer>
+            {bottomCarousels?.map((carousel, index) => (
               <div key={index}>{carousel}</div>
             ))}
-          </TopCarouselContainer>
-        )}
-      </Container>
-      <BottomCarouselContainer>
-        {bottomCarousels?.map((carousel, index) => (
-          <div key={index}>{carousel}</div>
-        ))}
-      </BottomCarouselContainer>
-    </OuterContainer>
+          </BottomContainer>
+        </MainCol>
+        <ChatCol>
+          {resource ? (
+            <Chat onClose={setShowTutor.off} resource={resource} />
+          ) : null}
+        </ChatCol>
+      </Stack>
+    </Outer>
   )
 }
 
