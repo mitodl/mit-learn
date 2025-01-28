@@ -335,6 +335,15 @@ paths:
         description: Multiple values may be separated by commas.
         explode: false
         style: form
+      - in: query
+        name: edx_block_id
+        schema:
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
       - in: path
         name: learning_resource_id
         schema:
@@ -940,6 +949,15 @@ paths:
       parameters:
       - in: query
         name: content_feature_type
+        schema:
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
+      - in: query
+        name: edx_block_id
         schema:
           type: array
           items:
@@ -2733,6 +2751,15 @@ paths:
       parameters:
       - in: query
         name: content_feature_type
+        schema:
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
+      - in: query
+        name: edx_block_id
         schema:
           type: array
           items:
@@ -8609,6 +8636,10 @@ components:
           $ref: '#/components/schemas/LearningResourcePlatform'
         run_readable_id:
           type: string
+        edx_block_id:
+          type: string
+          nullable: true
+          maxLength: 1024
       required:
       - content_feature_type
       - course_number
