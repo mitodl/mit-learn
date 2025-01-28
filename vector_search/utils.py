@@ -178,21 +178,38 @@ def _process_resource_embeddings(serialized_resources):
     return points_generator(ids, metadata, embeddings, vector_name)
 
 
-def _get_text_splitter(encoder):
-    """
-    Get the text splitter to use based on the encoder
-    """
-
+def _chunk_documents(encoder, texts, metadatas):
+    # chunk the documents. use semantic chunking if enabled
     chunk_params = {
         "chunk_overlap": settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP,
     }
 
     if settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE:
         chunk_params["chunk_size"] = settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
+    if settings.LITELLM_TOKEN_ENCODING_NAME:
+        """
+        If we have a specific model encoding
+        we can use that to stay within token limits
+        """
+        chunk_params["encoding_name"] = settings.LITELLM_TOKEN_ENCODING_NAME
+        recursive_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
+            **chunk_params
+        )
+    else:
+        recursive_splitter = RecursiveCharacterTextSplitter(**chunk_params)
 
     if settings.CONTENT_FILE_EMBEDDING_SEMANTIC_CHUNKING_ENABLED:
-        return SemanticChunker(encoder)
-    return RecursiveCharacterTextSplitter(**chunk_params)
+        """
+        If semantic chunking is enabled,
+        use the semantic chunker then recursive splitter
+        to stay within chunk size limits
+        """
+        return recursive_splitter.split_documents(
+            SemanticChunker(
+                encoder, **settings.SEMANTIC_CHUNKING_CONFIG
+            ).create_documents(texts=texts, metadatas=metadatas)
+        )
+    return recursive_splitter.create_documents(texts=texts, metadatas=metadatas)
 
 
 def _process_content_embeddings(serialized_content):
@@ -203,13 +220,10 @@ def _process_content_embeddings(serialized_content):
     client = qdrant_client()
     encoder = dense_encoder()
     vector_name = encoder.model_short_name()
-    text_splitter = _get_text_splitter(encoder)
     for doc in serialized_content:
         if not doc.get("content"):
             continue
-        split_docs = text_splitter.create_documents(
-            texts=[doc.get("content")], metadatas=[doc]
-        )
+        split_docs = _chunk_documents(encoder, [doc.get("content")], [doc])
         split_texts = [d.page_content for d in split_docs if d.page_content]
         resource_vector_point_id = vector_point_id(doc["resource_readable_id"])
         split_metadatas = [

@@ -849,7 +849,7 @@ AI_BUDGET_DURATION = get_string(name="AI_BUDGET_DURATION", default="60m")
 AI_MAX_BUDGET = get_float(name="AI_MAX_BUDGET", default=0.05)
 AI_ANON_LIMIT_MULTIPLIER = get_float(name="AI_ANON_LIMIT_MULTIPLIER", default=10.0)
 CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = get_int(
-    name="CONTENT_FILE_EMBEDDING_CHUNK_SIZE", default=None
+    name="CONTENT_FILE_EMBEDDING_CHUNK_SIZE", default=1024
 )
 CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = get_int(
     name="CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP",
@@ -858,3 +858,24 @@ CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = get_int(
 CONTENT_FILE_EMBEDDING_SEMANTIC_CHUNKING_ENABLED = get_bool(
     name="CONTENT_FILE_EMBEDDING_SEMANTIC_CHUNKING_ENABLED", default=False
 )
+
+SEMANTIC_CHUNKING_CONFIG = {
+    "buffer_size": get_int(
+        name="SEMANTIC_CHUNKING_BUFFER_SIZE",
+        default=1,
+    ),
+    "breakpoint_threshold_type": get_string(
+        # 'percentile', 'standard_deviation', 'interquartile', or 'gradient'
+        name="SEMANTIC_CHUNKING_BREAKPOINT_THRESHOLD_TYPE",
+        default="percentile",
+    ),
+    "breakpoint_threshold_amount": get_float(
+        # value we use for breakpoint_threshold_type to filter outliers
+        name="SEMANTIC_CHUNKING_BREAKPOINT_THRESHOLD_AMOUNT",
+        default=None,
+    ),
+    "number_of_chunks": get_int(
+        name="SEMANTIC_CHUNKING_NUMBER_OF_CHUNKS",
+        default=None,
+    ),
+}
