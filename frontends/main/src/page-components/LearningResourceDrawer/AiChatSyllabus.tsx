@@ -44,6 +44,7 @@ const AiChatSyllabus: React.FC<AiChatSyllabusProps> = ({
 
   return (
     <AiChat
+      key={resource.id}
       conversationStarters={STARTERS}
       initialMessages={getInitialMessage(resource, user.data)}
       chatId={`chat-${resource?.readable_id}`}

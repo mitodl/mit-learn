@@ -78,51 +78,72 @@ const TopContainer = styled.div({
     width: "auto",
     padding: "0 16px 24px",
   },
+  ".tutor-enabled &": {
+    padding: "0 0 24px 28px",
+    [theme.breakpoints.down("md")]: {
+      padding: "0 0 16px 24px",
+    },
+  },
 })
 
 const BottomContainer = styled.div({
   display: "flex",
   flexDirection: "column",
-  padding: "32px 28px",
   gap: "32px",
   borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
   background: theme.custom.colors.lightGray1,
   "> div": {
     width: "100%",
   },
+  padding: "32px 28px",
   [theme.breakpoints.down("md")]: {
     padding: "16px 0 16px 16px",
   },
-})
-
-const TUTOR_WIDTH = "388px"
-const MainCol = styled.div({
-  // Note: Without a width specified, the carousels will overflow up to 100vw
-  maxWidth: DRAWER_WIDTH,
-  minWidth: 0,
-  flex: 1,
-  [theme.breakpoints.up("sm")]: {
-    ".tutor-enabled &": {
-      maxWidth: `calc(${DRAWER_WIDTH} - ${TUTOR_WIDTH})`,
+  ".tutor-enabled &": {
+    [theme.breakpoints.up("md")]: {
+      padding: "32px 4px 32px 28px",
     },
   },
 })
+
+const CHAT_WIDTH = "388px"
+
+const MainCol = styled.div({
+  // Note: Without a width specified, the carousels will overflow up to 100vw
+  maxWidth: DRAWER_WIDTH,
+  flex: 1,
+  [theme.breakpoints.up("sm")]: {
+    ".tutor-enabled &": {
+      minWidth: 0,
+    },
+  },
+})
+
+/**
+ * Chat offset from top of drawer.
+ * 48px + 3rem = height of 1-line title plus padding.
+ * If title is two lines, the chat will overflow into title.
+ */
+const CHAT_TOP = "calc(48px + 3rem)"
 const ChatCol = styled.div({
   zIndex: 2,
   position: "sticky",
-  top: 96,
-  height: "calc(100vh - 96px)",
+  top: CHAT_TOP,
+  height: `calc(100vh - ${CHAT_TOP} - 24px)`,
   display: "none",
   ".tutor-enabled &": {
     display: "block",
+    [theme.breakpoints.down("sm")]: {
+      display: "none",
+    },
   },
-  [theme.breakpoints.up("sm")]: {
-    maxWidth: TUTOR_WIDTH,
-    flex: 1,
+  flex: 1,
+  padding: "0 28px 24px 24px",
+  [theme.breakpoints.down("md")]: {
+    padding: "0 16px 24px 16px",
   },
-  [theme.breakpoints.down("sm")]: {
-    maxWidth: "0px",
-  },
+  boxSizing: "content-box",
+  maxWidth: CHAT_WIDTH,
 })
 
 const ContentContainer = styled.div({
