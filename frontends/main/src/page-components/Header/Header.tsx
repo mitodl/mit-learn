@@ -277,6 +277,15 @@ const Header: FunctionComponent = () => {
   const drawerToggleEvent = drawerOpen
     ? "opened_nav_drawer"
     : "closed_nav_drawer"
+  const posthogCapture = (event: string) => {
+    if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+      posthog.capture(event)
+    }
+  }
+  const menuClick = () => {
+    toggleDrawer.toggle()
+    posthogCapture(drawerToggleEvent)
+  }
 
   return (
     <div>
@@ -288,24 +297,11 @@ const Header: FunctionComponent = () => {
             <MenuButton
               ref={desktopTrigger}
               text="Explore MIT"
-              onClick={() => {
-                toggleDrawer.toggle()
-                if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
-                  posthog.capture(drawerToggleEvent)
-                }
-              }}
+              onClick={menuClick}
             />
           </DesktopOnly>
           <MobileOnly>
-            <MenuButton
-              ref={mobileTrigger}
-              onClick={() => {
-                toggleDrawer.toggle()
-                if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
-                  posthog.capture(drawerToggleEvent)
-                }
-              }}
-            />
+            <MenuButton ref={mobileTrigger} onClick={menuClick} />
             <LeftSpacer />
             <StyledMITLogoLink logo="learn" />
           </MobileOnly>
@@ -322,11 +318,7 @@ const Header: FunctionComponent = () => {
         navData={navData}
         open={drawerOpen}
         onClose={toggleDrawer.off}
-        posthogCapture={(event: string) => {
-          if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
-            posthog.capture(event)
-          }
-        }}
+        posthogCapture={posthogCapture}
       />
     </div>
   )
