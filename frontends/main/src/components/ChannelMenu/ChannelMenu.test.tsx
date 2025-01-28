@@ -1,7 +1,5 @@
 import React from "react"
 import { screen } from "@testing-library/react"
-// eslint-disable-next-line import/no-extraneous-dependencies
-import { BrowserRouter } from "react-router-dom"
 
 import ChannelMenu from "./ChannelMenu"
 import { urls } from "api/test-utils"
@@ -17,9 +15,7 @@ describe("ChannelMenu", () => {
     )
 
     renderWithTheme(
-      <BrowserRouter>
-        <ChannelMenu channelType={channel.channel_type} name={channel.name} />
-      </BrowserRouter>,
+      <ChannelMenu channelType={channel.channel_type} name={channel.name} />,
     )
     const dropdown = await screen.findByRole("button")
     await user.click(dropdown)

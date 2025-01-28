@@ -1,5 +1,4 @@
 import React from "react"
-import { BrowserRouter } from "react-router-dom"
 import { screen, within } from "@testing-library/react"
 import { LearningResourceListCard } from "./LearningResourceListCard"
 import type { LearningResourceListCardProps } from "./LearningResourceListCard"
@@ -10,11 +9,7 @@ import { getByImageSrc } from "ol-test-utilities"
 import { renderWithTheme } from "../../test-utils"
 
 const setup = (props: LearningResourceListCardProps) => {
-  return renderWithTheme(
-    <BrowserRouter>
-      <LearningResourceListCard {...props} />
-    </BrowserRouter>,
-  )
+  return renderWithTheme(<LearningResourceListCard {...props} />)
 }
 
 describe("Learning Resource List Card", () => {
@@ -118,13 +113,11 @@ describe("Learning Resource List Card", () => {
     const onAddToUserListClick = jest.fn()
 
     renderWithTheme(
-      <BrowserRouter>
-        <LearningResourceListCard
-          resource={resource}
-          onAddToLearningPathClick={onAddToLearningPathClick}
-          onAddToUserListClick={onAddToUserListClick}
-        />
-      </BrowserRouter>,
+      <LearningResourceListCard
+        resource={resource}
+        onAddToLearningPathClick={onAddToLearningPathClick}
+        onAddToUserListClick={onAddToUserListClick}
+      />,
     )
 
     const addToLearningPathButton = screen.getByLabelText(

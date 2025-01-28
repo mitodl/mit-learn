@@ -543,22 +543,6 @@ interface SearchDisplayProps {
   clearAllFacets: UseResourceSearchParamsResult["clearAllFacets"]
   toggleParamValue: UseResourceSearchParamsResult["toggleParamValue"]
   showProfessionalToggle?: boolean
-  /**
-   * NOTE: This is passed from parent, rather than obtained via useSearchParams,
-   * because of quirks with react-router's useSearchParams hook.
-   *
-   * Multiple calls to React Router's useSearchParam hook do not use current
-   * values for the search params.
-   * See https://github.com/remix-run/react-router/issues/9757 for details.
-   *
-   * This is partially addressed by `@mitodl/course-search-utils`, which exports
-   * a wrapper around `useSearchParams`: subsequent calls to `setSearchParams`
-   * DO use the current value, with one caveat: The setSearchParams function
-   * must be from the same "instance" of `useSearchParams`.
-   *
-   * Because of this, we pass the setSearchParams function from the parent
-   * rather than from a new "instance" of `useSearchParams`.
-   */
   setSearchParams: UseResourceSearchParamsProps["setSearchParams"]
   resultsHeadingEl: React.ElementType
   filterHeadingEl: React.ElementType

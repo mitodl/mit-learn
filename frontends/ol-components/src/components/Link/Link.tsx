@@ -109,7 +109,7 @@ const BaseLink = ({
 
 /**
  * A styled link. By default, renders a medium-sized black link using the Link
- * component from `react-router`. This is appropriate for in-app routing.
+ * component from `next/link`. This is appropriate for in-app routing.
  *
  * If you need to force a full-page reload, e.g., for login/logout links, use
  * set `nativeAnchor={true}`.
