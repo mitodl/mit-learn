@@ -241,7 +241,7 @@ def test_transform_content_files(
                 "checksum": checksum,
                 "file_extension": file_extension,
                 "source_path": f"root/folder/{key}",
-                "edx_block_id": f"block-v1:{run.run_id.replace('course-v1:','')}+type@folder+block@key",
+                "edx_block_id": f"block-v1:{run.run_id.replace('course-v1:', '')}+type@folder+block@key",
             }
         ]
     else:
