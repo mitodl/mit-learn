@@ -1,4 +1,6 @@
+import React from "react"
 import { mockAxiosInstance } from "api/test-utils"
+import preloadAll from "jest-next-dynamic-ts"
 
 jest.mock("axios", () => {
   const AxiosError = jest.requireActual("axios").AxiosError
@@ -10,6 +12,17 @@ jest.mock("axios", () => {
     },
     AxiosError,
   }
+})
+
+jest.mock("react-markdown", () => {
+  return {
+    __esModule: true,
+    default: ({ children }: { children: string }) => <div>{children}</div>,
+  }
+})
+
+beforeAll(async () => {
+  await preloadAll()
 })
 
 beforeEach(() => {

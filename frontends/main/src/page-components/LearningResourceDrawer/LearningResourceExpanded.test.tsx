@@ -12,7 +12,7 @@ import invariant from "tiny-invariant"
 import type { LearningResource } from "api"
 import { PLATFORM_LOGOS } from "ol-components"
 import user from "@testing-library/user-event"
-import { renderWithTheme } from "@/test-utils"
+import { renderWithProviders } from "@/test-utils"
 
 const IMG_CONFIG: LearningResourceExpandedProps["imgConfig"] = {
   width: 385,
@@ -30,7 +30,7 @@ const setup = (resource: LearningResource, isLearningPathEditor?: boolean) => {
     is_authenticated: true,
   }
   setMockResponse.get(urls.userMe.get(), user)
-  return renderWithTheme(
+  return renderWithProviders(
     <LearningResourceExpanded
       resourceId={resource.id}
       resource={resource}
