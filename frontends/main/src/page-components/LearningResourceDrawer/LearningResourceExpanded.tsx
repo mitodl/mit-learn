@@ -47,6 +47,8 @@ import classNames from "classnames"
 import AiChatSyllabus from "./AiChatSyllabus"
 
 const DRAWER_WIDTH = "900px"
+const showChatClass = "show-chat"
+const showChatSelector = `.${showChatClass} &`
 
 const Outer = styled.div({
   display: "flex",
@@ -78,7 +80,7 @@ const TopContainer = styled.div({
     width: "auto",
     padding: "0 16px 24px",
   },
-  ".tutor-enabled &": {
+  [showChatSelector]: {
     padding: "0 0 24px 28px",
     [theme.breakpoints.down("md")]: {
       padding: "0 0 16px 24px",
@@ -99,7 +101,7 @@ const BottomContainer = styled.div({
   [theme.breakpoints.down("md")]: {
     padding: "16px 0 16px 16px",
   },
-  ".tutor-enabled &": {
+  [showChatSelector]: {
     [theme.breakpoints.up("md")]: {
       padding: "32px 4px 32px 28px",
     },
@@ -113,7 +115,7 @@ const MainCol = styled.div({
   maxWidth: DRAWER_WIDTH,
   flex: 1,
   [theme.breakpoints.up("sm")]: {
-    ".tutor-enabled &": {
+    [showChatSelector]: {
       minWidth: 0,
     },
   },
@@ -131,7 +133,7 @@ const ChatCol = styled.div({
   top: CHAT_TOP,
   height: `calc(100vh - ${CHAT_TOP} - 24px)`,
   display: "none",
-  ".tutor-enabled &": {
+  [showChatSelector]: {
     display: "block",
     [theme.breakpoints.down("sm")]: {
       display: "none",
@@ -154,7 +156,7 @@ const ContentContainer = styled.div({
     gap: "16px",
   },
   [theme.breakpoints.up("md")]: {
-    ".tutor-enabled &": {
+    [showChatSelector]: {
       flexDirection: "column-reverse",
       gap: "16px",
     },
@@ -208,7 +210,7 @@ const CallToAction = styled.div({
     border: "none",
     boxShadow: "none",
   },
-  ".tutor-enabled &": {
+  [showChatSelector]: {
     width: "100%",
     padding: "0",
     border: "none",
@@ -789,7 +791,7 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
   }, [resourceId])
   return (
     <Outer
-      className={classNames({ "tutor-enabled": chatExpanded })}
+      className={classNames({ [showChatClass]: chatExpanded })}
       ref={outerContainerRef}
     >
       <TitleSection
