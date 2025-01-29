@@ -47,17 +47,6 @@ const ChatSyllabusPage = () => {
   const [collectionName, setCollectionName] = useState("content_files")
   const [debugInfo, setDebugInfo] = useState("")
 
-  const parseContent = (content: string | unknown) => {
-    if (typeof content !== "string") {
-      return ""
-    }
-    const contentParts = content.split("<!--")
-    if (contentParts.length > 1) {
-      setDebugInfo(contentParts[1])
-    }
-    return contentParts[0]
-  }
-
   return (
     <StyledContainer>
       {
@@ -117,7 +106,6 @@ const ChatSyllabusPage = () => {
             <AiChat
               initialMessages={INITIAL_MESSAGES}
               conversationStarters={STARTERS}
-              parseContent={parseContent}
               requestOpts={{
                 apiUrl: `${process.env.NEXT_PUBLIC_MITOL_API_BASE_URL}/api/v0/syllabus_agent/`,
                 fetchOpts: {
@@ -130,6 +118,12 @@ const ChatSyllabusPage = () => {
                     message: messages[messages.length - 1].content,
                     readable_id: readableId,
                     collection_name: collectionName,
+                  }
+                },
+                onFinish: (message) => {
+                  const contentParts = message.content.split("<!--")
+                  if (contentParts.length > 1) {
+                    setDebugInfo(contentParts[1])
                   }
                 },
               }}
