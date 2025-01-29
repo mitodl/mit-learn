@@ -208,6 +208,12 @@ class LearnSCIMUser(SCIMUser):
 
         return super().parse_path_and_values(path, value)
 
+    def validate_email(self, *args, **kwargs):
+        print("validate_email")
+        print((args, kwargs))
+        result = super().validate_email(*args, **kwargs)
+        return result
+
     def handle_replace(
         self,
         path: Optional[AttrPath],
@@ -219,11 +225,16 @@ class LearnSCIMUser(SCIMUser):
 
         All operations happen within an atomic transaction.
         """
+
         if not isinstance(value, dict):
+            print("not a dict")
+            print((path, value))
             # Restructure for use in loop below.
             value = {path: value}
 
+        print(value)
         for nested_path, nested_value in (value or {}).items():
+            print((nested_path, nested_value))
             if nested_path.first_path in self.ATTR_MAP:
                 setattr(
                     self.obj, self.ATTR_MAP.get(nested_path.first_path), nested_value

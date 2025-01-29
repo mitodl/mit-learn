@@ -3,6 +3,7 @@ import itertools
 import json
 import operator
 import random
+from functools import reduce
 from types import SimpleNamespace
 
 from anys import ANY_STR
@@ -141,7 +142,7 @@ def _user_to_scim_payload(user):
         "schemas": [djs_constants.SchemaURI.USER],
         "emails": [{"value": user.email, "primary": True}],
         "userName": user.username,
-        "emailOptIn": user.profile.email_optin,
+        "emailOptIn": 1 if user.profile.email_optin else 0,
         "fullName": user.profile.name,
         "name": {
             "givenName": user.first_name,
@@ -162,8 +163,8 @@ USER_FIELD_TYPES: dict[str, type] = {
 USER_FIELDS_TO_SCIM: dict[str, Callable] = {
     "username": lambda value: {"userName": value},
     "email": lambda value: {"emails": [{"value": value, "primary": True}]},
-    "first_name": lambda value: {"profile": {"givenName": value}},
-    "last_name": lambda value: {"profile": {"familyName": value}},
+    "first_name": lambda value: {"name": {"givenName": value}},
+    "last_name": lambda value: {"name": {"familyName": value}},
     "profile.email_optin": lambda value: {"emailOptIn": 1 if value else 0},
     "profile.name": lambda value: {"fullName": value},
 }
@@ -239,7 +240,11 @@ def _patch_operation(user, data, fields_to_patch, bulk_id_gen):
                 "Operations": [
                     {
                         "op": "replace",
-                        "value": always_merger.merge(*field_updates)
+                        "value": reduce(
+                            always_merger.merge,
+                            field_updates,
+                            {}
+                        )
                     }
                 ],
             },
@@ -383,6 +388,7 @@ def test_bulk_post(staff_client, bulk_test_data):
     }
 
     for operation in bulk_test_data.operations:
+        print(operation.payload)
         assert (
             results_by_bulk_id[operation.payload["bulkId"]]
             == operation.expected_response
