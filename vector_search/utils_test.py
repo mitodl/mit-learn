@@ -236,6 +236,7 @@ def test_document_chunker(mocker):
     """
     settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = None
     settings.CONTENT_FILE_EMBEDDING_SEMANTIC_CHUNKING_ENABLED = True
+    settings.LITELLM_TOKEN_ENCODING_NAME = None
     encoder = dense_encoder()
     encoder.token_encoding_name = None
     mocked_splitter = mocker.patch("vector_search.utils.RecursiveCharacterTextSplitter")
@@ -243,16 +244,34 @@ def test_document_chunker(mocker):
     _chunk_documents(encoder, ["this is a test document"], [{}])
 
     mocked_chunker.assert_called()
-    mocked_splitter.assert_not_called()
+    mocked_splitter.assert_called()
 
     settings.CONTENT_FILE_EMBEDDING_SEMANTIC_CHUNKING_ENABLED = False
-    mocked_splitter = mocker.patch(
-        "vector_search.utils.RecursiveCharacterTextSplitter.from_tiktoken_encoder"
-    )
+
+    mocked_splitter = mocker.patch("vector_search.utils.RecursiveCharacterTextSplitter")
     mocked_chunker = mocker.patch("vector_search.utils.SemanticChunker")
 
     _chunk_documents(encoder, ["this is a test document"], [{}])
     mocked_chunker.assert_not_called()
+    mocked_splitter.assert_called()
+
+
+def test_document_chunker_tiktoken(mocker):
+    """
+    Test that we use tiktoken if a token encoding is specified
+    """
+    settings.LITELLM_TOKEN_ENCODING_NAME = None
+    encoder = dense_encoder()
+    encoder.token_encoding_name = None
+    mocked_splitter = mocker.patch(
+        "vector_search.utils.RecursiveCharacterTextSplitter.from_tiktoken_encoder"
+    )
+
+    _chunk_documents(encoder, ["this is a test document"], [{}])
+    mocked_splitter.assert_not_called()
+
+    settings.LITELLM_TOKEN_ENCODING_NAME = "test"  # noqa: S105
+    _chunk_documents(encoder, ["this is a test document"], [{}])
     mocked_splitter.assert_called()
 
 
