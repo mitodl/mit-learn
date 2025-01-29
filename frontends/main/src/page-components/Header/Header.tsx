@@ -275,8 +275,8 @@ const Header: FunctionComponent = () => {
   const desktopTrigger = React.useRef<HTMLButtonElement>(null)
   const mobileTrigger = React.useRef<HTMLButtonElement>(null)
   const drawerToggleEvent = drawerOpen
-    ? "opened_nav_drawer"
-    : "closed_nav_drawer"
+    ? "closed_nav_drawer"
+    : "opened_nav_drawer"
   const posthogCapture = (event: string) => {
     if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
       posthog.capture(event)
