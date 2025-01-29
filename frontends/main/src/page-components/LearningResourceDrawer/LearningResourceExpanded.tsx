@@ -36,6 +36,7 @@ import {
 import InfoSection from "./InfoSection"
 import type { User } from "api/hooks/user"
 import VideoFrame from "./VideoFrame"
+import { usePostHog } from "posthog-js/react"
 
 const DRAWER_WIDTH = "900px"
 
@@ -508,6 +509,7 @@ const CallToActionSection = ({
   onAddToLearningPathClick?: LearningResourceCardProps["onAddToLearningPathClick"]
   onAddToUserListClick?: LearningResourceCardProps["onAddToUserListClick"]
 }) => {
+  const posthog = usePostHog()
   const [shareExpanded, setShareExpanded] = useState(false)
   const [copyText, setCopyText] = useState("Copy Link")
   if (hide) {
@@ -544,12 +546,17 @@ const CallToActionSection = ({
         <StyledLink
           target="_blank"
           size="medium"
+          endIcon={<RiExternalLinkLine />}
+          href={resource.url || ""}
+          onClick={() => {
+            if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+              posthog.capture("cta_clicked", { resource })
+            }
+          }}
           data-ph-action="click-cta"
           data-ph-offered-by={offeredBy?.code}
           data-ph-resource-type={resource.resource_type}
           data-ph-resource-id={resource.id}
-          endIcon={<RiExternalLinkLine />}
-          href={resource.url || ""}
         >
           {cta}
         </StyledLink>

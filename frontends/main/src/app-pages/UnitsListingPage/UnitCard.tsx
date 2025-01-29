@@ -10,6 +10,7 @@ import {
   UnitLogo,
 } from "ol-components"
 import Link from "next/link"
+import { usePostHog } from "posthog-js/react"
 
 const CardStyled = styled(Card)({
   height: "100%",
@@ -114,6 +115,7 @@ interface UnitCardProps {
 }
 
 const UnitCard: React.FC<UnitCardProps> = (props) => {
+  const posthog = usePostHog()
   const { channel, courseCount, programCount } = props
   const unit = channel.unit_detail.unit
 
@@ -126,7 +128,15 @@ const UnitCard: React.FC<UnitCardProps> = (props) => {
         <UnitCardContainer>
           <UnitCardContent>
             <LogoContainer>
-              <Link href={href} data-card-link>
+              <Link
+                href={href}
+                onClick={() => {
+                  if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+                    posthog.capture("provider_link_clicked", { provider: unit })
+                  }
+                }}
+                data-card-link
+              >
                 <UnitLogo unitCode={unit.code as OfferedByEnum} height={50} />
               </Link>
             </LogoContainer>

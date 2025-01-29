@@ -5,6 +5,18 @@ import React from "react"
 import Image from "next/image"
 import { renderWithTheme } from "../../test-utils"
 
+const mockedPostHogCapture = jest.fn()
+
+jest.mock("posthog-js/react", () => ({
+  PostHogProvider: (props: { children: React.ReactNode }) => (
+    <div data-testid="phProvider">{props.children}</div>
+  ),
+
+  usePostHog: () => {
+    return { capture: mockedPostHogCapture }
+  },
+}))
+
 describe("NavDrawer", () => {
   it("Renders the expected drawer contents", () => {
     const navData: NavData = {
@@ -40,7 +52,14 @@ describe("NavDrawer", () => {
       ],
     }
     renderWithTheme(
-      <NavDrawer onClose={jest.fn()} navData={navData} open={true} />,
+      <NavDrawer
+        onClose={jest.fn()}
+        navData={navData}
+        open={true}
+        posthogCapture={(event: string) => {
+          mockedPostHogCapture(event)
+        }}
+      />,
     )
     const links = screen.getAllByTestId("nav-link")
     const icons = screen.getAllByTestId("nav-link-icon")
@@ -61,6 +80,7 @@ describe("NavDrawer", () => {
             title: "Title 1",
             description: "Description 1",
             href: "#hash-1",
+            posthogEvent: "test_event_1",
           },
         ],
       },
@@ -80,7 +100,14 @@ describe("NavDrawer", () => {
   test("close button calls onClose", async () => {
     const onClose = jest.fn()
     renderWithTheme(
-      <NavDrawer onClose={onClose} navData={NAV_DATA} open={true} />,
+      <NavDrawer
+        onClose={onClose}
+        posthogCapture={(event: string) => {
+          mockedPostHogCapture(event)
+        }}
+        navData={NAV_DATA}
+        open={true}
+      />,
     )
     const close = screen.getByRole("button", { name: "Close Navigation" })
     await user.click(close)
@@ -90,7 +117,14 @@ describe("NavDrawer", () => {
   test("escape calls onClose", async () => {
     const onClose = jest.fn()
     renderWithTheme(
-      <NavDrawer onClose={onClose} navData={NAV_DATA} open={true} />,
+      <NavDrawer
+        onClose={onClose}
+        posthogCapture={(event: string) => {
+          mockedPostHogCapture(event)
+        }}
+        navData={NAV_DATA}
+        open={true}
+      />,
     )
     const links = screen.getAllByRole("link")
     links[0].focus()
@@ -107,6 +141,9 @@ describe("NavDrawer", () => {
           <NavDrawer
             getClickAwayExcluded={() => [excluded.current]}
             onClose={onClose}
+            posthogCapture={(event: string) => {
+              mockedPostHogCapture(event)
+            }}
             navData={NAV_DATA}
             open={true}
           />
@@ -131,7 +168,14 @@ describe("NavDrawer", () => {
   test("clicking a link navigates and closes the drawer", async () => {
     const onClose = jest.fn()
     renderWithTheme(
-      <NavDrawer onClose={onClose} navData={NAV_DATA} open={true} />,
+      <NavDrawer
+        onClose={onClose}
+        posthogCapture={(event: string) => {
+          mockedPostHogCapture(event)
+        }}
+        navData={NAV_DATA}
+        open={true}
+      />,
     )
 
     const link = screen.getByRole("link", { name: "Title 1 Description 1" })
@@ -140,4 +184,40 @@ describe("NavDrawer", () => {
     expect(window.location.hash).toBe("#hash-1")
     expect(onClose).toHaveBeenCalled()
   })
+
+  it.each([{ enablePostHog: true }, { enablePostHog: false }])(
+    "posthogCapture callback is called only if passed in",
+    async ({ enablePostHog }) => {
+      process.env.NEXT_PUBLIC_POSTHOG_API_KEY = enablePostHog
+        ? "12345abcdef" // pragma: allowlist secret
+        : ""
+      renderWithTheme(
+        <NavDrawer
+          onClose={jest.fn()}
+          posthogCapture={
+            enablePostHog
+              ? (event: string) => {
+                  mockedPostHogCapture(event)
+                }
+              : undefined
+          }
+          navData={NAV_DATA}
+          open={true}
+        />,
+      )
+
+      const link = screen.getByRole("link", { name: "Title 1 Description 1" })
+      const link2 = screen.getByRole("link", { name: "Title 2 Description 2" })
+      await user.click(link)
+      await user.click(link2)
+
+      if (enablePostHog) {
+        expect(mockedPostHogCapture).toHaveBeenCalledExactlyOnceWith(
+          "test_event_1",
+        )
+      } else {
+        expect(mockedPostHogCapture).not.toHaveBeenCalled()
+      }
+    },
+  )
 })

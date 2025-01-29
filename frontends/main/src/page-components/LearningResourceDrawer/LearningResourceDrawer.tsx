@@ -61,7 +61,11 @@ const DrawerContent: React.FC<{
    *   The triggering component likely has the data already via some other API
    *   call.
    */
+  const posthog = usePostHog()
   const resource = useLearningResourcesDetail(Number(resourceId))
+  if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+    posthog.capture("lrd_open", { resource: resource?.data })
+  }
   const [signupEl, setSignupEl] = React.useState<HTMLElement | null>(null)
   const { data: user } = useUserMe()
   const { data: inLearningPath } = useIsLearningPathMember(resourceId)

@@ -22,6 +22,7 @@ import { HOME } from "@/common/urls"
 import { aggregateProgramCounts, aggregateCourseCounts } from "@/common/utils"
 import { useChannelCounts } from "api/hooks/channels"
 import backgroundSteps from "@/public/images/backgrounds/background_steps.jpg"
+import { usePostHog } from "posthog-js/react"
 
 type ChannelSummary = {
   id: number | string
@@ -124,11 +125,17 @@ const TopicBox = ({
   courseCount,
   programCount,
 }: TopicBoxProps) => {
+  const posthog = usePostHog()
   const counts = [
     { label: "Courses", count: courseCount },
     { label: "Programs", count: programCount },
   ].filter((item) => item.count)
   const { title, href, icon, channels } = topicGroup
+  const captureTopicClicked = (topic: string) => {
+    if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+      posthog.capture("topic_clicked", { topic })
+    }
+  }
 
   return (
     <li className={className}>
@@ -148,6 +155,9 @@ const TopicBox = ({
               variant="outlinedWhite"
               key={c.id}
               href={c.channel_url && new URL(c.channel_url).pathname}
+              onClick={() => {
+                captureTopicClicked(title)
+              }}
               label={c.name}
             />
           ))}
@@ -159,6 +169,9 @@ const TopicBox = ({
               variant="outlinedWhite"
               key={c.id}
               href={c.channel_url && new URL(c.channel_url).pathname}
+              onClick={() => {
+                captureTopicClicked(title)
+              }}
               label={c.name}
             />
           ))}

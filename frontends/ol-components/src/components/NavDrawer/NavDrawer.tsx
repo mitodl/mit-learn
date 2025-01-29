@@ -122,6 +122,7 @@ interface NavItem {
   icon?: ReactElement
   description?: string
   href: string
+  posthogEvent?: string
 }
 
 type NavItemProps = NavItem & {
@@ -163,12 +164,14 @@ type NavDrawerProps = {
    * on click-away
    */
   getClickAwayExcluded?: () => (Element | null)[]
+  posthogCapture?: (event: string) => void
 } & DrawerProps
 
 const NavDrawer = ({
   navData,
   onClose,
   getClickAwayExcluded = () => [],
+  posthogCapture,
   ...others
 }: NavDrawerProps) => {
   const navSections = navData.sections.map((section, i) => {
@@ -179,7 +182,13 @@ const NavDrawer = ({
         icon={item.icon}
         description={item.description}
         href={item.href}
-        onClick={onClose}
+        posthogEvent={item.posthogEvent}
+        onClick={() => {
+          if (item.posthogEvent && posthogCapture) {
+            posthogCapture(item.posthogEvent)
+          }
+          onClose()
+        }}
       />
     ))
     return (
