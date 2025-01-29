@@ -40,6 +40,9 @@ const StyledDebugPre = styled.pre({
   width: "80%",
   whiteSpace: "pre-wrap",
 })
+const AiChatStyled = styled(AiChat)({
+  height: "60vh",
+})
 
 const ChatSyllabusPage = () => {
   const botEnabled = useFeatureFlagEnabled(FeatureFlags.RecommendationBot)
@@ -103,7 +106,7 @@ const ChatSyllabusPage = () => {
                 </div>
               </FormContainer>
             </form>
-            <AiChat
+            <AiChatStyled
               initialMessages={INITIAL_MESSAGES}
               conversationStarters={STARTERS}
               requestOpts={{
