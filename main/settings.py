@@ -849,11 +849,11 @@ AI_BUDGET_DURATION = get_string(name="AI_BUDGET_DURATION", default="60m")
 AI_MAX_BUDGET = get_float(name="AI_MAX_BUDGET", default=0.05)
 AI_ANON_LIMIT_MULTIPLIER = get_float(name="AI_ANON_LIMIT_MULTIPLIER", default=10.0)
 CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = get_int(
-    name="CONTENT_FILE_EMBEDDING_CHUNK_SIZE", default=1024
+    name="CONTENT_FILE_EMBEDDING_CHUNK_SIZE", default=512
 )
 CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = get_int(
     name="CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP",
-    default=200,  # default that the tokenizer uses
+    default=0,  # default that the tokenizer uses
 )
 CONTENT_FILE_EMBEDDING_SEMANTIC_CHUNKING_ENABLED = get_bool(
     name="CONTENT_FILE_EMBEDDING_SEMANTIC_CHUNKING_ENABLED", default=False
