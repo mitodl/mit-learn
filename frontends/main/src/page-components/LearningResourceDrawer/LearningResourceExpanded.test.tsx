@@ -331,4 +331,19 @@ describe("Learning Resource Expanded", () => {
     )
     expect(copyButton).toHaveTextContent("Copied!")
   })
+
+  test.each(RESOURCE_TYPES)(
+    "Chat button visible only on courses (%s)",
+    (resourceType) => {
+      const resource = factories.learningResources.resource({
+        resource_type: resourceType,
+      })
+      setup(resource)
+
+      const chatButton = screen.queryByRole("button", {
+        name: "Need help? Ask our Tutor",
+      })
+      expect(!!chatButton).toBe(resourceType === ResourceTypeEnum.Course)
+    },
+  )
 })

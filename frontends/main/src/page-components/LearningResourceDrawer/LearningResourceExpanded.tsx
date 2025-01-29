@@ -779,7 +779,9 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
   onAddToUserListClick,
   closeDrawer,
 }) => {
-  const [showTutor, setShowTutor] = useToggle(false)
+  const chatEnabled = resource?.resource_type === ResourceTypeEnum.Course
+  const [chatExpanded, setChatExpanded] = useToggle(false)
+
   const outerContainerRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (outerContainerRef.current && outerContainerRef.current.scrollTo) {
@@ -788,7 +790,7 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
   }, [resourceId])
   return (
     <Outer
-      className={classNames({ "tutor-enabled": showTutor })}
+      className={classNames({ "tutor-enabled": chatExpanded })}
       ref={outerContainerRef}
     >
       <TitleSection
@@ -815,15 +817,15 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
                   onAddToLearningPathClick={onAddToLearningPathClick}
                   onAddToUserListClick={onAddToUserListClick}
                 />
-                {showTutor ? null : (
+                {chatEnabled && !chatExpanded ? (
                   <ChatTrigger
-                    onClick={setShowTutor.on}
+                    onClick={setChatExpanded.on}
                     variant="secondary"
                     endIcon={<RiSparkling2Line />}
                   >
-                    Need help? Ask our Tutor.
+                    Need help? Ask our Tutor
                   </ChatTrigger>
-                )}
+                ) : null}
               </ContentRight>
             </ContentContainer>
             {topCarousels && (
@@ -842,7 +844,7 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
         </MainCol>
         <ChatCol>
           {resource ? (
-            <Chat onClose={setShowTutor.off} resource={resource} />
+            <Chat onClose={setChatExpanded.off} resource={resource} />
           ) : null}
         </ChatCol>
       </Stack>
