@@ -158,7 +158,7 @@ class LearnSCIMUser(SCIMUser):
         """
         self.obj.is_active = False
         self.obj.save()
-        logger.info("Deactivated user id %i", self.obj.user.id)
+        logger.info("Deactivated user id %i", self.obj.id)
 
     def handle_add(
         self,

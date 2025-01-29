@@ -41,7 +41,6 @@ features_router.register(r"_/features", FeaturesViewSet, basename="features")
 
 urlpatterns = (
     [  # noqa: RUF005
-        path("scim/v2/", include("django_scim.urls")),
         re_path(r"^o/", include("oauth2_provider.urls", namespace="oauth2_provider")),
         re_path(r"^admin/", admin.site.urls),
         re_path(r"", include("authentication.urls")),
@@ -58,6 +57,7 @@ urlpatterns = (
         re_path(r"", include("articles.urls")),
         re_path(r"", include("testimonials.urls")),
         re_path(r"", include("news_events.urls")),
+        re_path(r"", include("scim.urls")),
         re_path(r"", include(features_router.urls)),
         re_path(r"^app", RedirectView.as_view(url=settings.APP_BASE_URL)),
         # Hijack

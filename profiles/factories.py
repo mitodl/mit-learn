@@ -1,6 +1,7 @@
 """Factories for making test data"""
+import uuid
 
-from factory import Faker, Sequence, SubFactory
+from factory import Faker, Sequence, SubFactory, SelfAttribute, LazyFunction
 from factory.django import DjangoModelFactory
 from factory.fuzzy import FuzzyChoice
 from faker.providers import BaseProvider
@@ -48,6 +49,9 @@ class ProfileFactory(DjangoModelFactory):
     certificate_desired = FuzzyChoice(
         [Profile.CertificateDesired.YES.value, Profile.CertificateDesired.NO.value]
     )
+
+    scim_external_id = LazyFunction(uuid.uuid4)
+    scim_username = SelfAttribute("user.email")
 
     class Meta:
         model = Profile
