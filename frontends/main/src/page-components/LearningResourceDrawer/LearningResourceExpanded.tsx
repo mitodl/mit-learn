@@ -83,7 +83,7 @@ const TopContainer = styled.div({
   },
   [showChatSelector]: {
     padding: "0 0 24px 28px",
-    [theme.breakpoints.down("md")]: {
+    [theme.breakpoints.between("sm", "md")]: {
       padding: "0 0 16px 24px",
     },
   },
@@ -112,9 +112,15 @@ const BottomContainer = styled.div({
 const CHAT_WIDTH = "388px"
 
 const MainCol = styled.div({
-  // Note: Without a width specified, the carousels will overflow up to 100vw
+  /**
+   * Note:
+   * Without a width specified, the carousels will overflow up to 100vw
+   */
   maxWidth: DRAWER_WIDTH,
   flex: 1,
+  [theme.breakpoints.down("md")]: {
+    maxWidth: "100%",
+  },
   [theme.breakpoints.up("sm")]: {
     [showChatSelector]: {
       minWidth: 0,
