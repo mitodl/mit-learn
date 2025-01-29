@@ -107,6 +107,7 @@ const ChatSyllabusPage = () => {
               </FormContainer>
             </form>
             <AiChatStyled
+              title="Syllabus Chatbot"
               initialMessages={INITIAL_MESSAGES}
               conversationStarters={STARTERS}
               requestOpts={{
