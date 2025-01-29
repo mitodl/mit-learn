@@ -1,6 +1,19 @@
 Release Notes
 =============
 
+Version 0.29.0
+--------------
+
+- reverse nav drawer posthog events (#2003)
+- track browse actions in posthog (#1997)
+- remove react router (#1988)
+- Env var to enable Posthog session replay (disable by default) (#1998)
+- Shanbady/chunk size dropdown (#1989)
+- Update codecov/codecov-action action to v5.3.1 (#1992)
+- Update dependency ruff to v0.9.3 (#1991)
+- Update dependency litellm to v1.59.7 (#1990)
+- move LearningResourceExpanded to main (#1987)
+
 Version 0.28.1 (Released January 29, 2025)
 --------------
 
