@@ -317,7 +317,10 @@ const Header: FunctionComponent = () => {
         ]}
         navData={navData}
         open={drawerOpen}
-        onClose={toggleDrawer.off}
+        onClose={() => {
+          posthogCapture(drawerToggleEvent)
+          toggleDrawer.off()
+        }}
         posthogCapture={posthogCapture}
       />
     </div>
