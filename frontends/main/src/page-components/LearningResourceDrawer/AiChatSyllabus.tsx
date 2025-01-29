@@ -5,6 +5,7 @@ import { LearningResource } from "api"
 import { useUserMe } from "api/hooks/user"
 import type { User } from "api/hooks/user"
 import dynamic from "next/dynamic"
+import type { SyllabusChatRequestRequest } from "api/v0"
 
 const AiChat = dynamic(
   () => import("@mitodl/smoot-design/ai").then((mod) => mod.AiChat),
@@ -61,10 +62,12 @@ const AiChatSyllabus: React.FC<AiChatSyllabusProps> = ({
           },
         },
         transformBody: (messages) => {
-          return {
+          const body: SyllabusChatRequestRequest = {
+            collection_name: "content_files",
             message: messages[messages.length - 1].content,
             readable_id: resource?.readable_id,
           }
+          return body
         },
       }}
       {...props}
