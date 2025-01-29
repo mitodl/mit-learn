@@ -17,7 +17,7 @@
     "@dnd-kit/utilities": "^3.2.1",
     "@emotion/react": "^11.11.1",
     "@emotion/styled": "^11.11.0",
-    "@mitodl/smoot-design": "https://github.com/mitodl/smoot-design.git#8615f7e7ca974244174e10d7739072fc758f8423",
+    "@mitodl/smoot-design": "https://github.com/mitodl/smoot-design.git#74df8fb40046ca9288667e58c601efbe1d7ef6b4",
     "@mui/base": "5.0.0-beta.69",
     "@mui/lab": "6.0.0-beta.24",
     "@mui/material": "^6.4.1",

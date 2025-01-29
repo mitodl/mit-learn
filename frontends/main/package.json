@@ -14,7 +14,7 @@
     "@emotion/cache": "^11.13.1",
     "@emotion/styled": "^11.11.0",
     "@mitodl/course-search-utils": "3.3.2",
-    "@mitodl/smoot-design": "https://github.com/mitodl/smoot-design.git#8615f7e7ca974244174e10d7739072fc758f8423",
+    "@mitodl/smoot-design": "https://github.com/mitodl/smoot-design.git#74df8fb40046ca9288667e58c601efbe1d7ef6b4",
     "@next/bundle-analyzer": "^14.2.15",
     "@nlux/react": "^2.17.1",
     "@nlux/themes": "^2.17.1",

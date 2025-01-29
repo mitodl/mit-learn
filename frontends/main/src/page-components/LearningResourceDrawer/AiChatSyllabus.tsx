@@ -1,10 +1,15 @@
 import * as React from "react"
-import { AiChat } from "@mitodl/smoot-design/ai"
 import type { AiChatProps } from "@mitodl/smoot-design/ai"
 import { getCsrfToken } from "@/common/utils"
 import { LearningResource } from "api"
 import { useUserMe } from "api/hooks/user"
 import type { User } from "api/hooks/user"
+import dynamic from "next/dynamic"
+
+const AiChat = dynamic(
+  () => import("@mitodl/smoot-design/ai").then((mod) => mod.AiChat),
+  { ssr: false },
+)
 
 const STARTERS: AiChatProps["conversationStarters"] = [
   { content: "What is this course about?" },
@@ -43,7 +48,6 @@ const AiChatSyllabus: React.FC<AiChatSyllabusProps> = ({
 
   return (
     <AiChat
-      key={resource.id}
       conversationStarters={STARTERS}
       initialMessages={getInitialMessage(resource, user.data)}
       chatId={`chat-${resource?.readable_id}`}

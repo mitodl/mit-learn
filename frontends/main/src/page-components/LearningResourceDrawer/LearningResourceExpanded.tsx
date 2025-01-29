@@ -44,7 +44,7 @@ import type { User } from "api/hooks/user"
 import VideoFrame from "./VideoFrame"
 import { usePostHog } from "posthog-js/react"
 import classNames from "classnames"
-import dynamic from "next/dynamic"
+import AiChatSyllabus from "./AiChatSyllabus"
 
 const DRAWER_WIDTH = "900px"
 
@@ -757,7 +757,6 @@ const ResourceDescription = ({ resource }: { resource?: LearningResource }) => {
   )
 }
 
-const Chat = dynamic(() => import("./AiChatSyllabus"), { ssr: false })
 const ChatTrigger = styled(Button)(({ theme }) => ({
   [theme.breakpoints.down("sm")]: {
     display: "none",
@@ -844,7 +843,7 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
         </MainCol>
         <ChatCol>
           {resource ? (
-            <Chat onClose={setChatExpanded.off} resource={resource} />
+            <AiChatSyllabus onClose={setChatExpanded.off} resource={resource} />
           ) : null}
         </ChatCol>
       </Stack>

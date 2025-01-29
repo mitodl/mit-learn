@@ -2704,9 +2704,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/smoot-design@https://github.com/mitodl/smoot-design.git#8615f7e7ca974244174e10d7739072fc758f8423":
+"@mitodl/smoot-design@https://github.com/mitodl/smoot-design.git#74df8fb40046ca9288667e58c601efbe1d7ef6b4":
   version: 0.0.0
-  resolution: "@mitodl/smoot-design@https://github.com/mitodl/smoot-design.git#commit=8615f7e7ca974244174e10d7739072fc758f8423"
+  resolution: "@mitodl/smoot-design@https://github.com/mitodl/smoot-design.git#commit=74df8fb40046ca9288667e58c601efbe1d7ef6b4"
   dependencies:
     "@mui/utils": "npm:^6.1.6"
     ai: "npm:^4.0.13"
@@ -2723,7 +2723,7 @@ __metadata:
     "@remixicon/react": ^4.2.0
     react: ^18 || ^19
     react-dom: ^18 || ^19
-  checksum: 10/2ef15df5ffae471032b54ff43a325eb5d333b56f4ddc1ab8c443c5265c3f2600e96a307700ee2faf6726f3e9378a2876d1617a6688916c39f7425ac20f8e67cb
+  checksum: 10/b2097d0dea9311861d6a5669b77a7c9544cb942488efc3f9f422cf80f08dc7b27f6f39985ffdb53a500e895bb077865499ea2ffdb9c0ac7f232bb458291d3ea3
   languageName: node
   linkType: hard
 
@@ -12690,7 +12690,7 @@ __metadata:
     "@emotion/styled": "npm:^11.11.0"
     "@faker-js/faker": "npm:^9.0.0"
     "@mitodl/course-search-utils": "npm:3.3.2"
-    "@mitodl/smoot-design": "https://github.com/mitodl/smoot-design.git#8615f7e7ca974244174e10d7739072fc758f8423"
+    "@mitodl/smoot-design": "https://github.com/mitodl/smoot-design.git#74df8fb40046ca9288667e58c601efbe1d7ef6b4"
     "@next/bundle-analyzer": "npm:^14.2.15"
     "@nlux/react": "npm:^2.17.1"
     "@nlux/themes": "npm:^2.17.1"
@@ -14330,7 +14330,7 @@ __metadata:
     "@emotion/react": "npm:^11.11.1"
     "@emotion/styled": "npm:^11.11.0"
     "@faker-js/faker": "npm:^9.0.0"
-    "@mitodl/smoot-design": "https://github.com/mitodl/smoot-design.git#8615f7e7ca974244174e10d7739072fc758f8423"
+    "@mitodl/smoot-design": "https://github.com/mitodl/smoot-design.git#74df8fb40046ca9288667e58c601efbe1d7ef6b4"
     "@mui/base": "npm:5.0.0-beta.69"
     "@mui/lab": "npm:6.0.0-beta.24"
     "@mui/material": "npm:^6.4.1"
