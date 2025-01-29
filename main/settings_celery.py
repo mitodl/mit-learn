@@ -6,6 +6,7 @@ from celery.schedules import crontab
 
 from main.envs import get_bool, get_int, get_string
 
+ENVIRONMENT = get_string("MITOL_ENVIRONMENT", "dev")
 USE_CELERY = True
 CELERY_BROKER_URL = get_string("CELERY_BROKER_URL", get_string("REDISCLOUD_URL", None))
 CELERY_RESULT_BACKEND = get_string(
@@ -130,12 +131,6 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": crontab(minute=30, hour=18),  # 2:30pm EST
         "kwargs": {"period": "daily", "subscription_type": "channel_subscription_type"},
     },
-    "daily_embed_new_learning_resources": {
-        "task": "vector_search.tasks.embed_new_learning_resources",
-        "schedule": get_int(
-            "EMBED_NEW_RESOURCES_SCHEDULE_SECONDS", 60 * 30
-        ),  # default is every 30 minutes
-    },
     "send-search-subscription-emails-every-1-days": {
         "task": "learning_resources_search.tasks.send_subscription_emails",
         "schedule": crontab(minute=0, hour=19),  # 3:00pm EST
@@ -147,6 +142,13 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
+if ENVIRONMENT != "dev":
+    CELERY_BEAT_SCHEDULE["daily_embed_new_learning_resources"] = {
+        "task": "vector_search.tasks.embed_new_learning_resources",
+        "schedule": get_int(
+            "EMBED_NEW_RESOURCES_SCHEDULE_SECONDS", 60 * 30
+        ),  # default is every 30 minutes
+    }
 
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
