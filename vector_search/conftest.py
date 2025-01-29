@@ -40,8 +40,29 @@ def _use_test_qdrant_settings(settings, mocker):
         [],
         None,
     ]
-    get_text_splitter_patch = mocker.patch("vector_search.utils._get_text_splitter")
-    get_text_splitter_patch.return_value = RecursiveCharacterTextSplitter()
+    get_text_splitter_patch = mocker.patch("vector_search.utils._chunk_documents")
+    get_text_splitter_patch.return_value = (
+        RecursiveCharacterTextSplitter().create_documents(
+            texts=["test dociment"],
+            metadatas=[
+                {
+                    "run_title": "",
+                    "platform": "",
+                    "offered_by": "",
+                    "run_readable_id": "",
+                    "resource_readable_id": "",
+                    "content_type": "",
+                    "file_extension": "",
+                    "content_feature_type": "",
+                    "course_number": "",
+                    "file_type": "",
+                    "description": "",
+                    "key": "",
+                    "url": "",
+                }
+            ],
+        )
+    )
     mock_qdrant.count.return_value = CountResult(count=10)
     mocker.patch(
         "vector_search.utils.qdrant_client",
