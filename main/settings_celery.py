@@ -6,7 +6,7 @@ from celery.schedules import crontab
 
 from main.envs import get_bool, get_int, get_string
 
-ENVIRONMENT = get_string("MITOL_ENVIRONMENT", "dev")
+DEV_ENV = get_bool("DEV_ENV", False)  # noqa: FBT003
 USE_CELERY = True
 CELERY_BROKER_URL = get_string("CELERY_BROKER_URL", get_string("REDISCLOUD_URL", None))
 CELERY_RESULT_BACKEND = get_string(
@@ -142,7 +142,8 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
-if ENVIRONMENT != "dev":
+
+if not DEV_ENV:
     CELERY_BEAT_SCHEDULE["daily_embed_new_learning_resources"] = {
         "task": "vector_search.tasks.embed_new_learning_resources",
         "schedule": get_int(
