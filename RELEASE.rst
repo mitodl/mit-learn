@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.28.1
+Version 0.28.1 (Released January 29, 2025)
 --------------
 
 - drawer topic carousels should not be filtered on just courses (#1984)
