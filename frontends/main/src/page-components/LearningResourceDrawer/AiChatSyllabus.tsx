@@ -55,8 +55,10 @@ const AiChatSyllabus: React.FC<AiChatSyllabusProps> = ({
       onClose={onClose}
       requestOpts={{
         apiUrl: `${process.env.NEXT_PUBLIC_MITOL_API_BASE_URL}/api/v0/syllabus_agent/`,
-        headersOpts: {
-          "X-CSRFToken": getCsrfToken(),
+        fetchOpts: {
+          headers: {
+            "X-CSRFToken": getCsrfToken(),
+          },
         },
         transformBody: (messages) => {
           return {

@@ -9,14 +9,7 @@ import StyledContainer from "@/page-components/StyledContainer/StyledContainer"
 import { InputLabel, Select } from "@mui/material"
 import { AiChat, AiChatProps } from "@mitodl/smoot-design/ai"
 import { extractJSONFromComment } from "ol-utilities"
-
-function getCookie(name: string) {
-  const value = `; ${document.cookie}`
-  const parts = value.split(`; ${name}=`)
-  if (parts.length === 2) {
-    return parts.pop()?.split(";").shift()
-  }
-}
+import { getCsrfToken } from "@/common/utils"
 
 const STARTERS: AiChatProps["conversationStarters"] = [
   { content: "What are the prerequisites for this course?" },
@@ -127,11 +120,10 @@ const ChatSyllabusPage = () => {
               parseContent={parseContent}
               requestOpts={{
                 apiUrl: `${process.env.NEXT_PUBLIC_MITOL_API_BASE_URL}/api/v0/syllabus_agent/`,
-                headersOpts: {
-                  "X-CSRFToken":
-                    getCookie(
-                      process.env.NEXT_PUBLIC_CSRF_COOKIE_NAME || "csrftoken",
-                    ) ?? "",
+                fetchOpts: {
+                  headers: {
+                    "X-CSRFToken": getCsrfToken(),
+                  },
                 },
                 transformBody: (messages) => {
                   return {
