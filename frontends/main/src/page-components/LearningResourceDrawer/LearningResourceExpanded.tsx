@@ -42,9 +42,10 @@ import {
 import InfoSection from "./InfoSection"
 import type { User } from "api/hooks/user"
 import VideoFrame from "./VideoFrame"
-import { usePostHog } from "posthog-js/react"
+import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 import classNames from "classnames"
 import AiChatSyllabus from "./AiChatSyllabus"
+import { FeatureFlags } from "@/common/feature_flags"
 
 const DRAWER_WIDTH = "900px"
 const showChatClass = "show-chat"
@@ -780,8 +781,11 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
   onAddToUserListClick,
   closeDrawer,
 }) => {
-  const chatEnabled = resource?.resource_type === ResourceTypeEnum.Course
+  const chatEnabled =
+    useFeatureFlagEnabled(FeatureFlags.LrDrawerChatbot) &&
+    resource?.resource_type === ResourceTypeEnum.Course
   const [chatExpanded, setChatExpanded] = useToggle(false)
+  const showChat = chatEnabled && chatExpanded
 
   const outerContainerRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -789,9 +793,15 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
       outerContainerRef.current.scrollTo(0, 0)
     }
   }, [resourceId])
+
+  useEffect(() => {
+    if (chatExpanded && resource && !chatEnabled) {
+      setChatExpanded.off()
+    }
+  }, [chatExpanded, resource, chatEnabled, setChatExpanded])
   return (
     <Outer
-      className={classNames({ [showChatClass]: chatExpanded })}
+      className={classNames({ [showChatClass]: showChat })}
       ref={outerContainerRef}
     >
       <TitleSection
@@ -844,7 +854,7 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
           </BottomContainer>
         </MainCol>
         <ChatCol>
-          {resource ? (
+          {resource && showChat ? (
             <AiChatSyllabus onClose={setChatExpanded.off} resource={resource} />
           ) : null}
         </ChatCol>
