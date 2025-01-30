@@ -819,6 +819,8 @@ class ContentFileSerializer(serializers.ModelSerializer):
             "offered_by",
             "platform",
             "run_readable_id",
+            "file_extension",
+            "edx_block_id",
         ]
 
 
