@@ -85,7 +85,7 @@ afterEach(() => {
  *
  * However, method calls occurring in beforeEach hooks earlier or afterEach hooks
  * after this line will not error.
- * - beforeEach hooks declared earlier than this all
+ * - beforeEach hooks declared earlier than this call
  * - afterEach hooks declared later than this call
  */
 failOnConsole()
