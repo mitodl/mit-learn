@@ -861,6 +861,7 @@ CONTENT_FILE_EMBEDDING_SEMANTIC_CHUNKING_ENABLED = get_bool(
 
 SEMANTIC_CHUNKING_CONFIG = {
     "buffer_size": get_int(
+        # Number of sentences to combine.
         name="SEMANTIC_CHUNKING_BUFFER_SIZE",
         default=1,
     ),
@@ -875,6 +876,7 @@ SEMANTIC_CHUNKING_CONFIG = {
         default=None,
     ),
     "number_of_chunks": get_int(
+        # number of chunks to consider for merging
         name="SEMANTIC_CHUNKING_NUMBER_OF_CHUNKS",
         default=None,
     ),
