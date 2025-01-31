@@ -60,8 +60,6 @@ const linkStyles = (props: LinkStyleProps) => {
 
 type LinkProps = LinkStyleProps &
   React.ComponentProps<"a"> & {
-    rawAnchor?: boolean
-
     /* Pass shallow to navigate with window.history.pushState
      * on the client only to prevent calls to the Next.js server
      * for RSC payloads - these cause performance and hydration mismatch

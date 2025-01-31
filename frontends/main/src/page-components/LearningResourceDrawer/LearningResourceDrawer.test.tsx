@@ -13,6 +13,7 @@ import { RESOURCE_DRAWER_QUERY_PARAM } from "@/common/urls"
 import { LearningResource, ResourceTypeEnum } from "api"
 import { makeUserSettings } from "@/test-utils/factories"
 import type { User } from "api/hooks/user"
+import { usePostHog } from "posthog-js/react"
 
 jest.mock("./LearningResourceExpanded", () => {
   const actual = jest.requireActual("./LearningResourceExpanded")
@@ -23,16 +24,11 @@ jest.mock("./LearningResourceExpanded", () => {
 })
 
 const mockedPostHogCapture = jest.fn()
-
-jest.mock("posthog-js/react", () => ({
-  PostHogProvider: (props: { children: React.ReactNode }) => (
-    <div data-testid="phProvider">{props.children}</div>
-  ),
-
-  usePostHog: () => {
-    return { capture: mockedPostHogCapture }
-  },
-}))
+jest.mock("posthog-js/react")
+jest.mocked(usePostHog).mockReturnValue(
+  // @ts-expect-error Not mocking all of posthog
+  { capture: mockedPostHogCapture },
+)
 
 describe("LearningResourceDrawer", () => {
   const setupApis = (

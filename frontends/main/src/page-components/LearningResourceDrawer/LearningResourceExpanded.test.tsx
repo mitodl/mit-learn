@@ -1,5 +1,5 @@
 import React from "react"
-import { screen, within } from "@testing-library/react"
+import { screen, waitFor, within } from "@testing-library/react"
 
 import {
   getCallToActionText,
@@ -9,10 +9,15 @@ import type { LearningResourceExpandedProps } from "./LearningResourceExpanded"
 import { ResourceTypeEnum } from "api"
 import { factories, setMockResponse, urls } from "api/test-utils"
 import invariant from "tiny-invariant"
-import type { LearningResource } from "api"
 import { PLATFORM_LOGOS } from "ol-components"
 import user from "@testing-library/user-event"
-import { renderWithTheme } from "@/test-utils"
+import { renderWithProviders } from "@/test-utils"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+
+jest.mock("posthog-js/react")
+const mockedUseFeatureFlagEnabled = jest
+  .mocked(useFeatureFlagEnabled)
+  .mockImplementation(() => false)
 
 const IMG_CONFIG: LearningResourceExpandedProps["imgConfig"] = {
   width: 385,
@@ -22,39 +27,56 @@ const IMG_CONFIG: LearningResourceExpandedProps["imgConfig"] = {
 // This is a pipe followed by a zero-width space
 const SEPARATOR = "|​"
 
-const setup = (resource: LearningResource, isLearningPathEditor?: boolean) => {
+type SetupOpts = {
+  isLearningPathEditor?: boolean
+}
+type SetupProps = Partial<LearningResourceExpandedProps>
+const setup = (props: SetupProps, opts?: SetupOpts) => {
+  const resourceId = props.resourceId ?? props.resource?.id
+  invariant(resourceId, "resourceId or resource must be provided")
+
   const user = {
     ...factories.user.user({
-      is_learning_path_editor: isLearningPathEditor,
+      is_learning_path_editor: opts?.isLearningPathEditor,
     }),
     is_authenticated: true,
   }
   setMockResponse.get(urls.userMe.get(), user)
-  return renderWithTheme(
-    <LearningResourceExpanded
-      resourceId={resource.id}
-      resource={resource}
-      user={user}
-      shareUrl={`https://learn.mit.edu/search?resource=${resource.id}`}
-      imgConfig={IMG_CONFIG}
-    />,
+  const allProps: LearningResourceExpandedProps = {
+    user: user,
+    shareUrl: `https://learn.mit.edu/search?resource=${resourceId}`,
+    imgConfig: IMG_CONFIG,
+    ...props,
+    resourceId,
+  }
+  const { view } = renderWithProviders(
+    <LearningResourceExpanded {...allProps} />,
   )
+  return {
+    rerender: (newProps: Partial<LearningResourceExpandedProps>) =>
+      view.rerender(<LearningResourceExpanded {...allProps} {...newProps} />),
+  }
 }
 
+const RESOURCE_TYPES = Object.values(ResourceTypeEnum).map((v) => ({
+  resourceType: v,
+}))
+
 describe("Learning Resource Expanded", () => {
-  const RESOURCE_TYPES = Object.values(ResourceTypeEnum)
   const isVideo = (resourceType: ResourceTypeEnum) =>
     resourceType === ResourceTypeEnum.Video ||
     resourceType === ResourceTypeEnum.VideoPlaylist
 
-  test.each(RESOURCE_TYPES.filter((type) => !isVideo(type)))(
-    'Renders image and title for resource type "%s"',
-    (resourceType) => {
+  test.each(
+    RESOURCE_TYPES.filter(({ resourceType }) => !isVideo(resourceType)),
+  )(
+    'Renders image and title for resource type "$resourceType"',
+    ({ resourceType }) => {
       const resource = factories.learningResources.resource({
         resource_type: resourceType,
       })
 
-      setup(resource)
+      setup({ resource })
 
       const images = screen.getAllByRole("img")
       const image = images.find((img) =>
@@ -85,7 +107,7 @@ describe("Learning Resource Expanded", () => {
       resource_type: ResourceTypeEnum.Video,
     })
 
-    setup(resource)
+    setup({ resource })
 
     const embedlyCard = screen.getByTestId("embedly-card")
     invariant(embedlyCard)
@@ -101,7 +123,7 @@ describe("Learning Resource Expanded", () => {
         resource_type: resourceType,
       })
 
-      setup(resource)
+      setup({ resource })
 
       const linkName = "Learn More"
       if (linkName) {
@@ -125,7 +147,7 @@ describe("Learning Resource Expanded", () => {
         },
       })
 
-      setup(resource)
+      setup({ resource })
 
       const link = screen.getByRole("link", {
         name: "Listen to Podcast",
@@ -147,7 +169,7 @@ describe("Learning Resource Expanded", () => {
         },
       })
 
-      setup(resource)
+      setup({ resource })
       const xproImage = screen
         .getAllByRole("img")
         .find((img) => img.getAttribute("alt")?.includes("xPRO"))
@@ -162,7 +184,7 @@ describe("Learning Resource Expanded", () => {
       resource_type: ResourceTypeEnum.Video,
     })
 
-    setup(resource)
+    setup({ resource })
 
     const run = resource.runs![0]
 
@@ -207,7 +229,7 @@ describe("Learning Resource Expanded", () => {
       ],
     })
 
-    setup(resource)
+    setup({ resource })
 
     const section = screen.getByTestId("drawer-info-items")
 
@@ -229,7 +251,7 @@ describe("Learning Resource Expanded", () => {
       ],
     })
 
-    setup(resource)
+    setup({ resource })
 
     const section = screen.getByTestId("drawer-info-items")
 
@@ -247,7 +269,7 @@ describe("Learning Resource Expanded", () => {
       video: { duration: "PT1H13M44S" },
     })
 
-    setup(resource)
+    setup({ resource })
 
     const section = screen.getByTestId("drawer-info-items")
 
@@ -260,7 +282,7 @@ describe("Learning Resource Expanded", () => {
       podcast_episode: { duration: "PT13M44S" },
     })
 
-    setup(resource)
+    setup({ resource })
 
     const section = screen.getByTestId("drawer-info-items")
 
@@ -274,7 +296,7 @@ describe("Learning Resource Expanded", () => {
         resource_type: ResourceTypeEnum.Course,
       })
 
-      setup(resource, isLearningPathEditor)
+      setup({ resource }, { isLearningPathEditor })
 
       const section = screen.getByTestId("drawer-cta")
 
@@ -293,7 +315,7 @@ describe("Learning Resource Expanded", () => {
       resource_type: ResourceTypeEnum.Course,
     })
 
-    setup(resource)
+    setup({ resource })
 
     await user.click(screen.getByRole("button", { name: "Share" }))
 
@@ -315,7 +337,7 @@ describe("Learning Resource Expanded", () => {
       resource_type: ResourceTypeEnum.Course,
     })
 
-    setup(resource)
+    setup({ resource })
 
     const shareButton = screen.getByRole("button", { name: "Share" })
     await user.click(shareButton)
@@ -332,3 +354,55 @@ describe("Learning Resource Expanded", () => {
     expect(copyButton).toHaveTextContent("Copied!")
   })
 })
+
+describe.each([true, false])(
+  "LearningResourceExpanded AiChat (enabled: %s)",
+  (enabled) => {
+    beforeEach(() => {
+      mockedUseFeatureFlagEnabled.mockReturnValue(enabled)
+    })
+
+    test.each(RESOURCE_TYPES)(
+      "Chat button visible only on courses ($resourceType)",
+      ({ resourceType }) => {
+        const resource = factories.learningResources.resource({
+          resource_type: resourceType,
+        })
+        setup({ resource })
+
+        const chatButton = screen.queryByRole("button", {
+          name: "Need help? Ask our Tutor",
+        })
+        const shouldBeVisible =
+          enabled && resourceType === ResourceTypeEnum.Course
+        expect(!!chatButton).toBe(shouldBeVisible)
+      },
+    )
+
+    test("Rerendering with a new resource keeps drawer open if and only if AiChat is enabled", async () => {
+      if (!enabled) return
+      const course1 = factories.learningResources.resource({
+        resource_type: ResourceTypeEnum.Course,
+      })
+      const course2 = factories.learningResources.resource({
+        resource_type: ResourceTypeEnum.Course,
+      })
+      const episode = factories.learningResources.resource({
+        resource_type: ResourceTypeEnum.PodcastEpisode,
+      })
+
+      const { rerender } = setup({ resource: course1 })
+      await user.click(
+        screen.getByRole("button", { name: "Need help? Ask our Tutor" }),
+      )
+      const dataTestId = "ai-chat-syllabus"
+      expect(screen.getByTestId(dataTestId)).toBeInTheDocument()
+      rerender({ resource: course2 })
+      expect(screen.getByTestId(dataTestId)).toBeInTheDocument()
+      rerender({ resource: episode })
+      await waitFor(() => {
+        expect(screen.queryByTestId(dataTestId)).toBe(null)
+      })
+    })
+  },
+)

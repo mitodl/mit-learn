@@ -9,14 +9,7 @@ import StyledContainer from "@/page-components/StyledContainer/StyledContainer"
 import { InputLabel, Select } from "@mui/material"
 import { AiChat, AiChatProps } from "@mitodl/smoot-design/ai"
 import { extractJSONFromComment } from "ol-utilities"
-
-function getCookie(name: string) {
-  const value = `; ${document.cookie}`
-  const parts = value.split(`; ${name}=`)
-  if (parts.length === 2) {
-    return parts.pop()?.split(";").shift()
-  }
-}
+import { getCsrfToken } from "@/common/utils"
 
 const STARTERS: AiChatProps["conversationStarters"] = [
   { content: "What are the prerequisites for this course?" },
@@ -47,23 +40,15 @@ const StyledDebugPre = styled.pre({
   width: "80%",
   whiteSpace: "pre-wrap",
 })
+const AiChatStyled = styled(AiChat)({
+  height: "60vh",
+})
 
 const ChatSyllabusPage = () => {
   const botEnabled = useFeatureFlagEnabled(FeatureFlags.RecommendationBot)
   const [readableId, setReadableId] = useState("18.06SC+fall_2011")
   const [collectionName, setCollectionName] = useState("content_files")
   const [debugInfo, setDebugInfo] = useState("")
-
-  const parseContent = (content: string | unknown) => {
-    if (typeof content !== "string") {
-      return ""
-    }
-    const contentParts = content.split("<!--")
-    if (contentParts.length > 1) {
-      setDebugInfo(contentParts[1])
-    }
-    return contentParts[0]
-  }
 
   return (
     <StyledContainer>
@@ -121,23 +106,28 @@ const ChatSyllabusPage = () => {
                 </div>
               </FormContainer>
             </form>
-            <AiChat
+            <AiChatStyled
+              title="Syllabus Chatbot"
               initialMessages={INITIAL_MESSAGES}
               conversationStarters={STARTERS}
-              parseContent={parseContent}
               requestOpts={{
                 apiUrl: `${process.env.NEXT_PUBLIC_MITOL_API_BASE_URL}/api/v0/syllabus_agent/`,
-                headersOpts: {
-                  "X-CSRFToken":
-                    getCookie(
-                      process.env.NEXT_PUBLIC_CSRF_COOKIE_NAME || "csrftoken",
-                    ) ?? "",
+                fetchOpts: {
+                  headers: {
+                    "X-CSRFToken": getCsrfToken(),
+                  },
                 },
                 transformBody: (messages) => {
                   return {
                     message: messages[messages.length - 1].content,
                     readable_id: readableId,
                     collection_name: collectionName,
+                  }
+                },
+                onFinish: (message) => {
+                  const contentParts = message.content.split("<!--")
+                  if (contentParts.length > 1) {
+                    setDebugInfo(contentParts[1])
                   }
                 },
               }}

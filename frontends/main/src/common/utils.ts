@@ -29,4 +29,25 @@ const aggregateCourseCounts = (
   )
 }
 
-export { getSearchParamMap, aggregateProgramCounts, aggregateCourseCounts }
+function getCookie(name: string) {
+  const value = `; ${document.cookie}`
+  const parts = value.split(`; ${name}=`)
+  if (parts.length === 2) {
+    return parts.pop()?.split(";").shift()
+  }
+}
+/**
+ * Returns CsrfToken from cookie if it is present
+ */
+const getCsrfToken = () => {
+  return (
+    getCookie(process.env.NEXT_PUBLIC_CSRF_COOKIE_NAME || "csrftoken") ?? ""
+  )
+}
+
+export {
+  getSearchParamMap,
+  aggregateProgramCounts,
+  aggregateCourseCounts,
+  getCsrfToken,
+}
