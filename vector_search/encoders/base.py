@@ -1,9 +1,12 @@
 from abc import ABC, abstractmethod
 
+from langchain_core.embeddings import Embeddings
 
-class BaseEncoder(ABC):
+
+class BaseEncoder(Embeddings, ABC):
     """
-    Base encoder class
+    Base encoder class.
+    Conforms to the langchain Embeddings interface
     """
 
     def model_short_name(self):
@@ -17,21 +20,26 @@ class BaseEncoder(ABC):
             model_name = split_model_name[1]
         return model_name
 
-    def encode(self, text):
+    def embed(self, text):
         """
         Embed a single text
         """
-        return next(iter(self.encode_batch([text])))
-
-    @abstractmethod
-    def encode_batch(self, texts: list[str]) -> list[list[float]]:
-        """
-        Embed multiple texts
-        """
-        return [self.encode(text) for text in texts]
+        return next(iter(self.embed_documents([text])))
 
     def dim(self):
         """
         Return the dimension of the embeddings
         """
-        return len(self.encode("test"))
+        return len(self.embed("test"))
+
+    @abstractmethod
+    def embed_documents(self, documents):
+        """
+        Embed a list of documents
+        """
+
+    def embed_query(self, query):
+        """
+        Embed a query
+        """
+        return self.embed(query)

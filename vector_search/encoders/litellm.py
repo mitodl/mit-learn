@@ -24,8 +24,8 @@ class LiteLLMEncoder(BaseEncoder):
             msg = f"Model {model_name} not found in tiktoken. defaulting to None"
             log.warning(msg)
 
-    def encode_batch(self, texts: list[str]) -> list[list[float]]:
-        return [result["embedding"] for result in self.get_embedding(texts)["data"]]
+    def embed_documents(self, documents):
+        return [result["embedding"] for result in self.get_embedding(documents)["data"]]
 
     def get_embedding(self, texts):
         if settings.LITELLM_CUSTOM_PROVIDER and settings.LITELLM_API_BASE:
