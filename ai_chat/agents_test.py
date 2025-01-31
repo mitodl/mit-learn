@@ -8,7 +8,7 @@ from django.core.cache import caches
 from llama_index.core.base.llms.types import MessageRole
 from llama_index.core.constants import DEFAULT_TEMPERATURE
 
-from ai_chat.agents import SearchAgent
+from ai_chat.agents import SearchAgent, SyllabusAgent
 from ai_chat.factories import ChatMessageFactory
 from learning_resources.factories import LearningResourceFactory
 from learning_resources.serializers import (
@@ -268,3 +268,27 @@ def test_get_completion(mocker):
         },
     )
     assert "".join([str(value) for value in expected_return_value]) in results
+
+
+@pytest.mark.django_db
+def test_collection_name_param(settings, mocker):
+    """The collection name should be passed through to the contentfile search"""
+    settings.AI_MIT_SEARCH_LIMIT = 5
+    settings.AI_MIT_SYLLABUS_URL = "https://test.com/api/v0/contentfiles/"
+    mock_post = mocker.patch(
+        "ai_chat.agents.requests.get",
+        return_value=mocker.Mock(json=mocker.Mock(return_value={})),
+    )
+    search_agent = SyllabusAgent("test agent", collection_name="content_files_512")
+    search_agent.get_completion("I want to learn physics", readable_id="test")
+    search_agent.search_content_files()
+    mock_post.assert_called_once_with(
+        settings.AI_MIT_SYLLABUS_URL,
+        params={
+            "q": "I want to learn physics",
+            "resource_readable_id": "test",
+            "limit": 20,
+            "collection_name": "content_files_512",
+        },
+        timeout=30,
+    )

@@ -1,7 +1,6 @@
 import failOnConsole from "jest-fail-on-console"
 import "@testing-library/jest-dom"
 import "cross-fetch/polyfill"
-import { configure } from "@testing-library/react"
 import { resetAllWhenMocks } from "jest-when"
 import * as matchers from "jest-extended"
 import { mockRouter } from "ol-test-utilities/mocks/nextNavigation"
@@ -59,25 +58,6 @@ const polyfillResizeObserver = () => {
 }
 polyfillResizeObserver()
 
-failOnConsole()
-
-configure({
-  /**
-   * Adapted from https://github.com/testing-library/dom-testing-library/issues/773
-   * to make the error messages a bit more succinct.
-   *
-   * By default, testing-library prints much too much of the DOM.
-   *
-   * This does change the stacktrace a bit: The line causing the error is still
-   * there, but the line where the error is generated (below) is most visible.
-   */
-  getElementError(message, _container) {
-    const error = new Error(message ?? "")
-    error.name = "TestingLibraryElementError"
-    return error
-  },
-})
-
 jest.mock("next/navigation", () => {
   return {
     ...jest.requireActual("ol-test-utilities/mocks/nextNavigation")
@@ -85,6 +65,10 @@ jest.mock("next/navigation", () => {
   }
 })
 
+beforeEach(() => {
+  mockRouter.setCurrentUrl("/")
+  window.history.replaceState({}, "", "/")
+})
 afterEach(() => {
   /**
    * Clear all mock call counts between tests.
@@ -93,6 +77,15 @@ afterEach(() => {
    */
   jest.clearAllMocks()
   resetAllWhenMocks()
-  mockRouter.setCurrentUrl("/")
-  window.history.replaceState({}, "", "/")
 })
+
+/**
+ * NOTE: This registers hooks (afterEach, etc) with Jest that cause tests to
+ * fail when console.warn or console.error are called.
+ *
+ * However, method calls occurring in beforeEach hooks earlier or afterEach hooks
+ * after this line will not error.
+ * - beforeEach hooks declared earlier than this call
+ * - afterEach hooks declared later than this call
+ */
+failOnConsole()

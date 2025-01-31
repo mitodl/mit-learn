@@ -1,7 +1,7 @@
 import React from "react"
 import { screen, within } from "@testing-library/react"
-import { courses } from "../LearningResourceCard/testUtils"
-import InfoSectionV2 from "./InfoSection"
+import { courses } from "./testUtils"
+import InfoSection from "./InfoSection"
 import { formatRunDate } from "ol-utilities"
 import invariant from "tiny-invariant"
 import user from "@testing-library/user-event"
@@ -12,7 +12,7 @@ const SEPARATOR = "|​"
 
 describe("Learning resource info section pricing", () => {
   test("Free course, no certificate", () => {
-    renderWithTheme(<InfoSectionV2 resource={courses.free.noCertificate} />)
+    renderWithTheme(<InfoSection resource={courses.free.noCertificate} />)
 
     screen.getByText("Free")
     expect(screen.queryByText("Paid")).toBeNull()
@@ -22,7 +22,7 @@ describe("Learning resource info section pricing", () => {
 
   test("Free course, with certificate, one price", () => {
     renderWithTheme(
-      <InfoSectionV2 resource={courses.free.withCertificateOnePrice} />,
+      <InfoSection resource={courses.free.withCertificateOnePrice} />,
     )
 
     screen.getByText("Free")
@@ -33,7 +33,7 @@ describe("Learning resource info section pricing", () => {
 
   test("Free course, with certificate, price range", () => {
     renderWithTheme(
-      <InfoSectionV2 resource={courses.free.withCertificatePriceRange} />,
+      <InfoSection resource={courses.free.withCertificatePriceRange} />,
     )
 
     screen.getByText("Free")
@@ -44,7 +44,7 @@ describe("Learning resource info section pricing", () => {
 
   test("Unknown price, no certificate", () => {
     renderWithTheme(
-      <InfoSectionV2 resource={courses.unknownPrice.noCertificate} />,
+      <InfoSection resource={courses.unknownPrice.noCertificate} />,
     )
 
     screen.getByText("Paid")
@@ -55,7 +55,7 @@ describe("Learning resource info section pricing", () => {
 
   test("Unknown price, with certificate", () => {
     renderWithTheme(
-      <InfoSectionV2 resource={courses.unknownPrice.withCertificate} />,
+      <InfoSection resource={courses.unknownPrice.withCertificate} />,
     )
 
     screen.getByText("Paid")
@@ -67,9 +67,7 @@ describe("Learning resource info section pricing", () => {
   })
 
   test("Paid course, no certificate", () => {
-    renderWithTheme(
-      <InfoSectionV2 resource={courses.paid.withoutCertificate} />,
-    )
+    renderWithTheme(<InfoSection resource={courses.paid.withoutCertificate} />)
 
     screen.getByText("$49")
     expect(screen.queryByText("Paid")).toBeNull()
@@ -80,7 +78,7 @@ describe("Learning resource info section pricing", () => {
 
   test("Paid course, with certificate, one price", () => {
     renderWithTheme(
-      <InfoSectionV2 resource={courses.paid.withCerticateOnePrice} />,
+      <InfoSection resource={courses.paid.withCerticateOnePrice} />,
     )
 
     screen.getByText("$49")
@@ -91,7 +89,7 @@ describe("Learning resource info section pricing", () => {
 
   test("Paid course, with certificate, price range", () => {
     renderWithTheme(
-      <InfoSectionV2 resource={courses.paid.withCertificatePriceRange} />,
+      <InfoSection resource={courses.paid.withCertificatePriceRange} />,
     )
 
     screen.getByText("$49 – $99")
@@ -110,7 +108,7 @@ describe("Learning resource info section start date", () => {
     invariant(run)
     const runDate = formatRunDate(run, false)
     invariant(runDate)
-    renderWithTheme(<InfoSectionV2 resource={course} />)
+    renderWithTheme(<InfoSection resource={course} />)
 
     const section = screen.getByTestId("drawer-info-items")
     within(section).getByText("Starts:")
@@ -123,7 +121,7 @@ describe("Learning resource info section start date", () => {
     invariant(run)
     const runDate = formatRunDate(run, true)
     invariant(runDate)
-    renderWithTheme(<InfoSectionV2 resource={course} />)
+    renderWithTheme(<InfoSection resource={course} />)
 
     const section = screen.getByTestId("drawer-info-items")
     const expectedDateText = `As taught in:${runDate}`
@@ -145,7 +143,7 @@ describe("Learning resource info section start date", () => {
       .slice(0, 2)
       .join(SEPARATOR)}Show more`
     invariant(expectedDateText)
-    renderWithTheme(<InfoSectionV2 resource={course} />)
+    renderWithTheme(<InfoSection resource={course} />)
 
     const section = screen.getByTestId("drawer-info-items")
     within(section).getAllByText((_content, node) => {
@@ -155,7 +153,7 @@ describe("Learning resource info section start date", () => {
 
   test("If data is different then dates, formats, locations and prices are not shown", () => {
     const course = courses.multipleRuns.differentData
-    renderWithTheme(<InfoSectionV2 resource={course} />)
+    renderWithTheme(<InfoSection resource={course} />)
     const section = screen.getByTestId("drawer-info-items")
     expect(within(section).queryByText("Starts:")).toBeNull()
     expect(within(section).queryByText("Price:")).toBeNull()
@@ -166,7 +164,7 @@ describe("Learning resource info section start date", () => {
   test("Clicking the show more button should show more dates", async () => {
     const course = courses.multipleRuns.sameData
     const totalRuns = course.runs?.length ? course.runs.length : 0
-    renderWithTheme(<InfoSectionV2 resource={course} />)
+    renderWithTheme(<InfoSection resource={course} />)
 
     const runDates = screen.getByTestId("drawer-run-dates")
     expect(runDates.children.length).toBe(3)
@@ -179,7 +177,7 @@ describe("Learning resource info section start date", () => {
 describe("Learning resource info section format and location", () => {
   test("Multiple formats", () => {
     const course = courses.multipleFormats
-    renderWithTheme(<InfoSectionV2 resource={course} />)
+    renderWithTheme(<InfoSection resource={course} />)
 
     const section = screen.getByTestId("drawer-info-items")
     within(section).getAllByText((_content, node) => {
@@ -193,7 +191,7 @@ describe("Learning resource info section format and location", () => {
 
   test("Single format", () => {
     const course = courses.singleFormat
-    renderWithTheme(<InfoSectionV2 resource={course} />)
+    renderWithTheme(<InfoSection resource={course} />)
 
     const section = screen.getByTestId("drawer-info-items")
     within(section).getAllByText((_content, node) => {

@@ -12,7 +12,7 @@ from vector_search.constants import (
 )
 from vector_search.encoders.utils import dense_encoder
 from vector_search.utils import (
-    _get_text_splitter,
+    _chunk_documents,
     create_qdrand_collections,
     embed_learning_resources,
     filter_existing_qdrant_points,
@@ -230,19 +230,49 @@ def test_qdrant_query_conditions(mocker):
     )
 
 
-def test_get_text_splitter(mocker):
+def test_document_chunker(mocker):
     """
     Test that the correct splitter is returned based on encoder
     """
     settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = None
+    settings.CONTENT_FILE_EMBEDDING_SEMANTIC_CHUNKING_ENABLED = True
+    settings.LITELLM_TOKEN_ENCODING_NAME = None
     encoder = dense_encoder()
     encoder.token_encoding_name = None
-    mocked_splitter = mocker.patch("vector_search.utils.TokenTextSplitter")
-    _get_text_splitter(encoder)
-    assert "encoding_name" not in mocked_splitter.mock_calls[0].kwargs
-    encoder.token_encoding_name = "cl100k_base"  # noqa: S105
-    _get_text_splitter(encoder)
-    assert "encoding_name" in mocked_splitter.mock_calls[1].kwargs
+    mocked_splitter = mocker.patch("vector_search.utils.RecursiveCharacterTextSplitter")
+    mocked_chunker = mocker.patch("vector_search.utils.SemanticChunker")
+    _chunk_documents(encoder, ["this is a test document"], [{}])
+
+    mocked_chunker.assert_called()
+    mocked_splitter.assert_called()
+
+    settings.CONTENT_FILE_EMBEDDING_SEMANTIC_CHUNKING_ENABLED = False
+
+    mocked_splitter = mocker.patch("vector_search.utils.RecursiveCharacterTextSplitter")
+    mocked_chunker = mocker.patch("vector_search.utils.SemanticChunker")
+
+    _chunk_documents(encoder, ["this is a test document"], [{}])
+    mocked_chunker.assert_not_called()
+    mocked_splitter.assert_called()
+
+
+def test_document_chunker_tiktoken(mocker):
+    """
+    Test that we use tiktoken if a token encoding is specified
+    """
+    settings.LITELLM_TOKEN_ENCODING_NAME = None
+    encoder = dense_encoder()
+    encoder.token_encoding_name = None
+    mocked_splitter = mocker.patch(
+        "vector_search.utils.RecursiveCharacterTextSplitter.from_tiktoken_encoder"
+    )
+
+    _chunk_documents(encoder, ["this is a test document"], [{}])
+    mocked_splitter.assert_not_called()
+
+    settings.LITELLM_TOKEN_ENCODING_NAME = "test"  # noqa: S105
+    _chunk_documents(encoder, ["this is a test document"], [{}])
+    mocked_splitter.assert_called()
 
 
 def test_text_splitter_chunk_size_override(mocker):
@@ -253,11 +283,11 @@ def test_text_splitter_chunk_size_override(mocker):
     settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = chunk_size
     settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = chunk_size / 10
     encoder = dense_encoder()
-    mocked_splitter = mocker.patch("vector_search.utils.TokenTextSplitter")
+    mocked_splitter = mocker.patch("vector_search.utils.RecursiveCharacterTextSplitter")
     encoder.token_encoding_name = "cl100k_base"  # noqa: S105
-    _get_text_splitter(encoder)
+    _chunk_documents(encoder, ["this is a test document"], [{}])
     assert mocked_splitter.mock_calls[0].kwargs["chunk_size"] == 100
-    mocked_splitter = mocker.patch("vector_search.utils.TokenTextSplitter")
+    mocked_splitter = mocker.patch("vector_search.utils.RecursiveCharacterTextSplitter")
     settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = None
-    _get_text_splitter(encoder)
+    _chunk_documents(encoder, ["this is a test document"], [{}])
     assert "chunk_size" not in mocked_splitter.mock_calls[0].kwargs

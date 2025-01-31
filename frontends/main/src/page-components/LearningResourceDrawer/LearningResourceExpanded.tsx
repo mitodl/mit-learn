@@ -1,6 +1,15 @@
 import React, { useCallback, useEffect, useRef, useState } from "react"
 import styled from "@emotion/styled"
-import Skeleton from "@mui/material/Skeleton"
+import {
+  Skeleton,
+  theme,
+  PlatformLogo,
+  PLATFORM_LOGOS,
+  Link,
+  Input,
+  Typography,
+} from "ol-components"
+import type { ImageConfig, LearningResourceCardProps } from "ol-components"
 import { default as NextImage } from "next/image"
 import {
   ActionButton,
@@ -23,16 +32,11 @@ import {
   RiShareLine,
   RiTwitterXLine,
 } from "@remixicon/react"
-import type { ImageConfig } from "../../constants/imgConfigs"
-import { theme } from "../ThemeProvider/ThemeProvider"
-import { PlatformLogo, PLATFORM_LOGOS } from "../Logo/Logo"
-import InfoSectionV2 from "./InfoSection"
+
+import InfoSection from "./InfoSection"
 import type { User } from "api/hooks/user"
-import { LearningResourceCardProps } from "../LearningResourceCard/LearningResourceCard"
 import VideoFrame from "./VideoFrame"
-import { Link } from "../Link/Link"
-import { Input } from "../Input/Input"
-import Typography from "@mui/material/Typography"
+import { usePostHog } from "posthog-js/react"
 
 const DRAWER_WIDTH = "900px"
 
@@ -505,6 +509,7 @@ const CallToActionSection = ({
   onAddToLearningPathClick?: LearningResourceCardProps["onAddToLearningPathClick"]
   onAddToUserListClick?: LearningResourceCardProps["onAddToUserListClick"]
 }) => {
+  const posthog = usePostHog()
   const [shareExpanded, setShareExpanded] = useState(false)
   const [copyText, setCopyText] = useState("Copy Link")
   if (hide) {
@@ -541,12 +546,17 @@ const CallToActionSection = ({
         <StyledLink
           target="_blank"
           size="medium"
+          endIcon={<RiExternalLinkLine />}
+          href={resource.url || ""}
+          onClick={() => {
+            if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+              posthog.capture("cta_clicked", { resource })
+            }
+          }}
           data-ph-action="click-cta"
           data-ph-offered-by={offeredBy?.code}
           data-ph-resource-type={resource.resource_type}
           data-ph-resource-id={resource.id}
-          endIcon={<RiExternalLinkLine />}
-          href={resource.url || ""}
         >
           {cta}
         </StyledLink>
@@ -734,7 +744,7 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
         <ContentContainer>
           <LeftContainer>
             <ResourceDescription resource={resource} />
-            <InfoSectionV2 resource={resource} />
+            <InfoSection resource={resource} />
           </LeftContainer>
           <RightContainer>
             <CallToActionSection

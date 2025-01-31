@@ -7,7 +7,7 @@ import Link from "next/link"
 type ListItemLinkProps = ListItemButtonProps<"a">
 
 /**
- * A ListItemButton that uses a Link component from react-router-dom.
+ * A ListItemButton that uses a Link component from next/link.
  *
  * The purpose is to make the entire clickable area of a ListItem a link. Note
  * that `ListItem` should have `disablePadding` when it contains a `ListItemLink`

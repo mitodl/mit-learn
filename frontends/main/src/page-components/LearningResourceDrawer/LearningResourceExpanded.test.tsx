@@ -1,5 +1,4 @@
 import React from "react"
-import { BrowserRouter } from "react-router-dom"
 import { screen, within } from "@testing-library/react"
 
 import {
@@ -11,10 +10,9 @@ import { ResourceTypeEnum } from "api"
 import { factories, setMockResponse, urls } from "api/test-utils"
 import invariant from "tiny-invariant"
 import type { LearningResource } from "api"
-import { PLATFORM_LOGOS } from "../Logo/Logo"
-import _ from "lodash"
+import { PLATFORM_LOGOS } from "ol-components"
 import user from "@testing-library/user-event"
-import { renderWithTheme } from "../../test-utils"
+import { renderWithTheme } from "@/test-utils"
 
 const IMG_CONFIG: LearningResourceExpandedProps["imgConfig"] = {
   width: 385,
@@ -33,15 +31,13 @@ const setup = (resource: LearningResource, isLearningPathEditor?: boolean) => {
   }
   setMockResponse.get(urls.userMe.get(), user)
   return renderWithTheme(
-    <BrowserRouter>
-      <LearningResourceExpanded
-        resourceId={resource.id}
-        resource={resource}
-        user={user}
-        shareUrl={`https://learn.mit.edu/search?resource=${resource.id}`}
-        imgConfig={IMG_CONFIG}
-      />
-    </BrowserRouter>,
+    <LearningResourceExpanded
+      resourceId={resource.id}
+      resource={resource}
+      user={user}
+      shareUrl={`https://learn.mit.edu/search?resource=${resource.id}`}
+      imgConfig={IMG_CONFIG}
+    />,
   )
 }
 

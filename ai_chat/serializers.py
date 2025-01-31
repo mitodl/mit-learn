@@ -41,3 +41,4 @@ class SyllabusChatRequestSerializer(ChatRequestSerializer):
     """DRF serializer for syllabus chatbot requests"""
 
     readable_id = serializers.CharField(required=True)
+    collection_name = serializers.CharField(required=False)

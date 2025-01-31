@@ -3,22 +3,19 @@ import { screen } from "@testing-library/react"
 import user from "@testing-library/user-event"
 import { SimpleMenu } from "./SimpleMenu"
 import type { SimpleMenuItem } from "./SimpleMenu"
-import type { LinkProps } from "react-router-dom"
 import { renderWithTheme } from "../../test-utils"
 
-// Mock react-router-dom's Link so we don't need to set up a Router
+// Mock next/link's Link so we don't need to set up a Router
 jest.mock("next/link", () => {
   return {
     __esModule: true,
-    default: React.forwardRef<HTMLAnchorElement, LinkProps>(
-      jest.fn(({ children, ...props }, ref) => {
-        return (
-          <a {...props} ref={ref} data-react-component="next/link">
-            {children}
-          </a>
-        )
-      }),
-    ),
+    default: jest.fn(({ children, ...props }) => {
+      return (
+        <a {...props} data-react-component="next/link">
+          {children}
+        </a>
+      )
+    }),
   }
 })
 
