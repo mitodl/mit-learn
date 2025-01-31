@@ -28,11 +28,12 @@ class LiteLLMEncoder(BaseEncoder):
         return [result["embedding"] for result in self.get_embedding(documents)["data"]]
 
     def get_embedding(self, texts):
-        if settings.LITELLM_CUSTOM_PROVIDER and settings.LITELLM_API_BASE:
-            return embedding(
-                model=self.model_name,
-                input=texts,
-                api_base=settings.LITELLM_API_BASE,
-                custom_llm_provider=settings.LITELLM_CUSTOM_PROVIDER,
-            ).to_dict()
-        return embedding(model=self.model_name, input=texts).to_dict()
+        config = {
+            "model": self.model_name,
+            "input": texts,
+        }
+        if settings.LITELLM_CUSTOM_PROVIDER:
+            config["custom_llm_provider"] = settings.LITELLM_CUSTOM_PROVIDER
+        if settings.LITELLM_API_BASE:
+            config["api_base"] = settings.LITELLM_API_BASE
+        return embedding(**config).to_dict()
