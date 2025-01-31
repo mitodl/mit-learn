@@ -5,7 +5,9 @@ import json
 
 from django.http import HttpRequest, HttpResponse
 from django.urls import Resolver404, resolve
-from django_scim import exceptions, constants as djs_constants, views as djs_views
+from django_scim import constants as djs_constants
+from django_scim import exceptions
+from django_scim import views as djs_views
 
 from scim import constants
 
@@ -112,7 +114,7 @@ class BulkView(djs_views.SCIMView):
         }
 
         if result.status_code >= 400:
-            response["response"] = json.loads(result.content.decode("utf-8")),
+            response["response"] = (json.loads(result.content.decode("utf-8")),)
 
         if "Location" in result.headers:
             response["location"] = result.headers["Location"]

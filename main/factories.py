@@ -4,7 +4,7 @@ Factory for Users
 
 import ulid
 from django.contrib.auth.models import Group, User
-from factory import LazyFunction, RelatedFactory, SubFactory, Trait, Faker
+from factory import Faker, LazyFunction, RelatedFactory, SubFactory, Trait
 from factory.django import DjangoModelFactory
 from factory.fuzzy import FuzzyText
 from social_django.models import UserSocialAuth

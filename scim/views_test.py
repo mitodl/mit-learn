@@ -1,17 +1,17 @@
-from collections.abc import Callable
 import itertools
 import json
 import operator
 import random
+from collections.abc import Callable
 from functools import reduce
 from types import SimpleNamespace
 
+import pytest
 from anys import ANY_STR
 from deepmerge import always_merger
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django_scim import constants as djs_constants
-import pytest
 
 from main.factories import UserFactory
 from scim import constants
@@ -240,11 +240,7 @@ def _patch_operation(user, data, fields_to_patch, bulk_id_gen):
                 "Operations": [
                     {
                         "op": "replace",
-                        "value": reduce(
-                            always_merger.merge,
-                            field_updates,
-                            {}
-                        )
+                        "value": reduce(always_merger.merge, field_updates, {}),
                     }
                 ],
             },
@@ -293,23 +289,23 @@ def _delete_operation(user, bulk_id_gen):
 @pytest.fixture
 def bulk_test_data():
     """Test data for the /Bulk API tests"""
-    existing_users = UserFactory.create_batch(50)
+    existing_users = UserFactory.create_batch(500)
     remaining_users = set(existing_users)
 
-    users_to_put = random.sample(sorted(remaining_users, key=lambda user: user.id), 10)
+    users_to_put = random.sample(sorted(remaining_users, key=lambda user: user.id), 100)
     remaining_users = remaining_users - set(users_to_put)
 
     users_to_patch = random.sample(
-        sorted(remaining_users, key=lambda user: user.id), 10
+        sorted(remaining_users, key=lambda user: user.id), 100
     )
     remaining_users = remaining_users - set(users_to_patch)
 
     users_to_delete = random.sample(
-        sorted(remaining_users, key=lambda user: user.id), 10
+        sorted(remaining_users, key=lambda user: user.id), 100
     )
     remaining_users = remaining_users - set(users_to_delete)
 
-    user_post_data = UserFactory.build_batch(10)
+    user_post_data = UserFactory.build_batch(100)
     user_put_data = UserFactory.build_batch(len(users_to_put))
     user_patch_data = UserFactory.build_batch(len(users_to_patch))
 
@@ -349,8 +345,6 @@ def bulk_test_data():
     ]
     random.shuffle(operations)
 
-    print(operations)
-
     return SimpleNamespace(
         existing_users=existing_users,
         remaining_users=remaining_users,
@@ -388,7 +382,6 @@ def test_bulk_post(staff_client, bulk_test_data):
     }
 
     for operation in bulk_test_data.operations:
-        print(operation.payload)
         assert (
             results_by_bulk_id[operation.payload["bulkId"]]
             == operation.expected_response
