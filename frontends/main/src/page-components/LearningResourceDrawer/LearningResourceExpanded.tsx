@@ -82,7 +82,7 @@ const TopContainer = styled.div({
     padding: "0 16px 24px",
   },
   [showChatSelector]: {
-    padding: "0 0 24px 28px",
+    padding: "0 16px 24px 28px",
     [theme.breakpoints.between("sm", "md")]: {
       padding: "0 0 16px 24px",
     },
@@ -104,7 +104,7 @@ const BottomContainer = styled.div({
   },
   [showChatSelector]: {
     [theme.breakpoints.up("md")]: {
-      padding: "32px 4px 32px 28px",
+      padding: "32px 16px 32px 28px",
     },
   },
 })
@@ -147,7 +147,7 @@ const ChatCol = styled.div({
     },
   },
   flex: 1,
-  padding: "0 28px 24px 24px",
+  padding: "0 28px 24px 16px",
   [theme.breakpoints.down("md")]: {
     padding: "0 16px 24px 16px",
   },
