@@ -218,10 +218,16 @@ const CallToAction = styled.div({
     boxShadow: "none",
   },
   [showChatSelector]: {
-    width: "100%",
-    padding: "0",
-    border: "none",
-    boxShadow: "none",
+    [theme.breakpoints.up("sm")]: {
+      width: "auto",
+      maxWidth: "424px",
+    },
+    [theme.breakpoints.down("md")]: {
+      width: "100%",
+      padding: "0",
+      border: "none",
+      boxShadow: "none",
+    },
   },
 })
 
