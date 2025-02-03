@@ -4,7 +4,7 @@ Factory for Users
 
 import ulid
 from django.conf import settings
-from factory import LazyFunction, RelatedFactory, SubFactory, Trait
+from factory import Faker, LazyFunction, RelatedFactory, SubFactory, Trait
 from factory.django import DjangoModelFactory
 from factory.fuzzy import FuzzyText
 from social_django.models import UserSocialAuth
@@ -15,8 +15,8 @@ class UserFactory(DjangoModelFactory):
 
     username = LazyFunction(lambda: ulid.new().str)
     email = FuzzyText(suffix="@example.com")
-    first_name = FuzzyText()
-    last_name = FuzzyText()
+    first_name = Faker("first_name")
+    last_name = Faker("last_name")
 
     profile = RelatedFactory("profiles.factories.ProfileFactory", "user")
 

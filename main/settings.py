@@ -122,6 +122,7 @@ INSTALLED_APPS = (
     "data_fixtures",
     "vector_search",
     "ai_chat",
+    "scim",
 )
 
 if not get_bool("RUN_DATA_MIGRATIONS", default=False):
@@ -141,9 +142,11 @@ SCIM_SERVICE_PROVIDER = {
             "documentationUri": "",
         },
     ],
-    "USER_ADAPTER": "profiles.scim.adapters.LearnSCIMUser",
-    "USER_MODEL_GETTER": "profiles.scim.adapters.get_user_model_for_scim",
-    "USER_FILTER_PARSER": "profiles.scim.filters.LearnUserFilterQuery",
+    "SERVICE_PROVIDER_CONFIG_MODEL": "scim.config.LearnSCIMServiceProviderConfig",
+    "USER_ADAPTER": "scim.adapters.LearnSCIMUser",
+    "USER_MODEL_GETTER": "scim.adapters.get_user_model_for_scim",
+    "USER_FILTER_PARSER": "scim.filters.LearnUserFilterQuery",
+    "GET_IS_AUTHENTICATED_PREDICATE": "scim.utils.is_authenticated_predicate",
 }
 
 
