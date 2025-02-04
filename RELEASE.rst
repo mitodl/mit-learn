@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.30.0
+--------------
+
+- Syllabus chatbot UI (#1999)
+- Update dependency attrs to v25 (#1994)
+
 Version 0.29.0 (Released February 04, 2025)
 --------------
 
