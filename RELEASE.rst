@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.29.0
+Version 0.29.0 (Released February 04, 2025)
 --------------
 
 - Semantic Chunking of Content Files (#2005)
