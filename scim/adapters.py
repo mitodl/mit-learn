@@ -44,6 +44,7 @@ class LearnSCIMUser(SCIMUser):
         ("active", None, None): "is_active",
         ("name", "givenName", None): "first_name",
         ("name", "familyName", None): "last_name",
+        ("userName", None, None): "username",
     }
 
     IGNORED_PATHS = {
@@ -158,7 +159,7 @@ class LearnSCIMUser(SCIMUser):
         """
         self.obj.is_active = False
         self.obj.save()
-        logger.info("Deactivated user id %i", self.obj.user.id)
+        logger.info("Deactivated user id %i", self.obj.id)
 
     def handle_add(
         self,
@@ -193,7 +194,7 @@ class LearnSCIMUser(SCIMUser):
 
             if isinstance(value, dict):
                 for nested_key, nested_value in value.items():
-                    result[f"{key}.{nested_key}"] = nested_value
+                    result[self.split_path(f"{key}.{nested_key}")] = nested_value
             else:
                 result[key] = value
 
@@ -202,11 +203,32 @@ class LearnSCIMUser(SCIMUser):
     def parse_path_and_values(
         self, path: Optional[str], value: Union[str, list, dict]
     ) -> list:
-        if not path and isinstance(value, str):
+        """Parse the incoming value(s)"""
+        if isinstance(value, str):
             # scim-for-keycloak sends this as a noncompliant JSON-encoded string
-            value = self.parse_scim_for_keycloak_payload(value)
+            if path is None:
+                val = json.loads(value)
+            else:
+                msg = "Called with a non-null path and a str value"
+                raise ValueError(msg)
+        else:
+            val = value
 
-        return super().parse_path_and_values(path, value)
+        results = []
+
+        for attr_path, attr_value in val.items():
+            if isinstance(attr_value, dict):
+                # nested object, we want to recursively flatten it to `first.second`
+                results.extend(self.parse_path_and_values(attr_path, attr_value))
+            else:
+                flattened_path = (
+                    f"{path}.{attr_path}" if path is not None else attr_path
+                )
+                new_path = self.split_path(flattened_path)
+                new_value = attr_value
+                results.append((new_path, new_value))
+
+        return results
 
     def handle_replace(
         self,
@@ -219,22 +241,20 @@ class LearnSCIMUser(SCIMUser):
 
         All operations happen within an atomic transaction.
         """
+
         if not isinstance(value, dict):
             # Restructure for use in loop below.
             value = {path: value}
 
         for nested_path, nested_value in (value or {}).items():
             if nested_path.first_path in self.ATTR_MAP:
-                setattr(
-                    self.obj, self.ATTR_MAP.get(nested_path.first_path), nested_value
-                )
-
+                setattr(self.obj, self.ATTR_MAP[nested_path.first_path], nested_value)
             elif nested_path.first_path == ("fullName", None, None):
                 self.obj.profile.name = nested_value
             elif nested_path.first_path == ("emailOptIn", None, None):
                 self.obj.profile.email_optin = nested_value == 1
             elif nested_path.first_path == ("emails", None, None):
-                self.parse_emails(value)
+                self.parse_emails(nested_value)
             elif nested_path.first_path not in self.IGNORED_PATHS:
                 logger.debug(
                     "Ignoring SCIM update for path: %s", nested_path.first_path
