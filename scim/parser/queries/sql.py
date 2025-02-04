@@ -1,6 +1,6 @@
-from scim2_filter_parser.queries.sql import SQLQuery
 from scim2_filter_parser.lexer import SCIMLexer
 from scim2_filter_parser.parser import SCIMParser
+from scim2_filter_parser.queries.sql import SQLQuery
 
 from scim.parser.transpilers.sql import PatchedTranspiler
 

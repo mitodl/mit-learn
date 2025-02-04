@@ -18,5 +18,3 @@ class PatchedTranspiler(Transpiler):
         index = len(self.params)
 
         return (chars[-1] * int(index / len(chars))) + chars[index % len(chars)]
-
-

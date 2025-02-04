@@ -1,6 +1,5 @@
 import json
 import logging
-import operator
 from typing import Optional, Union
 
 from django.contrib.auth import get_user_model
@@ -249,9 +248,7 @@ class LearnSCIMUser(SCIMUser):
 
         for nested_path, nested_value in (value or {}).items():
             if nested_path.first_path in self.ATTR_MAP:
-                setattr(
-                    self.obj, self.ATTR_MAP[nested_path.first_path], nested_value
-                )
+                setattr(self.obj, self.ATTR_MAP[nested_path.first_path], nested_value)
             elif nested_path.first_path == ("fullName", None, None):
                 self.obj.profile.name = nested_value
             elif nested_path.first_path == ("emailOptIn", None, None):

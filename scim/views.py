@@ -1,8 +1,9 @@
 """SCIM view customizations"""
-import logging
+
 import copy
-from http import HTTPStatus
 import json
+import logging
+from http import HTTPStatus
 from urllib.parse import urlparse
 
 from django.http import HttpRequest, HttpResponse
@@ -69,7 +70,9 @@ class BulkView(djs_views.SCIMView):
         content = json.dumps(response)
 
         return HttpResponse(
-            content=content, content_type=djs_constants.SCIM_CONTENT_TYPE, status=HTTPStatus.OK
+            content=content,
+            content_type=djs_constants.SCIM_CONTENT_TYPE,
+            status=HTTPStatus.OK,
         )
 
     def _attempt_operations(self, request, operations, fail_on_errors):
@@ -104,7 +107,9 @@ class BulkView(djs_views.SCIMView):
             url_match = resolve(path, urlconf="django_scim.urls")
         except Resolver404:
             return self._operation_error(
-                bulk_id, HTTPStatus.NOT_IMPLEMENTED, "Endpoint is not supported for /Bulk"
+                bulk_id,
+                HTTPStatus.NOT_IMPLEMENTED,
+                "Endpoint is not supported for /Bulk",
             )
 
         # this is an ephemeral request not tied to the real request directly
