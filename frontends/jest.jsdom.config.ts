@@ -7,7 +7,7 @@ import type { Config } from "@jest/types"
 const config: Config.InitialOptions &
   Pick<Required<Config.InitialOptions>, "setupFilesAfterEnv"> = {
   setupFilesAfterEnv: [resolve(__dirname, "./jest-shared-setup.ts")],
-  testEnvironment: "jsdom",
+  testEnvironment: resolve(__dirname, "./jsdom-extended.ts"),
   transform: {
     "^.+\\.(t|j)sx?$": "@swc/jest",
   },

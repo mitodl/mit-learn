@@ -74,9 +74,11 @@ const renderWithProviders = (
 
   mockRouter.setCurrentUrl(url)
 
-  const view = render(
-    <TestProviders queryClient={queryClient}>{component}</TestProviders>,
+  const Wrapper = ({ children }: { children: React.ReactNode }) => (
+    <TestProviders queryClient={queryClient}>{children}</TestProviders>
   )
+
+  const view = render(component, { wrapper: Wrapper })
 
   const location = {
     get current() {
