@@ -52,17 +52,17 @@ To get setup:
 
 ```
 QDRANT_ENCODER=vector_search.encoders.litellm.LiteLLMEncoder
-LITELLM_API_BASE=http://docker.for.mac.host.internal:11434
+LITELLM_API_BASE=http://docker.for.mac.host.internal:11434/v1/
 QDRANT_DENSE_MODEL=<ollama model name>
 ```
 
-_Note_ - "LITELLM_API_BASE=http://docker.for.mac.host.internal:11434" is Mac specific - if you are using another OS you will need to figure out what your host machine's docker address is.
+_Note_ - "LITELLM_API_BASE=http://docker.for.mac.host.internal:11434/v1/" is Mac specific - if you are using another OS you will need to figure out what your host machine's docker address is.
 
 Sample .env file configuration on Mac:
 
 ```
 QDRANT_ENCODER=vector_search.encoders.litellm.LiteLLMEncoder
-LITELLM_API_BASE=http://docker.for.mac.host.internal:11434
+LITELLM_API_BASE=http://docker.for.mac.host.internal:11434/v1/
 QDRANT_DENSE_MODEL=all-minilm
 ```
 
