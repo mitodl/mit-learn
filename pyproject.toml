@@ -214,6 +214,9 @@ convention = "pep257"
 [tool.ruff.lint.flake8-quotes]
 inline-quotes = "double"
 
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"django.contrib.auth.models.User".msg = "use get_user_model() or settings.AUTH_USER_MODEL"
+
 [tool.ruff.lint.per-file-ignores]
 "*_test.py" = ["ARG001", "E501", "S101", "PLR2004"]
 "test_*.py" = ["ARG001", "E501", "S101", "PLR2004"]

@@ -69,6 +69,8 @@ DEBUG = get_bool("DEBUG", False)  # noqa: FBT003
 
 ALLOWED_HOSTS = ["*"]
 
+AUTH_USER_MODEL = "auth.User"
+
 SECURE_SSL_REDIRECT = get_bool("MITOL_SECURE_SSL_REDIRECT", True)  # noqa: FBT003
 
 SITE_ID = 1

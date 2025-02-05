@@ -3,9 +3,9 @@
 import uuid
 from abc import abstractmethod
 from functools import cached_property
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
-from django.contrib.auth.models import User
+from django.conf import settings
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models import CharField, Count, JSONField, OuterRef, Prefetch, Q
@@ -24,6 +24,11 @@ from learning_resources.constants import (
     PrivacyLevel,
 )
 from main.models import TimestampedModel, TimestampedModelQuerySet
+
+if TYPE_CHECKING:
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
 
 
 def default_delivery():
@@ -328,7 +333,7 @@ class LearningResourceInstructor(TimestampedModel):
 class LearningResourceQuerySet(TimestampedModelQuerySet):
     """QuerySet for LearningResource"""
 
-    def for_serialization(self, *, user: User | None = None):
+    def for_serialization(self, *, user: Optional["User"] = None):
         """Return the list of prefetches"""
         return (
             self.prefetch_related(
@@ -792,7 +797,9 @@ class LearningPath(LearningResourceDetailModel):
         on_delete=models.CASCADE,
     )
     author = models.ForeignKey(
-        User, related_name="learning_paths", on_delete=models.PROTECT
+        settings.AUTH_USER_MODEL,
+        related_name="learning_paths",
+        on_delete=models.PROTECT,
     )
 
     def __str__(self):
@@ -896,7 +903,9 @@ class UserList(TimestampedModel):
     """
 
     author = models.ForeignKey(
-        User, on_delete=models.deletion.CASCADE, related_name="user_lists"
+        settings.AUTH_USER_MODEL,
+        on_delete=models.deletion.CASCADE,
+        related_name="user_lists",
     )
     title = models.CharField(max_length=256)
     description = models.TextField(default="", blank=True)

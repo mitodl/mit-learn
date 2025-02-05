@@ -4,7 +4,7 @@ import logging
 from decimal import Decimal
 from uuid import uuid4
 
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import F, Max
 from drf_spectacular.utils import extend_schema_field
@@ -845,6 +845,8 @@ class UserListSerializer(serializers.ModelSerializer, WriteableTopicsMixin):
 
     def create(self, validated_data):
         """Create a new user list"""
+        User = get_user_model()
+
         request = self.context.get("request")
         if request and hasattr(request, "user") and isinstance(request.user, User):
             validated_data["author"] = request.user
