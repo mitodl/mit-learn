@@ -250,7 +250,9 @@ const HeroSearch: React.FC<{ imageIndex: number }> = ({ imageIndex }) => {
                 <TopicLink
                   href="/topics/"
                   onClick={() => {
-                    posthogCapture("clicked_hero_browse_topics")
+                    if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+                      posthogCapture("clicked_hero_browse_topics")
+                    }
                   }}
                   color="red"
                 >

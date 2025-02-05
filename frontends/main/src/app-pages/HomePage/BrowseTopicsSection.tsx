@@ -122,7 +122,9 @@ const BrowseTopicsSection: React.FC = () => {
                   key={id}
                   href={channelUrl ? new URL(channelUrl!).pathname : ""}
                   onClick={() => {
-                    posthog.capture("home_topic_clicked", { topic: name })
+                    if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+                      posthog.capture("home_topic_clicked", { topic: name })
+                    }
                   }}
                 >
                   <TopicBoxContent>
@@ -138,7 +140,9 @@ const BrowseTopicsSection: React.FC = () => {
         <SeeAllButton
           href="/topics/"
           onClick={() => {
-            posthog.capture("home_see_all_topics_clicked")
+            if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+              posthog.capture("home_see_all_topics_clicked")
+            }
           }}
           size="large"
           responsive
