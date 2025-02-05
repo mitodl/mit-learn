@@ -24,6 +24,7 @@ import { useChannelCounts } from "api/hooks/channels"
 import backgroundSteps from "@/public/images/backgrounds/background_steps.jpg"
 import { usePostHog } from "posthog-js/react"
 import type { PostHog } from "posthog-js"
+import { PostHogEvents } from "@/common/constants"
 
 const captureTopicClicked = (
   posthog: PostHog,
@@ -58,7 +59,7 @@ const TopicBoxHeader = styled(
           href={href ?? ""}
           onClick={() => {
             if (posthog) {
-              captureTopicClicked(posthog, "topic_clicked", title)
+              captureTopicClicked(posthog, PostHogEvents.TopicClicked, title)
             }
           }}
         >
@@ -170,7 +171,11 @@ const TopicBox = ({
               key={c.id}
               href={c.channel_url && new URL(c.channel_url).pathname}
               onClick={() => {
-                captureTopicClicked(posthog, "subtopic_clicked", c.name)
+                captureTopicClicked(
+                  posthog,
+                  PostHogEvents.SubTopicClicked,
+                  c.name,
+                )
               }}
               label={c.name}
             />
@@ -184,7 +189,11 @@ const TopicBox = ({
               key={c.id}
               href={c.channel_url && new URL(c.channel_url).pathname}
               onClick={() => {
-                captureTopicClicked(posthog, "subtopic_clicked", c.name)
+                captureTopicClicked(
+                  posthog,
+                  PostHogEvents.SubTopicClicked,
+                  c.name,
+                )
               }}
               label={c.name}
             />

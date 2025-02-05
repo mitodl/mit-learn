@@ -30,6 +30,7 @@ import {
 import Image from "next/image"
 import { SearchField } from "@/page-components/SearchField/SearchField"
 import { usePostHog } from "posthog-js/react"
+import { PostHogEvents } from "@/common/constants"
 
 type SearchChip = {
   label: string
@@ -251,7 +252,7 @@ const HeroSearch: React.FC<{ imageIndex: number }> = ({ imageIndex }) => {
                   href="/topics/"
                   onClick={() => {
                     if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
-                      posthogCapture("clicked_hero_browse_topics")
+                      posthogCapture(PostHogEvents.HeroBrowseTopics)
                     }
                   }}
                   color="red"

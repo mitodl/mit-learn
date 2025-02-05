@@ -11,6 +11,7 @@ import {
 } from "ol-components"
 import Link from "next/link"
 import { usePostHog } from "posthog-js/react"
+import { PostHogEvents } from "@/common/constants"
 
 const CardStyled = styled(Card)({
   height: "100%",
@@ -132,7 +133,9 @@ const UnitCard: React.FC<UnitCardProps> = (props) => {
                 href={href}
                 onClick={() => {
                   if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
-                    posthog.capture("provider_link_clicked", { provider: unit })
+                    posthog.capture(PostHogEvents.ProviderLinkClicked, {
+                      provider: unit,
+                    })
                   }
                 }}
                 data-card-link

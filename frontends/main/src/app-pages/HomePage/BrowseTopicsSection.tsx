@@ -12,6 +12,7 @@ import { useLearningResourceTopics } from "api/hooks/learningResources"
 import { RiArrowRightLine } from "@remixicon/react"
 import RootTopicIcon from "@/components/RootTopicIcon/RootTopicIcon"
 import { usePostHog } from "posthog-js/react"
+import { PostHogEvents } from "@/common/constants"
 
 const Section = styled.section`
   background: #fff url("/images/backgrounds/open-bg-texture-with-gradient.svg")
@@ -123,7 +124,9 @@ const BrowseTopicsSection: React.FC = () => {
                   href={channelUrl ? new URL(channelUrl!).pathname : ""}
                   onClick={() => {
                     if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
-                      posthog.capture("home_topic_clicked", { topic: name })
+                      posthog.capture(PostHogEvents.HomeTopicClicked, {
+                        topic: name,
+                      })
                     }
                   }}
                 >
@@ -141,7 +144,7 @@ const BrowseTopicsSection: React.FC = () => {
           href="/topics/"
           onClick={() => {
             if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
-              posthog.capture("home_see_all_topics_clicked")
+              posthog.capture(PostHogEvents.HomeSeeAllTopicsClicked)
             }
           }}
           size="large"
