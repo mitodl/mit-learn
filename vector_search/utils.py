@@ -174,8 +174,10 @@ def _process_resource_embeddings(serialized_resources):
         docs.append(
             f"{doc.get('title')} {doc.get('description')} {doc.get('full_description')}"
         )
-    embeddings = encoder.embed_documents(docs)
-    return points_generator(ids, metadata, embeddings, vector_name)
+    if len(docs) > 0:
+        embeddings = encoder.embed_documents(docs)
+        return points_generator(ids, metadata, embeddings, vector_name)
+    return None
 
 
 def _chunk_documents(encoder, texts, metadatas):
@@ -212,7 +214,7 @@ def _chunk_documents(encoder, texts, metadatas):
     return recursive_splitter.create_documents(texts=texts, metadatas=metadatas)
 
 
-def _process_content_embeddings(serialized_content):
+def _process_content_embeddings(serialized_content, overwrite):
     embeddings = []
     metadata = []
     ids = []
@@ -222,6 +224,11 @@ def _process_content_embeddings(serialized_content):
     vector_name = encoder.model_short_name()
     for doc in serialized_content:
         if not doc.get("content"):
+            continue
+        if not overwrite and document_exists(
+            {"key": doc["key"], "run_readable_id": doc["run_readable_id"]},
+            collection_name=CONTENT_FILES_COLLECTION_NAME,
+        ):
             continue
         split_docs = _chunk_documents(encoder, [doc.get("content")], [doc])
         split_texts = [d.page_content for d in split_docs if d.page_content]
@@ -282,10 +289,12 @@ def _process_content_embeddings(serialized_content):
         except Exception as e:  # noqa: BLE001
             msg = f"Exceeded multi-vector max size: {e}"
             logger.warning(msg)
-    return points_generator(ids, metadata, embeddings, vector_name)
+    if ids:
+        return points_generator(ids, metadata, embeddings, vector_name)
+    return None
 
 
-def embed_learning_resources(ids, resource_type):
+def embed_learning_resources(ids, resource_type, overwrite):
     """
     Embed learning resources
 
@@ -296,20 +305,31 @@ def embed_learning_resources(ids, resource_type):
 
     client = qdrant_client()
 
-    resources_collection_name = RESOURCES_COLLECTION_NAME
-    content_files_collection_name = CONTENT_FILES_COLLECTION_NAME
-
     create_qdrand_collections(force_recreate=False)
     if resource_type != CONTENT_FILE_TYPE:
         serialized_resources = serialize_bulk_learning_resources(ids)
-        collection_name = resources_collection_name
+        existing_readable_ids = [
+            serialized["readable_id"] for serialized in serialized_resources
+        ]
+
+        new_resource_ids = filter_existing_qdrant_points(
+            values=existing_readable_ids,
+            lookup_field="readable_id",
+            collection_name=RESOURCES_COLLECTION_NAME,
+        )
+        serialized_resources = [
+            resource
+            for resource in serialized_resources
+            if resource["readable_id"] in new_resource_ids
+        ]
+        collection_name = RESOURCES_COLLECTION_NAME
         points = _process_resource_embeddings(serialized_resources)
     else:
         serialized_resources = serialize_bulk_content_files(ids)
-        collection_name = content_files_collection_name
-        points = _process_content_embeddings(serialized_resources)
-
-    client.upload_points(collection_name, points=points, wait=False)
+        collection_name = CONTENT_FILES_COLLECTION_NAME
+        points = _process_content_embeddings(serialized_resources, overwrite)
+    if points:
+        client.upload_points(collection_name, points=points, wait=False)
 
 
 def _resource_vector_hits(search_result):
@@ -395,6 +415,17 @@ def vector_search(
     }
 
 
+def document_exists(document, collection_name=RESOURCES_COLLECTION_NAME):
+    client = qdrant_client()
+    count_result = client.count(
+        collection_name=collection_name,
+        count_filter=models.Filter(
+            must=qdrant_query_conditions(document, collection_name=collection_name)
+        ),
+    )
+    return count_result.count > 0
+
+
 def qdrant_query_conditions(params, collection_name=RESOURCES_COLLECTION_NAME):
     """
     Generate Qdrant query conditions from query params
@@ -430,6 +461,18 @@ def qdrant_query_conditions(params, collection_name=RESOURCES_COLLECTION_NAME):
                 )
             )
     return conditions
+
+
+def filter_existing_qdrant_points_by_ids(
+    point_ids, collection_name=RESOURCES_COLLECTION_NAME
+):
+    client = qdrant_client()
+    response = client.retrieve(
+        collection_name=collection_name,
+        ids=point_ids,
+    )
+    existing = [record.id for record in response]
+    return [point_id for point_id in point_ids if point_id not in existing]
 
 
 def filter_existing_qdrant_points(
