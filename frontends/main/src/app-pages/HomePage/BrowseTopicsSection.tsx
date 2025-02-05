@@ -11,6 +11,7 @@ import { ButtonLink } from "@mitodl/smoot-design"
 import { useLearningResourceTopics } from "api/hooks/learningResources"
 import { RiArrowRightLine } from "@remixicon/react"
 import RootTopicIcon from "@/components/RootTopicIcon/RootTopicIcon"
+import { usePostHog } from "posthog-js/react"
 
 const Section = styled.section`
   background: #fff url("/images/backgrounds/open-bg-texture-with-gradient.svg")
@@ -104,6 +105,7 @@ const SeeAllButton = styled(ButtonLink)`
 `
 
 const BrowseTopicsSection: React.FC = () => {
+  const posthog = usePostHog()
   const { data: topics } = useLearningResourceTopics({ is_toplevel: true })
 
   return (
@@ -119,6 +121,9 @@ const BrowseTopicsSection: React.FC = () => {
                 <TopicBox
                   key={id}
                   href={channelUrl ? new URL(channelUrl!).pathname : ""}
+                  onClick={() => {
+                    posthog.capture("home_topic_clicked", { topic: name })
+                  }}
                 >
                   <TopicBoxContent>
                     <RootTopicIcon icon={icon} />
@@ -130,7 +135,14 @@ const BrowseTopicsSection: React.FC = () => {
             },
           )}
         </Topics>
-        <SeeAllButton href="/topics/" size="large" responsive>
+        <SeeAllButton
+          href="/topics/"
+          onClick={() => {
+            posthog.capture("home_see_all_topics_clicked")
+          }}
+          size="large"
+          responsive
+        >
           See all
         </SeeAllButton>
       </Container>
