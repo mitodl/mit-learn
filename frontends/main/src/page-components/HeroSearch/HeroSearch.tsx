@@ -29,6 +29,7 @@ import {
 } from "@remixicon/react"
 import Image from "next/image"
 import { SearchField } from "@/page-components/SearchField/SearchField"
+import AiRecommendationBotDrawerStrip from "@/page-components/AiRecommendationBot/AiRecommendationBotDrawerStrip"
 
 type SearchChip = {
   label: string
@@ -259,6 +260,7 @@ const HeroSearch: React.FC<{ imageIndex: number }> = ({ imageIndex }) => {
             </TrendingContainer>
           </div>
         </ControlsContainer>
+        <AiRecommendationBotDrawerStrip />
       </TitleAndControls>
       <ImageContainer>
         <Image
