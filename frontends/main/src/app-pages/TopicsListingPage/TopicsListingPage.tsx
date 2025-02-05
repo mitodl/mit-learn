@@ -23,6 +23,18 @@ import { aggregateProgramCounts, aggregateCourseCounts } from "@/common/utils"
 import { useChannelCounts } from "api/hooks/channels"
 import backgroundSteps from "@/public/images/backgrounds/background_steps.jpg"
 import { usePostHog } from "posthog-js/react"
+import type { PostHog } from "posthog-js"
+import { PostHogEvents } from "@/common/constants"
+
+const captureTopicClicked = (
+  posthog: PostHog,
+  event: string,
+  topic: string,
+) => {
+  if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+    posthog.capture(event, { topic })
+  }
+}
 
 type ChannelSummary = {
   id: number | string
@@ -37,12 +49,20 @@ type TopicBoxHeaderProps = {
   icon?: string
   href?: string
   className?: string
+  posthog?: PostHog
 }
 const TopicBoxHeader = styled(
-  ({ title, icon, href, className }: TopicBoxHeaderProps) => {
+  ({ title, icon, href, className, posthog }: TopicBoxHeaderProps) => {
     return (
       <Typography variant="h5" component="h2" className={className}>
-        <Link href={href ?? ""}>
+        <Link
+          href={href ?? ""}
+          onClick={() => {
+            if (posthog) {
+              captureTopicClicked(posthog, PostHogEvents.TopicClicked, title)
+            }
+          }}
+        >
           <RootTopicIcon icon={icon} aria-hidden="true" />
           <span>
             <span className="topic-title">{title}</span>
@@ -131,15 +151,10 @@ const TopicBox = ({
     { label: "Programs", count: programCount },
   ].filter((item) => item.count)
   const { title, href, icon, channels } = topicGroup
-  const captureTopicClicked = (topic: string) => {
-    if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
-      posthog.capture("topic_clicked", { topic })
-    }
-  }
 
   return (
     <li className={className}>
-      <TopicBoxHeader title={title} href={href} icon={icon} />
+      <TopicBoxHeader title={title} href={href} icon={icon} posthog={posthog} />
       <TopicBoxBody>
         <TopicCounts>
           {counts.map((item) => (
@@ -156,7 +171,11 @@ const TopicBox = ({
               key={c.id}
               href={c.channel_url && new URL(c.channel_url).pathname}
               onClick={() => {
-                captureTopicClicked(title)
+                captureTopicClicked(
+                  posthog,
+                  PostHogEvents.SubTopicClicked,
+                  c.name,
+                )
               }}
               label={c.name}
             />
@@ -170,7 +189,11 @@ const TopicBox = ({
               key={c.id}
               href={c.channel_url && new URL(c.channel_url).pathname}
               onClick={() => {
-                captureTopicClicked(title)
+                captureTopicClicked(
+                  posthog,
+                  PostHogEvents.SubTopicClicked,
+                  c.name,
+                )
               }}
               label={c.name}
             />
