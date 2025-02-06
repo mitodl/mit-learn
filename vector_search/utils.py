@@ -322,14 +322,13 @@ def embed_learning_resources(ids, resource_type, overwrite):
             if resource["readable_id"] in new_resource_ids
         ]
         collection_name = RESOURCES_COLLECTION_NAME
-
         points = _process_resource_embeddings(serialized_resources)
     else:
         serialized_resources = serialize_bulk_content_files(ids)
         collection_name = CONTENT_FILES_COLLECTION_NAME
         points = _process_content_embeddings(serialized_resources, overwrite)
-
-    client.upload_points(collection_name, points=points, wait=False)
+    if points:
+        client.upload_points(collection_name, points=points, wait=False)
 
 
 def _resource_vector_hits(search_result):
