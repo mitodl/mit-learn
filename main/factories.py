@@ -3,7 +3,7 @@ Factory for Users
 """
 
 import ulid
-from django.contrib.auth.models import Group, User
+from django.conf import settings
 from factory import LazyFunction, RelatedFactory, SubFactory, Trait
 from factory.django import DjangoModelFactory
 from factory.fuzzy import FuzzyText
@@ -21,7 +21,7 @@ class UserFactory(DjangoModelFactory):
     profile = RelatedFactory("profiles.factories.ProfileFactory", "user")
 
     class Meta:
-        model = User
+        model = settings.AUTH_USER_MODEL
         skip_postgeneration_save = True
 
     class Params:
@@ -34,7 +34,7 @@ class GroupFactory(DjangoModelFactory):
     name = FuzzyText()
 
     class Meta:
-        model = Group
+        model = "auth.Group"
 
 
 class UserSocialAuthFactory(DjangoModelFactory):

@@ -2,6 +2,7 @@ import React from "react"
 import { SearchInput } from "ol-components"
 import type { SearchInputProps, SearchSubmissionEvent } from "ol-components"
 import { usePostHog } from "posthog-js/react"
+import { PostHogEvents } from "@/common/constants"
 
 type SearchFieldProps = SearchInputProps & {
   onSubmit: (event: SearchSubmissionEvent) => void
@@ -26,7 +27,7 @@ const SearchField: React.FC<SearchFieldProps> = ({
     onSubmit(event)
     setPage?.(1)
     if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
-      posthog.capture("search_update", { isEnter: isEnter })
+      posthog.capture(PostHogEvents.SearchUpdate, { isEnter: isEnter })
     }
   }
 

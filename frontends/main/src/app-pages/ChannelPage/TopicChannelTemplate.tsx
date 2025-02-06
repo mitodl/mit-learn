@@ -27,6 +27,7 @@ import { propsNotNil, backgroundSrcSetCSS } from "ol-utilities"
 import invariant from "tiny-invariant"
 import backgroundSteps from "@/public/images/backgrounds/background_steps.jpg"
 import { usePostHog } from "posthog-js/react"
+import { PostHogEvents } from "@/common/constants"
 
 const ChildrenContainer = styled.div(({ theme }) => ({
   paddingTop: "40px",
@@ -79,14 +80,18 @@ const BannerSkeleton = styled(Skeleton)(({ theme }) => ({
 }))
 
 type TopicChipsInternalProps = {
-  title: string
   topicId: number
   parentTopicId: number
+  isTopLevelTopic: boolean
 }
 
 const TopicChipsInternal: React.FC<TopicChipsInternalProps> = (props) => {
   const posthog = usePostHog()
-  const { title, topicId, parentTopicId } = props
+  const { topicId, parentTopicId, isTopLevelTopic } = props
+  const title = isTopLevelTopic ? "Subtopics" : "Related Topics"
+  const posthogEvent = isTopLevelTopic
+    ? PostHogEvents.SubTopicClicked
+    : PostHogEvents.RelatedTopicClicked
   const subTopicsQuery = useLearningResourceTopics({
     parent_topic_id: [parentTopicId],
   })
@@ -106,7 +111,7 @@ const TopicChipsInternal: React.FC<TopicChipsInternalProps> = (props) => {
             href={topic.channel_url ?? ""}
             onClick={() => {
               if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
-                posthog.capture("related_topic_link_clicked", { topic })
+                posthog.capture(posthogEvent, { topic })
               }
             }}
             label={topic.name}
@@ -127,24 +132,17 @@ const TopicChips: React.FC<TopicChipsProps> = (props) => {
     return null
   }
   const isTopLevelTopic = topic?.parent === null
+  const parentTopicId = isTopLevelTopic ? topic.id : topic?.parent
 
-  if (isTopLevelTopic) {
+  if (parentTopicId) {
     return (
       <TopicChipsInternal
-        title="Subtopics"
         topicId={topic.id}
-        parentTopicId={topic.id}
+        parentTopicId={parentTopicId}
+        isTopLevelTopic={isTopLevelTopic}
       />
     )
-  } else if (topic?.parent) {
-    return (
-      <TopicChipsInternal
-        title="Related Topics"
-        topicId={topic.id}
-        parentTopicId={topic?.parent}
-      />
-    )
-  } else return null
+  }
 }
 
 type SubTopicBreadcrumbsProps = {

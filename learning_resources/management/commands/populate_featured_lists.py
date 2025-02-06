@@ -3,7 +3,7 @@
 import sys
 
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.core.management import BaseCommand
 
 from channels.models import Channel
@@ -17,6 +17,8 @@ from learning_resources.models import (
     LearningResourceOfferor,
 )
 from main.utils import clear_search_cache, now_in_utc
+
+User = get_user_model()
 
 
 class Command(BaseCommand):

@@ -3,7 +3,7 @@
 import logging
 
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.db.models import Prefetch
 from django.utils.decorators import method_decorator
 from django_filters.rest_framework import DjangoFilterBackend
@@ -169,6 +169,8 @@ class ChannelModeratorListView(ListCreateAPIView):
         """
         Build a queryset of relevant users with moderator permissions for this channel
         """
+        User = get_user_model()
+
         channel_group_name = get_group_role_name(
             self.kwargs["id"],
             CHANNEL_ROLE_MODERATORS,
@@ -190,6 +192,8 @@ class ChannelModeratorDetailView(APIView):
 
     def delete(self, request, *args, **kwargs):  # noqa: ARG002
         """Remove the user from the moderator groups for this website"""
+        User = get_user_model()
+
         user = User.objects.get(username=self.kwargs["moderator_name"])
         remove_user_role(
             Channel.objects.get(id=self.kwargs["id"]), CHANNEL_ROLE_MODERATORS, user

@@ -2,13 +2,14 @@
 
 import logging
 import re
+from typing import TYPE_CHECKING
 
 import rapidjson
 import requests
 import yaml
 from botocore.exceptions import ClientError
 from django.conf import settings
-from django.contrib.auth.models import Group, User
+from django.contrib.auth.models import Group
 from django.db import transaction
 from django.db.models import Q
 from retry import retry
@@ -32,6 +33,11 @@ from learning_resources.models import (
 from main.utils import generate_filepath
 
 log = logging.getLogger()
+
+if TYPE_CHECKING:
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
 
 
 def user_list_image_upload_uri(instance, filename):
@@ -229,7 +235,7 @@ def parse_instructors(staff):
     return instructors
 
 
-def update_editor_group(user: User, is_editor: False):
+def update_editor_group(user: "User", is_editor: False):
     """Assign or unassign user to staff list editors group"""
     group, _ = Group.objects.get_or_create(name=GROUP_STAFF_LISTS_EDITORS)
     if is_editor:

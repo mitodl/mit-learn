@@ -5,7 +5,8 @@ import random
 from math import ceil
 
 import pytest
-from django.contrib.auth.models import Group, User
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.urls import reverse
 
 from channels.api import add_user_role
@@ -25,6 +26,8 @@ from learning_resources.factories import (
 from main.factories import UserFactory
 
 pytestmark = pytest.mark.django_db
+
+User = get_user_model()
 
 
 def test_list_channels(user_client):

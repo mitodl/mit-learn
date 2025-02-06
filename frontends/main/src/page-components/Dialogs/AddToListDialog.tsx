@@ -29,6 +29,7 @@ import {
 import { manageListDialogs } from "@/page-components/ManageListDialogs/ManageListDialogs"
 import { ListType } from "api/constants"
 import { useFormik } from "formik"
+import { PostHogEvents } from "@/common/constants"
 
 const LIST_LIMIT = 100
 
@@ -101,7 +102,7 @@ const AddToListDialogInner: React.FC<AddToListDialogInnerProps> = ({
     onSubmit: async (values) => {
       if (resource) {
         if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
-          posthog.capture("lr_add_to_list", {
+          posthog.capture(PostHogEvents.LRAddToList, {
             listType: listType,
             resourceId: resource?.id,
             readableId: resource?.readable_id,

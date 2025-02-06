@@ -33,7 +33,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.30.0"
+VERSION = "0.30.1"
 
 log = logging.getLogger()
 
@@ -68,6 +68,8 @@ SECRET_KEY = get_string("SECRET_KEY", "terribly_unsafe_default_secret_key")
 DEBUG = get_bool("DEBUG", False)  # noqa: FBT003
 
 ALLOWED_HOSTS = ["*"]
+
+AUTH_USER_MODEL = "auth.User"
 
 SECURE_SSL_REDIRECT = get_bool("MITOL_SECURE_SSL_REDIRECT", True)  # noqa: FBT003
 
@@ -816,7 +818,7 @@ QDRANT_ENCODER = get_string(
 LITELLM_TOKEN_ENCODING_NAME = get_string(
     name="LITELLM_TOKEN_ENCODING_NAME", default=None
 )
-LITELLM_CUSTOM_PROVIDER = get_string(name="LITELLM_CUSTOM_PROVIDER", default="ollama")
+LITELLM_CUSTOM_PROVIDER = get_string(name="LITELLM_CUSTOM_PROVIDER", default="openai")
 LITELLM_API_BASE = get_string(name="LITELLM_API_BASE", default=None)
 
 
