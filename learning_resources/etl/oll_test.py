@@ -28,7 +28,7 @@ def test_extract(mocker, oll_course_data, sheets_id):
 def test_oll_transform(mocker, oll_course_data):
     """Verify that courses are transformed correctly"""
     results = list(transform(oll_course_data))
-    assert len(results) == 60
+    assert len(results) == 63
 
     assert results[0] == {
         "title": "Introduction to Probability and Statistics",
