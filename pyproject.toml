@@ -91,6 +91,7 @@ llama-index-llms-openai = "^0.3.12"
 llama-index-agent-openai = "^0.4.1"
 langchain-experimental = "^0.3.4"
 langchain-openai = "^0.3.2"
+deepmerge = "^2.0"
 
 
 [tool.poetry.group.dev.dependencies]
