@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.30.0
+Version 0.30.0 (Released February 06, 2025)
 --------------
 
 - Syllabus chatbot UI (#1999)
