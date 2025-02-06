@@ -18,6 +18,10 @@ RUN mkdir /src
 RUN adduser --disabled-password --gecos "" mitodl
 RUN mkdir /var/media && chown -R mitodl:mitodl /var/media
 
+# copy in trusted certs
+COPY --chmod=644 certs/*.crt /usr/local/share/ca-certificates/
+RUN update-ca-certificates
+
 ## Set some poetry config
 ENV  \
   POETRY_VERSION=1.7.1 \
