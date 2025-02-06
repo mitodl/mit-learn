@@ -63,7 +63,7 @@ def points_generator(
         yield models.PointStruct(id=idx, payload=payload, vector=point_vector)
 
 
-def create_qdrand_collections(force_recreate):
+def create_qdrant_collections(force_recreate):
     """
     Create or recreate QDrant collections
 
@@ -300,7 +300,7 @@ def embed_learning_resources(ids, resource_type, overwrite):
 
     client = qdrant_client()
 
-    create_qdrand_collections(force_recreate=False)
+    create_qdrant_collections(force_recreate=False)
     if resource_type != CONTENT_FILE_TYPE:
         serialized_resources = list(serialize_bulk_learning_resources(ids))
         points = [

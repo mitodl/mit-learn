@@ -13,7 +13,7 @@ from vector_search.constants import (
 from vector_search.encoders.utils import dense_encoder
 from vector_search.utils import (
     _chunk_documents,
-    create_qdrand_collections,
+    create_qdrant_collections,
     embed_learning_resources,
     filter_existing_qdrant_points,
     qdrant_query_conditions,
@@ -139,7 +139,7 @@ def test_filter_existing_qdrant_points(mocker):
     assert filtered_resources.count() == 7
 
 
-def test_force_create_qdrand_collections(mocker):
+def test_force_create_qdrant_collections(mocker):
     """
     Test that the force flag will recreate collections
     even if they exist
@@ -150,7 +150,7 @@ def test_force_create_qdrand_collections(mocker):
         return_value=mock_qdrant,
     )
     mock_qdrant.collection_exists.return_value = True
-    create_qdrand_collections(force_recreate=True)
+    create_qdrant_collections(force_recreate=True)
     assert (
         mock_qdrant.recreate_collection.mock_calls[0].kwargs["collection_name"]
         == RESOURCES_COLLECTION_NAME
@@ -169,7 +169,7 @@ def test_force_create_qdrand_collections(mocker):
     )
 
 
-def test_auto_create_qdrand_collections(mocker):
+def test_auto_create_qdrant_collections(mocker):
     """
     Test that collections will get autocreated if they
     don't exist
@@ -180,7 +180,7 @@ def test_auto_create_qdrand_collections(mocker):
         return_value=mock_qdrant,
     )
     mock_qdrant.collection_exists.return_value = False
-    create_qdrand_collections(force_recreate=False)
+    create_qdrant_collections(force_recreate=False)
     assert (
         mock_qdrant.recreate_collection.mock_calls[0].kwargs["collection_name"]
         == RESOURCES_COLLECTION_NAME
@@ -210,7 +210,7 @@ def test_skip_creating_qdrand_collections(mocker):
         return_value=mock_qdrant,
     )
     mock_qdrant.collection_exists.return_value = False
-    create_qdrand_collections(force_recreate=False)
+    create_qdrant_collections(force_recreate=False)
     assert (
         mock_qdrant.recreate_collection.mock_calls[0].kwargs["collection_name"]
         == RESOURCES_COLLECTION_NAME

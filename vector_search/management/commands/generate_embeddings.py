@@ -6,7 +6,7 @@ from learning_resources_search.constants import LEARNING_RESOURCE_TYPES
 from main.utils import clear_search_cache, now_in_utc
 from vector_search.tasks import embed_learning_resources_by_id, start_embed_resources
 from vector_search.utils import (
-    create_qdrand_collections,
+    create_qdrant_collections,
 )
 
 
@@ -77,7 +77,7 @@ class Command(BaseCommand):
                     self.stdout.write(f"  --{object_type}s")
                 return
         if options["recreate_collections"]:
-            create_qdrand_collections(force_recreate=True)
+            create_qdrant_collections(force_recreate=True)
         if options["resource-ids"]:
             task = embed_learning_resources_by_id.delay(
                 [
