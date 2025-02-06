@@ -225,13 +225,6 @@ def _process_content_embeddings(serialized_content):
     for doc in serialized_content:
         if not doc.get("content"):
             continue
-        """
-        if not overwrite and document_exists(
-            {"key": doc["key"], "run_readable_id": doc["run_readable_id"]},
-            collection_name=CONTENT_FILES_COLLECTION_NAME,
-        ):
-            continue
-        """
         split_docs = _chunk_documents(encoder, [doc.get("content")], [doc])
         split_texts = [d.page_content for d in split_docs if d.page_content]
         resource_vector_point_id = vector_point_id(doc["resource_readable_id"])
