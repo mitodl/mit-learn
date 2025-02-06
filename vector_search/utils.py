@@ -214,7 +214,7 @@ def _chunk_documents(encoder, texts, metadatas):
     return recursive_splitter.create_documents(texts=texts, metadatas=metadatas)
 
 
-def _process_content_embeddings(serialized_content, overwrite):
+def _process_content_embeddings(serialized_content):
     embeddings = []
     metadata = []
     ids = []
@@ -225,11 +225,13 @@ def _process_content_embeddings(serialized_content, overwrite):
     for doc in serialized_content:
         if not doc.get("content"):
             continue
+        """
         if not overwrite and document_exists(
             {"key": doc["key"], "run_readable_id": doc["run_readable_id"]},
             collection_name=CONTENT_FILES_COLLECTION_NAME,
         ):
             continue
+        """
         split_docs = _chunk_documents(encoder, [doc.get("content")], [doc])
         split_texts = [d.page_content for d in split_docs if d.page_content]
         resource_vector_point_id = vector_point_id(doc["resource_readable_id"])
@@ -308,25 +310,42 @@ def embed_learning_resources(ids, resource_type, overwrite):
     create_qdrand_collections(force_recreate=False)
     if resource_type != CONTENT_FILE_TYPE:
         serialized_resources = list(serialize_bulk_learning_resources(ids))
-        existing_readable_ids = [
-            serialized["readable_id"] for serialized in serialized_resources
+        points = [
+            (vector_point_id(serialized["readable_id"]), serialized)
+            for serialized in serialized_resources
         ]
-        new_resource_ids = filter_existing_qdrant_points(
-            values=existing_readable_ids,
-            lookup_field="readable_id",
-            collection_name=RESOURCES_COLLECTION_NAME,
-        )
-        serialized_resources = [
-            resource
-            for resource in serialized_resources
-            if resource["readable_id"] in new_resource_ids
-        ]
+        if not overwrite:
+            filtered_point_ids = filter_existing_qdrant_points_by_ids(
+                [point[0] for point in points],
+                collection_name=RESOURCES_COLLECTION_NAME,
+            )
+            serialized_resources = [
+                point[1] for point in points if point[0] in filtered_point_ids
+            ]
+
         collection_name = RESOURCES_COLLECTION_NAME
         points = _process_resource_embeddings(serialized_resources)
     else:
-        serialized_resources = serialize_bulk_content_files(ids)
+        serialized_resources = list(serialize_bulk_content_files(ids))
         collection_name = CONTENT_FILES_COLLECTION_NAME
-        points = _process_content_embeddings(serialized_resources, overwrite)
+        points = [
+            (
+                vector_point_id(
+                    f"{doc['resource_readable_id']}.{doc['run_readable_id']}.{doc['key']}.0"
+                ),
+                doc,
+            )
+            for doc in serialized_resources
+        ]
+        if not overwrite:
+            filtered_point_ids = filter_existing_qdrant_points_by_ids(
+                [point[0] for point in points],
+                collection_name=CONTENT_FILES_COLLECTION_NAME,
+            )
+            serialized_resources = [
+                point[1] for point in points if point[0] in filtered_point_ids
+            ]
+        points = _process_content_embeddings(serialized_resources)
     if points:
         client.upload_points(collection_name, points=points, wait=False)
 
@@ -465,6 +484,9 @@ def qdrant_query_conditions(params, collection_name=RESOURCES_COLLECTION_NAME):
 def filter_existing_qdrant_points_by_ids(
     point_ids, collection_name=RESOURCES_COLLECTION_NAME
 ):
+    """
+    Return only points that dont exist in qdrant
+    """
     client = qdrant_client()
     response = client.retrieve(
         collection_name=collection_name,

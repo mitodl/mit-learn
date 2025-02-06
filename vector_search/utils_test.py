@@ -73,14 +73,19 @@ def test_embed_learning_resources_no_overwrite(mocker, content_type):
     if content_type == "learning_resource":
         # filter out 3 resources that are already embedded
         mocker.patch(
-            "vector_search.utils.filter_existing_qdrant_points",
-            return_value=[r.readable_id for r in resources[0:2]],
+            "vector_search.utils.filter_existing_qdrant_points_by_ids",
+            return_value=[vector_point_id(r.readable_id) for r in resources[0:2]],
         )
     else:
         # all contentfiles exist in qdrant
         mocker.patch(
-            "vector_search.utils.document_exists",
-            return_value=True,
+            "vector_search.utils.filter_existing_qdrant_points_by_ids",
+            return_value=[
+                vector_point_id(
+                    f"{doc['resource_readable_id']}.{doc['run_readable_id']}.{doc['key']}.0"
+                )
+                for doc in serialize_bulk_content_files([r.id for r in resources[0:3]])
+            ],
         )
     embed_learning_resources(
         [resource.id for resource in resources], content_type, overwrite=False
@@ -88,7 +93,7 @@ def test_embed_learning_resources_no_overwrite(mocker, content_type):
     if content_type == "learning_resource":
         assert len(list(mock_qdrant.upload_points.mock_calls[0].kwargs["points"])) == 2
     else:
-        mock_qdrant.upload_points.assert_not_called()
+        assert len(list(mock_qdrant.upload_points.mock_calls[0].kwargs["points"])) == 3
 
 
 def test_filter_existing_qdrant_points(mocker):
