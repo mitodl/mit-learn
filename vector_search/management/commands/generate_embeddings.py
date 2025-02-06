@@ -6,7 +6,7 @@ from learning_resources_search.constants import LEARNING_RESOURCE_TYPES
 from main.utils import clear_search_cache, now_in_utc
 from vector_search.tasks import embed_learning_resources_by_id, start_embed_resources
 from vector_search.utils import (
-    create_qdrand_collections,
+    create_qdrant_collections,
 )
 
 
@@ -42,6 +42,12 @@ class Command(BaseCommand):
             action="store_true",
             help="Skip embedding content files",
         )
+        parser.add_argument(
+            "--overwrite",
+            dest="overwrite",
+            action="store_true",
+            help="Force overwrite existing embeddings",
+        )
 
         for object_type in sorted(LEARNING_RESOURCE_TYPES):
             parser.add_argument(
@@ -71,7 +77,7 @@ class Command(BaseCommand):
                     self.stdout.write(f"  --{object_type}s")
                 return
         if options["recreate_collections"]:
-            create_qdrand_collections(force_recreate=True)
+            create_qdrant_collections(force_recreate=True)
         if options["resource-ids"]:
             task = embed_learning_resources_by_id.delay(
                 [
@@ -79,10 +85,13 @@ class Command(BaseCommand):
                     for resource_id in options["resource-ids"].split(",")
                 ],
                 skip_content_files=options["skip_content_files"],
+                overwrite=options["overwrite"],
             )
         else:
             task = start_embed_resources.delay(
-                indexes_to_update, skip_content_files=options["skip_content_files"]
+                indexes_to_update,
+                skip_content_files=options["skip_content_files"],
+                overwrite=options["overwrite"],
             )
         self.stdout.write(
             f"Started celery task {task} to index content for the following"

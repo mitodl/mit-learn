@@ -31,10 +31,7 @@ from main.utils import (
     chunks,
     now_in_utc,
 )
-from vector_search.constants import (
-    RESOURCES_COLLECTION_NAME,
-)
-from vector_search.utils import embed_learning_resources, filter_existing_qdrant_points
+from vector_search.utils import embed_learning_resources
 
 log = logging.getLogger(__name__)
 
@@ -46,7 +43,7 @@ log = logging.getLogger(__name__)
     retry_backoff=True,
     rate_limit="600/m",
 )
-def generate_embeddings(ids, resource_type):
+def generate_embeddings(ids, resource_type, overwrite):
     """
     Generate learning resource embeddings and index in Qdrant
 
@@ -57,7 +54,7 @@ def generate_embeddings(ids, resource_type):
     """
     try:
         with wrap_retry_exception(*SEARCH_CONN_EXCEPTIONS):
-            embed_learning_resources(ids, resource_type)
+            embed_learning_resources(ids, resource_type, overwrite)
     except (RetryError, Ignore):
         raise
     except SystemExit as err:
@@ -69,7 +66,7 @@ def generate_embeddings(ids, resource_type):
 
 
 @app.task(bind=True)
-def start_embed_resources(self, indexes, skip_content_files):
+def start_embed_resources(self, indexes, skip_content_files, overwrite):
     """
     Celery task to embed all learning resources for given indexes
 
@@ -89,7 +86,7 @@ def start_embed_resources(self, indexes, skip_content_files):
             blocklisted_ids = load_course_blocklist()
 
             index_tasks = [
-                generate_embeddings.si(ids, COURSE_TYPE)
+                generate_embeddings.si(ids, COURSE_TYPE, overwrite)
                 for ids in chunks(
                     Course.objects.filter(learning_resource__published=True)
                     .exclude(learning_resource__readable_id=blocklisted_ids)
@@ -123,10 +120,7 @@ def start_embed_resources(self, indexes, skip_content_files):
                     )
 
                     index_tasks = index_tasks + [
-                        generate_embeddings.si(
-                            ids,
-                            CONTENT_FILE_TYPE,
-                        )
+                        generate_embeddings.si(ids, CONTENT_FILE_TYPE, overwrite)
                         for ids in chunks(
                             run_contentfiles,
                             chunk_size=settings.QDRANT_CHUNK_SIZE,
@@ -150,10 +144,7 @@ def start_embed_resources(self, indexes, skip_content_files):
                     chunk_size=settings.QDRANT_CHUNK_SIZE,
                 ):
                     index_tasks.append(
-                        generate_embeddings.si(
-                            ids,
-                            resource_type,
-                        )
+                        generate_embeddings.si(ids, resource_type, overwrite)
                     )
     except:  # noqa: E722
         error = "start_embed_resources threw an error"
@@ -166,7 +157,7 @@ def start_embed_resources(self, indexes, skip_content_files):
 
 
 @app.task(bind=True)
-def embed_learning_resources_by_id(self, ids, skip_content_files):
+def embed_learning_resources_by_id(self, ids, skip_content_files, overwrite):
     """
     Celery task to embed specific resources
 
@@ -190,10 +181,7 @@ def embed_learning_resources_by_id(self, ids, skip_content_files):
             embed_resources = resources.filter(resource_type=resource_type)
             [
                 index_tasks.append(
-                    generate_embeddings.si(
-                        chunk_ids,
-                        resource_type,
-                    )
+                    generate_embeddings.si(chunk_ids, resource_type, overwrite)
                 )
                 for chunk_ids in chunks(
                     embed_resources.order_by("id").values_list("id", flat=True),
@@ -216,10 +204,7 @@ def embed_learning_resources_by_id(self, ids, skip_content_files):
                     ).order_by("id")
                     content_ids = run_contentfiles.values_list("id", flat=True)
                     index_tasks = index_tasks + [
-                        generate_embeddings.si(
-                            ids,
-                            CONTENT_FILE_TYPE,
-                        )
+                        generate_embeddings.si(ids, CONTENT_FILE_TYPE, overwrite)
                         for ids in chunks(
                             content_ids,
                             chunk_size=settings.QDRANT_CHUNK_SIZE,
@@ -249,27 +234,19 @@ def embed_new_learning_resources(self):
         published=True,
         created_on__gt=since,
     ).exclude(resource_type=CONTENT_FILE_TYPE)
-    existing_readable_ids = [
-        learning_resource.readable_id for learning_resource in new_learning_resources
-    ]
-    filtered_readable_ids = filter_existing_qdrant_points(
-        values=existing_readable_ids,
-        lookup_field="readable_id",
-        collection_name=RESOURCES_COLLECTION_NAME,
+
+    resource_types = list(
+        new_learning_resources.values_list("resource_type", flat=True)
     )
-    filtered_resources = LearningResource.objects.filter(
-        readable_id__in=filtered_readable_ids
-    )
-    resource_types = list(filtered_resources.values_list("resource_type", flat=True))
     tasks = []
     for resource_type in resource_types:
         tasks.extend(
             [
-                generate_embeddings.si(ids, resource_type)
+                generate_embeddings.si(ids, resource_type, overwrite=False)
                 for ids in chunks(
-                    filtered_resources.filter(resource_type=resource_type).values_list(
-                        "id", flat=True
-                    ),
+                    new_learning_resources.filter(
+                        resource_type=resource_type
+                    ).values_list("id", flat=True),
                     chunk_size=settings.QDRANT_CHUNK_SIZE,
                 )
             ]

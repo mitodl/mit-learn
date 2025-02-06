@@ -3,7 +3,7 @@
 from django.core.management.base import BaseCommand
 
 from vector_search.utils import (
-    create_qdrand_collections,
+    create_qdrant_collections,
 )
 
 
@@ -26,8 +26,8 @@ class Command(BaseCommand):
         """Create Qdrant collections"""
 
         if options["force"]:
-            create_qdrand_collections(force_recreate=True)
+            create_qdrant_collections(force_recreate=True)
         else:
-            create_qdrand_collections(force_recreate=False)
+            create_qdrant_collections(force_recreate=False)
 
         self.stdout.write("Created Qdrant collections")

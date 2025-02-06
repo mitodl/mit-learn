@@ -13,7 +13,7 @@ from vector_search.constants import (
 from vector_search.encoders.utils import dense_encoder
 from vector_search.utils import (
     _chunk_documents,
-    create_qdrand_collections,
+    create_qdrant_collections,
     embed_learning_resources,
     filter_existing_qdrant_points,
     qdrant_query_conditions,
@@ -35,8 +35,14 @@ def test_vector_point_id_used_for_embed(mocker, content_type):
         "vector_search.utils.qdrant_client",
         return_value=mock_qdrant,
     )
-
-    embed_learning_resources([resource.id for resource in resources], content_type)
+    if content_type == "learning_resource":
+        mocker.patch(
+            "vector_search.utils.filter_existing_qdrant_points",
+            return_value=[r.readable_id for r in resources],
+        )
+    embed_learning_resources(
+        [resource.id for resource in resources], content_type, overwrite=True
+    )
 
     if content_type == "learning_resource":
         point_ids = [vector_point_id(resource.readable_id) for resource in resources]
@@ -47,10 +53,47 @@ def test_vector_point_id_used_for_embed(mocker, content_type):
             )
             for resource in serialize_bulk_content_files([r.id for r in resources])
         ]
-
     assert sorted(
         [p.id for p in mock_qdrant.upload_points.mock_calls[0].kwargs["points"]]
     ) == sorted(point_ids)
+
+
+@pytest.mark.parametrize("content_type", ["learning_resource", "content_file"])
+def test_embed_learning_resources_no_overwrite(mocker, content_type):
+    # test when overwrite flag is false we dont re-embed existing resources
+    if content_type == "learning_resource":
+        resources = LearningResourceFactory.create_batch(5)
+    else:
+        resources = ContentFileFactory.create_batch(5, content="test content")
+    mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
+    mocker.patch(
+        "vector_search.utils.qdrant_client",
+        return_value=mock_qdrant,
+    )
+    if content_type == "learning_resource":
+        # filter out 3 resources that are already embedded
+        mocker.patch(
+            "vector_search.utils.filter_existing_qdrant_points_by_ids",
+            return_value=[vector_point_id(r.readable_id) for r in resources[0:2]],
+        )
+    else:
+        # all contentfiles exist in qdrant
+        mocker.patch(
+            "vector_search.utils.filter_existing_qdrant_points_by_ids",
+            return_value=[
+                vector_point_id(
+                    f"{doc['resource_readable_id']}.{doc['run_readable_id']}.{doc['key']}.0"
+                )
+                for doc in serialize_bulk_content_files([r.id for r in resources[0:3]])
+            ],
+        )
+    embed_learning_resources(
+        [resource.id for resource in resources], content_type, overwrite=False
+    )
+    if content_type == "learning_resource":
+        assert len(list(mock_qdrant.upload_points.mock_calls[0].kwargs["points"])) == 2
+    else:
+        assert len(list(mock_qdrant.upload_points.mock_calls[0].kwargs["points"])) == 3
 
 
 def test_filter_existing_qdrant_points(mocker):
@@ -96,7 +139,7 @@ def test_filter_existing_qdrant_points(mocker):
     assert filtered_resources.count() == 7
 
 
-def test_force_create_qdrand_collections(mocker):
+def test_force_create_qdrant_collections(mocker):
     """
     Test that the force flag will recreate collections
     even if they exist
@@ -107,7 +150,7 @@ def test_force_create_qdrand_collections(mocker):
         return_value=mock_qdrant,
     )
     mock_qdrant.collection_exists.return_value = True
-    create_qdrand_collections(force_recreate=True)
+    create_qdrant_collections(force_recreate=True)
     assert (
         mock_qdrant.recreate_collection.mock_calls[0].kwargs["collection_name"]
         == RESOURCES_COLLECTION_NAME
@@ -126,7 +169,7 @@ def test_force_create_qdrand_collections(mocker):
     )
 
 
-def test_auto_create_qdrand_collections(mocker):
+def test_auto_create_qdrant_collections(mocker):
     """
     Test that collections will get autocreated if they
     don't exist
@@ -137,7 +180,7 @@ def test_auto_create_qdrand_collections(mocker):
         return_value=mock_qdrant,
     )
     mock_qdrant.collection_exists.return_value = False
-    create_qdrand_collections(force_recreate=False)
+    create_qdrant_collections(force_recreate=False)
     assert (
         mock_qdrant.recreate_collection.mock_calls[0].kwargs["collection_name"]
         == RESOURCES_COLLECTION_NAME
@@ -167,7 +210,7 @@ def test_skip_creating_qdrand_collections(mocker):
         return_value=mock_qdrant,
     )
     mock_qdrant.collection_exists.return_value = False
-    create_qdrand_collections(force_recreate=False)
+    create_qdrant_collections(force_recreate=False)
     assert (
         mock_qdrant.recreate_collection.mock_calls[0].kwargs["collection_name"]
         == RESOURCES_COLLECTION_NAME
