@@ -69,7 +69,9 @@ def test_start_embed_resources(mocker, mocked_celery, index):
         start_embed_resources.delay([index], skip_content_files=True, overwrite=True)
 
     generate_embeddings_mock.si.assert_called_once_with(
-        resource_ids, index, overwrite=True
+        resource_ids,
+        index,
+        True,  # noqa: FBT003
     )
     assert mocked_celery.replace.call_count == 1
     assert mocked_celery.replace.call_args[0][1] == mocked_celery.chain.return_value
