@@ -1,8 +1,6 @@
 from django.conf import settings
-from django.contrib.auth.models import User
 from qdrant_client import models
 
-user = User()
 RESOURCES_COLLECTION_NAME = f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources"
 CONTENT_FILES_COLLECTION_NAME = f"{settings.QDRANT_BASE_COLLECTION_NAME}.content_files"
 
