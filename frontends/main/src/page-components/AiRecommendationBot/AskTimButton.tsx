@@ -2,7 +2,8 @@ import React from "react"
 import Image from "next/image"
 import { Typography, styled } from "ol-components"
 import { Button } from "@mitodl/smoot-design"
-import askTimIcon from "@/public/images/icons/ask-tim.svg"
+import askIcon from "@/public/images/icons/ask-icon.svg"
+import askIconWhite from "@/public/images/icons/ask-icon-white.svg"
 
 const StyledButton = styled(Button)(({ theme }) => ({
   display: "flex",
@@ -11,38 +12,30 @@ const StyledButton = styled(Button)(({ theme }) => ({
   minWidth: "auto",
   paddingLeft: "16px",
   paddingRight: "24px",
+  color: theme.custom.colors.darkGray2,
   borderColor: theme.custom.colors.lightGray2,
-}))
-
-const AskTim = styled.div({
-  display: "flex",
-  alignItems: "baseline",
-})
-
-const Ask = styled(Typography)(({ theme }) => ({
-  ...theme.typography.body2,
-  color: theme.custom.colors.darkGray2,
-}))
-
-const Tim = styled(Typography)(({ theme }) => ({
-  ...theme.typography.body1,
-  color: theme.custom.colors.darkGray2,
-  textTransform: "uppercase",
-  // eslint-disable-next-line no-restricted-syntax
-  fontWeight: 900,
+  "&&": {
+    ":hover": {
+      borderColor: "transparent",
+      color: theme.custom.colors.white,
+      backgroundColor: theme.custom.colors.darkGray2,
+      p: {
+        color: theme.custom.colors.white,
+      },
+      img: {
+        content: `url(${askIconWhite.src})`,
+      },
+    },
+  },
 }))
 
 const AskTIMButton = ({ onClick }: { onClick: () => void }) => {
   return (
-    <StyledButton
-      variant="bordered"
-      edge="rounded"
-      startIcon={<Image src={askTimIcon.src} alt="" width={20} height={20} />}
-      onClick={onClick}
-    >
-      <AskTim>
-        <Ask>Ask</Ask> <Tim>Tim</Tim>
-      </AskTim>
+    <StyledButton variant="bordered" edge="rounded" onClick={onClick}>
+      <Image src={askIcon.src} alt="" width={20} height={20} />
+      <Typography variant="body1">
+        Ask<strong>TIM</strong>
+      </Typography>
     </StyledButton>
   )
 }

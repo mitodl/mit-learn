@@ -6,25 +6,21 @@ import { AiChat, AiChatProps } from "@mitodl/smoot-design/ai"
 
 const Container = styled.div(({ theme }) => ({
   width: "800px",
-  height: "100%",
+  height: "100vh",
+  padding: "24px",
   [theme.breakpoints.down("md")]: {
     width: "100%",
   },
 }))
 
-const AiChatStyled = styled(AiChat)({
-  height: "60vh",
-})
+// const AiChatStyled = styled(AiChat)({
+//   height: "60vh",
+// })
 
 const INITIAL_MESSAGES: AiChatProps["initialMessages"] = [
   {
     content: "What do you want to learn about today?",
     role: "assistant",
-  },
-  {
-    content:
-      "I'm interested in courses on quantum computing that offer certificates.",
-    role: "user",
   },
 ]
 
@@ -47,11 +43,12 @@ export const STARTERS = [
   },
 ]
 
-const AiRecommendationBot = () => {
+const AiRecommendationBot = ({ initialPrompt }: { initialPrompt: string }) => {
   return (
     <Container>
-      <AiChatStyled
-        title="AskTIM"
+      <AiChat
+        askTimTitle="to recommend a course"
+        initialPrompt={initialPrompt}
         initialMessages={INITIAL_MESSAGES}
         conversationStarters={STARTERS}
         requestOpts={{

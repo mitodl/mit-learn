@@ -1,18 +1,12 @@
 import React, { useState } from "react"
-import {
-  Typography,
-  styled,
-  Drawer,
-  Input,
-  AdornmentButton,
-} from "ol-components"
-// import { FeatureFlags } from "@/common/feature_flags"
-// import { useFeatureFlagEnabled } from "posthog-js/react"
+import { Typography, styled, Drawer, AdornmentButton } from "ol-components"
+import { Input } from "@mitodl/smoot-design"
 import AskTIMButton from "./AskTimButton"
 import AiRecommendationBot, { STARTERS } from "./AiRecommendationBot"
 import Image from "next/image"
 import timLogo from "@/public/images/icons/tim.svg"
-import askTimIcon from "@/public/images/icons/ask-tim.svg"
+import askIcon from "@/public/images/icons/ask-icon.svg"
+import askIconWhite from "@/public/images/icons/ask-icon-white.svg"
 import { RiSendPlaneFill } from "@remixicon/react"
 
 const StripContainer = styled.div({
@@ -104,10 +98,17 @@ const Starter = styled.div(({ theme }) => ({
     textAlign: "center",
     padding: "12px 36px",
   },
+  ":hover": {
+    cursor: "pointer",
+    borderColor: "transparent",
+    color: theme.custom.colors.white,
+    backgroundColor: theme.custom.colors.darkGray1,
+  },
 }))
 
 const AiRecommendationBotDrawerStrip = () => {
   const [open, setOpen] = useState(false)
+  const [initialPrompt, setInitialPrompt] = useState("")
   const [showEntryScreen, setShowEntryScreen] = useState(true)
   // const recommendationBotEnabled = useFeatureFlagEnabled(
   //   FeatureFlags.RecommendationBot,
@@ -116,34 +117,55 @@ const AiRecommendationBotDrawerStrip = () => {
   //   return null
   // }
 
+  const onPromptChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInitialPrompt(e.target.value)
+  }
+
+  const onPromptKeyDown: React.KeyboardEventHandler<HTMLInputElement> = (e) => {
+    if (e.key !== "Enter") return
+    setShowEntryScreen(false)
+  }
+
+  const onStarterClick = (content: string) => {
+    setInitialPrompt(content)
+    setShowEntryScreen(false)
+  }
+
+  const onDrawerClose = () => {
+    setOpen(false)
+    setShowEntryScreen(true)
+  }
+
   return (
     <StripContainer>
       <DecorativeLine />
       <LeadingText>Do you require assistance?</LeadingText>
       <AskTIMButton onClick={() => setOpen(true)} />
-      <Drawer open={open} anchor="right" onClose={() => setOpen(false)}>
+      <Drawer open={open} anchor="right" onClose={onDrawerClose}>
         {showEntryScreen ? (
           <EntryScreen>
             <TimLogoBox>
-              <AskTimIcon src={askTimIcon.src} alt="" width={24} height={24} />
+              <AskTimIcon src={askIcon.src} alt="" width={24} height={24} />
               <TimLogo src={timLogo.src} alt="" width={40} height={40} />
             </TimLogoBox>
             <Typography variant="h4">Welcome! I am TIM the Beaver.</Typography>
             <Typography>Need assistance getting started?</Typography>
             <StyledInput
               fullWidth
-              size="large"
+              size="chat"
               // inputProps={muiInputProps}
               // autoFocus
               // className={className}
               // placeholder={ }
               // value={value}
-              // onChange={onChange}
-              // onKeyDown={onInputKeyDown}
+
+              onChange={onPromptChange}
+              onKeyDown={onPromptKeyDown}
               endAdornment={
                 <AdornmentButton
                   aria-label="Send"
                   onClick={() => setShowEntryScreen(false)}
+                  disabled={!initialPrompt}
                 >
                   <StyledSendButton />
                 </AdornmentButton>
@@ -153,14 +175,14 @@ const AiRecommendationBotDrawerStrip = () => {
             <Typography variant="h5">Let me know how I can help.</Typography>
             <Starters>
               {STARTERS.map(({ content }, index) => (
-                <Starter key={index}>
+                <Starter key={index} onClick={() => onStarterClick(content)}>
                   <Typography variant="body2">{content}</Typography>
                 </Starter>
               ))}
             </Starters>
           </EntryScreen>
         ) : (
-          <AiRecommendationBot />
+          <AiRecommendationBot initialPrompt={initialPrompt} />
         )}
       </Drawer>
     </StripContainer>
