@@ -35,8 +35,14 @@ def test_vector_point_id_used_for_embed(mocker, content_type):
         "vector_search.utils.qdrant_client",
         return_value=mock_qdrant,
     )
-
-    embed_learning_resources([resource.id for resource in resources], content_type)
+    if content_type == "learning_resource":
+        mocker.patch(
+            "vector_search.utils.filter_existing_qdrant_points",
+            return_value=[r.readable_id for r in resources],
+        )
+    embed_learning_resources(
+        [resource.id for resource in resources], content_type, overwrite=True
+    )
 
     if content_type == "learning_resource":
         point_ids = [vector_point_id(resource.readable_id) for resource in resources]
@@ -47,7 +53,6 @@ def test_vector_point_id_used_for_embed(mocker, content_type):
             )
             for resource in serialize_bulk_content_files([r.id for r in resources])
         ]
-
     assert sorted(
         [p.id for p in mock_qdrant.upload_points.mock_calls[0].kwargs["points"]]
     ) == sorted(point_ids)

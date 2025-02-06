@@ -307,11 +307,10 @@ def embed_learning_resources(ids, resource_type, overwrite):
 
     create_qdrand_collections(force_recreate=False)
     if resource_type != CONTENT_FILE_TYPE:
-        serialized_resources = serialize_bulk_learning_resources(ids)
+        serialized_resources = list(serialize_bulk_learning_resources(ids))
         existing_readable_ids = [
             serialized["readable_id"] for serialized in serialized_resources
         ]
-
         new_resource_ids = filter_existing_qdrant_points(
             values=existing_readable_ids,
             lookup_field="readable_id",
@@ -323,13 +322,14 @@ def embed_learning_resources(ids, resource_type, overwrite):
             if resource["readable_id"] in new_resource_ids
         ]
         collection_name = RESOURCES_COLLECTION_NAME
+
         points = _process_resource_embeddings(serialized_resources)
     else:
         serialized_resources = serialize_bulk_content_files(ids)
         collection_name = CONTENT_FILES_COLLECTION_NAME
         points = _process_content_embeddings(serialized_resources, overwrite)
-    if points:
-        client.upload_points(collection_name, points=points, wait=False)
+
+    client.upload_points(collection_name, points=points, wait=False)
 
 
 def _resource_vector_hits(search_result):

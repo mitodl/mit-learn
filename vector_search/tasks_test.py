@@ -66,9 +66,11 @@ def test_start_embed_resources(mocker, mocked_celery, index):
     )
 
     with pytest.raises(mocked_celery.replace_exception_class):
-        start_embed_resources.delay([index], skip_content_files=True)
+        start_embed_resources.delay([index], skip_content_files=True, overwrite=True)
 
-    generate_embeddings_mock.si.assert_called_once_with(resource_ids, index)
+    generate_embeddings_mock.si.assert_called_once_with(
+        resource_ids, index, overwrite=True
+    )
     assert mocked_celery.replace.call_count == 1
     assert mocked_celery.replace.call_args[0][1] == mocked_celery.chain.return_value
 
@@ -101,7 +103,7 @@ def test_start_embed_resources_without_settings(mocker, mocked_celery, index):
     generate_embeddings_mock = mocker.patch(
         "vector_search.tasks.generate_embeddings", autospec=True
     )
-    start_embed_resources.delay([index], skip_content_files=True)
+    start_embed_resources.delay([index], skip_content_files=True, overwrite=True)
 
     generate_embeddings_mock.si.assert_not_called()
 
@@ -172,7 +174,9 @@ def test_embed_learning_resources_by_id(mocker, mocked_celery):
         content_ids.append(cf.id)
 
     with pytest.raises(mocked_celery.replace_exception_class):
-        embed_learning_resources_by_id.delay(resource_ids, skip_content_files=False)
+        embed_learning_resources_by_id.delay(
+            resource_ids, skip_content_files=False, overwrite=True
+        )
     for mock_call in generate_embeddings_mock.si.mock_calls[1:]:
         assert mock_call.args[0][0] in content_ids
         assert mock_call.args[1] == "content_file"
