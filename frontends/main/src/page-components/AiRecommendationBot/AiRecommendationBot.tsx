@@ -1,21 +1,16 @@
 import React from "react"
 import { styled } from "ol-components"
 import { getCsrfToken } from "@/common/utils"
-
 import { AiChat, AiChatProps } from "@mitodl/smoot-design/ai"
 
 const Container = styled.div(({ theme }) => ({
   width: "800px",
   height: "100vh",
-  padding: "24px",
+  padding: "16px 24px 24px 24px",
   [theme.breakpoints.down("md")]: {
     width: "100%",
   },
 }))
-
-// const AiChatStyled = styled(AiChat)({
-//   height: "60vh",
-// })
 
 const INITIAL_MESSAGES: AiChatProps["initialMessages"] = [
   {
@@ -43,7 +38,13 @@ export const STARTERS = [
   },
 ]
 
-const AiRecommendationBot = ({ initialPrompt }: { initialPrompt: string }) => {
+const AiRecommendationBot = ({
+  initialPrompt,
+  onClose,
+}: {
+  initialPrompt?: string
+  onClose?: () => void
+}) => {
   return (
     <Container>
       <AiChat
@@ -51,6 +52,7 @@ const AiRecommendationBot = ({ initialPrompt }: { initialPrompt: string }) => {
         initialPrompt={initialPrompt}
         initialMessages={INITIAL_MESSAGES}
         conversationStarters={STARTERS}
+        onClose={onClose}
         requestOpts={{
           apiUrl: `${process.env.NEXT_PUBLIC_MITOL_API_BASE_URL}/api/v0/chat_agent/`,
           fetchOpts: {
@@ -61,12 +63,6 @@ const AiRecommendationBot = ({ initialPrompt }: { initialPrompt: string }) => {
           transformBody: (messages) => ({
             message: messages[messages.length - 1].content,
           }),
-          // onFinish: (message) => {
-          // const contentParts = message.content.split("<!--")
-          // if (contentParts.length > 1) {
-          //   setDebugInfo(contentParts[1])
-          // }
-          // },
         }}
       />
     </Container>

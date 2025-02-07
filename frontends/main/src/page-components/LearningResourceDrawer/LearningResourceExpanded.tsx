@@ -8,7 +8,6 @@ import {
   Link,
   Input,
   Typography,
-  Stack,
 } from "ol-components"
 import type { ImageConfig, LearningResourceCardProps } from "ol-components"
 import { default as NextImage } from "next/image"
@@ -38,14 +37,15 @@ import {
   RiTwitterXLine,
   RiSparkling2Line,
 } from "@remixicon/react"
-
+import classNames from "classnames"
 import InfoSection from "./InfoSection"
 import type { User } from "api/hooks/user"
 import VideoFrame from "./VideoFrame"
-import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
-import classNames from "classnames"
-import AiChatSyllabus from "./AiChatSyllabus"
 import { FeatureFlags } from "@/common/feature_flags"
+import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
+import AiChatSyllabus from "./AiChatSyllabus"
+import askIcon from "@/public/images/icons/ask-icon.svg"
+import askIconWhite from "@/public/images/icons/ask-icon-white.svg"
 
 const DRAWER_WIDTH = "900px"
 const showChatClass = "show-chat"
@@ -72,6 +72,23 @@ const TitleContainer = styled.div({
     padding: "24px 16px",
   },
 })
+
+const CHAT_WIDTH = "400px"
+const CHAT_RIGHT = "0px"
+
+const Container = styled.div(({ chatOpen }: { chatOpen: boolean }) =>
+  chatOpen
+    ? {
+        paddingRight: `calc(${CHAT_WIDTH} + ${CHAT_RIGHT})`,
+        [theme.breakpoints.down("md")]: {
+          paddingRight: 0,
+          flexGrow: 1,
+        },
+      }
+    : {
+        paddingRight: 0,
+      },
+)
 
 const TopContainer = styled.div({
   display: "flex",
@@ -109,9 +126,7 @@ const BottomContainer = styled.div({
   },
 })
 
-const CHAT_WIDTH = "388px"
-
-const MainCol = styled.div({
+const MainCol = styled.div(({ chatOpen }: { chatOpen: boolean }) => ({
   /**
    * Note:
    * Without a width specified, the carousels will overflow up to 100vw
@@ -120,13 +135,9 @@ const MainCol = styled.div({
   flex: 1,
   [theme.breakpoints.down("md")]: {
     maxWidth: "100%",
+    display: chatOpen ? "none" : "inherit",
   },
-  [theme.breakpoints.up("sm")]: {
-    [showChatSelector]: {
-      minWidth: 0,
-    },
-  },
-})
+}))
 
 /**
  * Chat offset from top of drawer.
@@ -134,25 +145,27 @@ const MainCol = styled.div({
  * If title is two lines, the chat will overflow into title.
  */
 const CHAT_TOP = "calc(48px + 3rem)"
+
 const ChatCol = styled.div({
   zIndex: 2,
-  position: "sticky",
+  position: "fixed",
   top: CHAT_TOP,
-  height: `calc(100vh - ${CHAT_TOP} - 24px)`,
-  display: "none",
-  [showChatSelector]: {
-    display: "block",
-    [theme.breakpoints.down("sm")]: {
-      display: "none",
-    },
-  },
+  right: CHAT_RIGHT,
+  height: `calc(100vh - ${CHAT_TOP})`,
   flex: 1,
-  padding: "0 28px 24px 16px",
-  [theme.breakpoints.down("md")]: {
-    padding: "0 16px 24px 16px",
-  },
-  boxSizing: "content-box",
+  boxSizing: "border-box",
+  padding: "0 16px 16px 16px",
   maxWidth: CHAT_WIDTH,
+  [theme.breakpoints.down("md")]: {
+    maxWidth: "100%",
+    position: "static",
+  },
+  [theme.breakpoints.down("sm")]: {
+    height: "100%",
+  },
+  ".MitAiChat--title": {
+    paddingTop: "0px",
+  },
 })
 
 const ContentContainer = styled.div({
@@ -599,6 +612,7 @@ const CallToActionSection = ({
   const facebookShareBaseUrl = "https://www.facebook.com/sharer/sharer.php"
   const twitterShareBaseUrl = "https://x.com/share"
   const linkedInShareBaseUrl = "https://www.linkedin.com/sharing/share-offsite"
+
   return (
     <CallToAction data-testid="drawer-cta">
       <ImageSection resource={resource} config={imgConfig} />
@@ -772,9 +786,32 @@ const ResourceDescription = ({ resource }: { resource?: LearningResource }) => {
   )
 }
 
-const ChatTrigger = styled(Button)(({ theme }) => ({
-  [theme.breakpoints.down("sm")]: {
-    display: "none",
+const StyledAskButton = styled(Button)(({ theme }) => ({
+  display: "flex",
+  flexDirection: "row",
+  gap: "2px",
+  minWidth: "auto",
+  paddingLeft: "16px",
+  paddingRight: "24px",
+  color: theme.custom.colors.darkGray2,
+  borderColor: theme.custom.colors.lightGray2,
+  svg: {
+    content: `url(${askIcon.src})`,
+    fill: theme.custom.colors.red,
+  },
+  "&&": {
+    ":hover": {
+      borderColor: "transparent",
+      color: theme.custom.colors.white,
+      backgroundColor: theme.custom.colors.darkGray2,
+      p: {
+        color: theme.custom.colors.white,
+      },
+      svg: {
+        content: `url(${askIconWhite.src})`,
+        fill: theme.custom.colors.white,
+      },
+    },
   },
 }))
 
@@ -796,6 +833,7 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
   const chatEnabled =
     useFeatureFlagEnabled(FeatureFlags.LrDrawerChatbot) &&
     resource?.resource_type === ResourceTypeEnum.Course
+
   const [chatExpanded, setChatExpanded] = useToggle(false)
   const showChat = chatEnabled && chatExpanded
 
@@ -811,6 +849,9 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
       setChatExpanded.off()
     }
   }, [chatExpanded, resource, chatEnabled, setChatExpanded])
+
+  const chatOpen = !!(resource && showChat)
+
   return (
     <Outer
       className={classNames({ [showChatClass]: showChat })}
@@ -821,8 +862,8 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
         resource={resource}
         closeDrawer={closeDrawer ?? (() => {})}
       />
-      <Stack direction="row" alignItems="start">
-        <MainCol>
+      <Container chatOpen={chatOpen}>
+        <MainCol chatOpen={chatOpen}>
           <TopContainer>
             <ContentContainer>
               <ContentLeft>
@@ -841,13 +882,16 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
                   onAddToUserListClick={onAddToUserListClick}
                 />
                 {chatEnabled && !chatExpanded ? (
-                  <ChatTrigger
+                  <StyledAskButton
                     onClick={setChatExpanded.on}
-                    variant="secondary"
+                    variant="bordered"
+                    edge="rounded"
                     endIcon={<RiSparkling2Line />}
                   >
-                    Need help? Ask our Tutor
-                  </ChatTrigger>
+                    <Typography variant="body1">
+                      Need help? Ask<strong>TIM</strong>
+                    </Typography>
+                  </StyledAskButton>
                 ) : null}
               </ContentRight>
             </ContentContainer>
@@ -866,11 +910,11 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
           </BottomContainer>
         </MainCol>
         <ChatCol>
-          {resource && showChat ? (
+          {chatOpen ? (
             <AiChatSyllabus onClose={setChatExpanded.off} resource={resource} />
           ) : null}
         </ChatCol>
-      </Stack>
+      </Container>
     </Outer>
   )
 }

@@ -6,7 +6,6 @@ import AiRecommendationBot, { STARTERS } from "./AiRecommendationBot"
 import Image from "next/image"
 import timLogo from "@/public/images/icons/tim.svg"
 import askIcon from "@/public/images/icons/ask-icon.svg"
-import askIconWhite from "@/public/images/icons/ask-icon-white.svg"
 import { RiSendPlaneFill } from "@remixicon/react"
 
 const StripContainer = styled.div({
@@ -110,12 +109,6 @@ const AiRecommendationBotDrawerStrip = () => {
   const [open, setOpen] = useState(false)
   const [initialPrompt, setInitialPrompt] = useState("")
   const [showEntryScreen, setShowEntryScreen] = useState(true)
-  // const recommendationBotEnabled = useFeatureFlagEnabled(
-  //   FeatureFlags.RecommendationBot,
-  // )
-  // if (!recommendationBotEnabled) {
-  //   return null
-  // }
 
   const onPromptChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInitialPrompt(e.target.value)
@@ -153,12 +146,6 @@ const AiRecommendationBotDrawerStrip = () => {
             <StyledInput
               fullWidth
               size="chat"
-              // inputProps={muiInputProps}
-              // autoFocus
-              // className={className}
-              // placeholder={ }
-              // value={value}
-
               onChange={onPromptChange}
               onKeyDown={onPromptKeyDown}
               endAdornment={
@@ -182,7 +169,10 @@ const AiRecommendationBotDrawerStrip = () => {
             </Starters>
           </EntryScreen>
         ) : (
-          <AiRecommendationBot initialPrompt={initialPrompt} />
+          <AiRecommendationBot
+            initialPrompt={initialPrompt}
+            onClose={onDrawerClose}
+          />
         )}
       </Drawer>
     </StripContainer>

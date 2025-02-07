@@ -2,6 +2,9 @@
 
 import React, { useState, useCallback } from "react"
 import { useRouter } from "next-nprogress-bar"
+import { FeatureFlags } from "@/common/feature_flags"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+
 import {
   Typography,
   styled,
@@ -198,6 +201,10 @@ const HeroSearch: React.FC<{ imageIndex: number }> = ({ imageIndex }) => {
   const onSearchClear = useCallback(() => setSearchText(""), [])
   const router = useRouter()
 
+  const recommendationBotEnabled = useFeatureFlagEnabled(
+    FeatureFlags.HomePageRecommendationBot,
+  )
+
   const onSearchChange: SearchInputProps["onChange"] = useCallback((e) => {
     setSearchText(e.target.value)
   }, [])
@@ -260,7 +267,7 @@ const HeroSearch: React.FC<{ imageIndex: number }> = ({ imageIndex }) => {
             </TrendingContainer>
           </div>
         </ControlsContainer>
-        <AiRecommendationBotDrawerStrip />
+        {recommendationBotEnabled ? <AiRecommendationBotDrawerStrip /> : null}
       </TitleAndControls>
       <ImageContainer>
         <Image

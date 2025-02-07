@@ -53,7 +53,7 @@ const AiChatSyllabus: React.FC<AiChatSyllabusProps> = ({
       conversationStarters={STARTERS}
       initialMessages={getInitialMessage(resource, user.data)}
       chatId={`chat-${resource?.readable_id}`}
-      title="Ask Tim about this course"
+      askTimTitle="about this course"
       onClose={onClose}
       requestOpts={{
         apiUrl: `${process.env.NEXT_PUBLIC_MITOL_API_BASE_URL}/api/v0/syllabus_agent/`,
