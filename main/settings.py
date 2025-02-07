@@ -690,12 +690,6 @@ if MIDDLEWARE_FEATURE_FLAG_QS_PREFIX:
         "main.middleware.feature_flags.CookieFeatureFlagMiddleware",
     )
 
-# django debug toolbar only in debug mode
-if DEBUG:
-    INSTALLED_APPS += ("debug_toolbar",)
-    # it needs to be enabled before other middlewares
-    MIDDLEWARE = ("debug_toolbar.middleware.DebugToolbarMiddleware", *MIDDLEWARE)
-
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "DEFAULT_AUTHENTICATION_CLASSES": (
