@@ -69,7 +69,7 @@ DEBUG = get_bool("DEBUG", False)  # noqa: FBT003
 
 ALLOWED_HOSTS = ["*"]
 
-AUTH_USER_MODEL = "auth.User"
+AUTH_USER_MODEL = "users.User"
 
 SECURE_SSL_REDIRECT = get_bool("MITOL_SECURE_SSL_REDIRECT", True)  # noqa: FBT003
 
@@ -107,7 +107,7 @@ INSTALLED_APPS = (
     "drf_spectacular",
     # Put our apps after this point
     "main",
-    "users",
+    "users.apps.UsersConfig",
     "authentication",
     "channels",
     "profiles",
