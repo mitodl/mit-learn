@@ -63,22 +63,18 @@ describe("LearningResourceDrawer", () => {
       resource.resource_type === ResourceTypeEnum.VideoPlaylist ||
       resource.resource_type === ResourceTypeEnum.Podcast
     ) {
-      const items = factories.learningResources.resources({
-        count: 10,
-      })
-      items.results.forEach((item) => {
-        setMockResponse.get(
-          urls.learningResources.details({ id: item.id }),
-          item,
-        )
-      })
+      const relationships =
+        factories.learningResources.learningResourceRelationships({
+          count: 3,
+          parent: resource.id,
+        })
 
       setMockResponse.get(
         `${urls.learningResources.items({ id: resource.id })}?limit=12`,
-        items.results,
+        relationships,
       )
 
-      return { resource, user, items }
+      return { resource, user }
     }
 
     return { resource, user }
