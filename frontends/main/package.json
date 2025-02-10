@@ -20,7 +20,7 @@
     "@nlux/themes": "^2.17.1",
     "@remixicon/react": "^4.2.0",
     "@sentry/nextjs": "^8.36.0",
-    "@tanstack/react-query": "^4.36.1",
+    "@tanstack/react-query": "^5.0.0",
     "api": "workspace:*",
     "classnames": "^2.5.1",
     "formik": "^2.4.6",
