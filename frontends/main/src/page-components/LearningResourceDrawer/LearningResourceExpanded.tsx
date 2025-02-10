@@ -44,8 +44,6 @@ import VideoFrame from "./VideoFrame"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 import AiChatSyllabus from "./AiChatSyllabus"
-import askIcon from "@/public/images/icons/ask-icon.svg"
-import askIconWhite from "@/public/images/icons/ask-icon-white.svg"
 import { PostHogEvents } from "@/common/constants"
 
 const DRAWER_WIDTH = "900px"
@@ -797,7 +795,6 @@ const StyledAskButton = styled(Button)(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
   borderColor: theme.custom.colors.lightGray2,
   svg: {
-    content: `url(${askIcon.src})`,
     fill: theme.custom.colors.red,
   },
   "&&": {
@@ -809,7 +806,6 @@ const StyledAskButton = styled(Button)(({ theme }) => ({
         color: theme.custom.colors.white,
       },
       svg: {
-        content: `url(${askIconWhite.src})`,
         fill: theme.custom.colors.white,
       },
     },

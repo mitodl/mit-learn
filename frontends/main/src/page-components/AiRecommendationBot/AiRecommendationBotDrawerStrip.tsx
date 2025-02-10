@@ -1,11 +1,11 @@
 import React, { useState } from "react"
 import { Typography, styled, Drawer, AdornmentButton } from "ol-components"
+import { RiSparkling2Line } from "@remixicon/react"
 import { Input } from "@mitodl/smoot-design"
 import AskTIMButton from "./AskTimButton"
 import AiRecommendationBot, { STARTERS } from "./AiRecommendationBot"
 import Image from "next/image"
 import timLogo from "@/public/images/icons/tim.svg"
-import askIcon from "@/public/images/icons/ask-icon.svg"
 import { RiSendPlaneFill } from "@remixicon/react"
 
 const StripContainer = styled.div({
@@ -48,16 +48,16 @@ const TimLogoBox = styled.div(({ theme }) => ({
   padding: "16px",
   border: `1px solid ${theme.custom.colors.lightGray2}`,
   borderRadius: "8px",
+  svg: {
+    fill: theme.custom.colors.red,
+    position: "absolute",
+    top: "-10px",
+    left: "-10px",
+  },
 }))
 
 const TimLogo = styled(Image)({
   display: "block",
-})
-
-const AskTimIcon = styled(Image)({
-  position: "absolute",
-  top: "-10px",
-  left: "-10px",
 })
 
 const StyledInput = styled(Input)(({ theme }) => ({
@@ -138,7 +138,7 @@ const AiRecommendationBotDrawerStrip = () => {
         {showEntryScreen ? (
           <EntryScreen>
             <TimLogoBox>
-              <AskTimIcon src={askIcon.src} alt="" width={24} height={24} />
+              <RiSparkling2Line />
               <TimLogo src={timLogo.src} alt="" width={40} height={40} />
             </TimLogoBox>
             <Typography variant="h4">Welcome! I am TIM the Beaver.</Typography>

@@ -1,9 +1,7 @@
 import React from "react"
-import Image from "next/image"
 import { Typography, styled } from "ol-components"
 import { Button } from "@mitodl/smoot-design"
-import askIcon from "@/public/images/icons/ask-icon.svg"
-import askIconWhite from "@/public/images/icons/ask-icon-white.svg"
+import { RiSparkling2Line } from "@remixicon/react"
 
 const StyledButton = styled(Button)(({ theme }) => ({
   display: "flex",
@@ -14,6 +12,11 @@ const StyledButton = styled(Button)(({ theme }) => ({
   paddingRight: "24px",
   color: theme.custom.colors.darkGray2,
   borderColor: theme.custom.colors.lightGray2,
+  svg: {
+    fill: theme.custom.colors.red,
+    width: "20px",
+    height: "20px",
+  },
   "&&": {
     ":hover": {
       borderColor: "transparent",
@@ -22,8 +25,8 @@ const StyledButton = styled(Button)(({ theme }) => ({
       p: {
         color: theme.custom.colors.white,
       },
-      img: {
-        content: `url(${askIconWhite.src})`,
+      svg: {
+        fill: theme.custom.colors.white,
       },
     },
   },
@@ -32,7 +35,7 @@ const StyledButton = styled(Button)(({ theme }) => ({
 const AskTIMButton = ({ onClick }: { onClick: () => void }) => {
   return (
     <StyledButton variant="bordered" edge="rounded" onClick={onClick}>
-      <Image src={askIcon.src} alt="" width={20} height={20} />
+      <RiSparkling2Line />
       <Typography variant="body1">
         Ask<strong>TIM</strong>
       </Typography>
