@@ -58,7 +58,7 @@ export const usePrefetchWarnings = ({
       const potentialPrefetches = queries.filter(
         (query) =>
           !exempted.includes(query) &&
-          query.isStale() && 
+          query.isStale() &&
           !query.isDisabled(),
       )
 
