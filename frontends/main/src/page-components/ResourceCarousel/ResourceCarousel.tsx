@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { learningResources } from "api/hooks/learningResources"
+import { learningResourceQueries } from "api/hooks/learningResources"
 import {
   Carousel,
   TabButton,
@@ -219,19 +219,20 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
       > => {
         switch (tab.data.type) {
           case "resources":
-            return learningResources.list(tab.data.params)
+            return learningResourceQueries.list(tab.data.params)
           case "resource_items":
-            return learningResources
-              .detail(tab.data.params.learning_resource_id)
-              ._ctx.items(tab.data.params)
+            return learningResourceQueries.items(
+              tab.data.params.learning_resource_id,
+              tab.data.params,
+            )
           case "lr_search":
-            return learningResources.search(tab.data.params)
+            return learningResourceQueries.search(tab.data.params)
           case "lr_featured":
-            return learningResources.featured(tab.data.params)
+            return learningResourceQueries.featured(tab.data.params)
           case "lr_similar":
-            return learningResources.similar(tab.data.params.id)
+            return learningResourceQueries.similar(tab.data.params.id)
           case "lr_vector_similar":
-            return learningResources.vectorSimilar(tab.data.params.id)
+            return learningResourceQueries.vectorSimilar(tab.data.params.id)
         }
       },
     ),

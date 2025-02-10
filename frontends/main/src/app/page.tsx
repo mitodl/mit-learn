@@ -3,7 +3,10 @@ import type { Metadata } from "next"
 import HomePage from "@/app-pages/HomePage/HomePage"
 import { getMetadataAsync } from "@/common/metadata"
 import { Hydrate } from "@tanstack/react-query"
-import { learningResources } from "api/hooks/learningResources"
+import {
+  learningResourceQueries,
+  topicQueries,
+} from "api/hooks/learningResources"
 import { testimonials } from "api/hooks/testimonials"
 import { NewsEventsListFeedTypeEnum, newsEvents } from "api/hooks/newsEvents"
 import { prefetch } from "api/ssr/prefetch"
@@ -26,45 +29,45 @@ export async function generateMetadata({
 const Page: React.FC = async () => {
   const { dehydratedState } = await prefetch([
     // Featured Courses carousel "All"
-    learningResources.featured({
+    learningResourceQueries.featured({
       limit: 12,
     }),
     // Featured Courses carousel "Free"
-    learningResources.featured({
+    learningResourceQueries.featured({
       limit: 12,
       free: true,
     }),
     // Featured Courses carousel "With Certificate"
-    learningResources.featured({
+    learningResourceQueries.featured({
       limit: 12,
       certification: true,
       professional: false,
     }),
     // Featured Courses carousel "Professional & Executive Learning"
-    learningResources.featured({
+    learningResourceQueries.featured({
       limit: 12,
       professional: true,
     }),
     // Media carousel "All"
-    learningResources.list({
+    learningResourceQueries.list({
       resource_type: ["video", "podcast_episode"],
       limit: 12,
       sortby: "new",
     }),
     // Media carousel "Videos"
-    learningResources.list({
+    learningResourceQueries.list({
       resource_type: ["video"],
       limit: 12,
       sortby: "new",
     }),
     // Media carousel "Podcasts"
-    learningResources.list({
+    learningResourceQueries.list({
       resource_type: ["podcast_episode"],
       limit: 12,
       sortby: "new",
     }),
     // Browse by Topic
-    learningResources.topics({ is_toplevel: true }),
+    topicQueries.list({ is_toplevel: true }),
 
     testimonials.list({ position: 1 }),
     newsEvents.list({

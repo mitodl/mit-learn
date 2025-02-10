@@ -1,7 +1,10 @@
 import React from "react"
 import { Hydrate } from "@tanstack/react-query"
 import { prefetch } from "api/ssr/prefetch"
-import { learningResources } from "api/hooks/learningResources"
+import {
+  learningResourceQueries,
+  offerorQueries,
+} from "api/hooks/learningResources"
 import type { PageParams } from "@/app/types"
 import { getMetadataAsync } from "@/common/metadata"
 import SearchPage from "@/app-pages/SearchPage/SearchPage"
@@ -43,8 +46,8 @@ const Page: React.FC = async ({
   })
 
   const { dehydratedState } = await prefetch([
-    learningResources.offerors({}),
-    learningResources.search(params as LRSearchRequest),
+    offerorQueries.list({}),
+    learningResourceQueries.search(params as LRSearchRequest),
   ])
 
   return (

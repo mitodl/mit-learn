@@ -2,7 +2,7 @@ import React from "react"
 import { Metadata } from "next"
 import { Hydrate } from "@tanstack/react-query"
 import { prefetch } from "api/ssr/prefetch"
-import { learningResources } from "api/hooks/learningResources"
+import { topicQueries } from "api/hooks/learningResources"
 import { channels } from "api/hooks/channels"
 import TopicsListingPage from "@/app-pages/TopicsListingPage/TopicsListingPage"
 
@@ -13,7 +13,7 @@ export const metadata: Metadata = standardizeMetadata({
 
 const Page: React.FC = async () => {
   const { dehydratedState } = await prefetch([
-    learningResources.topics({}),
+    topicQueries.list({}),
     channels.countsByType("topic"),
   ])
 

@@ -6,7 +6,7 @@ import type {
   PaginatedUserListRelationshipList,
 } from "../../generated/v1"
 import { userListsApi } from "../../clients"
-import { clearListMemberships } from "../learningResources/keyFactory"
+import { clearListMemberships } from "../learningResources/queries"
 
 const userLists = createQueryKeys("userLists", {
   detail: (id: number) => ({

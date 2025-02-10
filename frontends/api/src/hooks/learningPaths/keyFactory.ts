@@ -6,7 +6,7 @@ import type {
   LearningpathsApiLearningpathsListRequest as ListRequest,
   PaginatedLearningPathRelationshipList,
 } from "../../generated/v1"
-import { clearListMemberships } from "../learningResources/keyFactory"
+import { clearListMemberships } from "../learningResources/queries"
 
 const learningPaths = createQueryKeys("learningPaths", {
   detail: (id: number) => ({

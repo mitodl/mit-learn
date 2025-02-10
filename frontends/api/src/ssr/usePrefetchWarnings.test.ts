@@ -4,7 +4,7 @@ import { usePrefetchWarnings } from "./usePrefetchWarnings"
 import { setupReactQueryTest } from "../hooks/test-utils"
 import { urls, factories, setMockResponse } from "../test-utils"
 import {
-  learningResources,
+  learningResourceQueries,
   useLearningResourcesDetail,
 } from "../hooks/learningResources"
 
@@ -45,7 +45,7 @@ describe("SSR prefetch warnings", () => {
         expect.objectContaining({
           disabled: false,
           initialStatus: "loading",
-          key: learningResources.detail(1).queryKey,
+          key: learningResourceQueries.detail(1).queryKey,
           observerCount: 1,
         }),
       ],
@@ -65,7 +65,7 @@ describe("SSR prefetch warnings", () => {
       wrapper,
       initialProps: {
         queryClient,
-        exemptions: [learningResources.detail(1).queryKey],
+        exemptions: [learningResourceQueries.detail(1).queryKey],
       },
     })
 
@@ -83,7 +83,7 @@ describe("SSR prefetch warnings", () => {
     const { unmount } = renderHook(
       () =>
         useQuery({
-          ...learningResources.detail(1),
+          ...learningResourceQueries.detail(1),
           initialData: data,
         }),
       { wrapper },
@@ -105,9 +105,9 @@ describe("SSR prefetch warnings", () => {
       [
         {
           disabled: false,
-          hash: JSON.stringify(learningResources.detail(1).queryKey),
+          hash: JSON.stringify(learningResourceQueries.detail(1).queryKey),
           initialStatus: "success",
-          key: learningResources.detail(1).queryKey,
+          key: learningResourceQueries.detail(1).queryKey,
           observerCount: 0,
           status: "success",
         },

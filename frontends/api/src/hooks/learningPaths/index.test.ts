@@ -5,7 +5,7 @@ import { LearningResource } from "../../generated/v1"
 import * as factories from "../../test-utils/factories"
 import { setupReactQueryTest } from "../test-utils"
 import { setMockResponse, urls, makeRequest } from "../../test-utils"
-import keyFactory from "../learningResources/keyFactory"
+import { learningResourceKeys } from "../learningResources/queries"
 import {
   useLearningPathsDetail,
   useLearningPathsList,
@@ -115,7 +115,7 @@ describe("LearningPath CRUD", () => {
     const path = factory.learningPath()
     const relationship = factory.learningPathRelationship({ parent: path.id })
     const keys = {
-      learningResources: keyFactory._def,
+      learningResources: learningResourceKeys.root,
       relationshipListing: learningPathKeyFactory.detail(path.id)._ctx
         .infiniteItems._def,
     }
