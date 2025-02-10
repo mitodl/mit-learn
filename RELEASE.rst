@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.30.2
+Version 0.30.2 (Released February 10, 2025)
 --------------
 
 - Update dependency litellm to v1.60.8 (#2028)
