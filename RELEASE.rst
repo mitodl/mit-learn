@@ -1,6 +1,18 @@
 Release Notes
 =============
 
+Version 0.30.3
+--------------
+
+- Add custom user model (#2015)
+- Update dependency ruff to v0.9.6 (#2033)
+- Update dependency @mui/lab to v6.0.0-beta.26 (#2023)
+- Remove django-debug-toolbar (#2021)
+- Update actions/setup-python to use pyproject.toml (#2020)
+- Update actions/setup-python digest to 4237552 (#2022)
+- Update dependency stylelint-config-standard-scss to v14 (#2029)
+- Update dependency syncpack to v13 (#2030)
+
 Version 0.30.2 (Released February 10, 2025)
 --------------
 
