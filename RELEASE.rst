@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.30.1
+Version 0.30.1 (Released February 10, 2025)
 --------------
 
 - Remove imports for builtin django User model (#2012)
