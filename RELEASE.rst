@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+Version 0.30.1 (Released February 10, 2025)
+--------------
+
+- Remove imports for builtin django User model (#2012)
+- track additional browse events in posthog (#2011)
+- Update dependency faker to v35 (#1996)
+- Fix support for hardware accelerated embedding generation via ollama (#2008)
+
 Version 0.30.0 (Released February 06, 2025)
 --------------
 
