@@ -1,12 +1,11 @@
 import React, { useState } from "react"
 import { Typography, styled, Drawer, AdornmentButton } from "ol-components"
-import { RiSparkling2Line } from "@remixicon/react"
+import { RiSparkling2Line, RiSendPlaneFill } from "@remixicon/react"
 import { Input } from "@mitodl/smoot-design"
 import AskTIMButton from "./AskTimButton"
 import AiRecommendationBot, { STARTERS } from "./AiRecommendationBot"
 import Image from "next/image"
 import timLogo from "@/public/images/icons/tim.svg"
-import { RiSendPlaneFill } from "@remixicon/react"
 
 const StripContainer = styled.div({
   padding: "16px 0",

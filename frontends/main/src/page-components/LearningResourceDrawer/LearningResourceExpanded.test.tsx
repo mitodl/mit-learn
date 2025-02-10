@@ -371,7 +371,7 @@ describe.each([true, false])(
         setup({ resource })
 
         const chatButton = screen.queryByRole("button", {
-          name: "Need help? Ask our Tutor",
+          name: "Need help? Ask TIM",
         })
         const shouldBeVisible =
           enabled && resourceType === ResourceTypeEnum.Course
