@@ -26,8 +26,6 @@ const useLearningResourcesList = (
   opts: Pick<UseQueryOptions, "enabled"> = {},
 ) => {
   return useQuery({
-    ...learningResources.list(params),
-    ...opts,
   })
 }
 

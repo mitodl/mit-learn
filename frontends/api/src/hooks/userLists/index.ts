@@ -38,7 +38,7 @@ const useUserListCreate = () => {
         UserListRequest: params,
       }),
     onSettled: () => {
-      queryClient.invalidateQueries(userLists.list._def)
+      queryClient.invalidateQueries({queryKey: userLists.list._def})
     },
   })
 }
@@ -51,8 +51,8 @@ const useUserListUpdate = () => {
         PatchedUserListRequest: params,
       }),
     onSettled: (_data, _err, vars) => {
-      queryClient.invalidateQueries(userLists.list._def)
-      queryClient.invalidateQueries(userLists.detail(vars.id).queryKey)
+      queryClient.invalidateQueries({queryKey: userLists.list._def})
+      queryClient.invalidateQueries({queryKey: userLists.detail(vars.id).queryKey})
     },
   })
 }
@@ -63,8 +63,8 @@ const useUserListDestroy = () => {
     mutationFn: (params: DestroyRequest) =>
       userListsApi.userlistsDestroy(params),
     onSettled: () => {
-      queryClient.invalidateQueries(userLists.list._def)
-      queryClient.invalidateQueries(userLists.membershipList._def)
+      queryClient.invalidateQueries({queryKey: userLists.list._def})
+      queryClient.invalidateQueries({queryKey: userLists.membershipList._def})
     },
   })
 }
@@ -98,9 +98,9 @@ const useUserListListItemMove = () => {
       })
     },
     onSettled: (_data, _err, vars) => {
-      queryClient.invalidateQueries(
-        userLists.detail(vars.parent)._ctx.infiniteItems._def,
-      )
+      queryClient.invalidateQueries({
+        queryKey: userLists.detail(vars.parent)._ctx.infiniteItems._def,
+      })
     },
   })
 }
