@@ -15,7 +15,7 @@ import {
   learningResourceQueries,
   offerorQueries,
 } from "api/hooks/learningResources"
-import { channels } from "api/hooks/channels"
+import { channelQueries } from "api/hooks/channels"
 import { testimonials } from "api/hooks/testimonials"
 import handleNotFound from "@/common/handleNotFound"
 import type { PageParams } from "@/app/types"
@@ -65,11 +65,11 @@ const Page: React.FC = async ({
       }),
     channelType === ChannelTypeEnum.Unit &&
       testimonials.list({ offerors: [name] }),
-    channels.detailByType(channelType, name),
+    channelQueries.detailByType(channelType, name),
   ])
 
   const channel = queryClient.getQueryData<UnitChannel>(
-    channels.detailByType(channelType, name).queryKey,
+    channelQueries.detailByType(channelType, name).queryKey,
   )
   const offerors = queryClient
     .getQueryData<PaginatedLearningResourceOfferorDetailList>(

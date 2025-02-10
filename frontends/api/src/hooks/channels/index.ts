@@ -10,27 +10,27 @@ import type {
   ChannelsApiChannelsListRequest,
   PatchedChannelWriteRequest,
 } from "../../generated/v0"
-import channels from "./keyFactory"
+import { channelKeys, channelQueries } from "./queries"
 
 const useChannelsList = (
   params: ChannelsApiChannelsListRequest = {},
   opts: Pick<UseQueryOptions, "enabled"> = {},
 ) => {
   return useQuery({
-    ...channels.list(params),
+    ...channelQueries.list(params),
     ...opts,
   })
 }
 
 const useChannelDetail = (channelType: string, channelName: string) => {
   return useQuery({
-    ...channels.detailByType(channelType, channelName),
+    ...channelQueries.detailByType(channelType, channelName),
   })
 }
 
 const useChannelCounts = (channelType: string) => {
   return useQuery({
-    ...channels.countsByType(channelType),
+    ...channelQueries.countsByType(channelType),
   })
 }
 
@@ -45,7 +45,7 @@ const useChannelPartialUpdate = () => {
         })
         .then((response) => response.data),
     onSuccess: (_data) => {
-      client.invalidateQueries(channels._def)
+      client.invalidateQueries(channelKeys.root)
     },
   })
 }
@@ -55,5 +55,5 @@ export {
   useChannelsList,
   useChannelPartialUpdate,
   useChannelCounts,
-  channels,
+  channelQueries,
 }

@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query"
-import programLetters from "./keyFactory"
+import { programLetterQueries } from "./queries"
 
 /**
  * Query is disabled if id is undefined.
  */
 const useProgramLettersDetail = (id: string | undefined) => {
   return useQuery({
-    ...programLetters.detail(id ?? ""),
+    ...programLetterQueries.detail(id ?? ""),
     enabled: id !== undefined,
   })
 }

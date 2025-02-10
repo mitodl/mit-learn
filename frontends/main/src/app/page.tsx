@@ -8,7 +8,10 @@ import {
   topicQueries,
 } from "api/hooks/learningResources"
 import { testimonials } from "api/hooks/testimonials"
-import { NewsEventsListFeedTypeEnum, newsEvents } from "api/hooks/newsEvents"
+import {
+  NewsEventsListFeedTypeEnum,
+  newsEventsQueries,
+} from "api/hooks/newsEvents"
 import { prefetch } from "api/ssr/prefetch"
 
 type SearchParams = {
@@ -70,12 +73,12 @@ const Page: React.FC = async () => {
     topicQueries.list({ is_toplevel: true }),
 
     testimonials.list({ position: 1 }),
-    newsEvents.list({
+    newsEventsQueries.list({
       feed_type: [NewsEventsListFeedTypeEnum.Events],
       limit: 5,
       sortby: "event_date",
     }),
-    newsEvents.list({
+    newsEventsQueries.list({
       feed_type: [NewsEventsListFeedTypeEnum.News],
       limit: 6,
       sortby: "-news_date",

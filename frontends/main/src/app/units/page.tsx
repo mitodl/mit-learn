@@ -3,7 +3,7 @@ import { Metadata } from "next"
 import { Hydrate } from "@tanstack/react-query"
 import { prefetch } from "api/ssr/prefetch"
 import { standardizeMetadata } from "@/common/metadata"
-import { channels } from "api/hooks/channels"
+import { channelQueries } from "api/hooks/channels"
 import UnitsListingPage from "@/app-pages/UnitsListingPage/UnitsListingPage"
 
 export const metadata: Metadata = standardizeMetadata({
@@ -12,8 +12,8 @@ export const metadata: Metadata = standardizeMetadata({
 
 const Page: React.FC = async () => {
   const { dehydratedState } = await prefetch([
-    channels.countsByType("unit"),
-    channels.list({ channel_type: "unit" }),
+    channelQueries.countsByType("unit"),
+    channelQueries.list({ channel_type: "unit" }),
   ])
 
   return (
