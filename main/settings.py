@@ -107,7 +107,7 @@ INSTALLED_APPS = (
     "drf_spectacular",
     # Put our apps after this point
     "main",
-    "users",
+    "users.apps.UsersConfig",
     "authentication",
     "channels",
     "profiles",
