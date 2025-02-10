@@ -1,6 +1,22 @@
 Release Notes
 =============
 
+Version 0.30.2 (Released February 10, 2025)
+--------------
+
+- Update dependency litellm to v1.60.8 (#2028)
+- Update dependency drf-spectacular to ^0.28.0 (#2027)
+- Update nginx Docker tag to v1.27.4 (#2026)
+- Skip existing embeddings (#2017)
+- Update dependency ruff to v0.9.5 (#2025)
+- Update dependency Django to v4.2.19 (#2024)
+- Update akhileshns/heroku-deploy digest to c3187cb (#1829)
+- [pre-commit.ci] pre-commit autoupdate (#1976)
+- Update dependency eslint-config-prettier to v10 (#1995)
+- Update actions/setup-node digest to 1d0ff46 (#2009)
+- Added SCIM /Bulk API endpoint (#1985)
+- Add initial migration for users app (#2013)
+
 Version 0.30.1 (Released February 10, 2025)
 --------------
 
