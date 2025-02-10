@@ -3,7 +3,6 @@
 from cairosvg import svg2png  # pylint:disable=no-name-in-module
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect
 from django.utils.decorators import method_decorator
@@ -137,6 +136,8 @@ def name_initials_avatar_view(
     bgcolor,
 ):  # pylint:disable=unused-argument
     """View for initial avatar"""
+    User = get_user_model()
+
     user = User.objects.filter(username=username).first()
     if not user:
         return redirect(DEFAULT_PROFILE_IMAGE)

@@ -21,6 +21,7 @@ import { useIsLearningPathMember } from "api/hooks/learningPaths"
 import { useIsUserListMember } from "api/hooks/userLists"
 import { TopicCarouselConfig } from "@/common/carousels"
 import { ResourceTypeEnum } from "api"
+import { PostHogEvents } from "@/common/constants"
 
 const RESOURCE_DRAWER_PARAMS = [RESOURCE_DRAWER_QUERY_PARAM] as const
 
@@ -32,7 +33,7 @@ const useCapturePageView = (resourceId: number) => {
   useEffect(() => {
     if (!apiKey || apiKey.length < 1) return
     if (!isSuccess) return
-    posthog.capture("lrd_view", {
+    posthog.capture(PostHogEvents.LearningResourceDrawerView, {
       resourceId: data?.id,
       readableId: data?.readable_id,
       platformCode: data?.platform?.code,
@@ -64,7 +65,9 @@ const DrawerContent: React.FC<{
   const posthog = usePostHog()
   const resource = useLearningResourcesDetail(Number(resourceId))
   if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
-    posthog.capture("lrd_open", { resource: resource?.data })
+    posthog.capture(PostHogEvents.LearningResourceDrawerOpen, {
+      resource: resource?.data,
+    })
   }
   const [signupEl, setSignupEl] = React.useState<HTMLElement | null>(null)
   const { data: user } = useUserMe()

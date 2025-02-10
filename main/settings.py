@@ -33,7 +33,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.28.1"
+VERSION = "0.30.2"
 
 log = logging.getLogger()
 
@@ -68,6 +68,8 @@ SECRET_KEY = get_string("SECRET_KEY", "terribly_unsafe_default_secret_key")
 DEBUG = get_bool("DEBUG", False)  # noqa: FBT003
 
 ALLOWED_HOSTS = ["*"]
+
+AUTH_USER_MODEL = "auth.User"
 
 SECURE_SSL_REDIRECT = get_bool("MITOL_SECURE_SSL_REDIRECT", True)  # noqa: FBT003
 
@@ -105,6 +107,7 @@ INSTALLED_APPS = (
     "drf_spectacular",
     # Put our apps after this point
     "main",
+    "users",
     "authentication",
     "channels",
     "profiles",
@@ -119,6 +122,7 @@ INSTALLED_APPS = (
     "data_fixtures",
     "vector_search",
     "ai_chat",
+    "scim",
 )
 
 if not get_bool("RUN_DATA_MIGRATIONS", default=False):
@@ -138,9 +142,11 @@ SCIM_SERVICE_PROVIDER = {
             "documentationUri": "",
         },
     ],
-    "USER_ADAPTER": "profiles.scim.adapters.LearnSCIMUser",
-    "USER_MODEL_GETTER": "profiles.scim.adapters.get_user_model_for_scim",
-    "USER_FILTER_PARSER": "profiles.scim.filters.LearnUserFilterQuery",
+    "SERVICE_PROVIDER_CONFIG_MODEL": "scim.config.LearnSCIMServiceProviderConfig",
+    "USER_ADAPTER": "scim.adapters.LearnSCIMUser",
+    "USER_MODEL_GETTER": "scim.adapters.get_user_model_for_scim",
+    "USER_FILTER_PARSER": "scim.filters.LearnUserFilterQuery",
+    "GET_IS_AUTHENTICATED_PREDICATE": "scim.utils.is_authenticated_predicate",
 }
 
 
@@ -684,12 +690,6 @@ if MIDDLEWARE_FEATURE_FLAG_QS_PREFIX:
         "main.middleware.feature_flags.CookieFeatureFlagMiddleware",
     )
 
-# django debug toolbar only in debug mode
-if DEBUG:
-    INSTALLED_APPS += ("debug_toolbar",)
-    # it needs to be enabled before other middlewares
-    MIDDLEWARE = ("debug_toolbar.middleware.DebugToolbarMiddleware", *MIDDLEWARE)
-
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "DEFAULT_AUTHENTICATION_CLASSES": (
@@ -816,7 +816,7 @@ QDRANT_ENCODER = get_string(
 LITELLM_TOKEN_ENCODING_NAME = get_string(
     name="LITELLM_TOKEN_ENCODING_NAME", default=None
 )
-LITELLM_CUSTOM_PROVIDER = get_string(name="LITELLM_CUSTOM_PROVIDER", default="ollama")
+LITELLM_CUSTOM_PROVIDER = get_string(name="LITELLM_CUSTOM_PROVIDER", default="openai")
 LITELLM_API_BASE = get_string(name="LITELLM_API_BASE", default=None)
 
 

@@ -132,3 +132,9 @@ storybook-static/
 
 /**/.yarn/cache
 .swc
+
+# ignore local ssl certs
+certs/
+
+# ignore db backups
+backups/

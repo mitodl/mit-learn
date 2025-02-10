@@ -46,6 +46,7 @@ import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 import AiChatSyllabus from "./AiChatSyllabus"
 import askIcon from "@/public/images/icons/ask-icon.svg"
 import askIconWhite from "@/public/images/icons/ask-icon-white.svg"
+import { PostHogEvents } from "@/common/constants"
 
 const DRAWER_WIDTH = "900px"
 const showChatClass = "show-chat"
@@ -624,7 +625,7 @@ const CallToActionSection = ({
           href={resource.url || ""}
           onClick={() => {
             if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
-              posthog.capture("cta_clicked", { resource })
+              posthog.capture(PostHogEvents.CallToActionClicked, { resource })
             }
           }}
           data-ph-action="click-cta"

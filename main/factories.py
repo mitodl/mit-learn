@@ -3,8 +3,8 @@ Factory for Users
 """
 
 import ulid
-from django.contrib.auth.models import Group, User
-from factory import LazyFunction, RelatedFactory, SubFactory, Trait
+from django.conf import settings
+from factory import Faker, LazyFunction, RelatedFactory, SubFactory, Trait
 from factory.django import DjangoModelFactory
 from factory.fuzzy import FuzzyText
 from social_django.models import UserSocialAuth
@@ -15,13 +15,13 @@ class UserFactory(DjangoModelFactory):
 
     username = LazyFunction(lambda: ulid.new().str)
     email = FuzzyText(suffix="@example.com")
-    first_name = FuzzyText()
-    last_name = FuzzyText()
+    first_name = Faker("first_name")
+    last_name = Faker("last_name")
 
     profile = RelatedFactory("profiles.factories.ProfileFactory", "user")
 
     class Meta:
-        model = User
+        model = settings.AUTH_USER_MODEL
         skip_postgeneration_save = True
 
     class Params:
@@ -34,7 +34,7 @@ class GroupFactory(DjangoModelFactory):
     name = FuzzyText()
 
     class Meta:
-        model = Group
+        model = "auth.Group"
 
 
 class UserSocialAuthFactory(DjangoModelFactory):

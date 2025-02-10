@@ -3,7 +3,7 @@
 import React, { useState, useCallback } from "react"
 import { useRouter } from "next-nprogress-bar"
 import { FeatureFlags } from "@/common/feature_flags"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 
 import {
   Typography,
@@ -33,6 +33,7 @@ import {
 import Image from "next/image"
 import { SearchField } from "@/page-components/SearchField/SearchField"
 import AiRecommendationBotDrawerStrip from "@/page-components/AiRecommendationBot/AiRecommendationBotDrawerStrip"
+import { PostHogEvents } from "@/common/constants"
 
 type SearchChip = {
   label: string
@@ -197,6 +198,12 @@ const BoldLink = styled(Link)(({ theme }) => ({
 }))
 
 const HeroSearch: React.FC<{ imageIndex: number }> = ({ imageIndex }) => {
+  const posthog = usePostHog()
+  const posthogCapture = (event: string) => {
+    if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+      posthog.capture(event)
+    }
+  }
   const [searchText, setSearchText] = useState("")
   const onSearchClear = useCallback(() => setSearchText(""), [])
   const router = useRouter()
@@ -248,7 +255,15 @@ const HeroSearch: React.FC<{ imageIndex: number }> = ({ imageIndex }) => {
             <BrowseByTopicContainer>
               <BrowseByTopicText>
                 or browse by{" "}
-                <TopicLink href="/topics/" color="red">
+                <TopicLink
+                  href="/topics/"
+                  onClick={() => {
+                    if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+                      posthogCapture(PostHogEvents.HeroBrowseTopics)
+                    }
+                  }}
+                  color="red"
+                >
                   Topic
                 </TopicLink>
               </BrowseByTopicText>

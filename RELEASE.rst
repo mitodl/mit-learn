@@ -1,6 +1,53 @@
 Release Notes
 =============
 
+Version 0.30.2 (Released February 10, 2025)
+--------------
+
+- Update dependency litellm to v1.60.8 (#2028)
+- Update dependency drf-spectacular to ^0.28.0 (#2027)
+- Update nginx Docker tag to v1.27.4 (#2026)
+- Skip existing embeddings (#2017)
+- Update dependency ruff to v0.9.5 (#2025)
+- Update dependency Django to v4.2.19 (#2024)
+- Update akhileshns/heroku-deploy digest to c3187cb (#1829)
+- [pre-commit.ci] pre-commit autoupdate (#1976)
+- Update dependency eslint-config-prettier to v10 (#1995)
+- Update actions/setup-node digest to 1d0ff46 (#2009)
+- Added SCIM /Bulk API endpoint (#1985)
+- Add initial migration for users app (#2013)
+
+Version 0.30.1 (Released February 10, 2025)
+--------------
+
+- Remove imports for builtin django User model (#2012)
+- track additional browse events in posthog (#2011)
+- Update dependency faker to v35 (#1996)
+- Fix support for hardware accelerated embedding generation via ollama (#2008)
+
+Version 0.30.0 (Released February 06, 2025)
+--------------
+
+- Syllabus chatbot UI (#1999)
+- Update dependency attrs to v25 (#1994)
+
+Version 0.29.0 (Released February 04, 2025)
+--------------
+
+- Semantic Chunking of Content Files (#2005)
+- add edx block ids to content files (#2000)
+- Better React Testing Library Errors (#2006)
+- disable daily embed task in development (#2001)
+- reverse nav drawer posthog events (#2003)
+- track browse actions in posthog (#1997)
+- remove react router (#1988)
+- Env var to enable Posthog session replay (disable by default) (#1998)
+- Shanbady/chunk size dropdown (#1989)
+- Update codecov/codecov-action action to v5.3.1 (#1992)
+- Update dependency ruff to v0.9.3 (#1991)
+- Update dependency litellm to v1.59.7 (#1990)
+- move LearningResourceExpanded to main (#1987)
+
 Version 0.28.1 (Released January 29, 2025)
 --------------
 

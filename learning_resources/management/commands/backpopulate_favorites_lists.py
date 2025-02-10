@@ -1,6 +1,6 @@
 """Management command to create user Favorites lists"""
 
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.core.management import BaseCommand
 
 from learning_resources.constants import FAVORITES_TITLE
@@ -24,6 +24,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):  # noqa: ARG002
         """Create a Favorites userlist for every active user"""
+        User = get_user_model()
+
         if options["delete"]:
             self.stdout.write("Deleting all existing Favorites userlists")
             UserList.objects.filter(title=FAVORITES_TITLE).delete()

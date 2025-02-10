@@ -38,6 +38,7 @@ import {
 } from "@/common/urls"
 import { useUserMe } from "api/hooks/user"
 import { usePostHog } from "posthog-js/react"
+import { PostHogEvents } from "@/common/constants"
 
 const Bar = styled(AppBar)(({ theme }) => ({
   padding: "16px 8px",
@@ -188,7 +189,7 @@ const navData: NavData = {
           description:
             "Single courses on a specific subject, taught by MIT instructors",
           href: SEARCH_COURSE,
-          posthogEvent: "clicked_nav_browse_courses",
+          posthogEvent: PostHogEvents.ClickedNavBrowseCourses,
         },
         {
           title: "Programs",
@@ -196,7 +197,7 @@ const navData: NavData = {
           description:
             "A series of courses for in-depth learning across a range of topics",
           href: SEARCH_PROGRAM,
-          posthogEvent: "clicked_nav_browse_programs",
+          posthogEvent: PostHogEvents.ClickedNavBrowsePrograms,
         },
         {
           title: "Learning Materials",
@@ -204,7 +205,7 @@ const navData: NavData = {
           description:
             "Free learning and teaching materials, including videos, podcasts, lecture notes, and more",
           href: SEARCH_LEARNING_MATERIAL,
-          posthogEvent: "clicked_nav_browse_learning_materials",
+          posthogEvent: PostHogEvents.ClickedNavBrowseLearningMaterials,
         },
       ],
     },
@@ -215,19 +216,19 @@ const navData: NavData = {
           title: "By Topic",
           icon: <RiPresentationLine />,
           href: TOPICS,
-          posthogEvent: "clicked_nav_browse_topics",
+          posthogEvent: PostHogEvents.ClickedNavBrowseTopics,
         },
         {
           title: "By Department",
           icon: <RiNodeTree />,
           href: DEPARTMENTS,
-          posthogEvent: "clicked_nav_browse_departments",
+          posthogEvent: PostHogEvents.ClickedNavBrowseDepartments,
         },
         {
           title: "By Provider",
           icon: <RiVerifiedBadgeLine />,
           href: UNITS,
-          posthogEvent: "clicked_nav_browse_providers",
+          posthogEvent: PostHogEvents.ClickedNavBrowseProviders,
         },
       ],
     },
@@ -238,31 +239,31 @@ const navData: NavData = {
           title: "Recently Added",
           icon: <RiFileAddLine />,
           href: SEARCH_NEW,
-          posthogEvent: "clicked_nav_browse_new",
+          posthogEvent: PostHogEvents.ClickedNavBrowseNew,
         },
         {
           title: "Upcoming",
           icon: <RiTimeLine />,
           href: SEARCH_UPCOMING,
-          posthogEvent: "clicked_nav_browse_upcoming",
+          posthogEvent: PostHogEvents.ClickedNavBrowseUpcoming,
         },
         {
           title: "Popular",
           href: SEARCH_POPULAR,
           icon: <RiHeartLine />,
-          posthogEvent: "clicked_nav_browse_popular",
+          posthogEvent: PostHogEvents.ClickedNavBrowsePopular,
         },
         {
           title: "Free",
           icon: <RiPriceTag3Line />,
           href: SEARCH_FREE,
-          posthogEvent: "clicked_nav_browse_free",
+          posthogEvent: PostHogEvents.ClickedNavBrowseFree,
         },
         {
           title: "With Certificate",
           icon: <RiAwardLine />,
           href: SEARCH_CERTIFICATE,
-          posthogEvent: "clicked_nav_browse_certificate",
+          posthogEvent: PostHogEvents.ClickedNavBrowseCertificate,
         },
       ],
     },
@@ -275,8 +276,8 @@ const Header: FunctionComponent = () => {
   const desktopTrigger = React.useRef<HTMLButtonElement>(null)
   const mobileTrigger = React.useRef<HTMLButtonElement>(null)
   const drawerToggleEvent = drawerOpen
-    ? "closed_nav_drawer"
-    : "opened_nav_drawer"
+    ? PostHogEvents.ClosedNavDrawer
+    : PostHogEvents.OpenedNavDrawer
   const posthogCapture = (event: string) => {
     if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
       posthog.capture(event)

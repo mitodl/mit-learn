@@ -5,7 +5,7 @@ import json
 
 import pytest
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
 
@@ -24,6 +24,8 @@ from profiles.serializers import (
 from profiles.utils import DEFAULT_PROFILE_IMAGE, IMAGE_MEDIUM, IMAGE_SMALL, image_uri
 
 pytestmark = [pytest.mark.django_db]
+
+User = get_user_model()
 
 
 def test_list_users(staff_client, staff_user):
