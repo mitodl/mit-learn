@@ -16,7 +16,7 @@ import {
   offerorQueries,
 } from "api/hooks/learningResources"
 import { channelQueries } from "api/hooks/channels"
-import { testimonials } from "api/hooks/testimonials"
+import { testimonialsQueries } from "api/hooks/testimonials"
 import handleNotFound from "@/common/handleNotFound"
 import type { PageParams } from "@/app/types"
 import getSearchParams from "@/page-components/SearchDisplay/getSearchParams"
@@ -64,7 +64,7 @@ const Page: React.FC = async ({
         offered_by: [name],
       }),
     channelType === ChannelTypeEnum.Unit &&
-      testimonials.list({ offerors: [name] }),
+      testimonialsQueries.list({ offerors: [name] }),
     channelQueries.detailByType(channelType, name),
   ])
 

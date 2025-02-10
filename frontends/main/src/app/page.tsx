@@ -7,7 +7,7 @@ import {
   learningResourceQueries,
   topicQueries,
 } from "api/hooks/learningResources"
-import { testimonials } from "api/hooks/testimonials"
+import { testimonialsQueries } from "api/hooks/testimonials"
 import {
   NewsEventsListFeedTypeEnum,
   newsEventsQueries,
@@ -72,7 +72,7 @@ const Page: React.FC = async () => {
     // Browse by Topic
     topicQueries.list({ is_toplevel: true }),
 
-    testimonials.list({ position: 1 }),
+    testimonialsQueries.list({ position: 1 }),
     newsEventsQueries.list({
       feed_type: [NewsEventsListFeedTypeEnum.Events],
       limit: 5,

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { widgetListsApi } from "../../clients"
-import widgetLists from "./keyFactory"
+import { widgetListQueries, widgetListKeys } from "./queries"
 import { WidgetInstance } from "api/v0"
 
 /**
@@ -9,7 +9,7 @@ import { WidgetInstance } from "api/v0"
  */
 const useWidgetList = (id: number | undefined) => {
   return useQuery({
-    ...widgetLists.detail(id ?? -1),
+    ...widgetListQueries.detail(id ?? -1),
     enabled: id !== undefined,
   })
 }
@@ -26,7 +26,7 @@ const useMutateWidgetsList = (id: number) => {
         .then((response) => response.data),
 
     onSuccess: (_data) => {
-      client.invalidateQueries(widgetLists._def)
+      client.invalidateQueries(widgetListKeys.root)
     },
   })
 }
