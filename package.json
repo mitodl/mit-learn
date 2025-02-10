@@ -23,7 +23,7 @@
   },
   "packageManager": "yarn@4.6.0",
   "devDependencies": {
-    "syncpack": "^12.4.0"
+    "syncpack": "^13.0.0"
   },
   "resolutions": {
     "@types/react": "^18",
