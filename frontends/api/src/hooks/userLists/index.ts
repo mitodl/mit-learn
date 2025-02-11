@@ -13,7 +13,7 @@ import type {
   UserlistsApiUserlistsItemsListRequest as ItemsListRequest,
   UserList,
 } from "../../generated/v1"
-import userLists from "./keyFactory"
+import { userlistKeys, userlistQueries } from "./queries"
 import { useUserIsAuthenticated } from "api/hooks/user"
 
 const useUserListList = (
@@ -21,13 +21,13 @@ const useUserListList = (
   opts: Pick<UseQueryOptions, "enabled"> = {},
 ) => {
   return useQuery({
-    ...userLists.list(params),
+    ...userlistQueries.list(params),
     ...opts,
   })
 }
 
 const useUserListsDetail = (id: number) => {
-  return useQuery(userLists.detail(id))
+  return useQuery(userlistQueries.detail(id))
 }
 
 const useUserListCreate = () => {
@@ -38,7 +38,7 @@ const useUserListCreate = () => {
         UserListRequest: params,
       }),
     onSettled: () => {
-      queryClient.invalidateQueries(userLists.list._def)
+      queryClient.invalidateQueries(userlistKeys.listRoot())
     },
   })
 }
@@ -51,8 +51,8 @@ const useUserListUpdate = () => {
         PatchedUserListRequest: params,
       }),
     onSettled: (_data, _err, vars) => {
-      queryClient.invalidateQueries(userLists.list._def)
-      queryClient.invalidateQueries(userLists.detail(vars.id).queryKey)
+      queryClient.invalidateQueries(userlistKeys.listRoot())
+      queryClient.invalidateQueries(userlistKeys.detail(vars.id))
     },
   })
 }
@@ -63,8 +63,8 @@ const useUserListDestroy = () => {
     mutationFn: (params: DestroyRequest) =>
       userListsApi.userlistsDestroy(params),
     onSettled: () => {
-      queryClient.invalidateQueries(userLists.list._def)
-      queryClient.invalidateQueries(userLists.membershipList._def)
+      queryClient.invalidateQueries(userlistKeys.listRoot())
+      queryClient.invalidateQueries(userlistKeys.membershipList())
     },
   })
 }
@@ -74,7 +74,7 @@ const useInfiniteUserListItems = (
   options: Pick<UseQueryOptions, "enabled"> = {},
 ) => {
   return useInfiniteQuery({
-    ...userLists.detail(params.userlist_id)._ctx.infiniteItems(params),
+    ...userlistQueries.infiniteItems(params.userlist_id, params),
     getNextPageParam: (lastPage) => {
       return lastPage.next ?? undefined
     },
@@ -98,16 +98,14 @@ const useUserListListItemMove = () => {
       })
     },
     onSettled: (_data, _err, vars) => {
-      queryClient.invalidateQueries(
-        userLists.detail(vars.parent)._ctx.infiniteItems._def,
-      )
+      queryClient.invalidateQueries(userlistKeys.infiniteItemsRoot(vars.parent))
     },
   })
 }
 
 const useIsUserListMember = (resourceId?: number) => {
   return useQuery({
-    ...userLists.membershipList(),
+    ...userlistQueries.membershipList(),
     select: (data) => {
       return !!data.find((relationship) => relationship.child === resourceId)
     },
@@ -117,7 +115,7 @@ const useIsUserListMember = (resourceId?: number) => {
 
 const useUserListMemberList = (resourceId?: number) => {
   return useQuery({
-    ...userLists.membershipList(),
+    ...userlistQueries.membershipList(),
     select: (data) => {
       return data
         .filter((relationship) => relationship.child === resourceId)

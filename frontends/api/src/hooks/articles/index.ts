@@ -10,14 +10,14 @@ import type {
   ArticlesApiArticlesListRequest as ArticleListRequest,
   Article,
 } from "../../generated/v1"
-import articles from "./keyFactory"
+import { articleQueries, articleKeys } from "./queries"
 
 const useArticleList = (
   params: ArticleListRequest = {},
   opts: Pick<UseQueryOptions, "enabled"> = {},
 ) => {
   return useQuery({
-    ...articles.list(params),
+    ...articleQueries.list(params),
     ...opts,
   })
 }
@@ -27,7 +27,7 @@ const useArticleList = (
  */
 const useArticleDetail = (id: number | undefined) => {
   return useQuery({
-    ...articles.detail(id ?? -1),
+    ...articleQueries.detail(id ?? -1),
     enabled: id !== undefined,
   })
 }
@@ -40,7 +40,7 @@ const useArticleCreate = () => {
         .articlesCreate({ ArticleRequest: data })
         .then((response) => response.data),
     onSuccess: () => {
-      client.invalidateQueries(articles.list._def)
+      client.invalidateQueries(articleKeys.listRoot())
     },
   })
 }
@@ -49,7 +49,7 @@ const useArticleDestroy = () => {
   return useMutation({
     mutationFn: (id: number) => articlesApi.articlesDestroy({ id }),
     onSuccess: () => {
-      client.invalidateQueries(articles.list._def)
+      client.invalidateQueries(articleKeys.listRoot())
     },
   })
 }
@@ -64,7 +64,7 @@ const useArticlePartialUpdate = () => {
         })
         .then((response) => response.data),
     onSuccess: (_data) => {
-      client.invalidateQueries(articles._def)
+      client.invalidateQueries(articleKeys.root)
     },
   })
 }

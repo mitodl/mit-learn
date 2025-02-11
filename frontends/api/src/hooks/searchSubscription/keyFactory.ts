@@ -1,16 +1,25 @@
 import { searchSubscriptionApi } from "../../clients"
-import { createQueryKeys } from "@lukemorales/query-key-factory"
 import type { LearningResourcesUserSubscriptionApiLearningResourcesUserSubscriptionCheckListRequest as subscriptionCheckListRequest } from "../../generated/v1"
+import { QueryOptions } from "@tanstack/react-query"
 
-const searchSubscriptions = createQueryKeys("searchSubscriptions", {
-  list: (params: subscriptionCheckListRequest) => ({
-    queryKey: [params],
-    queryFn: () => {
-      return searchSubscriptionApi
-        .learningResourcesUserSubscriptionCheckList(params)
-        .then((res) => res.data)
-    },
-  }),
-})
+const searchSubscriptionKeys = {
+  root: ["searchSubscriptions"],
+  list: (params: subscriptionCheckListRequest) => [
+    ...searchSubscriptionKeys.root,
+    "list",
+    params,
+  ],
+}
 
-export default searchSubscriptions
+const searchSubscriptionQueries = {
+  list: (params: subscriptionCheckListRequest) =>
+    ({
+      queryKey: searchSubscriptionKeys.list(params),
+      queryFn: () =>
+        searchSubscriptionApi
+          .learningResourcesUserSubscriptionCheckList(params)
+          .then((res) => res.data),
+    }) satisfies QueryOptions,
+}
+
+export { searchSubscriptionQueries, searchSubscriptionKeys }

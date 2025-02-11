@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import newsEvents from "./keyFactory"
+import { newsEventsQueries } from "./queries"
 import {
   NewsEventsApiNewsEventsListRequest,
   NewsEventsListFeedTypeEnum,
@@ -7,17 +7,17 @@ import {
 
 const useNewsEventsList = (params: NewsEventsApiNewsEventsListRequest) => {
   return useQuery({
-    ...newsEvents.list(params),
+    ...newsEventsQueries.list(params),
   })
 }
 
 const useNewsEventsDetail = (id: number) => {
-  return useQuery(newsEvents.detail(id))
+  return useQuery(newsEventsQueries.detail(id))
 }
 
 export {
   useNewsEventsList,
   useNewsEventsDetail,
   NewsEventsListFeedTypeEnum,
-  newsEvents,
+  newsEventsQueries,
 }

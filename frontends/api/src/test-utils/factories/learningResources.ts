@@ -27,6 +27,7 @@ import type {
   ProgramResource,
   VideoPlaylistResource,
   VideoResource,
+  LearningResourceRelationship,
 } from "api"
 import {
   AvailabilityEnum,
@@ -390,6 +391,49 @@ const microLearningPathRelationship: Factory<MicroLearningPathRelationship> = (
   }
 }
 
+const learningResourceRelationship: Factory<LearningResourceRelationship> = (
+  overrides = {},
+) => {
+  const micro = microLearningPathRelationship()
+  const resource = learningResource({
+    id: micro.child,
+  })
+  return {
+    ...micro,
+    position: faker.number.int(),
+    resource,
+    ...overrides,
+  }
+}
+const learningResourceRelationships = ({
+  count,
+  parent,
+  pageSize,
+  next = null,
+  previous = null,
+}: {
+  count: number
+  parent: number
+  pageSize?: number
+  next?: string | null
+  previous?: string | null
+}) => {
+  const results: LearningPathRelationship[] = Array(pageSize ?? count)
+    .fill(null)
+    .map((_val, index) => {
+      return learningResourceRelationship({
+        position: index + 1,
+        parent,
+      })
+    })
+  return {
+    count,
+    next,
+    previous,
+    results,
+  } satisfies PaginatedLearningPathRelationshipList
+}
+
 const learningPathRelationship: Factory<LearningPathRelationship> = (
   overrides = {},
 ) => {
@@ -525,6 +569,8 @@ export {
   microLearningPathRelationship,
   learningPathRelationship,
   learningPathRelationships,
+  learningResourceRelationship,
+  learningResourceRelationships,
   program,
   programs,
   course,

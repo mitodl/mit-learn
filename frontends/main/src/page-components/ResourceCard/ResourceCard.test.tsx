@@ -8,7 +8,7 @@ import {
   waitFor,
 } from "@/test-utils"
 import type { User } from "api/hooks/user"
-import { learningResources } from "api/hooks/learningResources"
+import { learningResourceQueries } from "api/hooks/learningResources"
 import { ResourceCard } from "./ResourceCard"
 import { getReadableResourceType } from "ol-utilities"
 import { ResourceTypeEnum, MicroUserListRelationship } from "api"
@@ -231,7 +231,7 @@ describe.each([
 
     invariant(resource)
     const cached = queryClient.getQueryData(
-      learningResources.detail(resource.id).queryKey,
+      learningResourceQueries.detail(resource.id).queryKey,
     )
     expect(cached).toEqual(resource)
   })

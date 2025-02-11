@@ -1,7 +1,7 @@
 import { renderHook, waitFor } from "@testing-library/react"
 
 import { setupReactQueryTest } from "../test-utils"
-import keyFactory from "./keyFactory"
+import { articleKeys } from "./queries"
 import { setMockResponse, urls, makeRequest } from "../../test-utils"
 import { UseQueryResult } from "@tanstack/react-query"
 import { articles as factory } from "../../test-utils/factories"
@@ -72,7 +72,7 @@ describe("Article CRUD", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(makeRequest).toHaveBeenCalledWith("post", url, requestData)
     expect(queryClient.invalidateQueries).toHaveBeenCalledWith(
-      keyFactory.list._def,
+      articleKeys.listRoot(),
     )
   })
 
@@ -89,7 +89,7 @@ describe("Article CRUD", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     const { id, ...patchData } = article
     expect(makeRequest).toHaveBeenCalledWith("patch", url, patchData)
-    expect(queryClient.invalidateQueries).toHaveBeenCalledWith(keyFactory._def)
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith(articleKeys.root)
   })
 
   test("useArticleDestroy calls correct API", async () => {
@@ -105,7 +105,7 @@ describe("Article CRUD", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(makeRequest).toHaveBeenCalledWith("delete", url, undefined)
     expect(queryClient.invalidateQueries).toHaveBeenCalledWith(
-      keyFactory.list._def,
+      articleKeys.listRoot(),
     )
   })
 })

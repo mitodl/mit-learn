@@ -16,9 +16,16 @@ import type {
   LearningResourcesApiLearningResourcesLearningPathsPartialUpdateRequest,
   LearningResource,
 } from "../../generated/v1"
-import learningResources from "./keyFactory"
-import userLists from "../userLists/keyFactory"
-import learningPaths from "../learningPaths/keyFactory"
+// import learningResources from "./keyFactory"
+import {
+  learningResourceQueries,
+  offerorQueries,
+  topicQueries,
+  schoolQueries,
+  platformsQueries,
+} from "./queries"
+import { userlistKeys } from "../userLists/queries"
+import { learningPathKeys } from "../learningPaths/queries"
 import { useCallback } from "react"
 
 const useLearningResourcesList = (
@@ -26,7 +33,7 @@ const useLearningResourcesList = (
   opts: Pick<UseQueryOptions, "enabled"> = {},
 ) => {
   return useQuery({
-    ...learningResources.list(params),
+    ...learningResourceQueries.list(params),
     ...opts,
   })
 }
@@ -38,7 +45,7 @@ const useLearningResourceDetailSetCache = (
   const onClick = useCallback(() => {
     if (resource) {
       queryClient.setQueryData(
-        learningResources.detail(resource.id).queryKey,
+        learningResourceQueries.detail(resource.id).queryKey,
         resource,
       )
     }
@@ -47,11 +54,11 @@ const useLearningResourceDetailSetCache = (
 }
 
 const useLearningResourcesDetail = (id: number) => {
-  return useQuery(learningResources.detail(id))
+  return useQuery(learningResourceQueries.detail(id))
 }
 
 const useFeaturedLearningResourcesList = (params: FeaturedListParams = {}) => {
-  return useQuery(learningResources.featured(params))
+  return useQuery(learningResourceQueries.featured(params))
 }
 
 const useLearningResourceTopic = (
@@ -59,7 +66,7 @@ const useLearningResourceTopic = (
   opts: Pick<UseQueryOptions, "enabled"> = {},
 ) => {
   return useQuery({
-    ...learningResources.topic(id),
+    ...topicQueries.detail(id),
     ...opts,
   })
 }
@@ -69,7 +76,7 @@ const useLearningResourceTopics = (
   opts: Pick<UseQueryOptions, "enabled"> = {},
 ) => {
   return useQuery({
-    ...learningResources.topics(params),
+    ...topicQueries.list(params),
     ...opts,
   })
 }
@@ -79,7 +86,7 @@ const useLearningResourcesSearch = (
   opts?: Pick<UseQueryOptions, "keepPreviousData">,
 ) => {
   return useQuery({
-    ...learningResources.search(params),
+    ...learningResourceQueries.search(params),
     ...opts,
   })
 }
@@ -91,7 +98,7 @@ const useLearningResourceSetUserListRelationships = () => {
       params: LearningResourcesApiLearningResourcesUserlistsPartialUpdateRequest,
     ) => learningResourcesApi.learningResourcesUserlistsPartialUpdate(params),
     onSettled: () => {
-      queryClient.invalidateQueries(userLists.membershipList().queryKey)
+      queryClient.invalidateQueries(userlistKeys.membershipList())
     },
   })
 }
@@ -104,7 +111,7 @@ const useLearningResourceSetLearningPathRelationships = () => {
     ) =>
       learningResourcesApi.learningResourcesLearningPathsPartialUpdate(params),
     onSettled: () => {
-      queryClient.invalidateQueries(learningPaths.membershipList().queryKey)
+      queryClient.invalidateQueries(learningPathKeys.membershipList())
     },
   })
 }
@@ -114,7 +121,7 @@ const useOfferorsList = (
   opts: Pick<UseQueryOptions, "enabled"> = {},
 ) => {
   return useQuery({
-    ...learningResources.offerors(params),
+    ...offerorQueries.list(params),
     ...opts,
   })
 }
@@ -124,13 +131,13 @@ const usePlatformsList = (
   opts: Pick<UseQueryOptions, "enabled"> = {},
 ) => {
   return useQuery({
-    ...learningResources.platforms(params),
+    ...platformsQueries.list(params),
     ...opts,
   })
 }
 
 const useSchoolsList = () => {
-  return useQuery(learningResources.schools())
+  return useQuery(schoolQueries.list())
 }
 
 const useSimilarLearningResources = (
@@ -138,7 +145,7 @@ const useSimilarLearningResources = (
   opts: Pick<UseQueryOptions, "enabled"> = {},
 ) => {
   return useQuery({
-    ...learningResources.similar(id),
+    ...learningResourceQueries.similar(id),
     ...opts,
   })
 }
@@ -148,7 +155,7 @@ const useVectorSimilarLearningResources = (
   opts: Pick<UseQueryOptions, "enabled"> = {},
 ) => {
   return useQuery({
-    ...learningResources.vectorSimilar(id),
+    ...learningResourceQueries.vectorSimilar(id),
     ...opts,
   })
 }
@@ -168,5 +175,9 @@ export {
   useSchoolsList,
   useSimilarLearningResources,
   useVectorSimilarLearningResources,
-  learningResources,
+  learningResourceQueries,
+  offerorQueries,
+  schoolQueries,
+  platformsQueries,
+  topicQueries,
 }

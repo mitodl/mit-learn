@@ -11,9 +11,12 @@ import {
 import { getMetadataAsync } from "@/common/metadata"
 import { Hydrate } from "@tanstack/react-query"
 import { prefetch } from "api/ssr/prefetch"
-import { learningResources } from "api/hooks/learningResources"
-import { channels } from "api/hooks/channels"
-import { testimonials } from "api/hooks/testimonials"
+import {
+  learningResourceQueries,
+  offerorQueries,
+} from "api/hooks/learningResources"
+import { channelQueries } from "api/hooks/channels"
+import { testimonialsQueries } from "api/hooks/testimonials"
 import handleNotFound from "@/common/handleNotFound"
 import type { PageParams } from "@/app/types"
 import getSearchParams from "@/page-components/SearchDisplay/getSearchParams"
@@ -54,23 +57,23 @@ const Page: React.FC = async ({
   const search = await searchParams
 
   const { queryClient } = await prefetch([
-    learningResources.offerors({}),
+    offerorQueries.list({}),
     channelType === ChannelTypeEnum.Unit &&
-      learningResources.featured({
+      learningResourceQueries.featured({
         limit: 12,
         offered_by: [name],
       }),
     channelType === ChannelTypeEnum.Unit &&
-      testimonials.list({ offerors: [name] }),
-    channels.detailByType(channelType, name),
+      testimonialsQueries.list({ offerors: [name] }),
+    channelQueries.detailByType(channelType, name),
   ])
 
   const channel = queryClient.getQueryData<UnitChannel>(
-    channels.detailByType(channelType, name).queryKey,
+    channelQueries.detailByType(channelType, name).queryKey,
   )
   const offerors = queryClient
     .getQueryData<PaginatedLearningResourceOfferorDetailList>(
-      learningResources.offerors({}).queryKey,
+      offerorQueries.list({}).queryKey,
     )!
     .results.reduce(
       (memo, offeror) => ({
@@ -97,7 +100,7 @@ const Page: React.FC = async ({
   })
 
   const { dehydratedState } = await prefetch(
-    [learningResources.search(searchRequest as LRSearchRequest)],
+    [learningResourceQueries.search(searchRequest as LRSearchRequest)],
     queryClient,
   )
   return (
