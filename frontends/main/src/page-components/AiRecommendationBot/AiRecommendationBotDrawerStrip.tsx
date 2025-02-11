@@ -114,16 +114,19 @@ const AiRecommendationBotDrawerStrip = () => {
   }>(null)
 
   useEffect(() => {
+    if (!initialPrompt || showEntryScreen) return
     const timer = setTimeout(() => {
-      if (initialPrompt && !showEntryScreen) {
-        aiChatRef.current?.append({
-          content: initialPrompt,
-          role: "user",
-        })
-        setInitialPrompt("")
-      }
+      aiChatRef.current?.append({
+        content: initialPrompt,
+        role: "user",
+      })
+      setInitialPrompt("")
     }, 0)
-    return () => clearTimeout(timer)
+
+    return () => {
+      clearTimeout(timer)
+      setInitialPrompt("")
+    }
   }, [initialPrompt, showEntryScreen])
 
   const onPromptChange = (e: React.ChangeEvent<HTMLInputElement>) => {
