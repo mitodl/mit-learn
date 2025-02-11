@@ -1,4 +1,4 @@
-import { QueryOptions } from "@tanstack/react-query"
+import { queryOptions } from "@tanstack/react-query"
 import { newsEventsApi } from "../../clients"
 import type { NewsEventsApiNewsEventsListRequest } from "../../generated/v0"
 
@@ -15,17 +15,17 @@ const newsEventsKeys = {
 
 const newsEventsQueries = {
   list: (params: NewsEventsApiNewsEventsListRequest) =>
-    ({
+    queryOptions({
       queryKey: newsEventsKeys.list(params),
       queryFn: () =>
         newsEventsApi.newsEventsList(params).then((res) => res.data),
-    }) satisfies QueryOptions,
+    }),
   detail: (id: number) =>
-    ({
+    queryOptions({
       queryKey: newsEventsKeys.detail(id),
       queryFn: () =>
         newsEventsApi.newsEventsRetrieve({ id }).then((res) => res.data),
-    }) satisfies QueryOptions,
+    }),
 }
 
 export { newsEventsQueries, newsEventsKeys }

@@ -1,9 +1,4 @@
-import {
-  UseQueryOptions,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { learningResourcesApi } from "../../clients"
 import type {
   LearningResourcesApiLearningResourcesListRequest as LRListRequest,
@@ -30,7 +25,7 @@ import { useCallback } from "react"
 
 const useLearningResourcesList = (
   params: LRListRequest = {},
-  opts: Pick<UseQueryOptions, "enabled"> = {},
+  opts?: { enabled?: boolean },
 ) => {
   return useQuery({
     ...learningResourceQueries.list(params),
@@ -61,10 +56,7 @@ const useFeaturedLearningResourcesList = (params: FeaturedListParams = {}) => {
   return useQuery(learningResourceQueries.featured(params))
 }
 
-const useLearningResourceTopic = (
-  id: number,
-  opts: Pick<UseQueryOptions, "enabled"> = {},
-) => {
+const useLearningResourceTopic = (id: number, opts?: { enabled?: boolean }) => {
   return useQuery({
     ...topicQueries.detail(id),
     ...opts,
@@ -73,7 +65,7 @@ const useLearningResourceTopic = (
 
 const useLearningResourceTopics = (
   params: TopicsListRequest = {},
-  opts: Pick<UseQueryOptions, "enabled"> = {},
+  opts?: { enabled?: boolean },
 ) => {
   return useQuery({
     ...topicQueries.list(params),
@@ -83,7 +75,7 @@ const useLearningResourceTopics = (
 
 const useLearningResourcesSearch = (
   params: LRSearchRequest,
-  opts?: Pick<UseQueryOptions, "keepPreviousData">,
+  opts?: { keepPreviousData?: boolean; enabled?: boolean },
 ) => {
   return useQuery({
     ...learningResourceQueries.search(params),
@@ -98,7 +90,7 @@ const useLearningResourceSetUserListRelationships = () => {
       params: LearningResourcesApiLearningResourcesUserlistsPartialUpdateRequest,
     ) => learningResourcesApi.learningResourcesUserlistsPartialUpdate(params),
     onSettled: () => {
-      queryClient.invalidateQueries(userlistKeys.membershipList())
+      queryClient.invalidateQueries({ queryKey: userlistKeys.membershipList() })
     },
   })
 }
@@ -111,14 +103,16 @@ const useLearningResourceSetLearningPathRelationships = () => {
     ) =>
       learningResourcesApi.learningResourcesLearningPathsPartialUpdate(params),
     onSettled: () => {
-      queryClient.invalidateQueries(learningPathKeys.membershipList())
+      queryClient.invalidateQueries({
+        queryKey: learningPathKeys.membershipList(),
+      })
     },
   })
 }
 
 const useOfferorsList = (
   params: OfferorsApiOfferorsListRequest = {},
-  opts: Pick<UseQueryOptions, "enabled"> = {},
+  opts?: { enabled?: boolean },
 ) => {
   return useQuery({
     ...offerorQueries.list(params),
@@ -128,7 +122,7 @@ const useOfferorsList = (
 
 const usePlatformsList = (
   params: PlatformsApiPlatformsListRequest = {},
-  opts: Pick<UseQueryOptions, "enabled"> = {},
+  opts?: { enabled?: boolean },
 ) => {
   return useQuery({
     ...platformsQueries.list(params),
@@ -142,7 +136,7 @@ const useSchoolsList = () => {
 
 const useSimilarLearningResources = (
   id: number,
-  opts: Pick<UseQueryOptions, "enabled"> = {},
+  opts?: { enabled?: boolean },
 ) => {
   return useQuery({
     ...learningResourceQueries.similar(id),
@@ -152,7 +146,7 @@ const useSimilarLearningResources = (
 
 const useVectorSimilarLearningResources = (
   id: number,
-  opts: Pick<UseQueryOptions, "enabled"> = {},
+  opts?: { enabled?: boolean },
 ) => {
   return useQuery({
     ...learningResourceQueries.vectorSimilar(id),

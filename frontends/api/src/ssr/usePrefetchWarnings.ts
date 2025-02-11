@@ -9,7 +9,6 @@ const logQueries = (...args: [...string[], Query[]]) => {
       key: query.queryKey,
       hash: query.queryHash,
       disabled: query.isDisabled(),
-      initialStatus: query.initialState.status,
       status: query.state.status,
       observerCount: query.getObserversCount(),
     })),
@@ -52,14 +51,14 @@ export const usePrefetchWarnings = ({
       const cache = queryClient.getQueryCache()
       const queries = cache.getAll()
 
-      const exempted = [...exemptions, ...PREFETCH_EXEMPT_QUERIES].map((key) =>
-        cache.find(key),
+      const exempted = [...exemptions, ...PREFETCH_EXEMPT_QUERIES].map(
+        (queryKey) => cache.find({ queryKey }),
       )
 
       const potentialPrefetches = queries.filter(
         (query) =>
           !exempted.includes(query) &&
-          query.initialState.status !== "success" &&
+          query.state.status !== "success" &&
           !query.isDisabled(),
       )
 
@@ -75,7 +74,7 @@ export const usePrefetchWarnings = ({
       const unusedPrefetches = queries.filter(
         (query) =>
           !exempted.includes(query) &&
-          query.initialState.status === "success" &&
+          query.state.status === "success" &&
           query.getObserversCount() === 0 &&
           !query.isDisabled(),
       )

@@ -1,5 +1,4 @@
 import {
-  UseQueryOptions,
   useInfiniteQuery,
   useMutation,
   useQuery,
@@ -18,7 +17,7 @@ import { useUserIsAuthenticated } from "api/hooks/user"
 
 const useUserListList = (
   params: ListRequest = {},
-  opts: Pick<UseQueryOptions, "enabled"> = {},
+  opts?: { enabled?: boolean },
 ) => {
   return useQuery({
     ...userlistQueries.list(params),
@@ -38,7 +37,7 @@ const useUserListCreate = () => {
         UserListRequest: params,
       }),
     onSettled: () => {
-      queryClient.invalidateQueries(userlistKeys.listRoot())
+      queryClient.invalidateQueries({ queryKey: userlistKeys.listRoot() })
     },
   })
 }
@@ -51,8 +50,8 @@ const useUserListUpdate = () => {
         PatchedUserListRequest: params,
       }),
     onSettled: (_data, _err, vars) => {
-      queryClient.invalidateQueries(userlistKeys.listRoot())
-      queryClient.invalidateQueries(userlistKeys.detail(vars.id))
+      queryClient.invalidateQueries({ queryKey: userlistKeys.listRoot() })
+      queryClient.invalidateQueries({ queryKey: userlistKeys.detail(vars.id) })
     },
   })
 }
@@ -63,22 +62,19 @@ const useUserListDestroy = () => {
     mutationFn: (params: DestroyRequest) =>
       userListsApi.userlistsDestroy(params),
     onSettled: () => {
-      queryClient.invalidateQueries(userlistKeys.listRoot())
-      queryClient.invalidateQueries(userlistKeys.membershipList())
+      queryClient.invalidateQueries({ queryKey: userlistKeys.listRoot() })
+      queryClient.invalidateQueries({ queryKey: userlistKeys.membershipList() })
     },
   })
 }
 
 const useInfiniteUserListItems = (
   params: ItemsListRequest,
-  options: Pick<UseQueryOptions, "enabled"> = {},
+  opts?: { enabled?: boolean },
 ) => {
   return useInfiniteQuery({
     ...userlistQueries.infiniteItems(params.userlist_id, params),
-    getNextPageParam: (lastPage) => {
-      return lastPage.next ?? undefined
-    },
-    ...options,
+    ...opts,
   })
 }
 
@@ -98,7 +94,9 @@ const useUserListListItemMove = () => {
       })
     },
     onSettled: (_data, _err, vars) => {
-      queryClient.invalidateQueries(userlistKeys.infiniteItemsRoot(vars.parent))
+      queryClient.invalidateQueries({
+        queryKey: userlistKeys.infiniteItemsRoot(vars.parent),
+      })
     },
   })
 }

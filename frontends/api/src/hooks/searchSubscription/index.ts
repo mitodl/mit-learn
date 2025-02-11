@@ -1,9 +1,4 @@
-import {
-  useMutation,
-  UseQueryOptions,
-  useQueryClient,
-  useQuery,
-} from "@tanstack/react-query"
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query"
 import { searchSubscriptionQueries, searchSubscriptionKeys } from "./keyFactory"
 import type { LearningResourcesUserSubscriptionApiLearningResourcesUserSubscriptionSubscribeCreateRequest as subscriptionCreateRequest } from "../../generated/v1"
 import { searchSubscriptionApi } from "../../clients"
@@ -17,14 +12,14 @@ const useSearchSubscriptionCreate = () => {
         .learningResourcesUserSubscriptionSubscribeCreate(params)
         .then((res) => res.data),
     onSuccess: (_data) => {
-      queryClient.invalidateQueries(searchSubscriptionKeys.root)
+      queryClient.invalidateQueries({ queryKey: searchSubscriptionKeys.root })
     },
   })
 }
 
 const useSearchSubscriptionList = (
   params = {},
-  opts: Pick<UseQueryOptions, "enabled"> = {},
+  opts?: { enabled?: boolean },
 ) => {
   return useQuery({
     ...searchSubscriptionQueries.list(params),
@@ -42,7 +37,7 @@ const useSearchSubscriptionDelete = () => {
         .then((res) => res.data)
     },
     onSuccess: (_data) => {
-      queryClient.invalidateQueries(searchSubscriptionKeys.root)
+      queryClient.invalidateQueries({ queryKey: searchSubscriptionKeys.root })
     },
   })
 }
