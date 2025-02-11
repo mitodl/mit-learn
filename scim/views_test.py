@@ -413,3 +413,23 @@ def test_bulk_post(scim_client, bulk_test_data):
                     assert actual_value is expected_value
                 else:
                     assert actual_value == expected_value
+
+
+def test_user_search(scim_client):
+    """Test the user search endpoint"""
+    users = UserFactory.create_batch(500)
+    emails = [user.email for user in users[:300]]
+
+    resp = scim_client.post(
+        reverse("scim:users-search"),
+        content_type="application/scim+json",
+        data=json.dumps(
+            {
+                "schemas": [djs_constants.SchemaURI.SERACH_REQUEST],
+                "filter": " OR ".join([f'email EQ "{email}"' for email in emails]),
+            }
+        ),
+    )
+
+    print(resp.json())
+    assert resp.status_code == 201
