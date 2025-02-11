@@ -146,6 +146,9 @@ jobs:
     needs: javascript-tests
     runs-on: ubuntu-22.04
     steps:
+      - name: Install Git
+        run: sudo apt-get install -y git
+
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
