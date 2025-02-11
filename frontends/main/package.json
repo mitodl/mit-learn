@@ -14,7 +14,7 @@
     "@emotion/cache": "^11.13.1",
     "@emotion/styled": "^11.11.0",
     "@mitodl/course-search-utils": "3.3.2",
-    "@mitodl/smoot-design": "https://github.com/mitodl/smoot-design.git#jk/aichat-designs",
+    "@mitodl/smoot-design": "https://github.com/mitodl/smoot-design.git#6c8b2bc967fac44e3024eb00ab5fe156f3a43fe1",
     "@next/bundle-analyzer": "^14.2.15",
     "@nlux/react": "^2.17.1",
     "@nlux/themes": "^2.17.1",
