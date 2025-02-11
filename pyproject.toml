@@ -92,6 +92,7 @@ llama-index-agent-openai = "^0.4.1"
 langchain-experimental = "^0.3.4"
 langchain-openai = "^0.3.2"
 deepmerge = "^2.0"
+pyparsing = "^3.2.1"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -117,6 +118,7 @@ freezegun = "^1.4.0"
 pytest-xdist = { version = "^3.6.1", extras = ["psutil"] }
 anys = "^0.3.0"
 locust = "^2.31.2"
+traceback-with-variables = "^2.1.1"
 
 
 [build-system]

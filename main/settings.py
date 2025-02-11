@@ -145,7 +145,7 @@ SCIM_SERVICE_PROVIDER = {
     "SERVICE_PROVIDER_CONFIG_MODEL": "scim.config.LearnSCIMServiceProviderConfig",
     "USER_ADAPTER": "scim.adapters.LearnSCIMUser",
     "USER_MODEL_GETTER": "scim.adapters.get_user_model_for_scim",
-    "USER_FILTER_PARSER": "scim.filters.LearnUserFilterQuery",
+    "USER_FILTER_PARSER": "scim.filters.UserFilterQuery",
     "GET_IS_AUTHENTICATED_PREDICATE": "scim.utils.is_authenticated_predicate",
 }
 
