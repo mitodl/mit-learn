@@ -262,7 +262,19 @@ def _process_content_embeddings(serialized_content):
             )
             for md in split_metadatas
         ]
-        split_embeddings = list(encoder.embed_documents(split_texts))
+        split_embeddings = []
+        """
+        Break up requests according to chunk size to stay under openai limits
+        600,000 tokens per request
+        max array size: 2048
+        see: https://platform.openai.com/docs/guides/rate-limits
+        """
+        request_chunk_size = int(
+            600000 / settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
+        )
+        for i in range(0, len(split_texts), request_chunk_size):
+            split_chunk = split_texts[i : i + request_chunk_size]
+            split_embeddings.extend(list(encoder.embed_documents(split_chunk)))
         if len(split_embeddings) > 0:
             resource_points.append(
                 models.PointVectors(
