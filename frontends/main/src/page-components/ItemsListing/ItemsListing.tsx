@@ -108,8 +108,8 @@ const ItemsListingSortable: React.FC<{
 
   const disabled =
     isRefetching ||
-    moveLearningPathListItem.isLoading ||
-    moveUserListListItem.isLoading
+    moveLearningPathListItem.isPending ||
+    moveUserListListItem.isPending
 
   return (
     <StyledPlainList disabled={disabled} itemSpacing={condensed ? 1 : 2}>
