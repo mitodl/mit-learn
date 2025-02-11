@@ -14,7 +14,7 @@ import {
   useLearningPathDestroy,
   useLearningPathUpdate,
 } from "./index"
-import learningPathKeyFactory from "./keyFactory"
+import { learningPathKeys } from "./queries"
 
 const factory = factories.learningResources
 
@@ -116,8 +116,7 @@ describe("LearningPath CRUD", () => {
     const relationship = factory.learningPathRelationship({ parent: path.id })
     const keys = {
       learningResources: learningResourceKeys.root,
-      relationshipListing: learningPathKeyFactory.detail(path.id)._ctx
-        .infiniteItems._def,
+      relationshipListing: learningPathKeys.infiniteItemsRoot(path.id),
     }
     const pathUrls = {
       list: urls.learningPaths.list(),

@@ -24,8 +24,8 @@ import {
   schoolQueries,
   platformsQueries,
 } from "./queries"
-import userLists from "../userLists/keyFactory"
-import learningPaths from "../learningPaths/keyFactory"
+import { userlistKeys } from "../userLists/queries"
+import { learningPathKeys } from "../learningPaths/queries"
 import { useCallback } from "react"
 
 const useLearningResourcesList = (
@@ -98,7 +98,7 @@ const useLearningResourceSetUserListRelationships = () => {
       params: LearningResourcesApiLearningResourcesUserlistsPartialUpdateRequest,
     ) => learningResourcesApi.learningResourcesUserlistsPartialUpdate(params),
     onSettled: () => {
-      queryClient.invalidateQueries(userLists.membershipList().queryKey)
+      queryClient.invalidateQueries(userlistKeys.membershipList())
     },
   })
 }
@@ -111,7 +111,7 @@ const useLearningResourceSetLearningPathRelationships = () => {
     ) =>
       learningResourcesApi.learningResourcesLearningPathsPartialUpdate(params),
     onSettled: () => {
-      queryClient.invalidateQueries(learningPaths.membershipList().queryKey)
+      queryClient.invalidateQueries(learningPathKeys.membershipList())
     },
   })
 }

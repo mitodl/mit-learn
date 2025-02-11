@@ -13,7 +13,7 @@ import type {
   LearningPathResource,
 } from "../../generated/v1"
 import { learningPathsApi } from "../../clients"
-import learningPaths from "./keyFactory"
+import { learningPathQueries, learningPathKeys } from "./queries"
 import { useUserHasPermission, Permission } from "api/hooks/user"
 
 const useLearningPathsList = (
@@ -21,7 +21,7 @@ const useLearningPathsList = (
   opts: Pick<UseQueryOptions, "enabled"> = {},
 ) => {
   return useQuery({
-    ...learningPaths.list(params),
+    ...learningPathQueries.list(params),
     ...opts,
   })
 }
@@ -31,9 +31,8 @@ const useInfiniteLearningPathItems = (
   options: Pick<UseQueryOptions, "enabled"> = {},
 ) => {
   return useInfiniteQuery({
-    ...learningPaths
-      .detail(params.learning_resource_id)
-      ._ctx.infiniteItems(params),
+    ...learningPathQueries.infiniteItems(params.learning_resource_id, params),
+    // TODO: in v5, co-locate this with the query options via infiniteQueryOptions
     getNextPageParam: (lastPage) => {
       return lastPage.next ?? undefined
     },
@@ -42,7 +41,7 @@ const useInfiniteLearningPathItems = (
 }
 
 const useLearningPathsDetail = (id: number) => {
-  return useQuery(learningPaths.detail(id))
+  return useQuery(learningPathQueries.detail(id))
 }
 
 type LearningPathCreateRequest = Omit<
@@ -57,7 +56,7 @@ const useLearningPathCreate = () => {
         LearningPathResourceRequest: params,
       }),
     onSettled: () => {
-      queryClient.invalidateQueries(learningPaths.list._def)
+      queryClient.invalidateQueries(learningPathKeys.listRoot())
     },
   })
 }
@@ -73,8 +72,8 @@ const useLearningPathUpdate = () => {
         PatchedLearningPathResourceRequest: params,
       }),
     onSettled: (data, err, vars) => {
-      queryClient.invalidateQueries(learningPaths.list._def)
-      queryClient.invalidateQueries(learningPaths.detail(vars.id).queryKey)
+      queryClient.invalidateQueries(learningPathKeys.listRoot())
+      queryClient.invalidateQueries(learningPathKeys.detail(vars.id))
     },
   })
 }
@@ -85,8 +84,8 @@ const useLearningPathDestroy = () => {
     mutationFn: (params: DestroyRequest) =>
       learningPathsApi.learningpathsDestroy(params),
     onSettled: () => {
-      queryClient.invalidateQueries(learningPaths.list._def)
-      queryClient.invalidateQueries(learningPaths.membershipList._def)
+      queryClient.invalidateQueries(learningPathKeys.listRoot())
+      queryClient.invalidateQueries(learningPathKeys.membershipList())
     },
   })
 }
@@ -109,7 +108,7 @@ const useLearningPathListItemMove = () => {
     },
     onSettled: (_data, _err, vars) => {
       queryClient.invalidateQueries(
-        learningPaths.detail(vars.parent)._ctx.infiniteItems._def,
+        learningPathKeys.infiniteItemsRoot(vars.parent),
       )
     },
   })
@@ -117,7 +116,7 @@ const useLearningPathListItemMove = () => {
 
 const useIsLearningPathMember = (resourceId?: number) => {
   return useQuery({
-    ...learningPaths.membershipList(),
+    ...learningPathQueries.membershipList(),
     select: (data) => {
       return !!data.find((relationship) => relationship.child === resourceId)
     },
@@ -128,8 +127,7 @@ const useIsLearningPathMember = (resourceId?: number) => {
 
 const useLearningPathMemberList = (resourceId?: number) => {
   return useQuery({
-    ...learningPaths.membershipList(),
-
+    ...learningPathQueries.membershipList(),
     select: (data) => {
       return data
         .filter((relationship) => relationship.child === resourceId)
