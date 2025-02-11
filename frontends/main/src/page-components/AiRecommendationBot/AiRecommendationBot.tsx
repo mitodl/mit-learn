@@ -2,6 +2,7 @@ import React from "react"
 import { styled } from "ol-components"
 import { getCsrfToken } from "@/common/utils"
 import { AiChat, AiChatProps } from "@mitodl/smoot-design/ai"
+import type { AiChatMessage } from "@mitodl/smoot-design/ai"
 
 const Container = styled.div(({ theme }) => ({
   width: "800px",
@@ -39,17 +40,16 @@ export const STARTERS = [
 ]
 
 const AiRecommendationBot = ({
-  initialPrompt,
   onClose,
+  ref,
 }: {
-  initialPrompt?: string
   onClose?: () => void
+  ref?: React.Ref<{ append: (message: Omit<AiChatMessage, "id">) => void }>
 }) => {
   return (
     <Container>
       <AiChat
         askTimTitle="to recommend a course"
-        initialPrompt={initialPrompt}
         initialMessages={INITIAL_MESSAGES}
         conversationStarters={STARTERS}
         onClose={onClose}
@@ -64,6 +64,7 @@ const AiRecommendationBot = ({
             message: messages[messages.length - 1].content,
           }),
         }}
+        ref={ref}
       />
     </Container>
   )

@@ -1,7 +1,8 @@
-import React, { useState } from "react"
+import React, { useState, useRef, useEffect } from "react"
 import { Typography, styled, Drawer, AdornmentButton } from "ol-components"
 import { RiSparkling2Line, RiSendPlaneFill } from "@remixicon/react"
 import { Input } from "@mitodl/smoot-design"
+import type { AiChatMessage } from "@mitodl/smoot-design/ai"
 import AskTIMButton from "./AskTimButton"
 import AiRecommendationBot, { STARTERS } from "./AiRecommendationBot"
 import Image from "next/image"
@@ -108,6 +109,22 @@ const AiRecommendationBotDrawerStrip = () => {
   const [open, setOpen] = useState(false)
   const [initialPrompt, setInitialPrompt] = useState("")
   const [showEntryScreen, setShowEntryScreen] = useState(true)
+  const aiChatRef = useRef<{
+    append: (message: Omit<AiChatMessage, "id">) => void
+  }>(null)
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (initialPrompt && !showEntryScreen) {
+        aiChatRef.current?.append({
+          content: initialPrompt,
+          role: "user",
+        })
+        setInitialPrompt("")
+      }
+    }, 0)
+    return () => clearTimeout(timer)
+  }, [initialPrompt, showEntryScreen])
 
   const onPromptChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInitialPrompt(e.target.value)
@@ -161,17 +178,24 @@ const AiRecommendationBotDrawerStrip = () => {
             <Typography variant="h5">Let me know how I can help.</Typography>
             <Starters>
               {STARTERS.map(({ content }, index) => (
-                <Starter key={index} onClick={() => onStarterClick(content)}>
+                <Starter
+                  key={index}
+                  onClick={() => onStarterClick(content)}
+                  role="button"
+                  tabIndex={index}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      onStarterClick(content)
+                    }
+                  }}
+                >
                   <Typography variant="body2">{content}</Typography>
                 </Starter>
               ))}
             </Starters>
           </EntryScreen>
         ) : (
-          <AiRecommendationBot
-            initialPrompt={initialPrompt}
-            onClose={onDrawerClose}
-          />
+          <AiRecommendationBot onClose={onDrawerClose} ref={aiChatRef} />
         )}
       </Drawer>
     </StripContainer>
