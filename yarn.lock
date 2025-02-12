@@ -38,12 +38,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ai-sdk/react@npm:1.1.11":
-  version: 1.1.11
-  resolution: "@ai-sdk/react@npm:1.1.11"
+"@ai-sdk/react@npm:1.1.12":
+  version: 1.1.12
+  resolution: "@ai-sdk/react@npm:1.1.12"
   dependencies:
     "@ai-sdk/provider-utils": "npm:2.1.6"
-    "@ai-sdk/ui-utils": "npm:1.1.11"
+    "@ai-sdk/ui-utils": "npm:1.1.12"
     swr: "npm:^2.2.5"
     throttleit: "npm:2.1.0"
   peerDependencies:
@@ -54,13 +54,13 @@ __metadata:
       optional: true
     zod:
       optional: true
-  checksum: 10/25d8be3586cb50e2cb6d5d9026fd68bb0e3b4015c8d4fecd633f5b8cf8270856b73c5942afaa9db94708ff7cc82a9aede4a641dead7d519a4a6863d95eeba157
+  checksum: 10/351992f3405754544d7ccb851ed7b77b773f12b3d0d57f455ce839ab2388af2516ad1c6b6305a1489d9cdcac95f89bffbc825ad986b23b2bd674e2e6637dcddc
   languageName: node
   linkType: hard
 
-"@ai-sdk/ui-utils@npm:1.1.11":
-  version: 1.1.11
-  resolution: "@ai-sdk/ui-utils@npm:1.1.11"
+"@ai-sdk/ui-utils@npm:1.1.12":
+  version: 1.1.12
+  resolution: "@ai-sdk/ui-utils@npm:1.1.12"
   dependencies:
     "@ai-sdk/provider": "npm:1.0.7"
     "@ai-sdk/provider-utils": "npm:2.1.6"
@@ -70,7 +70,7 @@ __metadata:
   peerDependenciesMeta:
     zod:
       optional: true
-  checksum: 10/f78edd8134d3ffba737b1ade9d4f60276bbfc339ee47700c30a16333f7d668ee89f17dcc6f595b67e2c92fd0688de841645d1f5f0c51af9b976202b219e1c25d
+  checksum: 10/bde6feb50a5e4616a24d85ada9e069834761e2090fdc38b64e299f75c0e362b46c6af215824c5c0008fd4a8b77c8296bd95b8d3133bc8197b985c886bf9a5c00
   languageName: node
   linkType: hard
 
@@ -2704,9 +2704,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/smoot-design@github:mitodl/smoot-design#jk/aichat-designs":
-  version: 0.0.0
-  resolution: "@mitodl/smoot-design@https://github.com/mitodl/smoot-design.git#commit=74115c5d238c322f3c8ae8871e8a097b6bfbc6aa"
+"@mitodl/smoot-design@npm:^3.2.0":
+  version: 3.2.0
+  resolution: "@mitodl/smoot-design@npm:3.2.0"
   dependencies:
     "@mui/utils": "npm:^6.1.6"
     ai: "npm:^4.0.13"
@@ -2723,7 +2723,7 @@ __metadata:
     "@remixicon/react": ^4.2.0
     react: ^18 || ^19
     react-dom: ^18 || ^19
-  checksum: 10/f35750a69723ed037ac84f023bc95f04dc1ffbee964c8478e57f0ca61596aa57f7e9f1f2d6efc9a9b3c2d52e55804fb46e41f2dbe41af8edd61d965e7d4efc50
+  checksum: 10/a124e732029210c5396582b3a49df3337ca6e51c56fe53a3a6853665699d1ef9ce46dc14dc7bd9eadc05a8e817dca34629f1051a4834889d2654b2bdaada3e48
   languageName: node
   linkType: hard
 
@@ -3054,32 +3054,6 @@ __metadata:
   dependencies:
     eslint-scope: "npm:5.1.1"
   checksum: 10/f2e3b2d6a6e2d9f163ca22105910c9f850dc4897af0aea3ef0a5886b63d8e1ba6505b71c99cb78a3bba24a09557d601eb21c8dede3f3213753fcfef364eb0e57
-  languageName: node
-  linkType: hard
-
-"@nlux/core@npm:2.17.1":
-  version: 2.17.1
-  resolution: "@nlux/core@npm:2.17.1"
-  checksum: 10/ea30460c396e75f6b13d8a5519f6d0ee0c7282f1cd4a176572e7d3c923c539ea367debb4f079d2e177103197c77ef2cea8462f3b033f2034467e842c26016537
-  languageName: node
-  linkType: hard
-
-"@nlux/react@npm:^2.17.1":
-  version: 2.17.1
-  resolution: "@nlux/react@npm:2.17.1"
-  dependencies:
-    "@nlux/core": "npm:2.17.1"
-  peerDependencies:
-    react: ^18
-    react-dom: ^18
-  checksum: 10/09fc44b2caea47d926483a9e987f97f456c4230342ffbdc83ee2f78a95eff1613abae2aa5b33b7ed6bf072d3ed14c4bfcd9fa4431e1b16fe95f490068d3e1263
-  languageName: node
-  linkType: hard
-
-"@nlux/themes@npm:^2.17.1":
-  version: 2.17.1
-  resolution: "@nlux/themes@npm:2.17.1"
-  checksum: 10/faa167100478fc3d266ed59bb5854ced1cad8717d2b1975803912b8199ada5df727dd3bb61465647fa05cd635ef6faac7e4cc33b7d60e7deb432af29a42f05ed
   languageName: node
   linkType: hard
 
@@ -6357,13 +6331,13 @@ __metadata:
   linkType: hard
 
 "ai@npm:^4.0.13":
-  version: 4.1.34
-  resolution: "ai@npm:4.1.34"
+  version: 4.1.35
+  resolution: "ai@npm:4.1.35"
   dependencies:
     "@ai-sdk/provider": "npm:1.0.7"
     "@ai-sdk/provider-utils": "npm:2.1.6"
-    "@ai-sdk/react": "npm:1.1.11"
-    "@ai-sdk/ui-utils": "npm:1.1.11"
+    "@ai-sdk/react": "npm:1.1.12"
+    "@ai-sdk/ui-utils": "npm:1.1.12"
     "@opentelemetry/api": "npm:1.9.0"
     jsondiffpatch: "npm:0.6.0"
   peerDependencies:
@@ -6374,7 +6348,7 @@ __metadata:
       optional: true
     zod:
       optional: true
-  checksum: 10/efc1a0bd44c8b635424a8d291a03135943ac9ac07d8332e3f48978406fc80f91eac0e27c2e7b8933bf876d6c5c8aab23399cdf432d7715cad0f4596bd2881bf8
+  checksum: 10/f72562cbab09603a30e2f69b1ff20a76b51a09a863d78a39763a5208f9c7877fa521970086ee032d0399c51dd52752561b00230ab0d84660df8d6a382e52c48a
   languageName: node
   linkType: hard
 
@@ -12719,10 +12693,8 @@ __metadata:
     "@emotion/styled": "npm:^11.11.0"
     "@faker-js/faker": "npm:^9.0.0"
     "@mitodl/course-search-utils": "npm:3.3.2"
-    "@mitodl/smoot-design": "github:mitodl/smoot-design#jk/aichat-designs"
+    "@mitodl/smoot-design": "npm:^3.2.0"
     "@next/bundle-analyzer": "npm:^14.2.15"
-    "@nlux/react": "npm:^2.17.1"
-    "@nlux/themes": "npm:^2.17.1"
     "@remixicon/react": "npm:^4.2.0"
     "@sentry/nextjs": "npm:^8.36.0"
     "@tanstack/react-query": "npm:^4.36.1"
@@ -13874,8 +13846,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "mit-learn@workspace:."
   dependencies:
-    "@nlux/react": "npm:^2.17.1"
-    "@nlux/themes": "npm:^2.17.1"
     syncpack: "npm:^13.0.0"
   languageName: unknown
   linkType: soft
@@ -14376,7 +14346,7 @@ __metadata:
     "@emotion/react": "npm:^11.11.1"
     "@emotion/styled": "npm:^11.11.0"
     "@faker-js/faker": "npm:^9.0.0"
-    "@mitodl/smoot-design": "github:mitodl/smoot-design#jk/aichat-designs"
+    "@mitodl/smoot-design": "npm:^3.2.0"
     "@mui/base": "npm:5.0.0-beta.69"
     "@mui/lab": "npm:6.0.0-beta.24"
     "@mui/material": "npm:^6.4.1"
@@ -19024,9 +18994,9 @@ __metadata:
   linkType: hard
 
 "zod@npm:^3.23.8":
-  version: 3.24.1
-  resolution: "zod@npm:3.24.1"
-  checksum: 10/54e25956495dec22acb9399c168c6ba657ff279801a7fcd0530c414d867f1dcca279335e160af9b138dd70c332e17d548be4bc4d2f7eaf627dead50d914fec27
+  version: 3.24.2
+  resolution: "zod@npm:3.24.2"
+  checksum: 10/604c62a8cf8e330d78b106a557f4b44f5d14845d20b1360a423ccc09b58cb8525ccf7e4b40cf1bd4852d22393d2c67774b5817ec5a2fedab25f543b36ed15943
   languageName: node
   linkType: hard
 
