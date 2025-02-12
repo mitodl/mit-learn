@@ -7302,6 +7302,17 @@ slack = ["slack-sdk"]
 telegram = ["requests"]
 
 [[package]]
+name = "traceback-with-variables"
+version = "2.1.1"
+description = "Adds variables to python traceback. Simple, lightweight, controllable. Debug reasons of exceptions by logging or pretty printing colorful variable contexts for each frame in a stacktrace, showing every value. Dump locals environments after errors to console, files, and loggers. Works with Jupyter and IPython."
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "traceback-with-variables-2.1.1.tar.gz", hash = "sha256:ca1ab9cd2871c3be3bbc57bb7b2dfe4b427763f81da6c632663d27231eaab132"},
+    {file = "traceback_with_variables-2.1.1-py3-none-any.whl", hash = "sha256:a98566d3931d151f43b1307e228b13fff5022a5c67defc3f53dbde64e8128e0b"},
+]
+
+[[package]]
 name = "traitlets"
 version = "5.14.3"
 description = "Traitlets Python configuration system"
@@ -7830,4 +7841,4 @@ testing = ["coverage[toml]", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.0"
 python-versions = "3.12.6"
-content-hash = "2482fea3370753dc339bec755f9e9912b2145e4108de922337b55290afe3409f"
+content-hash = "94752560e3977d7c8575807e35ebb1806fef224906fe466e7265f325e723174e"

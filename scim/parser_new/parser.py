@@ -1,54 +1,78 @@
-import pyparsing as pp
-
-
-NameChar = pp.Word(pp.alphanums + "_-")
-
-AttrName = pp.Word(pp.alphas, NameChar)
-SubAttr = pp.Word(".", AttrName)
-
-AttrPath = pp.Combine(AttrName, pp.Opt(SubAttr))
-
-ComparisonOperator = pp.one_of(
-    ["eq", "ne", "co", "sw", "ew", "gt", "lt", "ge", "le"], caseless=True, keyword=True
+from pyparsing import (
+    Regex,
+    Forward,
+    Suppress,
+    Char,
+    one_of,
+    CaselessLiteral,
+    Combine,
+    Literal,
+    alphas,
+    alphanums,
+    common,
+    dbl_quoted_string,
+    remove_quotes,
+    Group,
+    DelimitedList,
 )
 
-ValueTrue = pp.Literal("true")
-ValueFalse = pp.Literal("false")
-ValueNull = pp.Literal("null")
-ValueNumber = pp.common.number
-ValueString = pp.dbl_quoted_string
+UrnAttr = Regex(
+    r"(?P<urn>urn:[a-z0-9][a-z0-9-]{0,31}(:[a-z0-9()+,\-.=@;$_!*'%/?#])+):(?P<attr_name>[a-zA-Z_-]+)"
+)
 
-ComparisonValue = ValueTrue | ValueFalse | ValueNull | ValueNumber | ValueString
+NameChar = Char(alphanums + "_-")
+AttrName = Combine(Char(alphas) + NameChar[...]).set_results_name("attr_name")
+SubAttr = Combine(Literal(".") + AttrName).set_results_name("sub_attr")
 
-LogicalOperator = pp.one_of(["or", "and"], caseless=True, keyword=True)
+AttrPath = Combine((UrnAttr | AttrName.set_results_name("attr_name")) + SubAttr[..., 1])
 
-NegationOperator = pp.CaselessLiteral("not")
+ComparisonOperator = one_of(
+    ["eq", "ne", "co", "sw", "ew", "gt", "lt", "ge", "le"],
+    caseless=True,
+    as_keyword=True,
+).set_results_name("comparison_operator")
+LogicalOperator = one_of(
+    ["or", "and"], caseless=True, as_keyword=True
+).set_results_name("logical_operator")
+NegationOperator = CaselessLiteral("not").set_results_name("negation")
 
-AttrExpression = pp.Group(AttrPath + pp.Literal("pr")) ^ pp.Group(
+ValueTrue = Literal("true").set_parse_action(lambda: True)
+ValueFalse = Literal("false").set_parse_action(lambda: False)
+ValueNull = Literal("null").set_parse_action(lambda: None)
+ValueNumber = common.integer | common.fnumber
+ValueString = dbl_quoted_string.set_parse_action(remove_quotes)
+
+ComparisonValue = (
+    ValueTrue | ValueFalse | ValueNull | ValueNumber | ValueString
+).set_results_name("value")
+
+FilterTerm = Forward()
+FilterTermList = Forward()
+
+AttrPresence = Group(AttrPath + "pr").set_results_name("presence")
+AttrExpression =  AttrPresence | Group(
     AttrPath + ComparisonOperator + ComparisonValue
 )
 
-Filter = pp.Forward()
+ValueFilter = Forward()
 
-LeftPrecedence, RightPrecedence = map(pp.Literal, "()")
-LeftFilterGrouping, RightFilterGrouping = map(pp.Literal, "[]")
+ValuePath = Group(
+    AttrPath + Suppress("[") + ValueFilter("value_filter") + Suppress("]")
+).set_results_name("value_path")
 
-LogicalExpression = Filter + LogicalOperator + Filter
-
-ValueFilter = pp.Forward()
 ValueFilter <<= (
     AttrExpression
-    ^ LogicalExpression
-    ^ pp.Group(
-        pp.Opt(NegationOperator) + LeftPrecedence + ValueFilter + RightPrecedence
-    )
+    | FilterTermList
+    | Group(NegationOperator[..., 1] + Suppress("(") + ValueFilter + Suppress(")"))
 )
 
-ValuePath = AttrPath + LeftFilterGrouping + ValueFilter + RightFilterGrouping
-
-Filter <<= (
+FilterTerm <<= (
     AttrExpression
-    ^ LogicalExpression
-    ^ ValuePath
-    ^ pp.Group(pp.Opt(NegationOperator) + LeftPrecedence + Filter + RightPrecedence)
+    | ValuePath
+    | Group(NegationOperator[..., 1] + Suppress("(") + FilterTerm + Suppress(")"))
+)
+
+FilterTermList = DelimitedList(
+    FilterTerm,
+    LogicalOperator,
 )

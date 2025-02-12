@@ -118,6 +118,7 @@ freezegun = "^1.4.0"
 pytest-xdist = { version = "^3.6.1", extras = ["psutil"] }
 anys = "^0.3.0"
 locust = "^2.31.2"
+traceback-with-variables = "^2.1.1"
 
 
 [build-system]
