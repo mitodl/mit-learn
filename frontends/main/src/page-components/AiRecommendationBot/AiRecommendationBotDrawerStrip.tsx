@@ -69,12 +69,15 @@ const StyledInput = styled(Input)(({ theme }) => ({
   [theme.breakpoints.down("md")]: {
     width: "100%",
   },
+  "button:disabled": {
+    backgroundColor: "inherit",
+  },
 }))
 
 const SendIcon = styled(RiSendPlaneFill)(({ theme }) => ({
   fill: theme.custom.colors.red,
   "button:disabled &": {
-    fill: theme.custom.colors.lightGray2,
+    fill: theme.custom.colors.silverGray,
   },
 }))
 
