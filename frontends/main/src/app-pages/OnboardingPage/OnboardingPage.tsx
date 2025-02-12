@@ -152,7 +152,7 @@ const OnboardingPage: React.FC = () => {
         profile?.topic_interests?.map((topic) => String(topic.id)) || [],
     }
   }, [profile])
-  const { isLoading: isSaving, mutateAsync } = useProfileMeMutation()
+  const { isPending: isSaving, mutateAsync } = useProfileMeMutation()
   const { isLoading: userLoading, data: user } = useUserMe()
   const [activeStep, setActiveStep] = React.useState<number>(0)
   const router = useRouter()

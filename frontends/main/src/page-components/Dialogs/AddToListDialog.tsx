@@ -68,11 +68,11 @@ const AddToListDialogInner: React.FC<AddToListDialogInnerProps> = ({
     useLearningPathMemberList(resource?.id)
 
   const {
-    isLoading: isSavingUserListRelationships,
+    isPending: isSavingUserListRelationships,
     mutateAsync: setUserListRelationships,
   } = useLearningResourceSetUserListRelationships()
   const {
-    isLoading: isSavingLearningPathRelationships,
+    isPending: isSavingLearningPathRelationships,
     mutateAsync: setLearningPathRelationships,
   } = useLearningResourceSetLearningPathRelationships()
 

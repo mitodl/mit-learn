@@ -1,11 +1,11 @@
-import { UseQueryOptions, useQuery } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 
 import type { TestimonialsApiTestimonialsListRequest } from "../../generated/v0"
 import { testimonialsQueries } from "./queries"
 
 const useTestimonialList = (
   params: TestimonialsApiTestimonialsListRequest = {},
-  opts: Pick<UseQueryOptions, "enabled"> = {},
+  opts?: { enabled?: boolean },
 ) => {
   return useQuery({
     ...testimonialsQueries.list(params),

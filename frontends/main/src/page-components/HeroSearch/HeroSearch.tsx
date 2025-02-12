@@ -2,6 +2,9 @@
 
 import React, { useState, useCallback } from "react"
 import { useRouter } from "next-nprogress-bar"
+import { FeatureFlags } from "@/common/feature_flags"
+import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
+
 import {
   Typography,
   styled,
@@ -29,7 +32,7 @@ import {
 } from "@remixicon/react"
 import Image from "next/image"
 import { SearchField } from "@/page-components/SearchField/SearchField"
-import { usePostHog } from "posthog-js/react"
+import AiRecommendationBotDrawerStrip from "@/page-components/AiRecommendationBot/AiRecommendationBotDrawerStrip"
 import { PostHogEvents } from "@/common/constants"
 
 type SearchChip = {
@@ -205,6 +208,10 @@ const HeroSearch: React.FC<{ imageIndex: number }> = ({ imageIndex }) => {
   const onSearchClear = useCallback(() => setSearchText(""), [])
   const router = useRouter()
 
+  const recommendationBotEnabled = useFeatureFlagEnabled(
+    FeatureFlags.HomePageRecommendationBot,
+  )
+
   const onSearchChange: SearchInputProps["onChange"] = useCallback((e) => {
     setSearchText(e.target.value)
   }, [])
@@ -275,6 +282,7 @@ const HeroSearch: React.FC<{ imageIndex: number }> = ({ imageIndex }) => {
             </TrendingContainer>
           </div>
         </ControlsContainer>
+        {recommendationBotEnabled ? <AiRecommendationBotDrawerStrip /> : null}
       </TitleAndControls>
       <ImageContainer>
         <Image

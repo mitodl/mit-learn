@@ -1,4 +1,4 @@
-import { QueryOptions } from "@tanstack/react-query"
+import { queryOptions } from "@tanstack/react-query"
 import { articlesApi } from "../../clients"
 import type { ArticlesApiArticlesListRequest as ArticleListRequest } from "../../generated/v1"
 
@@ -12,16 +12,16 @@ const articleKeys = {
 
 const articleQueries = {
   list: (params: ArticleListRequest) =>
-    ({
+    queryOptions({
       queryKey: articleKeys.list(params),
       queryFn: () => articlesApi.articlesList(params).then((res) => res.data),
-    }) satisfies QueryOptions,
+    }),
   detail: (id: number) =>
-    ({
+    queryOptions({
       queryKey: articleKeys.detail(id),
       queryFn: () =>
         articlesApi.articlesRetrieve({ id }).then((res) => res.data),
-    }) satisfies QueryOptions,
+    }),
 }
 
 export { articleQueries, articleKeys }

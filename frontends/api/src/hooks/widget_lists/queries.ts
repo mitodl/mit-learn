@@ -1,4 +1,4 @@
-import { QueryOptions } from "@tanstack/react-query"
+import { queryOptions } from "@tanstack/react-query"
 import { widgetListsApi } from "../../clients"
 
 const widgetListKeys = {
@@ -9,11 +9,11 @@ const widgetListKeys = {
 
 const widgetListQueries = {
   detail: (id: number) =>
-    ({
+    queryOptions({
       queryKey: widgetListKeys.detail(id),
       queryFn: () =>
         widgetListsApi.widgetListsRetrieve({ id }).then((res) => res.data),
-    }) satisfies QueryOptions,
+    }),
 }
 
 export { widgetListQueries, widgetListKeys }

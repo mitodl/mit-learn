@@ -2,7 +2,7 @@ import React from "react"
 import type { Metadata } from "next"
 import HomePage from "@/app-pages/HomePage/HomePage"
 import { getMetadataAsync } from "@/common/metadata"
-import { Hydrate } from "@tanstack/react-query"
+import { HydrationBoundary } from "@tanstack/react-query"
 import {
   learningResourceQueries,
   topicQueries,
@@ -86,9 +86,9 @@ const Page: React.FC = async () => {
   ])
 
   return (
-    <Hydrate state={dehydratedState}>
+    <HydrationBoundary state={dehydratedState}>
       <HomePage heroImageIndex={Math.floor(Math.random() * 5) + 1} />
-    </Hydrate>
+    </HydrationBoundary>
   )
 }
 

@@ -9,7 +9,7 @@ import {
   LearningResourceOfferorDetail,
 } from "api"
 import { getMetadataAsync } from "@/common/metadata"
-import { Hydrate } from "@tanstack/react-query"
+import { HydrationBoundary } from "@tanstack/react-query"
 import { prefetch } from "api/ssr/prefetch"
 import {
   learningResourceQueries,
@@ -104,9 +104,9 @@ const Page: React.FC = async ({
     queryClient,
   )
   return (
-    <Hydrate state={dehydratedState}>
+    <HydrationBoundary state={dehydratedState}>
       <ChannelPage />
-    </Hydrate>
+    </HydrationBoundary>
   )
 }
 
