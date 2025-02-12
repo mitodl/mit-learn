@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.30.4
+Version 0.30.4 (Released February 12, 2025)
 --------------
 
 - Rename auth_user table to users_user (#2016)
