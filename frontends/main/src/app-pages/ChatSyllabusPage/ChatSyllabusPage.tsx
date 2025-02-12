@@ -105,7 +105,7 @@ const ChatSyllabusPage = () => {
             initialMessages={INITIAL_MESSAGES}
             conversationStarters={STARTERS}
             requestOpts={{
-              apiUrl: `${process.env.NEXT_PUBLIC_MITOL_API_BASE_URL}/api/v0/syllabus_agent/`,
+              apiUrl: process.env.NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT!,
               fetchOpts: {
                 headers: {
                   "X-CSRFToken": getCsrfToken(),

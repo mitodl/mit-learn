@@ -44,7 +44,7 @@ const ChatPage = () => {
         initialMessages={INITIAL_MESSAGES}
         conversationStarters={STARTERS}
         requestOpts={{
-          apiUrl: `${process.env.NEXT_PUBLIC_MITOL_API_BASE_URL}/api/v0/chat_agent/`,
+          apiUrl: process.env.NEXT_PUBLIC_LEARN_AI_RECOMMENDATION_ENDPOINT!,
           fetchOpts: {
             headers: {
               "X-CSRFToken": getCsrfToken(),
