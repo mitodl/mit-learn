@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.30.3
+Version 0.30.3 (Released February 12, 2025)
 --------------
 
 - Add custom user model (#2015)
