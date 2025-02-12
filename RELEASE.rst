@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+Version 0.30.4
+--------------
+
+- Rename auth_user table to users_user (#2016)
+- fix for staying under openai limits (#2041)
+- Update dependency cryptography to v44.0.1 [SECURITY] (#2042)
+- Remove `@lukemorales/query-key-factory`, unblock react-query v5 upgrade (#2040)
+
 Version 0.30.3 (Released February 12, 2025)
 --------------
 
