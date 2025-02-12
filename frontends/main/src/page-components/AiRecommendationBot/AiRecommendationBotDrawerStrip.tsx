@@ -71,8 +71,11 @@ const StyledInput = styled(Input)(({ theme }) => ({
   },
 }))
 
-const StyledSendButton = styled(RiSendPlaneFill)(({ theme }) => ({
+const SendIcon = styled(RiSendPlaneFill)(({ theme }) => ({
   fill: theme.custom.colors.red,
+  "button:disabled &": {
+    fill: theme.custom.colors.lightGray2,
+  },
 }))
 
 const Starters = styled.div(({ theme }) => ({
@@ -85,7 +88,7 @@ const Starters = styled.div(({ theme }) => ({
   },
 }))
 
-const Starter = styled.div(({ theme }) => ({
+const Starter = styled.button(({ theme }) => ({
   flex: 1,
   display: "flex",
   alignItems: "center",
@@ -93,6 +96,8 @@ const Starter = styled.div(({ theme }) => ({
   border: `1px solid ${theme.custom.colors.lightGray2}`,
   padding: "12px 16px",
   color: theme.custom.colors.darkGray2,
+  backgroundColor: "transparent",
+  textAlign: "left",
   [theme.breakpoints.down("md")]: {
     textAlign: "center",
     padding: "12px 36px",
@@ -173,7 +178,7 @@ const AiRecommendationBotDrawerStrip = () => {
                   onClick={() => setShowEntryScreen(false)}
                   disabled={!initialPrompt}
                 >
-                  <StyledSendButton />
+                  <SendIcon />
                 </AdornmentButton>
               }
               responsive
@@ -184,7 +189,6 @@ const AiRecommendationBotDrawerStrip = () => {
                 <Starter
                   key={index}
                   onClick={() => onStarterClick(content)}
-                  role="button"
                   tabIndex={index}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
