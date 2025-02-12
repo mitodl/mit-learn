@@ -179,6 +179,11 @@ type ResourceCarouselProps = {
   titleVariant?: TypographyProps["variant"]
   excludeResourceId?: number
 }
+
+type CarouselQuery = UseQueryOptions<
+  LearningResource[] | PaginatedLearningResourceList
+>
+
 /**
  * A tabbed carousel that fetches resources based on the configuration provided.
  *  - each TabConfig generates a tab + tabpanel that pulls data from an API based
@@ -204,38 +209,33 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
   const [ref, setRef] = React.useState<HTMLDivElement | null>(null)
 
   const queries = useQueries({
-    queries: config.map(
-      (
-        tab,
-      ): UseQueryOptions<
-        PaginatedLearningResourceList | LearningResource[],
-        unknown,
-        unknown,
-        // The factory-generated types for queryKeys are very specific (tuples not arrays)
-        // and assignable to the loose QueryKey (readonly unknown[]) on the UseQueryOptions generic.
-        // But! as a queryFn arg the more specific QueryKey cannot be assigned to the looser QueryKey.
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        any
-      > => {
-        switch (tab.data.type) {
-          case "resources":
-            return learningResourceQueries.list(tab.data.params)
-          case "resource_items":
-            return learningResourceQueries.items(
-              tab.data.params.learning_resource_id,
-              tab.data.params,
-            )
-          case "lr_search":
-            return learningResourceQueries.search(tab.data.params)
-          case "lr_featured":
-            return learningResourceQueries.featured(tab.data.params)
-          case "lr_similar":
-            return learningResourceQueries.similar(tab.data.params.id)
-          case "lr_vector_similar":
-            return learningResourceQueries.vectorSimilar(tab.data.params.id)
-        }
-      },
-    ),
+    queries: config.map((tab) => {
+      switch (tab.data.type) {
+        case "resources":
+          return learningResourceQueries.list(tab.data.params) as CarouselQuery
+        case "resource_items":
+          return learningResourceQueries.items(
+            tab.data.params.learning_resource_id,
+            tab.data.params,
+          ) as CarouselQuery
+        case "lr_search":
+          return learningResourceQueries.search(
+            tab.data.params,
+          ) as CarouselQuery
+        case "lr_featured":
+          return learningResourceQueries.featured(
+            tab.data.params,
+          ) as CarouselQuery
+        case "lr_similar":
+          return learningResourceQueries.similar(
+            tab.data.params.id,
+          ) as CarouselQuery
+        case "lr_vector_similar":
+          return learningResourceQueries.vectorSimilar(
+            tab.data.params.id,
+          ) as CarouselQuery
+      }
+    }),
   })
 
   const getCount = (

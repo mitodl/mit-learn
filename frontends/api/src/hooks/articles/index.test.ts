@@ -71,9 +71,9 @@ describe("Article CRUD", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(makeRequest).toHaveBeenCalledWith("post", url, requestData)
-    expect(queryClient.invalidateQueries).toHaveBeenCalledWith(
-      articleKeys.listRoot(),
-    )
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: articleKeys.listRoot(),
+    })
   })
 
   test("useArticlePartialUpdate calls correct API", async () => {
@@ -89,7 +89,9 @@ describe("Article CRUD", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     const { id, ...patchData } = article
     expect(makeRequest).toHaveBeenCalledWith("patch", url, patchData)
-    expect(queryClient.invalidateQueries).toHaveBeenCalledWith(articleKeys.root)
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: articleKeys.root,
+    })
   })
 
   test("useArticleDestroy calls correct API", async () => {
@@ -104,8 +106,8 @@ describe("Article CRUD", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(makeRequest).toHaveBeenCalledWith("delete", url, undefined)
-    expect(queryClient.invalidateQueries).toHaveBeenCalledWith(
-      articleKeys.listRoot(),
-    )
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: articleKeys.listRoot(),
+    })
   })
 })

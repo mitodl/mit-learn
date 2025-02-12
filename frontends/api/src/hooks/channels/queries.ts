@@ -1,4 +1,4 @@
-import { QueryOptions } from "@tanstack/react-query"
+import { queryOptions } from "@tanstack/react-query"
 import { channelsApi } from "../../clients"
 import type { ChannelsApiChannelsListRequest as FieldsApiListRequest } from "../../generated/v0"
 
@@ -22,34 +22,34 @@ const channelKeys = {
 
 const channelQueries = {
   list: (params: FieldsApiListRequest) =>
-    ({
+    queryOptions({
       queryKey: channelKeys.list(params),
       queryFn: () => channelsApi.channelsList(params).then((res) => res.data),
-    }) satisfies QueryOptions,
+    }),
   detail: (id: number) =>
-    ({
+    queryOptions({
       queryKey: channelKeys.detail(id),
       queryFn: () =>
         channelsApi.channelsRetrieve({ id }).then((res) => res.data),
-    }) satisfies QueryOptions,
+    }),
   detailByType: (channelType: string, name: string) =>
-    ({
+    queryOptions({
       queryKey: channelKeys.detailByType(channelType, name),
       queryFn: () => {
         return channelsApi
           .channelsTypeRetrieve({ channel_type: channelType, name: name })
           .then((res) => res.data)
       },
-    }) satisfies QueryOptions,
+    }),
   countsByType: (channelType: string) =>
-    ({
+    queryOptions({
       queryKey: channelKeys.countsByType(channelType),
       queryFn: () => {
         return channelsApi
           .channelsCountsList({ channel_type: channelType })
           .then((res) => res.data)
       },
-    }) satisfies QueryOptions,
+    }),
 }
 
 export { channelQueries, channelKeys }
