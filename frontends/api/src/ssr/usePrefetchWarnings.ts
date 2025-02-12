@@ -12,7 +12,7 @@ const logQueries = (...args: [...string[], Query[]]) => {
       status: query.state.status,
       observerCount: query.getObserversCount(),
     })),
-    ["hash", "initialStatus", "status", "observerCount", "disabled"],
+    ["hash", "status", "observerCount", "disabled"],
   )
 }
 
@@ -75,8 +75,7 @@ export const usePrefetchWarnings = ({
         (query) =>
           !exempted.includes(query) &&
           query.state.status === "success" &&
-          query.getObserversCount() === 0 &&
-          !query.isDisabled(),
+          query.getObserversCount() === 0,
       )
 
       if (unusedPrefetches.length > 0) {

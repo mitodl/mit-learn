@@ -53,7 +53,7 @@ describe("ResourceCarousel", () => {
     if (autoResolve) {
       resolve()
     }
-    return { resources, resolve }
+    return { resources, resolve, searchResponse }
   }
 
   it.each([
@@ -123,11 +123,12 @@ describe("ResourceCarousel", () => {
       const config: ResourceCarouselProps["config"] = labels.map((label) => {
         return {
           label,
-          data: { type: "resources", params: {} },
+          data: { type: "lr_search", params: { q: label } },
         }
       })
 
       const { resources } = setupApis()
+
       renderWithProviders(
         <ResourceCarousel
           titleComponent="h1"
@@ -144,9 +145,9 @@ describe("ResourceCarousel", () => {
         expect(tabs).toHaveLength(0)
       }
 
-      await screen.findByText(resources.list.results[1].title)
-      await screen.findByText(resources.list.results[0].title)
-      await screen.findByText(resources.list.results[2].title)
+      await screen.findByText(resources.search.results[1].title)
+      await screen.findByText(resources.search.results[0].title)
+      await screen.findByText(resources.search.results[2].title)
     },
   )
 

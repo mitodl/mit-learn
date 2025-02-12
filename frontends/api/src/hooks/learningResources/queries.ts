@@ -17,6 +17,7 @@ import type {
   PlatformsApiPlatformsListRequest,
   FeaturedApiFeaturedListRequest as FeaturedListParams,
   LearningResourcesApiLearningResourcesItemsListRequest as ItemsListRequest,
+  LearningResourcesSearchResponse,
 } from "../../generated/v1"
 import { queryOptions } from "@tanstack/react-query"
 
@@ -194,12 +195,13 @@ const learningResourceQueries = {
     queryOptions({
       queryKey: learningResourceKeys.search(params),
       queryFn: () =>
-        learningResourcesSearchApi
-          .learningResourcesSearchRetrieve(params)
-          .then((res) => ({
-            ...res.data,
-            results: res.data.results.map(clearListMemberships),
-          })),
+        learningResourcesSearchApi.learningResourcesSearchRetrieve(params).then(
+          (res) =>
+            ({
+              ...res.data,
+              results: res.data.results.map(clearListMemberships),
+            }) as LearningResourcesSearchResponse,
+        ),
     }),
 }
 

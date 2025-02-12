@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query"
 import { learningResourcesApi } from "../../clients"
 import type {
   LearningResourcesApiLearningResourcesListRequest as LRListRequest,
@@ -75,11 +80,13 @@ const useLearningResourceTopics = (
 
 const useLearningResourcesSearch = (
   params: LRSearchRequest,
-  opts?: { keepPreviousData?: boolean; enabled?: boolean },
+  opts?: {
+    keepPreviousData?: boolean
+  },
 ) => {
   return useQuery({
     ...learningResourceQueries.search(params),
-    ...opts,
+    placeholderData: opts?.keepPreviousData ? keepPreviousData : undefined,
   })
 }
 
