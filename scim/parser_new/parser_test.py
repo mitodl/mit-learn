@@ -1,4 +1,9 @@
+import pytest
+from faker import Faker
+
 from scim.parser_new.parser import FilterTermList
+
+faker = Faker()
 
 
 def test_scim_filter_parser():
@@ -39,4 +44,19 @@ def test_scim_filter_parser():
         emails[type eq "work" and value co "@example.com"] or ims[type eq "xmpp" and value co "@foo.com"]
         """)
 
+    # run_tests will output error messages
+    assert success
+
+
+@pytest.mark.parametrize("count", [10, 100, 1000, 5000])
+def test_large_filter(count):
+    """Test that the parser can handle large filters"""
+
+    filter_str = " OR ".join(
+        [f'email.value eq "{faker.email()}"' for _ in range(count)]
+    )
+
+    success, _ = FilterTermList.run_tests(filter_str)
+
+    # run_tests will output error messages
     assert success

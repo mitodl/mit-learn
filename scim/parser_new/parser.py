@@ -1,40 +1,87 @@
+"""
+SCIM filter parsers
+
+This module aims to compliantly parse SCIM filter queries per the spec:
+https://datatracker.ietf.org/doc/html/rfc7644#section-3.4.2.2
+
+Note that this implementation defines things slightly differently
+because a naive implementation exactly matching the filter grammar will
+result in hitting Python's recursion limit because the grammar defines
+logical lists (AND/OR chains) as a recursive relationship.
+
+This implementation avoids that by defining separately FilterTerm and
+Filter. As a result of this, some definitions are collapsed and removed
+(e.g. valFilter => FilterTerm).
+"""
+
 from pyparsing import (
-    Regex,
-    Forward,
-    Suppress,
+    CaselessKeyword,
     Char,
-    one_of,
-    CaselessLiteral,
     Combine,
+    DelimitedList,
+    FollowedBy,
+    Forward,
+    Group,
     Literal,
-    alphas,
     alphanums,
+    alphas,
     common,
     dbl_quoted_string,
+    nested_expr,
+    one_of,
     remove_quotes,
-    Group,
-    DelimitedList,
-)
-
-UrnAttr = Regex(
-    r"(?P<urn>urn:[a-z0-9][a-z0-9-]{0,31}(:[a-z0-9()+,\-.=@;$_!*'%/?#])+):(?P<attr_name>[a-zA-Z_-]+)"
 )
 
 NameChar = Char(alphanums + "_-")
-AttrName = Combine(Char(alphas) + NameChar[...]).set_results_name("attr_name")
-SubAttr = Combine(Literal(".") + AttrName).set_results_name("sub_attr")
+AttrName = Combine(
+    Char(alphas)
+    + NameChar[...]
+    # ensure we're not somehow parsing an URN
+    + ~FollowedBy(":")
+).set_results_name("attr_name")
 
-AttrPath = Combine((UrnAttr | AttrName.set_results_name("attr_name")) + SubAttr[..., 1])
+# Example URN-qualifed attr:
+# urn:ietf:params:scim:schemas:core:2.0:User:userName
+# |--------------- URN --------------------|:| attr |
+UrnAttr = Combine(
+    Combine(
+        Literal("urn:")
+        + DelimitedList(
+            # characters ONLY if followed by colon
+            Char(alphanums + ".-_")[1, ...] + FollowedBy(":"),
+            # separator
+            Literal(":"),
+            # combine everything back into a singular token
+            combine=True,
+        )[1, ...]
+    ).set_results_name("urn")
+    # separator between URN and attribute name
+    + Literal(":")
+    + AttrName
+)
+
+
+SubAttr = Combine(Literal(".") + AttrName.set_results_name("sub_attr"))
+
+AttrPath = Combine(
+    (
+        # match on UrnAttr first
+        UrnAttr ^ AttrName
+    )
+    + SubAttr[..., 1]
+)
 
 ComparisonOperator = one_of(
     ["eq", "ne", "co", "sw", "ew", "gt", "lt", "ge", "le"],
     caseless=True,
     as_keyword=True,
 ).set_results_name("comparison_operator")
-LogicalOperator = one_of(
-    ["or", "and"], caseless=True, as_keyword=True
-).set_results_name("logical_operator")
-NegationOperator = CaselessLiteral("not").set_results_name("negation")
+LogicalOperator = one_of(["or", "and"], caseless=True).set_results_name(
+    "logical_operator"
+)
+NegationOperator = (
+    CaselessKeyword("not").set_results_name("negated").set_parse_action(lambda: True)
+)
 
 ValueTrue = Literal("true").set_parse_action(lambda: True)
 ValueFalse = Literal("false").set_parse_action(lambda: False)
@@ -46,33 +93,24 @@ ComparisonValue = (
     ValueTrue | ValueFalse | ValueNull | ValueNumber | ValueString
 ).set_results_name("value")
 
+AttrPresence = Group(
+    AttrPath + Literal("pr").set_results_name("presence").set_parse_action(lambda: True)
+)
+AttrExpression = AttrPresence | Group(AttrPath + ComparisonOperator + ComparisonValue)
+
+# these are forward references, so that we can have
+# parsers circularly reference themselves
 FilterTerm = Forward()
 FilterTermList = Forward()
 
-AttrPresence = Group(AttrPath + "pr").set_results_name("presence")
-AttrExpression =  AttrPresence | Group(
-    AttrPath + ComparisonOperator + ComparisonValue
-)
-
-ValueFilter = Forward()
-
-ValuePath = Group(
-    AttrPath + Suppress("[") + ValueFilter("value_filter") + Suppress("]")
-).set_results_name("value_path")
-
-ValueFilter <<= (
-    AttrExpression
-    | FilterTermList
-    | Group(NegationOperator[..., 1] + Suppress("(") + ValueFilter + Suppress(")"))
+ValuePath = Group(AttrPath + nested_expr("[", "]", FilterTermList)).set_results_name(
+    "value_path"
 )
 
 FilterTerm <<= (
     AttrExpression
     | ValuePath
-    | Group(NegationOperator[..., 1] + Suppress("(") + FilterTerm + Suppress(")"))
+    | (NegationOperator[..., 1] + nested_expr("(", ")", FilterTermList))
 )
 
-FilterTermList = DelimitedList(
-    FilterTerm,
-    LogicalOperator,
-)
+FilterTermList <<= FilterTerm + (LogicalOperator + FilterTerm)[...]

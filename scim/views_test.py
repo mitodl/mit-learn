@@ -431,5 +431,4 @@ def test_user_search(scim_client):
         ),
     )
 
-    print(resp.json())
     assert resp.status_code == 201
