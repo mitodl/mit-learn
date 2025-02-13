@@ -1,5 +1,6 @@
 import logging
 import uuid
+from datetime import datetime
 
 from django.conf import settings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -24,6 +25,8 @@ from vector_search.constants import (
 from vector_search.encoders.utils import dense_encoder
 
 logger = logging.getLogger(__name__)
+
+encoder = dense_encoder()
 
 
 def qdrant_client():
@@ -74,8 +77,6 @@ def create_qdrant_collections(force_recreate):
     client = qdrant_client()
     resources_collection_name = RESOURCES_COLLECTION_NAME
     content_files_collection_name = CONTENT_FILES_COLLECTION_NAME
-
-    encoder = dense_encoder()
     if (
         not client.collection_exists(collection_name=resources_collection_name)
         or force_recreate
@@ -161,25 +162,6 @@ def vector_point_id(readable_id):
     return str(uuid.uuid5(uuid.NAMESPACE_DNS, readable_id))
 
 
-def _process_resource_embeddings(serialized_resources):
-    docs = []
-    metadata = []
-    ids = []
-    encoder = dense_encoder()
-    vector_name = encoder.model_short_name()
-    for doc in serialized_resources:
-        vector_point_key = doc["readable_id"]
-        metadata.append(doc)
-        ids.append(vector_point_id(vector_point_key))
-        docs.append(
-            f"{doc.get('title')} {doc.get('description')} {doc.get('full_description')}"
-        )
-    if len(docs) > 0:
-        embeddings = encoder.embed_documents(docs)
-        return points_generator(ids, metadata, embeddings, vector_name)
-    return None
-
-
 def _chunk_documents(encoder, texts, metadatas):
     # chunk the documents. use semantic chunking if enabled
     chunk_params = {
@@ -214,13 +196,107 @@ def _chunk_documents(encoder, texts, metadatas):
     return recursive_splitter.create_documents(texts=texts, metadatas=metadatas)
 
 
+def _process_resource_embeddings(serialized_resources):
+    docs = []
+    metadata = []
+    ids = []
+
+    vector_name = encoder.model_short_name()
+    for doc in serialized_resources:
+        vector_point_key = doc["readable_id"]
+        metadata.append(doc)
+        ids.append(vector_point_id(vector_point_key))
+        docs.append(
+            f"{doc.get('title')} {doc.get('description')} {doc.get('full_description')}"
+        )
+    if len(docs) > 0:
+        embeddings = encoder.embed_documents(docs)
+        return points_generator(ids, metadata, embeddings, vector_name)
+    return None
+
+
+def generate_metadata_document(serialized_resource):
+    """
+    Generate a plaint-text info document to embed in the contentfile collection
+    """
+    title = serialized_resource.get("title", "Unknown Course")
+    description = serialized_resource.get("description", "No description available.")
+    offered_by = serialized_resource.get("offered_by", {}).get(
+        "name", "Unknown Institution"
+    )
+    price = (
+        f"${serialized_resource['prices'][0]}"
+        if serialized_resource.get("prices")
+        else "Free"
+    )
+    certification = serialized_resource.get("certification_type", {}).get(
+        "name", "No certification"
+    )
+    topics = (
+        ", ".join(topic["name"] for topic in serialized_resource.get("topics", []))
+        or "Not specified"
+    )
+    # Extract course runs
+    runs = []
+    for run in serialized_resource.get("runs", []):
+        start_date = run.get("start_date")
+        formatted_date = (
+            datetime.strptime(start_date, "%Y-%m-%dT%H:%M:%SZ")
+            .replace(tzinfo=datetime.UTC)
+            .strftime("%B %d, %Y")
+            if start_date
+            else "Unknown start date"
+        )
+        location = run.get("location") or "Online"
+        duration = run.get("duration", "Unknown duration")
+        delivery_modes = (
+            ", ".join(delivery["name"] for delivery in run.get("delivery", []))
+            or "Not specified"
+        )
+        instructors = ", ".join(
+            instructor["full_name"]
+            for instructor in run.get("instructors", [])
+            if "full_name" in instructor
+        )
+        instructors = instructors if instructors else "Not specified"
+        runs.append(
+            f" - Start Date: {formatted_date}, Location: {location}, "
+            f"Duration: {duration}, Format: {delivery_modes},"
+            f" Instructors: {instructors}"
+        )
+    runs_text = "\n".join(runs) if runs else "No upcoming runs available."
+    # Extract languages
+    languages = []
+    for run in serialized_resource.get("runs", []):
+        if run.get("languages"):
+            languages.extend(run["languages"])
+    unique_languages = ", ".join(set(languages)) if languages else "Not specified"
+    # Extract levels
+    levels = []
+    for run in serialized_resource.get("runs", []):
+        if run.get("level"):
+            levels.extend(lvl["name"] for lvl in run["level"])
+    unique_levels = ", ".join(set(levels)) if levels else "Not specified"
+    return f"""
+    Course Title: {title}
+    Description: {description}
+    Offered By: {offered_by}
+    Price: {price}
+    Certification: {certification}
+    Topics: {topics}
+    Level: {unique_levels}
+    Languages: {unique_languages}
+    Course Runs:
+    {runs_text}
+    """
+
+
 def _process_content_embeddings(serialized_content):
     embeddings = []
     metadata = []
     ids = []
     resource_points = []
     client = qdrant_client()
-    encoder = dense_encoder()
     vector_name = encoder.model_short_name()
     for doc in serialized_content:
         if not doc.get("content"):
@@ -330,6 +406,11 @@ def embed_learning_resources(ids, resource_type, overwrite):
 
         collection_name = RESOURCES_COLLECTION_NAME
         points = _process_resource_embeddings(serialized_resources)
+
+        if points:
+            client.upload_points(
+                CONTENT_FILES_COLLECTION_NAME, points=points, wait=False
+            )
     else:
         serialized_resources = list(serialize_bulk_content_files(ids))
         collection_name = CONTENT_FILES_COLLECTION_NAME
@@ -405,7 +486,6 @@ def vector_search(
         ]
     )
     if query_string:
-        encoder = dense_encoder()
         search_result = client.query_points(
             collection_name=search_collection,
             using=encoder.model_short_name(),
