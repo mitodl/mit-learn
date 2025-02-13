@@ -1,45 +1,51 @@
-import React from "react"
+import React, { useState } from "react"
 import { Typography, styled } from "ol-components"
 import { Button } from "@mitodl/smoot-design"
 import { RiSparkling2Line } from "@remixicon/react"
+import AiRecommendationBotDrawer from "./AiRecommendationBotDrawer"
 
 const StyledButton = styled(Button)(({ theme }) => ({
   display: "flex",
   flexDirection: "row",
   gap: "8px",
   minWidth: "auto",
-  paddingLeft: "16px",
-  paddingRight: "24px",
+  padding: "4px 0",
   color: theme.custom.colors.darkGray2,
-  borderColor: theme.custom.colors.lightGray2,
+  border: "none",
+  background: "none",
   svg: {
-    fill: theme.custom.colors.red,
+    fill: theme.custom.colors.lightRed,
     width: "20px",
     height: "20px",
   },
   "&&": {
     ":hover": {
-      borderColor: "transparent",
-      color: theme.custom.colors.white,
-      backgroundColor: theme.custom.colors.darkGray2,
+      background: "none",
+      color: theme.custom.colors.mitRed,
       p: {
-        color: theme.custom.colors.white,
-      },
-      svg: {
-        fill: theme.custom.colors.white,
+        color: theme.custom.colors.mitRed,
       },
     },
   },
 }))
 
-const AskTIMButton = ({ onClick }: { onClick: () => void }) => {
+const AskTIMButton = () => {
+  const [open, setOpen] = useState(false)
+
   return (
-    <StyledButton variant="bordered" edge="rounded" onClick={onClick}>
-      <RiSparkling2Line />
-      <Typography variant="body1">
-        Ask<strong>TIM</strong>
-      </Typography>
-    </StyledButton>
+    <>
+      <StyledButton
+        variant="bordered"
+        edge="rounded"
+        onClick={() => setOpen(true)}
+      >
+        <RiSparkling2Line />
+        <Typography variant="body1">
+          Ask<strong>TIM</strong>
+        </Typography>
+      </StyledButton>
+      <AiRecommendationBotDrawer open={open} setOpen={setOpen} />
+    </>
   )
 }
 
