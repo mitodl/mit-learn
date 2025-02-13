@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+Version 0.30.5
+--------------
+
+- Design update for the homepage AskTIM action (#2047)
+- Point the chatbots to the Learn AI endpoints (#2045)
+- Recommendation bot UI (#2019)
+- Update React Query to v5 (#2043)
+
 Version 0.30.4 (Released February 12, 2025)
 --------------
 
