@@ -1,6 +1,6 @@
 import React from "react"
 import { Metadata } from "next"
-import { Hydrate } from "@tanstack/react-query"
+import { HydrationBoundary } from "@tanstack/react-query"
 import { standardizeMetadata } from "@/common/metadata"
 import { schoolQueries } from "api/hooks/learningResources"
 import { channelQueries } from "api/hooks/channels"
@@ -18,9 +18,9 @@ const Page: React.FC = async () => {
   ])
 
   return (
-    <Hydrate state={dehydratedState}>
+    <HydrationBoundary state={dehydratedState}>
       <DepartmentListingPage />
-    </Hydrate>
+    </HydrationBoundary>
   )
 }
 

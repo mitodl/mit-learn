@@ -26,7 +26,8 @@ test.each([
     const queryFn = jest.fn().mockRejectedValue({ response: { status } })
     const { result } = renderHook(
       () =>
-        useQuery(["test"], {
+        useQuery({
+          queryKey: ["test"],
           queryFn,
           retryDelay: 0,
         }),

@@ -44,12 +44,12 @@ describe("SSR prefetch warnings", () => {
       [
         expect.objectContaining({
           disabled: false,
-          initialStatus: "loading",
+          status: "pending",
           key: learningResourceQueries.detail(1).queryKey,
           observerCount: 1,
         }),
       ],
-      ["hash", "initialStatus", "status", "observerCount", "disabled"],
+      ["hash", "status", "observerCount", "disabled"],
     )
   })
 
@@ -104,15 +104,14 @@ describe("SSR prefetch warnings", () => {
     expect(console.table).toHaveBeenCalledWith(
       [
         {
-          disabled: false,
+          disabled: true,
           hash: JSON.stringify(learningResourceQueries.detail(1).queryKey),
-          initialStatus: "success",
           key: learningResourceQueries.detail(1).queryKey,
           observerCount: 0,
           status: "success",
         },
       ],
-      ["hash", "initialStatus", "status", "observerCount", "disabled"],
+      ["hash", "status", "observerCount", "disabled"],
     )
   })
 })

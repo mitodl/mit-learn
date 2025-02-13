@@ -6,7 +6,7 @@ import type {
   PaginatedLearningPathRelationshipList,
 } from "../../generated/v1"
 import { clearListMemberships } from "../learningResources/queries"
-import { QueryOptions, UseInfiniteQueryOptions } from "@tanstack/react-query"
+import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query"
 
 const learningPathKeys = {
   root: ["learningPaths"],
@@ -24,21 +24,21 @@ const learningPathKeys = {
 
 const learningPathQueries = {
   list: (params: ListRequest) =>
-    ({
+    queryOptions({
       queryKey: learningPathKeys.list(params),
       queryFn: () =>
         learningPathsApi.learningpathsList(params).then((res) => res.data),
-    }) satisfies QueryOptions,
+    }),
   detail: (id: number) =>
-    ({
+    queryOptions({
       queryKey: learningPathKeys.detail(id),
       queryFn: () =>
         learningPathsApi.learningpathsRetrieve({ id }).then((res) => res.data),
-    }) satisfies QueryOptions,
+    }),
   infiniteItems: (id: number, listingParams: ItemsListRequest) =>
-    ({
+    infiniteQueryOptions({
       queryKey: learningPathKeys.infiniteItems(id, listingParams),
-      queryFn: async ({ pageParam }: { pageParam?: string } = {}) => {
+      queryFn: async ({ pageParam }) => {
         // Use generated API for first request, then use next parameter
         const request = pageParam
           ? axiosInstance.request<PaginatedLearningPathRelationshipList>({
@@ -55,13 +55,18 @@ const learningPathQueries = {
           })),
         }
       },
-    }) satisfies UseInfiniteQueryOptions,
+      // Casting is so infiniteQueryOptions can infer the correct type for initialPageParam
+      initialPageParam: null as string | null,
+      getNextPageParam: (lastPage) => {
+        return lastPage.next ?? undefined
+      },
+    }),
   membershipList: () =>
-    ({
+    queryOptions({
       queryKey: learningPathKeys.membershipList(),
       queryFn: () =>
         learningPathsApi.learningpathsMembershipList().then((res) => res.data),
-    }) satisfies QueryOptions,
+    }),
 }
 
 export { learningPathQueries, learningPathKeys }

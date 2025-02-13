@@ -2,6 +2,10 @@
 
 import React, { useState, useCallback } from "react"
 import { useRouter } from "next-nprogress-bar"
+import { FeatureFlags } from "@/common/feature_flags"
+import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
+import AskTIMButton from "@/page-components/AiRecommendationBot/AskTimButton"
+
 import {
   Typography,
   styled,
@@ -29,7 +33,6 @@ import {
 } from "@remixicon/react"
 import Image from "next/image"
 import { SearchField } from "@/page-components/SearchField/SearchField"
-import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
 
 type SearchChip = {
@@ -134,7 +137,11 @@ const ControlsContainer = styled.div(({ theme }) => ({
   },
 }))
 
-const BrowseByTopicContainer = styled.div(({ theme }) => ({
+const ActionStrip = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "row",
+  alignItems: "center",
+  gap: "24px",
   marginTop: "16px",
   marginBottom: "24px",
   [theme.breakpoints.down("sm")]: {
@@ -142,7 +149,7 @@ const BrowseByTopicContainer = styled.div(({ theme }) => ({
   },
 }))
 
-const BrowseByTopicText = styled(Typography)(({ theme }) => ({
+const ActionStripText = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
   ...theme.typography.body2,
   [theme.breakpoints.down("sm")]: {
@@ -205,6 +212,10 @@ const HeroSearch: React.FC<{ imageIndex: number }> = ({ imageIndex }) => {
   const onSearchClear = useCallback(() => setSearchText(""), [])
   const router = useRouter()
 
+  const recommendationBotEnabled = useFeatureFlagEnabled(
+    FeatureFlags.HomePageRecommendationBot,
+  )
+
   const onSearchChange: SearchInputProps["onChange"] = useCallback((e) => {
     setSearchText(e.target.value)
   }, [])
@@ -245,9 +256,9 @@ const HeroSearch: React.FC<{ imageIndex: number }> = ({ imageIndex }) => {
             onSubmit={onSearchSubmit}
           />
           <div>
-            <BrowseByTopicContainer>
-              <BrowseByTopicText>
-                or browse by{" "}
+            <ActionStrip>
+              <ActionStripText>
+                {recommendationBotEnabled ? "Browse by " : "or browse by "}
                 <TopicLink
                   href="/topics/"
                   onClick={() => {
@@ -259,8 +270,14 @@ const HeroSearch: React.FC<{ imageIndex: number }> = ({ imageIndex }) => {
                 >
                   Topic
                 </TopicLink>
-              </BrowseByTopicText>
-            </BrowseByTopicContainer>
+              </ActionStripText>
+              {recommendationBotEnabled ? (
+                <>
+                  <ActionStripText>or</ActionStripText>
+                  <AskTIMButton />
+                </>
+              ) : null}
+            </ActionStrip>
             <TrendingContainer>
               {SEARCH_CHIPS.map((chip) => (
                 <TrendingChip

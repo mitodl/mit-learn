@@ -1,9 +1,4 @@
-import {
-  UseQueryOptions,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { articlesApi } from "../../clients"
 import type {
@@ -14,7 +9,7 @@ import { articleQueries, articleKeys } from "./queries"
 
 const useArticleList = (
   params: ArticleListRequest = {},
-  opts: Pick<UseQueryOptions, "enabled"> = {},
+  opts?: { enabled?: boolean },
 ) => {
   return useQuery({
     ...articleQueries.list(params),
@@ -40,7 +35,7 @@ const useArticleCreate = () => {
         .articlesCreate({ ArticleRequest: data })
         .then((response) => response.data),
     onSuccess: () => {
-      client.invalidateQueries(articleKeys.listRoot())
+      client.invalidateQueries({ queryKey: articleKeys.listRoot() })
     },
   })
 }
@@ -49,7 +44,7 @@ const useArticleDestroy = () => {
   return useMutation({
     mutationFn: (id: number) => articlesApi.articlesDestroy({ id }),
     onSuccess: () => {
-      client.invalidateQueries(articleKeys.listRoot())
+      client.invalidateQueries({ queryKey: articleKeys.listRoot() })
     },
   })
 }
@@ -64,7 +59,7 @@ const useArticlePartialUpdate = () => {
         })
         .then((response) => response.data),
     onSuccess: (_data) => {
-      client.invalidateQueries(articleKeys.root)
+      client.invalidateQueries({ queryKey: articleKeys.root })
     },
   })
 }

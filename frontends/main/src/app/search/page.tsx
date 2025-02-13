@@ -1,5 +1,5 @@
 import React from "react"
-import { Hydrate } from "@tanstack/react-query"
+import { HydrationBoundary } from "@tanstack/react-query"
 import { prefetch } from "api/ssr/prefetch"
 import {
   learningResourceQueries,
@@ -51,9 +51,9 @@ const Page: React.FC = async ({
   ])
 
   return (
-    <Hydrate state={dehydratedState}>
+    <HydrationBoundary state={dehydratedState}>
       <SearchPage />
-    </Hydrate>
+    </HydrationBoundary>
   )
 }
 

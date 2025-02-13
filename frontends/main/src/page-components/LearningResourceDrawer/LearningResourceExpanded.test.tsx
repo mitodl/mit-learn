@@ -371,7 +371,7 @@ describe.each([true, false])(
         setup({ resource })
 
         const chatButton = screen.queryByRole("button", {
-          name: "Need help? Ask our Tutor",
+          name: "Need help? Ask TIM",
         })
         const shouldBeVisible =
           enabled && resourceType === ResourceTypeEnum.Course
@@ -393,7 +393,7 @@ describe.each([true, false])(
 
       const { rerender } = setup({ resource: course1 })
       await user.click(
-        screen.getByRole("button", { name: "Need help? Ask our Tutor" }),
+        screen.getByRole("button", { name: "Need help? Ask TIM" }),
       )
       const dataTestId = "ai-chat-syllabus"
       expect(screen.getByTestId(dataTestId)).toBeInTheDocument()
