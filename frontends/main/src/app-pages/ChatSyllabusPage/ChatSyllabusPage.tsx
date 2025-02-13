@@ -111,13 +111,11 @@ const ChatSyllabusPage = () => {
                   "X-CSRFToken": getCsrfToken(),
                 },
               },
-              transformBody: (messages) => {
-                return {
-                  message: messages[messages.length - 1].content,
-                  readable_id: readableId,
-                  collection_name: collectionName,
-                }
-              },
+              transformBody: (messages) => ({
+                message: messages[messages.length - 1].content,
+                course_id: readableId,
+                collection_name: collectionName,
+              }),
               onFinish: (message) => {
                 const contentParts = message.content.split("<!--")
                 if (contentParts.length > 1) {
