@@ -3,36 +3,9 @@ import { Typography, styled, Drawer, AdornmentButton } from "ol-components"
 import { RiSparkling2Line, RiSendPlaneFill } from "@remixicon/react"
 import { Input } from "@mitodl/smoot-design"
 import type { AiChatMessage } from "@mitodl/smoot-design/ai"
-import AskTIMButton from "./AskTimButton"
 import AiRecommendationBot, { STARTERS } from "./AiRecommendationBot"
 import Image from "next/image"
 import timLogo from "@/public/images/icons/tim.svg"
-
-const StripContainer = styled.div({
-  padding: "16px 0",
-  marginTop: "24px",
-  display: "flex",
-  flexDirection: "row",
-  alignItems: "center",
-  gap: "24px",
-  width: "100%",
-  whiteSpace: "nowrap",
-})
-
-const DecorativeLine = styled.div(({ theme }) => ({
-  width: "100%",
-  height: "1px",
-  backgroundColor: theme.custom.colors.lightGray2,
-  marginTop: "4px",
-}))
-
-const LeadingText = styled(Typography)(({ theme }) => ({
-  color: theme.custom.colors.silverGrayDark,
-  ...theme.typography.body2,
-  [theme.breakpoints.down("sm")]: {
-    ...theme.typography.body3,
-  },
-}))
 
 const EntryScreen = styled.div({
   display: "flex",
@@ -113,8 +86,13 @@ const Starter = styled.button(({ theme }) => ({
   },
 }))
 
-const AiRecommendationBotDrawerStrip = () => {
-  const [open, setOpen] = useState(false)
+const AiRecommendationBotDrawer = ({
+  open,
+  setOpen,
+}: {
+  open: boolean
+  setOpen: (open: boolean) => void
+}) => {
   const [initialPrompt, setInitialPrompt] = useState("")
   const [showEntryScreen, setShowEntryScreen] = useState(true)
   const aiChatRef = useRef<{
@@ -157,59 +135,54 @@ const AiRecommendationBotDrawerStrip = () => {
   }
 
   return (
-    <StripContainer>
-      <DecorativeLine />
-      <LeadingText>Do you require assistance?</LeadingText>
-      <AskTIMButton onClick={() => setOpen(true)} />
-      <Drawer open={open} anchor="right" onClose={onDrawerClose}>
-        {showEntryScreen ? (
-          <EntryScreen>
-            <TimLogoBox>
-              <RiSparkling2Line />
-              <TimLogo src={timLogo.src} alt="" width={40} height={40} />
-            </TimLogoBox>
-            <Typography variant="h4">Welcome! I am TIM the Beaver.</Typography>
-            <Typography>Need assistance getting started?</Typography>
-            <StyledInput
-              fullWidth
-              size="chat"
-              onChange={onPromptChange}
-              onKeyDown={onPromptKeyDown}
-              endAdornment={
-                <AdornmentButton
-                  aria-label="Send"
-                  onClick={() => setShowEntryScreen(false)}
-                  disabled={!initialPrompt}
-                >
-                  <SendIcon />
-                </AdornmentButton>
-              }
-              responsive
-            />
-            <Typography variant="h5">Let me know how I can help.</Typography>
-            <Starters>
-              {STARTERS.map(({ content }, index) => (
-                <Starter
-                  key={index}
-                  onClick={() => onStarterClick(content)}
-                  tabIndex={index}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      onStarterClick(content)
-                    }
-                  }}
-                >
-                  <Typography variant="body2">{content}</Typography>
-                </Starter>
-              ))}
-            </Starters>
-          </EntryScreen>
-        ) : (
-          <AiRecommendationBot onClose={onDrawerClose} ref={aiChatRef} />
-        )}
-      </Drawer>
-    </StripContainer>
+    <Drawer open={open} anchor="right" onClose={onDrawerClose}>
+      {showEntryScreen ? (
+        <EntryScreen>
+          <TimLogoBox>
+            <RiSparkling2Line />
+            <TimLogo src={timLogo.src} alt="" width={40} height={40} />
+          </TimLogoBox>
+          <Typography variant="h4">Welcome! I am TIM the Beaver.</Typography>
+          <Typography>Need assistance getting started?</Typography>
+          <StyledInput
+            fullWidth
+            size="chat"
+            onChange={onPromptChange}
+            onKeyDown={onPromptKeyDown}
+            endAdornment={
+              <AdornmentButton
+                aria-label="Send"
+                onClick={() => setShowEntryScreen(false)}
+                disabled={!initialPrompt}
+              >
+                <SendIcon />
+              </AdornmentButton>
+            }
+            responsive
+          />
+          <Typography variant="h5">Let me know how I can help.</Typography>
+          <Starters>
+            {STARTERS.map(({ content }, index) => (
+              <Starter
+                key={index}
+                onClick={() => onStarterClick(content)}
+                tabIndex={index}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    onStarterClick(content)
+                  }
+                }}
+              >
+                <Typography variant="body2">{content}</Typography>
+              </Starter>
+            ))}
+          </Starters>
+        </EntryScreen>
+      ) : (
+        <AiRecommendationBot onClose={onDrawerClose} ref={aiChatRef} />
+      )}
+    </Drawer>
   )
 }
 
-export default AiRecommendationBotDrawerStrip
+export default AiRecommendationBotDrawer
