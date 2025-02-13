@@ -5,7 +5,6 @@ import { LearningResource } from "api"
 import { useUserMe } from "api/hooks/user"
 import type { User } from "api/hooks/user"
 import dynamic from "next/dynamic"
-import type { SyllabusChatRequestRequest } from "api/v0"
 
 const AiChat = dynamic(
   () => import("@mitodl/smoot-design/ai").then((mod) => mod.AiChat),
@@ -56,20 +55,17 @@ const AiChatSyllabus: React.FC<AiChatSyllabusProps> = ({
       askTimTitle="about this course"
       onClose={onClose}
       requestOpts={{
-        apiUrl: `${process.env.NEXT_PUBLIC_MITOL_API_BASE_URL}/api/v0/syllabus_agent/`,
+        apiUrl: process.env.NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT!,
         fetchOpts: {
           headers: {
             "X-CSRFToken": getCsrfToken(),
           },
         },
-        transformBody: (messages) => {
-          const body: SyllabusChatRequestRequest = {
-            collection_name: "content_files",
-            message: messages[messages.length - 1].content,
-            readable_id: resource?.readable_id,
-          }
-          return body
-        },
+        transformBody: (messages) => ({
+          collection_name: "content_files",
+          message: messages[messages.length - 1].content,
+          course_id: resource?.readable_id,
+        }),
       }}
       {...props}
     />
