@@ -131,12 +131,6 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": crontab(minute=30, hour=18),  # 2:30pm EST
         "kwargs": {"period": "daily", "subscription_type": "channel_subscription_type"},
     },
-    "daily_embed_new_learning_resources": {
-        "task": "vector_search.tasks.embed_new_learning_resources",
-        "schedule": get_int(
-            "EMBED_NEW_RESOURCES_SCHEDULE_SECONDS", 60 * 30
-        ),  # default is every 30 minutes
-    },
     "send-search-subscription-emails-every-1-days": {
         "task": "learning_resources_search.tasks.send_subscription_emails",
         "schedule": crontab(minute=0, hour=19),  # 3:00pm EST
@@ -156,6 +150,13 @@ if not DEV_ENV:
             "EMBED_NEW_RESOURCES_SCHEDULE_SECONDS", 60 * 30
         ),  # default is every 30 minutes
     }
+    CELERY_BEAT_SCHEDULE["daily_embed_new_content_files"] = {
+        "task": "vector_search.tasks.embed_new_content_files",
+        "schedule": get_int(
+            "EMBED_NEW_CONTENT_FILES_SCHEDULE_SECONDS", 60 * 30
+        ),  # default is every 30 minutes
+    }
+
 
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"

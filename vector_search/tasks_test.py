@@ -11,13 +11,14 @@ from learning_resources.factories import (
     LearningResourceRunFactory,
     ProgramFactory,
 )
-from learning_resources.models import LearningResource
+from learning_resources.models import ContentFile, LearningResource
 from learning_resources_search.constants import (
     COURSE_TYPE,
 )
 from main.utils import now_in_utc
 from vector_search.tasks import (
     embed_learning_resources_by_id,
+    embed_new_content_files,
     embed_new_learning_resources,
     start_embed_resources,
 )
@@ -147,6 +148,42 @@ def test_embed_new_learning_resources(mocker, mocked_celery):
 
     embedded_ids = generate_embeddings_mock.si.mock_calls[0].args[0]
     assert sorted(daily_resource_ids) == sorted(embedded_ids)
+
+
+def test_embed_new_content_files(mocker, mocked_celery):
+    """
+    embed_new_content_files should generate embeddings for new content files
+    created within the last day
+    """
+    mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
+
+    daily_since = now_in_utc() - datetime.timedelta(hours=5)
+
+    ContentFileFactory.create_batch(4, created_on=daily_since, published=True)
+    # create resources older than a day
+    ContentFileFactory.create_batch(
+        4,
+        created_on=now_in_utc() - datetime.timedelta(days=5),
+        published=True,
+    )
+
+    daily_content_file_ids = [
+        resource.id
+        for resource in ContentFile.objects.filter(
+            created_on__gt=now_in_utc() - datetime.timedelta(days=1)
+        )
+    ]
+
+    generate_embeddings_mock = mocker.patch(
+        "vector_search.tasks.generate_embeddings", autospec=True
+    )
+
+    with pytest.raises(mocked_celery.replace_exception_class):
+        embed_new_content_files.delay()
+    list(mocked_celery.group.call_args[0][0])
+
+    embedded_ids = generate_embeddings_mock.si.mock_calls[0].args[0]
+    assert sorted(daily_content_file_ids) == sorted(embedded_ids)
 
 
 def test_embed_learning_resources_by_id(mocker, mocked_celery):

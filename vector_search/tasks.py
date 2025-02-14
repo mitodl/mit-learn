@@ -254,3 +254,30 @@ def embed_new_learning_resources(self):
     embed_tasks = celery.group(tasks)
 
     return self.replace(embed_tasks)
+
+
+@app.task(bind=True)
+def embed_new_content_files(self):
+    """
+    Embed new content files from the last day
+    """
+    log.info("Running content file embedding task")
+    delta = datetime.timedelta(days=1)
+    since = now_in_utc() - delta
+    new_content_files = ContentFile.objects.filter(
+        published=True,
+        created_on__gt=since,
+        run__published=True,
+    )
+
+    tasks = [
+        generate_embeddings.si(ids, CONTENT_FILE_TYPE, overwrite=False)
+        for ids in chunks(
+            new_content_files.values_list("id", flat=True),
+            chunk_size=settings.QDRANT_CHUNK_SIZE,
+        )
+    ]
+
+    embed_tasks = celery.group(tasks)
+
+    return self.replace(embed_tasks)
