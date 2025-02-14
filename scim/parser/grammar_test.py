@@ -46,7 +46,6 @@ def test_scim_filter_parser():
 
     # run_tests will output error messages
     assert success
-    pytest.fail("test")
 
 
 @pytest.mark.parametrize("count", [10, 100, 1000, 5000])

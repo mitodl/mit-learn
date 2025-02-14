@@ -136,12 +136,12 @@ LogicalOperator = Group(
 )
 
 NegationOperator = Group(
-    Tag("negated", False)  # noqa: FBT003
-    + (
+    (
         CaselessKeyword("not")
         + _tag_term_type(TermType.negation_op)
         + Tag("negated", True)  # noqa: FBT003
-    )
+    )[..., 1]
+    ^ Tag("negated", False)  # noqa: FBT003
 )
 
 ValueTrue = Literal("true").set_parse_action(lambda: True) + _tag_value_type(
@@ -182,6 +182,8 @@ FilterExpr <<= (
     AttrExpression | ValuePath | (NegationOperator + nested_expr("(", ")", Filters))
 ) + _tag_term_type(TermType.filter_expr)
 
-Filters <<= (FilterExpr + (LogicalOperator + FilterExpr)[...]) + _tag_term_type(
-    TermType.filters
+Filters <<= (
+    # comment to force it to wrap the below for operator precedence
+    (FilterExpr + (LogicalOperator + FilterExpr)[...])
+    + _tag_term_type(TermType.filters)
 )
