@@ -1,11 +1,8 @@
 import React from "react"
 import { screen, waitFor, within } from "@testing-library/react"
-
-import {
-  getCallToActionText,
-  LearningResourceExpanded,
-} from "./LearningResourceExpanded"
-import type { LearningResourceExpandedProps } from "./LearningResourceExpanded"
+import { LearningResourceExpanded } from "../LearningResourceExpanded/LearningResourceExpanded"
+import { getCallToActionText } from "./CallToActionSection"
+import type { LearningResourceExpandedProps } from "../LearningResourceExpanded/LearningResourceExpanded"
 import { ResourceTypeEnum } from "api"
 import { factories, setMockResponse, urls } from "api/test-utils"
 import invariant from "tiny-invariant"
