@@ -49,7 +49,7 @@ class FilterQuery:
     def _attr_expr(cls, parsed: ParseResults) -> Q:
         dj_op = cls.dj_op_mapping[parsed.comparison_operator.lower()]
 
-        scim_keys = (parsed.attr_name, parsed.sub_path or None)
+        scim_keys = (parsed.attr_name, parsed.sub_attr)
 
         path_parts = list(
             filter(
