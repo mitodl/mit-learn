@@ -26,8 +26,6 @@ from vector_search.encoders.utils import dense_encoder
 
 logger = logging.getLogger(__name__)
 
-encoder = dense_encoder()
-
 
 def qdrant_client():
     return QdrantClient(
@@ -77,6 +75,7 @@ def create_qdrant_collections(force_recreate):
     client = qdrant_client()
     resources_collection_name = RESOURCES_COLLECTION_NAME
     content_files_collection_name = CONTENT_FILES_COLLECTION_NAME
+    encoder = dense_encoder()
     if (
         not client.collection_exists(collection_name=resources_collection_name)
         or force_recreate
@@ -200,7 +199,7 @@ def _process_resource_embeddings(serialized_resources):
     docs = []
     metadata = []
     ids = []
-
+    encoder = dense_encoder()
     vector_name = encoder.model_short_name()
     for doc in serialized_resources:
         vector_point_key = doc["readable_id"]
@@ -241,7 +240,7 @@ def generate_metadata_document(serialized_resource):
     for run in serialized_resource.get("runs", []):
         start_date = run.get("start_date")
         formatted_date = (
-            datetime.datetime.strptime(start_date, "%Y-%m-%dT%H:%M:%SZ")
+            datetime.datetime.strptime(start_date, "%Y-%m-%dT%H:%M:%S.%fZ")
             .replace(tzinfo=datetime.UTC)
             .strftime("%B %d, %Y")
             if start_date
@@ -296,6 +295,7 @@ def generate_metadata_document(serialized_resource):
 
 def _embed_course_metadata_as_contentfile(serialized_resources):
     client = qdrant_client()
+    encoder = dense_encoder()
     vector_name = encoder.model_short_name()
     metadata = []
     ids = []
@@ -333,6 +333,7 @@ def _process_content_embeddings(serialized_content):
     ids = []
     resource_points = []
     client = qdrant_client()
+    encoder = dense_encoder()
     vector_name = encoder.model_short_name()
     for doc in serialized_content:
         if not doc.get("content"):
@@ -441,9 +442,9 @@ def embed_learning_resources(ids, resource_type, overwrite):
             ]
 
         collection_name = RESOURCES_COLLECTION_NAME
-        _embed_course_metadata_as_contentfile(serialized_resources)
-        points = _process_resource_embeddings(serialized_resources)
 
+        points = _process_resource_embeddings(serialized_resources)
+        _embed_course_metadata_as_contentfile(serialized_resources)
     else:
         serialized_resources = list(serialize_bulk_content_files(ids))
         collection_name = CONTENT_FILES_COLLECTION_NAME
@@ -508,7 +509,7 @@ def vector_search(
     """
 
     client = qdrant_client()
-
+    encoder = dense_encoder()
     qdrant_conditions = qdrant_query_conditions(
         params, collection_name=search_collection
     )
