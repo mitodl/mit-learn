@@ -310,6 +310,8 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
                 "resource_point_id": resource_vector_point_id,
                 "resource_readable_id": readable_id,
                 "chunk_number": 0,
+                "file_extension": ".md",
+                "file_type": "text/markdown",
                 "chunk_content": course_info_document,
                 **{
                     key: doc[key]
