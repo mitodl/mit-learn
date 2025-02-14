@@ -417,11 +417,11 @@ def test_bulk_post(scim_client, bulk_test_data):
 
 def test_user_search(scim_client):
     """Test the user search endpoint"""
-    users = UserFactory.create_batch(500)
-    emails = [user.email for user in users[:300]]
+    users = UserFactory.create_batch(1500)
+    emails = [user.email for user in users[:1000]]
 
     resp = scim_client.post(
-        reverse("scim:users-search"),
+        f"{reverse('scim:users-search')}?count={len(emails)}",
         content_type="application/scim+json",
         data=json.dumps(
             {
@@ -432,3 +432,11 @@ def test_user_search(scim_client):
     )
 
     assert resp.status_code == 200
+
+    data = resp.json()
+
+    assert data["totalResults"] == len(emails)
+    assert len(data["Resources"]) == len(emails)
+
+    for resource in data["Resources"]:
+        assert resource["emails"][0]["value"] in emails

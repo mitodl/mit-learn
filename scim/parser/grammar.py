@@ -22,7 +22,6 @@ from pyparsing import (
     Char,
     Combine,
     DelimitedList,
-    Empty,
     FollowedBy,
     Forward,
     Group,
@@ -113,7 +112,7 @@ UrnAttr = Combine(
 
 
 SubAttr = ungroup(Combine(Suppress(".") + AttrName)).set_results_name("sub_attr") ^ (
-    Empty() + Tag("sub_attr", None)
+    Tag("sub_attr", None)
 )
 
 AttrPath = (

@@ -1,5 +1,6 @@
 import operator
 from collections.abc import Callable
+from typing import Optional
 
 from django.contrib.auth import get_user_model
 from django.db.models import Model, Q
@@ -13,7 +14,7 @@ class FilterQuery:
 
     model_cls: type[Model]
 
-    attr_map: dict[tuple[str, ...], tuple[str, ...]]
+    attr_map: dict[tuple[str, Optional[str]], tuple[str, ...]]
 
     related_selects: list[str] = []
 
@@ -48,13 +49,17 @@ class FilterQuery:
     def _attr_expr(cls, parsed: ParseResults) -> Q:
         dj_op = cls.dj_op_mapping[parsed.comparison_operator.lower()]
 
-        scim_keys = (
-            (parsed.attr_name,)
-            if parsed.sub_path is None
-            else (parsed.attr_name, parsed.sub_path)
-        )
+        scim_keys = (parsed.attr_name, parsed.sub_path or None)
 
-        path_parts = [*cls.attr_map.get(scim_keys, scim_keys), dj_op]
+        path_parts = list(
+            filter(
+                lambda part: part is not None,
+                (
+                    *cls.attr_map.get(scim_keys, scim_keys),
+                    dj_op,
+                ),
+            )
+        )
         path = "__".join(path_parts)
 
         q = Q(**{path: parsed.value})
@@ -107,11 +112,11 @@ class FilterQuery:
 class UserFilterQuery(FilterQuery):
     """FilterQuery for User"""
 
-    attr_map: dict[tuple[str, ...], tuple[str, ...]] = {
-        ("userName",): ("username",),
+    attr_map: dict[tuple[str, Optional[str]], tuple[str, ...]] = {
+        ("userName", None): ("username",),
         ("emails", "value"): ("email",),
-        ("active",): ("is_active",),
-        ("fullName",): ("profile", "name"),
+        ("active", None): ("is_active",),
+        ("fullName", None): ("profile", "name"),
         ("name", "givenName"): ("first_name",),
         ("name", "familyName"): ("last_name",),
     }
