@@ -1,6 +1,6 @@
+import datetime
 import logging
 import uuid
-from datetime import datetime
 
 from django.conf import settings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -236,12 +236,12 @@ def generate_metadata_document(serialized_resource):
         ", ".join(topic["name"] for topic in serialized_resource.get("topics", []))
         or "Not specified"
     )
-    # Extract course runs
+    # process course runs
     runs = []
     for run in serialized_resource.get("runs", []):
         start_date = run.get("start_date")
         formatted_date = (
-            datetime.strptime(start_date, "%Y-%m-%dT%H:%M:%SZ")
+            datetime.datetime.strptime(start_date, "%Y-%m-%dT%H:%M:%SZ")
             .replace(tzinfo=datetime.UTC)
             .strftime("%B %d, %Y")
             if start_date
@@ -277,18 +277,54 @@ def generate_metadata_document(serialized_resource):
         if run.get("level"):
             levels.extend(lvl["name"] for lvl in run["level"])
     unique_levels = ", ".join(set(levels)) if levels else "Not specified"
-    return f"""
-    Course Title: {title}
-    Description: {description}
-    Offered By: {offered_by}
-    Price: {price}
-    Certification: {certification}
-    Topics: {topics}
-    Level: {unique_levels}
-    Languages: {unique_languages}
-    Course Runs:
-    {runs_text}
-    """
+    display_info = {
+        "Course Title": title,
+        "Description": description,
+        "Offered By": offered_by,
+        "Price": price,
+        "Certification": certification,
+        "Topics": topics,
+        "Level": unique_levels,
+        "Languages": unique_languages,
+        "Course Runs": runs_text,
+    }
+    rendered_info = "\n".join(
+        [f"### {section}:\n{display_info[section]}" for section in display_info]
+    )
+    return f"# Course Details\n{rendered_info}"
+
+
+def _embed_course_metadata_as_contentfile(serialized_resources):
+    client = qdrant_client()
+    vector_name = encoder.model_short_name()
+    metadata = []
+    ids = []
+    docs = []
+    for doc in serialized_resources:
+        readable_id = doc["readable_id"]
+        resource_vector_point_id = str(vector_point_id(readable_id))
+        ids.append(resource_vector_point_id)
+        course_info_document = generate_metadata_document(doc)
+        metadata.append(
+            {
+                "resource_point_id": resource_vector_point_id,
+                "resource_readable_id": readable_id,
+                "chunk_number": 0,
+                "chunk_content": course_info_document,
+                **{
+                    key: doc[key]
+                    for key in [
+                        "platform",
+                        "offered_by",
+                    ]
+                },
+            }
+        )
+        docs.extend(course_info_document)
+    if len(docs) > 0:
+        embeddings = encoder.embed_documents(docs)
+        points = points_generator(ids, metadata, embeddings, vector_name)
+        client.upload_points(CONTENT_FILES_COLLECTION_NAME, points=points, wait=False)
 
 
 def _process_content_embeddings(serialized_content):
@@ -405,12 +441,9 @@ def embed_learning_resources(ids, resource_type, overwrite):
             ]
 
         collection_name = RESOURCES_COLLECTION_NAME
+        _embed_course_metadata_as_contentfile(serialized_resources)
         points = _process_resource_embeddings(serialized_resources)
 
-        if points:
-            client.upload_points(
-                CONTENT_FILES_COLLECTION_NAME, points=points, wait=False
-            )
     else:
         serialized_resources = list(serialize_bulk_content_files(ids))
         collection_name = CONTENT_FILES_COLLECTION_NAME
