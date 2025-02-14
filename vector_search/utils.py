@@ -2,6 +2,7 @@ import datetime
 import logging
 import uuid
 
+from dateutil import parser as date_parser
 from django.conf import settings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_experimental.text_splitter import SemanticChunker
@@ -218,8 +219,11 @@ def generate_metadata_document(serialized_resource):
     """
     Generate a plaint-text info document to embed in the contentfile collection
     """
-    title = serialized_resource.get("title", "Unknown Course")
-    description = serialized_resource.get("description", "No description available.")
+    title = serialized_resource.get("title", "")
+    description = (
+        f"{serialized_resource.get('description', '')}"
+        f" {serialized_resource.get('full_description', '')}"
+    )
     offered_by = serialized_resource.get("offered_by", {}).get(
         "name", "Unknown Institution"
     )
@@ -240,14 +244,14 @@ def generate_metadata_document(serialized_resource):
     for run in serialized_resource.get("runs", []):
         start_date = run.get("start_date")
         formatted_date = (
-            datetime.datetime.strptime(start_date, "%Y-%m-%dT%H:%M:%S.%fZ")
+            date_parser.parse(start_date)
             .replace(tzinfo=datetime.UTC)
             .strftime("%B %d, %Y")
             if start_date
-            else "Unknown start date"
+            else ""
         )
         location = run.get("location") or "Online"
-        duration = run.get("duration", "Unknown duration")
+        duration = run.get("duration")
         delivery_modes = (
             ", ".join(delivery["name"] for delivery in run.get("delivery", []))
             or "Not specified"
@@ -269,13 +273,13 @@ def generate_metadata_document(serialized_resource):
     for run in serialized_resource.get("runs", []):
         if run.get("languages"):
             languages.extend(run["languages"])
-    unique_languages = ", ".join(set(languages)) if languages else "Not specified"
+    unique_languages = ", ".join(set(languages))
     # Extract levels
     levels = []
     for run in serialized_resource.get("runs", []):
         if run.get("level"):
             levels.extend(lvl["name"] for lvl in run["level"])
-    unique_levels = ", ".join(set(levels)) if levels else "Not specified"
+    unique_levels = ", ".join(set(levels))
     display_info = {
         "Course Title": title,
         "Description": description,
@@ -288,9 +292,13 @@ def generate_metadata_document(serialized_resource):
         "Course Runs": runs_text,
     }
     rendered_info = "\n".join(
-        [f"### {section}:\n{display_info[section]}" for section in display_info]
+        [
+            f"{section} - {display_info[section]}"
+            for section in display_info
+            if {display_info[section]}
+        ]
     )
-    return f"# Course Details\n{rendered_info}"
+    return f"Information about this course:\n{rendered_info}"
 
 
 def _embed_course_metadata_as_contentfile(serialized_resources):
@@ -322,7 +330,7 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
                 },
             }
         )
-        docs.extend(course_info_document)
+        docs.append(course_info_document)
     if len(docs) > 0:
         embeddings = encoder.embed_documents(docs)
         points = points_generator(ids, metadata, embeddings, vector_name)
