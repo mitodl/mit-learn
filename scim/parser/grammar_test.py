@@ -1,14 +1,14 @@
 import pytest
 from faker import Faker
 
-from scim.parser_new.parser import FilterTermList
+from scim.parser.grammar import Filters
 
 faker = Faker()
 
 
 def test_scim_filter_parser():
     """Runer the parser tests"""
-    success, results = FilterTermList.run_tests("""\
+    success, results = Filters.run_tests("""\
         userName eq "bjensen"
 
         name.familyName co "O'Malley"
@@ -46,6 +46,7 @@ def test_scim_filter_parser():
 
     # run_tests will output error messages
     assert success
+    pytest.fail("test")
 
 
 @pytest.mark.parametrize("count", [10, 100, 1000, 5000])
@@ -56,7 +57,7 @@ def test_large_filter(count):
         [f'email.value eq "{faker.email()}"' for _ in range(count)]
     )
 
-    success, _ = FilterTermList.run_tests(filter_str)
+    success, _ = Filters.run_tests(filter_str)
 
     # run_tests will output error messages
     assert success

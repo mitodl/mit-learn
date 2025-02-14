@@ -431,4 +431,4 @@ def test_user_search(scim_client):
         ),
     )
 
-    assert resp.status_code == 201
+    assert resp.status_code == 200
