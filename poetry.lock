@@ -3246,13 +3246,13 @@ langsmith-pyo3 = ["langsmith-pyo3 (>=0.1.0rc2,<0.2.0)"]
 
 [[package]]
 name = "litellm"
-version = "1.61.4"
+version = "1.61.5"
 description = "Library to easily interface with LLM API providers"
 optional = false
 python-versions = "!=2.7.*,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,!=3.7.*,>=3.8"
 files = [
-    {file = "litellm-1.61.4-py3-none-any.whl", hash = "sha256:e87e0d397a191795b4217f9299fc9b21eaacaab91409695f0a4780cceccda6e1"},
-    {file = "litellm-1.61.4.tar.gz", hash = "sha256:eb9a7d2cbd068fb4bc7201e01a0ab56455b6ce92d45448d56db036c02f6c7ae3"},
+    {file = "litellm-1.61.5-py3-none-any.whl", hash = "sha256:0f842fe96d8354fce71bdb50b7b8d86b329653161885a047de4a9c78e0cfbe82"},
+    {file = "litellm-1.61.5.tar.gz", hash = "sha256:0fda7698e64933e100398d2b3ed5d1dc096021adf699c885f8baf5a7b0d7589c"},
 ]
 
 [package.dependencies]
@@ -7834,4 +7834,4 @@ testing = ["coverage[toml]", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.0"
 python-versions = "3.12.6"
-content-hash = "ee8dae077cde023fccf174ab8dd39dbb535b6f16fd77b1a48ecf34b330f12f71"
+content-hash = "5ee980b1260ffb80a8dea5001f14d22669e094e1af2f5b195b8caa3a49579068"
