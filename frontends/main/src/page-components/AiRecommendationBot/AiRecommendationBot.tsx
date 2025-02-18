@@ -5,7 +5,7 @@ import { AiChat, AiChatProps } from "@mitodl/smoot-design/ai"
 import type { AiChatMessage } from "@mitodl/smoot-design/ai"
 
 const Container = styled.div(({ theme }) => ({
-  width: "916px",
+  width: "900px",
   height: "100vh",
   padding: "16px 24px 24px 24px",
   [theme.breakpoints.down("md")]: {

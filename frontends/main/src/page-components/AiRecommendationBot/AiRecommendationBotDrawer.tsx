@@ -18,8 +18,10 @@ const EntryScreen = styled.div(({ theme }) => ({
   justifyContent: "center",
   gap: "16px",
   padding: "136px 40px 24px 40px",
+  width: "900px",
   [theme.breakpoints.down("md")]: {
     padding: "136px 24px 24px 24px",
+    width: "100%",
   },
 }))
 
