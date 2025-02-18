@@ -5,7 +5,7 @@ import { AiChat, AiChatProps } from "@mitodl/smoot-design/ai"
 import type { AiChatMessage } from "@mitodl/smoot-design/ai"
 
 const Container = styled.div(({ theme }) => ({
-  width: "900px",
+  width: "916px",
   height: "100vh",
   padding: "16px 24px 24px 24px",
   [theme.breakpoints.down("md")]: {
@@ -28,10 +28,6 @@ export const STARTERS = [
   {
     content:
       "I want to learn about global warming, can you recommend any videos?",
-  },
-  {
-    content:
-      "I am curious about AI applications for business.  Do you have any free courses about that?",
   },
   {
     content:

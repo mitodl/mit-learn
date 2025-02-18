@@ -1,20 +1,41 @@
 import React, { useState, useRef, useEffect } from "react"
 import { Typography, styled, Drawer, AdornmentButton } from "ol-components"
-import { RiSparkling2Line, RiSendPlaneFill } from "@remixicon/react"
-import { Input } from "@mitodl/smoot-design"
+import {
+  RiSparkling2Line,
+  RiSendPlaneFill,
+  RiCloseLine,
+} from "@remixicon/react"
+import { Input, ActionButton } from "@mitodl/smoot-design"
 import type { AiChatMessage } from "@mitodl/smoot-design/ai"
 import AiRecommendationBot, { STARTERS } from "./AiRecommendationBot"
 import Image from "next/image"
 import timLogo from "@/public/images/icons/tim.svg"
 
-const EntryScreen = styled.div({
+const EntryScreen = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
   justifyContent: "center",
   gap: "16px",
-  padding: "104px 32px",
-})
+  padding: "136px 40px 24px 40px",
+  [theme.breakpoints.down("md")]: {
+    padding: "136px 24px 24px 24px",
+  },
+}))
+
+const CloseButton = styled(ActionButton)(({ theme }) => ({
+  position: "absolute",
+  top: "24px",
+  right: "40px",
+  backgroundColor: theme.custom.colors.lightGray2,
+  "&&:hover": {
+    backgroundColor: theme.custom.colors.red,
+    color: theme.custom.colors.white,
+  },
+  [theme.breakpoints.down("md")]: {
+    right: "24px",
+  },
+}))
 
 const TimLogoBox = styled.div(({ theme }) => ({
   position: "relative",
@@ -33,17 +54,23 @@ const TimLogo = styled(Image)({
   display: "block",
 })
 
+const Title = styled(Typography)({
+  textAlign: "center",
+  padding: "0 40px",
+})
+
 const StyledInput = styled(Input)(({ theme }) => ({
   backgroundColor: theme.custom.colors.lightGray1,
   borderRadius: "8px",
   border: `1px solid ${theme.custom.colors.lightGray2}`,
-  margin: "24px 0",
-  width: "700px",
-  [theme.breakpoints.down("md")]: {
-    width: "100%",
-  },
+  margin: "8px 0 24px 0",
   "button:disabled": {
     backgroundColor: "inherit",
+  },
+  [theme.breakpoints.down("sm")]: {
+    ".Mit-AdornmentButton": {
+      padding: 0,
+    },
   },
 }))
 
@@ -57,9 +84,7 @@ const SendIcon = styled(RiSendPlaneFill)(({ theme }) => ({
 const Starters = styled.div(({ theme }) => ({
   display: "flex",
   gap: "16px",
-  maxWidth: "836px",
-  marginTop: "12px",
-  [theme.breakpoints.down("md")]: {
+  [theme.breakpoints.down("sm")]: {
     flexDirection: "column",
   },
 }))
@@ -129,21 +154,41 @@ const AiRecommendationBotDrawer = ({
     setShowEntryScreen(false)
   }
 
-  const onDrawerClose = () => {
+  const closeDrawer = () => {
     setOpen(false)
     setShowEntryScreen(true)
   }
 
   return (
-    <Drawer open={open} anchor="right" onClose={onDrawerClose}>
+    <Drawer
+      open={open}
+      anchor="right"
+      onClose={closeDrawer}
+      PaperProps={{
+        sx: {
+          minWidth: (theme) => ({
+            [theme.breakpoints.down("md")]: {
+              width: "100%",
+            },
+          }),
+        },
+      }}
+    >
+      <CloseButton
+        variant="text"
+        size="medium"
+        onClick={closeDrawer}
+        aria-label="Close"
+      >
+        <RiCloseLine />
+      </CloseButton>
       {showEntryScreen ? (
         <EntryScreen>
           <TimLogoBox>
             <RiSparkling2Line />
             <TimLogo src={timLogo.src} alt="" width={40} height={40} />
           </TimLogoBox>
-          <Typography variant="h4">Welcome! I am TIM the Beaver.</Typography>
-          <Typography>Need assistance getting started?</Typography>
+          <Title variant="h4">What do you want to learn from MIT?</Title>
           <StyledInput
             fullWidth
             size="chat"
@@ -160,7 +205,6 @@ const AiRecommendationBotDrawer = ({
             }
             responsive
           />
-          <Typography variant="h5">Let me know how I can help.</Typography>
           <Starters>
             {STARTERS.map(({ content }, index) => (
               <Starter
@@ -179,7 +223,7 @@ const AiRecommendationBotDrawer = ({
           </Starters>
         </EntryScreen>
       ) : (
-        <AiRecommendationBot onClose={onDrawerClose} ref={aiChatRef} />
+        <AiRecommendationBot ref={aiChatRef} />
       )}
     </Drawer>
   )
