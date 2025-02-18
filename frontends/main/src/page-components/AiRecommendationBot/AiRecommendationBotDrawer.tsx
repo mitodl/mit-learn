@@ -101,7 +101,7 @@ const Starter = styled.button(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
   backgroundColor: "transparent",
   textAlign: "left",
-  [theme.breakpoints.down("md")]: {
+  [theme.breakpoints.down("sm")]: {
     textAlign: "center",
     padding: "12px 36px",
   },
