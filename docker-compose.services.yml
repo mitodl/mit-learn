@@ -89,11 +89,6 @@ services:
       - load-testing
 
   keycloak:
-    env_file:
-      - env/shared.env
-      - env/shared.local.env
-      - env/backend.env
-      - env/backend.local.env
     profiles:
       - keycloak
     image: quay.io/keycloak/keycloak:latest
@@ -121,11 +116,6 @@ services:
   apigateway:
     profiles:
       - keycloak
-    env_file:
-      - env/shared.env
-      - env/shared.local.env
-      - env/backend.env
-      - env/backend.local.env
     image: apache/apisix:latest
     depends_on:
       - keycloak
