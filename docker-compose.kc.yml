@@ -1,0 +1,13 @@
+include:
+  - path: docker-compose.yml
+    env_file:
+      - env/shared.env
+      - env/shared.local.env
+      - env/backend.env
+      - env/backend.local.env
+  - path: docker-compose.kc.services.yml
+    env_file:
+      - env/shared.env
+      - env/shared.local.env
+      - env/backend.env
+      - env/backend.local.env

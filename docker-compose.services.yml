@@ -19,6 +19,7 @@ services:
       - POSTGRES_PASSWORD=postgres
     volumes:
       - pgdata:/var/lib/postgresql
+      - ./config/postgres:/docker-entrypoint-initdb.d
       - ./backups:/mnt/backups
 
   redis:
@@ -34,7 +35,6 @@ services:
       - "6379"
   qdrant:
     image: qdrant/qdrant:latest
-    restart: always
     ports:
       - "6333:6333"
     volumes:
