@@ -32,7 +32,7 @@ def decode_x_header(request, header):
     Returns:
     dict of decoded values, or None if the header isn't found
     """
-    x_userinfo = request.META.get(header, False)
+    x_userinfo = request.META[header]
 
     if not x_userinfo:
         return None
@@ -71,10 +71,9 @@ def decode_apisix_headers(request, model=settings.AUTH_USER_MODEL):
     try:
         apisix_result = decode_x_header(request, "HTTP_X_USERINFO")
         if not apisix_result:
-            log.debug(
-                "decode_apisix_headers: No APISIX-specific header found",
-            )
-            return None
+            err_msg = "decode_apisix_headers: No APISIX-specific header found"
+            log.debug(err_msg)
+            raise KeyError(err_msg)
     except json.JSONDecodeError:
         log.debug(
             "decode_apisix_headers: Got bad APISIX-specific header: %s",
@@ -84,7 +83,6 @@ def decode_apisix_headers(request, model=settings.AUTH_USER_MODEL):
         return None
 
     log.debug("decode_apisix_headers: Got %s", apisix_result)
-
     return {
         modelKey: apisix_result[data_mapping[modelKey]]
         for modelKey in data_mapping
@@ -95,19 +93,18 @@ def decode_apisix_headers(request, model=settings.AUTH_USER_MODEL):
 def get_user_from_apisix_headers(request):
     """Get a user based on the APISIX headers."""
 
-    decoded_headers = decode_apisix_headers(request)
+    decoded_user_headers = decode_apisix_headers(request)
 
-    if not decoded_headers:
+    if not decoded_user_headers:
         return None
 
-    log.debug("decoded headers: %s", decoded_headers)
+    log.debug("decoded headers: %s", decoded_user_headers)
 
-    email = decoded_headers.get("email", None)
-    global_id = decoded_headers.get("global_id", None)
-    username = decoded_headers.get("username", None)
-    given_name = decoded_headers.get("given_name", "")
-    family_name = decoded_headers.get("family_name", "")
-    name = decoded_headers.get("name", None)
+    email = decoded_user_headers.get("email", None)
+    global_id = decoded_user_headers.get("global_id", None)
+    username = decoded_user_headers.get("username", None)
+    first_name = decoded_user_headers.get("first_name", "")
+    last_name = decoded_user_headers.get("last_name", "")
 
     log.debug("get_user_from_apisix_headers: Authenticating %s", global_id)
 
@@ -115,8 +112,8 @@ def get_user_from_apisix_headers(request):
         email=email,
         defaults={
             "username": username,
-            "first_name": given_name,
-            "last_name": family_name,
+            "first_name": first_name,
+            "last_name": last_name,
         },
     )
 
@@ -143,14 +140,14 @@ def get_user_from_apisix_headers(request):
             msg = "User is inactive"
             raise KeyError(msg)
 
-    profile_data = decode_apisix_headers(request, "profiles.Profile")
-
+    profile_data = decode_apisix_headers(request, model="profiles.Profile")
     if profile_data:
         log.debug(
             "get_user_from_apisix_headers: Setting up additional profile for %s",
             global_id,
         )
-    user_created_actions(user=user, details={"name": name, **profile_data})
+        profile_data["profile"] = profile_data
+    user_created_actions(user=user, details=profile_data)
     user.refresh_from_db()
 
     return user

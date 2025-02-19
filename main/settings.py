@@ -855,7 +855,7 @@ APISIX_USERDATA_MAP = {
         "last_name": "family_name",
     },
     "profiles.Profile": {
-        "name": "full_name",
-        "emailOptin": "email_optin",
+        "name": "fullName",
+        "email_optin": "emailOptIn",
     },
 }
