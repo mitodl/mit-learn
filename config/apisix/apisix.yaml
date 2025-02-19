@@ -75,5 +75,5 @@ routes:
             Referrer-Policy: "origin"
     uris:
       - "/admin/login/*"
-      - "/login/oidc/*"
+      - "/login/*"
 #END
