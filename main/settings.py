@@ -158,6 +158,7 @@ MIDDLEWARE = (
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "main.middleware.apisix_user.ApisixUserMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "corsheaders.middleware.CorsMiddleware",
@@ -309,45 +310,6 @@ SOCIAL_AUTH_PROTECTED_USER_FIELDS = [
     "profile",  # this avoids an error because profile is a related model
 ]
 
-SOCIAL_AUTH_PIPELINE = (
-    # Checks if an admin user attempts to login/register while hijacking another user.
-    "authentication.pipeline.user.forbid_hijack",
-    # Get the information we can about the user and return it in a simple
-    # format to create the user instance later. On some cases the details are
-    # already part of the auth response from the provider, but sometimes this
-    # could hit a provider API.
-    "social_core.pipeline.social_auth.social_details",
-    # Get the social uid from whichever service we're authing thru. The uid is
-    # the unique identifier of the given user in the provider.
-    "social_core.pipeline.social_auth.social_uid",
-    # Verifies that the current auth process is valid within the current
-    # project, this is where emails and domains whitelists are applied (if
-    # defined).
-    "social_core.pipeline.social_auth.auth_allowed",
-    # Checks if the current social-account is already associated in the site.
-    "social_core.pipeline.social_auth.social_user",
-    # Associates current social details with another user account with same email.
-    "social_core.pipeline.social_auth.associate_by_email",
-    # Send a validation email to the user to verify its email address.
-    # Disabled by default.
-    "social_core.pipeline.mail.mail_validation",
-    # # Generate a username for the user
-    # # NOTE: needs to be right before create_user so nothing overrides the username
-    # "authentication.pipeline.user.get_username",
-    # Create a user account if we haven't found one yet.
-    "social_core.pipeline.user.create_user",
-    # Create the record that associates the social account with the user.
-    "social_core.pipeline.social_auth.associate_user",
-    # Populate the extra_data field in the social record with the values
-    # specified by settings (and the default ones like access_token, etc).
-    "social_core.pipeline.social_auth.load_extra_data",
-    # Update the user record with any changed info from the auth service.
-    "social_core.pipeline.user.user_details",
-    # Create a favorites list for new users
-    "authentication.pipeline.user.user_created_actions",
-    # redirect new users to onboarding
-    "authentication.pipeline.user.user_onboarding",
-)
 
 SOCIAL_AUTH_OL_OIDC_OIDC_ENDPOINT = get_string(
     name="SOCIAL_AUTH_OL_OIDC_OIDC_ENDPOINT",
@@ -743,6 +705,7 @@ REST_FRAMEWORK_EXTENSIONS = {
     "DEFAULT_PARENT_LOOKUP_KWARG_NAME_PREFIX": DRF_NESTED_PARENT_LOOKUP_PREFIX
 }
 
+# Keycloak API settings
 KEYCLOAK_BASE_URL = get_string(
     name="KEYCLOAK_BASE_URL",
     default="http://mit-keycloak-base-url.edu",
@@ -880,4 +843,19 @@ SEMANTIC_CHUNKING_CONFIG = {
         name="SEMANTIC_CHUNKING_NUMBER_OF_CHUNKS",
         default=None,
     ),
+}
+
+# APISIX middleware settings
+APISIX_USERDATA_MAP = {
+    "users.User": {
+        "email": "email",
+        "global_id": "sub",
+        "username": "preferred_username",
+        "first_name": "given_name",
+        "last_name": "family_name",
+    },
+    "profiles.Profile": {
+        "name": "full_name",
+        "emailOptin": "email_optin",
+    },
 }
