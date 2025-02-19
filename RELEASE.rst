@@ -1,6 +1,24 @@
 Release Notes
 =============
 
+Version 0.30.5
+--------------
+
+- Fixed SCIM search for large queries (#2049)
+- Latest smoot-design (#2059)
+- Recommendation bot styling and text updates (#2058)
+- Open Learning Library CSV update (#2014)
+- Update dependency litellm to v1.61.5 (#2056)
+- Update opensearchproject/opensearch Docker tag to v2.19.0 (#2055)
+- Update dependency tiktoken to ^0.9.0 (#2054)
+- Update dependency litellm to v1.61.4 (#2053)
+- Update Node.js to v22.14.0 (#2052)
+- Celery task to embed new contentfiles (#2044)
+- Design update for the homepage AskTIM action (#2047)
+- Point the chatbots to the Learn AI endpoints (#2045)
+- Recommendation bot UI (#2019)
+- Update React Query to v5 (#2043)
+
 Version 0.30.4 (Released February 12, 2025)
 --------------
 
