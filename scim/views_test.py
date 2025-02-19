@@ -30,7 +30,7 @@ def scim_client(staff_user):
 
 def test_scim_user_post(scim_client):
     """Test that we can create a user via SCIM API"""
-    user_q = User.objects.filter(profile__scim_external_id="1")
+    user_q = User.objects.filter(scim_external_id="1")
     assert not user_q.exists()
 
     resp = scim_client.post(
@@ -71,7 +71,7 @@ def test_scim_user_put(scim_client):
     user = UserFactory.create()
 
     resp = scim_client.put(
-        f"{reverse('scim:users')}/{user.profile.scim_id}",
+        f"{reverse('scim:users')}/{user.scim_id}",
         content_type="application/scim+json",
         data=json.dumps(
             {
@@ -107,7 +107,7 @@ def test_scim_user_patch(scim_client):
     user = UserFactory.create()
 
     resp = scim_client.patch(
-        f"{reverse('scim:users')}/{user.profile.scim_id}",
+        f"{reverse('scim:users')}/{user.scim_id}",
         content_type="application/scim+json",
         data=json.dumps(
             {
@@ -208,7 +208,7 @@ def _put_operation(user, data, bulk_id_gen):
         payload={
             "method": "put",
             "bulkId": bulk_id,
-            "path": f"/Users/{user.profile.scim_id}",
+            "path": f"/Users/{user.scim_id}",
             "data": _user_to_scim_payload(data),
         },
         user=user,
@@ -218,7 +218,7 @@ def _put_operation(user, data, bulk_id_gen):
             "location": ANY_STR,
             "bulkId": bulk_id,
             "status": "200",
-            "id": str(user.profile.scim_id),
+            "id": str(user.scim_id),
         },
     )
 
@@ -241,7 +241,7 @@ def _patch_operation(user, data, fields_to_patch, bulk_id_gen):
         payload={
             "method": "patch",
             "bulkId": bulk_id,
-            "path": f"/Users/{user.profile.scim_id}",
+            "path": f"/Users/{user.scim_id}",
             "data": {
                 "schemas": [djs_constants.SchemaURI.PATCH_OP],
                 "Operations": [
@@ -268,7 +268,7 @@ def _patch_operation(user, data, fields_to_patch, bulk_id_gen):
             "location": ANY_STR,
             "bulkId": bulk_id,
             "status": "200",
-            "id": str(user.profile.scim_id),
+            "id": str(user.scim_id),
         },
     )
 
@@ -280,7 +280,7 @@ def _delete_operation(user, bulk_id_gen):
         payload={
             "method": "delete",
             "bulkId": bulk_id,
-            "path": f"/Users/{user.profile.scim_id}",
+            "path": f"/Users/{user.scim_id}",
         },
         user=user,
         expected_user_state=None,
