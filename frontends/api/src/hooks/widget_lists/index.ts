@@ -26,7 +26,7 @@ const useMutateWidgetsList = (id: number) => {
         .then((response) => response.data),
 
     onSuccess: (_data) => {
-      client.invalidateQueries(widgetListKeys.root)
+      client.invalidateQueries({ queryKey: widgetListKeys.root })
     },
   })
 }

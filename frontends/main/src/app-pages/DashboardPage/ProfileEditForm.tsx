@@ -75,7 +75,7 @@ const ProfileEditForm: React.FC<Props> = ({ profile }) => {
     }
   }, [profile])
   const { data: user } = useUserMe()
-  const { isLoading: isSaving, mutateAsync } = useProfileMeMutation()
+  const { isPending: isSaving, mutateAsync } = useProfileMeMutation()
   const { data: topics } = useLearningResourceTopics({ is_toplevel: true })
   const topicChoices =
     topics?.results?.map((topic) => ({

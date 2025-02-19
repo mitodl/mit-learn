@@ -91,7 +91,7 @@ const SearchSubscriptionToggle: React.FC<SearchSubscriptionToggleProps> = ({
     <>
       <StyledButton
         variant="primary"
-        disabled={subscriptionCreate.isLoading}
+        disabled={subscriptionCreate.isPending}
         startIcon={<RiMailLine />}
         onClick={onFollowClick}
       >

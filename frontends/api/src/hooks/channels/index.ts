@@ -1,9 +1,4 @@
-import {
-  UseQueryOptions,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { channelsApi } from "../../clients"
 import type {
@@ -14,7 +9,7 @@ import { channelKeys, channelQueries } from "./queries"
 
 const useChannelsList = (
   params: ChannelsApiChannelsListRequest = {},
-  opts: Pick<UseQueryOptions, "enabled"> = {},
+  opts?: { enabled?: boolean },
 ) => {
   return useQuery({
     ...channelQueries.list(params),
@@ -45,7 +40,7 @@ const useChannelPartialUpdate = () => {
         })
         .then((response) => response.data),
     onSuccess: (_data) => {
-      client.invalidateQueries(channelKeys.root)
+      client.invalidateQueries({ queryKey: channelKeys.root })
     },
   })
 }

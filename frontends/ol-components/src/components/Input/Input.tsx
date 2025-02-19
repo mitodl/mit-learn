@@ -5,7 +5,7 @@ import type { InputBaseProps } from "@mui/material/InputBase"
 import type { Theme } from "@mui/material/styles"
 import ClassNames from "classnames"
 
-type Size = NonNullable<InputBaseProps["size"]>
+type Size = "small" | "medium" | "large" | "chat" | "hero"
 
 const defaultProps = {
   size: "medium",
@@ -16,6 +16,7 @@ const responsiveSize: Record<Size, Size> = {
   small: "small",
   medium: "small",
   large: "medium",
+  chat: "chat",
   hero: "large",
 }
 

@@ -23,6 +23,7 @@ if (POSTHOG_API_KEY) {
 const PosthogIdentifier = () => {
   const { data: user } = useUserMe()
   const posthog = usePostHog()
+
   /**
    * Posthog docs recommend calling `posthog.identify` on signin and
    * `posthog.reset` on signout. But signin and signout generally occur on the

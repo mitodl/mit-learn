@@ -1,5 +1,4 @@
 import {
-  UseQueryOptions,
   useQuery,
   useInfiniteQuery,
   useQueryClient,
@@ -18,7 +17,7 @@ import { useUserHasPermission, Permission } from "api/hooks/user"
 
 const useLearningPathsList = (
   params: ListRequest = {},
-  opts: Pick<UseQueryOptions, "enabled"> = {},
+  opts?: { enabled?: boolean },
 ) => {
   return useQuery({
     ...learningPathQueries.list(params),
@@ -28,15 +27,11 @@ const useLearningPathsList = (
 
 const useInfiniteLearningPathItems = (
   params: ItemsListRequest,
-  options: Pick<UseQueryOptions, "enabled"> = {},
+  opts?: { enabled?: boolean },
 ) => {
   return useInfiniteQuery({
     ...learningPathQueries.infiniteItems(params.learning_resource_id, params),
-    // TODO: in v5, co-locate this with the query options via infiniteQueryOptions
-    getNextPageParam: (lastPage) => {
-      return lastPage.next ?? undefined
-    },
-    ...options,
+    ...opts,
   })
 }
 
@@ -56,7 +51,7 @@ const useLearningPathCreate = () => {
         LearningPathResourceRequest: params,
       }),
     onSettled: () => {
-      queryClient.invalidateQueries(learningPathKeys.listRoot())
+      queryClient.invalidateQueries({ queryKey: learningPathKeys.listRoot() })
     },
   })
 }
@@ -72,8 +67,10 @@ const useLearningPathUpdate = () => {
         PatchedLearningPathResourceRequest: params,
       }),
     onSettled: (data, err, vars) => {
-      queryClient.invalidateQueries(learningPathKeys.listRoot())
-      queryClient.invalidateQueries(learningPathKeys.detail(vars.id))
+      queryClient.invalidateQueries({ queryKey: learningPathKeys.listRoot() })
+      queryClient.invalidateQueries({
+        queryKey: learningPathKeys.detail(vars.id),
+      })
     },
   })
 }
@@ -84,8 +81,10 @@ const useLearningPathDestroy = () => {
     mutationFn: (params: DestroyRequest) =>
       learningPathsApi.learningpathsDestroy(params),
     onSettled: () => {
-      queryClient.invalidateQueries(learningPathKeys.listRoot())
-      queryClient.invalidateQueries(learningPathKeys.membershipList())
+      queryClient.invalidateQueries({ queryKey: learningPathKeys.listRoot() })
+      queryClient.invalidateQueries({
+        queryKey: learningPathKeys.membershipList(),
+      })
     },
   })
 }
@@ -107,9 +106,9 @@ const useLearningPathListItemMove = () => {
       })
     },
     onSettled: (_data, _err, vars) => {
-      queryClient.invalidateQueries(
-        learningPathKeys.infiniteItemsRoot(vars.parent),
-      )
+      queryClient.invalidateQueries({
+        queryKey: learningPathKeys.infiniteItemsRoot(vars.parent),
+      })
     },
   })
 }

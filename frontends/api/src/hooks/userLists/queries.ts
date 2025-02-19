@@ -6,7 +6,7 @@ import type {
 } from "../../generated/v1"
 import { userListsApi } from "../../clients"
 import { clearListMemberships } from "../learningResources/queries"
-import { QueryOptions } from "@tanstack/react-query"
+import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query"
 
 const userlistKeys = {
   root: ["userLists"],
@@ -24,42 +24,49 @@ const userlistKeys = {
 
 const userlistQueries = {
   list: (params: ListRequest) =>
-    ({
+    queryOptions({
       queryKey: userlistKeys.list(params),
       queryFn: () => userListsApi.userlistsList(params).then((res) => res.data),
-    }) satisfies QueryOptions,
+    }),
   detail: (id: number) =>
-    ({
+    queryOptions({
       queryKey: userlistKeys.detail(id),
       queryFn: () =>
         userListsApi.userlistsRetrieve({ id }).then((res) => res.data),
-    }) satisfies QueryOptions,
-  infiniteItems: (id: number, listingParams: ItemsListRequest) => ({
-    queryKey: userlistKeys.infiniteItems(id, listingParams),
-    queryFn: async ({ pageParam }: { pageParam?: string } = {}) => {
-      // Use generated API for first request, then use next parameter
-      const request = pageParam
-        ? axiosInstance.request<PaginatedUserListRelationshipList>({
-            method: "get",
-            url: pageParam,
-          })
-        : userListsApi.userlistsItemsList(listingParams)
-      const { data } = await request
-      return {
-        ...data,
-        results: data.results.map((relation) => ({
-          ...relation,
-          resource: clearListMemberships(relation.resource),
-        })),
-      }
-    },
+    }),
+  infiniteItems: (id: number, listingParams: ItemsListRequest) =>
+    infiniteQueryOptions({
+      queryKey: userlistKeys.infiniteItems(id, listingParams),
+      queryFn: async ({
+        pageParam,
+      }): Promise<PaginatedUserListRelationshipList> => {
+        // Use generated API for first request, then use next parameter
+        const request = pageParam
+          ? axiosInstance.request<PaginatedUserListRelationshipList>({
+              method: "get",
+              url: pageParam,
+            })
+          : userListsApi.userlistsItemsList(listingParams)
+        const { data } = await request
+        return {
+          ...data,
+          results: data.results.map((relation) => ({
+            ...relation,
+            resource: clearListMemberships(relation.resource),
+          })),
+        }
+      },
+      // Casting is so infiniteQueryOptions can infer the correct type for initialPageParam
+      initialPageParam: null as string | null,
+      getNextPageParam: (lastPage) => {
+        return lastPage.next ?? undefined
+      },
+    }),
+  membershipList: () => ({
+    queryKey: userlistKeys.membershipList(),
+    queryFn: () =>
+      userListsApi.userlistsMembershipList().then((res) => res.data),
   }),
-  membershipList: () =>
-    ({
-      queryKey: userlistKeys.membershipList(),
-      queryFn: () =>
-        userListsApi.userlistsMembershipList().then((res) => res.data),
-    }) satisfies QueryOptions,
 }
 
 export { userlistQueries, userlistKeys }

@@ -1,14 +1,17 @@
-"use client"
-
 import React from "react"
 import { styled } from "ol-components"
 import { getCsrfToken } from "@/common/utils"
 import { AiChat, AiChatProps } from "@mitodl/smoot-design/ai"
+import type { AiChatMessage } from "@mitodl/smoot-design/ai"
 
-const Container = styled.div({
-  margin: "40px auto",
-  width: "60%",
-})
+const Container = styled.div(({ theme }) => ({
+  width: "900px",
+  height: "100vh",
+  padding: "16px 24px 24px 24px",
+  [theme.breakpoints.down("md")]: {
+    width: "100%",
+  },
+}))
 
 const INITIAL_MESSAGES: AiChatProps["initialMessages"] = [
   {
@@ -28,21 +31,24 @@ export const STARTERS = [
   },
   {
     content:
-      "I am curious about AI applications for business.  Do you have any free courses about that?",
-  },
-  {
-    content:
       "I would like to learn about linear regression, preferably at no cost.",
   },
 ]
 
-const ChatPage = () => {
+const AiRecommendationBot = ({
+  onClose,
+  ref,
+}: {
+  onClose?: () => void
+  ref?: React.Ref<{ append: (message: Omit<AiChatMessage, "id">) => void }>
+}) => {
   return (
     <Container>
       <AiChat
         askTimTitle="to recommend a course"
         initialMessages={INITIAL_MESSAGES}
         conversationStarters={STARTERS}
+        onClose={onClose}
         requestOpts={{
           apiUrl: process.env.NEXT_PUBLIC_LEARN_AI_RECOMMENDATION_ENDPOINT!,
           fetchOpts: {
@@ -54,9 +60,10 @@ const ChatPage = () => {
             message: messages[messages.length - 1].content,
           }),
         }}
+        ref={ref}
       />
     </Container>
   )
 }
 
-export default ChatPage
+export default AiRecommendationBot

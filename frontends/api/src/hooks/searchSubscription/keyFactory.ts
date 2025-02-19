@@ -1,6 +1,6 @@
 import { searchSubscriptionApi } from "../../clients"
 import type { LearningResourcesUserSubscriptionApiLearningResourcesUserSubscriptionCheckListRequest as subscriptionCheckListRequest } from "../../generated/v1"
-import { QueryOptions } from "@tanstack/react-query"
+import { queryOptions } from "@tanstack/react-query"
 
 const searchSubscriptionKeys = {
   root: ["searchSubscriptions"],
@@ -13,13 +13,13 @@ const searchSubscriptionKeys = {
 
 const searchSubscriptionQueries = {
   list: (params: subscriptionCheckListRequest) =>
-    ({
+    queryOptions({
       queryKey: searchSubscriptionKeys.list(params),
       queryFn: () =>
         searchSubscriptionApi
           .learningResourcesUserSubscriptionCheckList(params)
           .then((res) => res.data),
-    }) satisfies QueryOptions,
+    }),
 }
 
 export { searchSubscriptionQueries, searchSubscriptionKeys }

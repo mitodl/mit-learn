@@ -157,10 +157,9 @@ describe("LearningPath CRUD", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(makeRequest).toHaveBeenCalledWith("post", url, requestData)
 
-    expect(queryClient.invalidateQueries).toHaveBeenCalledWith([
-      "learningPaths",
-      "list",
-    ])
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["learningPaths", "list"],
+    })
   })
 
   test("useLearningPathDestroy calls correct API", async () => {
@@ -178,14 +177,12 @@ describe("LearningPath CRUD", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(makeRequest).toHaveBeenCalledWith("delete", url, undefined)
 
-    expect(queryClient.invalidateQueries).toHaveBeenCalledWith([
-      "learningPaths",
-      "list",
-    ])
-    expect(queryClient.invalidateQueries).toHaveBeenCalledWith([
-      "learningPaths",
-      "membershipList",
-    ])
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["learningPaths", "list"],
+    })
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["learningPaths", "membershipList"],
+    })
   })
 
   test("useLearningPathUpdate calls correct API", async () => {
@@ -203,14 +200,11 @@ describe("LearningPath CRUD", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(makeRequest).toHaveBeenCalledWith("patch", url, patch)
 
-    expect(queryClient.invalidateQueries).toHaveBeenCalledWith([
-      "learningPaths",
-      "list",
-    ])
-    expect(queryClient.invalidateQueries).toHaveBeenCalledWith([
-      "learningPaths",
-      "detail",
-      path.id,
-    ])
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["learningPaths", "list"],
+    })
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["learningPaths", "detail", path.id],
+    })
   })
 })
