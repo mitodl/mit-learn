@@ -31,10 +31,6 @@ export const STARTERS = [
   },
   {
     content:
-      "I am curious about AI applications for business.  Do you have any free courses about that?",
-  },
-  {
-    content:
       "I would like to learn about linear regression, preferably at no cost.",
   },
 ]
