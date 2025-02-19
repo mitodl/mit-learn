@@ -55,7 +55,7 @@ if (process.env.NODE_ENV !== "production") {
 
 const MITOL_API_BASE_URL = process.env.NEXT_PUBLIC_MITOL_API_BASE_URL
 
-export const LOGIN = `${MITOL_API_BASE_URL}/login/`
+export const LOGIN = `${MITOL_API_BASE_URL}/login/ol-oidc/`
 export const LOGOUT = `${MITOL_API_BASE_URL}/logout/`
 
 /**
