@@ -22,7 +22,6 @@ const Outer = styled.div<{ chatExpanded: boolean }>({
   flexGrow: 1,
   width: "100%",
   overflowX: "hidden",
-  scrollbarGutter: "stable",
   minWidth: DRAWER_WIDTH,
   [theme.breakpoints.down("md")]: {
     minWidth: "100%",
