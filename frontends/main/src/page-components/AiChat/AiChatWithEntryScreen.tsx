@@ -210,7 +210,10 @@ const AiChatWithEntryScreen = ({
           </Starters>
         </EntryScreen>
       ) : (
-        <ChatScreen className={chatScreenClassName}>
+        <ChatScreen
+          className={chatScreenClassName}
+          data-testid="ai-chat-screen"
+        >
           <AiChat
             askTimTitle={askTimTitle}
             conversationStarters={starters}

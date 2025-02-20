@@ -15,8 +15,10 @@ import { makeUserSettings } from "@/test-utils/factories"
 import type { User } from "api/hooks/user"
 import { usePostHog } from "posthog-js/react"
 
-jest.mock("./LearningResourceExpanded", () => {
-  const actual = jest.requireActual("./LearningResourceExpanded")
+jest.mock("../LearningResourceExpanded/LearningResourceExpanded", () => {
+  const actual = jest.requireActual(
+    "../LearningResourceExpanded/LearningResourceExpanded",
+  )
   return {
     ...actual,
     LearningResourceExpanded: jest.fn(actual.LearningResourceExpanded),
