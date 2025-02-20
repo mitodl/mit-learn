@@ -1,18 +1,22 @@
-import React, { useEffect, useRef } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import styled from "@emotion/styled"
 import { theme } from "ol-components"
 import type { ImageConfig, LearningResourceCardProps } from "ol-components"
 import type { LearningResource } from "api"
+import { ResourceTypeEnum } from "api"
 import { useToggle } from "ol-utilities"
 import InfoSection from "./InfoSection"
 import type { User } from "api/hooks/user"
 import TitleSection from "./TitleSection"
 import CallToActionSection from "./CallToActionSection"
 import ResourceDescription from "./ResourceDescription"
+import { FeatureFlags } from "@/common/feature_flags"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import AiSyllabusBotSlideDown from "./AiChatSyllabusSlideDown"
 
 const DRAWER_WIDTH = "900px"
 
-const Outer = styled.div({
+const Outer = styled.div<{ chatExpanded: boolean }>(({ chatExpanded }) => ({
   display: "flex",
   flexDirection: "column",
   flexGrow: 1,
@@ -22,43 +26,45 @@ const Outer = styled.div({
   [theme.breakpoints.down("md")]: {
     minWidth: "100%",
   },
-})
+  ...(chatExpanded && {
+    "&::-webkit-scrollbar": {
+      display: "none",
+    },
+    msOverflowStyle: "none",
+    scrollbarWidth: "none",
+  }),
+}))
 
-// const CHAT_WIDTH = "400px"
-// const CHAT_RIGHT = "0px"
-
-const Layers = styled.div({
-  paddingRight: 0,
+const ContentSection = styled.div({
+  display: "flex",
+  flexDirection: "column",
+  flexGrow: 1,
   position: "relative",
 })
 
-const Layer = styled.div({
-  position: "absolute",
-  top: 0,
-  left: 0,
-  width: "100%",
-  height: "100%",
-})
+const ChatLayer = styled("div")<{ top: number; chatExpanded: boolean }>(
+  ({ top, chatExpanded }) => ({
+    zIndex: 2,
+    position: "absolute",
+    top,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    pointerEvents: chatExpanded ? "auto" : "none",
+  }),
+)
 
-// const ChatLayer = styled(Layer)({
-//   zIndex: 2,
-// })
-
-const TopContainer = styled.div({
-  display: "flex",
-  flexDirection: "column",
-  padding: "0 28px 24px",
-  [theme.breakpoints.down("md")]: {
-    width: "auto",
-    padding: "0 16px 24px",
-  },
-  // [showChatSelector]: {
-  //   padding: "0 16px 24px 28px",
-  //   [theme.breakpoints.between("sm", "md")]: {
-  //     padding: "0 0 16px 24px",
-  //   },
-  // },
-})
+const TopContainer = styled.div<{ chatEnabled: boolean }>(
+  ({ chatEnabled }) => ({
+    display: "flex",
+    flexDirection: "column",
+    padding: chatEnabled ? "70px 28px 24px" : "0 28px 24px",
+    [theme.breakpoints.down("md")]: {
+      width: "auto",
+      padding: chatEnabled ? "72px 16px 24px" : "0 16px 24px",
+    },
+  }),
+)
 
 const BottomContainer = styled.div({
   display: "flex",
@@ -73,53 +79,7 @@ const BottomContainer = styled.div({
   [theme.breakpoints.down("md")]: {
     padding: "16px 0 16px 16px",
   },
-  // [showChatSelector]: {
-  //   [theme.breakpoints.up("md")]: {
-  //     padding: "32px 16px 32px 28px",
-  //   },
-  // },
 })
-
-// const MainCol = styled.div({
-//   /**
-//    * Note:
-//    * Without a width specified, the carousels will overflow up to 100vw
-//    */
-//   maxWidth: DRAWER_WIDTH,
-//   flex: 1,
-//   [theme.breakpoints.down("md")]: {
-//     maxWidth: "100%",
-//   },
-// })
-
-/**
- * Chat offset from top of drawer.
- * 48px + 3rem = height of 1-line title plus padding.
- * If title is two lines, the chat will overflow into title.
- */
-// const CHAT_TOP = "calc(48px + 3rem)"
-
-// const ChatCol = styled.div({
-//   zIndex: 2,
-//   position: "fixed",
-//   top: CHAT_TOP,
-//   right: CHAT_RIGHT,
-//   height: `calc(100vh - ${CHAT_TOP})`,
-//   flex: 1,
-//   boxSizing: "border-box",
-//   padding: "0 16px 16px 16px",
-//   maxWidth: CHAT_WIDTH,
-//   [theme.breakpoints.down("md")]: {
-//     maxWidth: "100%",
-//     position: "static",
-//   },
-//   [theme.breakpoints.down("sm")]: {
-//     height: "100%",
-//   },
-//   ".MitAiChat--title": {
-//     paddingTop: "0px",
-//   },
-// })
 
 const ContentContainer = styled.div({
   display: "flex",
@@ -128,12 +88,6 @@ const ContentContainer = styled.div({
     flexDirection: "column-reverse",
     gap: "16px",
   },
-  // [theme.breakpoints.up("md")]: {
-  //   [showChatSelector]: {
-  //     flexDirection: "column-reverse",
-  //     gap: "16px",
-  //   },
-  // },
 })
 
 const ContentLeft = styled.div({
@@ -188,14 +142,16 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
   onAddToUserListClick,
   closeDrawer,
 }) => {
-  const chatEnabled = true //
-  // useFeatureFlagEnabled(FeatureFlags.LrDrawerChatbot) &&
-  // resource?.resource_type === ResourceTypeEnum.Course
+  const chatEnabled =
+    useFeatureFlagEnabled(FeatureFlags.LrDrawerChatbot) &&
+    resource?.resource_type === ResourceTypeEnum.Course
 
   const [chatExpanded, setChatExpanded] = useToggle(false)
-  // const showChat = chatEnabled && chatExpanded
 
   const outerContainerRef = useRef<HTMLDivElement>(null)
+  const titleSectionRef = useRef<HTMLDivElement>(null)
+  const [titleSectionHeight, setTitleSectionHeight] = useState(0)
+
   useEffect(() => {
     if (outerContainerRef.current && outerContainerRef.current.scrollTo) {
       outerContainerRef.current.scrollTo(0, 0)
@@ -203,57 +159,72 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
   }, [resourceId])
 
   useEffect(() => {
-    if (chatExpanded && resource && !chatEnabled) {
-      setChatExpanded.off()
+    const updateHeight = () => {
+      if (titleSectionRef.current) {
+        setTitleSectionHeight(titleSectionRef.current.offsetHeight)
+      }
     }
-  }, [chatExpanded, resource, chatEnabled, setChatExpanded])
+    updateHeight()
+    const resizeObserver = new ResizeObserver(updateHeight)
 
-  // const chatOpen = !!(resource && showChat)
+    if (titleSectionRef.current) {
+      resizeObserver.observe(titleSectionRef.current)
+    }
+    return () => {
+      resizeObserver.disconnect()
+    }
+  }, [])
 
   return (
-    <Outer ref={outerContainerRef}>
+    <Outer ref={outerContainerRef} chatExpanded={chatExpanded}>
       <TitleSection
+        ref={titleSectionRef}
         titleId={titleId}
         resource={resource}
         closeDrawer={closeDrawer ?? (() => {})}
       />
-      <Layers>
-        <Layer></Layer>
-        <Layer>
-          <TopContainer>
-            <ContentContainer>
-              <ContentLeft>
-                <ResourceDescription resource={resource} />
-                <InfoSection resource={resource} />
-              </ContentLeft>
-              <ContentRight>
-                <CallToActionSection
-                  imgConfig={imgConfig}
-                  resource={resource}
-                  user={user}
-                  shareUrl={shareUrl}
-                  inLearningPath={inLearningPath}
-                  inUserList={inUserList}
-                  onAddToLearningPathClick={onAddToLearningPathClick}
-                  onAddToUserListClick={onAddToUserListClick}
-                />
-              </ContentRight>
-            </ContentContainer>
-            {topCarousels && (
-              <TopCarouselContainer>
-                {topCarousels?.map((carousel, index) => (
-                  <div key={index}>{carousel}</div>
-                ))}
-              </TopCarouselContainer>
-            )}
-          </TopContainer>
-          <BottomContainer>
-            {bottomCarousels?.map((carousel, index) => (
-              <div key={index}>{carousel}</div>
-            ))}
-          </BottomContainer>
-        </Layer>
-      </Layers>
+      {chatEnabled ? (
+        <ChatLayer top={titleSectionHeight} chatExpanded={chatExpanded}>
+          <AiSyllabusBotSlideDown
+            resource={resource}
+            onToggleOpen={setChatExpanded}
+          />
+        </ChatLayer>
+      ) : null}
+      <ContentSection>
+        <TopContainer chatEnabled={!!chatEnabled}>
+          <ContentContainer>
+            <ContentLeft>
+              <ResourceDescription resource={resource} />
+              <InfoSection resource={resource} />
+            </ContentLeft>
+            <ContentRight>
+              <CallToActionSection
+                imgConfig={imgConfig}
+                resource={resource}
+                user={user}
+                shareUrl={shareUrl}
+                inLearningPath={inLearningPath}
+                inUserList={inUserList}
+                onAddToLearningPathClick={onAddToLearningPathClick}
+                onAddToUserListClick={onAddToUserListClick}
+              />
+            </ContentRight>
+          </ContentContainer>
+          {topCarousels && (
+            <TopCarouselContainer>
+              {topCarousels?.map((carousel, index) => (
+                <div key={index}>{carousel}</div>
+              ))}
+            </TopCarouselContainer>
+          )}
+        </TopContainer>
+        <BottomContainer>
+          {bottomCarousels?.map((carousel, index) => (
+            <div key={index}>{carousel}</div>
+          ))}
+        </BottomContainer>
+      </ContentSection>
     </Outer>
   )
 }

@@ -8,6 +8,7 @@ const Container = styled.div(({ theme }) => ({
   width: "900px",
   height: "100vh",
   padding: "16px 24px 24px 24px",
+
   [theme.breakpoints.down("md")]: {
     width: "100%",
   },

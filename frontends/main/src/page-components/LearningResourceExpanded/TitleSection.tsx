@@ -13,7 +13,7 @@ const TitleContainer = styled.div({
   top: "0",
   padding: "24px 28px",
   gap: "16px",
-  zIndex: 1,
+  zIndex: 3,
   backgroundColor: theme.custom.colors.white,
   [theme.breakpoints.down("md")]: {
     padding: "24px 16px",
@@ -43,18 +43,8 @@ const TitleSection: React.FC<{
   titleId?: string
   resource?: LearningResource
   closeDrawer: () => void
-}> = ({ resource, closeDrawer, titleId }) => {
-  const closeButton = (
-    <CloseButton
-      variant="text"
-      size="medium"
-      onClick={() => closeDrawer()}
-      aria-label="Close"
-    >
-      <CloseIcon />
-    </CloseButton>
-  )
-
+  ref: React.Ref<HTMLDivElement>
+}> = ({ resource, closeDrawer, titleId, ref }) => {
   const type = resource ? (
     getReadableResourceType(resource.resource_type)
   ) : (
@@ -75,7 +65,7 @@ const TitleSection: React.FC<{
   )
 
   return (
-    <TitleContainer>
+    <TitleContainer ref={ref}>
       <Typography
         variant="h4"
         id={titleId}
@@ -90,7 +80,14 @@ const TitleSection: React.FC<{
         </Typography>
         {title}
       </Typography>
-      {closeButton}
+      <CloseButton
+        variant="text"
+        size="medium"
+        onClick={() => closeDrawer()}
+        aria-label="Close"
+      >
+        <CloseIcon />
+      </CloseButton>
     </TitleContainer>
   )
 }

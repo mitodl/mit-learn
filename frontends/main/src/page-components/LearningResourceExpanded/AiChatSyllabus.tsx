@@ -1,5 +1,5 @@
 import * as React from "react"
-import type { AiChatProps } from "@mitodl/smoot-design/ai"
+import type { AiChatMessage, AiChatProps } from "@mitodl/smoot-design/ai"
 import { getCsrfToken } from "@/common/utils"
 import { LearningResource } from "api"
 import { useUserMe } from "api/hooks/user"
@@ -21,26 +21,28 @@ const getInitialMessage = (
   resource: LearningResource,
   user?: User,
 ): AiChatProps["initialMessages"] => {
-  const grettings = user?.profile?.name
+  const greetings = user?.profile?.name
     ? `Hello ${user.profile.name}, `
     : "Hello and "
   return [
     {
-      content: `${grettings} welcome to **${resource.title}**. How can I assist you today?`,
+      content: `${greetings} welcome to **${resource.title}**. How can I assist you today?`,
       role: "assistant",
     },
   ]
 }
 
 type AiChatSyllabusProps = {
-  onClose: () => void
+  // onClose: () => void
   resource?: LearningResource
   className?: string
+  ref?: React.Ref<{ append: (message: Omit<AiChatMessage, "id">) => void }>
 }
 
 const AiChatSyllabus: React.FC<AiChatSyllabusProps> = ({
-  onClose,
+  // onClose,
   resource,
+  ref,
   ...props
 }) => {
   const user = useUserMe()
@@ -52,8 +54,8 @@ const AiChatSyllabus: React.FC<AiChatSyllabusProps> = ({
       conversationStarters={STARTERS}
       initialMessages={getInitialMessage(resource, user.data)}
       chatId={`chat-${resource?.readable_id}`}
-      askTimTitle="about this course"
-      onClose={onClose}
+      // askTimTitle="about this course"
+      // onClose={onClose}
       requestOpts={{
         apiUrl: process.env.NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT!,
         fetchOpts: {
@@ -67,6 +69,7 @@ const AiChatSyllabus: React.FC<AiChatSyllabusProps> = ({
           course_id: resource?.readable_id,
         }),
       }}
+      ref={ref}
       {...props}
     />
   )
