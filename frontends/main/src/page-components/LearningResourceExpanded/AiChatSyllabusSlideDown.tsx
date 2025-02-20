@@ -13,6 +13,8 @@ import type { User } from "api/hooks/user"
 import AiChatWithEntryScreen from "../AiChat/AiChatWithEntryScreen"
 import { getCsrfToken } from "@/common/utils"
 
+const Container = styled.div()
+
 const SlideDown = styled.div<{ open: boolean }>(({ theme, open }) => ({
   position: "absolute",
   top: open ? "0" : "-100%",
@@ -130,7 +132,7 @@ const AiChatSyllabusSlideDown = ({
   if (!resource) return null
 
   return (
-    <>
+    <Container>
       <Opener>
         <StyledButton
           variant="bordered"
@@ -165,7 +167,7 @@ const AiChatSyllabusSlideDown = ({
           }}
         />
       </SlideDown>
-    </>
+    </Container>
   )
 }
 

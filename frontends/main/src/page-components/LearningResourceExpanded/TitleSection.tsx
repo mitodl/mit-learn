@@ -13,7 +13,7 @@ const TitleContainer = styled.div({
   top: "0",
   padding: "24px 28px",
   gap: "16px",
-  zIndex: 1,
+  zIndex: 3,
   backgroundColor: theme.custom.colors.white,
   [theme.breakpoints.down("md")]: {
     padding: "24px 16px",

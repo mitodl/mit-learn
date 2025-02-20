@@ -16,7 +16,7 @@ import AiSyllabusBotSlideDown from "./AiChatSyllabusSlideDown"
 
 const DRAWER_WIDTH = "900px"
 
-const Outer = styled.div<{ chatExpanded: boolean }>({
+const Outer = styled.div<{ chatExpanded: boolean }>(({ chatExpanded }) => ({
   display: "flex",
   flexDirection: "column",
   flexGrow: 1,
@@ -26,23 +26,25 @@ const Outer = styled.div<{ chatExpanded: boolean }>({
   [theme.breakpoints.down("md")]: {
     minWidth: "100%",
   },
+  ...(chatExpanded && {
+    "&::-webkit-scrollbar": {
+      display: "none",
+    },
+    msOverflowStyle: "none",
+    scrollbarWidth: "none",
+  }),
+}))
+
+const ContentSection = styled.div({
+  display: "flex",
+  flexDirection: "column",
+  flexGrow: 1,
+  position: "relative",
 })
 
-const ContentSection = styled.div<{ chatEnabled?: boolean }>(
-  ({ chatEnabled }) => ({
-    display: "flex",
-    flexDirection: "column",
-    flexGrow: 1,
-    position: "relative",
-    overflowY: chatEnabled ? "scroll" : "visible",
-    marginTop: chatEnabled ? "22px" : 0,
-  }),
-)
-
-const ChatLayer = styled("div")<{ top: number; chatExpanded?: boolean }>(
+const ChatLayer = styled("div")<{ top: number; chatExpanded: boolean }>(
   ({ top, chatExpanded }) => ({
     zIndex: 2,
-    overflow: "hidden",
     position: "absolute",
     top,
     bottom: 0,
@@ -52,14 +54,14 @@ const ChatLayer = styled("div")<{ top: number; chatExpanded?: boolean }>(
   }),
 )
 
-const TopContainer = styled.div<{ chatEnabled?: boolean }>(
+const TopContainer = styled.div<{ chatEnabled: boolean }>(
   ({ chatEnabled }) => ({
     display: "flex",
     flexDirection: "column",
-    padding: chatEnabled ? "48px 28px 24px" : "0 28px 24px",
+    padding: chatEnabled ? "70px 28px 24px" : "0 28px 24px",
     [theme.breakpoints.down("md")]: {
       width: "auto",
-      padding: chatEnabled ? "50px 16px 24px" : "0 16px 24px",
+      padding: chatEnabled ? "72px 16px 24px" : "0 16px 24px",
     },
   }),
 )
@@ -189,8 +191,8 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
           />
         </ChatLayer>
       ) : null}
-      <ContentSection chatEnabled={chatEnabled} inert={chatExpanded}>
-        <TopContainer chatEnabled={chatEnabled}>
+      <ContentSection inert={chatExpanded}>
+        <TopContainer chatEnabled={!!chatEnabled}>
           <ContentContainer>
             <ContentLeft>
               <ResourceDescription resource={resource} />
