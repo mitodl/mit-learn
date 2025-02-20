@@ -1,17 +1,17 @@
-import React, { useState, useRef, useEffect } from "react"
-import { Typography, styled, AdornmentButton } from "ol-components"
-import { Button, Input } from "@mitodl/smoot-design"
+import React, { useState } from "react"
+import { Typography, styled } from "ol-components"
+import { Button } from "@mitodl/smoot-design"
 import {
   RiSparkling2Line,
-  RiSendPlaneFill,
   RiArrowDownSLine,
   RiCloseLine,
 } from "@remixicon/react"
-import type { AiChatMessage } from "@mitodl/smoot-design/ai"
-import AiChatSyllabus from "./AiChatSyllabus"
-import Image from "next/image"
-import timLogo from "@/public/images/icons/tim.svg"
+import type { AiChatProps } from "@mitodl/smoot-design/ai"
 import { LearningResource } from "api"
+import { useUserMe } from "api/hooks/user"
+import type { User } from "api/hooks/user"
+import AiChatWithEntryScreen from "../AiRecommendationBot/AiChatWithEntryScreen"
+import { getCsrfToken } from "@/common/utils"
 
 const Container = styled.div()
 
@@ -87,101 +87,32 @@ const CloseButton = styled(RiCloseLine)(({ theme }) => ({
   backgroundColor: theme.custom.colors.silverGray,
 }))
 
-const EntryScreen = styled.div({
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: "16px",
-  padding: "104px 32px",
+const StyledAiChatWithEntryScreen = styled(AiChatWithEntryScreen)({
+  ".MitAiChat--messagesContainer": {
+    marginTop: "14px",
+  },
 })
 
-const TimLogoBox = styled.div(({ theme }) => ({
-  position: "relative",
-  padding: "16px",
-  border: `1px solid ${theme.custom.colors.lightGray2}`,
-  borderRadius: "8px",
-  svg: {
-    fill: theme.custom.colors.red,
-    position: "absolute",
-    top: "-10px",
-    left: "-10px",
-  },
-}))
-
-const TimLogo = styled(Image)({
-  display: "block",
-})
-
-const StyledInput = styled(Input)(({ theme }) => ({
-  backgroundColor: theme.custom.colors.lightGray1,
-  borderRadius: "8px",
-  border: `1px solid ${theme.custom.colors.lightGray2}`,
-  margin: "24px 0",
-  width: "700px",
-  [theme.breakpoints.down("md")]: {
-    width: "100%",
-  },
-  "button:disabled": {
-    backgroundColor: "inherit",
-  },
-}))
-
-const SendIcon = styled(RiSendPlaneFill)(({ theme }) => ({
-  fill: theme.custom.colors.red,
-  "button:disabled &": {
-    fill: theme.custom.colors.silverGray,
-  },
-}))
-
-const Starters = styled.div(({ theme }) => ({
-  display: "flex",
-  gap: "16px",
-  maxWidth: "836px",
-  marginTop: "12px",
-  [theme.breakpoints.down("md")]: {
-    flexDirection: "column",
-  },
-}))
-
-const Starter = styled.button(({ theme }) => ({
-  flex: 1,
-  display: "flex",
-  alignItems: "center",
-  borderRadius: "8px",
-  border: `1px solid ${theme.custom.colors.lightGray2}`,
-  padding: "12px 16px",
-  color: theme.custom.colors.darkGray2,
-  backgroundColor: "transparent",
-  textAlign: "left",
-  [theme.breakpoints.down("md")]: {
-    textAlign: "center",
-    padding: "12px 36px",
-  },
-  ":hover": {
-    cursor: "pointer",
-    borderColor: "transparent",
-    color: theme.custom.colors.white,
-    backgroundColor: theme.custom.colors.darkGray1,
-  },
-}))
-
-const ChatContainer = styled.div({
-  padding: "40px 28px 16px",
-  height: "100%",
-})
-
-const STARTERS = [
-  {
-    content: "What is this course about?",
-  },
-  {
-    content: "What are the prerequisites for this course?",
-  },
-  {
-    content: "How will this course be graded?",
-  },
+const STARTERS: AiChatProps["conversationStarters"] = [
+  { content: "What is this course about?" },
+  { content: "What are the prerequisites for this course?" },
+  { content: "How will this course be graded?" },
 ]
+
+const getInitialMessage = (
+  resource: LearningResource,
+  user?: User,
+): AiChatProps["initialMessages"] => {
+  const greetings = user?.profile?.name
+    ? `Hello ${user.profile.name}, `
+    : "Hello and "
+  return [
+    {
+      content: `${greetings} welcome to **${resource.title}**. How can I assist you today?`,
+      role: "assistant",
+    },
+  ]
+}
 
 const AiChatSyllabusSlideDown = ({
   resource,
@@ -190,43 +121,8 @@ const AiChatSyllabusSlideDown = ({
   resource?: LearningResource
   onToggleOpen: (open: boolean) => void
 }) => {
-  const [initialPrompt, setInitialPrompt] = useState("")
   const [open, setOpen] = useState(false)
-  const [showEntryScreen, setShowEntryScreen] = useState(true)
-
-  const aiChatRef = useRef<{
-    append: (message: Omit<AiChatMessage, "id">) => void
-  }>(null)
-
-  useEffect(() => {
-    if (!initialPrompt || showEntryScreen) return
-    const timer = setTimeout(() => {
-      aiChatRef.current?.append({
-        content: initialPrompt,
-        role: "user",
-      })
-      setInitialPrompt("")
-    }, 0)
-
-    return () => {
-      clearTimeout(timer)
-      setInitialPrompt("")
-    }
-  }, [initialPrompt, showEntryScreen])
-
-  const onPromptChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInitialPrompt(e.target.value)
-  }
-
-  const onPromptKeyDown: React.KeyboardEventHandler<HTMLInputElement> = (e) => {
-    if (e.key !== "Enter") return
-    setShowEntryScreen(false)
-  }
-
-  const onStarterClick = (content: string) => {
-    setInitialPrompt(content)
-    setShowEntryScreen(false)
-  }
+  const user = useUserMe()
 
   const toggleOpen = () => {
     setOpen(!open)
@@ -252,53 +148,24 @@ const AiChatSyllabusSlideDown = ({
         </StyledButton>
       </Opener>
       <SlideDown open={open}>
-        {showEntryScreen ? (
-          <EntryScreen>
-            <TimLogoBox>
-              <RiSparkling2Line />
-              <TimLogo src={timLogo.src} alt="" width={40} height={40} />
-            </TimLogoBox>
-            <Typography variant="h4">
-              What do you want to know about this course?
-            </Typography>
-            <StyledInput
-              fullWidth
-              size="chat"
-              onChange={onPromptChange}
-              onKeyDown={onPromptKeyDown}
-              endAdornment={
-                <AdornmentButton
-                  aria-label="Send"
-                  onClick={() => setShowEntryScreen(false)}
-                  disabled={!initialPrompt}
-                >
-                  <SendIcon />
-                </AdornmentButton>
-              }
-              responsive
-            />
-            <Starters>
-              {STARTERS.map(({ content }, index) => (
-                <Starter
-                  key={index}
-                  onClick={() => onStarterClick(content)}
-                  tabIndex={index}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      onStarterClick(content)
-                    }
-                  }}
-                >
-                  <Typography variant="body2">{content}</Typography>
-                </Starter>
-              ))}
-            </Starters>
-          </EntryScreen>
-        ) : (
-          <ChatContainer>
-            <AiChatSyllabus resource={resource} ref={aiChatRef} />
-          </ChatContainer>
-        )}
+        <StyledAiChatWithEntryScreen
+          entryTitle="What do you want to know about this course?"
+          starters={STARTERS}
+          initialMessages={getInitialMessage(resource, user.data)}
+          requestOpts={{
+            apiUrl: process.env.NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT!,
+            fetchOpts: {
+              headers: {
+                "X-CSRFToken": getCsrfToken(),
+              },
+            },
+            transformBody: (messages) => ({
+              collection_name: "content_files",
+              message: messages[messages.length - 1].content,
+              course_id: resource?.readable_id,
+            }),
+          }}
+        />
       </SlideDown>
     </Container>
   )
