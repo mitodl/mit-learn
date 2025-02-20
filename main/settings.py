@@ -883,18 +883,3 @@ SEMANTIC_CHUNKING_CONFIG = {
         default=None,
     ),
 }
-
-# APISIX middleware settings
-APISIX_USERDATA_MAP = {
-    "users.User": {
-        "email": "email",
-        "global_id": "sub",
-        "username": "preferred_username",
-        "first_name": "given_name",
-        "last_name": "family_name",
-    },
-    "profiles.Profile": {
-        "name": "fullName",
-        "email_optin": "emailOptIn",
-    },
-}
