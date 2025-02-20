@@ -33,12 +33,13 @@ class CustomLogoutView(views.LogoutView):
             user, provider=OlOpenIdConnectAuth.name
         ).first()
         id_token = user_social_auth_record.extra_data.get("id_token")
+        qs_next = self.request.GET.get("next")
         qs = urlencode(
             {
                 "id_token_hint": id_token,
-                "post_logout_redirect_uri": self.request.build_absolute_uri(
-                    settings.LOGOUT_REDIRECT_URL
-                ),
+                "post_logout_redirect_uri": qs_next
+                if qs_next
+                else self.request.build_absolute_uri(settings.LOGOUT_REDIRECT_URL),
             }
         )
 
@@ -55,7 +56,7 @@ class CustomLogoutView(views.LogoutView):
         **kwargs,  # noqa: ARG002
     ):
         """
-        GET endpoint for loggin a user out.
+        GET endpoint for logging a user out.
 
         The logout redirect path the user follows is:
 
