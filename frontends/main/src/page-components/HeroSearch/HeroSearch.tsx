@@ -4,7 +4,7 @@ import React, { useState, useCallback } from "react"
 import { useRouter } from "next-nprogress-bar"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
-import AskTIMButton from "@/page-components/AiRecommendationBot/AskTimButton"
+import AskTimDrawerButton from "@/page-components/AiChat/AskTimDrawerButton"
 
 import {
   Typography,
@@ -274,7 +274,7 @@ const HeroSearch: React.FC<{ imageIndex: number }> = ({ imageIndex }) => {
               {recommendationBotEnabled ? (
                 <>
                   <ActionStripText>or</ActionStripText>
-                  <AskTIMButton />
+                  <AskTimDrawerButton />
                 </>
               ) : null}
             </ActionStrip>

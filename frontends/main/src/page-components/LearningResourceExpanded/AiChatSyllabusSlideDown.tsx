@@ -10,7 +10,7 @@ import type { AiChatProps } from "@mitodl/smoot-design/ai"
 import { LearningResource } from "api"
 import { useUserMe } from "api/hooks/user"
 import type { User } from "api/hooks/user"
-import AiChatWithEntryScreen from "../AiRecommendationBot/AiChatWithEntryScreen"
+import AiChatWithEntryScreen from "../AiChat/AiChatWithEntryScreen"
 import { getCsrfToken } from "@/common/utils"
 
 const Container = styled.div()
