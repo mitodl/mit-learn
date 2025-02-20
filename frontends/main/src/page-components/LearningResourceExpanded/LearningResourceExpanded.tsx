@@ -23,15 +23,12 @@ const Outer = styled.div<{ chatExpanded: boolean }>(({ chatExpanded }) => ({
   width: "100%",
   overflowX: "hidden",
   minWidth: DRAWER_WIDTH,
+  scrollbarGutter: "stable",
   [theme.breakpoints.down("md")]: {
     minWidth: "100%",
   },
   ...(chatExpanded && {
-    "&::-webkit-scrollbar": {
-      display: "none",
-    },
-    msOverflowStyle: "none",
-    scrollbarWidth: "none",
+    overflow: "hidden",
   }),
 }))
 
@@ -51,6 +48,8 @@ const ChatLayer = styled("div")<{ top: number; chatExpanded: boolean }>(
     left: 0,
     right: 0,
     pointerEvents: chatExpanded ? "auto" : "none",
+    overflow: "hidden",
+    scrollbarGutter: "stable",
   }),
 )
 
