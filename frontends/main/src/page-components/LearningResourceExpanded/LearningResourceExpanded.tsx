@@ -191,7 +191,7 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
           />
         </ChatLayer>
       ) : null}
-      <ContentSection>
+      <ContentSection inert={chatExpanded}>
         <TopContainer chatEnabled={!!chatEnabled}>
           <ContentContainer>
             <ContentLeft>
