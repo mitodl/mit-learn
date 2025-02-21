@@ -45,8 +45,9 @@ class ApisixUserMiddleware(RemoteUserMiddleware):
         """
         Modify the header to contaiin username, pass off to RemoteUserMiddleware
         """
-        if request.META.get("HTTP_X_USERINFO"):
+        if request.META.get(self.header):
             new_header = decode_apisix_headers(request, self.header)
+            log.error("FOUND APISIX HEADER: %s", new_header)
             request.META["REMOTE_USER"] = new_header
 
         return super().process_request(request)
