@@ -115,10 +115,8 @@ services:
 
   apigateway:
     profiles:
-      - keycloak
+      - apisix
     image: apache/apisix:latest
-    depends_on:
-      - keycloak
     environment:
       - KEYCLOAK_REALM_NAME=${KEYCLOAK_REALM_NAME:-ol-local}
       - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-apisix}
