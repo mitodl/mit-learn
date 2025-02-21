@@ -54,7 +54,7 @@ RUN poetry install
 USER root
 COPY . /src
 WORKDIR /src
-RUN mkdir /src/staticfiles
+RUN mkdir -p /src/staticfiles
 
 RUN apt-get clean && apt-get purge
 
