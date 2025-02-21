@@ -8,15 +8,17 @@ import {
 } from "@/test-utils"
 import LearningResourceDrawer from "./LearningResourceDrawer"
 import { urls, factories, setMockResponse } from "api/test-utils"
-import { LearningResourceExpanded } from "./LearningResourceExpanded"
+import { LearningResourceExpanded } from "../LearningResourceExpanded/LearningResourceExpanded"
 import { RESOURCE_DRAWER_QUERY_PARAM } from "@/common/urls"
 import { LearningResource, ResourceTypeEnum } from "api"
 import { makeUserSettings } from "@/test-utils/factories"
 import type { User } from "api/hooks/user"
 import { usePostHog } from "posthog-js/react"
 
-jest.mock("./LearningResourceExpanded", () => {
-  const actual = jest.requireActual("./LearningResourceExpanded")
+jest.mock("../LearningResourceExpanded/LearningResourceExpanded", () => {
+  const actual = jest.requireActual(
+    "../LearningResourceExpanded/LearningResourceExpanded",
+  )
   return {
     ...actual,
     LearningResourceExpanded: jest.fn(actual.LearningResourceExpanded),
