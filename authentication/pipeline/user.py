@@ -1,6 +1,7 @@
 """Auth pipline functions for email authentication"""
 
 from social_core.exceptions import AuthException
+from social_core.utils import sanitize_redirect
 
 from authentication.hooks import get_plugin_manager
 from profiles import api as profile_api
@@ -40,7 +41,23 @@ def user_onboarding(*, backend, **kwargs):
     """
     Redirect new users to the onboarding flow
     """
-    if kwargs.get("is_new"):
+    if kwargs.get("is_new") and not backend.strategy.session_get("skip_onboarding"):
         backend.strategy.session_set(
             "next", backend.setting("NEW_USER_LOGIN_REDIRECT_URL")
         )
+        return
+    next_url = backend.strategy.session_get("next")
+    if next_url:
+        allowed_hosts = backend.setting("SOCIAL_AUTH_ALLOWED_REDIRECT_HOSTS", [])
+        request_host = backend.strategy.request_host()
+        allowed_hosts = (
+            [
+                *allowed_hosts,
+                request_host,
+            ]
+            if allowed_hosts
+            else [request_host]
+        )
+        sanitized_next_url = sanitize_redirect(allowed_hosts, next_url)
+        if sanitized_next_url:
+            backend.strategy.session_set("next", sanitized_next_url)
