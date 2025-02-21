@@ -5,6 +5,7 @@ from urllib.parse import urlencode
 from django.conf import settings
 from django.contrib.auth import views
 from django.shortcuts import redirect
+from social_core.utils import sanitize_redirect
 from social_django.utils import load_strategy
 
 from authentication.backends.ol_open_id_connect import OlOpenIdConnectAuth
@@ -34,6 +35,9 @@ class CustomLogoutView(views.LogoutView):
         ).first()
         id_token = user_social_auth_record.extra_data.get("id_token")
         qs_next = self.request.GET.get("next")
+        if qs_next:
+            allowed_hosts = settings.SOCIAL_AUTH_ALLOWED_REDIRECT_HOSTS or []
+            qs_next = sanitize_redirect(allowed_hosts, qs_next)
         qs = urlencode(
             {
                 "id_token_hint": id_token,
