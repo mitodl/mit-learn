@@ -1,15 +1,19 @@
-import React, { useState, useRef, useEffect } from "react"
-import { Typography, styled, Drawer, AdornmentButton } from "ol-components"
-import {
-  RiSparkling2Line,
-  RiSendPlaneFill,
-  RiCloseLine,
-} from "@remixicon/react"
-import { Input, ActionButton } from "@mitodl/smoot-design"
-import type { AiChatMessage } from "@mitodl/smoot-design/ai"
-import AiRecommendationBot, { STARTERS } from "./AiRecommendationBot"
+import React, { useEffect, useRef, useState } from "react"
+import { styled, Typography, AdornmentButton } from "ol-components"
+import { AiChat } from "@mitodl/smoot-design/ai"
+import type { AiChatMessage, AiChatProps } from "@mitodl/smoot-design/ai"
+import { RiSparkling2Line, RiSendPlaneFill } from "@remixicon/react"
+import { Input } from "@mitodl/smoot-design"
 import Image from "next/image"
 import timLogo from "@/public/images/icons/tim.svg"
+
+const Container = styled.div(({ theme }) => ({
+  width: "900px",
+  height: "100%",
+  [theme.breakpoints.down("md")]: {
+    width: "100%",
+  },
+}))
 
 const EntryScreen = styled.div(({ theme }) => ({
   display: "flex",
@@ -18,24 +22,9 @@ const EntryScreen = styled.div(({ theme }) => ({
   justifyContent: "center",
   gap: "16px",
   padding: "136px 40px 24px 40px",
-  width: "900px",
   [theme.breakpoints.down("md")]: {
     padding: "136px 24px 24px 24px",
     width: "100%",
-  },
-}))
-
-const CloseButton = styled(ActionButton)(({ theme }) => ({
-  position: "absolute",
-  top: "24px",
-  right: "40px",
-  backgroundColor: theme.custom.colors.lightGray2,
-  "&&:hover": {
-    backgroundColor: theme.custom.colors.red,
-    color: theme.custom.colors.white,
-  },
-  [theme.breakpoints.down("md")]: {
-    right: "24px",
   },
 }))
 
@@ -86,6 +75,7 @@ const SendIcon = styled(RiSendPlaneFill)(({ theme }) => ({
 const Starters = styled.div(({ theme }) => ({
   display: "flex",
   gap: "16px",
+  width: "100%",
   [theme.breakpoints.down("sm")]: {
     flexDirection: "column",
   },
@@ -113,12 +103,33 @@ const Starter = styled.button(({ theme }) => ({
   },
 }))
 
-const AiRecommendationBotDrawer = ({
-  open,
-  setOpen,
+const ChatScreen = styled.div(({ theme }) => ({
+  padding: "16px 40px 24px",
+  height: "100%",
+  [theme.breakpoints.down("md")]: {
+    padding: "16px 24px 16px",
+    width: "100%",
+  },
+}))
+
+const AiChatWithEntryScreen = ({
+  entryTitle,
+  starters,
+  initialMessages,
+  askTimTitle,
+  requestOpts,
+  onClose,
+  chatScreenClassName,
+  className,
 }: {
-  open: boolean
-  setOpen: (open: boolean) => void
+  entryTitle: string
+  starters: AiChatProps["conversationStarters"]
+  initialMessages: AiChatProps["initialMessages"]
+  askTimTitle?: string
+  requestOpts: AiChatProps["requestOpts"]
+  onClose?: () => void
+  className?: string
+  chatScreenClassName?: string
 }) => {
   const [initialPrompt, setInitialPrompt] = useState("")
   const [showEntryScreen, setShowEntryScreen] = useState(true)
@@ -156,41 +167,15 @@ const AiRecommendationBotDrawer = ({
     setShowEntryScreen(false)
   }
 
-  const closeDrawer = () => {
-    setOpen(false)
-    setShowEntryScreen(true)
-  }
-
   return (
-    <Drawer
-      open={open}
-      anchor="right"
-      onClose={closeDrawer}
-      PaperProps={{
-        sx: {
-          minWidth: (theme) => ({
-            [theme.breakpoints.down("md")]: {
-              width: "100%",
-            },
-          }),
-        },
-      }}
-    >
-      <CloseButton
-        variant="text"
-        size="medium"
-        onClick={closeDrawer}
-        aria-label="Close"
-      >
-        <RiCloseLine />
-      </CloseButton>
+    <Container className={className}>
       {showEntryScreen ? (
         <EntryScreen>
           <TimLogoBox>
             <RiSparkling2Line />
             <TimLogo src={timLogo.src} alt="" width={40} height={40} />
           </TimLogoBox>
-          <Title variant="h4">What do you want to learn from MIT?</Title>
+          <Title variant="h4">{entryTitle}</Title>
           <StyledInput
             fullWidth
             size="chat"
@@ -208,7 +193,7 @@ const AiRecommendationBotDrawer = ({
             responsive
           />
           <Starters>
-            {STARTERS.map(({ content }, index) => (
+            {starters?.map(({ content }, index) => (
               <Starter
                 key={index}
                 onClick={() => onStarterClick(content)}
@@ -225,10 +210,22 @@ const AiRecommendationBotDrawer = ({
           </Starters>
         </EntryScreen>
       ) : (
-        <AiRecommendationBot ref={aiChatRef} />
+        <ChatScreen
+          className={chatScreenClassName}
+          data-testid="ai-chat-screen"
+        >
+          <AiChat
+            askTimTitle={askTimTitle}
+            conversationStarters={starters}
+            initialMessages={initialMessages}
+            onClose={onClose}
+            requestOpts={requestOpts}
+            ref={aiChatRef}
+          />
+        </ChatScreen>
       )}
-    </Drawer>
+    </Container>
   )
 }
 
-export default AiRecommendationBotDrawer
+export default AiChatWithEntryScreen
