@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.30.5
+Version 0.30.5 (Released February 21, 2025)
 --------------
 
 - Fixed SCIM search for large queries (#2049)
