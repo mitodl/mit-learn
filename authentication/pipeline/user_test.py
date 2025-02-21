@@ -1,5 +1,7 @@
 """Tests of user pipeline actions"""
 
+from urllib.parse import urlparse
+
 import pytest
 
 from authentication.pipeline import user as user_actions
@@ -82,7 +84,7 @@ def test_user_onboarding_actions(
         "details": {},
         "backend": mock_backend,
     }
-    netloc = next_qs.split("/")[2]
+    netloc = urlparse(next_qs).netloc if next_qs else None
     expected_allowed_hosts = (
         [*social_auth_allowed_redirect_hosts, "example.com"]
         if social_auth_allowed_redirect_hosts
