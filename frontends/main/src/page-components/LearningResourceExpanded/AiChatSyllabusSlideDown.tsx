@@ -25,7 +25,6 @@ const SlideDown = styled.div<{ open: boolean }>(({ theme, open }) => ({
 }))
 
 const Opener = styled.div(({ theme }) => ({
-  pointerEvents: "auto",
   position: "relative",
   ":after": {
     content: "''",
@@ -147,7 +146,7 @@ const AiChatSyllabusSlideDown = ({
           {open ? <CloseButton /> : <OpenChevron />}
         </StyledButton>
       </Opener>
-      <SlideDown open={open}>
+      <SlideDown open={open} inert={!open}>
         <StyledAiChatWithEntryScreen
           entryTitle="What do you want to know about this course?"
           starters={STARTERS}
@@ -162,7 +161,7 @@ const AiChatSyllabusSlideDown = ({
             transformBody: (messages) => ({
               collection_name: "content_files",
               message: messages[messages.length - 1].content,
-              course_id: resource?.readable_id,
+              course_id: resource.readable_id,
             }),
           }}
         />

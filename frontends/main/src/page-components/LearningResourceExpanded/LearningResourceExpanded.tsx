@@ -49,7 +49,7 @@ const ChatLayer = styled("div")<{ top: number; chatExpanded: boolean }>(
     right: 0,
     pointerEvents: chatExpanded ? "auto" : "none",
     overflow: "hidden",
-    scrollbarGutter: "stable",
+    scrollbarGutter: chatExpanded ? "auto" : "stable",
   }),
 )
 
