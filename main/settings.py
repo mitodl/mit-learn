@@ -309,6 +309,7 @@ SOCIAL_AUTH_ALLOWED_REDIRECT_HOSTS = [
 SOCIAL_AUTH_PROTECTED_USER_FIELDS = [
     "profile",  # this avoids an error because profile is a related model
 ]
+SOCIAL_AUTH_FIELDS_STORED_IN_SESSION = ["skip_onboarding", "next"]
 
 SOCIAL_AUTH_PIPELINE = (
     # Checks if an admin user attempts to login/register while hijacking another user.
