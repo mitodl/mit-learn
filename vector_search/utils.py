@@ -291,14 +291,14 @@ def generate_metadata_document(serialized_resource):
         "Languages": unique_languages,
         "Course Runs": runs_text,
     }
-    rendered_info = "\n".join(
-        [
-            f"{section} - {display_info[section]}"
-            for section in display_info
-            if {display_info[section]}
-        ]
-    )
-    return f"Information about this course:\n{rendered_info}"
+    rendered_info = "Information about this course:\n"
+    for section, display_text in display_info.items():
+        if display_text:
+            if len(display_text.strip().split("\n")) > 1:
+                rendered_info += f"{section} -\n{display_text}\n"
+            else:
+                rendered_info += f"{section} - {display_text}\n"
+    return rendered_info
 
 
 def _embed_course_metadata_as_contentfile(serialized_resources):
