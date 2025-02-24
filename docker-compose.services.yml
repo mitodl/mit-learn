@@ -122,7 +122,7 @@ services:
       - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-apisix}
       - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
       - KEYCLOAK_DISCOVERY_URL=${KEYCLOAK_DISCOVERY_URL:-https://kc.ol.local:8066/realms/ol-local/.well-known/openid-configuration}
-      - KEYCLOAK_SCOPES=${KEYCLOAK_SCOPES:-openid profile ol-profile}
+      - KEYCLOAK_SCOPES=${KEYCLOAK_SCOPES:-openid,profile,ol-profile}
       - APISIX_PORT=${APISIX_PORT:-8065}
       - APISIX_SESSION_SECRET_KEY=${APISIX_SESSION_SECRET_KEY:-something_at_least_16_characters}
       - APISIX_LOGOUT_URL=${APISIX_LOGOUT_URL:-http://open.odl.local:8065/}
