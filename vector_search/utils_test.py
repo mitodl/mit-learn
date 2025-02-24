@@ -334,3 +334,26 @@ def test_text_splitter_chunk_size_override(mocker):
     settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = None
     _chunk_documents(encoder, ["this is a test document"], [{}])
     assert "chunk_size" not in mocked_splitter.mock_calls[0].kwargs
+
+
+def test_course_metadata_indexed_with_learning_resources(mocker):
+    # test the we embed a metadata document when embedding learning resources
+    resources = LearningResourceFactory.create_batch(5)
+
+    mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
+    mock_embed_course_metadata_as_contentfile = mocker.patch(
+        "vector_search.utils._embed_course_metadata_as_contentfile"
+    )
+    mocker.patch(
+        "vector_search.utils.qdrant_client",
+        return_value=mock_qdrant,
+    )
+
+    mocker.patch(
+        "vector_search.utils.filter_existing_qdrant_points",
+        return_value=[r.readable_id for r in resources],
+    )
+    embed_learning_resources(
+        [resource.id for resource in resources], "course", overwrite=True
+    )
+    mock_embed_course_metadata_as_contentfile.assert_called()
