@@ -36,7 +36,7 @@ const Label = styled(FormLabel)(({ theme }) => ({
   width: "100%",
   color: theme.custom.colors.darkGray2,
   ...theme.typography.subtitle2,
-}))
+})) as typeof FormLabel
 
 const CheckboxChoiceField: React.FC<CheckboxChoiceFieldProps> = ({
   label,
@@ -59,7 +59,7 @@ const CheckboxChoiceField: React.FC<CheckboxChoiceFieldProps> = ({
       className={className}
       disabled={disabled}
     >
-      {label && <Label>{label}</Label>}
+      {label && <Label component="legend">{label}</Label>}
       <_Container>
         {choices.map((choice) => {
           return (
