@@ -2746,9 +2746,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mui/lab@npm:6.0.0-beta.26":
-  version: 6.0.0-beta.26
-  resolution: "@mui/lab@npm:6.0.0-beta.26"
+"@mui/lab@npm:6.0.0-beta.28":
+  version: 6.0.0-beta.28
+  resolution: "@mui/lab@npm:6.0.0-beta.28"
   dependencies:
     "@babel/runtime": "npm:^7.26.0"
     "@mui/base": "npm:5.0.0-beta.69"
@@ -2760,7 +2760,7 @@ __metadata:
   peerDependencies:
     "@emotion/react": ^11.5.0
     "@emotion/styled": ^11.3.0
-    "@mui/material": ^6.4.3
+    "@mui/material": ^6.4.5
     "@mui/material-pigment-css": ^6.4.3
     "@types/react": ^17.0.0 || ^18.0.0 || ^19.0.0
     react: ^17.0.0 || ^18.0.0 || ^19.0.0
@@ -2774,7 +2774,7 @@ __metadata:
       optional: true
     "@types/react":
       optional: true
-  checksum: 10/1d3f2f51bbd92eaa9955dbec063aa90b25954bd4f120141cfeda08c0a4f4248fb2fb8737fd96b864cc604c7fe56e48336208ec72e2d581880ffd0aba0e133bc5
+  checksum: 10/12f2eeb66571992003526f6e6aac25ac1cbc90ab1e12871129d5ba581f5e902715681f50f575e3297a50c7e547acca6d609a627d08211d4d4e5bd2be1ceccb3a
   languageName: node
   linkType: hard
 
@@ -14397,7 +14397,7 @@ __metadata:
     "@faker-js/faker": "npm:^9.0.0"
     "@mitodl/smoot-design": "npm:^3.3.0"
     "@mui/base": "npm:5.0.0-beta.69"
-    "@mui/lab": "npm:6.0.0-beta.26"
+    "@mui/lab": "npm:6.0.0-beta.28"
     "@mui/material": "npm:^6.4.1"
     "@mui/material-nextjs": "npm:^6.3.1"
     "@mui/system": "npm:^6.4.1"
