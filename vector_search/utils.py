@@ -636,6 +636,9 @@ def filter_existing_qdrant_points(
     lookup_field="readable_id",
     collection_name=RESOURCES_COLLECTION_NAME,
 ):
+    """
+    Return only values that dont exist in qdrant
+    """
     client = qdrant_client()
     results = client.scroll(
         collection_name=collection_name,
