@@ -59,7 +59,7 @@ sentry-sdk = "^2.13.0"
 social-auth-app-django = "^5.2.0"
 static3 = "^0.7.0"
 tika = "^2.6.0"
-tldextract = "^2.2.0"
+tldextract = "^5.0.0"
 toolz = "^1.0.0"
 ulid-py = "^0.2.0"
 urllib3 = "^2.0.0"
@@ -83,22 +83,23 @@ pycountry = "^24.6.1"
 qdrant-client = {extras = ["fastembed"], version = "^1.12.0"}
 onnxruntime = "1.20.1"
 openai = "^1.55.3"
-litellm = "1.60.8"
+litellm = "1.61.5"
 langchain = "^0.3.11"
-tiktoken = "^0.8.0"
+tiktoken = "^0.9.0"
 llama-index = "^0.12.6"
 llama-index-llms-openai = "^0.3.12"
 llama-index-agent-openai = "^0.4.1"
 langchain-experimental = "^0.3.4"
 langchain-openai = "^0.3.2"
 deepmerge = "^2.0"
+pyparsing = "^3.2.1"
 
 
 [tool.poetry.group.dev.dependencies]
 bpython = "^0.25"
 ddt = "^1.6.0"
 factory_boy = "^3.3.0"
-faker = "^35.0.0"
+faker = "^36.0.0"
 ipdb = "^0.13.13"
 moto = "^5.0.0"
 nplusone = "^1.0.0"
@@ -117,6 +118,7 @@ freezegun = "^1.4.0"
 pytest-xdist = { version = "^3.6.1", extras = ["psutil"] }
 anys = "^0.3.0"
 locust = "^2.31.2"
+traceback-with-variables = "^2.1.1"
 
 
 [build-system]

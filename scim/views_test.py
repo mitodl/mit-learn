@@ -413,3 +413,88 @@ def test_bulk_post(scim_client, bulk_test_data):
                     assert actual_value is expected_value
                 else:
                     assert actual_value == expected_value
+
+
+@pytest.mark.parametrize(
+    ("sort_by", "sort_order"),
+    [
+        (None, None),
+        ("email", None),
+        ("email", "ascending"),
+        ("email", "descending"),
+        ("username", None),
+        ("username", "ascending"),
+        ("username", "descending"),
+    ],
+)
+@pytest.mark.parametrize("count", [None, 100, 500])
+def test_user_search(scim_client, sort_by, sort_order, count):
+    """Test the user search endpoint"""
+    large_user_set = UserFactory.create_batch(1100)
+    search_users = large_user_set[:1000]
+    emails = [user.email for user in search_users]
+
+    expected = search_users
+
+    effective_count = count or 50
+    effective_sort_order = sort_order or "ascending"
+
+    if sort_by is not None:
+        expected = sorted(
+            expected,
+            # postgres sort is case-insensitive
+            key=lambda user: getattr(user, sort_by).lower(),
+            reverse=effective_sort_order == "descending",
+        )
+
+    for page in range(int(len(emails) / effective_count)):
+        start_index = page * effective_count  # zero based index
+        resp = scim_client.post(
+            reverse("ol-scim:users-search"),
+            content_type="application/scim+json",
+            data=json.dumps(
+                {
+                    "schemas": [djs_constants.SchemaURI.SERACH_REQUEST],
+                    "filter": " OR ".join([f'email EQ "{email}"' for email in emails]),
+                    "startIndex": start_index + 1,  # SCIM API is 1-based index
+                    **({"sortBy": sort_by} if sort_by is not None else {}),
+                    **({"sortOrder": sort_order} if sort_order is not None else {}),
+                    **({"count": count} if count is not None else {}),
+                }
+            ),
+        )
+
+        expected_in_resp = expected[start_index : start_index + effective_count]
+
+        assert resp.status_code == 200, f"Got error: {resp.content}"
+        assert resp.json() == {
+            "totalResults": len(emails),
+            "itemsPerPage": effective_count,
+            "startIndex": start_index + 1,
+            "schemas": [djs_constants.SchemaURI.LIST_RESPONSE],
+            "Resources": [
+                {
+                    "id": user.profile.scim_id,
+                    "active": user.is_active,
+                    "userName": user.username,
+                    "displayName": user.profile.name,
+                    "emails": [{"value": user.email, "primary": True}],
+                    "externalId": str(user.profile.scim_external_id),
+                    "name": {
+                        "givenName": user.first_name,
+                        "familyName": user.last_name,
+                    },
+                    "meta": {
+                        "resourceType": "User",
+                        "location": f"https://localhost/scim/v2/Users/{user.profile.scim_id}",
+                        "lastModified": user.profile.updated_at.isoformat(
+                            timespec="milliseconds"
+                        ),
+                        "created": user.date_joined.isoformat(timespec="milliseconds"),
+                    },
+                    "groups": [],
+                    "schemas": [djs_constants.SchemaURI.USER],
+                }
+                for user in expected_in_resp
+            ],
+        }

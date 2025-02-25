@@ -4,13 +4,14 @@ import copy
 import json
 import logging
 from http import HTTPStatus
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 from django.http import HttpRequest, HttpResponse
-from django.urls import Resolver404, resolve
+from django.urls import Resolver404, resolve, reverse
 from django_scim import constants as djs_constants
 from django_scim import exceptions
 from django_scim import views as djs_views
+from django_scim.utils import get_base_scim_location_getter
 
 from scim import constants
 
@@ -158,3 +159,54 @@ class BulkView(djs_views.SCIMView):
                 "detail": detail,
             },
         }
+
+
+class SearchView(djs_views.UserSearchView):
+    """
+    View for /.search endpoint
+    """
+
+    def post(self, request, *args, **kwargs):  # noqa: ARG002
+        body = self.load_body(request.body)
+        if body.get("schemas") != [djs_constants.SchemaURI.SERACH_REQUEST]:
+            msg = "Invalid schema uri. Must be SearchRequest."
+            raise exceptions.BadRequestError(msg)
+
+        start = body.get("startIndex", 1)
+        count = body.get("count", 50)
+        sort_by = body.get("sortBy", None)
+        sort_order = body.get("sortOrder", "ascending")
+        query = body.get("filter", None)
+
+        if sort_by is not None and sort_by not in ("email", "username"):
+            msg = "Sorting only supports email or username"
+            raise exceptions.BadRequestError(msg)
+
+        if sort_order is not None and sort_order not in ("ascending", "descending"):
+            msg = "Sorting only supports ascending or descending"
+            raise exceptions.BadRequestError(msg)
+
+        if not query:
+            msg = "No filter query specified"
+            raise exceptions.BadRequestError(msg)
+
+        try:
+            qs = self.__class__.parser_getter().search(query, request)
+        except ValueError as e:
+            msg = "Invalid filter/search query: " + str(e)
+            raise exceptions.BadRequestError(msg) from e
+
+        if sort_by is not None:
+            qs = qs.order_by(sort_by)
+
+            if sort_order == "descending":
+                qs = qs.reverse()
+
+        response = self._build_response(request, qs, start, count)
+
+        path = reverse(self.scim_adapter.url_name)
+        url = urljoin(get_base_scim_location_getter()(request=request), path).rstrip(
+            "/"
+        )
+        response["Location"] = url + "/.search"
+        return response

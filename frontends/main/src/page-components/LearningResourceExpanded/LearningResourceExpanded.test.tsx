@@ -1,11 +1,8 @@
 import React from "react"
 import { screen, waitFor, within } from "@testing-library/react"
-
-import {
-  getCallToActionText,
-  LearningResourceExpanded,
-} from "./LearningResourceExpanded"
-import type { LearningResourceExpandedProps } from "./LearningResourceExpanded"
+import { LearningResourceExpanded } from "../LearningResourceExpanded/LearningResourceExpanded"
+import { getCallToActionText } from "./CallToActionSection"
+import type { LearningResourceExpandedProps } from "../LearningResourceExpanded/LearningResourceExpanded"
 import { ResourceTypeEnum } from "api"
 import { factories, setMockResponse, urls } from "api/test-utils"
 import invariant from "tiny-invariant"
@@ -371,7 +368,7 @@ describe.each([true, false])(
         setup({ resource })
 
         const chatButton = screen.queryByRole("button", {
-          name: "Need help? Ask TIM",
+          name: "Ask TIM about this course",
         })
         const shouldBeVisible =
           enabled && resourceType === ResourceTypeEnum.Course
@@ -393,9 +390,14 @@ describe.each([true, false])(
 
       const { rerender } = setup({ resource: course1 })
       await user.click(
-        screen.getByRole("button", { name: "Need help? Ask TIM" }),
+        screen.getByRole("button", { name: "Ask TIM about this course" }),
       )
-      const dataTestId = "ai-chat-syllabus"
+
+      const input = screen.getByRole("textbox")
+      expect(input).toBeInTheDocument()
+      await user.type(input, "tell me more{enter}")
+
+      const dataTestId = "ai-chat-screen"
       expect(screen.getByTestId(dataTestId)).toBeInTheDocument()
       rerender({ resource: course2 })
       expect(screen.getByTestId(dataTestId)).toBeInTheDocument()

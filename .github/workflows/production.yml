@@ -28,7 +28,7 @@ jobs:
         run: heroku container:login
 
       - name: Release Backend on Heroku
-        uses: akhileshns/heroku-deploy@c3187cbbeceea824a6f5d9e0e14e2995a611059c
+        uses: akhileshns/heroku-deploy@e3eb99d45a8e2ec5dca08735e089607befa4bf28
         with:
           heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
           heroku_app_name: mitopen-production
@@ -52,7 +52,7 @@ jobs:
           POSTHOG_API_HOST: https://app.posthog.com
           POSTHOG_PROJECT_ID: ${{ secrets.POSTHOG_PROJECT_ID_PROD }}
           POSTHOG_API_KEY: ${{ secrets.POSTHOG_PROJECT_API_KEY_PROD }}
-          POSTHOG_ENABLE_SESSION_RECORDING: ${{ secrets.POSTHOG_PROJECT_ENABLE_SESSION_RECORDING_PROD }}
+          POSTHOG_ENABLE_SESSION_RECORDING: ${{ secrets.POSTHOG_ENABLE_SESSION_RECORDING_PROD }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN_PROD }}
           SENTRY_ENV: ${{ secrets.MITOL_ENVIRONMENT_PROD }}
           SENTRY_PROFILES_SAMPLE_RATE: ${{ secrets.SENTRY_PROFILES_SAMPLE_RATE_PROD }}
