@@ -302,6 +302,9 @@ def generate_metadata_document(serialized_resource):
 
 
 def _embed_course_metadata_as_contentfile(serialized_resources):
+    """
+    Embed general course info as a document in the contentfile collection
+    """
     client = qdrant_client()
     encoder = dense_encoder()
     vector_name = encoder.model_short_name()
@@ -338,6 +341,9 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
 
 
 def _process_content_embeddings(serialized_content):
+    """
+    Chunk and embed content file documents
+    """
     embeddings = []
     metadata = []
     ids = []
