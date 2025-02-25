@@ -224,21 +224,14 @@ def generate_metadata_document(serialized_resource):
         f"{serialized_resource.get('description', '')}"
         f" {serialized_resource.get('full_description', '')}"
     )
-    offered_by = serialized_resource.get("offered_by", {}).get(
-        "name", "Unknown Institution"
-    )
+    offered_by = serialized_resource.get("offered_by", {}).get("name")
     price = (
         f"${serialized_resource['prices'][0]}"
         if serialized_resource.get("prices")
         else "Free"
     )
-    certification = serialized_resource.get("certification_type", {}).get(
-        "name", "No certification"
-    )
-    topics = (
-        ", ".join(topic["name"] for topic in serialized_resource.get("topics", []))
-        or "Not specified"
-    )
+    certification = serialized_resource.get("certification_type", {}).get("name")
+    topics = ", ".join(topic["name"] for topic in serialized_resource.get("topics", []))
     # process course runs
     runs = []
     for run in serialized_resource.get("runs", []):
@@ -261,13 +254,12 @@ def generate_metadata_document(serialized_resource):
             for instructor in run.get("instructors", [])
             if "full_name" in instructor
         )
-        instructors = instructors if instructors else "Not specified"
         runs.append(
             f" - Start Date: {formatted_date}, Location: {location}, "
             f"Duration: {duration}, Format: {delivery_modes},"
             f" Instructors: {instructors}"
         )
-    runs_text = "\n".join(runs) if runs else "No upcoming runs available."
+    runs_text = "\n".join(runs) if runs else ""
     # Extract languages
     languages = []
     for run in serialized_resource.get("runs", []):
