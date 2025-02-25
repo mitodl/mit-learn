@@ -6,12 +6,13 @@ from scim import views
 
 ol_scim_urls = (
     [
-        re_path("^Bulk$", views.BulkView.as_view(), name="bulk"),
+        re_path(r"^Bulk$", views.BulkView.as_view(), name="bulk"),
+        re_path(r"^\.search$", views.SearchView.as_view(), name="users-search"),
     ],
     "ol-scim",
 )
 
 urlpatterns = [
-    re_path("^scim/v2/", include(ol_scim_urls)),
-    re_path("^scim/v2/", include("django_scim.urls", namespace="scim")),
+    re_path(r"^scim/v2/", include(ol_scim_urls)),
+    re_path(r"^scim/v2/", include("django_scim.urls", namespace="scim")),
 ]
