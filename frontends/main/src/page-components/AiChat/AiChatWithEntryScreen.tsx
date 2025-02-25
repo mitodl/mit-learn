@@ -55,6 +55,9 @@ const StyledInput = styled(Input)(({ theme }) => ({
   borderRadius: "8px",
   border: `1px solid ${theme.custom.colors.lightGray2}`,
   margin: "8px 0 24px 0",
+  "&&&:hover": {
+    borderColor: theme.custom.colors.silverGrayDark,
+  },
   "button:disabled": {
     backgroundColor: "inherit",
   },

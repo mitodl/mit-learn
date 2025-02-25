@@ -60,7 +60,6 @@ const AiRecommendationBotDrawer = ({
 }) => {
   const closeDrawer = () => {
     setOpen(false)
-    // setShowEntryScreen(true)
   }
 
   return (
