@@ -157,6 +157,7 @@ const AiChatSyllabusSlideDown = ({
               headers: {
                 "X-CSRFToken": getCsrfToken(),
               },
+              credentials: "include",
             },
             transformBody: (messages) => ({
               collection_name: "content_files",
