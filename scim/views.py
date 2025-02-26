@@ -174,11 +174,11 @@ class SearchView(djs_views.UserSearchView):
 
         start = body.get("startIndex", 1)
         count = body.get("count", 50)
-        sort_by = body.get("sortBy", None)
+        sort_by = body.get("sortBy", "id")
         sort_order = body.get("sortOrder", "ascending")
         query = body.get("filter", None)
 
-        if sort_by is not None and sort_by not in ("email", "username"):
+        if sort_by is not None and sort_by not in ("id", "email", "username"):
             msg = "Sorting only supports email or username"
             raise exceptions.BadRequestError(msg)
 
@@ -196,11 +196,10 @@ class SearchView(djs_views.UserSearchView):
             msg = "Invalid filter/search query: " + str(e)
             raise exceptions.BadRequestError(msg) from e
 
-        if sort_by is not None:
-            qs = qs.order_by(sort_by)
+        qs = qs.order_by(sort_by)
 
-            if sort_order == "descending":
-                qs = qs.reverse()
+        if sort_order == "descending":
+            qs = qs.reverse()
 
         response = self._build_response(request, qs, start, count)
 
