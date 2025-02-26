@@ -12,7 +12,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="contentfile",
             name="flashcards",
-            field=models.JSONField(blank=True, null=True),
+            field=models.JSONField(blank=True, null=True, default=dict),
         ),
         migrations.AddField(
             model_name="contentfile",

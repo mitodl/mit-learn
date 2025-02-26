@@ -11,6 +11,7 @@ import celery
 from django.conf import settings
 from django.utils import timezone
 
+from learning_resources.content_summarizer import ContentSummarizer
 from learning_resources.etl import pipelines, youtube
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.edx_shared import (
@@ -378,3 +379,11 @@ def get_learning_resource_views():
     """Load learning resource views from the PostHog ETL."""
 
     pipelines.posthog_etl()
+
+
+@app.task(bind=True, acks_late=True)
+def run_content_summaries(self):
+    """Generate content summaries for content files that are missing them."""
+    log.info("Generating content summaries through task: %s", self.request.id)
+    content_summarizer = ContentSummarizer()
+    content_summarizer.process_content()

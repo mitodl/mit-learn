@@ -48,10 +48,14 @@ class ContentSummarizer:
             unprocessed_content = ContentFile.objects.exclude(
                 Q(content__isnull=True) | Q(content="")
             ).filter(
-                Q(Q(summary__isnull=True) | Q(summary=""))
-                | Q(Q(flashcards__isnull=True) | Q(flashcards=""))
+                Q(
+                    Q(summary__isnull=True)
+                    | Q(summary="")
+                    | Q(flashcards__isnull=True)
+                    | Q(flashcards={})
+                )
                 & Q(run__learning_resource__platform=summarizer_configuration.platform)
-                & Q(
+                & (
                     Q(content_type__in=summarizer_configuration.allowed_content_types)
                     | Q(file_extension__in=summarizer_configuration.allowed_extensions)
                 )
@@ -75,18 +79,17 @@ class ContentSummarizer:
         """Process a single content file."""
         try:
             with transaction.atomic():
-                # Generate content using OpenAI
+                # Generate summary and flashcards using OpenAI
                 update_dict = {}
                 if not content_file.summary:
                     summary = self._generate_summary(content_file.content, llm_model)
                     update_dict["summary"] = summary
-                if not content_file.flashcards:
+                if not content_file.flashcards or content_file.flashcards == {}:
                     flashcards = self._generate_flashcards(
                         content_file.content, llm_model
                     )
                     update_dict["flashcards"] = flashcards
 
-                # Update content file
                 ContentFile.objects.filter(
                     id=content_file.id
                 ).select_for_update().update(**update_dict)
@@ -132,7 +135,7 @@ class ContentSummarizer:
                 messages=[
                     {
                         "role": "system",
-                        "content": "Create a set of flashcards. Each flashcard should have a 'question', 'answer' and 'explanation' field.",  # noqa: E501
+                        "content": "Create a set of flashcards in the form of JSON list. Each flashcard JSON should have a 'question', 'answer' and 'explanation' field.",  # noqa: E501
                     },
                     {
                         "role": "user",
@@ -141,6 +144,7 @@ class ContentSummarizer:
                 ],
                 max_tokens=500,
                 temperature=0.7,
+                response_format={"type": "json_object"},
             )
 
             generated_flashcards = response.choices[0].message.content

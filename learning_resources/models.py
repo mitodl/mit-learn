@@ -890,7 +890,7 @@ class ContentFile(TimestampedModel):
     file_extension = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
     edx_block_id = models.CharField(max_length=1024, null=True, blank=True)  # noqa: DJ001
     summary = models.TextField(null=True, blank=True)  # noqa: DJ001
-    flashcards = models.JSONField(null=True, blank=True)
+    flashcards = models.JSONField(null=True, blank=True, default=dict)
 
     class Meta:
         unique_together = (("key", "run"),)
