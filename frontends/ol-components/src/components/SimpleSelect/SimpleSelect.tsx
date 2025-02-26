@@ -75,7 +75,6 @@ const SimpleSelectField: React.FC<SimpleSelectFieldProps> = ({
 }) => {
   return (
     <SelectField {...others}>
-      <MenuItem style={{ display: "none" }}></MenuItem>
       {options.map(({ value, label, ...itemProps }) => (
         <MenuItem size={others.size} value={value} key={value} {...itemProps}>
           {label}
