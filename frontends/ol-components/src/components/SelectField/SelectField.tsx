@@ -96,6 +96,7 @@ const SelectIcon = styled(RiArrowDownSLine)({
   width: "1em",
 })
 
+const POINTER_CLASSNAME = "pointer-open"
 /**
  * WARNING: You likely do not need this component. Try one of
  *
@@ -105,12 +106,39 @@ const SelectIcon = styled(RiArrowDownSLine)({
  * instead.
  */
 function Select<Value = unknown>({ size, ...props }: SelectProps<Value>) {
+  const menu = React.useRef<HTMLDivElement | null>(null)
   return (
     <MuiSelect
       variant="standard"
       {...props}
       size={size}
       IconComponent={SelectIcon}
+      /**
+       * The next three properties are a workaround to deal with
+       * https://github.com/mui/material-ui/issues/23747
+       *
+       * Note: Another workaround is mentioned in the issue, but breaks
+       * accessibility (https://github.com/mui/material-ui/issues/23747#issuecomment-2596590221)
+       */
+      onPointerDown={() => {
+        // This likely isn't necessasry---the Menu unmounts on close.
+        // But let's not rely on that.
+        menu.current?.classList.remove(POINTER_CLASSNAME)
+      }}
+      onPointerUp={() => {
+        menu.current?.classList.add(POINTER_CLASSNAME)
+      }}
+      MenuProps={{
+        ref: menu,
+        sx: {
+          [`&.${POINTER_CLASSNAME} .MuiMenuItem-root.Mui-focusVisible`]: {
+            outline: "none",
+          },
+        },
+        onKeyDown: () => {
+          menu.current?.classList.remove(POINTER_CLASSNAME)
+        },
+      }}
       input={<SelectInput size={size} />}
     />
   )
