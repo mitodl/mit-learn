@@ -377,11 +377,16 @@ def _content_file_vector_hits(search_result):
         run__run_id__in=run_readable_ids, key__in=keys
     )
     results = []
+    contentfiles_dict = {(cf.run.run_id, cf.key): ContentFileSerializer(cf).data for cf in contentfiles}
+    results = []
     for hit in search_result:
         payload = hit.payload
-        serialized = ContentFileSerializer(
-            contentfiles.get(run__run_id=payload["run_readable_id"], key=payload["key"])
-        ).data
+        serialized = contentfiles_dict.get((payload["run_readable_id"], payload["key"]))
+        if serialized:
+            serialized.pop("content")
+            payload.update(serialized)
+            results.append(payload)
+    return results
         serialized.pop("content")
         payload.update(serialized)
         results.append(payload)
