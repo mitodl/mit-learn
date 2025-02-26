@@ -36,7 +36,7 @@ const Label = styled(FormLabel)(({ theme }) => ({
   width: "100%",
   color: theme.custom.colors.darkGray2,
   ...theme.typography.subtitle2,
-})) as typeof FormLabel
+})) as typeof FormLabel // https://mui.com/material-ui/guides/typescript/?srsltid=AfmBOoo9kvRiALbxt4kAarRGiKaiJ7tbui5tstoL23DYscJPyk6UaTul#complications-with-the-component-prop
 
 const CheckboxChoiceField: React.FC<CheckboxChoiceFieldProps> = ({
   label,
