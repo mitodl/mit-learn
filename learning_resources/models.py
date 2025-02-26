@@ -889,6 +889,8 @@ class ContentFile(TimestampedModel):
     source_path = models.CharField(max_length=1024, null=True, blank=True)  # noqa: DJ001
     file_extension = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
     edx_block_id = models.CharField(max_length=1024, null=True, blank=True)  # noqa: DJ001
+    summary = models.TextField(null=True, blank=True)  # noqa: DJ001
+    flashcards = models.JSONField(null=True, blank=True)
 
     class Meta:
         unique_together = (("key", "run"),)
@@ -1121,3 +1123,27 @@ class LearningResourceViewEvent(TimestampedModel):
             f" {self.learning_resource.readable_id})"
             f" on {self.event_date}"
         )
+
+
+class ContentSummarizerConfig(TimestampedModel):
+    """Stores configuration for content summarizer"""
+
+    llm_model = models.CharField(max_length=128, verbose_name="LLM Model")
+    platform = models.OneToOneField(
+        LearningResourcePlatform, on_delete=models.PROTECT, name="platform"
+    )
+    allowed_content_types = ArrayField(
+        models.CharField(
+            max_length=128, choices=constants.VALID_COURSE_CONTENT_CHOICES
+        ),
+        null=True,
+        blank=True,
+        default=list,
+    )
+    allowed_extensions = ArrayField(
+        models.CharField(max_length=128, choices=constants.VALID_ALL_FILE_TYPES),
+        null=True,
+        blank=True,
+        default=list,
+    )
+    is_active = models.BooleanField(default=True)

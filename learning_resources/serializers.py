@@ -821,6 +821,8 @@ class ContentFileSerializer(serializers.ModelSerializer):
             "run_readable_id",
             "file_extension",
             "edx_block_id",
+            "summary",
+            "flashcards",
         ]
 
 
