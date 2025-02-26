@@ -1,9 +1,8 @@
 import logging
 
-from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
-from openai import OpenAI
+from litellm import completion
 
 from learning_resources.models import ContentFile, ContentSummarizerConfig
 
@@ -14,12 +13,6 @@ class ContentSummarizer:
     """
     A service class to summarize and generate flashcards for the ContentFile objects .
     """
-
-    ai_client = None
-
-    def __init__(self):
-        """Initialize the ContentSummarizer class."""
-        self.ai_client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
     def process_content(self) -> dict[str, int]:
         """Process all unprocessed content files."""
@@ -64,13 +57,14 @@ class ContentSummarizer:
             processed = failed = 0
             for content_file in unprocessed_content:
                 try:
-                    self._process_single_content_file(
+                    self.process_single_content_file(
                         content_file, summarizer_configuration.llm_model
                     )
                     processed += 1
                 except Exception:
                     failed += 1
                     logger.exception("Failed to process content %s", content_file.id)
+
             stats[summarizer_configuration.platform.code] = {
                 "processed": processed,
                 "failed": failed,
@@ -78,7 +72,7 @@ class ContentSummarizer:
 
         return stats
 
-    def _process_single_content_file(
+    def process_single_content_file(
         self, content_file: ContentFile, llm_model: str
     ) -> None:
         """Process a single content file."""
@@ -87,10 +81,10 @@ class ContentSummarizer:
                 # Generate summary and flashcards using OpenAI
                 update_dict = {}
                 if not content_file.summary:
-                    summary = self._generate_summary(content_file.content, llm_model)
+                    summary = self.generate_summary(content_file.content, llm_model)
                     update_dict["summary"] = summary
                 if not content_file.flashcards or content_file.flashcards == {}:
-                    flashcards = self._generate_flashcards(
+                    flashcards = self.generate_flashcards(
                         content_file.content, llm_model
                     )
                     update_dict["flashcards"] = flashcards
@@ -103,22 +97,22 @@ class ContentSummarizer:
             logger.exception("Error processing content: %d", content_file.id)
             raise
 
-    def _generate_summary(self, content: str, llm_model: str) -> str:
-        """Generate summary using OpenAI."""
+    def generate_summary(self, content: str, llm_model: str) -> str:
+        """Generate summary using provided llm_model."""
         try:
-            response = self.ai_client.chat.completions.create(
+            response = completion(
                 model=llm_model,
                 messages=[
                     {
-                        "role": "system",
                         "content": "You are a helpful assistant that creates concise summaries.",  # noqa: E501
+                        "role": "system",
                     },
                     {
-                        "role": "user",
                         "content": f"Please create a clear and concise summary of the following content:\n\n{content}",  # noqa: E501
+                        "role": "user",
                     },
                 ],
-                max_tokens=500,
+                max_tokens=200,
                 temperature=0.0,
             )
             generated_summary = response.choices[0].message.content
@@ -130,26 +124,23 @@ class ContentSummarizer:
         else:
             return generated_summary
 
-    def _generate_flashcards(
-        self, content: str, llm_model: str
-    ) -> list[dict[str, str]]:
+    def generate_flashcards(self, content: str, llm_model: str) -> list[dict[str, str]]:
         """Generate flashcards using OpenAI."""
         try:
-            response = self.ai_client.chat.completions.create(
+            response = completion(
                 model=llm_model,
                 messages=[
                     {
-                        "role": "system",
                         "content": "Create a set of flashcards in the form of JSON list. Each flashcard JSON should have a 'question', 'answer' and 'explanation' field.",  # noqa: E501
+                        "role": "system",
                     },
                     {
-                        "role": "user",
                         "content": f"Generate flashcards from this content:\n\n{content}",  # noqa: E501
+                        "role": "user",
                     },
                 ],
-                max_tokens=500,
-                temperature=0.7,
-                response_format={"type": "json_object"},
+                max_tokens=200,
+                temperature=0.0,
             )
 
             generated_flashcards = response.choices[0].message.content
