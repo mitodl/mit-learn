@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.30.6
+Version 0.30.6 (Released February 26, 2025)
 --------------
 
 - Full width slide down syllabus chat for the resource drawer (#2063)
