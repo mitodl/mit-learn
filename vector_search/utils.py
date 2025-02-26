@@ -1,11 +1,13 @@
-import datetime
+import json
 import logging
 import uuid
 
-from dateutil import parser as date_parser
+import jq
 from django.conf import settings
+from django.core.serializers.json import DjangoJSONEncoder
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_experimental.text_splitter import SemanticChunker
+from langchain_text_splitters import RecursiveJsonSplitter
 from qdrant_client import QdrantClient, models
 
 from learning_resources.models import LearningResource
@@ -162,6 +164,11 @@ def vector_point_id(readable_id):
     return str(uuid.uuid5(uuid.NAMESPACE_DNS, readable_id))
 
 
+def _chunk_json_document(document):
+    splitter = RecursiveJsonSplitter()
+    return splitter.split_json(json_data=document, convert_lists=True)
+
+
 def _chunk_documents(encoder, texts, metadatas):
     # chunk the documents. use semantic chunking if enabled
     chunk_params = {
@@ -215,6 +222,76 @@ def _process_resource_embeddings(serialized_resources):
     return None
 
 
+def generate_metadata_document(serialized_resource):
+    serialized_resource = json.loads(
+        json.dumps(serialized_resource, cls=DjangoJSONEncoder)
+    )
+
+    jq_filter = """
+    {
+      "course_title": .title,
+      "description": (.description + " " + .full_description | gsub("^\\\\s+|\\\\s+$"; "")),
+      "offered_by": (.offered_by.name // "Unknown Institution"),
+      "price": (
+        if (.prices | type) == "array" and (.prices | length) > 0 then
+          (try (.prices[0] | tonumber | tostring) catch "0.00")
+        else
+          "Free"
+        end
+      ),
+      "certification": (.certification_type.name // "No certification"),
+      "topics": (
+        if (.topics | type) == "array" and (.topics | length) > 0 then
+          (.topics | map(.name) | join(", "))
+        else
+          "Not specified"
+        end
+      ),
+      "level": (
+        if (.runs | type) == "array" and (.runs | length) > 0 then
+          (.runs | map(if .level | type == "array" then .level[]?.name else empty end) | unique | join(", "))
+        else
+          "Not specified"
+        end
+      ),
+      "languages": (
+        if (.runs | type) == "array" and (.runs | length) > 0 then
+          (.runs | map(if .languages | type == "array" then .languages[]? else empty end) | unique | join(", "))
+        else
+          "Not specified"
+        end
+      ),
+      "course_runs": (
+        if (.runs | type) == "array" and (.runs | length) > 0 then
+          (.runs | map(
+            "- Start Date: " + (.start_date // "TBD") +
+            ", Location: " + (.location // "Online") +
+            ", Duration: " + (.duration // "TBD") +
+            ", Format: " + (if .delivery | type == "array" then .delivery | map(.name) | join(", ") else "Not specified" end) +
+            ", Instructors: " + (if .instructors | type == "array" then .instructors | map(.full_name) | join(", ") else "Not specified" end)
+          ))
+          | join("\\n")
+        else
+          "No upcoming runs available."
+        end
+      )
+    }
+    """  # noqa: E501
+    return jq.compile(jq_filter).input(serialized_resource).first()
+
+
+def metadata_to_info_doc(document_json):
+    rendered_info = "Information about this course:\n"
+    for section, display_text in document_json.items():
+        if display_text:
+            if display_text is str and len(display_text.split("\n")) > 1:
+                rendered_info += f"{section} -\n{display_text}\n"
+            else:
+                rendered_info += f"{section} - {display_text}\n"
+    return rendered_info
+
+
+'''
 def generate_metadata_document(serialized_resource):
     """
     Generate a plaint-text info document to embed in the contentfile collection
@@ -291,6 +368,7 @@ def generate_metadata_document(serialized_resource):
             else:
                 rendered_info += f"{section} - {display_text}\n"
     return rendered_info
+'''
 
 
 def _embed_course_metadata_as_contentfile(serialized_resources):
@@ -303,19 +381,22 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
     metadata = []
     ids = []
     docs = []
+    embeddings = []
     for doc in serialized_resources:
         readable_id = doc["readable_id"]
         resource_vector_point_id = str(vector_point_id(readable_id))
         ids.append(resource_vector_point_id)
         course_info_document = generate_metadata_document(doc)
-        metadata.append(
+        split_docs = _chunk_json_document(course_info_document)
+        split_texts = [metadata_to_info_doc(d) for d in split_docs if d]
+        split_metadatas = [
             {
                 "resource_point_id": resource_vector_point_id,
                 "resource_readable_id": readable_id,
-                "chunk_number": 0,
+                "chunk_number": chunk_id,
                 "file_extension": ".md",
                 "file_type": "text/markdown",
-                "chunk_content": course_info_document,
+                "chunk_content": d,
                 **{
                     key: doc[key]
                     for key in [
@@ -324,12 +405,21 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
                     ]
                 },
             }
-        )
-        docs.append(course_info_document)
-    if len(docs) > 0:
-        embeddings = encoder.embed_documents(docs)
-        points = points_generator(ids, metadata, embeddings, vector_name)
-        client.upload_points(CONTENT_FILES_COLLECTION_NAME, points=points, wait=False)
+            for chunk_id, d in enumerate(split_texts)
+            if d
+        ]
+        split_ids = [
+            vector_point_id(f"{doc['readable_id']}.metadata.{md['chunk_number']}")
+            for md in split_metadatas
+        ]
+
+        split_embeddings = encoder.embed_documents(split_texts)
+        embeddings.extend(split_embeddings)
+        metadata.extend(split_metadatas)
+        ids.extend(split_ids)
+        docs.extend(split_texts)
+    points = points_generator(ids, metadata, embeddings, vector_name)
+    client.upload_points(CONTENT_FILES_COLLECTION_NAME, points=points, wait=False)
 
 
 def _process_content_embeddings(serialized_content):
