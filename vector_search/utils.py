@@ -373,23 +373,28 @@ def _resource_vector_hits(search_result):
 def _content_file_vector_hits(search_result):
     run_readable_ids = [hit.payload["run_readable_id"] for hit in search_result]
     keys = [hit.payload["key"] for hit in search_result]
-    contentfiles = ContentFile.objects.for_serialization().filter(
-        run__run_id__in=run_readable_ids, key__in=keys
-    )
+
+    serialized_content_files = ContentFileSerializer(
+        ContentFile.objects.for_serialization().filter(
+            run__run_id__in=run_readable_ids, key__in=keys
+        ),
+        many=True,
+    ).data
     results = []
-    contentfiles_dict = {(cf.run.run_id, cf.key): ContentFileSerializer(cf).data for cf in contentfiles}
+    contentfiles_dict = {}
+    [
+        contentfiles_dict.update({(cf["run_readable_id"], cf["key"]): cf})
+        for cf in serialized_content_files
+    ]
     results = []
     for hit in search_result:
         payload = hit.payload
         serialized = contentfiles_dict.get((payload["run_readable_id"], payload["key"]))
         if serialized:
-            serialized.pop("content")
+            if "content" in serialized:
+                serialized.pop("content")
             payload.update(serialized)
             results.append(payload)
-    return results
-        serialized.pop("content")
-        payload.update(serialized)
-        results.append(payload)
     return results
 
 
