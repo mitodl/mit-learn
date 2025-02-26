@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.30.6 (Released February 26, 2025)
+--------------
+
+- Full width slide down syllabus chat for the resource drawer (#2063)
+- Update dependency faker to v36 (#2057)
+
 Version 0.30.5 (Released February 21, 2025)
 --------------
 
