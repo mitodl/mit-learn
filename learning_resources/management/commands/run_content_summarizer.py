@@ -1,6 +1,6 @@
 """Management command to run the content summarizer"""
 
-from django.core.management import BaseCommand, CommandError
+from django.core.management import BaseCommand
 
 from learning_resources.tasks import run_content_summaries
 from main.utils import now_in_utc
@@ -20,10 +20,8 @@ class Command(BaseCommand):
         self.stdout.write("Waiting on task...")
 
         start = now_in_utc()
-        error = summarizer_task.get()
-        if error:
-            msg = f"Content file summarizer errored: {error}"
-            raise CommandError(msg)
+        stats = summarizer_task.get()
+        self.stdout.write(f"Summarizer Stats: {stats}")
 
         total_seconds = (now_in_utc() - start).total_seconds()
         self.stdout.write(

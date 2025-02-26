@@ -23,7 +23,7 @@ class ContentSummarizer:
 
     def process_content(self) -> dict[str, int]:
         """Process all unprocessed content files."""
-        stats = {"platform": "", "processed": 0, "failed": 0}
+        stats = {}
         # Process the content files based on these conditions
         # 1. Content is not empty
         # 2. Summary or flashcards are not generated
@@ -61,15 +61,20 @@ class ContentSummarizer:
                 )
             )
             logger.info("Processing (%d) content files", len(unprocessed_content))
+            processed = failed = 0
             for content_file in unprocessed_content:
                 try:
                     self._process_single_content_file(
                         content_file, summarizer_configuration.llm_model
                     )
-                    stats["processed"] += 1
+                    processed += 1
                 except Exception:
-                    stats["failed"] += 1
+                    failed += 1
                     logger.exception("Failed to process content %s", content_file.id)
+            stats[summarizer_configuration.platform.code] = {
+                "processed": processed,
+                "failed": failed,
+            }
 
         return stats
 

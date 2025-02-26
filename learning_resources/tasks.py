@@ -381,9 +381,8 @@ def get_learning_resource_views():
     pipelines.posthog_etl()
 
 
-@app.task(bind=True, acks_late=True)
-def run_content_summaries(self):
+@app.task(acks_late=True)
+def run_content_summaries():
     """Generate content summaries for content files that are missing them."""
-    log.info("Generating content summaries through task: %s", self.request.id)
     content_summarizer = ContentSummarizer()
-    content_summarizer.process_content()
+    return content_summarizer.process_content()
