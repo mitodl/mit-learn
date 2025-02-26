@@ -6,8 +6,11 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_experimental.text_splitter import SemanticChunker
 from qdrant_client import QdrantClient, models
 
-from learning_resources.models import LearningResource
-from learning_resources.serializers import LearningResourceSerializer
+from learning_resources.models import ContentFile, LearningResource
+from learning_resources.serializers import (
+    ContentFileSerializer,
+    LearningResourceSerializer,
+)
 from learning_resources_search.constants import CONTENT_FILE_TYPE
 from learning_resources_search.serializers import (
     serialize_bulk_content_files,
@@ -368,7 +371,18 @@ def _resource_vector_hits(search_result):
 
 
 def _content_file_vector_hits(search_result):
-    return [hit.payload for hit in search_result]
+    run_readable_ids = []
+    keys = []
+    for hit in search_result:
+        payload = hit.payload
+        run_readable_ids.append(payload["run_readable_id"])
+        keys.append(payload["key"])
+    return ContentFileSerializer(
+        ContentFile.objects.for_serialization().filter(
+            run__run_id__in=run_readable_ids, key__in=keys
+        ),
+        many=True,
+    ).data
 
 
 def vector_search(
