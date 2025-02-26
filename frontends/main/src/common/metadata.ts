@@ -1,4 +1,4 @@
-import { RESOURCE_DRAWER_QUERY_PARAM } from "@/common/urls"
+import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
 import { learningResourcesApi } from "api/clients"
 import type { Metadata } from "next"
 import handleNotFound from "./handleNotFound"
@@ -28,7 +28,9 @@ export const getMetadataAsync = async ({
   ...otherMeta
 }: MetadataAsyncProps) => {
   // The learning resource drawer is open
-  const learningResourceId = (await searchParams)?.[RESOURCE_DRAWER_QUERY_PARAM]
+  const learningResourceId = (await searchParams)?.[
+    RESOURCE_DRAWER_PARAMS.resource
+  ]
   if (learningResourceId) {
     const { data } = await handleNotFound(
       learningResourcesApi.learningResourcesRetrieve({

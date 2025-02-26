@@ -128,7 +128,7 @@ const expectProps = (
  */
 const expectLastProps = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  fc: jest.Mock<any, any>,
+  fc: (...args: any[]) => void,
   partialProps: unknown,
 ) => {
   expect(fc).toHaveBeenLastCalledWith(
