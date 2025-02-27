@@ -61,7 +61,7 @@ jobs:
           LEARN_AI_RECOMMENDATION_ENDPOINT: ${{ secrets.LEARN_AI_RECOMMENDATION_ENDPOINT_PROD }}
           LEARN_AI_SYLLABUS_ENDPOINT: ${{ secrets.LEARN_AI_SYLLABUS_ENDPOINT_PROD }}
           VERSION: ${{ github.sha }}
-          MITOL_API_LOGOUT_SUFFIX: $${{ secrets.MITOL_API_LOGOUT_SUFFIX_PROD }}
+          MITOL_API_LOGOUT_SUFFIX: ${{ secrets.MITOL_API_LOGOUT_SUFFIX_PROD }}
         run: |
           heroku container:push web \
           --app $HEROKU_APP_NAME \
