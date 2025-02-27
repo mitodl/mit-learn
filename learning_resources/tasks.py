@@ -381,8 +381,39 @@ def get_learning_resource_views():
     pipelines.posthog_etl()
 
 
-@app.task(acks_late=True)
-def run_content_summaries():
+@app.task(
+    bind=True,
+    acks_late=True,
+    reject_on_worker_lost=True,
+    retry_backoff=True,
+    rate_limit="600/m",
+)
+def process_content_file_summarization(self, ids: Optional[list[int]] = None):  # noqa: ARG001
     """Generate content summaries for content files that are missing them."""
-    content_summarizer = ContentSummarizer()
-    return content_summarizer.process_content()
+    try:
+        if not ids:
+            # If no Ids were provided, get the unprocessed content file ids based on
+            # Summarization configurations.
+            ids = ContentSummarizer().get_unprocessed_content_file_ids()
+
+        # Create batches
+        batch_size = 20
+        batches = [ids[i : i + batch_size] for i in range(0, len(ids), batch_size)]
+        batch_tasks = [
+            celery.chain(
+                *(process_single_content_file_task.si(item_id) for item_id in batch)
+            )
+            for batch in batches
+        ]
+        return celery.group(batch_tasks).apply_async()
+    except:  # noqa: E722
+        error = "process_content_file_summarization threw an error"
+        log.exception(error)
+        return error
+
+
+@app.task
+def process_single_content_file_task(content_file_id: int):
+    """Process a single content file to generate summary and flashcards."""
+    summarizer = ContentSummarizer()
+    return summarizer.process_single_content_file(content_file_id, "gpt-4o-mini")
