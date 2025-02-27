@@ -107,7 +107,9 @@ def start_embed_resources(self, indexes, skip_content_files, overwrite):
                     run = (
                         course.next_run
                         if course.next_run
-                        else course.runs.order_by("-start_date").first()
+                        else course.runs.filter(published=True)
+                        .order_by("-start_date")
+                        .first()
                     )
                     run_contentfiles = (
                         ContentFile.objects.filter(
@@ -195,7 +197,9 @@ def embed_learning_resources_by_id(self, ids, skip_content_files, overwrite):
                     run = (
                         course.next_run
                         if course.next_run
-                        else course.runs.order_by("-start_date").first()
+                        else course.runs.filter(published=True)
+                        .order_by("-start_date")
+                        .first()
                     )
                     run_contentfiles = ContentFile.objects.filter(
                         run=run,
