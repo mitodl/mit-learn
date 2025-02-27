@@ -246,6 +246,7 @@ def _process_content_embeddings(serialized_content):
                         "resource_readable_id",
                         "content_type",
                         "file_extension",
+                        "edx_block_id",
                         "content_feature_type",
                         "course_number",
                         "file_type",
