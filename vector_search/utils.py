@@ -254,6 +254,7 @@ def _process_content_embeddings(serialized_content):
                         "key",
                         "url",
                     ]
+                    if key in d.metadata
                 },
             }
             for chunk_id, d in enumerate(split_docs)
