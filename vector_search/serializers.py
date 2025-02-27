@@ -130,23 +130,6 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             topic["name"] for topic in serialized_resource.get("topics", [])
         )
 
-    def to_representation(self, instance):
-        """Serialize a to metadata document"""
-        data = super().to_representation(instance)
-        data.update(
-            {
-                "topics_display": self.get_topics_display(data),
-                "price_display": self.get_price_display(data),
-                "certification_display": self.get_certification_display(data),
-                "instructors_display": self.get_instructors_display(data),
-                "runs_display": self.get_runs_display(data),
-                "offered_by_display": self.get_offered_by_display(data),
-                "languages_display": self.get_languages_display(data),
-                "levels_display": self.get_levels_display(data),
-            }
-        )
-        return data
-
     def render_document(self):
         data = self.data
         display_sections = {
