@@ -232,18 +232,23 @@ def test_embedded_content_from_next_run(mocker, mocked_celery):
 
     course = CourseFactory.create(etl_source=ETLSource.ocw.value)
 
-    latest_run = LearningResourceRunFactory.create(
+    other_run = LearningResourceRunFactory.create(
+        learning_resource=course.learning_resource,
+        created_on=datetime.datetime.now(tz=datetime.UTC) - datetime.timedelta(days=2),
+    )
+    LearningResourceRunFactory.create(
         learning_resource=course.learning_resource,
         created_on=datetime.datetime.now(tz=datetime.UTC),
     )
-    # create contentfiles using the latest run
-    ContentFileFactory.create_batch(3, run=latest_run)
+
     next_run_contentfiles = [
         cf.id
         for cf in ContentFileFactory.create_batch(
             3, run=course.learning_resource.next_run
         )
     ]
+    # create contentfiles using the other run
+    ContentFileFactory.create_batch(3, run=other_run)
 
     generate_embeddings_mock = mocker.patch(
         "vector_search.tasks.generate_embeddings", autospec=True
