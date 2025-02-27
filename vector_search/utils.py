@@ -1,8 +1,6 @@
-import datetime
 import logging
 import uuid
 
-from dateutil import parser as date_parser
 from django.conf import settings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_experimental.text_splitter import SemanticChunker
@@ -24,6 +22,7 @@ from vector_search.constants import (
     RESOURCES_COLLECTION_NAME,
 )
 from vector_search.encoders.utils import dense_encoder
+from vector_search.serializers import LearningResourceMetadataDisplaySerializer
 
 logger = logging.getLogger(__name__)
 
@@ -215,84 +214,6 @@ def _process_resource_embeddings(serialized_resources):
     return None
 
 
-def generate_metadata_document(serialized_resource):
-    """
-    Generate a plaint-text info document to embed in the contentfile collection
-    """
-    title = serialized_resource.get("title", "")
-    description = (
-        f"{serialized_resource.get('description', '')}"
-        f" {serialized_resource.get('full_description', '')}"
-    )
-    offered_by = serialized_resource.get("offered_by", {}).get("name")
-    price = (
-        f"${serialized_resource['prices'][0]}"
-        if serialized_resource.get("prices")
-        else "Free"
-    )
-    certification = serialized_resource.get("certification_type", {}).get("name")
-    topics = ", ".join(topic["name"] for topic in serialized_resource.get("topics", []))
-    # process course runs
-    runs = []
-    for run in serialized_resource.get("runs", []):
-        start_date = run.get("start_date")
-        formatted_date = (
-            date_parser.parse(start_date)
-            .replace(tzinfo=datetime.UTC)
-            .strftime("%B %d, %Y")
-            if start_date
-            else ""
-        )
-        location = run.get("location") or "Online"
-        duration = run.get("duration")
-        delivery_modes = (
-            ", ".join(delivery["name"] for delivery in run.get("delivery", []))
-            or "Not specified"
-        )
-        instructors = ", ".join(
-            instructor["full_name"]
-            for instructor in run.get("instructors", [])
-            if "full_name" in instructor
-        )
-        runs.append(
-            f" - Start Date: {formatted_date}, Location: {location}, "
-            f"Duration: {duration}, Format: {delivery_modes},"
-            f" Instructors: {instructors}"
-        )
-    runs_text = "\n".join(runs) if runs else ""
-    # Extract languages
-    languages = []
-    for run in serialized_resource.get("runs", []):
-        if run.get("languages"):
-            languages.extend(run["languages"])
-    unique_languages = ", ".join(set(languages))
-    # Extract levels
-    levels = []
-    for run in serialized_resource.get("runs", []):
-        if run.get("level"):
-            levels.extend(lvl["name"] for lvl in run["level"])
-    unique_levels = ", ".join(set(levels))
-    display_info = {
-        "Course Title": title,
-        "Description": description,
-        "Offered By": offered_by,
-        "Price": price,
-        "Certification": certification,
-        "Topics": topics,
-        "Level": unique_levels,
-        "Languages": unique_languages,
-        "Course Runs": runs_text,
-    }
-    rendered_info = "Information about this course:\n"
-    for section, display_text in display_info.items():
-        if display_text:
-            if len(display_text.strip().split("\n")) > 1:
-                rendered_info += f"{section} -\n{display_text}\n"
-            else:
-                rendered_info += f"{section} - {display_text}\n"
-    return rendered_info
-
-
 def _embed_course_metadata_as_contentfile(serialized_resources):
     """
     Embed general course info as a document in the contentfile collection
@@ -307,7 +228,9 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
         readable_id = doc["readable_id"]
         resource_vector_point_id = str(vector_point_id(readable_id))
         ids.append(resource_vector_point_id)
-        course_info_document = generate_metadata_document(doc)
+        course_info_document = LearningResourceMetadataDisplaySerializer(
+            doc
+        ).render_document()
         metadata.append(
             {
                 "resource_point_id": resource_vector_point_id,

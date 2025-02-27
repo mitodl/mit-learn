@@ -1,3 +1,6 @@
+import datetime
+
+from dateutil import parser as date_parser
 from drf_spectacular.plumbing import build_choice_description_list
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
@@ -20,6 +23,154 @@ from learning_resources_search.serializers import (
     SearchResponseMetadata,
     SearchResponseSerializer,
 )
+
+
+class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
+    title = serializers.CharField(read_only=True)
+    description = serializers.CharField(read_only=True)
+    full_description = serializers.CharField(read_only=True)
+    offered_by = serializers.ReadOnlyField(read_only=True)
+    platform = serializers.ReadOnlyField(read_only=True)
+    course_feature = serializers.ReadOnlyField(
+        read_only=True,
+    )
+    departments = serializers.ReadOnlyField(
+        read_only=True,
+    )
+    certification = serializers.ReadOnlyField(read_only=True)
+    certification_type = serializers.ReadOnlyField(read_only=True)
+    prices = serializers.ListField(
+        child=serializers.DecimalField(max_digits=12, decimal_places=2),
+        read_only=True,
+    )
+    resource_prices = serializers.ReadOnlyField(
+        read_only=True,
+    )
+    runs = serializers.ReadOnlyField(read_only=True, allow_null=True)
+    delivery = serializers.ReadOnlyField(read_only=True)
+    free = serializers.ReadOnlyField(read_only=True)
+    resource_category = serializers.ReadOnlyField(
+        read_only=True,
+    )
+    pace = serializers.ReadOnlyField(read_only=True)
+    topics_display = serializers.SerializerMethodField()
+    price_display = serializers.SerializerMethodField()
+    certification_display = serializers.SerializerMethodField()
+    instructors_display = serializers.SerializerMethodField()
+    runs_display = serializers.SerializerMethodField()
+    offered_by_display = serializers.SerializerMethodField()
+    languages_display = serializers.SerializerMethodField()
+    levels_display = serializers.SerializerMethodField()
+
+    def get_levels_display(self, serialized_resource):
+        levels = []
+        for run in serialized_resource.get("runs", []):
+            if run.get("level"):
+                levels.extend(lvl["name"] for lvl in run["level"])
+        return ", ".join(set(levels))
+
+    def get_languages_display(self, serialized_resource):
+        languages = []
+        for run in serialized_resource.get("runs", []):
+            if run.get("languages"):
+                languages.extend(run["languages"])
+        return ", ".join(set(languages))
+
+    def get_offered_by_display(self, serialized_resource):
+        return serialized_resource.get("offered_by", {}).get("name")
+
+    def get_runs_display(self, serialized_resource):
+        runs = []
+        for run in serialized_resource.get("runs", []):
+            start_date = run.get("start_date")
+            formatted_date = (
+                date_parser.parse(start_date)
+                .replace(tzinfo=datetime.UTC)
+                .strftime("%B %d, %Y")
+                if start_date
+                else ""
+            )
+            location = run.get("location") or "Online"
+            duration = run.get("duration")
+            delivery_modes = (
+                ", ".join(delivery["name"] for delivery in run.get("delivery", []))
+                or "Not specified"
+            )
+            instructors = ", ".join(
+                instructor["full_name"]
+                for instructor in run.get("instructors", [])
+                if "full_name" in instructor
+            )
+            runs.append(
+                f" - Start Date: {formatted_date}, Location: {location}, "
+                f"Duration: {duration}, Format: {delivery_modes},"
+                f" Instructors: {instructors}"
+            )
+        return "\n".join(runs) if runs else ""
+
+    def get_instructors_display(self, serialized_resource):
+        return ", ".join(
+            instructor["full_name"]
+            for instructor in serialized_resource.get("instructors", [])
+            if "full_name" in instructor
+        )
+
+    def get_certification_display(self, serialized_resource):
+        return serialized_resource.get("certification_type", {}).get("name")
+
+    def get_price_display(self, serialized_resource):
+        return (
+            f"${serialized_resource['prices'][0]}"
+            if serialized_resource.get("prices")
+            else "Free"
+        )
+
+    def get_topics_display(self, serialized_resource):
+        return ", ".join(
+            topic["name"] for topic in serialized_resource.get("topics", [])
+        )
+
+    def to_representation(self, instance):
+        """Serialize a to metadata document"""
+        data = super().to_representation(instance)
+        data.update(
+            {
+                "topics_display": self.get_topics_display(data),
+                "price_display": self.get_price_display(data),
+                "certification_display": self.get_certification_display(data),
+                "instructors_display": self.get_instructors_display(data),
+                "runs_display": self.get_runs_display(data),
+                "offered_by_display": self.get_offered_by_display(data),
+                "languages_display": self.get_languages_display(data),
+                "levels_display": self.get_levels_display(data),
+            }
+        )
+        return data
+
+    def render_document(self):
+        data = self.data
+        display_sections = {
+            "title": "Title",
+            "description": "Description",
+            "full_description": "Full Description",
+            "topics_display": "Topics",
+            "price_display": "Cost",
+            "certification_display": "Certification",
+            "instructors_display": "Instructors",
+            "runs_display": "Runs",
+            "offered_by_display": "Offered By",
+            "languages_display": "Languages",
+            "levels_display": "Levels",
+        }
+        rendered_info = "Information about this course:\n"
+        for section, section_display in display_sections.items():
+            display_text = data.get(section)
+            if display_text:
+                if len(display_text.strip().split("\n")) > 1:
+                    rendered_info += f"{section_display} -\n{display_text}\n"
+                else:
+                    rendered_info += f"{section_display} - {display_text}\n"
+        return rendered_info
 
 
 class LearningResourcesVectorSearchRequestSerializer(serializers.Serializer):
