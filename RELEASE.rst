@@ -1,6 +1,21 @@
 Release Notes
 =============
 
+Version 0.31.0
+--------------
+
+- Fix SCIM view tests (#2073)
+- Accessibility improvements (#2071)
+- APISIX integration (#2061)
+- Added SCIM fields to User and populate (#2062)
+- Fix SCIM search API sort and pagination (#2066)
+- fix: Opensearch container on ARM64 based architecture (#2069)
+- Update dependency @dnd-kit/sortable to v10 (#1974)
+- Update akhileshns/heroku-deploy digest to e3eb99d (#2068)
+- Update dependency @sentry/nextjs to v9 (#2034)
+- Update dependency @mui/lab to v6.0.0-beta.28 (#2051)
+- Update dependency tldextract to v5 (#2031)
+
 Version 0.30.6 (Released February 26, 2025)
 --------------
 
