@@ -10,6 +10,11 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.RunSQL(
+            sql="DROP VIEW auth_user;",
+            reverse_sql="CREATE VIEW auth_user AS SELECT * FROM users_user;",
+            elidable=True,
+        ),
         migrations.AddField(
             model_name="user",
             name="created_on",
@@ -60,6 +65,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="user",
             name="updated_on",
-            field=models.DateTimeField(auto_now=True),
+            field=models.DateTimeField(auto_now=True, null=True),
         ),
     ]
