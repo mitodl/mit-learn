@@ -29,30 +29,10 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
     title = serializers.CharField(read_only=True)
     description = serializers.CharField(read_only=True)
     full_description = serializers.CharField(read_only=True)
-    offered_by = serializers.ReadOnlyField(read_only=True)
-    platform = serializers.ReadOnlyField(read_only=True)
-    course_feature = serializers.ReadOnlyField(
-        read_only=True,
-    )
     departments = serializers.ReadOnlyField(
         read_only=True,
     )
-    certification = serializers.ReadOnlyField(read_only=True)
-    certification_type = serializers.ReadOnlyField(read_only=True)
-    prices = serializers.ListField(
-        child=serializers.DecimalField(max_digits=12, decimal_places=2),
-        read_only=True,
-    )
-    resource_prices = serializers.ReadOnlyField(
-        read_only=True,
-    )
-    runs = serializers.ReadOnlyField(read_only=True, allow_null=True)
-    delivery = serializers.ReadOnlyField(read_only=True)
     free = serializers.ReadOnlyField(read_only=True)
-    resource_category = serializers.ReadOnlyField(
-        read_only=True,
-    )
-    pace = serializers.ReadOnlyField(read_only=True)
     topics_display = serializers.SerializerMethodField()
     price_display = serializers.SerializerMethodField()
     certification_display = serializers.SerializerMethodField()
@@ -61,6 +41,13 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
     offered_by_display = serializers.SerializerMethodField()
     languages_display = serializers.SerializerMethodField()
     levels_display = serializers.SerializerMethodField()
+    departments_display = serializers.SerializerMethodField()
+
+    def get_departments_display(self, serialized_resource):
+        return ", ".join(
+            f"{department['name']} ({department['school']['name']})"
+            for department in serialized_resource.get("departments", [])
+        )
 
     def get_levels_display(self, serialized_resource):
         levels = []
@@ -134,6 +121,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         data = self.data
         display_sections = {
             "title": "Title",
+            "platform": "Platform",
+            "delivery": "Format",
+            "departments_display": "Departments",
             "description": "Description",
             "full_description": "Full Description",
             "topics_display": "Topics",
