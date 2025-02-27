@@ -238,22 +238,7 @@ def _process_content_embeddings(serialized_content):
                 "chunk_content": d.page_content,
                 **{
                     key: d.metadata[key]
-                    for key in [
-                        "run_title",
-                        "platform",
-                        "offered_by",
-                        "run_readable_id",
-                        "resource_readable_id",
-                        "content_type",
-                        "file_extension",
-                        "edx_block_id",
-                        "content_feature_type",
-                        "course_number",
-                        "file_type",
-                        "description",
-                        "key",
-                        "url",
-                    ]
+                    for key in QDRANT_CONTENT_FILE_PARAM_MAP
                     if key in d.metadata
                 },
             }
