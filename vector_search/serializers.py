@@ -26,6 +26,10 @@ from learning_resources_search.serializers import (
 
 
 class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
+    """
+    Serializer to render course information as a text document
+    """
+
     title = serializers.CharField(read_only=True)
     description = serializers.CharField(read_only=True)
     full_description = serializers.CharField(read_only=True)
