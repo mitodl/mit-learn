@@ -112,7 +112,12 @@ export const UNITS = "/units"
 
 export const CONTACT = "mailto:mitlearn-support@mit.edu"
 
-export const RESOURCE_DRAWER_QUERY_PARAM = "resource"
+export const RECOMMENDER_QUERY_PARAM = "recommender"
+
+export const RESOURCE_DRAWER_PARAMS = {
+  resource: "resource",
+  syllabus: "syllabus",
+} as const
 
 export const querifiedSearchUrl = (
   params:

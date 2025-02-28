@@ -18,7 +18,11 @@ describe("AiChatSyllabus", () => {
 
     setMockResponse.get(urls.userMe.get(), userMe)
     renderWithProviders(
-      <AiChatSyllabusSlideDown onToggleOpen={jest.fn()} resource={resource} />,
+      <AiChatSyllabusSlideDown
+        open
+        onToggleOpen={jest.fn()}
+        resource={resource}
+      />,
     )
 
     await user.click(
@@ -37,7 +41,11 @@ describe("AiChatSyllabus", () => {
 
     setMockResponse.get(urls.userMe.get(), {}, { code: 403 })
     renderWithProviders(
-      <AiChatSyllabusSlideDown onToggleOpen={jest.fn()} resource={resource} />,
+      <AiChatSyllabusSlideDown
+        open
+        onToggleOpen={jest.fn()}
+        resource={resource}
+      />,
     )
 
     const input = screen.getByRole("textbox")

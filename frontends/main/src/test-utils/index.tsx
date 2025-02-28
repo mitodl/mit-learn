@@ -1,7 +1,7 @@
 /* eslint-disable import/no-extraneous-dependencies */
 import React from "react"
 import { QueryClientProvider } from "@tanstack/react-query"
-import { ThemeProvider } from "@mitodl/smoot-design"
+import { ThemeProvider } from "ol-components"
 import { Provider as NiceModalProvider } from "@ebay/nice-modal-react"
 import type { QueryClient } from "@tanstack/react-query"
 
@@ -128,7 +128,7 @@ const expectProps = (
  */
 const expectLastProps = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  fc: jest.Mock<any, any>,
+  fc: (...args: any[]) => void,
   partialProps: unknown,
 ) => {
   expect(fc).toHaveBeenLastCalledWith(

@@ -1,9 +1,8 @@
 import React from "react"
 import styled from "@emotion/styled"
 import { css } from "@emotion/react"
-import { default as NextLink } from "next/link"
 import { theme } from "../ThemeProvider/ThemeProvider"
-import invariant from "tiny-invariant"
+import { LinkAdapter } from "../LinkAdapter/LinkAdapter"
 
 type LinkStyleProps = {
   size?: "small" | "medium" | "large"
@@ -19,6 +18,12 @@ const DEFAULT_PROPS: Required<LinkStyleProps> = {
   nohover: false,
 }
 
+const NO_FORWARD = Object.keys({
+  size: false,
+  color: false,
+  hovercolor: false,
+  nohover: false,
+} satisfies Record<keyof LinkStyleProps, boolean>)
 /**
  * Generate styles used for the Link component.
  *
@@ -73,38 +78,6 @@ type LinkProps = LinkStyleProps &
     prefetch?: boolean
   }
 
-const BaseLink = ({
-  href,
-  shallow,
-  nohover,
-  scroll,
-  onClick,
-  ...rest
-}: LinkProps) => {
-  if (process.env.NODE_ENV === "development") {
-    invariant(
-      !shallow || href?.startsWith("?"),
-      "Shallow routing should only be used to update search params",
-    )
-  }
-  return (
-    <NextLink
-      scroll={scroll}
-      href={href || ""}
-      {...rest}
-      onClick={
-        onClick ||
-        (shallow
-          ? (e) => {
-              e.preventDefault()
-              window.history.pushState({}, "", href)
-            }
-          : undefined)
-      }
-    />
-  )
-}
-
 /**
  * A styled link. By default, renders a medium-sized black link using the Link
  * component from `next/link`. This is appropriate for in-app routing.
@@ -114,7 +87,9 @@ const BaseLink = ({
  *
  * For a link styled as a button, use ButtonLink.
  */
-const Link = styled(BaseLink)<LinkStyleProps>(linkStyles)
+const Link = styled(LinkAdapter, {
+  shouldForwardProp: (propName) => !NO_FORWARD.includes(propName),
+})<LinkStyleProps>(linkStyles)
 
 export { Link, linkStyles }
 export type { LinkProps }
