@@ -32,10 +32,10 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
 
     title = serializers.CharField(read_only=True)
     description = serializers.CharField(read_only=True)
+    platform = serializers.ReadOnlyField(read_only=True)
+    offered_by = serializers.ReadOnlyField(read_only=True)
     full_description = serializers.CharField(read_only=True)
-    platform = serializers.CharField(source="platform.name")
     url = serializers.CharField(read_only=True)
-    offered_by = serializers.CharField(source="offered_by.name")
     departments = serializers.ReadOnlyField(
         read_only=True,
     )
@@ -49,12 +49,16 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
     languages_display = serializers.SerializerMethodField()
     levels_display = serializers.SerializerMethodField()
     departments_display = serializers.SerializerMethodField()
+    platform_display = serializers.SerializerMethodField()
 
     def get_departments_display(self, serialized_resource):
         return ", ".join(
             f"{department['name']} ({department['school']['name']})"
             for department in serialized_resource.get("departments", [])
         )
+
+    def get_platform_display(self, serialized_resource):
+        return serialized_resource["platform"]["name"]
 
     def get_levels_display(self, serialized_resource):
         levels = []
@@ -128,7 +132,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         data = self.data
         display_sections = {
             "title": "Title",
-            "platform": "Platform",
+            "platform_display": "Platform",
             "url": "Link",
             "delivery": "Format",
             "departments_display": "Departments",
