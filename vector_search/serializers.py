@@ -34,6 +34,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
     description = serializers.CharField(read_only=True)
     full_description = serializers.CharField(read_only=True)
     platform = serializers.CharField(source="platform.name")
+    url = serializers.CharField(read_only=True)
     offered_by = serializers.CharField(source="offered_by.name")
     departments = serializers.ReadOnlyField(
         read_only=True,
@@ -128,6 +129,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         display_sections = {
             "title": "Title",
             "platform": "Platform",
+            "url": "Link",
             "delivery": "Format",
             "departments_display": "Departments",
             "description": "Description",
