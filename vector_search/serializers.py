@@ -33,8 +33,8 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
     title = serializers.CharField(read_only=True)
     description = serializers.CharField(read_only=True)
     full_description = serializers.CharField(read_only=True)
-    platform = serializers.CharField(read_only=True)
-    offered_by = serializers.CharField(read_only=True)
+    platform = serializers.CharField(source="platform.name")
+    offered_by = serializers.CharField(source="offered_by.name")
     departments = serializers.ReadOnlyField(
         read_only=True,
     )
