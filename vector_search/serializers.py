@@ -33,6 +33,8 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
     title = serializers.CharField(read_only=True)
     description = serializers.CharField(read_only=True)
     full_description = serializers.CharField(read_only=True)
+    platform = serializers.CharField(read_only=True)
+    offered_by = serializers.CharField(read_only=True)
     departments = serializers.ReadOnlyField(
         read_only=True,
     )
@@ -148,6 +150,21 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
                 else:
                     rendered_info += f"{section_display} - {display_text}\n"
         return rendered_info
+
+    def get_metadata(self) -> dict:
+        return {
+            "chunk_number": 0,
+            "file_extension": ".md",
+            "file_type": "text/markdown",
+            "chunk_content": self.render_document(),
+            **{
+                key: self.data[key]
+                for key in [
+                    "platform",
+                    "offered_by",
+                ]
+            },
+        }
 
 
 class LearningResourcesVectorSearchRequestSerializer(serializers.Serializer):

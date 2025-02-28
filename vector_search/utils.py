@@ -228,27 +228,16 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
         readable_id = doc["readable_id"]
         resource_vector_point_id = str(vector_point_id(readable_id))
         ids.append(resource_vector_point_id)
-        course_info_document = LearningResourceMetadataDisplaySerializer(
-            doc
-        ).render_document()
+        serializer = LearningResourceMetadataDisplaySerializer(doc)
+        course_metadata = serializer.get_metadata()
         metadata.append(
             {
                 "resource_point_id": resource_vector_point_id,
                 "resource_readable_id": readable_id,
-                "chunk_number": 0,
-                "file_extension": ".md",
-                "file_type": "text/markdown",
-                "chunk_content": course_info_document,
-                **{
-                    key: doc[key]
-                    for key in [
-                        "platform",
-                        "offered_by",
-                    ]
-                },
+                **course_metadata,
             }
         )
-        docs.append(course_info_document)
+        docs.append(course_metadata["chunk_content"])
     if len(docs) > 0:
         embeddings = encoder.embed_documents(docs)
         points = points_generator(ids, metadata, embeddings, vector_name)
