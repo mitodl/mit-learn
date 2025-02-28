@@ -151,7 +151,7 @@ jobs:
 
       - name: Build the Docker image
         env:
-          ORIGIN: https://next.rc.learn.mit.edu
+          ORIGIN: https://rc.learn.mit.edu
           MITOL_API_BASE_URL: https://api.rc.learn.mit.edu
           SITE_NAME: MIT Learn
           SUPPORT_EMAIL: mitlearn-support@mit.edu

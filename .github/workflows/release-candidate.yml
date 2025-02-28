@@ -42,7 +42,7 @@ jobs:
         env:
           HEROKU_APP_NAME: mitopen-rc-nextjs
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
-          ORIGIN: https://next.rc.learn.mit.edu
+          ORIGIN: https://rc.learn.mit.edu
           MITOL_API_BASE_URL: https://api.rc.learn.mit.edu
           SITE_NAME: MIT Learn
           SUPPORT_EMAIL: mitlearn-support@mit.edu
