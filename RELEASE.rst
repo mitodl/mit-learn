@@ -1,6 +1,31 @@
 Release Notes
 =============
 
+Version 0.30.7
+--------------
+
+- remove an erroneous space (#2090)
+- remove next prefix from app origin (#2087)
+- fix: env based _JAVA_OPTIONS for opensearch container (#2082)
+- Add comma between build args (#2083)
+- Fix the user search URL (#2084)
+- Tie chatbots to URL parameters (#2076)
+- Add all Contentfile metadata to chunk responses (#2075)
+- Make embedding generation task use correct run (#2074)
+- add MITOL_LOGOUT_SUFFIX to github actions (#2079)
+- Fix user migrations for SCIM (#2078)
+- Fix SCIM view tests (#2073)
+- Accessibility improvements (#2071)
+- APISIX integration (#2061)
+- Added SCIM fields to User and populate (#2062)
+- Fix SCIM search API sort and pagination (#2066)
+- fix: Opensearch container on ARM64 based architecture (#2069)
+- Update dependency @dnd-kit/sortable to v10 (#1974)
+- Update akhileshns/heroku-deploy digest to e3eb99d (#2068)
+- Update dependency @sentry/nextjs to v9 (#2034)
+- Update dependency @mui/lab to v6.0.0-beta.28 (#2051)
+- Update dependency tldextract to v5 (#2031)
+
 Version 0.30.6 (Released February 26, 2025)
 --------------
 
