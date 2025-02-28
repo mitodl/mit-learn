@@ -433,9 +433,9 @@ def test_bulk_post(scim_client, bulk_test_data):
         ("email", None),
         ("email", "ascending"),
         ("email", "descending"),
-        ("username", None),
-        ("username", "ascending"),
-        ("username", "descending"),
+        ("userName", None),
+        ("userName", "ascending"),
+        ("userName", "descending"),
     ],
 )
 @pytest.mark.parametrize("count", [None, 100, 500])
@@ -447,7 +447,7 @@ def test_user_search(large_user_set, scim_client, sort_by, sort_order, count):
     expected = search_users
 
     effective_count = count or 50
-    effective_sort_by = sort_by or "id"
+    effective_sort_by = constants.SORT_MAPPING[sort_by or "id"]
     effective_sort_order = sort_order or "ascending"
 
     def _sort(user):
