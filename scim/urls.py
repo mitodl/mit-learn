@@ -7,7 +7,7 @@ from scim import views
 ol_scim_urls = (
     [
         re_path(r"^Bulk$", views.BulkView.as_view(), name="bulk"),
-        re_path(r"^\.search$", views.SearchView.as_view(), name="users-search"),
+        re_path(r"^Users/\.search$", views.SearchView.as_view(), name="users-search"),
     ],
     "ol-scim",
 )
