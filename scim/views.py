@@ -178,11 +178,13 @@ class SearchView(djs_views.UserSearchView):
         sort_order = body.get("sortOrder", "ascending")
         query = body.get("filter", None)
 
-        if sort_by is not None and sort_by not in ("id", "email", "username"):
-            msg = "Sorting only supports email or username"
+        if sort_by not in constants.VALID_SORTS:
+            msg = f"Sorting only supports: {', '.join(constants.VALID_SORTS)}"
             raise exceptions.BadRequestError(msg)
+        else:
+            sort_by = constants.SORT_MAPPING[sort_by]
 
-        if sort_order is not None and sort_order not in ("ascending", "descending"):
+        if sort_order not in ("ascending", "descending"):
             msg = "Sorting only supports ascending or descending"
             raise exceptions.BadRequestError(msg)
 
