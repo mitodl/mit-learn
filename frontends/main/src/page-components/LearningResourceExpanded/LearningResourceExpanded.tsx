@@ -4,7 +4,6 @@ import { theme } from "ol-components"
 import type { ImageConfig, LearningResourceCardProps } from "ol-components"
 import { ResourceTypeEnum } from "api"
 import type { LearningResource } from "api"
-import { useToggle } from "ol-utilities"
 import InfoSection from "./InfoSection"
 import type { User } from "api/hooks/user"
 import TitleSection from "./TitleSection"
@@ -13,6 +12,7 @@ import ResourceDescription from "./ResourceDescription"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import AiSyllabusBotSlideDown from "./AiChatSyllabusSlideDown"
+import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
 
 const DRAWER_WIDTH = "900px"
 
@@ -112,6 +112,7 @@ const TopCarouselContainer = styled.div({
 
 type LearningResourceExpandedProps = {
   resourceId: number
+  chatExpanded: boolean
   titleId?: string
   resource?: LearningResource
   user?: User
@@ -124,6 +125,25 @@ type LearningResourceExpandedProps = {
   onAddToLearningPathClick?: LearningResourceCardProps["onAddToLearningPathClick"]
   onAddToUserListClick?: LearningResourceCardProps["onAddToUserListClick"]
   closeDrawer?: () => void
+}
+
+const closeChat = () => {
+  const params = new URLSearchParams(window.location.search)
+  params.delete(RESOURCE_DRAWER_PARAMS.syllabus)
+  window.history.replaceState({}, "", `?${params.toString()}`)
+}
+const openChat = () => {
+  const params = new URLSearchParams(window.location.search)
+  params.set(RESOURCE_DRAWER_PARAMS.syllabus, "")
+  window.history.replaceState({}, "", `?${params.toString()}`)
+}
+const toggleChat = () => {
+  const params = new URLSearchParams(window.location.search)
+  if (params.has(RESOURCE_DRAWER_PARAMS.syllabus)) {
+    closeChat()
+  } else {
+    openChat()
+  }
 }
 
 const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
@@ -140,12 +160,18 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
   onAddToLearningPathClick,
   onAddToUserListClick,
   closeDrawer,
+  chatExpanded,
 }) => {
   const chatEnabled =
     useFeatureFlagEnabled(FeatureFlags.LrDrawerChatbot) &&
     resource?.resource_type === ResourceTypeEnum.Course
 
-  const [chatExpanded, setChatExpanded] = useToggle(false)
+  useEffect(() => {
+    // If URL indicates syllabus open, but it's not enabled, update URL
+    if (resource && !chatEnabled) {
+      closeChat()
+    }
+  }, [resource, chatEnabled])
 
   const outerContainerRef = useRef<HTMLDivElement>(null)
   const titleSectionRef = useRef<HTMLDivElement>(null)
@@ -186,7 +212,8 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
         <ChatLayer top={titleSectionHeight} chatExpanded={chatExpanded}>
           <AiSyllabusBotSlideDown
             resource={resource}
-            onToggleOpen={setChatExpanded}
+            open={chatExpanded}
+            onToggleOpen={toggleChat}
           />
         </ChatLayer>
       ) : null}

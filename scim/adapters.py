@@ -38,7 +38,7 @@ class LearnSCIMUser(SCIMUser):
 
     resource_type = "User"
 
-    id_field = "profile__scim_id"
+    id_field = "scim_id"
 
     ATTR_MAP = {
         ("active", None, None): "is_active",
@@ -66,7 +66,7 @@ class LearnSCIMUser(SCIMUser):
         """
         Return the SCIM id
         """
-        return self.obj.profile.scim_id
+        return self.obj.scim_id
 
     @property
     def emails(self):
@@ -89,10 +89,8 @@ class LearnSCIMUser(SCIMUser):
         """
         return {
             "resourceType": self.resource_type,
-            "created": self.obj.date_joined.isoformat(timespec="milliseconds"),
-            "lastModified": self.obj.profile.updated_at.isoformat(
-                timespec="milliseconds"
-            ),
+            "created": self.obj.created_on.isoformat(timespec="milliseconds"),
+            "lastModified": self.obj.updated_on.isoformat(timespec="milliseconds"),
             "location": self.location,
         }
 
@@ -103,7 +101,7 @@ class LearnSCIMUser(SCIMUser):
         """
         return {
             "id": self.id,
-            "externalId": self.obj.profile.scim_external_id,
+            "externalId": self.obj.scim_external_id,
             "schemas": [constants.SchemaURI.USER],
             "userName": self.obj.username,
             "name": {
@@ -135,10 +133,10 @@ class LearnSCIMUser(SCIMUser):
         self.obj.username = d.get("userName")
         self.obj.first_name = d.get("name", {}).get("givenName", "")
         self.obj.last_name = d.get("name", {}).get("familyName", "")
+        self.obj.scim_username = d.get("userName")
+        self.obj.scim_external_id = d.get("externalId")
 
         self.obj.profile = getattr(self.obj, "profile", Profile())
-        self.obj.profile.scim_username = d.get("userName")
-        self.obj.profile.scim_external_id = d.get("externalId")
         self.obj.profile.name = d.get("fullName", "")
         self.obj.profile.email_optin = d.get("emailOptIn", 1) == 1
 
@@ -179,7 +177,7 @@ class LearnSCIMUser(SCIMUser):
             return
 
         if path.first_path == ("externalId", None, None):
-            self.obj.profile.scim_external_id = value
+            self.obj.scim_external_id = value
             self.obj.save()
 
     def parse_scim_for_keycloak_payload(self, payload: str) -> dict:

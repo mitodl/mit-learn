@@ -72,6 +72,10 @@ repos:
           - yarn.lock
           - --exclude-files
           - ".*/generated/"
+          - --exclude-files
+          - "config/keycloak/tls/*"
+          - --exclude-files
+          - "config/keycloak/realms/default-realm.json"
         additional_dependencies: ["gibberish-detector"]
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: "v0.9.4"

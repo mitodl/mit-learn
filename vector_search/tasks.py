@@ -105,7 +105,9 @@ def start_embed_resources(self, indexes, skip_content_files, overwrite):
                     .order_by("id")
                 ):
                     run = (
-                        course.runs.filter(published=True)
+                        course.next_run
+                        if course.next_run
+                        else course.runs.filter(published=True)
                         .order_by("-start_date")
                         .first()
                     )
@@ -193,7 +195,9 @@ def embed_learning_resources_by_id(self, ids, skip_content_files, overwrite):
                     etl_source__in=RESOURCE_FILE_ETL_SOURCES
                 ).order_by("id"):
                     run = (
-                        course.runs.filter(published=True)
+                        course.next_run
+                        if course.next_run
+                        else course.runs.filter(published=True)
                         .order_by("-start_date")
                         .first()
                     )

@@ -1,0 +1,11 @@
+apisix:
+  enable_admin: false
+  enable_dev_mode: false
+  node_listen:
+    - port: ${{APISIX_PORT}}
+
+deployment:
+  role: data_plane
+  role_data_plane:
+    config_provider: yaml
+#END

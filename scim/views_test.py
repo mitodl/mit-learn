@@ -28,9 +28,17 @@ def scim_client(staff_user):
     return client
 
 
+@pytest.fixture(scope="module")
+def large_user_set(django_db_setup, django_db_blocker):
+    """Large set of users"""
+    # per https://pytest-django.readthedocs.io/en/latest/database.html#populate-the-test-database-if-you-don-t-use-transactional-or-live-server
+    with django_db_blocker.unblock():
+        yield UserFactory.create_batch(1100)
+
+
 def test_scim_user_post(scim_client):
     """Test that we can create a user via SCIM API"""
-    user_q = User.objects.filter(profile__scim_external_id="1")
+    user_q = User.objects.filter(scim_external_id="1")
     assert not user_q.exists()
 
     resp = scim_client.post(
@@ -71,7 +79,7 @@ def test_scim_user_put(scim_client):
     user = UserFactory.create()
 
     resp = scim_client.put(
-        f"{reverse('scim:users')}/{user.profile.scim_id}",
+        f"{reverse('scim:users')}/{user.scim_id}",
         content_type="application/scim+json",
         data=json.dumps(
             {
@@ -107,7 +115,7 @@ def test_scim_user_patch(scim_client):
     user = UserFactory.create()
 
     resp = scim_client.patch(
-        f"{reverse('scim:users')}/{user.profile.scim_id}",
+        f"{reverse('scim:users')}/{user.scim_id}",
         content_type="application/scim+json",
         data=json.dumps(
             {
@@ -208,7 +216,7 @@ def _put_operation(user, data, bulk_id_gen):
         payload={
             "method": "put",
             "bulkId": bulk_id,
-            "path": f"/Users/{user.profile.scim_id}",
+            "path": f"/Users/{user.scim_id}",
             "data": _user_to_scim_payload(data),
         },
         user=user,
@@ -218,7 +226,7 @@ def _put_operation(user, data, bulk_id_gen):
             "location": ANY_STR,
             "bulkId": bulk_id,
             "status": "200",
-            "id": str(user.profile.scim_id),
+            "id": str(user.scim_id),
         },
     )
 
@@ -241,7 +249,7 @@ def _patch_operation(user, data, fields_to_patch, bulk_id_gen):
         payload={
             "method": "patch",
             "bulkId": bulk_id,
-            "path": f"/Users/{user.profile.scim_id}",
+            "path": f"/Users/{user.scim_id}",
             "data": {
                 "schemas": [djs_constants.SchemaURI.PATCH_OP],
                 "Operations": [
@@ -268,7 +276,7 @@ def _patch_operation(user, data, fields_to_patch, bulk_id_gen):
             "location": ANY_STR,
             "bulkId": bulk_id,
             "status": "200",
-            "id": str(user.profile.scim_id),
+            "id": str(user.scim_id),
         },
     )
 
@@ -280,7 +288,7 @@ def _delete_operation(user, bulk_id_gen):
         payload={
             "method": "delete",
             "bulkId": bulk_id,
-            "path": f"/Users/{user.profile.scim_id}",
+            "path": f"/Users/{user.scim_id}",
         },
         user=user,
         expected_user_state=None,
@@ -419,6 +427,9 @@ def test_bulk_post(scim_client, bulk_test_data):
     ("sort_by", "sort_order"),
     [
         (None, None),
+        ("id", None),
+        ("id", "ascending"),
+        ("id", "descending"),
         ("email", None),
         ("email", "ascending"),
         ("email", "descending"),
@@ -428,24 +439,28 @@ def test_bulk_post(scim_client, bulk_test_data):
     ],
 )
 @pytest.mark.parametrize("count", [None, 100, 500])
-def test_user_search(scim_client, sort_by, sort_order, count):
+def test_user_search(large_user_set, scim_client, sort_by, sort_order, count):
     """Test the user search endpoint"""
-    large_user_set = UserFactory.create_batch(1100)
     search_users = large_user_set[:1000]
     emails = [user.email for user in search_users]
 
     expected = search_users
 
     effective_count = count or 50
+    effective_sort_by = sort_by or "id"
     effective_sort_order = sort_order or "ascending"
 
-    if sort_by is not None:
-        expected = sorted(
-            expected,
-            # postgres sort is case-insensitive
-            key=lambda user: getattr(user, sort_by).lower(),
-            reverse=effective_sort_order == "descending",
-        )
+    def _sort(user):
+        value = getattr(user, effective_sort_by)
+
+        # postgres sort is case-insensitive
+        return value.lower() if isinstance(value, str) else value
+
+    expected = sorted(
+        expected,
+        key=_sort,
+        reverse=effective_sort_order == "descending",
+    )
 
     for page in range(int(len(emails) / effective_count)):
         start_index = page * effective_count  # zero based index
@@ -474,23 +489,23 @@ def test_user_search(scim_client, sort_by, sort_order, count):
             "schemas": [djs_constants.SchemaURI.LIST_RESPONSE],
             "Resources": [
                 {
-                    "id": user.profile.scim_id,
+                    "id": user.scim_id,
                     "active": user.is_active,
                     "userName": user.username,
                     "displayName": user.profile.name,
                     "emails": [{"value": user.email, "primary": True}],
-                    "externalId": str(user.profile.scim_external_id),
+                    "externalId": str(user.scim_external_id),
                     "name": {
                         "givenName": user.first_name,
                         "familyName": user.last_name,
                     },
                     "meta": {
                         "resourceType": "User",
-                        "location": f"https://localhost/scim/v2/Users/{user.profile.scim_id}",
-                        "lastModified": user.profile.updated_at.isoformat(
+                        "location": f"https://localhost/scim/v2/Users/{user.scim_id}",
+                        "lastModified": user.updated_on.isoformat(
                             timespec="milliseconds"
                         ),
-                        "created": user.date_joined.isoformat(timespec="milliseconds"),
+                        "created": user.created_on.isoformat(timespec="milliseconds"),
                     },
                     "groups": [],
                     "schemas": [djs_constants.SchemaURI.USER],

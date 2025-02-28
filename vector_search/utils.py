@@ -6,8 +6,11 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_experimental.text_splitter import SemanticChunker
 from qdrant_client import QdrantClient, models
 
-from learning_resources.models import LearningResource
-from learning_resources.serializers import LearningResourceSerializer
+from learning_resources.models import ContentFile, LearningResource
+from learning_resources.serializers import (
+    ContentFileSerializer,
+    LearningResourceSerializer,
+)
 from learning_resources_search.constants import CONTENT_FILE_TYPE
 from learning_resources_search.serializers import (
     serialize_bulk_content_files,
@@ -268,21 +271,8 @@ def _process_content_embeddings(serialized_content):
                 "chunk_content": d.page_content,
                 **{
                     key: d.metadata[key]
-                    for key in [
-                        "run_title",
-                        "platform",
-                        "offered_by",
-                        "run_readable_id",
-                        "resource_readable_id",
-                        "content_type",
-                        "file_extension",
-                        "content_feature_type",
-                        "course_number",
-                        "file_type",
-                        "description",
-                        "key",
-                        "url",
-                    ]
+                    for key in QDRANT_CONTENT_FILE_PARAM_MAP
+                    if key in d.metadata
                 },
             }
             for chunk_id, d in enumerate(split_docs)
@@ -403,7 +393,31 @@ def _resource_vector_hits(search_result):
 
 
 def _content_file_vector_hits(search_result):
-    return [hit.payload for hit in search_result]
+    run_readable_ids = [hit.payload["run_readable_id"] for hit in search_result]
+    keys = [hit.payload["key"] for hit in search_result]
+
+    serialized_content_files = ContentFileSerializer(
+        ContentFile.objects.for_serialization().filter(
+            run__run_id__in=run_readable_ids, key__in=keys
+        ),
+        many=True,
+    ).data
+    results = []
+    contentfiles_dict = {}
+    [
+        contentfiles_dict.update({(cf["run_readable_id"], cf["key"]): cf})
+        for cf in serialized_content_files
+    ]
+    results = []
+    for hit in search_result:
+        payload = hit.payload
+        serialized = contentfiles_dict.get((payload["run_readable_id"], payload["key"]))
+        if serialized:
+            if "content" in serialized:
+                serialized.pop("content")
+            payload.update(serialized)
+            results.append(payload)
+    return results
 
 
 def vector_search(
