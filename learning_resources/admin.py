@@ -51,6 +51,12 @@ class LearningResourcePlatformAdmin(admin.ModelAdmin):
     search_fields = ("platform",)
 
 
+class ContentFileAdmin(admin.ModelAdmin):
+    """Platform Admin"""
+
+    model = models.ContentFile
+
+
 class LearningResourceOfferorAdmin(admin.ModelAdmin):
     """Offeror Admin"""
 
@@ -228,6 +234,19 @@ class VideoChannelAdmin(admin.ModelAdmin):
     inlines = (VideoPlaylistInline,)
 
 
+class ContentSummarizerConfigAdmin(admin.ModelAdmin):
+    """ContentSummarizerConfig Admin"""
+
+    model = models.ContentSummarizerConfig
+    list_display = (
+        "llm_model",
+        "platform",
+        "allowed_content_types",
+        "allowed_extensions",
+        "is_active",
+    )
+
+
 admin.site.register(models.LearningResourceTopic, LearningResourceTopicAdmin)
 admin.site.register(models.LearningResourceInstructor, LearningResourceInstructorAdmin)
 admin.site.register(models.LearningResource, LearningResourceAdmin)
@@ -239,3 +258,5 @@ admin.site.register(models.LearningResourceViewEvent, LearningResourceViewEventA
 admin.site.register(models.LearningResourceContentTag, LearningResourceContentTagAdmin)
 admin.site.register(models.UserList, UserListAdmin)
 admin.site.register(models.VideoChannel, VideoChannelAdmin)
+admin.site.register(models.ContentFile, ContentFileAdmin)
+admin.site.register(models.ContentSummarizerConfig, ContentSummarizerConfigAdmin)
