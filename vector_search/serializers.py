@@ -145,7 +145,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             "price_display": "Cost",
             "certification_display": "Certification",
             "instructors_display": "Instructors",
-            "runs_display": "Runs",
+            "runs_display": "Course Schedule (Runs and Sessions)",
             "offered_by_display": "Offered By",
             "languages_display": "Languages",
             "levels_display": "Levels",
@@ -169,6 +169,11 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
 
     def render_chunks(self):
         rendered_doc = self.render_document()
+        """
+        We cant use tiktoken for token size calculation so
+        we use a rough calculation of 4*chunk_size characters:
+        https://help.openai.com/en/articles/4936856-what-are-tokens-and-how-to-count-them
+        """
         chunk_size = (
             settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
             if settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE

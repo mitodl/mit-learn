@@ -244,7 +244,9 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
             for chunk_id, chunk_content in enumerate(split_texts)
         ]
         split_ids = [
-            vector_point_id(f"{doc['readable_id']}.{md['chunk_number']}")
+            vector_point_id(
+                f"{doc['readable_id']}.course_information.{md['chunk_number']}"
+            )
             for md in split_metadatas
         ]
         metadata.extend(split_metadatas)
