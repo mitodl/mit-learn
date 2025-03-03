@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo } from "react"
+import React, { useCallback, useEffect, useMemo, useRef } from "react"
 import Drawer from "@mui/material/Drawer"
 import styled from "@emotion/styled"
 import type { DrawerProps } from "@mui/material/Drawer"
@@ -25,6 +25,7 @@ type RoutedDrawerProps<K extends string = string, R extends K = K> = {
   children: (childProps: {
     params: ChildParams<K, R>
     closeDrawer: () => void
+    drawerRef: React.RefObject<HTMLDivElement>
   }) => React.ReactNode
 } & Omit<DrawerProps, "open" | "onClose" | "children">
 
@@ -33,6 +34,7 @@ const RoutedDrawer = <K extends string, R extends K = K>(
 ) => {
   const { requiredParams, children, onView, hideCloseButton, ...others } = props
   const { params = requiredParams } = props
+  const ref = useRef<HTMLDivElement>(null)
 
   const [open, setOpen] = useToggle(false)
   const searchParams = useSearchParams()
@@ -98,6 +100,7 @@ const RoutedDrawer = <K extends string, R extends K = K>(
       role="dialog"
       aria-modal="true"
       {...others}
+      ref={ref}
     >
       {
         <>
@@ -105,6 +108,7 @@ const RoutedDrawer = <K extends string, R extends K = K>(
             children?.({
               params: childParams as Record<K, string>,
               closeDrawer: setOpen.off,
+              drawerRef: ref,
             })}
           {!hideCloseButton && (
             <CloseButton

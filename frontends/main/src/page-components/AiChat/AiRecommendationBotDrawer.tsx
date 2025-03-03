@@ -10,6 +10,7 @@ const CloseButton = styled(ActionButton)(({ theme }) => ({
   position: "absolute",
   top: "24px",
   right: "40px",
+  zIndex: 2,
   backgroundColor: theme.custom.colors.lightGray2,
   "&&:hover": {
     backgroundColor: theme.custom.colors.red,

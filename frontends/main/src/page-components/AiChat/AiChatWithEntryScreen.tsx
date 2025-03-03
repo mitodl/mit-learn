@@ -6,26 +6,32 @@ import { RiSparkling2Line, RiSendPlaneFill } from "@remixicon/react"
 import { Input } from "@mitodl/smoot-design"
 import Image from "next/image"
 import timLogo from "@/public/images/icons/tim.svg"
+import { useScrollSnap } from "./useScrollSnap"
 
 const Container = styled.div(({ theme }) => ({
   width: "900px",
-  height: "100%",
   [theme.breakpoints.down("md")]: {
     width: "100%",
   },
 }))
 
-const EntryScreen = styled.div(({ theme }) => ({
+const EntryScreen = styled.div<{ top: number }>(({ theme, top }) => ({
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
-  justifyContent: "center",
   gap: "16px",
-  padding: "136px 40px 24px 40px",
+  padding: "114px 40px 24px 40px",
   [theme.breakpoints.down("md")]: {
-    padding: "136px 24px 24px 24px",
+    padding: "114px 24px 24px 24px",
     width: "100%",
   },
+  position: "absolute",
+  zIndex: 1,
+  background: "white",
+  bottom: 0,
+  top,
+  left: 0,
+  right: 0,
 }))
 
 const TimLogoBox = styled.div(({ theme }) => ({
@@ -55,16 +61,9 @@ const StyledInput = styled(Input)(({ theme }) => ({
   borderRadius: "8px",
   border: `1px solid ${theme.custom.colors.lightGray2}`,
   margin: "8px 0 24px 0",
-  "&&&:hover": {
-    borderColor: theme.custom.colors.silverGrayDark,
-  },
+  flexShrink: 0,
   "button:disabled": {
     backgroundColor: "inherit",
-  },
-  [theme.breakpoints.down("sm")]: {
-    ".Mit-AdornmentButton": {
-      padding: 0,
-    },
   },
 }))
 
@@ -106,12 +105,30 @@ const Starter = styled.button(({ theme }) => ({
   },
 }))
 
-const ChatScreen = styled.div(({ theme }) => ({
-  padding: "16px 40px 24px",
-  height: "100%",
+const ChatScreen = styled.div<{ top: number }>(({ theme, top }) => ({
+  padding: "16px 40px 0",
   [theme.breakpoints.down("md")]: {
-    padding: "16px 24px 16px",
+    padding: "16px 24px 0",
     width: "100%",
+  },
+  background: "white",
+  position: "absolute",
+  bottom: 0,
+  top,
+  left: 0,
+  right: 0,
+  zIndex: 1,
+}))
+
+const StyledAiChat = styled(AiChat)(({ theme }) => ({
+  ".MitAiChat--messagesContainer": {
+    overflow: "visible",
+  },
+  ".MitAiChat--bottomSection": {
+    position: "sticky",
+    background: theme.custom.colors.white,
+    bottom: 0,
+    paddingBottom: "14px",
   },
 }))
 
@@ -124,6 +141,9 @@ const AiChatWithEntryScreen = ({
   onClose,
   chatScreenClassName,
   className,
+  scrollElement,
+  topPosition = 0,
+  ref,
 }: {
   entryTitle: string
   starters: AiChatProps["conversationStarters"]
@@ -133,12 +153,16 @@ const AiChatWithEntryScreen = ({
   onClose?: () => void
   className?: string
   chatScreenClassName?: string
+  scrollElement?: HTMLElement | null
+  topPosition?: number
+  ref?: React.Ref<HTMLDivElement>
 }) => {
   const [initialPrompt, setInitialPrompt] = useState("")
   const [showEntryScreen, setShowEntryScreen] = useState(true)
   const aiChatRef = useRef<{
     append: (message: Omit<AiChatMessage, "id">) => void
   }>(null)
+  const chatScreenRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!initialPrompt || showEntryScreen) return
@@ -156,6 +180,16 @@ const AiChatWithEntryScreen = ({
     }
   }, [initialPrompt, showEntryScreen])
 
+  useScrollSnap({
+    scrollElement:
+      (scrollElement as HTMLElement) ||
+      chatScreenRef.current?.closest(".MuiDrawer-paper"),
+    contentElement: chatScreenRef.current?.querySelector(
+      ".MitAiChat--messagesContainer",
+    ),
+    threshold: 200,
+  })
+
   const onPromptChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInitialPrompt(e.target.value)
   }
@@ -171,9 +205,9 @@ const AiChatWithEntryScreen = ({
   }
 
   return (
-    <Container className={className}>
+    <Container className={className} ref={ref}>
       {showEntryScreen ? (
-        <EntryScreen>
+        <EntryScreen top={topPosition}>
           <TimLogoBox>
             <RiSparkling2Line />
             <TimLogo src={timLogo.src} alt="" width={40} height={40} />
@@ -216,8 +250,10 @@ const AiChatWithEntryScreen = ({
         <ChatScreen
           className={chatScreenClassName}
           data-testid="ai-chat-screen"
+          top={topPosition}
+          ref={chatScreenRef}
         >
-          <AiChat
+          <StyledAiChat
             askTimTitle={askTimTitle}
             conversationStarters={starters}
             initialMessages={initialMessages}

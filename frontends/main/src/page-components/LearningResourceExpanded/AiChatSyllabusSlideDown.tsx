@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useRef, useEffect } from "react"
 import { Typography, styled } from "ol-components"
 import { Button } from "@mitodl/smoot-design"
 import {
@@ -13,19 +13,17 @@ import type { User } from "api/hooks/user"
 import AiChatWithEntryScreen from "../AiChat/AiChatWithEntryScreen"
 import { getCsrfToken } from "@/common/utils"
 
-const Container = styled.div()
-
 const SlideDown = styled.div<{ open: boolean }>(({ theme, open }) => ({
   position: "absolute",
-  top: open ? "0" : "-100%",
+  top: open ? 0 : "-100%",
   width: "100%",
   height: "100%",
+
   backgroundColor: theme.custom.colors.white,
   transition: "top 0.3s ease-in-out",
 }))
 
 const Opener = styled.div(({ theme }) => ({
-  position: "relative",
   ":after": {
     content: "''",
     width: "100%",
@@ -87,6 +85,9 @@ const CloseButton = styled(RiCloseLine)(({ theme }) => ({
 }))
 
 const StyledAiChatWithEntryScreen = styled(AiChatWithEntryScreen)({
+  // ".MitAiChat--root": {
+  //   height: "auto",
+  // },
   ".MitAiChat--messagesContainer": {
     marginTop: "14px",
   },
@@ -113,61 +114,106 @@ const getInitialMessage = (
   ]
 }
 
+export const AiChatSyllabusOpener = ({
+  open,
+  onToggleOpen,
+  className,
+}: {
+  open: boolean
+  onToggleOpen: (open: boolean) => void
+  className?: string
+}) => {
+  return (
+    <Opener className={className}>
+      <StyledButton
+        variant="bordered"
+        edge="rounded"
+        open={open}
+        onClick={() => onToggleOpen(!open)}
+      >
+        <RiSparkling2Line />
+        <Typography variant="body1">
+          Ask<strong>TIM</strong> about this course
+        </Typography>
+        {open ? <CloseButton /> : <OpenChevron />}
+      </StyledButton>
+    </Opener>
+  )
+}
+
 const AiChatSyllabusSlideDown = ({
   resource,
-  onToggleOpen,
+  open,
+  onTransitionEnd,
+  // contentWindowHeight,
+  scrollElement,
+  contentTopPosition,
 }: {
   resource?: LearningResource
-  onToggleOpen: (open: boolean) => void
+  open: boolean
+  onTransitionEnd: () => void
+  // contentWindowHeight: number
+  scrollElement: HTMLElement | null
+  contentTopPosition: number
 }) => {
-  const [open, setOpen] = useState(false)
   const user = useUserMe()
+  const ref = useRef<HTMLDivElement>(null)
+  // const chatRef = useRef<HTMLDivElement>(null)
+  // const [fullyCollapsed, setFullyCollapsed] = useState(false)
 
-  const toggleOpen = () => {
-    setOpen(!open)
-    onToggleOpen(!open)
-  }
+  useEffect(() => {
+    const element = ref.current
+    if (!element) return
+
+    // if (!open) {
+    //   setFullyCollapsed(false)
+    // }
+
+    // const onTransitionEnd = () => {
+    //   if (open) {
+    //     onFullyExpanded()
+    //   } else {
+    //     setFullyCollapsed(true)
+    //   }
+    // }
+
+    element.addEventListener("transitionend", onTransitionEnd)
+    return () => {
+      element.removeEventListener("transitionend", onTransitionEnd)
+    }
+  }, [open])
 
   if (!resource) return null
 
   return (
-    <Container>
-      <Opener>
-        <StyledButton
-          variant="bordered"
-          edge="rounded"
-          open={open}
-          onClick={toggleOpen}
-        >
-          <RiSparkling2Line />
-          <Typography variant="body1">
-            Ask<strong>TIM</strong> about this course
-          </Typography>
-          {open ? <CloseButton /> : <OpenChevron />}
-        </StyledButton>
-      </Opener>
-      <SlideDown open={open} inert={!open}>
-        <StyledAiChatWithEntryScreen
-          entryTitle="What do you want to know about this course?"
-          starters={STARTERS}
-          initialMessages={getInitialMessage(resource, user.data)}
-          requestOpts={{
-            apiUrl: process.env.NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT!,
-            fetchOpts: {
-              headers: {
-                "X-CSRFToken": getCsrfToken(),
-              },
-              credentials: "include",
+    <SlideDown open={open} inert={!open} ref={ref}>
+      {/* <ScrollSnap element={scrollElement}> */}
+      {/* {fullyCollapsed && !open ? null : ( */}
+      <StyledAiChatWithEntryScreen
+        entryTitle="What do you want to know about this course?"
+        starters={STARTERS}
+        initialMessages={getInitialMessage(resource, user.data)}
+        topPosition={contentTopPosition}
+        // ref={chatRef}
+        scrollElement={scrollElement}
+        requestOpts={{
+          apiUrl: process.env.NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT!,
+          fetchOpts: {
+            headers: {
+              "X-CSRFToken": getCsrfToken(),
             },
-            transformBody: (messages) => ({
-              collection_name: "content_files",
-              message: messages[messages.length - 1].content,
-              course_id: resource.readable_id,
-            }),
-          }}
-        />
-      </SlideDown>
-    </Container>
+            credentials: "include",
+          },
+          transformBody: (messages) => ({
+            collection_name: "content_files",
+            message: messages[messages.length - 1].content,
+            course_id: resource.readable_id,
+          }),
+        }}
+      />
+      {/* </ScrollSnap> */}
+      {/* )} */}
+    </SlideDown>
   )
 }
 

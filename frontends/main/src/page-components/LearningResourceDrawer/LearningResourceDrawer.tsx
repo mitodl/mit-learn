@@ -54,7 +54,8 @@ const DrawerContent: React.FC<{
   resourceId: number
   titleId: string
   closeDrawer: () => void
-}> = ({ resourceId, closeDrawer, titleId }) => {
+  drawerRef: React.RefObject<HTMLDivElement>
+}> = ({ resourceId, closeDrawer, titleId, drawerRef }) => {
   /**
    * Ideally the resource data should already exist in the query cache, e.g., by:
    * - a server-side prefetch
@@ -214,6 +215,7 @@ const DrawerContent: React.FC<{
         onAddToLearningPathClick={handleAddToLearningPathClick}
         onAddToUserListClick={handleAddToUserListClick}
         closeDrawer={closeDrawer}
+        drawerRef={drawerRef}
       />
       <SignupPopover anchorEl={signupEl} onClose={() => setSignupEl(null)} />
     </>
@@ -249,12 +251,13 @@ const LearningResourceDrawer = () => {
         hideCloseButton={true}
         aria-labelledby={id}
       >
-        {({ params, closeDrawer }) => {
+        {({ params, closeDrawer, drawerRef }) => {
           return (
             <DrawerContent
               titleId={id}
               resourceId={Number(params.resource)}
               closeDrawer={closeDrawer}
+              drawerRef={drawerRef}
             />
           )
         }}
