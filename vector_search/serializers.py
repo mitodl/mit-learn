@@ -1,8 +1,11 @@
 import datetime
+import json
 
 from dateutil import parser as date_parser
+from django.conf import settings
 from drf_spectacular.plumbing import build_choice_description_list
 from drf_spectacular.utils import extend_schema_field
+from langchain_text_splitters import RecursiveJsonSplitter
 from rest_framework import serializers
 
 from learning_resources.constants import (
@@ -154,6 +157,32 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             if display_text:
                 rendered_data[section_display] = display_text
         return rendered_data
+
+    def _json_to_text_document(
+        self, json_text, document_prefix="Information about this course:"
+    ):
+        """Render a (serialized) json fragment as plain text"""
+        rendered_info = f"{document_prefix}\n"
+        for section, section_value in json.loads(json_text).items():
+            rendered_info += f"{section} -\n{section_value}\n"
+        return rendered_info
+
+    def render_chunks(self):
+        rendered_doc = self.render_document()
+        chunk_size = (
+            settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
+            if settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
+            else 512
+        )
+        return [
+            self._json_to_text_document(json_fragment)
+            for json_fragment in RecursiveJsonSplitter(
+                max_chunk_size=chunk_size * 4
+            ).split_text(
+                json_data=rendered_doc,
+                convert_lists=True,
+            )
+        ]
 
 
 class LearningResourcesVectorSearchRequestSerializer(serializers.Serializer):

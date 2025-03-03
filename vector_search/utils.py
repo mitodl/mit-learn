@@ -1,11 +1,9 @@
-import json
 import logging
 import uuid
 
 from django.conf import settings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_experimental.text_splitter import SemanticChunker
-from langchain_text_splitters import RecursiveJsonSplitter
 from qdrant_client import QdrantClient, models
 
 from learning_resources.models import ContentFile, LearningResource
@@ -219,13 +217,6 @@ def _process_resource_embeddings(serialized_resources):
     return None
 
 
-def _json_to_text_document(json_text, document_prefix="Information about this course:"):
-    rendered_info = f"{document_prefix}\n"
-    for section, section_value in json.loads(json_text).items():
-        rendered_info += f"{section} -\n{section_value}\n"
-    return rendered_info
-
-
 def _embed_course_metadata_as_contentfile(serialized_resources):
     """
     Embed general course info as a document in the contentfile collection
@@ -240,21 +231,7 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
         readable_id = doc["readable_id"]
         resource_vector_point_id = str(vector_point_id(readable_id))
         serializer = LearningResourceMetadataDisplaySerializer(doc)
-        rendered_doc = serializer.render_document()
-        chunk_size = (
-            settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
-            if settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
-            else 512
-        )
-        split_texts = [
-            _json_to_text_document(json_fragment)
-            for json_fragment in RecursiveJsonSplitter(
-                max_chunk_size=chunk_size * 4
-            ).split_text(
-                json_data=rendered_doc,
-                convert_lists=True,
-            )
-        ]
+        split_texts = serializer.render_chunks()
         split_metadatas = [
             {
                 "resource_point_id": str(resource_vector_point_id),
