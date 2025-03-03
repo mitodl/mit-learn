@@ -152,11 +152,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         for section, section_display in display_sections.items():
             display_text = data.get(section)
             if display_text:
-                if len(display_text.strip().split("\n")) > 1:
-                    value_text = f"{section_display} -\n{display_text}\n"
-                else:
-                    value_text = f"{section_display} - {display_text}\n"
-            rendered_data[section_display] = value_text
+                rendered_data[section_display] = display_text
         return rendered_data
 
 
