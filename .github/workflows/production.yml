@@ -62,7 +62,7 @@ jobs:
           LEARN_AI_SYLLABUS_ENDPOINT: ${{ secrets.LEARN_AI_SYLLABUS_ENDPOINT_PROD }}
           VERSION: ${{ github.sha }}
           MITOL_API_LOGOUT_SUFFIX: ${{ secrets.MITOL_API_LOGOUT_SUFFIX_PROD }}
-        run: |
+        run: | # NOTE: The --args must be comma separated and NOT have spaces
           heroku container:push web \
           --app $HEROKU_APP_NAME \
           --recursive \
