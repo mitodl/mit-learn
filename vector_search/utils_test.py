@@ -57,6 +57,9 @@ def test_vector_point_id_used_for_embed(mocker, content_type):
 
     if content_type == "learning_resource":
         point_ids = [vector_point_id(resource.readable_id) for resource in resources]
+        assert sorted(
+            [p.id for p in mock_qdrant.upload_points.mock_calls[1].kwargs["points"]]
+        ) == sorted(point_ids)
     else:
         point_ids = [
             vector_point_id(
@@ -64,9 +67,9 @@ def test_vector_point_id_used_for_embed(mocker, content_type):
             )
             for resource in serialize_bulk_content_files([r.id for r in resources])
         ]
-    assert sorted(
-        [p.id for p in mock_qdrant.upload_points.mock_calls[0].kwargs["points"]]
-    ) == sorted(point_ids)
+        assert sorted(
+            [p.id for p in mock_qdrant.upload_points.mock_calls[0].kwargs["points"]]
+        ) == sorted(point_ids)
 
 
 @pytest.mark.parametrize("content_type", ["learning_resource", "content_file"])

@@ -1,9 +1,11 @@
+import json
 import logging
 import uuid
 
 from django.conf import settings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_experimental.text_splitter import SemanticChunker
+from langchain_text_splitters import RecursiveJsonSplitter
 from qdrant_client import QdrantClient, models
 
 from learning_resources.models import ContentFile, LearningResource
@@ -217,6 +219,13 @@ def _process_resource_embeddings(serialized_resources):
     return None
 
 
+def _json_to_text_document(json_text, document_prefix="Information about this course:"):
+    rendered_info = f"{document_prefix}\n"
+    for section, section_value in json.loads(json_text).items():
+        rendered_info += f"{section} -\n{section_value}\n"
+    return rendered_info
+
+
 def _embed_course_metadata_as_contentfile(serialized_resources):
     """
     Embed general course info as a document in the contentfile collection
@@ -230,17 +239,40 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
     for doc in serialized_resources:
         readable_id = doc["readable_id"]
         resource_vector_point_id = str(vector_point_id(readable_id))
-        ids.append(resource_vector_point_id)
         serializer = LearningResourceMetadataDisplaySerializer(doc)
-        course_metadata = serializer.get_metadata()
-        metadata.append(
-            {
-                "resource_point_id": resource_vector_point_id,
-                "resource_readable_id": readable_id,
-                **course_metadata,
-            }
+        rendered_doc = serializer.render_document()
+        chunk_size = (
+            settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
+            if settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
+            else 512
         )
-        docs.append(course_metadata["chunk_content"])
+        split_texts = [
+            _json_to_text_document(json_fragment)
+            for json_fragment in RecursiveJsonSplitter(
+                max_chunk_size=chunk_size * 4
+            ).split_text(
+                json_data=rendered_doc,
+                convert_lists=True,
+            )
+        ]
+        split_metadatas = [
+            {
+                "resource_point_id": str(resource_vector_point_id),
+                "chunk_number": chunk_id,
+                "chunk_content": chunk_content,
+                "resource_readable_id": doc["readable_id"],
+                "file_extension": ".txt",
+                **{key: doc[key] for key in ["offered_by", "platform"]},
+            }
+            for chunk_id, chunk_content in enumerate(split_texts)
+        ]
+        split_ids = [
+            vector_point_id(f"{doc['readable_id']}.{md['chunk_number']}")
+            for md in split_metadatas
+        ]
+        metadata.extend(split_metadatas)
+        docs.extend(split_texts)
+        ids.extend(split_ids)
     if len(docs) > 0:
         embeddings = encoder.embed_documents(docs)
         points = points_generator(ids, metadata, embeddings, vector_name)
@@ -393,8 +425,8 @@ def _resource_vector_hits(search_result):
 
 
 def _content_file_vector_hits(search_result):
-    run_readable_ids = [hit.payload["run_readable_id"] for hit in search_result]
-    keys = [hit.payload["key"] for hit in search_result]
+    run_readable_ids = [hit.payload.get("run_readable_id") for hit in search_result]
+    keys = [hit.payload.get("key") for hit in search_result]
 
     serialized_content_files = ContentFileSerializer(
         ContentFile.objects.for_serialization().filter(
@@ -411,12 +443,14 @@ def _content_file_vector_hits(search_result):
     results = []
     for hit in search_result:
         payload = hit.payload
-        serialized = contentfiles_dict.get((payload["run_readable_id"], payload["key"]))
+        serialized = contentfiles_dict.get(
+            (payload.get("run_readable_id"), payload.get("key"))
+        )
         if serialized:
             if "content" in serialized:
                 serialized.pop("content")
             payload.update(serialized)
-            results.append(payload)
+        results.append(payload)
     return results
 
 

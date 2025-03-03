@@ -147,30 +147,17 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             "languages_display": "Languages",
             "levels_display": "Levels",
         }
-        rendered_info = "Information about this course:\n"
+        rendered_data = {}
+
         for section, section_display in display_sections.items():
             display_text = data.get(section)
             if display_text:
                 if len(display_text.strip().split("\n")) > 1:
-                    rendered_info += f"{section_display} -\n{display_text}\n"
+                    value_text = f"{section_display} -\n{display_text}\n"
                 else:
-                    rendered_info += f"{section_display} - {display_text}\n"
-        return rendered_info
-
-    def get_metadata(self) -> dict:
-        return {
-            "chunk_number": 0,
-            "file_extension": ".md",
-            "file_type": "text/markdown",
-            "chunk_content": self.render_document(),
-            **{
-                key: self.data[key]
-                for key in [
-                    "platform",
-                    "offered_by",
-                ]
-            },
-        }
+                    value_text = f"{section_display} - {display_text}\n"
+            rendered_data[section_display] = value_text
+        return rendered_data
 
 
 class LearningResourcesVectorSearchRequestSerializer(serializers.Serializer):
