@@ -471,10 +471,12 @@ def test_user_search(large_user_set, scim_client, sort_by, sort_order, count):
                 {
                     "schemas": [djs_constants.SchemaURI.SERACH_REQUEST],
                     "filter": " OR ".join([f'email EQ "{email}"' for email in emails]),
-                    "startIndex": start_index + 1,  # SCIM API is 1-based index
+                    # SCIM API is 1-based index
+                    # Additionally, scim-for-keycloak sends this as a string, but spec examples have ints
+                    "startIndex": str(start_index + 1),
                     **({"sortBy": sort_by} if sort_by is not None else {}),
                     **({"sortOrder": sort_order} if sort_order is not None else {}),
-                    **({"count": count} if count is not None else {}),
+                    **({"count": str(count)} if count is not None else {}),
                 }
             ),
         )

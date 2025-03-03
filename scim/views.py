@@ -172,8 +172,9 @@ class SearchView(djs_views.UserSearchView):
             msg = "Invalid schema uri. Must be SearchRequest."
             raise exceptions.BadRequestError(msg)
 
-        start = body.get("startIndex", 1)
-        count = body.get("count", 50)
+        # cast to ints because scim-for-keycloak sends strings
+        start = int(body.get("startIndex", 1))
+        count = int(body.get("count", 50))
         sort_by = body.get("sortBy", "id")
         sort_order = body.get("sortOrder", "ascending")
         query = body.get("filter", None)
