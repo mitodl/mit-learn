@@ -54,9 +54,10 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 const MITOL_API_BASE_URL = process.env.NEXT_PUBLIC_MITOL_API_BASE_URL
+const MITOL_API_LOGOUT_SUFFIX = process.env.NEXT_PUBLIC_MITOL_API_LOGOUT_SUFFIX
 
 export const LOGIN = `${MITOL_API_BASE_URL}/login/ol-oidc/`
-export const LOGOUT = `${MITOL_API_BASE_URL}/logout/`
+export const LOGOUT = `${MITOL_API_BASE_URL}/${MITOL_API_LOGOUT_SUFFIX}/`
 
 /**
  * Returns the URL to the login page, with a `next` parameter to redirect back
@@ -111,7 +112,12 @@ export const UNITS = "/units"
 
 export const CONTACT = "mailto:mitlearn-support@mit.edu"
 
-export const RESOURCE_DRAWER_QUERY_PARAM = "resource"
+export const RECOMMENDER_QUERY_PARAM = "recommender"
+
+export const RESOURCE_DRAWER_PARAMS = {
+  resource: "resource",
+  syllabus: "syllabus",
+} as const
 
 export const querifiedSearchUrl = (
   params:

@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React from "react"
 import { Typography, styled } from "ol-components"
 import { Button } from "@mitodl/smoot-design"
 import {
@@ -116,17 +116,13 @@ const getInitialMessage = (
 const AiChatSyllabusSlideDown = ({
   resource,
   onToggleOpen,
+  open,
 }: {
   resource?: LearningResource
+  open: boolean
   onToggleOpen: (open: boolean) => void
 }) => {
-  const [open, setOpen] = useState(false)
   const user = useUserMe()
-
-  const toggleOpen = () => {
-    setOpen(!open)
-    onToggleOpen(!open)
-  }
 
   if (!resource) return null
 
@@ -136,8 +132,9 @@ const AiChatSyllabusSlideDown = ({
         <StyledButton
           variant="bordered"
           edge="rounded"
+          aria-pressed={open}
           open={open}
-          onClick={toggleOpen}
+          onClick={() => onToggleOpen(open)}
         >
           <RiSparkling2Line />
           <Typography variant="body1">
@@ -157,6 +154,7 @@ const AiChatSyllabusSlideDown = ({
               headers: {
                 "X-CSRFToken": getCsrfToken(),
               },
+              credentials: "include",
             },
             transformBody: (messages) => ({
               collection_name: "content_files",

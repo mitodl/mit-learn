@@ -28,7 +28,7 @@ jobs:
         run: heroku container:login
 
       - name: Release Backend on Heroku
-        uses: akhileshns/heroku-deploy@c3187cbbeceea824a6f5d9e0e14e2995a611059c
+        uses: akhileshns/heroku-deploy@e3eb99d45a8e2ec5dca08735e089607befa4bf28
         with:
           heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
           heroku_app_name: mitopen-production
@@ -61,7 +61,8 @@ jobs:
           LEARN_AI_RECOMMENDATION_ENDPOINT: ${{ secrets.LEARN_AI_RECOMMENDATION_ENDPOINT_PROD }}
           LEARN_AI_SYLLABUS_ENDPOINT: ${{ secrets.LEARN_AI_SYLLABUS_ENDPOINT_PROD }}
           VERSION: ${{ github.sha }}
-        run: |
+          MITOL_API_LOGOUT_SUFFIX: ${{ secrets.MITOL_API_LOGOUT_SUFFIX_PROD }}
+        run: | # NOTE: The --args must be comma separated and NOT have spaces
           heroku container:push web \
           --app $HEROKU_APP_NAME \
           --recursive \
@@ -83,7 +84,8 @@ jobs:
           NEXT_PUBLIC_APPZI_URL=$APPZI_URL,\
           NEXT_PUBLIC_LEARN_AI_RECOMMENDATION_ENDPOINT=$LEARN_AI_RECOMMENDATION_ENDPOINT,\
           NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT=$LEARN_AI_SYLLABUS_ENDPOINT,\
-          NEXT_PUBLIC_VERSION=$VERSION \
+          NEXT_PUBLIC_VERSION=$VERSION,\
+          NEXT_PUBLIC_MITOL_API_LOGOUT_SUFFIX=$MITOL_API_LOGOUT_SUFFIX \
           --context-path .
 
       - name: Release Frontend on Heroku

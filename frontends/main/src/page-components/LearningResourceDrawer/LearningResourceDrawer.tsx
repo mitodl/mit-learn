@@ -7,7 +7,7 @@ import type {
 } from "ol-components"
 import { useLearningResourcesDetail } from "api/hooks/learningResources"
 
-import { RESOURCE_DRAWER_QUERY_PARAM } from "@/common/urls"
+import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
 import { useUserMe } from "api/hooks/user"
 import NiceModal from "@ebay/nice-modal-react"
 import {
@@ -23,7 +23,11 @@ import { TopicCarouselConfig } from "@/common/carousels"
 import { ResourceTypeEnum } from "api"
 import { PostHogEvents } from "@/common/constants"
 
-const RESOURCE_DRAWER_PARAMS = [RESOURCE_DRAWER_QUERY_PARAM] as const
+const REQUIRED_PARAMS = [RESOURCE_DRAWER_PARAMS.resource] as const
+const ALL_PARAMS = [
+  RESOURCE_DRAWER_PARAMS.resource,
+  RESOURCE_DRAWER_PARAMS.syllabus,
+] as const
 
 const useCapturePageView = (resourceId: number) => {
   const { data, isSuccess } = useLearningResourcesDetail(Number(resourceId))
@@ -54,7 +58,8 @@ const DrawerContent: React.FC<{
   resourceId: number
   titleId: string
   closeDrawer: () => void
-}> = ({ resourceId, closeDrawer, titleId }) => {
+  chatExpanded: boolean
+}> = ({ resourceId, closeDrawer, titleId, chatExpanded }) => {
   /**
    * Ideally the resource data should already exist in the query cache, e.g., by:
    * - a server-side prefetch
@@ -207,8 +212,9 @@ const DrawerContent: React.FC<{
         resource={resource.data}
         topCarousels={topCarousels}
         bottomCarousels={bottomCarousels}
+        chatExpanded={chatExpanded}
         user={user}
-        shareUrl={`${window.location.origin}/search?${RESOURCE_DRAWER_QUERY_PARAM}=${resourceId}`}
+        shareUrl={`${window.location.origin}/search?${RESOURCE_DRAWER_PARAMS.resource}=${resourceId}`}
         inLearningPath={inLearningPath}
         inUserList={inUserList}
         onAddToLearningPathClick={handleAddToLearningPathClick}
@@ -244,7 +250,8 @@ const LearningResourceDrawer = () => {
     <Suspense>
       <RoutedDrawer
         anchor="right"
-        requiredParams={RESOURCE_DRAWER_PARAMS}
+        requiredParams={REQUIRED_PARAMS}
+        params={ALL_PARAMS}
         PaperProps={PAPER_PROPS}
         hideCloseButton={true}
         aria-labelledby={id}
@@ -252,8 +259,9 @@ const LearningResourceDrawer = () => {
         {({ params, closeDrawer }) => {
           return (
             <DrawerContent
+              chatExpanded={params[RESOURCE_DRAWER_PARAMS.syllabus] !== null}
               titleId={id}
-              resourceId={Number(params.resource)}
+              resourceId={Number(params[RESOURCE_DRAWER_PARAMS.resource])}
               closeDrawer={closeDrawer}
             />
           )

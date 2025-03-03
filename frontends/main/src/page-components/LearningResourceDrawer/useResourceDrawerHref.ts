@@ -1,5 +1,5 @@
 import { useCallback } from "react"
-import { RESOURCE_DRAWER_QUERY_PARAM } from "@/common/urls"
+import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
 import { ReadonlyURLSearchParams, useSearchParams } from "next/navigation"
 
 const getOpenDrawerSearchParams = (
@@ -7,7 +7,7 @@ const getOpenDrawerSearchParams = (
   resourceId: number,
 ) => {
   const newSearchParams = new URLSearchParams(current)
-  newSearchParams.set(RESOURCE_DRAWER_QUERY_PARAM, resourceId.toString())
+  newSearchParams.set(RESOURCE_DRAWER_PARAMS.resource, resourceId.toString())
   return newSearchParams
 }
 

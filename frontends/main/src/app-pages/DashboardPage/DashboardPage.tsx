@@ -171,6 +171,10 @@ const TabsContainer = styled(TabList)(({ theme }) => ({
   a: {
     padding: "0",
     opacity: "1",
+
+    "&:focus-visible": {
+      outlineOffset: "-1px",
+    },
   },
   "&:hover": {
     a: {

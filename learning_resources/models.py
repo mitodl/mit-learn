@@ -838,13 +838,21 @@ class ContentFileQuerySet(TimestampedModelQuerySet):
         return self.select_related("run").prefetch_related(
             "content_tags",
             "run__learning_resource",
+            "run__learning_resource__course",
+            "run__learning_resource__platform",
             Prefetch(
                 "run__learning_resource__topics",
                 queryset=LearningResourceTopic.objects.for_serialization(),
             ),
             Prefetch(
+                "run__learning_resource__offered_by",
+                queryset=LearningResourceOfferor.objects.for_serialization(),
+            ),
+            Prefetch(
                 "run__learning_resource__departments",
-                queryset=LearningResourceDepartment.objects.for_serialization(),
+                queryset=LearningResourceDepartment.objects.for_serialization(
+                    prefetch_school=True
+                ).select_related("school"),
             ),
         )
 

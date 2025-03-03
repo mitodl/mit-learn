@@ -1,19 +1,21 @@
 import React from "react"
 import {
+  expectLastProps,
   expectProps,
   renderWithProviders,
   screen,
+  user,
   waitFor,
   within,
 } from "@/test-utils"
 import LearningResourceDrawer from "./LearningResourceDrawer"
 import { urls, factories, setMockResponse } from "api/test-utils"
 import { LearningResourceExpanded } from "../LearningResourceExpanded/LearningResourceExpanded"
-import { RESOURCE_DRAWER_QUERY_PARAM } from "@/common/urls"
+import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
 import { LearningResource, ResourceTypeEnum } from "api"
 import { makeUserSettings } from "@/test-utils/factories"
 import type { User } from "api/hooks/user"
-import { usePostHog } from "posthog-js/react"
+import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 
 jest.mock("../LearningResourceExpanded/LearningResourceExpanded", () => {
   const actual = jest.requireActual(
@@ -31,6 +33,9 @@ jest.mocked(usePostHog).mockReturnValue(
   // @ts-expect-error Not mocking all of posthog
   { capture: mockedPostHogCapture },
 )
+const mockedUseFeatureFlagEnabled = jest
+  .mocked(useFeatureFlagEnabled)
+  .mockImplementation(() => false)
 
 describe("LearningResourceDrawer", () => {
   const setupApis = (
@@ -94,7 +99,7 @@ describe("LearningResourceDrawer", () => {
         : ""
 
       renderWithProviders(<LearningResourceDrawer />, {
-        url: `?dog=woof&${RESOURCE_DRAWER_QUERY_PARAM}=${resource.id}`,
+        url: `?dog=woof&${RESOURCE_DRAWER_PARAMS.resource}=${resource.id}`,
       })
       expect(LearningResourceExpanded).toHaveBeenCalled()
       await waitFor(() => {
@@ -219,5 +224,81 @@ describe("LearningResourceDrawer", () => {
     await screen.findAllByText((text) =>
       similarResources.some((r) => text.includes(r.title)),
     )
+  })
+
+  it.each([
+    { extraQueryParams: "", expectChat: false },
+    {
+      extraQueryParams: `&${RESOURCE_DRAWER_PARAMS.syllabus}`,
+      expectChat: true,
+    },
+  ])(
+    "Renders drawer with chatExpanded based on URL",
+    async ({ extraQueryParams, expectChat }) => {
+      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+      const { resource } = setupApis({
+        resource: {
+          // Chat is only enabled for courses
+          resource_type: ResourceTypeEnum.Course,
+        },
+      })
+      renderWithProviders(<LearningResourceDrawer />, {
+        url: `?resource=${resource.id}${extraQueryParams}`,
+      })
+
+      await screen.findByText(resource.title)
+
+      await waitFor(() => {
+        expectLastProps(LearningResourceExpanded, {
+          resource,
+          chatExpanded: expectChat,
+        })
+      })
+    },
+  )
+
+  test("If chat is not supported, 'syllabus' param removed from URL", async () => {
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    const { resource } = setupApis({
+      resource: {
+        // Chat is only enabled for courses; NOT enabled here
+        resource_type: ResourceTypeEnum.Program,
+      },
+    })
+    const { location } = renderWithProviders(<LearningResourceDrawer />, {
+      url: `?resource=${resource.id}&syllabus`,
+    })
+
+    expect(location.current.searchParams.has("syllabus")).toBe(true)
+
+    await waitFor(() => {
+      expectLastProps(LearningResourceExpanded, {
+        resource,
+        chatExpanded: false,
+      })
+    })
+    expect(location.current.searchParams.has("syllabus")).toBe(false)
+  })
+
+  test("Clicking 'Ask Tim' toggles chat query param", async () => {
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    const { resource } = setupApis({
+      resource: {
+        // Chat is only enabled for courses
+        resource_type: ResourceTypeEnum.Course,
+      },
+    })
+    const { location } = renderWithProviders(<LearningResourceDrawer />, {
+      url: `?resource=${resource.id}`,
+    })
+
+    const askTimButton = await screen.findByRole("button", { name: /Ask\sTIM/ })
+    expect(askTimButton).toBeInTheDocument()
+
+    expect(location.current.searchParams.has("syllabus")).toBe(false)
+    await user.click(askTimButton)
+    expect(location.current.searchParams.has("syllabus")).toBe(true)
+    await user.click(askTimButton)
+    expect(location.current.searchParams.has("syllabus")).toBe(false)
   })
 })

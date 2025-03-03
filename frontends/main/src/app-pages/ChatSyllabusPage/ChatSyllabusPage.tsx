@@ -110,6 +110,7 @@ const ChatSyllabusPage = () => {
                 headers: {
                   "X-CSRFToken": getCsrfToken(),
                 },
+                credentials: "include",
               },
               transformBody: (messages) => ({
                 message: messages[messages.length - 1].content,

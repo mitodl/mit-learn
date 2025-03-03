@@ -855,6 +855,14 @@ paths:
             minLength: 1
         description: Course number of the content file
       - in: query
+        name: edx_block_id
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        description: The edx_block_id of the content file
+      - in: query
         name: file_extension
         schema:
           type: array

@@ -41,6 +41,7 @@ const setup = (props: SetupProps, opts?: SetupOpts) => {
   setMockResponse.get(urls.userMe.get(), user)
   const allProps: LearningResourceExpandedProps = {
     user: user,
+    chatExpanded: false,
     shareUrl: `https://learn.mit.edu/search?resource=${resourceId}`,
     imgConfig: IMG_CONFIG,
     ...props,
@@ -388,16 +389,15 @@ describe.each([true, false])(
         resource_type: ResourceTypeEnum.PodcastEpisode,
       })
 
-      const { rerender } = setup({ resource: course1 })
+      const { rerender } = setup({
+        resource: course1,
+        chatExpanded: true,
+      })
       await user.click(
         screen.getByRole("button", { name: "Ask TIM about this course" }),
       )
 
-      const input = screen.getByRole("textbox")
-      expect(input).toBeInTheDocument()
-      await user.type(input, "tell me more{enter}")
-
-      const dataTestId = "ai-chat-screen"
+      const dataTestId = "ai-chat-entry-screen"
       expect(screen.getByTestId(dataTestId)).toBeInTheDocument()
       rerender({ resource: course2 })
       expect(screen.getByTestId(dataTestId)).toBeInTheDocument()
@@ -406,5 +406,28 @@ describe.each([true, false])(
         expect(screen.queryByTestId(dataTestId)).toBe(null)
       })
     })
+
+    test.each([
+      { chatExpanded: false, expectChat: false },
+      { chatExpanded: true, expectChat: true },
+    ])(
+      "When `chatExpanded=true`, chat button is pressed and interactive",
+      ({ chatExpanded, expectChat }) => {
+        if (!enabled) return
+        const resource = factories.learningResources.resource({
+          resource_type: ResourceTypeEnum.Course,
+        })
+        setup({ resource, chatExpanded })
+
+        screen.getByRole("button", {
+          name: /Ask\sTIM/,
+          pressed: chatExpanded,
+        })
+
+        // AiChat is always in the dom, but it's hidden and inert when not expanded.
+        const aiChat = screen.getByTestId("ai-chat-entry-screen")
+        expect(!!aiChat.closest("[inert]")).toBe(!expectChat)
+      },
+    )
   },
 )

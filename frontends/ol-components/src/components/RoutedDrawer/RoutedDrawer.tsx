@@ -28,6 +28,13 @@ type RoutedDrawerProps<K extends string = string, R extends K = K> = {
   }) => React.ReactNode
 } & Omit<DrawerProps, "open" | "onClose" | "children">
 
+/**
+ * Drawer that opens & closes based on the presence of required URL params.
+ *
+ * This is particularly useful when the drawer content depends on the URL
+ * parameters: the drawer handles removing the URL params *after* its closing
+ * animation.
+ */
 const RoutedDrawer = <K extends string, R extends K = K>(
   props: RoutedDrawerProps<K, R>,
 ) => {

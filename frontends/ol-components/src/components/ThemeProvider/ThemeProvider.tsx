@@ -5,12 +5,20 @@ import {
 } from "@mitodl/smoot-design"
 import type {} from "@mitodl/smoot-design/type-augmentation"
 import type {} from "@mui/lab/themeAugmentation"
-import Link from "next/link"
 import Image from "next/image"
+import { LinkAdapter } from "../LinkAdapter/LinkAdapter"
+import type { LinkAdapterExtraProps } from "../LinkAdapter/LinkAdapter"
+
+declare module "@mitodl/smoot-design" {
+  // Add extra props to smoot-design's LinkAdapter
+  // See https://mitodl.github.io/smoot-design/?path=/docs/smoot-design-themeprovider--docs
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+  interface LinkAdapterPropsOverrides extends LinkAdapterExtraProps {}
+}
 
 const theme = createTheme({
   custom: {
-    LinkAdapter: Link,
+    LinkAdapter,
     ImgAdapter: Image,
   },
   components: {

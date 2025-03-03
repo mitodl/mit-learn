@@ -64,6 +64,11 @@ const Container = styled.div`
   && input[type="checkbox"] {
     margin: 0;
     margin-right: 4px;
+
+    /* Help avoid focus outline from being cutoff  */
+    :focus-visible {
+      outline-offset: -1px;
+    }
   }
 
   ${containerStyles}
