@@ -890,7 +890,7 @@ class ContentFile(TimestampedModel):
     file_extension = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
     edx_block_id = models.CharField(max_length=1024, null=True, blank=True)  # noqa: DJ001
     summary = models.TextField(null=True, blank=True)  # noqa: DJ001
-    flashcards = models.JSONField(null=True, blank=True, default=dict)
+    flashcards = models.JSONField(null=True, blank=True, default=list)
 
     class Meta:
         unique_together = (("key", "run"),)
@@ -1125,12 +1125,14 @@ class LearningResourceViewEvent(TimestampedModel):
         )
 
 
-class ContentSummarizerConfig(TimestampedModel):
+class ContentSummarizerConfiguration(TimestampedModel):
     """Stores configuration for content summarizer"""
 
     llm_model = models.CharField(max_length=128, verbose_name="LLM Model")
     platform = models.OneToOneField(
-        LearningResourcePlatform, on_delete=models.PROTECT, name="platform"
+        LearningResourcePlatform,
+        on_delete=models.PROTECT,
+        related_name="summarizer_config",
     )
     allowed_content_types = ArrayField(
         models.CharField(

@@ -6,6 +6,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_experimental.text_splitter import SemanticChunker
 from qdrant_client import QdrantClient, models
 
+from learning_resources.content_summarizer import ContentSummarizer
 from learning_resources.models import LearningResource
 from learning_resources.serializers import LearningResourceSerializer
 from learning_resources_search.constants import CONTENT_FILE_TYPE
@@ -249,6 +250,8 @@ def _process_content_embeddings(serialized_content):
                         "description",
                         "key",
                         "url",
+                        "summary",
+                        "flashcards",
                     ]
                 },
             }
@@ -331,6 +334,9 @@ def embed_learning_resources(ids, resource_type, overwrite):
         collection_name = RESOURCES_COLLECTION_NAME
         points = _process_resource_embeddings(serialized_resources)
     else:
+        # Process content files summaries/flashcards before serialization if applicable
+        ContentSummarizer().process_content_files_by_ids(ids)
+
         serialized_resources = list(serialize_bulk_content_files(ids))
         collection_name = CONTENT_FILES_COLLECTION_NAME
         points = [

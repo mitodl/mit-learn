@@ -234,10 +234,10 @@ class VideoChannelAdmin(admin.ModelAdmin):
     inlines = (VideoPlaylistInline,)
 
 
-class ContentSummarizerConfigAdmin(admin.ModelAdmin):
-    """ContentSummarizerConfig Admin"""
+class ContentSummarizerConfigurationAdmin(admin.ModelAdmin):
+    """ContentSummarizerConfiguration Admin"""
 
-    model = models.ContentSummarizerConfig
+    model = models.ContentSummarizerConfiguration
     list_display = (
         "llm_model",
         "platform",
@@ -259,4 +259,6 @@ admin.site.register(models.LearningResourceContentTag, LearningResourceContentTa
 admin.site.register(models.UserList, UserListAdmin)
 admin.site.register(models.VideoChannel, VideoChannelAdmin)
 admin.site.register(models.ContentFile, ContentFileAdmin)
-admin.site.register(models.ContentSummarizerConfig, ContentSummarizerConfigAdmin)
+admin.site.register(
+    models.ContentSummarizerConfiguration, ContentSummarizerConfigurationAdmin
+)
