@@ -179,7 +179,7 @@ def _process_resource_embeddings(serialized_resources):
             f"{doc.get('title')} {doc.get('description')} {doc.get('full_description')}"
         )
     if len(docs) > 0:
-        embeddings = encoder.embed_documents(docs)
+        embeddings = embeddings_for_documents(docs, encoder)
         return points_generator(ids, metadata, embeddings, vector_name)
     return None
 
@@ -251,6 +251,23 @@ def chunk_text_documents(encoder, texts, metadatas):
     return recursive_splitter.create_documents(texts=texts, metadatas=metadatas)
 
 
+def embeddings_for_documents(split_texts, encoder):
+    split_embeddings = []
+    """
+    Break up requests according to chunk size to stay under openai limits
+    600,000 tokens per request
+    max array size: 2048
+    see: https://platform.openai.com/docs/guides/rate-limits
+    """
+    request_chunk_size = int(
+        600000 / settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
+    )
+    for i in range(0, len(split_texts), request_chunk_size):
+        split_chunk = split_texts[i : i + request_chunk_size]
+        split_embeddings.extend(list(encoder.embed_documents(split_chunk)))
+    return split_embeddings
+
+
 def _process_content_embeddings(serialized_content):
     embeddings = []
     metadata = []
@@ -286,19 +303,7 @@ def _process_content_embeddings(serialized_content):
             )
             for md in split_metadatas
         ]
-        split_embeddings = []
-        """
-        Break up requests according to chunk size to stay under openai limits
-        600,000 tokens per request
-        max array size: 2048
-        see: https://platform.openai.com/docs/guides/rate-limits
-        """
-        request_chunk_size = int(
-            600000 / settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
-        )
-        for i in range(0, len(split_texts), request_chunk_size):
-            split_chunk = split_texts[i : i + request_chunk_size]
-            split_embeddings.extend(list(encoder.embed_documents(split_chunk)))
+        split_embeddings = embeddings_for_documents(split_texts, encoder)
         if len(split_embeddings) > 0:
             resource_points.append(
                 models.PointVectors(
