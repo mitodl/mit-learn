@@ -172,9 +172,10 @@ def test_parse_dates():
 @pytest.mark.parametrize("has_metadata", [True, False])
 @pytest.mark.parametrize("matching_checksum", [True, False])
 @pytest.mark.parametrize("overwrite", [True, False])
+@pytest.mark.parametrize("folder", ["folder", "static"])
 @pytest.mark.parametrize("tika_content", ["tika'ed text", ""])
-def test_transform_content_files(
-    mocker, has_metadata, matching_checksum, overwrite, tika_content
+def test_transform_content_files(  # noqa: PLR0913
+    mocker, folder, has_metadata, matching_checksum, overwrite, tika_content
 ):
     """transform_content_files"""
     run = LearningResourceRunFactory.create(published=True)
@@ -206,7 +207,7 @@ def test_transform_content_files(
                     "content_type": content_type,
                     "checksum": checksum,
                     "file_extension": file_extension,
-                    "source_path": f"root/folder/{key}",
+                    "source_path": f"root/{folder}/{key}",
                 },
             )
         ],
@@ -224,6 +225,16 @@ def test_transform_content_files(
             overwrite=overwrite,
         )
     )
+
+    if folder == "static":
+        edx_module_id = (
+            f"asset-v1:{run.run_id.replace('course-v1:', '')}+type@asset+block@key"
+        )
+    else:
+        edx_module_id = (
+            f"block-v1:{run.run_id.replace('course-v1:', '')}+type@folder+block@key"
+        )
+
     if tika_content or (matching_checksum and not overwrite):
         assert content == [
             {
@@ -240,8 +251,8 @@ def test_transform_content_files(
                 "content_type": content_type,
                 "checksum": checksum,
                 "file_extension": file_extension,
-                "source_path": f"root/folder/{key}",
-                "edx_block_id": f"block-v1:{run.run_id.replace('course-v1:', '')}+type@folder+block@key",
+                "source_path": f"root/{folder}/{key}",
+                "edx_module_id": edx_module_id,
             }
         ]
     else:

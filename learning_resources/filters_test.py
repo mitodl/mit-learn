@@ -90,7 +90,7 @@ def mock_content_files():
                         offered_by=LearningResourceOfferorFactory.create(code=offeror),
                     )
                 ),
-                edx_block_id=f"block_{platform}"
+                edx_module_id=f"block_{platform}"
                 if platform != PlatformType.ocw.name
                 else None,
             ),
@@ -575,21 +575,23 @@ def test_content_file_filter_resource_id(mock_content_files, client):
     )
 
 
-def test_content_file_filter_edx_block_id(mock_content_files, client):
+def test_content_file_filter_edx_module_id(mock_content_files, client):
     """Test that the resource_id filter works for contentfiles"""
-    assert mock_content_files[0].edx_block_id is None
-    assert mock_content_files[1].edx_block_id == "block_xpro"
-    assert mock_content_files[2].edx_block_id == "block_mitxonline"
+    assert mock_content_files[0].edx_module_id is None
+    assert mock_content_files[1].edx_module_id == "block_xpro"
+    assert mock_content_files[2].edx_module_id == "block_mitxonline"
 
-    results = client.get(f"{CONTENT_API_URL}?edx_block_id=block_xpro").json()["results"]
+    results = client.get(f"{CONTENT_API_URL}?edx_module_id=block_xpro").json()[
+        "results"
+    ]
     assert len(results) == 1
-    assert results[0]["edx_block_id"] == "block_xpro"
+    assert results[0]["edx_module_id"] == "block_xpro"
 
     results = client.get(
-        f"{CONTENT_API_URL}?edx_block_id=block_mitxonline&edx_block_id=block_xpro"
+        f"{CONTENT_API_URL}?edx_module_id=block_mitxonline&edx_module_id=block_xpro"
     ).json()["results"]
     assert len(results) == 2
-    assert sorted([result["edx_block_id"] for result in results]) == [
+    assert sorted([result["edx_module_id"] for result in results]) == [
         "block_mitxonline",
         "block_xpro",
     ]

@@ -346,7 +346,7 @@ def documents_from_olx(
                 )
 
 
-def get_edx_block_id(path: str, run: LearningResourceRun) -> str:
+def get_edx_module_id(path: str, run: LearningResourceRun) -> str:
     """
     Return the XBlock ID from a path
 
@@ -357,9 +357,17 @@ def get_edx_block_id(path: str, run: LearningResourceRun) -> str:
         str: The XBlock ID
     """
     name = Path(path).stem
-    module_type = path.split("/")[-2]
+    folder = path.split("/")[-2]
+
+    if folder == "static":
+        key_type = "asset-v1"
+        module_type = "asset"
+    else:
+        key_type = "block-v1"
+        module_type = folder
+
     return (
-        f"block-v1:{run.run_id.replace('course-v1:', '')}"
+        f"{key_type}:{run.run_id.replace('course-v1:', '')}"
         f"+type@{module_type}+block@{name}"
     )
 
@@ -421,7 +429,7 @@ def transform_content_files(
             mime_type = metadata.get("mime_type")
             file_extension = metadata.get("file_extension")
             source_path = metadata.get("source_path")
-            edx_block_id = get_edx_block_id(source_path, run)
+            edx_module_id = get_edx_module_id(source_path, run)
 
             existing_content = ContentFile.objects.filter(key=key, run=run).first()
             if (
@@ -473,7 +481,7 @@ def transform_content_files(
                     "checksum": metadata.get("checksum"),
                     "file_extension": file_extension,
                     "source_path": source_path,
-                    "edx_block_id": edx_block_id,
+                    "edx_module_id": edx_module_id,
                     **content_dict,
                 }
             )
