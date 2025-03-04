@@ -231,14 +231,14 @@ def test_embedded_content_from_next_run(mocker, mocked_celery):
     mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
 
     course = CourseFactory.create(etl_source=ETLSource.ocw.value)
-
+    course.runs.all().delete()
     other_run = LearningResourceRunFactory.create(
         learning_resource=course.learning_resource,
         created_on=datetime.datetime.now(tz=datetime.UTC) - datetime.timedelta(days=2),
     )
     LearningResourceRunFactory.create(
         learning_resource=course.learning_resource,
-        created_on=datetime.datetime.now(tz=datetime.UTC),
+        created_on=datetime.datetime.now(tz=datetime.UTC) + datetime.timedelta(days=2),
     )
 
     next_run_contentfiles = [

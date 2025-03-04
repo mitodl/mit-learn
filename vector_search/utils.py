@@ -26,6 +26,7 @@ from vector_search.constants import (
     RESOURCES_COLLECTION_NAME,
 )
 from vector_search.encoders.utils import dense_encoder
+from vector_search.serializers import LearningResourceMetadataDisplaySerializer
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +79,6 @@ def create_qdrant_collections(force_recreate):
     client = qdrant_client()
     resources_collection_name = RESOURCES_COLLECTION_NAME
     content_files_collection_name = CONTENT_FILES_COLLECTION_NAME
-
     encoder = dense_encoder()
     if (
         not client.collection_exists(collection_name=resources_collection_name)
@@ -268,7 +268,51 @@ def embeddings_for_documents(split_texts, encoder):
     return split_embeddings
 
 
+def _embed_course_metadata_as_contentfile(serialized_resources):
+    """
+    Embed general course info as a document in the contentfile collection
+    """
+    client = qdrant_client()
+    encoder = dense_encoder()
+    vector_name = encoder.model_short_name()
+    metadata = []
+    ids = []
+    docs = []
+    for doc in serialized_resources:
+        readable_id = doc["readable_id"]
+        resource_vector_point_id = str(vector_point_id(readable_id))
+        serializer = LearningResourceMetadataDisplaySerializer(doc)
+        split_texts = serializer.render_chunks()
+        split_metadatas = [
+            {
+                "resource_point_id": str(resource_vector_point_id),
+                "chunk_number": chunk_id,
+                "chunk_content": chunk_content,
+                "resource_readable_id": doc["readable_id"],
+                "file_extension": ".txt",
+                **{key: doc[key] for key in ["offered_by", "platform"]},
+            }
+            for chunk_id, chunk_content in enumerate(split_texts)
+        ]
+        split_ids = [
+            vector_point_id(
+                f"{doc['readable_id']}.course_information.{md['chunk_number']}"
+            )
+            for md in split_metadatas
+        ]
+        metadata.extend(split_metadatas)
+        docs.extend(split_texts)
+        ids.extend(split_ids)
+    if len(docs) > 0:
+        embeddings = embeddings_for_documents(docs, encoder)
+        points = points_generator(ids, metadata, embeddings, vector_name)
+        client.upload_points(CONTENT_FILES_COLLECTION_NAME, points=points, wait=False)
+
+
 def _process_content_embeddings(serialized_content):
+    """
+    Chunk and embed content file documents
+    """
     embeddings = []
     metadata = []
     ids = []
@@ -358,7 +402,9 @@ def embed_learning_resources(ids, resource_type, overwrite):
             ]
 
         collection_name = RESOURCES_COLLECTION_NAME
+
         points = _process_resource_embeddings(serialized_resources)
+        _embed_course_metadata_as_contentfile(serialized_resources)
     else:
         serialized_resources = list(serialize_bulk_content_files(ids))
         collection_name = CONTENT_FILES_COLLECTION_NAME
@@ -397,8 +443,8 @@ def _resource_vector_hits(search_result):
 
 
 def _content_file_vector_hits(search_result):
-    run_readable_ids = [hit.payload["run_readable_id"] for hit in search_result]
-    keys = [hit.payload["key"] for hit in search_result]
+    run_readable_ids = [hit.payload.get("run_readable_id") for hit in search_result]
+    keys = [hit.payload.get("key") for hit in search_result]
 
     serialized_content_files = ContentFileSerializer(
         ContentFile.objects.for_serialization().filter(
@@ -415,12 +461,14 @@ def _content_file_vector_hits(search_result):
     results = []
     for hit in search_result:
         payload = hit.payload
-        serialized = contentfiles_dict.get((payload["run_readable_id"], payload["key"]))
+        serialized = contentfiles_dict.get(
+            (payload.get("run_readable_id"), payload.get("key"))
+        )
         if serialized:
             if "content" in serialized:
                 serialized.pop("content")
             payload.update(serialized)
-            results.append(payload)
+        results.append(payload)
     return results
 
 
@@ -447,7 +495,7 @@ def vector_search(
     """
 
     client = qdrant_client()
-
+    encoder = dense_encoder()
     qdrant_conditions = qdrant_query_conditions(
         params, collection_name=search_collection
     )
@@ -458,7 +506,6 @@ def vector_search(
         ]
     )
     if query_string:
-        encoder = dense_encoder()
         search_result = client.query_points(
             collection_name=search_collection,
             using=encoder.model_short_name(),
@@ -559,6 +606,9 @@ def filter_existing_qdrant_points(
     lookup_field="readable_id",
     collection_name=RESOURCES_COLLECTION_NAME,
 ):
+    """
+    Return only values that dont exist in qdrant
+    """
     client = qdrant_client()
     results = client.scroll(
         collection_name=collection_name,
