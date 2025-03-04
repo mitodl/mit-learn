@@ -4,6 +4,7 @@ import uuid
 from django.conf import settings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_experimental.text_splitter import SemanticChunker
+from langchain_text_splitters import HTMLSectionSplitter, RecursiveJsonSplitter
 from qdrant_client import QdrantClient, models
 
 from learning_resources.models import ContentFile, LearningResource
@@ -183,8 +184,7 @@ def _process_resource_embeddings(serialized_resources):
     return None
 
 
-def _chunk_documents(encoder, texts, metadatas):
-    # chunk the documents. use semantic chunking if enabled
+def _get_text_splitter():
     chunk_params = {
         "chunk_overlap": settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP,
     }
@@ -202,6 +202,41 @@ def _chunk_documents(encoder, texts, metadatas):
         )
     else:
         recursive_splitter = RecursiveCharacterTextSplitter(**chunk_params)
+    return recursive_splitter
+
+
+def chunk_html_documents(html_documents, metadatas):
+    headers_to_split_on = [
+        ("h1", "Header 1"),
+        ("h2", "Header 2"),
+        ("h3", "Header 3"),
+        ("h4", "Header 4"),
+    ]
+    html_splitter = HTMLSectionSplitter(headers_to_split_on=headers_to_split_on)
+    text_splitter = _get_text_splitter()
+    documents = html_splitter.create_documents(
+        texts=html_documents, metadatas=metadatas
+    )
+    return text_splitter.split_documents(documents)
+
+
+def chunk_json(json_documents, metadatas):
+    max_chunk_size = (
+        settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
+        if settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
+        else 512
+    )
+    text_splitter = _get_text_splitter()
+    json_splitter = RecursiveJsonSplitter(max_chunk_size=max_chunk_size)
+    documents = json_splitter.create_documents(
+        texts=json_documents, metadatas=metadatas
+    )
+    return text_splitter.split_documents(documents)
+
+
+def chunk_text_documents(encoder, texts, metadatas):
+    # chunk text documents. use semantic chunking if enabled
+    recursive_splitter = _get_text_splitter()
 
     if settings.CONTENT_FILE_EMBEDDING_SEMANTIC_CHUNKING_ENABLED:
         """
@@ -228,7 +263,7 @@ def _process_content_embeddings(serialized_content):
     for doc in serialized_content:
         if not doc.get("content"):
             continue
-        split_docs = _chunk_documents(encoder, [doc.get("content")], [doc])
+        split_docs = chunk_text_documents(encoder, [doc.get("content")], [doc])
         split_texts = [d.page_content for d in split_docs if d.page_content]
         resource_vector_point_id = vector_point_id(doc["resource_readable_id"])
         split_metadatas = [
