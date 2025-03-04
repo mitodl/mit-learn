@@ -93,6 +93,7 @@ langchain-experimental = "^0.3.4"
 langchain-openai = "^0.3.2"
 deepmerge = "^2.0"
 pyparsing = "^3.2.1"
+langchain-text-splitters = "^0.3.6"
 
 
 [tool.poetry.group.dev.dependencies]
