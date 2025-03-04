@@ -234,11 +234,11 @@ def test_embedded_content_from_next_run(mocker, mocked_celery):
     course.runs.all().delete()
     other_run = LearningResourceRunFactory.create(
         learning_resource=course.learning_resource,
-        created_on=datetime.datetime.now(tz=datetime.UTC) - datetime.timedelta(days=2),
+        start_date=datetime.datetime.now(tz=datetime.UTC) - datetime.timedelta(days=2),
     )
     LearningResourceRunFactory.create(
         learning_resource=course.learning_resource,
-        created_on=datetime.datetime.now(tz=datetime.UTC) + datetime.timedelta(days=2),
+        start_date=datetime.datetime.now(tz=datetime.UTC) + datetime.timedelta(days=2),
     )
 
     next_run_contentfiles = [
@@ -277,7 +277,7 @@ def test_embedded_content_from_latest_run_if_next_missing(mocker, mocked_celery)
     course.runs.all().delete()
     latest_run = LearningResourceRunFactory.create(
         learning_resource=course.learning_resource,
-        created_on=datetime.datetime.now(tz=datetime.UTC) - datetime.timedelta(hours=1),
+        start_date=datetime.datetime.now(tz=datetime.UTC) - datetime.timedelta(hours=1),
     )
     latest_run_contentfiles = [
         cf.id for cf in ContentFileFactory.create_batch(3, run=latest_run)
