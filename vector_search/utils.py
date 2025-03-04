@@ -220,18 +220,17 @@ def chunk_html_documents(html_documents, metadatas):
     return text_splitter.split_documents(documents)
 
 
-def chunk_json(json_documents, metadatas):
-    max_chunk_size = (
+def chunk_json_documents(json_documents, metadatas):
+    chunk_size = (
         settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
         if settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
         else 512
     )
-    text_splitter = _get_text_splitter()
+    max_chunk_size = chunk_size * 4
     json_splitter = RecursiveJsonSplitter(max_chunk_size=max_chunk_size)
-    documents = json_splitter.create_documents(
-        texts=json_documents, metadatas=metadatas
+    return json_splitter.create_documents(
+        texts=json_documents, metadatas=metadatas, convert_lists=True
     )
-    return text_splitter.split_documents(documents)
 
 
 def chunk_text_documents(encoder, texts, metadatas):
