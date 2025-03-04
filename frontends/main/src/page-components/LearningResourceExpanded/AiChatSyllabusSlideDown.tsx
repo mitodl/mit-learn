@@ -85,9 +85,6 @@ const CloseButton = styled(RiCloseLine)(({ theme }) => ({
 }))
 
 const StyledAiChatWithEntryScreen = styled(AiChatWithEntryScreen)({
-  // ".MitAiChat--root": {
-  //   height: "auto",
-  // },
   ".MitAiChat--messagesContainer": {
     marginTop: "14px",
   },
@@ -145,56 +142,36 @@ const AiChatSyllabusSlideDown = ({
   resource,
   open,
   onTransitionEnd,
-  // contentWindowHeight,
   scrollElement,
   contentTopPosition,
 }: {
   resource?: LearningResource
   open: boolean
   onTransitionEnd: () => void
-  // contentWindowHeight: number
   scrollElement: HTMLElement | null
   contentTopPosition: number
 }) => {
   const user = useUserMe()
   const ref = useRef<HTMLDivElement>(null)
-  // const chatRef = useRef<HTMLDivElement>(null)
-  // const [fullyCollapsed, setFullyCollapsed] = useState(false)
 
   useEffect(() => {
     const element = ref.current
     if (!element) return
-
-    // if (!open) {
-    //   setFullyCollapsed(false)
-    // }
-
-    // const onTransitionEnd = () => {
-    //   if (open) {
-    //     onFullyExpanded()
-    //   } else {
-    //     setFullyCollapsed(true)
-    //   }
-    // }
-
     element.addEventListener("transitionend", onTransitionEnd)
     return () => {
       element.removeEventListener("transitionend", onTransitionEnd)
     }
-  }, [open])
+  }, [open, onTransitionEnd])
 
   if (!resource) return null
 
   return (
     <SlideDown open={open} inert={!open} ref={ref}>
-      {/* <ScrollSnap element={scrollElement}> */}
-      {/* {fullyCollapsed && !open ? null : ( */}
       <StyledAiChatWithEntryScreen
         entryTitle="What do you want to know about this course?"
         starters={STARTERS}
         initialMessages={getInitialMessage(resource, user.data)}
         topPosition={contentTopPosition}
-        // ref={chatRef}
         scrollElement={scrollElement}
         requestOpts={{
           apiUrl: process.env.NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT!,
@@ -211,8 +188,6 @@ const AiChatSyllabusSlideDown = ({
           }),
         }}
       />
-      {/* </ScrollSnap> */}
-      {/* )} */}
     </SlideDown>
   )
 }

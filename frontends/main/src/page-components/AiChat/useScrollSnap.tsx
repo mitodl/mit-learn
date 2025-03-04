@@ -24,12 +24,8 @@ const useScrollSnap = ({
   threshold?: number
 }) => {
   useEffect(() => {
-    console.log("useScrollSnap", scrollElement, contentElement)
-
     const onGrow = () => {
-      console.log("onGrow scrollElement", scrollElement)
       if (!scrollElement) return
-      console.log("onGrow", distanceFromBottom(scrollElement))
       if (distanceFromBottom(scrollElement) < threshold) {
         scrollToBottom(scrollElement)
       }
@@ -43,7 +39,7 @@ const useScrollSnap = ({
     return () => {
       resizeObserver.disconnect()
     }
-  }, [scrollElement, contentElement])
+  }, [scrollElement, contentElement, threshold])
 }
 
 export { useScrollSnap }
