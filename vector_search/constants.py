@@ -14,6 +14,11 @@ QDRANT_CONTENT_FILE_PARAM_MAP = {
     "run_readable_id": "run_readable_id",
     "resource_readable_id": "resource_readable_id",
     "run_title": "run_title",
+    "edx_block_id": "edx_block_id",
+    "content_type": "content_type",
+    "description": "description",
+    "url": "url",
+    "file_type": "file_type",
 }
 
 QDRANT_RESOURCE_PARAM_MAP = {
@@ -66,4 +71,5 @@ QDRANT_CONTENT_FILE_INDEXES = {
     "run_readable_id": models.PayloadSchemaType.INTEGER,
     "resource_readable_id": models.PayloadSchemaType.KEYWORD,
     "run_title": models.PayloadSchemaType.KEYWORD,
+    "edx_block_id": models.PayloadSchemaType.KEYWORD,
 }

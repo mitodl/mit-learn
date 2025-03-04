@@ -14,6 +14,7 @@ import { useFeatureFlagEnabled } from "posthog-js/react"
 import AiSyllabusBotSlideDown, {
   AiChatSyllabusOpener,
 } from "./AiChatSyllabusSlideDown"
+import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
 
 const DRAWER_WIDTH = "900px"
 
@@ -113,6 +114,7 @@ const TopCarouselContainer = styled.div({
 
 type LearningResourceExpandedProps = {
   resourceId: number
+  chatExpanded: boolean
   titleId?: string
   resource?: LearningResource
   user?: User
@@ -125,6 +127,18 @@ type LearningResourceExpandedProps = {
   onAddToLearningPathClick?: LearningResourceCardProps["onAddToLearningPathClick"]
   onAddToUserListClick?: LearningResourceCardProps["onAddToUserListClick"]
   closeDrawer?: () => void
+}
+
+const closeChat = () => {
+  const params = new URLSearchParams(window.location.search)
+  params.delete(RESOURCE_DRAWER_PARAMS.syllabus)
+  window.history.replaceState({}, "", `?${params.toString()}`)
+}
+
+const openChat = () => {
+  const params = new URLSearchParams(window.location.search)
+  params.set(RESOURCE_DRAWER_PARAMS.syllabus, "")
+  window.history.replaceState({}, "", `?${params.toString()}`)
 }
 
 const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
@@ -141,6 +155,7 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
   onAddToLearningPathClick,
   onAddToUserListClick,
   closeDrawer,
+  chatExpanded: initialChatExpanded,
 }) => {
   const [chatTransitionState, setChatTransitionState] = useState(
     ChatTransitionState.Closed,
@@ -150,12 +165,19 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
     useFeatureFlagEnabled(FeatureFlags.LrDrawerChatbot) &&
     resource?.resource_type === ResourceTypeEnum.Course
 
+  useEffect(() => {
+    // If URL indicates syllabus open, but it's not enabled, update URL
+    if (resource && !chatEnabled) {
+      closeChat()
+    }
+  }, [resource, chatEnabled])
+
   const outerContainerRef = useRef<HTMLDivElement>(null)
   const titleSectionRef = useRef<HTMLDivElement>(null)
   const [titleSectionHeight, setTitleSectionHeight] = useState(0)
   const [scrollPosition, setScrollPosition] = useState(0)
   const [scrollElement, setScrollElement] = useState<HTMLElement | null>(null)
-  const [chatExpanded, setChatExpanded] = useToggle(false)
+  const [chatExpanded, setChatExpanded] = useToggle(initialChatExpanded)
 
   useEffect(() => {
     if (outerContainerRef.current && outerContainerRef.current.scrollTo) {
@@ -199,8 +221,10 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
     if (open) {
       setChatTransitionState(ChatTransitionState.Opening)
       setScrollPosition(scrollElement?.scrollTop ?? 0)
+      openChat()
     } else {
       setChatTransitionState(ChatTransitionState.Closing)
+      closeChat()
     }
     setChatExpanded(open)
   }

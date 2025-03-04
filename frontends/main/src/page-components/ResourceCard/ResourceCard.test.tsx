@@ -18,7 +18,7 @@ import {
 } from "../Dialogs/AddToListDialog"
 import type { ResourceCardProps } from "./ResourceCard"
 import { urls, factories, setMockResponse } from "api/test-utils"
-import { RESOURCE_DRAWER_QUERY_PARAM } from "@/common/urls"
+import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
 import invariant from "tiny-invariant"
 import { LearningResourceCard, LearningResourceListCard } from "ol-components"
 
@@ -220,7 +220,7 @@ describe.each([
     const href = link.getAttribute("href")
     invariant(href)
     const url = new URL(href, window.location.href)
-    expect(url.searchParams.get(RESOURCE_DRAWER_QUERY_PARAM)).toBe(
+    expect(url.searchParams.get(RESOURCE_DRAWER_PARAMS.resource)).toBe(
       String(resource.id),
     )
   })

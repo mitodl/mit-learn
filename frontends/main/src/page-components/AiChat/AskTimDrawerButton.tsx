@@ -1,10 +1,11 @@
-import React, { useState } from "react"
+import React from "react"
 import { Typography, styled } from "ol-components"
-import { Button } from "@mitodl/smoot-design"
+import { ButtonLink } from "@mitodl/smoot-design"
 import { RiSparkling2Line } from "@remixicon/react"
 import AiRecommendationBotDrawer from "./AiRecommendationBotDrawer"
+import { RECOMMENDER_QUERY_PARAM } from "@/common/urls"
 
-const StyledButton = styled(Button)(({ theme }) => ({
+const StyledButton = styled(ButtonLink)(({ theme }) => ({
   display: "flex",
   flexDirection: "row",
   gap: "8px",
@@ -30,21 +31,20 @@ const StyledButton = styled(Button)(({ theme }) => ({
 }))
 
 const AskTIMButton = () => {
-  const [open, setOpen] = useState(false)
-
   return (
     <>
       <StyledButton
+        shallow
         variant="bordered"
         edge="rounded"
-        onClick={() => setOpen(true)}
+        href={`?${RECOMMENDER_QUERY_PARAM}`}
       >
         <RiSparkling2Line />
         <Typography variant="body1">
           Ask<strong>TIM</strong>
         </Typography>
       </StyledButton>
-      <AiRecommendationBotDrawer open={open} setOpen={setOpen} />
+      <AiRecommendationBotDrawer />
     </>
   )
 }

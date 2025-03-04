@@ -172,17 +172,20 @@ class SearchView(djs_views.UserSearchView):
             msg = "Invalid schema uri. Must be SearchRequest."
             raise exceptions.BadRequestError(msg)
 
-        start = body.get("startIndex", 1)
-        count = body.get("count", 50)
-        sort_by = body.get("sortBy", None)
+        # cast to ints because scim-for-keycloak sends strings
+        start = int(body.get("startIndex", 1))
+        count = int(body.get("count", 50))
+        sort_by = body.get("sortBy", "id")
         sort_order = body.get("sortOrder", "ascending")
         query = body.get("filter", None)
 
-        if sort_by is not None and sort_by not in ("email", "username"):
-            msg = "Sorting only supports email or username"
+        if sort_by not in constants.VALID_SORTS:
+            msg = f"Sorting only supports: {', '.join(constants.VALID_SORTS)}"
             raise exceptions.BadRequestError(msg)
+        else:
+            sort_by = constants.SORT_MAPPING[sort_by]
 
-        if sort_order is not None and sort_order not in ("ascending", "descending"):
+        if sort_order not in ("ascending", "descending"):
             msg = "Sorting only supports ascending or descending"
             raise exceptions.BadRequestError(msg)
 
@@ -196,11 +199,10 @@ class SearchView(djs_views.UserSearchView):
             msg = "Invalid filter/search query: " + str(e)
             raise exceptions.BadRequestError(msg) from e
 
-        if sort_by is not None:
-            qs = qs.order_by(sort_by)
+        qs = qs.order_by(sort_by)
 
-            if sort_order == "descending":
-                qs = qs.reverse()
+        if sort_order == "descending":
+            qs = qs.reverse()
 
         response = self._build_response(request, qs, start, count)
 

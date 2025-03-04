@@ -18,7 +18,6 @@ const SlideDown = styled.div<{ open: boolean }>(({ theme, open }) => ({
   top: open ? 0 : "-100%",
   width: "100%",
   height: "100%",
-
   backgroundColor: theme.custom.colors.white,
   transition: "top 0.3s ease-in-out",
 }))
@@ -113,18 +112,19 @@ const getInitialMessage = (
 
 export const AiChatSyllabusOpener = ({
   open,
-  onToggleOpen,
   className,
+  onToggleOpen,
 }: {
   open: boolean
-  onToggleOpen: (open: boolean) => void
   className?: string
+  onToggleOpen: (open: boolean) => void
 }) => {
   return (
     <Opener className={className}>
       <StyledButton
         variant="bordered"
         edge="rounded"
+        aria-pressed={open}
         open={open}
         onClick={() => onToggleOpen(!open)}
       >

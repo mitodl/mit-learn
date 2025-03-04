@@ -55,8 +55,13 @@ class Migration(migrations.Migration):
         ("users", "0004_add_scim_and_timestamp_fields"),
     ]
 
-    # we don't bother to undo these changes becaus eif we're rolling back the columns
+    # we don't bother to undo these changes because if we're rolling back the columns
     # just get dropped in the previous migration
     operations = [
-        migrations.RunPython(_set_scim_and_timestamps, migrations.RunPython.noop)
+        migrations.RunPython(_set_scim_and_timestamps, migrations.RunPython.noop),
+        migrations.AlterField(
+            model_name="user",
+            name="updated_on",
+            field=models.DateTimeField(auto_now=True),
+        ),
     ]

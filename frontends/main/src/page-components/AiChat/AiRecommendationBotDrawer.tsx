@@ -1,10 +1,11 @@
 import React from "react"
-import { styled, Drawer } from "ol-components"
+import { styled, RoutedDrawer } from "ol-components"
 import { RiCloseLine } from "@remixicon/react"
 import { ActionButton } from "@mitodl/smoot-design"
 import type { AiChatProps } from "@mitodl/smoot-design/ai"
 import AiChatWithEntryScreen from "./AiChatWithEntryScreen"
 import { getCsrfToken } from "@/common/utils"
+import { RECOMMENDER_QUERY_PARAM } from "@/common/urls"
 
 const CloseButton = styled(ActionButton)(({ theme }) => ({
   position: "absolute",
@@ -52,36 +53,15 @@ const STARTERS = [
   },
 ]
 
-const AiRecommendationBotDrawer = ({
-  open,
-  setOpen,
-}: {
-  open: boolean
-  setOpen: (open: boolean) => void
-}) => {
-  const closeDrawer = () => {
-    setOpen(false)
-  }
-
+const DrawerContent: React.FC<{
+  onClose?: () => void
+}> = ({ onClose }) => {
   return (
-    <Drawer
-      open={open}
-      anchor="right"
-      onClose={closeDrawer}
-      PaperProps={{
-        sx: {
-          minWidth: (theme) => ({
-            [theme.breakpoints.down("md")]: {
-              width: "100%",
-            },
-          }),
-        },
-      }}
-    >
+    <>
       <CloseButton
+        onClick={onClose}
         variant="text"
         size="medium"
-        onClick={closeDrawer}
         aria-label="Close"
       >
         <RiCloseLine />
@@ -104,7 +84,30 @@ const AiRecommendationBotDrawer = ({
           }),
         }}
       />
-    </Drawer>
+    </>
+  )
+}
+
+const DRAWER_REQUIRED_PARAMS = [RECOMMENDER_QUERY_PARAM] as const
+const AiRecommendationBotDrawer = () => {
+  return (
+    <RoutedDrawer
+      hideCloseButton
+      requiredParams={DRAWER_REQUIRED_PARAMS}
+      aria-label="What do you want to learn about?"
+      anchor="right"
+      PaperProps={{
+        sx: {
+          minWidth: (theme) => ({
+            [theme.breakpoints.down("md")]: {
+              width: "100%",
+            },
+          }),
+        },
+      }}
+    >
+      {({ closeDrawer }) => <DrawerContent onClose={closeDrawer} />}
+    </RoutedDrawer>
   )
 }
 

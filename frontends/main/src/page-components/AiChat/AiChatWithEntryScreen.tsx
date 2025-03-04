@@ -207,7 +207,7 @@ const AiChatWithEntryScreen = ({
   return (
     <Container className={className} ref={ref}>
       {showEntryScreen ? (
-        <EntryScreen top={topPosition}>
+        <EntryScreen top={topPosition} data-testid="ai-chat-entry-screen">
           <TimLogoBox>
             <RiSparkling2Line />
             <TimLogo src={timLogo.src} alt="" width={40} height={40} />

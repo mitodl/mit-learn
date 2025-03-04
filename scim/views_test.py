@@ -28,6 +28,14 @@ def scim_client(staff_user):
     return client
 
 
+@pytest.fixture(scope="module")
+def large_user_set(django_db_setup, django_db_blocker):
+    """Large set of users"""
+    # per https://pytest-django.readthedocs.io/en/latest/database.html#populate-the-test-database-if-you-don-t-use-transactional-or-live-server
+    with django_db_blocker.unblock():
+        yield UserFactory.create_batch(1100)
+
+
 def test_scim_user_post(scim_client):
     """Test that we can create a user via SCIM API"""
     user_q = User.objects.filter(scim_external_id="1")
@@ -419,33 +427,40 @@ def test_bulk_post(scim_client, bulk_test_data):
     ("sort_by", "sort_order"),
     [
         (None, None),
+        ("id", None),
+        ("id", "ascending"),
+        ("id", "descending"),
         ("email", None),
         ("email", "ascending"),
         ("email", "descending"),
-        ("username", None),
-        ("username", "ascending"),
-        ("username", "descending"),
+        ("userName", None),
+        ("userName", "ascending"),
+        ("userName", "descending"),
     ],
 )
 @pytest.mark.parametrize("count", [None, 100, 500])
-def test_user_search(scim_client, sort_by, sort_order, count):
+def test_user_search(large_user_set, scim_client, sort_by, sort_order, count):
     """Test the user search endpoint"""
-    large_user_set = UserFactory.create_batch(1100)
     search_users = large_user_set[:1000]
     emails = [user.email for user in search_users]
 
     expected = search_users
 
     effective_count = count or 50
+    effective_sort_by = constants.SORT_MAPPING[sort_by or "id"]
     effective_sort_order = sort_order or "ascending"
 
-    if sort_by is not None:
-        expected = sorted(
-            expected,
-            # postgres sort is case-insensitive
-            key=lambda user: getattr(user, sort_by).lower(),
-            reverse=effective_sort_order == "descending",
-        )
+    def _sort(user):
+        value = getattr(user, effective_sort_by)
+
+        # postgres sort is case-insensitive
+        return value.lower() if isinstance(value, str) else value
+
+    expected = sorted(
+        expected,
+        key=_sort,
+        reverse=effective_sort_order == "descending",
+    )
 
     for page in range(int(len(emails) / effective_count)):
         start_index = page * effective_count  # zero based index
@@ -456,10 +471,12 @@ def test_user_search(scim_client, sort_by, sort_order, count):
                 {
                     "schemas": [djs_constants.SchemaURI.SERACH_REQUEST],
                     "filter": " OR ".join([f'email EQ "{email}"' for email in emails]),
-                    "startIndex": start_index + 1,  # SCIM API is 1-based index
+                    # SCIM API is 1-based index
+                    # Additionally, scim-for-keycloak sends this as a string, but spec examples have ints
+                    "startIndex": str(start_index + 1),
                     **({"sortBy": sort_by} if sort_by is not None else {}),
                     **({"sortOrder": sort_order} if sort_order is not None else {}),
-                    **({"count": count} if count is not None else {}),
+                    **({"count": str(count)} if count is not None else {}),
                 }
             ),
         )
@@ -474,23 +491,23 @@ def test_user_search(scim_client, sort_by, sort_order, count):
             "schemas": [djs_constants.SchemaURI.LIST_RESPONSE],
             "Resources": [
                 {
-                    "id": user.profile.scim_id,
+                    "id": user.scim_id,
                     "active": user.is_active,
                     "userName": user.username,
                     "displayName": user.profile.name,
                     "emails": [{"value": user.email, "primary": True}],
-                    "externalId": str(user.profile.scim_external_id),
+                    "externalId": str(user.scim_external_id),
                     "name": {
                         "givenName": user.first_name,
                         "familyName": user.last_name,
                     },
                     "meta": {
                         "resourceType": "User",
-                        "location": f"https://localhost/scim/v2/Users/{user.profile.scim_id}",
-                        "lastModified": user.profile.updated_at.isoformat(
+                        "location": f"https://localhost/scim/v2/Users/{user.scim_id}",
+                        "lastModified": user.updated_on.isoformat(
                             timespec="milliseconds"
                         ),
-                        "created": user.date_joined.isoformat(timespec="milliseconds"),
+                        "created": user.created_on.isoformat(timespec="milliseconds"),
                     },
                     "groups": [],
                     "schemas": [djs_constants.SchemaURI.USER],
