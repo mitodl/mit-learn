@@ -216,7 +216,7 @@ class ContentFileFilter(FilterSet):
     )
 
     edx_module_id = CharInFilter(
-        label="The edx block id of the content file",
+        label="The edx module id of the content file",
         method="filter_edx_module_id",
     )
 
@@ -257,7 +257,7 @@ class ContentFileFilter(FilterSet):
         return multi_or_filter(queryset, "content_tags__name__iexact", value)
 
     def filter_edx_module_id(self, queryset, _, value):
-        """Edx block id Filter for contentfiles"""
+        """Edx module id Filter for contentfiles"""
         return multi_or_filter(queryset, "edx_module_id__iexact", value)
 
     class Meta:
