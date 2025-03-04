@@ -59,12 +59,8 @@ const Title = styled(Typography)({
 const StyledInput = styled(Input)(({ theme }) => ({
   backgroundColor: theme.custom.colors.lightGray1,
   borderRadius: "8px",
-  border: `1px solid ${theme.custom.colors.lightGray2}`,
   margin: "8px 0 24px 0",
   flexShrink: 0,
-  "button:disabled": {
-    backgroundColor: "inherit",
-  },
 }))
 
 const SendIcon = styled(RiSendPlaneFill)(({ theme }) => ({
@@ -141,7 +137,7 @@ const AiChatWithEntryScreen = ({
   onClose,
   chatScreenClassName,
   className,
-  scrollElement,
+  scrollElement: initialScrollElement,
   topPosition = 0,
   ref,
 }: {
@@ -163,6 +159,9 @@ const AiChatWithEntryScreen = ({
     append: (message: Omit<AiChatMessage, "id">) => void
   }>(null)
   const chatScreenRef = useRef<HTMLDivElement>(null)
+  const [scrollElement, setScrollElement] = useState<HTMLElement>(
+    initialScrollElement as HTMLElement,
+  )
 
   useEffect(() => {
     if (!initialPrompt || showEntryScreen) return
@@ -180,10 +179,16 @@ const AiChatWithEntryScreen = ({
     }
   }, [initialPrompt, showEntryScreen])
 
+  useEffect(() => {
+    if (!showEntryScreen && !scrollElement && chatScreenRef.current) {
+      setScrollElement(
+        chatScreenRef.current?.closest(".MuiDrawer-paper") as HTMLElement,
+      )
+    }
+  }, [showEntryScreen, scrollElement, chatScreenRef])
+
   useScrollSnap({
-    scrollElement:
-      (scrollElement as HTMLElement) ||
-      chatScreenRef.current?.closest(".MuiDrawer-paper"),
+    scrollElement,
     contentElement: chatScreenRef.current?.querySelector(
       ".MitAiChat--messagesContainer",
     ),
@@ -222,7 +227,6 @@ const AiChatWithEntryScreen = ({
               <AdornmentButton
                 aria-label="Send"
                 onClick={() => setShowEntryScreen(false)}
-                disabled={!initialPrompt}
               >
                 <SendIcon />
               </AdornmentButton>
@@ -259,6 +263,7 @@ const AiChatWithEntryScreen = ({
             initialMessages={initialMessages}
             onClose={onClose}
             requestOpts={requestOpts}
+            scrollContainer={scrollElement}
             ref={aiChatRef}
           />
         </ChatScreen>

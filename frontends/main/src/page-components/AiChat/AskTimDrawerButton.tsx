@@ -34,7 +34,6 @@ const AskTIMButton = () => {
   return (
     <>
       <StyledButton
-        shallow
         variant="bordered"
         edge="rounded"
         href={`?${RECOMMENDER_QUERY_PARAM}`}

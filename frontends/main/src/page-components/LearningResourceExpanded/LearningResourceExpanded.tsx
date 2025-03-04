@@ -16,8 +16,6 @@ import AiSyllabusBotSlideDown, {
 } from "./AiChatSyllabusSlideDown"
 import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
 
-const DRAWER_WIDTH = "900px"
-
 enum ChatTransitionState {
   Closed = "Closed",
   Opening = "Opening",
@@ -30,8 +28,6 @@ const Outer = styled.div(({ theme }) => ({
   flexDirection: "column",
   flexGrow: 1,
   width: "100%",
-  minWidth: DRAWER_WIDTH,
-  scrollbarGutter: "stable",
   [theme.breakpoints.down("md")]: {
     minWidth: "100%",
   },
