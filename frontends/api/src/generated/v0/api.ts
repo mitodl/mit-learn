@@ -732,7 +732,7 @@ export interface ContentFile {
    * @type {string}
    * @memberof ContentFile
    */
-  edx_block_id?: string | null
+  edx_module_id?: string | null
 }
 
 /**
@@ -10916,7 +10916,7 @@ export const VectorContentFilesSearchApiAxiosParamCreator = function (
      * @param {string} [collection_name] Manually specify the name of the Qdrant collection to query
      * @param {Array<string>} [content_feature_type] The feature type of the content file. Possible options are at api/v1/course_features/
      * @param {Array<string>} [course_number] Course number of the content file
-     * @param {Array<string>} [edx_block_id] The edx_block_id of the content file
+     * @param {Array<string>} [edx_module_id] The edx_module_id of the content file
      * @param {Array<string>} [file_extension] The extension of the content file.
      * @param {Array<string>} [key] The filename of the content file
      * @param {number} [limit] Number of results to return per page
@@ -10934,7 +10934,7 @@ export const VectorContentFilesSearchApiAxiosParamCreator = function (
       collection_name?: string,
       content_feature_type?: Array<string>,
       course_number?: Array<string>,
-      edx_block_id?: Array<string>,
+      edx_module_id?: Array<string>,
       file_extension?: Array<string>,
       key?: Array<string>,
       limit?: number,
@@ -10975,8 +10975,8 @@ export const VectorContentFilesSearchApiAxiosParamCreator = function (
         localVarQueryParameter["course_number"] = course_number
       }
 
-      if (edx_block_id) {
-        localVarQueryParameter["edx_block_id"] = edx_block_id
+      if (edx_module_id) {
+        localVarQueryParameter["edx_module_id"] = edx_module_id
       }
 
       if (file_extension) {
@@ -11052,7 +11052,7 @@ export const VectorContentFilesSearchApiFp = function (
      * @param {string} [collection_name] Manually specify the name of the Qdrant collection to query
      * @param {Array<string>} [content_feature_type] The feature type of the content file. Possible options are at api/v1/course_features/
      * @param {Array<string>} [course_number] Course number of the content file
-     * @param {Array<string>} [edx_block_id] The edx_block_id of the content file
+     * @param {Array<string>} [edx_module_id] The edx_module_id of the content file
      * @param {Array<string>} [file_extension] The extension of the content file.
      * @param {Array<string>} [key] The filename of the content file
      * @param {number} [limit] Number of results to return per page
@@ -11070,7 +11070,7 @@ export const VectorContentFilesSearchApiFp = function (
       collection_name?: string,
       content_feature_type?: Array<string>,
       course_number?: Array<string>,
-      edx_block_id?: Array<string>,
+      edx_module_id?: Array<string>,
       file_extension?: Array<string>,
       key?: Array<string>,
       limit?: number,
@@ -11093,7 +11093,7 @@ export const VectorContentFilesSearchApiFp = function (
           collection_name,
           content_feature_type,
           course_number,
-          edx_block_id,
+          edx_module_id,
           file_extension,
           key,
           limit,
@@ -11149,7 +11149,7 @@ export const VectorContentFilesSearchApiFactory = function (
           requestParameters.collection_name,
           requestParameters.content_feature_type,
           requestParameters.course_number,
-          requestParameters.edx_block_id,
+          requestParameters.edx_module_id,
           requestParameters.file_extension,
           requestParameters.key,
           requestParameters.limit,
@@ -11195,11 +11195,11 @@ export interface VectorContentFilesSearchApiVectorContentFilesSearchRetrieveRequ
   readonly course_number?: Array<string>
 
   /**
-   * The edx_block_id of the content file
+   * The edx_module_id of the content file
    * @type {Array<string>}
    * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
    */
-  readonly edx_block_id?: Array<string>
+  readonly edx_module_id?: Array<string>
 
   /**
    * The extension of the content file.
@@ -11296,7 +11296,7 @@ export class VectorContentFilesSearchApi extends BaseAPI {
         requestParameters.collection_name,
         requestParameters.content_feature_type,
         requestParameters.course_number,
-        requestParameters.edx_block_id,
+        requestParameters.edx_module_id,
         requestParameters.file_extension,
         requestParameters.key,
         requestParameters.limit,

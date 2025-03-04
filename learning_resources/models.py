@@ -896,7 +896,7 @@ class ContentFile(TimestampedModel):
     checksum = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
     source_path = models.CharField(max_length=1024, null=True, blank=True)  # noqa: DJ001
     file_extension = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
-    edx_block_id = models.CharField(max_length=1024, null=True, blank=True)  # noqa: DJ001
+    edx_module_id = models.CharField(max_length=1024, null=True, blank=True)  # noqa: DJ001
 
     class Meta:
         unique_together = (("key", "run"),)
