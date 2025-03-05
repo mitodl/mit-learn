@@ -20,8 +20,10 @@ describe("AiChatSyllabus", () => {
     renderWithProviders(
       <AiChatSyllabusSlideDown
         open
-        onToggleOpen={jest.fn()}
         resource={resource}
+        onTransitionEnd={jest.fn()}
+        scrollElement={null}
+        contentTopPosition={0}
       />,
     )
 
@@ -43,8 +45,10 @@ describe("AiChatSyllabus", () => {
     renderWithProviders(
       <AiChatSyllabusSlideDown
         open
-        onToggleOpen={jest.fn()}
         resource={resource}
+        onTransitionEnd={jest.fn()}
+        scrollElement={null}
+        contentTopPosition={0}
       />,
     )
 

@@ -13,7 +13,13 @@ declare module "@mitodl/smoot-design" {
   // Add extra props to smoot-design's LinkAdapter
   // See https://mitodl.github.io/smoot-design/?path=/docs/smoot-design-themeprovider--docs
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-  interface LinkAdapterPropsOverrides extends LinkAdapterExtraProps {}
+  interface LinkAdapterPropsOverrides extends LinkAdapterExtraProps {
+    shallow?: boolean
+  }
+
+  interface LinkAdapterPropsOverrides {
+    shallow?: boolean
+  }
 }
 
 const theme = createTheme({
