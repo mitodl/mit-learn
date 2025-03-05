@@ -50,6 +50,7 @@ const StyledButton = styled(Button)<{ open: boolean }>(({ theme, open }) => ({
     ? theme.custom.colors.silverGray
     : theme.custom.colors.lightGray2,
   overflow: "hidden",
+  paddingRight: "26px",
   "svg:first-child": {
     fill: theme.custom.colors.lightRed,
     width: "20px",
