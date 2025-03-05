@@ -31,6 +31,7 @@ from main.utils import (
     chunks,
     now_in_utc,
 )
+from vector_search.api import embed_external_content_for_resource
 from vector_search.utils import embed_learning_resources
 
 log = logging.getLogger(__name__)
@@ -273,7 +274,6 @@ def embed_new_content_files(self):
         created_on__gt=since,
         run__published=True,
     )
-
     tasks = [
         generate_embeddings.si(ids, CONTENT_FILE_TYPE, overwrite=False)
         for ids in chunks(
@@ -281,7 +281,26 @@ def embed_new_content_files(self):
             chunk_size=settings.QDRANT_CHUNK_SIZE,
         )
     ]
-
     embed_tasks = celery.group(tasks)
-
     return self.replace(embed_tasks)
+
+
+@app.task(
+    acks_late=True,
+    reject_on_worker_lost=True,
+    autoretry_for=(RetryError,),
+    retry_backoff=True,
+    rate_limit="600/m",
+)
+def embed_external_site_data_for_resource(resource_id, url):
+    try:
+        with wrap_retry_exception(*SEARCH_CONN_EXCEPTIONS):
+            embed_external_content_for_resource(resource_id, url)
+    except (RetryError, Ignore):
+        raise
+    except SystemExit as err:
+        raise RetryError(SystemExit.__name__) from err
+    except:  # noqa: E722
+        error = "generate_embeddings threw an error"
+        log.exception(error)
+        return error
