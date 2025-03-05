@@ -11,7 +11,6 @@ from vector_search.constants import (
 from vector_search.encoders.utils import dense_encoder
 from vector_search.utils import (
     chunk_html_documents,
-    chunk_json_documents,
     chunk_text_documents,
     create_qdrant_collections,
     embeddings_for_documents,
@@ -22,17 +21,12 @@ from vector_search.utils import (
 
 
 def external_content_chunks(serialized_resource, url):
-    encoder = dense_encoder()
     response = requests.get(url, timeout=60)
     content_type = response.headers.get("Content-Type", "text/html")
     if content_type == "text/html":
         split_docs = chunk_html_documents([response.text], [serialized_resource])
-    elif content_type == "application/json":
-        split_docs = chunk_json_documents([response.json()], [serialized_resource])
     else:
-        split_docs = chunk_text_documents(
-            encoder, [response.text], [serialized_resource]
-        )
+        split_docs = chunk_text_documents([response.text], [serialized_resource])
     return split_docs
 
 

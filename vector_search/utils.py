@@ -4,7 +4,7 @@ import uuid
 from django.conf import settings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_experimental.text_splitter import SemanticChunker
-from langchain_text_splitters import HTMLSectionSplitter, RecursiveJsonSplitter
+from langchain_text_splitters import HTMLSectionSplitter
 from qdrant_client import QdrantClient, models
 
 from learning_resources.models import ContentFile, LearningResource
@@ -218,19 +218,6 @@ def chunk_html_documents(html_documents, metadatas):
         texts=html_documents, metadatas=metadatas
     )
     return text_splitter.split_documents(documents)
-
-
-def chunk_json_documents(json_documents, metadatas):
-    chunk_size = (
-        settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
-        if settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
-        else 512
-    )
-    max_chunk_size = chunk_size * 4
-    json_splitter = RecursiveJsonSplitter(max_chunk_size=max_chunk_size)
-    return json_splitter.create_documents(
-        texts=json_documents, metadatas=metadatas, convert_lists=True
-    )
 
 
 def chunk_text_documents(texts, metadatas):
