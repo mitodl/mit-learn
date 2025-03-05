@@ -475,7 +475,7 @@ def test_content_file_serializer(settings, expected_types, has_channels):
         "content_author": "MIT",
         "content_language": "en",
         "content_title": "test title",
-        "edx_block_id": "edx_block_id",
+        "edx_module_id": "edx_module_id",
     }
     platform = PlatformType.ocw.name
     course = factories.CourseFactory.create(platform=platform)
@@ -574,7 +574,7 @@ def test_content_file_serializer(settings, expected_types, has_channels):
             "content_feature_type": sorted(
                 [tag.name for tag in content_file.content_tags.all()]
             ),
-            "edx_block_id": content_file.edx_block_id,
+            "edx_module_id": content_file.edx_module_id,
         },
     )
 
