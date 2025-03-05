@@ -12,10 +12,12 @@ import { useUserMe } from "api/hooks/user"
 import type { User } from "api/hooks/user"
 import AiChatWithEntryScreen from "../AiChat/AiChatWithEntryScreen"
 import { getCsrfToken } from "@/common/utils"
+import Slide from "@mui/material/Slide"
+import Collapse from "@mui/material/Collapse"
 
 const SlideDown = styled.div<{ open: boolean }>(({ theme, open }) => ({
   position: "absolute",
-  top: open ? 0 : "-100%",
+  top: open ? 0 : "calc(-100% - 96px)",
   width: "100%",
   height: "100%",
   backgroundColor: theme.custom.colors.white,
@@ -167,29 +169,27 @@ const AiChatSyllabusSlideDown = ({
   if (!resource) return null
 
   return (
-    <SlideDown open={open} inert={!open} ref={ref}>
-      <StyledAiChatWithEntryScreen
-        entryTitle="What do you want to know about this course?"
-        starters={STARTERS}
-        initialMessages={getInitialMessage(resource, user.data)}
-        topPosition={contentTopPosition}
-        scrollElement={scrollElement}
-        requestOpts={{
-          apiUrl: process.env.NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT!,
-          fetchOpts: {
-            headers: {
-              "X-CSRFToken": getCsrfToken(),
-            },
-            credentials: "include",
+    <StyledAiChatWithEntryScreen
+      entryTitle="What do you want to know about this course?"
+      starters={STARTERS}
+      initialMessages={getInitialMessage(resource, user.data)}
+      topPosition={contentTopPosition}
+      scrollElement={scrollElement}
+      requestOpts={{
+        apiUrl: process.env.NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT!,
+        fetchOpts: {
+          headers: {
+            "X-CSRFToken": getCsrfToken(),
           },
-          transformBody: (messages) => ({
-            collection_name: "content_files",
-            message: messages[messages.length - 1].content,
-            course_id: resource.readable_id,
-          }),
-        }}
-      />
-    </SlideDown>
+          credentials: "include",
+        },
+        transformBody: (messages) => ({
+          collection_name: "content_files",
+          message: messages[messages.length - 1].content,
+          course_id: resource.readable_id,
+        }),
+      }}
+    />
   )
 }
 

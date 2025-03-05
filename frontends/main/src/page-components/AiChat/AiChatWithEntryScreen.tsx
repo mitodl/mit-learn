@@ -9,6 +9,7 @@ import timLogo from "@/public/images/icons/tim.svg"
 import { useScrollSnap } from "./useScrollSnap"
 
 const Container = styled.div(({ theme }) => ({
+  backgroundColor: "white",
   width: "900px",
   [theme.breakpoints.down("md")]: {
     width: "100%",
@@ -25,13 +26,13 @@ const EntryScreen = styled.div<{ top: number }>(({ theme, top }) => ({
     padding: "114px 24px 24px 24px",
     width: "100%",
   },
-  position: "absolute",
+  // position: "absolute",
   zIndex: 1,
   background: "white",
-  bottom: 0,
-  top,
-  left: 0,
-  right: 0,
+  // bottom: 0,
+  // top,
+  // left: 0,
+  // right: 0,
 }))
 
 const TimLogoBox = styled.div(({ theme }) => ({
@@ -108,11 +109,11 @@ const ChatScreen = styled.div<{ top: number }>(({ theme, top }) => ({
     width: "100%",
   },
   background: "white",
-  position: "absolute",
-  bottom: 0,
-  top,
-  left: 0,
-  right: 0,
+  // position: "absolute",
+  // bottom: 0,
+  // top,
+  // left: 0,
+  // right: 0,
   zIndex: 1,
 }))
 

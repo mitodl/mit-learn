@@ -15,6 +15,9 @@ import AiSyllabusBotSlideDown, {
   AiChatSyllabusOpener,
 } from "./AiChatSyllabusSlideDown"
 import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
+import Fade from "@mui/material/Fade"
+import Collapse from "@mui/material/Collapse"
+import { TransitionGroup } from "react-transition-group"
 
 enum ChatTransitionState {
   Closed = "Closed",
@@ -226,7 +229,7 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
   }
 
   const onTransitionEnd = () => {
-    if (chatTransitionState === ChatTransitionState.Opening) {
+    if (chatExpanded) {
       setChatTransitionState(ChatTransitionState.Open)
     } else {
       setChatTransitionState(ChatTransitionState.Closed)
@@ -242,55 +245,58 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
         closeDrawer={closeDrawer ?? (() => {})}
       />
       {chatEnabled ? (
-        <>
-          <StyledAiChatSyllabusOpener
-            open={chatExpanded}
-            top={titleSectionHeight}
-            onToggleOpen={onChatOpenerToggle}
-          />
-          <AiSyllabusBotSlideDown
-            resource={resource}
-            open={chatExpanded}
-            onTransitionEnd={onTransitionEnd}
-            contentTopPosition={titleSectionHeight}
-            scrollElement={scrollElement}
-          />
-        </>
+        <StyledAiChatSyllabusOpener
+          open={chatExpanded}
+          top={titleSectionHeight}
+          onToggleOpen={onChatOpenerToggle}
+        />
       ) : null}
-      <ContentSection chatTransitionState={chatTransitionState}>
-        <TopContainer chatEnabled={!!chatEnabled}>
-          <ContentContainer>
-            <ContentLeft>
-              <ResourceDescription resource={resource} />
-              <InfoSection resource={resource} />
-            </ContentLeft>
-            <ContentRight>
-              <CallToActionSection
-                imgConfig={imgConfig}
-                resource={resource}
-                user={user}
-                shareUrl={shareUrl}
-                inLearningPath={inLearningPath}
-                inUserList={inUserList}
-                onAddToLearningPathClick={onAddToLearningPathClick}
-                onAddToUserListClick={onAddToUserListClick}
-              />
-            </ContentRight>
-          </ContentContainer>
-          {topCarousels && (
-            <TopCarouselContainer>
-              {topCarousels?.map((carousel, index) => (
-                <div key={index}>{carousel}</div>
-              ))}
-            </TopCarouselContainer>
-          )}
-        </TopContainer>
-        <BottomContainer>
-          {bottomCarousels?.map((carousel, index) => (
-            <div key={index}>{carousel}</div>
-          ))}
-        </BottomContainer>
-      </ContentSection>
+
+      <Collapse orientation="vertical" timeout={1000} in={chatExpanded}>
+        <AiSyllabusBotSlideDown
+          resource={resource}
+          open={true}
+          onTransitionEnd={onTransitionEnd}
+          contentTopPosition={titleSectionHeight}
+          scrollElement={scrollElement}
+        />
+      </Collapse>
+      <Fade timeout={1000} in={!chatExpanded} onTransitionEnd={onTransitionEnd}>
+        <ContentSection chatTransitionState={chatTransitionState}>
+          <TopContainer chatEnabled={!!chatEnabled}>
+            <ContentContainer>
+              <ContentLeft>
+                <ResourceDescription resource={resource} />
+                <InfoSection resource={resource} />
+              </ContentLeft>
+              <ContentRight>
+                <CallToActionSection
+                  imgConfig={imgConfig}
+                  resource={resource}
+                  user={user}
+                  shareUrl={shareUrl}
+                  inLearningPath={inLearningPath}
+                  inUserList={inUserList}
+                  onAddToLearningPathClick={onAddToLearningPathClick}
+                  onAddToUserListClick={onAddToUserListClick}
+                />
+              </ContentRight>
+            </ContentContainer>
+            {topCarousels && (
+              <TopCarouselContainer>
+                {topCarousels?.map((carousel, index) => (
+                  <div key={index}>{carousel}</div>
+                ))}
+              </TopCarouselContainer>
+            )}
+          </TopContainer>
+          <BottomContainer>
+            {bottomCarousels?.map((carousel, index) => (
+              <div key={index}>{carousel}</div>
+            ))}
+          </BottomContainer>
+        </ContentSection>
+      </Fade>
     </Outer>
   )
 }
