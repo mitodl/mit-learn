@@ -179,7 +179,7 @@ def _process_resource_embeddings(serialized_resources):
             f"{doc.get('title')} {doc.get('description')} {doc.get('full_description')}"
         )
     if len(docs) > 0:
-        embeddings = embeddings_for_documents(docs, encoder)
+        embeddings = embeddings_for_documents(docs)
         return points_generator(ids, metadata, embeddings, vector_name)
     return None
 
@@ -233,7 +233,8 @@ def chunk_json_documents(json_documents, metadatas):
     )
 
 
-def chunk_text_documents(encoder, texts, metadatas):
+def chunk_text_documents(texts, metadatas):
+    encoder = dense_encoder()
     # chunk text documents. use semantic chunking if enabled
     recursive_splitter = _get_text_splitter()
 
@@ -251,7 +252,7 @@ def chunk_text_documents(encoder, texts, metadatas):
     return recursive_splitter.create_documents(texts=texts, metadatas=metadatas)
 
 
-def embeddings_for_documents(split_texts, encoder):
+def embeddings_for_documents(split_texts):
     split_embeddings = []
     """
     Break up requests according to chunk size to stay under openai limits
@@ -259,6 +260,7 @@ def embeddings_for_documents(split_texts, encoder):
     max array size: 2048
     see: https://platform.openai.com/docs/guides/rate-limits
     """
+    encoder = dense_encoder()
     request_chunk_size = int(
         600000 / settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
     )
@@ -304,7 +306,7 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
         docs.extend(split_texts)
         ids.extend(split_ids)
     if len(docs) > 0:
-        embeddings = embeddings_for_documents(docs, encoder)
+        embeddings = embeddings_for_documents(docs)
         points = points_generator(ids, metadata, embeddings, vector_name)
         client.upload_points(CONTENT_FILES_COLLECTION_NAME, points=points, wait=False)
 
@@ -323,7 +325,7 @@ def _process_content_embeddings(serialized_content):
     for doc in serialized_content:
         if not doc.get("content"):
             continue
-        split_docs = chunk_text_documents(encoder, [doc.get("content")], [doc])
+        split_docs = chunk_text_documents([doc.get("content")], [doc])
         split_texts = [d.page_content for d in split_docs if d.page_content]
         resource_vector_point_id = vector_point_id(doc["resource_readable_id"])
         split_metadatas = [
@@ -347,7 +349,7 @@ def _process_content_embeddings(serialized_content):
             )
             for md in split_metadatas
         ]
-        split_embeddings = embeddings_for_documents(split_texts, encoder)
+        split_embeddings = embeddings_for_documents(split_texts)
         if len(split_embeddings) > 0:
             resource_points.append(
                 models.PointVectors(

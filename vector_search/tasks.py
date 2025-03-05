@@ -292,15 +292,15 @@ def embed_new_content_files(self):
     retry_backoff=True,
     rate_limit="600/m",
 )
-def embed_external_site_data_for_resource(resource_id, url):
+def embed_external_site_data_for_resource(resource_id):
     try:
         with wrap_retry_exception(*SEARCH_CONN_EXCEPTIONS):
-            embed_external_content_for_resource(resource_id, url)
+            embed_external_content_for_resource(resource_id)
     except (RetryError, Ignore):
         raise
     except SystemExit as err:
         raise RetryError(SystemExit.__name__) from err
     except:  # noqa: E722
-        error = "generate_embeddings threw an error"
+        error = "embed_external_site_data_for_resource threw an error"
         log.exception(error)
         return error

@@ -5,6 +5,7 @@ import logging
 from celery import chain
 from django.apps import apps
 
+import vector_search.tasks as vector_search_tasks
 from learning_resources_search import tasks
 from learning_resources_search.api import get_similar_topics
 from learning_resources_search.constants import (
@@ -68,13 +69,14 @@ class SearchIndexPlugin:
         Args:
             resource(LearningResource): The Learning Resource that was upserted
         """
-        upsert_task = tasks.upsert_learning_resource
-        if percolate:
-            upsert_task = chain(
-                tasks.upsert_learning_resource.si(resource.id),
-                tasks.percolate_learning_resource.si(resource.id),
-            )
 
+        upsert_tasks = [
+            tasks.upsert_learning_resource,
+            vector_search_tasks.embed_external_site_data_for_resource,
+        ]
+        if percolate:
+            upsert_tasks.append(tasks.percolate_learning_resource)
+        upsert_task = chain(*[task.si(resource.id) for task in upsert_tasks])
         try_with_retry_as_task(upsert_task, resource.id)
 
     @hookimpl
