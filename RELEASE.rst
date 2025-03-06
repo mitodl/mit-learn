@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+Version 0.30.8
+--------------
+
+- removing school from departments display (#2115)
+- edx_block_id -> edx_module_id (#2109)
+- Fix stale rendering on Syllabus chat (#2111)
+- Remove env control on session replay (#2081)
+- embed course metadata as contentfile (#2050)
+
 Version 0.30.7 (Released March 06, 2025)
 --------------
 
