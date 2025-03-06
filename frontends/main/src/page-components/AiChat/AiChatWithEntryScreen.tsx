@@ -121,6 +121,7 @@ const AiChatWithEntryScreen = ({
   onClose,
   chatScreenClassName,
   className,
+  chatId,
 }: {
   entryTitle: string
   starters: AiChatProps["conversationStarters"]
@@ -130,6 +131,7 @@ const AiChatWithEntryScreen = ({
   onClose?: () => void
   className?: string
   chatScreenClassName?: string
+  chatId?: string
 }) => {
   const [initialPrompt, setInitialPrompt] = useState("")
   const [showEntryScreen, setShowEntryScreen] = useState(true)
@@ -221,6 +223,7 @@ const AiChatWithEntryScreen = ({
             onClose={onClose}
             requestOpts={requestOpts}
             ref={aiChatRef}
+            chatId={chatId}
           />
         </ChatScreen>
       )}
