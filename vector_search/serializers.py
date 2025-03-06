@@ -56,7 +56,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
 
     def get_departments_display(self, serialized_resource):
         return ", ".join(
-            f"{department['name']} ({department['school']['name']})"
+            f"{department['name']}"
             for department in serialized_resource.get("departments", [])
         )
 
