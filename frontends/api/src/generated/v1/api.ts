@@ -402,7 +402,7 @@ export interface ContentFile {
    * @type {string}
    * @memberof ContentFile
    */
-  edx_block_id?: string | null
+  edx_module_id?: string | null
 }
 
 /**
@@ -8660,7 +8660,7 @@ export const ContentfilesApiAxiosParamCreator = function (
      * @summary List
      * @param {number} learning_resource_id id of the parent learning resource
      * @param {Array<string>} [content_feature_type] Multiple values may be separated by commas.
-     * @param {Array<string>} [edx_block_id] Multiple values may be separated by commas.
+     * @param {Array<string>} [edx_module_id] Multiple values may be separated by commas.
      * @param {number} [limit] Number of results to return per page.
      * @param {Array<ContentfilesListOfferedByEnum>} [offered_by] The organization that offers a learning resource the content file belongs to  * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education
      * @param {number} [offset] The initial index from which to return the results.
@@ -8673,7 +8673,7 @@ export const ContentfilesApiAxiosParamCreator = function (
     contentfilesList: async (
       learning_resource_id: number,
       content_feature_type?: Array<string>,
-      edx_block_id?: Array<string>,
+      edx_module_id?: Array<string>,
       limit?: number,
       offered_by?: Array<ContentfilesListOfferedByEnum>,
       offset?: number,
@@ -8712,8 +8712,8 @@ export const ContentfilesApiAxiosParamCreator = function (
           content_feature_type.join(COLLECTION_FORMATS.csv)
       }
 
-      if (edx_block_id) {
-        localVarQueryParameter["edx_block_id"] = edx_block_id.join(
+      if (edx_module_id) {
+        localVarQueryParameter["edx_module_id"] = edx_module_id.join(
           COLLECTION_FORMATS.csv,
         )
       }
@@ -8830,7 +8830,7 @@ export const ContentfilesApiFp = function (configuration?: Configuration) {
      * @summary List
      * @param {number} learning_resource_id id of the parent learning resource
      * @param {Array<string>} [content_feature_type] Multiple values may be separated by commas.
-     * @param {Array<string>} [edx_block_id] Multiple values may be separated by commas.
+     * @param {Array<string>} [edx_module_id] Multiple values may be separated by commas.
      * @param {number} [limit] Number of results to return per page.
      * @param {Array<ContentfilesListOfferedByEnum>} [offered_by] The organization that offers a learning resource the content file belongs to  * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education
      * @param {number} [offset] The initial index from which to return the results.
@@ -8843,7 +8843,7 @@ export const ContentfilesApiFp = function (configuration?: Configuration) {
     async contentfilesList(
       learning_resource_id: number,
       content_feature_type?: Array<string>,
-      edx_block_id?: Array<string>,
+      edx_module_id?: Array<string>,
       limit?: number,
       offered_by?: Array<ContentfilesListOfferedByEnum>,
       offset?: number,
@@ -8861,7 +8861,7 @@ export const ContentfilesApiFp = function (configuration?: Configuration) {
         await localVarAxiosParamCreator.contentfilesList(
           learning_resource_id,
           content_feature_type,
-          edx_block_id,
+          edx_module_id,
           limit,
           offered_by,
           offset,
@@ -8942,7 +8942,7 @@ export const ContentfilesApiFactory = function (
         .contentfilesList(
           requestParameters.learning_resource_id,
           requestParameters.content_feature_type,
-          requestParameters.edx_block_id,
+          requestParameters.edx_module_id,
           requestParameters.limit,
           requestParameters.offered_by,
           requestParameters.offset,
@@ -9000,7 +9000,7 @@ export interface ContentfilesApiContentfilesListRequest {
    * @type {Array<string>}
    * @memberof ContentfilesApiContentfilesList
    */
-  readonly edx_block_id?: Array<string>
+  readonly edx_module_id?: Array<string>
 
   /**
    * Number of results to return per page.
@@ -9089,7 +9089,7 @@ export class ContentfilesApi extends BaseAPI {
       .contentfilesList(
         requestParameters.learning_resource_id,
         requestParameters.content_feature_type,
-        requestParameters.edx_block_id,
+        requestParameters.edx_module_id,
         requestParameters.limit,
         requestParameters.offered_by,
         requestParameters.offset,
@@ -9488,7 +9488,7 @@ export const CoursesApiAxiosParamCreator = function (
      * @summary Learning Resource Content File List
      * @param {number} learning_resource_id id of the parent learning resource
      * @param {Array<string>} [content_feature_type] Multiple values may be separated by commas.
-     * @param {Array<string>} [edx_block_id] Multiple values may be separated by commas.
+     * @param {Array<string>} [edx_module_id] Multiple values may be separated by commas.
      * @param {number} [limit] Number of results to return per page.
      * @param {Array<CoursesContentfilesListOfferedByEnum>} [offered_by] The organization that offers a learning resource the content file belongs to  * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education
      * @param {number} [offset] The initial index from which to return the results.
@@ -9501,7 +9501,7 @@ export const CoursesApiAxiosParamCreator = function (
     coursesContentfilesList: async (
       learning_resource_id: number,
       content_feature_type?: Array<string>,
-      edx_block_id?: Array<string>,
+      edx_module_id?: Array<string>,
       limit?: number,
       offered_by?: Array<CoursesContentfilesListOfferedByEnum>,
       offset?: number,
@@ -9541,8 +9541,8 @@ export const CoursesApiAxiosParamCreator = function (
           content_feature_type.join(COLLECTION_FORMATS.csv)
       }
 
-      if (edx_block_id) {
-        localVarQueryParameter["edx_block_id"] = edx_block_id.join(
+      if (edx_module_id) {
+        localVarQueryParameter["edx_module_id"] = edx_module_id.join(
           COLLECTION_FORMATS.csv,
         )
       }
@@ -9850,7 +9850,7 @@ export const CoursesApiFp = function (configuration?: Configuration) {
      * @summary Learning Resource Content File List
      * @param {number} learning_resource_id id of the parent learning resource
      * @param {Array<string>} [content_feature_type] Multiple values may be separated by commas.
-     * @param {Array<string>} [edx_block_id] Multiple values may be separated by commas.
+     * @param {Array<string>} [edx_module_id] Multiple values may be separated by commas.
      * @param {number} [limit] Number of results to return per page.
      * @param {Array<CoursesContentfilesListOfferedByEnum>} [offered_by] The organization that offers a learning resource the content file belongs to  * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education
      * @param {number} [offset] The initial index from which to return the results.
@@ -9863,7 +9863,7 @@ export const CoursesApiFp = function (configuration?: Configuration) {
     async coursesContentfilesList(
       learning_resource_id: number,
       content_feature_type?: Array<string>,
-      edx_block_id?: Array<string>,
+      edx_module_id?: Array<string>,
       limit?: number,
       offered_by?: Array<CoursesContentfilesListOfferedByEnum>,
       offset?: number,
@@ -9881,7 +9881,7 @@ export const CoursesApiFp = function (configuration?: Configuration) {
         await localVarAxiosParamCreator.coursesContentfilesList(
           learning_resource_id,
           content_feature_type,
-          edx_block_id,
+          edx_module_id,
           limit,
           offered_by,
           offset,
@@ -10070,7 +10070,7 @@ export const CoursesApiFactory = function (
         .coursesContentfilesList(
           requestParameters.learning_resource_id,
           requestParameters.content_feature_type,
-          requestParameters.edx_block_id,
+          requestParameters.edx_module_id,
           requestParameters.limit,
           requestParameters.offered_by,
           requestParameters.offset,
@@ -10177,7 +10177,7 @@ export interface CoursesApiCoursesContentfilesListRequest {
    * @type {Array<string>}
    * @memberof CoursesApiCoursesContentfilesList
    */
-  readonly edx_block_id?: Array<string>
+  readonly edx_module_id?: Array<string>
 
   /**
    * Number of results to return per page.
@@ -10406,7 +10406,7 @@ export class CoursesApi extends BaseAPI {
       .coursesContentfilesList(
         requestParameters.learning_resource_id,
         requestParameters.content_feature_type,
-        requestParameters.edx_block_id,
+        requestParameters.edx_module_id,
         requestParameters.limit,
         requestParameters.offered_by,
         requestParameters.offset,
@@ -11770,7 +11770,7 @@ export const LearningResourcesApiAxiosParamCreator = function (
      * @summary Learning Resource Content File List
      * @param {number} learning_resource_id id of the parent learning resource
      * @param {Array<string>} [content_feature_type] Multiple values may be separated by commas.
-     * @param {Array<string>} [edx_block_id] Multiple values may be separated by commas.
+     * @param {Array<string>} [edx_module_id] Multiple values may be separated by commas.
      * @param {number} [limit] Number of results to return per page.
      * @param {Array<LearningResourcesContentfilesListOfferedByEnum>} [offered_by] The organization that offers a learning resource the content file belongs to  * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education
      * @param {number} [offset] The initial index from which to return the results.
@@ -11783,7 +11783,7 @@ export const LearningResourcesApiAxiosParamCreator = function (
     learningResourcesContentfilesList: async (
       learning_resource_id: number,
       content_feature_type?: Array<string>,
-      edx_block_id?: Array<string>,
+      edx_module_id?: Array<string>,
       limit?: number,
       offered_by?: Array<LearningResourcesContentfilesListOfferedByEnum>,
       offset?: number,
@@ -11823,8 +11823,8 @@ export const LearningResourcesApiAxiosParamCreator = function (
           content_feature_type.join(COLLECTION_FORMATS.csv)
       }
 
-      if (edx_block_id) {
-        localVarQueryParameter["edx_block_id"] = edx_block_id.join(
+      if (edx_module_id) {
+        localVarQueryParameter["edx_module_id"] = edx_module_id.join(
           COLLECTION_FORMATS.csv,
         )
       }
@@ -12675,7 +12675,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
      * @summary Learning Resource Content File List
      * @param {number} learning_resource_id id of the parent learning resource
      * @param {Array<string>} [content_feature_type] Multiple values may be separated by commas.
-     * @param {Array<string>} [edx_block_id] Multiple values may be separated by commas.
+     * @param {Array<string>} [edx_module_id] Multiple values may be separated by commas.
      * @param {number} [limit] Number of results to return per page.
      * @param {Array<LearningResourcesContentfilesListOfferedByEnum>} [offered_by] The organization that offers a learning resource the content file belongs to  * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education
      * @param {number} [offset] The initial index from which to return the results.
@@ -12688,7 +12688,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
     async learningResourcesContentfilesList(
       learning_resource_id: number,
       content_feature_type?: Array<string>,
-      edx_block_id?: Array<string>,
+      edx_module_id?: Array<string>,
       limit?: number,
       offered_by?: Array<LearningResourcesContentfilesListOfferedByEnum>,
       offset?: number,
@@ -12706,7 +12706,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
         await localVarAxiosParamCreator.learningResourcesContentfilesList(
           learning_resource_id,
           content_feature_type,
-          edx_block_id,
+          edx_module_id,
           limit,
           offered_by,
           offset,
@@ -13228,7 +13228,7 @@ export const LearningResourcesApiFactory = function (
         .learningResourcesContentfilesList(
           requestParameters.learning_resource_id,
           requestParameters.content_feature_type,
-          requestParameters.edx_block_id,
+          requestParameters.edx_module_id,
           requestParameters.limit,
           requestParameters.offered_by,
           requestParameters.offset,
@@ -13483,7 +13483,7 @@ export interface LearningResourcesApiLearningResourcesContentfilesListRequest {
    * @type {Array<string>}
    * @memberof LearningResourcesApiLearningResourcesContentfilesList
    */
-  readonly edx_block_id?: Array<string>
+  readonly edx_module_id?: Array<string>
 
   /**
    * Number of results to return per page.
@@ -14078,7 +14078,7 @@ export class LearningResourcesApi extends BaseAPI {
       .learningResourcesContentfilesList(
         requestParameters.learning_resource_id,
         requestParameters.content_feature_type,
-        requestParameters.edx_block_id,
+        requestParameters.edx_module_id,
         requestParameters.limit,
         requestParameters.offered_by,
         requestParameters.offset,

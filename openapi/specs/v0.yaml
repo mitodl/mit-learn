@@ -855,13 +855,13 @@ paths:
             minLength: 1
         description: Course number of the content file
       - in: query
-        name: edx_block_id
+        name: edx_module_id
         schema:
           type: array
           items:
             type: string
             minLength: 1
-        description: The edx_block_id of the content file
+        description: The edx_module_id of the content file
       - in: query
         name: file_extension
         schema:
@@ -1866,7 +1866,7 @@ components:
           $ref: '#/components/schemas/LearningResourcePlatform'
         run_readable_id:
           type: string
-        edx_block_id:
+        edx_module_id:
           type: string
           nullable: true
           maxLength: 1024
