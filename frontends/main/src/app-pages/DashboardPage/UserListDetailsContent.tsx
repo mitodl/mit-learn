@@ -9,11 +9,13 @@ import { useUserMe } from "api/hooks/user"
 import { manageListDialogs } from "@/page-components/ManageListDialogs/ManageListDialogs"
 import ItemsListingComponent from "@/page-components/ItemsListing/ItemsListingComponent"
 
-interface UserListDetailsTabProps {
+interface UserListDetailsContentProps {
   userListId: number
 }
 
-const UserListDetailsTab: React.FC<UserListDetailsTabProps> = (props) => {
+const UserListDetailsContent: React.FC<UserListDetailsContentProps> = (
+  props,
+) => {
   const { userListId } = props
 
   const { data: user } = useUserMe()
@@ -47,4 +49,4 @@ const UserListDetailsTab: React.FC<UserListDetailsTabProps> = (props) => {
   )
 }
 
-export default UserListDetailsTab
+export { UserListDetailsContent }
