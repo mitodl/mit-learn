@@ -2,6 +2,7 @@
 
 import logging
 
+import requests
 from django.contrib.auth import get_user_model
 from django.db import transaction
 
@@ -510,7 +511,7 @@ def load_course(
         load_image(learning_resource, image_data)
         load_departments(learning_resource, department_data)
         load_content_tags(learning_resource, content_tags_data)
-
+        load_marketing_page(learning_resource)
     update_index(learning_resource, created)
     return learning_resource
 
@@ -752,6 +753,24 @@ def calculate_completeness(
         ocw_resource.save()
         update_index(ocw_resource, newly_created=False)
     return new_score
+
+
+def load_marketing_page(learning_resource: LearningResource):
+    course_run = (
+        learning_resource.next_run
+        if learning_resource.next_run
+        else learning_resource.runs.order_by("-start_date").first()
+    )
+    marketing_page_url = learning_resource.url
+    if marketing_page_url:
+        response = requests.get(marketing_page_url, timeout=10)
+        if response.ok:
+            page_content = response.text
+            content_file, _ = ContentFile.objects.update_or_create(
+                run=course_run,
+                key=marketing_page_url,
+                defaults={"content": page_content, "file_extension": ".md"},
+            )
 
 
 def load_content_files(
