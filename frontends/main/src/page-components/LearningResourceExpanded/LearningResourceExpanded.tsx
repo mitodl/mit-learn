@@ -153,7 +153,7 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
   chatExpanded: initialChatExpanded,
 }) => {
   const [chatTransitionState, setChatTransitionState] = useState(
-    ChatTransitionState.Closed,
+    initialChatExpanded ? ChatTransitionState.Open : ChatTransitionState.Closed,
   )
 
   const chatEnabled =
@@ -231,8 +231,6 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
       setChatTransitionState(ChatTransitionState.Closed)
     }
   }
-
-  console.log("chatTransitionState", chatTransitionState)
 
   return (
     <Outer ref={outerContainerRef}>
