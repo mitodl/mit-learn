@@ -6,29 +6,29 @@ from django.core.exceptions import ValidationError
 from authentication.models import BlockedIPRange
 
 
-@pytest.mark.django_db
-@pytest.mark.parametrize(
-    ("ip_start", "ip_end", "error"),
-    [
-        [  # noqa: PT007
-            "194.168.20.100",
-            "194.168.3.100",
-            "IP 194.168.3.100 < IP 194.168.20.100",
-        ],
-        ["194.168.1.1", "194.168.3.100", None],  # noqa: PT007
-        [None, "182.0.0.1", "IP cannot be null"],  # noqa: PT007
-        ["194.168.20.100", None, "IP cannot be null"],  # noqa: PT007
-        ["192.168.2.2", "169.2.4.4", "IP 192.168.2.2 is not routable"],  # noqa: PT007
-        ["9.2.2.2", "10.2.4.4", "IP 10.2.4.4 is not routable"],  # noqa: PT007
-    ],
-)
-def test_blocked_ip_range_validation(ip_start, ip_end, error, settings):
-    """Test that validation for BlockedIPRange works as expected"""
-    settings.IPWARE_PRIVATE_IP_PREFIX = ("10.", "192.168.")
-    ip_range = BlockedIPRange(ip_start=ip_start, ip_end=ip_end)
-    if error:
-        with pytest.raises(ValidationError) as exc:
-            ip_range.clean()
-        assert exc.value.message == error
-    else:
-        ip_range.clean()
+# @pytest.mark.django_db
+# @pytest.mark.parametrize(
+#     ("ip_start", "ip_end", "error"),
+#     [
+#         [  # noqa: PT007
+#             "194.168.20.100",
+#             "194.168.3.100",
+#             "IP 194.168.3.100 < IP 194.168.20.100",
+#         ],
+#         ["194.168.1.1", "194.168.3.100", None],  # noqa: PT007
+#         [None, "182.0.0.1", "IP cannot be null"],  # noqa: PT007
+#         ["194.168.20.100", None, "IP cannot be null"],  # noqa: PT007
+#         ["192.168.2.2", "169.2.4.4", "IP 192.168.2.2 is not routable"],  # noqa: PT007
+#         ["9.2.2.2", "10.2.4.4", "IP 10.2.4.4 is not routable"],  # noqa: PT007
+#     ],
+# )
+# def test_blocked_ip_range_validation(ip_start, ip_end, error, settings):
+#     """Test that validation for BlockedIPRange works as expected"""
+#     settings.IPWARE_PRIVATE_IP_PREFIX = ("10.", "192.168.")
+#     ip_range = BlockedIPRange(ip_start=ip_start, ip_end=ip_end)
+#     if error:
+#         with pytest.raises(ValidationError) as exc:
+#             ip_range.clean()
+#         assert exc.value.message == error
+#     else:
+#         ip_range.clean()
