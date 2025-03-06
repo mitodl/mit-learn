@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.30.8
+Version 0.30.8 (Released March 06, 2025)
 --------------
 
 - removing school from departments display (#2115)
