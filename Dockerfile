@@ -36,6 +36,7 @@ RUN pip install "poetry==$POETRY_VERSION"
 
 COPY pyproject.toml /src
 COPY poetry.lock /src
+COPY dis[t]/ /src/dist 
 RUN chown -R mitodl:mitodl /src
 RUN mkdir ${VIRTUAL_ENV} && chown -R mitodl:mitodl ${VIRTUAL_ENV}
 
