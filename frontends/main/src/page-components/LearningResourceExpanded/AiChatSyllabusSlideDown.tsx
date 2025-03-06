@@ -169,6 +169,7 @@ const AiChatSyllabusSlideDown = ({
   return (
     <SlideDown open={open} inert={!open} ref={ref}>
       <StyledAiChatWithEntryScreen
+        chatId={resource.readable_id}
         entryTitle="What do you want to know about this course?"
         starters={STARTERS}
         initialMessages={getInitialMessage(resource, user.data)}

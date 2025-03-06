@@ -140,6 +140,7 @@ const AiChatWithEntryScreen = ({
   scrollElement: initialScrollElement,
   topPosition = 0,
   ref,
+  chatId,
 }: {
   entryTitle: string
   starters: AiChatProps["conversationStarters"]
@@ -152,6 +153,7 @@ const AiChatWithEntryScreen = ({
   scrollElement?: HTMLElement | null
   topPosition?: number
   ref?: React.Ref<HTMLDivElement>
+  chatId?: string
 }) => {
   const [initialPrompt, setInitialPrompt] = useState("")
   const [showEntryScreen, setShowEntryScreen] = useState(true)
@@ -265,6 +267,7 @@ const AiChatWithEntryScreen = ({
             requestOpts={requestOpts}
             scrollContainer={scrollElement}
             ref={aiChatRef}
+            chatId={chatId}
           />
         </ChatScreen>
       )}
