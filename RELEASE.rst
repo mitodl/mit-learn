@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.30.7
+Version 0.30.7 (Released March 06, 2025)
 --------------
 
 - Increase nginx header size limit to 12k (#2107)
