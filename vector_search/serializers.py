@@ -78,7 +78,11 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         return ", ".join(set(languages))
 
     def get_offered_by_display(self, serialized_resource):
-        return serialized_resource.get("offered_by", {}).get("name")
+        return (
+            serialized_resource["offered_by"].get("name")
+            if serialized_resource.get("offered_by")
+            else ""
+        )
 
     def get_runs_display(self, serialized_resource):
         runs = []
