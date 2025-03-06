@@ -8,15 +8,18 @@ import { RiCloseLargeLine } from "@remixicon/react"
 
 const TitleContainer = styled.div({
   display: "flex",
-  position: "sticky",
+  position: "fixed",
   justifyContent: "space-between",
   top: "0",
   padding: "24px 28px",
   gap: "16px",
   zIndex: 2,
   backgroundColor: theme.custom.colors.white,
+  width: theme.breakpoints.values.md,
   [theme.breakpoints.down("md")]: {
     padding: "24px 16px",
+    width: "100%",
+    left: 0,
   },
 })
 

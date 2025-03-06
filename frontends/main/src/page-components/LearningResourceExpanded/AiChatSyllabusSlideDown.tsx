@@ -13,13 +13,25 @@ import type { User } from "api/hooks/user"
 import AiChatWithEntryScreen from "../AiChat/AiChatWithEntryScreen"
 import { getCsrfToken } from "@/common/utils"
 
-const SlideDown = styled.div<{ open: boolean }>(({ theme, open }) => ({
+export enum ChatTransitionState {
+  Closed = "Closed",
+  Opening = "Opening",
+  Open = "Open",
+  Closing = "Closing",
+}
+
+const SlideDown = styled.div<{
+  open: boolean
+  chatTransitionState: ChatTransitionState
+}>(({ theme, open, chatTransitionState }) => ({
   position: "absolute",
   top: open ? 0 : "-100%",
   width: "100%",
   height: "100%",
   backgroundColor: theme.custom.colors.white,
   transition: "top 0.3s ease-in-out",
+  overflow:
+    chatTransitionState !== ChatTransitionState.Open ? "hidden" : "visible",
 }))
 
 const Opener = styled.div(({ theme }) => ({
@@ -145,12 +157,14 @@ const AiChatSyllabusSlideDown = ({
   onTransitionEnd,
   scrollElement,
   contentTopPosition,
+  chatTransitionState,
 }: {
   resource?: LearningResource
   open: boolean
   onTransitionEnd: () => void
   scrollElement: HTMLElement | null
   contentTopPosition: number
+  chatTransitionState: ChatTransitionState
 }) => {
   const user = useUserMe()
   const ref = useRef<HTMLDivElement>(null)
@@ -167,7 +181,7 @@ const AiChatSyllabusSlideDown = ({
   if (!resource) return null
 
   return (
-    <SlideDown open={open} inert={!open} ref={ref}>
+    <SlideDown open={open} chatTransitionState={chatTransitionState} ref={ref}>
       <StyledAiChatWithEntryScreen
         chatId={resource.readable_id}
         entryTitle="What do you want to know about this course?"

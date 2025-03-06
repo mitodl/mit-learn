@@ -13,15 +13,9 @@ import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import AiSyllabusBotSlideDown, {
   AiChatSyllabusOpener,
+  ChatTransitionState,
 } from "./AiChatSyllabusSlideDown"
 import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
-
-enum ChatTransitionState {
-  Closed = "Closed",
-  Opening = "Opening",
-  Open = "Open",
-  Closing = "Closing",
-}
 
 const Outer = styled.div(({ theme }) => ({
   display: "flex",
@@ -45,10 +39,15 @@ const ContentSection = styled.div<{
 
 const StyledAiChatSyllabusOpener = styled(AiChatSyllabusOpener)<{
   top: number
-}>(({ top }) => ({
-  position: "sticky",
+}>(({ theme, top }) => ({
+  position: "fixed",
   top,
   zIndex: 2,
+  width: theme.breakpoints.values.md,
+  [theme.breakpoints.down("md")]: {
+    width: "100%",
+    left: 0,
+  },
 }))
 
 const TopContainer = styled.div<{ chatEnabled: boolean }>(
@@ -233,6 +232,8 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
     }
   }
 
+  console.log("chatTransitionState", chatTransitionState)
+
   return (
     <Outer ref={outerContainerRef}>
       <TitleSection
@@ -252,6 +253,7 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
             resource={resource}
             open={chatExpanded}
             onTransitionEnd={onTransitionEnd}
+            chatTransitionState={chatTransitionState}
             contentTopPosition={titleSectionHeight}
             scrollElement={scrollElement}
           />
