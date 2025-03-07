@@ -13,6 +13,7 @@ import {
 } from "@/common/carousels"
 import ResourceCarousel from "@/page-components/ResourceCarousel/ResourceCarousel"
 import { useProfileMeQuery } from "api/hooks/profile"
+import { EnrollmentDisplay } from "./EnrollmentDisplay/EnrollmentDisplay"
 
 const SubTitleText = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
@@ -80,6 +81,7 @@ const HomeContent: React.FC = () => {
           </ButtonLink>
         </HomeHeaderRight>
       </HomeHeader>
+      <EnrollmentDisplay />
       <Suspense>
         <StyledResourceCarousel
           titleComponent="h2"

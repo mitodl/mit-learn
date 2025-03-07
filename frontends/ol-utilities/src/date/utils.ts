@@ -1,14 +1,16 @@
 import padStart from "lodash/padStart"
 import moment from "moment"
 
-const EXPECTED_FORMAT = "YYYY-MM-DD[T]HH:mm:ss[Z]"
+const ISO_8601_FORMAT = "YYYY-MM-DD[T]HH:mm:ss[Z]"
 /**
  * Parse date string into a moment object.
  *
  * If date is null or undefined, a Moment<Invalid date> object is returned.
  * Invalid dates return false for all comparisons.
  */
-const asMoment = (date?: string | null) => moment(date, EXPECTED_FORMAT)
+const asMoment = (date?: string | moment.Moment | null) =>
+  moment(date, ISO_8601_FORMAT)
+const utcNow = () => moment.utc()
 
 /* Instances must be wrapped in <NoSSR> to avoid SSR hydration mismatches.
  */
@@ -38,7 +40,7 @@ const formatDate = (
  *  3:09
  *  0:47
  */
-const formatDurationClockTime = (value: string) => {
+const formatDurationClockTime = (value: string | moment.Duration) => {
   const duration = moment.duration(value)
   const values = []
 
@@ -61,4 +63,10 @@ const formatDurationClockTime = (value: string) => {
   return values.join(":")
 }
 
-export { formatDate, asMoment, formatDurationClockTime }
+export {
+  formatDate,
+  asMoment,
+  utcNow,
+  formatDurationClockTime,
+  ISO_8601_FORMAT,
+}
