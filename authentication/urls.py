@@ -14,5 +14,6 @@ urlpatterns = [
     #     ),
     #     name="login",
     # ),
+    re_path(r"^login/", RedirectView.as_view(url="/", query_string=True), name="login"),
     re_path(r"^logout/$", CustomLogoutView.as_view(), name="logout"),
 ]
