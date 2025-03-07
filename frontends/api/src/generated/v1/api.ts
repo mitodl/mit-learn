@@ -403,6 +403,18 @@ export interface ContentFile {
    * @memberof ContentFile
    */
   edx_block_id?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  summary?: string | null
+  /**
+   *
+   * @type {any}
+   * @memberof ContentFile
+   */
+  flashcards?: any | null
 }
 
 /**
