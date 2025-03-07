@@ -5,7 +5,7 @@
 
 export * from "./styles"
 
-export * from "./date/format"
+export * from "./date/utils"
 export * from "./date/LocalDate"
 export * from "./learning-resources/learning-resources"
 export * from "./learning-resources/pricing"

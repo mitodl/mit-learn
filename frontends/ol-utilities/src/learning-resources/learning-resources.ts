@@ -1,8 +1,7 @@
-import moment from "moment"
 import type { LearningResource, LearningResourceRun } from "api"
 import { DeliveryEnum, ResourceTypeEnum } from "api"
 import { capitalize } from "lodash"
-import { formatDate } from "../date/format"
+import { asMoment, formatDate } from "../date/utils"
 
 const readableResourceTypes: Record<ResourceTypeEnum, string> = {
   [ResourceTypeEnum.Course]: "Course",
@@ -41,14 +40,6 @@ const resourceThumbnailSrc = (
   config: EmbedlyConfig,
 ) => embedlyCroppedImage(image?.url ?? DEFAULT_RESOURCE_IMG, config)
 
-const DATE_FORMAT = "YYYY-MM-DD[T]HH:mm:ss[Z]"
-/**
- * Parse date string into a moment object.
- *
- * If date is null or undefined, a Moment<Invalid date> object is returned.
- * Invalid dates return false for all comparisons.
- */
-const asMoment = (date?: string | null) => moment(date, DATE_FORMAT)
 const isCurrent = (run: LearningResourceRun) =>
   asMoment(run.start_date).isSameOrBefore() && asMoment(run.end_date).isAfter()
 
