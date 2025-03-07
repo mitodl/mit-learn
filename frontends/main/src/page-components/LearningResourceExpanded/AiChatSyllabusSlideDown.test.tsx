@@ -26,7 +26,7 @@ describe("AiChatSyllabus", () => {
         onTransitionEnd={jest.fn()}
         scrollElement={null}
         contentTopPosition={0}
-        chatTransitionState={ChatTransitionState.Closed}
+        chatTransitionState={ChatTransitionState.Open}
       />,
     )
 
@@ -52,7 +52,7 @@ describe("AiChatSyllabus", () => {
         onTransitionEnd={jest.fn()}
         scrollElement={null}
         contentTopPosition={0}
-        chatTransitionState={ChatTransitionState.Closed}
+        chatTransitionState={ChatTransitionState.Open}
       />,
     )
 
