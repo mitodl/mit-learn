@@ -8,12 +8,7 @@ import Image from "next/image"
 import timLogo from "@/public/images/icons/tim.svg"
 import { useScrollSnap } from "./useScrollSnap"
 
-const Container = styled.div(({ theme }) => ({
-  width: "900px",
-  [theme.breakpoints.down("md")]: {
-    width: "100%",
-  },
-}))
+const Container = styled.div()
 
 const EntryScreen = styled.div<{ top: number }>(({ theme, top }) => ({
   display: "flex",
@@ -102,9 +97,9 @@ const Starter = styled.button(({ theme }) => ({
 }))
 
 const ChatScreen = styled.div<{ top: number }>(({ theme, top }) => ({
-  padding: "16px 40px 0",
+  padding: "16px 28px 0",
   [theme.breakpoints.down("md")]: {
-    padding: "16px 24px 0",
+    padding: "16px 16px 0",
     width: "100%",
   },
   background: "white",
@@ -135,7 +130,6 @@ const AiChatWithEntryScreen = ({
   askTimTitle,
   requestOpts,
   onClose,
-  chatScreenClassName,
   className,
   scrollElement: initialScrollElement,
   topPosition = 0,
@@ -254,7 +248,7 @@ const AiChatWithEntryScreen = ({
         </EntryScreen>
       ) : (
         <ChatScreen
-          className={chatScreenClassName}
+          className="AiChatWithEntryScreen-chatScreen"
           data-testid="ai-chat-screen"
           top={topPosition}
           ref={chatScreenRef}

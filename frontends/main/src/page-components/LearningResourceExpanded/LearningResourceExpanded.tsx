@@ -39,15 +39,10 @@ const ContentSection = styled.div<{
 
 const StyledAiChatSyllabusOpener = styled(AiChatSyllabusOpener)<{
   top: number
-}>(({ theme, top }) => ({
-  position: "fixed",
+}>(({ top }) => ({
+  position: "sticky",
   top,
   zIndex: 2,
-  width: theme.breakpoints.values.md,
-  [theme.breakpoints.down("md")]: {
-    width: "100%",
-    left: 0,
-  },
 }))
 
 const TopContainer = styled.div<{ chatEnabled: boolean }>(

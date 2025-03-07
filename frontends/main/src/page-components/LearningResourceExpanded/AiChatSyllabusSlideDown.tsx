@@ -24,14 +24,19 @@ const SlideDown = styled.div<{
   open: boolean
   chatTransitionState: ChatTransitionState
 }>(({ theme, open, chatTransitionState }) => ({
-  position: "absolute",
   top: open ? 0 : "-100%",
-  width: "100%",
-  height: "100%",
-  backgroundColor: theme.custom.colors.white,
-  transition: "top 0.3s ease-in-out",
+  right: 0,
+  left: 0,
+  height: chatTransitionState === ChatTransitionState.Open ? "auto" : "100%",
   overflow:
     chatTransitionState !== ChatTransitionState.Open ? "hidden" : "visible",
+  position:
+    chatTransitionState === ChatTransitionState.Open ? "static" : "absolute",
+  visibility:
+    chatTransitionState === ChatTransitionState.Closed ? "hidden" : "visible",
+  backgroundColor: theme.custom.colors.white,
+  zIndex: 1,
+  transition: "top 0.3s ease-in-out",
 }))
 
 const Opener = styled.div(({ theme }) => ({
@@ -96,11 +101,23 @@ const CloseButton = styled(RiCloseLine)(({ theme }) => ({
   backgroundColor: theme.custom.colors.silverGray,
 }))
 
-const StyledAiChatWithEntryScreen = styled(AiChatWithEntryScreen)({
-  ".MitAiChat--messagesContainer": {
-    marginTop: "14px",
+const StyledAiChatWithEntryScreen = styled(AiChatWithEntryScreen)<{
+  topPosition: number
+}>(({ topPosition }) => ({
+  ".MitAiChat--root": {
+    minHeight: `calc(100vh - ${topPosition + 43}px)`,
   },
-})
+  ".MitAiChat--messagesContainer": {
+    position: "static",
+  },
+  ".AiChatWithEntryScreen-chatScreen": {
+    position: "static",
+    paddingTop: 0,
+  },
+  ".MitAiChat--title": {
+    display: "none",
+  },
+}))
 
 const STARTERS: AiChatProps["conversationStarters"] = [
   { content: "What is this course about?" },
@@ -176,7 +193,7 @@ const AiChatSyllabusSlideDown = ({
     return () => {
       element.removeEventListener("transitionend", onTransitionEnd)
     }
-  }, [open, onTransitionEnd])
+  }, [onTransitionEnd])
 
   if (!resource) return null
 

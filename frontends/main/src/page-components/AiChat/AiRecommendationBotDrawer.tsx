@@ -10,7 +10,7 @@ import { RECOMMENDER_QUERY_PARAM } from "@/common/urls"
 const CloseButton = styled(ActionButton)(({ theme }) => ({
   position: "absolute",
   top: "24px",
-  right: "40px",
+  right: "28px",
   zIndex: 2,
   backgroundColor: theme.custom.colors.lightGray2,
   "&&:hover": {
@@ -99,6 +99,7 @@ const AiRecommendationBotDrawer = () => {
       PaperProps={{
         sx: {
           minWidth: (theme) => ({
+            minWidth: "900px",
             [theme.breakpoints.down("md")]: {
               width: "100%",
             },
