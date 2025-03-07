@@ -22,7 +22,7 @@ from learning_resources.etl.constants import (
     ResourceNextRunConfig,
 )
 from learning_resources.etl.exceptions import ExtractException
-from learning_resources.etl.utils import most_common_topics
+from learning_resources.etl.utils import html_to_markdown, most_common_topics
 from learning_resources.models import (
     ContentFile,
     Course,
@@ -769,7 +769,10 @@ def load_marketing_page(learning_resource: LearningResource):
             content_file, _ = ContentFile.objects.update_or_create(
                 run=course_run,
                 key=marketing_page_url,
-                defaults={"content": page_content, "file_extension": ".md"},
+                defaults={
+                    "content": html_to_markdown(page_content),
+                    "file_extension": ".md",
+                },
             )
 
 
