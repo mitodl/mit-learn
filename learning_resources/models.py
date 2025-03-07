@@ -867,7 +867,18 @@ class ContentFile(TimestampedModel):
     uid = models.CharField(max_length=36, null=True, blank=True)  # noqa: DJ001
     key = models.CharField(max_length=1024, null=True, blank=True)  # noqa: DJ001
     run = models.ForeignKey(
-        LearningResourceRun, related_name="content_files", on_delete=models.CASCADE
+        LearningResourceRun,
+        related_name="content_files",
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
+    )
+    learning_resource = models.ForeignKey(
+        LearningResource,
+        related_name="resource_content_files",
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
     )
     title = models.CharField(max_length=1024, null=True, blank=True)  # noqa: DJ001
     description = models.TextField(null=True, blank=True)  # noqa: DJ001
@@ -901,6 +912,16 @@ class ContentFile(TimestampedModel):
     class Meta:
         unique_together = (("key", "run"),)
         verbose_name = "contentfile"
+
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    models.Q(learning_resource__isnull=False)
+                    | models.Q(run__isnull=False)
+                ),
+                name="run_or_resource_defined",
+            ),
+        ]
 
 
 class UserList(TimestampedModel):
