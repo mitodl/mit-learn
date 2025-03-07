@@ -55,13 +55,20 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
     platform_display = serializers.SerializerMethodField()
 
     def get_departments_display(self, serialized_resource):
-        return ", ".join(
-            f"{department['name']} ({department['school']['name']})"
-            for department in serialized_resource.get("departments", [])
-        )
+        department_vals = []
+        for department in serialized_resource.get("departments", []):
+            school_display = (
+                f" ({department['school']['name']})" if department.get("school") else ""
+            )
+            department_vals.append(f"{department['name']}{school_display}")
+        return ", ".join(department_vals)
 
     def get_platform_display(self, serialized_resource):
-        return serialized_resource["platform"]["name"]
+        return (
+            serialized_resource["platform"].get("name")
+            if serialized_resource.get("platform")
+            else ""
+        )
 
     def get_levels_display(self, serialized_resource):
         levels = []
@@ -78,7 +85,11 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         return ", ".join(set(languages))
 
     def get_offered_by_display(self, serialized_resource):
-        return serialized_resource.get("offered_by", {}).get("name")
+        return (
+            serialized_resource["offered_by"].get("name")
+            if serialized_resource.get("offered_by")
+            else ""
+        )
 
     def get_runs_display(self, serialized_resource):
         runs = []
@@ -117,7 +128,11 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         )
 
     def get_certification_display(self, serialized_resource):
-        return serialized_resource.get("certification_type", {}).get("name")
+        return (
+            serialized_resource["certification_type"].get("name")
+            if serialized_resource.get("certification_type")
+            else ""
+        )
 
     def get_price_display(self, serialized_resource):
         return (

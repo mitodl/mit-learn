@@ -198,8 +198,14 @@ const AiChatSyllabusSlideDown = ({
   if (!resource) return null
 
   return (
-    <SlideDown open={open} chatTransitionState={chatTransitionState} ref={ref}>
+    <SlideDown
+      open={open}
+      chatTransitionState={chatTransitionState}
+      inert={!open}
+      ref={ref}
+    >
       <StyledAiChatWithEntryScreen
+        key={resource.readable_id}
         chatId={resource.readable_id}
         entryTitle="What do you want to know about this course?"
         starters={STARTERS}

@@ -15,9 +15,9 @@ const EntryScreen = styled.div<{ top: number }>(({ theme, top }) => ({
   flexDirection: "column",
   alignItems: "center",
   gap: "16px",
-  padding: "114px 40px 24px 40px",
+  padding: "114px 32px 24px",
   [theme.breakpoints.down("md")]: {
-    padding: "114px 24px 24px 24px",
+    padding: "114px 16px 24px",
     width: "100%",
   },
   position: "absolute",
