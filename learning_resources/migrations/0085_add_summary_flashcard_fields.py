@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("learning_resources", "0083_contentfile_edx_block_id"),
+        ("learning_resources", "0084_rename_edx_block_id_contentfile_edx_module_id"),
     ]
 
     operations = [

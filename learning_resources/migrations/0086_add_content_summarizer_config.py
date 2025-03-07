@@ -7,7 +7,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("learning_resources", "0084_add_summary_flashcard_fields"),
+        ("learning_resources", "0085_add_summary_flashcard_fields"),
     ]
 
     operations = [
