@@ -1,5 +1,7 @@
 import React from "react"
-import AiChatSyllabusSlideDown from "./AiChatSyllabusSlideDown"
+import AiChatSyllabusSlideDown, {
+  ChatTransitionState,
+} from "./AiChatSyllabusSlideDown"
 import { renderWithProviders, screen, user } from "@/test-utils"
 import { factories, setMockResponse, urls } from "api/test-utils"
 
@@ -20,8 +22,11 @@ describe("AiChatSyllabus", () => {
     renderWithProviders(
       <AiChatSyllabusSlideDown
         open
-        onToggleOpen={jest.fn()}
         resource={resource}
+        onTransitionEnd={jest.fn()}
+        scrollElement={null}
+        contentTopPosition={0}
+        chatTransitionState={ChatTransitionState.Open}
       />,
     )
 
@@ -43,8 +48,11 @@ describe("AiChatSyllabus", () => {
     renderWithProviders(
       <AiChatSyllabusSlideDown
         open
-        onToggleOpen={jest.fn()}
         resource={resource}
+        onTransitionEnd={jest.fn()}
+        scrollElement={null}
+        contentTopPosition={0}
+        chatTransitionState={ChatTransitionState.Open}
       />,
     )
 
