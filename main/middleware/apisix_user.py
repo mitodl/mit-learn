@@ -4,25 +4,34 @@ import base64
 import json
 import logging
 
-from django.contrib.auth import get_user_model, logout
+from django.conf import settings
+from django.contrib.auth import get_user_model, login, logout
 from django.contrib.auth.middleware import RemoteUserMiddleware
-from django.core.exceptions import ImproperlyConfigured
+
+from profiles.api import ensure_profile
 
 log = logging.getLogger(__name__)
 
 
-def decode_apisix_headers(request, header):
+def decode_apisix_headers(request, header, model=settings.AUTH_USER_MODEL):
     """
     Decode APISIX-specific headers and return the username as a dict.
 
     Returns: dict containing username from APISIX/Keycloak
     """
-    x_userinfo = request.META[header]
+    if model not in settings.APISIX_USERDATA_MAP:
+        error = "Model %s is invalid"
+        raise ValueError(error, model)
+
+    data_mapping = settings.APISIX_USERDATA_MAP[model]
+
+    x_userinfo = request.META.get(header, None)
     if not x_userinfo:
         return None
 
     try:
         apisix_result = json.loads(base64.b64decode(x_userinfo))
+        log.error("FULL APISIX RESULT: %s", apisix_result)
         if not apisix_result:
             err_msg = "decode_apisix_headers: No APISIX-specific header found"
             raise KeyError(err_msg)
@@ -35,14 +44,14 @@ def decode_apisix_headers(request, header):
         return None
 
     log.debug("decode_apisix_headers: Got %s", apisix_result)
-    #return {"username": apisix_result.get("preferred_username", None)}
     return {
         modelKey: apisix_result[data_mapping[modelKey]]
         for modelKey in data_mapping
         if data_mapping[modelKey] in apisix_result
     }
 
-def get_user_from_apisix_headers(request, decoded_headers):
+
+def get_user_from_apisix_headers(request, decoded_headers, original_header):
     """Get a user based on the APISIX headers."""
 
     User = get_user_model()
@@ -59,7 +68,6 @@ def get_user_from_apisix_headers(request, decoded_headers):
             "global_id": global_id,
             "username": decoded_headers.get("username", ""),
             "email": decoded_headers.get("email", ""),
-            "name": decoded_headers.get("name", ""),
         }
     )
 
@@ -69,6 +77,7 @@ def get_user_from_apisix_headers(request, decoded_headers):
             global_id,
         )
         user.set_unusable_password()
+        user.is_active = True
         user.save()
     else:
         log.info(
@@ -80,17 +89,17 @@ def get_user_from_apisix_headers(request, decoded_headers):
         user.name = decoded_headers.get("name", "")
         user.save()
 
-    profile_data = decode_apisix_headers(request, "users_userprofile")
-
+    profile_data = decode_apisix_headers(
+        request, original_header, model="profiles.Profile"
+    )
     if profile_data:
         log.info(
             "get_user_from_apisix_headers: Setting up additional profile for %s",
             global_id,
         )
-
-        _, profile = user.profile.filter(user=user).get_or_create(defaults=profile_data)
-        profile.save()
-        user.refresh_from_db()
+        profile_data["profile"] = profile_data
+    ensure_profile(user=user, profile_data=profile_data)
+    user.refresh_from_db()
 
     return user
 
@@ -104,34 +113,43 @@ class ApisixUserMiddleware(RemoteUserMiddleware):
         """
         Modify the header to contaiin username, pass off to RemoteUserMiddleware
         """
+        apisix_user = None
         if request.META.get(self.header):
-            new_header = decode_apisix_headers(request, self.header)
-            log.info("APISIX User: %s", new_header)
+            new_header = decode_apisix_headers(
+                request, self.header, model=settings.AUTH_USER_MODEL
+            )
             request.META["REMOTE_USER"] = new_header
 
             try:
-                get_user_from_apisix_headers(request, new_header)
+                apisix_user = get_user_from_apisix_headers(
+                    request, new_header, self.header
+                )
             except KeyError:
                 if self.force_logout_if_no_header and request.user.is_authenticated:
                     log.debug("Forcing user logout due to missing APISIX headers.")
                     logout(request)
                 return None
-        return super().process_request(request)
 
-        # if apisix_user:
-        #     if request.user.is_authenticated and request.user != apisix_user:
-        #         # The user is authenticated, but doesn't match the user we got
-        #         # from APISIX. So, log them out so the APISIX user takes
-        #         # precedence.
-        #         log.debug(
-        #             "Forcing user logout because request user doesn't match APISIX user"
-        #         )
-        #
-        #         logout(request)
-        #
-        #     request.user = apisix_user
-        #     login(
-        #         request,
-        #         apisix_user,
-        #         backend="django.contrib.auth.backends.ModelBackend",
-        #     )
+        if apisix_user:
+            if request.user.is_authenticated and request.user != apisix_user:
+                # The user is authenticated, but doesn't match the user we got
+                # from APISIX. So, log them out so the APISIX user takes
+                # precedence.
+                log.debug(
+                    "Forcing user logout because request user doesn't match APISIX user"
+                )
+
+                logout(request)
+
+            request.user = apisix_user
+            login(
+                request,
+                apisix_user,
+                backend="django.contrib.auth.backends.ModelBackend",
+            )
+        elif request.user and request.user.is_authenticated:
+            logout(request)
+
+        request.api_gateway_userdata = decode_apisix_headers(request, self.header)
+
+        return self.get_response(request)

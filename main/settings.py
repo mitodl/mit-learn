@@ -15,7 +15,7 @@ import datetime
 import logging
 import os
 import platform
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
 
 import dj_database_url
 from django.core.exceptions import ImproperlyConfigured
@@ -93,7 +93,6 @@ INSTALLED_APPS = (
     "django.contrib.humanize",
     "django.contrib.sites",
     "django_scim",
-    "social_django",
     "server_status",
     "rest_framework",
     "corsheaders",
@@ -306,6 +305,22 @@ AUTHORIZATION_URL = get_string(
     name="AUTHORIZATION_URL",
     default=None,
 )
+
+APISIX_USERDATA_MAP = {
+    "users.User": {
+        "email": "email",
+        "global_id": "sub",
+        "username": "preferred_username",
+        "first_name": "given_name",
+        "last_name": "family_name",
+        "name": "name",
+    },
+    "profiles.Profile": {
+        "name": "name",
+        "email_optin": "emailOptIn",
+    },
+}
+
 
 # Social Auth configurations - [END]
 
