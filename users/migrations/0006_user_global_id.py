@@ -27,7 +27,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="user",
             name="global_id",
-            field=models.CharField(blank=True, max_length=255, unique=True),
+            field=models.CharField(blank=True, max_length=255),
         ),
         migrations.RunPython(
             transfer_global_id, reverse_code=migrations.RunPython.noop

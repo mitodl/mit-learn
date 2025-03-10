@@ -2,6 +2,7 @@
 
 import json
 from base64 import b64encode
+from uuid import uuid4
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -14,7 +15,7 @@ from main.middleware.apisix_user import ApisixUserMiddleware
 User = get_user_model()
 
 apisix_user_info = {
-    "global_id": "123456",
+    "sub": uuid4().hex,
     "preferred_username": "testuser",
     "email": "testuser@test.edu",
     "given_name": "test",
@@ -58,6 +59,7 @@ def test_get_request(mocker, mock_login):
     assert user.last_name == apisix_user_info["family_name"]
     assert user.profile.name == apisix_user_info["name"]
     assert user.profile.email_optin == apisix_user_info["emailOptIn"]
+    assert user.global_id == apisix_user_info["sub"]
 
 
 @pytest.mark.django_db(transaction=True)

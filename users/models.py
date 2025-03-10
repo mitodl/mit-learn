@@ -10,4 +10,4 @@ from main.models import TimestampedModel
 class User(AbstractUser, AbstractSCIMUserMixin, TimestampedModel):
     """Custom model for users"""
 
-    global_id = CharField(unique=True, blank=True, max_length=255)
+    global_id = CharField(blank=True, max_length=255, unique=True)
