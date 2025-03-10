@@ -93,6 +93,7 @@ INSTALLED_APPS = (
     "django.contrib.humanize",
     "django.contrib.sites",
     "django_scim",
+    "social_django",
     "server_status",
     "rest_framework",
     "corsheaders",
