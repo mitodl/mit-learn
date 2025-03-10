@@ -1610,3 +1610,128 @@ def test_calculate_completeness(mocker, is_scholar_course, tag_counts, expected_
         == expected_score
     )
     assert mock_index.call_count == (1 if resource.completeness != 1.0 else 0)
+
+
+def test_load_course_fetches_marketing_page_info(mocker):
+    """Test that loading a course produces a course metadata document"""
+    platform = LearningResourcePlatformFactory.create()
+
+    props = {
+        "readable_id": "abc123",
+        "platform": platform.code,
+        "etl_source": ETLSource.ocw.name,
+        "title": "course title",
+        "image": {"url": "https://www.test.edu/image.jpg"},
+        "description": "description",
+        "url": "https://test.edu",
+        "published": True,
+        "runs": [
+            {
+                "run_id": "test_run_id",
+                "enrollment_start": now_in_utc(),
+                "start_date": now_in_utc(),
+                "end_date": now_in_utc(),
+            }
+        ],
+    }
+    result = load_course(props, [], [], config=CourseLoaderConfig(prune=True))
+    assert ContentFile.objects.filter(key=result.url).exists()
+
+
+def test_load_podcast_fetches_marketing_page_info(
+    mock_upsert_tasks,
+    learning_resource_offeror,
+    podcast_platform,
+):
+    podcasts_data = []
+    for podcast in PodcastFactory.build_batch(3):
+        episodes = PodcastEpisodeFactory.build_batch(3)
+        podcast_data = model_to_dict(
+            podcast.learning_resource, exclude=non_transformable_attributes
+        )
+        podcast_data["image"] = {"url": podcast.learning_resource.image.url}
+        podcast_data["offered_by"] = {"name": learning_resource_offeror.name}
+        episodes_data = [
+            {
+                **model_to_dict(
+                    episode.learning_resource, exclude=non_transformable_attributes
+                ),
+                "offered_by": {"name": learning_resource_offeror.name},
+            }
+            for episode in episodes
+        ]
+        podcast_data["episodes"] = episodes_data
+        podcasts_data.append(podcast_data)
+    results = load_podcasts(podcasts_data)
+    for result in results:
+        assert ContentFile.objects.filter(key=result.url).exists()
+
+
+def test_load_program_fetches_marketing_page_info(
+    mock_upsert_tasks,
+):
+    """Test that load_program loads the program"""
+    platform = LearningResourcePlatformFactory.create()
+
+    program = ProgramFactory.create(courses=[], platform=platform.code)
+
+    LearningResourcePlatformFactory.create(code=platform.code)
+
+    learning_resource = program.learning_resource
+    learning_resource.is_published = True
+    learning_resource.platform = platform
+    learning_resource.runs.set([])
+    learning_resource.save()
+    courses = CourseFactory.create_batch(2, platform=platform.code)
+    run_data = {
+        "run_id": program.learning_resource.readable_id,
+        "enrollment_start": "2017-01-01T00:00:00Z",
+        "start_date": "2017-01-20T00:00:00Z",
+        "end_date": "2017-06-20T00:00:00Z",
+    }
+    delivery_data = {}
+    result = load_program(
+        {
+            "platform": platform.code,
+            "readable_id": program.learning_resource.readable_id,
+            "professional": False,
+            "title": program.learning_resource.title,
+            "url": program.learning_resource.url,
+            "image": {"url": program.learning_resource.image.url},
+            "published": True,
+            "runs": [run_data],
+            "availability": program.learning_resource.availability,
+            "courses": [
+                {
+                    "readable_id": course.learning_resource.readable_id,
+                    "platform": platform.code,
+                    "availability": course.learning_resource.availability,
+                }
+                for course in courses
+            ],
+            **delivery_data,
+        },
+        [],
+        [],
+    )
+    assert ContentFile.objects.filter(key=result.url).exists()
+
+
+def test_load_podcast_episode_fetches_marketing_page_info(
+    mock_upsert_tasks,
+    learning_resource_offeror,
+    podcast_platform,
+):
+    """Test that load_podcast_episode loads the podcast episode"""
+    podcast_episode = LearningResourceFactory.create(
+        published=True, is_podcast_episode=True
+    )
+
+    props = model_to_dict(podcast_episode, exclude=non_transformable_attributes)
+    props["image"] = {"url": podcast_episode.image.url}
+    props["offered_by"] = {"name": learning_resource_offeror.name}
+    topics = podcast_episode.topics.all()
+
+    props["topics"] = [model_to_dict(topic, exclude=["id"]) for topic in topics]
+    result = load_podcast_episode(props)
+    assert ContentFile.objects.filter(key=result.url).exists()
