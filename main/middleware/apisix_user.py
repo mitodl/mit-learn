@@ -26,7 +26,7 @@ def decode_apisix_headers(request, header, model=settings.AUTH_USER_MODEL):
         dict containing model attributes from APISIX/Keycloak
     """
     if model not in settings.APISIX_USERDATA_MAP:
-        error = "Model %s is invalid"
+        error = f"Model {model} is invalid"
         raise ValueError(error, model)
 
     data_mapping = settings.APISIX_USERDATA_MAP[model]
@@ -37,7 +37,6 @@ def decode_apisix_headers(request, header, model=settings.AUTH_USER_MODEL):
 
     try:
         apisix_result = json.loads(base64.b64decode(x_userinfo))
-        log.error("FULL APISIX RESULT: %s", apisix_result)
         if not apisix_result:
             err_msg = "decode_apisix_headers: No APISIX-specific header found"
             raise KeyError(err_msg)
@@ -78,8 +77,6 @@ def get_user_from_apisix_headers(request, decoded_headers, original_header):
 
     global_id = decoded_headers.get("global_id", None)
 
-    log.info("get_user_from_apisix_headers: Authenticating %s", global_id)
-
     user, created = User.objects.filter(global_id=global_id).get_or_create(
         defaults={
             "global_id": global_id,
@@ -99,7 +96,7 @@ def get_user_from_apisix_headers(request, decoded_headers, original_header):
         user.is_active = True
         user.save()
     else:
-        log.info(
+        log.debug(
             "get_user_from_apisix_headers: Found existing user for %s: %s",
             global_id,
             user,
@@ -111,9 +108,8 @@ def get_user_from_apisix_headers(request, decoded_headers, original_header):
     profile_data = decode_apisix_headers(
         request, original_header, model="profiles.Profile"
     )
-    log.info("PROFILE DATA: %s", profile_data)
     if profile_data:
-        log.info(
+        log.debug(
             "get_user_from_apisix_headers: Setting up additional profile for %s",
             global_id,
         )
