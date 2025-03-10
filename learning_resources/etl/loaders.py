@@ -758,10 +758,13 @@ def calculate_completeness(
 
 def _fetch_page(url):
     if url:
-        response = requests.get(url, timeout=10)
-        if response.ok:
-            return response.text
-    return None
+        try:
+            response = requests.get(url, timeout=10)
+            if response.ok:
+                return response.text
+        except requests.exceptions.RequestException as e:
+            logging.exception(f"Error fetching page from {url}: {e}")
+        return None
 
 
 def load_marketing_page(learning_resource: LearningResource):
