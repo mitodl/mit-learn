@@ -113,7 +113,9 @@ def get_user_from_apisix_headers(request, decoded_headers, original_header):
             "get_user_from_apisix_headers: Setting up additional profile for %s",
             global_id,
         )
-        profile_data["profile"] = profile_data
+        profile_data = {
+            "profile": profile_data,
+        }
     ensure_profile(user=user, profile_data=profile_data)
     user.refresh_from_db()
 
