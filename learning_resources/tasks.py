@@ -11,6 +11,7 @@ import celery
 from django.conf import settings
 from django.utils import timezone
 
+from learning_resources.content_summarizer import ContentSummarizer
 from learning_resources.etl import pipelines, youtube
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.edx_shared import (
@@ -378,3 +379,48 @@ def get_learning_resource_views():
     """Load learning resource views from the PostHog ETL."""
 
     pipelines.posthog_etl()
+
+
+def get_unprocessed_content_file_tasks(
+    overwrite,
+    chunk_size: int | None = None,
+    ids: Optional[list[int]] = None,
+) -> celery.group:
+    """Generate task groups for processing unprocessed content files."""
+
+    # If no Ids were provided, get all the unprocessed content file ids
+    if not ids:
+        ids = ContentSummarizer().get_unprocessed_content_file_ids(overwrite=overwrite)
+
+    if chunk_size is None:
+        chunk_size = settings.CONTENT_FILE_SUMMARIER_CHUNK_SIZE
+
+    return celery.group(
+        [
+            process_single_content_file_task.si(unpreocess_lr_ids, overwrite)
+            for unpreocess_lr_ids in chunks(
+                ids,
+                chunk_size=chunk_size,
+            )
+        ]
+    )
+
+
+@app.task(bind=True)
+def summarize_unprocessed_content(
+    self, *, chunk_size=None, overwrite, ids: Optional[list[int]] = None
+):
+    """Summarize the unprocessed content files."""
+
+    return self.replace(
+        get_unprocessed_content_file_tasks(
+            overwrite=overwrite, ids=ids, chunk_size=chunk_size
+        )
+    )
+
+
+@app.task
+def process_single_content_file_task(ids: list[int], overwrite):
+    """Process a single content file to generate summary and flashcards."""
+    summarizer = ContentSummarizer()
+    return summarizer.process_content_files_by_ids(overwrite, ids)
