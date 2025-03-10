@@ -11,9 +11,6 @@ import posthog
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import caches
-from django.core.exceptions import ObjectDoesNotExist
-
-from authentication.backends.ol_open_id_connect import OlOpenIdConnectAuth
 
 log = logging.getLogger()
 User = get_user_model()
@@ -48,29 +45,6 @@ def configure():
 def default_unique_id() -> str:
     """Get the default unique_id if it's not provided"""
     return settings.HOSTNAME
-
-
-def user_unique_id(user: Optional[User]) -> Optional[str]:
-    """
-    Get a unique id for a given user.
-    """
-    if user is None or user.is_anonymous():
-        return None
-
-    try:
-        # we use the keycloak uid because that should be ubiquitous across all apps
-        return user.social_auth.get(provider=OlOpenIdConnectAuth.name).uid
-    except ObjectDoesNotExist:
-        # this user was created out-of-band (e.g. createsuperuser)
-        # so we won't support this edge case
-        log.exception(
-            "Unable to pick posthog unique_id for user due to no keycloak auth: %s",
-            user.id,
-        )
-        return None
-    except Exception:
-        log.exception("Unexpected error trying to pick posthog unique_id for user")
-        return None
 
 
 def _get_person_properties(unique_id: str) -> dict:

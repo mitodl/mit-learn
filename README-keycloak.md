@@ -26,7 +26,7 @@ The Keycloak instance is part of the `keycloak` profile in the Composer file, so
 
 If you want to use the Keycloak and APISIX instances, follow these steps:
 
-1. Change the value of `MITOL_API_BASE_URL` to `http://api.open.odl.local:8065` and `MITOL_API_LOGOUT_SUFFIX` to `logout/oidc` in your `shared.local.env` file.
+1. Change the value of `MITOL_API_BASE_URL` to `http://api.open.odl.local:8065` in your `shared.local.env` file.
 2. Add `MITOL_NEW_USER_LOGIN_URL=http://open.odl.local:8062/onboarding` to your `shared.local.env` file
 3. Copy all the env values under the "# APISIX/Keycloak " section of `backend.local.example.env` to your `backend.local.env` file. You can leave all the values as is.
 4. Keycloak needs to create its own database, which will only happen if you first destroy your current mit-learn database container: `docker compose down db`. If you prefer not to do this, you can manually create it by running the SQL in `config/postgres/init-keycloak.sql` in a postgres shell.
