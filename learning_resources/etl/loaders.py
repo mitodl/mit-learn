@@ -762,9 +762,9 @@ def _fetch_page(url):
             response = requests.get(url, timeout=10)
             if response.ok:
                 return response.text
-        except requests.exceptions.RequestException as e:
-            logging.exception(f"Error fetching page from {url}: {e}")
-        return None
+        except requests.exceptions.RequestException:
+            logging.exception("Error fetching page from %s", url)
+    return None
 
 
 def load_marketing_page(learning_resource: LearningResource):
