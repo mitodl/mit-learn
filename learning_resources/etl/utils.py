@@ -905,7 +905,5 @@ def parse_resource_commitment(commitment_str: str) -> CommitmentConfig:
 
 def html_to_markdown(html):
     htmlformatter = html2text.HTML2Text()
-    htmlformatter.ignore_links = True
-    htmlformatter.ignore_images = True
     htmlformatter.body_width = 0
     return htmlformatter.handle(html)
