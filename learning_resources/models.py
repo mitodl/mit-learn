@@ -912,14 +912,17 @@ class ContentFile(TimestampedModel):
     class Meta:
         unique_together = (("key", "run"),)
         verbose_name = "contentfile"
-
+        # add constraint so that atleast run or learning_resource is defined (not both)
         constraints = [
             models.CheckConstraint(
                 check=(
-                    models.Q(learning_resource__isnull=False)
-                    | models.Q(run__isnull=False)
+                    models.Q(learning_resource__isnull=False, run__isnull=True)
+                    | models.Q(run__isnull=False, learning_resource__isnull=True)
                 ),
                 name="run_or_resource_defined",
+                violation_error_message=(
+                    "Either run or learning_resource should be defined (but not both)"
+                ),
             ),
         ]
 

@@ -756,18 +756,13 @@ def calculate_completeness(
 
 
 def load_marketing_page(learning_resource: LearningResource):
-    course_run = (
-        learning_resource.next_run
-        if learning_resource.next_run
-        else learning_resource.runs.order_by("-start_date").first()
-    )
     marketing_page_url = learning_resource.url
     if marketing_page_url:
         response = requests.get(marketing_page_url, timeout=10)
         if response.ok:
             page_content = response.text
             content_file, _ = ContentFile.objects.update_or_create(
-                run=course_run,
+                learning_resource=learning_resource,
                 key=marketing_page_url,
                 defaults={
                     "content": html_to_markdown(page_content),
