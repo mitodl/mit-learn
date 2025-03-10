@@ -4,6 +4,7 @@ from django.db import migrations, models
 
 
 def transfer_global_id(apps, schema_editor):
+    """Transfer the social uid to the user global_id field"""
     UserSocialAuth = apps.get_model("social_django", "UserSocialAuth")
     User = apps.get_model("users", "User")
 
