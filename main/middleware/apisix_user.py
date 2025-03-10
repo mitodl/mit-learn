@@ -85,6 +85,8 @@ def get_user_from_apisix_headers(request, decoded_headers, original_header):
             "global_id": global_id,
             "username": decoded_headers.get("username", ""),
             "email": decoded_headers.get("email", ""),
+            "first_name": decoded_headers.get("first_name", ""),
+            "last_name": decoded_headers.get("last_name", ""),
         }
     )
 
@@ -109,6 +111,7 @@ def get_user_from_apisix_headers(request, decoded_headers, original_header):
     profile_data = decode_apisix_headers(
         request, original_header, model="profiles.Profile"
     )
+    log.info("PROFILE DATA: %s", profile_data)
     if profile_data:
         log.info(
             "get_user_from_apisix_headers: Setting up additional profile for %s",
