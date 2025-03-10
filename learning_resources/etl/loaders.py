@@ -852,7 +852,6 @@ def load_podcast_episode(episode_data: dict) -> LearningResource:
     load_topics(learning_resource, topics_data)
     load_offered_by(learning_resource, offered_bys_data)
     load_departments(learning_resource, departments_data)
-    load_marketing_page(learning_resource)
 
     update_index(learning_resource, created)
 
@@ -895,7 +894,6 @@ def load_podcast(podcast_data: dict) -> LearningResource:
         load_topics(learning_resource, topics_data)
         load_offered_by(learning_resource, offered_by_data)
         load_departments(learning_resource, departments_data)
-        load_marketing_page(learning_resource)
 
     episode_ids = []
     if learning_resource.published:

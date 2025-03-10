@@ -1638,35 +1638,6 @@ def test_load_course_fetches_marketing_page_info(mocker):
     assert ContentFile.objects.filter(key=result.url).exists()
 
 
-def test_load_podcast_fetches_marketing_page_info(
-    mock_upsert_tasks,
-    learning_resource_offeror,
-    podcast_platform,
-):
-    podcasts_data = []
-    for podcast in PodcastFactory.build_batch(3):
-        episodes = PodcastEpisodeFactory.build_batch(3)
-        podcast_data = model_to_dict(
-            podcast.learning_resource, exclude=non_transformable_attributes
-        )
-        podcast_data["image"] = {"url": podcast.learning_resource.image.url}
-        podcast_data["offered_by"] = {"name": learning_resource_offeror.name}
-        episodes_data = [
-            {
-                **model_to_dict(
-                    episode.learning_resource, exclude=non_transformable_attributes
-                ),
-                "offered_by": {"name": learning_resource_offeror.name},
-            }
-            for episode in episodes
-        ]
-        podcast_data["episodes"] = episodes_data
-        podcasts_data.append(podcast_data)
-    results = load_podcasts(podcasts_data)
-    for result in results:
-        assert ContentFile.objects.filter(key=result.url).exists()
-
-
 def test_load_program_fetches_marketing_page_info(
     mock_upsert_tasks,
 ):
@@ -1714,24 +1685,4 @@ def test_load_program_fetches_marketing_page_info(
         [],
         [],
     )
-    assert ContentFile.objects.filter(key=result.url).exists()
-
-
-def test_load_podcast_episode_fetches_marketing_page_info(
-    mock_upsert_tasks,
-    learning_resource_offeror,
-    podcast_platform,
-):
-    """Test that load_podcast_episode loads the podcast episode"""
-    podcast_episode = LearningResourceFactory.create(
-        published=True, is_podcast_episode=True
-    )
-
-    props = model_to_dict(podcast_episode, exclude=non_transformable_attributes)
-    props["image"] = {"url": podcast_episode.image.url}
-    props["offered_by"] = {"name": learning_resource_offeror.name}
-    topics = podcast_episode.topics.all()
-
-    props["topics"] = [model_to_dict(topic, exclude=["id"]) for topic in topics]
-    result = load_podcast_episode(props)
     assert ContentFile.objects.filter(key=result.url).exists()
