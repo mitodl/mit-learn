@@ -22,7 +22,7 @@ routes:
         ssl_verify: false
         session:
           secret: ${{APISIX_SESSION_SECRET_KEY}}
-        logout_path: "/logout/oidc"
+        logout_path: "/logout"
         post_logout_redirect_uri: ${{APISIX_LOGOUT_URL}}
         unauth_action: "pass"
       cors:
@@ -40,10 +40,10 @@ routes:
     desc: "Strip trailing slash from logout redirect."
     priority: 10
     upstream_id: 1
-    uri: "/logout/oidc/*"
+    uri: "/logout/*"
     plugins:
       redirect:
-        uri: "/logout/oidc"
+        uri: "/logout"
   - id: 3
     name: "reqauth"
     desc: "Routes that require authentication."
@@ -61,7 +61,7 @@ routes:
         ssl_verify: false
         session:
           secret: ${{APISIX_SESSION_SECRET_KEY}}
-        logout_path: "/logout/oidc"
+        logout_path: "/logout"
         post_logout_redirect_uri: ${{APISIX_LOGOUT_URL}}
         unauth_action: "auth"
       cors:
