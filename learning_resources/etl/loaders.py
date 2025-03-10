@@ -755,20 +755,26 @@ def calculate_completeness(
     return new_score
 
 
+def _fetch_page(url):
+    if url:
+        response = requests.get(url, timeout=10)
+        if response.ok:
+            return response.text
+    return None
+
+
 def load_marketing_page(learning_resource: LearningResource):
     marketing_page_url = learning_resource.url
-    if marketing_page_url:
-        response = requests.get(marketing_page_url, timeout=10)
-        if response.ok:
-            page_content = response.text
-            content_file, _ = ContentFile.objects.update_or_create(
-                learning_resource=learning_resource,
-                key=marketing_page_url,
-                defaults={
-                    "content": html_to_markdown(page_content),
-                    "file_extension": ".md",
-                },
-            )
+    page_content = _fetch_page(marketing_page_url)
+    if page_content:
+        content_file, _ = ContentFile.objects.update_or_create(
+            learning_resource=learning_resource,
+            key=marketing_page_url,
+            defaults={
+                "content": html_to_markdown(page_content),
+                "file_extension": ".md",
+            },
+        )
 
 
 def load_content_files(
