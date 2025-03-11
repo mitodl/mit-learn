@@ -128,18 +128,31 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         )
 
     def get_certification_display(self, serialized_resource):
-        return (
-            serialized_resource["certification_type"].get("name")
-            if serialized_resource.get("certification_type")
-            else ""
-        )
+        if serialized_resource.get(
+            "certification_type"
+        ) and not serialized_resource.get("free"):
+            return serialized_resource["certification_type"].get("name")
+        if (
+            serialized_resource["free"]
+            and serialized_resource["certification_type"]
+            and serialized_resource["certification_type"]["code"]
+            == CertificationType.none.name
+        ):
+            return CertificationType.none.value
+        return None
 
     def get_price_display(self, serialized_resource):
-        return (
-            f"${serialized_resource['prices'][0]}"
-            if serialized_resource.get("prices")
-            else "Free"
-        )
+        prices = serialized_resource.get("prices", [])
+        if not serialized_resource["free"] and prices:
+            return f"${serialized_resource['prices'][0]}"
+        if (
+            serialized_resource["free"]
+            and serialized_resource["certification_type"]
+            and serialized_resource["certification_type"]["code"]
+            == CertificationType.completion.name
+        ) and len(prices) > 1:
+            return f"Free (Earn a certificate: ${prices[1]})"
+        return "Free"
 
     def get_topics_display(self, serialized_resource):
         return ", ".join(
