@@ -170,10 +170,13 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
   const [chatExpanded, setChatExpanded] = useToggle(initialChatExpanded)
 
   useEffect(() => {
-    if (outerContainerRef.current && outerContainerRef.current.scrollTo) {
+    if (outerContainerRef?.current?.scrollTo) {
       outerContainerRef.current.scrollTo(0, 0)
     }
-  }, [resourceId])
+    if (scrollElement) {
+      scrollElement.scrollTop = 0
+    }
+  }, [resourceId, scrollElement])
 
   useEffect(() => {
     const updateHeight = () => {
