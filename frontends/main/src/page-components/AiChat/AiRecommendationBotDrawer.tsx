@@ -7,13 +7,13 @@ import AiChatWithEntryScreen from "./AiChatWithEntryScreen"
 import { getCsrfToken } from "@/common/utils"
 import { RECOMMENDER_QUERY_PARAM } from "@/common/urls"
 
-const CloseButtonContainer = styled("div")(({ theme }) => ({
+const CloseButtonContainer = styled("div")({
   position: "sticky",
   top: 0,
   zIndex: 2,
   display: "flex",
   flexDirection: "row-reverse",
-}))
+})
 
 const CloseButton = styled(ActionButton)(({ theme }) => ({
   position: "absolute",
@@ -25,7 +25,7 @@ const CloseButton = styled(ActionButton)(({ theme }) => ({
     color: theme.custom.colors.white,
   },
   [theme.breakpoints.down("md")]: {
-    right: "24px",
+    right: "16px",
   },
 }))
 
@@ -37,6 +37,9 @@ const StyledAiChatWithEntryScreen = styled(AiChatWithEntryScreen)(
     },
     ".AiChatWithEntryScreen-chatScreen": {
       padding: "0 28px",
+      [theme.breakpoints.down("md")]: {
+        padding: "0 16px",
+      },
     },
     ".MitAiChat--title": {
       position: "sticky",
