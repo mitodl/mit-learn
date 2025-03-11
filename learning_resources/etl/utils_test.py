@@ -180,7 +180,7 @@ def test_transform_content_files(  # noqa: PLR0913
     """transform_content_files"""
     run = LearningResourceRunFactory.create(published=True)
     document = "some text in the document"
-    file_extension = ".html"
+    file_extension = ".pdf" if folder == "static" else ".html"
     key = f"key{file_extension}"
     content_type = "course"
     checksum = "7s35721d1647f962d59b8120a52210a7"
@@ -228,7 +228,7 @@ def test_transform_content_files(  # noqa: PLR0913
 
     if folder == "static":
         edx_module_id = (
-            f"asset-v1:{run.run_id.replace('course-v1:', '')}+type@asset+block@key"
+            f"asset-v1:{run.run_id.replace('course-v1:', '')}+type@asset+block@key.pdf"
         )
     else:
         edx_module_id = (
@@ -240,14 +240,10 @@ def test_transform_content_files(  # noqa: PLR0913
             {
                 "content": "existing content"
                 if (matching_checksum and not overwrite)
-                else tika_output["content"]
-                if file_extension == ".html" or matching_checksum
-                else "",
+                else tika_output["content"],
                 "key": key,
                 "published": True,
-                "content_title": metadata["title"]
-                if has_metadata and file_extension == ".html"
-                else "",
+                "content_title": metadata["title"] if has_metadata else "",
                 "content_type": content_type,
                 "checksum": checksum,
                 "file_extension": file_extension,

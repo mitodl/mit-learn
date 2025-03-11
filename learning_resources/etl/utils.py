@@ -356,13 +356,14 @@ def get_edx_module_id(path: str, run: LearningResourceRun) -> str:
     Returns:
         str: The XBlock ID
     """
-    name = Path(path).stem
     folder = path.split("/")[-2]
 
     if folder == "static":
+        name = Path(path).name
         key_type = "asset-v1"
         module_type = "asset"
     else:
+        name = Path(path).stem
         key_type = "block-v1"
         module_type = folder
 
