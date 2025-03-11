@@ -195,7 +195,7 @@ const AiChatWithEntryScreen = ({
   }
 
   const onPromptKeyDown: React.KeyboardEventHandler<HTMLInputElement> = (e) => {
-    if (e.key !== "Enter") return
+    if (e.key !== "Enter" || !initialPrompt) return
     setShowEntryScreen(false)
   }
 
@@ -221,7 +221,10 @@ const AiChatWithEntryScreen = ({
             endAdornment={
               <AdornmentButton
                 aria-label="Send"
-                onClick={() => setShowEntryScreen(false)}
+                onClick={() => {
+                  if (!initialPrompt) return
+                  setShowEntryScreen(false)
+                }}
               >
                 <SendIcon />
               </AdornmentButton>
