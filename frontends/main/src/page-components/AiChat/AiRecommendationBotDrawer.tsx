@@ -7,11 +7,18 @@ import AiChatWithEntryScreen from "./AiChatWithEntryScreen"
 import { getCsrfToken } from "@/common/utils"
 import { RECOMMENDER_QUERY_PARAM } from "@/common/urls"
 
+const CloseButtonContainer = styled("div")(({ theme }) => ({
+  position: "sticky",
+  top: 0,
+  zIndex: 2,
+  display: "flex",
+  flexDirection: "row-reverse",
+}))
+
 const CloseButton = styled(ActionButton)(({ theme }) => ({
   position: "absolute",
   top: "24px",
   right: "28px",
-  zIndex: 2,
   backgroundColor: theme.custom.colors.lightGray2,
   "&&:hover": {
     backgroundColor: theme.custom.colors.red,
@@ -27,6 +34,17 @@ const StyledAiChatWithEntryScreen = styled(AiChatWithEntryScreen)(
     width: "900px",
     [theme.breakpoints.down("md")]: {
       width: "100%",
+    },
+    ".AiChatWithEntryScreen-chatScreen": {
+      padding: "0 28px",
+    },
+    ".MitAiChat--title": {
+      position: "sticky",
+      top: 0,
+      padding: "32px 0 26px",
+      zIndex: 2,
+      backgroundColor: theme.custom.colors.white,
+      borderRadius: 0,
     },
   }),
 )
@@ -58,14 +76,16 @@ const DrawerContent: React.FC<{
 }> = ({ onClose }) => {
   return (
     <>
-      <CloseButton
-        onClick={onClose}
-        variant="text"
-        size="medium"
-        aria-label="Close"
-      >
-        <RiCloseLine />
-      </CloseButton>
+      <CloseButtonContainer>
+        <CloseButton
+          onClick={onClose}
+          variant="text"
+          size="medium"
+          aria-label="Close"
+        >
+          <RiCloseLine />
+        </CloseButton>
+      </CloseButtonContainer>
       <StyledAiChatWithEntryScreen
         entryTitle="What do you want to learn from MIT?"
         starters={STARTERS}
@@ -102,6 +122,7 @@ const AiRecommendationBotDrawer = () => {
             minWidth: "900px",
             [theme.breakpoints.down("md")]: {
               width: "100%",
+              minWidth: "auto",
             },
           }),
         },
