@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.30.9
+--------------
+
+- fix asset ids (#2121)
+- Always show chat entry screen when navigating courses (#2114)
+- fix(deps): update dependency django to v4.2.20 [security] (#2117)
+
 Version 0.30.8 (Released March 06, 2025)
 --------------
 
