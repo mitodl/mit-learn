@@ -14,6 +14,8 @@ import {
 import ResourceCarousel from "@/page-components/ResourceCarousel/ResourceCarousel"
 import { useProfileMeQuery } from "api/hooks/profile"
 import { EnrollmentDisplay } from "./EnrollmentDisplay/EnrollmentDisplay"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { FeatureFlags } from "@/common/feature_flags"
 
 const SubTitleText = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
@@ -66,6 +68,9 @@ const HomeContent: React.FC = () => {
   const { isLoading: isLoadingProfile, data: profile } = useProfileMeQuery()
   const topics = profile?.preference_search_filters.topic
   const certification = profile?.preference_search_filters.certification
+  const showEnrollments = useFeatureFlagEnabled(
+    FeatureFlags.EnrollmentDashboard,
+  )
   return (
     <>
       <HomeHeader>
@@ -81,7 +86,7 @@ const HomeContent: React.FC = () => {
           </ButtonLink>
         </HomeHeaderRight>
       </HomeHeader>
-      <EnrollmentDisplay />
+      {showEnrollments ? <EnrollmentDisplay /> : null}
       <Suspense>
         <StyledResourceCarousel
           titleComponent="h2"

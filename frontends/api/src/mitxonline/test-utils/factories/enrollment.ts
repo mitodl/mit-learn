@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker/locale/en"
-import { makePaginatedFactory, mergeOverrides } from "ol-test-utilities"
+import { mergeOverrides } from "ol-test-utilities"
 import type { PartialFactory } from "ol-test-utilities"
 import type {
   CourseRunEnrollment,
@@ -42,6 +42,9 @@ const courseEnrollment: PartialFactory<CourseRunEnrollment> = (
     overrides,
   )
 
-const courseEnrollments = makePaginatedFactory(courseEnrollment)
+// Not paginated
+const courseEnrollments = (count: number): CourseRunEnrollment[] => {
+  return new Array(count).fill(null).map(() => courseEnrollment())
+}
 
 export { courseEnrollment, courseEnrollments }

@@ -14,6 +14,7 @@ const EnrollmentDisplay = () => {
     ...enrollmentQueries.coursesList(),
     select: mitxonlineCoursesToEnrollment,
   })
+
   return (
     <Wrapper>
       <Typography variant="h3" component="h2" sx={{ marginBottom: "16px" }}>

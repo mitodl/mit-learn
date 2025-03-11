@@ -10,7 +10,7 @@ import {
 import type { EnrollmentData } from "./types"
 import { ActionButton, Button, ButtonLink } from "@mitodl/smoot-design"
 import { RiArrowRightLine, RiAwardLine, RiMoreLine } from "@remixicon/react"
-import { getTimeUntil, isInPast } from "ol-utilities"
+import { getTimeUntil, isInPast, NoSSR } from "ol-utilities"
 
 const LinkStyled = styled(Link)(({ theme }) => ({
   ...theme.typography.subtitle2,
@@ -89,7 +89,10 @@ const UpgradeBanner: React.FC<{
         <RiAwardLine size="16px" />
         Add a certificate for {formattedPrice}
       </UpgradeAlertText>
-      {formatUpgradeTime(timeUntil.days)}
+      <NoSSR>
+        {/* This uses local time. */}
+        {formatUpgradeTime(timeUntil.days)}
+      </NoSSR>
     </UpgradeRoot>
   )
 }
@@ -184,7 +187,7 @@ const EnrollmentCard: React.FC<EnrollmentCardProps> = ({ enrollment }) => {
   } = enrollment
   const { hasStarted, countdownUi } = getStartInfo(startDate)
   return (
-    <CardRoot>
+    <CardRoot data-testid="enrollment-card">
       <Stack direction="row">
         <Left>
           <LinkStyled size="medium" color="black" href={marketingUrl}>
@@ -212,7 +215,10 @@ const EnrollmentCard: React.FC<EnrollmentCardProps> = ({ enrollment }) => {
                 {getCoursewareText(endDate)}
               </CourseButton>
             )}
-            {countdownUi}
+            <NoSSR>
+              {/* This uses local time */}
+              {countdownUi}
+            </NoSSR>
           </Stack>
           <SimpleMenu
             items={getMenuItems()}
