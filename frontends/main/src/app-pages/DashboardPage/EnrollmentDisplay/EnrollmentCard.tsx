@@ -11,11 +11,7 @@ import type { EnrollmentData } from "./types"
 import { ActionButton, Button, ButtonLink } from "@mitodl/smoot-design"
 import { RiArrowRightLine, RiAwardLine, RiMoreLine } from "@remixicon/react"
 import { getTimeUntil, isInPast } from "ol-utilities"
-import { DashboardStatus } from "./DashboardStatus"
 
-const DashboardStatusStyled = styled(DashboardStatus)({
-  margin: "8px 8px 0px 8px",
-})
 const LinkStyled = styled(Link)(({ theme }) => ({
   ...theme.typography.subtitle2,
 }))
@@ -80,7 +76,7 @@ const UpgradeBanner: React.FC<{
   certificateUpgradeDeadline?: string | null
   certificateUpgradePrice?: string | null
 }> = ({ canUpgrade, certificateUpgradeDeadline, certificateUpgradePrice }) => {
-  if (canUpgrade || !certificateUpgradeDeadline || !certificateUpgradePrice) {
+  if (!canUpgrade || !certificateUpgradeDeadline || !certificateUpgradePrice) {
     return null
   }
   const timeUntil = getTimeUntil(certificateUpgradeDeadline)
@@ -88,7 +84,7 @@ const UpgradeBanner: React.FC<{
   if (timeUntil.ms < 0) return null
   const formattedPrice = `$${certificateUpgradePrice}`
   return (
-    <UpgradeRoot>
+    <UpgradeRoot data-testid="upgrade-root">
       <UpgradeAlertText>
         <RiAwardLine size="16px" />
         Add a certificate for {formattedPrice}
@@ -172,16 +168,20 @@ const getMenuItems = (): SimpleMenuItem[] => [
   },
 ]
 
-const EnrollmentCard: React.FC<EnrollmentData> = ({
-  title,
-  marketingUrl,
-  coursewareUrl,
-  startDate,
-  endDate,
-  canUpgrade,
-  certificateUpgradeDeadline,
-  certificateUpgradePrice,
-}) => {
+type EnrollmentCardProps = {
+  enrollment: EnrollmentData
+}
+const EnrollmentCard: React.FC<EnrollmentCardProps> = ({ enrollment }) => {
+  const {
+    title,
+    marketingUrl,
+    coursewareUrl,
+    startDate,
+    endDate,
+    canUpgrade,
+    certificateUpgradeDeadline,
+    certificateUpgradePrice,
+  } = enrollment
   const { hasStarted, countdownUi } = getStartInfo(startDate)
   return (
     <CardRoot>
@@ -192,7 +192,6 @@ const EnrollmentCard: React.FC<EnrollmentData> = ({
           </LinkStyled>
         </Left>
         <Right>
-          <DashboardStatusStyled />
           <Stack gap="4px">
             {hasStarted ? (
               <CourseButtonLink

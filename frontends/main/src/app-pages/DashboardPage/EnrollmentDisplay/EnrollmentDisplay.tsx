@@ -22,7 +22,7 @@ const EnrollmentDisplay = () => {
       <PlainList itemSpacing={1.5}>
         {enrolledCourses?.map((course) => (
           <li key={course.id}>
-            <EnrollmentCard {...course} />
+            <EnrollmentCard enrollment={course} />
           </li>
         ))}
       </PlainList>

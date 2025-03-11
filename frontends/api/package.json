@@ -14,7 +14,8 @@
     "./test-utils/factories": "./src/test-utils/factories/index.ts",
     "./test-utils": "./src/test-utils/index.ts",
     "./mitxonline": "./src/mitxonline/index.ts",
-    "./mitxonline-hooks/*": "./src/mitxonline/hooks/*/index.ts"
+    "./mitxonline-hooks/*": "./src/mitxonline/hooks/*/index.ts",
+    "./mitxonline-test-utils": "./src/mitxonline/test-utils/index.ts"
   },
   "peerDependencies": {
     "react": "^19"
