@@ -121,11 +121,12 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         return "\n".join(runs) if runs else ""
 
     def get_instructors_display(self, serialized_resource):
-        return ", ".join(
-            instructor["full_name"]
-            for instructor in serialized_resource.get("instructors", [])
-            if "full_name" in instructor
-        )
+        instructors = set()
+        for run in serialized_resource.get("runs", []):
+            for instructor in run.get("instructors", []):
+                instructors.add(instructor["full_name"])
+
+        return ", ".join(instructors)
 
     def get_certification_display(self, serialized_resource):
         if serialized_resource.get(
