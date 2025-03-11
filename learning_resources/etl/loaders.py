@@ -773,10 +773,11 @@ def load_marketing_page(learning_resource: LearningResource):
     if page_content:
         content_file, _ = ContentFile.objects.update_or_create(
             learning_resource=learning_resource,
-            key=marketing_page_url,
+            file_type="marketing_page",
             defaults={
                 "content": html_to_markdown(page_content),
                 "file_extension": ".md",
+                "key": marketing_page_url,
             },
         )
 
