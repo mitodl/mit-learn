@@ -777,9 +777,10 @@ def load_marketing_page(learning_resource: LearningResource):
             defaults={
                 "content": html_to_markdown(page_content),
                 "file_extension": ".md",
-                "key": marketing_page_url,
             },
         )
+        content_file.key = marketing_page_url
+        content_file.save()
 
 
 def load_content_files(
