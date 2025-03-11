@@ -188,10 +188,15 @@ const AiChatSyllabusSlideDown = ({
 
   useEffect(() => {
     const element = ref.current
+    const _onTransitionEnd = (event: TransitionEvent) => {
+      if (event.target === element) {
+        onTransitionEnd()
+      }
+    }
     if (!element) return
-    element.addEventListener("transitionend", onTransitionEnd)
+    element.addEventListener("transitionend", _onTransitionEnd)
     return () => {
-      element.removeEventListener("transitionend", onTransitionEnd)
+      element.removeEventListener("transitionend", _onTransitionEnd)
     }
   }, [onTransitionEnd])
 
