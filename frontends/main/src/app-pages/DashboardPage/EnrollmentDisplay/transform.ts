@@ -1,3 +1,9 @@
+/**
+ * The mitxonline dashboard is expected to contain enrollment data from multiple
+ * sources (mitxonline, xpro, ...). Here we transform the source data into
+ * a common format.
+ */
+
 import { CourseRunEnrollment, EnrollmentModeEnum } from "api/mitxonline"
 
 import { EnrollmentType } from "./types"

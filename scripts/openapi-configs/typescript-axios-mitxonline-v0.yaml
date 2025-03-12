@@ -1,9 +1,0 @@
-generatorName: typescript-axios
-outputDir: frontends/api/src/mitxonline/generated/v0
-inputSpec: mitxonline_v0.yaml
-ignoreFileOverride: frontends/api/.openapi-generator-ignore
-templateDir: scripts/openapi-configs/templates
-additionalProperties:
-  paramNaming: original
-  useSingleRequestParameter: true
-  supportsES6: false
