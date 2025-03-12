@@ -3,10 +3,13 @@ from decimal import Decimal
 import pytest
 
 from learning_resources.constants import CertificationType
+from learning_resources.etl.loaders import load_instructors
 from learning_resources.factories import (
     LearningResourceFactory,
+    LearningResourceInstructorFactory,
     LearningResourceOfferorFactory,
     LearningResourcePriceFactory,
+    LearningResourceRunFactory,
 )
 from learning_resources.serializers import LearningResourceSerializer
 from vector_search.serializers import LearningResourceMetadataDisplaySerializer
@@ -121,3 +124,26 @@ def test_price_display():
         metadata_serializer.data["price_display"]
         == f"${serialized_resource['prices'][0]}"
     )
+
+
+def test_instructors_display():
+    """Test that the instructors_display field is correctly populated"""
+    resource = LearningResourceFactory()
+    serialized_resource = LearningResourceSerializer(resource).data
+    metadata_serializer = LearningResourceMetadataDisplaySerializer(serialized_resource)
+
+    assert metadata_serializer.data["instructors_display"] == ""
+
+    instructors = LearningResourceInstructorFactory.create_batch(3)
+    run = LearningResourceRunFactory.create(
+        learning_resource=resource, no_instructors=True
+    )
+    assert run.instructors.count() == 0
+    load_instructors(
+        run, [{"full_name": instructor.full_name} for instructor in instructors]
+    )
+    serialized_resource = LearningResourceSerializer(resource).data
+    metadata_serializer = LearningResourceMetadataDisplaySerializer(serialized_resource)
+    assert set(metadata_serializer.data["instructors_display"].split(", ")) == {
+        instructor.full_name for instructor in instructors
+    }
