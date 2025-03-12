@@ -15,6 +15,7 @@ from learning_resources.constants import (
 )
 from learning_resources.etl.constants import (
     CONTENT_TAG_CATEGORIES,
+    MARKETING_PAGE_FILE_TYPE,
     READABLE_ID_FIELD,
     ContentTagCategory,
     CourseLoaderConfig,
@@ -773,13 +774,13 @@ def load_marketing_page(learning_resource: LearningResource):
     if page_content:
         content_file, _ = ContentFile.objects.update_or_create(
             learning_resource=learning_resource,
-            file_type="marketing_page",
+            file_type=MARKETING_PAGE_FILE_TYPE,
             defaults={
-                "content": html_to_markdown(page_content),
                 "file_extension": ".md",
             },
         )
         content_file.key = marketing_page_url
+        content_file.content = html_to_markdown(page_content)
         content_file.save()
 
 

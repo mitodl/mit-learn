@@ -1,5 +1,6 @@
 """Tests for ETL loaders"""
 
+import copy
 from datetime import timedelta
 from decimal import Decimal
 
@@ -21,6 +22,7 @@ from learning_resources.constants import (
     RunStatus,
 )
 from learning_resources.etl.constants import (
+    MARKETING_PAGE_FILE_TYPE,
     CourseLoaderConfig,
     ETLSource,
     ProgramLoaderConfig,
@@ -1613,7 +1615,7 @@ def test_calculate_completeness(mocker, is_scholar_course, tag_counts, expected_
 
 
 def test_load_course_fetches_marketing_page_info(mocker):
-    """Test that loading a course produces a course metadata document"""
+    """Test that loading a course produces a marketing page document"""
     platform = LearningResourcePlatformFactory.create()
 
     props = {
@@ -1641,7 +1643,7 @@ def test_load_course_fetches_marketing_page_info(mocker):
 def test_load_program_fetches_marketing_page_info(
     mock_upsert_tasks,
 ):
-    """Test that load_program loads the program"""
+    """Test that load_program produces a marketing page document"""
     platform = LearningResourcePlatformFactory.create()
 
     program = ProgramFactory.create(courses=[], platform=platform.code)
@@ -1686,3 +1688,49 @@ def test_load_program_fetches_marketing_page_info(
         [],
     )
     assert ContentFile.objects.filter(key=result.url).exists()
+
+
+def test_only_one_marketing_page_instance_exists(
+    mocker,
+):
+    """Test that we end up with only one marketing page instance per learning resource"""
+    platform = LearningResourcePlatformFactory.create()
+    original_url = "https://test.edu"
+    new_url = "https://newurl.com"
+    readable_id = "abc123"
+    props = {
+        "readable_id": readable_id,
+        "platform": platform.code,
+        "etl_source": ETLSource.ocw.name,
+        "title": "course title",
+        "image": {"url": "https://www.test.edu/image.jpg"},
+        "description": "description",
+        "url": original_url,
+        "published": True,
+        "runs": [
+            {
+                "run_id": "test_run_id",
+                "enrollment_start": now_in_utc(),
+                "start_date": now_in_utc(),
+                "end_date": now_in_utc(),
+            }
+        ],
+    }
+    initial_props = copy.deepcopy(props)
+    result = load_course(initial_props, [], [], config=CourseLoaderConfig(prune=True))
+    assert ContentFile.objects.filter(
+        key=result.url, file_type=MARKETING_PAGE_FILE_TYPE
+    ).exists()
+    props["url"] = new_url
+    result = load_course(props, [], [], config=CourseLoaderConfig(prune=True))
+
+    assert ContentFile.objects.filter(
+        key=new_url, file_type=MARKETING_PAGE_FILE_TYPE
+    ).exists()
+    assert (
+        ContentFile.objects.filter(
+            learning_resource__readable_id=readable_id,
+            file_type=MARKETING_PAGE_FILE_TYPE,
+        ).count()
+        == 1
+    )
