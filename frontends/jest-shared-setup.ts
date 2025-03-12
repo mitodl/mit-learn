@@ -10,6 +10,8 @@ expect.extend(matchers)
 // env vars
 process.env.NEXT_PUBLIC_MITOL_API_BASE_URL =
   "http://api.test.learn.odl.local:8063"
+process.env.NEXT_PUBLIC_MITXONLINE_API_BASE_URL =
+  "http://api.test.mitxonline.odl.local:8053"
 process.env.NEXT_PUBLIC_ORIGIN = "http://test.learn.odl.local:8062"
 process.env.NEXT_PUBLIC_EMBEDLY_KEY = "fake-embedly-key"
 
