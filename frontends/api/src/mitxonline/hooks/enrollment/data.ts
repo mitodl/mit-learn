@@ -384,7 +384,7 @@ const courses = {
     run: {
       title:
         "Upgradeable Course, Not Yet Started, And This Course Also Has A Really Long Name That Goes Across Multiple Lines",
-      start_date: "2026-09-12T15:00:00Z",
+      start_date: "2026-09-12T02:00:00Z",
       end_date: "2040-12-20T15:00:00Z",
       enrollment_start: "2024-03-07T23:59:00Z",
       enrollment_end: "2035-10-25T23:59:00Z",

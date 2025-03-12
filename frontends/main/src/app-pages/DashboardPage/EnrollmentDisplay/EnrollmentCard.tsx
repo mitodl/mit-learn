@@ -10,7 +10,7 @@ import {
 import type { EnrollmentData } from "./types"
 import { ActionButton, Button, ButtonLink } from "@mitodl/smoot-design"
 import { RiArrowRightLine, RiAwardLine, RiMoreLine } from "@remixicon/react"
-import { getTimeUntil, isInPast, NoSSR } from "ol-utilities"
+import { calendarDaysUntil, isInPast, NoSSR } from "ol-utilities"
 
 const LinkStyled = styled(Link)(({ theme }) => ({
   ...theme.typography.subtitle2,
@@ -79,9 +79,9 @@ const UpgradeBanner: React.FC<{
   if (!canUpgrade || !certificateUpgradeDeadline || !certificateUpgradePrice) {
     return null
   }
-  const timeUntil = getTimeUntil(certificateUpgradeDeadline)
-  if (!timeUntil) return null
-  if (timeUntil.ms < 0) return null
+  if (isInPast(certificateUpgradeDeadline)) return null
+  const calendarDays = calendarDaysUntil(certificateUpgradeDeadline)
+  if (calendarDays === null) return null
   const formattedPrice = `$${certificateUpgradePrice}`
   return (
     <UpgradeRoot data-testid="upgrade-root">
@@ -91,7 +91,7 @@ const UpgradeBanner: React.FC<{
       </UpgradeAlertText>
       <NoSSR>
         {/* This uses local time. */}
-        {formatUpgradeTime(timeUntil.days)}
+        {formatUpgradeTime(calendarDays)}
       </NoSSR>
     </UpgradeRoot>
   )
@@ -103,30 +103,27 @@ type StartInfo = {
 }
 const getStartInfo = (date?: string | null): StartInfo => {
   if (!date) return { hasStarted: null, countdownUi: null }
-  const timeUntil = getTimeUntil(date)
-  if (!timeUntil) return { hasStarted: null, countdownUi: null }
-  if (timeUntil.ms < 0) return { hasStarted: true, countdownUi: null }
-  const { isToday, isTomorrow, days } = timeUntil
+  const calendarDays = calendarDaysUntil(date)
+  if (calendarDays === null) return { hasStarted: null, countdownUi: null }
+  const hasStarted = isInPast(date)
+  if (hasStarted) return { hasStarted: true, countdownUi: null }
+
   return {
     hasStarted: false,
-    countdownUi: (
-      <CourseStartCountdown days={days} today={isToday} tomorrow={isTomorrow} />
-    ),
+    countdownUi: <CourseStartCountdown calendarDays={calendarDays} />,
   }
 }
 
 const CourseStartCountdown: React.FC<{
-  days: number
-  tomorrow: boolean
-  today: boolean
-}> = ({ days, today, tomorrow }) => {
+  calendarDays: number
+}> = ({ calendarDays }) => {
   let value
-  if (today) {
+  if (calendarDays === 0) {
     value = "Today"
-  } else if (tomorrow) {
+  } else if (calendarDays === 1) {
     value = "Tomorrow"
   } else {
-    value = `${Math.floor(days)} days`
+    value = `${calendarDays} days`
   }
   return (
     <Typography
@@ -137,7 +134,7 @@ const CourseStartCountdown: React.FC<{
       variant="body3"
       component="span"
     >
-      {today || tomorrow ? "Starts" : "Starts in "}
+      {calendarDays <= 1 ? "Starts" : "Starts in "}
       <Typography variant="subtitle3" component="span">
         {value}
       </Typography>

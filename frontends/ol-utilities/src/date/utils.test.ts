@@ -11,54 +11,30 @@ describe("formatDurationClockTime", () => {
   })
 })
 
-describe("getTimeUntil", () => {
-  afterEach(() => {
-    jest.useRealTimers()
-    setDefaultTimezone("UTC")
-  })
+describe("calendarDaysUntil", () => {
+  test("Gets calendar days until date, respecting timezone", () => {
+    //         UTC                       EST
+    const f0 = "2023-04-08T22:45:00Z" // 2023-04-08T17:45:00-05:00
+    const f1 = "2023-04-08T23:45:00Z" // 2023-04-08T18:45:00-05:00
+    const f2 = "2023-04-09T01:45:00Z" // 2023-04-08T20:45:00-05:00
+    const f3 = "2023-04-10T01:45:00Z" // 2023-04-09T20:45:00-05:00
+    const f4 = "2023-04-11T03:45:00Z" // 2023-04-10T22:45:00-05:00
+    const f5 = "2023-06-11T01:45:00Z" // 2023-06-10T20:45:00-05:00
+    const p1 = "2023-04-08T01:45:00Z" // 2023-04-07T20:45:00-05:00
+    const p2 = "2023-04-07T01:45:00Z" // 2023-04-06T20:45:00-05:00
 
-  it("Correctly formats the time until the given date", () => {
     jest.useFakeTimers()
-    jest.setSystemTime(new Date("2023-08-03T21:45:00Z"))
+    jest.setSystemTime(new Date(f0))
 
+    const dates = [f0, f1, f2, f3, f4, f5, p1, p2]
     setDefaultTimezone("UTC")
-    expect(u.getTimeUntil("2023-08-03T22:45:00Z")).toEqual({
-      ms: 3_600_000,
-      isToday: true,
-      isTomorrow: false,
-      days: expect.closeTo(0.042),
-    })
-    expect(u.getTimeUntil("2023-08-04T01:45:00Z")).toEqual({
-      ms: 14_400_000,
-      isToday: false,
-      isTomorrow: true,
-      days: expect.closeTo(0.1666),
-    })
-    expect(u.getTimeUntil("2023-08-06T01:45:00Z")).toEqual({
-      ms: 187_200_000,
-      isToday: false,
-      isTomorrow: false,
-      days: expect.closeTo(2.1666),
-    })
+    expect(dates.map((date) => u.calendarDaysUntil(date))).toEqual([
+      0, 0, 1, 2, 3, 64, 0, -1,
+    ])
 
     setDefaultTimezone("EST")
-    expect(u.getTimeUntil("2023-08-03T22:45:00Z")).toEqual({
-      ms: 3_600_000,
-      isToday: true,
-      isTomorrow: false,
-      days: expect.closeTo(0.042),
-    })
-    expect(u.getTimeUntil("2023-08-04T01:45:00Z")).toEqual({
-      ms: 14_400_000,
-      isToday: true,
-      isTomorrow: false,
-      days: expect.closeTo(0.1666),
-    })
-    expect(u.getTimeUntil("2023-08-06T01:45:00Z")).toEqual({
-      ms: 187_200_000,
-      isToday: false,
-      isTomorrow: false,
-      days: expect.closeTo(2.1666),
-    })
+    expect(dates.map((date) => u.calendarDaysUntil(date))).toEqual([
+      0, 0, 0, 1, 2, 63, -1, -2,
+    ])
   })
 })

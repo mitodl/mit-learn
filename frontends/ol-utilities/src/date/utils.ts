@@ -52,36 +52,11 @@ const formatDurationClockTime = (value: string | moment.Duration) => {
   return values.join(":")
 }
 
-type TimeUntil = {
-  ms: number
-  /**
-   * The number of days until the date.
-   * This is a float! It can be fractional.
-   */
-  days: number
-  isToday: boolean
-  isTomorrow: boolean
-}
-const getTimeUntil = (date: string): TimeUntil | null => {
+const calendarDaysUntil = (date: string): number | null => {
   const x = moment(date)
   if (!x.isValid()) return null
-  const today = {
-    start: moment().startOf("day"),
-    end: moment().endOf("day"),
-  }
-  const tomorrow = {
-    start: today.end,
-    end: moment().add(1, "days").endOf("day"),
-  }
-  const diff = x.diff(moment()) // ms
-
-  const duration = moment.duration(diff)
-  return {
-    ms: diff,
-    days: duration.asDays(),
-    isToday: x.isBetween(today.start, today.end),
-    isTomorrow: x.isBetween(tomorrow.start, tomorrow.end),
-  }
+  const today = moment().startOf("day")
+  return x.startOf("day").diff(today, "days")
 }
 
 const isInPast = (date: string): null | boolean => {
@@ -90,4 +65,4 @@ const isInPast = (date: string): null | boolean => {
   return x.isBefore(moment())
 }
 
-export { formatDate, formatDurationClockTime, isInPast, getTimeUntil }
+export { formatDate, formatDurationClockTime, isInPast, calendarDaysUntil }
