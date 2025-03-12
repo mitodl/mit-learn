@@ -189,7 +189,7 @@ const AiChatSyllabusSlideDown = ({
   useEffect(() => {
     const element = ref.current
     const _onTransitionEnd = (event: TransitionEvent) => {
-      if (event.target === element) {
+      if (event.target === element && event.propertyName === "top") {
         onTransitionEnd()
       }
     }

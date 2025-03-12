@@ -1709,7 +1709,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@emotion/cache@npm:^11.13.5":
+"@emotion/cache@npm:^11.13.5, @emotion/cache@npm:^11.14.0":
   version: 11.14.0
   resolution: "@emotion/cache@npm:11.14.0"
   dependencies:
@@ -2694,10 +2694,11 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/smoot-design@npm:0.0.0-preview2ed814cc":
-  version: 0.0.0-preview2ed814cc
-  resolution: "@mitodl/smoot-design@npm:0.0.0-preview2ed814cc"
+"@mitodl/smoot-design@npm:^3.8.0":
+  version: 3.8.0
+  resolution: "@mitodl/smoot-design@npm:3.8.0"
   dependencies:
+    "@emotion/cache": "npm:^11.14.0"
     "@mui/utils": "npm:^6.1.6"
     ai: "npm:^4.0.13"
     classnames: "npm:^2.5.1"
@@ -2713,7 +2714,7 @@ __metadata:
     "@remixicon/react": ^4.2.0
     react: ^18 || ^19
     react-dom: ^18 || ^19
-  checksum: 10/f7dc55d4de688aca4bd3ed5bd9db340b73eb9b0b89f2949b6f9e4ad59cbd5c17e9d16aee918ab9964350a1af96c1064ca3cb4debc026a649537b96bc1d4f440d
+  checksum: 10/2649c106c1755cfac38f7f0c72d78553cdd809123d15d662553cc034f6e06ad7093712f27ab52e4cf72f4cb086969ca66689d002c49732fc4743b81d07831a92
   languageName: node
   linkType: hard
 
@@ -12733,7 +12734,7 @@ __metadata:
     "@emotion/styled": "npm:^11.11.0"
     "@faker-js/faker": "npm:^9.0.0"
     "@mitodl/course-search-utils": "npm:3.3.2"
-    "@mitodl/smoot-design": "npm:0.0.0-preview2ed814cc"
+    "@mitodl/smoot-design": "npm:^3.8.0"
     "@next/bundle-analyzer": "npm:^14.2.15"
     "@remixicon/react": "npm:^4.2.0"
     "@sentry/nextjs": "npm:^9.0.0"
