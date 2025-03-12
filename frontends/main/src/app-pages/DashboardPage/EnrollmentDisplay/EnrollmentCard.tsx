@@ -23,8 +23,7 @@ const CourseButton = styled(Button)({
 })
 
 const CardRoot = styled.div(({ theme }) => ({
-  borderStyle: "solid",
-  borderColor: theme.custom.colors.lightGray2,
+  border: `1px solid ${theme.custom.colors.lightGray2}`,
   borderRadius: "8px",
   backgroundColor: theme.custom.colors.white,
 }))
