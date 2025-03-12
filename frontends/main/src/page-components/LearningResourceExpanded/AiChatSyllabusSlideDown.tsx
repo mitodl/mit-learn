@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useRef, useEffect } from "react"
 import { Typography, styled } from "ol-components"
 import { Button } from "@mitodl/smoot-design"
 import {
@@ -13,19 +13,33 @@ import type { User } from "api/hooks/user"
 import AiChatWithEntryScreen from "../AiChat/AiChatWithEntryScreen"
 import { getCsrfToken } from "@/common/utils"
 
-const Container = styled.div()
+export enum ChatTransitionState {
+  Closed = "Closed",
+  Opening = "Opening",
+  Open = "Open",
+  Closing = "Closing",
+}
 
-const SlideDown = styled.div<{ open: boolean }>(({ theme, open }) => ({
-  position: "absolute",
-  top: open ? "0" : "-100%",
-  width: "100%",
-  height: "100%",
+const SlideDown = styled.div<{
+  open: boolean
+  chatTransitionState: ChatTransitionState
+}>(({ theme, open, chatTransitionState }) => ({
+  top: open ? 0 : "-100%",
+  right: 0,
+  left: 0,
+  height: chatTransitionState === ChatTransitionState.Open ? "auto" : "100%",
+  overflow:
+    chatTransitionState !== ChatTransitionState.Open ? "hidden" : "visible",
+  position:
+    chatTransitionState === ChatTransitionState.Open ? "static" : "absolute",
+  visibility:
+    chatTransitionState === ChatTransitionState.Closed ? "hidden" : "visible",
   backgroundColor: theme.custom.colors.white,
+  zIndex: 1,
   transition: "top 0.3s ease-in-out",
 }))
 
 const Opener = styled.div(({ theme }) => ({
-  position: "relative",
   ":after": {
     content: "''",
     width: "100%",
@@ -53,6 +67,7 @@ const StyledButton = styled(Button)<{ open: boolean }>(({ theme, open }) => ({
     ? theme.custom.colors.silverGray
     : theme.custom.colors.lightGray2,
   overflow: "hidden",
+  paddingRight: "26px",
   "svg:first-child": {
     fill: theme.custom.colors.lightRed,
     width: "20px",
@@ -86,11 +101,23 @@ const CloseButton = styled(RiCloseLine)(({ theme }) => ({
   backgroundColor: theme.custom.colors.silverGray,
 }))
 
-const StyledAiChatWithEntryScreen = styled(AiChatWithEntryScreen)({
-  ".MitAiChat--messagesContainer": {
-    marginTop: "14px",
+const StyledAiChatWithEntryScreen = styled(AiChatWithEntryScreen)<{
+  topPosition: number
+}>(({ topPosition }) => ({
+  ".MitAiChat--root": {
+    minHeight: `calc(100vh - ${topPosition + 43}px)`,
   },
-})
+  ".MitAiChat--messagesContainer": {
+    position: "static",
+  },
+  ".AiChatWithEntryScreen-chatScreen": {
+    position: "static",
+    paddingTop: 0,
+  },
+  ".MitAiChat--title": {
+    display: "none",
+  },
+}))
 
 const STARTERS: AiChatProps["conversationStarters"] = [
   { content: "What is this course about?" },
@@ -113,60 +140,99 @@ const getInitialMessage = (
   ]
 }
 
+export const AiChatSyllabusOpener = ({
+  open,
+  className,
+  onToggleOpen,
+}: {
+  open: boolean
+  className?: string
+  onToggleOpen: (open: boolean) => void
+}) => {
+  return (
+    <Opener className={className}>
+      <StyledButton
+        variant="bordered"
+        edge="rounded"
+        aria-pressed={open}
+        open={open}
+        onClick={() => onToggleOpen(!open)}
+      >
+        <RiSparkling2Line />
+        <Typography variant="body1">
+          Ask<strong>TIM</strong> about this course
+        </Typography>
+        {open ? <CloseButton /> : <OpenChevron />}
+      </StyledButton>
+    </Opener>
+  )
+}
+
 const AiChatSyllabusSlideDown = ({
   resource,
-  onToggleOpen,
   open,
+  onTransitionEnd,
+  scrollElement,
+  contentTopPosition,
+  chatTransitionState,
 }: {
   resource?: LearningResource
   open: boolean
-  onToggleOpen: (open: boolean) => void
+  onTransitionEnd: () => void
+  scrollElement: HTMLElement | null
+  contentTopPosition: number
+  chatTransitionState: ChatTransitionState
 }) => {
   const user = useUserMe()
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const element = ref.current
+    const _onTransitionEnd = (event: TransitionEvent) => {
+      if (event.target === element && event.propertyName === "top") {
+        onTransitionEnd()
+      }
+    }
+    if (!element) return
+    element.addEventListener("transitionend", _onTransitionEnd)
+    return () => {
+      element.removeEventListener("transitionend", _onTransitionEnd)
+    }
+  }, [onTransitionEnd])
 
   if (!resource) return null
 
   return (
-    <Container>
-      <Opener>
-        <StyledButton
-          variant="bordered"
-          edge="rounded"
-          aria-pressed={open}
-          open={open}
-          onClick={() => onToggleOpen(open)}
-        >
-          <RiSparkling2Line />
-          <Typography variant="body1">
-            Ask<strong>TIM</strong> about this course
-          </Typography>
-          {open ? <CloseButton /> : <OpenChevron />}
-        </StyledButton>
-      </Opener>
-      <SlideDown open={open} inert={!open}>
-        <StyledAiChatWithEntryScreen
-          key={resource.readable_id}
-          chatId={resource.readable_id}
-          entryTitle="What do you want to know about this course?"
-          starters={STARTERS}
-          initialMessages={getInitialMessage(resource, user.data)}
-          requestOpts={{
-            apiUrl: process.env.NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT!,
-            fetchOpts: {
-              headers: {
-                "X-CSRFToken": getCsrfToken(),
-              },
-              credentials: "include",
+    <SlideDown
+      open={open}
+      chatTransitionState={chatTransitionState}
+      inert={!open}
+      ref={ref}
+    >
+      <StyledAiChatWithEntryScreen
+        key={resource.readable_id}
+        chatId={resource.readable_id}
+        entryTitle="What do you want to know about this course?"
+        starters={STARTERS}
+        initialMessages={getInitialMessage(resource, user.data)}
+        topPosition={contentTopPosition}
+        scrollElement={scrollElement}
+        requestOpts={{
+          apiUrl: process.env.NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT!,
+          fetchOpts: {
+            headers: {
+              "X-CSRFToken": getCsrfToken(),
             },
-            transformBody: (messages) => ({
-              collection_name: "content_files",
-              message: messages[messages.length - 1].content,
-              course_id: resource.readable_id,
-            }),
-          }}
-        />
-      </SlideDown>
-    </Container>
+            credentials: "include",
+          },
+          transformBody: (messages) => ({
+            collection_name: "content_files",
+            message: messages[messages.length - 1].content,
+            course_id: resource.readable_id,
+          }),
+        }}
+      />
+    </SlideDown>
   )
 }
 

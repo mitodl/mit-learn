@@ -17,7 +17,6 @@
     "@dnd-kit/utilities": "^3.2.1",
     "@emotion/react": "^11.11.1",
     "@emotion/styled": "^11.11.0",
-    "@mitodl/smoot-design": "^3.3.0",
     "@mui/base": "5.0.0-beta.69",
     "@mui/lab": "6.0.0-beta.28",
     "@mui/material": "^6.4.5",
@@ -68,5 +67,8 @@
     "storybook": "^8.2.9",
     "typescript": "^5.5.4",
     "webpack": "^5.94.0"
+  },
+  "peerDependencies": {
+    "@mitodl/smoot-design": "*"
   }
 }

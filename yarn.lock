@@ -12,11 +12,11 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ai-sdk/provider-utils@npm:2.1.6":
-  version: 2.1.6
-  resolution: "@ai-sdk/provider-utils@npm:2.1.6"
+"@ai-sdk/provider-utils@npm:2.1.10":
+  version: 2.1.10
+  resolution: "@ai-sdk/provider-utils@npm:2.1.10"
   dependencies:
-    "@ai-sdk/provider": "npm:1.0.7"
+    "@ai-sdk/provider": "npm:1.0.9"
     eventsource-parser: "npm:^3.0.0"
     nanoid: "npm:^3.3.8"
     secure-json-parse: "npm:^2.7.0"
@@ -25,25 +25,25 @@ __metadata:
   peerDependenciesMeta:
     zod:
       optional: true
-  checksum: 10/48804ab8aba51e1a47d1f17d5f1f4a4617837ef633eebc4159db36b683e96b7603b166bdff871fc84d6d4e40075a89d67fa7f2bb56bd6a2b13904618bed621d4
+  checksum: 10/600a732d5e0b02b873234921b8aa873a9c78b23a4d058a68e30e0783b1be0ba5067621cf119a3a676d082d1fbacad6951533ab7bb55bdb3a7d29b63a0bcd9b18
   languageName: node
   linkType: hard
 
-"@ai-sdk/provider@npm:1.0.7":
-  version: 1.0.7
-  resolution: "@ai-sdk/provider@npm:1.0.7"
+"@ai-sdk/provider@npm:1.0.9":
+  version: 1.0.9
+  resolution: "@ai-sdk/provider@npm:1.0.9"
   dependencies:
     json-schema: "npm:^0.4.0"
-  checksum: 10/75b56a82a1d837e40fd5c35fecf0bf74f1b05e2d0f93cc6a57f90defd4d8eb6f903c170e37644f4271c27cac59bb65716369c94c07de4269d54b1d53f50431a4
+  checksum: 10/5f399ded99da304821010ef189df3f7da72fc4c28c73d570bdc27dc8157dfa35cef8552099c450bef51b1c74c80a6029b36a515a035d4426fae8d5c5269fb82c
   languageName: node
   linkType: hard
 
-"@ai-sdk/react@npm:1.1.12":
-  version: 1.1.12
-  resolution: "@ai-sdk/react@npm:1.1.12"
+"@ai-sdk/react@npm:1.1.18":
+  version: 1.1.18
+  resolution: "@ai-sdk/react@npm:1.1.18"
   dependencies:
-    "@ai-sdk/provider-utils": "npm:2.1.6"
-    "@ai-sdk/ui-utils": "npm:1.1.12"
+    "@ai-sdk/provider-utils": "npm:2.1.10"
+    "@ai-sdk/ui-utils": "npm:1.1.16"
     swr: "npm:^2.2.5"
     throttleit: "npm:2.1.0"
   peerDependencies:
@@ -54,23 +54,23 @@ __metadata:
       optional: true
     zod:
       optional: true
-  checksum: 10/351992f3405754544d7ccb851ed7b77b773f12b3d0d57f455ce839ab2388af2516ad1c6b6305a1489d9cdcac95f89bffbc825ad986b23b2bd674e2e6637dcddc
+  checksum: 10/8fda4918cd9d565a31e6830a31473fe95d02877cd51a45225f53f198c37f8a788606ed709e7f41a2356dd4ca363e5b6762f38f0a326ea388bdf82f15fffbe2fb
   languageName: node
   linkType: hard
 
-"@ai-sdk/ui-utils@npm:1.1.12":
-  version: 1.1.12
-  resolution: "@ai-sdk/ui-utils@npm:1.1.12"
+"@ai-sdk/ui-utils@npm:1.1.16":
+  version: 1.1.16
+  resolution: "@ai-sdk/ui-utils@npm:1.1.16"
   dependencies:
-    "@ai-sdk/provider": "npm:1.0.7"
-    "@ai-sdk/provider-utils": "npm:2.1.6"
+    "@ai-sdk/provider": "npm:1.0.9"
+    "@ai-sdk/provider-utils": "npm:2.1.10"
     zod-to-json-schema: "npm:^3.24.1"
   peerDependencies:
     zod: ^3.0.0
   peerDependenciesMeta:
     zod:
       optional: true
-  checksum: 10/bde6feb50a5e4616a24d85ada9e069834761e2090fdc38b64e299f75c0e362b46c6af215824c5c0008fd4a8b77c8296bd95b8d3133bc8197b985c886bf9a5c00
+  checksum: 10/406c4e76d131df6ddd49d4dae2d10745fb41ac1881f71c15facb333550a5eb636e295f499ef3e972e5af3d5e87c7b2685fe8f4b41a424b419f90f82aa554fc93
   languageName: node
   linkType: hard
 
@@ -1709,7 +1709,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@emotion/cache@npm:^11.13.5":
+"@emotion/cache@npm:^11.13.5, @emotion/cache@npm:^11.14.0":
   version: 11.14.0
   resolution: "@emotion/cache@npm:11.14.0"
   dependencies:
@@ -2694,10 +2694,11 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/smoot-design@npm:^3.3.0":
-  version: 3.3.0
-  resolution: "@mitodl/smoot-design@npm:3.3.0"
+"@mitodl/smoot-design@npm:^3.8.0":
+  version: 3.8.0
+  resolution: "@mitodl/smoot-design@npm:3.8.0"
   dependencies:
+    "@emotion/cache": "npm:^11.14.0"
     "@mui/utils": "npm:^6.1.6"
     ai: "npm:^4.0.13"
     classnames: "npm:^2.5.1"
@@ -2713,7 +2714,7 @@ __metadata:
     "@remixicon/react": ^4.2.0
     react: ^18 || ^19
     react-dom: ^18 || ^19
-  checksum: 10/ce3e0c7e507179720d19fdb4a40e72e8bc36769a3a36ac6159a9b53c63b90925bae5ccc766e58a9fa44ede416981e7bd3b71b66af4949d4054c7c567f873236b
+  checksum: 10/2649c106c1755cfac38f7f0c72d78553cdd809123d15d662553cc034f6e06ad7093712f27ab52e4cf72f4cb086969ca66689d002c49732fc4743b81d07831a92
   languageName: node
   linkType: hard
 
@@ -2917,9 +2918,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mui/utils@npm:^6.1.6, @mui/utils@npm:^6.4.3":
-  version: 6.4.3
-  resolution: "@mui/utils@npm:6.4.3"
+"@mui/utils@npm:^6.1.6":
+  version: 6.4.6
+  resolution: "@mui/utils@npm:6.4.6"
   dependencies:
     "@babel/runtime": "npm:^7.26.0"
     "@mui/types": "npm:^7.2.21"
@@ -2933,7 +2934,7 @@ __metadata:
   peerDependenciesMeta:
     "@types/react":
       optional: true
-  checksum: 10/c8ccd0fb3a3cab885c75db28a64d2c1d304716ea82998f06692291c5c5d3230636849af5c9093db5f59b426c5ff0fce7f18bd83a23c6107811cb6eb8cd4338e5
+  checksum: 10/5569592eac42786c62c28b89f3707a95a8df87ffe746803f4eadbe830c255f8a07d92584e0ad00853116634279a2d398085207b6b5b3032297617bb5b4899ae6
   languageName: node
   linkType: hard
 
@@ -2954,6 +2955,26 @@ __metadata:
     "@types/react":
       optional: true
   checksum: 10/ded7c80cb769eaa979bcc1c4cecc41dfe51390590080105a3c6749e378587395133fd1f7ff7f0ce65801903d5de5ade050f458ce16af15aafb49d1b33c4b7ac8
+  languageName: node
+  linkType: hard
+
+"@mui/utils@npm:^6.4.3":
+  version: 6.4.3
+  resolution: "@mui/utils@npm:6.4.3"
+  dependencies:
+    "@babel/runtime": "npm:^7.26.0"
+    "@mui/types": "npm:^7.2.21"
+    "@types/prop-types": "npm:^15.7.14"
+    clsx: "npm:^2.1.1"
+    prop-types: "npm:^15.8.1"
+    react-is: "npm:^19.0.0"
+  peerDependencies:
+    "@types/react": ^17.0.0 || ^18.0.0 || ^19.0.0
+    react: ^17.0.0 || ^18.0.0 || ^19.0.0
+  peerDependenciesMeta:
+    "@types/react":
+      optional: true
+  checksum: 10/c8ccd0fb3a3cab885c75db28a64d2c1d304716ea82998f06692291c5c5d3230636849af5c9093db5f59b426c5ff0fce7f18bd83a23c6107811cb6eb8cd4338e5
   languageName: node
   linkType: hard
 
@@ -6320,13 +6341,13 @@ __metadata:
   linkType: hard
 
 "ai@npm:^4.0.13":
-  version: 4.1.35
-  resolution: "ai@npm:4.1.35"
+  version: 4.1.46
+  resolution: "ai@npm:4.1.46"
   dependencies:
-    "@ai-sdk/provider": "npm:1.0.7"
-    "@ai-sdk/provider-utils": "npm:2.1.6"
-    "@ai-sdk/react": "npm:1.1.12"
-    "@ai-sdk/ui-utils": "npm:1.1.12"
+    "@ai-sdk/provider": "npm:1.0.9"
+    "@ai-sdk/provider-utils": "npm:2.1.10"
+    "@ai-sdk/react": "npm:1.1.18"
+    "@ai-sdk/ui-utils": "npm:1.1.16"
     "@opentelemetry/api": "npm:1.9.0"
     jsondiffpatch: "npm:0.6.0"
   peerDependencies:
@@ -6337,7 +6358,7 @@ __metadata:
       optional: true
     zod:
       optional: true
-  checksum: 10/f72562cbab09603a30e2f69b1ff20a76b51a09a863d78a39763a5208f9c7877fa521970086ee032d0399c51dd52752561b00230ab0d84660df8d6a382e52c48a
+  checksum: 10/da352603e5bef7f56101347fe7284820e67a19d5e1bb2790e470a4b9a0f19dbde96b98009be929c35c5b2c2a6058406a3456a6012f219be8aa0d9f9457e1f08e
   languageName: node
   linkType: hard
 
@@ -10585,8 +10606,8 @@ __metadata:
   linkType: hard
 
 "hast-util-to-jsx-runtime@npm:^2.0.0":
-  version: 2.3.2
-  resolution: "hast-util-to-jsx-runtime@npm:2.3.2"
+  version: 2.3.5
+  resolution: "hast-util-to-jsx-runtime@npm:2.3.5"
   dependencies:
     "@types/estree": "npm:^1.0.0"
     "@types/hast": "npm:^3.0.0"
@@ -10598,12 +10619,12 @@ __metadata:
     mdast-util-mdx-expression: "npm:^2.0.0"
     mdast-util-mdx-jsx: "npm:^3.0.0"
     mdast-util-mdxjs-esm: "npm:^2.0.0"
-    property-information: "npm:^6.0.0"
+    property-information: "npm:^7.0.0"
     space-separated-tokens: "npm:^2.0.0"
     style-to-object: "npm:^1.0.0"
     unist-util-position: "npm:^5.0.0"
     vfile-message: "npm:^4.0.0"
-  checksum: 10/3d72f83e2d8c29adc6576d2c6b41479902fd51fac8cfb2b67c35fd68fcb9c25c274699442e4dee901a7ab926a0ff6851713ed5d92448ac09ae0f10daf293476c
+  checksum: 10/56b2fc0e86611d5109528b5fc228c28c623f96947f7fcb342a9aa4f762b9a4756d9a5ddac8e7fccff56e913f06b496b3fd69f5f064a1b7846304e530d317c854
   languageName: node
   linkType: hard
 
@@ -12712,7 +12733,7 @@ __metadata:
     "@emotion/styled": "npm:^11.11.0"
     "@faker-js/faker": "npm:^9.0.0"
     "@mitodl/course-search-utils": "npm:3.3.2"
-    "@mitodl/smoot-design": "npm:^3.3.0"
+    "@mitodl/smoot-design": "npm:^3.8.0"
     "@next/bundle-analyzer": "npm:^14.2.15"
     "@remixicon/react": "npm:^4.2.0"
     "@sentry/nextjs": "npm:^9.0.0"
@@ -14365,7 +14386,6 @@ __metadata:
     "@emotion/react": "npm:^11.11.1"
     "@emotion/styled": "npm:^11.11.0"
     "@faker-js/faker": "npm:^9.0.0"
-    "@mitodl/smoot-design": "npm:^3.3.0"
     "@mui/base": "npm:5.0.0-beta.69"
     "@mui/lab": "npm:6.0.0-beta.28"
     "@mui/material": "npm:^6.4.5"
@@ -14411,6 +14431,8 @@ __metadata:
     typescript: "npm:^5.5.4"
     validator: "npm:^13.11.0"
     webpack: "npm:^5.94.0"
+  peerDependencies:
+    "@mitodl/smoot-design": "*"
   languageName: unknown
   linkType: soft
 
@@ -15359,10 +15381,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"property-information@npm:^6.0.0":
-  version: 6.5.0
-  resolution: "property-information@npm:6.5.0"
-  checksum: 10/fced94f3a09bf651ad1824d1bdc8980428e3e480e6d01e98df6babe2cc9d45a1c52eee9a7736d2006958f9b394eb5964dedd37e23038086ddc143fc2fd5e426c
+"property-information@npm:^7.0.0":
+  version: 7.0.0
+  resolution: "property-information@npm:7.0.0"
+  checksum: 10/55f443088456cddc2fe499d6f5895e68cbd465e39dc318ecc63a0d2432d1b918f51fb6d13f8b1adf8a78337bc4e608baa6e46afbe0c6d50d2e38588b2c409f86
   languageName: node
   linkType: hard
 
@@ -15650,10 +15672,11 @@ __metadata:
   linkType: hard
 
 "react-markdown@npm:^9.0.1":
-  version: 9.0.3
-  resolution: "react-markdown@npm:9.0.3"
+  version: 9.1.0
+  resolution: "react-markdown@npm:9.1.0"
   dependencies:
     "@types/hast": "npm:^3.0.0"
+    "@types/mdast": "npm:^4.0.0"
     devlop: "npm:^1.0.0"
     hast-util-to-jsx-runtime: "npm:^2.0.0"
     html-url-attributes: "npm:^3.0.0"
@@ -15666,7 +15689,7 @@ __metadata:
   peerDependencies:
     "@types/react": ">=18"
     react: ">=18"
-  checksum: 10/b97eb9a61762762043263286ece030bd878acabe24bbf433767a9518cb18e434e26a75b1b810a7cb966e304ddb4e16bd4a15edcc808113b11b4fb85a68d99e8d
+  checksum: 10/07045797b926afafc6aff692c9ee7d1cb9b12bc0e2d2b9f22ab17f2d1036dd807034a58565d67cfcfe94fe43961452a977496a175cbc9028ed51f2eec823c2f4
   languageName: node
   linkType: hard
 
@@ -19002,11 +19025,11 @@ __metadata:
   linkType: hard
 
 "zod-to-json-schema@npm:^3.24.1":
-  version: 3.24.1
-  resolution: "zod-to-json-schema@npm:3.24.1"
+  version: 3.24.3
+  resolution: "zod-to-json-schema@npm:3.24.3"
   peerDependencies:
     zod: ^3.24.1
-  checksum: 10/d31fd05b67b428d8e0d5ecad2c3e80a1c2fc370e4c22f9111ffd11cbe05cfcab00f3228f84295830952649d15ea4494ef42c2ee1cbe723c865b13f4cf2b80c09
+  checksum: 10/9dc6fafc3a9b5e088a92e2296bee6bc7b1c149f1d762c535a17626ce471721ef0c472d287f137f5408dad6368469621fe538ed8f0bf79811c7a69d67a1a7908b
   languageName: node
   linkType: hard
 
