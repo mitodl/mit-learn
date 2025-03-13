@@ -2160,6 +2160,103 @@ export interface LearningResourceInstructorRequest {
   full_name?: string | null
 }
 /**
+ * Serializer to render course information as a text document
+ * @export
+ * @interface LearningResourceMetadataDisplay
+ */
+export interface LearningResourceMetadataDisplay {
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceMetadataDisplay
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceMetadataDisplay
+   */
+  description: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceMetadataDisplay
+   */
+  full_description: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceMetadataDisplay
+   */
+  url: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceMetadataDisplay
+   */
+  free: string
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LearningResourceMetadataDisplay
+   */
+  topics: Array<string>
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceMetadataDisplay
+   */
+  price: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceMetadataDisplay
+   */
+  certification: string
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LearningResourceMetadataDisplay
+   */
+  instructors: Array<string>
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceMetadataDisplay
+   */
+  runs: string
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LearningResourceMetadataDisplay
+   */
+  offered_by: Array<string>
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LearningResourceMetadataDisplay
+   */
+  languages: Array<string>
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LearningResourceMetadataDisplay
+   */
+  levels: Array<string>
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LearningResourceMetadataDisplay
+   */
+  departments: Array<string>
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceMetadataDisplay
+   */
+  platform: string
+}
+/**
  * Serializer for LearningResourceOfferor with basic details
  * @export
  * @interface LearningResourceOfferor
@@ -2887,6 +2984,19 @@ export interface LearningResourceTopic {
   channel_url: string | null
 }
 /**
+ * Serializer for LearningResource
+ * @export
+ * @interface LearningResourceWithDisplayInfo
+ */
+export interface LearningResourceWithDisplayInfo {
+  /**
+   *
+   * @type {LearningResourceMetadataDisplay}
+   * @memberof LearningResourceWithDisplayInfo
+   */
+  display_info: LearningResourceMetadataDisplay
+}
+/**
  * SearchResponseSerializer with OpenAPI annotations for Learning Resources search
  * @export
  * @interface LearningResourcesSearchResponse
@@ -2912,10 +3022,10 @@ export interface LearningResourcesSearchResponse {
   previous: string | null
   /**
    *
-   * @type {Array<LearningResource>}
+   * @type {Array<LearningResourceWithDisplayInfo>}
    * @memberof LearningResourcesSearchResponse
    */
-  results: Array<LearningResource>
+  results: Array<LearningResourceWithDisplayInfo>
   /**
    *
    * @type {ContentFileSearchResponseMetadata}

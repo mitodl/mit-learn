@@ -9902,6 +9902,83 @@ components:
           type: string
           nullable: true
           maxLength: 256
+    LearningResourceMetadataDisplay:
+      type: object
+      description: Serializer to render course information as a text document
+      properties:
+        title:
+          type: string
+          readOnly: true
+        description:
+          type: string
+          readOnly: true
+        full_description:
+          type: string
+          readOnly: true
+        url:
+          type: string
+          readOnly: true
+        free:
+          type: string
+          readOnly: true
+        topics:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        price:
+          type: string
+          readOnly: true
+        certification:
+          type: string
+          readOnly: true
+        instructors:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        runs:
+          type: string
+          readOnly: true
+        offered_by:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        languages:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        levels:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        departments:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        platform:
+          type: string
+          readOnly: true
+      required:
+      - certification
+      - departments
+      - description
+      - free
+      - full_description
+      - instructors
+      - languages
+      - levels
+      - offered_by
+      - platform
+      - price
+      - runs
+      - title
+      - topics
+      - url
     LearningResourceOfferor:
       type: object
       description: Serializer for LearningResourceOfferor with basic details
@@ -10477,6 +10554,14 @@ components:
       - channel_url
       - id
       - name
+    LearningResourceWithDisplayInfo:
+      type: object
+      description: Serializer for LearningResource
+      properties:
+        display_info:
+          $ref: '#/components/schemas/LearningResourceMetadataDisplay'
+      required:
+      - display_info
     LearningResourcesSearchResponse:
       type: object
       description: |-
@@ -10497,7 +10582,7 @@ components:
         results:
           type: array
           items:
-            $ref: '#/components/schemas/LearningResource'
+            $ref: '#/components/schemas/LearningResourceWithDisplayInfo'
           readOnly: true
         metadata:
           type: object
