@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.30.9
+Version 0.30.9 (Released March 13, 2025)
 --------------
 
 - fix asset ids (#2121)
