@@ -387,3 +387,37 @@ def test_update_next_start_date(mocker):
     )
     update_next_start_date_and_prices()
     mock_load_next_start_date.assert_called_once_with(learning_resource)
+
+
+@pytest.mark.parametrize(
+    ("chunk_size", "overwrite", "ids"),
+    [
+        (None, False, []),  # Default params
+        (10, True, [1, 2, 3]),  # Custom params
+        (5, False, [42, 99]),  # Another variation
+    ],
+)
+def test_summarize_unprocessed_content(
+    mocker, mocked_celery, chunk_size, overwrite, ids
+):
+    """Test that summarize_unprocessed_content calls the correct methods"""
+    summarize_content_files_task_mock = mocker.patch(
+        "learning_resources.tasks.summarize_content_files_task", autospec=True
+    )
+    get_unprocessed_content_file_ids_mock = mocker.patch(
+        "learning_resources.tasks.ContentSummarizer.get_unprocessed_content_file_ids",
+        autospec=True,
+        return_value=ids,
+    )
+    error_expectation = pytest.raises(mocked_celery.replace_exception_class)
+    with error_expectation:
+        tasks.summarize_unprocessed_content.delay(
+            unprocessed_content_ids=ids, overwrite=overwrite
+        )
+
+    assert mocked_celery.group.call_count == 1
+    if ids:
+        summarize_content_files_task_mock.si.assert_called_once_with(
+            content_file_ids=ids, overwrite=overwrite
+        )
+    assert get_unprocessed_content_file_ids_mock.call_count == 0 if ids else 1

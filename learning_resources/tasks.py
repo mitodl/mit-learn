@@ -11,6 +11,7 @@ import celery
 from django.conf import settings
 from django.utils import timezone
 
+from learning_resources.content_summarizer import ContentSummarizer
 from learning_resources.etl import pipelines, youtube
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.edx_shared import (
@@ -378,3 +379,54 @@ def get_learning_resource_views():
     """Load learning resource views from the PostHog ETL."""
 
     pipelines.posthog_etl()
+
+
+@app.task(acks_late=True)
+def summarize_content_files_task(
+    content_file_ids: list[int], *, overwrite: bool = False
+):
+    """Process a batch of content files to generate summary and flashcards.
+    Args:
+        - content_file_ids (list[int]): List of content file ids to process
+        - overwrite (bool): Whether to overwrite existing summary and flashcards
+    Returns:
+        - None
+    """
+    summarizer = ContentSummarizer()
+    summarizer.summarize_content_files_by_ids(content_file_ids, overwrite)
+
+
+@app.task(bind=True, acks_late=True)
+def summarize_unprocessed_content(
+    self,
+    *,
+    chunk_size=None,
+    unprocessed_content_ids: list[int],
+    overwrite: bool = False,
+):
+    """Summarize the unprocessed content files.
+
+    Args:
+        - chunk_size (int): Chunk size for batch import task
+        - unprocessed_content_ids (list[int]): List of resource ids to process
+        - overwrite (bool): Force overwrite existing embeddings
+
+    Returns:
+        - None
+    """
+
+    if chunk_size is None:
+        chunk_size = settings.CONTENT_FILE_SUMMARIZER_CHUNK_SIZE
+
+    summarizer_tasks = celery.group(
+        [
+            summarize_content_files_task.si(
+                content_file_ids=content_ids, overwrite=overwrite
+            )
+            for content_ids in chunks(
+                unprocessed_content_ids,
+                chunk_size=chunk_size,
+            )
+        ]
+    )
+    return self.replace(summarizer_tasks)
