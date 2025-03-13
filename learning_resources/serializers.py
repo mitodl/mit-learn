@@ -716,6 +716,50 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
     departments = serializers.SerializerMethodField()
     platform = serializers.SerializerMethodField()
 
+    def all_runs_are_identical(self, serialized_resource):
+        distinct_prices = set()
+        distinct_delivery_methods = set()
+        has_in_person = "in_person" in [
+            delivery["code"] for delivery in serialized_resource["delivery"]
+        ]
+        distinct_currencies = {
+            c["currency"] for c in serialized_resource["resource_prices"]
+        }
+
+        distinct_locations = set()
+        for run in serialized_resource["runs"]:
+            distinct_prices.update(run["prices"])
+            distinct_delivery_methods.update(
+                [delivery["code"] for delivery in run["delivery"]]
+            )
+            if run["location"]:
+                distinct_locations.add(run["location"])
+        if (
+            serialized_resource["free"]
+            and serialized_resource["certification"]
+            and len(distinct_prices) != 2  # noqa: PLR2004
+        ):
+            return False
+        if len(distinct_currencies) != 1:
+            return False
+        if len(distinct_delivery_methods) != 1:
+            return False
+        return (has_in_person and len(distinct_locations) != 1) or (
+            not has_in_person and len(distinct_locations) > 0
+        )
+
+    def show_start_anytime(self, serialized_resource):
+        return (
+            serialized_resource["resource_type"] in ["program", "course"]
+            and serialized_resource["availability"] == "anytime"
+        )
+
+    def total_runs_with_dates(self, serialized_resource):
+        pass
+
+    def should_show_format(self, serialized_resource):
+        pass
+
     @extend_schema_field({"type": "array", "items": {"type": "string"}})
     def get_departments(self, serialized_resource):
         department_vals = []
