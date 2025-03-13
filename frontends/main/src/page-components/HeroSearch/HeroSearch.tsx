@@ -212,9 +212,10 @@ const HeroSearch: React.FC<{ imageIndex: number }> = ({ imageIndex }) => {
   const onSearchClear = useCallback(() => setSearchText(""), [])
   const router = useRouter()
 
-  const recommendationBotEnabled = useFeatureFlagEnabled(
-    FeatureFlags.HomePageRecommendationBot,
-  )
+  const recommendationBotEnabled = true
+  // useFeatureFlagEnabled(
+  //   FeatureFlags.HomePageRecommendationBot,
+  // )
 
   const onSearchChange: SearchInputProps["onChange"] = useCallback((e) => {
     setSearchText(e.target.value)

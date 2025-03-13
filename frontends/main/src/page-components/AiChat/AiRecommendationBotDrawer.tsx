@@ -2,8 +2,8 @@ import React from "react"
 import { styled, RoutedDrawer } from "ol-components"
 import { RiCloseLine } from "@remixicon/react"
 import { ActionButton } from "@mitodl/smoot-design"
+import { AiChat } from "@mitodl/smoot-design/ai"
 import type { AiChatProps } from "@mitodl/smoot-design/ai"
-import AiChatWithEntryScreen from "./AiChatWithEntryScreen"
 import { getCsrfToken } from "@/common/utils"
 import { RECOMMENDER_QUERY_PARAM } from "@/common/urls"
 
@@ -29,28 +29,11 @@ const CloseButton = styled(ActionButton)(({ theme }) => ({
   },
 }))
 
-const StyledAiChatWithEntryScreen = styled(AiChatWithEntryScreen)(
-  ({ theme }) => ({
-    width: "900px",
-    [theme.breakpoints.down("md")]: {
-      width: "100%",
-    },
-    ".AiChatWithEntryScreen-chatScreen": {
-      padding: "0 28px",
-      [theme.breakpoints.down("md")]: {
-        padding: "0 16px",
-      },
-    },
-    ".MitAiChat--title": {
-      position: "sticky",
-      top: 0,
-      padding: "32px 0 26px",
-      zIndex: 2,
-      backgroundColor: theme.custom.colors.white,
-      borderRadius: 0,
-    },
-  }),
-)
+const StyledAiChat = styled(AiChat)(({ theme }) => ({
+  ".MitAiChat--entryScreenContainer": {
+    paddingTop: "152px",
+  },
+}))
 
 const INITIAL_MESSAGES: AiChatProps["initialMessages"] = [
   {
@@ -89,9 +72,9 @@ const DrawerContent: React.FC<{
           <RiCloseLine />
         </CloseButton>
       </CloseButtonContainer>
-      <StyledAiChatWithEntryScreen
-        entryTitle="What do you want to learn from MIT?"
-        starters={STARTERS}
+      <StyledAiChat
+        entryScreenTitle="What do you want to learn from MIT?"
+        conversationStarters={STARTERS}
         askTimTitle="to recommend a course"
         initialMessages={INITIAL_MESSAGES}
         requestOpts={{
