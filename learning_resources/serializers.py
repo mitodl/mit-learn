@@ -1,13 +1,18 @@
 """Serializers for learning_resources"""
 
+import json
 import logging
+from datetime import UTC
 from decimal import Decimal
 from uuid import uuid4
 
+import dateparser
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import F, Max
 from drf_spectacular.utils import extend_schema_field
+from langchain_text_splitters import RecursiveJsonSplitter
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -687,6 +692,200 @@ class LearningResourceSerializer(serializers.Serializer):
         serializer_cls = self.serializer_cls_mapping[instance.resource_type]
 
         return serializer_cls(instance=instance, context=self.context).data
+
+
+class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
+    """
+    Serializer to render course information as a text document
+    """
+
+    title = serializers.CharField(read_only=True)
+    description = serializers.CharField(read_only=True)
+
+    full_description = serializers.CharField(read_only=True)
+    url = serializers.CharField(read_only=True)
+    free = serializers.ReadOnlyField(read_only=True)
+    topics = serializers.SerializerMethodField()
+    price = serializers.SerializerMethodField()
+    certification = serializers.SerializerMethodField()
+    instructors = serializers.SerializerMethodField()
+    runs = serializers.SerializerMethodField()
+    offered_by = serializers.SerializerMethodField()
+    languages = serializers.SerializerMethodField()
+    levels = serializers.SerializerMethodField()
+    departments = serializers.SerializerMethodField()
+    platform = serializers.SerializerMethodField()
+
+    @extend_schema_field({"type": "array", "items": {"type": "string"}})
+    def get_departments(self, serialized_resource):
+        department_vals = []
+        for department in serialized_resource.get("departments", []):
+            school = (
+                f" ({department['school']['name']})" if department.get("school") else ""
+            )
+            department_vals.append(f"{department['name']}{school}")
+        return department_vals
+
+    def get_platform(self, serialized_resource):
+        return (
+            serialized_resource["platform"].get("name")
+            if serialized_resource.get("platform")
+            else ""
+        )
+
+    @extend_schema_field({"type": "array", "items": {"type": "string"}})
+    def get_levels(self, serialized_resource):
+        levels = []
+        for run in serialized_resource.get("runs", []):
+            if run.get("level"):
+                levels.extend(lvl["name"] for lvl in run["level"])
+        return list(set(levels))
+
+    @extend_schema_field({"type": "array", "items": {"type": "string"}})
+    def get_languages(self, serialized_resource):
+        languages = []
+        for run in serialized_resource.get("runs", []):
+            if run.get("languages"):
+                languages.extend(run["languages"])
+        return list(set(languages))
+
+    @extend_schema_field({"type": "array", "items": {"type": "string"}})
+    def get_offered_by(self, serialized_resource):
+        return (
+            serialized_resource["offered_by"].get("name")
+            if serialized_resource.get("offered_by")
+            else ""
+        )
+
+    def get_runs(self, serialized_resource):
+        runs = []
+        for run in serialized_resource.get("runs", []):
+            start_date = run["start_date"]
+            formatted_date = (
+                dateparser.parse(start_date).replace(tzinfo=UTC).strftime("%B %d, %Y")
+                if start_date
+                else ""
+            )
+            location = run["location"] or "Online"
+            duration = run["duration"]
+            delivery_modes = run.get("delivery", [])
+            instructors = [
+                instructor.get("full_name")
+                for instructor in run.get("instructors", [])
+                if instructor.get("full_name")
+            ]
+            runs.append(
+                {
+                    "start_date": formatted_date,
+                    "location": location,
+                    "instructors": instructors,
+                    "duration": duration,
+                    "format": delivery_modes,
+                }
+            )
+        return runs
+
+    @extend_schema_field({"type": "array", "items": {"type": "string"}})
+    def get_instructors(self, serialized_resource):
+        instructors = set()
+        for run in serialized_resource.get("runs", []):
+            for instructor in run.get("instructors", []):
+                instructors.add(instructor["full_name"])
+
+        return list(instructors)
+
+    def get_certification(self, serialized_resource):
+        if serialized_resource.get(
+            "certification_type"
+        ) and not serialized_resource.get("free"):
+            return serialized_resource["certification_type"].get("name")
+        if (
+            serialized_resource["free"]
+            and serialized_resource["certification_type"]
+            and serialized_resource["certification_type"]["code"]
+            == CertificationType.none.name
+        ):
+            return CertificationType.none.value
+        return None
+
+    def get_price(self, serialized_resource):
+        prices = serialized_resource.get("prices", [])
+        if not serialized_resource["free"] and prices:
+            return f"${serialized_resource['prices'][0]}"
+        if (
+            serialized_resource["free"]
+            and serialized_resource["certification_type"]
+            and serialized_resource["certification_type"]["code"]
+            == CertificationType.completion.name
+        ) and len(prices) > 1:
+            return f"Free (Earn a certificate: ${prices[1]})"
+        return "Free"
+
+    @extend_schema_field({"type": "array", "items": {"type": "string"}})
+    def get_topics(self, serialized_resource):
+        return [topic["name"] for topic in serialized_resource.get("topics", [])]
+
+    def render_document(self):
+        data = self.data
+        display_sections = {
+            "title": "Title",
+            "platform": "Platform",
+            "url": "Link",
+            "delivery": "Format",
+            "departments": "Departments",
+            "description": "Description",
+            "full_description": "Full Description",
+            "topics": "Topics",
+            "price": "Cost",
+            "certification": "Certification",
+            "instructors": "Instructors",
+            "runs": "Course Schedule (Runs and Sessions)",
+            "offered_by": "Offered By",
+            "languages": "Languages",
+            "levels": "Levels",
+        }
+        rendered_data = {}
+
+        for section, section in display_sections.items():
+            display_text = data.get(section)
+            if display_text:
+                rendered_data[section] = display_text
+        return rendered_data
+
+    def _json_to_text_document(
+        self, json_text, document_prefix="Information about this course:"
+    ):
+        """Render a (serialized) json fragment as plain text"""
+        rendered_info = f"{document_prefix}\n"
+        for section, section_value in json.loads(json_text).items():
+            rendered_info += f"{section} -\n{section_value}\n"
+        return rendered_info
+
+    def render_chunks(self):
+        rendered_doc = self.render_document()
+        """
+        We cant use tiktoken for token size calculation so
+        we use a rough calculation of 4*chunk_size characters:
+        https://help.openai.com/en/articles/4936856-what-are-tokens-and-how-to-count-them
+        """
+        chunk_size = (
+            settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
+            if settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
+            else 512
+        )
+        return [
+            self._json_to_text_document(json_fragment)
+            for json_fragment in RecursiveJsonSplitter(
+                max_chunk_size=chunk_size * 4
+            ).split_text(
+                json_data=rendered_doc,
+                convert_lists=True,
+            )
+        ]
+
+
+class LearningResourceWithDisplayInfoSerializer(LearningResourceSerializer):
+    display_info = LearningResourceMetadataDisplaySerializer()
 
 
 class LearningResourceRelationshipSerializer(serializers.ModelSerializer):
