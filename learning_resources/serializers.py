@@ -768,7 +768,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             )
             location = run["location"] or "Online"
             duration = run["duration"]
-            delivery_modes = run.get("delivery", [])
+            delivery_modes = [delivery["name"] for delivery in run.get("delivery", [])]
             instructors = [
                 instructor.get("full_name")
                 for instructor in run.get("instructors", [])
@@ -846,20 +846,55 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         }
         rendered_data = {}
 
-        for section, section in display_sections.items():
+        for section, section_display in display_sections.items():
             display_text = data.get(section)
             if display_text:
-                rendered_data[section] = display_text
+                rendered_data[section_display] = display_text
         return rendered_data
 
-    def _json_to_text_document(
-        self, json_text, document_prefix="Information about this course:"
-    ):
-        """Render a (serialized) json fragment as plain text"""
-        rendered_info = f"{document_prefix}\n"
-        for section, section_value in json.loads(json_text).items():
-            rendered_info += f"{section} -\n{section_value}\n"
-        return rendered_info
+    def _json_to_markdown(self, obj, indent=0):
+        """
+        Recursively converts a JSON object into a readable
+        Markdown format with proper lists and tables.
+        """
+        markdown = ""
+        indent_str = " " * (indent * 2)
+        if isinstance(obj, dict):
+            for key, value in obj.items():
+                markdown += f"\n{indent_str}**{key.replace('_', ' ').title()}**\n\n"
+                markdown += self._json_to_markdown(value, indent + 1)
+        elif isinstance(obj, list):
+            if all(
+                isinstance(item, dict) for item in obj
+            ):  # Check if it's a list of dictionaries
+                keys = sorted(
+                    {k for item in obj for k in item}
+                )  # Collect and sort all keys
+                # Create table header
+                markdown += f"| {' | '.join(keys)} |\n"
+                markdown += f"| {' | '.join(['---'] * len(keys))} |\n"
+                # Create table rows
+                for item in obj:
+                    row = [
+                        str(item.get(k, "N/A"))
+                        .replace("[", "")
+                        .replace("]", "")
+                        .replace("{", "")
+                        .replace("}", "")
+                        for k in keys
+                    ]
+                    markdown += f"| {' | '.join(row)} |\n"
+            else:
+                for item in obj:
+                    markdown += (
+                        f"{indent_str}- "
+                        f"{self._json_to_markdown(item, indent + 1).strip()}\n"
+                    )
+        elif obj is None:
+            markdown += f"{indent_str}N/A\n\n"
+        else:
+            markdown += f"{indent_str}{obj}\n\n"
+        return markdown
 
     def render_chunks(self):
         rendered_doc = self.render_document()
@@ -874,12 +909,15 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             else 512
         )
         return [
-            self._json_to_text_document(json_fragment)
+            (
+                f"# Information about this course:\n\n"
+                f"{self._json_to_markdown(json.loads(json_fragment))}"
+            )
             for json_fragment in RecursiveJsonSplitter(
                 max_chunk_size=chunk_size * 4
             ).split_text(
                 json_data=rendered_doc,
-                convert_lists=True,
+                convert_lists=False,
             )
         ]
 
