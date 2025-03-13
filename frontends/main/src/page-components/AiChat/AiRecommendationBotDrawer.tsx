@@ -29,11 +29,11 @@ const CloseButton = styled(ActionButton)(({ theme }) => ({
   },
 }))
 
-const StyledAiChat = styled(AiChat)(({ theme }) => ({
+const StyledAiChat = styled(AiChat)({
   ".MitAiChat--entryScreenContainer": {
     paddingTop: "152px",
   },
-}))
+})
 
 const INITIAL_MESSAGES: AiChatProps["initialMessages"] = [
   {
