@@ -754,38 +754,55 @@ class ContentFileSerializer(serializers.ModelSerializer):
     Serializer class for course run ContentFiles
     """
 
-    run_id = serializers.IntegerField(source="run.id")
-    run_readable_id = serializers.CharField(source="run.run_id")
-    run_title = serializers.CharField(source="run.title")
-    run_slug = serializers.CharField(source="run.slug")
-    semester = serializers.CharField(source="run.semester")
-    year = serializers.IntegerField(source="run.year")
-    topics = LearningResourceTopicSerializer(
-        source="run.learning_resource.topics", many=True
-    )
-    resource_id = serializers.CharField(source="run.learning_resource.id")
-    departments = LearningResourceDepartmentSerializer(
-        source="run.learning_resource.departments", many=True
-    )
-    resource_readable_id = serializers.CharField(
-        source="run.learning_resource.readable_id"
-    )
+    run_id = serializers.IntegerField(source="run.id", required=False)
+    run_readable_id = serializers.CharField(source="run.run_id", required=False)
+    run_title = serializers.CharField(source="run.title", required=False)
+    run_slug = serializers.CharField(source="run.slug", required=False)
+    semester = serializers.CharField(source="run.semester", required=False)
+    year = serializers.IntegerField(source="run.year", required=False)
+    topics = serializers.SerializerMethodField(read_only=True)
+    resource_id = serializers.SerializerMethodField(read_only=True)
+    departments = serializers.SerializerMethodField(read_only=True)
+    resource_readable_id = serializers.SerializerMethodField(read_only=True)
     course_number = serializers.SerializerMethodField()
     content_feature_type = LearningResourceContentTagField(source="content_tags")
-    offered_by = LearningResourceOfferorSerializer(
-        source="run.learning_resource.offered_by"
-    )
-    platform = LearningResourcePlatformSerializer(
-        source="run.learning_resource.platform"
-    )
+    offered_by = serializers.SerializerMethodField(read_only=True)
+    platform = serializers.SerializerMethodField(read_only=True)
+
+    def get_learning_resource(self, instance):
+        if instance.run:
+            return instance.run.learning_resource
+        return instance.learning_resource
+
+    def get_platform(self, instance):
+        platform = self.get_learning_resource(instance).platform
+        return LearningResourcePlatformSerializer(platform).data
+
+    def get_offered_by(self, instance):
+        offered_by = self.get_learning_resource(instance).offered_by
+        return LearningResourceOfferorSerializer(offered_by).data
+
+    def get_resource_readable_id(self, instance):
+        return self.get_learning_resource(instance).readable_id
+
+    def get_departments(self, instance):
+        return LearningResourceDepartmentSerializer(
+            self.get_learning_resource(instance).departments, many=True
+        ).data
+
+    def get_resource_id(self, instance):
+        return self.get_learning_resource(instance).id
+
+    def get_topics(self, instance):
+        return LearningResourceTopicSerializer(
+            self.get_learning_resource(instance).topics, many=True
+        ).data
 
     def get_course_number(self, instance) -> list[str]:
         """Extract the course number(s) from the associated course"""
-        if hasattr(instance.run.learning_resource, LearningResourceType.course.name):
-            return [
-                coursenum["value"]
-                for coursenum in instance.run.learning_resource.course.course_numbers
-            ]
+        resource = self.get_learning_resource(instance)
+        if hasattr(resource, LearningResourceType.course.name):
+            return [coursenum["value"] for coursenum in resource.course.course_numbers]
         return []
 
     class Meta:
