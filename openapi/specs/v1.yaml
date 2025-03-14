@@ -9938,12 +9938,30 @@ components:
             type: string
           readOnly: true
         runs:
-          type: string
-          readOnly: true
-        offered_by:
           type: array
           items:
-            type: string
+            type: object
+            properties:
+              location:
+                type: string
+              start_date:
+                type: string
+              instructors:
+                type: array
+                items:
+                  type: string
+              duration:
+                type: string
+              format:
+                type: array
+                items:
+                  type: string
+            required:
+            - code
+            - name
+          readOnly: true
+        offered_by:
+          type: string
           readOnly: true
         languages:
           type: array
@@ -9963,6 +9981,12 @@ components:
         platform:
           type: string
           readOnly: true
+        number_of_courses:
+          type: number
+          readOnly: true
+        location:
+          type: string
+          readOnly: true
       required:
       - certification
       - departments
@@ -9972,6 +9996,8 @@ components:
       - instructors
       - languages
       - levels
+      - location
+      - number_of_courses
       - offered_by
       - platform
       - price

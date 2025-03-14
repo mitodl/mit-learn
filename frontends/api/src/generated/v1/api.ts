@@ -2221,16 +2221,16 @@ export interface LearningResourceMetadataDisplay {
   instructors: Array<string>
   /**
    *
+   * @type {Array<LearningResourceMetadataDisplayRunsInner>}
+   * @memberof LearningResourceMetadataDisplay
+   */
+  runs: Array<LearningResourceMetadataDisplayRunsInner>
+  /**
+   *
    * @type {string}
    * @memberof LearningResourceMetadataDisplay
    */
-  runs: string
-  /**
-   *
-   * @type {Array<string>}
-   * @memberof LearningResourceMetadataDisplay
-   */
-  offered_by: Array<string>
+  offered_by: string
   /**
    *
    * @type {Array<string>}
@@ -2255,6 +2255,55 @@ export interface LearningResourceMetadataDisplay {
    * @memberof LearningResourceMetadataDisplay
    */
   platform: string
+  /**
+   *
+   * @type {number}
+   * @memberof LearningResourceMetadataDisplay
+   */
+  number_of_courses: number
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceMetadataDisplay
+   */
+  location: string
+}
+/**
+ *
+ * @export
+ * @interface LearningResourceMetadataDisplayRunsInner
+ */
+export interface LearningResourceMetadataDisplayRunsInner {
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceMetadataDisplayRunsInner
+   */
+  location?: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceMetadataDisplayRunsInner
+   */
+  start_date?: string
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LearningResourceMetadataDisplayRunsInner
+   */
+  instructors?: Array<string>
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceMetadataDisplayRunsInner
+   */
+  duration?: string
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LearningResourceMetadataDisplayRunsInner
+   */
+  format?: Array<string>
 }
 /**
  * Serializer for LearningResourceOfferor with basic details
