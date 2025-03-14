@@ -633,6 +633,12 @@ export interface CourseResource {
   platform: LearningResourcePlatform | null
   /**
    *
+   * @type {LearningResourceMetadataDisplay}
+   * @memberof CourseResource
+   */
+  display_info: LearningResourceMetadataDisplay
+  /**
+   *
    * @type {Array<string>}
    * @memberof CourseResource
    */
@@ -1497,6 +1503,12 @@ export interface LearningPathResource {
    * @memberof LearningPathResource
    */
   platform: LearningResourcePlatform | null
+  /**
+   *
+   * @type {LearningResourceMetadataDisplay}
+   * @memberof LearningPathResource
+   */
+  display_info: LearningResourceMetadataDisplay
   /**
    *
    * @type {Array<string>}
@@ -3033,19 +3045,6 @@ export interface LearningResourceTopic {
   channel_url: string | null
 }
 /**
- * Serializer for LearningResource
- * @export
- * @interface LearningResourceWithDisplayInfo
- */
-export interface LearningResourceWithDisplayInfo {
-  /**
-   *
-   * @type {LearningResourceMetadataDisplay}
-   * @memberof LearningResourceWithDisplayInfo
-   */
-  display_info: LearningResourceMetadataDisplay
-}
-/**
  * SearchResponseSerializer with OpenAPI annotations for Learning Resources search
  * @export
  * @interface LearningResourcesSearchResponse
@@ -3071,10 +3070,10 @@ export interface LearningResourcesSearchResponse {
   previous: string | null
   /**
    *
-   * @type {Array<LearningResourceWithDisplayInfo>}
+   * @type {Array<LearningResource>}
    * @memberof LearningResourcesSearchResponse
    */
-  results: Array<LearningResourceWithDisplayInfo>
+  results: Array<LearningResource>
   /**
    *
    * @type {ContentFileSearchResponseMetadata}
@@ -4675,6 +4674,12 @@ export interface PodcastEpisodeResource {
   platform: LearningResourcePlatform | null
   /**
    *
+   * @type {LearningResourceMetadataDisplay}
+   * @memberof PodcastEpisodeResource
+   */
+  display_info: LearningResourceMetadataDisplay
+  /**
+   *
    * @type {Array<string>}
    * @memberof PodcastEpisodeResource
    */
@@ -5139,6 +5144,12 @@ export interface PodcastResource {
    * @memberof PodcastResource
    */
   platform: LearningResourcePlatform | null
+  /**
+   *
+   * @type {LearningResourceMetadataDisplay}
+   * @memberof PodcastResource
+   */
+  display_info: LearningResourceMetadataDisplay
   /**
    *
    * @type {Array<string>}
@@ -5837,6 +5848,12 @@ export interface ProgramResource {
    * @memberof ProgramResource
    */
   platform: LearningResourcePlatform | null
+  /**
+   *
+   * @type {LearningResourceMetadataDisplay}
+   * @memberof ProgramResource
+   */
+  display_info: LearningResourceMetadataDisplay
   /**
    *
    * @type {Array<string>}
@@ -6784,6 +6801,12 @@ export interface VideoPlaylistResource {
   platform: LearningResourcePlatform | null
   /**
    *
+   * @type {LearningResourceMetadataDisplay}
+   * @memberof VideoPlaylistResource
+   */
+  display_info: LearningResourceMetadataDisplay
+  /**
+   *
    * @type {Array<string>}
    * @memberof VideoPlaylistResource
    */
@@ -7236,6 +7259,12 @@ export interface VideoResource {
    * @memberof VideoResource
    */
   platform: LearningResourcePlatform | null
+  /**
+   *
+   * @type {LearningResourceMetadataDisplay}
+   * @memberof VideoResource
+   */
+  display_info: LearningResourceMetadataDisplay
   /**
    *
    * @type {Array<string>}

@@ -8790,6 +8790,10 @@ components:
           - $ref: '#/components/schemas/LearningResourcePlatform'
           readOnly: true
           nullable: true
+        display_info:
+          allOf:
+          - $ref: '#/components/schemas/LearningResourceMetadataDisplay'
+          readOnly: true
         course_feature:
           type: array
           items:
@@ -9012,6 +9016,7 @@ components:
       - course_feature
       - delivery
       - departments
+      - display_info
       - format
       - free
       - id
@@ -9344,6 +9349,10 @@ components:
           - $ref: '#/components/schemas/LearningResourcePlatform'
           readOnly: true
           nullable: true
+        display_info:
+          allOf:
+          - $ref: '#/components/schemas/LearningResourceMetadataDisplay'
+          readOnly: true
         course_feature:
           type: array
           items:
@@ -9564,6 +9573,7 @@ components:
       - course_feature
       - delivery
       - departments
+      - display_info
       - format
       - free
       - id
@@ -10585,14 +10595,6 @@ components:
       - channel_url
       - id
       - name
-    LearningResourceWithDisplayInfo:
-      type: object
-      description: Serializer for LearningResource
-      properties:
-        display_info:
-          $ref: '#/components/schemas/LearningResourceMetadataDisplay'
-      required:
-      - display_info
     LearningResourcesSearchResponse:
       type: object
       description: |-
@@ -10613,7 +10615,7 @@ components:
         results:
           type: array
           items:
-            $ref: '#/components/schemas/LearningResourceWithDisplayInfo'
+            $ref: '#/components/schemas/LearningResource'
           readOnly: true
         metadata:
           type: object
@@ -11788,6 +11790,10 @@ components:
           - $ref: '#/components/schemas/LearningResourcePlatform'
           readOnly: true
           nullable: true
+        display_info:
+          allOf:
+          - $ref: '#/components/schemas/LearningResourceMetadataDisplay'
+          readOnly: true
         course_feature:
           type: array
           items:
@@ -12009,6 +12015,7 @@ components:
       - course_feature
       - delivery
       - departments
+      - display_info
       - format
       - free
       - id
@@ -12182,6 +12189,10 @@ components:
           - $ref: '#/components/schemas/LearningResourcePlatform'
           readOnly: true
           nullable: true
+        display_info:
+          allOf:
+          - $ref: '#/components/schemas/LearningResourceMetadataDisplay'
+          readOnly: true
         course_feature:
           type: array
           items:
@@ -12403,6 +12414,7 @@ components:
       - course_feature
       - delivery
       - departments
+      - display_info
       - format
       - free
       - id
@@ -12714,6 +12726,10 @@ components:
           - $ref: '#/components/schemas/LearningResourcePlatform'
           readOnly: true
           nullable: true
+        display_info:
+          allOf:
+          - $ref: '#/components/schemas/LearningResourceMetadataDisplay'
+          readOnly: true
         course_feature:
           type: array
           items:
@@ -12935,6 +12951,7 @@ components:
       - course_feature
       - delivery
       - departments
+      - display_info
       - format
       - free
       - id
@@ -13380,6 +13397,10 @@ components:
           - $ref: '#/components/schemas/LearningResourcePlatform'
           readOnly: true
           nullable: true
+        display_info:
+          allOf:
+          - $ref: '#/components/schemas/LearningResourceMetadataDisplay'
+          readOnly: true
         course_feature:
           type: array
           items:
@@ -13601,6 +13622,7 @@ components:
       - course_feature
       - delivery
       - departments
+      - display_info
       - format
       - free
       - id
@@ -13760,6 +13782,10 @@ components:
           - $ref: '#/components/schemas/LearningResourcePlatform'
           readOnly: true
           nullable: true
+        display_info:
+          allOf:
+          - $ref: '#/components/schemas/LearningResourceMetadataDisplay'
+          readOnly: true
         course_feature:
           type: array
           items:
@@ -13987,6 +14013,7 @@ components:
       - course_feature
       - delivery
       - departments
+      - display_info
       - format
       - free
       - id

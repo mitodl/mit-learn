@@ -38,7 +38,6 @@ from learning_resources.serializers import (
     CourseNumberSerializer,
     LearningResourceMetadataDisplaySerializer,
     LearningResourceSerializer,
-    LearningResourceWithDisplayInfoSerializer,
     MicroLearningPathRelationshipSerializer,
     MicroUserListRelationshipSerializer,
 )
@@ -703,7 +702,7 @@ class LearningResourcesSearchResponseSerializer(SearchResponseSerializer):
                     ).data
                 )
 
-    @extend_schema_field(LearningResourceWithDisplayInfoSerializer(many=True))
+    @extend_schema_field(LearningResourceSerializer(many=True))
     def get_results(self, instance):
         hits = instance.get("hits", {}).get("hits", [])
         request = self.context.get("request")

@@ -442,259 +442,6 @@ class MicroUserListRelationshipSerializer(serializers.ModelSerializer):
         fields = ("id", "parent", "child")
 
 
-class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopicsMixin):
-    """Serializer for LearningResource, minus program"""
-
-    position = serializers.IntegerField(read_only=True, allow_null=True)
-    offered_by = LearningResourceOfferorSerializer(read_only=True, allow_null=True)
-    platform = LearningResourcePlatformSerializer(read_only=True, allow_null=True)
-    course_feature = LearningResourceContentTagField(
-        source="content_tags", read_only=True, allow_null=True
-    )
-    departments = LearningResourceDepartmentSerializer(
-        read_only=True, allow_null=True, many=True
-    )
-    certification = serializers.ReadOnlyField(read_only=True)
-    certification_type = CertificateTypeField(read_only=True)
-    prices = serializers.ListField(
-        child=serializers.DecimalField(max_digits=12, decimal_places=2),
-        read_only=True,
-    )
-    resource_prices = LearningResourcePriceSerializer(read_only=True, many=True)
-    runs = LearningResourceRunSerializer(read_only=True, many=True, allow_null=True)
-    image = serializers.SerializerMethodField()
-    learning_path_parents = MicroLearningPathRelationshipSerializer(
-        many=True, read_only=True
-    )
-    user_list_parents = MicroUserListRelationshipSerializer(many=True, read_only=True)
-    views = serializers.IntegerField(source="views_count", read_only=True)
-    delivery = serializers.ListField(
-        child=LearningResourceDeliverySerializer(), read_only=True
-    )
-    free = serializers.SerializerMethodField()
-    resource_category = serializers.SerializerMethodField()
-    format = serializers.ListField(child=FormatSerializer(), read_only=True)
-    pace = serializers.ListField(child=PaceSerializer(), read_only=True)
-
-    def get_resource_category(self, instance) -> str:
-        """Return the resource category of the resource"""
-        if instance.resource_type in [
-            LearningResourceType.course.name,
-            LearningResourceType.program.name,
-        ]:
-            return instance.resource_type
-        else:
-            return LEARNING_MATERIAL_RESOURCE_CATEGORY
-
-    def get_free(self, instance) -> bool:
-        """Return true if the resource is free/has a free option"""
-        if instance.resource_type in [
-            LearningResourceType.course.name,
-            LearningResourceType.program.name,
-        ]:
-            prices = [price.amount for price in instance.resource_prices.all()]
-            return not instance.professional and (
-                Decimal("0.00") in prices or not prices or prices == []
-            )
-        else:
-            return True
-
-    @extend_schema_field(LearningResourceImageSerializer(allow_null=True))
-    def get_image(self, instance) -> dict | None:
-        """
-        Return the resource.image if it exists. Otherwise, for learning paths only,
-        return the image of the first child resource.
-        """
-        if instance.image:
-            return LearningResourceImageSerializer(instance=instance.image).data
-        elif (
-            instance.resource_type == constants.LearningResourceType.learning_path.value
-        ):
-            list_item = instance.children.order_by("position").first()
-            if list_item and list_item.child.image:
-                return LearningResourceImageSerializer(
-                    instance=list_item.child.image
-                ).data
-            return None
-        return None
-
-    class Meta:
-        model = models.LearningResource
-        read_only_fields = [
-            "free",
-            "prices",
-            "resource_prices",
-            "resource_category",
-            "certification",
-            "certification_type",
-            "professional",
-            "views",
-            "learning_path_parents",
-            "user_list_parents",
-        ]
-        exclude = ["content_tags", "resources", "etl_source", *COMMON_IGNORED_FIELDS]
-
-
-class ProgramResourceSerializer(LearningResourceBaseSerializer):
-    """Serializer for program resources"""
-
-    resource_type = LearningResourceTypeField(
-        default=constants.LearningResourceType.program.name
-    )
-
-    program = ProgramSerializer(read_only=True)
-
-
-class CourseResourceSerializer(LearningResourceBaseSerializer):
-    """Serializer for course resources"""
-
-    resource_type = LearningResourceTypeField(
-        default=constants.LearningResourceType.course.name
-    )
-
-    course = CourseSerializer(read_only=True)
-
-
-class LearningResourceRelationshipChildField(serializers.ModelSerializer):
-    """
-    Serializer field for the LearningResourceRelationship model that uses
-    the LearningResourceSerializer to serialize the child resources
-    """
-
-    def to_representation(self, instance):
-        """Serializes child as a LearningResource"""  # noqa: D401
-        return LearningResourceSerializer(instance=instance.child).data
-
-    class Meta:
-        model = models.LearningResourceRelationship
-        exclude = ("parent", *COMMON_IGNORED_FIELDS)
-
-
-class LearningPathResourceSerializer(LearningResourceBaseSerializer):
-    """CRUD serializer for LearningPath resources"""
-
-    resource_type = LearningResourceTypeField(
-        default=constants.LearningResourceType.learning_path.name
-    )
-
-    learning_path = LearningPathSerializer(read_only=True)
-
-    def validate_resource_type(self, value):
-        """Only allow LearningPath resources to be CRUDed"""
-        if value != constants.LearningResourceType.learning_path.name:
-            msg = "Only LearningPath resources are editable"
-            raise serializers.ValidationError(msg)
-        return value
-
-    def create(self, validated_data):
-        """Ensure that the LearningPath is created by the requesting user; set topics"""
-        # defined here because we disallow them as input
-        validated_data["readable_id"] = uuid4().hex
-        validated_data["resource_type"] = self.fields["resource_type"].default
-
-        request = self.context.get("request")
-        topics_data = validated_data.pop("topics", [])
-
-        with transaction.atomic():
-            path_resource = super().create(validated_data)
-            path_resource.topics.set(
-                models.LearningResourceTopic.objects.filter(id__in=topics_data)
-            )
-            models.LearningPath.objects.create(
-                learning_resource=path_resource, author=request.user
-            )
-        return path_resource
-
-    def update(self, instance, validated_data):
-        """Set learning path topics and update the model object"""
-        topics_data = validated_data.pop("topics", None)
-        with transaction.atomic():
-            resource = super().update(instance, validated_data)
-            if topics_data is not None:
-                resource.topics.set(
-                    models.LearningResourceTopic.objects.filter(id__in=topics_data)
-                )
-        return resource
-
-    class Meta:
-        model = models.LearningResource
-        exclude = ["content_tags", "resources", "etl_source", *COMMON_IGNORED_FIELDS]
-        read_only_fields = ["platform", "offered_by", "readable_id"]
-
-
-class PodcastResourceSerializer(LearningResourceBaseSerializer):
-    """Serializer for podcast resources"""
-
-    resource_type = LearningResourceTypeField(
-        default=constants.LearningResourceType.podcast.name
-    )
-
-    podcast = PodcastSerializer(read_only=True)
-
-
-class PodcastEpisodeResourceSerializer(LearningResourceBaseSerializer):
-    """Serializer for podcast episode resources"""
-
-    resource_type = LearningResourceTypeField(
-        default=constants.LearningResourceType.podcast_episode.name
-    )
-
-    podcast_episode = PodcastEpisodeSerializer(read_only=True)
-
-
-class VideoResourceSerializer(LearningResourceBaseSerializer):
-    """Serializer for video resources"""
-
-    resource_type = LearningResourceTypeField(
-        default=constants.LearningResourceType.video.name
-    )
-
-    video = VideoSerializer(read_only=True)
-
-    playlists = serializers.SerializerMethodField()
-
-    def get_playlists(self, instance) -> list[str]:
-        """Get the playlist id(s) the video belongs to"""
-        return list(
-            instance.parents.filter(
-                relation_type=constants.LearningResourceRelationTypes.PLAYLIST_VIDEOS.value
-            ).values_list("parent__id", flat=True)
-        )
-
-
-class VideoPlaylistResourceSerializer(LearningResourceBaseSerializer):
-    """Serializer for video playlist resources"""
-
-    resource_type = LearningResourceTypeField(
-        default=constants.LearningResourceType.video_playlist.name
-    )
-
-    video_playlist = VideoPlaylistSerializer(read_only=True)
-
-
-class LearningResourceSerializer(serializers.Serializer):
-    """Serializer for LearningResource"""
-
-    serializer_cls_mapping = {
-        serializer_cls().fields["resource_type"].default: serializer_cls
-        for serializer_cls in (
-            ProgramResourceSerializer,
-            CourseResourceSerializer,
-            LearningPathResourceSerializer,
-            PodcastResourceSerializer,
-            PodcastEpisodeResourceSerializer,
-            VideoResourceSerializer,
-            VideoPlaylistResourceSerializer,
-        )
-    }
-
-    def to_representation(self, instance):
-        """Serialize a LearningResource based on resource_type"""
-        serializer_cls = self.serializer_cls_mapping[instance.resource_type]
-
-        return serializer_cls(instance=instance, context=self.context).data
-
-
 class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
     """
     Serializer to render course information as a text document
@@ -957,8 +704,258 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         ]
 
 
-class LearningResourceWithDisplayInfoSerializer(LearningResourceSerializer):
-    display_info = LearningResourceMetadataDisplaySerializer()
+class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopicsMixin):
+    """Serializer for LearningResource, minus program"""
+
+    position = serializers.IntegerField(read_only=True, allow_null=True)
+    offered_by = LearningResourceOfferorSerializer(read_only=True, allow_null=True)
+    platform = LearningResourcePlatformSerializer(read_only=True, allow_null=True)
+    display_info = LearningResourceMetadataDisplaySerializer(read_only=True)
+    course_feature = LearningResourceContentTagField(
+        source="content_tags", read_only=True, allow_null=True
+    )
+    departments = LearningResourceDepartmentSerializer(
+        read_only=True, allow_null=True, many=True
+    )
+    certification = serializers.ReadOnlyField(read_only=True)
+    certification_type = CertificateTypeField(read_only=True)
+    prices = serializers.ListField(
+        child=serializers.DecimalField(max_digits=12, decimal_places=2),
+        read_only=True,
+    )
+    resource_prices = LearningResourcePriceSerializer(read_only=True, many=True)
+    runs = LearningResourceRunSerializer(read_only=True, many=True, allow_null=True)
+    image = serializers.SerializerMethodField()
+    learning_path_parents = MicroLearningPathRelationshipSerializer(
+        many=True, read_only=True
+    )
+    user_list_parents = MicroUserListRelationshipSerializer(many=True, read_only=True)
+    views = serializers.IntegerField(source="views_count", read_only=True)
+    delivery = serializers.ListField(
+        child=LearningResourceDeliverySerializer(), read_only=True
+    )
+    free = serializers.SerializerMethodField()
+    resource_category = serializers.SerializerMethodField()
+    format = serializers.ListField(child=FormatSerializer(), read_only=True)
+    pace = serializers.ListField(child=PaceSerializer(), read_only=True)
+
+    def get_resource_category(self, instance) -> str:
+        """Return the resource category of the resource"""
+        if instance.resource_type in [
+            LearningResourceType.course.name,
+            LearningResourceType.program.name,
+        ]:
+            return instance.resource_type
+        else:
+            return LEARNING_MATERIAL_RESOURCE_CATEGORY
+
+    def get_free(self, instance) -> bool:
+        """Return true if the resource is free/has a free option"""
+        if instance.resource_type in [
+            LearningResourceType.course.name,
+            LearningResourceType.program.name,
+        ]:
+            prices = [price.amount for price in instance.resource_prices.all()]
+            return not instance.professional and (
+                Decimal("0.00") in prices or not prices or prices == []
+            )
+        else:
+            return True
+
+    @extend_schema_field(LearningResourceImageSerializer(allow_null=True))
+    def get_image(self, instance) -> dict | None:
+        """
+        Return the resource.image if it exists. Otherwise, for learning paths only,
+        return the image of the first child resource.
+        """
+        if instance.image:
+            return LearningResourceImageSerializer(instance=instance.image).data
+        elif (
+            instance.resource_type == constants.LearningResourceType.learning_path.value
+        ):
+            list_item = instance.children.order_by("position").first()
+            if list_item and list_item.child.image:
+                return LearningResourceImageSerializer(
+                    instance=list_item.child.image
+                ).data
+            return None
+        return None
+
+    class Meta:
+        model = models.LearningResource
+        read_only_fields = [
+            "free",
+            "prices",
+            "resource_prices",
+            "resource_category",
+            "certification",
+            "certification_type",
+            "professional",
+            "views",
+            "learning_path_parents",
+            "user_list_parents",
+        ]
+        exclude = ["content_tags", "resources", "etl_source", *COMMON_IGNORED_FIELDS]
+
+
+class ProgramResourceSerializer(LearningResourceBaseSerializer):
+    """Serializer for program resources"""
+
+    resource_type = LearningResourceTypeField(
+        default=constants.LearningResourceType.program.name
+    )
+
+    program = ProgramSerializer(read_only=True)
+
+
+class CourseResourceSerializer(LearningResourceBaseSerializer):
+    """Serializer for course resources"""
+
+    resource_type = LearningResourceTypeField(
+        default=constants.LearningResourceType.course.name
+    )
+
+    course = CourseSerializer(read_only=True)
+
+
+class LearningResourceRelationshipChildField(serializers.ModelSerializer):
+    """
+    Serializer field for the LearningResourceRelationship model that uses
+    the LearningResourceSerializer to serialize the child resources
+    """
+
+    def to_representation(self, instance):
+        """Serializes child as a LearningResource"""  # noqa: D401
+        return LearningResourceSerializer(instance=instance.child).data
+
+    class Meta:
+        model = models.LearningResourceRelationship
+        exclude = ("parent", *COMMON_IGNORED_FIELDS)
+
+
+class LearningPathResourceSerializer(LearningResourceBaseSerializer):
+    """CRUD serializer for LearningPath resources"""
+
+    resource_type = LearningResourceTypeField(
+        default=constants.LearningResourceType.learning_path.name
+    )
+
+    learning_path = LearningPathSerializer(read_only=True)
+
+    def validate_resource_type(self, value):
+        """Only allow LearningPath resources to be CRUDed"""
+        if value != constants.LearningResourceType.learning_path.name:
+            msg = "Only LearningPath resources are editable"
+            raise serializers.ValidationError(msg)
+        return value
+
+    def create(self, validated_data):
+        """Ensure that the LearningPath is created by the requesting user; set topics"""
+        # defined here because we disallow them as input
+        validated_data["readable_id"] = uuid4().hex
+        validated_data["resource_type"] = self.fields["resource_type"].default
+
+        request = self.context.get("request")
+        topics_data = validated_data.pop("topics", [])
+
+        with transaction.atomic():
+            path_resource = super().create(validated_data)
+            path_resource.topics.set(
+                models.LearningResourceTopic.objects.filter(id__in=topics_data)
+            )
+            models.LearningPath.objects.create(
+                learning_resource=path_resource, author=request.user
+            )
+        return path_resource
+
+    def update(self, instance, validated_data):
+        """Set learning path topics and update the model object"""
+        topics_data = validated_data.pop("topics", None)
+        with transaction.atomic():
+            resource = super().update(instance, validated_data)
+            if topics_data is not None:
+                resource.topics.set(
+                    models.LearningResourceTopic.objects.filter(id__in=topics_data)
+                )
+        return resource
+
+    class Meta:
+        model = models.LearningResource
+        exclude = ["content_tags", "resources", "etl_source", *COMMON_IGNORED_FIELDS]
+        read_only_fields = ["platform", "offered_by", "readable_id"]
+
+
+class PodcastResourceSerializer(LearningResourceBaseSerializer):
+    """Serializer for podcast resources"""
+
+    resource_type = LearningResourceTypeField(
+        default=constants.LearningResourceType.podcast.name
+    )
+
+    podcast = PodcastSerializer(read_only=True)
+
+
+class PodcastEpisodeResourceSerializer(LearningResourceBaseSerializer):
+    """Serializer for podcast episode resources"""
+
+    resource_type = LearningResourceTypeField(
+        default=constants.LearningResourceType.podcast_episode.name
+    )
+
+    podcast_episode = PodcastEpisodeSerializer(read_only=True)
+
+
+class VideoResourceSerializer(LearningResourceBaseSerializer):
+    """Serializer for video resources"""
+
+    resource_type = LearningResourceTypeField(
+        default=constants.LearningResourceType.video.name
+    )
+
+    video = VideoSerializer(read_only=True)
+
+    playlists = serializers.SerializerMethodField()
+
+    def get_playlists(self, instance) -> list[str]:
+        """Get the playlist id(s) the video belongs to"""
+        return list(
+            instance.parents.filter(
+                relation_type=constants.LearningResourceRelationTypes.PLAYLIST_VIDEOS.value
+            ).values_list("parent__id", flat=True)
+        )
+
+
+class VideoPlaylistResourceSerializer(LearningResourceBaseSerializer):
+    """Serializer for video playlist resources"""
+
+    resource_type = LearningResourceTypeField(
+        default=constants.LearningResourceType.video_playlist.name
+    )
+
+    video_playlist = VideoPlaylistSerializer(read_only=True)
+
+
+class LearningResourceSerializer(serializers.Serializer):
+    """Serializer for LearningResource"""
+
+    serializer_cls_mapping = {
+        serializer_cls().fields["resource_type"].default: serializer_cls
+        for serializer_cls in (
+            ProgramResourceSerializer,
+            CourseResourceSerializer,
+            LearningPathResourceSerializer,
+            PodcastResourceSerializer,
+            PodcastEpisodeResourceSerializer,
+            VideoResourceSerializer,
+            VideoPlaylistResourceSerializer,
+        )
+    }
+
+    def to_representation(self, instance):
+        """Serialize a LearningResource based on resource_type"""
+        serializer_cls = self.serializer_cls_mapping[instance.resource_type]
+
+        return serializer_cls(instance=instance, context=self.context).data
 
 
 class LearningResourceRelationshipSerializer(serializers.ModelSerializer):
