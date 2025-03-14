@@ -467,6 +467,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
     platform = serializers.SerializerMethodField(help_text="Platform")
     number_of_courses = serializers.SerializerMethodField(help_text="Number of Courses")
     location = serializers.SerializerMethodField(help_text="Location")
+    starts = serializers.SerializerMethodField(help_text="Starts")
+    format_type = serializers.SerializerMethodField(help_text="Format")
+    as_taught_in = serializers.SerializerMethodField(help_text="As Taught In")
 
     def all_runs_are_identical(self, serialized_resource):
         distinct_prices = set()
@@ -510,8 +513,49 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             and serialized_resource["availability"] == "anytime"
         )
 
+    def runs_by_date(self, serialized_resource):
+        # Get runs sorted by date
+        return sorted(
+            serialized_resource.get("runs", []),
+            key=lambda run: dateparser.parse(run.get("start_date")).replace(tzinfo=UTC),
+        )
+
+    def dates_for_runs(self, serialized_resource):
+        # Get a list of sorted and formatted run dates
+        show_start_anytime = self.show_start_anytime(serialized_resource)
+        runs_with_dates = []
+        runs = self.runs_by_date(serialized_resource)
+        for run in runs:
+            formatted = self.format_run_date(run, show_start_anytime)
+            if formatted:
+                runs_with_dates.append(formatted)
+        return runs_with_dates
+
     def total_runs_with_dates(self, serialized_resource):
-        pass
+        # Get the total number of runs with valid dates
+        formatted = self.dates_for_runs(serialized_resource)
+        return len(formatted)
+
+    def format_run_date(self, run, as_taught_in):
+        if as_taught_in:
+            run_semester = run.get("semester", "").capitalize()
+            if run_semester and run.get("year"):
+                return f"{run_semester} {run['year']}"
+            if run_semester and run.get("start_date"):
+                return f"{run_semester} {run['start_date']}"
+            if run.get("start_date"):
+                return (
+                    dateparser.parse(run["start_date"])
+                    .replace(tzinfo=UTC)
+                    .strftime("%B, %Y")
+                )
+        if run.get("start_date"):
+            return (
+                dateparser.parse(run["start_date"])
+                .replace(tzinfo=UTC)
+                .strftime("%B %d, %Y")
+            )
+        return None
 
     def should_show_format(self, serialized_resource):
         return (
@@ -519,6 +563,14 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             and self.all_runs_are_identical(serialized_resource)
             and len(serialized_resource.get("delivery", [])) > 0
         )
+
+    @extend_schema_field({"type": "array", "items": {"type": "string"}})
+    def get_as_taught_in(self, serialized_resource):
+        if self.total_runs_with_dates(
+            serialized_resource
+        ) > 0 and self.show_start_anytime(serialized_resource):
+            return self.dates_for_runs(serialized_resource)
+        return None
 
     @extend_schema_field({"type": "number"})
     def get_number_of_courses(self, serialized_resource):
@@ -557,6 +609,14 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         )
 
     @extend_schema_field({"type": "array", "items": {"type": "string"}})
+    def get_format_type(self, serialized_resource):
+        if self.should_show_format(serialized_resource):
+            return [
+                delivery["name"] for delivery in serialized_resource.get("delivery", [])
+            ]
+        return None
+
+    @extend_schema_field({"type": "array", "items": {"type": "string"}})
     def get_levels(self, serialized_resource):
         levels = []
         for run in serialized_resource.get("runs", []):
@@ -580,6 +640,18 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             else None
         )
 
+    @extend_schema_field({"type": "array", "items": {"type": "string"}})
+    def get_starts(self, serialized_resource):
+        show_start_anytime = self.show_start_anytime(serialized_resource)
+
+        runs_with_dates = self.total_runs_with_dates(serialized_resource)
+        runs_identical = self.all_runs_are_identical(serialized_resource)
+        if show_start_anytime:
+            return ["Anytime"]
+        if runs_with_dates > 0 and runs_identical and not show_start_anytime:
+            return self.dates_for_runs(serialized_resource)
+        return None
+
     @extend_schema_field(
         {
             "type": "array",
@@ -598,6 +670,8 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
     )
     def get_runs(self, serialized_resource):
         runs = []
+        if self.all_runs_are_identical(serialized_resource):
+            return runs
         for run in serialized_resource.get("runs", []):
             start_date = run["start_date"]
             formatted_date = (
