@@ -1,6 +1,19 @@
 Release Notes
 =============
 
+Version 0.30.10
+---------------
+
+- Remove social auth login/logout, apisix middleware should handle both (#2119)
+- chore(deps): update thollander/actions-comment-pull-request action to v3 (#2102)
+- fix(deps): update dependency @mui/lab to v6.0.0-beta.30 (#2095)
+- [pre-commit.ci] pre-commit autoupdate (#2039)
+- Show mitxonline enrollments in dashboard (#2122)
+- Chatbot UI issues (#2110)
+- Store (and embed) marketing page info as a contentfile (#2120)
+- chore(deps): update react monorepo to v19 (major) (#2101)
+- chore(deps): update yarn to v4.7.0 (#2099)
+
 Version 0.30.9 (Released March 13, 2025)
 --------------
 
