@@ -1790,6 +1790,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LearningResourceDepartment'
+          readOnly: true
         semester:
           type: string
         year:
@@ -1798,6 +1799,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LearningResourceTopic'
+          readOnly: true
         key:
           type: string
           nullable: true
@@ -1844,8 +1846,10 @@ components:
           maxLength: 200
         resource_id:
           type: string
+          readOnly: true
         resource_readable_id:
           type: string
+          readOnly: true
         course_number:
           type: array
           items:
@@ -1861,9 +1865,13 @@ components:
           nullable: true
           maxLength: 32
         offered_by:
-          $ref: '#/components/schemas/LearningResourceOfferor'
+          allOf:
+          - $ref: '#/components/schemas/LearningResourceOfferor'
+          readOnly: true
         platform:
-          $ref: '#/components/schemas/LearningResourcePlatform'
+          allOf:
+          - $ref: '#/components/schemas/LearningResourcePlatform'
+          readOnly: true
         run_readable_id:
           type: string
         edx_module_id:
@@ -1879,13 +1887,7 @@ components:
       - platform
       - resource_id
       - resource_readable_id
-      - run_id
-      - run_readable_id
-      - run_slug
-      - run_title
-      - semester
       - topics
-      - year
     ContentFileVectorSearchResponse:
       type: object
       description: SearchResponseSerializer with OpenAPI annotations for Content Files
