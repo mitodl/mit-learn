@@ -296,3 +296,38 @@ def test_embedded_content_from_latest_run_if_next_missing(mocker, mocked_celery)
         "content_file",
         True,  # noqa: FBT003
     )
+
+
+def test_embedded_content_file_without_runs(mocker, mocked_celery):
+    """
+    Ensure that contentfiles without runs are also embedded for a resource
+    """
+
+    mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
+
+    course = CourseFactory.create(etl_source=ETLSource.ocw.value)
+    course.runs.all().delete()
+    latest_run = LearningResourceRunFactory.create(
+        learning_resource=course.learning_resource,
+        start_date=datetime.datetime.now(tz=datetime.UTC) - datetime.timedelta(hours=1),
+    )
+    ContentFileFactory.create_batch(3, run=latest_run)
+    # create contentfiles without runs
+    contentfiles_with_no_run = [
+        cf.id
+        for cf in ContentFileFactory.create_batch(
+            3, learning_resource=course.learning_resource
+        )
+    ]
+    generate_embeddings_mock = mocker.patch(
+        "vector_search.tasks.generate_embeddings", autospec=True
+    )
+
+    with pytest.raises(mocked_celery.replace_exception_class):
+        start_embed_resources.delay(
+            ["course"], skip_content_files=False, overwrite=True
+        )
+    embedded_ids = generate_embeddings_mock.mock_calls[-1].args[0]
+
+    for contentfile_id in contentfiles_with_no_run:
+        assert contentfile_id in embedded_ids
