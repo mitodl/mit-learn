@@ -60,7 +60,6 @@ jobs:
           LEARN_AI_RECOMMENDATION_ENDPOINT: ${{ secrets.LEARN_AI_RECOMMENDATION_ENDPOINT_PROD }}
           LEARN_AI_SYLLABUS_ENDPOINT: ${{ secrets.LEARN_AI_SYLLABUS_ENDPOINT_PROD }}
           VERSION: ${{ github.sha }}
-          MITOL_API_LOGOUT_SUFFIX: ${{ secrets.MITOL_API_LOGOUT_SUFFIX_PROD }}
         run: | # NOTE: The --args must be comma separated and NOT have spaces
           heroku container:push web \
           --app $HEROKU_APP_NAME \
@@ -82,8 +81,7 @@ jobs:
           NEXT_PUBLIC_APPZI_URL=$APPZI_URL,\
           NEXT_PUBLIC_LEARN_AI_RECOMMENDATION_ENDPOINT=$LEARN_AI_RECOMMENDATION_ENDPOINT,\
           NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT=$LEARN_AI_SYLLABUS_ENDPOINT,\
-          NEXT_PUBLIC_VERSION=$VERSION,\
-          NEXT_PUBLIC_MITOL_API_LOGOUT_SUFFIX=$MITOL_API_LOGOUT_SUFFIX \
+          NEXT_PUBLIC_VERSION=$VERSION \
           --context-path .
 
       - name: Release Frontend on Heroku

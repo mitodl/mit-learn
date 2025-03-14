@@ -16,7 +16,7 @@ repos:
         exclude: ".hbs$"
       - id: check-yaml
       - id: check-added-large-files
-        exclude: "yarn.lock|.yarn/releases/.*|frontends/.yarn/releases/.*"
+        exclude: "yarn.lock|.yarn/releases/.*|frontends/.yarn/releases/.*|generated/.*"
       - id: check-merge-conflict
       - id: check-toml
       - id: debug-statements
@@ -41,7 +41,7 @@ repos:
             html,
           ]
   - repo: https://github.com/scop/pre-commit-shfmt
-    rev: v3.10.0-2
+    rev: v3.11.0-1
     hooks:
       - id: shfmt
   - repo: https://github.com/adrienverge/yamllint.git
@@ -78,7 +78,7 @@ repos:
           - "config/keycloak/realms/default-realm.json"
         additional_dependencies: ["gibberish-detector"]
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: "v0.9.4"
+    rev: "v0.9.10"
     hooks:
       - id: ruff-format
       - id: ruff

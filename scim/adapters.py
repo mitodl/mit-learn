@@ -135,9 +135,9 @@ class LearnSCIMUser(SCIMUser):
         self.obj.last_name = d.get("name", {}).get("familyName", "")
         self.obj.scim_username = d.get("userName")
         self.obj.scim_external_id = d.get("externalId")
-
+        self.obj.global_id = d.get("externalId")
         self.obj.profile = getattr(self.obj, "profile", Profile())
-        self.obj.profile.name = d.get("fullName", "")
+        self.obj.profile.name = d.get("fullName", d.get("name", ""))
         self.obj.profile.email_optin = d.get("emailOptIn", 1) == 1
 
     def save(self):
@@ -178,6 +178,7 @@ class LearnSCIMUser(SCIMUser):
 
         if path.first_path == ("externalId", None, None):
             self.obj.scim_external_id = value
+            self.obj.global_id = value
             self.obj.save()
 
     def parse_scim_for_keycloak_payload(self, payload: str) -> dict:

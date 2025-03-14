@@ -24,10 +24,15 @@ type SimpleMenuItemHref = SimpleMenuItemBase & {
 type MenuOverrideProps = Omit<MenuProps, "open" | "anchorEl" | "close">
 type SimpleMenuItem = SimpleMenuItemOnClick | SimpleMenuItemHref
 
+type TriggerElement = React.ReactElement<{
+  onClick?: (e: React.MouseEvent) => void
+  ref?: React.Ref<HTMLElement>
+}>
+
 type SimpleMenuProps = {
   items: SimpleMenuItem[]
   menuOverrideProps?: MenuOverrideProps
-  trigger: React.ReactElement
+  trigger: TriggerElement
   onVisibilityChange?: (visible: boolean) => void
 }
 

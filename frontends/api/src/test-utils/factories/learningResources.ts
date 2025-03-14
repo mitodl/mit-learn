@@ -2,7 +2,7 @@ import { faker } from "@faker-js/faker/locale/en"
 import { startCase } from "lodash"
 import type { Factory, PartialFactory } from "ol-test-utilities"
 import { UniqueEnforcer } from "enforce-unique"
-import { makePaginatedFactory } from "ol-test-utilities"
+import { makePaginatedFactory, mergeOverrides } from "ol-test-utilities"
 import type {
   CourseNumber,
   CourseResource,
@@ -38,7 +38,6 @@ import {
   LearningResourceRunLevelInnerCodeEnum,
   PlatformEnum,
 } from "api"
-import { mergeOverrides } from "./index"
 
 const uniqueEnforcerId = new UniqueEnforcer()
 const uniqueEnforcerWords = new UniqueEnforcer()

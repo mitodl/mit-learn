@@ -4,6 +4,7 @@ import pytest
 from django.contrib.auth import get_user_model
 
 from authentication import api
+from main.factories import UserFactory
 from profiles.models import Profile
 
 User = get_user_model()
@@ -11,6 +12,7 @@ User = get_user_model()
 pytestmark = pytest.mark.django_db
 
 
+@pytest.mark.django_db
 @pytest.mark.parametrize(
     "profile_data",
     [
@@ -52,3 +54,19 @@ def test_create_user_errors(mocker, mock_method):
 
     assert User.objects.all().count() == 0
     assert Profile.objects.count() == 0
+
+
+@pytest.mark.parametrize("is_new", [True, False])
+def test_user_created_actions(mocker, is_new):
+    """
+    Tests that user_created_actions creates a favorites list for new users only
+    """
+    user = UserFactory.create()
+    kwargs = {
+        "user": user,
+        "is_new": is_new,
+        "details": {},
+    }
+
+    api.user_created_actions(**kwargs)
+    assert user.user_lists.count() == (1 if is_new else 0)

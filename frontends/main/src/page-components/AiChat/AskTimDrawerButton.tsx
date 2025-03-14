@@ -22,9 +22,9 @@ const StyledButton = styled(ButtonLink)(({ theme }) => ({
   "&&": {
     ":hover": {
       background: "none",
-      color: theme.custom.colors.mitRed,
+      color: theme.custom.colors.red,
       p: {
-        color: theme.custom.colors.mitRed,
+        color: theme.custom.colors.red,
       },
     },
   },

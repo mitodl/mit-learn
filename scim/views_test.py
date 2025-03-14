@@ -66,6 +66,7 @@ def test_scim_user_post(scim_client):
     user = user_q.first()
 
     assert user is not None
+    assert user.global_id == "1"
     assert user.email == "jdoe@example.com"
     assert user.username == "jdoe"
     assert user.first_name == "John"
