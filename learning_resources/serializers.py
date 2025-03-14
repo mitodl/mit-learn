@@ -760,39 +760,45 @@ class ContentFileSerializer(serializers.ModelSerializer):
     run_slug = serializers.CharField(source="run.slug", required=False)
     semester = serializers.CharField(source="run.semester", required=False)
     year = serializers.IntegerField(source="run.year", required=False)
-    topics = serializers.SerializerMethodField(read_only=True)
-    resource_id = serializers.SerializerMethodField(read_only=True)
-    departments = serializers.SerializerMethodField(read_only=True)
-    resource_readable_id = serializers.SerializerMethodField(read_only=True)
+    topics = serializers.SerializerMethodField()
+    resource_id = serializers.SerializerMethodField()
+    departments = serializers.SerializerMethodField()
+    resource_readable_id = serializers.SerializerMethodField()
     course_number = serializers.SerializerMethodField()
     content_feature_type = LearningResourceContentTagField(source="content_tags")
-    offered_by = serializers.SerializerMethodField(read_only=True)
-    platform = serializers.SerializerMethodField(read_only=True)
+    offered_by = serializers.SerializerMethodField()
+    platform = serializers.SerializerMethodField()
 
     def get_learning_resource(self, instance):
         if instance.run:
             return instance.run.learning_resource
         return instance.learning_resource
 
+    @extend_schema_field(LearningResourcePlatformSerializer())
     def get_platform(self, instance):
         platform = self.get_learning_resource(instance).platform
         return LearningResourcePlatformSerializer(platform).data
 
+    @extend_schema_field(LearningResourceOfferorSerializer())
     def get_offered_by(self, instance):
         offered_by = self.get_learning_resource(instance).offered_by
         return LearningResourceOfferorSerializer(offered_by).data
 
+    @extend_schema_field({"type": "string"})
     def get_resource_readable_id(self, instance):
         return self.get_learning_resource(instance).readable_id
 
+    @extend_schema_field(LearningResourceDepartmentSerializer(many=True))
     def get_departments(self, instance):
         return LearningResourceDepartmentSerializer(
             self.get_learning_resource(instance).departments, many=True
         ).data
 
+    @extend_schema_field({"type": "string"})
     def get_resource_id(self, instance):
         return self.get_learning_resource(instance).id
 
+    @extend_schema_field(LearningResourceTopicSerializer(many=True))
     def get_topics(self, instance):
         return LearningResourceTopicSerializer(
             self.get_learning_resource(instance).topics, many=True
