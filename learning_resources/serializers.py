@@ -794,7 +794,7 @@ class ContentFileSerializer(serializers.ModelSerializer):
             self.get_learning_resource(instance).departments, many=True
         ).data
 
-    @extend_schema_field({"type": "string"})
+    @extend_schema_field({"type": "number"})
     def get_resource_id(self, instance):
         return self.get_learning_resource(instance).id
 
