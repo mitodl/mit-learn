@@ -517,7 +517,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         # Get runs sorted by date
         return sorted(
             serialized_resource.get("runs", []),
-            key=lambda run: dateparser.parse(run.get("start_date")).replace(tzinfo=UTC),
+            key=lambda run: dateparser.parse(
+                run["start_date"] if run.get("start_date", "") else ""
+            ),
         )
 
     def dates_for_runs(self, serialized_resource):
