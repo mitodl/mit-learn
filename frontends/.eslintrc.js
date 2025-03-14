@@ -93,7 +93,7 @@ module.exports = {
           "**/src/setupJest.ts",
           "**/jest-shared-setup.ts",
           "**/jsdom-extended.ts",
-          "**/test-utils/**",
+          "**/test-utils.ts",
           "**/test-utils/**",
           "**/webpack.config.js",
           "**/webpack.exports.js",

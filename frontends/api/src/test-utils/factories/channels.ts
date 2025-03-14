@@ -1,5 +1,9 @@
 import { faker } from "@faker-js/faker/locale/en"
-import { makePaginatedFactory, type PartialFactory } from "ol-test-utilities"
+import {
+  makePaginatedFactory,
+  mergeOverrides,
+  type PartialFactory,
+} from "ol-test-utilities"
 import { UniqueEnforcer } from "enforce-unique"
 import {
   ChannelTypeEnum,
@@ -10,7 +14,6 @@ import {
   TopicChannel,
 } from "../../generated/v0"
 import { offeror } from "./learningResources"
-import { mergeOverrides } from "."
 const channelType = () =>
   faker.helpers.arrayElement(Object.values(ChannelTypeEnum))
 

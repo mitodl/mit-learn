@@ -172,7 +172,7 @@ const UnfollowDialog = NiceModal.create(
   },
 )
 
-const SettingsPage: React.FC = () => {
+const SettingsContent: React.FC = () => {
   const { data: user } = useUserMe()
 
   const subscriptionList = useSearchSubscriptionList({
@@ -241,4 +241,4 @@ const SettingsPage: React.FC = () => {
   )
 }
 
-export { SettingsPage }
+export { SettingsContent }

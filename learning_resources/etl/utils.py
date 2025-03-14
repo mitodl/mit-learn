@@ -19,6 +19,7 @@ from subprocess import check_call
 from tempfile import TemporaryDirectory
 
 import boto3
+import html2text
 import rapidjson
 import requests
 from django.conf import settings
@@ -901,3 +902,9 @@ def parse_resource_commitment(commitment_str: str) -> CommitmentConfig:
         else:
             log.warning("Invalid commitment: %s", commitment_str)
     return CommitmentConfig(commitment=commitment_str or "")
+
+
+def html_to_markdown(html):
+    htmlformatter = html2text.HTML2Text()
+    htmlformatter.body_width = 0
+    return htmlformatter.handle(html)

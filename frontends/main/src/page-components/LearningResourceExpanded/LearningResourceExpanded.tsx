@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from "react"
 import styled from "@emotion/styled"
-import { theme } from "ol-components"
 import type { ImageConfig, LearningResourceCardProps } from "ol-components"
 import { ResourceTypeEnum } from "api"
 import type { LearningResource } from "api"
+import { useToggle } from "ol-utilities"
 import InfoSection from "./InfoSection"
 import type { User } from "api/hooks/user"
 import TitleSection from "./TitleSection"
@@ -11,61 +11,53 @@ import CallToActionSection from "./CallToActionSection"
 import ResourceDescription from "./ResourceDescription"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagEnabled } from "posthog-js/react"
-import AiSyllabusBotSlideDown from "./AiChatSyllabusSlideDown"
+import AiSyllabusBotSlideDown, {
+  AiChatSyllabusOpener,
+  ChatTransitionState,
+} from "./AiChatSyllabusSlideDown"
 import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
 
-const DRAWER_WIDTH = "900px"
-
-const Outer = styled.div<{ chatExpanded: boolean }>(({ chatExpanded }) => ({
+const Outer = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   flexGrow: 1,
   width: "100%",
-  overflowX: "hidden",
-  minWidth: DRAWER_WIDTH,
-  scrollbarGutter: "stable",
   [theme.breakpoints.down("md")]: {
     minWidth: "100%",
   },
-  ...(chatExpanded && {
-    overflow: "hidden",
-  }),
+  position: "relative",
 }))
 
-const ContentSection = styled.div({
-  display: "flex",
+const ContentSection = styled.div<{
+  chatTransitionState: ChatTransitionState
+}>(({ chatTransitionState }) => ({
+  display: chatTransitionState === ChatTransitionState.Open ? "none" : "flex",
   flexDirection: "column",
   flexGrow: 1,
   position: "relative",
-})
+}))
 
-const ChatLayer = styled("div")<{ top: number; chatExpanded: boolean }>(
-  ({ top, chatExpanded }) => ({
-    zIndex: 2,
-    position: "absolute",
-    top,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    pointerEvents: chatExpanded ? "auto" : "none",
-    overflow: "hidden",
-    scrollbarGutter: chatExpanded ? "auto" : "stable",
-  }),
-)
+const StyledAiChatSyllabusOpener = styled(AiChatSyllabusOpener)<{
+  top: number
+}>(({ top }) => ({
+  position: "sticky",
+  top,
+  zIndex: 2,
+}))
 
 const TopContainer = styled.div<{ chatEnabled: boolean }>(
-  ({ chatEnabled }) => ({
+  ({ theme, chatEnabled }) => ({
     display: "flex",
     flexDirection: "column",
-    padding: chatEnabled ? "70px 28px 24px" : "0 28px 24px",
+    padding: chatEnabled ? "28px 28px 24px" : "0 28px 24px",
     [theme.breakpoints.down("md")]: {
       width: "auto",
-      padding: chatEnabled ? "72px 16px 24px" : "0 16px 24px",
+      padding: chatEnabled ? "30px 16px 24px" : "0 16px 24px",
     },
   }),
 )
 
-const BottomContainer = styled.div({
+const BottomContainer = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "32px",
@@ -78,16 +70,16 @@ const BottomContainer = styled.div({
   [theme.breakpoints.down("md")]: {
     padding: "16px 0 16px 16px",
   },
-})
+}))
 
-const ContentContainer = styled.div({
+const ContentContainer = styled.div(({ theme }) => ({
   display: "flex",
   gap: "32px",
   [theme.breakpoints.down("md")]: {
     flexDirection: "column-reverse",
     gap: "16px",
   },
-})
+}))
 
 const ContentLeft = styled.div({
   display: "flex",
@@ -132,18 +124,11 @@ const closeChat = () => {
   params.delete(RESOURCE_DRAWER_PARAMS.syllabus)
   window.history.replaceState({}, "", `?${params.toString()}`)
 }
+
 const openChat = () => {
   const params = new URLSearchParams(window.location.search)
   params.set(RESOURCE_DRAWER_PARAMS.syllabus, "")
   window.history.replaceState({}, "", `?${params.toString()}`)
-}
-const toggleChat = () => {
-  const params = new URLSearchParams(window.location.search)
-  if (params.has(RESOURCE_DRAWER_PARAMS.syllabus)) {
-    closeChat()
-  } else {
-    openChat()
-  }
 }
 
 const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
@@ -160,8 +145,12 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
   onAddToLearningPathClick,
   onAddToUserListClick,
   closeDrawer,
-  chatExpanded,
+  chatExpanded: initialChatExpanded,
 }) => {
+  const [chatTransitionState, setChatTransitionState] = useState(
+    initialChatExpanded ? ChatTransitionState.Open : ChatTransitionState.Closed,
+  )
+
   const chatEnabled =
     useFeatureFlagEnabled(FeatureFlags.LrDrawerChatbot) &&
     resource?.resource_type === ResourceTypeEnum.Course
@@ -176,12 +165,18 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
   const outerContainerRef = useRef<HTMLDivElement>(null)
   const titleSectionRef = useRef<HTMLDivElement>(null)
   const [titleSectionHeight, setTitleSectionHeight] = useState(0)
+  const [scrollPosition, setScrollPosition] = useState(0)
+  const [scrollElement, setScrollElement] = useState<HTMLElement | null>(null)
+  const [chatExpanded, setChatExpanded] = useToggle(initialChatExpanded)
 
   useEffect(() => {
-    if (outerContainerRef.current && outerContainerRef.current.scrollTo) {
+    if (outerContainerRef?.current?.scrollTo) {
       outerContainerRef.current.scrollTo(0, 0)
     }
-  }, [resourceId])
+    if (scrollElement) {
+      scrollElement.scrollTop = 0
+    }
+  }, [resourceId, scrollElement])
 
   useEffect(() => {
     const updateHeight = () => {
@@ -200,8 +195,43 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
     }
   }, [])
 
+  useEffect(() => {
+    if (outerContainerRef.current) {
+      const drawerPaper = outerContainerRef.current?.closest(
+        ".MuiDrawer-paper",
+      ) as HTMLElement
+      setScrollElement(drawerPaper)
+    }
+  }, [outerContainerRef])
+
+  useEffect(() => {
+    if (scrollElement && chatTransitionState === ChatTransitionState.Closing) {
+      scrollElement.scrollTop = scrollPosition
+    }
+  }, [chatTransitionState, scrollElement, scrollPosition])
+
+  const onChatOpenerToggle = (open: boolean) => {
+    if (open) {
+      setChatTransitionState(ChatTransitionState.Opening)
+      setScrollPosition(scrollElement?.scrollTop ?? 0)
+      openChat()
+    } else {
+      setChatTransitionState(ChatTransitionState.Closing)
+      closeChat()
+    }
+    setChatExpanded(open)
+  }
+
+  const onTransitionEnd = () => {
+    if (chatTransitionState === ChatTransitionState.Opening) {
+      setChatTransitionState(ChatTransitionState.Open)
+    } else {
+      setChatTransitionState(ChatTransitionState.Closed)
+    }
+  }
+
   return (
-    <Outer ref={outerContainerRef} chatExpanded={chatExpanded}>
+    <Outer ref={outerContainerRef}>
       <TitleSection
         ref={titleSectionRef}
         titleId={titleId}
@@ -209,15 +239,23 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
         closeDrawer={closeDrawer ?? (() => {})}
       />
       {chatEnabled ? (
-        <ChatLayer top={titleSectionHeight} chatExpanded={chatExpanded}>
+        <>
+          <StyledAiChatSyllabusOpener
+            open={chatExpanded}
+            top={titleSectionHeight}
+            onToggleOpen={onChatOpenerToggle}
+          />
           <AiSyllabusBotSlideDown
             resource={resource}
             open={chatExpanded}
-            onToggleOpen={toggleChat}
+            onTransitionEnd={onTransitionEnd}
+            chatTransitionState={chatTransitionState}
+            contentTopPosition={titleSectionHeight}
+            scrollElement={scrollElement}
           />
-        </ChatLayer>
+        </>
       ) : null}
-      <ContentSection inert={chatExpanded}>
+      <ContentSection chatTransitionState={chatTransitionState}>
         <TopContainer chatEnabled={!!chatEnabled}>
           <ContentContainer>
             <ContentLeft>

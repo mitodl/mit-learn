@@ -17,6 +17,13 @@ import {
 import { allowConsoleErrors, ControlledPromise } from "ol-test-utilities"
 import React from "react"
 import { DASHBOARD_HOME, MY_LISTS, PROFILE, SETTINGS } from "@/common/urls"
+import * as mitxonline from "api/mitxonline-test-utils"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+
+jest.mock("posthog-js/react")
+const mockedUseFeatureFlagEnabled = jest
+  .mocked(useFeatureFlagEnabled)
+  .mockImplementation(() => false)
 
 describe("DashboardPage", () => {
   const makeSearchResponse = (
@@ -358,4 +365,20 @@ describe("DashboardPage", () => {
       within(mobileNav).getByRole("tab", { selected: true }),
     ).toHaveAttribute("href", url)
   })
+
+  test.each([{ enrollmentsEnabled: true }, { enrollmentsEnabled: false }])(
+    "Shows enrollments if and only if feature flag is enabled",
+    async ({ enrollmentsEnabled }) => {
+      setupAPIs()
+      mockedUseFeatureFlagEnabled.mockReturnValue(enrollmentsEnabled)
+      if (enrollmentsEnabled) {
+        setMockResponse.get(mitxonline.urls.enrollment.courseEnrollment, [])
+      }
+      renderWithProviders(<DashboardPage />)
+      const enrollmentsHeading = screen.queryByRole("heading", {
+        name: "Your Courses",
+      })
+      expect(!!enrollmentsHeading).toBe(enrollmentsEnabled)
+    },
+  )
 })

@@ -106,6 +106,7 @@ RESOURCE_FILE_ETL_SOURCES = [
     ETLSource.xpro.value,
 ]
 
+MARKETING_PAGE_FILE_TYPE = "marketing_page"
 
 RESOURCE_DELIVERY_MAPPING = {
     None: LearningResourceDelivery.online.name,
