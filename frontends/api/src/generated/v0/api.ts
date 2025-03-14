@@ -681,10 +681,10 @@ export interface ContentFile {
   image_src?: string | null
   /**
    *
-   * @type {number}
+   * @type {string}
    * @memberof ContentFile
    */
-  resource_id: number
+  resource_id: string
   /**
    *
    * @type {string}

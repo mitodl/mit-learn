@@ -8615,7 +8615,7 @@ components:
           nullable: true
           maxLength: 200
         resource_id:
-          type: number
+          type: string
           readOnly: true
         resource_readable_id:
           type: string
