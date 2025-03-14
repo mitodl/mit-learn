@@ -8643,19 +8643,7 @@ components:
       required:
       - content_feature_type
       - course_number
-      - departments
       - id
-      - offered_by
-      - platform
-      - resource_id
-      - resource_readable_id
-      - run_id
-      - run_readable_id
-      - run_slug
-      - run_title
-      - semester
-      - topics
-      - year
     ContentFileSearchResponse:
       type: object
       description: SearchResponseSerializer with OpenAPI annotations for Content Files
@@ -9909,34 +9897,43 @@ components:
         title:
           type: string
           readOnly: true
+          description: Title
         description:
           type: string
           readOnly: true
+          description: Description
         full_description:
           type: string
           readOnly: true
+          description: Full Description
         url:
           type: string
           readOnly: true
+          description: Website
         free:
-          type: string
+          type: boolean
           readOnly: true
+          description: Free
         topics:
           type: array
           items:
             type: string
           readOnly: true
+          description: Topics
         price:
           type: string
           readOnly: true
+          description: Price
         certification:
           type: string
           readOnly: true
+          description: Certificate
         instructors:
           type: array
           items:
             type: string
           readOnly: true
+          description: Instructors
         runs:
           type: array
           items:
@@ -9960,33 +9957,41 @@ components:
             - code
             - name
           readOnly: true
+          description: Runs/Sessions
         offered_by:
           type: string
           readOnly: true
+          description: Offered By
         languages:
           type: array
           items:
             type: string
           readOnly: true
+          description: Languages
         levels:
           type: array
           items:
             type: string
           readOnly: true
+          description: Levels
         departments:
           type: array
           items:
             type: string
           readOnly: true
+          description: Departments
         platform:
           type: string
           readOnly: true
+          description: Platform
         number_of_courses:
           type: number
           readOnly: true
+          description: Number of Courses
         location:
           type: string
           readOnly: true
+          description: Location
       required:
       - certification
       - departments

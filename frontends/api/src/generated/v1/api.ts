@@ -240,43 +240,43 @@ export interface ContentFile {
    * @type {number}
    * @memberof ContentFile
    */
-  run_id: number
+  run_id?: number
   /**
    *
    * @type {string}
    * @memberof ContentFile
    */
-  run_title: string
+  run_title?: string
   /**
    *
    * @type {string}
    * @memberof ContentFile
    */
-  run_slug: string
+  run_slug?: string
   /**
    *
    * @type {Array<LearningResourceDepartment>}
    * @memberof ContentFile
    */
-  departments: Array<LearningResourceDepartment>
+  departments?: Array<LearningResourceDepartment>
   /**
    *
    * @type {string}
    * @memberof ContentFile
    */
-  semester: string
+  semester?: string
   /**
    *
    * @type {number}
    * @memberof ContentFile
    */
-  year: number
+  year?: number
   /**
    *
    * @type {Array<LearningResourceTopic>}
    * @memberof ContentFile
    */
-  topics: Array<LearningResourceTopic>
+  topics?: Array<LearningResourceTopic>
   /**
    *
    * @type {string}
@@ -354,13 +354,13 @@ export interface ContentFile {
    * @type {string}
    * @memberof ContentFile
    */
-  resource_id: string
+  resource_id?: string
   /**
    *
    * @type {string}
    * @memberof ContentFile
    */
-  resource_readable_id: string
+  resource_readable_id?: string
   /**
    * Extract the course number(s) from the associated course
    * @type {Array<string>}
@@ -384,19 +384,19 @@ export interface ContentFile {
    * @type {LearningResourceOfferor}
    * @memberof ContentFile
    */
-  offered_by: LearningResourceOfferor
+  offered_by?: LearningResourceOfferor
   /**
    *
    * @type {LearningResourcePlatform}
    * @memberof ContentFile
    */
-  platform: LearningResourcePlatform
+  platform?: LearningResourcePlatform
   /**
    *
    * @type {string}
    * @memberof ContentFile
    */
-  run_readable_id: string
+  run_readable_id?: string
   /**
    *
    * @type {string}
@@ -2166,103 +2166,103 @@ export interface LearningResourceInstructorRequest {
  */
 export interface LearningResourceMetadataDisplay {
   /**
-   *
+   * Title
    * @type {string}
    * @memberof LearningResourceMetadataDisplay
    */
   title: string
   /**
-   *
+   * Description
    * @type {string}
    * @memberof LearningResourceMetadataDisplay
    */
   description: string
   /**
-   *
+   * Full Description
    * @type {string}
    * @memberof LearningResourceMetadataDisplay
    */
   full_description: string
   /**
-   *
+   * Website
    * @type {string}
    * @memberof LearningResourceMetadataDisplay
    */
   url: string
   /**
-   *
-   * @type {string}
+   * Free
+   * @type {boolean}
    * @memberof LearningResourceMetadataDisplay
    */
-  free: string
+  free: boolean
   /**
-   *
+   * Topics
    * @type {Array<string>}
    * @memberof LearningResourceMetadataDisplay
    */
   topics: Array<string>
   /**
-   *
+   * Price
    * @type {string}
    * @memberof LearningResourceMetadataDisplay
    */
   price: string
   /**
-   *
+   * Certificate
    * @type {string}
    * @memberof LearningResourceMetadataDisplay
    */
   certification: string
   /**
-   *
+   * Instructors
    * @type {Array<string>}
    * @memberof LearningResourceMetadataDisplay
    */
   instructors: Array<string>
   /**
-   *
+   * Runs/Sessions
    * @type {Array<LearningResourceMetadataDisplayRunsInner>}
    * @memberof LearningResourceMetadataDisplay
    */
   runs: Array<LearningResourceMetadataDisplayRunsInner>
   /**
-   *
+   * Offered By
    * @type {string}
    * @memberof LearningResourceMetadataDisplay
    */
   offered_by: string
   /**
-   *
+   * Languages
    * @type {Array<string>}
    * @memberof LearningResourceMetadataDisplay
    */
   languages: Array<string>
   /**
-   *
+   * Levels
    * @type {Array<string>}
    * @memberof LearningResourceMetadataDisplay
    */
   levels: Array<string>
   /**
-   *
+   * Departments
    * @type {Array<string>}
    * @memberof LearningResourceMetadataDisplay
    */
   departments: Array<string>
   /**
-   *
+   * Platform
    * @type {string}
    * @memberof LearningResourceMetadataDisplay
    */
   platform: string
   /**
-   *
+   * Number of Courses
    * @type {number}
    * @memberof LearningResourceMetadataDisplay
    */
   number_of_courses: number
   /**
-   *
+   * Location
    * @type {string}
    * @memberof LearningResourceMetadataDisplay
    */
