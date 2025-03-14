@@ -1,3 +1,4 @@
+import json
 import logging
 from typing import Optional
 
@@ -193,7 +194,7 @@ class ContentSummarizer:
                     },
                 ],
                 max_tokens=500,
-                temperature=0.5,
+                temperature=0.3,
             )
             generated_summary = response.choices[0].message.content
             logger.info("Generated summary: %s", generated_summary)
@@ -225,14 +226,14 @@ class ContentSummarizer:
 
                             Your Job:
                             1. Provide the flashcards from the transcript in the form of question, answer and
-                            explanation.
-                            2. The question,answer and explanation can contain markdown tags.
+                            explanation in order.
+                            2. The (question, answer, explanation) values can contain markdown tags.
                             3. The explanation should have a clickable timestamp link from transcript at the end of explanation.
 
 
                             **IMPORTANT**:
-                            - Do not include backticks (` ``` `) or a `json` code block in your response.
-                            - Only return **valid JSON**.
+                            - Only return **Valid JSON response**.
+                            - Do not include backticks (` ``` `) or a `json` code block or backslashes in your response.
                             """,  # noqa: E501
                         "role": "system",
                     },
@@ -241,10 +242,10 @@ class ContentSummarizer:
                         "role": "user",
                     },
                 ],
-                max_tokens=500,
-                temperature=0.5,
+                max_tokens=1000,
+                temperature=0.3,
             )
-            generated_flashcards = response.choices[0].message.content
+            generated_flashcards = json.loads(response.choices[0].message.content)
             logger.info("Generated flashcards: %s", generated_flashcards)
 
         except Exception:
