@@ -8,6 +8,8 @@ import pytest
 
 from learning_resources.constants import PlatformType
 from learning_resources.factories import (
+    ContentFileFactory,
+    ContentSummarizerConfigurationFactory,
     LearningResourceDepartmentFactory,
     LearningResourceOfferorFactory,
     LearningResourcePlatformFactory,
@@ -147,4 +149,24 @@ def marketing_metadata_mocks(mocker):
           </div>
         </body>
         </html>""",
+    )
+
+
+@pytest.fixture
+def summarizer_configuration():
+    """Create a summarizer configuration"""
+    return ContentSummarizerConfigurationFactory.create()
+
+
+@pytest.fixture
+def processable_content_files(summarizer_configuration):
+    """Create unprocessable content files"""
+    return ContentFileFactory.create_batch(
+        3,
+        content="This is a test content",
+        summary="",
+        flashcards=[],
+        run__learning_resource__platform=summarizer_configuration.platform,
+        file_extension=summarizer_configuration.allowed_extensions[0],
+        content_type=summarizer_configuration.allowed_content_types[0],
     )
