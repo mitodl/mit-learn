@@ -331,3 +331,34 @@ def test_embedded_content_file_without_runs(mocker, mocked_celery):
 
     for contentfile_id in contentfiles_with_no_run:
         assert contentfile_id in embedded_ids
+
+
+def test_embed_new_content_files_without_runs(mocker, mocked_celery):
+    """
+    embed_new_content_files should generate embeddings for new content files
+    created within the last day
+    """
+    mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
+    course = CourseFactory.create(etl_source=ETLSource.ocw.value)
+    daily_since = now_in_utc() - datetime.timedelta(hours=5)
+    ContentFileFactory.create_batch(4, created_on=daily_since, published=True)
+    content_files_without_run = [
+        cf.id
+        for cf in ContentFileFactory.create_batch(
+            4,
+            learning_resource=course.learning_resource,
+            created_on=daily_since,
+            published=True,
+        )
+    ]
+
+    generate_embeddings_mock = mocker.patch(
+        "vector_search.tasks.generate_embeddings", autospec=True
+    )
+
+    with pytest.raises(mocked_celery.replace_exception_class):
+        embed_new_content_files.delay()
+    list(mocked_celery.group.call_args[0][0])
+    embedded_ids = generate_embeddings_mock.si.mock_calls[0].args[0]
+    for contentfile_id in content_files_without_run:
+        assert contentfile_id in embedded_ids

@@ -720,24 +720,18 @@ class ContentFileFactory(DjangoModelFactory):
     content_tags = factory.PostGeneration(_post_gen_tags)
 
     @classmethod
-    def _build(cls, model_class, *args, **kwargs):
-        # make sure that run or learning_resource is defined but not both
+    def _create(cls, model_class, *args, **kwargs):
         run = kwargs.pop("run", None)
         learning_resource = kwargs.pop("learning_resource", None)
         if run and learning_resource:
-            msg = "run or learning_resource not both."
+            msg = "set run or learning_resource not both."
             raise ValueError(msg)
         if not run and not learning_resource:
-            if random.choice([True, False]):  # noqa: S311
-                run = LearningResourceRunFactory()
-                learning_resource = None
-            else:
-                learning_resource = LearningResourceFactory()
-                run = None
+            run = LearningResourceRunFactory()
+            learning_resource = None
         kwargs["run"] = run
         kwargs["learning_resource"] = learning_resource
-
-        return super()._build(model_class, *args, **kwargs)
+        return super()._create(model_class, *args, **kwargs)
 
     class Meta:
         model = models.ContentFile
