@@ -26,6 +26,7 @@ from learning_resources.constants import (
     LevelType,
     Pace,
 )
+from learning_resources.utils import json_to_markdown
 from main.serializers import COMMON_IGNORED_FIELDS, WriteableSerializerMethodField
 
 log = logging.getLogger(__name__)
@@ -699,29 +700,36 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
     Serializer to render course information as a text document
     """
 
-    title = serializers.CharField(read_only=True)
-    description = serializers.CharField(read_only=True)
+    title = serializers.CharField(help_text="Title", read_only=True)
+    description = serializers.CharField(help_text="Description", read_only=True)
 
-    full_description = serializers.CharField(read_only=True)
-    url = serializers.CharField(read_only=True)
-    free = serializers.ReadOnlyField(read_only=True)
-    topics = serializers.SerializerMethodField()
-    price = serializers.SerializerMethodField()
-    certification = serializers.SerializerMethodField()
-    instructors = serializers.SerializerMethodField()
-    runs = serializers.SerializerMethodField()
-    offered_by = serializers.SerializerMethodField()
-    languages = serializers.SerializerMethodField()
-    levels = serializers.SerializerMethodField()
-    departments = serializers.SerializerMethodField()
-    platform = serializers.SerializerMethodField()
+    full_description = serializers.CharField(
+        help_text="Full Description", read_only=True
+    )
+    url = serializers.CharField(help_text="Website", read_only=True)
+    free = serializers.ReadOnlyField(help_text="Free", read_only=True)
+    topics = serializers.SerializerMethodField(help_text="Topics")
+    price = serializers.SerializerMethodField(help_text="Price")
+    certification = serializers.SerializerMethodField(help_text="Certificate")
+    instructors = serializers.SerializerMethodField(help_text="Instructors")
+    runs = serializers.SerializerMethodField(help_text="Runs/Sessions")
+    offered_by = serializers.SerializerMethodField(help_text="Offered By")
+    languages = serializers.SerializerMethodField(help_text="Languages")
+    levels = serializers.SerializerMethodField(help_text="Levels")
+    departments = serializers.SerializerMethodField(help_text="Departments")
+    platform = serializers.SerializerMethodField(help_text="Platform")
+    number_of_courses = serializers.SerializerMethodField(help_text="Number of Courses")
+    location = serializers.SerializerMethodField(help_text="Location")
 
     def all_runs_are_identical(self, serialized_resource):
         distinct_prices = set()
         distinct_delivery_methods = set()
-        has_in_person = "in_person" in [
+        resource_delivery = [
             delivery["code"] for delivery in serialized_resource["delivery"]
         ]
+        has_in_person = (
+            "in_person" in resource_delivery or "hybrid" in resource_delivery
+        )
         distinct_currencies = {
             c["currency"] for c in serialized_resource["resource_prices"]
         }
@@ -730,12 +738,12 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         for run in serialized_resource["runs"]:
             distinct_prices.update(run["prices"])
             distinct_delivery_methods.update(
-                [delivery["code"] for delivery in run["delivery"]]
+                [delivery["code"] for delivery in run.get("delivery", [])]
             )
-            if run["location"]:
+            if run.get("location"):
                 distinct_locations.add(run["location"])
         if (
-            serialized_resource["free"]
+            serialized_resource.get("free")
             and serialized_resource["certification"]
             and len(distinct_prices) != 2  # noqa: PLR2004
         ):
@@ -744,8 +752,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             return False
         if len(distinct_delivery_methods) != 1:
             return False
-        return (has_in_person and len(distinct_locations) != 1) or (
-            not has_in_person and len(distinct_locations) > 0
+        return not (
+            (has_in_person and len(distinct_locations) != 1)
+            or (not has_in_person and len(distinct_locations) > 0)
         )
 
     def show_start_anytime(self, serialized_resource):
@@ -758,7 +767,29 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         pass
 
     def should_show_format(self, serialized_resource):
-        pass
+        return (
+            serialized_resource.get("resource_type") in ["program", "course"]
+            and self.all_runs_are_identical(serialized_resource)
+            and len(serialized_resource.get("delivery", [])) > 0
+        )
+
+    @extend_schema_field({"type": "number"})
+    def get_number_of_courses(self, serialized_resource):
+        if serialized_resource.get("resource_type") == "program":
+            return serialized_resource["program"].get("course_count", 0)
+        return 0
+
+    @extend_schema_field({"type": "string"})
+    def get_location(self, serialized_resource):
+        resource_delivery = [
+            delivery["code"] for delivery in serialized_resource["delivery"]
+        ]
+        has_in_person = (
+            "in_person" in resource_delivery or "hybrid" in resource_delivery
+        )
+        if self.should_show_format(serialized_resource) and has_in_person:
+            return serialized_resource.get("location")
+        return None
 
     @extend_schema_field({"type": "array", "items": {"type": "string"}})
     def get_departments(self, serialized_resource):
@@ -770,6 +801,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             department_vals.append(f"{department['name']}{school}")
         return department_vals
 
+    @extend_schema_field({"type": "string"})
     def get_platform(self, serialized_resource):
         return (
             serialized_resource["platform"].get("name")
@@ -793,14 +825,30 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
                 languages.extend(run["languages"])
         return list(set(languages))
 
-    @extend_schema_field({"type": "array", "items": {"type": "string"}})
+    @extend_schema_field({"type": "string"})
     def get_offered_by(self, serialized_resource):
         return (
-            serialized_resource["offered_by"].get("name")
+            serialized_resource.get("offered_by").get("name")
             if serialized_resource.get("offered_by")
-            else ""
+            else None
         )
 
+    @extend_schema_field(
+        {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "location": {"type": "string"},
+                    "start_date": {"type": "string"},
+                    "instructors": {"type": "array", "items": {"type": "string"}},
+                    "duration": {"type": "string"},
+                    "format": {"type": "array", "items": {"type": "string"}},
+                },
+                "required": ["code", "name"],
+            },
+        }
+    )
     def get_runs(self, serialized_resource):
         runs = []
         for run in serialized_resource.get("runs", []):
@@ -810,8 +858,8 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
                 if start_date
                 else ""
             )
-            location = run["location"] or "Online"
-            duration = run["duration"]
+            location = run.get("location") or "Online"
+            duration = run.get("duration")
             delivery_modes = [delivery["name"] for delivery in run.get("delivery", [])]
             instructors = [
                 instructor.get("full_name")
@@ -838,13 +886,14 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
 
         return list(instructors)
 
+    @extend_schema_field({"type": "string"})
     def get_certification(self, serialized_resource):
         if serialized_resource.get(
             "certification_type"
         ) and not serialized_resource.get("free"):
             return serialized_resource["certification_type"].get("name")
         if (
-            serialized_resource["free"]
+            serialized_resource.get("free")
             and serialized_resource["certification_type"]
             and serialized_resource["certification_type"]["code"]
             == CertificationType.none.name
@@ -852,12 +901,15 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             return CertificationType.none.value
         return None
 
+    @extend_schema_field({"type": "string"})
     def get_price(self, serialized_resource):
+        if not self.all_runs_are_identical(serialized_resource):
+            return None
         prices = serialized_resource.get("prices", [])
-        if not serialized_resource["free"] and prices:
+        if not serialized_resource.get("free") and prices:
             return f"${serialized_resource['prices'][0]}"
         if (
-            serialized_resource["free"]
+            serialized_resource.get("free")
             and serialized_resource["certification_type"]
             and serialized_resource["certification_type"]["code"]
             == CertificationType.completion.name
@@ -871,74 +923,13 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
 
     def render_document(self):
         data = self.data
-        display_sections = {
-            "title": "Title",
-            "platform": "Platform",
-            "url": "Link",
-            "delivery": "Format",
-            "departments": "Departments",
-            "description": "Description",
-            "full_description": "Full Description",
-            "topics": "Topics",
-            "price": "Cost",
-            "certification": "Certification",
-            "instructors": "Instructors",
-            "runs": "Course Schedule (Runs and Sessions)",
-            "offered_by": "Offered By",
-            "languages": "Languages",
-            "levels": "Levels",
-        }
+        display_sections = dict(self.fields)
         rendered_data = {}
-
-        for section, section_display in display_sections.items():
+        for section, field in display_sections.items():
             display_text = data.get(section)
             if display_text:
-                rendered_data[section_display] = display_text
+                rendered_data[field.help_text] = display_text
         return rendered_data
-
-    def _json_to_markdown(self, obj, indent=0):
-        """
-        Recursively converts a JSON object into a readable
-        Markdown format with proper lists and tables.
-        """
-        markdown = ""
-        indent_str = " " * (indent * 2)
-        if isinstance(obj, dict):
-            for key, value in obj.items():
-                markdown += f"\n{indent_str}**{key.replace('_', ' ').title()}**\n\n"
-                markdown += self._json_to_markdown(value, indent + 1)
-        elif isinstance(obj, list):
-            if all(
-                isinstance(item, dict) for item in obj
-            ):  # Check if it's a list of dictionaries
-                keys = sorted(
-                    {k for item in obj for k in item}
-                )  # Collect and sort all keys
-                # Create table header
-                markdown += f"| {' | '.join(keys)} |\n"
-                markdown += f"| {' | '.join(['---'] * len(keys))} |\n"
-                # Create table rows
-                for item in obj:
-                    row = [
-                        str(item.get(k, "N/A"))
-                        .replace("[", "")
-                        .replace("]", "")
-                        .replace("{", "")
-                        .replace("}", "")
-                        for k in keys
-                    ]
-                    markdown += f"| {' | '.join(row)} |\n"
-            else:
-                for item in obj:
-                    markdown += (
-                        f"{indent_str}- "
-                        f"{self._json_to_markdown(item, indent + 1).strip()}\n"
-                    )
-        elif obj is None:
-            markdown += f"{indent_str}N/A\n\n"
-        else:
-            markdown += f"{indent_str}{obj}\n\n"
-        return markdown
 
     def render_chunks(self):
         rendered_doc = self.render_document()
@@ -955,7 +946,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         return [
             (
                 f"# Information about this course:\n\n"
-                f"{self._json_to_markdown(json.loads(json_fragment))}"
+                f"{json_to_markdown(json.loads(json_fragment))}"
             )
             for json_fragment in RecursiveJsonSplitter(
                 max_chunk_size=chunk_size * 4

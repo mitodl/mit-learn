@@ -416,7 +416,7 @@ def test_course_metadata_document_contents(mocker):
         if serialized_resource.get("prices")
         else "Free"
     )
-    assert course_metadata_content.startswith("Information about this course:")
+    assert course_metadata_content.startswith("# Information about this course:")
     assert resource.title in course_metadata_content
     assert resource.description in course_metadata_content
     assert resource.full_description in course_metadata_content

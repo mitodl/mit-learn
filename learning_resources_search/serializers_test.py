@@ -34,6 +34,7 @@ from learning_resources.factories import (
 )
 from learning_resources.models import LearningResource
 from learning_resources.serializers import (
+    LearningResourceMetadataDisplaySerializer,
     LearningResourceSerializer,
     MicroLearningPathRelationshipSerializer,
     MicroUserListRelationshipSerializer,
@@ -72,7 +73,7 @@ response_test_raw_data_1 = {
                         {"id": 5, "name": "Management"},
                         {"id": 6, "name": "Innovation"},
                     ],
-                    "offered_by": "MIT xPRO",
+                    "offered_by": {"name": "MIT xPRO"},
                     "course_feature": [],
                     "department": None,
                     "delivery": [
@@ -155,7 +156,7 @@ response_test_raw_data_1 = {
                     "languages": None,
                     "url": "http://xpro.mit.edu/courses/course-v1:xPRO+MCPO+R1/",
                     "resource_type": "course",
-                    "platform": "globalalumni",
+                    "platform": {"name": "globalalumni"},
                     "is_learning_material": False,
                 },
             }
@@ -221,7 +222,7 @@ response_test_response_1 = {
                 {"id": 5, "name": "Management"},
                 {"id": 6, "name": "Innovation"},
             ],
-            "offered_by": "MIT xPRO",
+            "offered_by": {"name": "MIT xPRO"},
             "course_feature": [],
             "department": None,
             "delivery": [
@@ -300,7 +301,7 @@ response_test_response_1 = {
             "languages": None,
             "url": "http://xpro.mit.edu/courses/course-v1:xPRO+MCPO+R1/",
             "resource_type": "course",
-            "platform": "globalalumni",
+            "platform": {"name": "globalalumni"},
             "is_learning_material": False,
         }
     ],
@@ -1043,6 +1044,10 @@ def test_learning_resources_search_response_serializer(
     """
     settings.OPENSEARCH_MAX_SUGGEST_HITS = 10
     request = get_request_object(learning_resources_search_view.url)
+
+    response["results"][0]["display_data"] = LearningResourceMetadataDisplaySerializer(
+        response["results"][0]
+    ).data
     assert JSONRenderer().render(
         LearningResourcesSearchResponseSerializer(
             raw_data, context={"request": request}
@@ -1090,7 +1095,9 @@ def test_learning_resources_search_response_serializer_user_parents(  # noqa: PL
     response = deepcopy(response_test_response_2)
     response["results"][0]["id"] = course.id
     request = get_request_object(learning_resources_search_view.url)
-
+    response["results"][0]["display_data"] = LearningResourceMetadataDisplaySerializer(
+        raw_data["hits"]["hits"][0]["_source"]
+    ).data
     if is_authenticated:
         request.user = user
         if in_path and is_admin:
@@ -1101,7 +1108,6 @@ def test_learning_resources_search_response_serializer_user_parents(  # noqa: PL
             response["results"][0]["user_list_parents"] = [
                 MicroUserListRelationshipSerializer(instance=ul_item).data
             ]
-
     assert JSONRenderer().render(
         LearningResourcesSearchResponseSerializer(
             raw_data, context={"request": request}
