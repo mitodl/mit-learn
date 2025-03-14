@@ -539,10 +539,12 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
     def format_run_date(self, run, as_taught_in):
         if as_taught_in:
             run_semester = run.get("semester", "").capitalize()
-            if run_semester and run.get("year"):
-                return f"{run_semester} {run['year']}"
-            if run_semester and run.get("start_date"):
-                return f"{run_semester} {run['start_date']}"
+            if run_semester:
+                run_semester = run_semester.capitalize()
+                if run.get("year"):
+                    return f"{run_semester} {run['year']}"
+                if run.get("start_date"):
+                    return f"{run_semester} {run['start_date']}"
             if run.get("start_date"):
                 return (
                     dateparser.parse(run["start_date"])
