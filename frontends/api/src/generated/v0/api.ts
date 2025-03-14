@@ -570,43 +570,43 @@ export interface ContentFile {
    * @type {number}
    * @memberof ContentFile
    */
-  run_id?: number
+  run_id: number
   /**
    *
    * @type {string}
    * @memberof ContentFile
    */
-  run_title?: string
+  run_title: string
   /**
    *
    * @type {string}
    * @memberof ContentFile
    */
-  run_slug?: string
+  run_slug: string
   /**
    *
    * @type {Array<LearningResourceDepartment>}
    * @memberof ContentFile
    */
-  departments?: Array<LearningResourceDepartment>
+  departments: Array<LearningResourceDepartment>
   /**
    *
    * @type {string}
    * @memberof ContentFile
    */
-  semester?: string
+  semester: string
   /**
    *
    * @type {number}
    * @memberof ContentFile
    */
-  year?: number
+  year: number
   /**
    *
    * @type {Array<LearningResourceTopic>}
    * @memberof ContentFile
    */
-  topics?: Array<LearningResourceTopic>
+  topics: Array<LearningResourceTopic>
   /**
    *
    * @type {string}
@@ -684,13 +684,13 @@ export interface ContentFile {
    * @type {string}
    * @memberof ContentFile
    */
-  resource_id?: string
+  resource_id: string
   /**
    *
    * @type {string}
    * @memberof ContentFile
    */
-  resource_readable_id?: string
+  resource_readable_id: string
   /**
    * Extract the course number(s) from the associated course
    * @type {Array<string>}
@@ -714,19 +714,19 @@ export interface ContentFile {
    * @type {LearningResourceOfferor}
    * @memberof ContentFile
    */
-  offered_by?: LearningResourceOfferor
+  offered_by: LearningResourceOfferor
   /**
    *
    * @type {LearningResourcePlatform}
    * @memberof ContentFile
    */
-  platform?: LearningResourcePlatform
+  platform: LearningResourcePlatform
   /**
    *
    * @type {string}
    * @memberof ContentFile
    */
-  run_readable_id?: string
+  run_readable_id: string
   /**
    *
    * @type {string}
@@ -2479,6 +2479,24 @@ export interface LearningResourceMetadataDisplay {
    * @memberof LearningResourceMetadataDisplay
    */
   location: string
+  /**
+   * Starts
+   * @type {Array<string>}
+   * @memberof LearningResourceMetadataDisplay
+   */
+  starts: Array<string>
+  /**
+   * Format
+   * @type {Array<string>}
+   * @memberof LearningResourceMetadataDisplay
+   */
+  format_type: Array<string>
+  /**
+   * As Taught In
+   * @type {Array<string>}
+   * @memberof LearningResourceMetadataDisplay
+   */
+  as_taught_in: Array<string>
 }
 /**
  *

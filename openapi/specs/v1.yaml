@@ -8643,7 +8643,19 @@ components:
       required:
       - content_feature_type
       - course_number
+      - departments
       - id
+      - offered_by
+      - platform
+      - resource_id
+      - resource_readable_id
+      - run_id
+      - run_readable_id
+      - run_slug
+      - run_title
+      - semester
+      - topics
+      - year
     ContentFileSearchResponse:
       type: object
       description: SearchResponseSerializer with OpenAPI annotations for Content Files
@@ -10002,10 +10014,30 @@ components:
           type: string
           readOnly: true
           description: Location
+        starts:
+          type: array
+          items:
+            type: string
+          readOnly: true
+          description: Starts
+        format_type:
+          type: array
+          items:
+            type: string
+          readOnly: true
+          description: Format
+        as_taught_in:
+          type: array
+          items:
+            type: string
+          readOnly: true
+          description: As Taught In
       required:
+      - as_taught_in
       - certification
       - departments
       - description
+      - format_type
       - free
       - full_description
       - instructors
@@ -10017,6 +10049,7 @@ components:
       - platform
       - price
       - runs
+      - starts
       - title
       - topics
       - url
