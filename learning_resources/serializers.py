@@ -1097,31 +1097,45 @@ class ContentFileSerializer(serializers.ModelSerializer):
     Serializer class for course run ContentFiles
     """
 
-    run_id = serializers.IntegerField(source="run.id", required=False)
-    run_readable_id = serializers.CharField(source="run.run_id", required=False)
-    run_title = serializers.CharField(source="run.title", required=False)
-    run_slug = serializers.CharField(source="run.slug", required=False)
-    semester = serializers.CharField(source="run.semester", required=False)
-    year = serializers.IntegerField(source="run.year", required=False)
+    run_id = serializers.IntegerField(
+        source="run.id",
+    )
+    run_readable_id = serializers.CharField(
+        source="run.run_id",
+    )
+    run_title = serializers.CharField(
+        source="run.title",
+    )
+    run_slug = serializers.CharField(
+        source="run.slug",
+    )
+    semester = serializers.CharField(
+        source="run.semester",
+    )
+    year = serializers.IntegerField(
+        source="run.year",
+    )
     topics = LearningResourceTopicSerializer(
-        source="run.learning_resource.topics", many=True, required=False
+        source="run.learning_resource.topics",
+        many=True,
     )
     resource_id = serializers.CharField(
-        source="run.learning_resource.id", required=False
+        source="run.learning_resource.id",
     )
     departments = LearningResourceDepartmentSerializer(
-        source="run.learning_resource.departments", many=True, required=False
+        source="run.learning_resource.departments",
+        many=True,
     )
     resource_readable_id = serializers.CharField(
-        source="run.learning_resource.readable_id", required=False
+        source="run.learning_resource.readable_id",
     )
     course_number = serializers.SerializerMethodField()
     content_feature_type = LearningResourceContentTagField(source="content_tags")
     offered_by = LearningResourceOfferorSerializer(
-        source="run.learning_resource.offered_by", required=False
+        source="run.learning_resource.offered_by",
     )
     platform = LearningResourcePlatformSerializer(
-        source="run.learning_resource.platform", required=False
+        source="run.learning_resource.platform",
     )
 
     def get_course_number(self, instance) -> list[str]:
