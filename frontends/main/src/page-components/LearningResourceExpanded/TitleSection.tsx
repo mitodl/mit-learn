@@ -42,9 +42,9 @@ const CloseIcon = styled(RiCloseLargeLine)`
 const TitleSection: React.FC<{
   titleId?: string
   resource?: LearningResource
-  closeDrawer: () => void
+  onClickClose?: () => void
   ref: React.Ref<HTMLDivElement>
-}> = ({ resource, closeDrawer, titleId, ref }) => {
+}> = ({ resource, onClickClose, titleId, ref }) => {
   const type = resource ? (
     getReadableResourceType(resource.resource_type)
   ) : (
@@ -83,7 +83,7 @@ const TitleSection: React.FC<{
       <CloseButton
         variant="text"
         size="medium"
-        onClick={() => closeDrawer()}
+        onClick={() => onClickClose?.()}
         aria-label="Close"
       >
         <CloseIcon />
