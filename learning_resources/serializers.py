@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import F, Max
+from django.db.models import F, Max, Prefetch
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -768,6 +768,40 @@ class ContentFileSerializer(serializers.ModelSerializer):
     content_feature_type = LearningResourceContentTagField(source="content_tags")
     offered_by = serializers.SerializerMethodField()
     platform = serializers.SerializerMethodField()
+
+    def to_representation(self, instance):
+        # prefetch related run and learning resource
+        queryset = instance.__class__.objects.prefetch_related(
+            Prefetch(
+                "run",
+                queryset=models.LearningResourceRun.objects.for_serialization(),
+            ),
+            Prefetch(
+                "learning_resource__course",
+            ),
+            Prefetch(
+                "learning_resource__topics",
+                queryset=models.LearningResourceTopic.objects.for_serialization(),
+            ),
+            Prefetch(
+                "learning_resource__offered_by",
+                queryset=models.LearningResourceOfferor.objects.for_serialization(),
+            ),
+            Prefetch(
+                "learning_resource__platform",
+            ),
+            Prefetch(
+                "content_tags",
+            ),
+            Prefetch(
+                "learning_resource__departments",
+                queryset=models.LearningResourceDepartment.objects.for_serialization().select_related(
+                    "school"
+                ),
+            ),
+        )
+        instance = queryset.get(pk=instance.pk)
+        return super().to_representation(instance)
 
     def get_learning_resource(self, instance):
         if instance.run:
