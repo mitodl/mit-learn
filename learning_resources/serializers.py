@@ -485,7 +485,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         }
 
         distinct_locations = set()
-        for run in serialized_resource["runs"]:
+        for run in serialized_resource.get("runs", []):
             distinct_prices.update(run["prices"])
             distinct_delivery_methods.update(
                 [delivery["code"] for delivery in run.get("delivery", [])]
@@ -510,7 +510,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
     def show_start_anytime(self, serialized_resource):
         return (
             serialized_resource["resource_type"] in ["program", "course"]
-            and serialized_resource["availability"] == "anytime"
+            and serialized_resource.get("availability") == "anytime"
         )
 
     def runs_by_date(self, serialized_resource):
@@ -580,7 +580,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
     def get_number_of_courses(self, serialized_resource):
         if serialized_resource.get("resource_type") == "program":
             return serialized_resource["program"].get("course_count", 0)
-        return 0
+        return None
 
     @extend_schema_field({"type": "string"})
     def get_location(self, serialized_resource):
@@ -752,7 +752,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         rendered_data = {}
         for section, field in display_sections.items():
             display_text = data.get(section)
-            if display_text:
+            if display_text is not None:
                 rendered_data[field.help_text] = display_text
         return rendered_data
 
