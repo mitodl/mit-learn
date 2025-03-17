@@ -457,6 +457,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
     free = serializers.BooleanField(help_text="Free", read_only=True, allow_null=True)
     topics = serializers.SerializerMethodField(help_text="Topics")
     price = serializers.SerializerMethodField(help_text="Price", allow_null=True)
+    extra_price_info = serializers.SerializerMethodField(
+        help_text="Extra Price Info", allow_null=True
+    )
     certification = serializers.SerializerMethodField(
         help_text="Certificate", allow_null=True
     )
@@ -739,19 +742,26 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         return None
 
     @extend_schema_field({"type": "string"})
-    def get_price(self, serialized_resource):
+    def get_extra_price_info(self, serialized_resource):
         if not self.all_runs_are_identical(serialized_resource):
             return None
         prices = serialized_resource.get("prices", [])
-        if not serialized_resource.get("free") and prices:
-            return f"${serialized_resource['prices'][0]}"
         if (
             serialized_resource.get("free")
             and serialized_resource["certification_type"]
             and serialized_resource["certification_type"]["code"]
             == CertificationType.completion.name
         ) and len(prices) > 1:
-            return f"Free (Earn a certificate: ${prices[1]})"
+            return f"Earn a certificate: ${prices[1]}"
+        return None
+
+    @extend_schema_field({"type": "string"})
+    def get_price(self, serialized_resource):
+        if not self.all_runs_are_identical(serialized_resource):
+            return None
+        prices = serialized_resource.get("prices", [])
+        if not serialized_resource.get("free") and prices:
+            return f"${serialized_resource['prices'][0]}"
         return "Free"
 
     @extend_schema_field({"type": "array", "items": {"type": "string"}})

@@ -770,9 +770,10 @@ def test_price_display():
         serialized_resource
     )
     assert serialized_resource["free"]
+    assert metadata_serializer.data["price"] == "Free"
     assert (
-        metadata_serializer.data["price"]
-        == f"Free (Earn a certificate: ${serialized_resource['prices'][1]})"
+        metadata_serializer.data["extra_price_info"]
+        == f"Earn a certificate: ${serialized_resource['prices'][1]}"
     )
 
     # If resource is not free and certification is not none - show the price
@@ -788,6 +789,7 @@ def test_price_display():
     )
     assert not serialized_resource["free"]
     assert metadata_serializer.data["price"] == f"${serialized_resource['prices'][0]}"
+    assert metadata_serializer.data["extra_price_info"] is None
 
 
 def test_instructors_display():
@@ -924,8 +926,43 @@ def test_metadata_display_serializer_show_start_anytime():
     assert metadata_serializer.show_start_anytime(serialized_resource) is False
 
 
-def test_metadata_display_serializer_total_runs_with_dates():
-    pass
+def test_total_runs_with_dates(mocker):
+    """
+    Test total_runs_with_dates method
+    """
+    mocker.patch(
+        "learning_resources.serializers.LearningResourceMetadataDisplaySerializer.dates_for_runs",
+        return_value=["2023-01-01", "2023-02-01"],
+    )
+    serializer = serializers.LearningResourceMetadataDisplaySerializer()
+    serialized_resource = mocker.Mock()
+    assert serializer.total_runs_with_dates(serialized_resource) == 2
+
+
+def test_total_runs_with_dates_no_runs(mocker):
+    """
+    Test total_runs_with_dates method with no runs
+    """
+    mocker.patch(
+        "learning_resources.serializers.LearningResourceMetadataDisplaySerializer.dates_for_runs",
+        return_value=[],
+    )
+    serializer = serializers.LearningResourceMetadataDisplaySerializer()
+    serialized_resource = mocker.Mock()
+    assert serializer.total_runs_with_dates(serialized_resource) == 0
+
+
+def test_total_runs_with_dates_single_run(mocker):
+    """
+    Test total_runs_with_dates method with a single run
+    """
+    mocker.patch(
+        "learning_resources.serializers.LearningResourceMetadataDisplaySerializer.dates_for_runs",
+        return_value=["2023-01-01"],
+    )
+    serializer = serializers.LearningResourceMetadataDisplaySerializer()
+    serialized_resource = mocker.Mock()
+    assert serializer.total_runs_with_dates(serialized_resource) == 1
 
 
 def test_metadata_display_serializer_should_show_format():
