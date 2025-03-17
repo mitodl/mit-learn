@@ -458,7 +458,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
     topics = serializers.SerializerMethodField(help_text="Topics")
     price = serializers.SerializerMethodField(help_text="Price", allow_null=True)
     extra_price_info = serializers.SerializerMethodField(
-        help_text="Extra Price Info", allow_null=True
+        help_text="Extra Price Information", allow_null=True
     )
     certification = serializers.SerializerMethodField(
         help_text="Certificate", allow_null=True
