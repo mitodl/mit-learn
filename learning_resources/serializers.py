@@ -12,6 +12,7 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import F, Max
 from drf_spectacular.utils import extend_schema_field
+from isodate import parse_duration
 from langchain_text_splitters import RecursiveJsonSplitter
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -485,6 +486,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
     as_taught_in = serializers.SerializerMethodField(
         help_text="As Taught In", allow_null=True
     )
+    duration = serializers.SerializerMethodField(help_text="Duration", allow_null=True)
 
     def all_runs_are_identical(self, serialized_resource):
         distinct_prices = set()
@@ -595,6 +597,14 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
     def get_number_of_courses(self, serialized_resource):
         if serialized_resource.get("resource_type") == "program":
             return serialized_resource["program"].get("course_count", 0)
+        return None
+
+    def get_duration(self, serialized_resource):
+        resource_type = serialized_resource.get("resource_type")
+        if resource_type in ["video", "podcast_episode"]:
+            duration = serialized_resource[resource_type].get("duration")
+            if duration:
+                return str(parse_duration(duration))
         return None
 
     @extend_schema_field({"type": "string"})
