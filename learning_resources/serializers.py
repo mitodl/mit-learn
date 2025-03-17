@@ -773,12 +773,10 @@ class ContentFileSerializer(serializers.ModelSerializer):
         # prefetch related run and learning resource
         queryset = models.ContentFile.objects.prefetch_related(
             "learning_resource__course",
-            "content_tags",
             "learning_resource__platform",
-            Prefetch(
-                "run",
-                queryset=models.LearningResourceRun.objects.for_serialization(),
-            ),
+            "run__learning_resource__course",
+            "run__learning_resource__platform",
+            "content_tags",
             Prefetch(
                 "learning_resource__topics",
                 queryset=models.LearningResourceTopic.objects.for_serialization(),
@@ -789,6 +787,20 @@ class ContentFileSerializer(serializers.ModelSerializer):
             ),
             Prefetch(
                 "learning_resource__departments",
+                queryset=models.LearningResourceDepartment.objects.for_serialization().select_related(
+                    "school"
+                ),
+            ),
+            Prefetch(
+                "run__learning_resource__topics",
+                queryset=models.LearningResourceTopic.objects.for_serialization(),
+            ),
+            Prefetch(
+                "run__learning_resource__offered_by",
+                queryset=models.LearningResourceOfferor.objects.for_serialization(),
+            ),
+            Prefetch(
+                "run__learning_resource__departments",
                 queryset=models.LearningResourceDepartment.objects.for_serialization().select_related(
                     "school"
                 ),
