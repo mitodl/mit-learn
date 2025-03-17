@@ -292,7 +292,9 @@ def _process_content_embeddings(serialized_content):
 
         split_ids = [
             vector_point_id(
-                f"{doc['resource_readable_id']}.{doc['run_readable_id']}.{doc['key']}.{md['chunk_number']}"
+                f"{doc['resource_readable_id']}."
+                f"{doc.get('run_readable_id', '')}."
+                f"{doc['key']}.{md['chunk_number']}"
             )
             for md in split_metadatas
         ]
@@ -372,7 +374,9 @@ def embed_learning_resources(ids, resource_type, overwrite):
         points = [
             (
                 vector_point_id(
-                    f"{doc['resource_readable_id']}.{doc['run_readable_id']}.{doc['key']}.0"
+                    f"{doc['resource_readable_id']}."
+                    f"{doc.get('run_readable_id', '')}."
+                    f"{doc['key']}.0"
                 ),
                 doc,
             )
