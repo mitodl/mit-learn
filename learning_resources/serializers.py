@@ -771,13 +771,13 @@ class ContentFileSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         # prefetch related run and learning resource
-        queryset = instance.__class__.objects.prefetch_related(
+        queryset = models.ContentFile.objects.prefetch_related(
+            "learning_resource__course",
+            "content_tags",
+            "learning_resource__platform",
             Prefetch(
                 "run",
                 queryset=models.LearningResourceRun.objects.for_serialization(),
-            ),
-            Prefetch(
-                "learning_resource__course",
             ),
             Prefetch(
                 "learning_resource__topics",
@@ -786,12 +786,6 @@ class ContentFileSerializer(serializers.ModelSerializer):
             Prefetch(
                 "learning_resource__offered_by",
                 queryset=models.LearningResourceOfferor.objects.for_serialization(),
-            ),
-            Prefetch(
-                "learning_resource__platform",
-            ),
-            Prefetch(
-                "content_tags",
             ),
             Prefetch(
                 "learning_resource__departments",
