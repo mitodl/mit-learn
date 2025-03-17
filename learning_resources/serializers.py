@@ -451,25 +451,37 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
     description = serializers.CharField(help_text="Description", read_only=True)
 
     full_description = serializers.CharField(
-        help_text="Full Description", read_only=True
+        help_text="Full Description", read_only=True, allow_null=True
     )
     url = serializers.CharField(help_text="Website", read_only=True)
-    free = serializers.BooleanField(help_text="Free", read_only=True)
+    free = serializers.BooleanField(help_text="Free", read_only=True, allow_null=True)
     topics = serializers.SerializerMethodField(help_text="Topics")
-    price = serializers.SerializerMethodField(help_text="Price")
-    certification = serializers.SerializerMethodField(help_text="Certificate")
-    instructors = serializers.SerializerMethodField(help_text="Instructors")
-    runs = serializers.SerializerMethodField(help_text="Runs/Sessions")
-    offered_by = serializers.SerializerMethodField(help_text="Offered By")
-    languages = serializers.SerializerMethodField(help_text="Languages")
-    levels = serializers.SerializerMethodField(help_text="Levels")
+    price = serializers.SerializerMethodField(help_text="Price", allow_null=True)
+    certification = serializers.SerializerMethodField(
+        help_text="Certificate", allow_null=True
+    )
+    instructors = serializers.SerializerMethodField(
+        help_text="Instructors", allow_null=True
+    )
+    runs = serializers.SerializerMethodField(help_text="Runs/Sessions", allow_null=True)
+    offered_by = serializers.SerializerMethodField(
+        help_text="Offered By", allow_null=True
+    )
+    languages = serializers.SerializerMethodField(
+        help_text="Languages", allow_null=True
+    )
+    levels = serializers.SerializerMethodField(help_text="Levels", allow_null=True)
     departments = serializers.SerializerMethodField(help_text="Departments")
-    platform = serializers.SerializerMethodField(help_text="Platform")
-    number_of_courses = serializers.SerializerMethodField(help_text="Number of Courses")
-    location = serializers.SerializerMethodField(help_text="Location")
-    starts = serializers.SerializerMethodField(help_text="Starts")
-    format_type = serializers.SerializerMethodField(help_text="Format")
-    as_taught_in = serializers.SerializerMethodField(help_text="As Taught In")
+    platform = serializers.SerializerMethodField(help_text="Platform", allow_null=True)
+    number_of_courses = serializers.SerializerMethodField(
+        help_text="Number of Courses", allow_null=True
+    )
+    location = serializers.SerializerMethodField(help_text="Location", allow_null=True)
+    starts = serializers.SerializerMethodField(help_text="Starts", allow_null=True)
+    format_type = serializers.SerializerMethodField(help_text="Format", allow_null=True)
+    as_taught_in = serializers.SerializerMethodField(
+        help_text="As Taught In", allow_null=True
+    )
 
     def all_runs_are_identical(self, serialized_resource):
         distinct_prices = set()

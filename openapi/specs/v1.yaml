@@ -9927,6 +9927,7 @@ components:
         full_description:
           type: string
           readOnly: true
+          nullable: true
           description: Full Description
         url:
           type: string
@@ -9935,6 +9936,7 @@ components:
         free:
           type: boolean
           readOnly: true
+          nullable: true
           description: Free
         topics:
           type: array
@@ -9945,16 +9947,19 @@ components:
         price:
           type: string
           readOnly: true
+          nullable: true
           description: Price
         certification:
           type: string
           readOnly: true
+          nullable: true
           description: Certificate
         instructors:
           type: array
           items:
             type: string
           readOnly: true
+          nullable: true
           description: Instructors
         runs:
           type: array
@@ -9979,22 +9984,26 @@ components:
             - code
             - name
           readOnly: true
+          nullable: true
           description: Runs/Sessions
         offered_by:
           type: string
           readOnly: true
+          nullable: true
           description: Offered By
         languages:
           type: array
           items:
             type: string
           readOnly: true
+          nullable: true
           description: Languages
         levels:
           type: array
           items:
             type: string
           readOnly: true
+          nullable: true
           description: Levels
         departments:
           type: array
@@ -10005,32 +10014,38 @@ components:
         platform:
           type: string
           readOnly: true
+          nullable: true
           description: Platform
         number_of_courses:
           type: number
           readOnly: true
+          nullable: true
           description: Number of Courses
         location:
           type: string
           readOnly: true
+          nullable: true
           description: Location
         starts:
           type: array
           items:
             type: string
           readOnly: true
+          nullable: true
           description: Starts
         format_type:
           type: array
           items:
             type: string
           readOnly: true
+          nullable: true
           description: Format
         as_taught_in:
           type: array
           items:
             type: string
           readOnly: true
+          nullable: true
           description: As Taught In
       required:
       - as_taught_in
