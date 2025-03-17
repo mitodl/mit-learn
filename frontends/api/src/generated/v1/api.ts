@@ -2194,7 +2194,7 @@ export interface LearningResourceMetadataDisplay {
    * @type {string}
    * @memberof LearningResourceMetadataDisplay
    */
-  full_description: string
+  full_description: string | null
   /**
    * Website
    * @type {string}
@@ -2206,7 +2206,7 @@ export interface LearningResourceMetadataDisplay {
    * @type {boolean}
    * @memberof LearningResourceMetadataDisplay
    */
-  free: boolean
+  free: boolean | null
   /**
    * Topics
    * @type {Array<string>}
@@ -2218,43 +2218,43 @@ export interface LearningResourceMetadataDisplay {
    * @type {string}
    * @memberof LearningResourceMetadataDisplay
    */
-  price: string
+  price: string | null
   /**
    * Certificate
    * @type {string}
    * @memberof LearningResourceMetadataDisplay
    */
-  certification: string
+  certification: string | null
   /**
    * Instructors
    * @type {Array<string>}
    * @memberof LearningResourceMetadataDisplay
    */
-  instructors: Array<string>
+  instructors: Array<string> | null
   /**
    * Runs/Sessions
    * @type {Array<LearningResourceMetadataDisplayRunsInner>}
    * @memberof LearningResourceMetadataDisplay
    */
-  runs: Array<LearningResourceMetadataDisplayRunsInner>
+  runs: Array<LearningResourceMetadataDisplayRunsInner> | null
   /**
    * Offered By
    * @type {string}
    * @memberof LearningResourceMetadataDisplay
    */
-  offered_by: string
+  offered_by: string | null
   /**
    * Languages
    * @type {Array<string>}
    * @memberof LearningResourceMetadataDisplay
    */
-  languages: Array<string>
+  languages: Array<string> | null
   /**
    * Levels
    * @type {Array<string>}
    * @memberof LearningResourceMetadataDisplay
    */
-  levels: Array<string>
+  levels: Array<string> | null
   /**
    * Departments
    * @type {Array<string>}
@@ -2266,37 +2266,37 @@ export interface LearningResourceMetadataDisplay {
    * @type {string}
    * @memberof LearningResourceMetadataDisplay
    */
-  platform: string
+  platform: string | null
   /**
    * Number of Courses
    * @type {number}
    * @memberof LearningResourceMetadataDisplay
    */
-  number_of_courses: number
+  number_of_courses: number | null
   /**
    * Location
    * @type {string}
    * @memberof LearningResourceMetadataDisplay
    */
-  location: string
+  location: string | null
   /**
    * Starts
    * @type {Array<string>}
    * @memberof LearningResourceMetadataDisplay
    */
-  starts: Array<string>
+  starts: Array<string> | null
   /**
    * Format
    * @type {Array<string>}
    * @memberof LearningResourceMetadataDisplay
    */
-  format_type: Array<string>
+  format_type: Array<string> | null
   /**
    * As Taught In
    * @type {Array<string>}
    * @memberof LearningResourceMetadataDisplay
    */
-  as_taught_in: Array<string>
+  as_taught_in: Array<string> | null
 }
 /**
  *
