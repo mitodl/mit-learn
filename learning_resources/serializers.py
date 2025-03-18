@@ -739,8 +739,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             location = run.get("location") or "Online"
             duration = run.get("duration")
             prices = run.get("prices", [])
-            if len(prices) > 0:
-                price = f"${prices[0]}"
+            price = f"${prices[0]}" if len(prices) > 0 else None
             delivery_modes = [delivery["name"] for delivery in run.get("delivery", [])]
             instructors = [
                 instructor.get("full_name")
