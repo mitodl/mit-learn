@@ -4,6 +4,7 @@ import { PlainList, Typography, styled } from "ol-components"
 import { useQuery } from "@tanstack/react-query"
 import { mitxonlineCoursesToEnrollment } from "./transform"
 import { EnrollmentCard } from "./EnrollmentCard"
+import { EnrollmentData } from "./types"
 
 const Wrapper = styled.div(({ theme }) => ({
   marginTop: "32px",
@@ -14,11 +15,54 @@ const Wrapper = styled.div(({ theme }) => ({
   borderRadius: "8px",
 }))
 
+const alphabeticalSort = (a: EnrollmentData, b: EnrollmentData) =>
+  a.title.localeCompare(b.title)
+
+const startsSooner = (a: EnrollmentData, b: EnrollmentData) => {
+  if (!a.startDate && !b.startDate) return 0
+  if (!a.startDate) return 1
+  if (!b.startDate) return -1
+  const x = new Date(a.startDate)
+  const y = new Date(b.startDate)
+  return x.getTime() - y.getTime()
+}
+const sortEnrollments = (enrollments: EnrollmentData[]) => {
+  const ended: EnrollmentData[] = []
+  const started: EnrollmentData[] = []
+  const notStarted: EnrollmentData[] = []
+  enrollments.forEach((enrollment) => {
+    if (
+      enrollment.hasUserCompleted ||
+      (enrollment.endDate && new Date(enrollment.endDate) < new Date())
+    ) {
+      ended.push(enrollment)
+    } else if (
+      enrollment.startDate &&
+      new Date(enrollment.startDate) < new Date()
+    ) {
+      started.push(enrollment)
+    } else {
+      notStarted.push(enrollment)
+    }
+  })
+
+  return {
+    ended: ended.sort(alphabeticalSort),
+    started: started.sort(alphabeticalSort),
+    notStarted: notStarted.sort(startsSooner),
+  }
+}
+
 const EnrollmentDisplay = () => {
   const { data: enrolledCourses } = useQuery({
     ...enrollmentQueries.coursesList(),
     select: mitxonlineCoursesToEnrollment,
   })
+
+  // These are separate variables because later we will move 'completed' to
+  // an initially collapsed section.
+  const { ended, started, notStarted } = sortEnrollments(enrolledCourses || [])
+  const sorted = [...started, ...notStarted, ...ended]
 
   return (
     <Wrapper>
@@ -26,7 +70,7 @@ const EnrollmentDisplay = () => {
         My Learning
       </Typography>
       <PlainList itemSpacing={"16px"}>
-        {enrolledCourses?.map((course) => (
+        {sorted?.map((course) => (
           <li key={course.id}>
             <EnrollmentCard enrollment={course} />
           </li>
