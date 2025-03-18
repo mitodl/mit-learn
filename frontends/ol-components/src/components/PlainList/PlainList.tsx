@@ -8,7 +8,7 @@ type PlainListProps = {
   /**
    * Spacing between list items, in units of the theme's spacing.
    */
-  itemSpacing?: number
+  itemSpacing?: number | string
 }
 
 /**

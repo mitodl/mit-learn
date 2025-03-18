@@ -113,4 +113,15 @@ describe("EnrollmentCard", () => {
 
     expect(view.container).toHaveTextContent(/starts in 5 days/i)
   })
+
+  test.each([{ hasCompleted: true }, { hasCompleted: false }])(
+    "Shows completed icon if course is completed",
+    ({ hasCompleted }) => {
+      const enrollment = enrollmentData({ hasUserCompleted: hasCompleted })
+      renderWithProviders(<EnrollmentCard enrollment={enrollment} />)
+
+      const completedIcon = screen.queryByRole("img", { name: "Completed" })
+      expect(!!completedIcon).toBe(hasCompleted)
+    },
+  )
 })
