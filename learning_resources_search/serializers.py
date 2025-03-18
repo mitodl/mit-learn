@@ -754,11 +754,15 @@ class PercolateQuerySubscriptionRequestSerializer(
 
 def serialize_content_file_for_update(content_file_obj):
     """Serialize a content file for API request"""
-
+    parent = (
+        content_file_obj.run.learning_resource_id
+        if content_file_obj.run
+        else content_file_obj.learning_resource.id
+    )
     return {
         "resource_relations": {
             "name": CONTENT_FILE_TYPE,
-            "parent": content_file_obj.run.learning_resource_id,
+            "parent": parent,
         },
         **ContentFileSerializer(content_file_obj).data,
     }

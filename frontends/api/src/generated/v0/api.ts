@@ -570,19 +570,19 @@ export interface ContentFile {
    * @type {number}
    * @memberof ContentFile
    */
-  run_id: number
+  run_id?: number
   /**
    *
    * @type {string}
    * @memberof ContentFile
    */
-  run_title: string
+  run_title?: string
   /**
    *
    * @type {string}
    * @memberof ContentFile
    */
-  run_slug: string
+  run_slug?: string
   /**
    *
    * @type {Array<LearningResourceDepartment>}
@@ -594,13 +594,13 @@ export interface ContentFile {
    * @type {string}
    * @memberof ContentFile
    */
-  semester: string
+  semester?: string
   /**
    *
    * @type {number}
    * @memberof ContentFile
    */
-  year: number
+  year?: number
   /**
    *
    * @type {Array<LearningResourceTopic>}
@@ -726,7 +726,7 @@ export interface ContentFile {
    * @type {string}
    * @memberof ContentFile
    */
-  run_readable_id: string
+  run_readable_id?: string
   /**
    *
    * @type {string}
@@ -2420,6 +2420,12 @@ export interface LearningResourceMetadataDisplay {
    */
   price: string | null
   /**
+   * Extra Price Information
+   * @type {string}
+   * @memberof LearningResourceMetadataDisplay
+   */
+  extra_price_info: string | null
+  /**
    * Certificate
    * @type {string}
    * @memberof LearningResourceMetadataDisplay
@@ -2497,6 +2503,12 @@ export interface LearningResourceMetadataDisplay {
    * @memberof LearningResourceMetadataDisplay
    */
   as_taught_in: Array<string> | null
+  /**
+   * Duration
+   * @type {string}
+   * @memberof LearningResourceMetadataDisplay
+   */
+  duration: string | null
 }
 /**
  *

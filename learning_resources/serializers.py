@@ -10,7 +10,7 @@ import dateparser
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import F, Max
+from django.db.models import F, Max, Prefetch
 from drf_spectacular.utils import extend_schema_field
 from isodate import parse_duration
 from langchain_text_splitters import RecursiveJsonSplitter
@@ -599,6 +599,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             return serialized_resource["program"].get("course_count", 0)
         return None
 
+    @extend_schema_field({"type": "string"})
     def get_duration(self, serialized_resource):
         resource_type = serialized_resource.get("resource_type")
         if resource_type in ["video", "podcast_episode"]:
@@ -1133,56 +1134,100 @@ class ContentFileSerializer(serializers.ModelSerializer):
     Serializer class for course run ContentFiles
     """
 
-    run_id = serializers.IntegerField(
-        source="run.id",
-    )
-    run_readable_id = serializers.CharField(
-        source="run.run_id",
-    )
-    run_title = serializers.CharField(
-        source="run.title",
-    )
-    run_slug = serializers.CharField(
-        source="run.slug",
-    )
-    semester = serializers.CharField(
-        source="run.semester",
-    )
-    year = serializers.IntegerField(
-        source="run.year",
-    )
-    topics = LearningResourceTopicSerializer(
-        source="run.learning_resource.topics",
-        many=True,
-    )
-    resource_id = serializers.CharField(
-        source="run.learning_resource.id",
-    )
-    departments = LearningResourceDepartmentSerializer(
-        source="run.learning_resource.departments",
-        many=True,
-    )
-    resource_readable_id = serializers.CharField(
-        source="run.learning_resource.readable_id",
-    )
+    run_id = serializers.IntegerField(source="run.id", required=False)
+    run_readable_id = serializers.CharField(source="run.run_id", required=False)
+    run_title = serializers.CharField(source="run.title", required=False)
+    run_slug = serializers.CharField(source="run.slug", required=False)
+    semester = serializers.CharField(source="run.semester", required=False)
+    year = serializers.IntegerField(source="run.year", required=False)
+    topics = serializers.SerializerMethodField()
+    resource_id = serializers.SerializerMethodField()
+    departments = serializers.SerializerMethodField()
+    resource_readable_id = serializers.SerializerMethodField()
     course_number = serializers.SerializerMethodField()
     content_feature_type = LearningResourceContentTagField(source="content_tags")
-    offered_by = LearningResourceOfferorSerializer(
-        source="run.learning_resource.offered_by",
-    )
-    platform = LearningResourcePlatformSerializer(
-        source="run.learning_resource.platform",
-    )
+    offered_by = serializers.SerializerMethodField()
+    platform = serializers.SerializerMethodField()
+
+    def to_representation(self, instance):
+        # prefetch related run and learning resource
+        queryset = models.ContentFile.objects.prefetch_related(
+            "learning_resource__course",
+            "learning_resource__platform",
+            "run__learning_resource__course",
+            "run__learning_resource__platform",
+            "content_tags",
+            Prefetch(
+                "learning_resource__topics",
+                queryset=models.LearningResourceTopic.objects.for_serialization(),
+            ),
+            Prefetch(
+                "learning_resource__offered_by",
+                queryset=models.LearningResourceOfferor.objects.for_serialization(),
+            ),
+            Prefetch(
+                "learning_resource__departments",
+                queryset=models.LearningResourceDepartment.objects.for_serialization().select_related(
+                    "school"
+                ),
+            ),
+            Prefetch(
+                "run__learning_resource__topics",
+                queryset=models.LearningResourceTopic.objects.for_serialization(),
+            ),
+            Prefetch(
+                "run__learning_resource__offered_by",
+                queryset=models.LearningResourceOfferor.objects.for_serialization(),
+            ),
+            Prefetch(
+                "run__learning_resource__departments",
+                queryset=models.LearningResourceDepartment.objects.for_serialization().select_related(
+                    "school"
+                ),
+            ),
+        )
+        instance = queryset.get(pk=instance.pk)
+        return super().to_representation(instance)
+
+    def get_learning_resource(self, instance):
+        if instance.run:
+            return instance.run.learning_resource
+        return instance.learning_resource
+
+    @extend_schema_field(LearningResourcePlatformSerializer())
+    def get_platform(self, instance):
+        platform = self.get_learning_resource(instance).platform
+        return LearningResourcePlatformSerializer(platform).data
+
+    @extend_schema_field(LearningResourceOfferorSerializer())
+    def get_offered_by(self, instance):
+        offered_by = self.get_learning_resource(instance).offered_by
+        return LearningResourceOfferorSerializer(offered_by).data
+
+    @extend_schema_field({"type": "string"})
+    def get_resource_readable_id(self, instance):
+        return self.get_learning_resource(instance).readable_id
+
+    @extend_schema_field(LearningResourceDepartmentSerializer(many=True))
+    def get_departments(self, instance):
+        return LearningResourceDepartmentSerializer(
+            self.get_learning_resource(instance).departments, many=True
+        ).data
+
+    @extend_schema_field({"type": "string"})
+    def get_resource_id(self, instance):
+        return str(self.get_learning_resource(instance).id)
+
+    @extend_schema_field(LearningResourceTopicSerializer(many=True))
+    def get_topics(self, instance):
+        return LearningResourceTopicSerializer(
+            self.get_learning_resource(instance).topics, many=True
+        ).data
 
     def get_course_number(self, instance) -> list[str]:
         """Extract the course number(s) from the associated course"""
-        resource = None
-        if instance.run:
-            resource = instance.run.learning_resource
-        elif instance.learning_resource:
-            resource = instance.learning_resource
-
-        if resource and hasattr(resource, LearningResourceType.course.name):
+        resource = self.get_learning_resource(instance)
+        if hasattr(resource, LearningResourceType.course.name):
             return [coursenum["value"] for coursenum in resource.course.course_numbers]
         return []
 
