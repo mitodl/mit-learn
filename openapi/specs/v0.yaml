@@ -3084,6 +3084,8 @@ components:
                   type: string
               duration:
                 type: string
+              price:
+                type: string
               format:
                 type: array
                 items:

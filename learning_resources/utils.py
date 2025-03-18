@@ -607,8 +607,9 @@ def json_to_markdown(obj, indent=0):
     indent_str = " " * (indent * 2)
     if isinstance(obj, dict):
         for key, value in obj.items():
-            markdown += f"\n{indent_str}**{key.replace('_', ' ').title()}**\n\n"
-            markdown += json_to_markdown(value, indent + 1)
+            if value is not None:
+                markdown += f"\n{indent_str}**{key.replace('_', ' ').title()}**\n\n"
+                markdown += json_to_markdown(value, indent + 1)
     elif isinstance(obj, list):
         if all(
             isinstance(item, dict) for item in obj

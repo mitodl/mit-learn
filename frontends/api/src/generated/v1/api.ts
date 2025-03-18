@@ -2342,6 +2342,12 @@ export interface LearningResourceMetadataDisplayRunsInner {
   duration?: string
   /**
    *
+   * @type {string}
+   * @memberof LearningResourceMetadataDisplayRunsInner
+   */
+  price?: string
+  /**
+   *
    * @type {Array<string>}
    * @memberof LearningResourceMetadataDisplayRunsInner
    */
