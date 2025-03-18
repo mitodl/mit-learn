@@ -83,30 +83,12 @@ def test_get_request_existing_user_no_globalid(mocker, mock_login):
 
 
 @pytest.mark.django_db(transaction=True)
-def test_get_request_existing_user_with_globalid(mocker, mock_login):
-    """Test that a valid request doesn't change global_id of existing user with same email"""
+def test_get_request_existing_user_with_global_id_diff_email(mocker, mock_login):
+    """Test that a valid request updates email of user with same global_id"""
     close_old_connections()
-    user = UserFactory.create(email=apisix_user_info["email"], global_id="abc123")
-    old_username = user.username
-    mock_request = mocker.Mock(
-        META={
-            "HTTP_X_USERINFO": b64encode(json.dumps(apisix_user_info).encode()),
-        },
-        user=AnonymousUser(),
+    user = UserFactory.create(
+        email="old_email@test.edu", global_id=apisix_user_info["sub"]
     )
-    apisix_middleware = ApisixUserMiddleware(mocker.Mock())
-    apisix_middleware.process_request(mock_request)
-    user.refresh_from_db()
-    assert user.username == old_username
-    assert user.global_id == "abc123"
-    assert user.email == apisix_user_info["email"]
-
-
-@pytest.mark.django_db(transaction=True)
-def test_get_request_existing_user_with_email(mocker, mock_login):
-    """Test that a valid request doesn't change email of existing user with missing global_id"""
-    close_old_connections()
-    user = UserFactory.create(email=apisix_user_info["email"], global_id=None)
     mock_request = mocker.Mock(
         META={
             "HTTP_X_USERINFO": b64encode(json.dumps(apisix_user_info).encode()),
