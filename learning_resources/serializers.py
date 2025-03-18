@@ -717,6 +717,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
                     "start_date": {"type": "string"},
                     "instructors": {"type": "array", "items": {"type": "string"}},
                     "duration": {"type": "string"},
+                    "price": {"type": "string"},
                     "format": {"type": "array", "items": {"type": "string"}},
                 },
                 "required": ["code", "name"],
@@ -737,6 +738,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             )
             location = run.get("location") or "Online"
             duration = run.get("duration")
+            prices = run.get("prices", [])
+            if len(prices) > 0:
+                price = f"${prices[0]}"
             delivery_modes = [delivery["name"] for delivery in run.get("delivery", [])]
             instructors = [
                 instructor.get("full_name")
@@ -750,6 +754,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
                     "instructors": instructors,
                     "duration": duration,
                     "format": delivery_modes,
+                    "price": price,
                 }
             )
         return runs if len(runs) > 0 else None
