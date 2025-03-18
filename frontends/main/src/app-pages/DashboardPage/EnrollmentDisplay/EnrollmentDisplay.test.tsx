@@ -20,7 +20,7 @@ describe("EnrollmentDisplay", () => {
     const { mitxonlineCourseEnrollments } = setupApis()
     renderWithProviders(<EnrollmentDisplay />)
 
-    screen.getByRole("heading", { name: "Your Courses" })
+    screen.getByRole("heading", { name: "My Learning" })
 
     const cards = await screen.findAllByTestId("enrollment-card")
     expect(cards).toHaveLength(3)
