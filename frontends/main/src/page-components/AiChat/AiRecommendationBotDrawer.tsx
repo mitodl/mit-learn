@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useEffect, useState, useRef } from "react"
 import { styled, RoutedDrawer } from "ol-components"
 import { RiCloseLine } from "@remixicon/react"
 import { ActionButton } from "@mitodl/smoot-design"
@@ -30,6 +30,9 @@ const CloseButton = styled(ActionButton)(({ theme }) => ({
 }))
 
 const StyledAiChat = styled(AiChat)({
+  ".MitAiChat--root": {
+    height: "100%",
+  },
   ".MitAiChat--entryScreenContainer": {
     paddingTop: "152px",
   },
@@ -59,7 +62,8 @@ const STARTERS = [
 
 const DrawerContent: React.FC<{
   onClose?: () => void
-}> = ({ onClose }) => {
+  scrollElement: HTMLElement | null
+}> = ({ onClose, scrollElement }) => {
   return (
     <>
       <CloseButtonContainer>
@@ -77,6 +81,7 @@ const DrawerContent: React.FC<{
         conversationStarters={STARTERS}
         askTimTitle="to recommend a course"
         initialMessages={INITIAL_MESSAGES}
+        scrollElement={scrollElement}
         requestOpts={{
           apiUrl: process.env.NEXT_PUBLIC_LEARN_AI_RECOMMENDATION_ENDPOINT!,
           fetchOpts: {
@@ -96,6 +101,13 @@ const DrawerContent: React.FC<{
 
 const DRAWER_REQUIRED_PARAMS = [RECOMMENDER_QUERY_PARAM] as const
 const AiRecommendationBotDrawer = () => {
+  const paperRef = useRef<HTMLDivElement>(null)
+  const [scrollElement, setScrollElement] = useState<HTMLElement | null>(null)
+
+  useEffect(() => {
+    setScrollElement(paperRef.current)
+  }, [paperRef.current])
+
   return (
     <RoutedDrawer
       hideCloseButton
@@ -103,6 +115,7 @@ const AiRecommendationBotDrawer = () => {
       aria-label="What do you want to learn about?"
       anchor="right"
       PaperProps={{
+        ref: paperRef,
         sx: {
           minWidth: (theme) => ({
             minWidth: "900px",
@@ -114,7 +127,9 @@ const AiRecommendationBotDrawer = () => {
         },
       }}
     >
-      {({ closeDrawer }) => <DrawerContent onClose={closeDrawer} />}
+      {({ closeDrawer }) => (
+        <DrawerContent onClose={closeDrawer} scrollElement={scrollElement} />
+      )}
     </RoutedDrawer>
   )
 }
