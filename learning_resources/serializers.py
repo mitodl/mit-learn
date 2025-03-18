@@ -638,14 +638,14 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
                 f" ({department['school']['name']})" if department.get("school") else ""
             )
             department_vals.append(f"{department['name']}{school}")
-        return department_vals
+        return department_vals if len(department_vals) > 0 else None
 
     @extend_schema_field({"type": "string"})
     def get_platform(self, serialized_resource):
         return (
             serialized_resource["platform"].get("name")
             if serialized_resource.get("platform")
-            else ""
+            else None
         )
 
     @extend_schema_field({"type": "array", "items": {"type": "string"}})
@@ -662,7 +662,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         for run in serialized_resource.get("runs", []):
             if run.get("level"):
                 levels.extend(lvl["name"] for lvl in run["level"])
-        return list(set(levels))
+        return list(set(levels)) if len(levels) > 0 else None
 
     @extend_schema_field({"type": "array", "items": {"type": "string"}})
     def get_languages(self, serialized_resource):
@@ -670,7 +670,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         for run in serialized_resource.get("runs", []):
             if run.get("languages"):
                 languages.extend(run["languages"])
-        return list(set(languages))
+        return list(set(languages)) if len(languages) > 0 else None
 
     @extend_schema_field({"type": "string"})
     def get_offered_by(self, serialized_resource):
@@ -711,7 +711,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
     def get_runs(self, serialized_resource):
         runs = []
         if self.all_runs_are_identical(serialized_resource):
-            return runs
+            return None
         for run in serialized_resource.get("runs", []):
             start_date = run["start_date"]
             formatted_date = (
@@ -736,7 +736,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
                     "format": delivery_modes,
                 }
             )
-        return runs
+        return runs if len(runs) > 0 else None
 
     @extend_schema_field({"type": "array", "items": {"type": "string"}})
     def get_instructors(self, serialized_resource):
@@ -744,8 +744,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         for run in serialized_resource.get("runs", []):
             for instructor in run.get("instructors", []):
                 instructors.add(instructor["full_name"])
-
-        return list(instructors)
+        return list(instructors) if len(instructors) > 0 else None
 
     @extend_schema_field({"type": "string"})
     def get_certification(self, serialized_resource):
