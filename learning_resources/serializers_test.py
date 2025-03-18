@@ -801,7 +801,7 @@ def test_instructors_display():
         serialized_resource
     )
 
-    assert metadata_serializer.data["instructors"] == []
+    assert metadata_serializer.data["instructors"] is None
 
     instructors = LearningResourceInstructorFactory.create_batch(3)
     run = LearningResourceRunFactory.create(
