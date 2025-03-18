@@ -7,6 +7,7 @@ import logging
 from django.conf import settings
 from django.contrib.auth import get_user_model, login, logout
 from django.contrib.auth.middleware import RemoteUserMiddleware
+from django.db.models import Q
 
 from authentication.api import user_created_actions
 
@@ -79,15 +80,18 @@ def get_user_from_apisix_headers(request, decoded_headers, original_header):
     if not global_id:
         log.error("No global_id found in APISIX headers")
         return None
+    email = decoded_headers.get("email", "")
 
-    user, created = User.objects.update_or_create(
-        global_id=global_id,
+    user, created = User.objects.filter(
+        Q(global_id=global_id) | Q(global_id__isnull=True, email=email)
+    ).update_or_create(
         defaults={
+            "global_id": global_id,
+            "email": email,
             "username": decoded_headers.get("username", ""),
-            "email": decoded_headers.get("email", ""),
             "first_name": decoded_headers.get("first_name", ""),
             "last_name": decoded_headers.get("last_name", ""),
-        },
+        }
     )
 
     if created:
