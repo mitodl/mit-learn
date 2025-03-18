@@ -490,6 +490,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
     duration = serializers.SerializerMethodField(help_text="Duration", allow_null=True)
 
     def all_runs_are_identical(self, serialized_resource):
+        """Check if all runs are identical"""
         distinct_prices = set()
         distinct_delivery_methods = set()
         resource_delivery = [
@@ -526,6 +527,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         )
 
     def show_start_anytime(self, serialized_resource):
+        """
+        Determine if start is "anytime" for a program or course
+        """
         return (
             serialized_resource["resource_type"]
             in [LearningResourceType.program.name, LearningResourceType.course.name]
@@ -533,7 +537,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         )
 
     def runs_by_date(self, serialized_resource):
-        # Get runs sorted by date
+        """
+        Get runs sorted by date
+        """
         return sorted(
             serialized_resource.get("runs", []),
             key=lambda run: dateparser.parse(
@@ -542,7 +548,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         )
 
     def dates_for_runs(self, serialized_resource):
-        # Get a list of sorted and formatted run dates
+        """
+        Get a list of sorted and formatted run dates
+        """
         show_start_anytime = self.show_start_anytime(serialized_resource)
         runs_with_dates = []
         runs = self.runs_by_date(serialized_resource)
@@ -553,11 +561,16 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         return runs_with_dates
 
     def total_runs_with_dates(self, serialized_resource):
-        # Get the total number of runs with valid dates
+        """
+        Get the total number of runs with valid dates
+        """
         formatted = self.dates_for_runs(serialized_resource)
         return len(formatted)
 
     def format_run_date(self, run, as_taught_in):
+        """
+        Format the run date based on available data
+        """
         if as_taught_in:
             run_semester = run.get("semester", "")
             if run_semester:
@@ -581,6 +594,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         return None
 
     def should_show_format(self, serialized_resource):
+        """
+        Determine if the format should be displayed
+        """
         return (
             serialized_resource.get("resource_type")
             in [LearningResourceType.program.name, LearningResourceType.course.name]
@@ -590,6 +606,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
 
     @extend_schema_field({"type": "array", "items": {"type": "string"}})
     def get_as_taught_in(self, serialized_resource):
+        """
+        Get the as-taught-in value
+        """
         if self.total_runs_with_dates(
             serialized_resource
         ) > 0 and self.show_start_anytime(serialized_resource):
@@ -598,6 +617,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
 
     @extend_schema_field({"type": "number"})
     def get_number_of_courses(self, serialized_resource):
+        """
+        Return the number of courses in a program
+        """
         if (
             serialized_resource.get("resource_type")
             == LearningResourceType.program.name
@@ -607,6 +629,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
 
     @extend_schema_field({"type": "string"})
     def get_duration(self, serialized_resource):
+        """
+        Get the duration of a video or podcast episode
+        """
         resource_type = serialized_resource.get("resource_type")
         if resource_type in [
             LearningResourceType.video.name,
@@ -619,6 +644,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
 
     @extend_schema_field({"type": "string"})
     def get_location(self, serialized_resource):
+        """
+        Get the location of a course or program
+        """
         resource_delivery = [
             delivery["code"] for delivery in serialized_resource["delivery"]
         ]
@@ -632,6 +660,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
 
     @extend_schema_field({"type": "array", "items": {"type": "string"}})
     def get_departments(self, serialized_resource):
+        """
+        Get the departments for a course or program
+        """
         department_vals = []
         for department in serialized_resource.get("departments", []):
             school = (
@@ -642,6 +673,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
 
     @extend_schema_field({"type": "string"})
     def get_platform(self, serialized_resource):
+        """
+        Get the platform for a course or program
+        """
         return (
             serialized_resource["platform"].get("name")
             if serialized_resource.get("platform")
@@ -650,6 +684,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
 
     @extend_schema_field({"type": "array", "items": {"type": "string"}})
     def get_format_type(self, serialized_resource):
+        """
+        Get the format type for a course
+        """
         if self.should_show_format(serialized_resource):
             return [
                 delivery["name"] for delivery in serialized_resource.get("delivery", [])
@@ -658,6 +695,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
 
     @extend_schema_field({"type": "array", "items": {"type": "string"}})
     def get_levels(self, serialized_resource):
+        """
+        Get the levels for a course or program
+        """
         levels = []
         for run in serialized_resource.get("runs", []):
             if run.get("level"):
@@ -666,6 +706,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
 
     @extend_schema_field({"type": "array", "items": {"type": "string"}})
     def get_languages(self, serialized_resource):
+        """
+        Get the languages for a course
+        """
         languages = []
         for run in serialized_resource.get("runs", []):
             if run.get("languages"):
@@ -674,6 +717,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
 
     @extend_schema_field({"type": "string"})
     def get_offered_by(self, serialized_resource):
+        """
+        Get the offeror
+        """
         return (
             serialized_resource.get("offered_by").get("name")
             if serialized_resource.get("offered_by")
@@ -682,6 +728,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
 
     @extend_schema_field({"type": "array", "items": {"type": "string"}})
     def get_starts(self, serialized_resource):
+        """
+        Get the start date(s) for a course
+        """
         show_start_anytime = self.show_start_anytime(serialized_resource)
 
         runs_with_dates = self.total_runs_with_dates(serialized_resource)
@@ -709,6 +758,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         }
     )
     def get_runs(self, serialized_resource):
+        """
+        Get the runs for a course
+        """
         runs = []
         if self.all_runs_are_identical(serialized_resource):
             return None
@@ -740,6 +792,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
 
     @extend_schema_field({"type": "array", "items": {"type": "string"}})
     def get_instructors(self, serialized_resource):
+        """
+        Get a list of instriuctors for a course
+        """
         instructors = set()
         for run in serialized_resource.get("runs", []):
             for instructor in run.get("instructors", []):
@@ -748,6 +803,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
 
     @extend_schema_field({"type": "string"})
     def get_certification(self, serialized_resource):
+        """
+        Get the certification type for a course
+        """
         if serialized_resource.get(
             "certification_type"
         ) and not serialized_resource.get("free"):
@@ -763,6 +821,10 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
 
     @extend_schema_field({"type": "string"})
     def get_extra_price_info(self, serialized_resource):
+        """
+        Get the extra price information for a course
+        Example: "With Certificate: $100"
+        """
         if not self.all_runs_are_identical(serialized_resource):
             return None
         prices = serialized_resource.get("prices", [])
@@ -777,6 +839,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
 
     @extend_schema_field({"type": "string"})
     def get_price(self, serialized_resource):
+        """
+        Get the price of a course
+        """
         if not self.all_runs_are_identical(serialized_resource):
             return None
         prices = serialized_resource.get("prices", [])
@@ -786,9 +851,15 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
 
     @extend_schema_field({"type": "array", "items": {"type": "string"}})
     def get_topics(self, serialized_resource):
+        """
+        Get the topics for a course
+        """
         return [topic["name"] for topic in serialized_resource.get("topics", [])]
 
     def render_document(self):
+        """
+        Render the course information object
+        """
         data = self.data
         display_sections = dict(self.fields)
         rendered_data = {}
@@ -799,6 +870,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         return rendered_data
 
     def render_chunks(self):
+        """
+        Convert to markdown and chunk course info
+        """
         rendered_doc = self.render_document()
         """
         We cant use tiktoken for token size calculation so
