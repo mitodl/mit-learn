@@ -673,10 +673,10 @@ class LearningResourcesSearchResponseSerializer(SearchResponseSerializer):
                         ).data
                     )
 
-    def add_display_data(self, hits):
+    def add_display_info(self, hits):
         for hit in hits:
             if hit.get("_source"):
-                hit["_source"]["display_data"] = (
+                hit["_source"]["display_info"] = (
                     LearningResourceMetadataDisplaySerializer(hit["_source"]).data
                 )
 
@@ -706,7 +706,7 @@ class LearningResourcesSearchResponseSerializer(SearchResponseSerializer):
     def get_results(self, instance):
         hits = instance.get("hits", {}).get("hits", [])
         request = self.context.get("request")
-        self.add_display_data(hits)
+        self.add_display_info(hits)
         if request and request.user and request.user.is_authenticated:
             self.update_list_parents(hits, request.user)
             if (
