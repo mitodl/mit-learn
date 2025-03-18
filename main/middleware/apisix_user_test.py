@@ -77,7 +77,7 @@ def test_get_request_existing_user_no_globalid(mocker, mock_login):
     apisix_middleware.process_request(mock_request)
     mock_login.assert_called_once()
     user.refresh_from_db()
-    assert user.username == user.username
+    assert user.username == apisix_user_info["preferred_username"]
     assert user.email == apisix_user_info["email"]
     assert user.global_id == apisix_user_info["sub"]
 
@@ -87,6 +87,7 @@ def test_get_request_existing_user_with_globalid(mocker, mock_login):
     """Test that a valid request doesn't change global_id of existing user with same email"""
     close_old_connections()
     user = UserFactory.create(email=apisix_user_info["email"], global_id="abc123")
+    old_username = user.username
     mock_request = mocker.Mock(
         META={
             "HTTP_X_USERINFO": b64encode(json.dumps(apisix_user_info).encode()),
@@ -96,7 +97,7 @@ def test_get_request_existing_user_with_globalid(mocker, mock_login):
     apisix_middleware = ApisixUserMiddleware(mocker.Mock())
     apisix_middleware.process_request(mock_request)
     user.refresh_from_db()
-    assert user.username == user.username
+    assert user.username == old_username
     assert user.global_id == "abc123"
     assert user.email == apisix_user_info["email"]
 
@@ -115,7 +116,7 @@ def test_get_request_existing_user_with_email(mocker, mock_login):
     apisix_middleware = ApisixUserMiddleware(mocker.Mock())
     apisix_middleware.process_request(mock_request)
     user.refresh_from_db()
-    assert user.username == user.username
+    assert user.username == apisix_user_info["preferred_username"]
     assert user.global_id == apisix_user_info["sub"]
     assert user.email == apisix_user_info["email"]
 
