@@ -43,7 +43,7 @@ jobs:
           HEROKU_APP_NAME: mitopen-production-nextjs
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
           ORIGIN: https://learn.mit.edu
-          MITOL_API_BASE_URL: https://api.learn.mit.edu
+          MITOL_API_BASE_URL: ${{ vars.API_BASE_PROD }}
           SITE_NAME: MIT Learn
           SUPPORT_EMAIL: mitlearn-support@mit.edu
           EMBEDLY_KEY: ${{ secrets.EMBEDLY_KEY_PROD }}
