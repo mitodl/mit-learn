@@ -1045,7 +1045,7 @@ def test_learning_resources_search_response_serializer(
     settings.OPENSEARCH_MAX_SUGGEST_HITS = 10
     request = get_request_object(learning_resources_search_view.url)
 
-    response["results"][0]["display_data"] = LearningResourceMetadataDisplaySerializer(
+    response["results"][0]["display_info"] = LearningResourceMetadataDisplaySerializer(
         response["results"][0]
     ).data
     assert JSONRenderer().render(
@@ -1095,7 +1095,7 @@ def test_learning_resources_search_response_serializer_user_parents(  # noqa: PL
     response = deepcopy(response_test_response_2)
     response["results"][0]["id"] = course.id
     request = get_request_object(learning_resources_search_view.url)
-    response["results"][0]["display_data"] = LearningResourceMetadataDisplaySerializer(
+    response["results"][0]["display_info"] = LearningResourceMetadataDisplaySerializer(
         raw_data["hits"]["hits"][0]["_source"]
     ).data
     if is_authenticated:
