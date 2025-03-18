@@ -20,6 +20,7 @@ from rest_framework.exceptions import ValidationError
 from learning_resources import constants, models
 from learning_resources.constants import (
     LEARNING_MATERIAL_RESOURCE_CATEGORY,
+    Availability,
     CertificationType,
     Format,
     LearningResourceDelivery,
@@ -526,8 +527,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
 
     def show_start_anytime(self, serialized_resource):
         return (
-            serialized_resource["resource_type"] in ["program", "course"]
-            and serialized_resource.get("availability") == "anytime"
+            serialized_resource["resource_type"]
+            in [LearningResourceType.program.name, LearningResourceType.course.name]
+            and serialized_resource.get("availability") == Availability.anytime.name
         )
 
     def runs_by_date(self, serialized_resource):
@@ -580,7 +582,8 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
 
     def should_show_format(self, serialized_resource):
         return (
-            serialized_resource.get("resource_type") in ["program", "course"]
+            serialized_resource.get("resource_type")
+            in [LearningResourceType.program.name, LearningResourceType.course.name]
             and self.all_runs_are_identical(serialized_resource)
             and len(serialized_resource.get("delivery", [])) > 0
         )
@@ -595,14 +598,20 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
 
     @extend_schema_field({"type": "number"})
     def get_number_of_courses(self, serialized_resource):
-        if serialized_resource.get("resource_type") == "program":
+        if (
+            serialized_resource.get("resource_type")
+            == LearningResourceType.program.name
+        ):
             return serialized_resource["program"].get("course_count", 0)
         return None
 
     @extend_schema_field({"type": "string"})
     def get_duration(self, serialized_resource):
         resource_type = serialized_resource.get("resource_type")
-        if resource_type in ["video", "podcast_episode"]:
+        if resource_type in [
+            LearningResourceType.video.name,
+            LearningResourceType.podcast_episode.name,
+        ]:
             duration = serialized_resource[resource_type].get("duration")
             if duration:
                 return str(parse_duration(duration))
@@ -614,7 +623,8 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             delivery["code"] for delivery in serialized_resource["delivery"]
         ]
         has_in_person = (
-            "in_person" in resource_delivery or "hybrid" in resource_delivery
+            LearningResourceDelivery.in_person.name in resource_delivery
+            or LearningResourceDelivery.hybrid.name in resource_delivery
         )
         if self.should_show_format(serialized_resource) and has_in_person:
             return serialized_resource.get("location")
@@ -677,7 +687,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         runs_with_dates = self.total_runs_with_dates(serialized_resource)
         runs_identical = self.all_runs_are_identical(serialized_resource)
         if show_start_anytime:
-            return ["Anytime"]
+            return Availability.anytime.value
         if runs_with_dates > 0 and runs_identical and not show_start_anytime:
             return self.dates_for_runs(serialized_resource)
         return None
