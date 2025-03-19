@@ -114,7 +114,7 @@ def test_get_or_create_chat_history_cache(settings, user, chat_history):
 
     caches[settings.AI_CACHE].set(
         f"{user.email}_test_cache_key",
-        json.dumps([message.dict() for message in chat_history]),
+        json.dumps([message.model_dump() for message in chat_history]),
     )
     user_service = SearchAgent(
         "test agent",
@@ -157,7 +157,7 @@ def test_clear_chat_history(client, user, chat_history):
 
     caches[settings.AI_CACHE].set(
         f"{user.email}_test_cache_key",
-        json.dumps([message.dict() for message in chat_history]),
+        json.dumps([message.model_dump() for message in chat_history]),
     )
     search_agent = SearchAgent(
         "test agent",

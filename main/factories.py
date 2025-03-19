@@ -30,6 +30,8 @@ class UserFactory(DjangoModelFactory):
     scim_external_id = Faker("uuid4")
     scim_username = SelfAttribute("email")
 
+    global_id = SelfAttribute("scim_external_id")
+
     class Meta:
         model = settings.AUTH_USER_MODEL
         skip_postgeneration_save = True

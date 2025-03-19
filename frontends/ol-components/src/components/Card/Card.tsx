@@ -6,6 +6,7 @@ import React, {
   CSSProperties,
   useCallback,
   AriaAttributes,
+  ReactElement,
 } from "react"
 import styled from "@emotion/styled"
 import { theme } from "../ThemeProvider/ThemeProvider"
@@ -291,12 +292,13 @@ const Card: Card = ({
    */
   Children.forEach(children, (child) => {
     if (!isValidElement(child)) return
-    if (child.type === Content) content = child.props.children
-    else if (child.type === Image) image = child.props
-    else if (child.type === Info) info = child.props
-    else if (child.type === Title) title = child.props
-    else if (child.type === Footer) footer = child.props
-    else if (child.type === Actions) actions = child.props
+    const element = child as ReactElement<{ children?: ReactNode }>
+    if (element.type === Content) content = element.props.children
+    else if (element.type === Image) image = element.props as ImageProps
+    else if (element.type === Info) info = element.props as SlotProps
+    else if (element.type === Title) title = element.props as TitleProps
+    else if (element.type === Footer) footer = element.props as SlotProps
+    else if (element.type === Actions) actions = element.props as SlotProps
   })
 
   const handleHrefClick = useClickChildLink(onClick)

@@ -5,6 +5,7 @@ import logging
 from django.contrib.auth import get_user_model
 from django.db import transaction
 
+from authentication.hooks import get_plugin_manager
 from profiles import api as profile_api
 
 User = get_user_model()
@@ -37,3 +38,15 @@ def create_user(username, email, profile_data=None, user_extra=None):
         profile_api.ensure_profile(user, profile_data=profile_data)
 
     return user
+
+
+def user_created_actions(*, user, details, **kwargs):
+    """
+    Trigger plugins when a user is created
+    """
+    if kwargs.get("is_new"):
+        pm = get_plugin_manager()
+        hook = pm.hook
+        hook.user_created(user=user, user_data={"profile": details})
+    else:
+        profile_api.ensure_profile(user=user, profile_data=details)

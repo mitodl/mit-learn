@@ -260,6 +260,25 @@ def test_list_content_files_list_endpoint(client):
         assert result["id"] in content_file_ids
 
 
+def test_list_content_files_list_endpoint_with_no_runs(client):
+    """Test ContentFile list endpoint returns results even without associated runs"""
+    course = CourseFactory.create()
+    content_file_ids = [
+        cf.id
+        for cf in ContentFileFactory.create_batch(
+            5, learning_resource=course.learning_resource
+        )
+    ]
+
+    assert reverse("lr:v1:contentfiles_api-list") == "/api/v1/contentfiles/"
+
+    resp = client.get(f"{reverse('lr:v1:contentfiles_api-list')}")
+
+    assert resp.data.get("count") == 5
+    for result in resp.data.get("results"):
+        assert result["id"] in content_file_ids
+
+
 def test_list_content_files_list_filtered(client):
     """Test ContentFile list endpoint"""
     course_1 = CourseFactory.create()

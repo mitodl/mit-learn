@@ -4,8 +4,8 @@ import logging
 import celery
 from celery.exceptions import Ignore
 from django.conf import settings
+from django.db.models import Q
 
-from learning_resources.etl.constants import RESOURCE_FILE_ETL_SOURCES
 from learning_resources.models import (
     ContentFile,
     Course,
@@ -95,12 +95,12 @@ def start_embed_resources(self, indexes, skip_content_files, overwrite):
                     chunk_size=settings.QDRANT_CHUNK_SIZE,
                 )
             ]
+
             if not skip_content_files:
                 for course in (
                     LearningResource.objects.filter(
                         resource_type=COURSE_TYPE, published=True
                     )
-                    .filter(etl_source__in=RESOURCE_FILE_ETL_SOURCES)
                     .exclude(readable_id=blocklisted_ids)
                     .order_by("id")
                 ):
@@ -111,11 +111,14 @@ def start_embed_resources(self, indexes, skip_content_files, overwrite):
                         .order_by("-start_date")
                         .first()
                     )
-                    run_contentfiles = (
+                    contentfiles = (
                         ContentFile.objects.filter(
-                            run=run,
-                            published=True,
-                            run__published=True,
+                            Q(run=run, published=True, run__published=True)
+                            | Q(
+                                learning_resource=course,
+                                published=True,
+                                learning_resource__published=True,
+                            )
                         )
                         .order_by("id")
                         .values_list("id", flat=True)
@@ -124,7 +127,7 @@ def start_embed_resources(self, indexes, skip_content_files, overwrite):
                     index_tasks = index_tasks + [
                         generate_embeddings.si(ids, CONTENT_FILE_TYPE, overwrite)
                         for ids in chunks(
-                            run_contentfiles,
+                            contentfiles,
                             chunk_size=settings.QDRANT_CHUNK_SIZE,
                         )
                     ]
@@ -191,9 +194,7 @@ def embed_learning_resources_by_id(self, ids, skip_content_files, overwrite):
                 )
             ]
             if not skip_content_files and resource_type == COURSE_TYPE:
-                for course in embed_resources.filter(
-                    etl_source__in=RESOURCE_FILE_ETL_SOURCES
-                ).order_by("id"):
+                for course in embed_resources.order_by("id"):
                     run = (
                         course.next_run
                         if course.next_run
@@ -201,12 +202,19 @@ def embed_learning_resources_by_id(self, ids, skip_content_files, overwrite):
                         .order_by("-start_date")
                         .first()
                     )
-                    run_contentfiles = ContentFile.objects.filter(
-                        run=run,
-                        published=True,
-                        run__published=True,
-                    ).order_by("id")
-                    content_ids = run_contentfiles.values_list("id", flat=True)
+                    content_ids = (
+                        ContentFile.objects.filter(
+                            Q(run=run, published=True, run__published=True)
+                            | Q(
+                                learning_resource=course,
+                                published=True,
+                                learning_resource__published=True,
+                            )
+                        )
+                        .order_by("id")
+                        .values_list("id", flat=True)
+                    )
+
                     index_tasks = index_tasks + [
                         generate_embeddings.si(ids, CONTENT_FILE_TYPE, overwrite)
                         for ids in chunks(
@@ -268,10 +276,13 @@ def embed_new_content_files(self):
     log.info("Running content file embedding task")
     delta = datetime.timedelta(days=1)
     since = now_in_utc() - delta
-    new_content_files = ContentFile.objects.filter(
-        published=True,
-        created_on__gt=since,
-        run__published=True,
+    new_content_files = (
+        ContentFile.objects.filter(
+            published=True,
+            created_on__gt=since,
+        )
+        .exclude(run__published=False)
+        .exclude(learning_resource__published=False)
     )
 
     tasks = [

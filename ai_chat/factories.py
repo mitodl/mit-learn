@@ -2,8 +2,8 @@
 
 import factory
 from factory.fuzzy import FuzzyChoice
-from llama_cloud import ChatMessage
 from llama_index.core.base.llms.types import MessageRole
+from llama_index.core.llms import ChatMessage
 
 
 class ChatMessageFactory(factory.Factory):

@@ -1,9 +1,9 @@
 import React from "react"
 import { NoSSR } from "../ssr/NoSSR"
-import { formatDate } from "./format"
+import { formatDate } from "./utils"
 
 type LocalDateProps = {
-  date?: string | Date | null
+  date?: string | null
   /**
    * A Moment.js format string. See https://momentjs.com/docs/#/displaying/format/
    */

@@ -36,15 +36,6 @@ routes:
             Referrer-Policy: "origin"
     uri: "*"
   - id: 2
-    name: "logout-redirect"
-    desc: "Strip trailing slash from logout redirect."
-    priority: 10
-    upstream_id: 1
-    uri: "/logout/oidc/*"
-    plugins:
-      redirect:
-        uri: "/logout/oidc"
-  - id: 3
     name: "reqauth"
     desc: "Routes that require authentication."
     priority: 10
@@ -75,5 +66,5 @@ routes:
             Referrer-Policy: "origin"
     uris:
       - "/admin/login/*"
-      - "/login/*"
+      - "/login"
 #END

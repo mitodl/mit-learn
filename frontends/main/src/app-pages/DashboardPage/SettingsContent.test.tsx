@@ -1,5 +1,5 @@
 import React from "react"
-import { SettingsPage } from "./SettingsPage"
+import { SettingsContent } from "./SettingsContent"
 import { renderWithProviders, screen, within, user } from "@/test-utils"
 import { urls, setMockResponse, factories, makeRequest } from "api/test-utils"
 import type { LearningResourcesUserSubscriptionApiLearningResourcesUserSubscriptionCheckListRequest as CheckSubscriptionRequest } from "api"
@@ -44,7 +44,7 @@ describe("SettingsPage", () => {
       isSubscribed: true,
       subscriptionRequest: {},
     })
-    renderWithProviders(<SettingsPage />)
+    renderWithProviders(<SettingsContent />)
 
     const followList = await screen.findByTestId("follow-list")
     expect(followList.children.length).toBe(5)
@@ -56,7 +56,7 @@ describe("SettingsPage", () => {
       isSubscribed: true,
       subscriptionRequest: {},
     })
-    renderWithProviders(<SettingsPage />)
+    renderWithProviders(<SettingsContent />)
 
     const followList = await screen.findByTestId("follow-list")
     const unsubscribeLink = within(followList).getAllByText("Unfollow")[0]
@@ -77,7 +77,7 @@ describe("SettingsPage", () => {
       isSubscribed: true,
       subscriptionRequest: {},
     })
-    renderWithProviders(<SettingsPage />)
+    renderWithProviders(<SettingsContent />)
     const unsubscribeLink = await screen.findByTestId("unfollow-all")
     await user.click(unsubscribeLink)
 
@@ -93,7 +93,7 @@ describe("SettingsPage", () => {
       isSubscribed: false,
       subscriptionRequest: {},
     })
-    renderWithProviders(<SettingsPage />)
+    renderWithProviders(<SettingsContent />)
     const unfollowButton = screen.queryByText("Unfollow All")
     expect(unfollowButton).not.toBeInTheDocument()
   })

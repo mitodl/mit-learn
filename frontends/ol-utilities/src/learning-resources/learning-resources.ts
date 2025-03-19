@@ -2,7 +2,7 @@ import moment from "moment"
 import type { LearningResource, LearningResourceRun } from "api"
 import { DeliveryEnum, ResourceTypeEnum } from "api"
 import { capitalize } from "lodash"
-import { formatDate } from "../date/format"
+import { formatDate } from "../date/utils"
 
 const readableResourceTypes: Record<ResourceTypeEnum, string> = {
   [ResourceTypeEnum.Course]: "Course",
