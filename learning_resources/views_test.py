@@ -42,6 +42,7 @@ from learning_resources.models import (
 from learning_resources.serializers import (
     ContentFileSerializer,
     LearningResourceDepartmentSerializer,
+    LearningResourceDisplayInfoResponseSerializer,
     LearningResourceOfferorDetailSerializer,
     LearningResourcePlatformSerializer,
     LearningResourceTopicSerializer,
@@ -1217,3 +1218,45 @@ def test_vector_similar_resources_endpoint_only_returns_published(mocker, client
     )
     response_ids = [hit["id"] for hit in resp.json()]
     assert len(response_ids) == 1
+
+
+def test_learning_resources_display_info_list_view(mocker, client):
+    """Test learning_resources_display_info_list_view returns expected results"""
+    from learning_resources.models import LearningResource
+
+    resources = LearningResourceFactory.create_batch(5, published=True)
+
+    resource_ids = [learning_resource.id for learning_resource in resources]
+    response_resources = LearningResource.objects.for_search_serialization().filter(
+        id__in=resource_ids
+    )
+    response_hits = []
+    for lr in response_resources:
+        serialized_resource = LearningResourceDisplayInfoResponseSerializer(
+            serialize_learning_resource_for_update(lr)
+        ).data
+        response_hits.append(serialized_resource)
+
+    resp = client.get(reverse("lr:v1:learning_resource_display_info_api-list"))
+    results = resp.json()["results"]
+    titles = [r["title"] for r in results]
+    for hit in response_hits:
+        assert hit["title"] in titles
+
+
+def test_learning_resources_display_info_detail_view(mocker, client):
+    """Test learning_resources_display_info_detail_view returns expected result"""
+    from learning_resources.models import LearningResource
+
+    resource = LearningResource.objects.for_search_serialization().get(
+        id=LearningResourceFactory.create().id
+    )
+    serialized_resource = LearningResourceDisplayInfoResponseSerializer(
+        serialize_learning_resource_for_update(resource)
+    ).data
+
+    resp = client.get(
+        reverse("lr:v1:learning_resource_display_info_api-detail", args=[resource.id])
+    )
+
+    assert resp.json() == serialized_resource

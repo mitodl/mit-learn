@@ -66,6 +66,7 @@ from learning_resources.serializers import (
     LearningPathResourceSerializer,
     LearningResourceContentTagSerializer,
     LearningResourceDepartmentSerializer,
+    LearningResourceDisplayInfoResponseSerializer,
     LearningResourceOfferorDetailSerializer,
     LearningResourcePlatformSerializer,
     LearningResourceRelationshipSerializer,
@@ -1240,3 +1241,47 @@ class FeaturedViewSet(
 
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+
+
+@extend_schema_view(
+    list=extend_schema(
+        summary="List",
+        description="Get a paginated list of learning resource display info",
+        responses=LearningResourceDisplayInfoResponseSerializer(many=True),
+    ),
+    retrieve=extend_schema(
+        summary="Retrieve",
+        description="Retrieve display info for a learning resource.",
+        responses=LearningResourceDisplayInfoResponseSerializer(),
+    ),
+)
+class LearningResourceDisplayInfoViewSet(BaseLearningResourceViewSet):
+    """
+    Viewset for LearningResourceDisplayInfo
+    """
+
+    serializer_class = LearningResourceDisplayInfoResponseSerializer
+
+    @method_decorator(
+        cache_page_for_anonymous_users(
+            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+        )
+    )
+    def list(self, *_args, **_kwargs):
+        """Get paginated list of display info"""
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = LearningResourceSerializer(page, many=True)
+
+            return self.get_paginated_response(
+                self.get_serializer(serializer.data, many=True).data
+            )
+
+        serializer = LearningResourceSerializer(queryset, many=True)
+        return Response(self.get_serializer(serializer.data, many=True).data)
+
+    def retrieve(self, *_args, **_kwargs):
+        instance = self.get_object()
+        serializer = LearningResourceSerializer(instance)
+        return Response(self.get_serializer(serializer.data).data)

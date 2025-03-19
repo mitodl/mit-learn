@@ -860,7 +860,6 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
     position = serializers.IntegerField(read_only=True, allow_null=True)
     offered_by = LearningResourceOfferorSerializer(read_only=True, allow_null=True)
     platform = LearningResourcePlatformSerializer(read_only=True, allow_null=True)
-    display_info = LearningResourceMetadataDisplaySerializer(read_only=True)
     course_feature = LearningResourceContentTagField(
         source="content_tags", read_only=True, allow_null=True
     )
@@ -1466,3 +1465,13 @@ class SetUserListsRequestSerializer(BaseRelationshipRequestSerializer):
             msg = f"Invalid learning path ids: {missing}"
             raise ValidationError(msg)
         return userlist_ids
+
+
+class LearningResourceDisplayInfoResponseSerializer(
+    LearningResourceMetadataDisplaySerializer
+):
+    """
+    Serializer for the response of the display info endpoint
+    """
+
+    id = serializers.IntegerField()
