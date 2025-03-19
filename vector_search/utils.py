@@ -476,6 +476,7 @@ def vector_search(
             using=encoder.model_short_name(),
             query=encoder.embed_query(query_string),
             query_filter=search_filter,
+            search_params=models.SearchParams(exact=False, indexed_only=True),
             limit=limit,
             offset=offset,
         ).points
