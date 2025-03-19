@@ -9208,10 +9208,6 @@ components:
           - $ref: '#/components/schemas/LearningResourcePlatform'
           readOnly: true
           nullable: true
-        display_info:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourceMetadataDisplay'
-          readOnly: true
         course_feature:
           type: array
           items:
@@ -9434,7 +9430,6 @@ components:
       - course_feature
       - delivery
       - departments
-      - display_info
       - format
       - free
       - id
@@ -9767,10 +9762,6 @@ components:
           - $ref: '#/components/schemas/LearningResourcePlatform'
           readOnly: true
           nullable: true
-        display_info:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourceMetadataDisplay'
-          readOnly: true
         course_feature:
           type: array
           items:
@@ -9991,7 +9982,6 @@ components:
       - course_feature
       - delivery
       - departments
-      - display_info
       - format
       - free
       - id
@@ -10491,176 +10481,6 @@ components:
           type: string
           nullable: true
           maxLength: 256
-    LearningResourceMetadataDisplay:
-      type: object
-      description: Serializer to render course information as a text document
-      properties:
-        title:
-          type: string
-          readOnly: true
-          description: Title
-        description:
-          type: string
-          readOnly: true
-          description: Description
-        full_description:
-          type: string
-          readOnly: true
-          nullable: true
-          description: Full Description
-        url:
-          type: string
-          readOnly: true
-          description: Website
-        free:
-          type: boolean
-          readOnly: true
-          nullable: true
-          description: Free
-        topics:
-          type: array
-          items:
-            type: string
-          readOnly: true
-          description: Topics
-        price:
-          type: string
-          readOnly: true
-          nullable: true
-          description: Price
-        extra_price_info:
-          type: string
-          readOnly: true
-          nullable: true
-          description: Extra Price Information
-        certification:
-          type: string
-          readOnly: true
-          nullable: true
-          description: Certificate
-        instructors:
-          type: array
-          items:
-            type: string
-          readOnly: true
-          nullable: true
-          description: Instructors
-        runs:
-          type: array
-          items:
-            type: object
-            properties:
-              location:
-                type: string
-              start_date:
-                type: string
-              instructors:
-                type: array
-                items:
-                  type: string
-              duration:
-                type: string
-              price:
-                type: string
-              format:
-                type: array
-                items:
-                  type: string
-            required:
-            - code
-            - name
-          readOnly: true
-          nullable: true
-          description: Runs/Sessions
-        offered_by:
-          type: string
-          readOnly: true
-          nullable: true
-          description: Offered By
-        languages:
-          type: array
-          items:
-            type: string
-          readOnly: true
-          nullable: true
-          description: Languages
-        levels:
-          type: array
-          items:
-            type: string
-          readOnly: true
-          nullable: true
-          description: Levels
-        departments:
-          type: array
-          items:
-            type: string
-          readOnly: true
-          description: Departments
-        platform:
-          type: string
-          readOnly: true
-          nullable: true
-          description: Platform
-        number_of_courses:
-          type: number
-          readOnly: true
-          nullable: true
-          description: Number of Courses
-        location:
-          type: string
-          readOnly: true
-          nullable: true
-          description: Location
-        starts:
-          type: array
-          items:
-            type: string
-          readOnly: true
-          nullable: true
-          description: Starts
-        format_type:
-          type: array
-          items:
-            type: string
-          readOnly: true
-          nullable: true
-          description: Format
-        as_taught_in:
-          type: array
-          items:
-            type: string
-          readOnly: true
-          nullable: true
-          description: As Taught In
-        duration:
-          type: string
-          readOnly: true
-          nullable: true
-          description: Duration
-      required:
-      - as_taught_in
-      - certification
-      - departments
-      - description
-      - duration
-      - extra_price_info
-      - format_type
-      - free
-      - full_description
-      - instructors
-      - languages
-      - levels
-      - location
-      - number_of_courses
-      - offered_by
-      - platform
-      - price
-      - runs
-      - starts
-      - title
-      - topics
-      - url
     LearningResourceOfferor:
       type: object
       description: Serializer for LearningResourceOfferor with basic details
@@ -12454,10 +12274,6 @@ components:
           - $ref: '#/components/schemas/LearningResourcePlatform'
           readOnly: true
           nullable: true
-        display_info:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourceMetadataDisplay'
-          readOnly: true
         course_feature:
           type: array
           items:
@@ -12679,7 +12495,6 @@ components:
       - course_feature
       - delivery
       - departments
-      - display_info
       - format
       - free
       - id
@@ -12853,10 +12668,6 @@ components:
           - $ref: '#/components/schemas/LearningResourcePlatform'
           readOnly: true
           nullable: true
-        display_info:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourceMetadataDisplay'
-          readOnly: true
         course_feature:
           type: array
           items:
@@ -13078,7 +12889,6 @@ components:
       - course_feature
       - delivery
       - departments
-      - display_info
       - format
       - free
       - id
@@ -13390,10 +13200,6 @@ components:
           - $ref: '#/components/schemas/LearningResourcePlatform'
           readOnly: true
           nullable: true
-        display_info:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourceMetadataDisplay'
-          readOnly: true
         course_feature:
           type: array
           items:
@@ -13615,7 +13421,6 @@ components:
       - course_feature
       - delivery
       - departments
-      - display_info
       - format
       - free
       - id
@@ -14061,10 +13866,6 @@ components:
           - $ref: '#/components/schemas/LearningResourcePlatform'
           readOnly: true
           nullable: true
-        display_info:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourceMetadataDisplay'
-          readOnly: true
         course_feature:
           type: array
           items:
@@ -14286,7 +14087,6 @@ components:
       - course_feature
       - delivery
       - departments
-      - display_info
       - format
       - free
       - id
@@ -14446,10 +14246,6 @@ components:
           - $ref: '#/components/schemas/LearningResourcePlatform'
           readOnly: true
           nullable: true
-        display_info:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourceMetadataDisplay'
-          readOnly: true
         course_feature:
           type: array
           items:
@@ -14677,7 +14473,6 @@ components:
       - course_feature
       - delivery
       - departments
-      - display_info
       - format
       - free
       - id

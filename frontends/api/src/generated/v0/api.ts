@@ -944,12 +944,6 @@ export interface CourseResource {
   platform: LearningResourcePlatform | null
   /**
    *
-   * @type {LearningResourceMetadataDisplay}
-   * @memberof CourseResource
-   */
-  display_info: LearningResourceMetadataDisplay
-  /**
-   *
    * @type {Array<string>}
    * @memberof CourseResource
    */
@@ -1977,12 +1971,6 @@ export interface LearningPathResource {
   platform: LearningResourcePlatform | null
   /**
    *
-   * @type {LearningResourceMetadataDisplay}
-   * @memberof LearningPathResource
-   */
-  display_info: LearningResourceMetadataDisplay
-  /**
-   *
    * @type {Array<string>}
    * @memberof LearningPathResource
    */
@@ -2370,188 +2358,6 @@ export interface LearningResourceInstructor {
    * @memberof LearningResourceInstructor
    */
   full_name?: string | null
-}
-/**
- * Serializer to render course information as a text document
- * @export
- * @interface LearningResourceMetadataDisplay
- */
-export interface LearningResourceMetadataDisplay {
-  /**
-   * Title
-   * @type {string}
-   * @memberof LearningResourceMetadataDisplay
-   */
-  title: string
-  /**
-   * Description
-   * @type {string}
-   * @memberof LearningResourceMetadataDisplay
-   */
-  description: string
-  /**
-   * Full Description
-   * @type {string}
-   * @memberof LearningResourceMetadataDisplay
-   */
-  full_description: string | null
-  /**
-   * Website
-   * @type {string}
-   * @memberof LearningResourceMetadataDisplay
-   */
-  url: string
-  /**
-   * Free
-   * @type {boolean}
-   * @memberof LearningResourceMetadataDisplay
-   */
-  free: boolean | null
-  /**
-   * Topics
-   * @type {Array<string>}
-   * @memberof LearningResourceMetadataDisplay
-   */
-  topics: Array<string>
-  /**
-   * Price
-   * @type {string}
-   * @memberof LearningResourceMetadataDisplay
-   */
-  price: string | null
-  /**
-   * Extra Price Information
-   * @type {string}
-   * @memberof LearningResourceMetadataDisplay
-   */
-  extra_price_info: string | null
-  /**
-   * Certificate
-   * @type {string}
-   * @memberof LearningResourceMetadataDisplay
-   */
-  certification: string | null
-  /**
-   * Instructors
-   * @type {Array<string>}
-   * @memberof LearningResourceMetadataDisplay
-   */
-  instructors: Array<string> | null
-  /**
-   * Runs/Sessions
-   * @type {Array<LearningResourceMetadataDisplayRunsInner>}
-   * @memberof LearningResourceMetadataDisplay
-   */
-  runs: Array<LearningResourceMetadataDisplayRunsInner> | null
-  /**
-   * Offered By
-   * @type {string}
-   * @memberof LearningResourceMetadataDisplay
-   */
-  offered_by: string | null
-  /**
-   * Languages
-   * @type {Array<string>}
-   * @memberof LearningResourceMetadataDisplay
-   */
-  languages: Array<string> | null
-  /**
-   * Levels
-   * @type {Array<string>}
-   * @memberof LearningResourceMetadataDisplay
-   */
-  levels: Array<string> | null
-  /**
-   * Departments
-   * @type {Array<string>}
-   * @memberof LearningResourceMetadataDisplay
-   */
-  departments: Array<string>
-  /**
-   * Platform
-   * @type {string}
-   * @memberof LearningResourceMetadataDisplay
-   */
-  platform: string | null
-  /**
-   * Number of Courses
-   * @type {number}
-   * @memberof LearningResourceMetadataDisplay
-   */
-  number_of_courses: number | null
-  /**
-   * Location
-   * @type {string}
-   * @memberof LearningResourceMetadataDisplay
-   */
-  location: string | null
-  /**
-   * Starts
-   * @type {Array<string>}
-   * @memberof LearningResourceMetadataDisplay
-   */
-  starts: Array<string> | null
-  /**
-   * Format
-   * @type {Array<string>}
-   * @memberof LearningResourceMetadataDisplay
-   */
-  format_type: Array<string> | null
-  /**
-   * As Taught In
-   * @type {Array<string>}
-   * @memberof LearningResourceMetadataDisplay
-   */
-  as_taught_in: Array<string> | null
-  /**
-   * Duration
-   * @type {string}
-   * @memberof LearningResourceMetadataDisplay
-   */
-  duration: string | null
-}
-/**
- *
- * @export
- * @interface LearningResourceMetadataDisplayRunsInner
- */
-export interface LearningResourceMetadataDisplayRunsInner {
-  /**
-   *
-   * @type {string}
-   * @memberof LearningResourceMetadataDisplayRunsInner
-   */
-  location?: string
-  /**
-   *
-   * @type {string}
-   * @memberof LearningResourceMetadataDisplayRunsInner
-   */
-  start_date?: string
-  /**
-   *
-   * @type {Array<string>}
-   * @memberof LearningResourceMetadataDisplayRunsInner
-   */
-  instructors?: Array<string>
-  /**
-   *
-   * @type {string}
-   * @memberof LearningResourceMetadataDisplayRunsInner
-   */
-  duration?: string
-  /**
-   *
-   * @type {string}
-   * @memberof LearningResourceMetadataDisplayRunsInner
-   */
-  price?: string
-  /**
-   *
-   * @type {Array<string>}
-   * @memberof LearningResourceMetadataDisplayRunsInner
-   */
-  format?: Array<string>
 }
 /**
  * Serializer for LearningResourceOfferor with basic details
@@ -3865,12 +3671,6 @@ export interface PodcastEpisodeResource {
   platform: LearningResourcePlatform | null
   /**
    *
-   * @type {LearningResourceMetadataDisplay}
-   * @memberof PodcastEpisodeResource
-   */
-  display_info: LearningResourceMetadataDisplay
-  /**
-   *
    * @type {Array<string>}
    * @memberof PodcastEpisodeResource
    */
@@ -4164,12 +3964,6 @@ export interface PodcastResource {
    * @memberof PodcastResource
    */
   platform: LearningResourcePlatform | null
-  /**
-   *
-   * @type {LearningResourceMetadataDisplay}
-   * @memberof PodcastResource
-   */
-  display_info: LearningResourceMetadataDisplay
   /**
    *
    * @type {Array<string>}
@@ -4854,12 +4648,6 @@ export interface ProgramResource {
    * @memberof ProgramResource
    */
   platform: LearningResourcePlatform | null
-  /**
-   *
-   * @type {LearningResourceMetadataDisplay}
-   * @memberof ProgramResource
-   */
-  display_info: LearningResourceMetadataDisplay
   /**
    *
    * @type {Array<string>}
@@ -5838,12 +5626,6 @@ export interface VideoPlaylistResource {
   platform: LearningResourcePlatform | null
   /**
    *
-   * @type {LearningResourceMetadataDisplay}
-   * @memberof VideoPlaylistResource
-   */
-  display_info: LearningResourceMetadataDisplay
-  /**
-   *
    * @type {Array<string>}
    * @memberof VideoPlaylistResource
    */
@@ -6137,12 +5919,6 @@ export interface VideoResource {
    * @memberof VideoResource
    */
   platform: LearningResourcePlatform | null
-  /**
-   *
-   * @type {LearningResourceMetadataDisplay}
-   * @memberof VideoResource
-   */
-  display_info: LearningResourceMetadataDisplay
   /**
    *
    * @type {Array<string>}
