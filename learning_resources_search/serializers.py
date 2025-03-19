@@ -36,7 +36,6 @@ from learning_resources.models import (
 from learning_resources.serializers import (
     ContentFileSerializer,
     CourseNumberSerializer,
-    LearningResourceMetadataDisplaySerializer,
     LearningResourceSerializer,
     MicroLearningPathRelationshipSerializer,
     MicroUserListRelationshipSerializer,
@@ -673,13 +672,6 @@ class LearningResourcesSearchResponseSerializer(SearchResponseSerializer):
                         ).data
                     )
 
-    def add_display_info(self, hits):
-        for hit in hits:
-            if hit.get("_source"):
-                hit["_source"]["display_info"] = (
-                    LearningResourceMetadataDisplaySerializer(hit["_source"]).data
-                )
-
     def update_list_parents(self, hits, user):
         """Fill in user_list_parents for users"""
         user_list_parents_dict = {}
@@ -706,7 +698,6 @@ class LearningResourcesSearchResponseSerializer(SearchResponseSerializer):
     def get_results(self, instance):
         hits = instance.get("hits", {}).get("hits", [])
         request = self.context.get("request")
-        self.add_display_info(hits)
         if request and request.user and request.user.is_authenticated:
             self.update_list_parents(hits, request.user)
             if (
