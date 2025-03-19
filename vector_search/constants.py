@@ -68,7 +68,7 @@ QDRANT_CONTENT_FILE_INDEXES = {
     "published": models.PayloadSchemaType.BOOL,
     "content_feature_type": models.PayloadSchemaType.KEYWORD,
     "file_extension": models.PayloadSchemaType.KEYWORD,
-    "run_readable_id": models.PayloadSchemaType.INTEGER,
+    "run_readable_id": models.PayloadSchemaType.KEYWORD,
     "resource_readable_id": models.PayloadSchemaType.KEYWORD,
     "run_title": models.PayloadSchemaType.KEYWORD,
     "edx_module_id": models.PayloadSchemaType.KEYWORD,
