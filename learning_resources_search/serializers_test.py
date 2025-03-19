@@ -1045,9 +1045,6 @@ def test_learning_resources_search_response_serializer(
     settings.OPENSEARCH_MAX_SUGGEST_HITS = 10
     request = get_request_object(learning_resources_search_view.url)
 
-    response["results"][0]["display_info"] = LearningResourceMetadataDisplaySerializer(
-        response["results"][0]
-    ).data
     assert JSONRenderer().render(
         LearningResourcesSearchResponseSerializer(
             raw_data, context={"request": request}
