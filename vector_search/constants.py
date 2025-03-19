@@ -41,7 +41,7 @@ QDRANT_RESOURCE_PARAM_MAP = {
 
 
 QDRANT_LEARNING_RESOURCE_INDEXES = {
-    "readable_id": models.PayloadSchemaType.INTEGER,
+    "readable_id": models.PayloadSchemaType.KEYWORD,
     "resource_type": models.PayloadSchemaType.KEYWORD,
     "certification": models.PayloadSchemaType.KEYWORD,
     "certification_type.code": models.PayloadSchemaType.KEYWORD,
