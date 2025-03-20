@@ -9,6 +9,7 @@ from qdrant_client import QdrantClient, models
 from learning_resources.models import ContentFile, LearningResource
 from learning_resources.serializers import (
     ContentFileSerializer,
+    LearningResourceMetadataDisplaySerializer,
     LearningResourceSerializer,
 )
 from learning_resources_search.constants import CONTENT_FILE_TYPE
@@ -25,7 +26,6 @@ from vector_search.constants import (
     RESOURCES_COLLECTION_NAME,
 )
 from vector_search.encoders.utils import dense_encoder
-from vector_search.serializers import LearningResourceMetadataDisplaySerializer
 
 logger = logging.getLogger(__name__)
 
