@@ -34,7 +34,6 @@ from learning_resources.factories import (
 )
 from learning_resources.models import LearningResource
 from learning_resources.serializers import (
-    LearningResourceMetadataDisplaySerializer,
     LearningResourceSerializer,
     MicroLearningPathRelationshipSerializer,
     MicroUserListRelationshipSerializer,
@@ -1092,9 +1091,6 @@ def test_learning_resources_search_response_serializer_user_parents(  # noqa: PL
     response = deepcopy(response_test_response_2)
     response["results"][0]["id"] = course.id
     request = get_request_object(learning_resources_search_view.url)
-    response["results"][0]["display_info"] = LearningResourceMetadataDisplaySerializer(
-        raw_data["hits"]["hits"][0]["_source"]
-    ).data
     if is_authenticated:
         request.user = user
         if in_path and is_admin:
