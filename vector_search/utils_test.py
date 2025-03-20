@@ -74,8 +74,9 @@ def test_vector_point_id_used_for_embed(mocker, content_type):
         assert sorted(
             [p.id for p in mock_qdrant.upload_points.mock_calls[0].kwargs["points"]]
         ) == sorted(point_ids)
+        # TODO: Pass "[resource.id for resource in resources]" instead of [] when we want the scheduled content file summarization  # noqa: FIX002, TD002, TD003
         summarize_content_files_by_ids_mock.assert_called_once_with(
-            [resource.id for resource in resources],
+            [],
             True,  # noqa: FBT003
         )
 
@@ -119,8 +120,9 @@ def test_embed_learning_resources_no_overwrite(mocker, content_type):
         assert len(list(mock_qdrant.upload_points.mock_calls[0].kwargs["points"])) == 2
     else:
         assert len(list(mock_qdrant.upload_points.mock_calls[0].kwargs["points"])) == 3
+        # TODO: Pass "[resource.id for resource in resources]" instead of [] when we want the scheduled content file summarization  # noqa: FIX002, TD002, TD003
         summarize_content_files_by_ids_mock.assert_called_once_with(
-            [resource.id for resource in resources],
+            [],
             False,  # noqa: FBT003
         )
 

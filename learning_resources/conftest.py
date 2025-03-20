@@ -13,6 +13,7 @@ from learning_resources.factories import (
     LearningResourceDepartmentFactory,
     LearningResourceOfferorFactory,
     LearningResourcePlatformFactory,
+    LearningResourceRunFactory,
 )
 
 TEST_PREFIX = "PROD/9/9.15/Fall_2007/9-15-biochemistry-and-pharmacology-of-synaptic-transmission-fall-2007/"  # noqa: E501
@@ -161,12 +162,15 @@ def summarizer_configuration():
 @pytest.fixture
 def processable_content_files(summarizer_configuration):
     """Create unprocessable content files"""
+    learning_resource_run = LearningResourceRunFactory.create(
+        learning_resource__platform=summarizer_configuration.platform
+    )
     return ContentFileFactory.create_batch(
         3,
         content="This is a test content",
         summary="",
         flashcards=[],
-        run__learning_resource__platform=summarizer_configuration.platform,
+        run=learning_resource_run,
         file_extension=summarizer_configuration.allowed_extensions[0],
         content_type=summarizer_configuration.allowed_content_types[0],
     )

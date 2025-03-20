@@ -10,6 +10,7 @@ from learning_resources.factories import (
     ContentFileFactory,
     ContentSummarizerConfigurationFactory,
     LearningResourceFactory,
+    LearningResourceRunFactory,
 )
 from learning_resources.models import ContentFile
 
@@ -103,12 +104,14 @@ def test_get_unprocessed_content_file_ids(  # noqa: PLR0913
         is_active=config_is_active,
         llm_model="test",
     )
-
+    learning_resource_run = LearningResourceRunFactory.create(
+        learning_resource__platform=summarizer_config.platform
+    )
     content_file = ContentFileFactory.create(
         content=content,
         file_extension=content_extension,
         content_type=content_type,
-        run__learning_resource__platform=summarizer_config.platform,
+        run=learning_resource_run,
     )
     unprocessed_file_ids = summarizer.get_unprocessed_content_file_ids(overwrite=False)
     if expected_count > 0:
@@ -217,12 +220,14 @@ def test_get_unprocessed_content_files_with_platform_and_config(
             llm_model="test",
             platform__code=config_platform_code.name,
         )
-
+    learning_resource_run = LearningResourceRunFactory.create(
+        learning_resource__platform__code=content_file_platform_code.name
+    )
     ContentFileFactory.create(
         content="Test content",
         file_extension=allowed_extensions[0],
         content_type=allowed_types[0],
-        run__learning_resource__platform__code=content_file_platform_code.name,
+        run=learning_resource_run,
     )
 
     unprocessed_file_ids = summarizer.get_unprocessed_content_file_ids(overwrite=False)
@@ -304,8 +309,6 @@ def test_process_single_file_calls_llm_summary(
             {
                 "question": "Generated Question",
                 "answer": "Generated Answer",
-                "explain": "Generated Explanation",
-                "timestamp": 0,
             }
         ]
     }
