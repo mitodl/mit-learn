@@ -371,7 +371,9 @@ def embed_learning_resources(ids, resource_type, overwrite):
         _embed_course_metadata_as_contentfile(serialized_resources)
     else:
         # Process content files summaries/flashcards if applicable before serialization
-        ContentSummarizer().summarize_content_files_by_ids(ids, overwrite)
+        # TODO: Pass actual Ids when we want scheduled content file summarization  # noqa: FIX002, TD002, TD003 E501
+
+        ContentSummarizer().summarize_content_files_by_ids([], overwrite)
 
         serialized_resources = list(serialize_bulk_content_files(ids))
         collection_name = CONTENT_FILES_COLLECTION_NAME
