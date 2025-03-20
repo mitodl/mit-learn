@@ -895,3 +895,16 @@ class VideoPlaylistFactory(DjangoModelFactory):
     class Meta:
         model = models.VideoPlaylist
         skip_postgeneration_save = True
+
+
+class ContentSummarizerConfigurationFactory(DjangoModelFactory):
+    """Factory for ContentSummarizerConfiguration"""
+
+    platform = factory.SubFactory(LearningResourcePlatformFactory)
+    llm_model = factory.Faker("word")
+    allowed_content_types = factory.List([constants.CONTENT_TYPE_FILE])
+    allowed_extensions = factory.List([".srt"])
+
+    class Meta:
+        model = models.ContentSummarizerConfiguration
+        django_get_or_create = ("platform", "llm_model")

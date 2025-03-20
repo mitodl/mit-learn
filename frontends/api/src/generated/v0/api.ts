@@ -733,6 +733,18 @@ export interface ContentFile {
    * @memberof ContentFile
    */
   edx_module_id?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  summary?: string
+  /**
+   *
+   * @type {any}
+   * @memberof ContentFile
+   */
+  flashcards?: any
 }
 
 /**
