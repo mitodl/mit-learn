@@ -586,6 +586,8 @@ def test_content_file_serializer(settings, expected_types, has_channels):
                 [tag.name for tag in content_file.content_tags.all()]
             ),
             "edx_module_id": content_file.edx_module_id,
+            "summary": content_file.summary,
+            "flashcards": content_file.flashcards,
         },
     )
 

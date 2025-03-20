@@ -19,6 +19,8 @@ QDRANT_CONTENT_FILE_PARAM_MAP = {
     "description": "description",
     "url": "url",
     "file_type": "file_type",
+    "summary": "summary",
+    "flashcards": "flashcards",
 }
 
 QDRANT_RESOURCE_PARAM_MAP = {

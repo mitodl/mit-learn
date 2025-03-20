@@ -1878,6 +1878,9 @@ components:
           type: string
           nullable: true
           maxLength: 1024
+        summary:
+          type: string
+        flashcards: {}
       required:
       - content_feature_type
       - course_number
