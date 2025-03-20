@@ -1,10 +1,13 @@
 """learning_resources data loaders"""
 
 import logging
+from functools import cache
 
 import requests
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 
 from learning_resources.constants import (
     LearningResourceDelivery,
@@ -757,12 +760,22 @@ def calculate_completeness(
     return new_score
 
 
+@cache
+def _get_web_driver():
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    service = webdriver.ChromeService(executable_path=r"/usr/bin/chromedriver")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-gpu")
+    return webdriver.Chrome(service=service, options=chrome_options)
+
+
 def _fetch_page(url):
     if url:
         try:
-            response = requests.get(url, timeout=10)
-            if response.ok:
-                return response.text
+            driver = _get_web_driver()
+            driver.get(url)
+            return driver.execute_script("return document.body.innerHTML")
         except requests.exceptions.RequestException:
             logging.exception("Error fetching page from %s", url)
     return None
