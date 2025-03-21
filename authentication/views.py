@@ -62,7 +62,7 @@ class NextLogoutView(View):
         **kwargs,  # noqa: ARG002
     ):
         """
-        GET endpoint for logging a user out.
+        GET endpoint for setting a next URL in the redis cache before logging out.
         """
         if request.GET.get("next", None) and request.user.is_authenticated:
             caches["redis"].set(
@@ -85,7 +85,7 @@ class CustomLogoutView(View):
         **kwargs,  # noqa: ARG002
     ):
         """
-        GET endpoint for logging a user out.
+        GET endpoint reached after logging a user out from Keycloak
         """
         user = getattr(request, "user", None)
         if user and user.is_authenticated:
@@ -100,7 +100,7 @@ class CustomLogoutView(View):
 
 class CustomLoginView(View):
     """
-    Log out the user from django
+    Redirect the user after login.
     """
 
     def get(
