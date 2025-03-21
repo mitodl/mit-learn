@@ -49,7 +49,6 @@ def next_cache_key(username):
     """
     return f"{username}_next_logout"
 
-
 class CustomLogoutView(View):
     """
     Log out the user from django
@@ -62,7 +61,7 @@ class CustomLogoutView(View):
         **kwargs,  # noqa: ARG002
     ):
         """
-        GET endpoint for logging a user out.
+        GET endpoint reached after logging a user out from Keycloak
         """
         user = getattr(request, "user", None)
         # Temporarily cache the next parameter URL if present
