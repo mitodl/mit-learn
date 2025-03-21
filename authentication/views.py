@@ -6,6 +6,7 @@ from urllib.parse import urljoin
 
 from django.contrib.auth import logout
 from django.core.cache import caches
+from django.http import HttpRequest
 from django.shortcuts import redirect
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views import View
@@ -15,12 +16,12 @@ from main import settings
 log = logging.getLogger(__name__)
 
 
-def get_redirect_url(request):
+def get_redirect_url(request: HttpRequest) -> str:
     """
     Get the redirect URL from the request.
 
     Args:
-        request: Django request object
+        request(HttpRequest): Django request object
 
     Returns:
         str: Redirect URL
@@ -36,12 +37,15 @@ def get_redirect_url(request):
     )
 
 
-def next_cache_key(username):
+def next_cache_key(username: str) -> str:
     """
-    Get the cache key for the next URL for a user.
+    Return the cache key for the next URL for a user.
 
     Args:
-        request: Django request object
+        username: The User.username value
+
+    Returns:
+        str: User-specific cache key
     """
     return f"{username}_next_logout"
 
@@ -86,10 +90,12 @@ class CustomLogoutView(View):
         user = getattr(request, "user", None)
         if user and user.is_authenticated:
             logout(request)
-        return redirect(
-            caches["redis"].get(next_cache_key(user.username), None)
-            or settings.LOGOUT_REDIRECT_URL
-        )
+        try:
+            next_url = caches["redis"].get(next_cache_key(user.username), None)
+        except Exception as e:  # noqa: BLE001
+            log.debug("The next url key could not be retrieved: %s", e)
+            next_url = None
+        return redirect(next_url or settings.LOGOUT_REDIRECT_URL)
 
 
 class CustomLoginView(View):

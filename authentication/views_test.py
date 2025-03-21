@@ -33,7 +33,7 @@ def test_custom_login(mocker, next_url, allowed):
 @pytest.mark.parametrize("is_authenticated", [True, False])
 @pytest.mark.parametrize("has_next", [True, False])
 def test_next_logout(mocker, client, user, is_authenticated, has_next):
-    """Test NextLogoutView"""
+    """NextLogoutView should set a redis cache key with the next URL"""
     next_url = "https://ocw.mit.edu"
     mock_request = mocker.MagicMock(GET={"next": next_url if has_next else None})
     if is_authenticated:
@@ -51,7 +51,7 @@ def test_next_logout(mocker, client, user, is_authenticated, has_next):
 @pytest.mark.parametrize("is_authenticated", [True, False])
 @pytest.mark.parametrize("has_next", [True, False])
 def test_custom_logout_view(mocker, client, user, is_authenticated, has_next):
-    """Test CustomLogoutView"""
+    """CustomLogoutView should redirect to the next URL if it exists"""
     next_url = "https://ocw.mit.edu"
     if has_next:
         caches["redis"].set(next_cache_key(user.username), next_url, timeout=30)
@@ -61,3 +61,16 @@ def test_custom_logout_view(mocker, client, user, is_authenticated, has_next):
         client.force_login(user)
     resp = client.get("/logout/", request=mock_request)
     assert resp.url == (next_url if (has_next and is_authenticated) else "/app")
+
+
+def test_custom_logout_view_missing_key(settings, mocker, client, user):
+    """The CustomLogoutView should handle a cache error"""
+    mock_log = mocker.patch("authentication.views.log.debug")
+    settings.CACHES["redis"] = {
+        "BACKEND": "django.core.cache.backends.FakeBackEnd",
+    }
+    mock_request = mocker.MagicMock(user=user)
+    client.force_login(user)
+    resp = client.get("/logout/", request=mock_request)
+    assert resp.url == "/app"
+    assert mock_log.call_count == 1
