@@ -4,6 +4,7 @@ import json
 from base64 import b64encode
 
 import pytest
+from django.conf import settings
 
 from authentication.views import get_redirect_url
 
@@ -45,7 +46,7 @@ def test_logout(mocker, next_url, client, user, has_apisix_header):
         HTTP_X_USERINFO=header_str if has_apisix_header else None,
     )
     if has_apisix_header:
-        assert response.url == "/logout/oidc"
+        assert response.url == f"{settings.MITOL_API_BASE_URL.rstrip('/')}/logout/oidc"
     else:
         assert response.url == (next_url if next_url else "/app")
     mock_logout.assert_called_once()
