@@ -54,7 +54,8 @@ class CustomLogoutView(View):
         if request.META.get(ApisixUserMiddleware.header):
             # Still logged in via Apisix/Keycloak, so log out there as well
             return redirect(settings.OIDC_LOGOUT_URL)
-        return redirect(get_redirect_url(request))
+        else:
+            return redirect(get_redirect_url(request))
 
 
 class CustomLoginView(View):
