@@ -1,6 +1,31 @@
 Release Notes
 =============
 
+Version 0.31.0
+--------------
+
+- Log out user if no apisix (#2149)
+- fix(deps): update dependency litellm to v1.63.14 (#2147)
+- chore(deps): update dependency node to v22 (#2133)
+- fix(deps): update dependency ipython to v9 (#2134)
+- Consolidate learning resource display logic into the backend (#2139)
+- global_id migrations based on scim id (#2141)
+- Updated github workflows to use parameterized BASE_URL provided to gh by pulumi code. (#2140)
+- Fix contentfile embeddings (#2135)
+- fix(deps): update dependency ruff to v0.11.0 (#2130)
+- fix(deps): update dependency litellm to v1.63.11 (#2128)
+- fix(deps): update dependency onnxruntime to v1.21.0 (#2129)
+- Remove comma from ci files (#2126)
+- Remove social auth login/logout, apisix middleware should handle both (#2119)
+- chore(deps): update thollander/actions-comment-pull-request action to v3 (#2102)
+- fix(deps): update dependency @mui/lab to v6.0.0-beta.30 (#2095)
+- [pre-commit.ci] pre-commit autoupdate (#2039)
+- Show mitxonline enrollments in dashboard (#2122)
+- Chatbot UI issues (#2110)
+- Store (and embed) marketing page info as a contentfile (#2120)
+- chore(deps): update react monorepo to v19 (major) (#2101)
+- chore(deps): update yarn to v4.7.0 (#2099)
+
 Version 0.30.9 (Released March 13, 2025)
 --------------
 
