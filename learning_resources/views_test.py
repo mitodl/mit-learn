@@ -1237,7 +1237,9 @@ def test_learning_resources_display_info_list_view(mocker, client):
         ).data
         response_hits.append(serialized_resource)
 
-    resp = client.get(reverse("lr:v1:learning_resource_display_info_api-list"))
+    resp = client.get(
+        reverse("lr:v1:learning_resource_display_info_api-list"), kwargs={"limit": 100}
+    )
     results = resp.json()["results"]
     titles = [r["title"] for r in results]
     for hit in response_hits:
