@@ -78,6 +78,7 @@ describe("EnrollmentCard", () => {
   test("Upgrade banner shows correct price and deadline", () => {
     const certificateUpgradePrice = faker.commerce.price()
     const certificateUpgradeDeadline = moment()
+      .startOf("day")
       .add(5, "days")
       .add(3, "hours")
       .toISOString()
@@ -100,7 +101,11 @@ describe("EnrollmentCard", () => {
   })
 
   test("Shows number of days until course starts", () => {
-    const startDate = moment().add(5, "days").add(3, "hours").toISOString()
+    const startDate = moment()
+      .startOf("day")
+      .add(5, "days")
+      .add(3, "hours")
+      .toISOString()
     const enrollment = enrollmentData({ startDate })
     const { view } = renderWithProviders(
       <EnrollmentCard enrollment={enrollment} />,
