@@ -1224,7 +1224,10 @@ def test_learning_resources_display_info_list_view(mocker, client):
     """Test learning_resources_display_info_list_view returns expected results"""
     from learning_resources.models import LearningResource
 
-    resources = LearningResourceFactory.create_batch(5, published=True)
+    LearningResource.objects.all().delete()
+    resources = LearningResourceFactory.create_batch(
+        5, published=True, title="test_learning_resources_display_info_list_view"
+    )
 
     resource_ids = [learning_resource.id for learning_resource in resources]
     response_resources = LearningResource.objects.for_search_serialization().filter(
@@ -1238,7 +1241,8 @@ def test_learning_resources_display_info_list_view(mocker, client):
         response_hits.append(serialized_resource)
 
     resp = client.get(
-        reverse("lr:v1:learning_resource_display_info_api-list"), {"limit": 100}
+        reverse("lr:v1:learning_resource_display_info_api-list"),
+        {"title": "test_learning_resources_display_info_list_view"},
     )
     results = resp.json()["results"]
     titles = [r["title"] for r in results]
