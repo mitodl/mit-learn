@@ -164,4 +164,11 @@ class ApisixUserMiddleware(RemoteUserMiddleware):
                 apisix_user,
                 backend="django.contrib.auth.backends.ModelBackend",
             )
+
+        if not apisix_user and request.user.is_authenticated:
+            # If we didn't get a user from APISIX, but the user is still
+            # authenticated, log them out.
+            log.debug("Forcing user logout because no APISIX user was found")
+            logout(request)
+
         return self.get_response(request)

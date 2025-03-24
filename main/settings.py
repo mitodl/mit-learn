@@ -221,6 +221,13 @@ LOGIN_URL = "/login"
 LOGIN_ERROR_URL = "/login"
 LOGOUT_URL = "/logout"
 LOGOUT_REDIRECT_URL = "/app"
+MITOL_API_BASE_URL = get_string("MITOL_API_BASE_URL", "")
+OIDC_LOGOUT_URL = get_string(
+    # urljoin might lead to wrong outputs with url rewrites like
+    # https://api.learn.mit.edu/learn/, so using rstrip('/') instead.
+    "OIDC_LOGOUT_URL",
+    f"{MITOL_API_BASE_URL.rstrip('/')}/logout/oidc",
+)
 
 MITOL_TOS_URL = get_string(
     "MITOL_TOS_URL", urljoin(APP_BASE_URL, "/terms-and-conditions/")
