@@ -286,11 +286,13 @@ def test_summarize_single_content_file(mocker, processable_content_files):
 )
 def test_process_single_file_calls_llm_summary(
     mocker,
+    settings,
     processable_content_files,
     has_summary,
     has_flashcards,
 ):
     """summarize_single_content_file should call the invoke function with the content"""
+    settings.OPENAI_API_KEY = "test"
     summarizer = ContentSummarizer()
     # Mock the ChatLiteLLM class and its methods
     mock_chat_llm = mocker.patch(

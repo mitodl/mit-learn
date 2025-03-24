@@ -27,7 +27,11 @@ class Migration(migrations.Migration):
                 ("updated_on", models.DateTimeField(auto_now=True)),
                 (
                     "llm_model",
-                    models.CharField(max_length=128, verbose_name="LLM Model"),
+                    models.CharField(
+                        help_text="Add any OpenAI LLM model.",
+                        max_length=128,
+                        verbose_name="LLM Model",
+                    ),
                 ),
                 (
                     "allowed_content_types",

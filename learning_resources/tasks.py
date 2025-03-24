@@ -400,14 +400,14 @@ def summarize_content_files_task(
 def summarize_unprocessed_content(
     self,
     *,
-    chunk_size=None,
+    batch_size=None,
     unprocessed_content_ids: list[int],
     overwrite: bool = False,
 ):
     """Summarize the unprocessed content files.
 
     Args:
-        - chunk_size (int): Chunk size for batch import task
+        - batch_size (int): Batch size for batch import task
         - unprocessed_content_ids (list[int]): List of resource ids to process
         - overwrite (bool): Force overwrite existing embeddings
 
@@ -415,8 +415,8 @@ def summarize_unprocessed_content(
         - None
     """
 
-    if chunk_size is None:
-        chunk_size = settings.CONTENT_FILE_SUMMARIZER_CHUNK_SIZE
+    if batch_size is None:
+        batch_size = settings.CONTENT_FILE_SUMMARIZER_BATCH_SIZE
 
     summarizer_tasks = celery.group(
         [
@@ -425,7 +425,7 @@ def summarize_unprocessed_content(
             )
             for content_ids in chunks(
                 unprocessed_content_ids,
-                chunk_size=chunk_size,
+                chunk_size=batch_size,
             )
         ]
     )

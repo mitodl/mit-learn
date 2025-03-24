@@ -17,14 +17,14 @@ class Command(BaseCommand):
         """Add arguments to the command"""
 
         parser.add_argument(
-            "--learning-resource-ids",
-            dest="learning-resource-ids",
-            help="Generate summaries/flashcards for specific set of learning resources",
+            "--resource-ids",
+            dest="resource-ids",
+            help="Generate summaries/flashcards for specific set of learning resources. (Comma separated Ids)",  # noqa: E501
         )
         parser.add_argument(
             "--content-file-ids",
             dest="content-file-ids",
-            help="Generate summaries/flashcards for specific set of content files",
+            help="Generate summaries/flashcards for specific set of content files. (Comma separated Ids)",  # noqa: E501
         )
         parser.add_argument(
             "--read-only",
@@ -39,12 +39,12 @@ class Command(BaseCommand):
             help="Force regenerate existing summaries/flashcards",
         )
         parser.add_argument(
-            "-c",
-            "--chunk-size",
-            dest="chunk_size",
-            default=settings.CONTENT_FILE_SUMMARIZER_CHUNK_SIZE,
+            "-b",
+            "--batch-size",
+            dest="batch_size",
+            default=settings.CONTENT_FILE_SUMMARIZER_BATCH_SIZE,
             type=int,
-            help="Chunk size for summarizer task",
+            help="Batch size for summarizer task",
         )
 
         return super().add_arguments(parser)
@@ -53,22 +53,20 @@ class Command(BaseCommand):
         """Generate summaries and flashcards for content files"""
         read_only = options["read_only"]
         overwrite = options["overwrite"]
-        learning_resource_ids = (
-            options["learning-resource-ids"].split(",")
-            if options["learning-resource-ids"]
-            else None
+        resource_ids = (
+            options["resource-ids"].split(",") if options["resource-ids"] else None
         )
         content_file_ids = (
             options["content-file-ids"].split(",")
             if options["content-file-ids"]
             else None
         )
-        chunk_size = options["chunk_size"]
+        batch_size = options["batch_size"]
 
         summarizer_task = None
         summarizer = ContentSummarizer()
         unprocessed_content_file_ids = summarizer.get_unprocessed_content_file_ids(
-            learning_resource_ids=learning_resource_ids,
+            learning_resource_ids=resource_ids,
             content_file_ids=content_file_ids,
             overwrite=overwrite,
         )
@@ -79,7 +77,7 @@ class Command(BaseCommand):
         else:
             summarizer_task = summarize_unprocessed_content.delay(
                 unprocessed_content_ids=unprocessed_content_file_ids,
-                chunk_size=chunk_size,
+                batch_size=batch_size,
                 overwrite=overwrite,
             )
 

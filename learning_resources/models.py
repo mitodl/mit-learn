@@ -1160,7 +1160,9 @@ class LearningResourceViewEvent(TimestampedModel):
 class ContentSummarizerConfiguration(TimestampedModel):
     """Stores configuration for content summarizer"""
 
-    llm_model = models.CharField(max_length=128, verbose_name="LLM Model")
+    llm_model = models.CharField(
+        max_length=128, verbose_name="LLM Model", help_text="Add any OpenAI LLM model."
+    )
     platform = models.OneToOneField(
         LearningResourcePlatform,
         on_delete=models.PROTECT,

@@ -1,6 +1,7 @@
 import logging
 from typing import Annotated, Optional
 
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
 from langchain_community.chat_models import ChatLiteLLM
@@ -44,9 +45,12 @@ class ContentSummarizer:
             # Summarizer needs content to process, if there is no content then skip
             return False
 
-        summarizer_config = getattr(
-            content_file.run.learning_resource.platform, "summarizer_config", None
+        platform = (
+            content_file.run.learning_resource.platform
+            if content_file.run
+            else content_file.learning_resource.platform
         )
+        summarizer_config = getattr(platform, "summarizer_config", None)
 
         if not summarizer_config or not summarizer_config.is_active:
             return False
@@ -176,6 +180,25 @@ class ContentSummarizer:
             logger.exception("Error processing content: %d", content_file.id)
             raise
 
+    def _get_llm(self, model=None, temperature=0.0, max_tokens=1000) -> ChatLiteLLM:
+        """Get the ChatLiteLLM instance"""
+
+        if not model:
+            raise ValueError("The 'model' parameter must be specified.")  # noqa: EM101, TRY003
+
+        if not settings.OPENAI_API_KEY:
+            raise ValueError("The 'OPENAI_API_KEY' setting must be set.")  # noqa: EM101, TRY003
+
+        if not settings.LITELLM_CUSTOM_PROVIDER:
+            raise ValueError("The 'LITELLM_CUSTOM_PROVIDER' setting must be set.")  # noqa: EM101, TRY003
+
+        return ChatLiteLLM(
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            custom_llm_provider=settings.LITELLM_CUSTOM_PROVIDER,
+        )
+
     def _generate_summary(self, content: str, llm_model: str) -> str:
         """Generate summary using provided llm_model
         Args:
@@ -185,10 +208,11 @@ class ContentSummarizer:
             - str: Generated summary
         """
         try:
-            llm = ChatLiteLLM(model=llm_model, temperature=0.3, max_tokens=1000)
+            llm = self._get_llm(model=llm_model, temperature=0.3, max_tokens=1000)
             response = llm.invoke(
-                f"Summarize the key points from this video transcript. Transcript:{content}"  # noqa: E501
+                f"Summarize the key points from this video. Transcript:{content}"
             )
+            logger.info("Generating Summary using model: %s", llm)
             generated_summary = response.content
             logger.info("Generated summary: %s", generated_summary)
 
@@ -211,7 +235,8 @@ class ContentSummarizer:
             - list[dict[str, str]]: List of flashcards
         """
         try:
-            llm = ChatLiteLLM(model=llm_model, temperature=0.3, max_tokens=1000)
+            llm = self._get_llm(model=llm_model, temperature=0.3, max_tokens=1000)
+            logger.info("Generating flashcards using model: %s", llm)
             structured_llm = llm.with_structured_output(FlashcardsResponse)
             response = structured_llm.invoke(
                 f"Generate flashcards from the following transcript. Each flashcard should have a question and answer. Transcript:{content}"  # noqa: E501
