@@ -8,14 +8,22 @@ from learning_resources import views
 from learning_resources.views import WebhookOCWView
 
 router = SimpleRouter()
+
 router.register(
     r"learning_resources",
     views.LearningResourceViewSet,
     basename="learning_resources_api",
 )
+router.register(
+    r"learning_resource_display_info",
+    views.LearningResourceDisplayInfoViewSet,
+    basename="learning_resource_display_info_api",
+)
 nested_learning_resources_router = NestedSimpleRouter(
     router, r"learning_resources", lookup="learning_resource"
 )
+
+
 nested_learning_resources_router.register(
     r"items", views.ResourceListItemsViewSet, basename="learning_resource_items_api"
 )

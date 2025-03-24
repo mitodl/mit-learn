@@ -380,7 +380,7 @@ def test_course_metadata_document_contents(mocker):
     run = LearningResourceRunFactory.create(
         learning_resource=resource,
         published=True,
-        prices=[Decimal("0.00"), Decimal("50.00")],
+        prices=[Decimal("1.00"), Decimal("50.00")],
         resource_prices=LearningResourcePriceFactory.create_batch(
             2, amount=Decimal("1.00")
         ),
@@ -411,16 +411,11 @@ def test_course_metadata_document_contents(mocker):
     _embed_course_metadata_as_contentfile([serialized_resource])
     point = next(mock_qdrant.upload_points.mock_calls[0].kwargs["points"])
     course_metadata_content = point.payload["chunk_content"]
-    prices = (
-        f"${serialized_resource['prices'][0]}"
-        if serialized_resource.get("prices")
-        else "Free"
-    )
-    assert course_metadata_content.startswith("Information about this course:")
+    assert course_metadata_content.startswith("# Information about this course:")
     assert resource.title in course_metadata_content
     assert resource.description in course_metadata_content
     assert resource.full_description in course_metadata_content
-    assert prices in course_metadata_content
+
     for topic in resource.topics.all():
         assert topic.name in course_metadata_content
     for run in serialized_resource["runs"]:

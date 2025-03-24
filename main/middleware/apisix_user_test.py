@@ -63,6 +63,47 @@ def test_get_request(mocker, mock_login):
 
 
 @pytest.mark.django_db(transaction=True)
+def test_get_request_existing_user_no_globalid(mocker, mock_login):
+    """Test that a valid request updates existing user with same email, no global_id."""
+    close_old_connections()
+    user = UserFactory.create(email=apisix_user_info["email"], global_id=None)
+    mock_request = mocker.Mock(
+        META={
+            "HTTP_X_USERINFO": b64encode(json.dumps(apisix_user_info).encode()),
+        },
+        user=AnonymousUser(),
+    )
+    apisix_middleware = ApisixUserMiddleware(mocker.Mock())
+    apisix_middleware.process_request(mock_request)
+    mock_login.assert_called_once()
+    user.refresh_from_db()
+    assert user.username == apisix_user_info["preferred_username"]
+    assert user.email == apisix_user_info["email"]
+    assert user.global_id == apisix_user_info["sub"]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_get_request_existing_user_with_global_id_diff_email(mocker, mock_login):
+    """Test that a valid request updates email of user with same global_id"""
+    close_old_connections()
+    user = UserFactory.create(
+        email="old_email@test.edu", global_id=apisix_user_info["sub"]
+    )
+    mock_request = mocker.Mock(
+        META={
+            "HTTP_X_USERINFO": b64encode(json.dumps(apisix_user_info).encode()),
+        },
+        user=AnonymousUser(),
+    )
+    apisix_middleware = ApisixUserMiddleware(mocker.Mock())
+    apisix_middleware.process_request(mock_request)
+    user.refresh_from_db()
+    assert user.username == apisix_user_info["preferred_username"]
+    assert user.global_id == apisix_user_info["sub"]
+    assert user.email == apisix_user_info["email"]
+
+
+@pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize("same_user", [False, True])
 def test_get_request_different_user_logout(mocker, client, same_user):
     """Test that a request with mismatched users logs user out"""
