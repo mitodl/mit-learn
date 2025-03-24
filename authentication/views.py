@@ -59,7 +59,7 @@ class CustomLogoutView(View):
 
 class CustomLoginView(View):
     """
-    Log out the user from django
+    Redirect the user to the appropriate url after login
     """
 
     def get(
