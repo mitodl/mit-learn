@@ -265,8 +265,6 @@ def _process_content_embeddings(serialized_content):
     embeddings = []
     metadata = []
     ids = []
-    resource_points = []
-    client = qdrant_client()
     encoder = dense_encoder()
     vector_name = encoder.model_short_name()
     for doc in serialized_content:
@@ -311,27 +309,9 @@ def _process_content_embeddings(serialized_content):
         for i in range(0, len(split_texts), request_chunk_size):
             split_chunk = split_texts[i : i + request_chunk_size]
             split_embeddings.extend(list(encoder.embed_documents(split_chunk)))
-        if len(split_embeddings) > 0:
-            resource_points.append(
-                models.PointVectors(
-                    id=resource_vector_point_id,
-                    vector={f"{vector_name}_content": split_embeddings},
-                )
-            )
         embeddings.extend(split_embeddings)
         metadata.extend(split_metadatas)
         ids.extend(split_ids)
-    if len(resource_points) > 0:
-        try:
-            # sometimes we can't update the multi-vector if max size is exceeded
-
-            client.update_vectors(
-                collection_name=RESOURCES_COLLECTION_NAME,
-                points=resource_points,
-            )
-        except Exception as e:  # noqa: BLE001
-            msg = f"Exceeded multi-vector max size: {e}"
-            logger.warning(msg)
     if ids:
         return points_generator(ids, metadata, embeddings, vector_name)
     return None
