@@ -505,7 +505,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
 
         distinct_locations = set()
         for run in serialized_resource.get("runs", []):
-            distinct_prices.update(run["prices"])
+            prices = run.get("prices", [])
+            if prices:
+                distinct_prices.update(prices)
             distinct_delivery_methods.update(
                 [delivery["code"] for delivery in run.get("delivery", [])]
             )
