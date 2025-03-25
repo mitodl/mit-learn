@@ -156,6 +156,13 @@ VALID_TEXT_FILE_TYPES = [
     ".xml",
 ]
 
+VALID_ALL_FILE_TYPES = list(
+    zip(
+        [*VALID_FILE_TYPES, *VALID_TEXT_FILE_TYPES],
+        [*VALID_FILE_TYPES, *VALID_TEXT_FILE_TYPES],
+    )
+)
+
 
 CONTENT_TYPE_PAGE = "page"
 CONTENT_TYPE_FILE = "file"

@@ -908,6 +908,8 @@ class ContentFile(TimestampedModel):
     source_path = models.CharField(max_length=1024, null=True, blank=True)  # noqa: DJ001
     file_extension = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
     edx_module_id = models.CharField(max_length=1024, null=True, blank=True)  # noqa: DJ001
+    summary = models.TextField(blank=True, default="")
+    flashcards = models.JSONField(blank=True, default=list)
 
     class Meta:
         unique_together = (("key", "run"),)
@@ -1153,3 +1155,31 @@ class LearningResourceViewEvent(TimestampedModel):
             f" {self.learning_resource.readable_id})"
             f" on {self.event_date}"
         )
+
+
+class ContentSummarizerConfiguration(TimestampedModel):
+    """Stores configuration for content summarizer"""
+
+    llm_model = models.CharField(
+        max_length=128, verbose_name="LLM Model", help_text="Add any OpenAI LLM model."
+    )
+    platform = models.OneToOneField(
+        LearningResourcePlatform,
+        on_delete=models.PROTECT,
+        related_name="summarizer_config",
+    )
+    allowed_content_types = ArrayField(
+        models.CharField(
+            max_length=128, choices=constants.VALID_COURSE_CONTENT_CHOICES
+        ),
+        null=True,
+        blank=True,
+        default=list,
+    )
+    allowed_extensions = ArrayField(
+        models.CharField(max_length=128, choices=constants.VALID_ALL_FILE_TYPES),
+        null=True,
+        blank=True,
+        default=list,
+    )
+    is_active = models.BooleanField(default=True)
