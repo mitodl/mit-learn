@@ -9,14 +9,6 @@ from django.conf import settings
 from authentication.views import get_redirect_url
 
 
-@pytest.fixture(autouse=True)
-def cache_settings(settings):
-    """Use the memory cache as a substitute for the redis cache."""
-    settings.CACHES["redis"] = {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-    }
-
-
 @pytest.mark.parametrize(
     ("next_url", "allowed"),
     [
