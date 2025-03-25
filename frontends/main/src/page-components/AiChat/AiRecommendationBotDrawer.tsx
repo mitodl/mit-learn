@@ -31,7 +31,7 @@ const CloseButton = styled(ActionButton)(({ theme }) => ({
 
 const StyledAiChat = styled(AiChat)({
   ".MitAiChat--root": {
-    height: "100%",
+    minHeight: "100%",
   },
   ".MitAiChat--entryScreenContainer": {
     paddingTop: "152px",
@@ -101,12 +101,13 @@ const DrawerContent: React.FC<{
 
 const DRAWER_REQUIRED_PARAMS = [RECOMMENDER_QUERY_PARAM] as const
 const AiRecommendationBotDrawer = () => {
-  const paperRef = useRef<HTMLDivElement>(null)
   const [scrollElement, setScrollElement] = useState<HTMLElement | null>(null)
 
-  useEffect(() => {
-    setScrollElement(paperRef.current)
-  }, [paperRef.current])
+  const paperRefCallback = (node: HTMLDivElement | null) => {
+    if (node) {
+      setScrollElement(node)
+    }
+  }
 
   return (
     <RoutedDrawer
@@ -115,7 +116,7 @@ const AiRecommendationBotDrawer = () => {
       aria-label="What do you want to learn about?"
       anchor="right"
       PaperProps={{
-        ref: paperRef,
+        ref: paperRefCallback,
         sx: {
           minWidth: (theme) => ({
             minWidth: "900px",
