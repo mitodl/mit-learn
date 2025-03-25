@@ -15,7 +15,7 @@ import datetime
 import logging
 import os
 import platform
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
 
 import dj_database_url
 from django.core.exceptions import ImproperlyConfigured
@@ -33,7 +33,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.30.8"
+VERSION = "0.30.9"
 
 log = logging.getLogger()
 
@@ -68,6 +68,13 @@ SECRET_KEY = get_string("SECRET_KEY", "terribly_unsafe_default_secret_key")
 DEBUG = get_bool("DEBUG", False)  # noqa: FBT003
 
 ALLOWED_HOSTS = ["*"]
+ALLOWED_REDIRECT_HOSTS = get_list_of_str(
+    "ALLOWED_REDIRECT_HOSTS",
+    [
+        "open.odl.local:8062",
+        "ocw.mit.edu",
+    ],
+)
 
 AUTH_USER_MODEL = "users.User"
 
@@ -163,7 +170,6 @@ MIDDLEWARE = (
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "authentication.middleware.BlockedIPMiddleware",
-    "authentication.middleware.SocialAuthExceptionRedirectMiddleware",
     "hijack.middleware.HijackUserMiddleware",
     "oauth2_provider.middleware.OAuth2TokenMiddleware",
     "django_scim.middleware.SCIMAuthCheckMiddleware",
@@ -215,6 +221,13 @@ LOGIN_URL = "/login"
 LOGIN_ERROR_URL = "/login"
 LOGOUT_URL = "/logout"
 LOGOUT_REDIRECT_URL = "/app"
+MITOL_API_BASE_URL = get_string("MITOL_API_BASE_URL", "")
+OIDC_LOGOUT_URL = get_string(
+    # urljoin might lead to wrong outputs with url rewrites like
+    # https://api.learn.mit.edu/learn/, so using rstrip('/') instead.
+    "OIDC_LOGOUT_URL",
+    f"{MITOL_API_BASE_URL.rstrip('/')}/logout/oidc",
+)
 
 MITOL_TOS_URL = get_string(
     "MITOL_TOS_URL", urljoin(APP_BASE_URL, "/terms-and-conditions/")
@@ -285,87 +298,13 @@ USE_L10N = True
 
 USE_TZ = True
 
-# Social Auth configurations - [START]
 AUTHENTICATION_BACKENDS = (
-    "authentication.backends.ol_open_id_connect.OlOpenIdConnectAuth",
     "oauth2_provider.backends.OAuth2Backend",
     # the following needs to stay here to allow login of local users
     "django.contrib.auth.backends.ModelBackend",
     "guardian.backends.ObjectPermissionBackend",
 )
 
-SOCIAL_AUTH_LOGIN_REDIRECT_URL = get_string("MITOL_LOGIN_REDIRECT_URL", "/app")
-SOCIAL_AUTH_NEW_USER_LOGIN_REDIRECT_URL = get_string(
-    "MITOL_NEW_USER_LOGIN_URL", "/onboarding"
-)
-SOCIAL_AUTH_LOGIN_ERROR_URL = "login"
-SOCIAL_AUTH_ALLOWED_REDIRECT_HOSTS = [
-    *get_list_of_str(
-        name="SOCIAL_AUTH_ALLOWED_REDIRECT_HOSTS",
-        default=[],
-    ),
-    urlparse(APP_BASE_URL).netloc,
-]
-SOCIAL_AUTH_PROTECTED_USER_FIELDS = [
-    "profile",  # this avoids an error because profile is a related model
-]
-
-SOCIAL_AUTH_PIPELINE = (
-    # Checks if an admin user attempts to login/register while hijacking another user.
-    "authentication.pipeline.user.forbid_hijack",
-    # Get the information we can about the user and return it in a simple
-    # format to create the user instance later. On some cases the details are
-    # already part of the auth response from the provider, but sometimes this
-    # could hit a provider API.
-    "social_core.pipeline.social_auth.social_details",
-    # Get the social uid from whichever service we're authing thru. The uid is
-    # the unique identifier of the given user in the provider.
-    "social_core.pipeline.social_auth.social_uid",
-    # Verifies that the current auth process is valid within the current
-    # project, this is where emails and domains whitelists are applied (if
-    # defined).
-    "social_core.pipeline.social_auth.auth_allowed",
-    # Checks if the current social-account is already associated in the site.
-    "social_core.pipeline.social_auth.social_user",
-    # Associates current social details with another user account with same email.
-    "social_core.pipeline.social_auth.associate_by_email",
-    # Send a validation email to the user to verify its email address.
-    # Disabled by default.
-    "social_core.pipeline.mail.mail_validation",
-    # # Generate a username for the user
-    # # NOTE: needs to be right before create_user so nothing overrides the username
-    # "authentication.pipeline.user.get_username",
-    # Create a user account if we haven't found one yet.
-    "social_core.pipeline.user.create_user",
-    # Create the record that associates the social account with the user.
-    "social_core.pipeline.social_auth.associate_user",
-    # Populate the extra_data field in the social record with the values
-    # specified by settings (and the default ones like access_token, etc).
-    "social_core.pipeline.social_auth.load_extra_data",
-    # Update the user record with any changed info from the auth service.
-    "social_core.pipeline.user.user_details",
-    # Create a favorites list for new users
-    "authentication.pipeline.user.user_created_actions",
-    # redirect new users to onboarding
-    "authentication.pipeline.user.user_onboarding",
-)
-
-SOCIAL_AUTH_OL_OIDC_OIDC_ENDPOINT = get_string(
-    name="SOCIAL_AUTH_OL_OIDC_OIDC_ENDPOINT",
-    default=None,
-)
-
-SOCIAL_AUTH_OL_OIDC_KEY = get_string(
-    name="SOCIAL_AUTH_OL_OIDC_KEY",
-    default="some available client id",
-)
-
-SOCIAL_AUTH_OL_OIDC_SECRET = get_string(
-    name="SOCIAL_AUTH_OL_OIDC_SECRET",
-    default="some super secret key",
-)
-
-SOCIAL_AUTH_OL_OIDC_SCOPE = ["ol-profile"]
 
 USERINFO_URL = get_string(
     name="USERINFO_URL",
@@ -381,6 +320,22 @@ AUTHORIZATION_URL = get_string(
     name="AUTHORIZATION_URL",
     default=None,
 )
+
+APISIX_USERDATA_MAP = {
+    "users.User": {
+        "email": "email",
+        "global_id": "sub",
+        "username": "preferred_username",
+        "first_name": "given_name",
+        "last_name": "family_name",
+        "name": "name",
+    },
+    "profiles.Profile": {
+        "name": "name",
+        "email_optin": "emailOptIn",
+    },
+}
+
 
 # Social Auth configurations - [END]
 
@@ -883,3 +838,5 @@ SEMANTIC_CHUNKING_CONFIG = {
         default=None,
     ),
 }
+
+CONTENT_FILE_SUMMARIZER_BATCH_SIZE = get_int("CONTENT_FILE_SUMMARIZER_BATCH_SIZE", 20)

@@ -1,6 +1,8 @@
 """Project conftest"""
 
 # pylint: disable=wildcard-import, unused-wildcard-import
+from types import SimpleNamespace
+
 import pytest
 
 from fixtures.aws import *  # noqa: F403
@@ -29,3 +31,11 @@ def _use_dummy_redis_cache_backend(settings):
         "BACKEND": "django.core.cache.backends.dummy.DummyCache",
     }
     settings.CACHES = new_cache_settings
+
+
+@pytest.fixture(autouse=True)
+def mock_apsisix_auth(mocker):
+    """Mock the Apisix header login/logout functions."""
+    mock_login = mocker.patch("main.middleware.apisix_user.login")
+    mock_logout = mocker.patch("main.middleware.apisix_user.logout")
+    return SimpleNamespace(login=mock_login, logout=mock_logout)

@@ -33,7 +33,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--resource-ids",
             dest="resource-ids",
-            help="Embed a specific set of reesources (overrides the --all flag)",
+            help="Embed a specific set of resources (overrides the --all flag)",
         )
 
         parser.add_argument(

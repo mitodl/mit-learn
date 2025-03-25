@@ -704,7 +704,8 @@ class LearningPathRelationshipFactory(DjangoModelFactory):
 class ContentFileFactory(DjangoModelFactory):
     """Factory for ContentFiles"""
 
-    run = factory.SubFactory(LearningResourceRunFactory)
+    run = None
+    learning_resource = None
     key = factory.Faker("file_path")
     title = factory.Faker("sentence")
     description = factory.Faker("sentence")
@@ -717,6 +718,20 @@ class ContentFileFactory(DjangoModelFactory):
     file_type = FuzzyChoice(("application/pdf", "video/mp4", "text"))
     published = True
     content_tags = factory.PostGeneration(_post_gen_tags)
+
+    @classmethod
+    def _create(cls, model_class, *args, **kwargs):
+        run = kwargs.pop("run", None)
+        learning_resource = kwargs.pop("learning_resource", None)
+        if run and learning_resource:
+            msg = "set run or learning_resource not both."
+            raise ValueError(msg)
+        if not run and not learning_resource:
+            run = LearningResourceRunFactory()
+            learning_resource = None
+        kwargs["run"] = run
+        kwargs["learning_resource"] = learning_resource
+        return super()._create(model_class, *args, **kwargs)
 
     class Meta:
         model = models.ContentFile
@@ -880,3 +895,16 @@ class VideoPlaylistFactory(DjangoModelFactory):
     class Meta:
         model = models.VideoPlaylist
         skip_postgeneration_save = True
+
+
+class ContentSummarizerConfigurationFactory(DjangoModelFactory):
+    """Factory for ContentSummarizerConfiguration"""
+
+    platform = factory.SubFactory(LearningResourcePlatformFactory)
+    llm_model = factory.Faker("word")
+    allowed_content_types = factory.List([constants.CONTENT_TYPE_FILE])
+    allowed_extensions = factory.List([".srt"])
+
+    class Meta:
+        model = models.ContentSummarizerConfiguration
+        django_get_or_create = ("platform", "llm_model")

@@ -1,5 +1,7 @@
 """Tests for learning_resources serializers"""
 
+import copy
+import datetime
 from decimal import Decimal
 
 import pytest
@@ -14,6 +16,7 @@ from learning_resources import factories, serializers, utils
 from learning_resources.constants import (
     CURRENCY_USD,
     LEARNING_MATERIAL_RESOURCE_CATEGORY,
+    Availability,
     CertificationType,
     Format,
     LearningResourceDelivery,
@@ -21,6 +24,14 @@ from learning_resources.constants import (
     LearningResourceType,
     Pace,
     PlatformType,
+)
+from learning_resources.etl.loaders import load_instructors
+from learning_resources.factories import (
+    LearningResourceFactory,
+    LearningResourceInstructorFactory,
+    LearningResourceOfferorFactory,
+    LearningResourcePriceFactory,
+    LearningResourceRunFactory,
 )
 from learning_resources.models import ContentFile, LearningResource
 from main.test_utils import assert_json_equal, drf_datetime
@@ -575,6 +586,8 @@ def test_content_file_serializer(settings, expected_types, has_channels):
                 [tag.name for tag in content_file.content_tags.all()]
             ),
             "edx_module_id": content_file.edx_module_id,
+            "summary": content_file.summary,
+            "flashcards": content_file.flashcards,
         },
     )
 
@@ -631,3 +644,340 @@ def test_set_userlist_request_serializer():
     assert invalid.is_valid() is False
     assert "userlist_ids" in invalid.errors
     assert "learning_resource_id" in invalid.errors
+
+
+def _create_identical_runs_resource():
+    learning_resource = LearningResourceFactory.create(
+        professional=False,
+        resource_type="course",
+        runs=[],
+        certification=True,
+        delivery=["in_person"],
+    )
+    learning_resource.resource_prices.set(
+        [LearningResourcePriceFactory.create(amount=Decimal("0.00"), currency="USD")]
+    )
+    start_date = datetime.datetime.now(tz=datetime.UTC)
+    run = LearningResourceRunFactory.create(
+        learning_resource=learning_resource,
+        published=True,
+        start_date=start_date,
+        location="online",
+        delivery=["in_person"],
+        prices=[Decimal("0.00"), Decimal("1.00")],
+        resource_prices=[
+            LearningResourcePriceFactory.create(amount=Decimal("1.00"), currency="USD")
+        ],
+    )
+    run.prices = [Decimal("1.00")]
+    run.save()
+    run = LearningResourceRunFactory.create(
+        learning_resource=learning_resource,
+        published=True,
+        prices=[Decimal("0.00"), Decimal("1.00")],
+        start_date=start_date,
+        location="online",
+        delivery=["in_person"],
+        resource_prices=[
+            LearningResourcePriceFactory.create(amount=Decimal("1.00"), currency="USD")
+        ],
+    )
+    run.prices = [Decimal("1.00"), Decimal("2.00")]
+    run.save()
+    return learning_resource
+
+
+def test_certificate_display():
+    # If certification is none and the resource is free - show "no certificate"
+    resource = LearningResourceFactory(
+        certification_type=CertificationType.none.name,
+        professional=False,
+        prices=[Decimal("0.00")],
+    )
+    serialized_resource = serializers.LearningResourceSerializer(resource).data
+    metadata_serializer = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource
+    )
+    assert serialized_resource["free"]
+    assert metadata_serializer.data["certification"] == CertificationType.none.value
+
+    # If course is "free" and certificate type is not explicitly "none" then dont display anything
+    resource = LearningResourceFactory(
+        certification_type=CertificationType.completion.name,
+        prices=[Decimal("0.00")],
+        resource_type="course",
+        professional=False,
+    )
+    resource.resource_prices.set(
+        [LearningResourcePriceFactory.create(amount=Decimal("0.00"))]
+    )
+    serialized_resource = serializers.LearningResourceSerializer(resource).data
+    metadata_serializer = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource
+    )
+    assert serialized_resource["free"]
+    assert metadata_serializer.data["certification"] is None
+
+    # If resource is not free and certification is not none - show the certification type
+    resource = LearningResourceFactory(
+        certification=False,
+        professional=False,
+        resource_type="course",
+        certification_type=CertificationType.professional.name,
+        prices=[Decimal("100.00")],
+        offered_by=LearningResourceOfferorFactory.create(professional=False),
+    )
+    resource.resource_prices.set(
+        [LearningResourcePriceFactory.create(amount=Decimal("100.00"))]
+    )
+    serialized_resource = serializers.LearningResourceSerializer(resource).data
+    metadata_serializer = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource
+    )
+
+    assert not serialized_resource["free"]
+    assert (
+        metadata_serializer.data["certification"]
+        == CertificationType.professional.value
+    )
+
+
+def test_price_display():
+    # If certification is none and the resource is free - show "free"
+    resource = _create_identical_runs_resource()
+    resource.resource_prices.set(
+        [
+            LearningResourcePriceFactory.create(amount=Decimal("0.00")),
+            LearningResourcePriceFactory.create(amount=Decimal("100.00")),
+        ]
+    )
+    serialized_resource = serializers.LearningResourceSerializer(resource).data
+    metadata_serializer = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource
+    )
+    assert serialized_resource["free"]
+    assert metadata_serializer.data["price"] == "Free"
+
+    # If course is "free" and certificate type is not explicitly "none" then display Free as well as certificate price
+    resource = _create_identical_runs_resource()
+    resource.prices = [Decimal("0.00"), Decimal("100.00")]
+    resource.resource_prices.set(
+        [
+            LearningResourcePriceFactory.create(amount=Decimal("0.00")),
+            LearningResourcePriceFactory.create(amount=Decimal("100.00")),
+        ]
+    )
+    serialized_resource = serializers.LearningResourceSerializer(resource).data
+    metadata_serializer = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource
+    )
+    assert serialized_resource["free"]
+    assert metadata_serializer.data["price"] == "Free"
+    assert (
+        metadata_serializer.data["extra_price_info"]
+        == f"Earn a certificate: ${serialized_resource['prices'][1]}"
+    )
+
+    # If resource is not free and certification is not none - show the price
+    resource = _create_identical_runs_resource()
+    resource.resource_prices.set(
+        [LearningResourcePriceFactory.create(amount=Decimal("100.00"))]
+    )
+    resource.prices = [Decimal("100.00")]
+    resource.save()
+    serialized_resource = serializers.LearningResourceSerializer(resource).data
+    metadata_serializer = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource
+    )
+    assert not serialized_resource["free"]
+    assert metadata_serializer.data["price"] == f"${serialized_resource['prices'][0]}"
+    assert metadata_serializer.data["extra_price_info"] is None
+
+
+def test_instructors_display():
+    """Test that the instructors_display field is correctly populated"""
+    resource = LearningResourceFactory()
+    resource.runs.all().delete()
+    serialized_resource = serializers.LearningResourceSerializer(resource).data
+    metadata_serializer = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource
+    )
+
+    assert metadata_serializer.data["instructors"] is None
+
+    instructors = LearningResourceInstructorFactory.create_batch(3)
+    run = LearningResourceRunFactory.create(
+        learning_resource=resource, no_instructors=True
+    )
+    assert run.instructors.count() == 0
+    load_instructors(
+        run, [{"full_name": instructor.full_name} for instructor in instructors]
+    )
+    serialized_resource = serializers.LearningResourceSerializer(resource).data
+    metadata_serializer = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource
+    )
+    assert sorted(metadata_serializer.data["instructors"]) == sorted(
+        [instructor.full_name for instructor in instructors]
+    )
+
+
+def test_metadata_display_serializer_all_runs_are_identical():
+    learning_resource = _create_identical_runs_resource()
+    identical_runs_resource = serializers.LearningResourceSerializer(
+        learning_resource
+    ).data
+
+    display_data_serializer = serializers.LearningResourceMetadataDisplaySerializer(
+        identical_runs_resource
+    )
+
+    assert display_data_serializer.all_runs_are_identical(identical_runs_resource)
+    """
+    Start testing qualities that will cause all_runs_are_identical to return False
+    """
+
+    # Test that all_runs_are_identical will return False if there is more than 1 delivery type
+    differing_runs_resource = copy.deepcopy(identical_runs_resource)
+    differing_runs_resource["runs"][0]["delivery"] = [
+        {
+            "name": "online",
+            "code": "online",
+        },
+        {
+            "name": "offline",
+            "code": "offline",
+        },
+    ]
+    assert (
+        display_data_serializer.all_runs_are_identical(differing_runs_resource) is False
+    )
+    # Test that all_runs_are_identical will return False if there is more than 1 unique currency
+    differing_runs_resource = copy.deepcopy(identical_runs_resource)
+    differing_runs_resource["resource_prices"] = [
+        {"currency": "USD", "amount": Decimal("1.00")},
+        {"currency": "BTC", "amount": Decimal("1.00")},
+    ]
+    assert (
+        display_data_serializer.all_runs_are_identical(differing_runs_resource) is False
+    )
+
+    # Test that all_runs_are_identical will return False if there is more than 1 unique price
+    differing_runs_resource = copy.deepcopy(identical_runs_resource)
+    differing_runs_resource["runs"][0]["prices"] = [Decimal(i) for i in range(5)]
+    assert (
+        display_data_serializer.all_runs_are_identical(differing_runs_resource) is False
+    )
+    """
+    Test that all_runs_are_identical will return False if there is more than 1 unique location
+    and the delivery method is in_person or hybrid
+    """
+    differing_runs_resource = copy.deepcopy(identical_runs_resource)
+    differing_runs_resource["runs"][0]["location"] = "test"
+    differing_runs_resource["runs"][1]["location"] = "other"
+    differing_runs_resource["delivery"] = [
+        {
+            "code": LearningResourceDelivery.in_person.name,
+            "name": LearningResourceDelivery.in_person.value,
+        }
+    ]
+    assert (
+        display_data_serializer.all_runs_are_identical(differing_runs_resource) is False
+    )
+
+    """
+    Test that all_runs_are_identical will return False if there is more than 1 unique location
+    and the delivery method is in_person or hybrid
+    """
+    differing_runs_resource = copy.deepcopy(identical_runs_resource)
+    differing_runs_resource["runs"][0]["location"] = "test"
+    differing_runs_resource["delivery"] = [
+        {"code": LearningResourceDelivery.online.name}
+    ]
+    assert (
+        display_data_serializer.all_runs_are_identical(differing_runs_resource) is False
+    )
+
+
+def test_metadata_display_serializer_show_start_anytime():
+    learning_resource = LearningResourceFactory.create(
+        professional=False,
+        resource_type="course",
+        runs=[],
+        certification=True,
+        delivery=[LearningResourceDelivery.in_person.name],
+        availability=Availability.anytime.name,
+    )
+    serialized_resource = serializers.LearningResourceSerializer(learning_resource).data
+    metadata_serializer = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource
+    )
+    assert metadata_serializer.show_start_anytime(serialized_resource)
+    learning_resource = LearningResourceFactory.create(
+        professional=False,
+        resource_type="course",
+        runs=[],
+        certification=True,
+        delivery=["in_person"],
+        availability=Availability.dated.name,
+    )
+    serialized_resource = serializers.LearningResourceSerializer(learning_resource).data
+    metadata_serializer = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource
+    )
+    assert metadata_serializer.show_start_anytime(serialized_resource) is False
+
+
+def test_total_runs_with_dates(mocker):
+    """
+    Test total_runs_with_dates method
+    """
+    mocker.patch(
+        "learning_resources.serializers.LearningResourceMetadataDisplaySerializer.dates_for_runs",
+        return_value=["2023-01-01", "2023-02-01"],
+    )
+    serializer = serializers.LearningResourceMetadataDisplaySerializer()
+    serialized_resource = mocker.Mock()
+    assert serializer.total_runs_with_dates(serialized_resource) == 2
+
+
+def test_total_runs_with_dates_no_runs(mocker):
+    """
+    Test total_runs_with_dates method with no runs
+    """
+    mocker.patch(
+        "learning_resources.serializers.LearningResourceMetadataDisplaySerializer.dates_for_runs",
+        return_value=[],
+    )
+    serializer = serializers.LearningResourceMetadataDisplaySerializer()
+    serialized_resource = mocker.Mock()
+    assert serializer.total_runs_with_dates(serialized_resource) == 0
+
+
+def test_total_runs_with_dates_single_run(mocker):
+    """
+    Test total_runs_with_dates method with a single run
+    """
+    mocker.patch(
+        "learning_resources.serializers.LearningResourceMetadataDisplaySerializer.dates_for_runs",
+        return_value=["2023-01-01"],
+    )
+    serializer = serializers.LearningResourceMetadataDisplaySerializer()
+    serialized_resource = mocker.Mock()
+    assert serializer.total_runs_with_dates(serialized_resource) == 1
+
+
+def test_metadata_display_serializer_should_show_format():
+    learning_resource = _create_identical_runs_resource()
+    serialized_resource = serializers.LearningResourceSerializer(learning_resource).data
+    metadata_serializer = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource
+    )
+    assert metadata_serializer.should_show_format(serialized_resource)
+    serialized = copy.deepcopy(serialized_resource)
+    serialized["delivery"] = []
+    assert metadata_serializer.should_show_format(serialized) is False
+
+    serialized = copy.deepcopy(serialized_resource)
+    serialized["resource_type"] = "podcast"
+    assert metadata_serializer.should_show_format(serialized) is False

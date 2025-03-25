@@ -42,6 +42,7 @@ from learning_resources.models import (
 from learning_resources.serializers import (
     ContentFileSerializer,
     LearningResourceDepartmentSerializer,
+    LearningResourceDisplayInfoResponseSerializer,
     LearningResourceOfferorDetailSerializer,
     LearningResourcePlatformSerializer,
     LearningResourceTopicSerializer,
@@ -256,6 +257,25 @@ def test_list_content_files_list_endpoint(client):
 
     resp = client.get(f"{reverse('lr:v1:contentfiles_api-list')}")
     assert resp.data.get("count") == 2
+    for result in resp.data.get("results"):
+        assert result["id"] in content_file_ids
+
+
+def test_list_content_files_list_endpoint_with_no_runs(client):
+    """Test ContentFile list endpoint returns results even without associated runs"""
+    course = CourseFactory.create()
+    content_file_ids = [
+        cf.id
+        for cf in ContentFileFactory.create_batch(
+            5, learning_resource=course.learning_resource
+        )
+    ]
+
+    assert reverse("lr:v1:contentfiles_api-list") == "/api/v1/contentfiles/"
+
+    resp = client.get(f"{reverse('lr:v1:contentfiles_api-list')}")
+
+    assert resp.data.get("count") == 5
     for result in resp.data.get("results"):
         assert result["id"] in content_file_ids
 
@@ -1198,3 +1218,80 @@ def test_vector_similar_resources_endpoint_only_returns_published(mocker, client
     )
     response_ids = [hit["id"] for hit in resp.json()]
     assert len(response_ids) == 1
+
+
+def test_learning_resources_display_info_list_view(mocker, client):
+    """Test learning_resources_display_info_list_view returns expected results"""
+    from learning_resources.models import LearningResource
+
+    LearningResource.objects.all().delete()
+    resources = LearningResourceFactory.create_batch(
+        5, published=True, title="test_learning_resources_display_info_list_view"
+    )
+
+    resource_ids = [learning_resource.id for learning_resource in resources]
+    response_resources = LearningResource.objects.for_search_serialization().filter(
+        id__in=resource_ids
+    )
+    response_hits = []
+    for lr in response_resources:
+        serialized_resource = LearningResourceDisplayInfoResponseSerializer(
+            serialize_learning_resource_for_update(lr)
+        ).data
+        response_hits.append(serialized_resource)
+
+    resp = client.get(
+        reverse("lr:v1:learning_resource_display_info_api-list"),
+        {"title": "test_learning_resources_display_info_list_view"},
+    )
+    results = resp.json()["results"]
+    titles = [r["title"] for r in results]
+    for hit in response_hits:
+        assert hit["title"] in titles
+
+
+def test_run_with_null_prices_does_not_throw_error(mocker, client):
+    """Test learning_resources_display_info_detail_view does not throw exception"""
+    from learning_resources.models import LearningResource
+
+    run = LearningResourceRunFactory.create(
+        run_id="test",
+        learning_resource=CourseFactory.create(
+            platform=PlatformType.ocw.name
+        ).learning_resource,
+    )
+    run.prices = None
+    run.save()
+
+    lr = LearningResource.objects.for_search_serialization().get(
+        id=run.learning_resource.id
+    )
+    serialized_resource = LearningResourceDisplayInfoResponseSerializer(
+        serialize_learning_resource_for_update(lr)
+    ).data
+
+    resp = client.get(
+        reverse(
+            "lr:v1:learning_resource_display_info_api-detail",
+            args=[run.learning_resource.id],
+        )
+    )
+    assert resp.json() == serialized_resource
+
+
+def test_learning_resources_display_info_detail_view(mocker, client):
+    """Test learning_resources_display_info_detail_view returns expected result"""
+    from learning_resources.models import LearningResource
+
+    resource = LearningResource.objects.for_search_serialization().get(
+        id=LearningResourceFactory.create().id
+    )
+    serialized_resource = LearningResourceDisplayInfoResponseSerializer(
+        serialize_learning_resource_for_update(resource)
+    ).data
+
+    resp = client.get(
+        reverse("lr:v1:learning_resource_display_info_api-detail", args=[resource.id])
+    )
+
+    assert resp.json() == serialized_resource

@@ -65,7 +65,7 @@ const UpdateButton = styled(Button)(({ theme }) => ({
   },
 }))
 
-const ProfileEditForm: React.FC<Props> = ({ profile }) => {
+const ProfileContent: React.FC<Props> = ({ profile }) => {
   const formId = useId()
   const initialFormData = useMemo(() => {
     return {
@@ -174,4 +174,4 @@ const ProfileEditForm: React.FC<Props> = ({ profile }) => {
   )
 }
 
-export { ProfileEditForm }
+export { ProfileContent }

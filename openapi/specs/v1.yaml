@@ -1561,6 +1561,410 @@ paths:
               schema:
                 $ref: '#/components/schemas/LearningResource'
           description: ''
+  /api/v1/learning_resource_display_info/:
+    get:
+      operationId: learning_resource_display_info_list
+      description: Get a paginated list of learning resource display info
+      summary: List
+      parameters:
+      - in: query
+        name: certification
+        schema:
+          type: boolean
+      - in: query
+        name: certification_type
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - completion
+            - micromasters
+            - none
+            - professional
+        description: |-
+          The type of certification offered
+
+          * `micromasters` - MicroMasters Credential
+          * `professional` - Professional Certificate
+          * `completion` - Certificate of Completion
+          * `none` - No Certificate
+        explode: true
+        style: form
+      - in: query
+        name: course_feature
+        schema:
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
+      - in: query
+        name: delivery
+        schema:
+          type: array
+          items:
+            type: array
+            items:
+              enum:
+              - online
+              - hybrid
+              - in_person
+              - offline
+              type: string
+              description: |-
+                * `online` - Online
+                * `hybrid` - Hybrid
+                * `in_person` - In person
+                * `offline` - Offline
+            enum:
+            - hybrid
+            - in_person
+            - offline
+            - online
+        description: |-
+          The delivery of course/program resources
+
+          * `online` - Online
+          * `hybrid` - Hybrid
+          * `in_person` - In person
+          * `offline` - Offline
+        explode: true
+        style: form
+      - in: query
+        name: department
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - '1'
+            - '10'
+            - '11'
+            - '12'
+            - '14'
+            - '15'
+            - '16'
+            - '17'
+            - '18'
+            - '2'
+            - '20'
+            - 21A
+            - 21G
+            - 21H
+            - 21L
+            - 21M
+            - '22'
+            - '24'
+            - '3'
+            - '4'
+            - '5'
+            - '6'
+            - '7'
+            - '8'
+            - '9'
+            - CC
+            - CMS-W
+            - EC
+            - ES
+            - ESD
+            - HST
+            - IDS
+            - MAS
+            - PE
+            - SP
+            - STS
+            - WGS
+        description: |-
+          The department that offers learning resources
+
+          * `1` - Civil and Environmental Engineering
+          * `2` - Mechanical Engineering
+          * `3` - Materials Science and Engineering
+          * `4` - Architecture
+          * `5` - Chemistry
+          * `6` - Electrical Engineering and Computer Science
+          * `7` - Biology
+          * `8` - Physics
+          * `9` - Brain and Cognitive Sciences
+          * `10` - Chemical Engineering
+          * `11` - Urban Studies and Planning
+          * `12` - Earth, Atmospheric, and Planetary Sciences
+          * `14` - Economics
+          * `15` - Management
+          * `16` - Aeronautics and Astronautics
+          * `17` - Political Science
+          * `18` - Mathematics
+          * `20` - Biological Engineering
+          * `21A` - Anthropology
+          * `21G` - Global Languages
+          * `21H` - History
+          * `21L` - Literature
+          * `21M` - Music and Theater Arts
+          * `22` - Nuclear Science and Engineering
+          * `24` - Linguistics and Philosophy
+          * `CC` - Concourse
+          * `CMS-W` - Comparative Media Studies/Writing
+          * `EC` - Edgerton Center
+          * `ES` - Experimental Study Group
+          * `ESD` - Engineering Systems Division
+          * `HST` - Medical Engineering and Science
+          * `IDS` - Data, Systems, and Society
+          * `MAS` - Media Arts and Sciences
+          * `PE` - Athletics, Physical Education and Recreation
+          * `SP` - Special Programs
+          * `STS` - Science, Technology, and Society
+          * `WGS` - Women's and Gender Studies
+        explode: true
+        style: form
+      - in: query
+        name: free
+        schema:
+          type: boolean
+        description: The course/program is offered for free
+      - in: query
+        name: level
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - advanced
+            - graduate
+            - high_school
+            - intermediate
+            - introductory
+            - noncredit
+            - undergraduate
+        description: |-
+          The academic level of the resources
+
+          * `undergraduate` - Undergraduate
+          * `graduate` - Graduate
+          * `high_school` - High School
+          * `noncredit` - Non-Credit
+          * `advanced` - Advanced
+          * `intermediate` - Intermediate
+          * `introductory` - Introductory
+        explode: true
+        style: form
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: offered_by
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - bootcamps
+            - mitpe
+            - mitx
+            - ocw
+            - see
+            - xpro
+        description: |-
+          The organization that offers a learning resource
+
+          * `mitx` - MITx
+          * `ocw` - MIT OpenCourseWare
+          * `bootcamps` - Bootcamps
+          * `xpro` - MIT xPRO
+          * `mitpe` - MIT Professional Education
+          * `see` - MIT Sloan Executive Education
+        explode: true
+        style: form
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: query
+        name: platform
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - bootcamps
+            - csail
+            - ctl
+            - edx
+            - emeritus
+            - globalalumni
+            - mitpe
+            - mitxonline
+            - ocw
+            - oll
+            - podcast
+            - scc
+            - see
+            - simplilearn
+            - susskind
+            - whu
+            - xpro
+            - youtube
+        description: |-
+          The platform on which learning resources are offered
+
+          * `edx` - edX
+          * `ocw` - MIT OpenCourseWare
+          * `oll` - Open Learning Library
+          * `mitxonline` - MITx Online
+          * `bootcamps` - Bootcamps
+          * `xpro` - MIT xPRO
+          * `csail` - CSAIL
+          * `mitpe` - MIT Professional Education
+          * `see` - MIT Sloan Executive Education
+          * `scc` - Schwarzman College of Computing
+          * `ctl` - Center for Transportation & Logistics
+          * `whu` - WHU
+          * `susskind` - Susskind
+          * `globalalumni` - Global Alumni
+          * `simplilearn` - Simplilearn
+          * `emeritus` - Emeritus
+          * `podcast` - Podcast
+          * `youtube` - YouTube
+        explode: true
+        style: form
+      - in: query
+        name: professional
+        schema:
+          type: boolean
+      - in: query
+        name: readable_id
+        schema:
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
+      - in: query
+        name: resource_category
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - course
+            - learning_material
+            - program
+        description: |-
+          The resource category of the learning resources
+
+          * `course` - Course
+          * `program` - Program
+          * `learning_material` - Learning Material
+        explode: true
+        style: form
+      - in: query
+        name: resource_type
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - course
+            - learning_path
+            - podcast
+            - podcast_episode
+            - program
+            - video
+            - video_playlist
+        description: |-
+          The type of learning resource
+
+          * `course` - Course
+          * `program` - Program
+          * `learning_path` - Learning Path
+          * `podcast` - Podcast
+          * `podcast_episode` - Podcast Episode
+          * `video` - Video
+          * `video_playlist` - Video Playlist
+        explode: true
+        style: form
+      - in: query
+        name: sortby
+        schema:
+          type: string
+          enum:
+          - -id
+          - -last_modified
+          - -mitcoursenumber
+          - -readable_id
+          - -start_date
+          - -views
+          - id
+          - last_modified
+          - mitcoursenumber
+          - new
+          - readable_id
+          - start_date
+          - upcoming
+          - views
+        description: |-
+          Sort By
+
+          * `id` - Object ID ascending
+          * `-id` - Object ID descending
+          * `readable_id` - Readable ID ascending
+          * `-readable_id` - Readable ID descending
+          * `last_modified` - Last Modified Date ascending
+          * `-last_modified` - Last Modified Date descending
+          * `new` - Newest resources first
+          * `start_date` - Start Date ascending
+          * `-start_date` - Start Date descending
+          * `mitcoursenumber` - MIT course number ascending
+          * `-mitcoursenumber` - MIT course number descending
+          * `views` - Popularity ascending
+          * `-views` - Popularity descending
+          * `upcoming` - Next start date ascending
+      - in: query
+        name: topic
+        schema:
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
+      tags:
+      - learning_resource_display_info
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedLearningResourceDisplayInfoResponseList'
+          description: ''
+  /api/v1/learning_resource_display_info/{id}/:
+    get:
+      operationId: learning_resource_display_info_retrieve
+      description: Retrieve display info for a learning resource.
+      summary: Retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this learning resource.
+        required: true
+      tags:
+      - learning_resource_display_info
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LearningResourceDisplayInfoResponse'
+          description: ''
   /api/v1/learning_resources/:
     get:
       operationId: learning_resources_list
@@ -8560,6 +8964,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LearningResourceDepartment'
+          readOnly: true
         semester:
           type: string
         year:
@@ -8568,6 +8973,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LearningResourceTopic'
+          readOnly: true
         key:
           type: string
           nullable: true
@@ -8614,8 +9020,10 @@ components:
           maxLength: 200
         resource_id:
           type: string
+          readOnly: true
         resource_readable_id:
           type: string
+          readOnly: true
         course_number:
           type: array
           items:
@@ -8631,15 +9039,22 @@ components:
           nullable: true
           maxLength: 32
         offered_by:
-          $ref: '#/components/schemas/LearningResourceOfferor'
+          allOf:
+          - $ref: '#/components/schemas/LearningResourceOfferor'
+          readOnly: true
         platform:
-          $ref: '#/components/schemas/LearningResourcePlatform'
+          allOf:
+          - $ref: '#/components/schemas/LearningResourcePlatform'
+          readOnly: true
         run_readable_id:
           type: string
         edx_module_id:
           type: string
           nullable: true
           maxLength: 1024
+        summary:
+          type: string
+        flashcards: {}
       required:
       - content_feature_type
       - course_number
@@ -8649,13 +9064,7 @@ components:
       - platform
       - resource_id
       - resource_readable_id
-      - run_id
-      - run_readable_id
-      - run_slug
-      - run_title
-      - semester
       - topics
-      - year
     ContentFileSearchResponse:
       type: object
       description: SearchResponseSerializer with OpenAPI annotations for Content Files
@@ -9826,6 +10235,179 @@ components:
       required:
       - department_id
       - name
+    LearningResourceDisplayInfoResponse:
+      type: object
+      description: Serializer for the response of the display info endpoint
+      properties:
+        title:
+          type: string
+          readOnly: true
+          description: Title
+        description:
+          type: string
+          readOnly: true
+          description: Description
+        full_description:
+          type: string
+          readOnly: true
+          nullable: true
+          description: Full Description
+        url:
+          type: string
+          readOnly: true
+          description: Website
+        free:
+          type: boolean
+          readOnly: true
+          nullable: true
+          description: Free
+        topics:
+          type: array
+          items:
+            type: string
+          readOnly: true
+          description: Topics
+        price:
+          type: string
+          readOnly: true
+          nullable: true
+          description: Price
+        extra_price_info:
+          type: string
+          readOnly: true
+          nullable: true
+          description: Extra Price Information
+        certification:
+          type: string
+          readOnly: true
+          nullable: true
+          description: Certificate
+        instructors:
+          type: array
+          items:
+            type: string
+          readOnly: true
+          nullable: true
+          description: Instructors
+        runs:
+          type: array
+          items:
+            type: object
+            properties:
+              location:
+                type: string
+              start_date:
+                type: string
+              instructors:
+                type: array
+                items:
+                  type: string
+              duration:
+                type: string
+              price:
+                type: string
+              format:
+                type: array
+                items:
+                  type: string
+            required:
+            - code
+            - name
+          readOnly: true
+          nullable: true
+          description: Runs/Sessions
+        offered_by:
+          type: string
+          readOnly: true
+          nullable: true
+          description: Offered By
+        languages:
+          type: array
+          items:
+            type: string
+          readOnly: true
+          nullable: true
+          description: Languages
+        levels:
+          type: array
+          items:
+            type: string
+          readOnly: true
+          nullable: true
+          description: Levels
+        departments:
+          type: array
+          items:
+            type: string
+          readOnly: true
+          description: Departments
+        platform:
+          type: string
+          readOnly: true
+          nullable: true
+          description: Platform
+        number_of_courses:
+          type: number
+          readOnly: true
+          nullable: true
+          description: Number of Courses
+        location:
+          type: string
+          readOnly: true
+          nullable: true
+          description: Location
+        starts:
+          type: array
+          items:
+            type: string
+          readOnly: true
+          nullable: true
+          description: Starts
+        format_type:
+          type: array
+          items:
+            type: string
+          readOnly: true
+          nullable: true
+          description: Format
+        as_taught_in:
+          type: array
+          items:
+            type: string
+          readOnly: true
+          nullable: true
+          description: As Taught In
+        duration:
+          type: string
+          readOnly: true
+          nullable: true
+          description: Duration
+        id:
+          type: integer
+      required:
+      - as_taught_in
+      - certification
+      - departments
+      - description
+      - duration
+      - extra_price_info
+      - format_type
+      - free
+      - full_description
+      - id
+      - instructors
+      - languages
+      - levels
+      - location
+      - number_of_courses
+      - offered_by
+      - platform
+      - price
+      - runs
+      - starts
+      - title
+      - topics
+      - url
     LearningResourceImage:
       type: object
       description: Serializer for LearningResourceImage
@@ -10781,6 +11363,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LearningResourceDepartment'
+    PaginatedLearningResourceDisplayInfoResponseList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/LearningResourceDisplayInfoResponse'
     PaginatedLearningResourceList:
       type: object
       required:

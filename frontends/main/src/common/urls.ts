@@ -54,10 +54,9 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 const MITOL_API_BASE_URL = process.env.NEXT_PUBLIC_MITOL_API_BASE_URL
-const MITOL_API_LOGOUT_SUFFIX = process.env.NEXT_PUBLIC_MITOL_API_LOGOUT_SUFFIX
 
-export const LOGIN = `${MITOL_API_BASE_URL}/login/ol-oidc/`
-export const LOGOUT = `${MITOL_API_BASE_URL}/${MITOL_API_LOGOUT_SUFFIX}/`
+export const LOGIN = `${MITOL_API_BASE_URL}/login`
+export const LOGOUT = `${MITOL_API_BASE_URL}/logout/`
 
 /**
  * Returns the URL to the login page, with a `next` parameter to redirect back

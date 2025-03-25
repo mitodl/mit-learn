@@ -596,3 +596,48 @@ def dump_topics_to_yaml(topic_id: int | None = None):
     }
 
     return yaml.dump(root_level_topics)
+
+
+def json_to_markdown(obj, indent=0):
+    """
+    Recursively converts a JSON object into a readable
+    Markdown format with proper lists and tables.
+    """
+    markdown = ""
+    indent_str = " " * (indent * 2)
+    if isinstance(obj, dict):
+        for key, value in obj.items():
+            if value is not None:
+                markdown += f"\n{indent_str}**{key.replace('_', ' ').title()}**\n\n"
+                markdown += json_to_markdown(value, indent + 1)
+    elif isinstance(obj, list):
+        if all(
+            isinstance(item, dict) for item in obj
+        ):  # Check if it's a list of dictionaries
+            keys = sorted(
+                {k for item in obj for k in item}
+            )  # Collect and sort all keys
+            # Create table header
+            markdown += f"| {' | '.join(keys)} |\n"
+            markdown += f"| {' | '.join(['---'] * len(keys))} |\n"
+            # Create table rows
+            for item in obj:
+                row = [
+                    str(item.get(k, "N/A"))
+                    .replace("[", "")
+                    .replace("]", "")
+                    .replace("{", "")
+                    .replace("}", "")
+                    for k in keys
+                ]
+                markdown += f"| {' | '.join(row)} |\n"
+        else:
+            for item in obj:
+                markdown += (
+                    f"{indent_str}- {json_to_markdown(item, indent + 1).strip()}\n"
+                )
+    elif obj is None:
+        markdown += f"{indent_str}N/A\n\n"
+    else:
+        markdown += f"{indent_str}{obj}\n\n"
+    return markdown

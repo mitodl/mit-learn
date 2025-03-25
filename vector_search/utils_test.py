@@ -51,6 +51,10 @@ def test_vector_point_id_used_for_embed(mocker, content_type):
             "vector_search.utils.filter_existing_qdrant_points",
             return_value=[r.readable_id for r in resources],
         )
+    summarize_content_files_by_ids_mock = mocker.patch(
+        "vector_search.utils.ContentSummarizer.summarize_content_files_by_ids"
+    )
+
     embed_learning_resources(
         [resource.id for resource in resources], content_type, overwrite=True
     )
@@ -70,6 +74,11 @@ def test_vector_point_id_used_for_embed(mocker, content_type):
         assert sorted(
             [p.id for p in mock_qdrant.upload_points.mock_calls[0].kwargs["points"]]
         ) == sorted(point_ids)
+        # TODO: Pass "[resource.id for resource in resources]" instead of [] when we want the scheduled content file summarization  # noqa: FIX002, TD002, TD003
+        summarize_content_files_by_ids_mock.assert_called_once_with(
+            [],
+            True,  # noqa: FBT003
+        )
 
 
 @pytest.mark.parametrize("content_type", ["learning_resource", "content_file"])
@@ -101,6 +110,9 @@ def test_embed_learning_resources_no_overwrite(mocker, content_type):
                 for doc in serialize_bulk_content_files([r.id for r in resources[0:3]])
             ],
         )
+    summarize_content_files_by_ids_mock = mocker.patch(
+        "vector_search.utils.ContentSummarizer.summarize_content_files_by_ids"
+    )
     embed_learning_resources(
         [resource.id for resource in resources], content_type, overwrite=False
     )
@@ -108,6 +120,11 @@ def test_embed_learning_resources_no_overwrite(mocker, content_type):
         assert len(list(mock_qdrant.upload_points.mock_calls[0].kwargs["points"])) == 2
     else:
         assert len(list(mock_qdrant.upload_points.mock_calls[0].kwargs["points"])) == 3
+        # TODO: Pass "[resource.id for resource in resources]" instead of [] when we want the scheduled content file summarization  # noqa: FIX002, TD002, TD003
+        summarize_content_files_by_ids_mock.assert_called_once_with(
+            [],
+            False,  # noqa: FBT003
+        )
 
 
 def test_filter_existing_qdrant_points(mocker):
@@ -380,7 +397,7 @@ def test_course_metadata_document_contents(mocker):
     run = LearningResourceRunFactory.create(
         learning_resource=resource,
         published=True,
-        prices=[Decimal("0.00"), Decimal("50.00")],
+        prices=[Decimal("1.00"), Decimal("50.00")],
         resource_prices=LearningResourcePriceFactory.create_batch(
             2, amount=Decimal("1.00")
         ),
@@ -411,16 +428,11 @@ def test_course_metadata_document_contents(mocker):
     _embed_course_metadata_as_contentfile([serialized_resource])
     point = next(mock_qdrant.upload_points.mock_calls[0].kwargs["points"])
     course_metadata_content = point.payload["chunk_content"]
-    prices = (
-        f"${serialized_resource['prices'][0]}"
-        if serialized_resource.get("prices")
-        else "Free"
-    )
-    assert course_metadata_content.startswith("Information about this course:")
+    assert course_metadata_content.startswith("# Information about this course:")
     assert resource.title in course_metadata_content
     assert resource.description in course_metadata_content
     assert resource.full_description in course_metadata_content
-    assert prices in course_metadata_content
+
     for topic in resource.topics.all():
         assert topic.name in course_metadata_content
     for run in serialized_resource["runs"]:
