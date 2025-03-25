@@ -741,7 +741,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             location = run.get("location") or "Online"
             duration = run.get("duration")
             prices = run.get("prices", [])
-            price = f"${prices[0]}" if len(prices) > 0 else None
+            price = f"${prices[0]}" if prices else None
             delivery_modes = [delivery["name"] for delivery in run.get("delivery", [])]
             instructors = [
                 instructor.get("full_name")
@@ -799,7 +799,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             and serialized_resource["certification_type"]
             and serialized_resource["certification_type"]["code"]
             == CertificationType.completion.name
-        ) and len(prices) > 1:
+        ) and prices:
             return f"Earn a certificate: ${prices[1]}"
         return None
 
