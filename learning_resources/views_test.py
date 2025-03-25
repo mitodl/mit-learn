@@ -1244,6 +1244,35 @@ def test_learning_resources_display_info_list_view(mocker, client):
         assert hit["title"] in titles
 
 
+def test_run_with_null_prices_does_not_throw_error(mocker, client):
+    """Test learning_resources_display_info_detail_view does not throw exception"""
+    from learning_resources.models import LearningResource
+
+    run = LearningResourceRunFactory.create(
+        run_id="test",
+        learning_resource=CourseFactory.create(
+            platform=PlatformType.ocw.name
+        ).learning_resource,
+    )
+    run.prices = None
+    run.save()
+
+    lr = LearningResource.objects.for_search_serialization().get(
+        id=run.learning_resource.id
+    )
+    serialized_resource = LearningResourceDisplayInfoResponseSerializer(
+        serialize_learning_resource_for_update(lr)
+    ).data
+
+    resp = client.get(
+        reverse(
+            "lr:v1:learning_resource_display_info_api-detail",
+            args=[run.learning_resource.id],
+        )
+    )
+    assert resp.json() == serialized_resource
+
+
 def test_learning_resources_display_info_detail_view(mocker, client):
     """Test learning_resources_display_info_detail_view returns expected result"""
     from learning_resources.models import LearningResource
