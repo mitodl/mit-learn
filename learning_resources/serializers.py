@@ -796,8 +796,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         prices = serialized_resource.get("prices", [])
         is_free_with_certificate = (
             serialized_resource.get("free")
-            and serialized_resource["certification_type"]
-            and serialized_resource["certification_type"]["code"]
+            and serialized_resource.get("certification_type", {}).get("code")
             == CertificationType.completion.name
         )
         if is_free_with_certificate and prices and len(prices) > 1:
