@@ -3391,12 +3391,6 @@ export interface PatchedUserRequest {
    * @memberof PatchedUserRequest
    */
   email?: string
-  /**
-   *
-   * @type {boolean}
-   * @memberof PatchedUserRequest
-   */
-  is_authenticated?: boolean
 }
 /**
  * Serializer for WidgetLists
@@ -5491,12 +5485,6 @@ export interface UserRequest {
    * @memberof UserRequest
    */
   email: string
-  /**
-   *
-   * @type {boolean}
-   * @memberof UserRequest
-   */
-  is_authenticated: boolean
 }
 /**
  * Serializer for UserWebsite
