@@ -11,7 +11,7 @@ const setup = ({ programLetter }: { programLetter: ProgramLetter }) => {
     urls.programLetters.details(programLetter.id),
     programLetter,
   )
-  setMockResponse.get(urls.userMe.get(), {})
+  setMockResponse.get(urls.userMe.get(), { is_authenticated: true })
   renderWithProviders(<ProgramLetterPage />, {
     url: programLetterView(programLetter.id),
   })

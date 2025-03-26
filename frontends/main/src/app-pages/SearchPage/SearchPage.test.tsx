@@ -252,7 +252,7 @@ describe("SearchPage", () => {
       },
     })
 
-    setMockResponse.get(urls.userMe.get(), {})
+    setMockResponse.get(urls.userMe.get(), { is_authenticated: true })
 
     renderWithProviders(<SearchPage />)
     await waitFor(() => {

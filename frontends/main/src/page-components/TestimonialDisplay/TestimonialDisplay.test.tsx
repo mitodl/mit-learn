@@ -6,7 +6,7 @@ import { testimonials as factory } from "api/test-utils/factories"
 import TestimonialDisplay from "./TestimonialDisplay"
 
 const setupAPIs = () => {
-  setMockResponse.get(urls.userMe.get(), {})
+  setMockResponse.get(urls.userMe.get(), { is_authenticated: true })
 }
 
 describe("TestimonialDisplay", () => {

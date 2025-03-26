@@ -32,9 +32,9 @@ const user: PartialFactory<User> = (overrides = {}): User => {
     is_article_editor: false,
     is_learning_path_editor: false,
     username: faker.internet.userName(),
+    is_authenticated: true,
     ...overrides,
     profile: profile(overrides?.profile),
-    is_authenticated: true,
   }
   return result
 }
