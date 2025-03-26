@@ -42,6 +42,7 @@ def test_serialize_user(user):
         "is_learning_path_editor": False,
         "is_article_editor": False,
         "profile": ProfileSerializer(user.profile).data,
+        "is_authenticated": True,
     }
 
 
@@ -94,6 +95,7 @@ def test_serialize_create_user(db, mocker):
         "is_learning_path_editor": False,
         "is_article_editor": False,
         "profile": {**profile, "preference_search_filters": {}},
+        "is_authenticated": True,
     }
 
 

@@ -44,6 +44,7 @@ def test_list_users(staff_client, staff_user):
             "is_learning_path_editor": True,
             "is_article_editor": True,
             "profile": ProfileSerializer(staff_user.profile).data,
+            "is_authenticated": True,
         }
     ]
 
@@ -102,6 +103,7 @@ def test_get_user(staff_client, user):
         "is_article_editor": True,
         "is_learning_path_editor": True,
         "profile": ProfileSerializer(user.profile).data,
+        "is_authenticated": True,
     }
 
 
@@ -190,6 +192,7 @@ def test_patch_user(staff_client, user, email, email_optin, toc_optin):
         "is_learning_path_editor": True,
         "is_article_editor": True,
         "profile": ProfileSerializer(user.profile).data,
+        "is_authenticated": True,
     }
     user.refresh_from_db()
     profile.refresh_from_db()
@@ -382,7 +385,13 @@ def test_get_user_by_me(mocker, client, user, is_anonymous):
     resp = client.get(reverse("profile:v0:users_api-me"))
 
     if is_anonymous:
-        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        assert resp.json() == {
+            "id": None,
+            "username": "",
+            "is_learning_path_editor": False,
+            "is_article_editor": False,
+            "is_authenticated": False,
+        }
     else:
         assert resp.json() == {
             "id": user.id,
@@ -392,6 +401,7 @@ def test_get_user_by_me(mocker, client, user, is_anonymous):
             "is_learning_path_editor": False,
             "is_article_editor": False,
             "profile": ProfileSerializer(user.profile).data,
+            "is_authenticated": True,
         }
 
 
