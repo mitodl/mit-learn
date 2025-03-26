@@ -48,7 +48,10 @@ class CurrentUserRetrieveViewSet(mixins.RetrieveModelMixin, viewsets.GenericView
     """User retrieve and update viewsets for the current user"""
 
     serializer_class = UserSerializer
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (
+        AnonymousAccessReadonlyPermission,
+        HasEditPermission,
+    )
 
     def get_object(self):
         """Return the current request user"""
