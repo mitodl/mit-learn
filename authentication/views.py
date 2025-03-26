@@ -34,16 +34,6 @@ def get_redirect_url(request):
     )
 
 
-def next_cache_key(username):
-    """
-    Get the cache key for the next URL for a user.
-
-    Args:
-        request: Django request object
-    """
-    return f"{username}_next_logout"
-
-
 class CustomLogoutView(View):
     """
     Log out the user from django
