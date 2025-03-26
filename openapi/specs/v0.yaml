@@ -3748,8 +3748,6 @@ components:
           type: string
           writeOnly: true
           minLength: 1
-        is_authenticated:
-          type: boolean
     PatchedWidgetListRequest:
       type: object
       description: Serializer for WidgetLists
@@ -5346,6 +5344,7 @@ components:
           readOnly: true
         is_authenticated:
           type: boolean
+          readOnly: true
       required:
       - first_name
       - id
@@ -5364,11 +5363,8 @@ components:
           type: string
           writeOnly: true
           minLength: 1
-        is_authenticated:
-          type: boolean
       required:
       - email
-      - is_authenticated
     UserWebsite:
       type: object
       description: Serializer for UserWebsite
