@@ -795,11 +795,15 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             return None
         prices = serialized_resource.get("prices", [])
         if (
-            serialized_resource.get("free")
-            and serialized_resource["certification_type"]
-            and serialized_resource["certification_type"]["code"]
-            == CertificationType.completion.name
-        ) and prices:
+            (
+                serialized_resource.get("free")
+                and serialized_resource["certification_type"]
+                and serialized_resource["certification_type"]["code"]
+                == CertificationType.completion.name
+            )
+            and prices
+            and len(prices) > 1
+        ):
             return f"Earn a certificate: ${prices[1]}"
         return None
 
