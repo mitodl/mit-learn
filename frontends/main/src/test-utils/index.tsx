@@ -7,7 +7,7 @@ import type { QueryClient } from "@tanstack/react-query"
 
 import { makeQueryClient } from "@/app/getQueryClient"
 import { render } from "@testing-library/react"
-import { setMockResponse } from "api/test-utils"
+import { factories, setMockResponse } from "api/test-utils"
 import type { User } from "api/hooks/user"
 import {
   mockRouter,
@@ -40,9 +40,7 @@ interface TestAppOptions {
 const defaultTestAppOptions = {
   url: "/",
 }
-const defaultUser: User = {
-  is_authenticated: true,
-}
+const defaultUser: User = factories.user.user()
 
 const TestProviders: React.FC<{
   children: React.ReactNode

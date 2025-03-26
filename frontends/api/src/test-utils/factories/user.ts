@@ -34,6 +34,7 @@ const user: PartialFactory<User> = (overrides = {}): User => {
     username: faker.internet.userName(),
     ...overrides,
     profile: profile(overrides?.profile),
+    is_authenticated: true,
   }
   return result
 }
