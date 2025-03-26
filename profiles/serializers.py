@@ -322,6 +322,7 @@ class UserSerializer(serializers.ModelSerializer):
         return False
 
     def is_authenticated(self, instance) -> bool:
+        """Return whether the user is authenticated"""
         return instance.is_authenticated
 
     def create(self, validated_data):
