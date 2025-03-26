@@ -307,6 +307,7 @@ class UserSerializer(serializers.ModelSerializer):
     email = serializers.CharField(write_only=True)
     is_learning_path_editor = serializers.SerializerMethodField()
     is_article_editor = serializers.SerializerMethodField()
+    is_authenticated = serializers.BooleanField(read_only=True)
     profile = ProfileSerializer(required=False)
 
     def get_is_learning_path_editor(self, instance) -> bool:  # noqa: ARG002
