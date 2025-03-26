@@ -13,7 +13,7 @@ import { setMockResponse, urls } from "api/test-utils"
 
 describe("Header", () => {
   it("Includes a link to the Homepage", async () => {
-    setMockResponse.get(urls.userMe.get(), {})
+    setMockResponse.get(urls.userMe.get(), { is_authenticated: true })
     renderWithProviders(<Header />)
     const header = screen.getByRole("banner")
     within(header).getAllByTitle("MIT Learn Homepage")

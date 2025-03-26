@@ -44,7 +44,7 @@ describe("AiChatSyllabus", () => {
   test("User enters a prompt. Greets anonymous user generically", async () => {
     const resource = factories.learningResources.course()
 
-    setMockResponse.get(urls.userMe.get(), {}, { code: 403 })
+    setMockResponse.get(urls.userMe.get(), { is_authenticated: false })
     renderWithProviders(
       <AiChatSyllabusSlideDown
         open
