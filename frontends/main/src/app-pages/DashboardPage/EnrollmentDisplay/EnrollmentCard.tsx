@@ -1,16 +1,15 @@
 import React from "react"
-import {
-  styled,
-  Link,
-  SimpleMenu,
-  SimpleMenuItem,
-  Chip,
-  Stack,
-} from "ol-components"
+import { styled, Link, SimpleMenu, SimpleMenuItem, Stack } from "ol-components"
+import NextLink from "next/link"
 import Image from "next/image"
 import type { EnrollmentData } from "./types"
 import { ActionButton, Button, ButtonLink } from "@mitodl/smoot-design"
-import { RiArrowRightLine, RiAwardLine, RiMore2Line } from "@remixicon/react"
+import {
+  RiArrowRightLine,
+  RiAddLine,
+  RiMore2Line,
+  RiAwardLine,
+} from "@remixicon/react"
 import { calendarDaysUntil, isInPast, NoSSR } from "ol-utilities"
 
 import CompleteCheck from "@/public/images/icons/complete-check.svg"
@@ -21,28 +20,10 @@ const CardRoot = styled.div(({ theme }) => ({
   backgroundColor: theme.custom.colors.white,
   boxShadow: "0px 1px 6px 0px rgba(3, 21, 45, 0.05)",
   padding: "16px",
+  display: "flex",
+  gap: "8px",
+  alignItems: "center",
 }))
-
-const TitleLink = styled(Link)(({ theme }) => ({
-  ...theme.typography.subtitle2,
-  flex: 1,
-  alignSelf: "center",
-}))
-
-const StyledChip = styled(Chip, {
-  shouldForwardProp: (name) => name !== "noBorder",
-})<{ noBorder?: boolean }>(({ theme, noBorder }) => [
-  noBorder && {
-    borderColor: "transparent",
-  },
-  {
-    "&.MuiChip-clickable:hover, &.MuiChip-deletable:hover": {
-      backgroundColor: `${theme.custom.colors.lightGray1}`,
-      borderColor: `${theme.custom.colors.silverGrayLight}`,
-      color: theme.custom.colors.darkGray2,
-    },
-  },
-])
 
 const MenuButton = styled(ActionButton)({
   marginLeft: "-8px",
@@ -105,8 +86,7 @@ const formatUpgradeTime = (daysFloat: number) => {
   return "Less than a day remaining"
 }
 
-const UpgradeRoot = styled.div(({ theme }) => ({
-  borderRadius: "4px",
+const SubtitleLinkRoot = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: "8px",
@@ -114,7 +94,7 @@ const UpgradeRoot = styled.div(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
   ...theme.typography.subtitle3,
 }))
-const UpgradeLink = styled.a(({ theme }) => ({
+const SubtitleLink = styled(NextLink)(({ theme }) => ({
   ...theme.typography.subtitle3,
   color: theme.custom.colors.mitRed,
   display: "flex",
@@ -124,19 +104,14 @@ const UpgradeLink = styled.a(({ theme }) => ({
     textDecoration: "underline",
   },
 }))
+
 const UpgradeBanner: React.FC<
   {
-    canUpgrade: boolean
     certificateUpgradeDeadline?: string | null
     certificateUpgradePrice?: string | null
   } & React.HTMLAttributes<HTMLDivElement>
-> = ({
-  canUpgrade,
-  certificateUpgradeDeadline,
-  certificateUpgradePrice,
-  ...others
-}) => {
-  if (!canUpgrade || !certificateUpgradeDeadline || !certificateUpgradePrice) {
+> = ({ certificateUpgradeDeadline, certificateUpgradePrice, ...others }) => {
+  if (!certificateUpgradeDeadline || !certificateUpgradePrice) {
     return null
   }
   if (isInPast(certificateUpgradeDeadline)) return null
@@ -144,25 +119,25 @@ const UpgradeBanner: React.FC<
   if (calendarDays === null) return null
   const formattedPrice = `$${certificateUpgradePrice}`
   return (
-    <UpgradeRoot {...others}>
-      <UpgradeLink href="#">
-        <RiAwardLine size="16px" />
+    <SubtitleLinkRoot {...others}>
+      <SubtitleLink href="#">
+        <RiAddLine size="16px" />
         Add a certificate for {formattedPrice}
-      </UpgradeLink>
+      </SubtitleLink>
       <NoSSR>
         {/* This uses local time. */}
         {formatUpgradeTime(calendarDays)}
       </NoSSR>
-    </UpgradeRoot>
+    </SubtitleLinkRoot>
   )
 }
 
 const CountdownRoot = styled.div({
   width: "142px",
+  marginRight: "32px",
   display: "flex",
-  alignItems: "center",
   justifyContent: "center",
-  marginRight: "40px",
+  alignSelf: "end",
 })
 const CourseStartCountdown: React.FC<{
   startDate: string
@@ -181,13 +156,14 @@ const CourseStartCountdown: React.FC<{
   }
   return (
     <CountdownRoot>
-      <StyledChip
-        noBorder
+      <Link
+        color="black"
+        size="small"
         className={className}
         onClick={console.log}
-        variant="outlined"
-        label={value}
-      />
+      >
+        {value}
+      </Link>
     </CountdownRoot>
   )
 }
@@ -196,6 +172,12 @@ const Completed = styled(Image)({
   width: "16px",
   height: "16px",
 })
+const NotComplete = styled.div(({ theme }) => ({
+  width: "16px",
+  height: "16px",
+  borderRadius: "50%",
+  border: `1px solid ${theme.custom.colors.silverGrayLight}`,
+}))
 
 const getMenuItems = (): SimpleMenuItem[] => [
   {
@@ -232,18 +214,31 @@ const EnrollmentCard: React.FC<EnrollmentCardProps> = ({ enrollment }) => {
   } = enrollment
   return (
     <CardRoot data-testid="enrollment-card">
-      <Stack
-        direction="row"
-        gap="16px"
-        sx={{ marginBottom: "8px", alignItems: "start" }}
-      >
-        <TitleLink size="medium" color="black" href={marketingUrl}>
+      <Stack justifyContent="start" alignItems="stretch" gap="8px" flex={1}>
+        <Link size="medium" color="black" href={marketingUrl}>
           {title}
-        </TitleLink>
-        <Stack direction="row" gap="16px" alignItems="center">
+        </Link>
+        {hasUserCompleted ? (
+          <SubtitleLink href="#">
+            {<RiAwardLine size="16px" />}
+            View Certificate
+          </SubtitleLink>
+        ) : null}
+        {canUpgrade ? (
+          <UpgradeBanner
+            data-testid="upgrade-root"
+            certificateUpgradeDeadline={certificateUpgradeDeadline}
+            certificateUpgradePrice={certificateUpgradePrice}
+          />
+        ) : null}
+      </Stack>
+      <Stack gap="8px">
+        <Stack direction="row" gap="8px" alignItems="center">
           {hasUserCompleted ? (
             <Completed src={CompleteCheck} alt="Completed" />
-          ) : null}
+          ) : (
+            <NotComplete />
+          )}
           <CoursewareButton
             startDate={startDate}
             href={coursewareUrl}
@@ -258,14 +253,6 @@ const EnrollmentCard: React.FC<EnrollmentCardProps> = ({ enrollment }) => {
             }
           />
         </Stack>
-      </Stack>
-      <Stack direction="row" gap="16px" justifyContent="flex-end">
-        <UpgradeBanner
-          data-testid="upgrade-root"
-          canUpgrade={canUpgrade}
-          certificateUpgradeDeadline={certificateUpgradeDeadline}
-          certificateUpgradePrice={certificateUpgradePrice}
-        />
         {startDate ? <CourseStartCountdown startDate={startDate} /> : null}
       </Stack>
     </CardRoot>

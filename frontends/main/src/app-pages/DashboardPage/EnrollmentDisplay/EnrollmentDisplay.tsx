@@ -59,8 +59,15 @@ const EnrollmentDisplay = () => {
     select: mitxonlineCoursesToEnrollment,
   })
 
-  // These are separate variables because later we will move 'completed' to
-  // an initially collapsed section.
+  /**
+   * TODO:
+   * Consider handling UI logic in a component that expects standardized
+   * EnrollmentData objects. This will simplify testing and isolate API calls
+   * to the parent
+   *
+   * The constants below are separate for impending "Show All" functionality.
+   * The above TODO could be handled then.
+   */
   const { ended, started, notStarted } = sortEnrollments(enrolledCourses || [])
   const sorted = [...started, ...notStarted, ...ended]
 
