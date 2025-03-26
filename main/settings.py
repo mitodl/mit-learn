@@ -335,7 +335,10 @@ APISIX_USERDATA_MAP = {
         "email_optin": "emailOptIn",
     },
 }
-
+DISABLE_APISIX_USER_MIDDLEWARE = get_bool(
+    name="DISABLE_APISIX_USER_MIDDLEWARE",
+    default=False,
+)
 
 # Social Auth configurations - [END]
 
