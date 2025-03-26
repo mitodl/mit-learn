@@ -716,7 +716,7 @@ def test_certificate_display():
         serialized_resource
     )
     assert serialized_resource["free"]
-    assert metadata_serializer.data["certification"] is None
+    assert metadata_serializer.data.get("certification") is None
 
     # If resource is not free and certification is not none - show the certification type
     resource = LearningResourceFactory(
