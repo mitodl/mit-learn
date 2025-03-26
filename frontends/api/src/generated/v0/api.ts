@@ -3391,6 +3391,12 @@ export interface PatchedUserRequest {
    * @memberof PatchedUserRequest
    */
   email?: string
+  /**
+   *
+   * @type {boolean}
+   * @memberof PatchedUserRequest
+   */
+  is_authenticated?: boolean
 }
 /**
  * Serializer for WidgetLists
@@ -5462,10 +5468,10 @@ export interface User {
   is_learning_path_editor: boolean
   /**
    *
-   * @type {string}
+   * @type {boolean}
    * @memberof User
    */
-  is_authenticated: string
+  is_authenticated: boolean
 }
 /**
  * Serializer for User
@@ -5485,6 +5491,12 @@ export interface UserRequest {
    * @memberof UserRequest
    */
   email: string
+  /**
+   *
+   * @type {boolean}
+   * @memberof UserRequest
+   */
+  is_authenticated: boolean
 }
 /**
  * Serializer for UserWebsite
