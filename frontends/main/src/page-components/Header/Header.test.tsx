@@ -34,7 +34,10 @@ describe("UserMenu", () => {
   test.each([{}, { profile: null }, { profile: {} }])(
     "Trigger button shows UserIcon for authenticated users w/o initials",
     async (userSettings) => {
-      setMockResponse.get(urls.userMe.get(), userSettings)
+      setMockResponse.get(urls.userMe.get(), {
+        is_authenticated: true,
+        ...userSettings,
+      })
 
       renderWithProviders(<Header />)
 
@@ -44,7 +47,10 @@ describe("UserMenu", () => {
   )
 
   test("Trigger button shows name if available", async () => {
-    setMockResponse.get(urls.userMe.get(), { profile: { name: "Alice Bee" } })
+    setMockResponse.get(urls.userMe.get(), {
+      is_authenticated: true,
+      profile: { name: "Alice Bee" },
+    })
 
     renderWithProviders(<Header />)
     const trigger = await screen.findByRole("button", { name: "User Menu" })
@@ -99,7 +105,10 @@ describe("UserMenu", () => {
   })
 
   test("Learning path editors see 'Learning Paths' link", async () => {
-    setMockResponse.get(urls.userMe.get(), { is_learning_path_editor: true })
+    setMockResponse.get(urls.userMe.get(), {
+      is_learning_path_editor: true,
+      is_authenticated: true,
+    })
     renderWithProviders(<Header />)
     const menu = await findUserMenu()
     const link = within(menu).getByRole("menuitem", {
@@ -109,7 +118,10 @@ describe("UserMenu", () => {
   })
 
   test("Users WITHOUT LearningPathEditor permission do not see 'Learning Paths' link", async () => {
-    setMockResponse.get(urls.userMe.get(), { is_learning_path_editor: false })
+    setMockResponse.get(urls.userMe.get(), {
+      is_learning_path_editor: false,
+      is_authenticated: true,
+    })
     renderWithProviders(<Header />)
     const menu = await findUserMenu()
     const link = within(menu).queryByRole("menuitem", {

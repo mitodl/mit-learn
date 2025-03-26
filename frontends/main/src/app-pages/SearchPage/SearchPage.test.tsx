@@ -328,6 +328,7 @@ describe("SearchPage", () => {
     })
     setMockResponse.get(urls.userMe.get(), {
       is_learning_path_editor: true,
+      is_authenticated: true,
     })
 
     setMockResponse.get(urls.adminSearchParams.get(), {
@@ -375,6 +376,7 @@ test("admin users can set the search mode and slop", async () => {
   })
   setMockResponse.get(urls.userMe.get(), {
     is_learning_path_editor: true,
+    is_authenticated: true,
   })
   setMockResponse.get(urls.adminSearchParams.get(), {
     search_mode: "phrase",
