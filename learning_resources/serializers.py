@@ -794,14 +794,13 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         if not self.all_runs_are_identical(serialized_resource):
             return None
         prices = serialized_resource.get("prices", [])
-        if (
+        is_free_with_certificate = (
             serialized_resource.get("free")
             and serialized_resource["certification_type"]
             and serialized_resource["certification_type"]["code"]
             == CertificationType.completion.name
-            and prices
-            and len(prices) > 1
-        ):
+        )
+        if is_free_with_certificate and prices and len(prices) > 1:
             return f"Earn a certificate: ${prices[1]}"
         return None
 
