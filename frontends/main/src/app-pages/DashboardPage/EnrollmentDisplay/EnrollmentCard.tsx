@@ -12,9 +12,6 @@ import { ActionButton, Button, ButtonLink } from "@mitodl/smoot-design"
 import { RiArrowRightLine, RiAwardLine, RiMoreLine } from "@remixicon/react"
 import { calendarDaysUntil, isInPast, NoSSR } from "ol-utilities"
 
-const LinkStyled = styled(Link)(({ theme }) => ({
-  ...theme.typography.subtitle2,
-}))
 const CourseButtonLink = styled(ButtonLink)({
   width: "142px",
 })
@@ -186,9 +183,9 @@ const EnrollmentCard: React.FC<EnrollmentCardProps> = ({ enrollment }) => {
     <CardRoot data-testid="enrollment-card">
       <Stack direction="row">
         <Left>
-          <LinkStyled size="medium" color="black" href={marketingUrl}>
+          <Link size="medium" color="black" href={marketingUrl}>
             {title}
-          </LinkStyled>
+          </Link>
         </Left>
         <Right>
           <Stack gap="4px">
