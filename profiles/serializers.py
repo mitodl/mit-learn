@@ -321,10 +321,6 @@ class UserSerializer(serializers.ModelSerializer):
             return is_admin_user(request)
         return False
 
-    def is_authenticated(self, instance) -> bool:
-        """Return whether the user is authenticated"""
-        return instance.is_authenticated
-
     def create(self, validated_data):
         profile_data = validated_data.pop("profile") or {}
         username = ulid.new()
