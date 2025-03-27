@@ -96,6 +96,9 @@ pyparsing = "^3.2.1"
 html2text = "^2024.2.26"
 markdown = "^3.7"
 isodate = "^0.7.2"
+mitol-django-common = { git = "https://github.com/mitodl/ol-django.git", branch = "nl/add-ol-django-scim", subdirectory = "src/common"}
+mitol-django-scim = { git = "https://github.com/mitodl/ol-django.git", branch = "nl/add-ol-django-scim", subdirectory = "src/scim"}
+
 
 
 [tool.poetry.group.dev.dependencies]
