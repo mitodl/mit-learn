@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.30.10
+Version 0.30.10 (Released March 27, 2025)
 ---------------
 
 - fix dedupe issue (#2153)
