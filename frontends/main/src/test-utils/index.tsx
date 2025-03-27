@@ -107,14 +107,10 @@ const renderWithTheme = (ui: React.ReactElement) =>
  * @param fc the mock or spied upon functional component
  * @param partialProps an object of props
  */
-const expectProps = (
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  fc: (...args: any[]) => void,
-  partialProps: unknown,
-) => {
+const expectProps = <P,>(fc: React.FC<P>, partialProps: Partial<P>) => {
   expect(fc).toHaveBeenCalledWith(
     expect.objectContaining(partialProps),
-    expect.toBeOneOf([expect.anything(), undefined]),
+    undefined,
   )
 }
 
@@ -124,14 +120,10 @@ const expectProps = (
  * @param fc the mock or spied upon functional component
  * @param partialProps an object of props
  */
-const expectLastProps = (
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  fc: (...args: any[]) => void,
-  partialProps: unknown,
-) => {
+const expectLastProps = <P,>(fc: React.FC<P>, partialProps: Partial<P>) => {
   expect(fc).toHaveBeenLastCalledWith(
     expect.objectContaining(partialProps),
-    expect.toBeOneOf([expect.anything(), undefined]),
+    undefined,
   )
 }
 
