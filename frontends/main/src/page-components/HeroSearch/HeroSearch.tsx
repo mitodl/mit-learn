@@ -197,10 +197,6 @@ const TrendingContainer = styled.div({
   gap: "8px",
 })
 
-const BoldLink = styled(Link)(({ theme }) => ({
-  ...theme.typography.subtitle1,
-}))
-
 const HeroSearch: React.FC<{ imageIndex: number }> = ({ imageIndex }) => {
   const posthog = usePostHog()
   const posthogCapture = (event: string) => {
@@ -239,12 +235,14 @@ const HeroSearch: React.FC<{ imageIndex: number }> = ({ imageIndex }) => {
         </Typography>
         <Typography>
           Explore MIT's{" "}
-          <BoldLink
+          <Link
+            color="black"
+            size="large"
             href={`${ABOUT}#${ABOUT_NON_DEGREE_LEARNING_FRAGMENT}`}
             prefetch={false}
           >
             Non-Degree Learning
-          </BoldLink>
+          </Link>
         </Typography>
         <ControlsContainer>
           <SearchField

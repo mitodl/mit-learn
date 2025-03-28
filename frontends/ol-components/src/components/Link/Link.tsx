@@ -5,15 +5,14 @@ import { theme } from "../ThemeProvider/ThemeProvider"
 import { LinkAdapter } from "../LinkAdapter/LinkAdapter"
 
 type LinkStyleProps = {
+  color: "black" | "white" | "red"
   size?: "small" | "medium" | "large"
-  color?: "black" | "white" | "red"
   hovercolor?: "black" | "white" | "red"
   nohover?: boolean
 }
 
-const DEFAULT_PROPS: Required<LinkStyleProps> = {
+const DEFAULT_PROPS: Required<Omit<LinkStyleProps, "color">> = {
   size: "medium",
-  color: "black",
   hovercolor: "red",
   nohover: false,
 }
@@ -33,16 +32,22 @@ const NO_FORWARD = Object.keys({
  */
 const linkStyles = (props: LinkStyleProps) => {
   const { size, color, hovercolor, nohover } = { ...DEFAULT_PROPS, ...props }
+
   return css([
-    size === "small" && {
-      ...theme.typography.body3,
-    },
-    size === "medium" && {
-      ...theme.typography.body2,
-    },
-    size === "large" && {
-      ...theme.typography.h5,
-    },
+    {
+      small:
+        color === "black"
+          ? { ...theme.typography.subtitle3 }
+          : { ...theme.typography.body3 },
+      medium:
+        color === "black"
+          ? { ...theme.typography.subtitle2 }
+          : { ...theme.typography.body2 },
+      large:
+        color === "black"
+          ? { ...theme.typography.subtitle1 }
+          : { ...theme.typography.body1 },
+    }[size],
     {
       color: {
         ["black"]: theme.custom.colors.darkGray2,

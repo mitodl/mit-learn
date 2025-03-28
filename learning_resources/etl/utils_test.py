@@ -170,23 +170,32 @@ def test_parse_dates():
 
 
 @pytest.mark.parametrize("has_metadata", [True, False])
-@pytest.mark.parametrize("matching_checksum", [True, False])
+@pytest.mark.parametrize("matching_edx_module_id", [True, False])
 @pytest.mark.parametrize("overwrite", [True, False])
 @pytest.mark.parametrize("folder", ["folder", "static"])
 @pytest.mark.parametrize("tika_content", ["tika'ed text", ""])
 def test_transform_content_files(  # noqa: PLR0913
-    mocker, folder, has_metadata, matching_checksum, overwrite, tika_content
+    mocker, folder, has_metadata, matching_edx_module_id, overwrite, tika_content
 ):
     """transform_content_files"""
     run = LearningResourceRunFactory.create(published=True)
     document = "some text in the document"
     file_extension = ".pdf" if folder == "static" else ".html"
-    key = f"key{file_extension}"
     content_type = "course"
     checksum = "7s35721d1647f962d59b8120a52210a7"
     metadata = {"title": "the title of the course"} if has_metadata else None
     tika_output = {"content": tika_content, "metadata": metadata}
-    if matching_checksum:
+
+    if folder == "static":
+        edx_module_id = (
+            f"asset-v1:{run.run_id.replace('course-v1:', '')}+type@asset+block@uuid.pdf"
+        )
+    else:
+        edx_module_id = (
+            f"block-v1:{run.run_id.replace('course-v1:', '')}+type@folder+block@uuid"
+        )
+
+    if matching_edx_module_id:
         ContentFileFactory.create(
             content="existing content",
             content_title=metadata["title"] if metadata else "",
@@ -194,7 +203,7 @@ def test_transform_content_files(  # noqa: PLR0913
             published=True,
             run=run,
             checksum=checksum,
-            key=key,
+            key=edx_module_id,
         )
 
     documents_mock = mocker.patch(
@@ -203,11 +212,10 @@ def test_transform_content_files(  # noqa: PLR0913
             (
                 document,
                 {
-                    "key": key,
                     "content_type": content_type,
                     "checksum": checksum,
                     "file_extension": file_extension,
-                    "source_path": f"root/{folder}/{key}",
+                    "source_path": f"root/{folder}/uuid{file_extension}",
                 },
             )
         ],
@@ -226,35 +234,26 @@ def test_transform_content_files(  # noqa: PLR0913
         )
     )
 
-    if folder == "static":
-        edx_module_id = (
-            f"asset-v1:{run.run_id.replace('course-v1:', '')}+type@asset+block@key.pdf"
-        )
-    else:
-        edx_module_id = (
-            f"block-v1:{run.run_id.replace('course-v1:', '')}+type@folder+block@key"
-        )
-
-    if tika_content or (matching_checksum and not overwrite):
+    if tika_content or (matching_edx_module_id and not overwrite):
         assert content == [
             {
                 "content": "existing content"
-                if (matching_checksum and not overwrite)
+                if (matching_edx_module_id and not overwrite)
                 else tika_output["content"],
-                "key": key,
+                "key": edx_module_id,
                 "published": True,
                 "content_title": metadata["title"] if has_metadata else "",
                 "content_type": content_type,
                 "checksum": checksum,
                 "file_extension": file_extension,
-                "source_path": f"root/{folder}/{key}",
+                "source_path": f"root/{folder}/uuid{file_extension}",
                 "edx_module_id": edx_module_id,
             }
         ]
     else:
         assert content == []
 
-    if matching_checksum and not overwrite:
+    if matching_edx_module_id and not overwrite:
         extract_mock.assert_not_called()
     else:
         extract_mock.assert_called_once_with(document, other_headers={})
@@ -275,7 +274,6 @@ def test_documents_from_olx():
     assert formula2do[1]["source_path"].endswith("formula2do.xml")
     assert formula2do[1]["content_type"] == CONTENT_TYPE_FILE
     assert formula2do[1]["mime_type"].endswith("/xml")
-    assert formula2do[1]["key"] == "8852bcb31c0a4dc9d6c5385e09b0e0c4"
 
 
 @pytest.mark.parametrize(

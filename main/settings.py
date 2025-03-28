@@ -33,7 +33,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.30.9"
+VERSION = "0.30.10"
 
 log = logging.getLogger()
 
@@ -335,7 +335,10 @@ APISIX_USERDATA_MAP = {
         "email_optin": "emailOptIn",
     },
 }
-
+DISABLE_APISIX_USER_MIDDLEWARE = get_bool(
+    name="DISABLE_APISIX_USER_MIDDLEWARE",
+    default=False,
+)
 
 # Social Auth configurations - [END]
 

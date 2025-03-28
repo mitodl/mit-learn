@@ -254,10 +254,17 @@ def transform_contentfile(
         content_type = CONTENT_TYPE_VIDEO
         file_s3_path = contentfile_data.get("transcript_file")
         image_src = contentfile_data.get("thumbnail_file")
-        file_extension = Path(contentfile_data.get("file")).suffix
+        file_extension = Path(
+            contentfile_data.get(
+                "file", contentfile_data.get("video_files", {}).get("archive_url")
+            )
+            or ""  # Assign blank str if missing/null
+        ).suffix
     else:
         content_type = get_content_type(file_type)
-        file_s3_path = contentfile_data.get("file")
+        file_s3_path = (
+            contentfile_data.get("file") or ""
+        )  # Assign blank str if missing/null
         image_src = None
         file_extension = Path(file_s3_path).suffix
 
