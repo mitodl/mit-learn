@@ -1,9 +1,9 @@
-import React from "react"
+import React, { useState } from "react"
 import { styled, RoutedDrawer } from "ol-components"
 import { RiCloseLine } from "@remixicon/react"
 import { ActionButton } from "@mitodl/smoot-design"
+import { AiChat } from "@mitodl/smoot-design/ai"
 import type { AiChatProps } from "@mitodl/smoot-design/ai"
-import AiChatWithEntryScreen from "./AiChatWithEntryScreen"
 import { getCsrfToken } from "@/common/utils"
 import { RECOMMENDER_QUERY_PARAM } from "@/common/urls"
 
@@ -29,28 +29,11 @@ const CloseButton = styled(ActionButton)(({ theme }) => ({
   },
 }))
 
-const StyledAiChatWithEntryScreen = styled(AiChatWithEntryScreen)(
-  ({ theme }) => ({
-    width: "900px",
-    [theme.breakpoints.down("md")]: {
-      width: "100%",
-    },
-    ".AiChatWithEntryScreen-chatScreen": {
-      padding: "0 28px",
-      [theme.breakpoints.down("md")]: {
-        padding: "0 16px",
-      },
-    },
-    ".MitAiChat--title": {
-      position: "sticky",
-      top: 0,
-      padding: "32px 0 26px",
-      zIndex: 2,
-      backgroundColor: theme.custom.colors.white,
-      borderRadius: 0,
-    },
-  }),
-)
+const StyledAiChat = styled(AiChat)({
+  ".MitAiChat--entryScreenContainer": {
+    paddingTop: "152px",
+  },
+})
 
 const INITIAL_MESSAGES: AiChatProps["initialMessages"] = [
   {
@@ -76,7 +59,8 @@ const STARTERS = [
 
 const DrawerContent: React.FC<{
   onClose?: () => void
-}> = ({ onClose }) => {
+  scrollElement: HTMLElement | null
+}> = ({ onClose, scrollElement }) => {
   return (
     <>
       <CloseButtonContainer>
@@ -89,11 +73,12 @@ const DrawerContent: React.FC<{
           <RiCloseLine />
         </CloseButton>
       </CloseButtonContainer>
-      <StyledAiChatWithEntryScreen
-        entryTitle="What do you want to learn from MIT?"
-        starters={STARTERS}
+      <StyledAiChat
+        entryScreenTitle="What do you want to learn from MIT?"
+        conversationStarters={STARTERS}
         askTimTitle="to recommend a course"
         initialMessages={INITIAL_MESSAGES}
+        scrollElement={scrollElement}
         requestOpts={{
           apiUrl: process.env.NEXT_PUBLIC_LEARN_AI_RECOMMENDATION_ENDPOINT!,
           fetchOpts: {
@@ -113,6 +98,14 @@ const DrawerContent: React.FC<{
 
 const DRAWER_REQUIRED_PARAMS = [RECOMMENDER_QUERY_PARAM] as const
 const AiRecommendationBotDrawer = () => {
+  const [scrollElement, setScrollElement] = useState<HTMLElement | null>(null)
+
+  const paperRefCallback = (node: HTMLDivElement | null) => {
+    if (node) {
+      setScrollElement(node)
+    }
+  }
+
   return (
     <RoutedDrawer
       hideCloseButton
@@ -120,6 +113,7 @@ const AiRecommendationBotDrawer = () => {
       aria-label="What do you want to learn about?"
       anchor="right"
       PaperProps={{
+        ref: paperRefCallback,
         sx: {
           minWidth: (theme) => ({
             minWidth: "900px",
@@ -131,7 +125,9 @@ const AiRecommendationBotDrawer = () => {
         },
       }}
     >
-      {({ closeDrawer }) => <DrawerContent onClose={closeDrawer} />}
+      {({ closeDrawer }) => (
+        <DrawerContent onClose={closeDrawer} scrollElement={scrollElement} />
+      )}
     </RoutedDrawer>
   )
 }
