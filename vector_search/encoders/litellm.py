@@ -1,12 +1,19 @@
 import logging
 
+import litellm
 import tiktoken
 from django.conf import settings
-from litellm import embedding
 
 from vector_search.encoders.base import BaseEncoder
 
 log = logging.getLogger()
+
+
+litellm.enable_cache(
+    type="disk",
+    disk_cache_dir="./disk-cache",
+    supported_call_types=["embedding"],
+)
 
 
 class LiteLLMEncoder(BaseEncoder):
@@ -28,12 +35,9 @@ class LiteLLMEncoder(BaseEncoder):
         return [result["embedding"] for result in self.get_embedding(documents)["data"]]
 
     def get_embedding(self, texts):
-        config = {
-            "model": self.model_name,
-            "input": texts,
-        }
+        config = {"model": self.model_name, "input": texts, "caching": True}
         if settings.LITELLM_CUSTOM_PROVIDER:
             config["custom_llm_provider"] = settings.LITELLM_CUSTOM_PROVIDER
         if settings.LITELLM_API_BASE:
             config["api_base"] = settings.LITELLM_API_BASE
-        return embedding(**config).to_dict()
+        return litellm.embedding(**config).to_dict()
