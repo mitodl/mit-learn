@@ -21,8 +21,12 @@ RUN mkdir /src && \
 
 FROM system AS poetry
 
-## Set some poetry config
+## Set some poetry and python config
 ENV  \
+  PYTHONUNBUFFERED=1 \
+  PYTHONDONTWRITEBYTECODE=1 \
+  PIP_DISABLE_PIP_VERSION_CHECK=on \
+  POETRY_NO_INTERACTION=1 \
   POETRY_VERSION=1.8.5 \
   POETRY_VIRTUALENVS_CREATE=true \
   POETRY_CACHE_DIR='/tmp/cache/poetry' \
@@ -47,7 +51,7 @@ RUN curl -sSL https://install.python-poetry.org \
   python3 -q
 WORKDIR /src
 RUN python3 -m venv $VIRTUAL_ENV
-RUN poetry install
+RUN poetry install && rm -rf /tmp/cache
 
 FROM poetry as code
 
