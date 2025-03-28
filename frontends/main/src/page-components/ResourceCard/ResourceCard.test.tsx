@@ -78,7 +78,7 @@ describe.each([
         learningPathMemberships,
       )
     } else {
-      setMockResponse.get(urls.userMe.get(), {}, { code: 403 })
+      setMockResponse.get(urls.userMe.get(), { is_authenticated: false })
     }
     const { view, location, queryClient } = renderWithProviders(
       <ResourceCard {...props} resource={resource} list={isList} />,

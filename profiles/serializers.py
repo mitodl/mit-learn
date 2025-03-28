@@ -307,7 +307,8 @@ class UserSerializer(serializers.ModelSerializer):
     email = serializers.CharField(write_only=True)
     is_learning_path_editor = serializers.SerializerMethodField()
     is_article_editor = serializers.SerializerMethodField()
-    profile = ProfileSerializer()
+    is_authenticated = serializers.BooleanField(read_only=True)
+    profile = ProfileSerializer(required=False)
 
     def get_is_learning_path_editor(self, instance) -> bool:  # noqa: ARG002
         request = self.context.get("request")
@@ -360,8 +361,9 @@ class UserSerializer(serializers.ModelSerializer):
             "last_name",
             "is_article_editor",
             "is_learning_path_editor",
+            "is_authenticated",
         )
-        read_only_fields = ("id", "username")
+        read_only_fields = ("id", "username", "is_authenticated")
 
 
 class ProgramCertificateSerializer(serializers.ModelSerializer):

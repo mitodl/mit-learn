@@ -36,7 +36,7 @@ const assertLinksTo = (
 }
 
 const setupAPIs = () => {
-  setMockResponse.get(urls.userMe.get(), {})
+  setMockResponse.get(urls.userMe.get(), { is_authenticated: true })
   setMockResponse.get(urls.userLists.membershipList(), [])
   setMockResponse.get(urls.learningPaths.membershipList(), [])
 
@@ -272,7 +272,7 @@ describe("Home Page personalize section", () => {
   test("Links to login when not authenticated", async () => {
     setupAPIs()
 
-    setMockResponse.get(urls.userMe.get(), {}, { code: 403 })
+    setMockResponse.get(urls.userMe.get(), { is_authenticated: false })
     renderWithProviders(<HomePage heroImageIndex={1} />)
     const personalize = (
       await screen.findByRole("heading", {

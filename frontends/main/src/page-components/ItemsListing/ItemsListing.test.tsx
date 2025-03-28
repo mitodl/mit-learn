@@ -105,7 +105,7 @@ describe("ItemsListing", () => {
   ])(
     "Shows empty message when there are no items",
     ({ listType, count, hasEmptyMessage }) => {
-      setMockResponse.get(urls.userMe.get(), {})
+      setMockResponse.get(urls.userMe.get(), { is_authenticated: true })
       setMockResponse.get(urls.userLists.membershipList(), [])
       setMockResponse.get(urls.learningPaths.membershipList(), [])
       const emptyMessage = faker.lorem.sentence()
