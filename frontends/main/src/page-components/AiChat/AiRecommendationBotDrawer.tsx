@@ -30,9 +30,6 @@ const CloseButton = styled(ActionButton)(({ theme }) => ({
 }))
 
 const StyledAiChat = styled(AiChat)({
-  ".MitAiChat--root": {
-    minHeight: "100%",
-  },
   ".MitAiChat--entryScreenContainer": {
     paddingTop: "152px",
   },

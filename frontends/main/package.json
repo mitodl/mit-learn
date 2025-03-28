@@ -14,7 +14,7 @@
     "@emotion/cache": "^11.13.1",
     "@emotion/styled": "^11.11.0",
     "@mitodl/course-search-utils": "3.3.2",
-    "@mitodl/smoot-design": "0.0.0-preview-bf8e88e2",
+    "@mitodl/smoot-design": "^6.0.0",
     "@next/bundle-analyzer": "^14.2.15",
     "@remixicon/react": "^4.2.0",
     "@sentry/nextjs": "^9.0.0",
