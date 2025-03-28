@@ -56,7 +56,7 @@ def test_transform_content_files(settings, mocker, base_ocw_url):
         transform_content_files(s3_resource, OCW_TEST_PREFIX, False)  # noqa: FBT003
     )
 
-    assert len(content_data) == 4
+    assert len(content_data) == 5
 
     assert content_data[0] == {
         "content": "Pages Section",
@@ -112,6 +112,21 @@ def test_transform_content_files(settings, mocker, base_ocw_url):
         "file_extension": ".mp4",
     }
 
+    assert content_data[4] == {
+        "content": "TEXT",
+        "content_type": "video",
+        "description": "Video Description, no file",
+        "file_type": "video/mp4",
+        "key": "courses/16-01-unified-engineering-i-ii-iii-iv-fall-2005-spring-2006/resources/video_no_file/",
+        "content_tags": ["Old Videos"],
+        "published": True,
+        "title": None,
+        "content_title": None,
+        "url": f"{ocw_url}/courses/16-01-unified-engineering-i-ii-iii-iv-fall-2005-spring-2006/resources/video_no_file/",
+        "image_src": "https://img.youtube.com/vi/vKer2U5W5-s/default.jpg",
+        "file_extension": ".mp4",
+    }
+
 
 @mock_aws
 def test_transform_content_files_exceptions(settings, mocker):
@@ -129,7 +144,7 @@ def test_transform_content_files_exceptions(settings, mocker):
         transform_content_files(s3_resource, OCW_TEST_PREFIX, False)  # noqa: FBT003
     )
     assert len(content_data) == 0
-    assert mock_log.call_count == 5
+    assert mock_log.call_count == 7
 
 
 @mock_aws
