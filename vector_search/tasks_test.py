@@ -1,4 +1,5 @@
 import datetime
+import random
 
 import pytest
 from django.conf import settings
@@ -118,23 +119,30 @@ def test_embed_new_learning_resources(mocker, mocked_celery):
     """
     mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
 
-    daily_since = now_in_utc() - datetime.timedelta(hours=5)
-
-    LearningResourceFactory.create_batch(
-        4, created_on=daily_since, resource_type=COURSE_TYPE, published=True
+    new_resources = LearningResourceFactory.create_batch(
+        4, resource_type=COURSE_TYPE, published=True
     )
+    for resource in new_resources:
+        resource.created_on = now_in_utc() - datetime.timedelta(
+            minutes=random.randint(1, 39)  # noqa: S311
+        )
+        resource.save()
     # create resources older than a day
-    LearningResourceFactory.create_batch(
+    old_resources = LearningResourceFactory.create_batch(
         4,
-        created_on=now_in_utc() - datetime.timedelta(days=5),
         resource_type=COURSE_TYPE,
         published=True,
     )
+    for resource in old_resources:
+        resource.created_on = now_in_utc() - datetime.timedelta(
+            minutes=random.randint(50, 100)  # noqa: S311
+        )
+        resource.save()
 
-    daily_resource_ids = [
+    new_resource_ids = [
         resource.id
         for resource in LearningResource.objects.filter(
-            created_on__gt=now_in_utc() - datetime.timedelta(days=1)
+            created_on__gt=now_in_utc() - datetime.timedelta(minutes=40)
         )
     ]
 
@@ -147,30 +155,35 @@ def test_embed_new_learning_resources(mocker, mocked_celery):
     list(mocked_celery.group.call_args[0][0])
 
     embedded_ids = generate_embeddings_mock.si.mock_calls[0].args[0]
-    assert sorted(daily_resource_ids) == sorted(embedded_ids)
+    assert sorted(new_resource_ids) == sorted(embedded_ids)
 
 
 def test_embed_new_content_files(mocker, mocked_celery):
     """
     embed_new_content_files should generate embeddings for new content files
-    created within the last day
+    created within the last 40 minutes
     """
     mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
 
-    daily_since = now_in_utc() - datetime.timedelta(hours=5)
-
-    ContentFileFactory.create_batch(4, created_on=daily_since, published=True)
-    # create resources older than a day
-    ContentFileFactory.create_batch(
+    new_contents = ContentFileFactory.create_batch(4, published=True)
+    for cf in new_contents:
+        cf.created_on = now_in_utc() - datetime.timedelta(minutes=random.randint(1, 39))  # noqa: S311
+        cf.save()
+    # create resources older than 40 minutes
+    old_contents = ContentFileFactory.create_batch(
         4,
-        created_on=now_in_utc() - datetime.timedelta(days=5),
         published=True,
     )
+    for cf in old_contents:
+        cf.created_on = now_in_utc() - datetime.timedelta(
+            minutes=random.randint(50, 140)  # noqa: S311
+        )
+        cf.save()
 
-    daily_content_file_ids = [
+    new_content_file_ids = [
         resource.id
         for resource in ContentFile.objects.filter(
-            created_on__gt=now_in_utc() - datetime.timedelta(days=1)
+            created_on__gt=now_in_utc() - datetime.timedelta(minutes=40)
         )
     ]
 
@@ -183,7 +196,7 @@ def test_embed_new_content_files(mocker, mocked_celery):
     list(mocked_celery.group.call_args[0][0])
 
     embedded_ids = generate_embeddings_mock.si.mock_calls[0].args[0]
-    assert sorted(daily_content_file_ids) == sorted(embedded_ids)
+    assert sorted(new_content_file_ids) == sorted(embedded_ids)
 
 
 def test_embed_learning_resources_by_id(mocker, mocked_celery):
@@ -336,11 +349,11 @@ def test_embedded_content_file_without_runs(mocker, mocked_celery):
 def test_embed_new_content_files_without_runs(mocker, mocked_celery):
     """
     embed_new_content_files should generate embeddings for new content files
-    created within the last day
+    created within the last 40 minutes
     """
     mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
     course = CourseFactory.create(etl_source=ETLSource.ocw.value)
-    daily_since = now_in_utc() - datetime.timedelta(hours=5)
+    daily_since = now_in_utc() - datetime.timedelta(minutes=5)
     ContentFileFactory.create_batch(4, created_on=daily_since, published=True)
     content_files_without_run = [
         cf.id
