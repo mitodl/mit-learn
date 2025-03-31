@@ -83,6 +83,15 @@ repos:
       - id: ruff-format
       - id: ruff
         args: [--extend-ignore=D1, --fix]
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.7.0
+    hooks:
+      - id: hadolint-docker
+        name: Lint Dockerfiles
+        description: "Runs hadolin docker image to lint dockerfiles"
+        language: docker_image
+        types: ["dockerfile"]
+        entry: "hadolint/hadolint:latest-debian hadolint"
   - repo: local
     hooks:
       - id: eslint

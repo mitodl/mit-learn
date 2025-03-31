@@ -1,4 +1,6 @@
-FROM python:3.12-slim as base
+# hadolint global ignore=SC2046,DL3002,DL3008,DL3025,DL3042,DL4006
+
+FROM python:3.12-slim AS base
 LABEL maintainer "ODL DevOps <mitx-devops@mit.edu>"
 
 # Add package files, install updated node and pip
@@ -7,10 +9,11 @@ WORKDIR /tmp
 # Install packages
 COPY apt.txt /tmp/apt.txt
 RUN apt-get update && \
-    apt-get install -y $(grep -vE "^\s*#" apt.txt  | tr "\n" " ") && \
-    apt-get install libpq-dev postgresql-client -y && \
+    apt-get install -y --no-install-recommends $(grep -vE "^\s*#" apt.txt | tr "\n" " ") && \
+    apt-get install libpq-dev postgresql-client -y --no-install-recommends && \
     apt-get clean && \
-    apt-get purge
+    apt-get purge &&  \
+    rm -rf /var/lib/apt/lists/*
 
 
 FROM base AS system
@@ -36,7 +39,7 @@ ENV  \
 ENV PATH="$VIRTUAL_ENV/bin:$POETRY_HOME/bin:$PATH"
 
 # Install poetry
-RUN pip install "poetry==$POETRY_VERSION"
+RUN pip install --no-cache-dir "poetry==$POETRY_VERSION"
 
 COPY pyproject.toml /src
 COPY poetry.lock /src
