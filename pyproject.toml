@@ -1,4 +1,6 @@
 [tool.poetry]
+# Don't try to install mit-learn as a package on deploy
+package-mode = false
 name = "mit-learn"
 version = "0.71.0"
 description = "Search index for use with other MIT applications."
