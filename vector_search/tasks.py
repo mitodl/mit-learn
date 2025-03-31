@@ -237,7 +237,7 @@ def embed_learning_resources_by_id(self, ids, skip_content_files, overwrite):
 @app.task(bind=True)
 def embed_new_learning_resources(self):
     """
-    Embed new resources from 40 minutes ago
+    Embed new resources from QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW minutes ago
     """
     log.info("Running new resource embedding task")
     delta = datetime.timedelta(minutes=settings.QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW)
@@ -271,7 +271,7 @@ def embed_new_learning_resources(self):
 @app.task(bind=True)
 def embed_new_content_files(self):
     """
-    Embed new content files from 40 minutes ago
+    Embed new content files from QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW minutes ago
     """
     log.info("Running content file embedding task")
     delta = datetime.timedelta(minutes=settings.QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW)
