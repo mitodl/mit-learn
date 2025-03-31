@@ -24,7 +24,7 @@ RUN update-ca-certificates
 
 ## Set some poetry config
 ENV  \
-  POETRY_VERSION=1.7.1 \
+  POETRY_VERSION=1.8.5 \
   POETRY_VIRTUALENVS_CREATE=true \
   POETRY_CACHE_DIR='/tmp/cache/poetry' \
   POETRY_HOME='/home/mitodl/.local' \
