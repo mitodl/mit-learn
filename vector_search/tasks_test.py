@@ -165,7 +165,7 @@ def test_embed_new_learning_resources(mocker, mocked_celery):
 def test_embed_new_content_files(mocker, mocked_celery):
     """
     embed_new_content_files should generate embeddings for new content files
-    created within the last 40 minutes
+    created within the last QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW minutes
     """
     settings.QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW = 60 * 2
     mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
@@ -176,7 +176,7 @@ def test_embed_new_content_files(mocker, mocked_celery):
             minutes=random.randint(1, settings.QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW)  # noqa: S311
         )
         cf.save()
-    # create resources older than 40 minutes
+    # create resources older than QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW minutes
     old_contents = ContentFileFactory.create_batch(
         4,
         published=True,
@@ -359,7 +359,7 @@ def test_embedded_content_file_without_runs(mocker, mocked_celery):
 def test_embed_new_content_files_without_runs(mocker, mocked_celery):
     """
     embed_new_content_files should generate embeddings for new content files
-    created within the last 40 minutes
+    created within the last QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW minutes
     """
     mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
     course = CourseFactory.create(etl_source=ETLSource.ocw.value)
