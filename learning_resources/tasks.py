@@ -147,6 +147,7 @@ def get_content_tasks(
     s3_prefix: str | None = None,
     override_base_prefix: bool = False,
     overwrite: bool = False,
+    learning_resource_id: int | None = None,
 ) -> celery.group:
     """
     Return a list of grouped celery tasks for indexing edx content
@@ -158,18 +159,28 @@ def get_content_tasks(
     archive_keys = get_most_recent_course_archives(
         etl_source, s3_prefix=s3_prefix, override_base_prefix=override_base_prefix
     )
+
+    if learning_resource_id:
+        learning_resources = LearningResource.objects.filter(
+            id=learning_resource_id, etl_source=etl_source
+        )
+    else:
+        learning_resources = (
+            LearningResource.objects.filter(
+                published=True, course__isnull=False, etl_source=etl_source
+            )
+            .exclude(readable_id__in=blocklisted_ids)
+            .order_by("-id")
+            .values_list("id", flat=True)
+        )
+
     return celery.group(
         [
             get_content_files.si(
                 ids, etl_source, archive_keys, s3_prefix=s3_prefix, overwrite=overwrite
             )
             for ids in chunks(
-                LearningResource.objects.filter(
-                    published=True, course__isnull=False, etl_source=etl_source
-                )
-                .exclude(readable_id__in=blocklisted_ids)
-                .order_by("-id")
-                .values_list("id", flat=True),
+                learning_resources,
                 chunk_size=chunk_size,
             )
         ]
@@ -204,11 +215,16 @@ def import_all_oll_files(self, *, chunk_size=None, overwrite=False):
 
 
 @app.task(bind=True)
-def import_all_mitxonline_files(self, *, chunk_size=None, overwrite=False):
+def import_all_mitxonline_files(
+    self, *, chunk_size=None, overwrite=False, learning_resource_id=None
+):
     """Ingest MITx Online files from an S3 bucket"""
     return self.replace(
         get_content_tasks(
-            ETLSource.mitxonline.name, chunk_size=chunk_size, overwrite=overwrite
+            ETLSource.mitxonline.name,
+            chunk_size=chunk_size,
+            overwrite=overwrite,
+            learning_resource_id=learning_resource_id,
         )
     )
 
