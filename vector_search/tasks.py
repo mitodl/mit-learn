@@ -240,7 +240,7 @@ def embed_new_learning_resources(self):
     Embed new resources from 40 minutes ago
     """
     log.info("Running new resource embedding task")
-    delta = datetime.timedelta(minutes=40)
+    delta = datetime.timedelta(minutes=settings.QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW)
     since = now_in_utc() - delta
     new_learning_resources = LearningResource.objects.filter(
         published=True,
@@ -274,7 +274,7 @@ def embed_new_content_files(self):
     Embed new content files from 40 minutes ago
     """
     log.info("Running content file embedding task")
-    delta = datetime.timedelta(minutes=40)
+    delta = datetime.timedelta(minutes=settings.QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW)
     since = now_in_utc() - delta
     new_content_files = (
         ContentFile.objects.filter(

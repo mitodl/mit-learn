@@ -117,6 +117,7 @@ def test_embed_new_learning_resources(mocker, mocked_celery):
     embed_new_learning_resources should generate embeddings for new resources
     based on the period
     """
+    settings.QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW = 60 * 2
     mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
 
     new_resources = LearningResourceFactory.create_batch(
@@ -124,7 +125,7 @@ def test_embed_new_learning_resources(mocker, mocked_celery):
     )
     for resource in new_resources:
         resource.created_on = now_in_utc() - datetime.timedelta(
-            minutes=random.randint(1, 39)  # noqa: S311
+            minutes=random.randint(1, settings.QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW)  # noqa: S311
         )
         resource.save()
     # create resources older than a day
@@ -142,7 +143,10 @@ def test_embed_new_learning_resources(mocker, mocked_celery):
     new_resource_ids = [
         resource.id
         for resource in LearningResource.objects.filter(
-            created_on__gt=now_in_utc() - datetime.timedelta(minutes=40)
+            created_on__gt=now_in_utc()
+            - datetime.timedelta(
+                minutes=settings.QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW
+            )
         )
     ]
 
@@ -163,11 +167,14 @@ def test_embed_new_content_files(mocker, mocked_celery):
     embed_new_content_files should generate embeddings for new content files
     created within the last 40 minutes
     """
+    settings.QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW = 60 * 2
     mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
 
     new_contents = ContentFileFactory.create_batch(4, published=True)
     for cf in new_contents:
-        cf.created_on = now_in_utc() - datetime.timedelta(minutes=random.randint(1, 39))  # noqa: S311
+        cf.created_on = now_in_utc() - datetime.timedelta(
+            minutes=random.randint(1, settings.QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW)  # noqa: S311
+        )
         cf.save()
     # create resources older than 40 minutes
     old_contents = ContentFileFactory.create_batch(
@@ -183,7 +190,10 @@ def test_embed_new_content_files(mocker, mocked_celery):
     new_content_file_ids = [
         resource.id
         for resource in ContentFile.objects.filter(
-            created_on__gt=now_in_utc() - datetime.timedelta(minutes=40)
+            created_on__gt=now_in_utc()
+            - datetime.timedelta(
+                minutes=settings.QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW
+            )
         )
     ]
 

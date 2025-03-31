@@ -6,6 +6,16 @@ from celery.schedules import crontab
 
 from main.envs import get_bool, get_int, get_string
 
+"""
+the lookback window (in minutes) for the embeddings task
+the frequency of the embeddings tasks will be 1/4 of this for example
+lookback = 2 hours; task frequency = 30 minutes
+"""
+QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW = get_int(
+    name="QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW", default=60 * 2
+)
+EMBEDDING_SCHEDULE_MINUTES = int(QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW / 4)
+
 DEV_ENV = get_bool("DEV_ENV", False)  # noqa: FBT003
 USE_CELERY = True
 CELERY_BROKER_URL = get_string("CELERY_BROKER_URL", get_string("REDISCLOUD_URL", None))
@@ -147,13 +157,13 @@ if not DEV_ENV:
     CELERY_BEAT_SCHEDULE["daily_embed_new_learning_resources"] = {
         "task": "vector_search.tasks.embed_new_learning_resources",
         "schedule": get_int(
-            "EMBED_NEW_RESOURCES_SCHEDULE_SECONDS", 60 * 30
+            "EMBED_NEW_RESOURCES_SCHEDULE_SECONDS", 60 * EMBEDDING_SCHEDULE_MINUTES
         ),  # default is every 30 minutes
     }
     CELERY_BEAT_SCHEDULE["daily_embed_new_content_files"] = {
         "task": "vector_search.tasks.embed_new_content_files",
         "schedule": get_int(
-            "EMBED_NEW_CONTENT_FILES_SCHEDULE_SECONDS", 60 * 30
+            "EMBED_NEW_CONTENT_FILES_SCHEDULE_SECONDS", 60 * EMBEDDING_SCHEDULE_MINUTES
         ),  # default is every 30 minutes
     }
 
