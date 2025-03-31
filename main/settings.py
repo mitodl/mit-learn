@@ -758,8 +758,8 @@ the lookback window (in minutes) for the embeddings task
 the frequency of the embeddings tasks will be 1/4 of this for example
 lookback = 2 hours; task frequency = 30 minutes
 """
-QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW = get_int(
-    name="QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW", default=60 * 2
+QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW = max(
+    75, get_int(name="QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW", default=60 * 2)
 )
 QDRANT_API_KEY = get_string(name="QDRANT_API_KEY", default="")
 QDRANT_HOST = get_string(name="QDRANT_HOST", default="http://qdrant:6333")

@@ -11,10 +11,11 @@ the lookback window (in minutes) for the embeddings task
 the frequency of the embeddings tasks will be 1/4 of this for example
 lookback = 2 hours; task frequency = 30 minutes
 """
-QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW = get_int(
-    name="QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW", default=60 * 2
+QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW = max(
+    75, get_int(name="QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW", default=60 * 2)
 )
-EMBEDDING_SCHEDULE_MINUTES = int(QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW / 4)
+# schedule should be an hour less than lookback window
+EMBEDDING_SCHEDULE_MINUTES = QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW - 60
 
 DEV_ENV = get_bool("DEV_ENV", False)  # noqa: FBT003
 USE_CELERY = True
