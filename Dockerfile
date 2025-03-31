@@ -32,8 +32,8 @@ ENV  \
   POETRY_VIRTUALENVS_CREATE=true \
   POETRY_CACHE_DIR='/tmp/cache/poetry' \
   POETRY_HOME='/home/mitodl/.local' \
-  VIRTUAL_ENV="/opt/venv" \
-  PATH="$VIRTUAL_ENV/bin:$POETRY_HOME/bin:$PATH"
+  VIRTUAL_ENV='/opt/venv'
+ENV PATH="$VIRTUAL_ENV/bin:$POETRY_HOME/bin:$PATH"
 
 # Install poetry
 RUN pip install "poetry==$POETRY_VERSION"
