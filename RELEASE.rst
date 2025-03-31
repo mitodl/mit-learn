@@ -1,6 +1,21 @@
 Release Notes
 =============
 
+Version 0.31.0
+--------------
+
+- version: Loosen the version of Python (#2167)
+- config: Increase the Nginx buffer size for headers and cookies
+- Remove SCIM fields from Profile (#2160)
+- Fix for potential missing file attribute in contentfile json (#2158)
+- chore(deps): update dependency faker to v37 (#2132)
+- chore(deps): update actions/setup-node digest to cdca736 (#2146)
+- Make gemini optional by request (#2159)
+- Enrollment card updates & sorting (#2142)
+- Enable redirects on logout (#2145)
+- Fix broken test test_certificate_display (#2155)
+- make black link typography match design system (#2154)
+
 Version 0.30.10 (Released March 27, 2025)
 ---------------
 
