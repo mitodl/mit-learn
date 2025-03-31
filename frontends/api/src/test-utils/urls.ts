@@ -60,7 +60,9 @@ const queryify = (params: unknown) => {
       query.append(key, String(value))
     }
   }
-  return `?${query.toString()}`
+  query.sort()
+  const stringified = query.toString()
+  return stringified ? `?${stringified}` : ""
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

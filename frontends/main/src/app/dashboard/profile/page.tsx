@@ -1,7 +1,7 @@
 import React from "react"
 import { Metadata } from "next"
-import HomeContent from "@/app-pages/DashboardPage/HomeContent"
 import { standardizeMetadata } from "@/common/metadata"
+import { ProfileContent } from "@/app-pages/DashboardPage/ProfileContent"
 
 export const metadata: Metadata = standardizeMetadata({
   title: "Your MIT Learning Journey",
@@ -9,7 +9,7 @@ export const metadata: Metadata = standardizeMetadata({
 })
 
 const Page: React.FC = () => {
-  return <HomeContent />
+  return <ProfileContent />
 }
 
 export default Page
