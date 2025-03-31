@@ -54,7 +54,7 @@ WORKDIR /src
 RUN python3 -m venv $VIRTUAL_ENV
 RUN poetry install && rm -rf /tmp/cache
 
-FROM poetry as code
+FROM poetry AS code
 
 # Add project
 USER root
