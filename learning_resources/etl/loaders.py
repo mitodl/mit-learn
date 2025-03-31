@@ -4,10 +4,20 @@ import logging
 from functools import cache
 
 import requests
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from selenium import webdriver
+from selenium.common.exceptions import (
+    ElementNotInteractableException,
+    JavascriptException,
+    NoSuchElementException,
+    TimeoutException,
+)
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions
+from selenium.webdriver.support.ui import WebDriverWait
 
 from learning_resources.constants import (
     LearningResourceDelivery,
@@ -770,14 +780,44 @@ def _get_web_driver():
     return webdriver.Chrome(service=service, options=chrome_options)
 
 
-def _fetch_page(url):
+def _webdriver_fetch_extra_elements(driver):
+    """
+    Attempt to Fetch any extra possible js loaded elements that
+    require interaction to display
+    """
+    errors = [
+        NoSuchElementException,
+        JavascriptException,
+        ElementNotInteractableException,
+        TimeoutException,
+    ]
+    wait = WebDriverWait(
+        driver, timeout=0.5, poll_frequency=0.1, ignored_exceptions=errors
+    )
+    wait.until(
+        expected_conditions.visibility_of_element_located((By.ID, "faculty-tab"))
+    )
+    driver.execute_script("document.getElementById('faculty-tab').click()")
+    wait.until(expected_conditions.visibility_of_element_located((By.ID, "faculty")))
+
+
+def _fetch_page(url, use_webdriver=settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER):
     if url:
-        try:
+        if use_webdriver:
             driver = _get_web_driver()
             driver.get(url)
+            try:
+                _webdriver_fetch_extra_elements(driver)
+            except TimeoutException:
+                log.warning("Error custom elements page from %s", url)
             return driver.execute_script("return document.body.innerHTML")
-        except requests.exceptions.RequestException:
-            logging.exception("Error fetching page from %s", url)
+        else:
+            try:
+                response = requests.get(url, timeout=10)
+                if response.ok:
+                    return response.text
+            except requests.exceptions.RequestException:
+                log.exception("Error fetching page from %s", url)
     return None
 
 

@@ -772,7 +772,10 @@ QDRANT_CHUNK_SIZE = get_int(
 QDRANT_ENCODER = get_string(
     name="QDRANT_ENCODER", default="vector_search.encoders.fastembed.FastEmbedEncoder"
 )
-
+# toggle to use requests (default for local) or webdriver which renders js elements
+EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = get_bool(
+    "EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER", default=False
+)
 LITELLM_TOKEN_ENCODING_NAME = get_string(
     name="LITELLM_TOKEN_ENCODING_NAME", default=None
 )
