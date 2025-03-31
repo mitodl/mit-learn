@@ -1,0 +1,11 @@
+{
+  "description": "This resource contains problem set 2",
+  "file": "https://ol-ocw-studio-app-qa.s3.amazonaws.com/courses/16-01-unified-engineering-i-ii-iii-iv-fall-2005-spring-2006/fubar.pdf",
+  "learning_resource_types": [
+    "Activity Assignments",
+    "Activity Assignments with Examples"
+  ],
+  "resource_type": "Document",
+  "file_type": "application/pdf",
+  "title": "Resource Title 2"
+}

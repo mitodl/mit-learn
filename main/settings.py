@@ -33,7 +33,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.30.9"
+VERSION = "0.30.10"
 
 log = logging.getLogger()
 
@@ -221,6 +221,13 @@ LOGIN_URL = "/login"
 LOGIN_ERROR_URL = "/login"
 LOGOUT_URL = "/logout"
 LOGOUT_REDIRECT_URL = "/app"
+MITOL_API_BASE_URL = get_string("MITOL_API_BASE_URL", "")
+OIDC_LOGOUT_URL = get_string(
+    # urljoin might lead to wrong outputs with url rewrites like
+    # https://api.learn.mit.edu/learn/, so using rstrip('/') instead.
+    "OIDC_LOGOUT_URL",
+    f"{MITOL_API_BASE_URL.rstrip('/')}/logout/oidc",
+)
 
 MITOL_TOS_URL = get_string(
     "MITOL_TOS_URL", urljoin(APP_BASE_URL, "/terms-and-conditions/")
@@ -328,7 +335,10 @@ APISIX_USERDATA_MAP = {
         "email_optin": "emailOptIn",
     },
 }
-
+DISABLE_APISIX_USER_MIDDLEWARE = get_bool(
+    name="DISABLE_APISIX_USER_MIDDLEWARE",
+    default=False,
+)
 
 # Social Auth configurations - [END]
 
@@ -831,3 +841,5 @@ SEMANTIC_CHUNKING_CONFIG = {
         default=None,
     ),
 }
+
+CONTENT_FILE_SUMMARIZER_BATCH_SIZE = get_int("CONTENT_FILE_SUMMARIZER_BATCH_SIZE", 20)

@@ -505,7 +505,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
 
         distinct_locations = set()
         for run in serialized_resource.get("runs", []):
-            distinct_prices.update(run["prices"])
+            prices = run.get("prices", [])
+            if prices:
+                distinct_prices.update(prices)
             distinct_delivery_methods.update(
                 [delivery["code"] for delivery in run.get("delivery", [])]
             )
@@ -739,7 +741,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             location = run.get("location") or "Online"
             duration = run.get("duration")
             prices = run.get("prices", [])
-            price = f"${prices[0]}" if len(prices) > 0 else None
+            price = f"${prices[0]}" if prices else None
             delivery_modes = [delivery["name"] for delivery in run.get("delivery", [])]
             instructors = [
                 instructor.get("full_name")
@@ -792,12 +794,12 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         if not self.all_runs_are_identical(serialized_resource):
             return None
         prices = serialized_resource.get("prices", [])
-        if (
+        is_free_with_certificate = (
             serialized_resource.get("free")
-            and serialized_resource["certification_type"]
-            and serialized_resource["certification_type"]["code"]
+            and serialized_resource.get("certification_type", {}).get("code")
             == CertificationType.completion.name
-        ) and len(prices) > 1:
+        )
+        if is_free_with_certificate and prices and len(prices) > 1:
             return f"Earn a certificate: ${prices[1]}"
         return None
 
@@ -1302,6 +1304,8 @@ class ContentFileSerializer(serializers.ModelSerializer):
             "run_readable_id",
             "file_extension",
             "edx_module_id",
+            "summary",
+            "flashcards",
         ]
 
 

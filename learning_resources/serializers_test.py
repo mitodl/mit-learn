@@ -586,6 +586,8 @@ def test_content_file_serializer(settings, expected_types, has_channels):
                 [tag.name for tag in content_file.content_tags.all()]
             ),
             "edx_module_id": content_file.edx_module_id,
+            "summary": content_file.summary,
+            "flashcards": content_file.flashcards,
         },
     )
 
@@ -714,7 +716,7 @@ def test_certificate_display():
         serialized_resource
     )
     assert serialized_resource["free"]
-    assert metadata_serializer.data["certification"] is None
+    assert metadata_serializer.data.get("certification") is None
 
     # If resource is not free and certification is not none - show the certification type
     resource = LearningResourceFactory(

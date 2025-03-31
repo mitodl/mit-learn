@@ -123,7 +123,6 @@ def start_embed_resources(self, indexes, skip_content_files, overwrite):
                         .order_by("id")
                         .values_list("id", flat=True)
                     )
-
                     index_tasks = index_tasks + [
                         generate_embeddings.si(ids, CONTENT_FILE_TYPE, overwrite)
                         for ids in chunks(
@@ -193,6 +192,7 @@ def embed_learning_resources_by_id(self, ids, skip_content_files, overwrite):
                     chunk_size=settings.QDRANT_CHUNK_SIZE,
                 )
             ]
+
             if not skip_content_files and resource_type == COURSE_TYPE:
                 for course in embed_resources.order_by("id"):
                     run = (

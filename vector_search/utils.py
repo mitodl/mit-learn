@@ -6,6 +6,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_experimental.text_splitter import SemanticChunker
 from qdrant_client import QdrantClient, models
 
+from learning_resources.content_summarizer import ContentSummarizer
 from learning_resources.models import ContentFile, LearningResource
 from learning_resources.serializers import (
     ContentFileSerializer,
@@ -265,8 +266,6 @@ def _process_content_embeddings(serialized_content):
     embeddings = []
     metadata = []
     ids = []
-    resource_points = []
-    client = qdrant_client()
     encoder = dense_encoder()
     vector_name = encoder.model_short_name()
     for doc in serialized_content:
@@ -311,27 +310,9 @@ def _process_content_embeddings(serialized_content):
         for i in range(0, len(split_texts), request_chunk_size):
             split_chunk = split_texts[i : i + request_chunk_size]
             split_embeddings.extend(list(encoder.embed_documents(split_chunk)))
-        if len(split_embeddings) > 0:
-            resource_points.append(
-                models.PointVectors(
-                    id=resource_vector_point_id,
-                    vector={f"{vector_name}_content": split_embeddings},
-                )
-            )
         embeddings.extend(split_embeddings)
         metadata.extend(split_metadatas)
         ids.extend(split_ids)
-    if len(resource_points) > 0:
-        try:
-            # sometimes we can't update the multi-vector if max size is exceeded
-
-            client.update_vectors(
-                collection_name=RESOURCES_COLLECTION_NAME,
-                points=resource_points,
-            )
-        except Exception as e:  # noqa: BLE001
-            msg = f"Exceeded multi-vector max size: {e}"
-            logger.warning(msg)
     if ids:
         return points_generator(ids, metadata, embeddings, vector_name)
     return None
@@ -369,6 +350,11 @@ def embed_learning_resources(ids, resource_type, overwrite):
         points = _process_resource_embeddings(serialized_resources)
         _embed_course_metadata_as_contentfile(serialized_resources)
     else:
+        # Process content files summaries/flashcards if applicable before serialization
+        # TODO: Pass actual Ids when we want scheduled content file summarization  # noqa: FIX002, TD002, TD003 E501
+
+        ContentSummarizer().summarize_content_files_by_ids([], overwrite)
+
         serialized_resources = list(serialize_bulk_content_files(ids))
         collection_name = CONTENT_FILES_COLLECTION_NAME
         points = [
@@ -476,6 +462,7 @@ def vector_search(
             using=encoder.model_short_name(),
             query=encoder.embed_query(query_string),
             query_filter=search_filter,
+            search_params=models.SearchParams(indexed_only=True),
             limit=limit,
             offset=offset,
         ).points

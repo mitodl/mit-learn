@@ -51,6 +51,10 @@ def test_vector_point_id_used_for_embed(mocker, content_type):
             "vector_search.utils.filter_existing_qdrant_points",
             return_value=[r.readable_id for r in resources],
         )
+    summarize_content_files_by_ids_mock = mocker.patch(
+        "vector_search.utils.ContentSummarizer.summarize_content_files_by_ids"
+    )
+
     embed_learning_resources(
         [resource.id for resource in resources], content_type, overwrite=True
     )
@@ -70,6 +74,11 @@ def test_vector_point_id_used_for_embed(mocker, content_type):
         assert sorted(
             [p.id for p in mock_qdrant.upload_points.mock_calls[0].kwargs["points"]]
         ) == sorted(point_ids)
+        # TODO: Pass "[resource.id for resource in resources]" instead of [] when we want the scheduled content file summarization  # noqa: FIX002, TD002, TD003
+        summarize_content_files_by_ids_mock.assert_called_once_with(
+            [],
+            True,  # noqa: FBT003
+        )
 
 
 @pytest.mark.parametrize("content_type", ["learning_resource", "content_file"])
@@ -101,6 +110,9 @@ def test_embed_learning_resources_no_overwrite(mocker, content_type):
                 for doc in serialize_bulk_content_files([r.id for r in resources[0:3]])
             ],
         )
+    summarize_content_files_by_ids_mock = mocker.patch(
+        "vector_search.utils.ContentSummarizer.summarize_content_files_by_ids"
+    )
     embed_learning_resources(
         [resource.id for resource in resources], content_type, overwrite=False
     )
@@ -108,6 +120,11 @@ def test_embed_learning_resources_no_overwrite(mocker, content_type):
         assert len(list(mock_qdrant.upload_points.mock_calls[0].kwargs["points"])) == 2
     else:
         assert len(list(mock_qdrant.upload_points.mock_calls[0].kwargs["points"])) == 3
+        # TODO: Pass "[resource.id for resource in resources]" instead of [] when we want the scheduled content file summarization  # noqa: FIX002, TD002, TD003
+        summarize_content_files_by_ids_mock.assert_called_once_with(
+            [],
+            False,  # noqa: FBT003
+        )
 
 
 def test_filter_existing_qdrant_points(mocker):

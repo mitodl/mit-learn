@@ -132,7 +132,10 @@ class ApisixUserMiddleware(RemoteUserMiddleware):
         """
         Modify the header to contain username, pass off to RemoteUserMiddleware
         """
+        if settings.DISABLE_APISIX_USER_MIDDLEWARE:
+            return super().process_request(request)
         apisix_user = None
+        next_param = request.GET.get("next", None) if request.GET else None
         if request.META.get(self.header):
             new_header = decode_apisix_headers(
                 request, self.header, model=settings.AUTH_USER_MODEL
@@ -145,7 +148,7 @@ class ApisixUserMiddleware(RemoteUserMiddleware):
                 )
             except KeyError:
                 if self.force_logout_if_no_header and request.user.is_authenticated:
-                    log.debug("Forcing user logout due to missing APISIX headers.")
+                    log.debug("Forcing user logout because no APISIX user was found")
                     logout(request)
                 return None
         if apisix_user:
@@ -164,4 +167,14 @@ class ApisixUserMiddleware(RemoteUserMiddleware):
                 apisix_user,
                 backend="django.contrib.auth.backends.ModelBackend",
             )
-        return self.get_response(request)
+
+        if not apisix_user and request.user.is_authenticated:
+            # If we didn't get a user from APISIX, but the user is still
+            # authenticated, log them out.
+            log.debug("Forcing user logout because no APISIX user was found")
+            logout(request)
+
+        response = self.get_response(request)
+        if next_param:
+            response.set_cookie("next", next_param, max_age=30, secure=False)
+        return response

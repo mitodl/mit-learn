@@ -125,3 +125,18 @@ def test_get_request_different_user_logout(mocker, client, same_user):
     apisix_middleware = ApisixUserMiddleware(mocker.Mock())
     apisix_middleware.process_request(mock_request)
     assert mock_logout.call_count == (0 if same_user else 1)
+
+
+@pytest.mark.django_db(transaction=True)
+def test_get_request_logged_in_no_header(mocker, client, user):
+    """Test that an authenticated user without apisix header gets logged out."""
+    close_old_connections()
+    client.force_login(user)
+    mock_request = mocker.Mock(
+        META={},
+        user=user,
+    )
+    mock_logout = mocker.patch("main.middleware.apisix_user.logout")
+    apisix_middleware = ApisixUserMiddleware(mocker.Mock())
+    apisix_middleware.process_request(mock_request)
+    mock_logout.assert_called_once()

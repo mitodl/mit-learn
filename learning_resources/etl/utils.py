@@ -337,7 +337,6 @@ def documents_from_olx(
                 yield (
                     filebytes,
                     {
-                        "key": checksum,
                         "content_type": CONTENT_TYPE_FILE,
                         "mime_type": mimetype,
                         "checksum": checksum,
@@ -426,12 +425,12 @@ def transform_content_files(
         check_call(["tar", "xf", course_tarpath], cwd=inner_tempdir)  # noqa: S603,S607
         olx_path = glob.glob(inner_tempdir + "/*")[0]  # noqa: PTH207
         for document, metadata in documents_from_olx(olx_path):
-            key = metadata["key"]
+            source_path = metadata.get("source_path")
+            edx_module_id = get_edx_module_id(source_path, run)
+            key = edx_module_id
             content_type = metadata["content_type"]
             mime_type = metadata.get("mime_type")
             file_extension = metadata.get("file_extension")
-            source_path = metadata.get("source_path")
-            edx_module_id = get_edx_module_id(source_path, run)
 
             existing_content = ContentFile.objects.filter(key=key, run=run).first()
             if (
