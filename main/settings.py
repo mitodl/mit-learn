@@ -753,6 +753,13 @@ DEFAULT_SEARCH_MAX_INCOMPLETENESS_PENALTY = get_float(
 DEFAULT_SEARCH_CONTENT_FILE_SCORE_WEIGHT = get_float(
     name="DEFAULT_SEARCH_CONTENT_FILE_SCORE_WEIGHT", default=1
 )
+"""
+the schedule (in minutes) for the embeddings task
+the lookback window for getting items to embed
+will be a constant 60 minutes greater more than the schedule frequency
+"""
+EMBEDDING_SCHEDULE_MINUTES = get_int(name="EMBEDDING_SCHEDULE_MINUTES", default=60)
+QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW = EMBEDDING_SCHEDULE_MINUTES + 60
 
 QDRANT_API_KEY = get_string(name="QDRANT_API_KEY", default="")
 QDRANT_HOST = get_string(name="QDRANT_HOST", default="http://qdrant:6333")
