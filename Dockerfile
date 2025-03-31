@@ -65,7 +65,7 @@ COPY . /src
 WORKDIR /src
 RUN mkdir -p /src/staticfiles
 
-FROM code as final
+FROM code AS final
 USER mitodl
 
 EXPOSE 8061
