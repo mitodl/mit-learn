@@ -237,7 +237,9 @@ def fetch_marketing_pages(self):
     missing_pages = resource_ids.difference(existing_page_resource_ids)
     fetch_tasks = celery.group(
         embed_marketing_pages.si(chunk)
-        for chunk in chunks(missing_pages, chunk_size=10)
+        for chunk in chunks(
+            missing_pages, chunk_size=settings.MARKETING_PAGE_FETCH_BATCH_SIZE
+        )
     )
     return self.replace(fetch_tasks)
 

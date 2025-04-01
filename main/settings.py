@@ -777,6 +777,7 @@ QDRANT_CHUNK_SIZE = get_int(
 )
 
 PLAYWRIGHT_ENDPOINT = get_string("PLAYWRIGHT_ENDPOINT", "ws://playwright:3000")
+MARKETING_PAGE_FETCH_BATCH_SIZE = get_int("MARKETING_PAGE_FETCH_BATCH_SIZE", 10)
 
 QDRANT_ENCODER = get_string(
     name="QDRANT_ENCODER", default="vector_search.encoders.fastembed.FastEmbedEncoder"
