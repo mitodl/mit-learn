@@ -21,6 +21,10 @@ services:
       # DEPRECATED: legacy .env file at the repo root
       - path: .env
         required: false
+  playwright:
+    extends:
+      file: docker-compose.apps.yml
+      service: playwright
 
   watch:
     extends:

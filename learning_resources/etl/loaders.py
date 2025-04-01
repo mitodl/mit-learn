@@ -15,7 +15,6 @@ from learning_resources.constants import (
 )
 from learning_resources.etl.constants import (
     CONTENT_TAG_CATEGORIES,
-    MARKETING_PAGE_FILE_TYPE,
     READABLE_ID_FIELD,
     ContentTagCategory,
     CourseLoaderConfig,
@@ -23,7 +22,7 @@ from learning_resources.etl.constants import (
     ResourceNextRunConfig,
 )
 from learning_resources.etl.exceptions import ExtractException
-from learning_resources.etl.utils import html_to_markdown, most_common_topics
+from learning_resources.etl.utils import most_common_topics
 from learning_resources.models import (
     ContentFile,
     Course,
@@ -512,7 +511,6 @@ def load_course(
         load_image(learning_resource, image_data)
         load_departments(learning_resource, department_data)
         load_content_tags(learning_resource, content_tags_data)
-        load_marketing_page(learning_resource)
     update_index(learning_resource, created)
     return learning_resource
 
@@ -604,7 +602,6 @@ def load_program(
         load_image(learning_resource, image_data)
         load_offered_by(learning_resource, offered_by_data)
         load_departments(learning_resource, departments_data)
-        load_marketing_page(learning_resource)
 
         program, _ = Program.objects.get_or_create(learning_resource=learning_resource)
 
@@ -766,22 +763,6 @@ def _fetch_page(url):
         except requests.exceptions.RequestException:
             logging.exception("Error fetching page from %s", url)
     return None
-
-
-def load_marketing_page(learning_resource: LearningResource):
-    marketing_page_url = learning_resource.url
-    page_content = _fetch_page(marketing_page_url)
-    if page_content:
-        content_file, _ = ContentFile.objects.update_or_create(
-            learning_resource=learning_resource,
-            file_type=MARKETING_PAGE_FILE_TYPE,
-            defaults={
-                "file_extension": ".md",
-            },
-        )
-        content_file.key = marketing_page_url
-        content_file.content = html_to_markdown(page_content)
-        content_file.save()
 
 
 def load_content_files(

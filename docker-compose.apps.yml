@@ -25,7 +25,27 @@ services:
     volumes:
       - .:/src
       - django_media:/var/media
-
+  playwright:
+    image: mcr.microsoft.com/playwright:v1.51.1-noble
+    entrypoint:
+      [
+        "npx",
+        "-y",
+        "playwright@1.51.1",
+        "run-server",
+        "--port",
+        "3000",
+        "--host",
+        "0.0.0.0",
+      ]
+    working_dir: /home/pwuser
+    user: pwuser
+    security_opt:
+      - "seccomp=learning_resources/etl/playwright/seccomp_profile.json"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - web
   watch:
     profiles:
       - frontend

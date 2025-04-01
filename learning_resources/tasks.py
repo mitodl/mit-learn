@@ -13,15 +13,19 @@ from django.utils import timezone
 
 from learning_resources.content_summarizer import ContentSummarizer
 from learning_resources.etl import pipelines, youtube
-from learning_resources.etl.constants import ETLSource
+from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE, ETLSource
 from learning_resources.etl.edx_shared import (
     get_most_recent_course_archives,
     sync_edx_course_files,
 )
 from learning_resources.etl.loaders import load_run_dependent_values
 from learning_resources.etl.pipelines import ocw_courses_etl
-from learning_resources.etl.utils import get_learning_course_bucket_name
-from learning_resources.models import LearningResource
+from learning_resources.etl.utils import (
+    fetch_external_page,
+    get_learning_course_bucket_name,
+    html_to_markdown,
+)
+from learning_resources.models import ContentFile, LearningResource
 from learning_resources.utils import load_course_blocklist
 from main.celery import app
 from main.constants import ISOFORMAT
@@ -187,6 +191,55 @@ def import_all_mit_edx_files(self, *, chunk_size=None, overwrite=False):
             overwrite=overwrite,
         )
     )
+
+
+@app.task(acks_late=True)
+def embed_marketing_pages(resource_ids: list[int]):
+    """Fetch and embed a batch of marketing pages
+    Args:
+        - resource_ids (list[int]): List of course or program resource ids
+        - overwrite (bool): Whether to overwrite existing marketing page data
+    Returns:
+        - None
+    """
+    for resource_id in resource_ids:
+        resource = LearningResource.objects.get(id=resource_id)
+        marketing_page_url = resource.url
+
+        page_content = fetch_external_page(marketing_page_url)
+        if page_content:
+            content_file, _ = ContentFile.objects.update_or_create(
+                learning_resource=resource,
+                file_type=MARKETING_PAGE_FILE_TYPE,
+                defaults={
+                    "file_extension": ".md",
+                },
+            )
+            content_file.key = marketing_page_url
+            content_file.content = html_to_markdown(page_content)
+            content_file.save()
+
+
+@app.task(bind=True)
+def fetch_marketing_pages(self):
+    """Fetch marketing pages for course resources and programs"""
+    resource_ids = set(
+        LearningResource.objects.filter(
+            published=True, resource_type__in=["course", "program"]
+        ).values_list("id", flat=True)
+    )
+
+    existing_page_resource_ids = set(
+        ContentFile.objects.filter(file_type="marketing_page").values_list(
+            "learning_resource_id", flat=True
+        )
+    )
+    missing_pages = resource_ids.difference(existing_page_resource_ids)
+    fetch_tasks = celery.group(
+        embed_marketing_pages.si(chunk)
+        for chunk in chunks(missing_pages, chunk_size=10)
+    )
+    return self.replace(fetch_tasks)
 
 
 @app.task(bind=True)

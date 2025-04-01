@@ -25,6 +25,8 @@ import requests
 from django.conf import settings
 from django.utils.dateparse import parse_duration
 from django.utils.text import slugify
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+from playwright.sync_api import sync_playwright
 from pycountry import currencies
 from tika import parser as tika_parser
 
@@ -901,6 +903,28 @@ def parse_resource_commitment(commitment_str: str) -> CommitmentConfig:
         else:
             log.warning("Invalid commitment: %s", commitment_str)
     return CommitmentConfig(commitment=commitment_str or "")
+
+
+def fetch_external_page(url):
+    if url:
+        with sync_playwright() as p:
+            browser = p.chromium.connect(settings.PLAYWRIGHT_ENDPOINT)
+            browser.new_context()
+            # Create a new page and navigate to the URL
+            page = browser.new_page()
+            log.warning("fetching external page %s", url)
+            page.goto(url)
+            page.wait_for_load_state("domcontentloaded")  # Ensures the DOM is loaded
+            selectors = ["#faculty-tab", "#participants-tab", "#reviews-tab"]
+            for selector in selectors:
+                try:
+                    tab = page.query_selector(selector)
+                    if tab:
+                        tab.click(timeout=500)
+                except PlaywrightTimeoutError:
+                    log.warning("playwright timed out trying to click %s", selector)
+            return page.content()
+    return None
 
 
 def html_to_markdown(html):
