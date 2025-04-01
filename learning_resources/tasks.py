@@ -140,7 +140,7 @@ def get_content_files(
     clear_search_cache()
 
 
-def get_content_tasks(
+def get_content_tasks(  # noqa: PLR0913
     etl_source: str,
     *,
     chunk_size: int | None = None,
@@ -163,7 +163,7 @@ def get_content_tasks(
     if learning_resource_id:
         learning_resources = LearningResource.objects.filter(
             id=learning_resource_id, etl_source=etl_source
-        )
+        ).values_list("id", flat=True)
     else:
         learning_resources = (
             LearningResource.objects.filter(
@@ -188,7 +188,9 @@ def get_content_tasks(
 
 
 @app.task(bind=True)
-def import_all_mit_edx_files(self, *, chunk_size=None, overwrite=False):
+def import_all_mit_edx_files(
+    self, *, chunk_size=None, overwrite=False, learning_resource_id=None
+):
     """Ingest MIT edX files from an S3 bucket"""
     return self.replace(
         get_content_tasks(
@@ -196,12 +198,15 @@ def import_all_mit_edx_files(self, *, chunk_size=None, overwrite=False):
             chunk_size=chunk_size,
             s3_prefix=settings.EDX_LEARNING_COURSE_BUCKET_PREFIX,
             overwrite=overwrite,
+            learning_resource_id=learning_resource_id,
         )
     )
 
 
 @app.task(bind=True)
-def import_all_oll_files(self, *, chunk_size=None, overwrite=False):
+def import_all_oll_files(
+    self, *, chunk_size=None, overwrite=False, learning_resource_id=None
+):
     """Ingest MIT edX files from an S3 bucket"""
     return self.replace(
         get_content_tasks(
@@ -210,6 +215,7 @@ def import_all_oll_files(self, *, chunk_size=None, overwrite=False):
             s3_prefix=settings.OLL_LEARNING_COURSE_BUCKET_PREFIX,
             override_base_prefix=True,
             overwrite=overwrite,
+            learning_resource_id=learning_resource_id,
         )
     )
 
@@ -230,12 +236,17 @@ def import_all_mitxonline_files(
 
 
 @app.task(bind=True)
-def import_all_xpro_files(self, *, chunk_size=None, overwrite=False):
+def import_all_xpro_files(
+    self, *, chunk_size=None, overwrite=False, learning_resource_id=None
+):
     """Ingest xPRO OLX files from an S3 bucket"""
 
     return self.replace(
         get_content_tasks(
-            ETLSource.xpro.name, chunk_size=chunk_size, overwrite=overwrite
+            ETLSource.xpro.name,
+            chunk_size=chunk_size,
+            overwrite=overwrite,
+            learning_resource_id=learning_resource_id,
         )
     )
 
