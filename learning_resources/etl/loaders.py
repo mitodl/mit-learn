@@ -1,5 +1,6 @@
 """learning_resources data loaders"""
 
+import contextlib
 import logging
 from functools import cache
 
@@ -7,6 +8,7 @@ import requests
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from playwright.sync_api import sync_playwright
 from selenium import webdriver
 from selenium.common.exceptions import (
     ElementNotInteractableException,
@@ -18,6 +20,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.ui import WebDriverWait
+from typeguard import typechecked
 
 from learning_resources.constants import (
     LearningResourceDelivery,
@@ -36,7 +39,10 @@ from learning_resources.etl.constants import (
     ResourceNextRunConfig,
 )
 from learning_resources.etl.exceptions import ExtractException
-from learning_resources.etl.utils import html_to_markdown, most_common_topics
+from learning_resources.etl.utils import (
+    html_to_markdown,
+    most_common_topics,
+)
 from learning_resources.models import (
     ContentFile,
     Course,
@@ -75,6 +81,34 @@ from learning_resources.utils import (
 log = logging.getLogger()
 
 User = get_user_model()
+
+
+@typechecked
+@contextlib.contextmanager
+def initialise_playwright_browsercontroller(
+    *,
+    start_url: str,
+):
+    """Create a Playwright browser, open a new page, and navigate to a
+    specified URL.
+    """
+    with sync_playwright() as p:
+        browser = p.chromium.connect("ws://playwright:3000")
+        # Create a single context for the entire scraping session
+        browser.new_context()
+
+        # Create a new page and navigate to the URL
+        page = browser.new_page()
+        page.goto(start_url)
+
+        # Return the browser and page objects
+        yield browser, page
+
+
+@typechecked
+def scrape_page(url) -> str:
+    with initialise_playwright_browsercontroller(start_url=url) as (browser, page):
+        return page.content()
 
 
 def update_index(learning_resource, newly_created):
@@ -804,13 +838,7 @@ def _webdriver_fetch_extra_elements(driver):
 def _fetch_page(url, use_webdriver=settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER):
     if url:
         if use_webdriver:
-            driver = _get_web_driver()
-            driver.get(url)
-            try:
-                _webdriver_fetch_extra_elements(driver)
-            except TimeoutException:
-                log.warning("Error custom elements page from %s", url)
-            return driver.execute_script("return document.body.innerHTML")
+            return scrape_page(url)
         else:
             try:
                 response = requests.get(url, timeout=10)

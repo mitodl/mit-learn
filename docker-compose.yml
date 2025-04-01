@@ -21,7 +21,25 @@ services:
       # DEPRECATED: legacy .env file at the repo root
       - path: .env
         required: false
-
+  playwright:
+    image: mcr.microsoft.com/playwright:v1.51.1-noble
+    entrypoint:
+      [
+        "npx",
+        "-y",
+        "playwright@1.51.1",
+        "run-server",
+        "--port",
+        "3000",
+        "--host",
+        "0.0.0.0",
+      ]
+    working_dir: /home/pwuser
+    user: pwuser
+    ports:
+      - "3000:3000"
+    depends_on:
+      - web
   watch:
     extends:
       file: docker-compose.apps.yml
