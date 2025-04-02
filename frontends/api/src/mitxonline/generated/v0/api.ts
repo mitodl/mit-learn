@@ -307,10 +307,10 @@ export interface CourseWithCourseRuns {
   readable_id: string
   /**
    * Get next run id
-   * @type {string}
+   * @type {number}
    * @memberof CourseWithCourseRuns
    */
-  next_run_id: string | null
+  next_run_id: number | null
   /**
    *
    * @type {Array<Department>}
@@ -379,16 +379,16 @@ export interface CourseWithCourseRuns {
   availability: string
   /**
    * Get the min weekly hours of the course from the course page CMS.
-   * @type {number}
+   * @type {string}
    * @memberof CourseWithCourseRuns
    */
-  min_weekly_hours: number
+  min_weekly_hours: string | null
   /**
    * Get the max weekly hours of the course from the course page CMS.
-   * @type {number}
+   * @type {string}
    * @memberof CourseWithCourseRuns
    */
-  max_weekly_hours: number | null
+  max_weekly_hours: string | null
   /**
    *
    * @type {Array<V2CourseRun>}
@@ -1991,16 +1991,16 @@ export interface V2Program {
   enrollment_end?: string | null
   /**
    * Check if the prerequisites field is populated in the program page CMS.
-   * @type {{ [key: string]: any; }}
+   * @type {boolean}
    * @memberof V2Program
    */
-  required_prerequisites: { [key: string]: any }
+  required_prerequisites: boolean
   /**
    * Get the length/duration field from the program page CMS.
-   * @type {number}
+   * @type {string}
    * @memberof V2Program
    */
-  duration: number
+  duration: string
   /**
    * Get the min weeks of the program from the CMS page.
    * @type {number}
@@ -2021,16 +2021,16 @@ export interface V2Program {
   time_commitment: string
   /**
    * Get the min weekly hours of the course from the course page CMS.
-   * @type {number}
+   * @type {string}
    * @memberof V2Program
    */
-  min_weekly_hours: number
+  min_weekly_hours: string | null
   /**
    * Get the max weekly hours of the course from the course page CMS.
-   * @type {number}
+   * @type {string}
    * @memberof V2Program
    */
-  max_weekly_hours: number
+  max_weekly_hours: string | null
 }
 
 /**
