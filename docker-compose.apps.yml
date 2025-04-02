@@ -26,6 +26,7 @@ services:
       - .:/src
       - django_media:/var/media
   playwright:
+    ipc: host
     image: mcr.microsoft.com/playwright:v1.51.1-noble
     entrypoint:
       [
