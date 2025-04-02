@@ -77,7 +77,7 @@ const setMockApiResponses = ({
     results: [],
   })
 
-  setMockResponse.get(urls.userMe.get(), {})
+  setMockResponse.get(urls.userMe.get(), { is_authenticated: true })
   setMockResponse.get(urls.userLists.membershipList(), [])
   setMockResponse.get(urls.learningPaths.membershipList(), [])
 

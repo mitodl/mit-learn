@@ -32,7 +32,7 @@ describe("ResourceCarousel", () => {
       search: factories.learningResources.resources({ count }),
       list: factories.learningResources.resources({ count }),
     }
-    setMockResponse.get(urls.userMe.get(), {})
+    setMockResponse.get(urls.userMe.get(), { is_authenticated: true })
     setMockResponse.get(urls.userLists.membershipList(), [])
     setMockResponse.get(urls.learningPaths.membershipList(), [])
 
@@ -161,7 +161,7 @@ describe("ResourceCarousel", () => {
         },
       },
     ]
-    setMockResponse.get(urls.userMe.get(), {})
+    setMockResponse.get(urls.userMe.get(), { is_authenticated: true })
     setupApis()
     renderWithProviders(
       <ResourceCarousel
@@ -205,7 +205,7 @@ describe("ResourceCarousel", () => {
           },
         },
       ]
-      setMockResponse.get(urls.userMe.get(), {})
+      setMockResponse.get(urls.userMe.get(), { is_authenticated: true })
       setupApis()
       renderWithProviders(
         <ResourceCarousel

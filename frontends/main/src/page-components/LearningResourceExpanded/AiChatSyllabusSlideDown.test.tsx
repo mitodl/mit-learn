@@ -16,7 +16,7 @@ describe("AiChatSyllabus", () => {
     const userMe = factories.user.user()
 
     // Sanity
-    expect(userMe.profile.name).toBeTruthy()
+    expect(userMe.profile?.name).toBeTruthy()
 
     setMockResponse.get(urls.userMe.get(), userMe)
     renderWithProviders(
@@ -37,14 +37,14 @@ describe("AiChatSyllabus", () => {
     // byAll because there are two instances, one is SR-only in an aria-live area
     // check for username and resource title
     await screen.findAllByText(
-      new RegExp(`Hello ${userMe.profile.name}.*${resource.title}.*`),
+      new RegExp(`Hello ${userMe.profile?.name}.*${resource.title}.*`),
     )
   })
 
   test("User enters a prompt. Greets anonymous user generically", async () => {
     const resource = factories.learningResources.course()
 
-    setMockResponse.get(urls.userMe.get(), {}, { code: 403 })
+    setMockResponse.get(urls.userMe.get(), { is_authenticated: false })
     renderWithProviders(
       <AiChatSyllabusSlideDown
         open

@@ -40,7 +40,7 @@ const setupApis = ({
 
 test("Shows subscription popover if user is NOT authenticated", async () => {
   // Don't set up all the APIs... We don't want to call the others for unauthenticated users.
-  setMockResponse.get(urls.userMe.get(), {}, { code: 403 })
+  setMockResponse.get(urls.userMe.get(), { is_authenticated: false })
   renderWithProviders(
     <SearchSubscriptionToggle
       itemName="Test"
