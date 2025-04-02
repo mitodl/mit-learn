@@ -774,7 +774,9 @@ def calculate_completeness(
 def _get_web_driver():
     chrome_options = Options()
     chrome_options.add_argument("--headless")
-    service = webdriver.ChromeService(executable_path=r"/usr/bin/chromedriver")
+    service = webdriver.ChromeService(
+        executable_path=settings.CHROMEDRIVER_EXECUTABLE_PATH
+    )
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-gpu")
     return webdriver.Chrome(service=service, options=chrome_options)
