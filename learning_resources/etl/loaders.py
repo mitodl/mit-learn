@@ -1,23 +1,9 @@
 """learning_resources data loaders"""
 
 import logging
-from functools import cache
 
-import requests
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from selenium import webdriver
-from selenium.common.exceptions import (
-    ElementNotInteractableException,
-    JavascriptException,
-    NoSuchElementException,
-    TimeoutException,
-)
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions
-from selenium.webdriver.support.ui import WebDriverWait
 
 from learning_resources.constants import (
     LearningResourceDelivery,
@@ -28,7 +14,6 @@ from learning_resources.constants import (
 )
 from learning_resources.etl.constants import (
     CONTENT_TAG_CATEGORIES,
-    MARKETING_PAGE_FILE_TYPE,
     READABLE_ID_FIELD,
     ContentTagCategory,
     CourseLoaderConfig,
@@ -36,7 +21,7 @@ from learning_resources.etl.constants import (
     ResourceNextRunConfig,
 )
 from learning_resources.etl.exceptions import ExtractException
-from learning_resources.etl.utils import html_to_markdown, most_common_topics
+from learning_resources.etl.utils import most_common_topics
 from learning_resources.models import (
     ContentFile,
     Course,
@@ -525,7 +510,7 @@ def load_course(
         load_image(learning_resource, image_data)
         load_departments(learning_resource, department_data)
         load_content_tags(learning_resource, content_tags_data)
-        load_marketing_page(learning_resource)
+
     update_index(learning_resource, created)
     return learning_resource
 
@@ -617,7 +602,6 @@ def load_program(
         load_image(learning_resource, image_data)
         load_offered_by(learning_resource, offered_by_data)
         load_departments(learning_resource, departments_data)
-        load_marketing_page(learning_resource)
 
         program, _ = Program.objects.get_or_create(learning_resource=learning_resource)
 
@@ -768,75 +752,6 @@ def calculate_completeness(
         ocw_resource.save()
         update_index(ocw_resource, newly_created=False)
     return new_score
-
-
-@cache
-def _get_web_driver():
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")
-    service = webdriver.ChromeService(
-        executable_path=settings.CHROMEDRIVER_EXECUTABLE_PATH
-    )
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-gpu")
-    return webdriver.Chrome(service=service, options=chrome_options)
-
-
-def _webdriver_fetch_extra_elements(driver):
-    """
-    Attempt to Fetch any extra possible js loaded elements that
-    require interaction to display
-    """
-    errors = [
-        NoSuchElementException,
-        JavascriptException,
-        ElementNotInteractableException,
-        TimeoutException,
-    ]
-    wait = WebDriverWait(
-        driver, timeout=0.5, poll_frequency=0.1, ignored_exceptions=errors
-    )
-    wait.until(
-        expected_conditions.visibility_of_element_located((By.ID, "faculty-tab"))
-    )
-    driver.execute_script("document.getElementById('faculty-tab').click()")
-    wait.until(expected_conditions.visibility_of_element_located((By.ID, "faculty")))
-
-
-def _fetch_page(url, use_webdriver=settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER):
-    if url:
-        if use_webdriver:
-            driver = _get_web_driver()
-            driver.get(url)
-            try:
-                _webdriver_fetch_extra_elements(driver)
-            except TimeoutException:
-                log.warning("Error custom elements page from %s", url)
-            return driver.execute_script("return document.body.innerHTML")
-        else:
-            try:
-                response = requests.get(url, timeout=10)
-                if response.ok:
-                    return response.text
-            except requests.exceptions.RequestException:
-                log.exception("Error fetching page from %s", url)
-    return None
-
-
-def load_marketing_page(learning_resource: LearningResource):
-    marketing_page_url = learning_resource.url
-    page_content = _fetch_page(marketing_page_url)
-    if page_content:
-        content_file, _ = ContentFile.objects.update_or_create(
-            learning_resource=learning_resource,
-            file_type=MARKETING_PAGE_FILE_TYPE,
-            defaults={
-                "file_extension": ".md",
-            },
-        )
-        content_file.key = marketing_page_url
-        content_file.content = html_to_markdown(page_content)
-        content_file.save()
 
 
 def load_content_files(

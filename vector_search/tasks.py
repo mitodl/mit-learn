@@ -6,6 +6,7 @@ from celery.exceptions import Ignore
 from django.conf import settings
 from django.db.models import Q
 
+from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE
 from learning_resources.models import (
     ContentFile,
     Course,
@@ -31,7 +32,11 @@ from main.utils import (
     chunks,
     now_in_utc,
 )
-from vector_search.utils import embed_learning_resources
+from vector_search.utils import (
+    _fetch_page,
+    embed_learning_resources,
+    html_to_markdown,
+)
 
 log = logging.getLogger(__name__)
 
@@ -296,3 +301,58 @@ def embed_new_content_files(self):
     embed_tasks = celery.group(tasks)
 
     return self.replace(embed_tasks)
+
+
+@app.task(bind=True)
+def scrape_marketing_pages(self):
+    """
+    Scrape marketing pages (for programs and courses)
+    and store them as content files
+    """
+    log.info("Running scrape_marketing_pages task")
+    resource_ids = set(
+        LearningResource.objects.filter(
+            published=True, resource_type__in=["course", "program"]
+        ).values_list("id", flat=True)
+    )
+
+    existing_page_resource_ids = set(
+        ContentFile.objects.filter(file_type="marketing_page").values_list(
+            "learning_resource_id", flat=True
+        )
+    )
+    missing_pages = list(resource_ids.difference(existing_page_resource_ids))
+
+    tasks = [
+        marketing_page_for_resources.si(ids)
+        for ids in chunks(
+            missing_pages,
+            chunk_size=settings.QDRANT_CHUNK_SIZE,
+        )
+    ]
+    scrape_tasks = celery.group(tasks)
+    return self.replace(scrape_tasks)
+
+
+@app.task(
+    acks_late=True,
+    reject_on_worker_lost=True,
+    autoretry_for=(RetryError,),
+    retry_backoff=True,
+    rate_limit="600/m",
+)
+def marketing_page_for_resources(resource_ids):
+    for learning_resource in LearningResource.objects.filter(id__in=resource_ids):
+        marketing_page_url = learning_resource.url
+        page_content = _fetch_page(marketing_page_url)
+        if page_content:
+            content_file, _ = ContentFile.objects.update_or_create(
+                learning_resource=learning_resource,
+                file_type=MARKETING_PAGE_FILE_TYPE,
+                defaults={
+                    "file_extension": ".md",
+                },
+            )
+            content_file.key = marketing_page_url
+            content_file.content = html_to_markdown(page_content)
+            content_file.save()
