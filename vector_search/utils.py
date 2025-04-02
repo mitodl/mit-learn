@@ -1,6 +1,7 @@
 import logging
 import uuid
 from functools import cache
+from shutil import which
 
 import html2text
 import requests
@@ -10,9 +11,15 @@ from langchain_experimental.text_splitter import SemanticChunker
 from qdrant_client import QdrantClient, models
 from selenium import webdriver
 from selenium.common.exceptions import (
+    ElementNotInteractableException,
+    JavascriptException,
+    NoSuchElementException,
     TimeoutException,
 )
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions
+from selenium.webdriver.support.ui import WebDriverWait
 
 from learning_resources.content_summarizer import ContentSummarizer
 from learning_resources.models import ContentFile, LearningResource
@@ -606,9 +613,7 @@ def html_to_markdown(html):
 def _get_web_driver():
     chrome_options = Options()
     chrome_options.add_argument("--headless")
-    service = webdriver.ChromeService(
-        executable_path=settings.CHROMEDRIVER_EXECUTABLE_PATH
-    )
+    service = webdriver.ChromeService(executable_path=which("chromedriver"))
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-gpu")
     return webdriver.Chrome(service=service, options=chrome_options)
@@ -619,8 +624,17 @@ def _webdriver_fetch_extra_elements(driver):
     Attempt to Fetch any extra possible js loaded elements that
     require interaction to display
     """
-
+    errors = [
+        NoSuchElementException,
+        JavascriptException,
+        ElementNotInteractableException,
+        TimeoutException,
+    ]
+    wait = WebDriverWait(
+        driver, timeout=0.1, poll_frequency=0.01, ignored_exceptions=errors
+    )
     for tab_id in ["faculty-tab", "reviews-tab", "participants-tab"]:
+        wait.until(expected_conditions.visibility_of_element_located((By.ID, tab_id)))
         driver.execute_script(f"document.getElementById('{tab_id}').click()")
 
 

@@ -781,9 +781,6 @@ LITELLM_TOKEN_ENCODING_NAME = get_string(
 )
 LITELLM_CUSTOM_PROVIDER = get_string(name="LITELLM_CUSTOM_PROVIDER", default="openai")
 LITELLM_API_BASE = get_string(name="LITELLM_API_BASE", default=None)
-CHROMEDRIVER_EXECUTABLE_PATH = get_string(
-    name="CHROMEDRIVER_EXECUTABLE_PATH", default="/usr/bin/chromedriver"
-)
 
 OPENAI_API_KEY = get_string(
     name="OPENAI_API_KEY",
