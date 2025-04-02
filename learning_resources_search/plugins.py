@@ -58,7 +58,7 @@ class SearchIndexPlugin:
             resource(LearningResource): The Learning Resource that was percolated
             percolated_queries(PercolateQuery): list of percolated queries
         """
-        log.info("document %i percolated - %s", resource.id, list(percolated_queries))
+        log.debug("document %i percolated - %s", resource.id, list(percolated_queries))
 
     @hookimpl
     def resource_upserted(self, resource, percolate):

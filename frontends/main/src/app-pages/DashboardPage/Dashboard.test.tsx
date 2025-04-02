@@ -376,7 +376,7 @@ describe("DashboardPage", () => {
       }
       renderWithProviders(<DashboardPage />)
       const enrollmentsHeading = screen.queryByRole("heading", {
-        name: "Your Courses",
+        name: "My Learning",
       })
       expect(!!enrollmentsHeading).toBe(enrollmentsEnabled)
     },

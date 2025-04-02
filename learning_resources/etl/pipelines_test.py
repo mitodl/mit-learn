@@ -263,7 +263,7 @@ def test_ocw_courses_etl(settings, mocker, skip_content_files):
     run = resource.runs.first()
     assert run.instructors.count() == 10
     assert run.run_id == "97db384ef34009a64df7cb86cf701979"
-    assert run.content_files.count() == (0 if skip_content_files else 4)
+    assert run.content_files.count() == (0 if skip_content_files else 5)
     assert mock_cf_actions.call_count == (0 if skip_content_files else 1)
     assert mock_calc_score.call_count == (0 if skip_content_files else 1)
 

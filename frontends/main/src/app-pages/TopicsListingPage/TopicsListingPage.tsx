@@ -95,9 +95,10 @@ const TopicBoxHeader = styled(
     },
   },
   ".view-topic": [
-    linkStyles({ size: "medium" }),
+    linkStyles({ size: "medium", color: "black" }),
     {
       color: theme.custom.colors.darkGray1,
+      ...theme.typography.body2,
       marginLeft: "16px",
       [theme.breakpoints.down("sm")]: {
         ...theme.typography.body3,

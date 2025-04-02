@@ -7,10 +7,10 @@ import {
   theme,
   PlatformLogo,
   PLATFORM_LOGOS,
-  Link,
   Input,
   Typography,
 } from "ol-components"
+import Link from "next/link"
 import type { ImageConfig, LearningResourceCardProps } from "ol-components"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
 import { ResourceTypeEnum, PlatformEnum } from "api"
@@ -158,6 +158,9 @@ const ShareButtonContainer = styled.div({
 
 const ShareLink = styled(Link)({
   color: theme.custom.colors.silverGrayDark,
+  "&:hover": {
+    color: theme.custom.colors.lightRed,
+  },
 })
 
 const RedLinkIcon = styled(RiLink)({

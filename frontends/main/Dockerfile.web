@@ -1,3 +1,4 @@
+# hadolint global ignore=DL3018,DL3059
 # Build: \
 # docker build \
 #   -f frontends/main/Dockerfile.web \
@@ -60,8 +61,8 @@
 FROM node:22-alpine
 
 RUN apk update
-RUN apk add --no-cache libc6-compat
-RUN apk add --no-cache git
+RUN apk add --no-cache libc6-compat && \
+    apk add --no-cache git
 
 WORKDIR /app
 
@@ -71,7 +72,8 @@ COPY yarn.lock /app
 COPY package.json /app
 COPY frontends /app/frontends
 
-RUN yarn install --immutable
+RUN yarn install --immutable && \
+    yarn cache clean
 
 WORKDIR /app/frontends/main
 

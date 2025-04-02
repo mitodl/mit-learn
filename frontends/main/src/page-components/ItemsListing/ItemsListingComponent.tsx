@@ -1,6 +1,6 @@
 import React from "react"
-import { Grid, Typography, styled, Link } from "ol-components"
-import { Button } from "@mitodl/smoot-design"
+import { Grid, Typography, styled } from "ol-components"
+import { Button, ButtonLink } from "@mitodl/smoot-design"
 import { RiArrowLeftLine, RiArrowUpDownLine } from "@remixicon/react"
 import { useToggle, pluralize } from "ol-utilities"
 import { GridColumn, GridContainer } from "@/components/GridLayout/GridLayout"
@@ -95,11 +95,13 @@ const ItemsListingComponent: React.FC<ItemsListingComponentProps> = ({
             marginBottom="24px"
           >
             <Grid item>
-              <Link href={MY_LISTS}>
-                <Button variant="tertiary" startIcon={<RiArrowLeftLine />}>
-                  My Lists
-                </Button>
-              </Link>
+              <ButtonLink
+                href={MY_LISTS}
+                variant="tertiary"
+                startIcon={<RiArrowLeftLine />}
+              >
+                My Lists
+              </ButtonLink>
             </Grid>
           </Grid>
           <Grid

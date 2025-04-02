@@ -33,7 +33,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.30.10"
+VERSION = "0.31.0"
 
 log = logging.getLogger()
 
@@ -335,7 +335,10 @@ APISIX_USERDATA_MAP = {
         "email_optin": "emailOptIn",
     },
 }
-
+DISABLE_APISIX_USER_MIDDLEWARE = get_bool(
+    name="DISABLE_APISIX_USER_MIDDLEWARE",
+    default=False,
+)
 
 # Social Auth configurations - [END]
 
@@ -750,6 +753,13 @@ DEFAULT_SEARCH_MAX_INCOMPLETENESS_PENALTY = get_float(
 DEFAULT_SEARCH_CONTENT_FILE_SCORE_WEIGHT = get_float(
     name="DEFAULT_SEARCH_CONTENT_FILE_SCORE_WEIGHT", default=1
 )
+"""
+the schedule (in minutes) for the embeddings task
+the lookback window for getting items to embed
+will be a constant 60 minutes greater more than the schedule frequency
+"""
+EMBEDDING_SCHEDULE_MINUTES = get_int(name="EMBEDDING_SCHEDULE_MINUTES", default=60)
+QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW = EMBEDDING_SCHEDULE_MINUTES + 60
 
 QDRANT_API_KEY = get_string(name="QDRANT_API_KEY", default="")
 QDRANT_HOST = get_string(name="QDRANT_HOST", default="http://qdrant:6333")

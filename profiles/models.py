@@ -7,7 +7,6 @@ from django.contrib.auth import get_user_model
 from django.contrib.postgres.fields import ArrayField
 from django.db import models, transaction
 from django.db.models import JSONField
-from django_scim.models import AbstractSCIMUserMixin
 
 from main.utils import frontend_absolute_url
 from profiles.utils import (
@@ -66,7 +65,7 @@ def filter_profile_props(data):
     return {key: value for key, value in data.items() if key in PROFILE_PROPS}
 
 
-class Profile(AbstractSCIMUserMixin):
+class Profile(models.Model):
     """Profile model"""
 
     class Goal(models.TextChoices):
@@ -175,6 +174,9 @@ class Profile(AbstractSCIMUserMixin):
         blank=True,
     )
 
+    def __str__(self):
+        return f"{self.name}"
+
     @transaction.atomic
     def save(self, *args, update_image=False, **kwargs):  # pylint: disable=arguments-differ
         """Update thumbnails if necessary"""
@@ -194,9 +196,6 @@ class Profile(AbstractSCIMUserMixin):
                 self.image_small_file = None
                 self.image_medium_file = None
         super().save(*args, **kwargs)  # pylint:disable=super-with-arguments
-
-    def __str__(self):
-        return f"{self.name}"
 
 
 class UserWebsite(models.Model):

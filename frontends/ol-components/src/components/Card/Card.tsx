@@ -37,6 +37,7 @@ export const Linkable: React.FC<LinkableProps> = ({
   if (href) {
     return (
       <Link
+        color="black"
         {...others}
         className={className}
         href={href}

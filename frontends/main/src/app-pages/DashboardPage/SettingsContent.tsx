@@ -31,10 +31,6 @@ const FollowList = styled(PlainList)(({ theme }) => ({
   border: `1px solid ${theme.custom.colors.lightGray2}`,
 }))
 
-const StyledLink = styled(Link)(({ theme }) => ({
-  color: theme.custom.colors.red,
-}))
-
 const TitleText = styled(Typography)(({ theme }) => ({
   marginTop: "16px",
   marginBottom: "8px",
@@ -223,7 +219,8 @@ const SettingsContent: React.FC = () => {
                 ]
               }
             />
-            <StyledLink
+            <Link
+              color="red"
               onClick={() =>
                 NiceModal.show(UnfollowDialog, {
                   subscriptionIds: [subscriptionItem.id],
@@ -233,7 +230,7 @@ const SettingsContent: React.FC = () => {
               }
             >
               Unfollow
-            </StyledLink>
+            </Link>
           </ListItem>
         ))}
       </FollowList>

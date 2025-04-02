@@ -3197,7 +3197,7 @@ def test_document_percolation(opensearch, mocker):
     lr = LearningResourceFactory.create()
     percolate_matches_for_document(lr.id)
 
-    plugin_log_handler.info.assert_called_once_with(
+    plugin_log_handler.debug.assert_called_once_with(
         "document %i percolated - %s",
         lr.id,
         list(PercolateQuery.objects.filter(id__in=[p["id"] for p in percolate_hits])),
