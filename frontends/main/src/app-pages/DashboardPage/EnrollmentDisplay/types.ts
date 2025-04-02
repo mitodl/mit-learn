@@ -41,7 +41,7 @@ type EnrollmentData = {
   /**
    * URL to courseware
    */
-  coursewareUrl: string
+  coursewareUrl: string | null
   /**
    * URL to marketing page
    */
