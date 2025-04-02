@@ -3,7 +3,7 @@ import { mergeOverrides } from "ol-test-utilities"
 import type { PartialFactory } from "ol-test-utilities"
 import type {
   CourseRunEnrollment,
-  V1CourseRun,
+  Course,
   ProductFlexibilePrice,
 } from "../../generated/v0"
 
@@ -35,8 +35,8 @@ const courseEnrollment: PartialFactory<CourseRunEnrollment> = (
         course: {
           page: {
             page_url: faker.internet.url(),
-          } as V1CourseRun["course"]["page"],
-        } as V1CourseRun["course"],
+          } as Course["page"],
+        } as Course,
       } as CourseRunEnrollment["run"],
     },
     overrides,
