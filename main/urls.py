@@ -57,7 +57,7 @@ urlpatterns = (
         re_path(r"", include("articles.urls")),
         re_path(r"", include("testimonials.urls")),
         re_path(r"", include("news_events.urls")),
-        re_path(r"", include("scim.urls")),
+        re_path(r"", include("mitol.scim.urls")),
         re_path(r"", include(features_router.urls)),
         re_path(r"^app", RedirectView.as_view(url=settings.APP_BASE_URL)),
         # Hijack

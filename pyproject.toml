@@ -99,6 +99,8 @@ html2text = "^2024.2.26"
 markdown = "^3.7"
 isodate = "^0.7.2"
 selenium = "^4.30.0"
+mitol-django-scim = "^2025.3.31"
+
 
 
 [tool.poetry.group.dev.dependencies]
