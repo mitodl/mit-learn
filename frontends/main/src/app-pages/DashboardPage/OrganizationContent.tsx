@@ -11,14 +11,8 @@ import { V2Program } from "api/mitxonline"
 import * as transform from "./CoursewareDisplay/transform"
 import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
 import { DashboardCard } from "./CoursewareDisplay/DashboardCard"
-import { PlainList, styled } from "ol-components"
-
-const DashboardCardStyled = styled(DashboardCard)({
-  borderRadius: "0px",
-  "&:not(:first-child)": {
-    borderTop: "none",
-  },
-})
+import { PlainList, styled, Typography } from "ol-components"
+import { DashboardCourse, DashboardProgram } from "./CoursewareDisplay/types"
 
 type Organization = { id: number; name: string }
 type UserWithOrgsField = User & { organizations: Organization[] }
@@ -59,6 +53,59 @@ const useMitxonlineProgramsCourses = (programs: V2Program[]) => {
   return courseGroups
 }
 
+const DashboardCardStyled = styled(DashboardCard)({
+  borderRadius: "0px",
+  borderTop: "none",
+  "&:last-of-type": {
+    borderRadius: "0px 0px 8px 8px",
+  },
+})
+const ProgramRoot = styled.div(({ theme }) => ({
+  color: theme.custom.colors.darkGray2,
+  boxShadow: "0px 4px 8px 0px rgba(19, 20, 21, 0.08)",
+}))
+const ProgramHeader = styled.div(({ theme }) => ({
+  display: "flex",
+  padding: "24px",
+  flexDirection: "column",
+
+  gap: "16px",
+  backgroundColor: "rgba(243, 244, 248, 0.60)", // lightGray1 at 60%
+  borderRadius: "8px 8px 0px 0px",
+  border: `1px solid ${theme.custom.colors.lightGray2}`,
+}))
+const OrgProgramDisplay: React.FC<{
+  program: DashboardProgram
+  courses: DashboardCourse[]
+  coursesLoading: boolean
+  programLoading: boolean
+}> = ({ program, courses }) => {
+  return (
+    <ProgramRoot>
+      <ProgramHeader>
+        <Typography variant="h5" component="h2">
+          {program.title}
+        </Typography>
+        <Typography variant="body1">{program.description}</Typography>
+      </ProgramHeader>
+      <PlainList itemSpacing={0}>
+        {courses.map((course) => (
+          <DashboardCardStyled
+            Component="li"
+            key={course.id}
+            dashboardResource={course}
+          />
+        ))}
+      </PlainList>
+    </ProgramRoot>
+  )
+}
+const OrganizationRoot = styled.div({
+  display: "flex",
+  flexDirection: "column",
+  gap: "40px",
+})
+
 type OrganizationContentProps = {
   orgId: number
 }
@@ -84,34 +131,23 @@ const OrganizationContent: React.FC<OrganizationContentProps> = ({ orgId }) => {
   )
 
   return (
-    <div>
-      {programs.isLoading ? (
-        "Programs Loading"
-      ) : (
-        <ul>
-          {transformedPrograms?.map((program, index) => (
-            <li key={program.id}>
-              <strong>{program.title}</strong>
-              <ul>
-                {courseGroups[index].isLoading ? (
-                  "Courses Loading"
-                ) : (
-                  <PlainList itemSpacing={0}>
-                    {transformedCourseGroups[index].map((course) => (
-                      <DashboardCardStyled
-                        Component="li"
-                        key={course.id}
-                        dashboardResource={course}
-                      />
-                    ))}
-                  </PlainList>
-                )}
-              </ul>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    <OrganizationRoot>
+      {programs.isLoading
+        ? "Programs Loading"
+        : transformedPrograms?.map((program, index) => {
+            const courses = transformedCourseGroups[index]
+            const programLoading = courseGroups[index].isLoading
+            return (
+              <OrgProgramDisplay
+                key={program.id}
+                program={program}
+                courses={courses}
+                coursesLoading={courseGroups[index].isLoading}
+                programLoading={programLoading}
+              />
+            )
+          })}
+    </OrganizationRoot>
   )
 }
 
