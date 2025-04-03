@@ -17,6 +17,7 @@ import React from "react"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import HomeContent from "./HomeContent"
+import invariant from "tiny-invariant"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest
@@ -73,6 +74,7 @@ describe("HomeContent", () => {
         },
       },
     })
+    invariant(user.profile)
 
     const courses = factories.learningResources.courses
     const resources = {
