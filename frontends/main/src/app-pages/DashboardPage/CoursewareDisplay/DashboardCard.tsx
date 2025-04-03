@@ -36,9 +36,7 @@ const MobileOnly = styled.div(({ theme }) => ({
 const CardRoot = styled.div(({ theme }) => ({
   position: "relative",
   border: `1px solid ${theme.custom.colors.lightGray2}`,
-  borderRadius: "8px",
   backgroundColor: theme.custom.colors.white,
-  boxShadow: "0px 1px 6px 0px rgba(3, 21, 45, 0.05)",
   padding: "16px",
   display: "flex",
   gap: "8px",
@@ -85,7 +83,7 @@ const CoursewareButton = styled(
   }: {
     startDate?: string | null
     endDate?: string | null
-    href: string | null
+    href?: string | null
     className?: string
   }) => {
     const children = getCoursewareText(endDate)
@@ -247,12 +245,16 @@ const getMenuItems = (): SimpleMenuItem[] => [
 ]
 
 type DashboardCardProps = {
+  Component?: React.ElementType
   dashboardResource: DashboardCourse
   showNotComplete?: boolean
+  className?: string
 }
 const DashboardCard: React.FC<DashboardCardProps> = ({
   dashboardResource,
   showNotComplete = true,
+  Component,
+  className,
 }) => {
   const { title, marketingUrl, enrollment, run } = dashboardResource
   const contextMenu = (
@@ -365,8 +367,12 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   )
   return (
     <>
-      <DesktopOnly>{desktopLayout}</DesktopOnly>
-      <MobileOnly>{mobileLayout}</MobileOnly>
+      <DesktopOnly as={Component} className={className}>
+        {desktopLayout}
+      </DesktopOnly>
+      <MobileOnly as={Component} className={className}>
+        {mobileLayout}
+      </MobileOnly>
     </>
   )
 }

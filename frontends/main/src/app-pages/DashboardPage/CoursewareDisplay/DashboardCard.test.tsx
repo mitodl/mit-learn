@@ -19,6 +19,18 @@ describe("EnrollmentCard", () => {
     }
   })
 
+  test("Accepts a classname", () => {
+    const course = dashboardCourse()
+    const { view } = renderWithProviders(
+      <DashboardCard
+        dashboardResource={course}
+        className="some-custom classes"
+      />,
+    )
+    expect(view.container.firstChild).toHaveClass("some-custom")
+    expect(view.container.firstChild).toHaveClass("classes")
+  })
+
   test("Courseware button is disabled if course has not started", () => {
     const course = dashboardCourse({
       run: {
