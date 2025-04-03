@@ -2,7 +2,7 @@ import React from "react"
 import { styled, Link, SimpleMenu, SimpleMenuItem, Stack } from "ol-components"
 import NextLink from "next/link"
 import Image from "next/image"
-import { EnrollmentStatus } from "./types"
+import { EnrollmentStatus, EnrollmentMode } from "./types"
 import type { DashboardCourse } from "./types"
 import { ActionButton, Button, ButtonLink } from "@mitodl/smoot-design"
 import {
@@ -108,11 +108,17 @@ const SubtitleLink = styled(NextLink)(({ theme }) => ({
 
 const UpgradeBanner: React.FC<
   {
+    canUpgrade: boolean
     certificateUpgradeDeadline?: string | null
     certificateUpgradePrice?: string | null
   } & React.HTMLAttributes<HTMLDivElement>
-> = ({ certificateUpgradeDeadline, certificateUpgradePrice, ...others }) => {
-  if (!certificateUpgradeDeadline || !certificateUpgradePrice) {
+> = ({
+  canUpgrade,
+  certificateUpgradeDeadline,
+  certificateUpgradePrice,
+  ...others
+}) => {
+  if (!canUpgrade || !certificateUpgradeDeadline || !certificateUpgradePrice) {
     return null
   }
   if (isInPast(certificateUpgradeDeadline)) return null
@@ -202,48 +208,39 @@ type DashboardCardProps = {
   dashboardResource: DashboardCourse
 }
 const DashboardCard: React.FC<DashboardCardProps> = ({ dashboardResource }) => {
-  const {
-    title,
-    marketingUrl,
-    coursewareUrl,
-    startDate,
-    endDate,
-    canUpgrade,
-    enrollmentStatus,
-    certificateUpgradeDeadline,
-    certificateUpgradePrice,
-  } = dashboardResource.data
+  const { title, marketingUrl, enrollment, run } = dashboardResource
   return (
     <CardRoot data-testid="enrollment-card">
       <Stack justifyContent="start" alignItems="stretch" gap="8px" flex={1}>
         <Link size="medium" color="black" href={marketingUrl}>
           {title}
         </Link>
-        {enrollmentStatus === EnrollmentStatus.Completed ? (
+        {enrollment?.status === EnrollmentStatus.Completed ? (
           <SubtitleLink href="#">
             {<RiAwardLine size="16px" />}
             View Certificate
           </SubtitleLink>
         ) : null}
-        {canUpgrade ? (
+        {enrollment?.mode !== EnrollmentMode.Verified ? (
           <UpgradeBanner
             data-testid="upgrade-root"
-            certificateUpgradeDeadline={certificateUpgradeDeadline}
-            certificateUpgradePrice={certificateUpgradePrice}
+            canUpgrade={run.canUpgrade}
+            certificateUpgradeDeadline={run.certificateUpgradeDeadline}
+            certificateUpgradePrice={run.certificateUpgradePrice}
           />
         ) : null}
       </Stack>
       <Stack gap="8px">
         <Stack direction="row" gap="8px" alignItems="center">
-          {enrollmentStatus === EnrollmentStatus.Completed ? (
+          {enrollment?.status === EnrollmentStatus.Completed ? (
             <Completed src={CompleteCheck} alt="Completed" />
           ) : (
             <NotComplete />
           )}
           <CoursewareButton
-            startDate={startDate}
-            href={coursewareUrl}
-            endDate={endDate}
+            startDate={run.startDate}
+            href={run.coursewareUrl}
+            endDate={run.endDate}
           />
           <SimpleMenu
             items={getMenuItems()}
@@ -254,7 +251,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ dashboardResource }) => {
             }
           />
         </Stack>
-        {startDate ? <CourseStartCountdown startDate={startDate} /> : null}
+        {run.startDate ? (
+          <CourseStartCountdown startDate={run.startDate} />
+        ) : null}
       </Stack>
     </CardRoot>
   )

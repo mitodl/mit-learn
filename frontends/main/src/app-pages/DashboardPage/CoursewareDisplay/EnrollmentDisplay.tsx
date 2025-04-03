@@ -16,14 +16,14 @@ const Wrapper = styled.div(({ theme }) => ({
 }))
 
 const alphabeticalSort = (a: DashboardCourse, b: DashboardCourse) =>
-  a.data.title.localeCompare(b.data.title)
+  a.title.localeCompare(b.title)
 
 const startsSooner = (a: DashboardCourse, b: DashboardCourse) => {
-  if (!a.data.startDate && !b.data.startDate) return 0
-  if (!a.data.startDate) return 1
-  if (!b.data.startDate) return -1
-  const x = new Date(a.data.startDate)
-  const y = new Date(b.data.startDate)
+  if (!a.run.startDate && !b.run.startDate) return 0
+  if (!a.run.startDate) return 1
+  if (!b.run.startDate) return -1
+  const x = new Date(a.run.startDate)
+  const y = new Date(b.run.startDate)
   return x.getTime() - y.getTime()
 }
 const sortEnrollments = (resources: DashboardCourse[]) => {
@@ -32,13 +32,13 @@ const sortEnrollments = (resources: DashboardCourse[]) => {
   const notStarted: DashboardCourse[] = []
   resources.forEach((resource) => {
     if (
-      resource.data.enrollmentStatus === EnrollmentStatus.Completed ||
-      (resource.data.endDate && new Date(resource.data.endDate) < new Date())
+      resource.enrollment?.status === EnrollmentStatus.Completed ||
+      (resource.run.endDate && new Date(resource.run.endDate) < new Date())
     ) {
       ended.push(resource)
     } else if (
-      resource.data.startDate &&
-      new Date(resource.data.startDate) < new Date()
+      resource.run.startDate &&
+      new Date(resource.run.startDate) < new Date()
     ) {
       started.push(resource)
     } else {

@@ -4,7 +4,7 @@ import { DashboardCard } from "./DashboardCard"
 import { dashboardCourse } from "./test-utils"
 import { faker } from "@faker-js/faker/locale/en"
 import moment from "moment"
-import { EnrollmentStatus } from "./types"
+import { EnrollmentMode, EnrollmentStatus } from "./types"
 
 describe("EnrollmentCard", () => {
   test("It shows course title with link to marketing url", () => {
@@ -12,14 +12,14 @@ describe("EnrollmentCard", () => {
     renderWithProviders(<DashboardCard dashboardResource={course} />)
 
     const courseLink = screen.getByRole("link", {
-      name: course.data.title,
+      name: course.title,
     })
-    expect(courseLink).toHaveAttribute("href", course.data.marketingUrl)
+    expect(courseLink).toHaveAttribute("href", course.marketingUrl)
   })
 
   test("Courseware button is disabled if course has not started", () => {
     const course = dashboardCourse({
-      data: {
+      run: {
         startDate: faker.date.future().toISOString(),
       },
     })
@@ -33,7 +33,7 @@ describe("EnrollmentCard", () => {
 
   test("Courseware button is enabled if course has started AND NOT ended", () => {
     const course = dashboardCourse({
-      data: {
+      run: {
         startDate: faker.date.past().toISOString(),
         endDate: faker.date.future().toISOString(),
       },
@@ -42,12 +42,12 @@ describe("EnrollmentCard", () => {
     const coursewareLink = screen.getByRole("link", {
       name: "Continue Course",
     })
-    expect(coursewareLink).toHaveAttribute("href", course.data.coursewareUrl)
+    expect(coursewareLink).toHaveAttribute("href", course.run.coursewareUrl)
   })
 
   test("Courseware button says 'View Course' if course has ended", () => {
     const course = dashboardCourse({
-      data: {
+      run: {
         startDate: faker.date.past().toISOString(),
         endDate: faker.date.past().toISOString(),
       },
@@ -56,26 +56,42 @@ describe("EnrollmentCard", () => {
     const coursewareLink = screen.getByRole("link", {
       name: "View Course",
     })
-    expect(coursewareLink).toHaveAttribute("href", course.data.coursewareUrl)
+    expect(coursewareLink).toHaveAttribute("href", course.run.coursewareUrl)
   })
 
   test.each([
     {
       overrides: {
-        canUpgrade: true,
-        certificateUpgradeDeadline: faker.date.future().toISOString(),
-        certificateUpgradePrice: faker.commerce.price(),
+        run: {
+          canUpgrade: true,
+          certificateUpgradeDeadline: faker.date.future().toISOString(),
+          certificateUpgradePrice: faker.commerce.price(),
+        },
+        enrollment: { mode: EnrollmentMode.Audit },
       },
       expectation: { visible: true },
     },
     {
-      overrides: { canUpgrade: false },
+      overrides: {
+        run: {
+          canUpgrade: true,
+          certificateUpgradeDeadline: faker.date.future().toISOString(),
+          certificateUpgradePrice: faker.commerce.price(),
+        },
+        enrollment: { mode: EnrollmentMode.Verified },
+      },
+      expectation: { visible: false },
+    },
+    {
+      overrides: {
+        run: { canUpgrade: false },
+      },
       expectation: { visible: false },
     },
   ])(
-    "Shows upgrade banner if and only if user can upgrade (canUpgrade: $overrides.canUpgrade)",
+    "Shows upgrade banner if and only if run.canUpgrade and not already upgraded (canUpgrade: $overrides.canUpgrade)",
     ({ overrides, expectation }) => {
-      const course = dashboardCourse({ data: overrides })
+      const course = dashboardCourse(overrides)
       renderWithProviders(<DashboardCard dashboardResource={course} />)
       const upgradeRoot = screen.queryByTestId("upgrade-root")
       expect(!!upgradeRoot).toBe(expectation.visible)
@@ -91,7 +107,7 @@ describe("EnrollmentCard", () => {
       .toISOString()
 
     const course = dashboardCourse({
-      data: {
+      run: {
         canUpgrade: true,
         certificateUpgradeDeadline,
         certificateUpgradePrice,
@@ -115,7 +131,7 @@ describe("EnrollmentCard", () => {
       .add(5, "days")
       .add(3, "hours")
       .toISOString()
-    const enrollment = dashboardCourse({ data: { startDate } })
+    const enrollment = dashboardCourse({ run: { startDate } })
     const { view } = renderWithProviders(
       <DashboardCard dashboardResource={enrollment} />,
     )
@@ -130,7 +146,7 @@ describe("EnrollmentCard", () => {
     "Shows completed icon if course is completed",
     ({ enrollmentStatus, hasCompleted }) => {
       const course = dashboardCourse({
-        data: { enrollmentStatus },
+        enrollment: { status: enrollmentStatus },
       })
       renderWithProviders(<DashboardCard dashboardResource={course} />)
 

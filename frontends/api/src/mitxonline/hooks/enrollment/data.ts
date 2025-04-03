@@ -37,8 +37,8 @@ const courses = {
       ],
       approved_flexible_price_exists: false,
       course: {
-        id: 2,
-        title: "Test Course",
+        id: 21,
+        title: "Enrolled, Started, Not Upgradeable",
         readable_id: "course-v1:xOnline+test",
         next_run_id: 20,
         departments: [
@@ -176,8 +176,8 @@ const courses = {
       ],
       approved_flexible_price_exists: false,
       course: {
-        id: 2,
-        title: "Test Course",
+        id: 22,
+        title: "Course That Has Ended",
         readable_id: "course-v1:xOnline+test",
         next_run_id: 20,
         departments: [
@@ -316,8 +316,10 @@ const courses = {
       ],
       approved_flexible_price_exists: false,
       course: {
-        id: 3,
-        title: "Data Analysis for Social Scientists",
+        id: 31,
+        title:
+          "Started and Already Upgraded And This Course Has a Really Long Name That Goes Across Multiple Lines",
+
         readable_id: "course-v1:MITx+14.310x",
         next_run_id: null,
         departments: [
@@ -423,7 +425,7 @@ const courses = {
       approved_flexible_price_exists: false,
       course: {
         id: 34,
-        title: "The Challenges of Global Poverty",
+        title: "Upgradeable Course, Not Yet Started",
         readable_id: "course-v1:MITxT+14.73x",
         next_run_id: null,
         departments: [
@@ -529,8 +531,9 @@ const courses = {
       ],
       approved_flexible_price_exists: false,
       course: {
-        id: 34,
-        title: "The Challenges of Global Poverty",
+        id: 35,
+        title:
+          "Upgradeable Course, Not Yet Started, And This Course Also Has A Really Long Name That Goes Across Multiple Lines",
         readable_id: "course-v1:MITxT+14.73x",
         next_run_id: null,
         departments: [
@@ -627,8 +630,8 @@ const courses = {
       products: [],
       approved_flexible_price_exists: false,
       course: {
-        id: 34,
-        title: "The Challenges of Global Poverty",
+        id: 36,
+        title: "Not Upgradeable, Not Started",
         readable_id: "course-v1:MITxT+14.73x",
         next_run_id: null,
         departments: [
@@ -733,8 +736,8 @@ const courses = {
       ],
       approved_flexible_price_exists: false,
       course: {
-        id: 34,
-        title: "The Challenges of Global Poverty",
+        id: 37,
+        title: "Upgradeable Course, Already Started",
         readable_id: "course-v1:MITxT+14.73x",
         next_run_id: null,
         departments: [
@@ -839,8 +842,8 @@ const courses = {
       ],
       approved_flexible_price_exists: false,
       course: {
-        id: 34,
-        title: "The Challenges of Global Poverty",
+        id: 38,
+        title: "Upgradeable Course, Ended and Passed",
         readable_id: "course-v1:MITxT+14.73x",
         next_run_id: null,
         departments: [
@@ -945,8 +948,8 @@ const courses = {
       ],
       approved_flexible_price_exists: false,
       course: {
-        id: 34,
-        title: "The Challenges of Global Poverty",
+        id: 39,
+        title: "Upgradeable Course, Ended and Not Passed",
         readable_id: "course-v1:MITxT+14.73x",
         next_run_id: null,
         departments: [
