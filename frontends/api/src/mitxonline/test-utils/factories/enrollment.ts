@@ -9,8 +9,9 @@ import type {
 
 const courseEnrollment: PartialFactory<CourseRunEnrollment> = (
   overrides = {},
-) =>
-  mergeOverrides<CourseRunEnrollment>(
+) => {
+  const title = faker.word.words(3)
+  return mergeOverrides<CourseRunEnrollment>(
     {
       id: faker.number.int(),
       certificate: null,
@@ -20,7 +21,7 @@ const courseEnrollment: PartialFactory<CourseRunEnrollment> = (
       edx_emails_subscription: faker.datatype.boolean(),
       run: {
         id: faker.number.int(),
-        title: faker.word.words(3),
+        title,
         start_date: faker.date.past().toISOString(),
         end_date: faker.date.future().toISOString(),
         upgrade_deadline: faker.date.future().toISOString(),
@@ -33,6 +34,8 @@ const courseEnrollment: PartialFactory<CourseRunEnrollment> = (
           } as ProductFlexibilePrice, // not fully implemented
         ],
         course: {
+          id: faker.number.int(),
+          title,
           page: {
             page_url: faker.internet.url(),
           } as Course["page"],
@@ -41,6 +44,7 @@ const courseEnrollment: PartialFactory<CourseRunEnrollment> = (
     },
     overrides,
   )
+}
 
 // Not paginated
 const courseEnrollments = (count: number): CourseRunEnrollment[] => {

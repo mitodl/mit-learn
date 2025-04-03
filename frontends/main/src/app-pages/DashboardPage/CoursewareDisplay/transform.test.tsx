@@ -23,7 +23,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
       const transformed = transform.mitxonlineEnrollments([apiData])
       expect(transformed).toHaveLength(1)
       expect(transformed[0]).toEqual({
-        id: `mitxonline-course-${apiData.id}`,
+        id: `mitxonline-course-${apiData.run.course.id}`,
         type: DashboardResourceType.Course,
         title: apiData.run.title,
         marketingUrl: apiData.run.course.page.page_url,
