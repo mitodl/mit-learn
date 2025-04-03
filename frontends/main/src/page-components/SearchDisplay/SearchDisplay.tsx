@@ -350,15 +350,17 @@ const PaginationContainer = styled.div`
   }
 `
 
-const StyledResultsContainer = styled.div<{ fetching: boolean }>(({ fetching }) => ({
-  marginTop: "16px",
+const StyledResultsContainer = styled.div<{ fetching: boolean }>(
+  ({ fetching }) => ({
+    marginTop: "16px",
 
-  "ul > li + li": {
-    marginTop: "8px",
-  },
+    "ul > li + li": {
+      marginTop: "8px",
+    },
 
-  opacity: fetching ? 0.5 : 1,
-}))
+    opacity: fetching ? 0.5 : 1,
+  }),
+)
 
 const DesktopFiltersColumn = styled(GridColumn)`
   ${({ theme }) => theme.breakpoints.down("md")} {
