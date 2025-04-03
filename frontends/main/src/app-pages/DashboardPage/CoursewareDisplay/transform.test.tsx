@@ -25,41 +25,23 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
       expect(transformed[0]).toEqual({
         id: `mitxonline-course-${apiData.id}`,
         type: DashboardResourceType.Course,
-        data: {
-          marketingUrl: apiData.run.course.page.page_url,
+        title: apiData.run.title,
+        marketingUrl: apiData.run.course.page.page_url,
+        run: {
           startDate: apiData.run.start_date,
           endDate: apiData.run.end_date,
-          title: apiData.run.title,
           coursewareUrl: apiData.run.courseware_url,
           certificateUpgradeDeadline: apiData.run.upgrade_deadline,
           certificateUpgradePrice: apiData.run.products[0]?.price,
-          hasUpgraded: apiData.enrollment_mode === "verified",
-          enrollmentStatus,
           canUpgrade: expect.any(Boolean), // check this in a moment
+        },
+        enrollment: {
+          status: enrollmentStatus,
+          mode: apiData.enrollment_mode,
         },
       } satisfies DashboardResource)
     },
   )
-
-  test.each([
-    {
-      in: { enrollment_mode: "audit", run: { is_upgradable: true } },
-      out: { hasUpgraded: true, canUpgrade: true },
-    },
-    {
-      in: { enrollment_mode: "verified", run: { is_upgradable: true } },
-      out: { hasUpgraded: true, canUpgrade: false },
-    },
-    {
-      in: { run: { is_upgradable: false } },
-      out: { canUpgrade: false },
-    },
-  ] as const)("canUpgrade is false if user already upgraded", (params) => {
-    const apiData = mitxOnlineFactories.enrollment.courseEnrollment(params.in)
-    const transformed = transform.mitxonlineEnrollments([apiData])
-    expect(transformed).toHaveLength(1)
-    expect(transformed[0].data.canUpgrade).toEqual(params.out.canUpgrade)
-  })
 
   test("CertificateUpgradePrice is first price in prices array", () => {
     // Unclear why the mitxonline API has this as an array.
@@ -69,6 +51,6 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
     })
     const transformed = transform.mitxonlineEnrollments([apiData])
     expect(transformed).toHaveLength(1)
-    expect(transformed[0].data.certificateUpgradePrice).toEqual("10")
+    expect(transformed[0].run.certificateUpgradePrice).toEqual("10")
   })
 })

@@ -12,43 +12,41 @@ const EnrollmentStatus = {
 } as const
 type EnrollmentStatus = (typeof EnrollmentStatus)[keyof typeof EnrollmentStatus]
 
-type DashboardCourseData = {
+const EnrollmentMode = {
+  Audit: "audit",
+  Verified: "verified",
+} as const
+type EnrollmentMode = (typeof EnrollmentMode)[keyof typeof EnrollmentMode]
+
+type DashboardCourse = {
+  id: string
   title: string
-  startDate?: string | null
-  endDate?: string | null
-  certificateUpgradeDeadline?: string | null
-  certificateUpgradePrice?: string | null
-  /**
-   * Whether user can upgrade to verified certificate
-   * (e.g., upgrade may be disabled after a certain date, or user may have
-   * already upgraded)
-   */
-  canUpgrade: boolean
-  hasUpgraded: boolean
-  coursewareUrl: string | null
+  type: typeof DashboardResourceType.Course
+  run: {
+    startDate?: string | null
+    endDate?: string | null
+    certificateUpgradeDeadline?: string | null
+    certificateUpgradePrice?: string | null
+    coursewareUrl: string | null
+    canUpgrade: boolean
+  }
+  enrollment?: {
+    status: EnrollmentStatus
+    mode: EnrollmentMode
+  }
   marketingUrl: string
-  enrollmentStatus: EnrollmentStatus
 }
 
-type DashboardProgramData = {
+type DashboardProgram = {
+  id: string
+  type: typeof DashboardResourceType.Program
   title: string
   programType: string
   courseIds: number[]
   description: string
 }
 
-type DashboardCourse = {
-  id: string
-  type: typeof DashboardResourceType.Course
-  data: DashboardCourseData
-}
-type DashboardProgram = {
-  id: string
-  type: typeof DashboardResourceType.Program
-  data: DashboardProgramData
-}
-
 type DashboardResource = DashboardCourse | DashboardProgram
 
-export { DashboardResourceType, EnrollmentStatus }
+export { DashboardResourceType, EnrollmentStatus, EnrollmentMode }
 export type { DashboardResource, DashboardCourse, DashboardProgram }

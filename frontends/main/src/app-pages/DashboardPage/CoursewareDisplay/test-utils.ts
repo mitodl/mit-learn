@@ -1,6 +1,10 @@
 import { faker } from "@faker-js/faker/locale/en"
 import { mergeOverrides, type PartialFactory } from "ol-test-utilities"
-import { DashboardResourceType, EnrollmentStatus } from "./types"
+import {
+  DashboardResourceType,
+  EnrollmentMode,
+  EnrollmentStatus,
+} from "./types"
 import type { DashboardCourse } from "./types"
 
 const dashboardCourse: PartialFactory<DashboardCourse> = (overrides = {}) => {
@@ -8,20 +12,19 @@ const dashboardCourse: PartialFactory<DashboardCourse> = (overrides = {}) => {
     {
       id: faker.string.uuid(),
       type: DashboardResourceType.Course,
-      data: {
-        title: faker.commerce.productName(),
+      title: faker.commerce.productName(),
+      marketingUrl: faker.internet.url(),
+      run: {
         startDate: faker.date.past().toISOString(),
         endDate: faker.date.future().toISOString(),
         certificateUpgradeDeadline: faker.date.future().toISOString(),
         certificateUpgradePrice: faker.commerce.price(),
-        hasUpgraded: false,
         canUpgrade: true,
-        enrollmentStatus: faker.helpers.arrayElement(
-          Object.values(EnrollmentStatus),
-        ),
         coursewareUrl: faker.internet.url(),
-        marketingUrl: faker.internet.url(),
-        ...overrides.data,
+      },
+      enrollment: {
+        status: faker.helpers.arrayElement(Object.values(EnrollmentStatus)),
+        mode: faker.helpers.arrayElement(Object.values(EnrollmentMode)),
       },
     },
     overrides,

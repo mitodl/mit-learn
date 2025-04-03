@@ -4,7 +4,7 @@
  * a common format.
  */
 
-import { CourseRunEnrollment, EnrollmentModeEnum } from "api/mitxonline"
+import { CourseRunEnrollment } from "api/mitxonline"
 
 import { DashboardResourceType, EnrollmentStatus } from "./types"
 import type { DashboardCourse } from "./types"
@@ -19,23 +19,25 @@ const getId = (
 ) => `${source}-${resourceType}-${id}`
 
 const mitxonlineEnrollment = (raw: CourseRunEnrollment): DashboardCourse => {
-  const hasUpgraded = raw.enrollment_mode === EnrollmentModeEnum.Verified
+  const course = raw.run.course
   return {
-    id: getId(sources.mitxonline, DashboardResourceType.Course, raw.id),
+    id: getId(sources.mitxonline, DashboardResourceType.Course, course.id),
     type: DashboardResourceType.Course,
-    data: {
-      title: raw.run.title,
+    title: course.title,
+    marketingUrl: course.page.page_url,
+    run: {
       startDate: raw.run.start_date,
       endDate: raw.run.end_date,
       certificateUpgradeDeadline: raw.run.upgrade_deadline,
       certificateUpgradePrice: raw.run.products[0]?.price,
-      hasUpgraded,
-      canUpgrade: raw.run.is_upgradable && !hasUpgraded,
-      enrollmentStatus: raw.grades[0]?.passed
+      canUpgrade: raw.run.is_upgradable,
+      coursewareUrl: raw.run.courseware_url,
+    },
+    enrollment: {
+      mode: raw.enrollment_mode,
+      status: raw.grades[0]?.passed
         ? EnrollmentStatus.Completed
         : EnrollmentStatus.Enrolled,
-      coursewareUrl: raw.run.courseware_url,
-      marketingUrl: raw.run.course.page.page_url,
     },
   }
 }
