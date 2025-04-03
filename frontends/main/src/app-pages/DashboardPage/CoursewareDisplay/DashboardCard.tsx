@@ -17,9 +17,7 @@ import CompleteCheck from "@/public/images/icons/complete-check.svg"
 
 const CardRoot = styled.div(({ theme }) => ({
   border: `1px solid ${theme.custom.colors.lightGray2}`,
-  borderRadius: "8px",
   backgroundColor: theme.custom.colors.white,
-  boxShadow: "0px 1px 6px 0px rgba(3, 21, 45, 0.05)",
   padding: "16px",
   display: "flex",
   gap: "8px",
@@ -47,7 +45,7 @@ const CoursewareButton = styled(
   }: {
     startDate?: string | null
     endDate?: string | null
-    href: string | null
+    href?: string | null
     className?: string
   }) => {
     const children = getCoursewareText(endDate)
@@ -205,12 +203,22 @@ const getMenuItems = (): SimpleMenuItem[] => [
 ]
 
 type DashboardCardProps = {
+  Component?: React.ElementType
   dashboardResource: DashboardCourse
+  className?: string
 }
-const DashboardCard: React.FC<DashboardCardProps> = ({ dashboardResource }) => {
+const DashboardCard: React.FC<DashboardCardProps> = ({
+  dashboardResource,
+  Component,
+  className,
+}) => {
   const { title, marketingUrl, enrollment, run } = dashboardResource
   return (
-    <CardRoot data-testid="enrollment-card">
+    <CardRoot
+      as={Component}
+      className={className}
+      data-testid="enrollment-card"
+    >
       <Stack justifyContent="start" alignItems="stretch" gap="8px" flex={1}>
         <Link size="medium" color="black" href={marketingUrl}>
           {title}

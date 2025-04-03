@@ -4,15 +4,27 @@ import type { CourseRunEnrollment } from "../../generated/v0"
 import * as data from "./data"
 import { enrollmentsApi } from "../../clients"
 
+type EnrollmentsListOptions = {
+  /**
+   * WARNING: This is not yet implemented in the API.
+   */
+  orgId?: number
+}
+
 const enrollmentKeys = {
   root: ["mitxonline", "enrollments"],
-  coursesList: () => [...enrollmentKeys.root, "courses", "list"],
+  coursesList: (opts?: EnrollmentsListOptions) => [
+    ...enrollmentKeys.root,
+    "courses",
+    "list",
+    opts,
+  ],
 }
 
 const enrollmentQueries = {
-  coursesList: () =>
+  coursesList: (opts: EnrollmentsListOptions = {}) =>
     queryOptions({
-      queryKey: enrollmentKeys.coursesList(),
+      queryKey: enrollmentKeys.coursesList(opts),
       queryFn: async (): Promise<CourseRunEnrollment[]> => {
         if (process.env.NODE_ENV === "test") {
           /**
