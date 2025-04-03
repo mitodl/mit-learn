@@ -307,7 +307,7 @@ def embed_new_content_files(self):
 def scrape_marketing_pages(self):
     """
     Scrape marketing pages (for programs and courses)
-    and store them as content files
+    and store them as content files if they dont exist
     """
     log.info("Running scrape_marketing_pages task")
     resource_ids = set(
