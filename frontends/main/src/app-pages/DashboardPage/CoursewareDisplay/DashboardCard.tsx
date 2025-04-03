@@ -2,7 +2,8 @@ import React from "react"
 import { styled, Link, SimpleMenu, SimpleMenuItem, Stack } from "ol-components"
 import NextLink from "next/link"
 import Image from "next/image"
-import type { EnrollmentData } from "./types"
+import { EnrollmentStatus } from "./types"
+import type { DashboardCourse } from "./types"
 import { ActionButton, Button, ButtonLink } from "@mitodl/smoot-design"
 import {
   RiArrowRightLine,
@@ -197,10 +198,10 @@ const getMenuItems = (): SimpleMenuItem[] => [
   },
 ]
 
-type EnrollmentCardProps = {
-  enrollment: EnrollmentData
+type DashboardCardProps = {
+  dashboardResource: DashboardCourse
 }
-const EnrollmentCard: React.FC<EnrollmentCardProps> = ({ enrollment }) => {
+const DashboardCard: React.FC<DashboardCardProps> = ({ dashboardResource }) => {
   const {
     title,
     marketingUrl,
@@ -208,17 +209,17 @@ const EnrollmentCard: React.FC<EnrollmentCardProps> = ({ enrollment }) => {
     startDate,
     endDate,
     canUpgrade,
-    hasUserCompleted,
+    enrollmentStatus,
     certificateUpgradeDeadline,
     certificateUpgradePrice,
-  } = enrollment
+  } = dashboardResource.data
   return (
     <CardRoot data-testid="enrollment-card">
       <Stack justifyContent="start" alignItems="stretch" gap="8px" flex={1}>
         <Link size="medium" color="black" href={marketingUrl}>
           {title}
         </Link>
-        {hasUserCompleted ? (
+        {enrollmentStatus === EnrollmentStatus.Completed ? (
           <SubtitleLink href="#">
             {<RiAwardLine size="16px" />}
             View Certificate
@@ -234,7 +235,7 @@ const EnrollmentCard: React.FC<EnrollmentCardProps> = ({ enrollment }) => {
       </Stack>
       <Stack gap="8px">
         <Stack direction="row" gap="8px" alignItems="center">
-          {hasUserCompleted ? (
+          {enrollmentStatus === EnrollmentStatus.Completed ? (
             <Completed src={CompleteCheck} alt="Completed" />
           ) : (
             <NotComplete />
@@ -259,4 +260,4 @@ const EnrollmentCard: React.FC<EnrollmentCardProps> = ({ enrollment }) => {
   )
 }
 
-export { EnrollmentCard }
+export { DashboardCard }
