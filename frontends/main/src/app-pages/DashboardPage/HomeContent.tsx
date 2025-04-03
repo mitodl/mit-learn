@@ -14,7 +14,7 @@ import {
 } from "@/common/carousels"
 import ResourceCarousel from "@/page-components/ResourceCarousel/ResourceCarousel"
 import { useProfileMeQuery } from "api/hooks/profile"
-import { EnrollmentDisplay } from "./EnrollmentDisplay/EnrollmentDisplay"
+import { EnrollmentDisplay } from "./CoursewareDisplay/EnrollmentDisplay"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 

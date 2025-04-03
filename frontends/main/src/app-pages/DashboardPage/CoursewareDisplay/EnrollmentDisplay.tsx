@@ -2,9 +2,9 @@ import React from "react"
 import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
 import { PlainList, Typography, styled } from "ol-components"
 import { useQuery } from "@tanstack/react-query"
-import { mitxonlineCoursesToEnrollment } from "./transform"
-import { EnrollmentCard } from "./EnrollmentCard"
-import { EnrollmentData } from "./types"
+import { mitxonlineEnrollments } from "./transform"
+import { DashboardCard } from "./DashboardCard"
+import { DashboardCourse, EnrollmentStatus } from "./types"
 
 const Wrapper = styled.div(({ theme }) => ({
   marginTop: "32px",
@@ -15,34 +15,34 @@ const Wrapper = styled.div(({ theme }) => ({
   borderRadius: "8px",
 }))
 
-const alphabeticalSort = (a: EnrollmentData, b: EnrollmentData) =>
-  a.title.localeCompare(b.title)
+const alphabeticalSort = (a: DashboardCourse, b: DashboardCourse) =>
+  a.data.title.localeCompare(b.data.title)
 
-const startsSooner = (a: EnrollmentData, b: EnrollmentData) => {
-  if (!a.startDate && !b.startDate) return 0
-  if (!a.startDate) return 1
-  if (!b.startDate) return -1
-  const x = new Date(a.startDate)
-  const y = new Date(b.startDate)
+const startsSooner = (a: DashboardCourse, b: DashboardCourse) => {
+  if (!a.data.startDate && !b.data.startDate) return 0
+  if (!a.data.startDate) return 1
+  if (!b.data.startDate) return -1
+  const x = new Date(a.data.startDate)
+  const y = new Date(b.data.startDate)
   return x.getTime() - y.getTime()
 }
-const sortEnrollments = (enrollments: EnrollmentData[]) => {
-  const ended: EnrollmentData[] = []
-  const started: EnrollmentData[] = []
-  const notStarted: EnrollmentData[] = []
-  enrollments.forEach((enrollment) => {
+const sortEnrollments = (resources: DashboardCourse[]) => {
+  const ended: DashboardCourse[] = []
+  const started: DashboardCourse[] = []
+  const notStarted: DashboardCourse[] = []
+  resources.forEach((resource) => {
     if (
-      enrollment.hasUserCompleted ||
-      (enrollment.endDate && new Date(enrollment.endDate) < new Date())
+      resource.data.enrollmentStatus === EnrollmentStatus.Completed ||
+      (resource.data.endDate && new Date(resource.data.endDate) < new Date())
     ) {
-      ended.push(enrollment)
+      ended.push(resource)
     } else if (
-      enrollment.startDate &&
-      new Date(enrollment.startDate) < new Date()
+      resource.data.startDate &&
+      new Date(resource.data.startDate) < new Date()
     ) {
-      started.push(enrollment)
+      started.push(resource)
     } else {
-      notStarted.push(enrollment)
+      notStarted.push(resource)
     }
   })
 
@@ -56,7 +56,7 @@ const sortEnrollments = (enrollments: EnrollmentData[]) => {
 const EnrollmentDisplay = () => {
   const { data: enrolledCourses } = useQuery({
     ...enrollmentQueries.coursesList(),
-    select: mitxonlineCoursesToEnrollment,
+    select: mitxonlineEnrollments,
   })
 
   /**
@@ -79,7 +79,7 @@ const EnrollmentDisplay = () => {
       <PlainList itemSpacing={"16px"}>
         {sorted?.map((course) => (
           <li key={course.id}>
-            <EnrollmentCard enrollment={course} />
+            <DashboardCard dashboardResource={course} />
           </li>
         ))}
       </PlainList>
