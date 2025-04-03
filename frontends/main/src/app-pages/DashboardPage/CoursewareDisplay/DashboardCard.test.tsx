@@ -112,6 +112,7 @@ describe("EnrollmentCard", () => {
         certificateUpgradeDeadline,
         certificateUpgradePrice,
       },
+      enrollment: { mode: EnrollmentMode.Audit },
     })
 
     renderWithProviders(<DashboardCard dashboardResource={course} />)
