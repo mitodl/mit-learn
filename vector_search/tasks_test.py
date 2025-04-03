@@ -3,7 +3,11 @@ import datetime
 import pytest
 from django.conf import settings
 
-from learning_resources.etl.constants import RESOURCE_FILE_ETL_SOURCES, ETLSource
+from learning_resources.etl.constants import (
+    MARKETING_PAGE_FILE_TYPE,
+    RESOURCE_FILE_ETL_SOURCES,
+    ETLSource,
+)
 from learning_resources.factories import (
     ContentFileFactory,
     CourseFactory,
@@ -20,8 +24,11 @@ from vector_search.tasks import (
     embed_learning_resources_by_id,
     embed_new_content_files,
     embed_new_learning_resources,
+    marketing_page_for_resources,
+    scrape_marketing_pages,
     start_embed_resources,
 )
+from vector_search.utils import _fetch_page
 
 pytestmark = pytest.mark.django_db
 
@@ -362,3 +369,119 @@ def test_embed_new_content_files_without_runs(mocker, mocked_celery):
     embedded_ids = generate_embeddings_mock.si.mock_calls[0].args[0]
     for contentfile_id in content_files_without_run:
         assert contentfile_id in embedded_ids
+
+
+@pytest.mark.parametrize("use_webdriver", [True], ids=["with_webdriver"])
+def test_fetch_page_with_webdriver(mocker, use_webdriver, settings):
+    """Test that _fetch_page uses WebDriver when settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER is True"""
+
+    settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = use_webdriver
+
+    mock_driver = mocker.MagicMock()
+    mock_driver.execute_script.return_value = "<html><body>Page content</body></html>"
+    mock_get_web_driver = mocker.patch(
+        "vector_search.utils._get_web_driver", return_value=mock_driver
+    )
+    mock_webdriver_fetch_extra = mocker.patch(
+        "vector_search.utils._webdriver_fetch_extra_elements"
+    )
+
+    url = "https://example.com/course"
+    result = _fetch_page(url, use_webdriver=use_webdriver)
+
+    assert result == "<html><body>Page content</body></html>"
+    mock_get_web_driver.assert_called_once()
+    mock_driver.get.assert_called_once_with(url)
+    mock_webdriver_fetch_extra.assert_called_once_with(mock_driver)
+    mock_driver.execute_script.assert_called_once_with("return document.body.innerHTML")
+
+
+@pytest.mark.django_db
+def test_marketing_page_for_resources_with_webdriver(mocker, settings):
+    """Test that marketing_page_for_resources uses WebDriver to fetch content"""
+
+    settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = True
+
+    course = LearningResource.objects.create(
+        title="Test Course",
+        url="https://example.com/course",
+        resource_type="course",
+        published=True,
+    )
+
+    html_content = "<html><body><h1>Test Course</h1><p>Course content</p></body></html>"
+    mock_fetch_page = mocker.patch(
+        "vector_search.tasks._fetch_page", return_value=html_content
+    )
+
+    markdown_content = "# Test Course\n\nCourse content"
+    mock_html_to_markdown = mocker.patch(
+        "vector_search.tasks.html_to_markdown", return_value=markdown_content
+    )
+
+    marketing_page_for_resources([course.id])
+
+    mock_fetch_page.assert_called_once_with(course.url)
+    mock_html_to_markdown.assert_called_once_with(html_content)
+
+    # Verify that a content file was created
+    content_file = ContentFile.objects.get(
+        learning_resource=course, file_type=MARKETING_PAGE_FILE_TYPE
+    )
+    assert content_file.key == course.url
+    assert content_file.content == markdown_content
+    assert content_file.file_extension == ".md"
+
+
+@pytest.mark.django_db
+def test_scrape_marketing_pages(mocker, settings, mocked_celery):
+    """Test that scrape_marketing_pages correctly identifies resources without marketing pages"""
+
+    settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = True
+    settings.QDRANT_CHUNK_SIZE = 2
+
+    course1 = LearningResource.objects.create(
+        title="Course 1",
+        url="https://example.com/course1",
+        resource_type="course",
+        published=True,
+    )
+    course2 = LearningResource.objects.create(
+        title="Course 2",
+        url="https://example.com/course2",
+        resource_type="course",
+        published=True,
+    )
+
+    course3 = LearningResource.objects.create(
+        title="Course 3",
+        url="https://example.com/course3",
+        resource_type="course",
+        published=True,
+    )
+    ContentFile.objects.create(
+        learning_resource=course3,
+        file_type=MARKETING_PAGE_FILE_TYPE,
+        key=course3.url,
+        content="Existing content",
+        file_extension=".md",
+    )
+
+    LearningResource.objects.create(
+        title="Unpublished Course",
+        url="https://example.com/unpublished",
+        resource_type="course",
+        published=False,
+    )
+
+    mock_group = mocker.patch("vector_search.tasks.celery.group")
+    mock_marketing_page_task = mocker.patch(
+        "vector_search.tasks.marketing_page_for_resources.si"
+    )
+    with pytest.raises(mocked_celery.replace_exception_class):
+        scrape_marketing_pages.delay()
+
+    # Verify that only resources without marketing pages are included
+    expected_ids = [course1.id, course2.id]
+    mock_marketing_page_task.assert_called_once_with(expected_ids)
+    mock_group.assert_called_once()
