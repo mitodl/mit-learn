@@ -184,6 +184,30 @@ type CarouselQuery = UseQueryOptions<
   LearningResource[] | PaginatedLearningResourceList
 >
 
+const getTabQuery = (tab: TabConfig): CarouselQuery => {
+  switch (tab.data.type) {
+    case "resources":
+      return learningResourceQueries.list(tab.data.params) as CarouselQuery
+    case "resource_items":
+      return learningResourceQueries.items(
+        tab.data.params.learning_resource_id,
+        tab.data.params,
+      ) as CarouselQuery
+    case "lr_search":
+      return learningResourceQueries.search(tab.data.params) as CarouselQuery
+    case "lr_featured":
+      return learningResourceQueries.featured(tab.data.params) as CarouselQuery
+    case "lr_similar":
+      return learningResourceQueries.similar(
+        tab.data.params.id,
+      ) as CarouselQuery
+    case "lr_vector_similar":
+      return learningResourceQueries.vectorSimilar(
+        tab.data.params.id,
+      ) as CarouselQuery
+  }
+}
+
 /**
  * A tabbed carousel that fetches resources based on the configuration provided.
  *  - each TabConfig generates a tab + tabpanel that pulls data from an API based
@@ -200,41 +224,15 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
   title,
   className,
   isLoading,
-  "data-testid": dataTestId,
   titleComponent = "h4",
   titleVariant = "h4",
   excludeResourceId,
 }) => {
   const [tab, setTab] = React.useState("0")
   const [ref, setRef] = React.useState<HTMLDivElement | null>(null)
-
   const queries = useQueries({
     queries: config.map((tab) => {
-      switch (tab.data.type) {
-        case "resources":
-          return learningResourceQueries.list(tab.data.params) as CarouselQuery
-        case "resource_items":
-          return learningResourceQueries.items(
-            tab.data.params.learning_resource_id,
-            tab.data.params,
-          ) as CarouselQuery
-        case "lr_search":
-          return learningResourceQueries.search(
-            tab.data.params,
-          ) as CarouselQuery
-        case "lr_featured":
-          return learningResourceQueries.featured(
-            tab.data.params,
-          ) as CarouselQuery
-        case "lr_similar":
-          return learningResourceQueries.similar(
-            tab.data.params.id,
-          ) as CarouselQuery
-        case "lr_vector_similar":
-          return learningResourceQueries.vectorSimilar(
-            tab.data.params.id,
-          ) as CarouselQuery
-      }
+      return { ...getTabQuery(tab), enabled: !isLoading }
     }),
   })
 
@@ -260,7 +258,7 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
   )
 
   return (
-    <MobileOverflow className={className} data-testid={dataTestId}>
+    <MobileOverflow className={className} data-testid="resource-carousel">
       <TabContext value={tab}>
         <HeaderRow>
           <HeaderText component={titleComponent} variant={titleVariant}>

@@ -1,3 +1,4 @@
+"use client"
 import React, { Suspense } from "react"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { ResourceTypeEnum } from "api"
@@ -93,7 +94,6 @@ const HomeContent: React.FC = () => {
           title="Top picks for you"
           isLoading={isLoadingProfile}
           config={TopPicksCarouselConfig(profile)}
-          data-testid="top-picks-carousel"
         />
         {topics?.map((topic, index) => (
           <StyledResourceCarousel
@@ -102,7 +102,6 @@ const HomeContent: React.FC = () => {
             title={`Popular courses in ${topic}`}
             isLoading={isLoadingProfile}
             config={TopicCarouselConfig(topic, [ResourceTypeEnum.Course])}
-            data-testid={`topic-carousel-${topic}`}
           />
         ))}
         {certification === true ? (
@@ -111,7 +110,6 @@ const HomeContent: React.FC = () => {
             title="Courses with Certificates"
             isLoading={isLoadingProfile}
             config={CERTIFICATE_COURSES_CAROUSEL}
-            data-testid="certification-carousel"
           />
         ) : (
           <StyledResourceCarousel
@@ -119,24 +117,22 @@ const HomeContent: React.FC = () => {
             title="Free courses"
             isLoading={isLoadingProfile}
             config={FREE_COURSES_CAROUSEL}
-            data-testid="free-carousel"
           />
         )}
         <StyledResourceCarousel
           titleComponent="h2"
           title="New"
           config={NEW_LEARNING_RESOURCES_CAROUSEL}
-          data-testid="new-learning-resources-carousel"
         />
         <StyledResourceCarousel
           titleComponent="h2"
           title="Popular"
           config={POPULAR_LEARNING_RESOURCES_CAROUSEL}
-          data-testid="popular-learning-resources-carousel"
         />
       </Suspense>
     </>
   )
 }
 
+export default HomeContent
 export { HomeContent, TitleText }

@@ -422,14 +422,6 @@ describe("Channel Pages, Unit only", () => {
         undefined,
       )
     })
-
-    await waitFor(() => {
-      expect(makeRequest).toHaveBeenCalledWith(
-        "get",
-        urls.learningResources.featured({ limit: 12 }),
-        undefined,
-      )
-    })
   })
 
   test("headings", async () => {
