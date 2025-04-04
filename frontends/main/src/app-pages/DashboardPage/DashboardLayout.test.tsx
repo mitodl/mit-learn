@@ -10,6 +10,7 @@ import DashboardLayout from "./DashboardLayout"
 import React from "react"
 import { DASHBOARD_HOME, MY_LISTS, PROFILE, SETTINGS } from "@/common/urls"
 import { faker } from "@faker-js/faker/locale/en"
+import invariant from "tiny-invariant"
 
 jest.mock("posthog-js/react")
 
@@ -34,7 +35,7 @@ describe("DashboardLayout", () => {
 
   test("Renders user info", async () => {
     const { user } = setup()
-
+    invariant(user.profile)
     await screen.findByText(user.profile.name)
   })
 
