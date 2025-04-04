@@ -206,8 +206,12 @@ const getMenuItems = (): SimpleMenuItem[] => [
 
 type DashboardCardProps = {
   dashboardResource: DashboardCourse
+  showNotComplete?: boolean
 }
-const DashboardCard: React.FC<DashboardCardProps> = ({ dashboardResource }) => {
+const DashboardCard: React.FC<DashboardCardProps> = ({
+  dashboardResource,
+  showNotComplete = true,
+}) => {
   const { title, marketingUrl, enrollment, run } = dashboardResource
   return (
     <CardRoot data-testid="enrollment-card">
@@ -234,9 +238,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ dashboardResource }) => {
         <Stack direction="row" gap="8px" alignItems="center">
           {enrollment?.status === EnrollmentStatus.Completed ? (
             <Completed src={CompleteCheck} alt="Completed" />
-          ) : (
-            <NotComplete />
-          )}
+          ) : showNotComplete ? (
+            <NotComplete data-testid="not-complete-icon" />
+          ) : null}
           <CoursewareButton
             startDate={run.startDate}
             href={run.coursewareUrl}
