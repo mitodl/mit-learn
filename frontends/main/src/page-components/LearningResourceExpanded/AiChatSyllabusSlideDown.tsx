@@ -10,7 +10,7 @@ import type { AiChatProps } from "@mitodl/smoot-design/ai"
 import { LearningResource } from "api"
 import { useUserMe } from "api/hooks/user"
 import type { User } from "api/hooks/user"
-import AiChatWithEntryScreen from "../AiChat/AiChatWithEntryScreen"
+import { AiChat } from "@mitodl/smoot-design/ai"
 import { getCsrfToken } from "@/common/utils"
 
 export enum ChatTransitionState {
@@ -101,21 +101,22 @@ const CloseButton = styled(RiCloseLine)(({ theme }) => ({
   backgroundColor: theme.custom.colors.silverGray,
 }))
 
-const StyledAiChatWithEntryScreen = styled(AiChatWithEntryScreen)<{
+const StyledAiChat = styled(AiChat)<{
   topPosition: number
 }>(({ topPosition }) => ({
   ".MitAiChat--root": {
     minHeight: `calc(100vh - ${topPosition + 43}px)`,
   },
+  ".MitAiChat--entryScreenContainer": {
+    top: topPosition,
+    paddingTop: "130px",
+  },
   ".MitAiChat--messagesContainer": {
     position: "static",
   },
-  ".AiChatWithEntryScreen-chatScreen": {
+  ".MitAiChat--chatScreenContainer": {
     position: "static",
     paddingTop: 0,
-  },
-  ".MitAiChat--title": {
-    display: "none",
   },
 }))
 
@@ -209,11 +210,11 @@ const AiChatSyllabusSlideDown = ({
       inert={!open}
       ref={ref}
     >
-      <StyledAiChatWithEntryScreen
+      <StyledAiChat
         key={resource.readable_id}
         chatId={resource.readable_id}
-        entryTitle="What do you want to know about this course?"
-        starters={STARTERS}
+        entryScreenTitle="What do you want to know about this course?"
+        conversationStarters={STARTERS}
         initialMessages={getInitialMessage(resource, user.data)}
         topPosition={contentTopPosition}
         scrollElement={scrollElement}

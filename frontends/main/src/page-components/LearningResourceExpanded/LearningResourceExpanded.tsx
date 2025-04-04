@@ -236,7 +236,7 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
         ref={titleSectionRef}
         titleId={titleId}
         resource={resource}
-        closeDrawer={closeDrawer ?? (() => {})}
+        onClickClose={closeDrawer}
       />
       {chatEnabled ? (
         <>
