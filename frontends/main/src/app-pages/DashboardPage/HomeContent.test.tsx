@@ -76,6 +76,7 @@ describe("HomeContent", () => {
     })
     invariant(user.profile)
 
+    invariant(user.profile)
     const courses = factories.learningResources.courses
     const resources = {
       topPicks: courses({ count: 3 }).results,
