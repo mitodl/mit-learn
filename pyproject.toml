@@ -101,8 +101,6 @@ isodate = "^0.7.2"
 selenium = "^4.30.0"
 mitol-django-scim = "^2025.3.31"
 
-
-
 [tool.poetry.group.dev.dependencies]
 bpython = "^0.25"
 ddt = "^1.6.0"
