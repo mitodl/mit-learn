@@ -148,6 +148,12 @@ CELERY_BEAT_SCHEDULE = {
         "task": "learning_resources_search.tasks.update_featured_rank",
         "schedule": crontab(minute=30, hour=7),  # 3:30am EST
     },
+    "scrape-marketing-pages-every-1-hour": {
+        "task": "vector_search.tasks.scrape_marketing_pages",
+        "schedule": get_int(
+            "SCRAPE_MARKETING_PAGES_SCHEDULE_SECONDS", 60 * 60
+        ),  # default is every hour
+    },
 }
 
 
@@ -162,12 +168,6 @@ if not DEV_ENV:
         "task": "vector_search.tasks.embed_new_content_files",
         "schedule": get_int(
             "EMBED_NEW_CONTENT_FILES_SCHEDULE_SECONDS", 60 * EMBEDDING_SCHEDULE_MINUTES
-        ),  # default is every 30 minutes
-    }
-    CELERY_BEAT_SCHEDULE["scrape-marketing-pages-every-1-hour"] = {
-        "task": "vector_search.tasks.scrape_marketing_pages",
-        "schedule": get_int(
-            "SCRAPE_MARKETING_PAGES_SCHEDULE_SECONDS", 60 * 60
         ),  # default is every 30 minutes
     }
 
