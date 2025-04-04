@@ -156,6 +156,12 @@ if not DEV_ENV:
             "EMBED_NEW_CONTENT_FILES_SCHEDULE_SECONDS", 60 * 30
         ),  # default is every 30 minutes
     }
+    CELERY_BEAT_SCHEDULE["scrape-marketing-pages-every-1-hour"] = {
+        "task": "vector_search.tasks.scrape_marketing_pages",
+        "schedule": get_int(
+            "SCRAPE_MARKETING_PAGES_SCHEDULE_SECONDS", 60 * 60
+        ),  # default is every 30 minutes
+    }
 
 
 CELERY_TASK_SERIALIZER = "json"
