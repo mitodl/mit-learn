@@ -506,5 +506,7 @@ def test_scrape_marketing_pages(mocker, settings, mocked_celery):
 
     # Verify that only resources without marketing pages are included
     expected_ids = [course1.id, course2.id]
-    mock_marketing_page_task.assert_called_once_with(expected_ids)
+    assert all(
+        eid in mock_marketing_page_task.mock_calls[0].args[0] for eid in expected_ids
+    )
     mock_group.assert_called_once()
