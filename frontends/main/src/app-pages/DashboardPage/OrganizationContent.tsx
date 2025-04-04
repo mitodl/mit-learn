@@ -1,6 +1,7 @@
 "use client"
 
 import React from "react"
+import Image from "next/image"
 import { User, useUserMe } from "api/hooks/user"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -11,10 +12,12 @@ import { V2Program } from "api/mitxonline"
 import * as transform from "./CoursewareDisplay/transform"
 import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
 import { DashboardCard } from "./CoursewareDisplay/DashboardCard"
-import { PlainList, styled, Typography } from "ol-components"
+import { PlainList, Stack, styled, Typography } from "ol-components"
 import { DashboardCourse, DashboardProgram } from "./CoursewareDisplay/types"
+import graduateLogo from "@/public/images/dashboard/graduate.png"
+import invariant from "tiny-invariant"
 
-type Organization = { id: number; name: string }
+type Organization = { id: number; name: string; logo?: string }
 type UserWithOrgsField = User & { organizations: Organization[] }
 
 /**
@@ -34,12 +37,65 @@ const useUserMeWithMockedOrgs = (): UseQueryResult<
   const organizations = isOrgDashboardEnabled
     ? [
         { id: 488, name: "Organization X" },
-        { id: 522, name: "Organization Y" },
+        {
+          id: 522,
+          name: "Organization Y",
+          logo: "https://brand.mit.edu/sites/default/files/styles/tile_narrow/public/2023-08/logo-colors-mit-red.png?itok=k08Ir4pB",
+        },
       ]
     : []
   return { ...query, data: { ...query.data, organizations } }
 }
 
+const HeaderRoot = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: "24px",
+}))
+const ImageContainer = styled.div(({ theme }) => ({
+  width: "120px",
+  height: "118px",
+  padding: "0 24px",
+  display: "flex",
+  alignItems: "center",
+  borderRadius: "8px",
+  backgroundColor: theme.custom.colors.white,
+  boxShadow: "0px 1px 3px 0px rgba(120, 147, 172, 0.40)",
+  "> img": {
+    width: "100%",
+    height: "auto",
+  },
+}))
+const OrganizationHeader: React.FC<{ org: Organization }> = ({ org }) => {
+  return (
+    <HeaderRoot>
+      <ImageContainer>
+        <Image
+          width={72}
+          // NextJS Image component requires width and height to avoid loayout shift.
+          // These are supposed to be the intrinsic sizes of the image file.
+          // That said, it's not particularly relevant here since the parent is
+          // reserving spae for the image anyway. Using next/image still gets us
+          // the image optimization, though.
+          height={78}
+          src={org.logo ?? graduateLogo}
+          alt=""
+        />
+      </ImageContainer>
+      <Stack gap="8px">
+        <Typography variant="h3" component="h1">
+          Your {org.name} home
+        </Typography>
+        <Typography variant="body1">MIT courses for {org.name}</Typography>
+      </Stack>
+    </HeaderRoot>
+  )
+}
+
+/**
+ * For an array of programs, fetch the associated courses.
+ * [program1, program2] => [[...courses1], [...courses2]]
+ */
 const useMitxonlineProgramsCourses = (programs: V2Program[]) => {
   const courseGroupIds =
     programs.map((program) => program.courses.map((id) => id as number)) ?? []
@@ -63,6 +119,8 @@ const DashboardCardStyled = styled(DashboardCard)({
 const ProgramRoot = styled.div(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
   boxShadow: "0px 4px 8px 0px rgba(19, 20, 21, 0.08)",
+  backgroundColor: theme.custom.colors.white,
+  borderRadius: "8px",
 }))
 const ProgramHeader = styled.div(({ theme }) => ({
   display: "flex",
@@ -111,8 +169,7 @@ type OrganizationContentProps = {
 }
 const OrganizationContent: React.FC<OrganizationContentProps> = ({ orgId }) => {
   const user = useUserMeWithMockedOrgs()
-  const organization = user.data?.organizations.find((org) => org.id === orgId)
-  console.log({ organization })
+
   const enrollments = useQuery(enrollmentQueries.coursesList({ orgId }))
   const programs = useQuery(programsQueries.programsList({ orgId }))
   const courseGroups = useMitxonlineProgramsCourses(
@@ -130,8 +187,13 @@ const OrganizationContent: React.FC<OrganizationContentProps> = ({ orgId }) => {
     transform.mitxonlineProgram(program),
   )
 
+  if (user.isLoading) return "Loading"
+  const organization = user.data?.organizations.find((org) => org.id === orgId)
+  if (!organization) return null
+
   return (
     <OrganizationRoot>
+      <OrganizationHeader org={organization} />
       {programs.isLoading
         ? "Programs Loading"
         : transformedPrograms?.map((program, index) => {
