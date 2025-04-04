@@ -1409,7 +1409,7 @@ export interface LearningPath {
    * @type {number}
    * @memberof LearningPath
    */
-  item_count: number
+  item_count: number | null
 }
 /**
  * Specialized serializer for a LearningPath relationship

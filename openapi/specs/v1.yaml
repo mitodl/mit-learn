@@ -9696,6 +9696,7 @@ components:
           readOnly: true
         item_count:
           type: integer
+          nullable: true
           description: Return the number of items in the list
           readOnly: true
       required:

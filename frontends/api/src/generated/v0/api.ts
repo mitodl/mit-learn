@@ -1918,7 +1918,7 @@ export interface LearningPath {
    * @type {number}
    * @memberof LearningPath
    */
-  item_count: number
+  item_count: number | null
 }
 /**
  * Serializer for a minimal preview of Learning Paths

@@ -311,7 +311,7 @@ class ResourceListMixin(serializers.Serializer):
 
     item_count = serializers.SerializerMethodField()
 
-    def get_item_count(self, instance) -> int:
+    def get_item_count(self, instance) -> int | None:
         """Return the number of items in the list"""
         return (
             getattr(instance, "item_count", None)
