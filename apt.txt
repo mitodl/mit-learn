@@ -7,3 +7,5 @@ net-tools
 pkg-config
 libffi-dev
 libxmlsec1-dev
+build-essential
+libcairo2-dev

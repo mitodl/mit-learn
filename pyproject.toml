@@ -1,4 +1,6 @@
 [tool.poetry]
+# Don't try to install mit-learn as a package on deploy
+package-mode = false
 name = "mit-learn"
 version = "0.71.0"
 description = "Search index for use with other MIT applications."
@@ -9,7 +11,7 @@ authors  = ["MIT ODL"]
 
 
 [tool.poetry.dependencies]
-python = "3.12.6"
+python = "~3.12"
 attrs = "^25.0.0"
 base36 = "^0.1.1"
 beautifulsoup4 = "^4.8.2"
@@ -96,9 +98,8 @@ pyparsing = "^3.2.1"
 html2text = "^2024.2.26"
 markdown = "^3.7"
 isodate = "^0.7.2"
-pydoll-python = "^1.3.3"
-selenium = "^4.29.0"
-
+selenium = "^4.30.0"
+mitol-django-scim = "^2025.3.31"
 
 [tool.poetry.group.dev.dependencies]
 bpython = "^0.25"

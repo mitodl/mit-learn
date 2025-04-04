@@ -46,12 +46,12 @@ const CoursewareButton = styled(
   }: {
     startDate?: string | null
     endDate?: string | null
-    href: string
+    href: string | null
     className?: string
   }) => {
     const children = getCoursewareText(endDate)
     const hasStarted = startDate && isInPast(startDate)
-    return hasStarted ? (
+    return hasStarted && href ? (
       <ButtonLink
         size="small"
         variant="primary"

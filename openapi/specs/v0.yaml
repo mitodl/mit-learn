@@ -5342,13 +5342,16 @@ components:
         is_learning_path_editor:
           type: boolean
           readOnly: true
+        is_authenticated:
+          type: boolean
+          readOnly: true
       required:
       - first_name
       - id
       - is_article_editor
+      - is_authenticated
       - is_learning_path_editor
       - last_name
-      - profile
       - username
     UserRequest:
       type: object
@@ -5362,7 +5365,6 @@ components:
           minLength: 1
       required:
       - email
-      - profile
     UserWebsite:
       type: object
       description: Serializer for UserWebsite

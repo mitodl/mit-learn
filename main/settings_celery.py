@@ -6,6 +6,14 @@ from celery.schedules import crontab
 
 from main.envs import get_bool, get_int, get_string
 
+"""
+the schedule (in minutes) for the embeddings task
+the lookback window for getting items to embed
+will be a constant 60 minutes greater more than the schedule frequency
+"""
+EMBEDDING_SCHEDULE_MINUTES = get_int(name="EMBEDDING_SCHEDULE_MINUTES", default=60)
+QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW = EMBEDDING_SCHEDULE_MINUTES + 60
+
 DEV_ENV = get_bool("DEV_ENV", False)  # noqa: FBT003
 USE_CELERY = True
 CELERY_BROKER_URL = get_string("CELERY_BROKER_URL", get_string("REDISCLOUD_URL", None))
@@ -147,13 +155,13 @@ if not DEV_ENV:
     CELERY_BEAT_SCHEDULE["daily_embed_new_learning_resources"] = {
         "task": "vector_search.tasks.embed_new_learning_resources",
         "schedule": get_int(
-            "EMBED_NEW_RESOURCES_SCHEDULE_SECONDS", 60 * 30
+            "EMBED_NEW_RESOURCES_SCHEDULE_SECONDS", 60 * EMBEDDING_SCHEDULE_MINUTES
         ),  # default is every 30 minutes
     }
     CELERY_BEAT_SCHEDULE["daily_embed_new_content_files"] = {
         "task": "vector_search.tasks.embed_new_content_files",
         "schedule": get_int(
-            "EMBED_NEW_CONTENT_FILES_SCHEDULE_SECONDS", 60 * 30
+            "EMBED_NEW_CONTENT_FILES_SCHEDULE_SECONDS", 60 * EMBEDDING_SCHEDULE_MINUTES
         ),  # default is every 30 minutes
     }
     CELERY_BEAT_SCHEDULE["scrape-marketing-pages-every-1-hour"] = {

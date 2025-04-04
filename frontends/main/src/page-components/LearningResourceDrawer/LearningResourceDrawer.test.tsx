@@ -50,7 +50,7 @@ describe("LearningResourceDrawer", () => {
       setMockResponse.get(urls.userMe.get(), user)
       setMockResponse.get(urls.userLists.membershipList(), [])
     } else {
-      setMockResponse.get(urls.userMe.get(), null, { code: 403 })
+      setMockResponse.get(urls.userMe.get(), { is_authenticated: false })
     }
     if (user.is_learning_path_editor) {
       setMockResponse.get(urls.learningPaths.membershipList(), [])

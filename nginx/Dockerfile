@@ -1,3 +1,4 @@
+# hadolint global ignore=DL3008
 # NOTE: this dockerfile is primarilty for local development only
 #       it's primary purpose is to emulate heroku-buildpack-nginx's
 #       functionality that compiles config/nginx.conf.erb
@@ -9,7 +10,7 @@ FROM nginx:1.27.4
 RUN mkdir -p /etc/nginx/logs && ln -sf /var/log/nginx /etc/nginx/logs/
 
 # erb unfortunately needs a whole ruby install
-RUN apt-get update && apt-get install -y ruby
+RUN apt-get update && apt-get install -y --no-install-recommends ruby && rm -rf /var/lib/apt/lists/*
 
 # this gets run automatically by the nginx container's entrypoint
 COPY 20-compile-nginx-conf-erb.sh /docker-entrypoint.d

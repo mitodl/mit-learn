@@ -19,6 +19,7 @@ from urllib.parse import urljoin
 
 import dj_database_url
 from django.core.exceptions import ImproperlyConfigured
+from mitol.scim.settings.scim import *  # noqa: F403
 
 from main.envs import (
     get_bool,
@@ -129,33 +130,13 @@ INSTALLED_APPS = (
     "data_fixtures",
     "vector_search",
     "ai_chat",
-    "scim",
+    "mitol.scim.apps.ScimApp",
 )
 
 if not get_bool("RUN_DATA_MIGRATIONS", default=False):
     MIGRATION_MODULES = {"data_fixtures": None}
 
-SCIM_SERVICE_PROVIDER = {
-    "SCHEME": "https",
-    # use default value,
-    # this will be overridden by value returned by BASE_LOCATION_GETTER
-    "NETLOC": "localhost",
-    "AUTHENTICATION_SCHEMES": [
-        {
-            "type": "oauth2",
-            "name": "OAuth 2",
-            "description": "Oauth 2 implemented with bearer token",
-            "specUri": "",
-            "documentationUri": "",
-        },
-    ],
-    "SERVICE_PROVIDER_CONFIG_MODEL": "scim.config.LearnSCIMServiceProviderConfig",
-    "USER_ADAPTER": "scim.adapters.LearnSCIMUser",
-    "USER_MODEL_GETTER": "scim.adapters.get_user_model_for_scim",
-    "USER_FILTER_PARSER": "scim.filters.UserFilterQuery",
-    "GET_IS_AUTHENTICATED_PREDICATE": "scim.utils.is_authenticated_predicate",
-}
-
+SCIM_SERVICE_PROVIDER["USER_ADAPTER"] = "users.adapters.LearnUserAdapter"  # noqa: F405
 
 # OAuth2TokenMiddleware must be before SCIMAuthCheckMiddleware
 # in order to insert request.user into the request.
@@ -753,6 +734,13 @@ DEFAULT_SEARCH_MAX_INCOMPLETENESS_PENALTY = get_float(
 DEFAULT_SEARCH_CONTENT_FILE_SCORE_WEIGHT = get_float(
     name="DEFAULT_SEARCH_CONTENT_FILE_SCORE_WEIGHT", default=1
 )
+"""
+the schedule (in minutes) for the embeddings task
+the lookback window for getting items to embed
+will be a constant 60 minutes greater more than the schedule frequency
+"""
+EMBEDDING_SCHEDULE_MINUTES = get_int(name="EMBEDDING_SCHEDULE_MINUTES", default=60)
+QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW = EMBEDDING_SCHEDULE_MINUTES + 60
 
 QDRANT_API_KEY = get_string(name="QDRANT_API_KEY", default="")
 QDRANT_HOST = get_string(name="QDRANT_HOST", default="http://qdrant:6333")
