@@ -79,7 +79,7 @@ const EnrollmentDisplay = () => {
       <PlainList itemSpacing={"16px"}>
         {sorted?.map((course) => (
           <li key={course.id}>
-            <DashboardCard dashboardResource={course} />
+            <DashboardCard dashboardResource={course} showNotComplete={false} />
           </li>
         ))}
       </PlainList>
