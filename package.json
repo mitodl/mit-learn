@@ -21,7 +21,7 @@
     "lint-check": "yarn workspace frontends run lint-check",
     "typecheck": "yarn workspace frontends run typecheck"
   },
-  "packageManager": "yarn@4.8.0",
+  "packageManager": "yarn@4.8.1",
   "devDependencies": {
     "syncpack": "^13.0.0"
   },
