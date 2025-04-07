@@ -129,4 +129,24 @@ describe("UserMenu", () => {
     })
     expect(link).toBe(null)
   })
+  test("Users who have not completed onboarding are redirected to onboarding flow", async () => {
+    setMockResponse.get(urls.userMe.get(), {
+      is_authenticated: true,
+      profile: { completed_onboarding: false },
+    })
+
+    renderWithProviders(<Header />, { url: "/some-page" })
+    await findUserMenu()
+    expect(window.location.pathname).toBe(urlConstants.ONBOARDING)
+  })
+  test("Users who have completed onboarding are not redirected to the onboarding flow", async () => {
+    setMockResponse.get(urls.userMe.get(), {
+      is_authenticated: true,
+      profile: { completed_onboarding: true },
+    })
+    const pagePath = "/some-page"
+    renderWithProviders(<Header />, { url: pagePath })
+    await findUserMenu()
+    expect(window.location.pathname).toBe(pagePath)
+  })
 })
