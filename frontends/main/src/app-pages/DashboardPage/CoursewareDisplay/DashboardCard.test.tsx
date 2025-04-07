@@ -156,3 +156,24 @@ describe("EnrollmentCard", () => {
     },
   )
 })
+
+test.each([
+  { enrollmentStatus: EnrollmentStatus.NotEnrolled, showNotComplete: true },
+  { enrollmentStatus: EnrollmentStatus.NotEnrolled, showNotComplete: false },
+])(
+  "Shows empty circle icon if not enrolled and showNotComplete is true",
+  ({ enrollmentStatus, showNotComplete }) => {
+    const course = dashboardCourse({
+      enrollment: { status: enrollmentStatus },
+    })
+    renderWithProviders(
+      <DashboardCard
+        dashboardResource={course}
+        showNotComplete={showNotComplete}
+      />,
+    )
+
+    const notCompletedIcon = screen.queryByTestId("not-complete-icon")
+    expect(!!notCompletedIcon).toBe(showNotComplete)
+  },
+)
