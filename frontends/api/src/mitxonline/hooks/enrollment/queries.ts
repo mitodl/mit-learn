@@ -2,6 +2,7 @@ import { queryOptions } from "@tanstack/react-query"
 import type { CourseRunEnrollment } from "../../generated/v0"
 
 import * as data from "./data"
+import * as dataForOrgs from "./dataForOrgs"
 import { enrollmentsApi } from "../../clients"
 
 type EnrollmentsListOptions = {
@@ -34,6 +35,16 @@ const enrollmentQueries = {
           return enrollmentsApi.enrollmentsList().then((res) => res.data)
         }
         await new Promise((resolve) => setTimeout(resolve, 300))
+        if (opts.orgId === dataForOrgs.orgData.orgX.id) {
+          return dataForOrgs.orgXEnrollments
+        }
+        if (opts.orgId === dataForOrgs.orgData.orgY.id) {
+          return dataForOrgs.orgYEnrollments
+        }
+        if (opts.orgId) {
+          console.error(`No data for orgId ${opts.orgId}`)
+          return []
+        }
         return data.enrollments
       },
     }),

@@ -1,4 +1,35 @@
+// FAKE DATA while API / auth work is in development
 import { PaginatedV2ProgramList } from "../../generated/v0"
+
+const mockProgramCourseData = {
+  foundational: {
+    one: {
+      id: 1001,
+      title:
+        "Introduction to Data Analytics, Machine Learning, & Python Coding",
+    },
+    two: { id: 1002, title: "Prescriptive Analytics" },
+    three: { id: 1003, title: "Supervised Learning Fundamentals" },
+    four: { id: 1004, title: "Clustering and Unsupervised Learning" },
+    five: {
+      id: 1005,
+      title: "Deep Learning and Convolutional Neural Networks",
+    },
+    six: { id: 1006, title: "Natural Language Processing" },
+    seven: { id: 1007, title: "Large Language Models" },
+    eight: {
+      id: 1008,
+      title: "Generative AI, the Future of Work, and Human Creativity",
+    },
+    nine: { id: 1009, title: "Multimodal AI" },
+  },
+  industry: {
+    one: { id: 2001, title: "AI and Machine Learning for Transportation" },
+    two: { id: 2002, title: "AI and Precision Medicine" },
+    three: { id: 2003, title: "AI for Human Experience" },
+    four: { id: 2004, title: "AI and Commerce" },
+  },
+}
 
 const universalAiProgramData: PaginatedV2ProgramList = {
   count: 1,
@@ -9,7 +40,17 @@ const universalAiProgramData: PaginatedV2ProgramList = {
       title: "Foundational AI Modules",
       readable_id: "program-v1:MITxT+UAI.01x",
       id: 101,
-      courses: [1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1009],
+      courses: [
+        mockProgramCourseData.foundational.one.id,
+        mockProgramCourseData.foundational.two.id,
+        mockProgramCourseData.foundational.three.id,
+        mockProgramCourseData.foundational.four.id,
+        mockProgramCourseData.foundational.five.id,
+        mockProgramCourseData.foundational.six.id,
+        mockProgramCourseData.foundational.seven.id,
+        mockProgramCourseData.foundational.eight.id,
+        mockProgramCourseData.foundational.nine.id,
+      ],
       requirements: {
         required: [],
         electives: [],
@@ -58,7 +99,12 @@ const universalAiProgramData: PaginatedV2ProgramList = {
       title: "Industry-specific Vertical Modules",
       readable_id: "program-v1:MITxT+UAI.02x",
       id: 201,
-      courses: [2001, 2002, 2003, 2004],
+      courses: [
+        mockProgramCourseData.industry.one.id,
+        mockProgramCourseData.industry.two.id,
+        mockProgramCourseData.industry.three.id,
+        mockProgramCourseData.industry.four.id,
+      ],
       requirements: {
         required: [],
         electives: [],
@@ -106,4 +152,4 @@ const universalAiProgramData: PaginatedV2ProgramList = {
   ],
 }
 
-export { universalAiProgramData }
+export { universalAiProgramData, mockProgramCourseData }

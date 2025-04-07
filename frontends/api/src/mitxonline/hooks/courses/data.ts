@@ -1,4 +1,6 @@
+// FAKE DATA while API / auth work is in development
 import { CourseWithCourseRuns } from "../../generated/v0"
+import { mockProgramCourseData } from "../programs/data"
 
 const fakeCourse = ({
   id,
@@ -67,31 +69,19 @@ const fakeCourse = ({
 }
 
 const universalAiCourses: CourseWithCourseRuns[] = [
-  fakeCourse({
-    id: 1001,
-    title: "Introduction to Data Analytics, Machine Learning, & Python Coding",
-  }),
-  fakeCourse({ id: 1002, title: "Prescriptive Analytics" }),
-  fakeCourse({ id: 1003, title: "Supervised Learning Fundamentals" }),
-  fakeCourse({ id: 1004, title: "Clustering and Unsupervised Learning" }),
-  fakeCourse({
-    id: 1005,
-    title: "Deep Learning and Convolutional Neural Networks",
-  }),
-  fakeCourse({ id: 1006, title: "Natural Language Processing" }),
-  fakeCourse({ id: 1007, title: "Large Language Models" }),
-  fakeCourse({
-    id: 1008,
-    title: "Generative AI, the Future of Work, and Human Creativity",
-  }),
-  fakeCourse({ id: 1009, title: "Multimodal AI" }),
-  fakeCourse({
-    id: 2001,
-    title: "AI and Machine Learning for Transportation & Logistics",
-  }),
-  fakeCourse({ id: 2002, title: "AI and Precision Medicine" }),
-  fakeCourse({ id: 2003, title: "AI for Human Experience" }),
-  fakeCourse({ id: 2004, title: "AI and Commerce" }),
+  fakeCourse(mockProgramCourseData.foundational.one),
+  fakeCourse(mockProgramCourseData.foundational.two),
+  fakeCourse(mockProgramCourseData.foundational.three),
+  fakeCourse(mockProgramCourseData.foundational.four),
+  fakeCourse(mockProgramCourseData.foundational.five),
+  fakeCourse(mockProgramCourseData.foundational.six),
+  fakeCourse(mockProgramCourseData.foundational.seven),
+  fakeCourse(mockProgramCourseData.foundational.eight),
+  fakeCourse(mockProgramCourseData.foundational.nine),
+  fakeCourse(mockProgramCourseData.industry.one),
+  fakeCourse(mockProgramCourseData.industry.two),
+  fakeCourse(mockProgramCourseData.industry.three),
+  fakeCourse(mockProgramCourseData.industry.four),
 ]
 
 export { universalAiCourses }

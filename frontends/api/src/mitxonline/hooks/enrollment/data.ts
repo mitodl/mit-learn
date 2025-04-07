@@ -1,3 +1,4 @@
+// FAKE DATA while API / auth work is in development
 import { CourseRunEnrollment } from "../../generated/v0"
 
 const soon = (days: number) => {
