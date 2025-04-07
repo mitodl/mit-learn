@@ -24,6 +24,11 @@ const CardRoot = styled.div(({ theme }) => ({
   display: "flex",
   gap: "8px",
   alignItems: "center",
+  [theme.breakpoints.down("md")]: {
+    borderTop: "none",
+    borderRadius: "0px",
+    boxShadow: "none",
+  },
 }))
 
 const MenuButton = styled(ActionButton)({
