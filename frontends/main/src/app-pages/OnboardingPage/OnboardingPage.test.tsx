@@ -10,7 +10,7 @@ import {
 } from "../../test-utils"
 
 import { allowConsoleErrors } from "ol-test-utilities"
-import { urls, makeRequest } from "api/test-utils"
+import { urls } from "api/test-utils"
 
 import * as factories from "api/test-utils/factories"
 import {
@@ -154,19 +154,4 @@ describe("OnboardingPage", () => {
       )
     },
   )
-
-  test("Sets 'completed_onboarding' to true on first interaction", async () => {
-    const profile = PROFILES_FOR_STEPS[0]
-    await setup(profile)
-
-    const nextButton = await findNextButton()
-
-    // Interact with form
-    await user.click(nextButton)
-
-    // Verify that "completed_onboarding" was set to true
-    expect(makeRequest).toHaveBeenCalledWith("patch", urls.profileMe.patch(), {
-      completed_onboarding: true,
-    })
-  })
 })

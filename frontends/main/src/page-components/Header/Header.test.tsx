@@ -9,7 +9,9 @@ import {
 } from "@/test-utils"
 import invariant from "tiny-invariant"
 import * as urlConstants from "@/common/urls"
-import { setMockResponse, urls } from "api/test-utils"
+import { setMockResponse, urls, makeRequest } from "api/test-utils"
+
+import { waitFor } from "@testing-library/react"
 
 describe("Header", () => {
   it("Includes a link to the Homepage", async () => {
@@ -31,9 +33,19 @@ describe("UserMenu", () => {
     return screen.findByRole("menu")
   }
 
+  const setup = async () => {
+    setMockResponse.get(urls.userMe.get(), {
+      is_learning_path_editor: true,
+      is_authenticated: true,
+      profile: { completed_onboarding: true },
+    })
+    setMockResponse.patch(urls.profileMe.patch(), () => ({}))
+  }
+
   test.each([{}, { profile: null }, { profile: {} }])(
     "Trigger button shows UserIcon for authenticated users w/o initials",
     async (userSettings) => {
+      setup()
       setMockResponse.get(urls.userMe.get(), {
         is_authenticated: true,
         ...userSettings,
@@ -47,6 +59,7 @@ describe("UserMenu", () => {
   )
 
   test("Trigger button shows name if available", async () => {
+    setup()
     setMockResponse.get(urls.userMe.get(), {
       is_authenticated: true,
       profile: { name: "Alice Bee" },
@@ -58,6 +71,7 @@ describe("UserMenu", () => {
   })
 
   test("Unauthenticated users see the Sign Up / Login link", async () => {
+    setup()
     const isAuthenticated = false
     const initialUrl = "/foo/bar?cat=meow"
     const expectedUrl = urlConstants.login({
@@ -83,6 +97,7 @@ describe("UserMenu", () => {
   })
 
   test("Authenticated users see the Log Out link", async () => {
+    setup()
     const isAuthenticated = true
     const initialUrl = "/foo/bar?cat=meow"
     const expected = { text: "Log Out", url: urlConstants.LOGOUT }
@@ -105,6 +120,7 @@ describe("UserMenu", () => {
   })
 
   test("Learning path editors see 'Learning Paths' link", async () => {
+    setup()
     setMockResponse.get(urls.userMe.get(), {
       is_learning_path_editor: true,
       is_authenticated: true,
@@ -118,6 +134,7 @@ describe("UserMenu", () => {
   })
 
   test("Users WITHOUT LearningPathEditor permission do not see 'Learning Paths' link", async () => {
+    setup()
     setMockResponse.get(urls.userMe.get(), {
       is_learning_path_editor: false,
       is_authenticated: true,
@@ -130,6 +147,8 @@ describe("UserMenu", () => {
     expect(link).toBe(null)
   })
   test("Users who have not completed onboarding are redirected to onboarding flow", async () => {
+    setup()
+
     setMockResponse.get(urls.userMe.get(), {
       is_authenticated: true,
       profile: { completed_onboarding: false },
@@ -137,9 +156,14 @@ describe("UserMenu", () => {
 
     renderWithProviders(<Header />, { url: "/some-page" })
     await findUserMenu()
-    expect(window.location.pathname).toBe(urlConstants.ONBOARDING)
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(urlConstants.ONBOARDING)
+    })
   })
+
   test("Users who have completed onboarding are not redirected to the onboarding flow", async () => {
+    setup()
     setMockResponse.get(urls.userMe.get(), {
       is_authenticated: true,
       profile: { completed_onboarding: true },
@@ -148,5 +172,20 @@ describe("UserMenu", () => {
     renderWithProviders(<Header />, { url: pagePath })
     await findUserMenu()
     expect(window.location.pathname).toBe(pagePath)
+  })
+  test("Sets 'completed_onboarding' on redirect", async () => {
+    setup()
+    setMockResponse.get(urls.userMe.get(), {
+      is_authenticated: true,
+      profile: { completed_onboarding: false },
+    })
+
+    renderWithProviders(<Header />)
+    await findUserMenu()
+
+    // Verify that "completed_onboarding" was set to true
+    expect(makeRequest).toHaveBeenCalledWith("patch", urls.profileMe.patch(), {
+      completed_onboarding: true,
+    })
   })
 })

@@ -1,6 +1,6 @@
 "use client"
 
-import React, { FunctionComponent } from "react"
+import React, { FunctionComponent, useEffect } from "react"
 import type { NavData } from "ol-components"
 import { styled, AppBar, NavDrawer, Toolbar } from "ol-components"
 import { ActionButtonLink } from "@mitodl/smoot-design"
@@ -18,7 +18,7 @@ import {
   RiPriceTag3Line,
   RiAwardLine,
 } from "@remixicon/react"
-
+import { useProfileMeMutation } from "api/hooks/profile"
 import * as urls from "@/common/urls"
 import { redirect, usePathname } from "next/navigation"
 import { useToggle } from "ol-utilities"
@@ -175,17 +175,33 @@ const LoggedInView: FunctionComponent = () => {
 
 const UserView: FunctionComponent = () => {
   const { isLoading, data: user } = useUserMe()
+  const { mutate: profileMutate } = useProfileMeMutation()
   const pathname = usePathname()
+
+  useEffect(() => {
+    if (
+      user?.is_authenticated &&
+      !user?.profile?.completed_onboarding &&
+      pathname !== urls.ONBOARDING
+    ) {
+      if (typeof profileMutate === "function") {
+        profileMutate(
+          { completed_onboarding: true },
+          {
+            onSuccess: () => {
+              redirect(urls.ONBOARDING)
+            },
+          },
+        )
+      }
+    }
+  }, [user, pathname, profileMutate])
 
   if (isLoading) {
     return null
   }
 
   if (user?.is_authenticated) {
-    if (!user?.profile?.completed_onboarding && pathname !== urls.ONBOARDING) {
-      redirect(urls.ONBOARDING)
-      return null
-    }
     return <LoggedInView />
   }
 
