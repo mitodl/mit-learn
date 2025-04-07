@@ -119,6 +119,8 @@ class Profile(models.Model):
 
     name = models.TextField(blank=True, null=True)  # noqa: DJ001
 
+    completed_onboarding = models.BooleanField(default=False)
+
     image = models.CharField(  # noqa: DJ001
         null=True, max_length=MAX_IMAGE_FIELD_LENGTH
     )
