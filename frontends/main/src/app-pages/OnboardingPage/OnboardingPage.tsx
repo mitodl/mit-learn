@@ -160,7 +160,7 @@ const OnboardingPage: React.FC = () => {
     initialValues: initialFormData ?? ProfileSchema.getDefault(),
     validationSchema: ProfileSchema,
     onSubmit: async (values) => {
-      if (!user.profile.completed_onboarding) {
+      if (!user?.profile?.completed_onboarding) {
         await mutateAsync({
           completed_onboarding: true,
         })
