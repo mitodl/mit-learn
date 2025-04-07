@@ -139,6 +139,7 @@ def test_get_profile(logged_in, user, user_client):
         "goals": profile.goals,
         "current_education": profile.current_education,
         "certificate_desired": profile.certificate_desired,
+        "completed_onboarding": False,
         "time_commitment": profile.time_commitment,
         "delivery": profile.delivery,
         "preference_search_filters": {

@@ -174,7 +174,7 @@ const OnboardingPage: React.FC = () => {
       if (activeStep < NUM_STEPS - 1) {
         setActiveStep((prevActiveStep) => prevActiveStep + 1)
       } else {
-        window.location = DASHBOARD_HOME
+        ;(window as Window).location = DASHBOARD_HOME
       }
     },
     validateOnChange: false,
