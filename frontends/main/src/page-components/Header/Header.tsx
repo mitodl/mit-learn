@@ -18,6 +18,8 @@ import {
   RiPriceTag3Line,
   RiAwardLine,
 } from "@remixicon/react"
+import * as urls from "@/common/urls"
+import { redirect, usePathname } from "next/navigation"
 import { useToggle } from "ol-utilities"
 import MITLogoLink from "@/components/MITLogoLink/MITLogoLink"
 import UserMenu from "./UserMenu"
@@ -172,9 +174,20 @@ const LoggedInView: FunctionComponent = () => {
 
 const UserView: FunctionComponent = () => {
   const { isLoading, data: user } = useUserMe()
+  const pathname = usePathname()
+
   if (isLoading) {
     return null
   }
+
+  if (user && !user?.profile?.completed_onboarding) {
+    console.log(user.profile.completed_onboarding)
+    if (pathname !== urls.ONBOARDING) {
+      redirect(urls.ONBOARDING)
+      return null
+    }
+  }
+
   return user?.is_authenticated ? <LoggedInView /> : <LoggedOutView />
 }
 

@@ -148,6 +148,7 @@ const OnboardingPage: React.FC = () => {
   const initialFormData = useMemo(() => {
     return {
       ...profile,
+      completed_onboarding: true,
       topic_interests:
         profile?.topic_interests?.map((topic) => String(topic.id)) || [],
     }
