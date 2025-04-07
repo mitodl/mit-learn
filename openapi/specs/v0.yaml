@@ -3711,6 +3711,8 @@ components:
           type: string
           nullable: true
           maxLength: 60
+        completed_onboarding:
+          type: boolean
         location:
           writeOnly: true
           nullable: true
@@ -4537,6 +4539,8 @@ components:
           type: string
           description: Custom getter for location text
           readOnly: true
+        completed_onboarding:
+          type: boolean
         topic_interests:
           type: array
           items:
@@ -4607,6 +4611,8 @@ components:
           type: string
           nullable: true
           maxLength: 60
+        completed_onboarding:
+          type: boolean
         location:
           writeOnly: true
           nullable: true

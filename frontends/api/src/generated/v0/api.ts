@@ -3310,6 +3310,12 @@ export interface PatchedProfileRequest {
   headline?: string | null
   /**
    *
+   * @type {boolean}
+   * @memberof PatchedProfileRequest
+   */
+  completed_onboarding?: boolean
+  /**
+   *
    * @type {any}
    * @memberof PatchedProfileRequest
    */
@@ -4346,6 +4352,12 @@ export interface Profile {
   placename: string
   /**
    *
+   * @type {boolean}
+   * @memberof Profile
+   */
+  completed_onboarding?: boolean
+  /**
+   *
    * @type {Array<LearningResourceTopic>}
    * @memberof Profile
    */
@@ -4435,6 +4447,12 @@ export interface ProfileRequest {
    * @memberof ProfileRequest
    */
   headline?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof ProfileRequest
+   */
+  completed_onboarding?: boolean
   /**
    *
    * @type {any}
