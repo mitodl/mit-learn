@@ -7,11 +7,31 @@ import {
   user,
   expectWindowNavigation,
 } from "@/test-utils"
+
 import invariant from "tiny-invariant"
 import * as urlConstants from "@/common/urls"
 import { setMockResponse, urls, makeRequest } from "api/test-utils"
 
 import { waitFor } from "@testing-library/react"
+
+const oldWindowLocation = window.location
+
+beforeAll(() => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  delete (window as any).location
+
+  window.location = Object.defineProperties({} as Location, {
+    ...Object.getOwnPropertyDescriptors(oldWindowLocation),
+    assign: {
+      configurable: true,
+      value: jest.fn(),
+    },
+  })
+})
+
+afterAll(() => {
+  window.location = oldWindowLocation
+})
 
 describe("Header", () => {
   it("Includes a link to the Homepage", async () => {
@@ -156,9 +176,10 @@ describe("UserMenu", () => {
 
     renderWithProviders(<Header />, { url: "/some-page" })
     await findUserMenu()
-
     await waitFor(() => {
-      expect(window.location.pathname).toBe(urlConstants.ONBOARDING)
+      expect(window.location.assign).toHaveBeenCalledWith(
+        urlConstants.ONBOARDING,
+      )
     })
   })
 

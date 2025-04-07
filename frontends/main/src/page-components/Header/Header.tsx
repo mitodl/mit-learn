@@ -20,7 +20,7 @@ import {
 } from "@remixicon/react"
 import { useProfileMeMutation } from "api/hooks/profile"
 import * as urls from "@/common/urls"
-import { redirect, usePathname } from "next/navigation"
+import { usePathname } from "next/navigation"
 import { useToggle } from "ol-utilities"
 import MITLogoLink from "@/components/MITLogoLink/MITLogoLink"
 import UserMenu from "./UserMenu"
@@ -179,6 +179,9 @@ const UserView: FunctionComponent = () => {
   const pathname = usePathname()
 
   useEffect(() => {
+    if (isLoading) {
+      return
+    }
     if (
       user?.is_authenticated &&
       !user?.profile?.completed_onboarding &&
@@ -189,13 +192,14 @@ const UserView: FunctionComponent = () => {
           { completed_onboarding: true },
           {
             onSuccess: () => {
-              redirect(urls.ONBOARDING)
+              ;(window as Window).location.assign(urls.ONBOARDING)
+              return null
             },
           },
         )
       }
     }
-  }, [user, pathname, profileMutate])
+  }, [user, pathname, profileMutate, isLoading])
 
   if (isLoading) {
     return null
