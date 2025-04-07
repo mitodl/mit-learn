@@ -1,0 +1,106 @@
+name: CI Frontend Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch: # manual trigger
+
+jobs:
+  # runs if CI workflow was successful OR if this was manually triggered
+  on-success:
+    runs-on: ubuntu-22.04
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          ref: main
+
+      - name: Set VERSION
+        run: echo "VERSION=$(./scripts/get_version.sh)" >> $GITHUB_ENV
+
+      - name: Heroku login
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: heroku container:login
+
+      - name: Release Backend on Heroku
+        uses: akhileshns/heroku-deploy@e3eb99d45a8e2ec5dca08735e089607befa4bf28
+        with:
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+          heroku_app_name: mitopen-rc
+          heroku_email: ${{ secrets.HEROKU_EMAIL }}
+          branch: main
+
+      - name: Write commit SHA to file
+        run: echo $GITHUB_SHA > frontends/main/public/hash.txt
+
+      - name: Build and push the NextJS Docker image
+        env:
+          HEROKU_APP_NAME: mitopen-rc-nextjs
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+          ORIGIN: https://rc.learn.mit.edu
+          MITOL_API_BASE_URL: ${{ vars.API_BASE_CI }}
+          SITE_NAME: MIT Learn
+          SUPPORT_EMAIL: mitlearn-support@mit.edu
+          EMBEDLY_KEY: ${{ secrets.EMBEDLY_KEY_CI }}
+          MITOL_AXIOS_WITH_CREDENTIALS: true
+          CSRF_COOKIE_NAME: ${{ secrets.CSRF_COOKIE_NAME_CI }}
+          POSTHOG_API_HOST: https://app.posthog.com
+          POSTHOG_PROJECT_ID: ${{ secrets.POSTHOG_PROJECT_ID_CI }}
+          POSTHOG_API_KEY: ${{ secrets.POSTHOG_PROJECT_API_KEY_CI }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN_CI }}
+          SENTRY_ENV: ${{ secrets.MITOL_ENVIRONMENT_CI }}
+          SENTRY_PROFILES_SAMPLE_RATE: ${{ secrets.SENTRY_PROFILES_SAMPLE_RATE_CI }}
+          SENTRY_TRACES_SAMPLE_RATE: ${{ secrets.SENTRY_TRACES_SAMPLE_RATE_CI }}
+          APPZI_URL: ${{ secrets.APPZI_URL_CI }}
+          LEARN_AI_RECOMMENDATION_ENDPOINT: ${{ secrets.LEARN_AI_RECOMMENDATION_ENDPOINT_CI }}
+          LEARN_AI_SYLLABUS_ENDPOINT: ${{ secrets.LEARN_AI_SYLLABUS_ENDPOINT_CI }}
+          VERSION: ${{ github.sha }}
+        run: | # NOTE: The --args must be comma separated and NOT have spaces
+          heroku container:push web \
+          --app $HEROKU_APP_NAME \
+          --recursive \
+          --arg NEXT_PUBLIC_ORIGIN=$ORIGIN,\
+          NEXT_PUBLIC_MITOL_API_BASE_URL=$MITOL_API_BASE_URL,\
+          NEXT_PUBLIC_SITE_NAME="$SITE_NAME",\
+          NEXT_PUBLIC_MITOL_SUPPORT_EMAIL=$SUPPORT_EMAIL,\
+          NEXT_PUBLIC_EMBEDLY_KEY=$EMBEDLY_KEY,\
+          NEXT_PUBLIC_MITOL_AXIOS_WITH_CREDENTIALS=$MITOL_AXIOS_WITH_CREDENTIALS,\
+          NEXT_PUBLIC_CSRF_COOKIE_NAME=$CSRF_COOKIE_NAME,\
+          NEXT_PUBLIC_POSTHOG_API_HOST=$POSTHOG_API_HOST,\
+          NEXT_PUBLIC_POSTHOG_PROJECT_ID=$POSTHOG_PROJECT_ID,\
+          NEXT_PUBLIC_POSTHOG_API_KEY=$POSTHOG_API_KEY,\
+          NEXT_PUBLIC_SENTRY_DSN=$SENTRY_DSN,\
+          NEXT_PUBLIC_SENTRY_ENV=$SENTRY_ENV,\
+          NEXT_PUBLIC_SENTRY_PROFILES_SAMPLE_RATE=$SENTRY_PROFILES_SAMPLE_RATE,\
+          NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE=$SENTRY_TRACES_SAMPLE_RATE,\
+          NEXT_PUBLIC_APPZI_URL=$APPZI_URL,\
+          NEXT_PUBLIC_LEARN_AI_RECOMMENDATION_ENDPOINT=$LEARN_AI_RECOMMENDATION_ENDPOINT,\
+          NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT=$LEARN_AI_SYLLABUS_ENDPOINT,\
+          NEXT_PUBLIC_VERSION=$VERSION \
+          --context-path .
+
+      - name: Release Frontend on Heroku
+        env:
+          HEROKU_APP_NAME: mitopen-rc-nextjs
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: heroku container:release --app $HEROKU_APP_NAME web
+
+      - name: Purge Fastly cache
+        uses: jcoene/fastly-purge-action@master
+        with:
+          api_key: "${{ secrets.FASTLY_API_KEY_RC_NEXTJS }}"
+          service_id: "${{ secrets.FASTLY_SERVICE_ID_RC_NEXTJS }}"
+
+  # runs ONLY on a failure of the CI workflow
+  on-failure:
+    runs-on: ubuntu-22.04
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'failure'
+    steps:
+      - run: echo 'The triggering workflow failed'

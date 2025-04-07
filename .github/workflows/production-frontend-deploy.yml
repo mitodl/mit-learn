@@ -1,4 +1,4 @@
-name: Production Deploy
+name: Production Frontend Deploy
 
 on:
   workflow_run:

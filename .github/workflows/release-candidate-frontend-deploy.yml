@@ -1,4 +1,4 @@
-name: Release Candidate Deploy
+name: Release Candidate Frontend Deploy
 
 on:
   workflow_run:
