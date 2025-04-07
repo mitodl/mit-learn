@@ -91,6 +91,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     placename = serializers.SerializerMethodField(read_only=True)
     topic_interests = TopicInterestsField(default=list)
     preference_search_filters = serializers.SerializerMethodField(read_only=True)
+    completed_onboarding = serializers.BooleanField(required=False)
 
     def get_name(self, obj) -> str:
         """Get the user's name"""
@@ -187,6 +188,7 @@ class ProfileSerializer(serializers.ModelSerializer):
             "headline",
             "username",
             "placename",
+            "completed_onboarding",
             "location",
             "topic_interests",
             "goals",
