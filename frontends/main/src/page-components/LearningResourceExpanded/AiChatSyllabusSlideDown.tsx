@@ -8,8 +8,6 @@ import {
 } from "@remixicon/react"
 import type { AiChatProps } from "@mitodl/smoot-design/ai"
 import { LearningResource } from "api"
-import { useUserMe } from "api/hooks/user"
-import type { User } from "api/hooks/user"
 import { AiChat } from "@mitodl/smoot-design/ai"
 import { getCsrfToken } from "@/common/utils"
 
@@ -126,21 +124,6 @@ const STARTERS: AiChatProps["conversationStarters"] = [
   { content: "How will this course be graded?" },
 ]
 
-const getInitialMessage = (
-  resource: LearningResource,
-  user?: User,
-): AiChatProps["initialMessages"] => {
-  const greetings = user?.profile?.name
-    ? `Hello ${user.profile.name}, `
-    : "Hello and "
-  return [
-    {
-      content: `${greetings} welcome to **${resource.title}**. How can I assist you today?`,
-      role: "assistant",
-    },
-  ]
-}
-
 export const AiChatSyllabusOpener = ({
   open,
   className,
@@ -184,7 +167,6 @@ const AiChatSyllabusSlideDown = ({
   contentTopPosition: number
   chatTransitionState: ChatTransitionState
 }) => {
-  const user = useUserMe()
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -215,7 +197,6 @@ const AiChatSyllabusSlideDown = ({
         chatId={resource.readable_id}
         entryScreenTitle="What do you want to know about this course?"
         conversationStarters={STARTERS}
-        initialMessages={getInitialMessage(resource, user.data)}
         topPosition={contentTopPosition}
         scrollElement={scrollElement}
         requestOpts={{

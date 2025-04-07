@@ -3,7 +3,6 @@ import { styled, RoutedDrawer } from "ol-components"
 import { RiCloseLine } from "@remixicon/react"
 import { ActionButton } from "@mitodl/smoot-design"
 import { AiChat } from "@mitodl/smoot-design/ai"
-import type { AiChatProps } from "@mitodl/smoot-design/ai"
 import { getCsrfToken } from "@/common/utils"
 import { RECOMMENDER_QUERY_PARAM } from "@/common/urls"
 
@@ -34,13 +33,6 @@ const StyledAiChat = styled(AiChat)({
     paddingTop: "152px",
   },
 })
-
-const INITIAL_MESSAGES: AiChatProps["initialMessages"] = [
-  {
-    content: "What do you want to learn about today?",
-    role: "assistant",
-  },
-]
 
 const STARTERS = [
   {
@@ -77,7 +69,6 @@ const DrawerContent: React.FC<{
         entryScreenTitle="What do you want to learn from MIT?"
         conversationStarters={STARTERS}
         askTimTitle="to recommend a course"
-        initialMessages={INITIAL_MESSAGES}
         scrollElement={scrollElement}
         requestOpts={{
           apiUrl: process.env.NEXT_PUBLIC_LEARN_AI_RECOMMENDATION_ENDPOINT!,

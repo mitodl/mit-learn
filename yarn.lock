@@ -2694,9 +2694,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/smoot-design@npm:^6.0.0":
-  version: 6.0.0
-  resolution: "@mitodl/smoot-design@npm:6.0.0"
+"@mitodl/smoot-design@npm:^6.1.0":
+  version: 6.1.0
+  resolution: "@mitodl/smoot-design@npm:6.1.0"
   dependencies:
     "@emotion/cache": "npm:^11.14.0"
     "@mui/utils": "npm:^6.1.6"
@@ -2716,7 +2716,7 @@ __metadata:
     "@remixicon/react": ^4.2.0
     react: ^18 || ^19
     react-dom: ^18 || ^19
-  checksum: 10/c956df5a0ea5a75ef815424314346124f9d62e228675e8e22a76270e1ddf2bcd085964d09b41afa40187a28014eea5d3918ff64b5dce35b4f872eac823e0b90d
+  checksum: 10/1395c039f7b30dc73d317de264e37ccf98c2e9d9a87083e4549136bcb3b15017a472a5a98c476ba22b942a9ea97f4bc93d2182902db05b9ffbaca5b66e53fc80
   languageName: node
   linkType: hard
 
@@ -12916,7 +12916,7 @@ __metadata:
     "@emotion/styled": "npm:^11.11.0"
     "@faker-js/faker": "npm:^9.0.0"
     "@mitodl/course-search-utils": "npm:3.3.2"
-    "@mitodl/smoot-design": "npm:^6.0.0"
+    "@mitodl/smoot-design": "npm:^6.1.0"
     "@next/bundle-analyzer": "npm:^14.2.15"
     "@remixicon/react": "npm:^4.2.0"
     "@sentry/nextjs": "npm:^9.0.0"
