@@ -1,7 +1,6 @@
 "use client"
 
 import React, { useEffect, useId, useMemo } from "react"
-import { useRouter } from "next-nprogress-bar"
 import {
   styled,
   Step,
@@ -148,7 +147,6 @@ const OnboardingPage: React.FC = () => {
   const initialFormData = useMemo(() => {
     return {
       ...profile,
-      completed_onboarding: true,
       topic_interests:
         profile?.topic_interests?.map((topic) => String(topic.id)) || [],
     }
@@ -156,13 +154,17 @@ const OnboardingPage: React.FC = () => {
   const { isPending: isSaving, mutateAsync } = useProfileMeMutation()
   const { isLoading: userLoading, data: user } = useUserMe()
   const [activeStep, setActiveStep] = React.useState<number>(0)
-  const router = useRouter()
 
   const formik = useFormik({
     enableReinitialize: true,
     initialValues: initialFormData ?? ProfileSchema.getDefault(),
     validationSchema: ProfileSchema,
     onSubmit: async (values) => {
+      if (!user.profile.completed_onboarding) {
+        await mutateAsync({
+          completed_onboarding: true,
+        })
+      }
       if (formik.dirty) {
         await mutateAsync({
           ...values,
@@ -172,7 +174,7 @@ const OnboardingPage: React.FC = () => {
       if (activeStep < NUM_STEPS - 1) {
         setActiveStep((prevActiveStep) => prevActiveStep + 1)
       } else {
-        router.push(DASHBOARD_HOME)
+        window.location = DASHBOARD_HOME
       }
     },
     validateOnChange: false,

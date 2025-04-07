@@ -18,6 +18,7 @@ import {
   RiPriceTag3Line,
   RiAwardLine,
 } from "@remixicon/react"
+
 import * as urls from "@/common/urls"
 import { redirect, usePathname } from "next/navigation"
 import { useToggle } from "ol-utilities"
@@ -180,15 +181,15 @@ const UserView: FunctionComponent = () => {
     return null
   }
 
-  if (user && !user?.profile?.completed_onboarding) {
-    console.log(user.profile.completed_onboarding)
-    if (pathname !== urls.ONBOARDING) {
+  if (user?.is_authenticated) {
+    if (!user?.profile?.completed_onboarding && pathname !== urls.ONBOARDING) {
       redirect(urls.ONBOARDING)
       return null
     }
+    return <LoggedInView />
   }
 
-  return user?.is_authenticated ? <LoggedInView /> : <LoggedOutView />
+  return <LoggedOutView />
 }
 
 const navData: NavData = {
