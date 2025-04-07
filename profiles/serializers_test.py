@@ -77,6 +77,7 @@ def test_serialize_create_user(db, mocker):
             "profile_image_small": image_uri(user.profile, IMAGE_SMALL),
             "profile_image_medium": image_uri(user.profile, IMAGE_MEDIUM),
             "username": user.username,
+            "completed_onboarding": False,
             "topic_interests": LearningResourceTopicSerializer(
                 user.profile.topic_interests, many=True
             ).data,
