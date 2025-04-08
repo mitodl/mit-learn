@@ -53,11 +53,14 @@ const CardRoot = styled.div(({ theme }) => ({
   },
 }))
 
-const MenuButton = styled(ActionButton)({
-  position: "absolute",
-  top: "0",
-  right: "0",
-})
+const MenuButton = styled(ActionButton)(({ theme }) => ({
+  marginLeft: "-8px",
+  [theme.breakpoints.down("md")]: {
+    position: "absolute",
+    top: "0",
+    right: "0",
+  },
+}))
 
 const getCoursewareText = (endDate?: string | null) => {
   if (!endDate) return "Continue Course"
