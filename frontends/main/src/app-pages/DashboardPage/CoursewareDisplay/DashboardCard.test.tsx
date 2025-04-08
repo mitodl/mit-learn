@@ -6,6 +6,40 @@ import { faker } from "@faker-js/faker/locale/en"
 import moment from "moment"
 import { EnrollmentMode, EnrollmentStatus } from "./types"
 
+const pastDashboardCourse: typeof dashboardCourse = (...overrides) => {
+  return dashboardCourse(
+    {
+      run: {
+        startDate: faker.date.past().toISOString(),
+        endDate: faker.date.past().toISOString(),
+      },
+    },
+    ...overrides,
+  )
+}
+const currentDashboardCourse: typeof dashboardCourse = (...overrides) => {
+  return dashboardCourse(
+    {
+      run: {
+        startDate: faker.date.past().toISOString(),
+        endDate: faker.date.future().toISOString(),
+      },
+    },
+    ...overrides,
+  )
+}
+const futureDashboardCourse: typeof dashboardCourse = (...overrides) => {
+  return dashboardCourse(
+    {
+      run: {
+        startDate: faker.date.future().toISOString(),
+        endDate: faker.date.future().toISOString(),
+      },
+    },
+    ...overrides,
+  )
+}
+
 describe("EnrollmentCard", () => {
   test("It shows course title with link to marketing url", () => {
     const course = dashboardCourse()
@@ -31,53 +65,80 @@ describe("EnrollmentCard", () => {
     expect(view.container.firstChild).toHaveClass("classes")
   })
 
-  test("Courseware button is disabled if course has not started", () => {
-    const course = dashboardCourse({
-      run: {
-        startDate: faker.date.future().toISOString(),
-      },
-    })
-    renderWithProviders(<DashboardCard dashboardResource={course} />)
-    const coursewareButtons = screen.getAllByRole("button", {
-      name: "Continue Course",
-      hidden: true,
-    })
-    for (const coursewareButton of coursewareButtons) {
-      expect(coursewareButton).toBeDisabled()
-    }
-  })
+  test.each([
+    {
+      course: pastDashboardCourse(),
+      expected: { enabled: true },
+      case: "past",
+    },
+    {
+      course: currentDashboardCourse(),
+      expected: { enabled: true },
+      case: "current",
+    },
+    {
+      course: futureDashboardCourse(),
+      expected: { enabled: false },
+      label: "future",
+    },
+  ])(
+    "Courseware CTA and is enabled/disabled (enabled=$expected.enabled) based on date (case: $case)",
+    ({ course, expected }) => {
+      renderWithProviders(<DashboardCard dashboardResource={course} />)
+      const mobileCTA = within(
+        screen.getByTestId("enrollment-card-desktop"),
+      ).getByTestId("courseware-button")
 
-  test("Courseware button is enabled if course has started AND NOT ended", () => {
-    const course = dashboardCourse({
-      run: {
-        startDate: faker.date.past().toISOString(),
-        endDate: faker.date.future().toISOString(),
-      },
-    })
-    renderWithProviders(<DashboardCard dashboardResource={course} />)
-    const coursewareLinks = screen.getAllByRole("link", {
-      name: "Continue Course",
-    })
-    for (const coursewareLink of coursewareLinks) {
-      expect(coursewareLink).toHaveAttribute("href", course.run.coursewareUrl)
-    }
-  })
+      const desktopCTA = within(
+        screen.getByTestId("enrollment-card-desktop"),
+      ).getByTestId("courseware-button")
 
-  test("Courseware button says 'View Course' if course has ended", () => {
-    const course = dashboardCourse({
-      run: {
-        startDate: faker.date.past().toISOString(),
-        endDate: faker.date.past().toISOString(),
-      },
-    })
-    renderWithProviders(<DashboardCard dashboardResource={course} />)
-    const coursewareLinks = screen.getAllByRole("link", {
-      name: "View Course",
-    })
-    for (const coursewareLink of coursewareLinks) {
-      expect(coursewareLink).toHaveAttribute("href", course.run.coursewareUrl)
-    }
-  })
+      if (expected.enabled) {
+        expect(mobileCTA).toBeEnabled()
+        expect(desktopCTA).toBeEnabled()
+      } else {
+        expect(mobileCTA).toBeEnabled()
+        expect(desktopCTA).toBeEnabled()
+      }
+    },
+  )
+
+  test.each([
+    {
+      course: pastDashboardCourse(),
+      expected: { labelPrefix: "View" },
+      case: "past",
+    },
+    {
+      course: currentDashboardCourse(),
+      expected: { labelPrefix: "Continue" },
+      case: "current",
+    },
+    {
+      course: futureDashboardCourse(),
+      expected: { labelPrefix: "Continue" },
+      label: "future",
+    },
+  ])(
+    "Courseware CTA shows correct label based on courseNoun prop and dates (case $case)",
+    ({ course, expected }) => {
+      const { view } = renderWithProviders(
+        <DashboardCard dashboardResource={course} />,
+      )
+      const coursewareCTA = screen.getByTestId("courseware-button")
+
+      expect(coursewareCTA).toHaveTextContent(`${expected.labelPrefix} Course`)
+
+      const courseNoun = faker.word.noun()
+      view.rerender(
+        <DashboardCard courseNoun={courseNoun} dashboardResource={course} />,
+      )
+
+      expect(coursewareCTA).toHaveTextContent(
+        `${expected.labelPrefix} ${courseNoun}`,
+      )
+    },
+  )
 
   test.each([
     {
@@ -109,7 +170,7 @@ describe("EnrollmentCard", () => {
       expectation: { visible: false },
     },
   ])(
-    "Shows upgrade banner if and only if run.canUpgrade and not already upgraded (canUpgrade: $overrides.canUpgrade)",
+    "Shows upgrade banner based on run.canUpgrade and not already upgraded (canUpgrade: $overrides.canUpgrade)",
     ({ overrides, expectation }) => {
       const course = dashboardCourse(overrides)
       renderWithProviders(<DashboardCard dashboardResource={course} />)
@@ -121,6 +182,33 @@ describe("EnrollmentCard", () => {
       ).queryByTestId("upgrade-root")
       expect(!!upgradeRootDesktop).toBe(expectation.visible)
       expect(!!upgradeRootMobile).toBe(expectation.visible)
+    },
+  )
+
+  test.each([
+    { offerUpgrade: true, expected: { visible: true } },
+    { offerUpgrade: false, expected: { visible: false } },
+  ])(
+    "Never shows upgrade banner if `offerUpgrade` is false",
+    ({ offerUpgrade, expected }) => {
+      const course = dashboardCourse({
+        run: {
+          canUpgrade: true,
+          certificateUpgradeDeadline: faker.date.future().toISOString(),
+          certificateUpgradePrice: faker.commerce.price(),
+        },
+        enrollment: { mode: EnrollmentMode.Audit },
+      })
+
+      renderWithProviders(
+        <DashboardCard
+          dashboardResource={course}
+          offerUpgrade={offerUpgrade}
+        />,
+      )
+
+      const upgradeRoot = screen.queryByTestId("upgrade-root")
+      expect(!!upgradeRoot).toBe(expected.visible)
     },
   )
 

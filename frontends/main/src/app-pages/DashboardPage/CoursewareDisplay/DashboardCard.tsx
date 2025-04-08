@@ -66,27 +66,31 @@ const MenuButton = styled(ActionButton)(({ theme }) => ({
   },
 }))
 
-const getCoursewareText = (endDate?: string | null) => {
-  if (!endDate) return "Continue Course"
-  if (isInPast(endDate)) {
-    return "View Course"
-  }
-  return "Continue Course"
+type CoursewareButtonProps = {
+  startDate?: string | null
+  endDate?: string | null
+  href?: string | null
+  className?: string
+  courseNoun: string
+  "data-testid"?: string
 }
-
+const getCoursewareText = ({ endDate, courseNoun }: CoursewareButtonProps) => {
+  if (!endDate) return `Continue ${courseNoun}`
+  if (isInPast(endDate)) {
+    return `View ${courseNoun}`
+  }
+  return `Continue ${courseNoun}`
+}
 const CoursewareButton = styled(
   ({
     startDate,
     endDate,
     href,
     className,
-  }: {
-    startDate?: string | null
-    endDate?: string | null
-    href?: string | null
-    className?: string
-  }) => {
-    const children = getCoursewareText(endDate)
+    courseNoun,
+    ...others
+  }: CoursewareButtonProps) => {
+    const children = getCoursewareText({ endDate, courseNoun })
     const hasStarted = startDate && isInPast(startDate)
     return hasStarted && href ? (
       <ButtonLink
@@ -95,6 +99,7 @@ const CoursewareButton = styled(
         endIcon={<RiArrowRightLine />}
         href={href}
         className={className}
+        {...others}
       >
         {children}
       </ButtonLink>
@@ -105,6 +110,7 @@ const CoursewareButton = styled(
         endIcon={<RiArrowRightLine />}
         disabled
         className={className}
+        {...others}
       >
         {children}
       </Button>
@@ -249,12 +255,16 @@ type DashboardCardProps = {
   dashboardResource: DashboardCourse
   showNotComplete?: boolean
   className?: string
+  courseNoun?: string
+  offerUpgrade?: boolean
 }
 const DashboardCard: React.FC<DashboardCardProps> = ({
   dashboardResource,
   showNotComplete = true,
   Component,
   className,
+  courseNoun = "Course",
+  offerUpgrade = true,
 }) => {
   const { title, marketingUrl, enrollment, run } = dashboardResource
   const contextMenu = (
@@ -279,7 +289,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
             View Certificate
           </SubtitleLink>
         ) : null}
-        {enrollment?.mode !== EnrollmentMode.Verified ? (
+        {enrollment?.mode !== EnrollmentMode.Verified && offerUpgrade ? (
           <UpgradeBanner
             data-testid="upgrade-root"
             canUpgrade={run.canUpgrade}
@@ -296,9 +306,11 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
             <NotComplete data-testid="not-complete-icon" />
           ) : null}
           <CoursewareButton
+            data-testid="courseware-button"
             startDate={run.startDate}
             href={run.coursewareUrl}
             endDate={run.endDate}
+            courseNoun={courseNoun}
           />
           {contextMenu}
         </Stack>

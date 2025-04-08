@@ -13,6 +13,7 @@ const courseEnrollment: PartialFactory<CourseRunEnrollment> = (
 ) => {
   const title =
     overrides.run?.title ?? overrides.run?.course?.title ?? faker.word.words(3)
+
   const defaults: CourseRunEnrollment = {
     id: uniqueEnrollmentId.enforce(() => faker.number.int()),
     certificate: null,

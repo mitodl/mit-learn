@@ -7,7 +7,7 @@ import {
 } from "./types"
 import type { DashboardCourse } from "./types"
 
-const dashboardCourse: PartialFactory<DashboardCourse> = (overrides = {}) => {
+const dashboardCourse: PartialFactory<DashboardCourse> = (...overrides) => {
   return mergeOverrides<DashboardCourse>(
     {
       id: faker.string.uuid(),
@@ -27,7 +27,7 @@ const dashboardCourse: PartialFactory<DashboardCourse> = (overrides = {}) => {
         mode: faker.helpers.arrayElement(Object.values(EnrollmentMode)),
       },
     },
-    overrides,
+    ...overrides,
   )
 }
 

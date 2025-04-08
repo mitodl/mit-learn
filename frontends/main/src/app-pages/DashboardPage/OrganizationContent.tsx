@@ -15,7 +15,6 @@ import { DashboardCard } from "./CoursewareDisplay/DashboardCard"
 import { PlainList, Stack, styled, Typography } from "ol-components"
 import { DashboardCourse, DashboardProgram } from "./CoursewareDisplay/types"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
-import invariant from "tiny-invariant"
 
 type Organization = { id: number; name: string; logo?: string }
 type UserWithOrgsField = User & { organizations: Organization[] }
@@ -47,11 +46,11 @@ const useUserMeWithMockedOrgs = (): UseQueryResult<
   return { ...query, data: { ...query.data, organizations } }
 }
 
-const HeaderRoot = styled.div(({ theme }) => ({
+const HeaderRoot = styled.div({
   display: "flex",
   alignItems: "center",
   gap: "24px",
-}))
+})
 const ImageContainer = styled.div(({ theme }) => ({
   width: "120px",
   height: "118px",
@@ -152,6 +151,8 @@ const OrgProgramDisplay: React.FC<{
             Component="li"
             key={course.id}
             dashboardResource={course}
+            courseNoun="Module"
+            offerUpgrade={false}
           />
         ))}
       </PlainList>
