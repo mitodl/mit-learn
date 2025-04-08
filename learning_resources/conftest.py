@@ -1,6 +1,5 @@
 """Common test fixtures for learning_resources"""
 
-from os import listdir
 from pathlib import Path
 
 import boto3
@@ -20,7 +19,7 @@ TEST_PREFIX = "PROD/9/9.15/Fall_2007/9-15-biochemistry-and-pharmacology-of-synap
 
 TEST_JSON_PATH = f"./test_json/{TEST_PREFIX}0"
 TEST_JSON_FILES = [
-    f for f in listdir(TEST_JSON_PATH) if Path.is_file(Path(TEST_JSON_PATH, f))
+    f for f in Path.iterdir(TEST_JSON_PATH) if Path.is_file(Path(TEST_JSON_PATH, f))
 ]
 
 OCW_TEST_PREFIX = "courses/16-01-unified-engineering-i-ii-iii-iv-fall-2005-spring-2006/"
@@ -83,7 +82,7 @@ def add_file_to_bucket_recursive(bucket, file_base, s3_base, file_object):
         with Path.open(Path(local_path)) as f:
             bucket.put_object(Key=file_key, Body=f.read())
     else:
-        for child in listdir(local_path):
+        for child in Path.iterdir(local_path):
             add_file_to_bucket_recursive(bucket, local_path, file_key, child)
 
 
@@ -108,7 +107,7 @@ def setup_s3_ocw(settings):
 
     base_folder = OCW_TEST_JSON_PATH.replace("./test_json/", "")
 
-    for file in listdir(OCW_TEST_JSON_PATH):
+    for file in Path.iterdir(OCW_TEST_JSON_PATH):
         add_file_to_bucket_recursive(
             ocw_next_bucket, OCW_TEST_JSON_PATH, base_folder, file
         )
