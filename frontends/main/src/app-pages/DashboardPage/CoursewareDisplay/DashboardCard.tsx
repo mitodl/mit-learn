@@ -34,6 +34,7 @@ const MobileOnly = styled.div(({ theme }) => ({
 }))
 
 const CardRoot = styled.div(({ theme }) => ({
+  position: "relative",
   border: `1px solid ${theme.custom.colors.lightGray2}`,
   borderRadius: "8px",
   backgroundColor: theme.custom.colors.white,
@@ -53,7 +54,9 @@ const CardRoot = styled.div(({ theme }) => ({
 }))
 
 const MenuButton = styled(ActionButton)({
-  marginLeft: "-8px",
+  position: "absolute",
+  top: "0",
+  right: "0",
 })
 
 const getCoursewareText = (endDate?: string | null) => {
