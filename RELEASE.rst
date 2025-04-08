@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.31.0
+Version 0.31.0 (Released April 08, 2025)
 --------------
 
 - adding selenium dependency (#2173)
