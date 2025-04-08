@@ -1,6 +1,6 @@
 "use client"
 
-import React, { FunctionComponent, useEffect } from "react"
+import React, { Suspense, FunctionComponent, useEffect } from "react"
 import type { NavData } from "ol-components"
 import { styled, AppBar, NavDrawer, Toolbar } from "ol-components"
 import { ActionButtonLink } from "@mitodl/smoot-design"
@@ -25,6 +25,7 @@ import { useToggle } from "ol-utilities"
 import MITLogoLink from "@/components/MITLogoLink/MITLogoLink"
 import UserMenu from "./UserMenu"
 import { MenuButton } from "./MenuButton"
+
 import {
   DEPARTMENTS,
   TOPICS,
@@ -346,7 +347,9 @@ const Header: FunctionComponent = () => {
             <StyledMITLogoLink logo="learn" />
           </MobileOnly>
           <Spacer />
-          <UserView />
+          <Suspense>
+            <UserView />
+          </Suspense>
         </StyledToolbar>
       </Bar>
 
