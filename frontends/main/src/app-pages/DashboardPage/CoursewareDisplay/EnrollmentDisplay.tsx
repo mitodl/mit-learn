@@ -20,6 +20,8 @@ const Wrapper = styled.div(({ theme }) => ({
   boxShadow: "0px 4px 8px 0px rgba(19, 20, 21, 0.08)",
   borderRadius: "8px",
   [theme.breakpoints.down("md")]: {
+    borderColor: theme.custom.colors.lightGray2,
+    backgroundColor: "rgba(243, 244, 248, 0.60);", // TODO: use theme color
     marginTop: "16px",
     padding: "0",
   },
