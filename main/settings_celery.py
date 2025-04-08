@@ -152,7 +152,7 @@ CELERY_BEAT_SCHEDULE = {
         "task": "learning_resources.tasks.scrape_marketing_pages",
         "schedule": get_int(
             "SCRAPE_MARKETING_PAGES_SCHEDULE_SECONDS", 60 * 60 * 12
-        ),  # default is every hour
+        ),  # default is every 12 hours
     },
 }
 
