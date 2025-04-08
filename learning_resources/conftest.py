@@ -18,7 +18,7 @@ from learning_resources.factories import (
 TEST_PREFIX = "PROD/9/9.15/Fall_2007/9-15-biochemistry-and-pharmacology-of-synaptic-transmission-fall-2007/"  # noqa: E501
 
 TEST_JSON_PATH = f"./test_json/{TEST_PREFIX}0"
-TEST_JSON_FILES = [str(f) for f in Path(TEST_JSON_PATH).iterdir() if f.is_file()]
+TEST_JSON_FILES = [f.name for f in Path(TEST_JSON_PATH).iterdir() if f.is_file()]
 
 OCW_TEST_PREFIX = "courses/16-01-unified-engineering-i-ii-iii-iv-fall-2005-spring-2006/"
 
@@ -81,7 +81,7 @@ def add_file_to_bucket_recursive(bucket, file_base, s3_base, file_object):
             bucket.put_object(Key=file_key, Body=f.read())
     else:
         for child in Path(local_path).iterdir():
-            add_file_to_bucket_recursive(bucket, local_path, file_key, str(child))
+            add_file_to_bucket_recursive(bucket, local_path, file_key, child.name)
 
 
 def setup_s3_ocw(settings):
@@ -107,7 +107,7 @@ def setup_s3_ocw(settings):
 
     for file in Path(OCW_TEST_JSON_PATH).iterdir():
         add_file_to_bucket_recursive(
-            ocw_next_bucket, OCW_TEST_JSON_PATH, base_folder, str(file)
+            ocw_next_bucket, OCW_TEST_JSON_PATH, base_folder, file.name
         )
     LearningResourcePlatformFactory.create(code=PlatformType.ocw.name)
     LearningResourceOfferorFactory.create(is_ocw=True)
