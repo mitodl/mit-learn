@@ -76,20 +76,18 @@ describe("EnrollmentDisplay", () => {
     screen.getByRole("heading", { name: "My Learning" })
 
     const cards = await screen.findAllByTestId("enrollment-card")
-    expect(cards.length).toBe(7)
-    return
-    const expectedTitled = [
+    expect(cards.length).toBe(14)
+    const expectedTitles = [
       ...mitxonlineCourses.started,
       ...mitxonlineCourses.notStarted,
       ...mitxonlineCourses.ended,
     ].map((e) => e.run.title)
 
-    expect(cards[0]).toHaveTextContent(expectedTitled[0])
-    expect(cards[1]).toHaveTextContent(expectedTitled[1])
-    expect(cards[2]).toHaveTextContent(expectedTitled[2])
-    expect(cards[3]).toHaveTextContent(expectedTitled[3])
-    expect(cards[4]).toHaveTextContent(expectedTitled[4])
-    expect(cards[5]).toHaveTextContent(expectedTitled[5])
-    expect(cards[6]).toHaveTextContent(expectedTitled[6])
+    for (const expectedTitle of expectedTitles) {
+      const matchingCards = cards.filter((card) =>
+        card.textContent?.includes(expectedTitle),
+      )
+      expect(matchingCards.length).toBe(2)
+    }
   })
 })

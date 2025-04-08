@@ -10,7 +10,8 @@ import type {
 const courseEnrollment: PartialFactory<CourseRunEnrollment> = (
   overrides = {},
 ) => {
-  const title = faker.word.words(3)
+  const title =
+    overrides.run?.title ?? overrides.run?.course?.title ?? faker.word.words(3)
   return mergeOverrides<CourseRunEnrollment>(
     {
       id: faker.number.int(),
