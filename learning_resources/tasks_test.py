@@ -430,7 +430,7 @@ def test_summarize_unprocessed_content(
 
 @pytest.mark.parametrize("use_webdriver", [True], ids=["with_webdriver"])
 def test_fetch_page_with_webdriver(mocker, use_webdriver, settings):
-    """Test that _fetch_page uses WebDriver when settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER is True"""
+    """Test that fetch_page uses WebDriver when settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER is True"""
 
     settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = use_webdriver
 
