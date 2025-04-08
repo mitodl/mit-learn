@@ -49,7 +49,7 @@ jobs:
           EMBEDLY_KEY: ${{ secrets.EMBEDLY_KEY_PROD }}
           MITOL_AXIOS_WITH_CREDENTIALS: true
           CSRF_COOKIE_NAME: ${{ secrets.CSRF_COOKIE_NAME_PROD }}
-          POSTHOG_API_HOST: https://app.posthog.com
+          POSTHOG_API_HOST: ${{ vars.POSTHOG_API_HOST_PROD }}
           POSTHOG_PROJECT_ID: ${{ secrets.POSTHOG_PROJECT_ID_PROD }}
           POSTHOG_API_KEY: ${{ secrets.POSTHOG_PROJECT_API_KEY_PROD }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN_PROD }}
