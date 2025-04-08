@@ -183,6 +183,20 @@ describe("UserMenu", () => {
     })
   })
 
+  test("Users who have not completed onboarding skip onboarding if skip_onboarding is present", async () => {
+    setup()
+    setMockResponse.get(urls.userMe.get(), {
+      is_authenticated: true,
+      profile: { completed_onboarding: false },
+    })
+
+    renderWithProviders(<Header />, { url: "/some-page?skip_onboarding=1" })
+    await findUserMenu()
+    await waitFor(() => {
+      expect(window.location.assign).toHaveBeenCalledTimes(0)
+    })
+  })
+
   test("Users who have completed onboarding are not redirected to the onboarding flow", async () => {
     setup()
     setMockResponse.get(urls.userMe.get(), {

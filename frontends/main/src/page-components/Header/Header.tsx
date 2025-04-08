@@ -18,9 +18,9 @@ import {
   RiPriceTag3Line,
   RiAwardLine,
 } from "@remixicon/react"
+import { useSearchParams, usePathname } from "next/navigation"
 import { useProfileMeMutation } from "api/hooks/profile"
 import * as urls from "@/common/urls"
-import { usePathname } from "next/navigation"
 import { useToggle } from "ol-utilities"
 import MITLogoLink from "@/components/MITLogoLink/MITLogoLink"
 import UserMenu from "./UserMenu"
@@ -177,6 +177,8 @@ const UserView: FunctionComponent = () => {
   const { isLoading, data: user } = useUserMe()
   const { mutate: profileMutate } = useProfileMeMutation()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const skipOnboarding = searchParams.get("skip_onboarding")
 
   useEffect(() => {
     if (isLoading) {
@@ -188,18 +190,21 @@ const UserView: FunctionComponent = () => {
       pathname !== urls.ONBOARDING
     ) {
       if (typeof profileMutate === "function") {
+        // mark user as having completed onboarding
         profileMutate(
           { completed_onboarding: true },
           {
             onSuccess: () => {
-              ;(window as Window).location.assign(urls.ONBOARDING)
+              if (!skipOnboarding) {
+                ;(window as Window).location.assign(urls.ONBOARDING)
+              }
               return null
             },
           },
         )
       }
     }
-  }, [user, pathname, profileMutate, isLoading])
+  }, [user, pathname, profileMutate, isLoading, skipOnboarding])
 
   if (isLoading) {
     return null
