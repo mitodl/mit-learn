@@ -149,7 +149,7 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": crontab(minute=30, hour=7),  # 3:30am EST
     },
     "scrape-marketing-pages-every-1-hour": {
-        "task": "vector_search.tasks.scrape_marketing_pages",
+        "task": "learning_resources.tasks.scrape_marketing_pages",
         "schedule": get_int(
             "SCRAPE_MARKETING_PAGES_SCHEDULE_SECONDS", 60 * 60 * 12
         ),  # default is every hour

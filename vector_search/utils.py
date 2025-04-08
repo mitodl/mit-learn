@@ -1,25 +1,10 @@
 import logging
 import uuid
-from functools import cache
-from shutil import which
 
-import html2text
-import requests
 from django.conf import settings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_experimental.text_splitter import SemanticChunker
 from qdrant_client import QdrantClient, models
-from selenium import webdriver
-from selenium.common.exceptions import (
-    ElementNotInteractableException,
-    JavascriptException,
-    NoSuchElementException,
-    TimeoutException,
-)
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions
-from selenium.webdriver.support.ui import WebDriverWait
 
 from learning_resources.content_summarizer import ContentSummarizer
 from learning_resources.models import ContentFile, LearningResource
@@ -601,63 +586,3 @@ def filter_existing_qdrant_points(
         existing_values.extend([point.payload[lookup_field] for point in results[0]])
         next_page_offset = results[1]
     return [value for value in values if value not in existing_values]
-
-
-def html_to_markdown(html):
-    htmlformatter = html2text.HTML2Text()
-    htmlformatter.body_width = 0
-    return htmlformatter.handle(html)
-
-
-@cache
-def _get_web_driver():
-    service = webdriver.ChromeService(executable_path=which("chromedriver"))
-    chrome_options = Options()
-    chrome_options.add_argument("--headless=new")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--disable-extensions")
-    chrome_options.add_argument("--disable-features=site-per-process")
-    chrome_options.add_argument("--incognito")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-
-    return webdriver.Chrome(service=service, options=chrome_options)
-
-
-def _webdriver_fetch_extra_elements(driver):
-    """
-    Attempt to Fetch any extra possible js loaded elements that
-    require interaction to display
-    """
-    errors = [
-        NoSuchElementException,
-        JavascriptException,
-        ElementNotInteractableException,
-        TimeoutException,
-    ]
-    wait = WebDriverWait(
-        driver, timeout=0.1, poll_frequency=0.01, ignored_exceptions=errors
-    )
-    for tab_id in ["faculty-tab", "reviews-tab", "participants-tab"]:
-        wait.until(expected_conditions.visibility_of_element_located((By.ID, tab_id)))
-        driver.execute_script(f"document.getElementById('{tab_id}').click()")
-
-
-def _fetch_page(url, use_webdriver=settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER):
-    if url:
-        if use_webdriver:
-            driver = _get_web_driver()
-            driver.get(url)
-            try:
-                _webdriver_fetch_extra_elements(driver)
-            except TimeoutException:
-                logger.warning("Error custom elements page from %s", url)
-            return driver.execute_script("return document.body.innerHTML")
-        else:
-            try:
-                response = requests.get(url, timeout=10)
-                if response.ok:
-                    return response.text
-            except requests.exceptions.RequestException:
-                logger.exception("Error fetching page from %s", url)
-    return None
