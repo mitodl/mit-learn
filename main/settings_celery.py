@@ -151,7 +151,7 @@ CELERY_BEAT_SCHEDULE = {
     "scrape-marketing-pages-every-1-hour": {
         "task": "vector_search.tasks.scrape_marketing_pages",
         "schedule": get_int(
-            "SCRAPE_MARKETING_PAGES_SCHEDULE_SECONDS", 60 * 60
+            "SCRAPE_MARKETING_PAGES_SCHEDULE_SECONDS", 60 * 60 * 12
         ),  # default is every hour
     },
 }
