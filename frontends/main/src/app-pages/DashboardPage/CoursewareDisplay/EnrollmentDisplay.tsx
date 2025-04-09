@@ -1,6 +1,12 @@
 import React from "react"
 import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
-import { PlainList, Typography, styled } from "ol-components"
+import {
+  PlainList,
+  PlainListProps,
+  Typography,
+  TypographyProps,
+  styled,
+} from "ol-components"
 import { useQuery } from "@tanstack/react-query"
 import { mitxonlineEnrollments } from "./transform"
 import { DashboardCard } from "./DashboardCard"
@@ -13,7 +19,35 @@ const Wrapper = styled.div(({ theme }) => ({
   borderBottom: `1px solid ${theme.custom.colors.red}`,
   boxShadow: "0px 4px 8px 0px rgba(19, 20, 21, 0.08)",
   borderRadius: "8px",
+  [theme.breakpoints.down("md")]: {
+    border: `1px solid ${theme.custom.colors.lightGray2}`,
+    backgroundColor: "rgba(243, 244, 248, 0.60);", // TODO: use theme color
+    marginTop: "16px",
+    padding: "0",
+  },
 }))
+
+const Title = styled(Typography)<Pick<TypographyProps, "component">>(
+  ({ theme }) => ({
+    ...theme.typography.h5,
+    marginBottom: "16px",
+    [theme.breakpoints.down("md")]: {
+      padding: "16px",
+      marginBottom: "0",
+    },
+  }),
+)
+
+const EnrollmentList = styled(PlainList)<Pick<PlainListProps, "itemSpacing">>(
+  ({ theme }) => ({
+    [theme.breakpoints.down("md")]: {
+      borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
+      ">li+li": {
+        marginTop: "0",
+      },
+    },
+  }),
+)
 
 const alphabeticalSort = (a: DashboardCourse, b: DashboardCourse) =>
   a.title.localeCompare(b.title)
@@ -73,16 +107,16 @@ const EnrollmentDisplay = () => {
 
   return (
     <Wrapper>
-      <Typography variant="h5" component="h2" sx={{ marginBottom: "16px" }}>
+      <Title variant="h5" component="h2">
         My Learning
-      </Typography>
-      <PlainList itemSpacing={"16px"}>
+      </Title>
+      <EnrollmentList itemSpacing={"16px"}>
         {sorted?.map((course) => (
           <li key={course.id}>
             <DashboardCard dashboardResource={course} showNotComplete={false} />
           </li>
         ))}
-      </PlainList>
+      </EnrollmentList>
     </Wrapper>
   )
 }

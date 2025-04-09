@@ -1,5 +1,5 @@
 import React from "react"
-import { renderWithProviders, screen } from "@/test-utils"
+import { renderWithProviders, screen, within } from "@/test-utils"
 import { DashboardCard } from "./DashboardCard"
 import { dashboardCourse } from "./test-utils"
 import { faker } from "@faker-js/faker/locale/en"
@@ -11,10 +11,12 @@ describe("EnrollmentCard", () => {
     const course = dashboardCourse()
     renderWithProviders(<DashboardCard dashboardResource={course} />)
 
-    const courseLink = screen.getByRole("link", {
+    const courseLinks = screen.getAllByRole("link", {
       name: course.title,
     })
-    expect(courseLink).toHaveAttribute("href", course.marketingUrl)
+    for (const courseLink of courseLinks) {
+      expect(courseLink).toHaveAttribute("href", course.marketingUrl)
+    }
   })
 
   test("Courseware button is disabled if course has not started", () => {
@@ -24,11 +26,13 @@ describe("EnrollmentCard", () => {
       },
     })
     renderWithProviders(<DashboardCard dashboardResource={course} />)
-    const coursewareButton = screen.getByRole("button", {
+    const coursewareButtons = screen.getAllByRole("button", {
       name: "Continue Course",
       hidden: true,
     })
-    expect(coursewareButton).toBeDisabled()
+    for (const coursewareButton of coursewareButtons) {
+      expect(coursewareButton).toBeDisabled()
+    }
   })
 
   test("Courseware button is enabled if course has started AND NOT ended", () => {
@@ -39,10 +43,12 @@ describe("EnrollmentCard", () => {
       },
     })
     renderWithProviders(<DashboardCard dashboardResource={course} />)
-    const coursewareLink = screen.getByRole("link", {
+    const coursewareLinks = screen.getAllByRole("link", {
       name: "Continue Course",
     })
-    expect(coursewareLink).toHaveAttribute("href", course.run.coursewareUrl)
+    for (const coursewareLink of coursewareLinks) {
+      expect(coursewareLink).toHaveAttribute("href", course.run.coursewareUrl)
+    }
   })
 
   test("Courseware button says 'View Course' if course has ended", () => {
@@ -53,10 +59,12 @@ describe("EnrollmentCard", () => {
       },
     })
     renderWithProviders(<DashboardCard dashboardResource={course} />)
-    const coursewareLink = screen.getByRole("link", {
+    const coursewareLinks = screen.getAllByRole("link", {
       name: "View Course",
     })
-    expect(coursewareLink).toHaveAttribute("href", course.run.coursewareUrl)
+    for (const coursewareLink of coursewareLinks) {
+      expect(coursewareLink).toHaveAttribute("href", course.run.coursewareUrl)
+    }
   })
 
   test.each([
@@ -93,8 +101,14 @@ describe("EnrollmentCard", () => {
     ({ overrides, expectation }) => {
       const course = dashboardCourse(overrides)
       renderWithProviders(<DashboardCard dashboardResource={course} />)
-      const upgradeRoot = screen.queryByTestId("upgrade-root")
-      expect(!!upgradeRoot).toBe(expectation.visible)
+      const upgradeRootDesktop = within(
+        screen.getByTestId("enrollment-card-desktop"),
+      ).queryByTestId("upgrade-root")
+      const upgradeRootMobile = within(
+        screen.getByTestId("enrollment-card-mobile"),
+      ).queryByTestId("upgrade-root")
+      expect(!!upgradeRootDesktop).toBe(expectation.visible)
+      expect(!!upgradeRootMobile).toBe(expectation.visible)
     },
   )
 
@@ -117,13 +131,20 @@ describe("EnrollmentCard", () => {
 
     renderWithProviders(<DashboardCard dashboardResource={course} />)
 
-    const upgradeRoot = screen.getByTestId("upgrade-root")
-    expect(upgradeRoot).toBeVisible()
+    const upgradeRootDesktop = within(
+      screen.getByTestId("enrollment-card-desktop"),
+    ).queryByTestId("upgrade-root")
+    const upgradeRootMobile = within(
+      screen.getByTestId("enrollment-card-mobile"),
+    ).queryByTestId("upgrade-root")
+    for (const upgradeRoot of [upgradeRootDesktop, upgradeRootMobile]) {
+      expect(upgradeRoot).toBeVisible()
 
-    expect(upgradeRoot).toHaveTextContent(/5 days remaining/)
-    expect(upgradeRoot).toHaveTextContent(
-      `Add a certificate for $${certificateUpgradePrice}`,
-    )
+      expect(upgradeRoot).toHaveTextContent(/5 days remaining/)
+      expect(upgradeRoot).toHaveTextContent(
+        `Add a certificate for $${certificateUpgradePrice}`,
+      )
+    }
   })
 
   test("Shows number of days until course starts", () => {
@@ -141,18 +162,43 @@ describe("EnrollmentCard", () => {
   })
 
   test.each([
-    { enrollmentStatus: EnrollmentStatus.Completed, hasCompleted: true },
-    { enrollmentStatus: EnrollmentStatus.Enrolled, hasCompleted: false },
+    {
+      enrollmentStatus: EnrollmentStatus.Completed,
+      hasCompleted: true,
+      showNotComplete: false,
+    },
+    {
+      enrollmentStatus: EnrollmentStatus.Enrolled,
+      hasCompleted: false,
+      showNotComplete: false,
+    },
+    {
+      enrollmentStatus: EnrollmentStatus.Completed,
+      hasCompleted: true,
+      showNotComplete: true,
+    },
+    {
+      enrollmentStatus: EnrollmentStatus.Enrolled,
+      hasCompleted: false,
+      showNotComplete: true,
+    },
   ])(
     "Shows completed icon if course is completed",
-    ({ enrollmentStatus, hasCompleted }) => {
+    ({ enrollmentStatus, hasCompleted, showNotComplete }) => {
       const course = dashboardCourse({
         enrollment: { status: enrollmentStatus },
       })
-      renderWithProviders(<DashboardCard dashboardResource={course} />)
+      renderWithProviders(
+        <DashboardCard
+          dashboardResource={course}
+          showNotComplete={showNotComplete}
+        />,
+      )
 
-      const completedIcon = screen.queryByRole("img", { name: "Completed" })
-      expect(!!completedIcon).toBe(hasCompleted)
+      const completedIcon = screen.queryAllByRole("img", { name: "Completed" })
+      for (const icon of completedIcon) {
+        expect(!!icon).toBe(hasCompleted)
+      }
     },
   )
 })
@@ -173,7 +219,13 @@ test.each([
       />,
     )
 
-    const notCompletedIcon = screen.queryByTestId("not-complete-icon")
-    expect(!!notCompletedIcon).toBe(showNotComplete)
+    const notCompletedIconDesktop = within(
+      screen.getByTestId("enrollment-card-desktop"),
+    ).queryByTestId("not-complete-icon")
+    const notCompletedIconMobile = within(
+      screen.getByTestId("enrollment-card-mobile"),
+    ).queryByTestId("not-complete-icon")
+    expect(!!notCompletedIconDesktop).toBe(showNotComplete)
+    expect(!!notCompletedIconMobile).toBe(showNotComplete)
   },
 )

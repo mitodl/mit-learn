@@ -15,7 +15,26 @@ import { calendarDaysUntil, isInPast, NoSSR } from "ol-utilities"
 
 import CompleteCheck from "@/public/images/icons/complete-check.svg"
 
+const DesktopOnly = styled.div(({ theme }) => ({
+  [theme.breakpoints.up("md")]: {
+    display: "list-item",
+  },
+  [theme.breakpoints.down("md")]: {
+    display: "none",
+  },
+}))
+
+const MobileOnly = styled.div(({ theme }) => ({
+  [theme.breakpoints.down("md")]: {
+    display: "list-item",
+  },
+  [theme.breakpoints.up("md")]: {
+    display: "none",
+  },
+}))
+
 const CardRoot = styled.div(({ theme }) => ({
+  position: "relative",
   border: `1px solid ${theme.custom.colors.lightGray2}`,
   borderRadius: "8px",
   backgroundColor: theme.custom.colors.white,
@@ -24,11 +43,30 @@ const CardRoot = styled.div(({ theme }) => ({
   display: "flex",
   gap: "8px",
   alignItems: "center",
+  [theme.breakpoints.down("md")]: {
+    border: "none",
+    borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
+    borderRadius: "0px",
+    boxShadow: "none",
+    flexDirection: "column",
+    gap: "16px",
+  },
 }))
 
-const MenuButton = styled(ActionButton)({
+const TitleLink = styled(Link)(({ theme }) => ({
+  [theme.breakpoints.down("md")]: {
+    maxWidth: "calc(100% - 16px)",
+  },
+}))
+
+const MenuButton = styled(ActionButton)(({ theme }) => ({
   marginLeft: "-8px",
-})
+  [theme.breakpoints.down("md")]: {
+    position: "absolute",
+    top: "0",
+    right: "0",
+  },
+}))
 
 const getCoursewareText = (endDate?: string | null) => {
   if (!endDate) return "Continue Course"
@@ -139,13 +177,17 @@ const UpgradeBanner: React.FC<
   )
 }
 
-const CountdownRoot = styled.div({
+const CountdownRoot = styled.div(({ theme }) => ({
   width: "142px",
   marginRight: "32px",
   display: "flex",
   justifyContent: "center",
   alignSelf: "end",
-})
+  [theme.breakpoints.down("md")]: {
+    marginRight: "0px",
+    justifyContent: "flex-start",
+  },
+}))
 const CourseStartCountdown: React.FC<{
   startDate: string
   className?: string
@@ -213,12 +255,22 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   showNotComplete = true,
 }) => {
   const { title, marketingUrl, enrollment, run } = dashboardResource
-  return (
-    <CardRoot data-testid="enrollment-card">
+  const contextMenu = (
+    <SimpleMenu
+      items={getMenuItems()}
+      trigger={
+        <MenuButton size="small" variant="text" aria-label="More options">
+          <RiMore2Line />
+        </MenuButton>
+      }
+    />
+  )
+  const desktopLayout = (
+    <CardRoot data-testid="enrollment-card-desktop">
       <Stack justifyContent="start" alignItems="stretch" gap="8px" flex={1}>
-        <Link size="medium" color="black" href={marketingUrl}>
+        <TitleLink size="medium" color="black" href={marketingUrl}>
           {title}
-        </Link>
+        </TitleLink>
         {enrollment?.status === EnrollmentStatus.Completed ? (
           <SubtitleLink href="#">
             {<RiAwardLine size="16px" />}
@@ -246,20 +298,76 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
             href={run.coursewareUrl}
             endDate={run.endDate}
           />
-          <SimpleMenu
-            items={getMenuItems()}
-            trigger={
-              <MenuButton size="small" variant="text" aria-label="More options">
-                <RiMore2Line />
-              </MenuButton>
-            }
-          />
+          {contextMenu}
         </Stack>
         {run.startDate ? (
           <CourseStartCountdown startDate={run.startDate} />
         ) : null}
       </Stack>
     </CardRoot>
+  )
+
+  const mobileLayout = (
+    <CardRoot data-testid="enrollment-card-mobile">
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        alignItems="stretch"
+        flex={1}
+        width="100%"
+      >
+        <Stack direction="column" gap="8px">
+          <TitleLink size="medium" color="black" href={marketingUrl}>
+            {title}
+          </TitleLink>
+          {enrollment?.status === EnrollmentStatus.Completed ? (
+            <SubtitleLink href="#">
+              {<RiAwardLine size="16px" />}
+              View Certificate
+            </SubtitleLink>
+          ) : null}
+          {enrollment?.mode !== EnrollmentMode.Verified ? (
+            <UpgradeBanner
+              data-testid="upgrade-root"
+              canUpgrade={run.canUpgrade}
+              certificateUpgradeDeadline={run.certificateUpgradeDeadline}
+              certificateUpgradePrice={run.certificateUpgradePrice}
+            />
+          ) : null}
+        </Stack>
+        {contextMenu}
+      </Stack>
+      <Stack
+        direction="row"
+        alignItems="center"
+        justifyContent="space-between"
+        width="100%"
+      >
+        {run.startDate ? (
+          <Stack justifyContent="start">
+            <CourseStartCountdown startDate={run.startDate} />
+          </Stack>
+        ) : null}
+        <Stack direction="row" gap="8px" alignItems="center">
+          {enrollment?.status === EnrollmentStatus.Completed ? (
+            <Completed src={CompleteCheck} alt="Completed" />
+          ) : showNotComplete ? (
+            <NotComplete data-testid="not-complete-icon" />
+          ) : null}
+          <CoursewareButton
+            startDate={run.startDate}
+            href={run.coursewareUrl}
+            endDate={run.endDate}
+          />
+        </Stack>
+      </Stack>
+    </CardRoot>
+  )
+  return (
+    <>
+      <DesktopOnly>{desktopLayout}</DesktopOnly>
+      <MobileOnly>{mobileLayout}</MobileOnly>
+    </>
   )
 }
 
