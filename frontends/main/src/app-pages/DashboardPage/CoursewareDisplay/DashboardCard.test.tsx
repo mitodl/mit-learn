@@ -260,74 +260,74 @@ describe("EnrollmentCard", () => {
 
     expect(view.container).toHaveTextContent(/starts in 5 days/i)
   })
+
+  test.each([{ showNotComplete: true }, { showNotComplete: false }])(
+    "Shows incomplete status when showNotComplete is true",
+    ({ showNotComplete }) => {
+      const enrollment = faker.helpers.arrayElement([
+        { status: EnrollmentStatus.NotEnrolled },
+        { status: EnrollmentStatus.Enrolled },
+        undefined,
+      ])
+      const course = dashboardCourse({ enrollment })
+      if (!enrollment) {
+        course.enrollment = undefined
+      }
+      const { view } = renderWithProviders(
+        <DashboardCard
+          dashboardResource={course}
+          showNotComplete={showNotComplete}
+        />,
+      )
+
+      const indicator = screen.queryByTestId("enrollment-status")
+      expect(!!indicator).toBe(showNotComplete)
+
+      view.rerender(
+        <DashboardCard
+          dashboardResource={dashboardCourse({
+            enrollment: { status: EnrollmentStatus.Completed },
+          })}
+          showNotComplete={showNotComplete}
+        />,
+      )
+      // Completed should always show the indicator
+      screen.getByTestId("enrollment-status")
+    },
+  )
+
+  test.each([
+    {
+      status: EnrollmentStatus.Completed,
+      expectedLabel: "Completed",
+      hiddenImage: true,
+    },
+    {
+      status: EnrollmentStatus.Enrolled,
+      expectedLabel: "Enrolled",
+      hiddenImage: true,
+    },
+    { status: EnrollmentStatus.NotEnrolled, expectedLabel: "Not Enrolled" },
+  ])(
+    "Enrollment indicator shows meaningful text",
+    ({ status, expectedLabel, hiddenImage }) => {
+      renderWithProviders(
+        <DashboardCard
+          dashboardResource={dashboardCourse({ enrollment: { status } })}
+        />,
+      )
+      const indicator = screen.getByTestId("enrollment-status")
+      expect(indicator).toHaveTextContent(expectedLabel)
+
+      // Double check the image is aria-hidden, since we're using
+      // VisuallyHidden text instead of alt
+      const img = indicator.querySelector("img")
+      if (hiddenImage) {
+        expect(img).toHaveAttribute("aria-hidden", "true")
+        expect(img).toHaveAttribute("alt", "")
+      } else {
+        expect(img).toBe(null)
+      }
+    },
+  )
 })
-
-test.each([{ showNotComplete: true }, { showNotComplete: false }])(
-  "Shows incomplete status when showNotComplete is true",
-  ({ showNotComplete }) => {
-    const enrollment = faker.helpers.arrayElement([
-      { status: EnrollmentStatus.NotEnrolled },
-      { status: EnrollmentStatus.Enrolled },
-      undefined,
-    ])
-    const course = dashboardCourse({ enrollment })
-    if (!enrollment) {
-      course.enrollment = undefined
-    }
-    const { view } = renderWithProviders(
-      <DashboardCard
-        dashboardResource={course}
-        showNotComplete={showNotComplete}
-      />,
-    )
-
-    const indicator = screen.queryByTestId("enrollment-status")
-    expect(!!indicator).toBe(showNotComplete)
-
-    view.rerender(
-      <DashboardCard
-        dashboardResource={dashboardCourse({
-          enrollment: { status: EnrollmentStatus.Completed },
-        })}
-        showNotComplete={showNotComplete}
-      />,
-    )
-    // Completed should always show the indicator
-    screen.getByTestId("enrollment-status")
-  },
-)
-
-test.each([
-  {
-    status: EnrollmentStatus.Completed,
-    expectedLabel: "Completed",
-    hiddenImage: true,
-  },
-  {
-    status: EnrollmentStatus.Enrolled,
-    expectedLabel: "Enrolled",
-    hiddenImage: true,
-  },
-  { status: EnrollmentStatus.NotEnrolled, expectedLabel: "Not Enrolled" },
-])(
-  "Enrollment indicator shows meaningful text",
-  ({ status, expectedLabel, hiddenImage }) => {
-    renderWithProviders(
-      <DashboardCard
-        dashboardResource={dashboardCourse({ enrollment: { status } })}
-      />,
-    )
-    const indicator = screen.getByTestId("enrollment-status")
-    expect(indicator).toHaveTextContent(expectedLabel)
-
-    // Double check the image is aria-hidden, since we're using
-    // VisuallyHidden text instead of alt
-    const img = indicator.querySelector("img")
-    if (hiddenImage) {
-      expect(img).toHaveAttribute("aria-hidden", "true")
-      expect(img).toHaveAttribute("alt", "")
-    } else {
-      expect(img).toBe(null)
-    }
-  },
-)

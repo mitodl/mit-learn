@@ -350,15 +350,16 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
           </Stack>
         ) : null}
         <Stack direction="row" gap="8px" alignItems="center">
-          {enrollment?.status === EnrollmentStatus.Completed ? (
-            <Completed src={CompleteCheck} alt="Completed" />
-          ) : showNotComplete ? (
-            <NotComplete data-testid="not-complete-icon" />
-          ) : null}
+          <EnrollmentStatusIndicator
+            status={enrollment?.status}
+            showNotComplete={showNotComplete}
+          />
           <CoursewareButton
+            data-testid="courseware-button"
             startDate={run.startDate}
             href={run.coursewareUrl}
             endDate={run.endDate}
+            courseNoun={courseNoun}
           />
         </Stack>
       </Stack>
