@@ -6,6 +6,7 @@ import moment from "moment"
 import { faker } from "@faker-js/faker/locale/en"
 
 const courseEnrollment = mitxonline.factories.enrollment.courseEnrollment
+const grade = mitxonline.factories.enrollment.grade
 describe("EnrollmentDisplay", () => {
   const setupApis = () => {
     const ended = [
@@ -23,7 +24,7 @@ describe("EnrollmentDisplay", () => {
       }),
       courseEnrollment({
         run: { title: "C Course Ended" },
-        grades: [{ passed: true }],
+        grades: [grade({ passed: true })],
       }),
     ]
     const started = [
@@ -59,7 +60,7 @@ describe("EnrollmentDisplay", () => {
     ])
 
     setMockResponse.get(
-      mitxonline.urls.enrollment.courseEnrollment,
+      mitxonline.urls.enrollment.courseEnrollment(),
       mitxonlineCourseEnrollments,
     )
 

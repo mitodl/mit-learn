@@ -2,8 +2,8 @@ import { faker } from "@faker-js/faker/locale/en"
 import type { PartialDeep } from "type-fest"
 import { mergeWith } from "lodash"
 
-export type Factory<T, U = never> = (overrides?: Partial<T>, options?: U) => T
-export type PartialFactory<T, U = T> = (overrides?: PartialDeep<T>) => U
+export type Factory<T> = (overrides?: Partial<T>) => T
+export type PartialFactory<T, U = T> = (...overrides: PartialDeep<T>[]) => U
 
 interface PaginatedResult<T> {
   count: number
@@ -13,7 +13,7 @@ interface PaginatedResult<T> {
 }
 
 export const makePaginatedFactory =
-  <T>(makeResult: Factory<T>) =>
+  <T>(makeResult: Factory<T> | PartialFactory<T>) =>
   (
     { count, pageSize }: { count: number; pageSize?: number },
     {

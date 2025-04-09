@@ -45,7 +45,9 @@ describe("LearningResourceDrawer", () => {
     } = {},
   ) => {
     const user = makeUserSettings(overries.user)
-    const resource = factories.learningResources.resource(overries.resource)
+    const resource = factories.learningResources.resource(
+      overries.resource ?? {},
+    )
     if (user.is_authenticated) {
       setMockResponse.get(urls.userMe.get(), user)
       setMockResponse.get(urls.userLists.membershipList(), [])

@@ -15,7 +15,7 @@ import ChannelPage from "./ChannelPage"
 
 const setMockApiResponses = ({
   search,
-  channelPatch,
+  channelPatch = {},
 }: {
   search?: Partial<LearningResourcesSearchResponse>
   channelPatch?: Partial<Channel>
