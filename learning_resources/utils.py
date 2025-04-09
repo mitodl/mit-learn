@@ -619,7 +619,7 @@ def html_to_markdown(html):
 
 
 @cache
-def _get_web_driver():
+def get_web_driver():
     service = webdriver.ChromeService(executable_path=which("chromedriver"))
     chrome_options = Options()
     chrome_options.add_argument("--headless=new")
@@ -655,7 +655,7 @@ def _webdriver_fetch_extra_elements(driver):
 def fetch_page(url, use_webdriver=settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER):
     if url:
         if use_webdriver:
-            driver = _get_web_driver()
+            driver = get_web_driver()
             driver.get(url)
             try:
                 _webdriver_fetch_extra_elements(driver)
