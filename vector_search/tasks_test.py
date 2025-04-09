@@ -4,7 +4,10 @@ import random
 import pytest
 from django.conf import settings
 
-from learning_resources.etl.constants import RESOURCE_FILE_ETL_SOURCES, ETLSource
+from learning_resources.etl.constants import (
+    RESOURCE_FILE_ETL_SOURCES,
+    ETLSource,
+)
 from learning_resources.factories import (
     ContentFileFactory,
     CourseFactory,

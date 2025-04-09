@@ -760,13 +760,15 @@ QDRANT_CHUNK_SIZE = get_int(
 QDRANT_ENCODER = get_string(
     name="QDRANT_ENCODER", default="vector_search.encoders.fastembed.FastEmbedEncoder"
 )
-
+# toggle to use requests (default for local) or webdriver which renders js elements
+EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = get_bool(
+    "EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER", default=False
+)
 LITELLM_TOKEN_ENCODING_NAME = get_string(
     name="LITELLM_TOKEN_ENCODING_NAME", default=None
 )
 LITELLM_CUSTOM_PROVIDER = get_string(name="LITELLM_CUSTOM_PROVIDER", default="openai")
 LITELLM_API_BASE = get_string(name="LITELLM_API_BASE", default=None)
-
 
 OPENAI_API_KEY = get_string(
     name="OPENAI_API_KEY",
