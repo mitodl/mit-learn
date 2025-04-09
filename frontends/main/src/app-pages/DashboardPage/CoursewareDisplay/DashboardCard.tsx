@@ -279,7 +279,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         ) : null}
         {enrollment?.mode !== EnrollmentMode.Verified ? (
           <UpgradeBanner
-            data-testid="upgrade-root-desktop"
+            data-testid="upgrade-root"
             canUpgrade={run.canUpgrade}
             certificateUpgradeDeadline={run.certificateUpgradeDeadline}
             certificateUpgradePrice={run.certificateUpgradePrice}
@@ -291,7 +291,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
           {enrollment?.status === EnrollmentStatus.Completed ? (
             <Completed src={CompleteCheck} alt="Completed" />
           ) : showNotComplete ? (
-            <NotComplete data-testid="not-complete-icon-desktop" />
+            <NotComplete data-testid="not-complete-icon" />
           ) : null}
           <CoursewareButton
             startDate={run.startDate}
@@ -328,7 +328,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
           ) : null}
           {enrollment?.mode !== EnrollmentMode.Verified ? (
             <UpgradeBanner
-              data-testid="upgrade-root-mobile"
+              data-testid="upgrade-root"
               canUpgrade={run.canUpgrade}
               certificateUpgradeDeadline={run.certificateUpgradeDeadline}
               certificateUpgradePrice={run.certificateUpgradePrice}
@@ -352,7 +352,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
           {enrollment?.status === EnrollmentStatus.Completed ? (
             <Completed src={CompleteCheck} alt="Completed" />
           ) : showNotComplete ? (
-            <NotComplete data-testid="not-complete-icon-mobile" />
+            <NotComplete data-testid="not-complete-icon" />
           ) : null}
           <CoursewareButton
             startDate={run.startDate}

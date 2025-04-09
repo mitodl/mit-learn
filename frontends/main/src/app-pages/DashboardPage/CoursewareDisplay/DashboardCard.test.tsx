@@ -1,5 +1,5 @@
 import React from "react"
-import { renderWithProviders, screen } from "@/test-utils"
+import { renderWithProviders, screen, within } from "@/test-utils"
 import { DashboardCard } from "./DashboardCard"
 import { dashboardCourse } from "./test-utils"
 import { faker } from "@faker-js/faker/locale/en"
@@ -101,8 +101,12 @@ describe("EnrollmentCard", () => {
     ({ overrides, expectation }) => {
       const course = dashboardCourse(overrides)
       renderWithProviders(<DashboardCard dashboardResource={course} />)
-      const upgradeRootDesktop = screen.queryByTestId("upgrade-root-desktop")
-      const upgradeRootMobile = screen.queryByTestId("upgrade-root-mobile")
+      const upgradeRootDesktop = within(
+        screen.getByTestId("enrollment-card-desktop"),
+      ).queryByTestId("upgrade-root")
+      const upgradeRootMobile = within(
+        screen.getByTestId("enrollment-card-mobile"),
+      ).queryByTestId("upgrade-root")
       expect(!!upgradeRootDesktop).toBe(expectation.visible)
       expect(!!upgradeRootMobile).toBe(expectation.visible)
     },
@@ -127,8 +131,12 @@ describe("EnrollmentCard", () => {
 
     renderWithProviders(<DashboardCard dashboardResource={course} />)
 
-    const upgradeRootDesktop = screen.queryByTestId("upgrade-root-desktop")
-    const upgradeRootMobile = screen.queryByTestId("upgrade-root-mobile")
+    const upgradeRootDesktop = within(
+      screen.getByTestId("enrollment-card-desktop"),
+    ).queryByTestId("upgrade-root")
+    const upgradeRootMobile = within(
+      screen.getByTestId("enrollment-card-mobile"),
+    ).queryByTestId("upgrade-root")
     for (const upgradeRoot of [upgradeRootDesktop, upgradeRootMobile]) {
       expect(upgradeRoot).toBeVisible()
 
@@ -211,12 +219,12 @@ test.each([
       />,
     )
 
-    const notCompletedIconDesktop = screen.queryByTestId(
-      "not-complete-icon-desktop",
-    )
-    const notCompletedIconMobile = screen.queryByTestId(
-      "not-complete-icon-mobile",
-    )
+    const notCompletedIconDesktop = within(
+      screen.getByTestId("enrollment-card-desktop"),
+    ).queryByTestId("not-complete-icon")
+    const notCompletedIconMobile = within(
+      screen.getByTestId("enrollment-card-mobile"),
+    ).queryByTestId("not-complete-icon")
     expect(!!notCompletedIconDesktop).toBe(showNotComplete)
     expect(!!notCompletedIconMobile).toBe(showNotComplete)
   },
