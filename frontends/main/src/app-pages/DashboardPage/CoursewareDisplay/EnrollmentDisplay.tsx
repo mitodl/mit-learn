@@ -1,6 +1,7 @@
 import React from "react"
 import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
 import {
+  Link,
   PlainList,
   PlainListProps,
   Typography,
@@ -53,6 +54,15 @@ const EnrollmentList = styled(PlainList)<Pick<PlainListProps, "itemSpacing">>(
   }),
 )
 
+const ShowAllContainer = styled.div(({ theme }) => ({
+  display: "flex",
+  justifyContent: "center",
+  marginTop: "24px",
+  [theme.breakpoints.down("md")]: {
+    marginBottom: "24px",
+  },
+}))
+
 const alphabeticalSort = (a: DashboardCourse, b: DashboardCourse) =>
   a.title.localeCompare(b.title)
 
@@ -91,6 +101,44 @@ const sortEnrollments = (resources: DashboardCourse[]) => {
   }
 }
 
+interface EnrollmentExpandCollapseProps {
+  shownEnrollments: DashboardCourse[]
+  hiddenEnrollments: DashboardCourse[]
+}
+
+const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
+  shownEnrollments,
+  hiddenEnrollments,
+}) => {
+  const [shown, setShown] = React.useState(false)
+  return (
+    <>
+      <EnrollmentList itemSpacing={"16px"}>
+        {shownEnrollments?.map((course) => (
+          <li key={course.id}>
+            <DashboardCard dashboardResource={course} showNotComplete={false} />
+          </li>
+        ))}
+        {shown
+          ? hiddenEnrollments?.map((course) => (
+              <li key={course.id}>
+                <DashboardCard
+                  dashboardResource={course}
+                  showNotComplete={false}
+                />
+              </li>
+            ))
+          : null}
+      </EnrollmentList>
+      <ShowAllContainer>
+        <Link color="red" size="medium" onClick={() => setShown(!shown)}>
+          {shown ? "Show less" : "Show all"}
+        </Link>
+      </ShowAllContainer>
+    </>
+  )
+}
+
 const EnrollmentDisplay = () => {
   const { data: enrolledCourses } = useQuery({
     ...enrollmentQueries.coursesList(),
@@ -107,23 +155,17 @@ const EnrollmentDisplay = () => {
    * The above TODO could be handled then.
    */
   const { ended, started, notStarted } = sortEnrollments(enrolledCourses || [])
-  const sorted = [...started, ...notStarted, ...ended]
+  const shownEnrollments = [...started, ...notStarted]
 
   return (
     <Wrapper>
       <Title variant="h5" component="h2">
         My Learning
       </Title>
-      <EnrollmentList itemSpacing={"16px"}>
-        {sorted?.map((course) => (
-          <DashboardCardStyled
-            key={course.id}
-            Component="li"
-            showNotComplete={false}
-            dashboardResource={course}
-          />
-        ))}
-      </EnrollmentList>
+      <EnrollmentExpandCollapse
+        shownEnrollments={shownEnrollments}
+        hiddenEnrollments={ended}
+      />
     </Wrapper>
   )
 }
