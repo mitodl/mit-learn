@@ -1,7 +1,6 @@
 import React from "react"
 import { styled, Link, SimpleMenu, SimpleMenuItem, Stack } from "ol-components"
 import NextLink from "next/link"
-import Image from "next/image"
 import { EnrollmentStatus, EnrollmentMode } from "./types"
 import type { DashboardCourse } from "./types"
 import { ActionButton, Button, ButtonLink } from "@mitodl/smoot-design"
@@ -13,7 +12,7 @@ import {
 } from "@remixicon/react"
 import { calendarDaysUntil, isInPast, NoSSR } from "ol-utilities"
 
-import CompleteCheck from "@/public/images/icons/complete-check.svg"
+import { EnrollmentStatusIndicator } from "./EnrollmentStatusIndicator"
 
 const DesktopOnly = styled.div(({ theme }) => ({
   [theme.breakpoints.up("md")]: {
@@ -221,17 +220,6 @@ const CourseStartCountdown: React.FC<{
   )
 }
 
-const Completed = styled(Image)({
-  width: "16px",
-  height: "16px",
-})
-const NotComplete = styled.div(({ theme }) => ({
-  width: "16px",
-  height: "16px",
-  borderRadius: "50%",
-  border: `1px solid ${theme.custom.colors.silverGrayLight}`,
-}))
-
 const getMenuItems = (): SimpleMenuItem[] => [
   {
     key: "placeholder1",
@@ -300,11 +288,10 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       </Stack>
       <Stack gap="8px">
         <Stack direction="row" gap="8px" alignItems="center">
-          {enrollment?.status === EnrollmentStatus.Completed ? (
-            <Completed src={CompleteCheck} alt="Completed" />
-          ) : showNotComplete ? (
-            <NotComplete data-testid="not-complete-icon" />
-          ) : null}
+          <EnrollmentStatusIndicator
+            status={enrollment?.status}
+            showNotComplete={showNotComplete}
+          />
           <CoursewareButton
             data-testid="courseware-button"
             startDate={run.startDate}

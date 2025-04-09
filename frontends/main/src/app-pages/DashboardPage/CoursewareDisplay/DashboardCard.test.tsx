@@ -260,72 +260,74 @@ describe("EnrollmentCard", () => {
 
     expect(view.container).toHaveTextContent(/starts in 5 days/i)
   })
-
-  test.each([
-    {
-      enrollmentStatus: EnrollmentStatus.Completed,
-      hasCompleted: true,
-      showNotComplete: false,
-    },
-    {
-      enrollmentStatus: EnrollmentStatus.Enrolled,
-      hasCompleted: false,
-      showNotComplete: false,
-    },
-    {
-      enrollmentStatus: EnrollmentStatus.Completed,
-      hasCompleted: true,
-      showNotComplete: true,
-    },
-    {
-      enrollmentStatus: EnrollmentStatus.Enrolled,
-      hasCompleted: false,
-      showNotComplete: true,
-    },
-  ])(
-    "Shows completed icon if course is completed",
-    ({ enrollmentStatus, hasCompleted, showNotComplete }) => {
-      const course = dashboardCourse({
-        enrollment: { status: enrollmentStatus },
-      })
-      renderWithProviders(
-        <DashboardCard
-          dashboardResource={course}
-          showNotComplete={showNotComplete}
-        />,
-      )
-
-      const completedIcon = screen.queryAllByRole("img", { name: "Completed" })
-      for (const icon of completedIcon) {
-        expect(!!icon).toBe(hasCompleted)
-      }
-    },
-  )
 })
 
-test.each([
-  { enrollmentStatus: EnrollmentStatus.NotEnrolled, showNotComplete: true },
-  { enrollmentStatus: EnrollmentStatus.NotEnrolled, showNotComplete: false },
-])(
-  "Shows empty circle icon if not enrolled and showNotComplete is true",
-  ({ enrollmentStatus, showNotComplete }) => {
-    const course = dashboardCourse({
-      enrollment: { status: enrollmentStatus },
-    })
-    renderWithProviders(
+test.each([{ showNotComplete: true }, { showNotComplete: false }])(
+  "Shows incomplete status when showNotComplete is true",
+  ({ showNotComplete }) => {
+    const enrollment = faker.helpers.arrayElement([
+      { status: EnrollmentStatus.NotEnrolled },
+      { status: EnrollmentStatus.Enrolled },
+      undefined,
+    ])
+    const course = dashboardCourse({ enrollment })
+    if (!enrollment) {
+      course.enrollment = undefined
+    }
+    const { view } = renderWithProviders(
       <DashboardCard
         dashboardResource={course}
         showNotComplete={showNotComplete}
       />,
     )
 
-    const notCompletedIconDesktop = within(
-      screen.getByTestId("enrollment-card-desktop"),
-    ).queryByTestId("not-complete-icon")
-    const notCompletedIconMobile = within(
-      screen.getByTestId("enrollment-card-mobile"),
-    ).queryByTestId("not-complete-icon")
-    expect(!!notCompletedIconDesktop).toBe(showNotComplete)
-    expect(!!notCompletedIconMobile).toBe(showNotComplete)
+    const indicator = screen.queryByTestId("enrollment-status")
+    expect(!!indicator).toBe(showNotComplete)
+
+    view.rerender(
+      <DashboardCard
+        dashboardResource={dashboardCourse({
+          enrollment: { status: EnrollmentStatus.Completed },
+        })}
+        showNotComplete={showNotComplete}
+      />,
+    )
+    // Completed should always show the indicator
+    screen.getByTestId("enrollment-status")
+  },
+)
+
+test.each([
+  {
+    status: EnrollmentStatus.Completed,
+    expectedLabel: "Completed",
+    hiddenImage: true,
+  },
+  {
+    status: EnrollmentStatus.Enrolled,
+    expectedLabel: "Enrolled",
+    hiddenImage: true,
+  },
+  { status: EnrollmentStatus.NotEnrolled, expectedLabel: "Not Enrolled" },
+])(
+  "Enrollment indicator shows meaningful text",
+  ({ status, expectedLabel, hiddenImage }) => {
+    renderWithProviders(
+      <DashboardCard
+        dashboardResource={dashboardCourse({ enrollment: { status } })}
+      />,
+    )
+    const indicator = screen.getByTestId("enrollment-status")
+    expect(indicator).toHaveTextContent(expectedLabel)
+
+    // Double check the image is aria-hidden, since we're using
+    // VisuallyHidden text instead of alt
+    const img = indicator.querySelector("img")
+    if (hiddenImage) {
+      expect(img).toHaveAttribute("aria-hidden", "true")
+      expect(img).toHaveAttribute("alt", "")
+    } else {
+      expect(img).toBe(null)
+    }
   },
 )

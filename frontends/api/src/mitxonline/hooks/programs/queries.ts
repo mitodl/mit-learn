@@ -5,7 +5,7 @@ import type {
 } from "../../generated/v0"
 
 import * as data from "./data"
-import { programsApi } from "../../clients"
+import { axiosInstance } from "../../clients"
 
 type ProgramsListRequest = ProgramsApiProgramsListV2Request & {
   /**
@@ -30,10 +30,24 @@ const programsQueries = {
       queryFn: async (): Promise<PaginatedV2ProgramList> => {
         if (process.env.NODE_ENV === "test") {
           /**
-           * For now, only use the API client during tests so we
-           * can mock it the way we normally do.
+           * ALERT! This is a temporary solution while API is under development.
+           *
+           * Ideally we would use the real API client here:
+           * `enrollmentsApi.enrollmentsList(opts)`
+           *
+           * However, we are relying on yet-to-be-implemented query parameters
+           * (namely, orgId).
+           *
+           * The generated client ignores unsupported query parameters, which
+           * inhibits testing.
            */
-          return programsApi.programsListV2(opts).then((res) => res.data)
+          const urls = await import("../../test-utils/urls")
+          return axiosInstance
+            .request({
+              url: urls.programs.programsList(opts),
+              method: "GET",
+            })
+            .then((res) => res.data)
         }
         return data.universalAiProgramData
       },
@@ -41,3 +55,4 @@ const programsQueries = {
 }
 
 export { programsQueries, programsKeys }
+export type { ProgramsListRequest }

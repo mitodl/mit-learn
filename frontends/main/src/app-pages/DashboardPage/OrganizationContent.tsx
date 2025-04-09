@@ -83,7 +83,7 @@ const OrganizationHeader: React.FC<{ org: Organization }> = ({ org }) => {
       </ImageContainer>
       <Stack gap="8px">
         <Typography variant="h3" component="h1">
-          Your {org.name} home
+          Your {org.name} Home
         </Typography>
         <Typography variant="body1">MIT courses for {org.name}</Typography>
       </Stack>
@@ -138,7 +138,7 @@ const OrgProgramDisplay: React.FC<{
   programLoading: boolean
 }> = ({ program, courses }) => {
   return (
-    <ProgramRoot>
+    <ProgramRoot data-testid="org-program-root">
       <ProgramHeader>
         <Typography variant="h5" component="h2">
           {program.title}
@@ -190,6 +190,7 @@ const OrganizationContent: React.FC<OrganizationContentProps> = ({ orgId }) => {
 
   if (user.isLoading) return "Loading"
   const organization = user.data?.organizations.find((org) => org.id === orgId)
+  console.log({ organization, orgs: user.data?.organizations })
   if (!organization) return null
 
   return (

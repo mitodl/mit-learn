@@ -3,7 +3,7 @@ import type { CourseRunEnrollment } from "../../generated/v0"
 
 import * as data from "./data"
 import * as dataForOrgs from "./dataForOrgs"
-import { enrollmentsApi } from "../../clients"
+import { axiosInstance } from "../../clients"
 
 type EnrollmentsListOptions = {
   /**
@@ -29,10 +29,24 @@ const enrollmentQueries = {
       queryFn: async (): Promise<CourseRunEnrollment[]> => {
         if (process.env.NODE_ENV === "test") {
           /**
-           * For now, only use the API client during tests so we
-           * can mock it the way we normally do.
+           * ALERT! This is a temporary solution while API is under development.
+           *
+           * Ideally we would use the real API client here:
+           * `enrollmentsApi.enrollmentsList(opts)`
+           *
+           * However, we are relying on yet-to-be-implemented query parameters
+           * (namely, orgId).
+           *
+           * The generated client ignores unsupported query parameters, which
+           * inhibits testing.
            */
-          return enrollmentsApi.enrollmentsList().then((res) => res.data)
+          const urls = await import("../../test-utils/urls")
+          return axiosInstance
+            .request({
+              url: urls.enrollment.courseEnrollment(opts),
+              method: "GET",
+            })
+            .then((res) => res.data)
         }
         await new Promise((resolve) => setTimeout(resolve, 300))
         if (opts.orgId === dataForOrgs.orgData.orgX.id) {
@@ -50,4 +64,4 @@ const enrollmentQueries = {
     }),
 }
 
-export { enrollmentQueries, enrollmentKeys }
+export { enrollmentQueries, enrollmentKeys, EnrollmentsListOptions }

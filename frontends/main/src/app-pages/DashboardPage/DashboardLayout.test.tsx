@@ -18,6 +18,7 @@ import {
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
 import { useFeatureFlagEnabled } from "posthog-js/react"
+import { mockOrgData } from "api/mitxonline-hooks/enrollment"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
@@ -57,8 +58,8 @@ describe("DashboardLayout", () => {
       organizations: [
         // For now, this is mock data matching the hardcoded data in the component
         // This should be replaced by faker data when the API is ready
-        { id: 488, name: "Organization X" },
-        { id: 522, name: "Organization Y" },
+        mockOrgData.orgX,
+        mockOrgData.orgY,
       ],
     },
     {

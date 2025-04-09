@@ -59,7 +59,7 @@ describe("EnrollmentDisplay", () => {
     ])
 
     setMockResponse.get(
-      mitxonline.urls.enrollment.courseEnrollment,
+      mitxonline.urls.enrollment.courseEnrollment(),
       mitxonlineCourseEnrollments,
     )
 
