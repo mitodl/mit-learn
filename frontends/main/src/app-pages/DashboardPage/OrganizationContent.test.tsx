@@ -8,6 +8,7 @@ import { mockOrgData } from "api/mitxonline-hooks/enrollment"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 
 const makeCourseEnrollment = factories.enrollment.courseEnrollment
+const makeGrade = factories.enrollment.grade
 const makeProgram = factories.programs.program
 const makeCourses = factories.courses.courses
 
@@ -85,7 +86,7 @@ describe("OrganizationContent", () => {
     const enrollments = [
       makeCourseEnrollment({
         run: { course: { id: coursesA[0].id, title: coursesA[0].title } },
-        grades: [{ passed: true }],
+        grades: [makeGrade({ passed: true })],
       }),
       makeCourseEnrollment({
         run: { course: { id: coursesA[1].id, title: coursesA[1].title } },

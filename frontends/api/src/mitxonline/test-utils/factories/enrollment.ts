@@ -1,12 +1,27 @@
 import { faker } from "@faker-js/faker/locale/en"
 import { mergeOverrides } from "ol-test-utilities"
 import type { PartialFactory } from "ol-test-utilities"
-import type { CourseRunEnrollment } from "../../generated/v0"
+import type { CourseRunEnrollment, CourseRunGrade } from "../../generated/v0"
 import { UniqueEnforcer } from "enforce-unique"
 
 const uniqueEnrollmentId = new UniqueEnforcer()
 const uniqueRunId = new UniqueEnforcer()
 const uniqueCourseId = new UniqueEnforcer()
+
+const grade: PartialFactory<CourseRunGrade> = (overrides = {}) => {
+  const defaults: CourseRunGrade = {
+    grade: faker.number.float({ min: 0, max: 1 }),
+    // should be correlated with grade, but probably no harm for test data
+    grade_percent: faker.number.int({ min: 0, max: 100 }),
+    letter_grade: faker.helpers.arrayElement([
+      null,
+      faker.string.alpha({ length: 1, casing: "upper" }),
+    ]),
+    passed: faker.datatype.boolean(),
+    set_by_admin: faker.datatype.boolean(),
+  }
+  return mergeOverrides<CourseRunGrade>(defaults, overrides)
+}
 
 const courseEnrollment: PartialFactory<CourseRunEnrollment> = (
   overrides = {},
@@ -83,4 +98,4 @@ const courseEnrollments = (count: number): CourseRunEnrollment[] => {
   return new Array(count).fill(null).map(() => courseEnrollment())
 }
 
-export { courseEnrollment, courseEnrollments }
+export { courseEnrollment, courseEnrollments, grade }
