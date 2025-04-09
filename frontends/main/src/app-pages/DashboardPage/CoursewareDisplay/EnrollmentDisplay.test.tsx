@@ -78,7 +78,7 @@ describe("EnrollmentDisplay", () => {
 
     const cards = await screen.findAllByTestId("enrollment-card")
     expect(cards.length).toBe(7)
-    return
+
     const expectedTitled = [
       ...mitxonlineCourses.started,
       ...mitxonlineCourses.notStarted,

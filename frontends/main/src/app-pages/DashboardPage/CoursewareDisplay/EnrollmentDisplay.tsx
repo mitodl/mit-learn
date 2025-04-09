@@ -14,6 +14,10 @@ const Wrapper = styled.div(({ theme }) => ({
   boxShadow: "0px 4px 8px 0px rgba(19, 20, 21, 0.08)",
   borderRadius: "8px",
 }))
+const DashboardCardStyled = styled(DashboardCard)({
+  borderRadius: "8px",
+  boxShadow: "0px 1px 6px 0px rgba(3, 21, 45, 0.05)",
+})
 
 const alphabeticalSort = (a: DashboardCourse, b: DashboardCourse) =>
   a.title.localeCompare(b.title)
@@ -78,9 +82,12 @@ const EnrollmentDisplay = () => {
       </Typography>
       <PlainList itemSpacing={"16px"}>
         {sorted?.map((course) => (
-          <li key={course.id}>
-            <DashboardCard dashboardResource={course} showNotComplete={false} />
-          </li>
+          <DashboardCardStyled
+            key={course.id}
+            Component="li"
+            showNotComplete={false}
+            dashboardResource={course}
+          />
         ))}
       </PlainList>
     </Wrapper>

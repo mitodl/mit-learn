@@ -6,6 +6,40 @@ import { faker } from "@faker-js/faker/locale/en"
 import moment from "moment"
 import { EnrollmentMode, EnrollmentStatus } from "./types"
 
+const pastDashboardCourse: typeof dashboardCourse = (...overrides) => {
+  return dashboardCourse(
+    {
+      run: {
+        startDate: faker.date.past().toISOString(),
+        endDate: faker.date.past().toISOString(),
+      },
+    },
+    ...overrides,
+  )
+}
+const currentDashboardCourse: typeof dashboardCourse = (...overrides) => {
+  return dashboardCourse(
+    {
+      run: {
+        startDate: faker.date.past().toISOString(),
+        endDate: faker.date.future().toISOString(),
+      },
+    },
+    ...overrides,
+  )
+}
+const futureDashboardCourse: typeof dashboardCourse = (...overrides) => {
+  return dashboardCourse(
+    {
+      run: {
+        startDate: faker.date.future().toISOString(),
+        endDate: faker.date.future().toISOString(),
+      },
+    },
+    ...overrides,
+  )
+}
+
 describe("EnrollmentCard", () => {
   test("It shows course title with link to marketing url", () => {
     const course = dashboardCourse()
@@ -17,47 +51,84 @@ describe("EnrollmentCard", () => {
     expect(courseLink).toHaveAttribute("href", course.marketingUrl)
   })
 
-  test("Courseware button is disabled if course has not started", () => {
-    const course = dashboardCourse({
-      run: {
-        startDate: faker.date.future().toISOString(),
-      },
-    })
-    renderWithProviders(<DashboardCard dashboardResource={course} />)
-    const coursewareButton = screen.getByRole("button", {
-      name: "Continue Course",
-      hidden: true,
-    })
-    expect(coursewareButton).toBeDisabled()
+  test("Accepts a classname", () => {
+    const course = dashboardCourse()
+    const { view } = renderWithProviders(
+      <DashboardCard
+        dashboardResource={course}
+        className="some-custom classes"
+      />,
+    )
+    expect(view.container.firstChild).toHaveClass("some-custom")
+    expect(view.container.firstChild).toHaveClass("classes")
   })
 
-  test("Courseware button is enabled if course has started AND NOT ended", () => {
-    const course = dashboardCourse({
-      run: {
-        startDate: faker.date.past().toISOString(),
-        endDate: faker.date.future().toISOString(),
-      },
-    })
-    renderWithProviders(<DashboardCard dashboardResource={course} />)
-    const coursewareLink = screen.getByRole("link", {
-      name: "Continue Course",
-    })
-    expect(coursewareLink).toHaveAttribute("href", course.run.coursewareUrl)
-  })
+  test.each([
+    {
+      course: pastDashboardCourse(),
+      expected: { enabled: true },
+      case: "past",
+    },
+    {
+      course: currentDashboardCourse(),
+      expected: { enabled: true },
+      case: "current",
+    },
+    {
+      course: futureDashboardCourse(),
+      expected: { enabled: false },
+      label: "future",
+    },
+  ])(
+    "Courseware CTA and is enabled/disabled (enabled=$expected.enabled) based on date (case: $case)",
+    ({ course, expected }) => {
+      renderWithProviders(<DashboardCard dashboardResource={course} />)
+      const coursewareCTA = screen.getByTestId("courseware-button")
 
-  test("Courseware button says 'View Course' if course has ended", () => {
-    const course = dashboardCourse({
-      run: {
-        startDate: faker.date.past().toISOString(),
-        endDate: faker.date.past().toISOString(),
-      },
-    })
-    renderWithProviders(<DashboardCard dashboardResource={course} />)
-    const coursewareLink = screen.getByRole("link", {
-      name: "View Course",
-    })
-    expect(coursewareLink).toHaveAttribute("href", course.run.coursewareUrl)
-  })
+      if (expected.enabled) {
+        expect(coursewareCTA).toBeEnabled()
+      } else {
+        expect(coursewareCTA).toBeDisabled()
+      }
+    },
+  )
+
+  test.each([
+    {
+      course: pastDashboardCourse(),
+      expected: { labelPrefix: "View" },
+      case: "past",
+    },
+    {
+      course: currentDashboardCourse(),
+      expected: { labelPrefix: "Continue" },
+      case: "current",
+    },
+    {
+      course: futureDashboardCourse(),
+      expected: { labelPrefix: "Continue" },
+      label: "future",
+    },
+  ])(
+    "Courseware CTA shows correct label based on courseNoun prop and dates (case $case)",
+    ({ course, expected }) => {
+      const { view } = renderWithProviders(
+        <DashboardCard dashboardResource={course} />,
+      )
+      const coursewareCTA = screen.getByTestId("courseware-button")
+
+      expect(coursewareCTA).toHaveTextContent(`${expected.labelPrefix} Course`)
+
+      const courseNoun = faker.word.noun()
+      view.rerender(
+        <DashboardCard courseNoun={courseNoun} dashboardResource={course} />,
+      )
+
+      expect(coursewareCTA).toHaveTextContent(
+        `${expected.labelPrefix} ${courseNoun}`,
+      )
+    },
+  )
 
   test.each([
     {
@@ -89,12 +160,39 @@ describe("EnrollmentCard", () => {
       expectation: { visible: false },
     },
   ])(
-    "Shows upgrade banner if and only if run.canUpgrade and not already upgraded (canUpgrade: $overrides.canUpgrade)",
+    "Shows upgrade banner based on run.canUpgrade and not already upgraded (canUpgrade: $overrides.canUpgrade)",
     ({ overrides, expectation }) => {
       const course = dashboardCourse(overrides)
       renderWithProviders(<DashboardCard dashboardResource={course} />)
       const upgradeRoot = screen.queryByTestId("upgrade-root")
       expect(!!upgradeRoot).toBe(expectation.visible)
+    },
+  )
+
+  test.each([
+    { offerUpgrade: true, expected: { visible: true } },
+    { offerUpgrade: false, expected: { visible: false } },
+  ])(
+    "Never shows upgrade banner if `offerUpgrade` is false",
+    ({ offerUpgrade, expected }) => {
+      const course = dashboardCourse({
+        run: {
+          canUpgrade: true,
+          certificateUpgradeDeadline: faker.date.future().toISOString(),
+          certificateUpgradePrice: faker.commerce.price(),
+        },
+        enrollment: { mode: EnrollmentMode.Audit },
+      })
+
+      renderWithProviders(
+        <DashboardCard
+          dashboardResource={course}
+          offerUpgrade={offerUpgrade}
+        />,
+      )
+
+      const upgradeRoot = screen.queryByTestId("upgrade-root")
+      expect(!!upgradeRoot).toBe(expected.visible)
     },
   )
 
@@ -139,41 +237,74 @@ describe("EnrollmentCard", () => {
 
     expect(view.container).toHaveTextContent(/starts in 5 days/i)
   })
-
-  test.each([
-    { enrollmentStatus: EnrollmentStatus.Completed, hasCompleted: true },
-    { enrollmentStatus: EnrollmentStatus.Enrolled, hasCompleted: false },
-  ])(
-    "Shows completed icon if course is completed",
-    ({ enrollmentStatus, hasCompleted }) => {
-      const course = dashboardCourse({
-        enrollment: { status: enrollmentStatus },
-      })
-      renderWithProviders(<DashboardCard dashboardResource={course} />)
-
-      const completedIcon = screen.queryByRole("img", { name: "Completed" })
-      expect(!!completedIcon).toBe(hasCompleted)
-    },
-  )
 })
 
-test.each([
-  { enrollmentStatus: EnrollmentStatus.NotEnrolled, showNotComplete: true },
-  { enrollmentStatus: EnrollmentStatus.NotEnrolled, showNotComplete: false },
-])(
-  "Shows empty circle icon if not enrolled and showNotComplete is true",
-  ({ enrollmentStatus, showNotComplete }) => {
-    const course = dashboardCourse({
-      enrollment: { status: enrollmentStatus },
-    })
-    renderWithProviders(
+test.each([{ showNotComplete: true }, { showNotComplete: false }])(
+  "Shows incomplete status when showNotComplete is true",
+  ({ showNotComplete }) => {
+    const enrollment = faker.helpers.arrayElement([
+      { status: EnrollmentStatus.NotEnrolled },
+      { status: EnrollmentStatus.Enrolled },
+      undefined,
+    ])
+    const course = dashboardCourse({ enrollment })
+    if (!enrollment) {
+      course.enrollment = undefined
+    }
+    const { view } = renderWithProviders(
       <DashboardCard
         dashboardResource={course}
         showNotComplete={showNotComplete}
       />,
     )
 
-    const notCompletedIcon = screen.queryByTestId("not-complete-icon")
-    expect(!!notCompletedIcon).toBe(showNotComplete)
+    const indicator = screen.queryByTestId("enrollment-status")
+    expect(!!indicator).toBe(showNotComplete)
+
+    view.rerender(
+      <DashboardCard
+        dashboardResource={dashboardCourse({
+          enrollment: { status: EnrollmentStatus.Completed },
+        })}
+        showNotComplete={showNotComplete}
+      />,
+    )
+    // Completed should always show the indicator
+    screen.getByTestId("enrollment-status")
+  },
+)
+
+test.each([
+  {
+    status: EnrollmentStatus.Completed,
+    expectedLabel: "Completed",
+    hiddenImage: true,
+  },
+  {
+    status: EnrollmentStatus.Enrolled,
+    expectedLabel: "Enrolled",
+    hiddenImage: true,
+  },
+  { status: EnrollmentStatus.NotEnrolled, expectedLabel: "Not Enrolled" },
+])(
+  "Enrollment indicator shows meaningful text",
+  ({ status, expectedLabel, hiddenImage }) => {
+    renderWithProviders(
+      <DashboardCard
+        dashboardResource={dashboardCourse({ enrollment: { status } })}
+      />,
+    )
+    const indicator = screen.getByTestId("enrollment-status")
+    expect(indicator).toHaveTextContent(expectedLabel)
+
+    // Double check the image is aria-hidden, since we're using
+    // VisuallyHidden text instead of alt
+    const img = indicator.querySelector("img")
+    if (hiddenImage) {
+      expect(img).toHaveAttribute("aria-hidden", "true")
+      expect(img).toHaveAttribute("alt", "")
+    } else {
+      expect(img).toBe(null)
+    }
   },
 )
