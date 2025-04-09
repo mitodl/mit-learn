@@ -323,7 +323,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         flex={1}
         width="100%"
       >
-        <Stack direction="column" gap="8px">
+        <Stack direction="column" gap="8px" flex={1}>
           <TitleLink size="medium" color="black" href={marketingUrl}>
             {title}
           </TitleLink>
