@@ -302,7 +302,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   )
 
   const mobileLayout = (
-    <CardRoot data-testid="enrollment-card">
+    <CardRoot data-testid="enrollment-card-mobile">
       <Stack
         direction="row"
         justifyContent="space-between"
