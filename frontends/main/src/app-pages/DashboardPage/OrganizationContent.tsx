@@ -190,7 +190,7 @@ const OrganizationContent: React.FC<OrganizationContentProps> = ({ orgId }) => {
 
   if (user.isLoading) return "Loading"
   const organization = user.data?.organizations.find((org) => org.id === orgId)
-  console.log({ organization, orgs: user.data?.organizations })
+
   if (!organization) return null
 
   return (

@@ -70,12 +70,12 @@ describe("OrganizationContent", () => {
     expect(programs.length).toBe(2)
 
     await within(programs[0]).findByRole("heading", { name: programA.title })
-    const cardsA = within(programs[0]).getAllByTestId("enrollment-card")
+    const cardsA = within(programs[0]).getAllByTestId("enrollment-card-desktop")
     coursesA.forEach((course, i) => {
       expect(cardsA[i]).toHaveTextContent(course.title)
     })
     await within(programs[1]).findByRole("heading", { name: programB.title })
-    const cardsB = within(programs[1]).getAllByTestId("enrollment-card")
+    const cardsB = within(programs[1]).getAllByTestId("enrollment-card-desktop")
     coursesB.forEach((course, i) => {
       expect(cardsB[i]).toHaveTextContent(course.title)
     })
@@ -100,7 +100,9 @@ describe("OrganizationContent", () => {
     renderWithProviders(<OrganizationContent orgId={orgId} />)
 
     const [programElA] = await screen.findAllByTestId("org-program-root")
-    const cards = await within(programElA).findAllByTestId("enrollment-card")
+    const cards = await within(programElA).findAllByTestId(
+      "enrollment-card-desktop",
+    )
     expect(cards.length).toBeGreaterThan(0)
     cards.forEach((card, i) => {
       const course = coursesA[i]

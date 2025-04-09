@@ -14,41 +14,37 @@ import { calendarDaysUntil, isInPast, NoSSR } from "ol-utilities"
 
 import { EnrollmentStatusIndicator } from "./EnrollmentStatusIndicator"
 
-const DesktopOnly = styled.div(({ theme }) => ({
-  [theme.breakpoints.up("md")]: {
-    display: "list-item",
+const CardRoot = styled.div<{
+  screenSize: "desktop" | "mobile"
+}>(({ theme, screenSize }) => [
+  {
+    position: "relative",
+    border: `1px solid ${theme.custom.colors.lightGray2}`,
+    backgroundColor: theme.custom.colors.white,
+    padding: "16px",
+    display: "flex",
+    gap: "8px",
+    alignItems: "center",
+    [theme.breakpoints.down("md")]: {
+      border: "none",
+      borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
+      borderRadius: "0px",
+      boxShadow: "none",
+      flexDirection: "column",
+      gap: "16px",
+    },
   },
-  [theme.breakpoints.down("md")]: {
-    display: "none",
+  screenSize === "desktop" && {
+    [theme.breakpoints.down("md")]: {
+      display: "none",
+    },
   },
-}))
-
-const MobileOnly = styled.div(({ theme }) => ({
-  [theme.breakpoints.down("md")]: {
-    display: "list-item",
+  screenSize === "mobile" && {
+    [theme.breakpoints.up("md")]: {
+      display: "none",
+    },
   },
-  [theme.breakpoints.up("md")]: {
-    display: "none",
-  },
-}))
-
-const CardRoot = styled.div(({ theme }) => ({
-  position: "relative",
-  border: `1px solid ${theme.custom.colors.lightGray2}`,
-  backgroundColor: theme.custom.colors.white,
-  padding: "16px",
-  display: "flex",
-  gap: "8px",
-  alignItems: "center",
-  [theme.breakpoints.down("md")]: {
-    border: "none",
-    borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
-    borderRadius: "0px",
-    boxShadow: "none",
-    flexDirection: "column",
-    gap: "16px",
-  },
-}))
+])
 
 const TitleLink = styled(Link)(({ theme }) => ({
   [theme.breakpoints.down("md")]: {
@@ -266,7 +262,12 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     />
   )
   const desktopLayout = (
-    <CardRoot data-testid="enrollment-card-desktop">
+    <CardRoot
+      screenSize="desktop"
+      data-testid="enrollment-card-desktop"
+      as={Component}
+      className={className}
+    >
       <Stack justifyContent="start" alignItems="stretch" gap="8px" flex={1}>
         <TitleLink size="medium" color="black" href={marketingUrl}>
           {title}
@@ -309,7 +310,12 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   )
 
   const mobileLayout = (
-    <CardRoot data-testid="enrollment-card-mobile">
+    <CardRoot
+      screenSize="mobile"
+      data-testid="enrollment-card-mobile"
+      as={Component}
+      className={className}
+    >
       <Stack
         direction="row"
         justifyContent="space-between"
@@ -327,7 +333,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
               View Certificate
             </SubtitleLink>
           ) : null}
-          {enrollment?.mode !== EnrollmentMode.Verified ? (
+          {enrollment?.mode !== EnrollmentMode.Verified && offerUpgrade ? (
             <UpgradeBanner
               data-testid="upgrade-root"
               canUpgrade={run.canUpgrade}
@@ -367,12 +373,8 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   )
   return (
     <>
-      <DesktopOnly as={Component} className={className}>
-        {desktopLayout}
-      </DesktopOnly>
-      <MobileOnly as={Component} className={className}>
-        {mobileLayout}
-      </MobileOnly>
+      {desktopLayout}
+      {mobileLayout}
     </>
   )
 }

@@ -40,29 +40,43 @@ const futureDashboardCourse: typeof dashboardCourse = (...overrides) => {
   )
 }
 
-describe("EnrollmentCard", () => {
+describe.each([
+  { display: "desktop", testId: "enrollment-card-desktop" },
+  { display: "mobile", testId: "enrollment-card-mobile" },
+])("EnrollmentCard $display", ({ testId }) => {
+  const getCard = () => screen.getByTestId(testId)
+
   test("It shows course title with link to marketing url", () => {
     const course = dashboardCourse()
     renderWithProviders(<DashboardCard dashboardResource={course} />)
 
-    const courseLinks = screen.getAllByRole("link", {
+    const card = getCard()
+
+    const courseLink = within(card).getByRole("link", {
       name: course.title,
     })
-    for (const courseLink of courseLinks) {
-      expect(courseLink).toHaveAttribute("href", course.marketingUrl)
-    }
+    expect(courseLink).toHaveAttribute("href", course.marketingUrl)
   })
 
   test("Accepts a classname", () => {
     const course = dashboardCourse()
-    const { view } = renderWithProviders(
+    const TheComponent = faker.helpers.arrayElement([
+      "li",
+      "div",
+      "span",
+      "article",
+    ])
+    renderWithProviders(
       <DashboardCard
+        Component={TheComponent}
         dashboardResource={course}
         className="some-custom classes"
       />,
     )
-    expect(view.container.firstChild).toHaveClass("some-custom")
-    expect(view.container.firstChild).toHaveClass("classes")
+    const card = getCard()
+    expect(card.tagName).toBe(TheComponent.toUpperCase())
+    expect(card).toHaveClass("some-custom")
+    expect(card).toHaveClass("classes")
   })
 
   test.each([
@@ -85,20 +99,13 @@ describe("EnrollmentCard", () => {
     "Courseware CTA and is enabled/disabled (enabled=$expected.enabled) based on date (case: $case)",
     ({ course, expected }) => {
       renderWithProviders(<DashboardCard dashboardResource={course} />)
-      const mobileCTA = within(
-        screen.getByTestId("enrollment-card-desktop"),
-      ).getByTestId("courseware-button")
-
-      const desktopCTA = within(
-        screen.getByTestId("enrollment-card-desktop"),
-      ).getByTestId("courseware-button")
+      const card = getCard()
+      const coursewareCTA = within(card).getByTestId("courseware-button")
 
       if (expected.enabled) {
-        expect(mobileCTA).toBeEnabled()
-        expect(desktopCTA).toBeEnabled()
+        expect(coursewareCTA).toBeEnabled()
       } else {
-        expect(mobileCTA).toBeEnabled()
-        expect(desktopCTA).toBeEnabled()
+        expect(coursewareCTA).toBeDisabled()
       }
     },
   )
@@ -125,7 +132,8 @@ describe("EnrollmentCard", () => {
       const { view } = renderWithProviders(
         <DashboardCard dashboardResource={course} />,
       )
-      const coursewareCTA = screen.getByTestId("courseware-button")
+      const card = getCard()
+      const coursewareCTA = within(card).getByTestId("courseware-button")
 
       expect(coursewareCTA).toHaveTextContent(`${expected.labelPrefix} Course`)
 
@@ -174,14 +182,10 @@ describe("EnrollmentCard", () => {
     ({ overrides, expectation }) => {
       const course = dashboardCourse(overrides)
       renderWithProviders(<DashboardCard dashboardResource={course} />)
-      const upgradeRootDesktop = within(
-        screen.getByTestId("enrollment-card-desktop"),
-      ).queryByTestId("upgrade-root")
-      const upgradeRootMobile = within(
-        screen.getByTestId("enrollment-card-mobile"),
-      ).queryByTestId("upgrade-root")
-      expect(!!upgradeRootDesktop).toBe(expectation.visible)
-      expect(!!upgradeRootMobile).toBe(expectation.visible)
+      const card = getCard()
+      const upgradeRoot = within(card).queryByTestId("upgrade-root")
+
+      expect(!!upgradeRoot).toBe(expectation.visible)
     },
   )
 
@@ -206,8 +210,9 @@ describe("EnrollmentCard", () => {
           offerUpgrade={offerUpgrade}
         />,
       )
+      const card = getCard()
 
-      const upgradeRoot = screen.queryByTestId("upgrade-root")
+      const upgradeRoot = within(card).queryByTestId("upgrade-root")
       expect(!!upgradeRoot).toBe(expected.visible)
     },
   )
@@ -230,21 +235,14 @@ describe("EnrollmentCard", () => {
     })
 
     renderWithProviders(<DashboardCard dashboardResource={course} />)
+    const card = getCard()
+    const upgradeRoot = within(card).getByTestId("upgrade-root")
 
-    const upgradeRootDesktop = within(
-      screen.getByTestId("enrollment-card-desktop"),
-    ).queryByTestId("upgrade-root")
-    const upgradeRootMobile = within(
-      screen.getByTestId("enrollment-card-mobile"),
-    ).queryByTestId("upgrade-root")
-    for (const upgradeRoot of [upgradeRootDesktop, upgradeRootMobile]) {
-      expect(upgradeRoot).toBeVisible()
-
-      expect(upgradeRoot).toHaveTextContent(/5 days remaining/)
-      expect(upgradeRoot).toHaveTextContent(
-        `Add a certificate for $${certificateUpgradePrice}`,
-      )
-    }
+    expect(upgradeRoot).toBeVisible()
+    expect(upgradeRoot).toHaveTextContent(/5 days remaining/)
+    expect(upgradeRoot).toHaveTextContent(
+      `Add a certificate for $${certificateUpgradePrice}`,
+    )
   })
 
   test("Shows number of days until course starts", () => {
@@ -254,11 +252,10 @@ describe("EnrollmentCard", () => {
       .add(3, "hours")
       .toISOString()
     const enrollment = dashboardCourse({ run: { startDate } })
-    const { view } = renderWithProviders(
-      <DashboardCard dashboardResource={enrollment} />,
-    )
+    renderWithProviders(<DashboardCard dashboardResource={enrollment} />)
+    const card = getCard()
 
-    expect(view.container).toHaveTextContent(/starts in 5 days/i)
+    expect(card).toHaveTextContent(/starts in 5 days/i)
   })
 
   test.each([{ showNotComplete: true }, { showNotComplete: false }])(
@@ -279,8 +276,9 @@ describe("EnrollmentCard", () => {
           showNotComplete={showNotComplete}
         />,
       )
+      const card = getCard()
 
-      const indicator = screen.queryByTestId("enrollment-status")
+      const indicator = within(card).queryByTestId("enrollment-status")
       expect(!!indicator).toBe(showNotComplete)
 
       view.rerender(
@@ -292,7 +290,7 @@ describe("EnrollmentCard", () => {
         />,
       )
       // Completed should always show the indicator
-      screen.getByTestId("enrollment-status")
+      within(card).getByTestId("enrollment-status")
     },
   )
 
@@ -316,7 +314,8 @@ describe("EnrollmentCard", () => {
           dashboardResource={dashboardCourse({ enrollment: { status } })}
         />,
       )
-      const indicator = screen.getByTestId("enrollment-status")
+      const card = getCard()
+      const indicator = within(card).getByTestId("enrollment-status")
       expect(indicator).toHaveTextContent(expectedLabel)
 
       // Double check the image is aria-hidden, since we're using
