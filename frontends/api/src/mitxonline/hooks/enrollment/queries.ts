@@ -64,4 +64,5 @@ const enrollmentQueries = {
     }),
 }
 
-export { enrollmentQueries, enrollmentKeys, EnrollmentsListOptions }
+export { enrollmentQueries, enrollmentKeys }
+export type { EnrollmentsListOptions }

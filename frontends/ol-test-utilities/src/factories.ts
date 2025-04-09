@@ -13,7 +13,7 @@ interface PaginatedResult<T> {
 }
 
 export const makePaginatedFactory =
-  <T>(makeResult: Factory<T>) =>
+  <T>(makeResult: Factory<T> | PartialFactory<T>) =>
   (
     { count, pageSize }: { count: number; pageSize?: number },
     {
