@@ -5,13 +5,14 @@ from django.conf import settings
 
 from learning_resources.utils import get_web_driver
 
-log = logging.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class BaseScraper:
     use_webdriver = settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER
 
-    def __init__(self):
+    def __init__(self, start_url):
+        self.start_url = start_url
         if self.use_webdriver:
             self.driver = get_web_driver()
 
@@ -26,13 +27,13 @@ class BaseScraper:
                     if response.ok:
                         return response.text
                 except requests.exceptions.RequestException:
-                    log.exception("Error fetching page from %s", url)
+                    logger.exception("Error fetching page from %s", url)
         return None
 
-    def start(self, url):
-        page_content = self.fetch_page(url)
+    def scrape(self):
+        page_content = self.fetch_page(self.start_url)
         if page_content:
             return page_content
         else:
-            log.error("Failed to fetch page content from %s", url)
+            logger.error("Failed to fetch page content from %s", self.start_url)
         return None
