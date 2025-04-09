@@ -53,6 +53,12 @@ const CardRoot = styled.div(({ theme }) => ({
   },
 }))
 
+const TitleLink = styled(Link)(({ theme }) => ({
+  [theme.breakpoints.down("md")]: {
+    maxWidth: "calc(100% - 16px)",
+  },
+}))
+
 const MenuButton = styled(ActionButton)(({ theme }) => ({
   marginLeft: "-8px",
   [theme.breakpoints.down("md")]: {
@@ -262,9 +268,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   const desktopLayout = (
     <CardRoot data-testid="enrollment-card-desktop">
       <Stack justifyContent="start" alignItems="stretch" gap="8px" flex={1}>
-        <Link size="medium" color="black" href={marketingUrl}>
+        <TitleLink size="medium" color="black" href={marketingUrl}>
           {title}
-        </Link>
+        </TitleLink>
         {enrollment?.status === EnrollmentStatus.Completed ? (
           <SubtitleLink href="#">
             {<RiAwardLine size="16px" />}
@@ -311,9 +317,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         width="100%"
       >
         <Stack direction="column" gap="8px">
-          <Link size="medium" color="black" href={marketingUrl}>
+          <TitleLink size="medium" color="black" href={marketingUrl}>
             {title}
-          </Link>
+          </TitleLink>
           {enrollment?.status === EnrollmentStatus.Completed ? (
             <SubtitleLink href="#">
               {<RiAwardLine size="16px" />}
