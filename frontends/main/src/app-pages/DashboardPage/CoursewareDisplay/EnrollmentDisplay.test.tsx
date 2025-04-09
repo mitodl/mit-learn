@@ -75,8 +75,10 @@ describe("EnrollmentDisplay", () => {
 
     screen.getByRole("heading", { name: "My Learning" })
 
-    const cards = await screen.findAllByTestId("enrollment-card")
-    expect(cards.length).toBe(14)
+    const desktopCards = await screen.findAllByTestId("enrollment-card-desktop")
+    const mobileCards = await screen.findAllByTestId("enrollment-card-mobile")
+    expect(desktopCards.length).toBe(7)
+    expect(mobileCards.length).toBe(7)
     const expectedTitles = [
       ...mitxonlineCourses.started,
       ...mitxonlineCourses.notStarted,
@@ -84,10 +86,10 @@ describe("EnrollmentDisplay", () => {
     ].map((e) => e.run.title)
 
     for (const expectedTitle of expectedTitles) {
-      const matchingCards = cards.filter((card) =>
+      const cards = [...desktopCards, ...mobileCards].filter((card) =>
         card.textContent?.includes(expectedTitle),
       )
-      expect(matchingCards.length).toBe(2)
+      expect(cards.length).toBe(2)
     }
   })
 })

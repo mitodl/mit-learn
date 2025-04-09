@@ -101,10 +101,10 @@ describe("EnrollmentCard", () => {
     ({ overrides, expectation }) => {
       const course = dashboardCourse(overrides)
       renderWithProviders(<DashboardCard dashboardResource={course} />)
-      const upgradeRoots = screen.queryAllByTestId("upgrade-root")
-      for (const upgradeRoot of upgradeRoots) {
-        expect(!!upgradeRoot).toBe(expectation.visible)
-      }
+      const upgradeRootDesktop = screen.queryByTestId("upgrade-root-desktop")
+      const upgradeRootMobile = screen.queryByTestId("upgrade-root-mobile")
+      expect(!!upgradeRootDesktop).toBe(expectation.visible)
+      expect(!!upgradeRootMobile).toBe(expectation.visible)
     },
   )
 
@@ -127,8 +127,9 @@ describe("EnrollmentCard", () => {
 
     renderWithProviders(<DashboardCard dashboardResource={course} />)
 
-    const upgradeRoots = screen.getAllByTestId("upgrade-root")
-    for (const upgradeRoot of upgradeRoots) {
+    const upgradeRootDesktop = screen.queryByTestId("upgrade-root-desktop")
+    const upgradeRootMobile = screen.queryByTestId("upgrade-root-mobile")
+    for (const upgradeRoot of [upgradeRootDesktop, upgradeRootMobile]) {
       expect(upgradeRoot).toBeVisible()
 
       expect(upgradeRoot).toHaveTextContent(/5 days remaining/)
@@ -210,9 +211,13 @@ test.each([
       />,
     )
 
-    const notCompletedIcons = screen.queryAllByTestId("not-complete-icon")
-    for (const notCompletedIcon of notCompletedIcons) {
-      expect(!!notCompletedIcon).toBe(showNotComplete)
-    }
+    const notCompletedIconDesktop = screen.queryByTestId(
+      "not-complete-icon-desktop",
+    )
+    const notCompletedIconMobile = screen.queryByTestId(
+      "not-complete-icon-mobile",
+    )
+    expect(!!notCompletedIconDesktop).toBe(showNotComplete)
+    expect(!!notCompletedIconMobile).toBe(showNotComplete)
   },
 )

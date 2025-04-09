@@ -260,7 +260,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     />
   )
   const desktopLayout = (
-    <CardRoot data-testid="enrollment-card">
+    <CardRoot data-testid="enrollment-card-desktop">
       <Stack justifyContent="start" alignItems="stretch" gap="8px" flex={1}>
         <Link size="medium" color="black" href={marketingUrl}>
           {title}
@@ -273,7 +273,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         ) : null}
         {enrollment?.mode !== EnrollmentMode.Verified ? (
           <UpgradeBanner
-            data-testid="upgrade-root"
+            data-testid="upgrade-root-desktop"
             canUpgrade={run.canUpgrade}
             certificateUpgradeDeadline={run.certificateUpgradeDeadline}
             certificateUpgradePrice={run.certificateUpgradePrice}
@@ -285,7 +285,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
           {enrollment?.status === EnrollmentStatus.Completed ? (
             <Completed src={CompleteCheck} alt="Completed" />
           ) : showNotComplete ? (
-            <NotComplete data-testid="not-complete-icon" />
+            <NotComplete data-testid="not-complete-icon-desktop" />
           ) : null}
           <CoursewareButton
             startDate={run.startDate}
@@ -302,7 +302,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   )
 
   const mobileLayout = (
-    <CardRoot data-testid="enrollment-card">
+    <CardRoot data-testid="enrollment-card-mobile">
       <Stack
         direction="row"
         justifyContent="space-between"
@@ -322,7 +322,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
           ) : null}
           {enrollment?.mode !== EnrollmentMode.Verified ? (
             <UpgradeBanner
-              data-testid="upgrade-root"
+              data-testid="upgrade-root-mobile"
               canUpgrade={run.canUpgrade}
               certificateUpgradeDeadline={run.certificateUpgradeDeadline}
               certificateUpgradePrice={run.certificateUpgradePrice}
@@ -346,7 +346,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
           {enrollment?.status === EnrollmentStatus.Completed ? (
             <Completed src={CompleteCheck} alt="Completed" />
           ) : showNotComplete ? (
-            <NotComplete data-testid="not-complete-icon" />
+            <NotComplete data-testid="not-complete-icon-mobile" />
           ) : null}
           <CoursewareButton
             startDate={run.startDate}
