@@ -1,5 +1,10 @@
 import React from "react"
-import { renderWithProviders, screen, setMockResponse } from "@/test-utils"
+import {
+  renderWithProviders,
+  screen,
+  setMockResponse,
+  user,
+} from "@/test-utils"
 import { EnrollmentDisplay } from "./EnrollmentDisplay"
 import * as mitxonline from "api/mitxonline-test-utils"
 import moment from "moment"
@@ -73,6 +78,25 @@ describe("EnrollmentDisplay", () => {
   test("Renders the expected cards", async () => {
     const { mitxonlineCourses } = setupApis()
     renderWithProviders(<EnrollmentDisplay />)
+
+    screen.getByRole("heading", { name: "My Learning" })
+
+    const cards = await screen.findAllByTestId("enrollment-card-desktop")
+    const expectedTitles = [
+      ...mitxonlineCourses.started,
+      ...mitxonlineCourses.notStarted,
+    ].map((e) => e.run.title)
+
+    expectedTitles.forEach((title, i) => {
+      expect(cards[i]).toHaveTextContent(title)
+    })
+  })
+
+  test("Clicking show all reveals ended courses", async () => {
+    const { mitxonlineCourses } = setupApis()
+    renderWithProviders(<EnrollmentDisplay />)
+
+    await user.click(screen.getByText("Show all"))
 
     screen.getByRole("heading", { name: "My Learning" })
 
