@@ -17,4 +17,5 @@ class MainConfig(AppConfig):
 
         # Initialize OpenTelemetry
         from main.telemetry import configure_opentelemetry
+
         configure_opentelemetry()
