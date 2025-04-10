@@ -71,10 +71,10 @@ const OrganizationHeader: React.FC<{ org: Organization }> = ({ org }) => {
       <ImageContainer>
         <Image
           width={72}
-          // NextJS Image component requires width and height to avoid loayout shift.
+          // NextJS Image component requires width and height to avoid layout shift.
           // These are supposed to be the intrinsic sizes of the image file.
           // That said, it's not particularly relevant here since the parent is
-          // reserving spae for the image anyway. Using next/image still gets us
+          // reserving space for the image anyway. Using next/image still gets us
           // the image optimization, though.
           height={78}
           src={org.logo ?? graduateLogo}
