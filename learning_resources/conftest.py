@@ -1,6 +1,5 @@
 """Common test fixtures for learning_resources"""
 
-from os import listdir
 from pathlib import Path
 
 import boto3
@@ -19,9 +18,7 @@ from learning_resources.factories import (
 TEST_PREFIX = "PROD/9/9.15/Fall_2007/9-15-biochemistry-and-pharmacology-of-synaptic-transmission-fall-2007/"  # noqa: E501
 
 TEST_JSON_PATH = f"./test_json/{TEST_PREFIX}0"
-TEST_JSON_FILES = [
-    f for f in listdir(TEST_JSON_PATH) if Path.is_file(Path(TEST_JSON_PATH, f))
-]
+TEST_JSON_FILES = [f.name for f in Path(TEST_JSON_PATH).iterdir() if f.is_file()]
 
 OCW_TEST_PREFIX = "courses/16-01-unified-engineering-i-ii-iii-iv-fall-2005-spring-2006/"
 
@@ -83,46 +80,14 @@ def add_file_to_bucket_recursive(bucket, file_base, s3_base, file_object):
         with Path.open(Path(local_path)) as f:
             bucket.put_object(Key=file_key, Body=f.read())
     else:
-        for child in listdir(local_path):
-            add_file_to_bucket_recursive(bucket, local_path, file_key, child)
-
-
-def setup_s3_ocw(settings):
-    """
-    Set up the fake s3 data for OCW
-    """
-    # Fake the settings
-    settings.AWS_ACCESS_KEY_ID = "abc"
-    settings.AWS_SECRET_ACCESS_KEY = "abc"  # noqa: S105
-    settings.OCW_LIVE_BUCKET = "test_bucket"
-    # Create our fake bucket
-    conn = boto3.resource(
-        "s3",
-        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-    )
-    conn.create_bucket(Bucket=settings.OCW_LIVE_BUCKET)
-
-    # Add data to the fake ocw next bucket
-    ocw_next_bucket = conn.Bucket(name=settings.OCW_LIVE_BUCKET)
-
-    base_folder = OCW_TEST_JSON_PATH.replace("./test_json/", "")
-
-    for file in listdir(OCW_TEST_JSON_PATH):
-        add_file_to_bucket_recursive(
-            ocw_next_bucket, OCW_TEST_JSON_PATH, base_folder, file
-        )
-    LearningResourcePlatformFactory.create(code=PlatformType.ocw.name)
-    LearningResourceOfferorFactory.create(is_ocw=True)
-    LearningResourceDepartmentFactory.create(
-        department_id="16", name="Aeronautics and Astronautics"
-    )
+        for child in Path(local_path).iterdir():
+            add_file_to_bucket_recursive(bucket, local_path, file_key, child.name)
 
 
 @pytest.fixture(autouse=True)
 def marketing_metadata_mocks(mocker):
     mocker.patch(
-        "learning_resources.etl.loaders._fetch_page",
+        "learning_resources.utils.fetch_page",
         return_value="""
         <html>
         <body>
@@ -150,6 +115,38 @@ def marketing_metadata_mocks(mocker):
           </div>
         </body>
         </html>""",
+    )
+
+
+def setup_s3_ocw(settings):
+    """
+    Set up the fake s3 data for OCW
+    """
+    # Fake the settings
+    settings.AWS_ACCESS_KEY_ID = "abc"
+    settings.AWS_SECRET_ACCESS_KEY = "abc"  # noqa: S105
+    settings.OCW_LIVE_BUCKET = "test_bucket"
+    # Create our fake bucket
+    conn = boto3.resource(
+        "s3",
+        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+    )
+    conn.create_bucket(Bucket=settings.OCW_LIVE_BUCKET)
+
+    # Add data to the fake ocw next bucket
+    ocw_next_bucket = conn.Bucket(name=settings.OCW_LIVE_BUCKET)
+
+    base_folder = OCW_TEST_JSON_PATH.replace("./test_json/", "")
+
+    for file in Path(OCW_TEST_JSON_PATH).iterdir():
+        add_file_to_bucket_recursive(
+            ocw_next_bucket, OCW_TEST_JSON_PATH, base_folder, file.name
+        )
+    LearningResourcePlatformFactory.create(code=PlatformType.ocw.name)
+    LearningResourceOfferorFactory.create(is_ocw=True)
+    LearningResourceDepartmentFactory.create(
+        department_id="16", name="Aeronautics and Astronautics"
     )
 
 

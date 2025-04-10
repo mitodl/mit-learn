@@ -23,16 +23,11 @@ import {
 } from "ol-components"
 import Link from "next/link"
 import { useUserMe } from "api/hooks/user"
-import { useParams } from "next/navigation"
-import UserListListingComponent from "@/page-components/UserListListing/UserListListing"
+import { usePathname } from "next/navigation"
 import backgroundImage from "@/public/images/backgrounds/user_menu_background.svg"
-import { ProfileContent } from "./ProfileContent"
-import { useProfileMeQuery } from "api/hooks/profile"
-import { UserListDetailsContent } from "./UserListDetailsContent"
-import { SettingsContent } from "./SettingsContent"
+
 import { DASHBOARD_HOME, MY_LISTS, PROFILE, SETTINGS } from "@/common/urls"
 import dynamic from "next/dynamic"
-import { HomeContent, TitleText } from "./HomeContent"
 
 const LearningResourceDrawer = dynamic(
   () =>
@@ -281,27 +276,19 @@ const TAB_DATA: TabData[] = [
   },
 ]
 
-type RouteParams = {
-  id: string
-}
-
-const DashboardPage: React.FC = () => {
+const DashboardPage: React.FC<{
+  children: React.ReactNode
+}> = ({ children }) => {
   const { isLoading: isLoadingUser, data: user } = useUserMe()
-  const { isLoading: isLoadingProfile, data: profile } = useProfileMeQuery()
-  const params = useParams<{ tab: string }>()
+  const pathname = usePathname()
 
-  const appRouterPath = `${DASHBOARD_HOME}/${params.tab}`
+  /**
+   * The pages my-lists and my-lists/[id] both use the same active tab
+   * ("my lists") so use the same tab value for both.
+   */
+  const tabValue = pathname.startsWith(MY_LISTS) ? MY_LISTS : pathname
 
-  const id = Number(useParams<RouteParams>().id) || -1
-  const showUserListDetail = appRouterPath === MY_LISTS && id !== -1
-
-  const tabValue = showUserListDetail
-    ? MY_LISTS
-    : [DASHBOARD_HOME, MY_LISTS, PROFILE, SETTINGS].includes(appRouterPath)
-      ? appRouterPath
-      : DASHBOARD_HOME
-
-  const desktopMenu = (
+  const desktopTabs = (
     <ProfileSidebar>
       <Card.Content>
         <ProfilePhotoContainer>
@@ -333,7 +320,7 @@ const DashboardPage: React.FC = () => {
     </ProfileSidebar>
   )
 
-  const mobileMenu = (
+  const mobileTabs = (
     <TabButtonList data-testid="mobile-nav" role="navigation">
       {TAB_DATA.map((tab) => (
         <TabButtonLink
@@ -351,48 +338,17 @@ const DashboardPage: React.FC = () => {
       <Page>
         <LearningResourceDrawer />
         <DashboardContainer>
-          <TabContext value={tabValue}>
-            <DashboardGrid>
+          <DashboardGrid>
+            <TabContext value={tabValue}>
               <DashboardGridItem>
-                <MobileOnly>{mobileMenu}</MobileOnly>
-                <DesktopOnly>{desktopMenu}</DesktopOnly>
+                <MobileOnly>{mobileTabs}</MobileOnly>
+                <DesktopOnly>{desktopTabs}</DesktopOnly>
               </DashboardGridItem>
-              {showUserListDetail ? (
-                <DashboardGridItem>
-                  <UserListDetailsContent userListId={id} />
-                </DashboardGridItem>
-              ) : (
-                <DashboardGridItem>
-                  <TabPanelStyled value={DASHBOARD_HOME}>
-                    <HomeContent />
-                  </TabPanelStyled>
-                  <TabPanelStyled value={MY_LISTS}>
-                    <UserListListingComponent title="My Lists" />
-                  </TabPanelStyled>
-                  <TabPanelStyled value={PROFILE}>
-                    <TitleText component="h1">Profile</TitleText>
-                    {isLoadingProfile || !profile ? (
-                      <Skeleton variant="text" width={128} height={32} />
-                    ) : (
-                      <div id="user-profile-edit">
-                        <ProfileContent profile={profile} />
-                      </div>
-                    )}
-                  </TabPanelStyled>
-                  <TabPanelStyled value={SETTINGS}>
-                    <TitleText component="h1">Settings</TitleText>
-                    {isLoadingProfile || !profile ? (
-                      <Skeleton variant="text" width={128} height={32} />
-                    ) : (
-                      <div id="user-settings">
-                        <SettingsContent />
-                      </div>
-                    )}
-                  </TabPanelStyled>
-                </DashboardGridItem>
-              )}
-            </DashboardGrid>
-          </TabContext>
+              <DashboardGridItem>
+                <TabPanelStyled value={tabValue}>{children}</TabPanelStyled>
+              </DashboardGridItem>
+            </TabContext>
+          </DashboardGrid>
         </DashboardContainer>
       </Page>
     </Background>

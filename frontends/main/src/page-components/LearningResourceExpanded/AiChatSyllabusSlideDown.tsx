@@ -8,9 +8,7 @@ import {
 } from "@remixicon/react"
 import type { AiChatProps } from "@mitodl/smoot-design/ai"
 import { LearningResource } from "api"
-import { useUserMe } from "api/hooks/user"
-import type { User } from "api/hooks/user"
-import AiChatWithEntryScreen from "../AiChat/AiChatWithEntryScreen"
+import { AiChat } from "@mitodl/smoot-design/ai"
 import { getCsrfToken } from "@/common/utils"
 
 export enum ChatTransitionState {
@@ -101,21 +99,22 @@ const CloseButton = styled(RiCloseLine)(({ theme }) => ({
   backgroundColor: theme.custom.colors.silverGray,
 }))
 
-const StyledAiChatWithEntryScreen = styled(AiChatWithEntryScreen)<{
+const StyledAiChat = styled(AiChat)<{
   topPosition: number
 }>(({ topPosition }) => ({
   ".MitAiChat--root": {
     minHeight: `calc(100vh - ${topPosition + 43}px)`,
   },
+  ".MitAiChat--entryScreenContainer": {
+    top: topPosition,
+    paddingTop: "130px",
+  },
   ".MitAiChat--messagesContainer": {
     position: "static",
   },
-  ".AiChatWithEntryScreen-chatScreen": {
+  ".MitAiChat--chatScreenContainer": {
     position: "static",
     paddingTop: 0,
-  },
-  ".MitAiChat--title": {
-    display: "none",
   },
 }))
 
@@ -124,21 +123,6 @@ const STARTERS: AiChatProps["conversationStarters"] = [
   { content: "What are the prerequisites for this course?" },
   { content: "How will this course be graded?" },
 ]
-
-const getInitialMessage = (
-  resource: LearningResource,
-  user?: User,
-): AiChatProps["initialMessages"] => {
-  const greetings = user?.profile?.name
-    ? `Hello ${user.profile.name}, `
-    : "Hello and "
-  return [
-    {
-      content: `${greetings} welcome to **${resource.title}**. How can I assist you today?`,
-      role: "assistant",
-    },
-  ]
-}
 
 export const AiChatSyllabusOpener = ({
   open,
@@ -183,7 +167,6 @@ const AiChatSyllabusSlideDown = ({
   contentTopPosition: number
   chatTransitionState: ChatTransitionState
 }) => {
-  const user = useUserMe()
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -209,12 +192,11 @@ const AiChatSyllabusSlideDown = ({
       inert={!open}
       ref={ref}
     >
-      <StyledAiChatWithEntryScreen
+      <StyledAiChat
         key={resource.readable_id}
         chatId={resource.readable_id}
-        entryTitle="What do you want to know about this course?"
-        starters={STARTERS}
-        initialMessages={getInitialMessage(resource, user.data)}
+        entryScreenTitle="What do you want to know about this course?"
+        conversationStarters={STARTERS}
         topPosition={contentTopPosition}
         scrollElement={scrollElement}
         requestOpts={{

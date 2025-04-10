@@ -2,6 +2,7 @@ import React from "react"
 import ResourceCarousel from "./ResourceCarousel"
 import type { ResourceCarouselProps } from "./ResourceCarousel"
 import {
+  act,
   expectLastProps,
   renderWithProviders,
   screen,
@@ -111,6 +112,51 @@ describe("ResourceCarousel", () => {
       await screen.findByText(resources.search.results[1].title)
       await screen.findByText(resources.search.results[2].title)
       expectLastProps(spyLearningResourceCard, { ...cardProps })
+    },
+  )
+
+  it.each([{ isLoading: true }, { isLoading: false }])(
+    "Makes no API calls in loading state (isLoading=$isLoading)",
+    async ({ isLoading }) => {
+      const config: ResourceCarouselProps["config"] = [
+        {
+          label: "Search",
+          data: { type: "lr_search", params: { professional: true } },
+        },
+      ]
+
+      renderWithProviders(
+        <ResourceCarousel
+          titleComponent="h1"
+          title="My Carousel"
+          config={config}
+          isLoading={isLoading}
+        />,
+      )
+      setupApis()
+      await act(() => {
+        // Goal here is just to flush the event queue; 0 timeout is good enough.
+        return new Promise((resolve) => setTimeout(resolve, 0))
+      })
+
+      if (isLoading) {
+        /**
+         * makeRequest is actually called, just not with the carousel URL.
+         * The ResourceCard components call `useUserMe` regardless of their
+         * loading state.
+         */
+        expect(makeRequest).not.toHaveBeenCalledWith([
+          "get",
+          expect.stringContaining(urls.search.resources()),
+          undefined,
+        ])
+      } else {
+        expect(makeRequest).not.toHaveBeenCalledWith([
+          "get",
+          expect.stringContaining(urls.search.resources()),
+          undefined,
+        ])
+      }
     },
   )
 

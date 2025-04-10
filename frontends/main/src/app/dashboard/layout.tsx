@@ -1,21 +1,23 @@
 import React from "react"
-import DashboardPage from "@/app-pages/DashboardPage/DashboardPage"
-import { Metadata } from "next"
-import { standardizeMetadata } from "@/common/metadata"
+import DashboardLayout from "@/app-pages/DashboardPage/DashboardLayout"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
 import { Permission } from "api/hooks/user"
+import { standardizeMetadata } from "@/common/metadata"
+import type { Metadata } from "next"
 
 export const metadata: Metadata = standardizeMetadata({
   title: "Your MIT Learning Journey",
   social: false,
 })
 
-const Page: React.FC = () => {
+const Layout: React.FC<{
+  children: React.ReactNode
+}> = ({ children }) => {
   return (
     <RestrictedRoute requires={Permission.Authenticated}>
-      <DashboardPage />
+      <DashboardLayout>{children}</DashboardLayout>
     </RestrictedRoute>
   )
 }
 
-export default Page
+export default Layout

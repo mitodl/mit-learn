@@ -19,6 +19,7 @@ from urllib.parse import urljoin
 
 import dj_database_url
 from django.core.exceptions import ImproperlyConfigured
+from mitol.scim.settings.scim import *  # noqa: F403
 
 from main.envs import (
     get_bool,
@@ -33,7 +34,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.31.0"
+VERSION = "0.31.1"
 
 log = logging.getLogger()
 
@@ -129,33 +130,13 @@ INSTALLED_APPS = (
     "data_fixtures",
     "vector_search",
     "ai_chat",
-    "scim",
+    "mitol.scim.apps.ScimApp",
 )
 
 if not get_bool("RUN_DATA_MIGRATIONS", default=False):
     MIGRATION_MODULES = {"data_fixtures": None}
 
-SCIM_SERVICE_PROVIDER = {
-    "SCHEME": "https",
-    # use default value,
-    # this will be overridden by value returned by BASE_LOCATION_GETTER
-    "NETLOC": "localhost",
-    "AUTHENTICATION_SCHEMES": [
-        {
-            "type": "oauth2",
-            "name": "OAuth 2",
-            "description": "Oauth 2 implemented with bearer token",
-            "specUri": "",
-            "documentationUri": "",
-        },
-    ],
-    "SERVICE_PROVIDER_CONFIG_MODEL": "scim.config.LearnSCIMServiceProviderConfig",
-    "USER_ADAPTER": "scim.adapters.LearnSCIMUser",
-    "USER_MODEL_GETTER": "scim.adapters.get_user_model_for_scim",
-    "USER_FILTER_PARSER": "scim.filters.UserFilterQuery",
-    "GET_IS_AUTHENTICATED_PREDICATE": "scim.utils.is_authenticated_predicate",
-}
-
+SCIM_SERVICE_PROVIDER["USER_ADAPTER"] = "users.adapters.LearnUserAdapter"  # noqa: F405
 
 # OAuth2TokenMiddleware must be before SCIMAuthCheckMiddleware
 # in order to insert request.user into the request.
@@ -779,13 +760,15 @@ QDRANT_CHUNK_SIZE = get_int(
 QDRANT_ENCODER = get_string(
     name="QDRANT_ENCODER", default="vector_search.encoders.fastembed.FastEmbedEncoder"
 )
-
+# toggle to use requests (default for local) or webdriver which renders js elements
+EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = get_bool(
+    "EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER", default=False
+)
 LITELLM_TOKEN_ENCODING_NAME = get_string(
     name="LITELLM_TOKEN_ENCODING_NAME", default=None
 )
 LITELLM_CUSTOM_PROVIDER = get_string(name="LITELLM_CUSTOM_PROVIDER", default="openai")
 LITELLM_API_BASE = get_string(name="LITELLM_API_BASE", default=None)
-
 
 OPENAI_API_KEY = get_string(
     name="OPENAI_API_KEY",

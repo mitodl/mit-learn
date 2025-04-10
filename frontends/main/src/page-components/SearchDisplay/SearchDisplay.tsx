@@ -350,13 +350,17 @@ const PaginationContainer = styled.div`
   }
 `
 
-const StyledResultsContainer = styled.div`
-  margin-top: 16px;
+const StyledResultsContainer = styled.div<{ fetching: boolean }>(
+  ({ fetching }) => ({
+    marginTop: "16px",
 
-  ul > li + li {
-    margin-top: 8px;
-  }
-`
+    "ul > li + li": {
+      marginTop: "8px",
+    },
+
+    opacity: fetching ? 0.5 : 1,
+  }),
+)
 
 const DesktopFiltersColumn = styled(GridColumn)`
   ${({ theme }) => theme.breakpoints.down("md")} {
@@ -924,7 +928,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                 </StyledDrawer>
                 <MobileSortContainer>{sortDropdown}</MobileSortContainer>
               </MobileFilter>
-              <StyledResultsContainer>
+              <StyledResultsContainer fetching={isFetching} inert={isFetching}>
                 <div ref={scrollHook} />
                 {isLoading ? (
                   <PlainList itemSpacing={1.5}>

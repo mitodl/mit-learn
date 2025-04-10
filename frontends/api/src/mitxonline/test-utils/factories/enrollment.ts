@@ -3,14 +3,16 @@ import { mergeOverrides } from "ol-test-utilities"
 import type { PartialFactory } from "ol-test-utilities"
 import type {
   CourseRunEnrollment,
-  V1CourseRun,
+  Course,
   ProductFlexibilePrice,
 } from "../../generated/v0"
 
 const courseEnrollment: PartialFactory<CourseRunEnrollment> = (
   overrides = {},
-) =>
-  mergeOverrides<CourseRunEnrollment>(
+) => {
+  const title =
+    overrides.run?.title ?? overrides.run?.course?.title ?? faker.word.words(3)
+  return mergeOverrides<CourseRunEnrollment>(
     {
       id: faker.number.int(),
       certificate: null,
@@ -20,7 +22,7 @@ const courseEnrollment: PartialFactory<CourseRunEnrollment> = (
       edx_emails_subscription: faker.datatype.boolean(),
       run: {
         id: faker.number.int(),
-        title: faker.word.words(3),
+        title,
         start_date: faker.date.past().toISOString(),
         end_date: faker.date.future().toISOString(),
         upgrade_deadline: faker.date.future().toISOString(),
@@ -33,14 +35,17 @@ const courseEnrollment: PartialFactory<CourseRunEnrollment> = (
           } as ProductFlexibilePrice, // not fully implemented
         ],
         course: {
+          id: faker.number.int(),
+          title,
           page: {
             page_url: faker.internet.url(),
-          } as V1CourseRun["course"]["page"],
-        } as V1CourseRun["course"],
+          } as Course["page"],
+        } as Course,
       } as CourseRunEnrollment["run"],
     },
     overrides,
   )
+}
 
 // Not paginated
 const courseEnrollments = (count: number): CourseRunEnrollment[] => {

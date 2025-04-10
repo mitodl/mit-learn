@@ -1,3 +1,5 @@
+"use client"
+
 import React from "react"
 import {
   PlainList,
@@ -6,6 +8,7 @@ import {
   styled,
   Dialog,
   DialogActions,
+  Skeleton,
 } from "ol-components"
 import { Button } from "@mitodl/smoot-design"
 import { useUserMe } from "api/hooks/user"
@@ -14,6 +17,7 @@ import {
   useSearchSubscriptionList,
 } from "api/hooks/searchSubscription"
 import * as NiceModal from "@ebay/nice-modal-react"
+import { TitleText } from "./HomeContent"
 const SOURCE_LABEL_DISPLAY = {
   topic: "Topic",
   unit: "MIT Unit",
@@ -31,7 +35,7 @@ const FollowList = styled(PlainList)(({ theme }) => ({
   border: `1px solid ${theme.custom.colors.lightGray2}`,
 }))
 
-const TitleText = styled(Typography)(({ theme }) => ({
+const SubtitleTitleText = styled(Typography)(({ theme }) => ({
   marginTop: "16px",
   marginBottom: "8px",
 
@@ -39,7 +43,7 @@ const TitleText = styled(Typography)(({ theme }) => ({
   ...theme.typography.h5,
 }))
 
-const SubTitleText = styled(Typography)(({ theme }) => ({
+const SubSubTitleText = styled(Typography)(({ theme }) => ({
   marginBottom: "16px",
   color: theme.custom.colors.darkGray2,
   ...theme.typography.body2,
@@ -175,16 +179,19 @@ const SettingsContent: React.FC = () => {
     enabled: !!user?.is_authenticated,
   })
 
-  if (!user || subscriptionList.isLoading) return null
+  if (!user || subscriptionList.isLoading) {
+    return <Skeleton variant="text" width={128} height={32} />
+  }
 
   return (
-    <>
+    <div id="user-settings">
+      <TitleText component="h1">Settings</TitleText>
       <SettingsHeader>
         <SettingsHeaderLeft>
-          <TitleText>Following</TitleText>
-          <SubTitleText>
+          <SubtitleTitleText>Following</SubtitleTitleText>
+          <SubSubTitleText>
             All topics, academic departments, and MIT units you are following.
-          </SubTitleText>
+          </SubSubTitleText>
         </SettingsHeaderLeft>
         {subscriptionList?.data && subscriptionList?.data?.length > 1 ? (
           <SettingsHeaderRight>
@@ -234,7 +241,7 @@ const SettingsContent: React.FC = () => {
           </ListItem>
         ))}
       </FollowList>
-    </>
+    </div>
   )
 }
 
