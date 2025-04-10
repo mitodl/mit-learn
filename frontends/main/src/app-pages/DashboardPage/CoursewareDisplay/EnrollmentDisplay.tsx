@@ -111,10 +111,13 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
   hiddenEnrollments,
 }) => {
   const [shown, setShown] = React.useState(false)
+  const enrollments = shown
+    ? shownEnrollments
+    : shownEnrollments.concat(hiddenEnrollments)
   return (
     <>
       <EnrollmentList itemSpacing={"16px"}>
-        {shownEnrollments?.map((course) => (
+        {enrollments.map((course) => (
           <DashboardCardStyled
             key={course.id}
             Component="li"
@@ -122,16 +125,6 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
             showNotComplete={false}
           />
         ))}
-        {shown
-          ? hiddenEnrollments?.map((course) => (
-              <DashboardCardStyled
-                key={course.id}
-                Component="li"
-                dashboardResource={course}
-                showNotComplete={false}
-              />
-            ))
-          : null}
       </EnrollmentList>
       <ShowAllContainer>
         <Link color="red" size="medium" onClick={() => setShown(!shown)}>
