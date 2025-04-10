@@ -111,9 +111,16 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
   hiddenEnrollments,
 }) => {
   const [shown, setShown] = React.useState(false)
+
+  const handleToggle = (event: React.MouseEvent) => {
+    event.preventDefault()
+    setShown(!shown)
+  }
+
   const enrollments = shown
     ? shownEnrollments.concat(hiddenEnrollments)
     : shownEnrollments
+
   return (
     <>
       <EnrollmentList itemSpacing={"16px"}>
@@ -127,7 +134,7 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
         ))}
       </EnrollmentList>
       <ShowAllContainer>
-        <Link color="red" size="medium" onClick={() => setShown(!shown)}>
+        <Link color="red" size="medium" onClick={handleToggle}>
           {shown ? "Show less" : "Show all"}
         </Link>
       </ShowAllContainer>
