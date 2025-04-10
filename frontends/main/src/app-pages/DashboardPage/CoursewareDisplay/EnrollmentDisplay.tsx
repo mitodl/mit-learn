@@ -112,8 +112,8 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
 }) => {
   const [shown, setShown] = React.useState(false)
   const enrollments = shown
-    ? shownEnrollments
-    : shownEnrollments.concat(hiddenEnrollments)
+    ? shownEnrollments.concat(hiddenEnrollments)
+    : shownEnrollments
   return (
     <>
       <EnrollmentList itemSpacing={"16px"}>
