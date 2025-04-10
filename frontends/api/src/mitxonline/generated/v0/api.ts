@@ -256,10 +256,10 @@ export interface CourseRunEnrollment {
   approved_flexible_price_exists: boolean
   /**
    *
-   * @type {Array<{ [key: string]: any; }>}
+   * @type {Array<CourseRunGrade>}
    * @memberof CourseRunEnrollment
    */
-  grades: Array<{ [key: string]: any }>
+  grades: Array<CourseRunGrade>
 }
 
 /**
@@ -280,6 +280,43 @@ export interface CourseRunEnrollmentRequest {
    * @memberof CourseRunEnrollmentRequest
    */
   run_id: number
+}
+/**
+ * CourseRunGrade serializer
+ * @export
+ * @interface CourseRunGrade
+ */
+export interface CourseRunGrade {
+  /**
+   *
+   * @type {number}
+   * @memberof CourseRunGrade
+   */
+  grade: number
+  /**
+   *
+   * @type {string}
+   * @memberof CourseRunGrade
+   */
+  letter_grade?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof CourseRunGrade
+   */
+  passed?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof CourseRunGrade
+   */
+  set_by_admin?: boolean
+  /**
+   * Returns the grade field value as a number out of 100 (or None if the value is None)
+   * @type {number}
+   * @memberof CourseRunGrade
+   */
+  grade_percent: number
 }
 /**
  * Course model serializer - also serializes child course runs
@@ -307,10 +344,10 @@ export interface CourseWithCourseRuns {
   readable_id: string
   /**
    * Get next run id
-   * @type {string}
+   * @type {number}
    * @memberof CourseWithCourseRuns
    */
-  next_run_id: string | null
+  next_run_id: number | null
   /**
    *
    * @type {Array<Department>}
@@ -379,16 +416,16 @@ export interface CourseWithCourseRuns {
   availability: string
   /**
    * Get the min weekly hours of the course from the course page CMS.
-   * @type {number}
+   * @type {string}
    * @memberof CourseWithCourseRuns
    */
-  min_weekly_hours: number
+  min_weekly_hours: string | null
   /**
    * Get the max weekly hours of the course from the course page CMS.
-   * @type {number}
+   * @type {string}
    * @memberof CourseWithCourseRuns
    */
-  max_weekly_hours: number | null
+  max_weekly_hours: string | null
   /**
    *
    * @type {Array<V2CourseRun>}
@@ -1907,10 +1944,10 @@ export interface V2Program {
   id: number
   /**
    *
-   * @type {Array<any>}
+   * @type {Array<number>}
    * @memberof V2Program
    */
-  courses: Array<any>
+  courses: Array<number>
   /**
    *
    * @type {V1ProgramRequirements}
@@ -1954,11 +1991,11 @@ export interface V2Program {
    */
   live?: boolean
   /**
-   * List all topics in all courses in the program
-   * @type {Array<any>}
+   *
+   * @type {Array<V2ProgramTopicsInner>}
    * @memberof V2Program
    */
-  topics: Array<any>
+  topics: Array<V2ProgramTopicsInner>
   /**
    *
    * @type {AvailabilityEnum}
@@ -1991,46 +2028,46 @@ export interface V2Program {
   enrollment_end?: string | null
   /**
    * Check if the prerequisites field is populated in the program page CMS.
-   * @type {{ [key: string]: any; }}
+   * @type {boolean}
    * @memberof V2Program
    */
-  required_prerequisites: { [key: string]: any }
+  required_prerequisites: boolean
   /**
    * Get the length/duration field from the program page CMS.
-   * @type {number}
+   * @type {string}
    * @memberof V2Program
    */
-  duration: number
+  duration: string | null
   /**
    * Get the min weeks of the program from the CMS page.
    * @type {number}
    * @memberof V2Program
    */
-  min_weeks: number
+  min_weeks: number | null
   /**
    * Get the max weeks of the program from the CMS page.
    * @type {number}
    * @memberof V2Program
    */
-  max_weeks: number
+  max_weeks: number | null
   /**
    * Get the effort/time_commitment field from the program page CMS.
    * @type {string}
    * @memberof V2Program
    */
-  time_commitment: string
+  time_commitment: string | null
   /**
    * Get the min weekly hours of the course from the course page CMS.
-   * @type {number}
+   * @type {string}
    * @memberof V2Program
    */
-  min_weekly_hours: number
+  min_weekly_hours: string | null
   /**
    * Get the max weekly hours of the course from the course page CMS.
-   * @type {number}
+   * @type {string}
    * @memberof V2Program
    */
-  max_weekly_hours: number
+  max_weekly_hours: string | null
 }
 
 /**
@@ -2106,6 +2143,20 @@ export interface V2ProgramRequirementData {
    * @memberof V2ProgramRequirementData
    */
   elective_flag?: boolean | null
+}
+
+/**
+ *
+ * @export
+ * @interface V2ProgramTopicsInner
+ */
+export interface V2ProgramTopicsInner {
+  /**
+   *
+   * @type {string}
+   * @memberof V2ProgramTopicsInner
+   */
+  name?: string
 }
 
 /**

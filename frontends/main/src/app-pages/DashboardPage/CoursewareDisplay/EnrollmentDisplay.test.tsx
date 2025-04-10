@@ -6,6 +6,7 @@ import moment from "moment"
 import { faker } from "@faker-js/faker/locale/en"
 
 const courseEnrollment = mitxonline.factories.enrollment.courseEnrollment
+const grade = mitxonline.factories.enrollment.grade
 describe("EnrollmentDisplay", () => {
   const setupApis = () => {
     const ended = [
@@ -23,7 +24,7 @@ describe("EnrollmentDisplay", () => {
       }),
       courseEnrollment({
         run: { title: "C Course Ended" },
-        grades: [{ passed: true }],
+        grades: [grade({ passed: true })],
       }),
     ]
     const started = [
@@ -59,7 +60,7 @@ describe("EnrollmentDisplay", () => {
     ])
 
     setMockResponse.get(
-      mitxonline.urls.enrollment.courseEnrollment,
+      mitxonline.urls.enrollment.courseEnrollment(),
       mitxonlineCourseEnrollments,
     )
 
@@ -75,21 +76,15 @@ describe("EnrollmentDisplay", () => {
 
     screen.getByRole("heading", { name: "My Learning" })
 
-    const desktopCards = await screen.findAllByTestId("enrollment-card-desktop")
-    const mobileCards = await screen.findAllByTestId("enrollment-card-mobile")
-    expect(desktopCards.length).toBe(7)
-    expect(mobileCards.length).toBe(7)
+    const cards = await screen.findAllByTestId("enrollment-card-desktop")
     const expectedTitles = [
       ...mitxonlineCourses.started,
       ...mitxonlineCourses.notStarted,
       ...mitxonlineCourses.ended,
     ].map((e) => e.run.title)
 
-    for (const expectedTitle of expectedTitles) {
-      const cards = [...desktopCards, ...mobileCards].filter((card) =>
-        card.textContent?.includes(expectedTitle),
-      )
-      expect(cards.length).toBe(2)
-    }
+    expectedTitles.forEach((title, i) => {
+      expect(cards[i]).toHaveTextContent(title)
+    })
   })
 })

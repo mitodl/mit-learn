@@ -27,7 +27,7 @@ type DashboardCourse = {
     endDate?: string | null
     certificateUpgradeDeadline?: string | null
     certificateUpgradePrice?: string | null
-    coursewareUrl: string | null
+    coursewareUrl?: string | null
     canUpgrade: boolean
   }
   enrollment?: {
@@ -41,7 +41,7 @@ type DashboardProgram = {
   id: string
   type: typeof DashboardResourceType.Program
   title: string
-  programType: string
+  programType?: string | null
   courseIds: number[]
   description: string
 }

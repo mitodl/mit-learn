@@ -26,6 +26,7 @@ import type {
 } from "../generated/v1"
 import type { BaseAPI } from "../generated/v1/base"
 import type { BaseAPI as BaseAPIv0 } from "../generated/v0/base"
+import { queryify } from "ol-test-utilities"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_MITOL_API_BASE_URL
 
@@ -48,21 +49,6 @@ const query = (params: any) => {
     }
   }
   return `?${queryString.toString()}`
-}
-
-const queryify = (params: unknown) => {
-  if (!params || Object.keys(params).length === 0) return ""
-  const query = new URLSearchParams()
-  for (const [key, value] of Object.entries(params)) {
-    if (Array.isArray(value)) {
-      value.forEach((v) => query.append(key, String(v)))
-    } else {
-      query.append(key, String(value))
-    }
-  }
-  query.sort()
-  const stringified = query.toString()
-  return stringified ? `?${stringified}` : ""
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

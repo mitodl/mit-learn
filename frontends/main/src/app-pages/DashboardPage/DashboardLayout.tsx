@@ -1,12 +1,13 @@
 "use client"
 
-import React from "react"
+import React, { useMemo } from "react"
 import {
   RiAccountCircleFill,
   RiDashboardLine,
   RiBookmarkLine,
   RiEditLine,
   RiNotificationLine,
+  RiBuilding2Line,
 } from "@remixicon/react"
 import {
   Card,
@@ -22,12 +23,21 @@ import {
   styled,
 } from "ol-components"
 import Link from "next/link"
-import { useUserMe } from "api/hooks/user"
 import { usePathname } from "next/navigation"
 import backgroundImage from "@/public/images/backgrounds/user_menu_background.svg"
 
-import { DASHBOARD_HOME, MY_LISTS, PROFILE, SETTINGS } from "@/common/urls"
+import {
+  DASHBOARD_HOME,
+  MY_LISTS,
+  organizationView,
+  PROFILE,
+  SETTINGS,
+} from "@/common/urls"
 import dynamic from "next/dynamic"
+import {
+  UserWithOrgsField,
+  useUserMeWithMockedOrgs,
+} from "./OrganizationContent"
 
 const LearningResourceDrawer = dynamic(
   () =>
@@ -239,54 +249,73 @@ type TabData = {
     desktop: React.ReactNode
   }
 }
-const TAB_DATA: TabData[] = [
-  {
-    value: DASHBOARD_HOME,
-    href: DASHBOARD_HOME,
-    label: {
-      mobile: "Home",
-      desktop: <DesktopTabLabel icon={<RiDashboardLine />} text="Home" />,
+const getTabData = (user?: UserWithOrgsField): TabData[] => {
+  const orgs = user?.organizations ?? []
+  return [
+    {
+      value: DASHBOARD_HOME,
+      href: DASHBOARD_HOME,
+      label: {
+        mobile: "Home",
+        desktop: <DesktopTabLabel icon={<RiDashboardLine />} text="Home" />,
+      },
     },
-  },
-  {
-    value: MY_LISTS,
-    href: MY_LISTS,
-    label: {
-      mobile: "My Lists",
-      desktop: <DesktopTabLabel icon={<RiBookmarkLine />} text="My Lists" />,
+    ...orgs.map((org) => ({
+      value: organizationView(org.id),
+      href: organizationView(org.id),
+      label: {
+        mobile: org.name,
+        desktop: <DesktopTabLabel icon={<RiBuilding2Line />} text={org.name} />,
+      },
+    })),
+    {
+      value: MY_LISTS,
+      href: MY_LISTS,
+      label: {
+        mobile: "My Lists",
+        desktop: <DesktopTabLabel icon={<RiBookmarkLine />} text="My Lists" />,
+      },
     },
-  },
-  {
-    value: PROFILE,
-    href: PROFILE,
-    label: {
-      mobile: "Profile",
-      desktop: <DesktopTabLabel icon={<RiEditLine />} text="Profile" />,
+    {
+      value: PROFILE,
+      href: PROFILE,
+      label: {
+        mobile: "Profile",
+        desktop: <DesktopTabLabel icon={<RiEditLine />} text="Profile" />,
+      },
     },
-  },
-  {
-    value: SETTINGS,
-    href: SETTINGS,
-    label: {
-      mobile: "Settings",
-      desktop: (
-        <DesktopTabLabel icon={<RiNotificationLine />} text="Settings" />
-      ),
+    {
+      value: SETTINGS,
+      href: SETTINGS,
+      label: {
+        mobile: "Settings",
+        desktop: (
+          <DesktopTabLabel icon={<RiNotificationLine />} text="Settings" />
+        ),
+      },
     },
-  },
-]
+  ]
+}
 
 const DashboardPage: React.FC<{
   children: React.ReactNode
 }> = ({ children }) => {
-  const { isLoading: isLoadingUser, data: user } = useUserMe()
   const pathname = usePathname()
+  const { isLoading: isLoadingUser, data: user } = useUserMeWithMockedOrgs()
 
-  /**
-   * The pages my-lists and my-lists/[id] both use the same active tab
-   * ("my lists") so use the same tab value for both.
-   */
-  const tabValue = pathname.startsWith(MY_LISTS) ? MY_LISTS : pathname
+  const tabData = useMemo(() => getTabData(user), [user])
+
+  const tabValue = useMemo(() => {
+    /**
+     * The pages my-lists and my-lists/[id] both use the same active tab
+     * ("my lists") so use the same tab value for both.
+     */
+    const value = pathname.startsWith(MY_LISTS) ? MY_LISTS : pathname
+    // organization/[id] isn't an available tab until feature flag is finished
+    // loading, so fallback to home tab
+    //
+    return tabData.some((tab) => tab.value === value) ? value : DASHBOARD_HOME
+  }, [pathname, tabData])
 
   const desktopTabs = (
     <ProfileSidebar>
@@ -306,7 +335,7 @@ const DashboardPage: React.FC<{
           data-testid="desktop-nav"
           role="navigation"
         >
-          {TAB_DATA.map((tab) => (
+          {tabData.map((tab) => (
             <Tab
               key={tab.value}
               value={tab.value}
@@ -322,7 +351,7 @@ const DashboardPage: React.FC<{
 
   const mobileTabs = (
     <TabButtonList data-testid="mobile-nav" role="navigation">
-      {TAB_DATA.map((tab) => (
+      {tabData.map((tab) => (
         <TabButtonLink
           key={tab.value}
           value={tab.value}
@@ -332,6 +361,10 @@ const DashboardPage: React.FC<{
       ))}
     </TabButtonList>
   )
+
+  if (isLoadingUser) {
+    return null
+  }
 
   return (
     <Background>

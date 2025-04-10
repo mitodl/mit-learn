@@ -26,6 +26,10 @@ const Wrapper = styled.div(({ theme }) => ({
     padding: "0",
   },
 }))
+const DashboardCardStyled = styled(DashboardCard)({
+  borderRadius: "8px",
+  boxShadow: "0px 1px 6px 0px rgba(3, 21, 45, 0.05)",
+})
 
 const Title = styled(Typography)<Pick<TypographyProps, "component">>(
   ({ theme }) => ({
@@ -112,9 +116,12 @@ const EnrollmentDisplay = () => {
       </Title>
       <EnrollmentList itemSpacing={"16px"}>
         {sorted?.map((course) => (
-          <li key={course.id}>
-            <DashboardCard dashboardResource={course} showNotComplete={false} />
-          </li>
+          <DashboardCardStyled
+            key={course.id}
+            Component="li"
+            showNotComplete={false}
+            dashboardResource={course}
+          />
         ))}
       </EnrollmentList>
     </Wrapper>

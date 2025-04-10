@@ -1,7 +1,6 @@
 import React from "react"
 import { styled, Link, SimpleMenu, SimpleMenuItem, Stack } from "ol-components"
 import NextLink from "next/link"
-import Image from "next/image"
 import { EnrollmentStatus, EnrollmentMode } from "./types"
 import type { DashboardCourse } from "./types"
 import { ActionButton, Button, ButtonLink } from "@mitodl/smoot-design"
@@ -13,45 +12,39 @@ import {
 } from "@remixicon/react"
 import { calendarDaysUntil, isInPast, NoSSR } from "ol-utilities"
 
-import CompleteCheck from "@/public/images/icons/complete-check.svg"
+import { EnrollmentStatusIndicator } from "./EnrollmentStatusIndicator"
 
-const DesktopOnly = styled.div(({ theme }) => ({
-  [theme.breakpoints.up("md")]: {
-    display: "list-item",
+const CardRoot = styled.div<{
+  screenSize: "desktop" | "mobile"
+}>(({ theme, screenSize }) => [
+  {
+    position: "relative",
+    border: `1px solid ${theme.custom.colors.lightGray2}`,
+    backgroundColor: theme.custom.colors.white,
+    padding: "16px",
+    display: "flex",
+    gap: "8px",
+    alignItems: "center",
+    [theme.breakpoints.down("md")]: {
+      border: "none",
+      borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
+      borderRadius: "0px",
+      boxShadow: "none",
+      flexDirection: "column",
+      gap: "16px",
+    },
   },
-  [theme.breakpoints.down("md")]: {
-    display: "none",
+  screenSize === "desktop" && {
+    [theme.breakpoints.down("md")]: {
+      display: "none",
+    },
   },
-}))
-
-const MobileOnly = styled.div(({ theme }) => ({
-  [theme.breakpoints.down("md")]: {
-    display: "list-item",
+  screenSize === "mobile" && {
+    [theme.breakpoints.up("md")]: {
+      display: "none",
+    },
   },
-  [theme.breakpoints.up("md")]: {
-    display: "none",
-  },
-}))
-
-const CardRoot = styled.div(({ theme }) => ({
-  position: "relative",
-  border: `1px solid ${theme.custom.colors.lightGray2}`,
-  borderRadius: "8px",
-  backgroundColor: theme.custom.colors.white,
-  boxShadow: "0px 1px 6px 0px rgba(3, 21, 45, 0.05)",
-  padding: "16px",
-  display: "flex",
-  gap: "8px",
-  alignItems: "center",
-  [theme.breakpoints.down("md")]: {
-    border: "none",
-    borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
-    borderRadius: "0px",
-    boxShadow: "none",
-    flexDirection: "column",
-    gap: "16px",
-  },
-}))
+])
 
 const TitleLink = styled(Link)(({ theme }) => ({
   [theme.breakpoints.down("md")]: {
@@ -68,27 +61,31 @@ const MenuButton = styled(ActionButton)(({ theme }) => ({
   },
 }))
 
-const getCoursewareText = (endDate?: string | null) => {
-  if (!endDate) return "Continue Course"
-  if (isInPast(endDate)) {
-    return "View Course"
-  }
-  return "Continue Course"
+type CoursewareButtonProps = {
+  startDate?: string | null
+  endDate?: string | null
+  href?: string | null
+  className?: string
+  courseNoun: string
+  "data-testid"?: string
 }
-
+const getCoursewareText = ({ endDate, courseNoun }: CoursewareButtonProps) => {
+  if (!endDate) return `Continue ${courseNoun}`
+  if (isInPast(endDate)) {
+    return `View ${courseNoun}`
+  }
+  return `Continue ${courseNoun}`
+}
 const CoursewareButton = styled(
   ({
     startDate,
     endDate,
     href,
     className,
-  }: {
-    startDate?: string | null
-    endDate?: string | null
-    href: string | null
-    className?: string
-  }) => {
-    const children = getCoursewareText(endDate)
+    courseNoun,
+    ...others
+  }: CoursewareButtonProps) => {
+    const children = getCoursewareText({ endDate, courseNoun })
     const hasStarted = startDate && isInPast(startDate)
     return hasStarted && href ? (
       <ButtonLink
@@ -97,6 +94,7 @@ const CoursewareButton = styled(
         endIcon={<RiArrowRightLine />}
         href={href}
         className={className}
+        {...others}
       >
         {children}
       </ButtonLink>
@@ -107,6 +105,7 @@ const CoursewareButton = styled(
         endIcon={<RiArrowRightLine />}
         disabled
         className={className}
+        {...others}
       >
         {children}
       </Button>
@@ -217,17 +216,6 @@ const CourseStartCountdown: React.FC<{
   )
 }
 
-const Completed = styled(Image)({
-  width: "16px",
-  height: "16px",
-})
-const NotComplete = styled.div(({ theme }) => ({
-  width: "16px",
-  height: "16px",
-  borderRadius: "50%",
-  border: `1px solid ${theme.custom.colors.silverGrayLight}`,
-}))
-
 const getMenuItems = (): SimpleMenuItem[] => [
   {
     key: "placeholder1",
@@ -247,12 +235,20 @@ const getMenuItems = (): SimpleMenuItem[] => [
 ]
 
 type DashboardCardProps = {
+  Component?: React.ElementType
   dashboardResource: DashboardCourse
   showNotComplete?: boolean
+  className?: string
+  courseNoun?: string
+  offerUpgrade?: boolean
 }
 const DashboardCard: React.FC<DashboardCardProps> = ({
   dashboardResource,
   showNotComplete = true,
+  Component,
+  className,
+  courseNoun = "Course",
+  offerUpgrade = true,
 }) => {
   const { title, marketingUrl, enrollment, run } = dashboardResource
   const contextMenu = (
@@ -266,7 +262,12 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     />
   )
   const desktopLayout = (
-    <CardRoot data-testid="enrollment-card-desktop">
+    <CardRoot
+      screenSize="desktop"
+      data-testid="enrollment-card-desktop"
+      as={Component}
+      className={className}
+    >
       <Stack justifyContent="start" alignItems="stretch" gap="8px" flex={1}>
         <TitleLink size="medium" color="black" href={marketingUrl}>
           {title}
@@ -277,7 +278,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
             View Certificate
           </SubtitleLink>
         ) : null}
-        {enrollment?.mode !== EnrollmentMode.Verified ? (
+        {enrollment?.mode !== EnrollmentMode.Verified && offerUpgrade ? (
           <UpgradeBanner
             data-testid="upgrade-root"
             canUpgrade={run.canUpgrade}
@@ -288,15 +289,16 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       </Stack>
       <Stack gap="8px">
         <Stack direction="row" gap="8px" alignItems="center">
-          {enrollment?.status === EnrollmentStatus.Completed ? (
-            <Completed src={CompleteCheck} alt="Completed" />
-          ) : showNotComplete ? (
-            <NotComplete data-testid="not-complete-icon" />
-          ) : null}
+          <EnrollmentStatusIndicator
+            status={enrollment?.status}
+            showNotComplete={showNotComplete}
+          />
           <CoursewareButton
+            data-testid="courseware-button"
             startDate={run.startDate}
             href={run.coursewareUrl}
             endDate={run.endDate}
+            courseNoun={courseNoun}
           />
           {contextMenu}
         </Stack>
@@ -308,7 +310,12 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   )
 
   const mobileLayout = (
-    <CardRoot data-testid="enrollment-card-mobile">
+    <CardRoot
+      screenSize="mobile"
+      data-testid="enrollment-card-mobile"
+      as={Component}
+      className={className}
+    >
       <Stack
         direction="row"
         justifyContent="space-between"
@@ -316,7 +323,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         flex={1}
         width="100%"
       >
-        <Stack direction="column" gap="8px">
+        <Stack direction="column" gap="8px" flex={1}>
           <TitleLink size="medium" color="black" href={marketingUrl}>
             {title}
           </TitleLink>
@@ -326,7 +333,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
               View Certificate
             </SubtitleLink>
           ) : null}
-          {enrollment?.mode !== EnrollmentMode.Verified ? (
+          {enrollment?.mode !== EnrollmentMode.Verified && offerUpgrade ? (
             <UpgradeBanner
               data-testid="upgrade-root"
               canUpgrade={run.canUpgrade}
@@ -349,15 +356,16 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
           </Stack>
         ) : null}
         <Stack direction="row" gap="8px" alignItems="center">
-          {enrollment?.status === EnrollmentStatus.Completed ? (
-            <Completed src={CompleteCheck} alt="Completed" />
-          ) : showNotComplete ? (
-            <NotComplete data-testid="not-complete-icon" />
-          ) : null}
+          <EnrollmentStatusIndicator
+            status={enrollment?.status}
+            showNotComplete={showNotComplete}
+          />
           <CoursewareButton
+            data-testid="courseware-button"
             startDate={run.startDate}
             href={run.coursewareUrl}
             endDate={run.endDate}
+            courseNoun={courseNoun}
           />
         </Stack>
       </Stack>
@@ -365,8 +373,8 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   )
   return (
     <>
-      <DesktopOnly>{desktopLayout}</DesktopOnly>
-      <MobileOnly>{mobileLayout}</MobileOnly>
+      {desktopLayout}
+      {mobileLayout}
     </>
   )
 }

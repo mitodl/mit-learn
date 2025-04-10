@@ -4,10 +4,15 @@
  * a common format.
  */
 
-import { CourseRunEnrollment } from "api/mitxonline"
+import {
+  CourseRunEnrollment,
+  CourseWithCourseRuns,
+  V2Program,
+} from "api/mitxonline"
 
 import { DashboardResourceType, EnrollmentStatus } from "./types"
-import type { DashboardCourse } from "./types"
+import type { DashboardCourse, DashboardProgram } from "./types"
+import { groupBy } from "lodash"
 
 const sources = {
   mitxonline: "mitxonline",
@@ -44,4 +49,60 @@ const mitxonlineEnrollment = (raw: CourseRunEnrollment): DashboardCourse => {
 const mitxonlineEnrollments = (data: CourseRunEnrollment[]) =>
   data.map((course) => mitxonlineEnrollment(course))
 
-export { mitxonlineEnrollments }
+const mitxonlineUnenrolledCourse = (
+  course: CourseWithCourseRuns,
+): DashboardCourse => {
+  const run = course.courseruns.find((run) => run.id === course.next_run_id)
+  return {
+    id: getId(sources.mitxonline, DashboardResourceType.Course, course.id),
+    type: DashboardResourceType.Course,
+    title: course.title,
+    marketingUrl: course.page.page_url,
+    run: {
+      startDate: run?.start_date,
+      endDate: run?.end_date,
+      certificateUpgradeDeadline: run?.upgrade_deadline,
+      certificateUpgradePrice: run?.products[0]?.price,
+      coursewareUrl: run?.courseware_url,
+      canUpgrade: !!run?.is_upgradable,
+    },
+  }
+}
+
+const mitxonlineCourses = (raw: {
+  courses: CourseWithCourseRuns[]
+  enrollments: CourseRunEnrollment[]
+}) => {
+  const enrollmentsByCourseId = groupBy(
+    raw.enrollments,
+    (enrollment) => enrollment.run.course.id,
+  )
+  const transformedCourses = raw.courses.map((course) => {
+    const enrollments = enrollmentsByCourseId[course.id]
+    if (enrollments?.length > 0) {
+      const transformed = mitxonlineEnrollments(enrollments)
+      const completed = transformed.find(
+        (e) => e.enrollment?.status === EnrollmentStatus.Completed,
+      )
+      if (completed) {
+        return completed
+      }
+      return transformed[0]
+    }
+    return mitxonlineUnenrolledCourse(course)
+  })
+  return transformedCourses
+}
+
+const mitxonlineProgram = (raw: V2Program): DashboardProgram => {
+  return {
+    id: getId(sources.mitxonline, DashboardResourceType.Program, raw.id),
+    type: DashboardResourceType.Program,
+    title: raw.title,
+    programType: raw.program_type,
+    courseIds: raw.courses,
+    description: raw.page.description,
+  }
+}
+
+export { mitxonlineEnrollments, mitxonlineCourses, mitxonlineProgram }
