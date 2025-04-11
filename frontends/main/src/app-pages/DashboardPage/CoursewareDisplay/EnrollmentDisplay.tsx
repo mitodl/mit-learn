@@ -1,6 +1,7 @@
 import React from "react"
 import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
 import {
+  Collapse,
   Link,
   PlainList,
   PlainListProps,
@@ -117,14 +118,10 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
     setShown(!shown)
   }
 
-  const enrollments = shown
-    ? shownEnrollments.concat(hiddenEnrollments)
-    : shownEnrollments
-
   return (
     <>
       <EnrollmentList itemSpacing={"16px"}>
-        {enrollments.map((course) => (
+        {shownEnrollments.map((course) => (
           <DashboardCardStyled
             key={course.id}
             Component="li"
@@ -132,6 +129,20 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
             showNotComplete={false}
           />
         ))}
+        <li>
+          <Collapse orientation="vertical" in={shown}>
+            <EnrollmentList itemSpacing={"16px"}>
+              {hiddenEnrollments.map((course) => (
+                <DashboardCardStyled
+                  key={course.id}
+                  Component="li"
+                  dashboardResource={course}
+                  showNotComplete={false}
+                />
+              ))}
+            </EnrollmentList>
+          </Collapse>
+        </li>
       </EnrollmentList>
       <ShowAllContainer>
         <Link color="red" size="medium" onClick={handleToggle}>
