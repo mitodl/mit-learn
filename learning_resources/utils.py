@@ -17,16 +17,7 @@ from django.db import transaction
 from django.db.models import Q
 from retry import retry
 from selenium import webdriver
-from selenium.common.exceptions import (
-    ElementNotInteractableException,
-    JavascriptException,
-    NoSuchElementException,
-    TimeoutException,
-)
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions
-from selenium.webdriver.support.ui import WebDriverWait
 
 from learning_resources.constants import (
     GROUP_STAFF_LISTS_EDITORS,
@@ -631,45 +622,6 @@ def get_web_driver():
     chrome_options.add_argument("--disable-dev-shm-usage")
 
     return webdriver.Chrome(service=service, options=chrome_options)
-
-
-def _webdriver_fetch_extra_elements(driver):
-    """
-    Attempt to Fetch any extra possible js loaded elements that
-    require interaction to display
-    """
-    errors = [
-        NoSuchElementException,
-        JavascriptException,
-        ElementNotInteractableException,
-        TimeoutException,
-    ]
-    wait = WebDriverWait(
-        driver, timeout=0.1, poll_frequency=0.01, ignored_exceptions=errors
-    )
-    for tab_id in ["faculty-tab", "reviews-tab", "participants-tab"]:
-        wait.until(expected_conditions.visibility_of_element_located((By.ID, tab_id)))
-        driver.execute_script(f"document.getElementById('{tab_id}').click()")
-
-
-def fetch_page(url, use_webdriver=settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER):
-    if url:
-        if use_webdriver:
-            driver = get_web_driver()
-            driver.get(url)
-            try:
-                _webdriver_fetch_extra_elements(driver)
-            except TimeoutException:
-                log.warning("Error custom elements page from %s", url)
-            return driver.execute_script("return document.body.innerHTML")
-        else:
-            try:
-                response = requests.get(url, timeout=10)
-                if response.ok:
-                    return response.text
-            except requests.exceptions.RequestException:
-                log.exception("Error fetching page from %s", url)
-    return None
 
 
 def json_to_markdown(obj, indent=0):
