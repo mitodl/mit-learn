@@ -51,7 +51,7 @@ def configure_opentelemetry() -> Optional[TracerProvider]:
     # Add OTLP exporter if configured
     otlp_endpoint = getattr(settings, "OPENTELEMETRY_ENDPOINT", None)
     if otlp_endpoint:
-        log.info(f"Configuring OTLP exporter to endpoint: {otlp_endpoint}")
+        log.info("Configuring OTLP exporter to endpoint: %s", otlp_endpoint)
 
         headers = {}
 
@@ -73,8 +73,8 @@ def configure_opentelemetry() -> Optional[TracerProvider]:
                     ),
                 )
             )
-        except Exception as e:
-            log.exception("Failed to configure OTLP exporter: %s", e)
+        except Exception:
+            log.exception("Failed to configure OTLP exporter")
 
     # Initialize instrumentations
     DjangoInstrumentor().instrument()
