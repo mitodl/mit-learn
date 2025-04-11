@@ -190,20 +190,18 @@ const UserView: FunctionComponent = () => {
       !user?.profile?.completed_onboarding &&
       pathname !== urls.ONBOARDING
     ) {
-      if (typeof profileMutate === "function") {
-        // mark user as having completed onboarding
-        profileMutate(
-          { completed_onboarding: true },
-          {
-            onSuccess: () => {
-              if (!skipOnboarding) {
-                ;(window as Window).location.assign(urls.ONBOARDING)
-              }
-              return null
-            },
+      // mark user as having completed onboarding
+      profileMutate(
+        { completed_onboarding: true },
+        {
+          onSuccess: () => {
+            if (!skipOnboarding) {
+              ;(window as Window).location.assign(urls.ONBOARDING)
+            }
+            return null
           },
-        )
-      }
+        },
+      )
     }
   }, [user, pathname, profileMutate, isLoading, skipOnboarding])
 
