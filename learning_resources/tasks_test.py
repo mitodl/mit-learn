@@ -437,7 +437,7 @@ def test_fetch_page_with_webdriver(mocker, use_webdriver, settings):
     mock_driver = mocker.MagicMock()
     mock_driver.execute_script.return_value = "<html><body>Page content</body></html>"
     mock_get_web_driver = mocker.patch(
-        "learning_resources.utils._get_web_driver", return_value=mock_driver
+        "learning_resources.utils.get_web_driver", return_value=mock_driver
     )
     mock_webdriver_fetch_extra = mocker.patch(
         "learning_resources.utils._webdriver_fetch_extra_elements"
