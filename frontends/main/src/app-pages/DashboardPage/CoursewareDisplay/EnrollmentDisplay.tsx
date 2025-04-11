@@ -1,11 +1,14 @@
 import React from "react"
 import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
 import {
+  Collapse,
+  Link,
   PlainList,
   PlainListProps,
   Typography,
   TypographyProps,
   styled,
+  theme,
 } from "ol-components"
 import { useQuery } from "@tanstack/react-query"
 import { mitxonlineEnrollments } from "./transform"
@@ -42,7 +45,7 @@ const Title = styled(Typography)<Pick<TypographyProps, "component">>(
   }),
 )
 
-const EnrollmentList = styled(PlainList)<Pick<PlainListProps, "itemSpacing">>(
+const EnrollmentsList = styled(PlainList)<Pick<PlainListProps, "itemSpacing">>(
   ({ theme }) => ({
     [theme.breakpoints.down("md")]: {
       borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
@@ -52,6 +55,23 @@ const EnrollmentList = styled(PlainList)<Pick<PlainListProps, "itemSpacing">>(
     },
   }),
 )
+
+const HiddenEnrollmentsList = styled(EnrollmentsList)({
+  marginTop: "16px",
+  [theme.breakpoints.down("md")]: {
+    borderTop: "none",
+    marginTop: "0",
+  },
+})
+
+const ShowAllContainer = styled.div(({ theme }) => ({
+  display: "flex",
+  justifyContent: "center",
+  marginTop: "24px",
+  [theme.breakpoints.down("md")]: {
+    marginBottom: "24px",
+  },
+}))
 
 const alphabeticalSort = (a: DashboardCourse, b: DashboardCourse) =>
   a.title.localeCompare(b.title)
@@ -65,15 +85,18 @@ const startsSooner = (a: DashboardCourse, b: DashboardCourse) => {
   return x.getTime() - y.getTime()
 }
 const sortEnrollments = (resources: DashboardCourse[]) => {
-  const ended: DashboardCourse[] = []
+  const expired: DashboardCourse[] = []
+  const completed: DashboardCourse[] = []
   const started: DashboardCourse[] = []
   const notStarted: DashboardCourse[] = []
   resources.forEach((resource) => {
-    if (
-      resource.enrollment?.status === EnrollmentStatus.Completed ||
-      (resource.run.endDate && new Date(resource.run.endDate) < new Date())
+    if (resource.enrollment?.status === EnrollmentStatus.Completed) {
+      completed.push(resource)
+    } else if (
+      resource.run.endDate &&
+      new Date(resource.run.endDate) < new Date()
     ) {
-      ended.push(resource)
+      expired.push(resource)
     } else if (
       resource.run.startDate &&
       new Date(resource.run.startDate) < new Date()
@@ -85,10 +108,60 @@ const sortEnrollments = (resources: DashboardCourse[]) => {
   })
 
   return {
-    ended: ended.sort(alphabeticalSort),
+    completed: completed.sort(alphabeticalSort),
+    expired: expired.sort(alphabeticalSort),
     started: started.sort(alphabeticalSort),
     notStarted: notStarted.sort(startsSooner),
   }
+}
+
+interface EnrollmentExpandCollapseProps {
+  shownEnrollments: DashboardCourse[]
+  hiddenEnrollments: DashboardCourse[]
+}
+
+const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
+  shownEnrollments,
+  hiddenEnrollments,
+}) => {
+  const [shown, setShown] = React.useState(false)
+
+  const handleToggle = (event: React.MouseEvent) => {
+    event.preventDefault()
+    setShown(!shown)
+  }
+
+  return (
+    <>
+      <EnrollmentsList itemSpacing={"16px"}>
+        {shownEnrollments.map((course) => (
+          <DashboardCardStyled
+            key={course.id}
+            Component="li"
+            dashboardResource={course}
+            showNotComplete={false}
+          />
+        ))}
+      </EnrollmentsList>
+      <Collapse orientation="vertical" in={shown}>
+        <HiddenEnrollmentsList itemSpacing={"16px"}>
+          {hiddenEnrollments.map((course) => (
+            <DashboardCardStyled
+              key={course.id}
+              Component="li"
+              dashboardResource={course}
+              showNotComplete={false}
+            />
+          ))}
+        </HiddenEnrollmentsList>
+      </Collapse>
+      <ShowAllContainer>
+        <Link color="red" size="medium" onClick={handleToggle}>
+          {shown ? "Show less" : "Show all"}
+        </Link>
+      </ShowAllContainer>
+    </>
+  )
 }
 
 const EnrollmentDisplay = () => {
@@ -106,24 +179,20 @@ const EnrollmentDisplay = () => {
    * The constants below are separate for impending "Show All" functionality.
    * The above TODO could be handled then.
    */
-  const { ended, started, notStarted } = sortEnrollments(enrolledCourses || [])
-  const sorted = [...started, ...notStarted, ...ended]
+  const { completed, expired, started, notStarted } = sortEnrollments(
+    enrolledCourses || [],
+  )
+  const shownEnrollments = [...started, ...notStarted, ...completed]
 
   return (
     <Wrapper>
       <Title variant="h5" component="h2">
         My Learning
       </Title>
-      <EnrollmentList itemSpacing={"16px"}>
-        {sorted?.map((course) => (
-          <DashboardCardStyled
-            key={course.id}
-            Component="li"
-            showNotComplete={false}
-            dashboardResource={course}
-          />
-        ))}
-      </EnrollmentList>
+      <EnrollmentExpandCollapse
+        shownEnrollments={shownEnrollments}
+        hiddenEnrollments={expired}
+      />
     </Wrapper>
   )
 }
