@@ -14,7 +14,13 @@ const courseEnrollment = mitxonline.factories.enrollment.courseEnrollment
 const grade = mitxonline.factories.enrollment.grade
 describe("EnrollmentDisplay", () => {
   const setupApis = () => {
-    const ended = [
+    const completed = [
+      courseEnrollment({
+        run: { title: "C Course Ended" },
+        grades: [grade({ passed: true })],
+      }),
+    ]
+    const expired = [
       courseEnrollment({
         run: {
           title: "A Course Ended",
@@ -26,10 +32,6 @@ describe("EnrollmentDisplay", () => {
           title: "B Course Ended",
           end_date: faker.date.past().toISOString(),
         },
-      }),
-      courseEnrollment({
-        run: { title: "C Course Ended" },
-        grades: [grade({ passed: true })],
       }),
     ]
     const started = [
@@ -59,7 +61,8 @@ describe("EnrollmentDisplay", () => {
       }),
     ]
     const mitxonlineCourseEnrollments = faker.helpers.shuffle([
-      ...ended,
+      ...expired,
+      ...completed,
       ...started,
       ...notStarted,
     ])
@@ -71,7 +74,7 @@ describe("EnrollmentDisplay", () => {
 
     return {
       mitxonlineCourseEnrollments,
-      mitxonlineCourses: { started, ended, notStarted },
+      mitxonlineCourses: { completed, expired, started, notStarted },
     }
   }
 
@@ -85,6 +88,7 @@ describe("EnrollmentDisplay", () => {
     const expectedTitles = [
       ...mitxonlineCourses.started,
       ...mitxonlineCourses.notStarted,
+      ...mitxonlineCourses.completed,
     ].map((e) => e.run.title)
 
     expectedTitles.forEach((title, i) => {
@@ -104,7 +108,8 @@ describe("EnrollmentDisplay", () => {
     const expectedTitles = [
       ...mitxonlineCourses.started,
       ...mitxonlineCourses.notStarted,
-      ...mitxonlineCourses.ended,
+      ...mitxonlineCourses.completed,
+      ...mitxonlineCourses.expired,
     ].map((e) => e.run.title)
 
     expectedTitles.forEach((title, i) => {
