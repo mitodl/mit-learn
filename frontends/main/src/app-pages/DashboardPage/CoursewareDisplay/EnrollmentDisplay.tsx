@@ -8,6 +8,7 @@ import {
   Typography,
   TypographyProps,
   styled,
+  theme,
 } from "ol-components"
 import { useQuery } from "@tanstack/react-query"
 import { mitxonlineEnrollments } from "./transform"
@@ -44,7 +45,7 @@ const Title = styled(Typography)<Pick<TypographyProps, "component">>(
   }),
 )
 
-const EnrollmentList = styled(PlainList)<Pick<PlainListProps, "itemSpacing">>(
+const EnrollmentsList = styled(PlainList)<Pick<PlainListProps, "itemSpacing">>(
   ({ theme }) => ({
     [theme.breakpoints.down("md")]: {
       borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
@@ -54,6 +55,13 @@ const EnrollmentList = styled(PlainList)<Pick<PlainListProps, "itemSpacing">>(
     },
   }),
 )
+
+const HiddenEnrollmentsList = styled(EnrollmentsList)({
+  marginTop: "16px",
+  [theme.breakpoints.down("md")]: {
+    marginTop: "0",
+  },
+})
 
 const ShowAllContainer = styled.div(({ theme }) => ({
   display: "flex",
@@ -120,7 +128,7 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
 
   return (
     <>
-      <EnrollmentList itemSpacing={"16px"}>
+      <EnrollmentsList itemSpacing={"16px"}>
         {shownEnrollments.map((course) => (
           <DashboardCardStyled
             key={course.id}
@@ -129,21 +137,19 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
             showNotComplete={false}
           />
         ))}
-        <li>
-          <Collapse orientation="vertical" in={shown}>
-            <EnrollmentList itemSpacing={"16px"}>
-              {hiddenEnrollments.map((course) => (
-                <DashboardCardStyled
-                  key={course.id}
-                  Component="li"
-                  dashboardResource={course}
-                  showNotComplete={false}
-                />
-              ))}
-            </EnrollmentList>
-          </Collapse>
-        </li>
-      </EnrollmentList>
+      </EnrollmentsList>
+      <Collapse orientation="vertical" in={shown}>
+        <HiddenEnrollmentsList itemSpacing={"16px"}>
+          {hiddenEnrollments.map((course) => (
+            <DashboardCardStyled
+              key={course.id}
+              Component="li"
+              dashboardResource={course}
+              showNotComplete={false}
+            />
+          ))}
+        </HiddenEnrollmentsList>
+      </Collapse>
       <ShowAllContainer>
         <Link color="red" size="medium" onClick={handleToggle}>
           {shown ? "Show less" : "Show all"}
