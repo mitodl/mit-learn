@@ -84,15 +84,18 @@ const startsSooner = (a: DashboardCourse, b: DashboardCourse) => {
   return x.getTime() - y.getTime()
 }
 const sortEnrollments = (resources: DashboardCourse[]) => {
-  const ended: DashboardCourse[] = []
+  const expired: DashboardCourse[] = []
+  const completed: DashboardCourse[] = []
   const started: DashboardCourse[] = []
   const notStarted: DashboardCourse[] = []
   resources.forEach((resource) => {
-    if (
-      resource.enrollment?.status === EnrollmentStatus.Completed ||
-      (resource.run.endDate && new Date(resource.run.endDate) < new Date())
+    if (resource.enrollment?.status === EnrollmentStatus.Completed) {
+      completed.push(resource)
+    } else if (
+      resource.run.endDate &&
+      new Date(resource.run.endDate) < new Date()
     ) {
-      ended.push(resource)
+      expired.push(resource)
     } else if (
       resource.run.startDate &&
       new Date(resource.run.startDate) < new Date()
@@ -104,7 +107,8 @@ const sortEnrollments = (resources: DashboardCourse[]) => {
   })
 
   return {
-    ended: ended.sort(alphabeticalSort),
+    completed: completed.sort(alphabeticalSort),
+    expired: expired.sort(alphabeticalSort),
     started: started.sort(alphabeticalSort),
     notStarted: notStarted.sort(startsSooner),
   }
@@ -174,8 +178,10 @@ const EnrollmentDisplay = () => {
    * The constants below are separate for impending "Show All" functionality.
    * The above TODO could be handled then.
    */
-  const { ended, started, notStarted } = sortEnrollments(enrolledCourses || [])
-  const shownEnrollments = [...started, ...notStarted]
+  const { completed, expired, started, notStarted } = sortEnrollments(
+    enrolledCourses || [],
+  )
+  const shownEnrollments = [...started, ...notStarted, ...completed]
 
   return (
     <Wrapper>
@@ -184,7 +190,7 @@ const EnrollmentDisplay = () => {
       </Title>
       <EnrollmentExpandCollapse
         shownEnrollments={shownEnrollments}
-        hiddenEnrollments={ended}
+        hiddenEnrollments={expired}
       />
     </Wrapper>
   )
