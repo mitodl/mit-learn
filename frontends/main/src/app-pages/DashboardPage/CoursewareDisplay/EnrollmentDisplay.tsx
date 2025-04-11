@@ -59,6 +59,7 @@ const EnrollmentsList = styled(PlainList)<Pick<PlainListProps, "itemSpacing">>(
 const HiddenEnrollmentsList = styled(EnrollmentsList)({
   marginTop: "16px",
   [theme.breakpoints.down("md")]: {
+    borderTop: "none",
     marginTop: "0",
   },
 })
