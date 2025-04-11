@@ -2,6 +2,7 @@ import logging
 
 import requests
 from django.conf import settings
+from selenium.webdriver.support.ui import WebDriverWait
 
 from learning_resources.utils import get_web_driver
 
@@ -10,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 class BaseScraper:
     use_webdriver = settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER
+    driver = None
 
     def __init__(self, start_url):
         self.start_url = start_url
@@ -20,6 +22,10 @@ class BaseScraper:
         if url:
             if self.driver:
                 self.driver.get(url)
+                WebDriverWait(self.driver, 10).until(
+                    lambda d: d.execute_script("return document.readyState")
+                    == "complete"
+                )
                 return self.driver.execute_script("return document.body.innerHTML")
             else:
                 try:
