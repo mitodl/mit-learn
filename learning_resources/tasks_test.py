@@ -145,12 +145,15 @@ def test_import_all_mit_edx_files(settings, mocker, mocked_celery, mock_blocklis
         "learning_resources.tasks.get_content_tasks", autospec=True
     )
     with pytest.raises(mocked_celery.replace_exception_class):
-        tasks.import_all_mit_edx_files.delay(chunk_size=4, overwrite=False)
+        tasks.import_all_mit_edx_files.delay(
+            chunk_size=4, overwrite=False, learning_resource_ids=[1]
+        )
     get_content_tasks_mock.assert_called_once_with(
         ETLSource.mit_edx.name,
         chunk_size=4,
         s3_prefix="simeon-mitx-course-tarballs",
         overwrite=False,
+        learning_resource_ids=[1],
     )
 
 
@@ -163,9 +166,14 @@ def test_import_all_mitxonline_files(settings, mocker, mocked_celery, mock_block
     )
 
     with pytest.raises(mocked_celery.replace_exception_class):
-        tasks.import_all_mitxonline_files.delay(chunk_size=3, overwrite=True)
+        tasks.import_all_mitxonline_files.delay(
+            chunk_size=3, overwrite=True, learning_resource_ids=None
+        )
     get_content_tasks_mock.assert_called_once_with(
-        PlatformType.mitxonline.name, chunk_size=3, overwrite=True
+        PlatformType.mitxonline.name,
+        chunk_size=3,
+        overwrite=True,
+        learning_resource_ids=None,
     )
 
 
@@ -177,9 +185,9 @@ def test_import_all_xpro_files(settings, mocker, mocked_celery, mock_blocklist):
         "learning_resources.tasks.get_content_tasks", autospec=True
     )
     with pytest.raises(mocked_celery.replace_exception_class):
-        tasks.import_all_xpro_files.delay(chunk_size=3)
+        tasks.import_all_xpro_files.delay(chunk_size=3, learning_resource_ids=[1])
     get_content_tasks_mock.assert_called_once_with(
-        PlatformType.xpro.name, chunk_size=3, overwrite=False
+        PlatformType.xpro.name, chunk_size=3, overwrite=False, learning_resource_ids=[1]
     )
 
 
@@ -198,11 +206,19 @@ def test_import_all_oll_files(settings, mocker, mocked_celery, mock_blocklist):
         s3_prefix="open-learning-library/courses",
         override_base_prefix=True,
         overwrite=False,
+        learning_resource_ids=None,
     )
 
 
 @mock_aws
-def test_get_content_tasks(settings, mocker, mocked_celery, mock_xpro_learning_bucket):
+@pytest.mark.parametrize("with_learning_resource_ids", [True, False])
+def test_get_content_tasks(
+    settings,
+    mocker,
+    mocked_celery,
+    mock_xpro_learning_bucket,
+    with_learning_resource_ids,
+):
     """Test that get_content_tasks calls get_content_files with the correct args"""
     mock_get_content_files = mocker.patch(
         "learning_resources.tasks.get_content_files.si"
@@ -216,9 +232,23 @@ def test_get_content_tasks(settings, mocker, mocked_celery, mock_xpro_learning_b
     settings.LEARNING_COURSE_ITERATOR_CHUNK_SIZE = 2
     etl_source = ETLSource.xpro.name
     platform = PlatformType.xpro.name
-    factories.CourseFactory.create_batch(3, etl_source=etl_source, platform=platform)
+    courses = factories.CourseFactory.create_batch(
+        3, etl_source=etl_source, platform=platform
+    )
+    if with_learning_resource_ids:
+        learning_resource_ids = [
+            courses[0].learning_resource_id,
+            courses[1].learning_resource_id,
+        ]
+    else:
+        learning_resource_ids = None
     s3_prefix = "course-prefix"
-    tasks.get_content_tasks(etl_source, s3_prefix=s3_prefix, overwrite=True)
+    tasks.get_content_tasks(
+        etl_source,
+        s3_prefix=s3_prefix,
+        overwrite=True,
+        learning_resource_ids=learning_resource_ids,
+    )
     assert mocked_celery.group.call_count == 1
     assert (
         models.LearningResource.objects.filter(
@@ -230,10 +260,20 @@ def test_get_content_tasks(settings, mocker, mocked_celery, mock_xpro_learning_b
         .order_by("id")
         .values_list("id", flat=True)
     ).count() == 3
-    assert mock_get_content_files.call_count == 2
-    mock_get_content_files.assert_any_call(
-        ANY, etl_source, ["foo.tar.gz"], s3_prefix=s3_prefix, overwrite=True
-    )
+    if with_learning_resource_ids:
+        assert mock_get_content_files.call_count == 1
+        mock_get_content_files.assert_any_call(
+            [learning_resource_ids[0], learning_resource_ids[1]],
+            etl_source,
+            ["foo.tar.gz"],
+            s3_prefix=s3_prefix,
+            overwrite=True,
+        )
+    else:
+        assert mock_get_content_files.call_count == 2
+        mock_get_content_files.assert_any_call(
+            ANY, etl_source, ["foo.tar.gz"], s3_prefix=s3_prefix, overwrite=True
+        )
 
 
 def test_get_content_files(mocker, mock_xpro_learning_bucket):
