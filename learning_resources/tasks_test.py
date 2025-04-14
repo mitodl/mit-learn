@@ -25,9 +25,6 @@ from learning_resources.tasks import (
     scrape_marketing_pages,
     update_next_start_date_and_prices,
 )
-from learning_resources.utils import (
-    fetch_page,
-)
 
 pytestmark = pytest.mark.django_db
 # pylint:disable=redefined-outer-name,unused-argument,too-many-arguments
@@ -468,31 +465,6 @@ def test_summarize_unprocessed_content(
     assert get_unprocessed_content_file_ids_mock.call_count == 0 if ids else 1
 
 
-@pytest.mark.parametrize("use_webdriver", [True], ids=["with_webdriver"])
-def test_fetch_page_with_webdriver(mocker, use_webdriver, settings):
-    """Test that fetch_page uses WebDriver when settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER is True"""
-
-    settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = use_webdriver
-
-    mock_driver = mocker.MagicMock()
-    mock_driver.execute_script.return_value = "<html><body>Page content</body></html>"
-    mock_get_web_driver = mocker.patch(
-        "learning_resources.utils._get_web_driver", return_value=mock_driver
-    )
-    mock_webdriver_fetch_extra = mocker.patch(
-        "learning_resources.utils._webdriver_fetch_extra_elements"
-    )
-
-    url = "https://example.com/course"
-    result = fetch_page(url, use_webdriver=use_webdriver)
-
-    assert result == "<html><body>Page content</body></html>"
-    mock_get_web_driver.assert_called_once()
-    mock_driver.get.assert_called_once_with(url)
-    mock_webdriver_fetch_extra.assert_called_once_with(mock_driver)
-    mock_driver.execute_script.assert_called_once_with("return document.body.innerHTML")
-
-
 @pytest.mark.django_db
 def test_marketing_page_for_resources_with_webdriver(mocker, settings):
     """Test that marketing_page_for_resources uses WebDriver to fetch content"""
@@ -508,7 +480,8 @@ def test_marketing_page_for_resources_with_webdriver(mocker, settings):
 
     html_content = "<html><body><h1>Test Course</h1><p>Course content</p></body></html>"
     mock_fetch_page = mocker.patch(
-        "learning_resources.tasks.fetch_page", return_value=html_content
+        "learning_resources.site_scrapers.base_scraper.BaseScraper.fetch_page",
+        return_value=html_content,
     )
 
     markdown_content = "# Test Course\n\nCourse content"

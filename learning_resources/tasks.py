@@ -22,7 +22,8 @@ from learning_resources.etl.loaders import load_run_dependent_values
 from learning_resources.etl.pipelines import ocw_courses_etl
 from learning_resources.etl.utils import get_learning_course_bucket_name
 from learning_resources.models import ContentFile, LearningResource
-from learning_resources.utils import fetch_page, html_to_markdown, load_course_blocklist
+from learning_resources.site_scrapers.utils import scraper_for_site
+from learning_resources.utils import html_to_markdown, load_course_blocklist
 from learning_resources_search.exceptions import RetryError
 from main.celery import app
 from main.constants import ISOFORMAT
@@ -503,7 +504,8 @@ def scrape_marketing_pages(self):
 def marketing_page_for_resources(resource_ids):
     for learning_resource in LearningResource.objects.filter(id__in=resource_ids):
         marketing_page_url = learning_resource.url
-        page_content = fetch_page(marketing_page_url)
+        scraper = scraper_for_site(marketing_page_url)
+        page_content = scraper.scrape()
         if page_content:
             content_file, _ = ContentFile.objects.update_or_create(
                 learning_resource=learning_resource,
