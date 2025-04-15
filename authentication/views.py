@@ -80,8 +80,8 @@ class CustomLoginView(View):
                 not profile.completed_onboarding
                 and request.GET.get("skip_onboarding", "0") != "1"
             ):
-                profile.completed_onboarding = True
-                profile.save()
                 params = urlencode({"next": redirect_url})
                 redirect_url = f"{settings.MITOL_NEW_USER_LOGIN_URL}?{params}"
+            profile.completed_onboarding = True
+            profile.save()
         return redirect(redirect_url)
