@@ -1,7 +1,7 @@
 // FAKE DATA while API / auth work is in development
 import { CourseRunEnrollment } from "../../generated/v0"
 
-const soon = (days: number) => {
+const future = (days: number) => {
   return new Date(new Date().setDate(new Date().getDate() + days)).toISOString()
 }
 
@@ -396,8 +396,9 @@ const courses = {
   upgradeable_course_not_started: {
     run: {
       title: "Upgradeable Course, Not Yet Started",
-      start_date: soon(1),
-      end_date: "2040-12-20T15:00:00Z",
+      start_date: future(1),
+      upgrade_deadline: future(5),
+      end_date: future(10000),
       enrollment_start: "2024-03-07T23:59:00Z",
       enrollment_end: "2035-10-25T23:59:00Z",
       expiration_date: null,
@@ -405,7 +406,6 @@ const courses = {
         "https://courses-qa.mitxonline.mit.edu/courses/course-v1:MITxT+14.73x+3T2023/course",
       courseware_id: "course-v1:MITxT+14.73x+3T2023",
       certificate_available_date: "2024-01-03T00:00:00Z",
-      upgrade_deadline: "2025-04-10T15:00:00Z",
       is_upgradable: true,
       is_enrollable: false,
       is_archived: false,
@@ -503,8 +503,9 @@ const courses = {
     run: {
       title:
         "Upgradeable Course, Not Yet Started, And This Course Also Has A Really Long Name That Goes Across Multiple Lines",
-      start_date: soon(5),
-      end_date: "2040-12-20T15:00:00Z",
+      start_date: future(5),
+      upgrade_deadline: future(15),
+      end_date: future(10000),
       enrollment_start: "2024-03-07T23:59:00Z",
       enrollment_end: "2035-10-25T23:59:00Z",
       expiration_date: null,
@@ -512,7 +513,6 @@ const courses = {
         "https://courses-qa.mitxonline.mit.edu/courses/course-v1:MITxT+14.73x+3T2023/course",
       courseware_id: "course-v1:MITxT+14.73x+3T2023",
       certificate_available_date: "2024-01-03T00:00:00Z",
-      upgrade_deadline: "2025-04-10T15:00:00Z",
       is_upgradable: true,
       is_enrollable: false,
       is_archived: false,
@@ -610,7 +610,7 @@ const courses = {
   not_upgradeable_not_started: {
     run: {
       title: "Not Upgradeable, Not Started",
-      start_date: soon(10),
+      start_date: future(10),
       end_date: "2040-12-20T15:00:00Z",
       enrollment_start: "2024-03-07T23:59:00Z",
       enrollment_end: "2035-10-25T23:59:00Z",
@@ -717,7 +717,7 @@ const courses = {
         "https://courses-qa.mitxonline.mit.edu/courses/course-v1:MITxT+14.73x+3T2023/course",
       courseware_id: "course-v1:MITxT+14.73x+3T2023",
       certificate_available_date: "2024-01-03T00:00:00Z",
-      upgrade_deadline: "2025-04-10T15:00:00Z",
+      upgrade_deadline: future(8),
       is_upgradable: true,
       is_enrollable: false,
       is_archived: false,
