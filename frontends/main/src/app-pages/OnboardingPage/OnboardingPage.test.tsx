@@ -27,7 +27,7 @@ const oldWindowLocation = window.location
 beforeAll(() => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   delete (window as any).location
-  console.log("testing")
+
   window.location = Object.defineProperties(
     {} as unknown as string & Location,
     {
