@@ -20,6 +20,8 @@ import {
 import { calendarDaysUntil, isInPast, NoSSR } from "ol-utilities"
 
 import { EnrollmentStatusIndicator } from "./EnrollmentStatusIndicator"
+import { EmailSettingsDialog, UnenrollDialog } from "./DashboardDialogs"
+import NiceModal from "@ebay/nice-modal-react"
 
 const CardRoot = styled.div<{
   screenSize: "desktop" | "mobile"
@@ -68,14 +70,14 @@ const MenuButton = styled(ActionButton)(({ theme }) => ({
   },
 }))
 
-const getStandardContextMenuItems = () => {
+const getStandardContextMenuItems = (courseId: string, title: string) => {
   return [
     {
       key: "email-settings",
       label: "Email Settings",
       className: "dashboard-card-email-settings-menu-item",
       onClick: () => {
-        alert("Email Settings") // TODO: Implement email settings modal
+        NiceModal.show(EmailSettingsDialog, { title })
       },
     },
     {
@@ -83,7 +85,7 @@ const getStandardContextMenuItems = () => {
       label: "Unenroll",
       className: "dashboard-card-unenroll-menu-item",
       onClick: () => {
-        alert("Unenroll") // TODO: Implement unenroll functionality
+        NiceModal.show(UnenrollDialog, { title })
       },
     },
   ]
@@ -265,7 +267,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   const { title, marketingUrl, enrollment, run } = dashboardResource
   const contextMenu = (
     <SimpleMenu
-      items={contextMenuItems.concat(getStandardContextMenuItems())}
+      items={contextMenuItems.concat(
+        getStandardContextMenuItems(dashboardResource.id, title),
+      )}
       menuOverrideProps={{
         sx: {
           "li:hover": {
