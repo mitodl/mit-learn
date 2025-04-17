@@ -4,7 +4,6 @@ import { merge, times } from "lodash"
 import {
   renderWithProviders,
   screen,
-  waitFor,
   setMockResponse,
   user,
 } from "../../test-utils"
@@ -19,7 +18,31 @@ import {
   type Profile,
 } from "api/v0"
 
+import { waitFor } from "@testing-library/react"
+
 import OnboardingPage from "./OnboardingPage"
+
+const oldWindowLocation = window.location
+
+beforeAll(() => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  delete (window as any).location
+
+  window.location = Object.defineProperties(
+    {} as unknown as string & Location,
+    {
+      ...Object.getOwnPropertyDescriptors(oldWindowLocation),
+      assign: {
+        configurable: true,
+        value: jest.fn(),
+      },
+    },
+  )
+})
+
+afterAll(() => {
+  window.location = oldWindowLocation as unknown as string & Location
+})
 
 const STEPS_DATA: Partial<Profile>[] = [
   {
@@ -68,7 +91,9 @@ const setup = async (profile: Profile) => {
     ...req,
   }))
 
-  renderWithProviders(<OnboardingPage />)
+  renderWithProviders(<OnboardingPage />, {
+    url: "/onboarding?next=http%3A%2F%2Flearn.mit.edu",
+  })
 }
 
 // this function sets up the test and progresses the UI to the designated step
@@ -107,8 +132,15 @@ describe("OnboardingPage", () => {
       const nextStep = step + 1
       await setupAndProgressToStep(step)
       if (step === STEP_TITLES.length - 1) {
-        await findFinishButton()
+        const finishButton = await findFinishButton()
+
         expect(queryBackButton()).not.toBeNil()
+
+        await user.click(finishButton)
+        await waitFor(() => {
+          expect(window.location).toBe("http://learn.mit.edu")
+        })
+
         return
       }
 
