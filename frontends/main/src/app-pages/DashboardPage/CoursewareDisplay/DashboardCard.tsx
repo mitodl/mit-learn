@@ -277,14 +277,14 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
           },
           ".dashboard-card-email-settings-menu-item": {
             color: theme.custom.colors.silverGrayDark,
-            "&:hover": {
+            "&:hover, &.Mui-selected": {
               color: theme.custom.colors.lightRed,
               textDecoration: "underline",
             },
           },
           ".dashboard-card-unenroll-menu-item": {
             color: theme.custom.colors.red,
-            "&:hover": {
+            "&:hover, &.Mui-selected": {
               color: theme.custom.colors.lightRed,
               textDecoration: "underline",
             },
