@@ -63,7 +63,7 @@ const MenuButton = styled(ActionButton)(({ theme }) => ({
   },
 }))
 
-const getStandardContextMenuItems = (courseId: string, title: string) => {
+const getDefaultContextMenuItems = (title: string) => {
   return [
     {
       key: "email-settings",
@@ -258,9 +258,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   const { title, marketingUrl, enrollment, run } = dashboardResource
   const contextMenu = (
     <SimpleMenu
-      items={contextMenuItems.concat(
-        getStandardContextMenuItems(dashboardResource.id, title),
-      )}
+      items={contextMenuItems.concat(getDefaultContextMenuItems(title))}
       trigger={
         <MenuButton size="small" variant="text" aria-label="More options">
           <RiMore2Line />
@@ -386,4 +384,4 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   )
 }
 
-export { DashboardCard, getStandardContextMenuItems }
+export { DashboardCard, getDefaultContextMenuItems }
