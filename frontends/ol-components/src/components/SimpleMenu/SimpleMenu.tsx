@@ -8,6 +8,7 @@ interface SimpleMenuItemBase {
   key: string
   label: React.ReactNode
   icon?: React.ReactNode
+  className?: string
   LinkComponent?: React.ElementType
 }
 
@@ -108,7 +109,12 @@ const SimpleMenu: React.FC<SimpleMenuProps> = ({
             setOpen(false)
           }
           return (
-            <MenuItem {...linkProps} key={item.key} onClick={onClick}>
+            <MenuItem
+              {...linkProps}
+              className={item.className}
+              key={item.key}
+              onClick={onClick}
+            >
               {item.icon ? <ListItemIcon>{item.icon}</ListItemIcon> : null}
               {item.label}
             </MenuItem>
