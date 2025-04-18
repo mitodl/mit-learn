@@ -1,12 +1,5 @@
 import React from "react"
-import {
-  styled,
-  Link,
-  SimpleMenu,
-  SimpleMenuItem,
-  Stack,
-  theme,
-} from "ol-components"
+import { styled, Link, SimpleMenu, SimpleMenuItem, Stack } from "ol-components"
 import NextLink from "next/link"
 import { EnrollmentStatus, EnrollmentMode } from "./types"
 import type { DashboardCourse } from "./types"
@@ -75,7 +68,6 @@ const getStandardContextMenuItems = (courseId: string, title: string) => {
     {
       key: "email-settings",
       label: "Email Settings",
-      className: "dashboard-card-email-settings-menu-item",
       onClick: () => {
         NiceModal.show(EmailSettingsDialog, { title })
       },
@@ -83,7 +75,6 @@ const getStandardContextMenuItems = (courseId: string, title: string) => {
     {
       key: "unenroll",
       label: "Unenroll",
-      className: "dashboard-card-unenroll-menu-item",
       onClick: () => {
         NiceModal.show(UnenrollDialog, { title })
       },
@@ -270,27 +261,6 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       items={contextMenuItems.concat(
         getStandardContextMenuItems(dashboardResource.id, title),
       )}
-      menuOverrideProps={{
-        sx: {
-          "li:hover": {
-            backgroundColor: theme.custom.colors.white,
-          },
-          ".dashboard-card-email-settings-menu-item": {
-            color: theme.custom.colors.silverGrayDark,
-            "&:hover, &.Mui-selected": {
-              color: theme.custom.colors.lightRed,
-              textDecoration: "underline",
-            },
-          },
-          ".dashboard-card-unenroll-menu-item": {
-            color: theme.custom.colors.red,
-            "&:hover, &.Mui-selected": {
-              color: theme.custom.colors.lightRed,
-              textDecoration: "underline",
-            },
-          },
-        },
-      }}
       trigger={
         <MenuButton size="small" variant="text" aria-label="More options">
           <RiMore2Line />
