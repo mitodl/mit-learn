@@ -586,3 +586,24 @@ def filter_existing_qdrant_points(
         existing_values.extend([point.payload[lookup_field] for point in results[0]])
         next_page_offset = results[1]
     return [value for value in values if value not in existing_values]
+
+
+def remove_matching_qdrant_points(
+    params,
+    collection_name=RESOURCES_COLLECTION_NAME,
+):
+    """
+    Delete points from Qdrant mathing the provided params
+    """
+    client = qdrant_client()
+    qdrant_conditions = qdrant_query_conditions(params, collection_name=collection_name)
+    client.delete(
+        collection_name=collection_name,
+        points_selector=models.FilterSelector(
+            filter=models.Filter(
+                must=[
+                    *qdrant_conditions,
+                ]
+            )
+        ),
+    )
