@@ -4,7 +4,7 @@ import { Button } from "@mitodl/smoot-design"
 import {
   RiSparkling2Line,
   RiArrowDownSLine,
-  RiCloseLine,
+  RiArrowUpSLine,
 } from "@remixicon/react"
 import type { AiChatProps } from "@mitodl/smoot-design/ai"
 import { LearningResource } from "api"
@@ -90,7 +90,7 @@ const OpenChevron = styled(RiArrowDownSLine)(({ theme }) => ({
   right: "9px",
 }))
 
-const CloseButton = styled(RiCloseLine)(({ theme }) => ({
+const CloseChevron = styled(RiArrowUpSLine)(({ theme }) => ({
   fill: theme.custom.colors.white,
   position: "absolute",
   right: "0",
@@ -146,7 +146,7 @@ export const AiChatSyllabusOpener = ({
         <Typography variant="body1">
           Ask<strong>TIM</strong> about this course
         </Typography>
-        {open ? <CloseButton /> : <OpenChevron />}
+        {open ? <CloseChevron /> : <OpenChevron />}
       </StyledButton>
     </Opener>
   )
