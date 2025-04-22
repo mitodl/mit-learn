@@ -75,7 +75,7 @@ repos:
           - --exclude-files
           - "config/keycloak/tls/*"
           - --exclude-files
-          - "config/keycloak/realms/default-realm.json"
+          - "config/keycloak/realms/ol-local-realm.json"
         additional_dependencies: ["gibberish-detector"]
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: "v0.11.4"
