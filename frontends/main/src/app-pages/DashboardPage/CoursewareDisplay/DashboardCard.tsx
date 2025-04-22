@@ -13,6 +13,8 @@ import {
 import { calendarDaysUntil, isInPast, NoSSR } from "ol-utilities"
 
 import { EnrollmentStatusIndicator } from "./EnrollmentStatusIndicator"
+import { EmailSettingsDialog, UnenrollDialog } from "./DashboardDialogs"
+import NiceModal from "@ebay/nice-modal-react"
 
 const CardRoot = styled.div<{
   screenSize: "desktop" | "mobile"
@@ -60,6 +62,27 @@ const MenuButton = styled(ActionButton)(({ theme }) => ({
     right: "0",
   },
 }))
+
+const getDefaultContextMenuItems = (title: string) => {
+  return [
+    {
+      className: "dashboard-card-menu-item",
+      key: "email-settings",
+      label: "Email Settings",
+      onClick: () => {
+        NiceModal.show(EmailSettingsDialog, { title })
+      },
+    },
+    {
+      className: "dashboard-card-menu-item",
+      key: "unenroll",
+      label: "Unenroll",
+      onClick: () => {
+        NiceModal.show(UnenrollDialog, { title })
+      },
+    },
+  ]
+}
 
 type CoursewareButtonProps = {
   startDate?: string | null
@@ -216,24 +239,6 @@ const CourseStartCountdown: React.FC<{
   )
 }
 
-const getMenuItems = (): SimpleMenuItem[] => [
-  {
-    key: "placeholder1",
-    label: "Placeholder 1",
-    onClick: () => {},
-  },
-  {
-    key: "placeholder2",
-    label: "Placeholder 2",
-    onClick: () => {},
-  },
-  {
-    key: "placeholder3",
-    label: "Placeholder 3",
-    onClick: () => {},
-  },
-]
-
 type DashboardCardProps = {
   Component?: React.ElementType
   dashboardResource: DashboardCourse
@@ -241,6 +246,7 @@ type DashboardCardProps = {
   className?: string
   courseNoun?: string
   offerUpgrade?: boolean
+  contextMenuItems?: SimpleMenuItem[]
 }
 const DashboardCard: React.FC<DashboardCardProps> = ({
   dashboardResource,
@@ -249,11 +255,13 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   className,
   courseNoun = "Course",
   offerUpgrade = true,
+  contextMenuItems = [],
 }) => {
   const { title, marketingUrl, enrollment, run } = dashboardResource
+  const menuItems = contextMenuItems.concat(getDefaultContextMenuItems(title))
   const contextMenu = (
     <SimpleMenu
-      items={getMenuItems()}
+      items={menuItems}
       trigger={
         <MenuButton size="small" variant="text" aria-label="More options">
           <RiMore2Line />
@@ -379,4 +387,4 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   )
 }
 
-export { DashboardCard }
+export { DashboardCard, getDefaultContextMenuItems }
