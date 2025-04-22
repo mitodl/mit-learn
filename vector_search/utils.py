@@ -588,22 +588,27 @@ def filter_existing_qdrant_points(
     return [value for value in values if value not in existing_values]
 
 
-def remove_matching_qdrant_points(
+def remove_qdrant_points_matching_params(
     params,
     collection_name=RESOURCES_COLLECTION_NAME,
 ):
     """
-    Delete points from Qdrant mathing the provided params
+    Delete points from Qdrant matching the provided params
     """
     client = qdrant_client()
     qdrant_conditions = qdrant_query_conditions(params, collection_name=collection_name)
-    client.delete(
-        collection_name=collection_name,
-        points_selector=models.FilterSelector(
-            filter=models.Filter(
-                must=[
-                    *qdrant_conditions,
-                ]
-            )
-        ),
-    )
+    if qdrant_conditions:
+        """
+        Make sure the conditions have at least one
+        condition otherwise all records are dropped
+        """
+        client.delete(
+            collection_name=collection_name,
+            points_selector=models.FilterSelector(
+                filter=models.Filter(
+                    must=[
+                        *qdrant_conditions,
+                    ]
+                )
+            ),
+        )
