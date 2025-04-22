@@ -588,7 +588,25 @@ def filter_existing_qdrant_points(
     return [value for value in values if value not in existing_values]
 
 
-def remove_qdrant_points_matching_params(
+def remove_documents_by_ids(ids, resource_type):
+    if resource_type != CONTENT_FILE_TYPE:
+        collection_name = RESOURCES_COLLECTION_NAME
+        serialized_documents = serialize_bulk_learning_resources(ids)
+        lookup_keys = ["readable_id"]
+    else:
+        collection_name = CONTENT_FILES_COLLECTION_NAME
+        serialized_documents = serialize_bulk_content_files(ids)
+        lookup_keys = ["run_readable_id", "resource_readable_id", "key"]
+    for doc in serialized_documents:
+        params = {}
+        for key in lookup_keys:
+            if key in doc:
+                params[key] = doc[key]
+        if params:
+            remove_points_matching_params(params, collection_name=collection_name)
+
+
+def remove_points_matching_params(
     params,
     collection_name=RESOURCES_COLLECTION_NAME,
 ):
