@@ -4,6 +4,7 @@ import copy
 import logging
 import mimetypes
 from datetime import datetime
+from hashlib import md5
 from json import JSONDecodeError
 from pathlib import Path
 from urllib.parse import unquote, urljoin, urlparse
@@ -53,6 +54,12 @@ log = logging.getLogger(__name__)
 OFFERED_BY = {"code": OfferedBy.ocw.name}
 PRIMARY_COURSE_ID = "primary_course_number"
 UNIQUE_FIELD = "url"
+
+
+def content_checksum(content):
+    hasher = md5()  # noqa: S324
+    hasher.update(content.encode("utf-8"))
+    return hasher.hexdigest()
 
 
 def parse_delivery(course_data: dict) -> list[str]:
@@ -128,7 +135,11 @@ def transform_content_files(
         if obj.key.endswith("data.json"):
             try:
                 course_page_json = safe_load_json(get_s3_object_and_read(obj), obj.key)
-                yield transform_page(obj.key, course_page_json)
+                transformed_page = transform_page(obj.key, course_page_json)
+                content = transformed_page.get("content")
+                if content:
+                    transformed_page["checksum"] = content_checksum(content)
+                yield transformed_page
 
             except:  # noqa: E722
                 log.exception(
@@ -142,7 +153,11 @@ def transform_content_files(
                 transformed_resource = transform_contentfile(
                     obj.key, resource_json, s3_resource, force_overwrite
                 )
+
                 if transformed_resource:
+                    content = transformed_resource.get("content")
+                    if content:
+                        transformed_resource["checksum"] = content_checksum(content)
                     yield transformed_resource
 
             except:  # noqa: E722
