@@ -45,9 +45,10 @@ const Opener = styled.div(({ theme }) => ({
     background: theme.custom.colors.white,
     display: "block",
     position: "absolute",
-    top: 0,
+    top: "-10px",
     borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
     zIndex: 1,
+    paddingTop: "10px",
   },
 }))
 

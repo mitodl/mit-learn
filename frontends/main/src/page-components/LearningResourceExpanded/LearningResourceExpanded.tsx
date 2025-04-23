@@ -41,8 +41,9 @@ const StyledAiChatSyllabusOpener = styled(AiChatSyllabusOpener)<{
   top: number
 }>(({ top }) => ({
   position: "sticky",
-  top,
+  top: 0,
   zIndex: 2,
+  paddingTop: "10px",
 }))
 
 const TopContainer = styled.div<{ chatEnabled: boolean }>(
@@ -151,9 +152,9 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
     initialChatExpanded ? ChatTransitionState.Open : ChatTransitionState.Closed,
   )
 
-  const chatEnabled =
-    useFeatureFlagEnabled(FeatureFlags.LrDrawerChatbot) &&
-    resource?.resource_type === ResourceTypeEnum.Course
+  const chatEnabled = true
+  // useFeatureFlagEnabled(FeatureFlags.LrDrawerChatbot) &&
+  // resource?.resource_type === ResourceTypeEnum.Course
 
   useEffect(() => {
     // If URL indicates syllabus open, but it's not enabled, update URL
