@@ -13,7 +13,7 @@ from learning_resources.serializers import (
     LearningResourceMetadataDisplaySerializer,
     LearningResourceSerializer,
 )
-from learning_resources_search.constants import CONTENT_FILE_TYPE
+from learning_resources_search.constants import CONTENT_FILE_TYPE, COURSE_TYPE
 from learning_resources_search.serializers import (
     serialize_bulk_content_files,
     serialize_bulk_learning_resources,
@@ -199,6 +199,23 @@ def _chunk_documents(encoder, texts, metadatas):
     return recursive_splitter.create_documents(texts=texts, metadatas=metadatas)
 
 
+def _embedding_context(document, resource_type):
+    """
+    Get the embedding context for a document
+    based on the resource_type (learning resource vs content file)
+    """
+    if resource_type != CONTENT_FILE_TYPE:
+        return " ".join(
+            [
+                document.get("title"),
+                document.get("description"),
+                document.get("full_description"),
+            ]
+        )
+    else:
+        return document.get("content", "")
+
+
 def _process_resource_embeddings(serialized_resources):
     docs = []
     metadata = []
@@ -206,16 +223,55 @@ def _process_resource_embeddings(serialized_resources):
     encoder = dense_encoder()
     vector_name = encoder.model_short_name()
     for doc in serialized_resources:
+        if not should_generate_embeddings(doc, COURSE_TYPE):
+            continue
         vector_point_key = doc["readable_id"]
         metadata.append(doc)
         ids.append(vector_point_id(vector_point_key))
-        docs.append(
-            f"{doc.get('title')} {doc.get('description')} {doc.get('full_description')}"
-        )
+        docs.append(_embedding_context(doc, COURSE_TYPE))
     if len(docs) > 0:
         embeddings = encoder.embed_documents(docs)
         return points_generator(ids, metadata, embeddings, vector_name)
     return None
+
+
+def should_generate_embeddings(serialized_document, resource_type):
+    """
+    Determine if we should generate embeddings for a document
+    based on the resource_type (learning resource vs content file)
+    """
+    client = qdrant_client()
+    if resource_type != CONTENT_FILE_TYPE:
+        collection_name = RESOURCES_COLLECTION_NAME
+        point_id = vector_point_id(serialized_document["readable_id"])
+    else:
+        # we just need metadata from the first chunk
+        point_id = vector_point_id(
+            f"{serialized_document['resource_readable_id']}."
+            f"{serialized_document.get('run_readable_id', '')}."
+            f"{serialized_document['key']}.0"
+        )
+    response = client.retrieve(
+        collection_name=collection_name,
+        ids=[point_id],
+    )
+    if len(response) > 0:
+        if resource_type != CONTENT_FILE_TYPE:
+            resource_payload = response[0].payload
+            stored_embedding_content = _embedding_context(
+                resource_payload, resource_type
+            )
+            current_embedding_content = _embedding_context(
+                serialized_document, resource_type
+            )
+            if stored_embedding_content != current_embedding_content:
+                return True
+        else:
+            qdrant_checksum = response[0].payload.get("checksum")
+            if qdrant_checksum != serialized_document["checksum"]:
+                return True
+        return False
+    return True
 
 
 def _embed_course_metadata_as_contentfile(serialized_resources):
@@ -268,10 +324,15 @@ def _process_content_embeddings(serialized_content):
     ids = []
     encoder = dense_encoder()
     vector_name = encoder.model_short_name()
+    remove_docs = []
     for doc in serialized_content:
-        if not doc.get("content"):
+        embedding_context = _embedding_context(doc, CONTENT_FILE_TYPE)
+        if not embedding_context or not should_generate_embeddings(
+            doc, CONTENT_FILE_TYPE
+        ):
             continue
-        split_docs = _chunk_documents(encoder, [doc.get("content")], [doc])
+        remove_docs.append(doc)
+        split_docs = _chunk_documents(encoder, [embedding_context], [doc])
         split_texts = [d.page_content for d in split_docs if d.page_content]
         resource_vector_point_id = vector_point_id(doc["resource_readable_id"])
         split_metadatas = [
@@ -313,6 +374,8 @@ def _process_content_embeddings(serialized_content):
         embeddings.extend(split_embeddings)
         metadata.extend(split_metadatas)
         ids.extend(split_ids)
+    if remove_docs:
+        remove_qdrant_records(remove_docs, CONTENT_FILE_TYPE)
     if ids:
         return points_generator(ids, metadata, embeddings, vector_name)
     return None
@@ -588,14 +651,12 @@ def filter_existing_qdrant_points(
     return [value for value in values if value not in existing_values]
 
 
-def remove_documents_by_ids(ids, resource_type):
+def remove_qdrant_records(serialized_documents, resource_type):
     if resource_type != CONTENT_FILE_TYPE:
         collection_name = RESOURCES_COLLECTION_NAME
-        serialized_documents = serialize_bulk_learning_resources(ids)
         lookup_keys = ["readable_id"]
     else:
         collection_name = CONTENT_FILES_COLLECTION_NAME
-        serialized_documents = serialize_bulk_content_files(ids)
         lookup_keys = ["run_readable_id", "resource_readable_id", "key"]
     for doc in serialized_documents:
         params = {}
