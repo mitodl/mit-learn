@@ -143,7 +143,8 @@ def test_custom_login_view_authenticated_user_skip_onboarding(mocker):
 
     response = CustomLoginView().get(request)
     request.user.profile.refresh_from_db()
-    assert request.user.profile.completed_onboarding is True
+    # user should not be marked as completed onboarding
+    assert request.user.profile.completed_onboarding is False
 
     assert response.status_code == 302
     assert response.url == "/dashboard"
