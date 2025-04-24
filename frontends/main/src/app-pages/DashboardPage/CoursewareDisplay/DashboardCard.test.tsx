@@ -1,6 +1,6 @@
 import React from "react"
-import { renderWithProviders, screen, within } from "@/test-utils"
-import { DashboardCard } from "./DashboardCard"
+import { renderWithProviders, screen, user, within } from "@/test-utils"
+import { DashboardCard, getDefaultContextMenuItems } from "./DashboardCard"
 import { dashboardCourse } from "./test-utils"
 import { faker } from "@faker-js/faker/locale/en"
 import moment from "moment"
@@ -326,6 +326,49 @@ describe.each([
         expect(img).toHaveAttribute("alt", "")
       } else {
         expect(img).toBe(null)
+      }
+    },
+  )
+
+  test.each([
+    { contextMenuItems: [] },
+    {
+      contextMenuItems: [
+        {
+          key: "test-key",
+          label: "Test",
+          onClick: () => {},
+        },
+      ],
+    },
+  ])(
+    "getDefaultContextMenuItems returns correct items",
+    async ({ contextMenuItems }) => {
+      const course = dashboardCourse()
+      renderWithProviders(
+        <DashboardCard
+          dashboardResource={course}
+          contextMenuItems={contextMenuItems}
+        />,
+      )
+      const card = getCard()
+      const contextMenuButton = within(card).getByRole("button", {
+        name: "More options",
+      })
+      await user.click(contextMenuButton)
+      const expectedMenuItems = [
+        ...contextMenuItems,
+        ...getDefaultContextMenuItems("Test Course"),
+      ]
+      const menuItems = screen.getAllByRole("menuitem")
+      for (let i = 0; i < expectedMenuItems.length; i++) {
+        const menuItem = expectedMenuItems[i]
+        const menuItemElement = menuItems.find((item) => {
+          if (item.textContent === menuItem.label) {
+            return item
+          }
+        })
+        expect(menuItemElement?.textContent).toBe(menuItem.label)
       }
     },
   )
