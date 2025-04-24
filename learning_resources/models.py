@@ -3,6 +3,7 @@
 import uuid
 from abc import abstractmethod
 from functools import cached_property
+from hashlib import md5
 from typing import TYPE_CHECKING, Optional
 
 from django.conf import settings
@@ -910,6 +911,19 @@ class ContentFile(TimestampedModel):
     edx_module_id = models.CharField(max_length=1024, null=True, blank=True)  # noqa: DJ001
     summary = models.TextField(blank=True, default="")
     flashcards = models.JSONField(blank=True, default=list)
+
+    def content_checksum(self):
+        hasher = md5()  # noqa: S324
+        if self.content:
+            hasher.update(self.content.encode("utf-8"))
+            return hasher.hexdigest()
+        return None
+
+    def save(self, **kwargs):
+        if self.content and not self.checksum:
+            self.checksum = self.content_checksum()
+
+        super().save(**kwargs)
 
     class Meta:
         unique_together = (("key", "run"),)
