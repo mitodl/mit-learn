@@ -75,15 +75,6 @@ const Chevron = styled(RiArrowDownSLine)(({ theme }) => ({
   right: "9px",
 }))
 
-const CloseChevron = styled(RiArrowUpSLine)(({ theme }) => ({
-  fill: theme.custom.colors.white,
-  position: "absolute",
-  right: "0",
-  padding: "9px",
-  boxSizing: "content-box",
-  backgroundColor: theme.custom.colors.silverGray,
-}))
-
 const StyledAiChat = styled(AiChat)<{
   topPosition: number
 }>(({ topPosition }) => ({
