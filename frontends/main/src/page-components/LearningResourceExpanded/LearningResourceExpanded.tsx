@@ -41,9 +41,8 @@ const StyledAiChatSyllabusOpener = styled(AiChatSyllabusOpener)<{
   top: number
 }>(({ top }) => ({
   position: "sticky",
-  top: 0,
+  top: "24px",
   zIndex: 2,
-  paddingTop: "10px",
 }))
 
 const TopContainer = styled.div<{ chatEnabled: boolean }>(

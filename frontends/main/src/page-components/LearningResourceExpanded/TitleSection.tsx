@@ -8,21 +8,23 @@ import { RiCloseLargeLine } from "@remixicon/react"
 
 const TitleContainer = styled.div({
   display: "flex",
-  // position: "sticky",
   justifyContent: "space-between",
   top: "0",
-  padding: "24px 28px",
+  padding: "24px 72px 24px 28px",
   gap: "16px",
   zIndex: 2,
   backgroundColor: theme.custom.colors.white,
   [theme.breakpoints.down("md")]: {
-    padding: "24px 16px",
+    padding: "24px 60px 24px 16px",
   },
 })
 
 const CloseButton = styled(ActionButton)(({ theme }) => ({
   position: "fixed",
   right: "28px",
+  [theme.breakpoints.down("md")]: {
+    right: "16px",
+  },
   "&&&": {
     flexShrink: 0,
     backgroundColor: theme.custom.colors.lightGray2,

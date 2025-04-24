@@ -37,21 +37,6 @@ const SlideDown = styled.div<{
   transition: "top 0.3s ease-in-out",
 }))
 
-const Opener = styled.div(({ theme }) => ({
-  ":after": {
-    content: "''",
-    width: "100%",
-    height: "50%",
-    background: theme.custom.colors.white,
-    display: "block",
-    position: "absolute",
-    top: "-10px",
-    borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
-    zIndex: 1,
-    paddingTop: "10px",
-  },
-}))
-
 const StyledButton = styled(Button)<{ open: boolean }>(({ theme, open }) => ({
   pointerEvents: "auto",
   display: "flex",
@@ -75,17 +60,16 @@ const StyledButton = styled(Button)<{ open: boolean }>(({ theme, open }) => ({
   "&&": {
     ":hover": {
       backgroundColor: theme.custom.colors.white,
-      borderColor: open
-        ? theme.custom.colors.darkGray1
-        : theme.custom.colors.silverGray,
-      "svg:last-child": {
-        backgroundColor: open ? theme.custom.colors.darkGray1 : "transparent",
-      },
+      borderColor: theme.custom.colors.silverGray,
     },
+  },
+  "svg:last-child": {
+    transform: open ? "rotate(-180deg)" : "rotate(0deg)",
+    transition: "transform 0.3s ease-in-out",
   },
 }))
 
-const OpenChevron = styled(RiArrowDownSLine)(({ theme }) => ({
+const Chevron = styled(RiArrowDownSLine)(({ theme }) => ({
   fill: theme.custom.colors.mitRed,
   position: "absolute",
   right: "9px",
@@ -135,7 +119,7 @@ export const AiChatSyllabusOpener = ({
   onToggleOpen: (open: boolean) => void
 }) => {
   return (
-    <Opener className={className}>
+    <div className={className}>
       <StyledButton
         variant="bordered"
         edge="rounded"
@@ -147,9 +131,9 @@ export const AiChatSyllabusOpener = ({
         <Typography variant="body1">
           Ask<strong>TIM</strong> about this course
         </Typography>
-        {open ? <CloseChevron /> : <OpenChevron />}
+        <Chevron />
       </StyledButton>
-    </Opener>
+    </div>
   )
 }
 
