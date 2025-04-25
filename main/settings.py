@@ -196,7 +196,9 @@ if DEBUG:
     MIDDLEWARE += ("nplusone.ext.django.NPlusOneMiddleware",)
 
 SESSION_ENGINE = "django.contrib.sessions.backends.signed_cookies"
-
+MITOL_NEW_USER_LOGIN_URL = get_string(
+    "MITOL_NEW_USER_LOGIN_URL", "http://open.odl.local:8062/onboarding"
+)
 LOGIN_REDIRECT_URL = "/app"
 LOGIN_URL = "/login"
 LOGIN_ERROR_URL = "/login"
