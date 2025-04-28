@@ -306,6 +306,12 @@ export interface ContentFile {
    * @type {string}
    * @memberof ContentFile
    */
+  archive_checksum?: string
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
   url?: string | null
   /**
    *
@@ -343,6 +349,12 @@ export interface ContentFile {
    * @memberof ContentFile
    */
   content_language?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  checksum?: string
   /**
    *
    * @type {string}
