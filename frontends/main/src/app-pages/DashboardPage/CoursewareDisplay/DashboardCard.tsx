@@ -313,9 +313,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   )
   const startDateSection = isLoading ? (
     <Skeleton variant="text" width={100} height={24} />
-  ) : (
+  ) : run.startDate ? (
     <CourseStartCountdown startDate={run.startDate} />
-  )
+  ) : null
   const menuItems = contextMenuItems.concat(getDefaultContextMenuItems(title))
   const contextMenu = isLoading ? (
     <Skeleton variant="rectangular" width={12} height={24} />
