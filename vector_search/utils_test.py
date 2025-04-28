@@ -62,7 +62,12 @@ def test_vector_point_id_used_for_embed(mocker, content_type):
     if content_type == "learning_resource":
         point_ids = [vector_point_id(resource.readable_id) for resource in resources]
         assert sorted(
-            [p.id for p in mock_qdrant.upload_points.mock_calls[1].kwargs["points"]]
+            [
+                p.id
+                for p in mock_qdrant.batch_update_points.mock_calls[0]
+                .kwargs["update_operations"][0]
+                .upsert.points
+            ]
         ) == sorted(point_ids)
     else:
         point_ids = [
@@ -72,7 +77,12 @@ def test_vector_point_id_used_for_embed(mocker, content_type):
             for resource in serialize_bulk_content_files([r.id for r in resources])
         ]
         assert sorted(
-            [p.id for p in mock_qdrant.upload_points.mock_calls[0].kwargs["points"]]
+            [
+                p.id
+                for p in mock_qdrant.batch_update_points.mock_calls[0]
+                .kwargs["update_operations"][0]
+                .upsert.points
+            ]
         ) == sorted(point_ids)
         # TODO: Pass "[resource.id for resource in resources]" instead of [] when we want the scheduled content file summarization  # noqa: FIX002, TD002, TD003
         summarize_content_files_by_ids_mock.assert_called_once_with(
