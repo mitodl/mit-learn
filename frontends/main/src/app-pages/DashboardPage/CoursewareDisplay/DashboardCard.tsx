@@ -1,5 +1,12 @@
 import React from "react"
-import { styled, Link, SimpleMenu, SimpleMenuItem, Stack } from "ol-components"
+import {
+  styled,
+  Link,
+  SimpleMenu,
+  SimpleMenuItem,
+  Stack,
+  Skeleton,
+} from "ol-components"
 import NextLink from "next/link"
 import { EnrollmentStatus, EnrollmentMode } from "./types"
 import type { DashboardCourse } from "./types"
@@ -247,6 +254,7 @@ type DashboardCardProps = {
   courseNoun?: string
   offerUpgrade?: boolean
   contextMenuItems?: SimpleMenuItem[]
+  isLoading?: boolean
 }
 const DashboardCard: React.FC<DashboardCardProps> = ({
   dashboardResource,
@@ -256,10 +264,62 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   courseNoun = "Course",
   offerUpgrade = true,
   contextMenuItems = [],
+  isLoading = false,
 }) => {
   const { title, marketingUrl, enrollment, run } = dashboardResource
+  const titleSection = isLoading ? (
+    <>
+      <Skeleton variant="text" width="95%" height={16} />
+      <Skeleton variant="text" width={120} height={16} />
+      <Skeleton variant="text" width={120} height={16} />
+    </>
+  ) : (
+    <>
+      <TitleLink size="medium" color="black" href={marketingUrl}>
+        {title}
+      </TitleLink>
+      {enrollment?.status === EnrollmentStatus.Completed ? (
+        <SubtitleLink href="#">
+          {<RiAwardLine size="16px" />}
+          View Certificate
+        </SubtitleLink>
+      ) : null}
+      {enrollment?.mode !== EnrollmentMode.Verified && offerUpgrade ? (
+        <UpgradeBanner
+          data-testid="upgrade-root"
+          canUpgrade={run.canUpgrade}
+          certificateUpgradeDeadline={run.certificateUpgradeDeadline}
+          certificateUpgradePrice={run.certificateUpgradePrice}
+        />
+      ) : null}
+    </>
+  )
+  const buttonSection = isLoading ? (
+    <Skeleton variant="rectangular" width={120} height={32} />
+  ) : (
+    <>
+      <EnrollmentStatusIndicator
+        status={enrollment?.status}
+        showNotComplete={showNotComplete}
+      />
+      <CoursewareButton
+        data-testid="courseware-button"
+        startDate={run.startDate}
+        href={run.coursewareUrl}
+        endDate={run.endDate}
+        courseNoun={courseNoun}
+      />
+    </>
+  )
+  const startDateSection = isLoading ? (
+    <Skeleton variant="text" width={100} height={24} />
+  ) : (
+    <CourseStartCountdown startDate={run.startDate} />
+  )
   const menuItems = contextMenuItems.concat(getDefaultContextMenuItems(title))
-  const contextMenu = (
+  const contextMenu = isLoading ? (
+    <Skeleton variant="rectangular" width={12} height={24} />
+  ) : (
     <SimpleMenu
       items={menuItems}
       trigger={
@@ -277,42 +337,14 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       className={className}
     >
       <Stack justifyContent="start" alignItems="stretch" gap="8px" flex={1}>
-        <TitleLink size="medium" color="black" href={marketingUrl}>
-          {title}
-        </TitleLink>
-        {enrollment?.status === EnrollmentStatus.Completed ? (
-          <SubtitleLink href="#">
-            {<RiAwardLine size="16px" />}
-            View Certificate
-          </SubtitleLink>
-        ) : null}
-        {enrollment?.mode !== EnrollmentMode.Verified && offerUpgrade ? (
-          <UpgradeBanner
-            data-testid="upgrade-root"
-            canUpgrade={run.canUpgrade}
-            certificateUpgradeDeadline={run.certificateUpgradeDeadline}
-            certificateUpgradePrice={run.certificateUpgradePrice}
-          />
-        ) : null}
+        {titleSection}
       </Stack>
       <Stack gap="8px">
         <Stack direction="row" gap="8px" alignItems="center">
-          <EnrollmentStatusIndicator
-            status={enrollment?.status}
-            showNotComplete={showNotComplete}
-          />
-          <CoursewareButton
-            data-testid="courseware-button"
-            startDate={run.startDate}
-            href={run.coursewareUrl}
-            endDate={run.endDate}
-            courseNoun={courseNoun}
-          />
+          {buttonSection}
           {contextMenu}
         </Stack>
-        {run.startDate ? (
-          <CourseStartCountdown startDate={run.startDate} />
-        ) : null}
+        {startDateSection}
       </Stack>
     </CardRoot>
   )
@@ -332,23 +364,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         width="100%"
       >
         <Stack direction="column" gap="8px" flex={1}>
-          <TitleLink size="medium" color="black" href={marketingUrl}>
-            {title}
-          </TitleLink>
-          {enrollment?.status === EnrollmentStatus.Completed ? (
-            <SubtitleLink href="#">
-              {<RiAwardLine size="16px" />}
-              View Certificate
-            </SubtitleLink>
-          ) : null}
-          {enrollment?.mode !== EnrollmentMode.Verified && offerUpgrade ? (
-            <UpgradeBanner
-              data-testid="upgrade-root"
-              canUpgrade={run.canUpgrade}
-              certificateUpgradeDeadline={run.certificateUpgradeDeadline}
-              certificateUpgradePrice={run.certificateUpgradePrice}
-            />
-          ) : null}
+          {titleSection}
         </Stack>
         {contextMenu}
       </Stack>
@@ -358,23 +374,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         justifyContent="space-between"
         width="100%"
       >
-        {run.startDate ? (
-          <Stack justifyContent="start">
-            <CourseStartCountdown startDate={run.startDate} />
-          </Stack>
-        ) : null}
+        {startDateSection}
         <Stack direction="row" gap="8px" alignItems="center">
-          <EnrollmentStatusIndicator
-            status={enrollment?.status}
-            showNotComplete={showNotComplete}
-          />
-          <CoursewareButton
-            data-testid="courseware-button"
-            startDate={run.startDate}
-            href={run.coursewareUrl}
-            endDate={run.endDate}
-            courseNoun={courseNoun}
-          />
+          {buttonSection}
         </Stack>
       </Stack>
     </CardRoot>

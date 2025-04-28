@@ -118,11 +118,13 @@ const sortEnrollments = (resources: DashboardCourse[]) => {
 interface EnrollmentExpandCollapseProps {
   shownEnrollments: DashboardCourse[]
   hiddenEnrollments: DashboardCourse[]
+  isLoading?: boolean
 }
 
 const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
   shownEnrollments,
   hiddenEnrollments,
+  isLoading,
 }) => {
   const [shown, setShown] = React.useState(false)
 
@@ -140,6 +142,7 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
             Component="li"
             dashboardResource={course}
             showNotComplete={false}
+            isLoading={isLoading}
           />
         ))}
       </EnrollmentsList>
@@ -151,6 +154,7 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
               Component="li"
               dashboardResource={course}
               showNotComplete={false}
+              isLoading={isLoading}
             />
           ))}
         </HiddenEnrollmentsList>
@@ -165,7 +169,7 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
 }
 
 const EnrollmentDisplay = () => {
-  const { data: enrolledCourses } = useQuery({
+  const { data: enrolledCourses, isLoading } = useQuery({
     ...enrollmentQueries.coursesList(),
     select: mitxonlineEnrollments,
   })
@@ -192,6 +196,7 @@ const EnrollmentDisplay = () => {
       <EnrollmentExpandCollapse
         shownEnrollments={shownEnrollments}
         hiddenEnrollments={expired}
+        isLoading={isLoading}
       />
     </Wrapper>
   )
