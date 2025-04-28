@@ -64,8 +64,11 @@ def points_generator(
         metadata = iter(dict, None)
     for idx, meta, vector in zip(ids, metadata, encoded_docs):
         payload = meta
-        point_vector: dict[str, models.Vector] = {vector_name: vector}
-        yield models.PointStruct(id=idx, payload=payload, vector=point_vector)
+        point_data = {"id": idx, "payload": payload}
+        if vector:
+            point_vector: dict[str, models.Vector] = {vector_name: vector}
+            point_data["vector"] = point_vector
+        yield models.PointStruct(**point_data)
 
 
 def create_qdrant_collections(force_recreate):
@@ -205,12 +208,9 @@ def _embedding_context(document, resource_type):
     based on the resource_type (learning resource vs content file)
     """
     if resource_type != CONTENT_FILE_TYPE:
-        return " ".join(
-            [
-                document.get("title"),
-                document.get("description"),
-                document.get("full_description"),
-            ]
+        return (
+            f"{document.get('title')} "
+            f"{document.get('description')} {document.get('full_description')}"
         )
     else:
         return document.get("content", "")
@@ -246,6 +246,7 @@ def should_generate_embeddings(serialized_document, resource_type):
         point_id = vector_point_id(serialized_document["readable_id"])
     else:
         # we just need metadata from the first chunk
+        collection_name = CONTENT_FILES_COLLECTION_NAME
         point_id = vector_point_id(
             f"{serialized_document['resource_readable_id']}."
             f"{serialized_document.get('run_readable_id', '')}."
@@ -327,11 +328,17 @@ def _process_content_embeddings(serialized_content):
     remove_docs = []
     for doc in serialized_content:
         embedding_context = _embedding_context(doc, CONTENT_FILE_TYPE)
-        if not embedding_context or not should_generate_embeddings(
-            doc, CONTENT_FILE_TYPE
-        ):
+        if not embedding_context:
             continue
-        remove_docs.append(doc)
+        should_generate = should_generate_embeddings(doc, CONTENT_FILE_TYPE)
+
+        if should_generate:
+            """
+            if we are generating embeddings then
+            the content and number of chunk have changed
+            so we need to remove all old points
+            """
+            remove_docs.append(doc)
         split_docs = _chunk_documents(encoder, [embedding_context], [doc])
         split_texts = [d.page_content for d in split_docs if d.page_content]
         resource_vector_point_id = vector_point_id(doc["resource_readable_id"])
@@ -370,7 +377,11 @@ def _process_content_embeddings(serialized_content):
         )
         for i in range(0, len(split_texts), request_chunk_size):
             split_chunk = split_texts[i : i + request_chunk_size]
-            split_embeddings.extend(list(encoder.embed_documents(split_chunk)))
+            if should_generate:
+                split_embeddings.extend(list(encoder.embed_documents(split_chunk)))
+            else:
+                # dont overwrite existing embeddings
+                split_embeddings.extend([None] * len(split_chunk))
         embeddings.extend(split_embeddings)
         metadata.extend(split_metadatas)
         ids.extend(split_ids)
@@ -441,7 +452,17 @@ def embed_learning_resources(ids, resource_type, overwrite):
             ]
         points = _process_content_embeddings(serialized_resources)
     if points:
-        client.upload_points(collection_name, points=points, wait=False)
+        client.batch_update_points(
+            collection_name=collection_name,
+            update_operations=[
+                models.UpsertOperation(
+                    upsert=models.PointsList(
+                        points=points,
+                    )
+                ),
+            ],
+            wait=False,
+        )
 
 
 def _resource_vector_hits(search_result):
