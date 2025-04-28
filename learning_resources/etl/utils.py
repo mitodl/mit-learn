@@ -331,14 +331,14 @@ def documents_from_olx(
                     filebytes = f.read()
 
                 mimetype = mimetypes.types_map.get(extension_lower)
-                checksum = md5(filebytes).hexdigest()  # noqa: S324
+                archive_checksum = md5(filebytes).hexdigest()  # noqa: S324
 
                 yield (
                     filebytes,
                     {
                         "content_type": CONTENT_TYPE_FILE,
                         "mime_type": mimetype,
-                        "archive_checksum": checksum,
+                        "archive_checksum": archive_checksum,
                         "file_extension": extension_lower,
                         "source_path": f"{path}/{filename}",
                     },
@@ -434,7 +434,7 @@ def transform_content_files(
             existing_content = ContentFile.objects.filter(key=key, run=run).first()
             if (
                 not existing_content
-                or existing_content.checksum != metadata.get("archive_checksum")
+                or existing_content.archive_checksum != metadata.get("archive_checksum")
             ) or overwrite:
                 if settings.SKIP_TIKA and settings.ENVIRONMENT != "production":
                     content_dict = {
