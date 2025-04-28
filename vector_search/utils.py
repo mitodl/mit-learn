@@ -224,6 +224,7 @@ def _process_resource_embeddings(serialized_resources):
     vector_name = encoder.model_short_name()
     for doc in serialized_resources:
         if not should_generate_embeddings(doc, COURSE_TYPE):
+            update_payload(doc, resource_type=COURSE_TYPE)
             continue
         vector_point_key = doc["readable_id"]
         metadata.append(doc)
@@ -233,6 +234,47 @@ def _process_resource_embeddings(serialized_resources):
         embeddings = encoder.embed_documents(docs)
         return points_generator(ids, metadata, embeddings, vector_name)
     return None
+
+
+def update_payload(
+    serialized_document,
+    resource_type,
+):
+    """
+    Update the payload of a document in Qdrant
+    based on the resource_type (learning resource vs content file)
+    """
+    client = qdrant_client()
+    if resource_type != CONTENT_FILE_TYPE:
+        collection_name = RESOURCES_COLLECTION_NAME
+        QDRANT_PARAM_MAP = QDRANT_RESOURCE_PARAM_MAP
+        points = [vector_point_id(serialized_document["readable_id"])]
+    else:
+        collection_name = CONTENT_FILES_COLLECTION_NAME
+        QDRANT_PARAM_MAP = QDRANT_CONTENT_FILE_PARAM_MAP
+        params = {
+            "resource_readable_id": serialized_document["resource_readable_id"],
+            "key": serialized_document["key"],
+            "run_readable_id": serialized_document["run_readable_id"],
+        }
+        points = [
+            point.id
+            for point in retrieve_points_matching_params(
+                params,
+                collection_name=collection_name,
+            )
+        ]
+    payload = {}
+    for key in QDRANT_PARAM_MAP:
+        if key in serialized_document:
+            payload[QDRANT_PARAM_MAP[key]] = serialized_document[key]
+    if not all([points, payload]):
+        return
+    client.set_payload(
+        collection_name=collection_name,
+        payload=payload,
+        points=points,
+    )
 
 
 def should_generate_embeddings(serialized_document, resource_type):
@@ -331,14 +373,18 @@ def _process_content_embeddings(serialized_content):
         if not embedding_context:
             continue
         should_generate = should_generate_embeddings(doc, CONTENT_FILE_TYPE)
-
-        if should_generate:
+        if not should_generate:
             """
-            if we are generating embeddings then
-            the content and number of chunk have changed
-            so we need to remove all old points
+            Just update the payload and continue
             """
-            remove_docs.append(doc)
+            update_payload(doc, resource_type=CONTENT_FILE_TYPE)
+            continue
+        """
+        if we are generating embeddings then
+        the content and number of chunk have changed
+        so we need to remove all old points
+        """
+        remove_docs.append(doc)
         split_docs = _chunk_documents(encoder, [embedding_context], [doc])
         split_texts = [d.page_content for d in split_docs if d.page_content]
         resource_vector_point_id = vector_point_id(doc["resource_readable_id"])
@@ -377,11 +423,7 @@ def _process_content_embeddings(serialized_content):
         )
         for i in range(0, len(split_texts), request_chunk_size):
             split_chunk = split_texts[i : i + request_chunk_size]
-            if should_generate:
-                split_embeddings.extend(list(encoder.embed_documents(split_chunk)))
-            else:
-                # dont overwrite existing embeddings
-                split_embeddings.extend([None] * len(split_chunk))
+            split_embeddings.extend(list(encoder.embed_documents(split_chunk)))
         embeddings.extend(split_embeddings)
         metadata.extend(split_metadatas)
         ids.extend(split_ids)
@@ -712,3 +754,33 @@ def remove_points_matching_params(
                 )
             ),
         )
+
+
+def retrieve_points_matching_params(
+    params,
+    collection_name=RESOURCES_COLLECTION_NAME,
+):
+    """
+    Retrieve points from Qdrant matching params and yield them one by one.
+    """
+    client = qdrant_client()
+    qdrant_conditions = qdrant_query_conditions(params, collection_name=collection_name)
+    if not qdrant_conditions:
+        return
+
+    search_filter = models.Filter(must=qdrant_conditions)
+
+    next_page_offset = None
+
+    while True:
+        results = client.scroll(
+            collection_name=collection_name,
+            scroll_filter=search_filter,
+            offset=next_page_offset,
+        )
+        points, next_page_offset = results
+
+        yield from points
+
+        if not next_page_offset:
+            break
