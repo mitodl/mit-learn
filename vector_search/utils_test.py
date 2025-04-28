@@ -116,10 +116,29 @@ def test_embed_learning_resources_no_overwrite(mocker, content_type):
     embed_learning_resources(
         [resource.id for resource in resources], content_type, overwrite=False
     )
+
     if content_type == "learning_resource":
-        assert len(list(mock_qdrant.upload_points.mock_calls[0].kwargs["points"])) == 2
+        assert (
+            len(
+                list(
+                    mock_qdrant.batch_update_points.mock_calls[0]
+                    .kwargs["update_operations"][0]
+                    .upsert.points
+                )
+            )
+            == 2
+        )
     else:
-        assert len(list(mock_qdrant.upload_points.mock_calls[0].kwargs["points"])) == 3
+        assert (
+            len(
+                list(
+                    mock_qdrant.batch_update_points.mock_calls[0]
+                    .kwargs["update_operations"][0]
+                    .upsert.points
+                )
+            )
+            == 3
+        )
         # TODO: Pass "[resource.id for resource in resources]" instead of [] when we want the scheduled content file summarization  # noqa: FIX002, TD002, TD003
         summarize_content_files_by_ids_mock.assert_called_once_with(
             [],

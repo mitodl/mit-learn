@@ -65,7 +65,7 @@ def points_generator(
     for idx, meta, vector in zip(ids, metadata, encoded_docs):
         payload = meta
         point_data = {"id": idx, "payload": payload}
-        if vector:
+        if any(vector):
             point_vector: dict[str, models.Vector] = {vector_name: vector}
             point_data["vector"] = point_vector
         yield models.PointStruct(**point_data)
