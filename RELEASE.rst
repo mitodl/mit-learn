@@ -1,6 +1,29 @@
 Release Notes
 =============
 
+Version 0.31.1 (Released April 29, 2025)
+--------------
+
+- enrollment dashboard mobile layout (#2187)
+- Add a default worker concurrency for local dev (#2190)
+- Scrape marketing sites with dynamic content (#2180)
+- remove initial messages (#2185)
+- Changes to use posthog proxy (#2188)
+- [pre-commit.ci] pre-commit autoupdate (#2138)
+- chore(deps): update dependency @storybook/addon-webpack5-compiler-swc to v3 (#2131)
+- fix(deps): update material-ui monorepo (#2164)
+- chore(deps): update yarn to v4.8.1 (#2183)
+- add a prop to DashboardCard to optionally disable the not complete icon (#2182)
+- chore(deps): update actions/setup-python digest to 8d9ed9a (#2163)
+- Migrated AiChat entry screen (#2124)
+- Rename EnrollmentCard to DashboardCard  (#2179)
+- Fade search results while fetching (#2177)
+- chore(deps): update yarn to v4.8.0 (#2165)
+- fix user profile type error (#2178)
+- reorganize dashboard tabs (#2171)
+- Update mitxonline api client (#2172)
+- Switch to using mitol-django-scim (#2136)
+
 Version 0.31.0 (Released April 08, 2025)
 --------------
 
