@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.31.1
+Version 0.31.1 (Released April 29, 2025)
 --------------
 
 - enrollment dashboard mobile layout (#2187)
