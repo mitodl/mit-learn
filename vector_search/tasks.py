@@ -323,3 +323,35 @@ def embed_new_content_files(self):
     ]
     embed_tasks = celery.group(tasks)
     return self.replace(embed_tasks)
+
+
+@app.task(bind=True)
+def embed_run_content_files(self, run_id):
+    content_file_ids = list(
+        ContentFile.objects.filter(run__id=run_id).values_list("id", flat=True)
+    )
+
+    return self.replace(
+        celery.group(
+            [
+                generate_embeddings.si(ids, CONTENT_FILE_TYPE, overwrite=True)
+                for ids in chunks(content_file_ids)
+            ]
+        )
+    )
+
+
+@app.task
+def remove_run_content_files(run_id):
+    """
+    Remove content files from Qdrant
+    """
+    content_file_ids = list(
+        ContentFile.objects.filter(run__id=run_id).values_list("id", flat=True)
+    )
+    return celery.group(
+        [
+            remove_embeddings.si(ids, CONTENT_FILE_TYPE)
+            for ids in chunks(content_file_ids)
+        ]
+    )
