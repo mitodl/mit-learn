@@ -4,7 +4,6 @@ import logging
 
 from celery import chain
 from django.apps import apps
-from django.conf import settings as django_settings
 
 from learning_resources_search import tasks
 from learning_resources_search.api import get_similar_topics
@@ -14,7 +13,6 @@ from learning_resources_search.constants import (
 )
 from main import settings
 from main.utils import chunks
-from vector_search import tasks as vector_tasks
 
 log = logging.getLogger()
 
@@ -70,22 +68,14 @@ class SearchIndexPlugin:
         Args:
             resource(LearningResource): The Learning Resource that was upserted
         """
-        upsert_task = [
-            tasks.upsert_learning_resource.si(resource.id),
-        ]
-        if django_settings.QDRANT_ENABLE_INDEXING_HOOKS:
-            upsert_task.append(
-                vector_tasks.generate_embeddings.si(
-                    [resource.id], resource.resource_type, overwrite=True
-                )
-            )
-
+        upsert_task = tasks.upsert_learning_resource
         if percolate:
-            upsert_task.append(
+            upsert_task = chain(
+                tasks.upsert_learning_resource.si(resource.id),
                 tasks.percolate_learning_resource.si(resource.id),
             )
 
-        try_with_retry_as_task(chain(*upsert_task), resource.id)
+        try_with_retry_as_task(upsert_task, resource.id)
 
     @hookimpl
     def resource_unpublished(self, resource):
@@ -95,15 +85,11 @@ class SearchIndexPlugin:
         Args:
             resource(LearningResource): The Learning Resource that was removed
         """
-
-        remove_tasks = [tasks.deindex_document.si(resource.id, resource.resource_type)]
-
-        if django_settings.QDRANT_ENABLE_INDEXING_HOOKS:
-            remove_tasks.append(
-                vector_tasks.remove_embeddings.si([resource.id], resource.resource_type)
-            )
-
-        try_with_retry_as_task(chain(*remove_tasks))
+        try_with_retry_as_task(
+            tasks.deindex_document,
+            resource.id,
+            resource.resource_type,
+        )
 
         if resource.resource_type == COURSE_TYPE:
             for run in resource.runs.all():
@@ -147,16 +133,10 @@ class SearchIndexPlugin:
             resource_ids,
             chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
         ):
-            unpublished_tasks = [
-                tasks.bulk_deindex_learning_resources.si(ids, resource_type),
-            ]
-            if django_settings.QDRANT_ENABLE_INDEXING_HOOKS:
-                unpublished_tasks.append(
-                    vector_tasks.remove_embeddings.si(ids, resource_type)
-                )
-
             try_with_retry_as_task(
-                chain(*unpublished_tasks),
+                tasks.bulk_deindex_learning_resources,
+                ids,
+                resource_type,
             )
 
     @hookimpl
