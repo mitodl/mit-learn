@@ -4,6 +4,7 @@ import logging
 
 from celery import chain
 from django.apps import apps
+from django.conf import settings as django_settings
 
 from learning_resources_search import tasks
 from learning_resources_search.api import get_similar_topics
@@ -69,12 +70,16 @@ class SearchIndexPlugin:
         Args:
             resource(LearningResource): The Learning Resource that was upserted
         """
-        upsert_tasks = [
+        upsert_tasks = []
+        if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
+            upsert_tasks.append(
+                vector_tasks.generate_embeddings.si(
+                    [resource.id], resource.resource_type, overwrite=True
+                )
+            )
+        upsert_tasks.append(
             tasks.upsert_learning_resource.si(resource.id),
-            vector_tasks.generate_embeddings.si(
-                [resource.id], resource.resource_type, overwrite=True
-            ),
-        ]
+        )
         if percolate:
             upsert_tasks.append(tasks.percolate_learning_resource.si(resource.id))
 
@@ -88,10 +93,15 @@ class SearchIndexPlugin:
         Args:
             resource(LearningResource): The Learning Resource that was removed
         """
-        unpublished_tasks = [
-            vector_tasks.remove_embeddings.si([resource.id], resource.resource_type),
-            tasks.deindex_document.si(resource.id, resource.resource_type),
-        ]
+        unpublished_tasks = []
+        if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
+            unpublished_tasks.append(
+                vector_tasks.remove_embeddings.si([resource.id], resource.resource_type)
+            )
+
+        unpublished_tasks.append(
+            tasks.deindex_document.si(resource.id, resource.resource_type)
+        )
         try_with_retry_as_task(chain(*unpublished_tasks))
 
         if resource.resource_type == COURSE_TYPE:
@@ -137,9 +147,12 @@ class SearchIndexPlugin:
             chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
         ):
             unpublished_tasks = [
-                vector_tasks.remove_embeddings.si(ids, resource_type),
                 tasks.bulk_deindex_learning_resources.si(ids, resource_type),
             ]
+            if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
+                unpublished_tasks.append(
+                    vector_tasks.remove_embeddings.si(ids, resource_type)
+                )
             try_with_retry_as_task(chain(*unpublished_tasks))
 
     @hookimpl
@@ -158,9 +171,10 @@ class SearchIndexPlugin:
             run(LearningResourceRun): The Learning Resource run that was removed
         """
         deindex_tasks = [
-            vector_tasks.remove_run_content_files.si(run.id),
             tasks.deindex_run_content_files.si(run.id, unpublished_only=False),
         ]
+        if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
+            deindex_tasks.append(vector_tasks.remove_run_content_files.si(run.id))
         try_with_retry_as_task(chain(*deindex_tasks))
 
     @hookimpl
@@ -186,16 +200,23 @@ class SearchIndexPlugin:
             # Only one run per course should have contentfiles at any given time
             course_runs_to_deindex = course_runs_to_deindex.exclude(id=run.id)
             if not deindex_only:
-                index_tasks = [
-                    vector_tasks.embed_run_content_files.si(run.id),
+                index_tasks = []
+                if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
+                    index_tasks.append(
+                        vector_tasks.embed_run_content_files.si(run.id),
+                    )
+                index_tasks.append(
                     tasks.index_run_content_files.si(run.id),
-                ]
+                )
                 try_with_retry_as_task(chain(*index_tasks))
         for course_run in course_runs_to_deindex:
             deindex_tasks = [
-                vector_tasks.remove_run_content_files.si(course_run.id),
                 tasks.deindex_run_content_files.si(
                     course_run.id, unpublished_only=False
                 ),
             ]
+            if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
+                deindex_tasks.append(
+                    vector_tasks.remove_run_content_files.si(course_run.id),
+                )
             try_with_retry_as_task(chain(*deindex_tasks))
