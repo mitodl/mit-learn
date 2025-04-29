@@ -12,12 +12,15 @@ from learning_resources.factories import (
     LearningResourceRunFactory,
 )
 from learning_resources.models import LearningResource
+from learning_resources_search.constants import CONTENT_FILE_TYPE, COURSE_TYPE
 from learning_resources_search.serializers import (
     serialize_bulk_content_files,
     serialize_bulk_learning_resources,
 )
 from vector_search.constants import (
     CONTENT_FILES_COLLECTION_NAME,
+    QDRANT_CONTENT_FILE_PARAM_MAP,
+    QDRANT_RESOURCE_PARAM_MAP,
     RESOURCES_COLLECTION_NAME,
 )
 from vector_search.encoders.utils import dense_encoder
@@ -28,29 +31,31 @@ from vector_search.utils import (
     embed_learning_resources,
     filter_existing_qdrant_points,
     qdrant_query_conditions,
+    should_generate_embeddings,
+    update_payload,
     vector_point_id,
 )
 
 pytestmark = pytest.mark.django_db
 
 
-@pytest.mark.parametrize("content_type", ["learning_resource", "content_file"])
+@pytest.mark.parametrize("content_type", ["course", "content_file"])
 def test_vector_point_id_used_for_embed(mocker, content_type):
     # test the vector ids we generate for embedding resources and files
-    if content_type == "learning_resource":
-        resources = LearningResourceFactory.create_batch(5)
-    else:
-        resources = ContentFileFactory.create_batch(5, content="test content")
     mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
     mocker.patch(
         "vector_search.utils.qdrant_client",
         return_value=mock_qdrant,
     )
-    if content_type == "learning_resource":
+    if content_type == "course":
+        resources = LearningResourceFactory.create_batch(5)
         mocker.patch(
             "vector_search.utils.filter_existing_qdrant_points",
             return_value=[r.readable_id for r in resources],
         )
+    else:
+        resources = ContentFileFactory.create_batch(5, content="test content")
+
     summarize_content_files_by_ids_mock = mocker.patch(
         "vector_search.utils.ContentSummarizer.summarize_content_files_by_ids"
     )
@@ -59,7 +64,7 @@ def test_vector_point_id_used_for_embed(mocker, content_type):
         [resource.id for resource in resources], content_type, overwrite=True
     )
 
-    if content_type == "learning_resource":
+    if content_type == "course":
         point_ids = [vector_point_id(resource.readable_id) for resource in resources]
         assert sorted(
             [
@@ -91,10 +96,10 @@ def test_vector_point_id_used_for_embed(mocker, content_type):
         )
 
 
-@pytest.mark.parametrize("content_type", ["learning_resource", "content_file"])
+@pytest.mark.parametrize("content_type", ["course", "content_file"])
 def test_embed_learning_resources_no_overwrite(mocker, content_type):
     # test when overwrite flag is false we dont re-embed existing resources
-    if content_type == "learning_resource":
+    if content_type == "course":
         resources = LearningResourceFactory.create_batch(5)
     else:
         resources = ContentFileFactory.create_batch(5, content="test content")
@@ -103,7 +108,7 @@ def test_embed_learning_resources_no_overwrite(mocker, content_type):
         "vector_search.utils.qdrant_client",
         return_value=mock_qdrant,
     )
-    if content_type == "learning_resource":
+    if content_type == "course":
         # filter out 3 resources that are already embedded
         mocker.patch(
             "vector_search.utils.filter_existing_qdrant_points_by_ids",
@@ -127,7 +132,7 @@ def test_embed_learning_resources_no_overwrite(mocker, content_type):
         [resource.id for resource in resources], content_type, overwrite=False
     )
 
-    if content_type == "learning_resource":
+    if content_type == "course":
         assert (
             len(
                 list(
@@ -467,3 +472,113 @@ def test_course_metadata_document_contents(mocker):
     for run in serialized_resource["runs"]:
         for level in run["level"]:
             assert level["name"] in course_metadata_content
+
+
+def test_should_generate_for_changed_resource(mocker):
+    """Should generate embeddings when resource content has changed"""
+    resource = LearningResourceFactory.create()
+    serialized_resources = list(serialize_bulk_learning_resources([resource.id]))
+
+    mock_qdrant = mocker.MagicMock()
+    fake_payload = {
+        "title": "Different title",
+        "description": serialized_resources[0]["description"],
+        "full_description": serialized_resources[0]["full_description"],
+    }
+    mock_point = mocker.MagicMock()
+    # return record with different title
+    mock_point.payload = fake_payload
+    mock_qdrant.retrieve.return_value = [mock_point]
+    mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
+    result = should_generate_embeddings(serialized_resources[0], COURSE_TYPE)
+    assert result is True
+
+
+def test_should_generate_for_changed_content_file(mocker):
+    """Should generate embeddings when content file checksum has changed"""
+
+    content_file = ContentFileFactory.create(content="Test content")
+    serialized_files = list(serialize_bulk_content_files([content_file.id]))
+
+    mock_qdrant = mocker.MagicMock()
+    mock_point = mocker.MagicMock()
+    # return record with different checksum
+    mock_point.payload = {"checksum": "different-checksum"}
+    mock_qdrant.retrieve.return_value = [mock_point]
+    mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
+    result = should_generate_embeddings(serialized_files[0], CONTENT_FILE_TYPE)
+    assert result is True
+
+
+def test_should_not_generate_for_unchanged_content_file(mocker):
+    """Should not generate embeddings when content file hasn't changed"""
+
+    content_file = ContentFileFactory.create(content="Test content")
+    serialized_files = list(serialize_bulk_content_files([content_file.id]))
+
+    mock_qdrant = mocker.MagicMock()
+    mock_point = mocker.MagicMock()
+    # return record with same checksum
+    mock_point.payload = {"checksum": serialized_files[0]["checksum"]}
+    mock_qdrant.retrieve.return_value = [mock_point]
+    mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
+    result = should_generate_embeddings(serialized_files[0], CONTENT_FILE_TYPE)
+    assert result is False
+
+
+def test_update_payload_learning_resource(mocker):
+    """Should update payload for learning resources"""
+    resource = LearningResourceFactory.create()
+    serialized_resources = list(serialize_bulk_learning_resources([resource.id]))
+    mock_qdrant = mocker.MagicMock()
+    mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
+    update_payload(serialized_resources[0], COURSE_TYPE)
+    mock_qdrant.set_payload.assert_called_once()
+    call_args = mock_qdrant.set_payload.call_args[1]
+    assert call_args["collection_name"] == RESOURCES_COLLECTION_NAME
+    assert call_args["points"] == [
+        vector_point_id(serialized_resources[0]["readable_id"])
+    ]
+    # Verify payload contains the mapped values
+    for src_key, dest_key in QDRANT_RESOURCE_PARAM_MAP.items():
+        if src_key in serialized_resources[0]:
+            assert dest_key in call_args["payload"]
+            assert call_args["payload"][dest_key] == serialized_resources[0][src_key]
+
+
+def test_update_payload_content_file(mocker):
+    """Should update payload for content files"""
+    content_file = ContentFileFactory.create(content="Test content")
+    serialized_files = list(serialize_bulk_content_files([content_file.id]))
+    mock_qdrant = mocker.MagicMock()
+    mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
+
+    # Mock retrieve_points_matching_params to return points
+    mock_point = mocker.MagicMock()
+    mock_point.id = "test-point-id"
+    mocker.patch(
+        "vector_search.utils.retrieve_points_matching_params", return_value=[mock_point]
+    )
+    update_payload(serialized_files[0], CONTENT_FILE_TYPE)
+    mock_qdrant.set_payload.assert_called_once()
+    call_args = mock_qdrant.set_payload.call_args[1]
+    assert call_args["collection_name"] == CONTENT_FILES_COLLECTION_NAME
+    assert call_args["points"] == ["test-point-id"]
+    # Verify payload contains the mapped values
+    for src_key, dest_key in QDRANT_CONTENT_FILE_PARAM_MAP.items():
+        if src_key in serialized_files[0]:
+            assert dest_key in call_args["payload"]
+            assert call_args["payload"][dest_key] == serialized_files[0][src_key]
+
+
+def test_update_payload_no_points(mocker):
+    """Should not update payload when no points are found"""
+
+    content_file = ContentFileFactory.create(content="Test content")
+    serialized_files = list(serialize_bulk_content_files([content_file.id]))
+    mock_qdrant = mocker.MagicMock()
+    mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
+    mocker.patch("vector_search.utils.retrieve_points_matching_params", return_value=[])
+    update_payload(serialized_files[0], CONTENT_FILE_TYPE)
+    # Verify set_payload not called
+    mock_qdrant.set_payload.assert_not_called()

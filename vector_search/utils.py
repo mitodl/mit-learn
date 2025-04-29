@@ -13,7 +13,11 @@ from learning_resources.serializers import (
     LearningResourceMetadataDisplaySerializer,
     LearningResourceSerializer,
 )
-from learning_resources_search.constants import CONTENT_FILE_TYPE, COURSE_TYPE
+from learning_resources_search.constants import (
+    CONTENT_FILE_TYPE,
+    COURSE_TYPE,
+    LEARNING_RESOURCE_TYPES,
+)
 from learning_resources_search.serializers import (
     serialize_bulk_content_files,
     serialize_bulk_learning_resources,
@@ -328,6 +332,8 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
     ids = []
     docs = []
     for doc in serialized_resources:
+        if not should_generate_embeddings(doc, COURSE_TYPE):
+            continue
         readable_id = doc["readable_id"]
         resource_vector_point_id = str(vector_point_id(readable_id))
         serializer = LearningResourceMetadataDisplaySerializer(doc)
@@ -384,7 +390,7 @@ def _process_content_embeddings(serialized_content):
         the content and number of chunk have changed
         so we need to remove all old points
         """
-        remove_docs.append(doc)
+        remove_docs.append(doc["id"])
         split_docs = _chunk_documents(encoder, [embedding_context], [doc])
         split_texts = [d.page_content for d in split_docs if d.page_content]
         resource_vector_point_id = vector_point_id(doc["resource_readable_id"])
@@ -442,6 +448,11 @@ def embed_learning_resources(ids, resource_type, overwrite):
         ids (list of int): Ids of learning resources to embed
         resource_type (str): Type of learning resource to embed
     """
+    if (
+        resource_type not in LEARNING_RESOURCE_TYPES
+        and resource_type != CONTENT_FILE_TYPE
+    ):
+        return
 
     client = qdrant_client()
 
@@ -714,11 +725,13 @@ def filter_existing_qdrant_points(
     return [value for value in values if value not in existing_values]
 
 
-def remove_qdrant_records(serialized_documents, resource_type):
+def remove_qdrant_records(ids, resource_type):
     if resource_type != CONTENT_FILE_TYPE:
+        serialized_documents = serialize_bulk_learning_resources(ids)
         collection_name = RESOURCES_COLLECTION_NAME
         lookup_keys = ["readable_id"]
     else:
+        serialized_documents = serialize_bulk_content_files(ids)
         collection_name = CONTENT_FILES_COLLECTION_NAME
         lookup_keys = ["run_readable_id", "resource_readable_id", "key"]
     for doc in serialized_documents:
