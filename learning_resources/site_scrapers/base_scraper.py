@@ -14,7 +14,7 @@ class BaseScraper:
     driver = None
 
     def __init__(self, start_url):
-        self.start_url = start_url
+        self.start_url = start_url.replace("http://", "https://")
         if self.use_webdriver:
             self.driver = get_web_driver()
 
