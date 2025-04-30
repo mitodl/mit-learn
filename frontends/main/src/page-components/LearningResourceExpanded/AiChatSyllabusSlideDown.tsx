@@ -33,6 +33,22 @@ const SlideDown = styled.div<{
   transition: "top 0.3s ease-in-out",
 }))
 
+const Opener = styled.div(({ theme }) => ({
+  position: "relative",
+  ":after": {
+    content: "''",
+    width: "100%",
+    height: "50%",
+    background: theme.custom.colors.white,
+    display: "block",
+    position: "absolute",
+    top: "-24px",
+    borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
+    zIndex: 1,
+    paddingTop: "24px",
+  },
+}))
+
 const StyledButton = styled(Button)<{ open: boolean }>(({ theme, open }) => ({
   pointerEvents: "auto",
   display: "flex",
@@ -75,7 +91,7 @@ const StyledAiChat = styled(AiChat)<{
   topPosition: number
 }>(({ topPosition }) => ({
   ".MitAiChat--root": {
-    minHeight: `calc(100vh - ${topPosition + 43}px)`,
+    minHeight: `calc(100vh - ${topPosition}px)`,
   },
   ".MitAiChat--entryScreenContainer": {
     top: topPosition,
@@ -106,7 +122,7 @@ export const AiChatSyllabusOpener = ({
   onToggleOpen: (open: boolean) => void
 }) => {
   return (
-    <div className={className}>
+    <Opener className={className}>
       <StyledButton
         variant="bordered"
         edge="rounded"
@@ -120,7 +136,7 @@ export const AiChatSyllabusOpener = ({
         </Typography>
         <Chevron />
       </StyledButton>
-    </div>
+    </Opener>
   )
 }
 

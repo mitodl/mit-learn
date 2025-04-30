@@ -37,14 +37,6 @@ const ContentSection = styled.div<{
   position: "relative",
 }))
 
-const StyledAiChatSyllabusOpener = styled(AiChatSyllabusOpener)<{
-  top: number
-}>(({ top }) => ({
-  position: "sticky",
-  top: "24px",
-  zIndex: 2,
-}))
-
 const TopContainer = styled.div<{ chatEnabled: boolean }>(
   ({ theme, chatEnabled }) => ({
     display: "flex",
@@ -151,9 +143,9 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
     initialChatExpanded ? ChatTransitionState.Open : ChatTransitionState.Closed,
   )
 
-  const chatEnabled = true
-  // useFeatureFlagEnabled(FeatureFlags.LrDrawerChatbot) &&
-  // resource?.resource_type === ResourceTypeEnum.Course
+  const chatEnabled =
+    useFeatureFlagEnabled(FeatureFlags.LrDrawerChatbot) &&
+    resource?.resource_type === ResourceTypeEnum.Course
 
   useEffect(() => {
     // If URL indicates syllabus open, but it's not enabled, update URL
@@ -238,15 +230,20 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
         ref={titleSectionRef}
         titleId={titleId}
         resource={resource}
-        onClickClose={closeDrawer}
+        onClickClose={
+          chatTransitionState === ChatTransitionState.Open
+            ? () => onChatOpenerToggle(false)
+            : closeDrawer
+        }
       />
       {chatEnabled ? (
         <>
-          <StyledAiChatSyllabusOpener
-            open={chatExpanded}
-            top={titleSectionHeight}
-            onToggleOpen={onChatOpenerToggle}
-          />
+          {chatTransitionState !== ChatTransitionState.Open ? (
+            <AiChatSyllabusOpener
+              open={chatExpanded}
+              onToggleOpen={onChatOpenerToggle}
+            />
+          ) : null}
           <AiSyllabusBotSlideDown
             resource={resource}
             open={chatExpanded}
