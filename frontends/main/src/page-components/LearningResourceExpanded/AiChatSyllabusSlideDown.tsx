@@ -1,11 +1,7 @@
 import React, { useRef, useEffect } from "react"
 import { Typography, styled } from "ol-components"
 import { Button } from "@mitodl/smoot-design"
-import {
-  RiSparkling2Line,
-  RiArrowDownSLine,
-  RiArrowUpSLine,
-} from "@remixicon/react"
+import { RiSparkling2Line, RiArrowDownSLine } from "@remixicon/react"
 import type { AiChatProps } from "@mitodl/smoot-design/ai"
 import { LearningResource } from "api"
 import { AiChat } from "@mitodl/smoot-design/ai"

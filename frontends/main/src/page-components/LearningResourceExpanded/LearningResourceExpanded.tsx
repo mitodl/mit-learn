@@ -174,7 +174,9 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
       outerContainerRef.current.scrollTo(0, 0)
     }
     if (scrollElement) {
-      scrollElement.scrollTop = 0
+      requestAnimationFrame(() => {
+        scrollElement.scrollTop = 0
+      })
     }
   }, [resourceId, scrollElement])
 
