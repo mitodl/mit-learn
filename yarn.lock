@@ -12,65 +12,56 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ai-sdk/provider-utils@npm:2.1.10":
-  version: 2.1.10
-  resolution: "@ai-sdk/provider-utils@npm:2.1.10"
+"@ai-sdk/provider-utils@npm:2.2.7":
+  version: 2.2.7
+  resolution: "@ai-sdk/provider-utils@npm:2.2.7"
   dependencies:
-    "@ai-sdk/provider": "npm:1.0.9"
-    eventsource-parser: "npm:^3.0.0"
+    "@ai-sdk/provider": "npm:1.1.3"
     nanoid: "npm:^3.3.8"
     secure-json-parse: "npm:^2.7.0"
   peerDependencies:
-    zod: ^3.0.0
-  peerDependenciesMeta:
-    zod:
-      optional: true
-  checksum: 10/600a732d5e0b02b873234921b8aa873a9c78b23a4d058a68e30e0783b1be0ba5067621cf119a3a676d082d1fbacad6951533ab7bb55bdb3a7d29b63a0bcd9b18
+    zod: ^3.23.8
+  checksum: 10/243d636b0c737ff547f6f23ebfae0c39a43b0fad721a52ebf62e31a4a48bad6521cdf7a48b036cf395e64d3f380af7cf3536817df1bb1bacfff7432e276ef231
   languageName: node
   linkType: hard
 
-"@ai-sdk/provider@npm:1.0.9":
-  version: 1.0.9
-  resolution: "@ai-sdk/provider@npm:1.0.9"
+"@ai-sdk/provider@npm:1.1.3":
+  version: 1.1.3
+  resolution: "@ai-sdk/provider@npm:1.1.3"
   dependencies:
     json-schema: "npm:^0.4.0"
-  checksum: 10/5f399ded99da304821010ef189df3f7da72fc4c28c73d570bdc27dc8157dfa35cef8552099c450bef51b1c74c80a6029b36a515a035d4426fae8d5c5269fb82c
+  checksum: 10/b094ca2f08001d4d34a0dcdf9fbe1b6eeedeaf0cf1568ce148d67b04333fd959cca60f888a24522b6d74114eabbc469f762d290d08096adec992a3c6de23756a
   languageName: node
   linkType: hard
 
-"@ai-sdk/react@npm:1.1.18":
-  version: 1.1.18
-  resolution: "@ai-sdk/react@npm:1.1.18"
+"@ai-sdk/react@npm:1.2.10":
+  version: 1.2.10
+  resolution: "@ai-sdk/react@npm:1.2.10"
   dependencies:
-    "@ai-sdk/provider-utils": "npm:2.1.10"
-    "@ai-sdk/ui-utils": "npm:1.1.16"
+    "@ai-sdk/provider-utils": "npm:2.2.7"
+    "@ai-sdk/ui-utils": "npm:1.2.9"
     swr: "npm:^2.2.5"
     throttleit: "npm:2.1.0"
   peerDependencies:
     react: ^18 || ^19 || ^19.0.0-rc
-    zod: ^3.0.0
+    zod: ^3.23.8
   peerDependenciesMeta:
-    react:
-      optional: true
     zod:
       optional: true
-  checksum: 10/8fda4918cd9d565a31e6830a31473fe95d02877cd51a45225f53f198c37f8a788606ed709e7f41a2356dd4ca363e5b6762f38f0a326ea388bdf82f15fffbe2fb
+  checksum: 10/4108ea4a3c06728b7b85227bfbf1b6dc76fd09a5d6a1fdc8e30ea056814f29a6ee6a1ba2a2f3a9f8a5f6e7534119b50f2e5e67afbfa31c29b3045fa32993a64b
   languageName: node
   linkType: hard
 
-"@ai-sdk/ui-utils@npm:1.1.16":
-  version: 1.1.16
-  resolution: "@ai-sdk/ui-utils@npm:1.1.16"
+"@ai-sdk/ui-utils@npm:1.2.9":
+  version: 1.2.9
+  resolution: "@ai-sdk/ui-utils@npm:1.2.9"
   dependencies:
-    "@ai-sdk/provider": "npm:1.0.9"
-    "@ai-sdk/provider-utils": "npm:2.1.10"
+    "@ai-sdk/provider": "npm:1.1.3"
+    "@ai-sdk/provider-utils": "npm:2.2.7"
     zod-to-json-schema: "npm:^3.24.1"
   peerDependencies:
-    zod: ^3.0.0
-  peerDependenciesMeta:
-    zod:
-      optional: true
-  checksum: 10/406c4e76d131df6ddd49d4dae2d10745fb41ac1881f71c15facb333550a5eb636e295f499ef3e972e5af3d5e87c7b2685fe8f4b41a424b419f90f82aa554fc93
+    zod: ^3.23.8
+  checksum: 10/44a39b0455a2631349a51b7ff34ab10d27207c6c41ed908d728b50a22a5b5af6d35107819c770b1017f49d9ec502a9b34d2a8d984deed4ebc5a75ac305df1c07
   languageName: node
   linkType: hard
 
@@ -2703,13 +2694,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/smoot-design@npm:^6.2.2":
-  version: 6.2.2
-  resolution: "@mitodl/smoot-design@npm:6.2.2"
+"@mitodl/smoot-design@npm:0.0.0-cf541fb":
+  version: 0.0.0-cf541fb
+  resolution: "@mitodl/smoot-design@npm:0.0.0-cf541fb"
   dependencies:
+    "@ai-sdk/react": "npm:1.2.10"
     "@emotion/cache": "npm:^11.14.0"
     "@mui/utils": "npm:^6.1.6"
-    ai: "npm:^4.0.13"
     classnames: "npm:^2.5.1"
     lodash: "npm:^4.17.21"
     react-markdown: "npm:^10.0.0"
@@ -2725,7 +2716,7 @@ __metadata:
     "@remixicon/react": ^4.2.0
     react: ^18 || ^19
     react-dom: ^18 || ^19
-  checksum: 10/e82638cf078014d970e720061f85a4b4338dcb20c0bae022b968f2ec3c6a6b25a37dd927400f443324cf033efba9dbfa882175bb00ac13001c237be3a3255039
+  checksum: 10/25fd163893f2280a06eb625659b4547c7d937f84e3eaacd70ce04771bfb7ae782441a141b936d1b689c6d3d1d03ab9b0c97e9f05ad298bdeeec6ccbb27cf20c9
   languageName: node
   linkType: hard
 
@@ -3371,7 +3362,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@opentelemetry/api@npm:1.9.0, @opentelemetry/api@npm:^1.3.0, @opentelemetry/api@npm:^1.9.0":
+"@opentelemetry/api@npm:^1.3.0, @opentelemetry/api@npm:^1.9.0":
   version: 1.9.0
   resolution: "@opentelemetry/api@npm:1.9.0"
   checksum: 10/a607f0eef971893c4f2ee2a4c2069aade6ec3e84e2a1f5c2aac19f65c5d9eeea41aa72db917c1029faafdd71789a1a040bdc18f40d63690e22ccae5d7070f194
@@ -5347,13 +5338,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/diff-match-patch@npm:^1.0.36":
-  version: 1.0.36
-  resolution: "@types/diff-match-patch@npm:1.0.36"
-  checksum: 10/7d7ce03422fcc3e79d0cda26e4748aeb176b75ca4b4e5f38459b112bf24660d628424bdb08d330faefa69039d19a5316e7a102a8ab68b8e294c8346790e55113
-  languageName: node
-  linkType: hard
-
 "@types/doctrine@npm:^0.0.9":
   version: 0.0.9
   resolution: "@types/doctrine@npm:0.0.9"
@@ -6606,28 +6590,6 @@ __metadata:
     clean-stack: "npm:^2.0.0"
     indent-string: "npm:^4.0.0"
   checksum: 10/1101a33f21baa27a2fa8e04b698271e64616b886795fd43c31068c07533c7b3facfcaf4e9e0cab3624bd88f729a592f1c901a1a229c9e490eafce411a8644b79
-  languageName: node
-  linkType: hard
-
-"ai@npm:^4.0.13":
-  version: 4.1.46
-  resolution: "ai@npm:4.1.46"
-  dependencies:
-    "@ai-sdk/provider": "npm:1.0.9"
-    "@ai-sdk/provider-utils": "npm:2.1.10"
-    "@ai-sdk/react": "npm:1.1.18"
-    "@ai-sdk/ui-utils": "npm:1.1.16"
-    "@opentelemetry/api": "npm:1.9.0"
-    jsondiffpatch: "npm:0.6.0"
-  peerDependencies:
-    react: ^18 || ^19 || ^19.0.0-rc
-    zod: ^3.0.0
-  peerDependenciesMeta:
-    react:
-      optional: true
-    zod:
-      optional: true
-  checksum: 10/da352603e5bef7f56101347fe7284820e67a19d5e1bb2790e470a4b9a0f19dbde96b98009be929c35c5b2c2a6058406a3456a6012f219be8aa0d9f9457e1f08e
   languageName: node
   linkType: hard
 
@@ -8654,13 +8616,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"diff-match-patch@npm:^1.0.5":
-  version: 1.0.5
-  resolution: "diff-match-patch@npm:1.0.5"
-  checksum: 10/fd1ab417eba9559bda752a4dfc9a8ac73fa2ca8b146d29d153964b437168e301c09d8a688fae0cd81d32dc6508a4918a94614213c85df760793f44e245173bb6
-  languageName: node
-  linkType: hard
-
 "diff-sequences@npm:^29.6.3":
   version: 29.6.3
   resolution: "diff-sequences@npm:29.6.3"
@@ -9869,13 +9824,6 @@ __metadata:
   version: 3.3.0
   resolution: "events@npm:3.3.0"
   checksum: 10/a3d47e285e28d324d7180f1e493961a2bbb4cad6412090e4dec114f4db1f5b560c7696ee8e758f55e23913ede856e3689cd3aa9ae13c56b5d8314cd3b3ddd1be
-  languageName: node
-  linkType: hard
-
-"eventsource-parser@npm:^3.0.0":
-  version: 3.0.0
-  resolution: "eventsource-parser@npm:3.0.0"
-  checksum: 10/8215adf5d8404105ecd0658030b0407e06987ceb9aadcea28a38d69bacf02e5d0fc8bba5fa7c3954552c89509c8ef5e1fa3895e000c061411c055b4bbc26f4b0
   languageName: node
   linkType: hard
 
@@ -12743,19 +12691,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"jsondiffpatch@npm:0.6.0":
-  version: 0.6.0
-  resolution: "jsondiffpatch@npm:0.6.0"
-  dependencies:
-    "@types/diff-match-patch": "npm:^1.0.36"
-    chalk: "npm:^5.3.0"
-    diff-match-patch: "npm:^1.0.5"
-  bin:
-    jsondiffpatch: bin/jsondiffpatch.js
-  checksum: 10/124b9797c266c693e69f8d23216e64d5ca4b21a4ec10e3a769a7b8cb19602ba62522f9a3d0c55299c1bfbe5ad955ca9ad2852439ca2c6b6316b8f91a5c218e94
-  languageName: node
-  linkType: hard
-
 "jsonfile@npm:^6.0.1, jsonfile@npm:^6.1.0":
   version: 6.1.0
   resolution: "jsonfile@npm:6.1.0"
@@ -13083,7 +13018,7 @@ __metadata:
     "@emotion/styled": "npm:^11.11.0"
     "@faker-js/faker": "npm:^9.0.0"
     "@mitodl/course-search-utils": "npm:3.3.2"
-    "@mitodl/smoot-design": "npm:^6.2.2"
+    "@mitodl/smoot-design": "npm:0.0.0-cf541fb"
     "@next/bundle-analyzer": "npm:^14.2.15"
     "@remixicon/react": "npm:^4.2.0"
     "@sentry/nextjs": "npm:^9.0.0"
