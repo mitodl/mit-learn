@@ -327,6 +327,9 @@ def embed_new_content_files(self):
 
 @app.task(bind=True)
 def embed_run_content_files(self, run_id):
+    """
+    Embed contentfiles associated with a run
+    """
     content_file_ids = list(
         ContentFile.objects.filter(run__id=run_id).values_list("id", flat=True)
     )
@@ -344,7 +347,7 @@ def embed_run_content_files(self, run_id):
 @app.task
 def remove_run_content_files(run_id):
     """
-    Remove content files from Qdrant
+    Remove content files associated with a run from Qdrant
     """
     content_file_ids = list(
         ContentFile.objects.filter(run__id=run_id).values_list("id", flat=True)
