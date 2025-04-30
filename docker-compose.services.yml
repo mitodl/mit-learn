@@ -101,6 +101,7 @@ services:
     environment:
       - KEYCLOAK_ADMIN=${KEYCLOAK_SVC_ADMIN:-admin}
       - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_SVC_ADMIN_PASSWORD:-admin}
+      - "_JAVA_OPTIONS=${JAVA_OPTIONS:-}" # Load _JAVA_OPTIONS from env, fallback to empty string
     networks:
       default:
         aliases:

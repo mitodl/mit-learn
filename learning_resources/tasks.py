@@ -424,7 +424,7 @@ def summarize_content_files_task(
         - None
     """
     summarizer = ContentSummarizer()
-    summarizer.summarize_content_files_by_ids(content_file_ids, overwrite)
+    return summarizer.summarize_content_files_by_ids(content_file_ids, overwrite)
 
 
 @app.task(bind=True, acks_late=True)

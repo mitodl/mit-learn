@@ -7,6 +7,10 @@ from django.db.models import Q
 from langchain_community.chat_models import ChatLiteLLM
 from typing_extensions import TypedDict
 
+from learning_resources.exceptions import (
+    FlashcardsGenerationError,
+    SummaryGenerationError,
+)
 from learning_resources.models import (
     ContentFile,
     ContentSummarizerConfiguration,
@@ -134,21 +138,26 @@ class ContentSummarizer:
         Returns:
             - None
         """
+        status_messages = []
         for content_file_id in content_file_ids:
-            self.summarize_single_content_file(content_file_id, overwrite=overwrite)
+            status_msg = self.summarize_single_content_file(
+                content_file_id, overwrite=overwrite
+            )
+            status_messages.append(status_msg)
+        return status_messages
 
     def summarize_single_content_file(
         self,
         content_file_id: int,
         overwrite,
-    ) -> None:
+    ) -> tuple[bool, str]:
         """Process a single content file
         Args:
             - content_file_id (int): Id of the content file to process
             - overwrite (bool): Whether to overwrite existing summary and flashcards
 
         Returns:
-            - None
+            - str: A string message indicating the status of the summarization
         """
         try:
             with transaction.atomic():
@@ -175,10 +184,20 @@ class ContentSummarizer:
 
                     if updated:
                         content_file.save()
+                    return f"Content file summarization succeeded for CONTENT_FILE_ID: {content_file_id}"  # noqa: E501
+                return f"Content file summarization skipped for CONTENT_FILE_ID: {content_file_id}"  # noqa: E501
 
-        except Exception:
+        except SummaryGenerationError as exc:
+            return f"Content file summary generation failed for CONTENT_FILE_ID: {content_file_id}\nError: {exc.args[0]}\n\n"  # noqa: E501
+
+        except FlashcardsGenerationError as exc:
+            return f"Content file flashcards generation failed for CONTENT_FILE_ID: {content_file_id}\nError: {exc.args[0]}\n\n"  # noqa: E501
+        except Exception as exc:
             logger.exception("Error processing content: %d", content_file.id)
-            raise
+            return (
+                False,
+                f"Content file summarization failed for CONTENT_FILE_ID: {content_file_id}\nError: {exc.args[0]}\n\n",  # noqa: E501
+            )
 
     def _get_llm(self, model=None, temperature=0.0, max_tokens=1000) -> ChatLiteLLM:
         """Get the ChatLiteLLM instance"""
@@ -216,13 +235,14 @@ class ContentSummarizer:
             generated_summary = response.content
             logger.info("Generated summary: %s", generated_summary)
 
-        except Exception:
+        except Exception as exc:
             logger.exception(
                 "An error occurred while generating summary using model: %s", llm_model
             )
-            raise
+            raise SummaryGenerationError(exc) from exc
+
         else:
-            return generated_summary
+            return True, generated_summary
 
     def _generate_flashcards(
         self, content: str, llm_model: str
@@ -243,12 +263,12 @@ class ContentSummarizer:
             )
             generated_flashcards = response.get("flashcards")
             logger.info("Generated flashcards: %s", generated_flashcards)
-
-        except Exception:
+        except Exception as exc:
             logger.exception(
                 "An error occurred while generating flashcards using model: %s",
                 llm_model,
             )
-            raise
+            raise FlashcardsGenerationError(exc) from exc
+
         else:
             return generated_flashcards
