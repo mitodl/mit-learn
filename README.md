@@ -13,24 +13,11 @@ This application provides a central interface from which learners can browse MIT
 
 ## Initial Setup
 
-MIT Learn follows the same [initial setup steps outlined in the common OL web app guide](https://mitodl.github.io/handbook/how-to/common-web-app-guide.html).
-Run through those steps **including the addition of `/etc/hosts` aliases and the optional step for running the
-`createsuperuser` command**.
+MIT Learn follows similar steps to the [initial setup steps outlined in the common OL web app guide](https://mitodl.github.io/handbook/how-to/common-web-app-guide.html).
 
-### Configuration
+### Environment Preparation (Before Initial Setup):
 
-Configuration can be put in the following files which are gitignored:
-
-```
-mit-learn/
-  ├── env/
-  │   ├── shared.local.env (provided to both frontend and backend containers)
-  │   ├── frontend.local.env (provided only to frontend containers)
-  │   └── backend.local.env (provided only to frontend containers)
-  └── .env (legacy file)
-```
-
-The following settings must be configured before running the app:
+Before starting the initial setup, you must prepare your environment files according to the following settings:
 
 - `COMPOSE_PROFILES`
 
@@ -42,6 +29,40 @@ The following settings must be configured before running the app:
   You can set these values to any non-empty string value if email-sending functionality
   is not needed. It's recommended that you eventually configure the site to be able
   to send emails. Those configuration steps can be found [below](#enabling-email).
+
+Here is an example setup using a top-level `.env`:
+```
+touch .env
+
+# Setup COMPOSE_PROFILES for all docker containers
+echo "COMPOSE_PROFILES=backend,frontend" > .env
+
+# Setup email-sending with any string
+echo "MAILGUN_KEY=\"fake\"" >> .env
+echo "MAILGUN_SENDER_DOMAIN=\"fake\"" >> .env
+```
+
+Now setup the relevant envs in the `env` directory
+
+```
+cp env/shared.local.example.env env/shared.local.env
+cp env/backend.local.example.env env/backend.local.env
+cp env/frontend.local.example.env env/frontend.local.env
+```
+
+Your setup should now reflect the following files which are gitignored:
+
+```
+mit-learn/
+  ├── env/
+  │   ├── shared.local.env (provided to both frontend and backend containers)
+  │   ├── frontend.local.env (provided only to frontend containers)
+  │   └── backend.local.env (provided only to frontend containers)
+  └── .env (legacy file)
+```
+
+You may begin the [initial setup steps outlined in the common OL web app guide](https://mitodl.github.io/handbook/how-to/common-web-app-guide.html). Run through those steps **including the addition of `/etc/hosts` aliases and the optional step for running the
+`createsuperuser` command**.
 
 ### Loading Data
 
