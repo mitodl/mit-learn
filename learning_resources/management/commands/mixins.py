@@ -10,7 +10,7 @@ class BaseCommandMixin:
         )
 
     def configure_test_resources(self, options):
-        if options["test_ids"]:
+        if options.get("test_ids"):
             test_ids = options["test_ids"].split(",")
             LearningResource.objects.filter(id__in=test_ids).update(
                 test_mode=True, published=False

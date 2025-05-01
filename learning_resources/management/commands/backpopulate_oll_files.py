@@ -14,6 +14,7 @@ class Command(BaseCommandMixin, BaseCommand):
     help = "Populate OLL course run files"
 
     def add_arguments(self, parser):
+        super().add_arguments(parser)
         parser.add_argument(
             "-c",
             "--chunk-size",
