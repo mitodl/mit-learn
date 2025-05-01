@@ -2,13 +2,13 @@
 
 from django.core.management import BaseCommand
 
-from learning_resources.management.commands.mixins import BaseCommandMixin
+from learning_resources.management.commands.mixins import TestResourceIdMixin
 from learning_resources.tasks import import_all_mitxonline_files
 from main import settings
 from main.utils import now_in_utc
 
 
-class Command(BaseCommandMixin, BaseCommand):
+class Command(TestResourceIdMixin, BaseCommand):
     """Populate mitxonline course run files"""
 
     help = "Populate mitxonline course run files"

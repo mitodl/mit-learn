@@ -1,7 +1,7 @@
 from learning_resources.models import LearningResource
 
 
-class BaseCommandMixin:
+class TestResourceIdMixin:
     def add_arguments(self, parser):
         parser.add_argument(
             "--test-ids",

@@ -2,13 +2,13 @@
 
 from django.core.management import BaseCommand
 
-from learning_resources.management.commands.mixins import BaseCommandMixin
+from learning_resources.management.commands.mixins import TestResourceIdMixin
 from learning_resources.tasks import import_all_oll_files
 from main import settings
 from main.utils import now_in_utc
 
 
-class Command(BaseCommandMixin, BaseCommand):
+class Command(TestResourceIdMixin, BaseCommand):
     """Populate OLL course run files"""
 
     help = "Populate OLL course run files"
