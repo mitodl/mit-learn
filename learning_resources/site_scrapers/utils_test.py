@@ -29,3 +29,22 @@ def test_scraper_for_site(mocker, url, expected_scraper_class):
 
     scraper = scraper_for_site(url)
     assert isinstance(scraper, expected_scraper_class)
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://example.com",
+        "http://micromasters.mit.edu/ds/",
+        "http://unknownsite.com",
+        "http://executive.mit.edu/course/innovation-executive-academy/a05U1000005l8nFIAQ.html",
+    ],
+)
+def test_scraper_forces_https(mocker, url):
+    """
+    Test that the scraper class forces https for the start url
+    """
+
+    scraper = scraper_for_site(url)
+    assert "http://" not in scraper.start_url
+    assert "https://" in scraper.start_url
