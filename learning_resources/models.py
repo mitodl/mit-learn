@@ -467,9 +467,6 @@ class LearningResource(TimestampedModel):
         default=default_delivery,
     )
     license_cc = models.BooleanField(default=False)
-
-    test_mode = models.BooleanField(default=False)
-
     continuing_ed_credits = models.DecimalField(
         max_digits=5, decimal_places=2, null=True, blank=True
     )
