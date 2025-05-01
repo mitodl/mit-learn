@@ -6,8 +6,6 @@ from pathlib import Path
 from tarfile import ReadError
 from tempfile import TemporaryDirectory
 
-from django.db.models import Q
-
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.loaders import load_content_files
 from learning_resources.etl.utils import (
@@ -114,11 +112,9 @@ def sync_edx_course_files(
         runs = LearningResourceRun.objects.filter(
             learning_resource__etl_source=etl_source,
             learning_resource_id__in=ids,
+            learning_resource__published=True,
             published=True,
-        ).filter(
-            Q(learning_resource__published=True) | Q(learning_resource__test_mode=True)
         )
-
         if etl_source == ETLSource.mit_edx.name:
             # Additional processing of run ids and tarfile names,
             # because edx data is structured differently

@@ -3,18 +3,16 @@
 from django.conf import settings
 from django.core.management import BaseCommand
 
-from learning_resources.management.commands.mixins import BaseCommandMixin
 from learning_resources.tasks import import_all_xpro_files
 from main.utils import now_in_utc
 
 
-class Command(BaseCommandMixin, BaseCommand):
+class Command(BaseCommand):
     """Populate xpro course run files"""
 
     help = "Populate xpro course run files"
 
     def add_arguments(self, parser):
-        super().add_arguments(parser)
         parser.add_argument(
             "-c",
             "--chunk-size",
@@ -44,7 +42,6 @@ class Command(BaseCommandMixin, BaseCommand):
             if options["learning_resource_ids"]
             else None
         )
-        self.configure_test_resources(options)
         task = import_all_xpro_files.delay(
             chunk_size=chunk_size,
             overwrite=options["force_overwrite"],
