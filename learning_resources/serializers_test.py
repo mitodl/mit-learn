@@ -233,6 +233,7 @@ def test_learning_resource_serializer(  # noqa: PLR0913
             key=lambda price: price.amount,
         ),
         "professional": resource.professional,
+        "test_mode": False,
         "position": None,
         "certification": resource.certification,
         "certification_type": {
