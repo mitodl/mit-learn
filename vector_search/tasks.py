@@ -99,8 +99,9 @@ def start_embed_resources(self, indexes, skip_content_files, overwrite):
             if not skip_content_files:
                 for course in (
                     LearningResource.objects.filter(
-                        resource_type=COURSE_TYPE, published=True
+                        resource_type=COURSE_TYPE,
                     )
+                    .filter(Q(published=True) | Q(test_mode=True))
                     .exclude(readable_id=blocklisted_ids)
                     .order_by("id")
                 ):
