@@ -1287,7 +1287,6 @@ class ContentFileSerializer(serializers.ModelSerializer):
             "uid",
             "title",
             "description",
-            "archive_checksum",
             "url",
             "content_feature_type",
             "content_type",
