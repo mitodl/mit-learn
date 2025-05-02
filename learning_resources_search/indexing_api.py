@@ -8,6 +8,7 @@ from math import ceil
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 from opensearchpy.exceptions import ConflictError, NotFoundError
 from opensearchpy.helpers import BulkIndexError, bulk
 
@@ -383,9 +384,13 @@ def index_course_content_files(learning_resource_ids, index_types):
             index, the reindexing index or both need to be updated
 
     """
-    for run_id in LearningResourceRun.objects.filter(
-        learning_resource_id__in=learning_resource_ids, published=True
-    ).values_list("id", flat=True):
+    for run_id in (
+        LearningResourceRun.objects.filter(
+            learning_resource_id__in=learning_resource_ids,
+        )
+        .filter(Q(published=True) | Q(test_mode=True))
+        .values_list("id", flat=True)
+    ):
         index_run_content_files(run_id, index_types)
 
 
