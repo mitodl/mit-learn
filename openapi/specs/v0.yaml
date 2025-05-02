@@ -1817,6 +1817,8 @@ components:
           nullable: true
         archive_checksum:
           type: string
+          nullable: true
+          maxLength: 32
         url:
           type: string
           nullable: true
