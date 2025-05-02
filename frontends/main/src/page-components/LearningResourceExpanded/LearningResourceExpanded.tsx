@@ -37,14 +37,6 @@ const ContentSection = styled.div<{
   position: "relative",
 }))
 
-const StyledAiChatSyllabusOpener = styled(AiChatSyllabusOpener)<{
-  top: number
-}>(({ top }) => ({
-  position: "sticky",
-  top,
-  zIndex: 2,
-}))
-
 const TopContainer = styled.div<{ chatEnabled: boolean }>(
   ({ theme, chatEnabled }) => ({
     display: "flex",
@@ -238,15 +230,20 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
         ref={titleSectionRef}
         titleId={titleId}
         resource={resource}
-        onClickClose={closeDrawer}
+        onClickClose={
+          chatTransitionState === ChatTransitionState.Open
+            ? () => onChatOpenerToggle(false)
+            : closeDrawer
+        }
       />
       {chatEnabled ? (
         <>
-          <StyledAiChatSyllabusOpener
-            open={chatExpanded}
-            top={titleSectionHeight}
-            onToggleOpen={onChatOpenerToggle}
-          />
+          {chatTransitionState !== ChatTransitionState.Open ? (
+            <AiChatSyllabusOpener
+              open={chatExpanded}
+              onToggleOpen={onChatOpenerToggle}
+            />
+          ) : null}
           <AiSyllabusBotSlideDown
             resource={resource}
             open={chatExpanded}

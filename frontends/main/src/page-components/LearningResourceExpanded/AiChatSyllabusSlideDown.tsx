@@ -34,6 +34,7 @@ const SlideDown = styled.div<{
 }))
 
 const Opener = styled.div(({ theme }) => ({
+  position: "relative",
   ":after": {
     content: "''",
     width: "100%",
@@ -41,9 +42,10 @@ const Opener = styled.div(({ theme }) => ({
     background: theme.custom.colors.white,
     display: "block",
     position: "absolute",
-    top: 0,
+    top: "-24px",
     borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
     zIndex: 1,
+    paddingTop: "24px",
   },
 }))
 
@@ -89,7 +91,7 @@ const StyledAiChat = styled(AiChat)<{
   topPosition: number
 }>(({ topPosition }) => ({
   ".MitAiChat--root": {
-    minHeight: `calc(100vh - ${topPosition + 43}px)`,
+    minHeight: `calc(100vh - ${topPosition}px)`,
   },
   ".MitAiChat--entryScreenContainer": {
     top: topPosition,
