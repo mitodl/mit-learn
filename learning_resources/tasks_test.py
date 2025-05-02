@@ -290,7 +290,7 @@ def test_get_content_tasks_test_mode(
         return_value=["foo.tar.gz"],
     )
     setup_s3(settings)
-    settings.LEARNING_COURSE_ITERATOR_CHUNK_SIZE = 2
+    settings.LEARNING_COURSE_ITERATOR_CHUNK_SIZE = 10
     etl_source = ETLSource.xpro.name
     platform = PlatformType.xpro.name
     courses = factories.CourseFactory.create_batch(
@@ -314,10 +314,9 @@ def test_get_content_tasks_test_mode(
         overwrite=True,
     )
     assert mocked_celery.group.call_count == 1
-
     if test_mode:
         assert sorted(mock_get_content_files.mock_calls[0].args[0]) == sorted(
-            [learning_resource_ids[0], learning_resource_ids[1]]
+            learning_resource_ids
         )
     else:
         mock_get_content_files.assert_not_called()
