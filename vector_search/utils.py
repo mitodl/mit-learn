@@ -228,7 +228,7 @@ def _process_resource_embeddings(serialized_resources):
     vector_name = encoder.model_short_name()
     for doc in serialized_resources:
         if not should_generate_embeddings(doc, COURSE_TYPE):
-            update_payload(doc, resource_type=COURSE_TYPE)
+            update_learning_resource_payload(doc)
             continue
         vector_point_key = doc["readable_id"]
         metadata.append(doc)
@@ -240,38 +240,43 @@ def _process_resource_embeddings(serialized_resources):
     return None
 
 
-def update_payload(
-    serialized_document,
-    resource_type,
-):
-    """
-    Update the payload of a document in Qdrant
-    based on the resource_type (learning resource vs content file)
-    """
+def update_learning_resource_payload(serialized_document):
+    points = [vector_point_id(serialized_document["readable_id"])]
+    _set_payload(
+        points,
+        serialized_document,
+        param_map=QDRANT_RESOURCE_PARAM_MAP,
+        collection_name=RESOURCES_COLLECTION_NAME,
+    )
+
+
+def update_content_file_payload(serialized_document):
+    params = {
+        "resource_readable_id": serialized_document["resource_readable_id"],
+        "key": serialized_document["key"],
+        "run_readable_id": serialized_document["run_readable_id"],
+    }
+    points = [
+        point.id
+        for point in retrieve_points_matching_params(
+            params,
+            collection_name=CONTENT_FILES_COLLECTION_NAME,
+        )
+    ]
+    _set_payload(
+        points,
+        serialized_document,
+        param_map=QDRANT_CONTENT_FILE_PARAM_MAP,
+        collection_name=CONTENT_FILES_COLLECTION_NAME,
+    )
+
+
+def _set_payload(points, document, param_map, collection_name):
     client = qdrant_client()
-    if resource_type != CONTENT_FILE_TYPE:
-        collection_name = RESOURCES_COLLECTION_NAME
-        QDRANT_PARAM_MAP = QDRANT_RESOURCE_PARAM_MAP
-        points = [vector_point_id(serialized_document["readable_id"])]
-    else:
-        collection_name = CONTENT_FILES_COLLECTION_NAME
-        QDRANT_PARAM_MAP = QDRANT_CONTENT_FILE_PARAM_MAP
-        params = {
-            "resource_readable_id": serialized_document["resource_readable_id"],
-            "key": serialized_document["key"],
-            "run_readable_id": serialized_document["run_readable_id"],
-        }
-        points = [
-            point.id
-            for point in retrieve_points_matching_params(
-                params,
-                collection_name=collection_name,
-            )
-        ]
     payload = {}
-    for key in QDRANT_PARAM_MAP:
-        if key in serialized_document:
-            payload[QDRANT_PARAM_MAP[key]] = serialized_document[key]
+    for key in param_map:
+        if key in document:
+            payload[param_map[key]] = document[key]
     if not all([points, payload]):
         return
     client.set_payload(
@@ -383,7 +388,7 @@ def _process_content_embeddings(serialized_content):
             """
             Just update the payload and continue
             """
-            update_payload(doc, resource_type=CONTENT_FILE_TYPE)
+            update_content_file_payload(doc)
             continue
         """
         if we are generating embeddings then
