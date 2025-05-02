@@ -2,6 +2,7 @@
 
 from datetime import timedelta
 from decimal import Decimal
+from pathlib import Path
 
 # pylint: disable=redefined-outer-name,too-many-locals,too-many-lines
 from types import SimpleNamespace
@@ -25,6 +26,7 @@ from learning_resources.etl.constants import (
     ETLSource,
     ProgramLoaderConfig,
 )
+from learning_resources.etl.edx_shared import sync_edx_course_files
 from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.loaders import (
     calculate_completeness,
@@ -946,38 +948,63 @@ def test_load_content_files(mocker, is_published, extra_run, calc_score):
 
 
 @pytest.mark.parametrize("test_mode", [True, False])
-def test_load_test_mode_resource_content_files(mocker, test_mode):
+def test_load_test_mode_resource_content_files(
+    mocker, mock_xpro_learning_bucket, mock_mitx_learning_bucket, test_mode
+):
     """Test that load_content_files calls the expected functions"""
-    is_published = False
+
     course = LearningResourceFactory.create(
-        is_course=True, create_runs=False, test_mode=test_mode
+        is_course=True,
+        create_runs=False,
+        test_mode=test_mode,
+        published=False,
+        etl_source=ETLSource.mit_edx.name,
     )
     course_run = LearningResourceRunFactory.create(
-        published=is_published, learning_resource=course
+        published=True, learning_resource=course, checksum="testing124"
     )
 
-    deleted_content_file = ContentFileFactory.create(run=course_run)
-    returned_content_file_id = deleted_content_file.id + 1
+    ContentFileFactory.create(run=course_run)
 
     content_data = [{"a": "b"}, {"a": "c"}]
-    mock_load_content_file = mocker.patch(
-        "learning_resources.etl.loaders.load_content_file",
-        return_value=returned_content_file_id,
+
+    mock_load_content_files = mocker.patch(
+        "learning_resources.etl.edx_shared.load_content_files",
         autospec=True,
+        return_value=[],
     )
-    mock_bulk_index = mocker.patch(
-        "learning_resources_search.plugins.tasks.index_run_content_files",
+
+    mocker.patch(
+        "learning_resources.etl.edx_shared.content_files_loaded_actions",
     )
     mocker.patch(
         "learning_resources_search.plugins.tasks.deindex_run_content_files",
         autospec=True,
     )
+    bucket = mock_mitx_learning_bucket.bucket
+    with Path.open(
+        Path("test_json/course-v1:MITxT+8.01.3x+3T2022.tar.gz"), "rb"
+    ) as infile:
+        bucket.put_object(
+            Key=f"20220101/course/{course.runs.first().run_id}.tar.gz",
+            Body=infile.read(),
+            ACL="public-read",
+        )
+    mocker.patch(
+        "learning_resources.etl.edx_shared.get_learning_course_bucket",
+        return_value=bucket,
+    )
+    sync_edx_course_files(
+        course.etl_source,
+        [course.id],
+        [f"20220101/course/{course.runs.first().run_id}.tar.gz"],
+        s3_prefix="course",
+    )
 
-    load_content_files(course_run, content_data, calc_completeness=False)
-    assert mock_load_content_file.call_count == len(content_data)
-    assert mock_bulk_index.call_count == (1 if test_mode else 0)
-    deleted_content_file.refresh_from_db()
-    assert not deleted_content_file.published
+    if test_mode:
+        assert len(mock_load_content_files.mock_calls[0].args) == len(content_data)
+    else:
+        assert mock_load_content_files.call_count == 0
 
 
 def test_load_content_file():
