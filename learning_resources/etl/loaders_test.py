@@ -968,6 +968,10 @@ def test_load_test_mode_resource_content_files(mocker, test_mode):
     mock_bulk_index = mocker.patch(
         "learning_resources_search.plugins.tasks.index_run_content_files",
     )
+    mocker.patch(
+        "learning_resources_search.plugins.tasks.deindex_run_content_files",
+        autospec=True,
+    )
 
     load_content_files(course_run, content_data, calc_completeness=False)
     assert mock_load_content_file.call_count == len(content_data)
