@@ -933,6 +933,11 @@ def test_load_content_files(mocker, is_published, extra_run, calc_score):
         "learning_resources_search.plugins.tasks.deindex_run_content_files",
         autospec=True,
     )
+
+    mocker.patch(
+        "learning_resources_search.indexing_api.deindex_run_content_files",
+        autospec=True,
+    )
     mock_calc_score = mocker.patch(
         "learning_resources.etl.loaders.calculate_completeness"
     )
