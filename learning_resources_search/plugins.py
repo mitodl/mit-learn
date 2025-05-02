@@ -71,15 +71,16 @@ class SearchIndexPlugin:
             resource(LearningResource): The Learning Resource that was upserted
         """
         upsert_tasks = []
+
+        upsert_tasks.append(
+            tasks.upsert_learning_resource.si(resource.id),
+        )
         if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
             upsert_tasks.append(
                 vector_tasks.generate_embeddings.si(
                     [resource.id], resource.resource_type, overwrite=True
                 )
             )
-        upsert_tasks.append(
-            tasks.upsert_learning_resource.si(resource.id),
-        )
         if percolate:
             upsert_tasks.append(tasks.percolate_learning_resource.si(resource.id))
 
@@ -94,14 +95,13 @@ class SearchIndexPlugin:
             resource(LearningResource): The Learning Resource that was removed
         """
         unpublished_tasks = []
+        unpublished_tasks.append(
+            tasks.deindex_document.si(resource.id, resource.resource_type)
+        )
         if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
             unpublished_tasks.append(
                 vector_tasks.remove_embeddings.si([resource.id], resource.resource_type)
             )
-
-        unpublished_tasks.append(
-            tasks.deindex_document.si(resource.id, resource.resource_type)
-        )
         try_with_retry_as_task(chain(*unpublished_tasks))
 
         if resource.resource_type == COURSE_TYPE:
