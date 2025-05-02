@@ -945,6 +945,37 @@ def test_load_content_files(mocker, is_published, extra_run, calc_score):
     assert not deleted_content_file.published
 
 
+@pytest.mark.parametrize("test_mode", [True, False])
+def test_load_test_mode_resource_content_files(mocker, test_mode):
+    """Test that load_content_files calls the expected functions"""
+    is_published = False
+    course = LearningResourceFactory.create(
+        is_course=True, create_runs=False, test_mode=test_mode
+    )
+    course_run = LearningResourceRunFactory.create(
+        published=is_published, learning_resource=course
+    )
+
+    deleted_content_file = ContentFileFactory.create(run=course_run)
+    returned_content_file_id = deleted_content_file.id + 1
+
+    content_data = [{"a": "b"}, {"a": "c"}]
+    mock_load_content_file = mocker.patch(
+        "learning_resources.etl.loaders.load_content_file",
+        return_value=returned_content_file_id,
+        autospec=True,
+    )
+    mock_bulk_index = mocker.patch(
+        "learning_resources_search.plugins.tasks.index_run_content_files",
+    )
+
+    load_content_files(course_run, content_data, calc_completeness=False)
+    assert mock_load_content_file.call_count == len(content_data)
+    assert mock_bulk_index.call_count == (1 if test_mode else 0)
+    deleted_content_file.refresh_from_db()
+    assert not deleted_content_file.published
+
+
 def test_load_content_file():
     """Test that load_content_file saves a ContentFile object"""
     learning_resource_run = LearningResourceRunFactory.create()
