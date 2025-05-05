@@ -206,18 +206,21 @@ def _chunk_documents(encoder, texts, metadatas):
     return recursive_splitter.create_documents(texts=texts, metadatas=metadatas)
 
 
-def _embedding_context(document, resource_type):
+def _learning_resource_embedding_context(document):
     """
-    Get the embedding context for a document
-    based on the resource_type (learning resource vs content file)
+    Get the embedding context for a learning resource
     """
-    if resource_type != CONTENT_FILE_TYPE:
-        return (
-            f"{document.get('title')} "
-            f"{document.get('description')} {document.get('full_description')}"
-        )
-    else:
-        return document.get("content", "")
+    return (
+        f"{document.get('title')} "
+        f"{document.get('description')} {document.get('full_description')}"
+    )
+
+
+def _content_file_embedding_context(document):
+    """
+    Get the embedding context for a content file
+    """
+    return document.get("content", "")
 
 
 def _process_resource_embeddings(serialized_resources):
@@ -233,7 +236,7 @@ def _process_resource_embeddings(serialized_resources):
         vector_point_key = doc["readable_id"]
         metadata.append(doc)
         ids.append(vector_point_id(vector_point_key))
-        docs.append(_embedding_context(doc, COURSE_TYPE))
+        docs.append(_learning_resource_embedding_context(doc))
     if len(docs) > 0:
         embeddings = encoder.embed_documents(docs)
         return points_generator(ids, metadata, embeddings, vector_name)
@@ -310,11 +313,11 @@ def should_generate_embeddings(serialized_document, resource_type):
     if len(response) > 0:
         if resource_type != CONTENT_FILE_TYPE:
             resource_payload = response[0].payload
-            stored_embedding_content = _embedding_context(
-                resource_payload, resource_type
+            stored_embedding_content = _learning_resource_embedding_context(
+                resource_payload
             )
-            current_embedding_content = _embedding_context(
-                serialized_document, resource_type
+            current_embedding_content = _learning_resource_embedding_context(
+                serialized_document
             )
             if stored_embedding_content != current_embedding_content:
                 return True
@@ -380,7 +383,7 @@ def _process_content_embeddings(serialized_content):
     vector_name = encoder.model_short_name()
     remove_docs = []
     for doc in serialized_content:
-        embedding_context = _embedding_context(doc, CONTENT_FILE_TYPE)
+        embedding_context = _content_file_embedding_context(doc)
         if not embedding_context:
             continue
         should_generate = should_generate_embeddings(doc, CONTENT_FILE_TYPE)
