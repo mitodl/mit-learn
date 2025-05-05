@@ -15,7 +15,6 @@ from learning_resources.serializers import (
 )
 from learning_resources_search.constants import (
     CONTENT_FILE_TYPE,
-    COURSE_TYPE,
     LEARNING_RESOURCE_TYPES,
 )
 from learning_resources_search.serializers import (
@@ -230,7 +229,7 @@ def _process_resource_embeddings(serialized_resources):
     encoder = dense_encoder()
     vector_name = encoder.model_short_name()
     for doc in serialized_resources:
-        if not should_generate_embeddings(doc, COURSE_TYPE):
+        if not should_generate_resource_embeddings(doc):
             update_learning_resource_payload(doc)
             continue
         vector_point_key = doc["readable_id"]
@@ -275,6 +274,14 @@ def update_content_file_payload(serialized_document):
 
 
 def _set_payload(points, document, param_map, collection_name):
+    """
+    Set the payload for a list of points in Qdrant
+    Args:
+        points (list): List of point ids
+        document (dict): Document to set the payload for
+        param_map (dict): Mapping of document fields to Qdrant payload fields
+        collection_name (str): Name of the Qdrant collection
+    """
     client = qdrant_client()
     payload = {}
     for key in param_map:
@@ -289,43 +296,49 @@ def _set_payload(points, document, param_map, collection_name):
     )
 
 
-def should_generate_embeddings(serialized_document, resource_type):
+def should_generate_resource_embeddings(serialized_document):
     """
-    Determine if we should generate embeddings for a document
-    based on the resource_type (learning resource vs content file)
+    Determine if we should generate embeddings for a learning resource
     """
     client = qdrant_client()
-    if resource_type != CONTENT_FILE_TYPE:
-        collection_name = RESOURCES_COLLECTION_NAME
-        point_id = vector_point_id(serialized_document["readable_id"])
-    else:
-        # we just need metadata from the first chunk
-        collection_name = CONTENT_FILES_COLLECTION_NAME
-        point_id = vector_point_id(
-            f"{serialized_document['resource_readable_id']}."
-            f"{serialized_document.get('run_readable_id', '')}."
-            f"{serialized_document['key']}.0"
-        )
+    point_id = vector_point_id(serialized_document["readable_id"])
     response = client.retrieve(
-        collection_name=collection_name,
+        collection_name=RESOURCES_COLLECTION_NAME,
         ids=[point_id],
     )
     if len(response) > 0:
-        if resource_type != CONTENT_FILE_TYPE:
-            resource_payload = response[0].payload
-            stored_embedding_content = _learning_resource_embedding_context(
-                resource_payload
-            )
-            current_embedding_content = _learning_resource_embedding_context(
-                serialized_document
-            )
-            if stored_embedding_content != current_embedding_content:
-                return True
-        else:
-            qdrant_checksum = response[0].payload.get("checksum")
-            if qdrant_checksum != serialized_document["checksum"]:
-                return True
-        return False
+        resource_payload = response[0].payload
+        stored_embedding_content = _learning_resource_embedding_context(
+            resource_payload
+        )
+        current_embedding_content = _learning_resource_embedding_context(
+            serialized_document
+        )
+        if stored_embedding_content == current_embedding_content:
+            return False
+    return True
+
+
+def should_generate_content_embeddings(serialized_document):
+    """
+    Determine if we should generate embeddings for a content file
+    """
+    client = qdrant_client()
+
+    # we just need metadata from the first chunk
+    point_id = vector_point_id(
+        f"{serialized_document['resource_readable_id']}."
+        f"{serialized_document.get('run_readable_id', '')}."
+        f"{serialized_document['key']}.0"
+    )
+    response = client.retrieve(
+        collection_name=CONTENT_FILES_COLLECTION_NAME,
+        ids=[point_id],
+    )
+    if len(response) > 0:
+        qdrant_checksum = response[0].payload.get("checksum")
+        if qdrant_checksum == serialized_document["checksum"]:
+            return False
     return True
 
 
@@ -340,7 +353,7 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
     ids = []
     docs = []
     for doc in serialized_resources:
-        if not should_generate_embeddings(doc, COURSE_TYPE):
+        if not should_generate_resource_embeddings(doc):
             continue
         readable_id = doc["readable_id"]
         resource_vector_point_id = str(vector_point_id(readable_id))
@@ -386,7 +399,7 @@ def _process_content_embeddings(serialized_content):
         embedding_context = _content_file_embedding_context(doc)
         if not embedding_context:
             continue
-        should_generate = should_generate_embeddings(doc, CONTENT_FILE_TYPE)
+        should_generate = should_generate_content_embeddings(doc)
         if not should_generate:
             """
             Just update the payload and continue

@@ -12,7 +12,6 @@ from learning_resources.factories import (
     LearningResourceRunFactory,
 )
 from learning_resources.models import LearningResource
-from learning_resources_search.constants import CONTENT_FILE_TYPE, COURSE_TYPE
 from learning_resources_search.serializers import (
     serialize_bulk_content_files,
     serialize_bulk_learning_resources,
@@ -31,7 +30,8 @@ from vector_search.utils import (
     embed_learning_resources,
     filter_existing_qdrant_points,
     qdrant_query_conditions,
-    should_generate_embeddings,
+    should_generate_content_embeddings,
+    should_generate_resource_embeddings,
     update_content_file_payload,
     update_learning_resource_payload,
     vector_point_id,
@@ -491,7 +491,7 @@ def test_should_generate_for_changed_resource(mocker):
     mock_point.payload = fake_payload
     mock_qdrant.retrieve.return_value = [mock_point]
     mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
-    result = should_generate_embeddings(serialized_resources[0], COURSE_TYPE)
+    result = should_generate_resource_embeddings(serialized_resources[0])
     assert result is True
 
 
@@ -507,7 +507,7 @@ def test_should_generate_for_changed_content_file(mocker):
     mock_point.payload = {"checksum": "different-checksum"}
     mock_qdrant.retrieve.return_value = [mock_point]
     mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
-    result = should_generate_embeddings(serialized_files[0], CONTENT_FILE_TYPE)
+    result = should_generate_content_embeddings(serialized_files[0])
     assert result is True
 
 
@@ -523,7 +523,7 @@ def test_should_not_generate_for_unchanged_content_file(mocker):
     mock_point.payload = {"checksum": serialized_files[0]["checksum"]}
     mock_qdrant.retrieve.return_value = [mock_point]
     mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
-    result = should_generate_embeddings(serialized_files[0], CONTENT_FILE_TYPE)
+    result = should_generate_content_embeddings(serialized_files[0])
     assert result is False
 
 
