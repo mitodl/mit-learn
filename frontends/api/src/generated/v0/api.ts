@@ -636,12 +636,6 @@ export interface ContentFile {
    * @type {string}
    * @memberof ContentFile
    */
-  archive_checksum?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof ContentFile
-   */
   url?: string | null
   /**
    *
