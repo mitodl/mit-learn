@@ -127,7 +127,7 @@ jobs:
         run: yarn run lint-check
 
       - name: Build Next.js frontend
-        run: yarn workspace main build ${NEXTJS_BUILD_OPTIONS}
+        run: yarn workspace main build --debug
         env:
           NODE_ENV: production
           NEXT_PUBLIC_ORIGIN: https://ci.learn.mit.edu
