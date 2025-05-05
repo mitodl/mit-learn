@@ -101,6 +101,8 @@ const nextConfig = {
     FEATURE_FLAGS: JSON.stringify(processFeatureFlags()),
   },
 
+  staticPageGenerationTimeout: 180,
+
   experimental: { webpackMemoryOptimizations: true },
 
   webpack: (config, { dev }) => {
