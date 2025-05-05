@@ -1,5 +1,11 @@
 name: CI
-on: [push]
+on:
+  push:
+  workflow_dispatch:
+    inputs:
+      debug:
+        type: boolean
+        description: "Run in debug mode"
 jobs:
   python-tests:
     runs-on: ubuntu-22.04
@@ -87,6 +93,8 @@ jobs:
 
   javascript-tests:
     runs-on: ubuntu-22.04
+    env:
+      NEXTJS_BUILD_OPTIONS: ""
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e # v4
@@ -97,6 +105,11 @@ jobs:
 
       - name: Setup environment
         run: sudo apt-get install libelf1
+
+      - name: Set Debug Based on Input
+        if: ${{ github.event.inputs.debug == 'true' }}
+        run: |
+          echo "NEXTJS_BUILD_OPTIONS='--debug'" >> $GITHUB_ENV
 
       - name: Install dependencies
         run: yarn install --immutable
@@ -114,7 +127,7 @@ jobs:
         run: yarn run lint-check
 
       - name: Build Next.js frontend
-        run: yarn workspace main build
+        run: yarn workspace main build ${NEXTJS_BUILD_OPTIONS}
         env:
           NODE_ENV: production
           NEXT_PUBLIC_ORIGIN: https://ci.learn.mit.edu
