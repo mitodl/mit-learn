@@ -32,7 +32,8 @@ from vector_search.utils import (
     filter_existing_qdrant_points,
     qdrant_query_conditions,
     should_generate_embeddings,
-    update_payload,
+    update_content_file_payload,
+    update_learning_resource_payload,
     vector_point_id,
 )
 
@@ -532,7 +533,7 @@ def test_update_payload_learning_resource(mocker):
     serialized_resources = list(serialize_bulk_learning_resources([resource.id]))
     mock_qdrant = mocker.MagicMock()
     mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
-    update_payload(serialized_resources[0], COURSE_TYPE)
+    update_learning_resource_payload(serialized_resources[0])
     mock_qdrant.set_payload.assert_called_once()
     call_args = mock_qdrant.set_payload.call_args[1]
     assert call_args["collection_name"] == RESOURCES_COLLECTION_NAME
@@ -559,7 +560,7 @@ def test_update_payload_content_file(mocker):
     mocker.patch(
         "vector_search.utils.retrieve_points_matching_params", return_value=[mock_point]
     )
-    update_payload(serialized_files[0], CONTENT_FILE_TYPE)
+    update_content_file_payload(serialized_files[0])
     mock_qdrant.set_payload.assert_called_once()
     call_args = mock_qdrant.set_payload.call_args[1]
     assert call_args["collection_name"] == CONTENT_FILES_COLLECTION_NAME
@@ -579,6 +580,6 @@ def test_update_payload_no_points(mocker):
     mock_qdrant = mocker.MagicMock()
     mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
     mocker.patch("vector_search.utils.retrieve_points_matching_params", return_value=[])
-    update_payload(serialized_files[0], CONTENT_FILE_TYPE)
+    update_content_file_payload(serialized_files[0])
     # Verify set_payload not called
     mock_qdrant.set_payload.assert_not_called()
