@@ -21,6 +21,7 @@ QDRANT_CONTENT_FILE_PARAM_MAP = {
     "file_type": "file_type",
     "summary": "summary",
     "flashcards": "flashcards",
+    "checksum": "checksum",
 }
 
 QDRANT_RESOURCE_PARAM_MAP = {

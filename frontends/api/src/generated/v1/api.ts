@@ -348,6 +348,12 @@ export interface ContentFile {
    * @type {string}
    * @memberof ContentFile
    */
+  checksum?: string
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
   image_src?: string | null
   /**
    *

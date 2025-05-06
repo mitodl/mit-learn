@@ -3,6 +3,7 @@
 import uuid
 from abc import abstractmethod
 from functools import cached_property
+from hashlib import md5
 from typing import TYPE_CHECKING, Optional
 
 from django.conf import settings
@@ -907,12 +908,24 @@ class ContentFile(TimestampedModel):
     )
     content_tags = models.ManyToManyField(LearningResourceContentTag)
     published = models.BooleanField(default=True)
+    archive_checksum = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
     checksum = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
     source_path = models.CharField(max_length=1024, null=True, blank=True)  # noqa: DJ001
     file_extension = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
     edx_module_id = models.CharField(max_length=1024, null=True, blank=True)  # noqa: DJ001
     summary = models.TextField(blank=True, default="")
     flashcards = models.JSONField(blank=True, default=list)
+
+    def content_checksum(self):
+        hasher = md5()  # noqa: S324
+        if self.content:
+            hasher.update(self.content.encode("utf-8"))
+            return hasher.hexdigest()
+        return None
+
+    def save(self, **kwargs):
+        self.checksum = self.content_checksum()
+        super().save(**kwargs)
 
     class Meta:
         unique_together = (("key", "run"),)

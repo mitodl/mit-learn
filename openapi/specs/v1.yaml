@@ -9013,6 +9013,8 @@ components:
           type: string
           nullable: true
           maxLength: 24
+        checksum:
+          type: string
         image_src:
           type: string
           format: uri
