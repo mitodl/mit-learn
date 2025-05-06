@@ -1,7 +1,13 @@
-import { EnrollmentsApi, ProgramsApi, CoursesApi } from "./generated/v0/api"
+import {
+  EnrollmentsApi,
+  ProgramsApi,
+  CoursesApi,
+} from "@mitodl/mitxonline-api-axios/v0"
 import axios from "axios"
 
-const axiosInstance = axios.create({})
+const axiosInstance = axios.create({
+  baseURL: "https://mitxonline.c4103.com/api/v0/",
+})
 
 const BASE_PATH =
   process.env.NEXT_PUBLIC_MITXONLINE_API_BASE_URL?.replace(/\/+$/, "") ?? ""
