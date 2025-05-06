@@ -1,6 +1,6 @@
 import { mergeOverrides, makePaginatedFactory } from "ol-test-utilities"
 import type { PartialFactory } from "ol-test-utilities"
-import type { CourseWithCourseRuns } from "@mitodl/mitxonline-api-axios/v0"
+import type { CourseWithCourseRuns } from "@mitodl/mitxonline-api-axios/v1"
 import { faker } from "@faker-js/faker/locale/en"
 import { UniqueEnforcer } from "enforce-unique"
 

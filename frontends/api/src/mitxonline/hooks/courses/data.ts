@@ -1,5 +1,5 @@
 // FAKE DATA while API / auth work is in development
-import { CourseWithCourseRuns } from "../../generated/v0"
+import { CourseWithCourseRuns } from "@mitodl/mitxonline-api-axios/v1"
 import { mockProgramCourseData } from "../programs/data"
 
 const fakeCourse = ({

@@ -8,13 +8,13 @@ import { FeatureFlags } from "@/common/feature_flags"
 import { useQueries, useQuery, UseQueryResult } from "@tanstack/react-query"
 import { programsQueries } from "api/mitxonline-hooks/programs"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
-import { V2Program } from "api/mitxonline"
 import * as transform from "./CoursewareDisplay/transform"
 import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
 import { DashboardCard } from "./CoursewareDisplay/DashboardCard"
 import { PlainList, Stack, styled, Typography } from "ol-components"
 import { DashboardCourse, DashboardProgram } from "./CoursewareDisplay/types"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
+import { V2Program } from "@mitodl/mitxonline-api-axios/v1"
 
 type Organization = { id: number; name: string; logo?: string }
 type UserWithOrgsField = User & { organizations: Organization[] }
@@ -95,6 +95,7 @@ const OrganizationHeader: React.FC<{ org: Organization }> = ({ org }) => {
  * For an array of programs, fetch the associated courses.
  * [program1, program2] => [[...courses1], [...courses2]]
  */
+
 const useMitxonlineProgramsCourses = (programs: V2Program[]) => {
   const courseGroupIds =
     programs.map((program) => program.courses.map((id) => id as number)) ?? []

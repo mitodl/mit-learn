@@ -1,5 +1,5 @@
 // FAKE DATA while API / auth work is in development
-import { PaginatedV2ProgramList } from "@mitodl/mitxonline-api-axios/v0"
+import { PaginatedV2ProgramList } from "@mitodl/mitxonline-api-axios/v1"
 
 const mockProgramCourseData = {
   foundational: {

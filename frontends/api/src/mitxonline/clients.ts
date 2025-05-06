@@ -1,12 +1,17 @@
 import {
+  CoursesApi,
   EnrollmentsApi,
   ProgramsApi,
-  CoursesApi,
-} from "@mitodl/mitxonline-api-axios/v0"
+} from "@mitodl/mitxonline-api-axios/v1"
 import axios from "axios"
 
 const axiosInstance = axios.create({
-  baseURL: "https://mitxonline.c4103.com/api/v0/",
+  baseURL: "https://mitxonline.c4103.com/",
+  xsrfCookieName: process.env.NEXT_PUBLIC_CSRF_COOKIE_NAME,
+  xsrfHeaderName: "X-CSRFToken",
+  withXSRFToken: true,
+  withCredentials:
+    process.env.NEXT_PUBLIC_MITOL_AXIOS_WITH_CREDENTIALS === "true",
 })
 
 const BASE_PATH =

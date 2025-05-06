@@ -2,10 +2,10 @@ import { queryOptions } from "@tanstack/react-query"
 import type {
   CoursesApiApiV2CoursesListRequest,
   PaginatedCourseWithCourseRunsList,
-} from "@mitodl/mitxonline-api-axios/v0"
+} from "@mitodl/mitxonline-api-axios/v1"
+import { coursesApi } from "../../clients"
 
 // import * as data from "./data"
-import { coursesApi } from "../../clients"
 
 const coursesKeys = {
   root: ["mitxonline", "courses"],
@@ -21,9 +21,7 @@ const coursesQueries = {
     queryOptions({
       queryKey: coursesKeys.coursesList(opts),
       queryFn: async (): Promise<PaginatedCourseWithCourseRunsList> => {
-        return coursesApi
-          .apiV2CoursesList(opts)
-          .then((res: { data: PaginatedCourseWithCourseRunsList }) => res.data)
+        return coursesApi.apiV2CoursesList(opts).then((res) => res.data)
 
         // if (process.env.NODE_ENV === "test") {
         //   /**

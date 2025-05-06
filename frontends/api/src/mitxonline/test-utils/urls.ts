@@ -1,7 +1,9 @@
-import type { CoursesApiApiV2CoursesListRequest } from "@mitodl/mitxonline-api-axios/v0"
+import type {
+  CoursesApiApiV2CoursesListRequest,
+  ProgramsApiProgramsListV2Request,
+} from "@mitodl/mitxonline-api-axios/v1"
 import { queryify } from "ol-test-utilities"
 import type { EnrollmentsListOptions } from "../hooks/enrollment/queries"
-import type { ProgramsListRequest } from "../hooks/programs/queries"
 const API_BASE_URL = process.env.NEXT_PUBLIC_MITXONLINE_API_BASE_URL
 
 const enrollment = {
@@ -10,7 +12,7 @@ const enrollment = {
 }
 
 const programs = {
-  programsList: (opts?: ProgramsListRequest) =>
+  programsList: (opts?: ProgramsApiProgramsListV2Request) =>
     `${API_BASE_URL}/api/v2/programs/${queryify(opts)}`,
 }
 

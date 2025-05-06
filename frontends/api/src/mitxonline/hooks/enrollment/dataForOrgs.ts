@@ -1,4 +1,4 @@
-import { CourseRunEnrollment } from "@mitodl/mitxonline-api-axios/v0"
+import { CourseRunEnrollment } from "@mitodl/mitxonline-api-axios/v1"
 import { mockProgramCourseData } from "../programs/data"
 
 const orgCourseEnollments = {
