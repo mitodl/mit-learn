@@ -46,15 +46,6 @@ const makeQueryClient = (): QueryClient => {
           }
           return false
         },
-
-        /**
-         * By default, React Query gradually applies a backoff delay, though it is
-         * preferable that we do not significantly delay initial page renders (or
-         * indeed pages that are Statically Rendered during the build process) and
-         * instead allow the request to fail quickly so it can be subsequently
-         * fetched on the client.
-         */
-        retryDelay: 1000,
       },
     },
   })

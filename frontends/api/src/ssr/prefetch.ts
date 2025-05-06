@@ -1,7 +1,7 @@
 import { QueryClient, dehydrate } from "@tanstack/react-query"
 import type { Query } from "@tanstack/react-query"
 
-const MAX_RETRIES = 3
+const MAX_RETRIES = 10
 const NO_RETRY_CODES = [400, 401, 403, 404, 405, 409, 422]
 
 type MaybeHasStatus = {
@@ -47,6 +47,15 @@ export const prefetch = async (
             }
             return false
           },
+
+          /**
+           * By default, React Query gradually applies a backoff delay, though it is
+           * preferable that we do not significantly delay initial page renders (or
+           * indeed pages that are Statically Rendered during the build process) and
+           * instead allow the request to fail quickly so it can be subsequently
+           * fetched on the client.
+           */
+          retryDelay: 1000,
         },
       },
     })
