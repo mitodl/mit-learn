@@ -1,4 +1,4 @@
-import type { CoursesApiApiV2CoursesListRequest } from "../generated/v0"
+import type { CoursesApiApiV2CoursesListRequest } from "@mitodl/mitxonline-api-axios/v0"
 import { queryify } from "ol-test-utilities"
 import type { EnrollmentsListOptions } from "../hooks/enrollment/queries"
 import type { ProgramsListRequest } from "../hooks/programs/queries"

@@ -1,7 +1,10 @@
 import { faker } from "@faker-js/faker/locale/en"
 import { mergeOverrides } from "ol-test-utilities"
 import type { PartialFactory } from "ol-test-utilities"
-import type { CourseRunEnrollment, CourseRunGrade } from "../../generated/v0"
+import type {
+  CourseRunEnrollment,
+  CourseRunGrade,
+} from "@mitodl/mitxonline-api-axios/v0"
 import { UniqueEnforcer } from "enforce-unique"
 
 const uniqueEnrollmentId = new UniqueEnforcer()
