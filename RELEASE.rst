@@ -1,6 +1,34 @@
 Release Notes
 =============
 
+Version 0.31.2
+--------------
+
+- embedding content updates and removals (#2217)
+- test (#2226)
+- update coursenumber weight in search (#2219)
+- Static header for accessible drawer content at page magnification (#2221)
+- Force https for urls in scraper (#2222)
+- add a loading state to DashboardCard (#2216)
+- [pre-commit.ci] pre-commit autoupdate (#2203)
+- Increase local dev container session lifespan to 2 weeks (#2212)
+- Drawer/chat accessibility fixes (#2214)
+- chore(deps): update yarn to v4.9.0 (#2198)
+- redirect new users to onboarding (#2204)
+- Reduce memory usage for nextjs in dev mode (#2211)
+- add email settings and unenroll dialogs as default context menu items in dashboard cards (#2210)
+- Rename the realm file to work under keycloak 26.2+ (#2209)
+- fix(deps): update dependency litellm to v1.66.1 (#2205)
+- fix some hardcoded dates (#2208)
+- fix(deps): update dependency html2text to v2025 (#2207)
+- multi page marketing site scraping (#2196)
+- fix(deps): update dependency litellm to v1.65.7 (#2199)
+- fix(deps): update dependency ruff to v0.11.5 (#2197)
+- enrollments dashboard expand collapse (#2195)
+- Add OpenTelemetry Config (#2194)
+- backpopulate edx files by learning_resource_id (#2174)
+- UAI Dashboard (#2189)
+
 Version 0.31.1 (Released April 29, 2025)
 --------------
 
