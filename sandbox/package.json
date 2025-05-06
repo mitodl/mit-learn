@@ -1,0 +1,12 @@
+{
+  "name": "sandbox",
+  "packageManager": "yarn@4.4.0",
+  "scripts": {
+    "proxy": "PORT=${PORT:-8063} tsx proxy"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "http-proxy-middleware": "^3.0.3",
+    "tsx": "^4.17.0"
+  }
+}
