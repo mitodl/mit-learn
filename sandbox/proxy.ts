@@ -2,7 +2,7 @@ import express from "express"
 import type { Request, Response } from "express"
 import { createProxyMiddleware } from "http-proxy-middleware"
 
-const PROXY_TARGET = "learn.mit.edu"
+const PROXY_TARGET = "rc.learn.mit.edu"
 
 const app = express()
 
@@ -25,6 +25,7 @@ app.use((req, res, next) => {
   // Get metadata for a learning resource when page loaded with drawer open
   // e.g. http://learn.odl.local:8062/?resource=17261
   if (
+    isServer &&
     req.method === "GET" &&
     req.path === "/api/v1/learning_resources/17261/"
   ) {
@@ -33,7 +34,6 @@ app.use((req, res, next) => {
       callsCount: callsCount[hash],
       route: hash,
     })
-    // @ts-ignore
     req.socket.destroy(new Error("ECONNRESET"))
     return
   }
@@ -50,7 +50,6 @@ app.use((req, res, next) => {
       callsCount: callsCount[hash],
       route: hash,
     })
-    // @ts-ignore
     req.socket.destroy(new Error("ECONNRESET"))
     return
   }
