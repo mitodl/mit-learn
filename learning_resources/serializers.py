@@ -1179,6 +1179,7 @@ class ContentFileSerializer(serializers.ModelSerializer):
     run_title = serializers.CharField(source="run.title", required=False)
     run_slug = serializers.CharField(source="run.slug", required=False)
     semester = serializers.CharField(source="run.semester", required=False)
+    checksum = serializers.CharField(required=False)
     year = serializers.IntegerField(source="run.year", required=False)
     topics = serializers.SerializerMethodField()
     resource_id = serializers.SerializerMethodField()
@@ -1293,6 +1294,7 @@ class ContentFileSerializer(serializers.ModelSerializer):
             "content_title",
             "content_author",
             "content_language",
+            "checksum",
             "image_src",
             "resource_id",
             "resource_readable_id",

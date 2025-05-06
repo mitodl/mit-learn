@@ -132,8 +132,11 @@ def mock_upsert_tasks(mocker):
         deindex_learning_resource=mocker.patch(
             "learning_resources_search.tasks.deindex_document"
         ),
+        deindex_learning_resource_immutable_signature=mocker.patch(
+            "learning_resources_search.tasks.deindex_document.si"
+        ),
         batch_deindex_resources=mocker.patch(
-            "learning_resources_search.tasks.bulk_deindex_learning_resources"
+            "learning_resources_search.tasks.bulk_deindex_learning_resources.si"
         ),
     )
 
@@ -260,13 +263,15 @@ def test_load_program(  # noqa: PLR0913
         assert relationship.child.readable_id == data.learning_resource.readable_id
 
     if program_exists and not is_published:
-        mock_upsert_tasks.deindex_learning_resource.assert_called_with(
+        mock_upsert_tasks.deindex_learning_resource_immutable_signature.assert_called_with(
             result.id, result.resource_type
         )
     elif is_published:
-        mock_upsert_tasks.upsert_learning_resource.assert_called_with(result.id)
+        mock_upsert_tasks.upsert_learning_resource_immutable_signature.assert_called_with(
+            result.id
+        )
     else:
-        mock_upsert_tasks.upsert_learning_resource.assert_not_called()
+        mock_upsert_tasks.upsert_learning_resource_immutable_signature.assert_not_called()
 
 
 def test_load_program_bad_platform(mocker):
@@ -414,14 +419,16 @@ def test_load_course(  # noqa: PLR0913,PLR0912,PLR0915
     )
 
     if course_exists and ((not is_published or not is_run_published) or blocklisted):
-        mock_upsert_tasks.deindex_learning_resource.assert_called_with(
+        mock_upsert_tasks.deindex_learning_resource_immutable_signature.assert_called_with(
             result.id, result.resource_type
         )
     elif is_published and is_run_published and not blocklisted:
-        mock_upsert_tasks.upsert_learning_resource.assert_called_with(result.id)
+        mock_upsert_tasks.upsert_learning_resource_immutable_signature.assert_called_with(
+            result.id
+        )
     else:
-        mock_upsert_tasks.deindex_learning_resource.assert_not_called()
-        mock_upsert_tasks.upsert_learning_resource.assert_not_called()
+        mock_upsert_tasks.deindex_learning_resource_immutable_signature.assert_not_called()
+        mock_upsert_tasks.upsert_learning_resource_immutable_signature.assert_not_called()
 
     if course_exists and is_published and not blocklisted:
         course.refresh_from_db()
@@ -545,11 +552,11 @@ def test_load_duplicate_course(
     result = load_course(props, [], duplicates)
 
     if course_id_is_duplicate and duplicate_course_exists:
-        mock_upsert_tasks.deindex_learning_resource.assert_called()
+        mock_upsert_tasks.deindex_learning_resource_immutable_signature.assert_called()
     else:
-        mock_upsert_tasks.deindex_learning_resource.assert_not_called()
+        mock_upsert_tasks.deindex_learning_resource_immutable_signature.assert_not_called()
     if course.learning_resource.id:
-        mock_upsert_tasks.upsert_learning_resource.assert_called_with(
+        mock_upsert_tasks.upsert_learning_resource_immutable_signature.assert_called_with(
             course.learning_resource.id
         )
 
@@ -925,10 +932,10 @@ def test_load_content_files(mocker, is_published, extra_run, calc_score):
         autospec=True,
     )
     mock_bulk_index = mocker.patch(
-        "learning_resources_search.plugins.tasks.index_run_content_files",
+        "learning_resources_search.plugins.tasks.index_run_content_files.si",
     )
     mock_bulk_delete = mocker.patch(
-        "learning_resources_search.plugins.tasks.deindex_run_content_files",
+        "learning_resources_search.plugins.tasks.deindex_run_content_files.si",
         autospec=True,
     )
     mock_calc_score = mocker.patch(
@@ -1108,13 +1115,15 @@ def test_load_podcast_episode(
         assert getattr(result, key) == value, f"Property {key} should equal {value}"
 
     if podcast_episode_exists and not is_published:
-        mock_upsert_tasks.deindex_learning_resource.assert_called_with(
+        mock_upsert_tasks.deindex_learning_resource_immutable_signature.assert_called_with(
             result.id, result.resource_type
         )
     elif is_published:
-        mock_upsert_tasks.upsert_learning_resource.assert_called_with(result.id)
+        mock_upsert_tasks.upsert_learning_resource_immutable_signature.assert_called_with(
+            result.id
+        )
     else:
-        mock_upsert_tasks.upsert_learning_resource.assert_not_called()
+        mock_upsert_tasks.upsert_learning_resource_immutable_signature.assert_not_called()
         mock_upsert_tasks.deindex_learning_resource.assert_not_called()
 
 
@@ -1183,14 +1192,16 @@ def test_load_podcast(
         assert new_podcast.resources.count() == 0
 
     if podcast_exists and not is_published:
-        mock_upsert_tasks.deindex_learning_resource.assert_called_with(
+        mock_upsert_tasks.deindex_learning_resource_immutable_signature.assert_called_with(
             result.id, result.resource_type
         )
     elif is_published:
-        mock_upsert_tasks.upsert_learning_resource.assert_called_with(result.id)
+        mock_upsert_tasks.upsert_learning_resource_immutable_signature.assert_called_with(
+            result.id
+        )
     else:
-        mock_upsert_tasks.deindex_learning_resource.assert_not_called()
-        mock_upsert_tasks.upsert_learning_resource.assert_not_called()
+        mock_upsert_tasks.deindex_learning_resource_immutable_signature.assert_not_called()
+        mock_upsert_tasks.upsert_learning_resource_immutable_signature.assert_not_called()
 
 
 @pytest.mark.parametrize("video_exists", [True, False])
@@ -1322,7 +1333,7 @@ def test_load_playlist(mocker):
 
 def test_load_playlists_unpublish(mocker):
     """Test load_playlists when a video/playlist gets unpublished"""
-    mocker.patch("learning_resources_search.tasks.bulk_deindex_learning_resources")
+    mocker.patch("learning_resources_search.tasks.bulk_deindex_learning_resources.si")
     channel = VideoChannelFactory.create()
 
     playlists = sorted(
@@ -1498,7 +1509,9 @@ def test_load_course_percolation(
 
     blocklist = [learning_resource.readable_id] if blocklisted else []
     result = load_course(props, blocklist, [], config=CourseLoaderConfig(prune=True))
-    mock_upsert_tasks.upsert_learning_resource.assert_called_with(result.id)
+    mock_upsert_tasks.upsert_learning_resource_immutable_signature.assert_called_with(
+        result.id
+    )
 
 
 @pytest.mark.parametrize("certification", [True, False])

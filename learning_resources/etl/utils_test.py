@@ -182,7 +182,7 @@ def test_transform_content_files(  # noqa: PLR0913
     document = "some text in the document"
     file_extension = ".pdf" if folder == "static" else ".html"
     content_type = "course"
-    checksum = "7s35721d1647f962d59b8120a52210a7"
+    archive_checksum = "7s35721d1647f962d59b8120a52210a7"
     metadata = {"title": "the title of the course"} if has_metadata else None
     tika_output = {"content": tika_content, "metadata": metadata}
 
@@ -202,7 +202,7 @@ def test_transform_content_files(  # noqa: PLR0913
             content_type=content_type,
             published=True,
             run=run,
-            checksum=checksum,
+            archive_checksum=archive_checksum,
             key=edx_module_id,
         )
 
@@ -213,7 +213,7 @@ def test_transform_content_files(  # noqa: PLR0913
                 document,
                 {
                     "content_type": content_type,
-                    "checksum": checksum,
+                    "archive_checksum": archive_checksum,
                     "file_extension": file_extension,
                     "source_path": f"root/{folder}/uuid{file_extension}",
                 },
@@ -244,7 +244,7 @@ def test_transform_content_files(  # noqa: PLR0913
                 "published": True,
                 "content_title": metadata["title"] if has_metadata else "",
                 "content_type": content_type,
-                "checksum": checksum,
+                "archive_checksum": archive_checksum,
                 "file_extension": file_extension,
                 "source_path": f"root/{folder}/uuid{file_extension}",
                 "edx_module_id": edx_module_id,

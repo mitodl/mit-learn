@@ -744,6 +744,10 @@ will be a constant 60 minutes greater more than the schedule frequency
 EMBEDDING_SCHEDULE_MINUTES = get_int(name="EMBEDDING_SCHEDULE_MINUTES", default=60)
 QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW = EMBEDDING_SCHEDULE_MINUTES + 60
 
+QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = get_bool(
+    name="QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS", default=False
+)
+
 QDRANT_API_KEY = get_string(name="QDRANT_API_KEY", default="")
 QDRANT_HOST = get_string(name="QDRANT_HOST", default="http://qdrant:6333")
 QDRANT_BASE_COLLECTION_NAME = get_string(
