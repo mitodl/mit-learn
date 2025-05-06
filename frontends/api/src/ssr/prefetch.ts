@@ -1,7 +1,7 @@
 import { QueryClient, dehydrate } from "@tanstack/react-query"
 import type { Query } from "@tanstack/react-query"
 
-const MAX_RETRIES = 10
+const MAX_RETRIES = 3
 const NO_RETRY_CODES = [400, 401, 403, 404, 405, 409, 422]
 
 type MaybeHasStatus = {
