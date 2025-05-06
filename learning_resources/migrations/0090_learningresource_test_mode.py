@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("learning_resources", "0088_add_content_summarizer_config"),
+        ("learning_resources", "0089_contentfile_archive_checksum"),
     ]
 
     operations = [
