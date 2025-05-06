@@ -4,7 +4,7 @@ import type { PartialFactory } from "ol-test-utilities"
 import type {
   CourseRunEnrollment,
   CourseRunGrade,
-} from "@mitodl/mitxonline-api-axios/v0"
+} from "@mitodl/mitxonline-api-axios/v1"
 import { UniqueEnforcer } from "enforce-unique"
 
 const uniqueEnrollmentId = new UniqueEnforcer()

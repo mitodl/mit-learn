@@ -1,7 +1,9 @@
 import { queryOptions } from "@tanstack/react-query"
-import type { CourseRunEnrollment } from "@mitodl/mitxonline-api-axios/v0"
+import type { CourseRunEnrollment } from "@mitodl/mitxonline-api-axios/v1"
 
-import { axiosInstance } from "../../clients"
+// import { axiosInstance } from "../../clients"
+import { AxiosRequestConfig } from "axios"
+import { enrollmentsApi } from "../../clients"
 
 type EnrollmentsListOptions = {
   /**
@@ -25,12 +27,9 @@ const enrollmentQueries = {
     queryOptions({
       queryKey: enrollmentKeys.coursesList(opts),
       queryFn: async (): Promise<CourseRunEnrollment[]> => {
-        const urls = await import("../../test-utils/urls")
-        return axiosInstance
-          .request({
-            url: urls.enrollment.courseEnrollment(opts),
-            method: "GET",
-          })
+        const axiosConfig = { params: opts } as AxiosRequestConfig
+        return enrollmentsApi
+          .enrollmentsList(axiosConfig)
           .then((res) => res.data)
 
         // if (process.env.NODE_ENV === "test") {
