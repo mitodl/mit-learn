@@ -9,7 +9,7 @@ type MaybeHasStatus = {
 }
 
 const MAX_RETRIES = 3
-const SHOULD_THROW_CODES = [400, 401, 403]
+const THROW_ERROR_CODES = [400, 401, 403]
 const NO_RETRY_CODES = [400, 401, 403, 404, 405, 409, 422]
 
 const makeQueryClient = (): QueryClient => {
@@ -27,7 +27,7 @@ const makeQueryClient = (): QueryClient => {
          */
         throwOnError: (error) => {
           const status = (error as MaybeHasStatus)?.response?.status
-          return SHOULD_THROW_CODES.includes(status ?? 0)
+          return THROW_ERROR_CODES.includes(status ?? 0)
         },
 
         retry: (failureCount, error) => {
@@ -46,6 +46,16 @@ const makeQueryClient = (): QueryClient => {
           }
           return false
         },
+
+        /**
+         * By default, React Query gradually applies a backoff delay, though it is
+         * preferable that we do not significantly delay initial page renders on
+         * the server and instead allow the request to fail quickly so it can be
+         * subsequently fetched on the client. Note that we aim to prefetch any API
+         * content needed to render the page, so we don't generally expect the retry
+         * rules above to be in use on the server.
+         */
+        retryDelay: isServer ? 1000 : undefined,
       },
     },
   })
