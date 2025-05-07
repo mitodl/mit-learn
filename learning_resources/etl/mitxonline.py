@@ -276,7 +276,6 @@ def _transform_course(course):
         if course_run
     ]
     has_certification = parse_certification(OFFERED_BY["code"], runs)
-    has_enrollable_run = any(run.get("enrollable") for run in runs)
     return {
         "readable_id": course["readable_id"],
         "platform": PlatformType.mitxonline.name,
@@ -296,7 +295,6 @@ def _transform_course(course):
             parse_page_attribute(course, "page_url")
             and parse_page_attribute(course, "live")
             and len([run for run in runs if run["published"]]) > 0
-            and has_enrollable_run
         ),  # a course is only published if it has a live url and published runs
         "professional": False,
         "certification": has_certification,
