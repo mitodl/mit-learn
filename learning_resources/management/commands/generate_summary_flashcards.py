@@ -1,5 +1,7 @@
 """Management command to run the content summarizer"""
 
+import itertools
+
 from django.conf import settings
 from django.core.management import BaseCommand
 
@@ -91,9 +93,16 @@ class Command(BaseCommand):
             self.stdout.write("Waiting on task...")
 
             start = now_in_utc()
-            summarizer_task.get()
+            results = summarizer_task.get()
+
+            # Log the summarization stats
+            flat_results = list(itertools.chain(*results))
+            for result in flat_results:
+                self.stdout.write(f"{result}")
 
             total_seconds = (now_in_utc() - start).total_seconds()
             self.stdout.write(
-                f"Content file summarizer finished, took {total_seconds} seconds"
+                self.style.SUCCESS(
+                    f"Content file summarizer finished, took {total_seconds} seconds"
+                )
             )
