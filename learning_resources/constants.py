@@ -329,3 +329,6 @@ class Format(ExtendedEnum):
 
 
 CURRENCY_USD = "USD"
+
+
+GROUP_CONTENT_FILE_CONTENT_VIEWERS = "content_file_viewers"
