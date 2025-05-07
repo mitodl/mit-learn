@@ -2,6 +2,11 @@ import { factories as mitx } from "api/mitxonline-test-utils"
 import * as transform from "./transform"
 import { DashboardResourceType, EnrollmentStatus } from "./types"
 import type { DashboardResource } from "./types"
+import {
+  mitxonlineCourses,
+  mitxonlineProgram,
+  sortDashboardCourses,
+} from "./transform"
 
 describe("Transforming mitxonline enrollment data to DashboardResource", () => {
   test.each([
@@ -52,5 +57,34 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
     const transformed = transform.mitxonlineEnrollments([apiData])
     expect(transformed).toHaveLength(1)
     expect(transformed[0].run.certificateUpgradePrice).toEqual("10")
+  })
+
+  test("sortDashboardCourses sorts courses by enrollment status and program order", () => {
+    const { programA, coursesA } = mitx.setupProgramsAndCourses()
+
+    const enrollments = [
+      mitx.enrollment.courseEnrollment({
+        run: { course: { id: coursesA[0].id } },
+        grades: [mitx.enrollment.grade({ passed: true })],
+        enrollment_mode: "audit",
+      }),
+      mitx.enrollment.courseEnrollment({
+        run: { course: { id: coursesA[1].id } },
+        grades: [],
+        enrollment_mode: "verified",
+      }),
+    ]
+
+    const sortedCourses = sortDashboardCourses(
+      mitxonlineProgram(programA),
+      mitxonlineCourses({ courses: coursesA, enrollments }),
+    )
+
+    expect(sortedCourses.map((course) => course.id)).toEqual([
+      `mitxonline-course-${coursesA[1].id}`, // Enrolled course
+      `mitxonline-course-${coursesA[0].id}`, // Completed course
+      `mitxonline-course-${coursesA[2].id}`, // Not enrolled course
+      `mitxonline-course-${coursesA[3].id}`, // Not enrolled course
+    ])
   })
 })
