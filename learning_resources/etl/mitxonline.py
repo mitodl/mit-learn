@@ -338,7 +338,6 @@ def _fetch_courses_by_ids(course_ids):
                 settings.MITX_ONLINE_COURSES_API_URL,
                 params={
                     "id": ",".join([str(courseid) for courseid in course_ids]),
-                    "page__live": True,
                     "live": True,
                 },
             )
