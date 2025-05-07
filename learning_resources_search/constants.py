@@ -439,6 +439,9 @@ SOURCE_EXCLUDED_FIELDS = [
     "resource_age_date",
     "featured_rank",
     "is_incomplete_or_stale",
+    "content",
+    "summary",
+    "flashcards",
 ]
 
 LEARNING_RESOURCE_SEARCH_SORTBY_OPTIONS = {
