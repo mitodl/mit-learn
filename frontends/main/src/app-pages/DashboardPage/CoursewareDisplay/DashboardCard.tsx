@@ -61,14 +61,22 @@ const TitleLink = styled(Link)(({ theme }) => ({
   },
 }))
 
-const MenuButton = styled(ActionButton)(({ theme }) => ({
-  marginLeft: "-8px",
-  [theme.breakpoints.down("md")]: {
-    position: "absolute",
-    top: "0",
-    right: "0",
+const MenuButton = styled(ActionButton)<{
+  status?: EnrollmentStatus
+}>(({ theme, status }) => [
+  {
+    marginLeft: "-8px",
+    [theme.breakpoints.down("md")]: {
+      position: "absolute",
+      top: "0",
+      right: "0",
+    },
   },
-}))
+  status !== EnrollmentStatus.Completed &&
+    status !== EnrollmentStatus.Enrolled && {
+      visibility: "hidden",
+    },
+])
 
 const getDefaultContextMenuItems = (title: string) => {
   return [
@@ -323,7 +331,12 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     <SimpleMenu
       items={menuItems}
       trigger={
-        <MenuButton size="small" variant="text" aria-label="More options">
+        <MenuButton
+          size="small"
+          variant="text"
+          aria-label="More options"
+          status={enrollment?.status}
+        >
           <RiMore2Line />
         </MenuButton>
       }
