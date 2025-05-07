@@ -223,6 +223,9 @@ def test_mitxonline_transform_programs(
                             ]
                         )
                         > 0
+                        and any(
+                            run.get("enrollable") for run in course_data["courseruns"]
+                        )
                     ),
                     "certification": bool(
                         course_data.get("page", {}).get("page_url", None) is not None
@@ -350,6 +353,7 @@ def test_mitxonline_transform_courses(settings, mock_mitxonline_courses_data):
             "published": bool(
                 course_data.get("page", {}).get("page_url", None)
                 and course_data.get("page", {}).get("live", None)
+                and any(run.get("enrollable") for run in course_data["courseruns"])
             ),
             "professional": False,
             "certification": parse_certification(
