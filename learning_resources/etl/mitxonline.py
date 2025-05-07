@@ -215,7 +215,10 @@ def _transform_run(course_run: dict, course: dict) -> dict:
         "enrollment_start": _parse_datetime(course_run.get("enrollment_start")),
         "enrollment_end": _parse_datetime(course_run.get("enrollment_end")),
         "url": parse_page_attribute(course, "page_url", is_url=True),
-        "published": bool(course_run["is_enrollable"] and course["page"]["live"]),
+        "published": bool(
+            course_run.get("is_enrollable", False)
+            and (course.get("page") or {}).get("live", False)
+        ),
         "description": clean_data(parse_page_attribute(course_run, "description")),
         "image": _transform_image(course_run),
         "prices": [
@@ -267,7 +270,11 @@ def _transform_course(course):
     Returns:
         dict: normalized course data
     """  # noqa: D401
-    runs = [_transform_run(course_run, course) for course_run in course["courseruns"]]
+    runs = [
+        _transform_run(course_run, course)
+        for course_run in course["courseruns"]
+        if course_run
+    ]
     has_certification = parse_certification(OFFERED_BY["code"], runs)
     has_enrollable_run = any(run.get("enrollable") for run in runs)
     return {
