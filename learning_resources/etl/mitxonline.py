@@ -135,16 +135,7 @@ def extract_programs():
 def extract_courses():
     """Loads the MITx Online catalog data"""  # noqa: D401
     if settings.MITX_ONLINE_COURSES_API_URL:
-        return list(
-            _fetch_data(
-                settings.MITX_ONLINE_COURSES_API_URL,
-                params={
-                    "page__live": True,
-                    "live": True,
-                    "courserun_is_enrollable": True,
-                },
-            )
-        )
+        return list(_fetch_data(settings.MITX_ONLINE_COURSES_API_URL))
     else:
         log.warning("Missing required setting MITX_ONLINE_COURSES_API_URL")
 
@@ -272,6 +263,7 @@ def _transform_course(course):
     """  # noqa: D401
     runs = [_transform_run(course_run, course) for course_run in course["courseruns"]]
     has_certification = parse_certification(OFFERED_BY["code"], runs)
+    has_enrollable_run = any(run.get("enrollable") for run in runs)
     return {
         "readable_id": course["readable_id"],
         "platform": PlatformType.mitxonline.name,
@@ -291,6 +283,7 @@ def _transform_course(course):
             parse_page_attribute(course, "page_url")
             and parse_page_attribute(course, "live")
             and len([run for run in runs if run["published"]]) > 0
+            and has_enrollable_run
         ),  # a course is only published if it has a live url and published runs
         "professional": False,
         "certification": has_certification,
