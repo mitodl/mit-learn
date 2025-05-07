@@ -121,7 +121,6 @@ def extract_programs():
             _fetch_data(
                 settings.MITX_ONLINE_PROGRAMS_API_URL,
                 params={
-                    "page__live": True,
                     "live": True,
                 },
             )
@@ -135,7 +134,14 @@ def extract_programs():
 def extract_courses():
     """Loads the MITx Online catalog data"""  # noqa: D401
     if settings.MITX_ONLINE_COURSES_API_URL:
-        return list(_fetch_data(settings.MITX_ONLINE_COURSES_API_URL))
+        return list(
+            _fetch_data(
+                settings.MITX_ONLINE_COURSES_API_URL,
+                params={
+                    "live": True,
+                },
+            )
+        )
     else:
         log.warning("Missing required setting MITX_ONLINE_COURSES_API_URL")
 
@@ -378,6 +384,7 @@ def transform_programs(programs: list[dict]) -> list[dict]:
             "availability": program.get("availability"),
             "published": bool(
                 parse_page_attribute(program, "page_url")
+                and parse_page_attribute(program, "live")
             ),  # a program is only considered published if it has a page url
             "format": [Format.asynchronous.name],
             "pace": pace,
