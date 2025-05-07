@@ -305,7 +305,11 @@ describe.each([
       expectedLabel: "Enrolled",
       hiddenImage: true,
     },
-    { status: EnrollmentStatus.NotEnrolled, expectedLabel: "Not Enrolled" },
+    {
+      status: EnrollmentStatus.NotEnrolled,
+      expectedLabel: "Not Enrolled",
+      hiddenImage: true,
+    },
   ])(
     "Enrollment indicator shows meaningful text",
     ({ status, expectedLabel, hiddenImage }) => {
