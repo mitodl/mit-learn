@@ -2072,6 +2072,12 @@ export interface LearningResourceDepartmentRequest {
  */
 export interface LearningResourceDisplayInfoResponse {
   /**
+   * Title
+   * @type {string}
+   * @memberof LearningResourceDisplayInfoResponse
+   */
+  title: string
+  /**
    * Description
    * @type {string}
    * @memberof LearningResourceDisplayInfoResponse

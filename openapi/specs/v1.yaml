@@ -10241,6 +10241,10 @@ components:
       type: object
       description: Serializer for the response of the display info endpoint
       properties:
+        title:
+          type: string
+          readOnly: true
+          description: Title
         description:
           type: string
           readOnly: true
@@ -10403,6 +10407,7 @@ components:
       - price
       - runs
       - starts
+      - title
       - topics
       - url
     LearningResourceImage:
