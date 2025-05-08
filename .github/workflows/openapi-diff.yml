@@ -42,6 +42,8 @@ jobs:
           body-includes: "## OpenAPI Changes"
       - name: Post changes as comment
         uses: peter-evans/create-or-update-comment@v3
+        # Even if no changes, make sure to update old comment if it was found.
+        if: steps.oasdif_summary.outputs.summary || steps.find_comment.outputs.comment-id
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           edit-mode: "replace"
