@@ -27,8 +27,6 @@ import { DASHBOARD_HOME } from "@/common/urls"
 import { useFormik } from "formik"
 import { useLearningResourceTopics } from "api/hooks/learningResources"
 import { useUserMe } from "api/hooks/user"
-
-import { useSearchParams } from "next/navigation"
 import {
   CERTIFICATE_CHOICES,
   EDUCATION_LEVEL_OPTIONS,
@@ -158,8 +156,6 @@ const OnboardingPage: React.FC = () => {
   const { isLoading: userLoading, data: user } = useUserMe()
   const [activeStep, setActiveStep] = React.useState<number>(0)
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const nextUrl = searchParams.get("next")
 
   const formik = useFormik({
     enableReinitialize: true,
@@ -175,10 +171,6 @@ const OnboardingPage: React.FC = () => {
       if (activeStep < NUM_STEPS - 1) {
         setActiveStep((prevActiveStep) => prevActiveStep + 1)
       } else {
-        if (nextUrl) {
-          ;(window as Window).location = nextUrl
-          return null
-        }
         router.push(DASHBOARD_HOME)
       }
     },
