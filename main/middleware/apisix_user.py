@@ -97,7 +97,7 @@ def get_user_from_apisix_headers(request, decoded_headers, original_header):
 
     if created:
         log.info(
-            "get_user_from_apisix_headers: User %s not found, created new222",
+            "get_user_from_apisix_headers: User %s not found, created new",
             global_id,
         )
         # Send user creation event to PostHog
