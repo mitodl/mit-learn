@@ -120,7 +120,6 @@ def test_custom_login_view_authenticated_user_with_onboarding(mocker):
     request.user = MagicMock(is_anonymous=False)
     request.user.profile = MagicMock(completed_onboarding=False)
     mocker.patch("authentication.views.get_redirect_url", return_value="/dashboard")
-    mocker.patch("authentication.views.urlencode", return_value="next=/dashboard")
     mocker.patch(
         "authentication.views.settings.MITOL_NEW_USER_LOGIN_URL", "/onboarding"
     )
@@ -128,7 +127,7 @@ def test_custom_login_view_authenticated_user_with_onboarding(mocker):
     response = CustomLoginView().get(request)
 
     assert response.status_code == 302
-    assert response.url == "/onboarding?next=/dashboard"
+    assert response.url == "/onboarding"
 
 
 def test_custom_login_view_authenticated_user_skip_onboarding(mocker):

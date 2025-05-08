@@ -4,7 +4,7 @@ import logging
 
 from django.contrib.auth import logout
 from django.shortcuts import redirect
-from django.utils.http import url_has_allowed_host_and_scheme, urlencode
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views import View
 
 from main import settings
@@ -80,8 +80,7 @@ class CustomLoginView(View):
                 not profile.completed_onboarding
                 and request.GET.get("skip_onboarding", "0") == "0"
             ):
-                params = urlencode({"next": redirect_url})
-                redirect_url = f"{settings.MITOL_NEW_USER_LOGIN_URL}?{params}"
+                redirect_url = settings.MITOL_NEW_USER_LOGIN_URL
                 profile.completed_onboarding = True
                 profile.save()
         return redirect(redirect_url)
