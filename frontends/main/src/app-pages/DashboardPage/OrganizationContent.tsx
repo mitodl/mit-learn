@@ -153,6 +153,8 @@ const OrgProgramDisplay: React.FC<{
             dashboardResource={course}
             courseNoun="Module"
             offerUpgrade={false}
+            titleHref={course.run.coursewareUrl}
+            buttonHref={course.run.coursewareUrl}
           />
         ))}
       </PlainList>
