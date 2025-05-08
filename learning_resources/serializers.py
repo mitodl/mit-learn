@@ -449,7 +449,6 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
     Serializer to render course information as a text document
     """
 
-    title = serializers.CharField(help_text="Title", read_only=True)
     description = serializers.CharField(help_text="Description", read_only=True)
 
     full_description = serializers.CharField(
