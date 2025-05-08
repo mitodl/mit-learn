@@ -10,6 +10,7 @@ import {
   mitxonlineProgram,
   sortDashboardCourses,
 } from "./CoursewareDisplay/transform"
+import { setupProgramsAndCourses } from "./CoursewareDisplay/test-utils"
 
 const makeCourseEnrollment = factories.enrollment.courseEnrollment
 const makeGrade = factories.enrollment.grade
@@ -26,7 +27,7 @@ describe("OrganizationContent", () => {
 
   it("displays a header for each program returned and cards for courses in program", async () => {
     const { orgId, programA, programB, coursesA, coursesB } =
-      factories.setupProgramsAndCourses()
+      setupProgramsAndCourses()
     setMockResponse.get(urls.enrollment.courseEnrollment({ orgId }), [])
     renderWithProviders(<OrganizationContent orgId={orgId} />)
 
@@ -49,7 +50,7 @@ describe("OrganizationContent", () => {
   })
 
   test("Shows correct enrollment status", async () => {
-    const { orgId, programA, coursesA } = factories.setupProgramsAndCourses()
+    const { orgId, programA, coursesA } = setupProgramsAndCourses()
     const enrollments = [
       makeCourseEnrollment({
         run: { course: { id: coursesA[0].id, title: coursesA[0].title } },

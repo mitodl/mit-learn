@@ -7,6 +7,7 @@ import {
   mitxonlineProgram,
   sortDashboardCourses,
 } from "./transform"
+import { setupProgramsAndCourses } from "./test-utils"
 
 describe("Transforming mitxonline enrollment data to DashboardResource", () => {
   test.each([
@@ -60,7 +61,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
   })
 
   test("sortDashboardCourses sorts courses by enrollment status and program order", () => {
-    const { programA, coursesA } = mitx.setupProgramsAndCourses()
+    const { programA, coursesA } = setupProgramsAndCourses()
 
     const enrollments = [
       mitx.enrollment.courseEnrollment({
