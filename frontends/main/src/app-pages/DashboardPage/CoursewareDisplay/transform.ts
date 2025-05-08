@@ -126,16 +126,7 @@ const sortDashboardCourses = (
     if (!aCompleted && bCompleted) {
       return 1
     }
-    return (
-      program.courseIds.findIndex(
-        (id) =>
-          getId(sources.mitxonline, DashboardResourceType.Course, id) === a.id,
-      ) -
-      program.courseIds.findIndex(
-        (id) =>
-          getId(sources.mitxonline, DashboardResourceType.Course, id) === b.id,
-      )
-    )
+    return 0
   })
 }
 
