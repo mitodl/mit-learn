@@ -129,7 +129,6 @@ INSTALLED_APPS = (
     "testimonials",
     "data_fixtures",
     "vector_search",
-    "ai_chat",
     "mitol.scim.apps.ScimApp",
 )
 
@@ -781,29 +780,6 @@ OPENAI_API_KEY = get_string(
     default=None,
 )
 
-# AI settings
-AI_DEBUG = get_bool("AI_DEBUG", True)  # noqa: FBT003
-AI_CACHE_TIMEOUT = get_int(name="AI_CACHE_TIMEOUT", default=3600)
-AI_CACHE = get_string(name="AI_CACHE", default="redis")
-AI_MIT_SEARCH_URL = get_string(
-    name="AI_MIT_SEARCH_URL",
-    default="https://api.learn.mit.edu/api/v1/learning_resources_search/",
-)
-AI_MIT_SYLLABUS_URL = get_string("AI_MIT_SYLLABUS_URL", "")
-AI_MIT_SEARCH_LIMIT = get_int(name="AI_MIT_SEARCH_LIMIT", default=10)
-AI_MODEL = get_string(name="AI_MODEL", default="gpt-4o")
-AI_MODEL_API = get_string(name="AI_MODEL_API", default="openai")
-
-# AI proxy settings (aka LiteLLM)
-AI_PROXY_CLASS = get_string(name="AI_PROXY_CLASS", default="")
-AI_PROXY_URL = get_string(name="AI_PROXY_URL", default="")
-AI_PROXY_AUTH_TOKEN = get_string(name="AI_PROXY_AUTH_TOKEN", default="")
-AI_MAX_PARALLEL_REQUESTS = get_int(name="AI_MAX_PARALLEL_REQUESTS", default=10)
-AI_TPM_LIMIT = get_int(name="AI_TPM_LIMIT", default=5000)
-AI_RPM_LIMIT = get_int(name="AI_RPM_LIMIT", default=10)
-AI_BUDGET_DURATION = get_string(name="AI_BUDGET_DURATION", default="60m")
-AI_MAX_BUDGET = get_float(name="AI_MAX_BUDGET", default=0.05)
-AI_ANON_LIMIT_MULTIPLIER = get_float(name="AI_ANON_LIMIT_MULTIPLIER", default=10.0)
 CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = get_int(
     name="CONTENT_FILE_EMBEDDING_CHUNK_SIZE", default=512
 )
