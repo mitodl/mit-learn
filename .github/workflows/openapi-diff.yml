@@ -32,12 +32,21 @@ jobs:
         run: |
           echo summary=$(echo "${{ steps.oasdif_changelog.outputs.changelog }}" | head -1 ) \
           >> $GITHUB_OUTPUT
+      - name: Find existing comment
+        id: find_comment
+        uses: peter-evans/find-comment@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body-includes: "## OpenAPI Changes"
       - name: Post changes as comment
         uses: peter-evans/create-or-update-comment@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
           issue-number: ${{ github.event.pull_request.number }}
+          comment-id: ${{ steps.find_comment.outputs.comment-id }}
           body: |
             ## OpenAPI Changes
 
@@ -48,7 +57,6 @@ jobs:
             ${{ steps.oasdif_changelog.outputs.changelog }}
             ```
             </details>
-          body-includes: "## OpenAPI Changes"
       - name: Check for breaking changes
         id: oasdif_breaking
         run: |
