@@ -60,7 +60,7 @@ jobs:
             ${{ steps.oasdif_changelog.outputs.changelog }}
             ```
 
-            Unexpected changes? Consider rebasing against `main` to ensure most accurate results.
+            Unexpected changes? Ensure your branch is up-to-date with `main` (consider rebasing).
             </details>
       - name: Check for breaking changes
         id: oasdif_breaking
