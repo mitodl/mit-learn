@@ -107,7 +107,7 @@ def get_user_from_apisix_headers(request, decoded_headers, original_header):
         )
         posthog.capture(
             user.id,
-            event=PostHogEvents.ACCOUNT_CREATED,
+            event=PostHogEvents.ACCOUNT_CREATED.value,
             properties={
                 "$current_url": request.build_absolute_uri(),
                 "global_id": global_id,
