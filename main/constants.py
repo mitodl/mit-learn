@@ -1,4 +1,5 @@
 """main constants"""
+from enum import Enum
 
 from rest_framework import status
 
@@ -40,5 +41,8 @@ ALLOWED_HTML_TAGS = {
 ALLOWED_HTML_ATTRIBUTES = {}
 
 
-class PostHogEvents:
-    ACCOUNT_CREATED = "user_account_created"
+class PostHogEvents(Enum):
+    """
+    Enum for PostHog events
+    """
+    account_created = "user_account_created"
