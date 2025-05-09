@@ -3,6 +3,7 @@ Django settings for celery.
 """
 
 from celery.schedules import crontab
+from redbeat import RedBeatScheduler
 
 from main.envs import get_bool, get_int, get_string
 
@@ -17,6 +18,9 @@ QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW = EMBEDDING_SCHEDULE_MINUTES + 60
 DEV_ENV = get_bool("DEV_ENV", False)  # noqa: FBT003
 USE_CELERY = True
 CELERY_BROKER_URL = get_string("CELERY_BROKER_URL", get_string("REDISCLOUD_URL", None))
+CELERY_BEAT_SCHEDULER = RedBeatScheduler
+CELERY_REDBEAT_REDIS_URL = CELERY_BROKER_URL
+redbeat_redis_url = CELERY_BROKER_URL
 CELERY_RESULT_BACKEND = get_string(
     "CELERY_RESULT_BACKEND", get_string("REDISCLOUD_URL", None)
 )
