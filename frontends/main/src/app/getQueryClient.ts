@@ -8,9 +8,9 @@ type MaybeHasStatus = {
   }
 }
 
+const RETRY_STATUS_CODES = [408, 429, 502, 503, 504]
 const MAX_RETRIES = 3
-const THROW_ERROR_CODES = [400, 401, 403]
-const NO_RETRY_CODES = [400, 401, 403, 404, 405, 409, 422]
+const THROW_ERROR_CODES: (number | undefined)[] = [404, 403, 401]
 
 const makeQueryClient = (): QueryClient => {
   return new QueryClient({
@@ -18,44 +18,26 @@ const makeQueryClient = (): QueryClient => {
       queries: {
         refetchOnWindowFocus: false,
         staleTime: Infinity,
-
-        /**
-         * Throw runtime errors instead of marking query as errored.
-         * The runtime error will be caught by an error boundary.
-         * For now, only do this for 404s, 403s, and 401s. Other errors should
-         * be handled locally by components.
-         */
+        // Throw runtime errors instead of marking query as errored.
+        // The runtime error will be caught by an error boundary.
+        // For now, only do this for 404s, 403s, and 401s. Other errors should
+        // be handled locally by components.
         throwOnError: (error) => {
           const status = (error as MaybeHasStatus)?.response?.status
-          return THROW_ERROR_CODES.includes(status ?? 0)
+          return THROW_ERROR_CODES.includes(status)
         },
-
         retry: (failureCount, error) => {
           const status = (error as MaybeHasStatus)?.response?.status
-          const isNetworkError = status === undefined || status === 0
-
           /**
            * React Query's default behavior is to retry all failed queries 3
-           * times. Many things (e.g. 403, 404) are not worth retrying. Let's
-           * exclude these.
-           *
-           * Includes statuses undefined and 0 as we want to retry on network errors.
+           * times. Many things (e.g., 403, 404) are not worth retrying. Let's
+           * just retry some explicit whitelist of status codes.
            */
-          if (isNetworkError || !NO_RETRY_CODES.includes(status)) {
+          if (status !== undefined && RETRY_STATUS_CODES.includes(status)) {
             return failureCount < MAX_RETRIES
           }
           return false
         },
-
-        /**
-         * By default, React Query gradually applies a backoff delay, though it is
-         * preferable that we do not significantly delay initial page renders on
-         * the server and instead allow the request to fail quickly so it can be
-         * subsequently fetched on the client. Note that we aim to prefetch any API
-         * content needed to render the page, so we don't generally expect the retry
-         * rules above to be in use on the server.
-         */
-        retryDelay: isServer ? 1000 : undefined,
       },
     },
   })

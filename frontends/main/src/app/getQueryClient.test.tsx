@@ -13,12 +13,7 @@ const getWrapper = () => {
 }
 
 test.each([
-  { status: 0, retries: 3 },
-  { status: 404, retries: 0 },
-  { status: 405, retries: 0 },
   { status: 408, retries: 3 },
-  { status: 409, retries: 0 },
-  { status: 422, retries: 0 },
   { status: 429, retries: 3 },
   { status: 502, retries: 3 },
   { status: 503, retries: 3 },
@@ -29,7 +24,6 @@ test.each([
     allowConsoleErrors()
     const wrapper = getWrapper()
     const queryFn = jest.fn().mockRejectedValue({ response: { status } })
-
     const { result } = renderHook(
       () =>
         useQuery({

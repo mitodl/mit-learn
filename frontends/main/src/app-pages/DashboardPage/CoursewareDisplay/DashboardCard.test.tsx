@@ -305,11 +305,7 @@ describe.each([
       expectedLabel: "Enrolled",
       hiddenImage: true,
     },
-    {
-      status: EnrollmentStatus.NotEnrolled,
-      expectedLabel: "Not Enrolled",
-      hiddenImage: true,
-    },
+    { status: EnrollmentStatus.NotEnrolled, expectedLabel: "Not Enrolled" },
   ])(
     "Enrollment indicator shows meaningful text",
     ({ status, expectedLabel, hiddenImage }) => {
@@ -349,10 +345,6 @@ describe.each([
     "getDefaultContextMenuItems returns correct items",
     async ({ contextMenuItems }) => {
       const course = dashboardCourse()
-      course.enrollment = {
-        status: EnrollmentStatus.Completed,
-        mode: EnrollmentMode.Verified,
-      }
       renderWithProviders(
         <DashboardCard
           dashboardResource={course}
@@ -377,33 +369,6 @@ describe.each([
           }
         })
         expect(menuItemElement?.textContent).toBe(menuItem.label)
-      }
-    },
-  )
-
-  test.each([
-    { status: EnrollmentStatus.Completed },
-    { status: EnrollmentStatus.Enrolled },
-    { status: EnrollmentStatus.NotEnrolled },
-    { status: undefined },
-  ])(
-    "Context menu button is not shown when enrollment status is not Completed or Enrolled",
-    ({ status }) => {
-      renderWithProviders(
-        <DashboardCard
-          dashboardResource={dashboardCourse({ enrollment: { status } })}
-        />,
-      )
-      const card = getCard()
-      const expectedVisible =
-        status === EnrollmentStatus.Completed ||
-        status === EnrollmentStatus.Enrolled
-      const contextMenuButton = within(card).queryByRole("button", {
-        name: "More options",
-        hidden: !expectedVisible,
-      })
-      if (expectedVisible) {
-        expect(contextMenuButton).toBeVisible()
       }
     },
   )
