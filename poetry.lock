@@ -8028,13 +8028,14 @@ test = ["pytest", "tornado (>=4.5)", "typeguard"]
 
 [[package]]
 name = "tika"
-version = "2.6.0"
+version = "3.1.0"
 description = "Apache Tika Python library"
 optional = false
 python-versions = "*"
 groups = ["main"]
 files = [
-    {file = "tika-2.6.0.tar.gz", hash = "sha256:56670eb812944eb25ed73f1b3b075aa41e7a135b74b240822f28b819e5b373da"},
+    {file = "tika-3.1.0-py3-none-any.whl", hash = "sha256:c6171c947d6410813f236c988a1fde4a6ad11cbaa95ec4e700eb9aef7c848093"},
+    {file = "tika-3.1.0.tar.gz", hash = "sha256:4c3a404c3d846437c942d6a6fd7b71d50285690fae5489aa8a6f00ff9ccd0fc7"},
 ]
 
 [package.dependencies]
@@ -8994,4 +8995,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.1"
 python-versions = "~3.12"
-content-hash = "b04f2e9d538a8a9d04d2743e064c0d0e65321c3865db721924d53c38c41b8303"
+content-hash = "44d444eb3030917a05f412473eda4493688a854ef528159cf31b5b58a55e84f7"
