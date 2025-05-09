@@ -38,3 +38,7 @@ ALLOWED_HTML_TAGS = {
     "ul",
 }
 ALLOWED_HTML_ATTRIBUTES = {}
+
+
+class PostHogEvents:
+    ACCOUNT_CREATED = "user_account_created"

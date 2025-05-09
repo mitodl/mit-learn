@@ -11,6 +11,7 @@ from django.db.models import Q
 from posthog import Posthog
 
 from authentication.api import user_created_actions
+from main.constants import PostHogEvents
 
 log = logging.getLogger(__name__)
 
@@ -106,9 +107,9 @@ def get_user_from_apisix_headers(request, decoded_headers, original_header):
         )
         posthog.capture(
             user.id,
-            event="user_account_created",
+            event=PostHogEvents.ACCOUNT_CREATED,
             properties={
-                '$current_url': request.build_absolute_uri(),
+                "$current_url": request.build_absolute_uri(),
                 "global_id": global_id,
                 "email": email,
                 "first_name": decoded_headers.get("first_name", ""),
