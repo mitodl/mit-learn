@@ -273,6 +273,55 @@ def test_get_content_tasks(
         )
 
 
+@mock_aws
+@pytest.mark.parametrize("test_mode", [True, False])
+def test_get_content_tasks_test_mode(
+    settings, mocker, mocked_celery, mock_xpro_learning_bucket, test_mode
+):
+    """Test that if a resource is marked as in test_mode, it's contentfiles are fetched"""
+    mock_get_content_files = mocker.patch(
+        "learning_resources.tasks.get_content_files.si"
+    )
+
+    mocker.patch("learning_resources.tasks.load_course_blocklist", return_value=[])
+
+    mocker.patch(
+        "learning_resources.tasks.get_most_recent_course_archives",
+        return_value=["foo.tar.gz"],
+    )
+    setup_s3(settings)
+    settings.LEARNING_COURSE_ITERATOR_CHUNK_SIZE = 10
+    etl_source = ETLSource.xpro.name
+    platform = PlatformType.xpro.name
+    courses = factories.CourseFactory.create_batch(
+        3,
+        etl_source=etl_source,
+        platform=platform,
+    )
+    learning_resource_ids = []
+    for course in courses:
+        resource = course.learning_resource
+        resource.published = False
+        resource.test_mode = test_mode
+        resource.save()
+
+        learning_resource_ids.append(resource.id)
+
+    s3_prefix = "course-prefix"
+    tasks.get_content_tasks(
+        etl_source,
+        s3_prefix=s3_prefix,
+        overwrite=True,
+    )
+    assert mocked_celery.group.call_count == 1
+    if test_mode:
+        assert sorted(mock_get_content_files.mock_calls[0].args[0]) == sorted(
+            learning_resource_ids
+        )
+    else:
+        mock_get_content_files.assert_not_called()
+
+
 def test_get_content_files(mocker, mock_xpro_learning_bucket):
     """Test that get_content_files calls sync_edx_course_files with expected parameters"""
     mock_sync_edx_course_files = mocker.patch(

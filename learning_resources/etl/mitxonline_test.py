@@ -155,6 +155,7 @@ def test_mitxonline_transform_programs(
             ),
             "published": bool(
                 program_data.get("page", {}).get("page_url", None) is not None
+                and program_data.get("page", {}).get("live", None)
             ),
             "url": parse_page_attribute(program_data, "page_url", is_url=True),
             "availability": program_data["availability"],

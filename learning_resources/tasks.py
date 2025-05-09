@@ -9,6 +9,7 @@ from typing import Optional
 import boto3
 import celery
 from django.conf import settings
+from django.db.models import Q
 from django.utils import timezone
 
 from learning_resources.content_summarizer import ContentSummarizer
@@ -52,7 +53,8 @@ def get_micromasters_data():
 
 @app.task
 def get_mit_edx_data(
-    api_course_datafile: str | None = None, api_program_datafile: str | None = None
+    api_course_datafile: str | None = None,
+    api_program_datafile: str | None = None,
 ) -> int:
     """Task to sync MIT edX data with the database
 
@@ -169,9 +171,8 @@ def get_content_tasks(  # noqa: PLR0913
         ).values_list("id", flat=True)
     else:
         learning_resources = (
-            LearningResource.objects.filter(
-                published=True, course__isnull=False, etl_source=etl_source
-            )
+            LearningResource.objects.filter(Q(published=True) | Q(test_mode=True))
+            .filter(course__isnull=False, etl_source=etl_source)
             .exclude(readable_id__in=blocklisted_ids)
             .order_by("-id")
             .values_list("id", flat=True)
