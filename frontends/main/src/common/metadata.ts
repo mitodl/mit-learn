@@ -1,6 +1,7 @@
 import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
 import { learningResourcesApi } from "api/clients"
 import type { Metadata } from "next"
+import * as Sentry from "@sentry/nextjs"
 import handleNotFound from "./handleNotFound"
 
 const DEFAULT_OG_IMAGE = "/images/learn-og-image.jpg"
@@ -32,16 +33,25 @@ export const getMetadataAsync = async ({
     RESOURCE_DRAWER_PARAMS.resource
   ]
   if (learningResourceId) {
-    const { data } = await handleNotFound(
-      learningResourcesApi.learningResourcesRetrieve({
-        id: Number(learningResourceId),
-      }),
-    )
+    try {
+      const { data } = await handleNotFound(
+        learningResourcesApi.learningResourcesRetrieve({
+          id: Number(learningResourceId),
+        }),
+      )
 
-    title = data?.title
-    description = data?.description?.replace(/<\/[^>]+(>|$)/g, "") ?? ""
-    image = data?.image?.url || image
-    imageAlt = image === data?.image?.url ? imageAlt : data?.image?.alt || ""
+      title = data?.title
+      description = data?.description?.replace(/<\/[^>]+(>|$)/g, "") ?? ""
+      image = data?.image?.url || image
+      imageAlt = image === data?.image?.url ? imageAlt : data?.image?.alt || ""
+    } catch (error) {
+      Sentry.captureException(error)
+      console.error(
+        "Error fetching learning resource for page metadata",
+        learningResourceId,
+        error,
+      )
+    }
   }
 
   return standardizeMetadata({

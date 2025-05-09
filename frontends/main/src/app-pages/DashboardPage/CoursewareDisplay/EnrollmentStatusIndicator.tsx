@@ -3,6 +3,7 @@ import Image from "next/image"
 import { styled, VisuallyHidden } from "ol-components"
 import CourseComplete from "@/public/images/icons/course-complete.svg"
 import CourseInProgress from "@/public/images/icons/course-in-progress.svg"
+import CourseUnenrolled from "@/public/images/icons/course-unenrolled.svg"
 import { EnrollmentStatus } from "./types"
 
 const CompletedImage = styled(Image)({
@@ -63,6 +64,12 @@ const EnrollmentStatusIndicator: React.FC<EnrollmentStatusIndicatorProps> = ({
 
   return (
     <Ring data-testid="enrollment-status">
+      <Image
+        src={CourseUnenrolled}
+        alt=""
+        // use VisuallyHidden text for consistency with the non-image case.
+        aria-hidden
+      />
       <VisuallyHidden>Not Enrolled</VisuallyHidden>
     </Ring>
   )
