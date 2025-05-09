@@ -146,7 +146,7 @@ const OrgProgramDisplay: React.FC<{
         <Typography variant="body1">{program.description}</Typography>
       </ProgramHeader>
       <PlainList itemSpacing={0}>
-        {courses.map((course) => (
+        {transform.sortDashboardCourses(program, courses).map((course) => (
           <DashboardCardStyled
             Component="li"
             key={course.id}
