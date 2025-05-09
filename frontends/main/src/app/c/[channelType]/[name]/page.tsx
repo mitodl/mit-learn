@@ -71,17 +71,18 @@ const Page: React.FC = async ({
   const channel = queryClient.getQueryData<UnitChannel>(
     channelQueries.detailByType(channelType, name).queryKey,
   )
-  const offerors = queryClient
-    .getQueryData<PaginatedLearningResourceOfferorDetailList>(
-      offerorQueries.list({}).queryKey,
-    )!
-    .results.reduce(
-      (memo, offeror) => ({
-        ...memo,
-        [offeror.code]: offeror,
-      }),
-      [],
-    )
+  const offerors =
+    queryClient
+      .getQueryData<PaginatedLearningResourceOfferorDetailList>(
+        offerorQueries.list({}).queryKey,
+      )
+      ?.results.reduce(
+        (memo, offeror) => ({
+          ...memo,
+          [offeror.code]: offeror,
+        }),
+        [],
+      ) ?? {}
 
   const constantSearchParams = getConstantSearchParams(channel?.search_filter)
 

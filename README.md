@@ -34,7 +34,7 @@ The following settings must be configured before running the app:
 
 - `COMPOSE_PROFILES`
 
-  Controls which docker containers run. To run them all, use `COMPOSE_PROFILES=backend,frontend`. See [Frontend Development](./frontends/README.md) for more.
+  Controls which docker containers run. To run them all, use `COMPOSE_PROFILES=backend,frontend,keycloak,apisix`. See [Frontend Development](./frontends/README.md) for more.
   This can be set either in a top-level `.env` that `docker compose` [automatically ingests](https://docs.docker.com/compose/environment-variables/envvars/#compose_env_files) or through any other method of setting an environment variable in your shell (e.g. `direnv`).
 
 - `MAILGUN_KEY` and `MAILGUN_SENDER_DOMAIN`

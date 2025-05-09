@@ -110,7 +110,7 @@ const renderWithTheme = (ui: React.ReactElement) =>
 const expectProps = <P,>(fc: React.FC<P>, partialProps: Partial<P>) => {
   expect(fc).toHaveBeenCalledWith(
     expect.objectContaining(partialProps),
-    expect.toBeOneOf([expect.anything(), undefined]),
+    undefined,
   )
 }
 
@@ -123,7 +123,7 @@ const expectProps = <P,>(fc: React.FC<P>, partialProps: Partial<P>) => {
 const expectLastProps = <P,>(fc: React.FC<P>, partialProps: Partial<P>) => {
   expect(fc).toHaveBeenLastCalledWith(
     expect.objectContaining(partialProps),
-    expect.toBeOneOf([expect.anything(), undefined]),
+    undefined,
   )
 }
 

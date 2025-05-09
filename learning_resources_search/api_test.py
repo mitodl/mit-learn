@@ -223,7 +223,7 @@ def test_generate_learning_resources_text_clause(
                                                 "multi_match": {
                                                     "query": "math",
                                                     "fields": [
-                                                        "course.course_numbers.value",
+                                                        "course.course_numbers.value^5",
                                                     ],
                                                     **extra_params,
                                                 }
@@ -336,7 +336,7 @@ def test_generate_learning_resources_text_clause(
                             "multi_match": {
                                 "query": "math",
                                 "fields": [
-                                    "course.course_numbers.value",
+                                    "course.course_numbers.value^5",
                                 ],
                                 **extra_params,
                             }
@@ -446,7 +446,7 @@ def test_generate_learning_resources_text_clause(
                                                 "query_string": {
                                                     "query": '"math"',
                                                     "fields": [
-                                                        "course.course_numbers.value",
+                                                        "course.course_numbers.value^5",
                                                     ],
                                                 }
                                             },
@@ -553,7 +553,7 @@ def test_generate_learning_resources_text_clause(
                             "query_string": {
                                 "query": '"math"',
                                 "fields": [
-                                    "course.course_numbers.value",
+                                    "course.course_numbers.value^5",
                                 ],
                             }
                         },
@@ -688,7 +688,7 @@ def test_generate_learning_resources_text_clause_with_min_score():
                                                         "multi_match": {
                                                             "query": "math",
                                                             "fields": [
-                                                                "course.course_numbers.value"
+                                                                "course.course_numbers.value^5"
                                                             ],
                                                             "type": "phrase",
                                                             "slop": 2,
@@ -815,7 +815,7 @@ def test_generate_learning_resources_text_clause_with_min_score():
                         "query": {
                             "multi_match": {
                                 "query": "math",
-                                "fields": ["course.course_numbers.value"],
+                                "fields": ["course.course_numbers.value^5"],
                                 "type": "phrase",
                                 "slop": 2,
                             }
@@ -935,7 +935,7 @@ def test_generate_learning_resources_text_clause_with_min_score():
                                                         "query_string": {
                                                             "query": '"math"',
                                                             "fields": [
-                                                                "course.course_numbers.value"
+                                                                "course.course_numbers.value^5"
                                                             ],
                                                         }
                                                     },
@@ -1050,7 +1050,7 @@ def test_generate_learning_resources_text_clause_with_min_score():
                         "query": {
                             "query_string": {
                                 "query": '"math"',
-                                "fields": ["course.course_numbers.value"],
+                                "fields": ["course.course_numbers.value^5"],
                             }
                         },
                     }
@@ -1636,7 +1636,7 @@ def test_execute_learn_search_for_learning_resource_query(opensearch):
                                                                     "multi_match": {
                                                                         "query": "math",
                                                                         "fields": [
-                                                                            "course.course_numbers.value"
+                                                                            "course.course_numbers.value^5"
                                                                         ],
                                                                         "type": "best_fields",
                                                                     }
@@ -1756,7 +1756,7 @@ def test_execute_learn_search_for_learning_resource_query(opensearch):
                                             "multi_match": {
                                                 "query": "math",
                                                 "fields": [
-                                                    "course.course_numbers.value"
+                                                    "course.course_numbers.value^5"
                                                 ],
                                                 "type": "best_fields",
                                             }
@@ -2107,7 +2107,7 @@ def test_execute_learn_search_with_script_score(
                                                                             "multi_match": {
                                                                                 "query": "math",
                                                                                 "fields": [
-                                                                                    "course.course_numbers.value"
+                                                                                    "course.course_numbers.value^5"
                                                                                 ],
                                                                                 "type": "phrase",
                                                                             }
@@ -2227,7 +2227,7 @@ def test_execute_learn_search_with_script_score(
                                                     "multi_match": {
                                                         "query": "math",
                                                         "fields": [
-                                                            "course.course_numbers.value"
+                                                            "course.course_numbers.value^5"
                                                         ],
                                                         "type": "phrase",
                                                     }
@@ -2538,7 +2538,7 @@ def test_execute_learn_search_with_min_score(mocker, settings, opensearch):
                                                                             "multi_match": {
                                                                                 "query": "math",
                                                                                 "fields": [
-                                                                                    "course.course_numbers.value"
+                                                                                    "course.course_numbers.value^5"
                                                                                 ],
                                                                                 "type": "best_fields",
                                                                             }
@@ -2661,7 +2661,7 @@ def test_execute_learn_search_with_min_score(mocker, settings, opensearch):
                                             "multi_match": {
                                                 "query": "math",
                                                 "fields": [
-                                                    "course.course_numbers.value"
+                                                    "course.course_numbers.value^5"
                                                 ],
                                                 "type": "best_fields",
                                             }

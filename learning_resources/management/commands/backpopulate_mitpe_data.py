@@ -3,13 +3,14 @@
 from django.core.management import BaseCommand
 
 from learning_resources.etl.constants import ETLSource
+from learning_resources.management.commands.mixins import TestResourceConfigurationMixin
 from learning_resources.models import LearningResource
 from learning_resources.tasks import get_mitpe_data
 from learning_resources.utils import resource_delete_actions
 from main.utils import now_in_utc
 
 
-class Command(BaseCommand):
+class Command(TestResourceConfigurationMixin, BaseCommand):
     """Populate professional education  courses"""
 
     help = "Populate professional education courses"
@@ -41,6 +42,7 @@ class Command(BaseCommand):
             self.stdout.write("Waiting on task...")
             start = now_in_utc()
             count = task.get()
+            self.configure_test_resources(options)
             total_seconds = (now_in_utc() - start).total_seconds()
             self.stdout.write(
                 f"Population of Prof. Ed. data finished, took {total_seconds} seconds"

@@ -25,9 +25,6 @@ from learning_resources.tasks import (
     scrape_marketing_pages,
     update_next_start_date_and_prices,
 )
-from learning_resources.utils import (
-    fetch_page,
-)
 
 pytestmark = pytest.mark.django_db
 # pylint:disable=redefined-outer-name,unused-argument,too-many-arguments
@@ -145,12 +142,15 @@ def test_import_all_mit_edx_files(settings, mocker, mocked_celery, mock_blocklis
         "learning_resources.tasks.get_content_tasks", autospec=True
     )
     with pytest.raises(mocked_celery.replace_exception_class):
-        tasks.import_all_mit_edx_files.delay(chunk_size=4, overwrite=False)
+        tasks.import_all_mit_edx_files.delay(
+            chunk_size=4, overwrite=False, learning_resource_ids=[1]
+        )
     get_content_tasks_mock.assert_called_once_with(
         ETLSource.mit_edx.name,
         chunk_size=4,
         s3_prefix="simeon-mitx-course-tarballs",
         overwrite=False,
+        learning_resource_ids=[1],
     )
 
 
@@ -163,9 +163,14 @@ def test_import_all_mitxonline_files(settings, mocker, mocked_celery, mock_block
     )
 
     with pytest.raises(mocked_celery.replace_exception_class):
-        tasks.import_all_mitxonline_files.delay(chunk_size=3, overwrite=True)
+        tasks.import_all_mitxonline_files.delay(
+            chunk_size=3, overwrite=True, learning_resource_ids=None
+        )
     get_content_tasks_mock.assert_called_once_with(
-        PlatformType.mitxonline.name, chunk_size=3, overwrite=True
+        PlatformType.mitxonline.name,
+        chunk_size=3,
+        overwrite=True,
+        learning_resource_ids=None,
     )
 
 
@@ -177,9 +182,9 @@ def test_import_all_xpro_files(settings, mocker, mocked_celery, mock_blocklist):
         "learning_resources.tasks.get_content_tasks", autospec=True
     )
     with pytest.raises(mocked_celery.replace_exception_class):
-        tasks.import_all_xpro_files.delay(chunk_size=3)
+        tasks.import_all_xpro_files.delay(chunk_size=3, learning_resource_ids=[1])
     get_content_tasks_mock.assert_called_once_with(
-        PlatformType.xpro.name, chunk_size=3, overwrite=False
+        PlatformType.xpro.name, chunk_size=3, overwrite=False, learning_resource_ids=[1]
     )
 
 
@@ -198,11 +203,19 @@ def test_import_all_oll_files(settings, mocker, mocked_celery, mock_blocklist):
         s3_prefix="open-learning-library/courses",
         override_base_prefix=True,
         overwrite=False,
+        learning_resource_ids=None,
     )
 
 
 @mock_aws
-def test_get_content_tasks(settings, mocker, mocked_celery, mock_xpro_learning_bucket):
+@pytest.mark.parametrize("with_learning_resource_ids", [True, False])
+def test_get_content_tasks(
+    settings,
+    mocker,
+    mocked_celery,
+    mock_xpro_learning_bucket,
+    with_learning_resource_ids,
+):
     """Test that get_content_tasks calls get_content_files with the correct args"""
     mock_get_content_files = mocker.patch(
         "learning_resources.tasks.get_content_files.si"
@@ -216,9 +229,23 @@ def test_get_content_tasks(settings, mocker, mocked_celery, mock_xpro_learning_b
     settings.LEARNING_COURSE_ITERATOR_CHUNK_SIZE = 2
     etl_source = ETLSource.xpro.name
     platform = PlatformType.xpro.name
-    factories.CourseFactory.create_batch(3, etl_source=etl_source, platform=platform)
+    courses = factories.CourseFactory.create_batch(
+        3, etl_source=etl_source, platform=platform
+    )
+    if with_learning_resource_ids:
+        learning_resource_ids = [
+            courses[0].learning_resource_id,
+            courses[1].learning_resource_id,
+        ]
+    else:
+        learning_resource_ids = None
     s3_prefix = "course-prefix"
-    tasks.get_content_tasks(etl_source, s3_prefix=s3_prefix, overwrite=True)
+    tasks.get_content_tasks(
+        etl_source,
+        s3_prefix=s3_prefix,
+        overwrite=True,
+        learning_resource_ids=learning_resource_ids,
+    )
     assert mocked_celery.group.call_count == 1
     assert (
         models.LearningResource.objects.filter(
@@ -230,10 +257,69 @@ def test_get_content_tasks(settings, mocker, mocked_celery, mock_xpro_learning_b
         .order_by("id")
         .values_list("id", flat=True)
     ).count() == 3
-    assert mock_get_content_files.call_count == 2
-    mock_get_content_files.assert_any_call(
-        ANY, etl_source, ["foo.tar.gz"], s3_prefix=s3_prefix, overwrite=True
+    if with_learning_resource_ids:
+        assert mock_get_content_files.call_count == 1
+        mock_get_content_files.assert_any_call(
+            [learning_resource_ids[0], learning_resource_ids[1]],
+            etl_source,
+            ["foo.tar.gz"],
+            s3_prefix=s3_prefix,
+            overwrite=True,
+        )
+    else:
+        assert mock_get_content_files.call_count == 2
+        mock_get_content_files.assert_any_call(
+            ANY, etl_source, ["foo.tar.gz"], s3_prefix=s3_prefix, overwrite=True
+        )
+
+
+@mock_aws
+@pytest.mark.parametrize("test_mode", [True, False])
+def test_get_content_tasks_test_mode(
+    settings, mocker, mocked_celery, mock_xpro_learning_bucket, test_mode
+):
+    """Test that if a resource is marked as in test_mode, it's contentfiles are fetched"""
+    mock_get_content_files = mocker.patch(
+        "learning_resources.tasks.get_content_files.si"
     )
+
+    mocker.patch("learning_resources.tasks.load_course_blocklist", return_value=[])
+
+    mocker.patch(
+        "learning_resources.tasks.get_most_recent_course_archives",
+        return_value=["foo.tar.gz"],
+    )
+    setup_s3(settings)
+    settings.LEARNING_COURSE_ITERATOR_CHUNK_SIZE = 10
+    etl_source = ETLSource.xpro.name
+    platform = PlatformType.xpro.name
+    courses = factories.CourseFactory.create_batch(
+        3,
+        etl_source=etl_source,
+        platform=platform,
+    )
+    learning_resource_ids = []
+    for course in courses:
+        resource = course.learning_resource
+        resource.published = False
+        resource.test_mode = test_mode
+        resource.save()
+
+        learning_resource_ids.append(resource.id)
+
+    s3_prefix = "course-prefix"
+    tasks.get_content_tasks(
+        etl_source,
+        s3_prefix=s3_prefix,
+        overwrite=True,
+    )
+    assert mocked_celery.group.call_count == 1
+    if test_mode:
+        assert sorted(mock_get_content_files.mock_calls[0].args[0]) == sorted(
+            learning_resource_ids
+        )
+    else:
+        mock_get_content_files.assert_not_called()
 
 
 def test_get_content_files(mocker, mock_xpro_learning_bucket):
@@ -428,31 +514,6 @@ def test_summarize_unprocessed_content(
     assert get_unprocessed_content_file_ids_mock.call_count == 0 if ids else 1
 
 
-@pytest.mark.parametrize("use_webdriver", [True], ids=["with_webdriver"])
-def test_fetch_page_with_webdriver(mocker, use_webdriver, settings):
-    """Test that fetch_page uses WebDriver when settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER is True"""
-
-    settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = use_webdriver
-
-    mock_driver = mocker.MagicMock()
-    mock_driver.execute_script.return_value = "<html><body>Page content</body></html>"
-    mock_get_web_driver = mocker.patch(
-        "learning_resources.utils._get_web_driver", return_value=mock_driver
-    )
-    mock_webdriver_fetch_extra = mocker.patch(
-        "learning_resources.utils._webdriver_fetch_extra_elements"
-    )
-
-    url = "https://example.com/course"
-    result = fetch_page(url, use_webdriver=use_webdriver)
-
-    assert result == "<html><body>Page content</body></html>"
-    mock_get_web_driver.assert_called_once()
-    mock_driver.get.assert_called_once_with(url)
-    mock_webdriver_fetch_extra.assert_called_once_with(mock_driver)
-    mock_driver.execute_script.assert_called_once_with("return document.body.innerHTML")
-
-
 @pytest.mark.django_db
 def test_marketing_page_for_resources_with_webdriver(mocker, settings):
     """Test that marketing_page_for_resources uses WebDriver to fetch content"""
@@ -468,7 +529,8 @@ def test_marketing_page_for_resources_with_webdriver(mocker, settings):
 
     html_content = "<html><body><h1>Test Course</h1><p>Course content</p></body></html>"
     mock_fetch_page = mocker.patch(
-        "learning_resources.tasks.fetch_page", return_value=html_content
+        "learning_resources.site_scrapers.base_scraper.BaseScraper.fetch_page",
+        return_value=html_content,
     )
 
     markdown_content = "# Test Course\n\nCourse content"

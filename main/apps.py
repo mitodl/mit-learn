@@ -14,3 +14,8 @@ class MainConfig(AppConfig):
         from main import features
 
         features.configure()
+
+        # Initialize OpenTelemetry
+        from main.telemetry import configure_opentelemetry
+
+        configure_opentelemetry()

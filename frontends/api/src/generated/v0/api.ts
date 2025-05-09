@@ -517,43 +517,6 @@ export interface ChannelUnitDetail {
   unit: LearningResourceOfferorDetail
 }
 /**
- * DRF serializer for chatbot requests
- * @export
- * @interface ChatRequestRequest
- */
-export interface ChatRequestRequest {
-  /**
-   *
-   * @type {string}
-   * @memberof ChatRequestRequest
-   */
-  message: string
-  /**
-   *
-   * @type {string}
-   * @memberof ChatRequestRequest
-   */
-  model?: string
-  /**
-   *
-   * @type {number}
-   * @memberof ChatRequestRequest
-   */
-  temperature?: number
-  /**
-   *
-   * @type {string}
-   * @memberof ChatRequestRequest
-   */
-  instructions?: string
-  /**
-   *
-   * @type {boolean}
-   * @memberof ChatRequestRequest
-   */
-  clear_history?: boolean
-}
-/**
  * Serializer class for course run ContentFiles
  * @export
  * @interface ContentFile
@@ -673,6 +636,12 @@ export interface ContentFile {
    * @memberof ContentFile
    */
   content_language?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  checksum?: string
   /**
    *
    * @type {string}
@@ -1146,6 +1115,12 @@ export interface CourseResource {
    * @memberof CourseResource
    */
   license_cc?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof CourseResource
+   */
+  test_mode?: boolean
   /**
    *
    * @type {string}
@@ -2173,6 +2148,12 @@ export interface LearningPathResource {
    * @memberof LearningPathResource
    */
   license_cc?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof LearningPathResource
+   */
+  test_mode?: boolean
   /**
    *
    * @type {string}
@@ -3875,6 +3856,12 @@ export interface PodcastEpisodeResource {
   license_cc?: boolean
   /**
    *
+   * @type {boolean}
+   * @memberof PodcastEpisodeResource
+   */
+  test_mode?: boolean
+  /**
+   *
    * @type {string}
    * @memberof PodcastEpisodeResource
    */
@@ -4168,6 +4155,12 @@ export interface PodcastResource {
    * @memberof PodcastResource
    */
   license_cc?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof PodcastResource
+   */
+  test_mode?: boolean
   /**
    *
    * @type {string}
@@ -4854,6 +4847,12 @@ export interface ProgramResource {
   license_cc?: boolean
   /**
    *
+   * @type {boolean}
+   * @memberof ProgramResource
+   */
+  test_mode?: boolean
+  /**
+   *
    * @type {string}
    * @memberof ProgramResource
    */
@@ -5002,55 +5001,6 @@ export interface SubChannel {
    * @memberof SubChannel
    */
   position?: number
-}
-/**
- * DRF serializer for syllabus chatbot requests
- * @export
- * @interface SyllabusChatRequestRequest
- */
-export interface SyllabusChatRequestRequest {
-  /**
-   *
-   * @type {string}
-   * @memberof SyllabusChatRequestRequest
-   */
-  message: string
-  /**
-   *
-   * @type {string}
-   * @memberof SyllabusChatRequestRequest
-   */
-  model?: string
-  /**
-   *
-   * @type {number}
-   * @memberof SyllabusChatRequestRequest
-   */
-  temperature?: number
-  /**
-   *
-   * @type {string}
-   * @memberof SyllabusChatRequestRequest
-   */
-  instructions?: string
-  /**
-   *
-   * @type {boolean}
-   * @memberof SyllabusChatRequestRequest
-   */
-  clear_history?: boolean
-  /**
-   *
-   * @type {string}
-   * @memberof SyllabusChatRequestRequest
-   */
-  readable_id: string
-  /**
-   *
-   * @type {string}
-   * @memberof SyllabusChatRequestRequest
-   */
-  collection_name?: string
 }
 /**
  * * `0-to-5-hours` - <5 hours/week * `5-to-10-hours` - 5-10 hours/week * `10-to-20-hours` - 10-20 hours/week * `20-to-30-hours` - 20-30 hours/week * `30-plus-hours` - 30+ hours/week
@@ -5836,6 +5786,12 @@ export interface VideoPlaylistResource {
   license_cc?: boolean
   /**
    *
+   * @type {boolean}
+   * @memberof VideoPlaylistResource
+   */
+  test_mode?: boolean
+  /**
+   *
    * @type {string}
    * @memberof VideoPlaylistResource
    */
@@ -6135,6 +6091,12 @@ export interface VideoResource {
    * @memberof VideoResource
    */
   license_cc?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof VideoResource
+   */
+  test_mode?: boolean
   /**
    *
    * @type {string}
@@ -7763,173 +7725,6 @@ export type ChannelsListChannelTypeEnum =
   (typeof ChannelsListChannelTypeEnum)[keyof typeof ChannelsListChannelTypeEnum]
 
 /**
- * ChatAgentApi - axios parameter creator
- * @export
- */
-export const ChatAgentApiAxiosParamCreator = function (
-  configuration?: Configuration,
-) {
-  return {
-    /**
-     * Handle a POST request to the chatbot agent.
-     * @param {ChatRequestRequest} ChatRequestRequest
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    chatAgentCreate: async (
-      ChatRequestRequest: ChatRequestRequest,
-      options: RawAxiosRequestConfig = {},
-    ): Promise<RequestArgs> => {
-      // verify required parameter 'ChatRequestRequest' is not null or undefined
-      assertParamExists(
-        "chatAgentCreate",
-        "ChatRequestRequest",
-        ChatRequestRequest,
-      )
-      const localVarPath = `/api/v0/chat_agent/`
-      // use dummy base URL string because the URL constructor only accepts absolute URLs.
-      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
-      let baseOptions
-      if (configuration) {
-        baseOptions = configuration.baseOptions
-      }
-
-      const localVarRequestOptions = {
-        method: "POST",
-        ...baseOptions,
-        ...options,
-      }
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
-
-      localVarHeaderParameter["Content-Type"] = "application/json"
-
-      setSearchParams(localVarUrlObj, localVarQueryParameter)
-      let headersFromBaseOptions =
-        baseOptions && baseOptions.headers ? baseOptions.headers : {}
-      localVarRequestOptions.headers = {
-        ...localVarHeaderParameter,
-        ...headersFromBaseOptions,
-        ...options.headers,
-      }
-      localVarRequestOptions.data = serializeDataIfNeeded(
-        ChatRequestRequest,
-        localVarRequestOptions,
-        configuration,
-      )
-
-      return {
-        url: toPathString(localVarUrlObj),
-        options: localVarRequestOptions,
-      }
-    },
-  }
-}
-
-/**
- * ChatAgentApi - functional programming interface
- * @export
- */
-export const ChatAgentApiFp = function (configuration?: Configuration) {
-  const localVarAxiosParamCreator = ChatAgentApiAxiosParamCreator(configuration)
-  return {
-    /**
-     * Handle a POST request to the chatbot agent.
-     * @param {ChatRequestRequest} ChatRequestRequest
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    async chatAgentCreate(
-      ChatRequestRequest: ChatRequestRequest,
-      options?: RawAxiosRequestConfig,
-    ): Promise<
-      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<string>
-    > {
-      const localVarAxiosArgs = await localVarAxiosParamCreator.chatAgentCreate(
-        ChatRequestRequest,
-        options,
-      )
-      const index = configuration?.serverIndex ?? 0
-      const operationBasePath =
-        operationServerMap["ChatAgentApi.chatAgentCreate"]?.[index]?.url
-      return (axios, basePath) =>
-        createRequestFunction(
-          localVarAxiosArgs,
-          globalAxios,
-          BASE_PATH,
-          configuration,
-        )(axios, operationBasePath || basePath)
-    },
-  }
-}
-
-/**
- * ChatAgentApi - factory interface
- * @export
- */
-export const ChatAgentApiFactory = function (
-  configuration?: Configuration,
-  basePath?: string,
-  axios?: AxiosInstance,
-) {
-  const localVarFp = ChatAgentApiFp(configuration)
-  return {
-    /**
-     * Handle a POST request to the chatbot agent.
-     * @param {ChatAgentApiChatAgentCreateRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    chatAgentCreate(
-      requestParameters: ChatAgentApiChatAgentCreateRequest,
-      options?: RawAxiosRequestConfig,
-    ): AxiosPromise<string> {
-      return localVarFp
-        .chatAgentCreate(requestParameters.ChatRequestRequest, options)
-        .then((request) => request(axios, basePath))
-    },
-  }
-}
-
-/**
- * Request parameters for chatAgentCreate operation in ChatAgentApi.
- * @export
- * @interface ChatAgentApiChatAgentCreateRequest
- */
-export interface ChatAgentApiChatAgentCreateRequest {
-  /**
-   *
-   * @type {ChatRequestRequest}
-   * @memberof ChatAgentApiChatAgentCreate
-   */
-  readonly ChatRequestRequest: ChatRequestRequest
-}
-
-/**
- * ChatAgentApi - object-oriented interface
- * @export
- * @class ChatAgentApi
- * @extends {BaseAPI}
- */
-export class ChatAgentApi extends BaseAPI {
-  /**
-   * Handle a POST request to the chatbot agent.
-   * @param {ChatAgentApiChatAgentCreateRequest} requestParameters Request parameters.
-   * @param {*} [options] Override http request option.
-   * @throws {RequiredError}
-   * @memberof ChatAgentApi
-   */
-  public chatAgentCreate(
-    requestParameters: ChatAgentApiChatAgentCreateRequest,
-    options?: RawAxiosRequestConfig,
-  ) {
-    return ChatAgentApiFp(this.configuration)
-      .chatAgentCreate(requestParameters.ChatRequestRequest, options)
-      .then((request) => request(this.axios, this.basePath))
-  }
-}
-
-/**
  * CkeditorApi - axios parameter creator
  * @export
  */
@@ -9526,181 +9321,6 @@ export class ProgramCertificatesApi extends BaseAPI {
       .programCertificatesList(
         requestParameters.micromasters_program_id,
         requestParameters.program_title,
-        options,
-      )
-      .then((request) => request(this.axios, this.basePath))
-  }
-}
-
-/**
- * SyllabusAgentApi - axios parameter creator
- * @export
- */
-export const SyllabusAgentApiAxiosParamCreator = function (
-  configuration?: Configuration,
-) {
-  return {
-    /**
-     * Handle a POST request to the chatbot agent.
-     * @param {SyllabusChatRequestRequest} SyllabusChatRequestRequest
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    syllabusAgentCreate: async (
-      SyllabusChatRequestRequest: SyllabusChatRequestRequest,
-      options: RawAxiosRequestConfig = {},
-    ): Promise<RequestArgs> => {
-      // verify required parameter 'SyllabusChatRequestRequest' is not null or undefined
-      assertParamExists(
-        "syllabusAgentCreate",
-        "SyllabusChatRequestRequest",
-        SyllabusChatRequestRequest,
-      )
-      const localVarPath = `/api/v0/syllabus_agent/`
-      // use dummy base URL string because the URL constructor only accepts absolute URLs.
-      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
-      let baseOptions
-      if (configuration) {
-        baseOptions = configuration.baseOptions
-      }
-
-      const localVarRequestOptions = {
-        method: "POST",
-        ...baseOptions,
-        ...options,
-      }
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
-
-      localVarHeaderParameter["Content-Type"] = "application/json"
-
-      setSearchParams(localVarUrlObj, localVarQueryParameter)
-      let headersFromBaseOptions =
-        baseOptions && baseOptions.headers ? baseOptions.headers : {}
-      localVarRequestOptions.headers = {
-        ...localVarHeaderParameter,
-        ...headersFromBaseOptions,
-        ...options.headers,
-      }
-      localVarRequestOptions.data = serializeDataIfNeeded(
-        SyllabusChatRequestRequest,
-        localVarRequestOptions,
-        configuration,
-      )
-
-      return {
-        url: toPathString(localVarUrlObj),
-        options: localVarRequestOptions,
-      }
-    },
-  }
-}
-
-/**
- * SyllabusAgentApi - functional programming interface
- * @export
- */
-export const SyllabusAgentApiFp = function (configuration?: Configuration) {
-  const localVarAxiosParamCreator =
-    SyllabusAgentApiAxiosParamCreator(configuration)
-  return {
-    /**
-     * Handle a POST request to the chatbot agent.
-     * @param {SyllabusChatRequestRequest} SyllabusChatRequestRequest
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    async syllabusAgentCreate(
-      SyllabusChatRequestRequest: SyllabusChatRequestRequest,
-      options?: RawAxiosRequestConfig,
-    ): Promise<
-      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<string>
-    > {
-      const localVarAxiosArgs =
-        await localVarAxiosParamCreator.syllabusAgentCreate(
-          SyllabusChatRequestRequest,
-          options,
-        )
-      const index = configuration?.serverIndex ?? 0
-      const operationBasePath =
-        operationServerMap["SyllabusAgentApi.syllabusAgentCreate"]?.[index]?.url
-      return (axios, basePath) =>
-        createRequestFunction(
-          localVarAxiosArgs,
-          globalAxios,
-          BASE_PATH,
-          configuration,
-        )(axios, operationBasePath || basePath)
-    },
-  }
-}
-
-/**
- * SyllabusAgentApi - factory interface
- * @export
- */
-export const SyllabusAgentApiFactory = function (
-  configuration?: Configuration,
-  basePath?: string,
-  axios?: AxiosInstance,
-) {
-  const localVarFp = SyllabusAgentApiFp(configuration)
-  return {
-    /**
-     * Handle a POST request to the chatbot agent.
-     * @param {SyllabusAgentApiSyllabusAgentCreateRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    syllabusAgentCreate(
-      requestParameters: SyllabusAgentApiSyllabusAgentCreateRequest,
-      options?: RawAxiosRequestConfig,
-    ): AxiosPromise<string> {
-      return localVarFp
-        .syllabusAgentCreate(
-          requestParameters.SyllabusChatRequestRequest,
-          options,
-        )
-        .then((request) => request(axios, basePath))
-    },
-  }
-}
-
-/**
- * Request parameters for syllabusAgentCreate operation in SyllabusAgentApi.
- * @export
- * @interface SyllabusAgentApiSyllabusAgentCreateRequest
- */
-export interface SyllabusAgentApiSyllabusAgentCreateRequest {
-  /**
-   *
-   * @type {SyllabusChatRequestRequest}
-   * @memberof SyllabusAgentApiSyllabusAgentCreate
-   */
-  readonly SyllabusChatRequestRequest: SyllabusChatRequestRequest
-}
-
-/**
- * SyllabusAgentApi - object-oriented interface
- * @export
- * @class SyllabusAgentApi
- * @extends {BaseAPI}
- */
-export class SyllabusAgentApi extends BaseAPI {
-  /**
-   * Handle a POST request to the chatbot agent.
-   * @param {SyllabusAgentApiSyllabusAgentCreateRequest} requestParameters Request parameters.
-   * @param {*} [options] Override http request option.
-   * @throws {RequiredError}
-   * @memberof SyllabusAgentApi
-   */
-  public syllabusAgentCreate(
-    requestParameters: SyllabusAgentApiSyllabusAgentCreateRequest,
-    options?: RawAxiosRequestConfig,
-  ) {
-    return SyllabusAgentApiFp(this.configuration)
-      .syllabusAgentCreate(
-        requestParameters.SyllabusChatRequestRequest,
         options,
       )
       .then((request) => request(this.axios, this.basePath))

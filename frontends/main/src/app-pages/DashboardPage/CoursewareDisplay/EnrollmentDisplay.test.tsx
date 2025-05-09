@@ -1,14 +1,26 @@
 import React from "react"
-import { renderWithProviders, screen, setMockResponse } from "@/test-utils"
+import {
+  renderWithProviders,
+  screen,
+  setMockResponse,
+  user,
+} from "@/test-utils"
 import { EnrollmentDisplay } from "./EnrollmentDisplay"
 import * as mitxonline from "api/mitxonline-test-utils"
 import moment from "moment"
 import { faker } from "@faker-js/faker/locale/en"
 
 const courseEnrollment = mitxonline.factories.enrollment.courseEnrollment
+const grade = mitxonline.factories.enrollment.grade
 describe("EnrollmentDisplay", () => {
   const setupApis = () => {
-    const ended = [
+    const completed = [
+      courseEnrollment({
+        run: { title: "C Course Ended" },
+        grades: [grade({ passed: true })],
+      }),
+    ]
+    const expired = [
       courseEnrollment({
         run: {
           title: "A Course Ended",
@@ -20,10 +32,6 @@ describe("EnrollmentDisplay", () => {
           title: "B Course Ended",
           end_date: faker.date.past().toISOString(),
         },
-      }),
-      courseEnrollment({
-        run: { title: "C Course Ended" },
-        grades: [{ passed: true }],
       }),
     ]
     const started = [
@@ -53,19 +61,20 @@ describe("EnrollmentDisplay", () => {
       }),
     ]
     const mitxonlineCourseEnrollments = faker.helpers.shuffle([
-      ...ended,
+      ...expired,
+      ...completed,
       ...started,
       ...notStarted,
     ])
 
     setMockResponse.get(
-      mitxonline.urls.enrollment.courseEnrollment,
+      mitxonline.urls.enrollment.courseEnrollment(),
       mitxonlineCourseEnrollments,
     )
 
     return {
       mitxonlineCourseEnrollments,
-      mitxonlineCourses: { started, ended, notStarted },
+      mitxonlineCourses: { completed, expired, started, notStarted },
     }
   }
 
@@ -75,21 +84,36 @@ describe("EnrollmentDisplay", () => {
 
     screen.getByRole("heading", { name: "My Learning" })
 
-    const desktopCards = await screen.findAllByTestId("enrollment-card-desktop")
-    const mobileCards = await screen.findAllByTestId("enrollment-card-mobile")
-    expect(desktopCards.length).toBe(7)
-    expect(mobileCards.length).toBe(7)
+    const cards = await screen.findAllByTestId("enrollment-card-desktop")
     const expectedTitles = [
       ...mitxonlineCourses.started,
       ...mitxonlineCourses.notStarted,
-      ...mitxonlineCourses.ended,
+      ...mitxonlineCourses.completed,
     ].map((e) => e.run.title)
 
-    for (const expectedTitle of expectedTitles) {
-      const cards = [...desktopCards, ...mobileCards].filter((card) =>
-        card.textContent?.includes(expectedTitle),
-      )
-      expect(cards.length).toBe(2)
-    }
+    expectedTitles.forEach((title, i) => {
+      expect(cards[i]).toHaveTextContent(title)
+    })
+  })
+
+  test("Clicking show all reveals ended courses", async () => {
+    const { mitxonlineCourses } = setupApis()
+    renderWithProviders(<EnrollmentDisplay />)
+
+    await user.click(screen.getByText("Show all"))
+
+    screen.getByRole("heading", { name: "My Learning" })
+
+    const cards = await screen.findAllByTestId("enrollment-card-desktop")
+    const expectedTitles = [
+      ...mitxonlineCourses.started,
+      ...mitxonlineCourses.notStarted,
+      ...mitxonlineCourses.completed,
+      ...mitxonlineCourses.expired,
+    ].map((e) => e.run.title)
+
+    expectedTitles.forEach((title, i) => {
+      expect(cards[i]).toHaveTextContent(title)
+    })
   })
 })

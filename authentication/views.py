@@ -73,4 +73,14 @@ class CustomLoginView(View):
         """
         GET endpoint for logging a user in.
         """
-        return redirect(get_redirect_url(request))
+        redirect_url = get_redirect_url(request)
+        if not request.user.is_anonymous:
+            profile = request.user.profile
+            if (
+                not profile.completed_onboarding
+                and request.GET.get("skip_onboarding", "0") == "0"
+            ):
+                redirect_url = settings.MITOL_NEW_USER_LOGIN_URL
+                profile.completed_onboarding = True
+                profile.save()
+        return redirect(redirect_url)

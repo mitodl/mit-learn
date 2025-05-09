@@ -3,16 +3,18 @@
 from django.conf import settings
 from django.core.management import BaseCommand
 
+from learning_resources.management.commands.mixins import TestResourceIdMixin
 from learning_resources.tasks import import_all_xpro_files
 from main.utils import now_in_utc
 
 
-class Command(BaseCommand):
+class Command(TestResourceIdMixin, BaseCommand):
     """Populate xpro course run files"""
 
     help = "Populate xpro course run files"
 
     def add_arguments(self, parser):
+        super().add_arguments(parser)
         parser.add_argument(
             "-c",
             "--chunk-size",
@@ -27,12 +29,26 @@ class Command(BaseCommand):
             action="store_true",
             help="Overwrite any existing records",
         )
+        parser.add_argument(
+            "--resource-ids",
+            dest="learning_resource_ids",
+            required=False,
+            help="If set, backpopulate only the learning resources with these ids",
+        )
 
     def handle(self, *args, **options):  # noqa: ARG002
         """Run Populate xpro course run files"""
         chunk_size = options["chunk_size"]
+        resource_ids = (
+            options["learning_resource_ids"].split(",")
+            if options["learning_resource_ids"]
+            else None
+        )
+        self.configure_test_resources(options)
         task = import_all_xpro_files.delay(
-            chunk_size=chunk_size, overwrite=options["force_overwrite"]
+            chunk_size=chunk_size,
+            overwrite=options["force_overwrite"],
+            learning_resource_ids=resource_ids,
         )
         self.stdout.write(f"Started task {task} to get xpro course run file data")
         self.stdout.write("Waiting on task...")

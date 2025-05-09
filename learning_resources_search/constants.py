@@ -391,7 +391,7 @@ TOPICS_QUERY_FIELDS = ["topics.name"]
 DEPARTMENT_QUERY_FIELDS = ["departments.department_id", "departments.name"]
 
 COURSE_QUERY_FIELDS = [
-    "course.course_numbers.value",
+    "course.course_numbers.value^5",
 ]
 
 RUNS_QUERY_FIELDS = [

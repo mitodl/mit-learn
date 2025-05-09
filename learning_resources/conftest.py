@@ -87,7 +87,7 @@ def add_file_to_bucket_recursive(bucket, file_base, s3_base, file_object):
 @pytest.fixture(autouse=True)
 def marketing_metadata_mocks(mocker):
     mocker.patch(
-        "learning_resources.utils.fetch_page",
+        "learning_resources.site_scrapers.base_scraper.BaseScraper.fetch_page",
         return_value="""
         <html>
         <body>

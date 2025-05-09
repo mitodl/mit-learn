@@ -233,6 +233,7 @@ def test_learning_resource_serializer(  # noqa: PLR0913
             key=lambda price: price.amount,
         ),
         "professional": resource.professional,
+        "test_mode": False,
         "position": None,
         "certification": resource.certification,
         "certification_type": {
@@ -570,6 +571,7 @@ def test_content_file_serializer(settings, expected_types, has_channels):
             "description": content_file.description,
             "file_type": content_file.file_type,
             "content_type": content_file.content_type,
+            "checksum": content_file.checksum,
             "url": content_file.url,
             "content": content_kwargs["content"],
             "content_title": content_kwargs["content_title"],

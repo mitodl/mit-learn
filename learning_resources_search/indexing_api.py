@@ -384,7 +384,7 @@ def index_course_content_files(learning_resource_ids, index_types):
 
     """
     for run_id in LearningResourceRun.objects.filter(
-        learning_resource_id__in=learning_resource_ids, published=True
+        learning_resource_id__in=learning_resource_ids,
     ).values_list("id", flat=True):
         index_run_content_files(run_id, index_types)
 

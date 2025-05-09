@@ -2,17 +2,19 @@
 
 from django.core.management import BaseCommand
 
+from learning_resources.management.commands.mixins import TestResourceIdMixin
 from learning_resources.tasks import import_all_oll_files
 from main import settings
 from main.utils import now_in_utc
 
 
-class Command(BaseCommand):
+class Command(TestResourceIdMixin, BaseCommand):
     """Populate OLL course run files"""
 
     help = "Populate OLL course run files"
 
     def add_arguments(self, parser):
+        super().add_arguments(parser)
         parser.add_argument(
             "-c",
             "--chunk-size",
@@ -28,14 +30,29 @@ class Command(BaseCommand):
             help="Overwrite any existing records",
         )
 
+        parser.add_argument(
+            "--resource-ids",
+            dest="learning_resource_ids",
+            required=False,
+            help="If set, backpopulate only the learning resources with these ids",
+        )
+
     def handle(self, *args, **options):  # noqa: ARG002
         """Run Populate OLL course run files"""
         if not settings.OLL_LEARNING_COURSE_BUCKET_NAME:
             self.stderr.write("OLL contentfile settings not configured, skipping")
             return
         chunk_size = options["chunk_size"]
+        resource_ids = (
+            options["learning_resource_ids"].split(",")
+            if options["learning_resource_ids"]
+            else None
+        )
+        self.configure_test_resources(options)
         task = import_all_oll_files.delay(
-            chunk_size=chunk_size, overwrite=options["force_overwrite"]
+            chunk_size=chunk_size,
+            overwrite=options["force_overwrite"],
+            learning_resource_ids=resource_ids,
         )
         self.stdout.write(f"Started task {task} to get OLL course run file data")
         self.stdout.write("Waiting on task...")

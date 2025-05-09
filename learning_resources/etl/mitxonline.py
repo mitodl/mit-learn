@@ -121,7 +121,6 @@ def extract_programs():
             _fetch_data(
                 settings.MITX_ONLINE_PROGRAMS_API_URL,
                 params={
-                    "page__live": True,
                     "live": True,
                 },
             )
@@ -139,9 +138,7 @@ def extract_courses():
             _fetch_data(
                 settings.MITX_ONLINE_COURSES_API_URL,
                 params={
-                    "page__live": True,
                     "live": True,
-                    "courserun_is_enrollable": True,
                 },
             )
         )
@@ -218,7 +215,10 @@ def _transform_run(course_run: dict, course: dict) -> dict:
         "enrollment_start": _parse_datetime(course_run.get("enrollment_start")),
         "enrollment_end": _parse_datetime(course_run.get("enrollment_end")),
         "url": parse_page_attribute(course, "page_url", is_url=True),
-        "published": bool(course_run["is_enrollable"] and course["page"]["live"]),
+        "published": bool(
+            course_run.get("is_enrollable", False)
+            and (course.get("page") or {}).get("live", False)
+        ),
         "description": clean_data(parse_page_attribute(course_run, "description")),
         "image": _transform_image(course_run),
         "prices": [
@@ -270,7 +270,11 @@ def _transform_course(course):
     Returns:
         dict: normalized course data
     """  # noqa: D401
-    runs = [_transform_run(course_run, course) for course_run in course["courseruns"]]
+    runs = [
+        _transform_run(course_run, course)
+        for course_run in course["courseruns"]
+        if course_run
+    ]
     has_certification = parse_certification(OFFERED_BY["code"], runs)
     return {
         "readable_id": course["readable_id"],
@@ -332,7 +336,6 @@ def _fetch_courses_by_ids(course_ids):
                 settings.MITX_ONLINE_COURSES_API_URL,
                 params={
                     "id": ",".join([str(courseid) for courseid in course_ids]),
-                    "page__live": True,
                     "live": True,
                 },
             )
@@ -385,6 +388,7 @@ def transform_programs(programs: list[dict]) -> list[dict]:
             "availability": program.get("availability"),
             "published": bool(
                 parse_page_attribute(program, "page_url")
+                and parse_page_attribute(program, "live")
             ),  # a program is only considered published if it has a page url
             "format": [Format.asynchronous.name],
             "pace": pace,

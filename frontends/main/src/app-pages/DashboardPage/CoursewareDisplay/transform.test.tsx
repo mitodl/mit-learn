@@ -1,4 +1,4 @@
-import { factories as mitxOnlineFactories } from "api/mitxonline-test-utils"
+import { factories as mitx } from "api/mitxonline-test-utils"
 import * as transform from "./transform"
 import { DashboardResourceType, EnrollmentStatus } from "./types"
 import type { DashboardResource } from "./types"
@@ -6,18 +6,18 @@ import type { DashboardResource } from "./types"
 describe("Transforming mitxonline enrollment data to DashboardResource", () => {
   test.each([
     {
-      grades: [{ passed: true }],
+      grades: [mitx.enrollment.grade({ passed: true })],
       enrollmentStatus: EnrollmentStatus.Completed,
     },
     {
-      grades: [{ passed: false }],
+      grades: [mitx.enrollment.grade({ passed: false })],
       enrollmentStatus: EnrollmentStatus.Enrolled,
     },
     { grades: [], enrollmentStatus: EnrollmentStatus.Enrolled },
   ])(
     "Property renames and EnrollmentStatus",
     ({ grades, enrollmentStatus }) => {
-      const apiData = mitxOnlineFactories.enrollment.courseEnrollment({
+      const apiData = mitx.enrollment.courseEnrollment({
         grades,
       })
       const transformed = transform.mitxonlineEnrollments([apiData])
@@ -45,7 +45,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
 
   test("CertificateUpgradePrice is first price in prices array", () => {
     // Unclear why the mitxonline API has this as an array.
-    const apiData = mitxOnlineFactories.enrollment.courseEnrollment({
+    const apiData = mitx.enrollment.courseEnrollment({
       // @ts-expect-error not fully implementing product objects
       run: { products: [{ price: "10" }, { price: "20" }] },
     })

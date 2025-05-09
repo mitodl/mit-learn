@@ -393,9 +393,7 @@ describe.each([true, false])(
         resource: course1,
         chatExpanded: true,
       })
-      await user.click(
-        screen.getByRole("button", { name: "Ask TIM about this course" }),
-      )
+      await user.click(screen.getByRole("button", { name: "Close" }))
 
       const dataTestId = "ai-chat-entry-screen"
       expect(screen.getByTestId(dataTestId)).toBeInTheDocument()
@@ -407,27 +405,36 @@ describe.each([true, false])(
       })
     })
 
-    test.each([
-      { chatExpanded: false, expectChat: false },
-      { chatExpanded: true, expectChat: true },
-    ])(
-      "When `chatExpanded=true`, chat button is pressed and interactive",
-      ({ chatExpanded, expectChat }) => {
-        if (!enabled) return
-        const resource = factories.learningResources.resource({
-          resource_type: ResourceTypeEnum.Course,
-        })
-        setup({ resource, chatExpanded })
+    test("When `chatExpanded=false`, chat button is not pressed and chat is inert", () => {
+      if (!enabled) return
+      const resource = factories.learningResources.resource({
+        resource_type: ResourceTypeEnum.Course,
+      })
+      setup({ resource, chatExpanded: false })
 
-        screen.getByRole("button", {
-          name: /Ask\sTIM/,
-          pressed: chatExpanded,
-        })
+      screen.getByRole("button", {
+        name: /Ask\sTIM/,
+        pressed: false,
+      })
 
-        // AiChat is always in the dom, but it's hidden and inert when not expanded.
-        const aiChat = screen.getByTestId("ai-chat-entry-screen")
-        expect(!!aiChat.closest("[inert]")).toBe(!expectChat)
-      },
-    )
+      // AiChat is always in the dom, but it's hidden and inert when not expanded.
+      const aiChat = screen.getByTestId("ai-chat-entry-screen")
+      expect(!!aiChat.closest("[inert]")).toBe(true)
+    })
+
+    test("When `chatExpanded=true`, chat is not inert until closed", async () => {
+      if (!enabled) return
+      const resource = factories.learningResources.resource({
+        resource_type: ResourceTypeEnum.Course,
+      })
+      setup({ resource, chatExpanded: true })
+
+      const aiChat = screen.getByTestId("ai-chat-entry-screen")
+      expect(!!aiChat.closest("[inert]")).toBe(false)
+
+      await user.click(screen.getByRole("button", { name: "Close" }))
+
+      expect(!!aiChat.closest("[inert]")).toBe(true)
+    })
   },
 )

@@ -34,7 +34,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.31.1"
+VERSION = "0.31.3"
 
 log = logging.getLogger()
 
@@ -129,7 +129,6 @@ INSTALLED_APPS = (
     "testimonials",
     "data_fixtures",
     "vector_search",
-    "ai_chat",
     "mitol.scim.apps.ScimApp",
 )
 
@@ -196,7 +195,9 @@ if DEBUG:
     MIDDLEWARE += ("nplusone.ext.django.NPlusOneMiddleware",)
 
 SESSION_ENGINE = "django.contrib.sessions.backends.signed_cookies"
-
+MITOL_NEW_USER_LOGIN_URL = get_string(
+    "MITOL_NEW_USER_LOGIN_URL", "http://open.odl.local:8062/onboarding"
+)
 LOGIN_REDIRECT_URL = "/app"
 LOGIN_URL = "/login"
 LOGIN_ERROR_URL = "/login"
@@ -742,6 +743,10 @@ will be a constant 60 minutes greater more than the schedule frequency
 EMBEDDING_SCHEDULE_MINUTES = get_int(name="EMBEDDING_SCHEDULE_MINUTES", default=60)
 QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW = EMBEDDING_SCHEDULE_MINUTES + 60
 
+QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = get_bool(
+    name="QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS", default=False
+)
+
 QDRANT_API_KEY = get_string(name="QDRANT_API_KEY", default="")
 QDRANT_HOST = get_string(name="QDRANT_HOST", default="http://qdrant:6333")
 QDRANT_BASE_COLLECTION_NAME = get_string(
@@ -775,29 +780,6 @@ OPENAI_API_KEY = get_string(
     default=None,
 )
 
-# AI settings
-AI_DEBUG = get_bool("AI_DEBUG", True)  # noqa: FBT003
-AI_CACHE_TIMEOUT = get_int(name="AI_CACHE_TIMEOUT", default=3600)
-AI_CACHE = get_string(name="AI_CACHE", default="redis")
-AI_MIT_SEARCH_URL = get_string(
-    name="AI_MIT_SEARCH_URL",
-    default="https://api.learn.mit.edu/api/v1/learning_resources_search/",
-)
-AI_MIT_SYLLABUS_URL = get_string("AI_MIT_SYLLABUS_URL", "")
-AI_MIT_SEARCH_LIMIT = get_int(name="AI_MIT_SEARCH_LIMIT", default=10)
-AI_MODEL = get_string(name="AI_MODEL", default="gpt-4o")
-AI_MODEL_API = get_string(name="AI_MODEL_API", default="openai")
-
-# AI proxy settings (aka LiteLLM)
-AI_PROXY_CLASS = get_string(name="AI_PROXY_CLASS", default="")
-AI_PROXY_URL = get_string(name="AI_PROXY_URL", default="")
-AI_PROXY_AUTH_TOKEN = get_string(name="AI_PROXY_AUTH_TOKEN", default="")
-AI_MAX_PARALLEL_REQUESTS = get_int(name="AI_MAX_PARALLEL_REQUESTS", default=10)
-AI_TPM_LIMIT = get_int(name="AI_TPM_LIMIT", default=5000)
-AI_RPM_LIMIT = get_int(name="AI_RPM_LIMIT", default=10)
-AI_BUDGET_DURATION = get_string(name="AI_BUDGET_DURATION", default="60m")
-AI_MAX_BUDGET = get_float(name="AI_MAX_BUDGET", default=0.05)
-AI_ANON_LIMIT_MULTIPLIER = get_float(name="AI_ANON_LIMIT_MULTIPLIER", default=10.0)
 CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = get_int(
     name="CONTENT_FILE_EMBEDDING_CHUNK_SIZE", default=512
 )
@@ -833,3 +815,11 @@ SEMANTIC_CHUNKING_CONFIG = {
 }
 
 CONTENT_FILE_SUMMARIZER_BATCH_SIZE = get_int("CONTENT_FILE_SUMMARIZER_BATCH_SIZE", 20)
+
+# OpenTelemetry configuration
+OPENTELEMETRY_ENABLED = get_bool("OPENTELEMETRY_ENABLED", False)  # noqa: FBT003
+OPENTELEMETRY_SERVICE_NAME = get_string("OPENTELEMETRY_SERVICE_NAME", "learn")
+OPENTELEMETRY_INSECURE = get_bool("OPENTELEMETRY_INSECURE", default=True)
+OPENTELEMETRY_ENDPOINT = get_string("OPENTELEMETRY_ENDPOINT", None)
+OPENTELEMETRY_TRACES_BATCH_SIZE = get_int("OPENTELEMETRY_TRACES_BATCH_SIZE", 512)
+OPENTELEMETRY_EXPORT_TIMEOUT_MS = get_int("OPENTELEMETRY_EXPORT_TIMEOUT_MS", 5000)

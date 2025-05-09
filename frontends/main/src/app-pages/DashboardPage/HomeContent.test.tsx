@@ -208,7 +208,7 @@ describe("HomeContent", () => {
       setupAPIs()
       mockedUseFeatureFlagEnabled.mockReturnValue(enrollmentsEnabled)
       if (enrollmentsEnabled) {
-        setMockResponse.get(mitxonline.urls.enrollment.courseEnrollment, [])
+        setMockResponse.get(mitxonline.urls.enrollment.courseEnrollment(), [])
       }
       renderWithProviders(<HomeContent />)
       const enrollmentsHeading = screen.queryByRole("heading", {

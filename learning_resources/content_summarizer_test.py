@@ -6,6 +6,10 @@ from learning_resources.constants import (
     PlatformType,
 )
 from learning_resources.content_summarizer import ContentSummarizer
+from learning_resources.exceptions import (
+    FlashcardsGenerationError,
+    SummaryGenerationError,
+)
 from learning_resources.factories import (
     ContentFileFactory,
     ContentSummarizerConfigurationFactory,
@@ -242,9 +246,9 @@ def test_get_unprocessed_content_files_with_platform_and_config(
 def test_summarize_content_files_by_ids(
     processable_content_files, mock_summarize_single_content_file
 ):
-    """The summarizer should process content files that are processable"""
+    """The summarizer should process content files that are processable and return the status results"""
     summarizer = ContentSummarizer()
-    summarizer.summarize_content_files_by_ids(
+    results = summarizer.summarize_content_files_by_ids(
         overwrite=False,
         content_file_ids=[
             content_file.id for content_file in processable_content_files
@@ -253,6 +257,8 @@ def test_summarize_content_files_by_ids(
     assert mock_summarize_single_content_file.call_count == len(
         processable_content_files
     )
+    assert isinstance(results, list)
+    assert len(results) == len(processable_content_files)
 
 
 def test_summarize_single_content_file(mocker, processable_content_files):
@@ -332,3 +338,77 @@ def test_process_single_file_calls_llm_summary(
         assert mock_instance.with_structured_output.call_count == 1
     elif has_flashcards:
         assert mock_instance.invoke.call_count == 1
+
+
+@pytest.mark.parametrize(
+    ("process_type", "expected_exception"),
+    [("summary", SummaryGenerationError), ("flashcards", FlashcardsGenerationError)],
+)
+def test_generate_summary_flashcards_exception(
+    mocker, processable_content_files, settings, process_type, expected_exception
+):
+    """Test the exception handling in the generate_summary and generate_flashcards methods"""
+    settings.OPENAI_API_KEY = "test"
+    summarizer = ContentSummarizer()
+    content_file = processable_content_files[0]
+    content_file.save()
+
+    # Mock the ChatLiteLLM class and its methods
+    mock_chat_llm = mocker.patch(
+        "learning_resources.content_summarizer.ChatLiteLLM", autospec=True
+    )
+    mock_instance = mock_chat_llm.return_value
+
+    # Mock the response for _generate_summary to raise an exception
+    mock_instance.invoke.side_effect = Exception("Test exception")
+    # Mock the response for _generate_flashcards to raise an exception
+    mock_instance.with_structured_output.return_value.invoke.side_effect = Exception(
+        "INVALID_FORMAT"
+    )
+
+    if process_type == "summary":
+        with pytest.raises(expected_exception):
+            summarizer._generate_summary(  # noqa: SLF001
+                llm_model="llm_model", content=content_file.content
+            )
+    else:
+        with pytest.raises(expected_exception):
+            summarizer._generate_flashcards(  # noqa: SLF001
+                llm_model="llm_model", content=content_file.content
+            )
+
+
+def test_summarize_single_content_file_with_exception(
+    mocker, processable_content_files, settings
+):
+    """Test the exception handling in the summarize_single_content_file method"""
+    settings.OPENAI_API_KEY = "test"
+    summarizer = ContentSummarizer()
+    content_file = processable_content_files[0]
+
+    # Mock the ChatLiteLLM class and its methods
+    mock_chat_llm = mocker.patch(
+        "learning_resources.content_summarizer.ChatLiteLLM", autospec=True
+    )
+    mock_instance = mock_chat_llm.return_value
+
+    # Mock the response for _generate_summary to raise an exception
+    mock_instance.invoke.side_effect = Exception("Test exception")
+    # Mock the response for _generate_flashcards to raise an exception
+    mock_instance.with_structured_output.return_value.invoke.side_effect = Exception(
+        "INVALID_FORMAT"
+    )
+
+    error = summarizer.summarize_single_content_file(content_file.id, overwrite=False)
+    assert (
+        error
+        == f"Summary generation failed for CONTENT_FILE_ID: {content_file.id}\nError: Test exception\n\n"
+    )
+    content_file.summary = "Test summary"
+    content_file.save()
+    content_file.refresh_from_db()
+    error = summarizer.summarize_single_content_file(content_file.id, overwrite=False)
+    assert (
+        error
+        == f"Flashcards generation failed for CONTENT_FILE_ID: {content_file.id}\nError: INVALID_FORMAT\n\n"
+    )

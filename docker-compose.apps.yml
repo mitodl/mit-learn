@@ -36,7 +36,6 @@ services:
     command:
       - |
         yarn install --immutable
-        yarn workspace ol-components storybook --no-open &
         yarn watch
     ports:
       - "8062:8062"

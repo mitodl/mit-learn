@@ -100,6 +100,19 @@ const nextConfig = {
   env: {
     FEATURE_FLAGS: JSON.stringify(processFeatureFlags()),
   },
+
+  experimental: { webpackMemoryOptimizations: true },
+
+  webpack: (config, { dev }) => {
+    if (dev) {
+      config.cache = Object.freeze({
+        type: "filesystem",
+        allowCollectingMemory: true,
+      })
+    }
+    // Important: return the modified config
+    return config
+  },
 }
 
 // Injected content via Sentry wizard below

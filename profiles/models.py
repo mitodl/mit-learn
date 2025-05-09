@@ -148,6 +148,8 @@ class Profile(models.Model):
     email_optin = models.BooleanField(null=True)
     toc_optin = models.BooleanField(null=True)
 
+    completed_onboarding = models.BooleanField(default=False)
+
     headline = models.CharField(blank=True, null=True, max_length=60)  # noqa: DJ001
     bio = models.TextField(blank=True, null=True)  # noqa: DJ001
     location = JSONField(null=True, blank=True)

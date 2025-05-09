@@ -33,7 +33,7 @@ const someAncestor = (el: HTMLElement, cb: (el: HTMLElement) => boolean) => {
 }
 
 const setupApis = (
-  channelPatch?: Partial<Channel>,
+  channelPatch: Partial<Channel> = {},
   search?: Partial<LearningResourcesSearchResponse>,
   { isSubscribed = false, isAuthenticated = false } = {},
 ) => {

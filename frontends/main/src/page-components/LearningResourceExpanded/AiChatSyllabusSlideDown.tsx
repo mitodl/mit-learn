@@ -1,11 +1,7 @@
 import React, { useRef, useEffect } from "react"
 import { Typography, styled } from "ol-components"
 import { Button } from "@mitodl/smoot-design"
-import {
-  RiSparkling2Line,
-  RiArrowDownSLine,
-  RiCloseLine,
-} from "@remixicon/react"
+import { RiSparkling2Line, RiArrowDownSLine } from "@remixicon/react"
 import type { AiChatProps } from "@mitodl/smoot-design/ai"
 import { LearningResource } from "api"
 import { AiChat } from "@mitodl/smoot-design/ai"
@@ -38,6 +34,7 @@ const SlideDown = styled.div<{
 }))
 
 const Opener = styled.div(({ theme }) => ({
+  position: "relative",
   ":after": {
     content: "''",
     width: "100%",
@@ -45,9 +42,10 @@ const Opener = styled.div(({ theme }) => ({
     background: theme.custom.colors.white,
     display: "block",
     position: "absolute",
-    top: 0,
+    top: "-24px",
     borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
     zIndex: 1,
+    paddingTop: "24px",
   },
 }))
 
@@ -74,36 +72,26 @@ const StyledButton = styled(Button)<{ open: boolean }>(({ theme, open }) => ({
   "&&": {
     ":hover": {
       backgroundColor: theme.custom.colors.white,
-      borderColor: open
-        ? theme.custom.colors.darkGray1
-        : theme.custom.colors.silverGray,
-      "svg:last-child": {
-        backgroundColor: open ? theme.custom.colors.darkGray1 : "transparent",
-      },
+      borderColor: theme.custom.colors.silverGray,
     },
+  },
+  "svg:last-child": {
+    transform: open ? "rotate(-180deg)" : "rotate(0deg)",
+    transition: "transform 0.3s ease-in-out",
   },
 }))
 
-const OpenChevron = styled(RiArrowDownSLine)(({ theme }) => ({
+const Chevron = styled(RiArrowDownSLine)(({ theme }) => ({
   fill: theme.custom.colors.mitRed,
   position: "absolute",
   right: "9px",
-}))
-
-const CloseButton = styled(RiCloseLine)(({ theme }) => ({
-  fill: theme.custom.colors.white,
-  position: "absolute",
-  right: "0",
-  padding: "9px",
-  boxSizing: "content-box",
-  backgroundColor: theme.custom.colors.silverGray,
 }))
 
 const StyledAiChat = styled(AiChat)<{
   topPosition: number
 }>(({ topPosition }) => ({
   ".MitAiChat--root": {
-    minHeight: `calc(100vh - ${topPosition + 43}px)`,
+    minHeight: `calc(100vh - ${topPosition}px)`,
   },
   ".MitAiChat--entryScreenContainer": {
     top: topPosition,
@@ -146,7 +134,7 @@ export const AiChatSyllabusOpener = ({
         <Typography variant="body1">
           Ask<strong>TIM</strong> about this course
         </Typography>
-        {open ? <CloseButton /> : <OpenChevron />}
+        <Chevron />
       </StyledButton>
     </Opener>
   )

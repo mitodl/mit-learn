@@ -19,8 +19,14 @@ def mock_search_index_helpers(mocker):
     mock_upsert_learning_resource = mocker.patch(
         "learning_resources_search.plugins.tasks.upsert_learning_resource"
     )
+    mock_upsert_learning_resource_immutable_signature = mocker.patch(
+        "learning_resources_search.plugins.tasks.upsert_learning_resource.si"
+    )
     mock_remove_learning_resource = mocker.patch(
         "learning_resources_search.plugins.tasks.deindex_document"
+    )
+    mock_remove_learning_resource_immutable_signature = mocker.patch(
+        "learning_resources_search.plugins.tasks.deindex_document.si"
     )
     mock_upsert_contentfiles = mocker.patch(
         "learning_resources_search.plugins.tasks.index_run_content_files"
@@ -28,11 +34,17 @@ def mock_search_index_helpers(mocker):
     mock_remove_contentfiles = mocker.patch(
         "learning_resources_search.plugins.tasks.deindex_run_content_files"
     )
+    mock_remove_contentfiles_immutable_signature = mocker.patch(
+        "learning_resources_search.plugins.tasks.deindex_run_content_files.si"
+    )
     return SimpleNamespace(
         mock_upsert_learning_resource=mock_upsert_learning_resource,
+        mock_upsert_learning_resource_immutable_signature=mock_upsert_learning_resource_immutable_signature,
         mock_remove_learning_resource=mock_remove_learning_resource,
+        mock_remove_learning_resource_immutable_signature=mock_remove_learning_resource_immutable_signature,
         mock_upsert_contentfiles=mock_upsert_contentfiles,
         mock_remove_contentfiles=mock_remove_contentfiles,
+        mock_remove_contentfiles_immutable_signature=mock_remove_contentfiles_immutable_signature,
     )
 
 
@@ -45,7 +57,7 @@ def test_search_index_plugin_resource_upserted(
     resource = LearningResourceFactory.create(resource_type=resource_type)
     SearchIndexPlugin().resource_upserted(resource, percolate=False)
 
-    mock_search_index_helpers.mock_upsert_learning_resource.assert_called_once_with(
+    mock_search_index_helpers.mock_upsert_learning_resource_immutable_signature.assert_called_once_with(
         resource.id
     )
 
@@ -58,16 +70,16 @@ def test_search_index_plugin_resource_unpublished(
     """The plugin function should remove a resource from the search index"""
     resource = LearningResourceFactory.create(resource_type=resource_type)
     unpublish_run_mock = mocker.patch(
-        "learning_resources_search.plugins.tasks.deindex_run_content_files"
+        "learning_resources_search.plugins.tasks.deindex_run_content_files.si"
     )
     SearchIndexPlugin().resource_unpublished(resource)
-    mock_search_index_helpers.mock_remove_learning_resource.assert_called_once_with(
+    mock_search_index_helpers.mock_remove_learning_resource_immutable_signature.assert_called_once_with(
         resource.id, resource.resource_type
     )
     if resource_type == COURSE_TYPE:
         assert unpublish_run_mock.call_count == resource.runs.count()
         for run in resource.runs.all():
-            unpublish_run_mock.assert_any_call(run.id, False)  # noqa: FBT003
+            unpublish_run_mock.assert_any_call(run.id, unpublished_only=False)
     else:
         unpublish_run_mock.assert_not_called()
 
@@ -82,7 +94,7 @@ def test_search_index_plugin_resource_before_delete(
     resource_id = resource.id
     SearchIndexPlugin().resource_before_delete(resource)
 
-    mock_search_index_helpers.mock_remove_learning_resource.assert_called_once_with(
+    mock_search_index_helpers.mock_remove_learning_resource_immutable_signature.assert_called_once_with(
         resource_id, resource.resource_type
     )
 
@@ -92,9 +104,9 @@ def test_search_index_plugin_resource_run_unpublished(mock_search_index_helpers)
     """The plugin function should remove a run's contenfiles from the search index"""
     run = LearningResourceRunFactory.create()
     SearchIndexPlugin().resource_run_unpublished(run)
-    mock_search_index_helpers.mock_remove_contentfiles.assert_called_once_with(
+    mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_called_once_with(
         run.id,
-        False,  # noqa: FBT003
+        unpublished_only=False,
     )
 
 
@@ -104,9 +116,9 @@ def test_search_index_plugin_resource_run_delete(mock_search_index_helpers):
     run = LearningResourceRunFactory.create()
     run_id = run.id
     SearchIndexPlugin().resource_run_delete(run)
-    mock_search_index_helpers.mock_remove_contentfiles.assert_called_once_with(
+    mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_called_once_with(
         run_id,
-        False,  # noqa: FBT003
+        unpublished_only=False,
     )
     assert LearningResourceRun.objects.filter(id=run_id).exists() is False
 

@@ -6,6 +6,8 @@ from pathlib import Path
 from tarfile import ReadError
 from tempfile import TemporaryDirectory
 
+from django.db.models import Q
+
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.loaders import load_content_files
 from learning_resources.etl.utils import (
@@ -109,12 +111,18 @@ def sync_edx_course_files(
         matches = re.search(rf"{s3_prefix}/(.+)\.tar\.gz$", key)
         run_id = matches.group(1).split("/")[-1]
         log.info("Run is is %s", run_id)
-        runs = LearningResourceRun.objects.filter(
-            learning_resource__etl_source=etl_source,
-            learning_resource_id__in=ids,
-            learning_resource__published=True,
-            published=True,
+        runs = (
+            LearningResourceRun.objects.filter(
+                learning_resource__etl_source=etl_source,
+                learning_resource_id__in=ids,
+            )
+            .filter(Q(published=True) | Q(learning_resource__test_mode=True))
+            .filter(
+                Q(learning_resource__published=True)
+                | Q(learning_resource__test_mode=True)
+            )
         )
+
         if etl_source == ETLSource.mit_edx.name:
             # Additional processing of run ids and tarfile names,
             # because edx data is structured differently
@@ -142,7 +150,11 @@ def sync_edx_course_files(
         resource = run.learning_resource
         if run != (
             resource.next_run
-            or resource.runs.filter(published=True).order_by("-start_date").first()
+            or resource.runs.filter(
+                Q(published=True) | Q(learning_resource__test_mode=True)
+            )
+            .order_by("-start_date")
+            .first()
         ):
             log.info("Skipping %s, not the next / most recent run", run.run_id)
             continue

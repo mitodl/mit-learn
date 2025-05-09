@@ -13,7 +13,10 @@ from learning_resources.serializers import (
     LearningResourceMetadataDisplaySerializer,
     LearningResourceSerializer,
 )
-from learning_resources_search.constants import CONTENT_FILE_TYPE
+from learning_resources_search.constants import (
+    CONTENT_FILE_TYPE,
+    LEARNING_RESOURCE_TYPES,
+)
 from learning_resources_search.serializers import (
     serialize_bulk_content_files,
     serialize_bulk_learning_resources,
@@ -64,8 +67,11 @@ def points_generator(
         metadata = iter(dict, None)
     for idx, meta, vector in zip(ids, metadata, encoded_docs):
         payload = meta
-        point_vector: dict[str, models.Vector] = {vector_name: vector}
-        yield models.PointStruct(id=idx, payload=payload, vector=point_vector)
+        point_data = {"id": idx, "payload": payload}
+        if any(vector):
+            point_vector: dict[str, models.Vector] = {vector_name: vector}
+            point_data["vector"] = point_vector
+        yield models.PointStruct(**point_data)
 
 
 def create_qdrant_collections(force_recreate):
@@ -199,6 +205,23 @@ def _chunk_documents(encoder, texts, metadatas):
     return recursive_splitter.create_documents(texts=texts, metadatas=metadatas)
 
 
+def _learning_resource_embedding_context(document):
+    """
+    Get the embedding context for a learning resource
+    """
+    return (
+        f"{document.get('title')} "
+        f"{document.get('description')} {document.get('full_description')}"
+    )
+
+
+def _content_file_embedding_context(document):
+    """
+    Get the embedding context for a content file
+    """
+    return document.get("content", "")
+
+
 def _process_resource_embeddings(serialized_resources):
     docs = []
     metadata = []
@@ -206,16 +229,117 @@ def _process_resource_embeddings(serialized_resources):
     encoder = dense_encoder()
     vector_name = encoder.model_short_name()
     for doc in serialized_resources:
+        if not should_generate_resource_embeddings(doc):
+            update_learning_resource_payload(doc)
+            continue
         vector_point_key = doc["readable_id"]
         metadata.append(doc)
         ids.append(vector_point_id(vector_point_key))
-        docs.append(
-            f"{doc.get('title')} {doc.get('description')} {doc.get('full_description')}"
-        )
+        docs.append(_learning_resource_embedding_context(doc))
     if len(docs) > 0:
         embeddings = encoder.embed_documents(docs)
         return points_generator(ids, metadata, embeddings, vector_name)
     return None
+
+
+def update_learning_resource_payload(serialized_document):
+    points = [vector_point_id(serialized_document["readable_id"])]
+    _set_payload(
+        points,
+        serialized_document,
+        param_map=QDRANT_RESOURCE_PARAM_MAP,
+        collection_name=RESOURCES_COLLECTION_NAME,
+    )
+
+
+def update_content_file_payload(serialized_document):
+    params = {
+        "resource_readable_id": serialized_document["resource_readable_id"],
+        "key": serialized_document["key"],
+        "run_readable_id": serialized_document["run_readable_id"],
+    }
+    points = [
+        point.id
+        for point in retrieve_points_matching_params(
+            params,
+            collection_name=CONTENT_FILES_COLLECTION_NAME,
+        )
+    ]
+    _set_payload(
+        points,
+        serialized_document,
+        param_map=QDRANT_CONTENT_FILE_PARAM_MAP,
+        collection_name=CONTENT_FILES_COLLECTION_NAME,
+    )
+
+
+def _set_payload(points, document, param_map, collection_name):
+    """
+    Set the payload for a list of points in Qdrant
+    Args:
+        points (list): List of point ids
+        document (dict): Document to set the payload for
+        param_map (dict): Mapping of document fields to Qdrant payload fields
+        collection_name (str): Name of the Qdrant collection
+    """
+    client = qdrant_client()
+    payload = {}
+    for key in param_map:
+        if key in document:
+            payload[param_map[key]] = document[key]
+    if not all([points, payload]):
+        return
+    client.set_payload(
+        collection_name=collection_name,
+        payload=payload,
+        points=points,
+    )
+
+
+def should_generate_resource_embeddings(serialized_document):
+    """
+    Determine if we should generate embeddings for a learning resource
+    """
+    client = qdrant_client()
+    point_id = vector_point_id(serialized_document["readable_id"])
+    response = client.retrieve(
+        collection_name=RESOURCES_COLLECTION_NAME,
+        ids=[point_id],
+    )
+    if len(response) > 0:
+        resource_payload = response[0].payload
+        stored_embedding_content = _learning_resource_embedding_context(
+            resource_payload
+        )
+        current_embedding_content = _learning_resource_embedding_context(
+            serialized_document
+        )
+        if stored_embedding_content == current_embedding_content:
+            return False
+    return True
+
+
+def should_generate_content_embeddings(serialized_document):
+    """
+    Determine if we should generate embeddings for a content file
+    """
+    client = qdrant_client()
+
+    # we just need metadata from the first chunk
+    point_id = vector_point_id(
+        f"{serialized_document['resource_readable_id']}."
+        f"{serialized_document.get('run_readable_id', '')}."
+        f"{serialized_document['key']}.0"
+    )
+    response = client.retrieve(
+        collection_name=CONTENT_FILES_COLLECTION_NAME,
+        ids=[point_id],
+    )
+    if len(response) > 0:
+        qdrant_checksum = response[0].payload.get("checksum")
+        if qdrant_checksum == serialized_document["checksum"]:
+            return False
+    return True
 
 
 def _embed_course_metadata_as_contentfile(serialized_resources):
@@ -229,6 +353,8 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
     ids = []
     docs = []
     for doc in serialized_resources:
+        if not should_generate_resource_embeddings(doc):
+            continue
         readable_id = doc["readable_id"]
         resource_vector_point_id = str(vector_point_id(readable_id))
         serializer = LearningResourceMetadataDisplaySerializer(doc)
@@ -268,10 +394,25 @@ def _process_content_embeddings(serialized_content):
     ids = []
     encoder = dense_encoder()
     vector_name = encoder.model_short_name()
+    remove_docs = []
     for doc in serialized_content:
-        if not doc.get("content"):
+        embedding_context = _content_file_embedding_context(doc)
+        if not embedding_context:
             continue
-        split_docs = _chunk_documents(encoder, [doc.get("content")], [doc])
+        should_generate = should_generate_content_embeddings(doc)
+        if not should_generate:
+            """
+            Just update the payload and continue
+            """
+            update_content_file_payload(doc)
+            continue
+        """
+        if we are generating embeddings then
+        the content and number of chunk have changed
+        so we need to remove all old points
+        """
+        remove_docs.append(doc["id"])
+        split_docs = _chunk_documents(encoder, [embedding_context], [doc])
         split_texts = [d.page_content for d in split_docs if d.page_content]
         resource_vector_point_id = vector_point_id(doc["resource_readable_id"])
         split_metadatas = [
@@ -313,6 +454,8 @@ def _process_content_embeddings(serialized_content):
         embeddings.extend(split_embeddings)
         metadata.extend(split_metadatas)
         ids.extend(split_ids)
+    if remove_docs:
+        remove_qdrant_records(remove_docs, CONTENT_FILE_TYPE)
     if ids:
         return points_generator(ids, metadata, embeddings, vector_name)
     return None
@@ -326,6 +469,11 @@ def embed_learning_resources(ids, resource_type, overwrite):
         ids (list of int): Ids of learning resources to embed
         resource_type (str): Type of learning resource to embed
     """
+    if (
+        resource_type not in LEARNING_RESOURCE_TYPES
+        and resource_type != CONTENT_FILE_TYPE
+    ):
+        return
 
     client = qdrant_client()
 
@@ -378,7 +526,17 @@ def embed_learning_resources(ids, resource_type, overwrite):
             ]
         points = _process_content_embeddings(serialized_resources)
     if points:
-        client.upload_points(collection_name, points=points, wait=False)
+        client.batch_update_points(
+            collection_name=collection_name,
+            update_operations=[
+                models.UpsertOperation(
+                    upsert=models.PointsList(
+                        points=points,
+                    )
+                ),
+            ],
+            wait=False,
+        )
 
 
 def _resource_vector_hits(search_result):
@@ -586,3 +744,77 @@ def filter_existing_qdrant_points(
         existing_values.extend([point.payload[lookup_field] for point in results[0]])
         next_page_offset = results[1]
     return [value for value in values if value not in existing_values]
+
+
+def remove_qdrant_records(ids, resource_type):
+    if resource_type != CONTENT_FILE_TYPE:
+        serialized_documents = serialize_bulk_learning_resources(ids)
+        collection_name = RESOURCES_COLLECTION_NAME
+        lookup_keys = ["readable_id"]
+    else:
+        serialized_documents = serialize_bulk_content_files(ids)
+        collection_name = CONTENT_FILES_COLLECTION_NAME
+        lookup_keys = ["run_readable_id", "resource_readable_id", "key"]
+    for doc in serialized_documents:
+        params = {}
+        for key in lookup_keys:
+            if key in doc:
+                params[key] = doc[key]
+        if params:
+            remove_points_matching_params(params, collection_name=collection_name)
+
+
+def remove_points_matching_params(
+    params,
+    collection_name=RESOURCES_COLLECTION_NAME,
+):
+    """
+    Delete points from Qdrant matching the provided params
+    """
+    client = qdrant_client()
+    qdrant_conditions = qdrant_query_conditions(params, collection_name=collection_name)
+    if qdrant_conditions:
+        """
+        Make sure the conditions have at least one
+        condition otherwise all records are dropped
+        """
+        client.delete(
+            collection_name=collection_name,
+            points_selector=models.FilterSelector(
+                filter=models.Filter(
+                    must=[
+                        *qdrant_conditions,
+                    ]
+                )
+            ),
+        )
+
+
+def retrieve_points_matching_params(
+    params,
+    collection_name=RESOURCES_COLLECTION_NAME,
+):
+    """
+    Retrieve points from Qdrant matching params and yield them one by one.
+    """
+    client = qdrant_client()
+    qdrant_conditions = qdrant_query_conditions(params, collection_name=collection_name)
+    if not qdrant_conditions:
+        return
+
+    search_filter = models.Filter(must=qdrant_conditions)
+
+    next_page_offset = None
+
+    while True:
+        results = client.scroll(
+            collection_name=collection_name,
+            scroll_filter=search_filter,
+            offset=next_page_offset,
+        )
+        points, next_page_offset = results
+
+        yield from points
+
+        if not next_page_offset:
+            break

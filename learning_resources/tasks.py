@@ -9,6 +9,7 @@ from typing import Optional
 import boto3
 import celery
 from django.conf import settings
+from django.db.models import Q
 from django.utils import timezone
 
 from learning_resources.content_summarizer import ContentSummarizer
@@ -22,7 +23,8 @@ from learning_resources.etl.loaders import load_run_dependent_values
 from learning_resources.etl.pipelines import ocw_courses_etl
 from learning_resources.etl.utils import get_learning_course_bucket_name
 from learning_resources.models import ContentFile, LearningResource
-from learning_resources.utils import fetch_page, html_to_markdown, load_course_blocklist
+from learning_resources.site_scrapers.utils import scraper_for_site
+from learning_resources.utils import html_to_markdown, load_course_blocklist
 from learning_resources_search.exceptions import RetryError
 from main.celery import app
 from main.constants import ISOFORMAT
@@ -51,7 +53,8 @@ def get_micromasters_data():
 
 @app.task
 def get_mit_edx_data(
-    api_course_datafile: str | None = None, api_program_datafile: str | None = None
+    api_course_datafile: str | None = None,
+    api_program_datafile: str | None = None,
 ) -> int:
     """Task to sync MIT edX data with the database
 
@@ -141,13 +144,15 @@ def get_content_files(
     clear_search_cache()
 
 
-def get_content_tasks(
+def get_content_tasks(  # noqa: PLR0913
     etl_source: str,
     *,
     chunk_size: int | None = None,
     s3_prefix: str | None = None,
     override_base_prefix: bool = False,
     overwrite: bool = False,
+    learning_resource_ids: list[int] | None = None,
+    # Updated parameter
 ) -> celery.group:
     """
     Return a list of grouped celery tasks for indexing edx content
@@ -159,18 +164,27 @@ def get_content_tasks(
     archive_keys = get_most_recent_course_archives(
         etl_source, s3_prefix=s3_prefix, override_base_prefix=override_base_prefix
     )
+
+    if learning_resource_ids:
+        learning_resources = LearningResource.objects.filter(
+            id__in=learning_resource_ids, etl_source=etl_source
+        ).values_list("id", flat=True)
+    else:
+        learning_resources = (
+            LearningResource.objects.filter(Q(published=True) | Q(test_mode=True))
+            .filter(course__isnull=False, etl_source=etl_source)
+            .exclude(readable_id__in=blocklisted_ids)
+            .order_by("-id")
+            .values_list("id", flat=True)
+        )
+
     return celery.group(
         [
             get_content_files.si(
                 ids, etl_source, archive_keys, s3_prefix=s3_prefix, overwrite=overwrite
             )
             for ids in chunks(
-                LearningResource.objects.filter(
-                    published=True, course__isnull=False, etl_source=etl_source
-                )
-                .exclude(readable_id__in=blocklisted_ids)
-                .order_by("-id")
-                .values_list("id", flat=True),
+                learning_resources,
                 chunk_size=chunk_size,
             )
         ]
@@ -178,7 +192,9 @@ def get_content_tasks(
 
 
 @app.task(bind=True)
-def import_all_mit_edx_files(self, *, chunk_size=None, overwrite=False):
+def import_all_mit_edx_files(
+    self, *, chunk_size=None, overwrite=False, learning_resource_ids=None
+):
     """Ingest MIT edX files from an S3 bucket"""
     return self.replace(
         get_content_tasks(
@@ -186,12 +202,15 @@ def import_all_mit_edx_files(self, *, chunk_size=None, overwrite=False):
             chunk_size=chunk_size,
             s3_prefix=settings.EDX_LEARNING_COURSE_BUCKET_PREFIX,
             overwrite=overwrite,
+            learning_resource_ids=learning_resource_ids,
         )
     )
 
 
 @app.task(bind=True)
-def import_all_oll_files(self, *, chunk_size=None, overwrite=False):
+def import_all_oll_files(
+    self, *, chunk_size=None, overwrite=False, learning_resource_ids=None
+):
     """Ingest MIT edX files from an S3 bucket"""
     return self.replace(
         get_content_tasks(
@@ -200,27 +219,39 @@ def import_all_oll_files(self, *, chunk_size=None, overwrite=False):
             s3_prefix=settings.OLL_LEARNING_COURSE_BUCKET_PREFIX,
             override_base_prefix=True,
             overwrite=overwrite,
+            learning_resource_ids=learning_resource_ids,
         )
     )
 
 
 @app.task(bind=True)
-def import_all_mitxonline_files(self, *, chunk_size=None, overwrite=False):
+def import_all_mitxonline_files(
+    self, *, chunk_size=None, overwrite=False, learning_resource_ids=None
+):
     """Ingest MITx Online files from an S3 bucket"""
+
     return self.replace(
         get_content_tasks(
-            ETLSource.mitxonline.name, chunk_size=chunk_size, overwrite=overwrite
+            ETLSource.mitxonline.name,
+            chunk_size=chunk_size,
+            overwrite=overwrite,
+            learning_resource_ids=learning_resource_ids,
         )
     )
 
 
 @app.task(bind=True)
-def import_all_xpro_files(self, *, chunk_size=None, overwrite=False):
+def import_all_xpro_files(
+    self, *, chunk_size=None, overwrite=False, learning_resource_ids=None
+):
     """Ingest xPRO OLX files from an S3 bucket"""
 
     return self.replace(
         get_content_tasks(
-            ETLSource.xpro.name, chunk_size=chunk_size, overwrite=overwrite
+            ETLSource.xpro.name,
+            chunk_size=chunk_size,
+            overwrite=overwrite,
+            learning_resource_ids=learning_resource_ids,
         )
     )
 
@@ -394,7 +425,7 @@ def summarize_content_files_task(
         - None
     """
     summarizer = ContentSummarizer()
-    summarizer.summarize_content_files_by_ids(content_file_ids, overwrite)
+    return summarizer.summarize_content_files_by_ids(content_file_ids, overwrite)
 
 
 @app.task(bind=True, acks_late=True)
@@ -474,7 +505,8 @@ def scrape_marketing_pages(self):
 def marketing_page_for_resources(resource_ids):
     for learning_resource in LearningResource.objects.filter(id__in=resource_ids):
         marketing_page_url = learning_resource.url
-        page_content = fetch_page(marketing_page_url)
+        scraper = scraper_for_site(marketing_page_url)
+        page_content = scraper.scrape()
         if page_content:
             content_file, _ = ContentFile.objects.update_or_create(
                 learning_resource=learning_resource,
