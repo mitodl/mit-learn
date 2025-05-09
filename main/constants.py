@@ -1,4 +1,5 @@
 """main constants"""
+
 from enum import Enum
 
 from rest_framework import status
@@ -45,4 +46,5 @@ class PostHogEvents(Enum):
     """
     Enum for PostHog events
     """
+
     account_created = "user_account_created"
