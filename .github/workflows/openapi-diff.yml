@@ -59,6 +59,8 @@ jobs:
             ```
             ${{ steps.oasdif_changelog.outputs.changelog }}
             ```
+
+            Unexpected changes? Consider rebasing against `main` to ensure most accurate results.
             </details>
       - name: Check for breaking changes
         id: oasdif_breaking
