@@ -263,6 +263,8 @@ type DashboardCardProps = {
   offerUpgrade?: boolean
   contextMenuItems?: SimpleMenuItem[]
   isLoading?: boolean
+  titleHref?: string | null
+  buttonHref?: string | null
 }
 const DashboardCard: React.FC<DashboardCardProps> = ({
   dashboardResource,
@@ -273,6 +275,8 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   offerUpgrade = true,
   contextMenuItems = [],
   isLoading = false,
+  titleHref,
+  buttonHref,
 }) => {
   const { title, marketingUrl, enrollment, run } = dashboardResource
   const titleSection = isLoading ? (
@@ -283,7 +287,11 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     </>
   ) : (
     <>
-      <TitleLink size="medium" color="black" href={marketingUrl}>
+      <TitleLink
+        size="medium"
+        color="black"
+        href={titleHref ? titleHref : marketingUrl}
+      >
         {title}
       </TitleLink>
       {enrollment?.status === EnrollmentStatus.Completed ? (
@@ -313,7 +321,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       <CoursewareButton
         data-testid="courseware-button"
         startDate={run.startDate}
-        href={run.coursewareUrl}
+        href={buttonHref ? buttonHref : run.coursewareUrl}
         endDate={run.endDate}
         courseNoun={courseNoun}
       />
