@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.31.3
+Version 0.31.3 (Released May 12, 2025)
 --------------
 
 - Less noisy openapi-diff action. (#2236)
