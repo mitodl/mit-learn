@@ -857,6 +857,26 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         ]
 
 
+class LearningResourceRelationshipChildField(serializers.ModelSerializer):
+    """
+    Serializer field for the LearningResourceRelationship model that uses
+    the LearningResourceSerializer to serialize the child resources
+    """
+
+    readable_id = serializers.ReadOnlyField(source="child.readable_id")
+    title = serializers.ReadOnlyField(source="child.title")
+
+    class Meta:
+        model = models.LearningResourceRelationship
+        fields = (
+            "child",
+            "position",
+            "relation_type",
+            "title",
+            "readable_id",
+        )
+
+
 class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopicsMixin):
     """Serializer for LearningResource, minus program"""
 
@@ -892,6 +912,7 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
     pace = serializers.ListField(child=PaceSerializer(), read_only=True)
     children = serializers.SerializerMethodField(allow_null=True)
 
+    @extend_schema_field(LearningResourceRelationshipChildField(allow_null=True))
     def get_children(self, instance):
         children = models.LearningResourceRelationship.objects.filter(parent=instance)
         return LearningResourceRelationshipChildField(
@@ -976,26 +997,6 @@ class CourseResourceSerializer(LearningResourceBaseSerializer):
     )
 
     course = CourseSerializer(read_only=True)
-
-
-class LearningResourceRelationshipChildField(serializers.ModelSerializer):
-    """
-    Serializer field for the LearningResourceRelationship model that uses
-    the LearningResourceSerializer to serialize the child resources
-    """
-
-    readable_id = serializers.ReadOnlyField(source="child.readable_id")
-    title = serializers.ReadOnlyField(source="child.title")
-
-    class Meta:
-        model = models.LearningResourceRelationship
-        fields = (
-            "child",
-            "position",
-            "relation_type",
-            "title",
-            "readable_id",
-        )
 
 
 class LearningPathResourceSerializer(LearningResourceBaseSerializer):

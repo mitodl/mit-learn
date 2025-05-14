@@ -2068,9 +2068,10 @@ components:
             - name
           readOnly: true
         children:
-          type: string
-          readOnly: true
+          allOf:
+          - $ref: '#/components/schemas/LearningResourceRelationshipChildField'
           nullable: true
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/CourseResourceResourceTypeEnum'
@@ -2714,9 +2715,10 @@ components:
             - name
           readOnly: true
         children:
-          type: string
-          readOnly: true
+          allOf:
+          - $ref: '#/components/schemas/LearningResourceRelationshipChildField'
           nullable: true
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/LearningPathResourceResourceTypeEnum'
@@ -3107,6 +3109,30 @@ components:
       required:
       - amount
       - currency
+    LearningResourceRelationshipChildField:
+      type: object
+      description: |-
+        Serializer field for the LearningResourceRelationship model that uses
+        the LearningResourceSerializer to serialize the child resources
+      properties:
+        child:
+          type: integer
+        position:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        relation_type:
+          $ref: '#/components/schemas/RelationTypeEnum'
+        title:
+          type: string
+          readOnly: true
+        readable_id:
+          type: string
+          readOnly: true
+      required:
+      - child
+      - readable_id
+      - title
     LearningResourceRun:
       type: object
       description: Serializer for the LearningResourceRun model
@@ -4012,9 +4038,10 @@ components:
             - name
           readOnly: true
         children:
-          type: string
-          readOnly: true
+          allOf:
+          - $ref: '#/components/schemas/LearningResourceRelationshipChildField'
           nullable: true
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/PodcastEpisodeResourceResourceTypeEnum'
@@ -4289,9 +4316,10 @@ components:
             - name
           readOnly: true
         children:
-          type: string
-          readOnly: true
+          allOf:
+          - $ref: '#/components/schemas/LearningResourceRelationshipChildField'
           nullable: true
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/PodcastResourceResourceTypeEnum'
@@ -4835,9 +4863,10 @@ components:
             - name
           readOnly: true
         children:
-          type: string
-          readOnly: true
+          allOf:
+          - $ref: '#/components/schemas/LearningResourceRelationshipChildField'
           nullable: true
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/ProgramResourceResourceTypeEnum'
@@ -4965,6 +4994,23 @@ components:
       type: string
       enum:
       - program
+    RelationTypeEnum:
+      enum:
+      - PROGRAM_COURSES
+      - LEARNING_PATH_ITEMS
+      - PODCAST_EPISODES
+      - PLAYLIST_VIDEOS
+      type: string
+      description: |-
+        * `PROGRAM_COURSES` - Program Courses
+        * `LEARNING_PATH_ITEMS` - Learning Path Items
+        * `PODCAST_EPISODES` - Podcast Episodes
+        * `PLAYLIST_VIDEOS` - Playlist Videos
+      x-enum-descriptions:
+      - Program Courses
+      - Learning Path Items
+      - Podcast Episodes
+      - Playlist Videos
     ResourceTypeEnum:
       enum:
       - news
@@ -5523,9 +5569,10 @@ components:
             - name
           readOnly: true
         children:
-          type: string
-          readOnly: true
+          allOf:
+          - $ref: '#/components/schemas/LearningResourceRelationshipChildField'
           nullable: true
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/VideoPlaylistResourceResourceTypeEnum'
@@ -5800,9 +5847,10 @@ components:
             - name
           readOnly: true
         children:
-          type: string
-          readOnly: true
+          allOf:
+          - $ref: '#/components/schemas/LearningResourceRelationshipChildField'
           nullable: true
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/VideoResourceResourceTypeEnum'

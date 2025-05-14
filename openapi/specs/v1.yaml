@@ -9335,9 +9335,10 @@ components:
             - name
           readOnly: true
         children:
-          type: string
-          readOnly: true
+          allOf:
+          - $ref: '#/components/schemas/LearningResourceRelationshipChildField'
           nullable: true
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/CourseResourceResourceTypeEnum'
@@ -9898,9 +9899,10 @@ components:
             - name
           readOnly: true
         children:
-          type: string
-          readOnly: true
+          allOf:
+          - $ref: '#/components/schemas/LearningResourceRelationshipChildField'
           nullable: true
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/LearningPathResourceResourceTypeEnum'
@@ -10674,6 +10676,30 @@ components:
       - id
       - parent
       - resource
+    LearningResourceRelationshipChildField:
+      type: object
+      description: |-
+        Serializer field for the LearningResourceRelationship model that uses
+        the LearningResourceSerializer to serialize the child resources
+      properties:
+        child:
+          type: integer
+        position:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        relation_type:
+          $ref: '#/components/schemas/RelationTypeEnum'
+        title:
+          type: string
+          readOnly: true
+        readable_id:
+          type: string
+          readOnly: true
+      required:
+      - child
+      - readable_id
+      - title
     LearningResourceRequest:
       oneOf:
       - $ref: '#/components/schemas/ProgramResourceRequest'
@@ -12421,9 +12447,10 @@ components:
             - name
           readOnly: true
         children:
-          type: string
-          readOnly: true
+          allOf:
+          - $ref: '#/components/schemas/LearningResourceRelationshipChildField'
           nullable: true
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/PodcastEpisodeResourceResourceTypeEnum'
@@ -12824,9 +12851,10 @@ components:
             - name
           readOnly: true
         children:
-          type: string
-          readOnly: true
+          allOf:
+          - $ref: '#/components/schemas/LearningResourceRelationshipChildField'
           nullable: true
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/PodcastResourceResourceTypeEnum'
@@ -13365,9 +13393,10 @@ components:
             - name
           readOnly: true
         children:
-          type: string
-          readOnly: true
+          allOf:
+          - $ref: '#/components/schemas/LearningResourceRelationshipChildField'
           nullable: true
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/ProgramResourceResourceTypeEnum'
@@ -14040,9 +14069,10 @@ components:
             - name
           readOnly: true
         children:
-          type: string
-          readOnly: true
+          allOf:
+          - $ref: '#/components/schemas/LearningResourceRelationshipChildField'
           nullable: true
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/VideoPlaylistResourceResourceTypeEnum'
@@ -14429,9 +14459,10 @@ components:
             - name
           readOnly: true
         children:
-          type: string
-          readOnly: true
+          allOf:
+          - $ref: '#/components/schemas/LearningResourceRelationshipChildField'
           nullable: true
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/VideoResourceResourceTypeEnum'
