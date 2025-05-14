@@ -2127,6 +2127,8 @@ components:
           format: double
         license_cc:
           type: boolean
+        test_mode:
+          type: boolean
         continuing_ed_credits:
           type: string
           format: decimal
@@ -2764,6 +2766,8 @@ components:
           type: number
           format: double
         license_cc:
+          type: boolean
+        test_mode:
           type: boolean
         continuing_ed_credits:
           type: string
@@ -4057,6 +4061,8 @@ components:
           format: double
         license_cc:
           type: boolean
+        test_mode:
+          type: boolean
         continuing_ed_credits:
           type: string
           format: decimal
@@ -4326,6 +4332,8 @@ components:
           type: number
           format: double
         license_cc:
+          type: boolean
+        test_mode:
           type: boolean
         continuing_ed_credits:
           type: string
@@ -4865,6 +4873,8 @@ components:
           type: number
           format: double
         license_cc:
+          type: boolean
+        test_mode:
           type: boolean
         continuing_ed_credits:
           type: string
@@ -5547,6 +5557,8 @@ components:
           format: double
         license_cc:
           type: boolean
+        test_mode:
+          type: boolean
         continuing_ed_credits:
           type: string
           format: decimal
@@ -5822,6 +5834,8 @@ components:
           type: number
           format: double
         license_cc:
+          type: boolean
+        test_mode:
           type: boolean
         continuing_ed_credits:
           type: string

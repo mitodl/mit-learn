@@ -1,5 +1,7 @@
 """main constants"""
 
+from enum import Enum
+
 from rest_framework import status
 
 PERMISSION_DENIED_ERROR_TYPE = "PermissionDenied"
@@ -38,3 +40,11 @@ ALLOWED_HTML_TAGS = {
     "ul",
 }
 ALLOWED_HTML_ATTRIBUTES = {}
+
+
+class PostHogEvents(Enum):
+    """
+    Enum for PostHog events
+    """
+
+    ACCOUNT_CREATED = "user_account_created"

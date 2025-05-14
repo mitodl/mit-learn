@@ -44,6 +44,12 @@ def setup_test_database():
 def test_get_request(mocker, mock_login):
     """Test that a valid request creates a new user."""
     close_old_connections()
+    mocker.patch(
+        "main.middleware.apisix_user.Posthog",
+        mocker.Mock(
+            capture=mocker.ANY,
+        ),
+    )
     mock_request = mocker.Mock(
         META={
             "HTTP_X_USERINFO": b64encode(json.dumps(apisix_user_info).encode()),

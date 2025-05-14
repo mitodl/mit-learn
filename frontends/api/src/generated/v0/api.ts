@@ -1117,6 +1117,12 @@ export interface CourseResource {
   license_cc?: boolean
   /**
    *
+   * @type {boolean}
+   * @memberof CourseResource
+   */
+  test_mode?: boolean
+  /**
+   *
    * @type {string}
    * @memberof CourseResource
    */
@@ -2142,6 +2148,12 @@ export interface LearningPathResource {
    * @memberof LearningPathResource
    */
   license_cc?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof LearningPathResource
+   */
+  test_mode?: boolean
   /**
    *
    * @type {string}
@@ -3844,6 +3856,12 @@ export interface PodcastEpisodeResource {
   license_cc?: boolean
   /**
    *
+   * @type {boolean}
+   * @memberof PodcastEpisodeResource
+   */
+  test_mode?: boolean
+  /**
+   *
    * @type {string}
    * @memberof PodcastEpisodeResource
    */
@@ -4137,6 +4155,12 @@ export interface PodcastResource {
    * @memberof PodcastResource
    */
   license_cc?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof PodcastResource
+   */
+  test_mode?: boolean
   /**
    *
    * @type {string}
@@ -4821,6 +4845,12 @@ export interface ProgramResource {
    * @memberof ProgramResource
    */
   license_cc?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof ProgramResource
+   */
+  test_mode?: boolean
   /**
    *
    * @type {string}
@@ -5756,6 +5786,12 @@ export interface VideoPlaylistResource {
   license_cc?: boolean
   /**
    *
+   * @type {boolean}
+   * @memberof VideoPlaylistResource
+   */
+  test_mode?: boolean
+  /**
+   *
    * @type {string}
    * @memberof VideoPlaylistResource
    */
@@ -6055,6 +6091,12 @@ export interface VideoResource {
    * @memberof VideoResource
    */
   license_cc?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof VideoResource
+   */
+  test_mode?: boolean
   /**
    *
    * @type {string}

@@ -32,10 +32,25 @@ jobs:
         run: |
           echo summary=$(echo "${{ steps.oasdif_changelog.outputs.changelog }}" | head -1 ) \
           >> $GITHUB_OUTPUT
-      - name: Post changes as comment
-        uses: thollander/actions-comment-pull-request@24bffb9b452ba05a4f3f77933840a6a841d1b32b # v3
+      - name: Find existing comment
+        id: find_comment
+        uses: peter-evans/find-comment@3eae4d37986fb5a8592848f6a574fdf654e61f9e # v3
         with:
-          message: |
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body-includes: "## OpenAPI Changes"
+      - name: Post changes as comment
+        uses: peter-evans/create-or-update-comment@23ff15729ef2fc348714a3bb66d2f655ca9066f2 # v3
+        # Even if no changes, make sure to update old comment if it was found.
+        if: steps.oasdif_summary.outputs.summary || steps.find_comment.outputs.comment-id
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          edit-mode: "replace"
+          repository: ${{ github.repository }}
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-id: ${{ steps.find_comment.outputs.comment-id }}
+          body: |
             ## OpenAPI Changes
 
             <details>
@@ -44,9 +59,9 @@ jobs:
             ```
             ${{ steps.oasdif_changelog.outputs.changelog }}
             ```
+
+            Unexpected changes? Ensure your branch is up-to-date with `main` (consider rebasing).
             </details>
-          comment_tag: oasdiff_changelog
-          mode: upsert
       - name: Check for breaking changes
         id: oasdif_breaking
         run: |
