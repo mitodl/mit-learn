@@ -475,6 +475,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
     languages = serializers.SerializerMethodField(
         help_text="Languages", allow_null=True
     )
+
     levels = serializers.SerializerMethodField(help_text="Levels", allow_null=True)
     departments = serializers.SerializerMethodField(help_text="Departments")
     platform = serializers.SerializerMethodField(help_text="Platform", allow_null=True)
@@ -889,6 +890,13 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
     resource_category = serializers.SerializerMethodField()
     format = serializers.ListField(child=FormatSerializer(), read_only=True)
     pace = serializers.ListField(child=PaceSerializer(), read_only=True)
+    children = serializers.SerializerMethodField(allow_null=True)
+
+    def get_children(self, instance):
+        children = models.LearningResourceRelationship.objects.filter(parent=instance)
+        return LearningResourceRelationshipChildField(
+            children, many=True, read_only=True
+        ).data
 
     def get_resource_category(self, instance) -> str:
         """Return the resource category of the resource"""
@@ -940,6 +948,7 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
             "resource_prices",
             "resource_category",
             "certification",
+            "children",
             "certification_type",
             "professional",
             "views",
@@ -975,13 +984,18 @@ class LearningResourceRelationshipChildField(serializers.ModelSerializer):
     the LearningResourceSerializer to serialize the child resources
     """
 
-    def to_representation(self, instance):
-        """Serializes child as a LearningResource"""  # noqa: D401
-        return LearningResourceSerializer(instance=instance.child).data
+    readable_id = serializers.ReadOnlyField(source="child.readable_id")
+    title = serializers.ReadOnlyField(source="child.title")
 
     class Meta:
         model = models.LearningResourceRelationship
-        exclude = ("parent", *COMMON_IGNORED_FIELDS)
+        fields = (
+            "child",
+            "position",
+            "relation_type",
+            "title",
+            "readable_id",
+        )
 
 
 class LearningPathResourceSerializer(LearningResourceBaseSerializer):
