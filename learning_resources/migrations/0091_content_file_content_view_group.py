@@ -20,7 +20,7 @@ def remove_content_file_content_viewers(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("learning_resources", "0089_contentfile_archive_checksum"),
+        ("learning_resources", "0090_learningresource_test_mode"),
     ]
 
     operations = [
