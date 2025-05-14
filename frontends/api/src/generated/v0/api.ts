@@ -1021,6 +1021,12 @@ export interface CourseResource {
   pace: Array<CourseResourcePaceInner>
   /**
    *
+   * @type {string}
+   * @memberof CourseResource
+   */
+  children: string | null
+  /**
+   *
    * @type {CourseResourceResourceTypeEnum}
    * @memberof CourseResource
    */
@@ -2052,6 +2058,12 @@ export interface LearningPathResource {
    * @memberof LearningPathResource
    */
   pace: Array<CourseResourcePaceInner>
+  /**
+   *
+   * @type {string}
+   * @memberof LearningPathResource
+   */
+  children: string | null
   /**
    *
    * @type {LearningPathResourceResourceTypeEnum}
@@ -3760,6 +3772,12 @@ export interface PodcastEpisodeResource {
   pace: Array<CourseResourcePaceInner>
   /**
    *
+   * @type {string}
+   * @memberof PodcastEpisodeResource
+   */
+  children: string | null
+  /**
+   *
    * @type {PodcastEpisodeResourceResourceTypeEnum}
    * @memberof PodcastEpisodeResource
    */
@@ -4059,6 +4077,12 @@ export interface PodcastResource {
    * @memberof PodcastResource
    */
   pace: Array<CourseResourcePaceInner>
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastResource
+   */
+  children: string | null
   /**
    *
    * @type {PodcastResourceResourceTypeEnum}
@@ -4749,6 +4773,12 @@ export interface ProgramResource {
    * @memberof ProgramResource
    */
   pace: Array<CourseResourcePaceInner>
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramResource
+   */
+  children: string | null
   /**
    *
    * @type {ProgramResourceResourceTypeEnum}
@@ -5690,6 +5720,12 @@ export interface VideoPlaylistResource {
   pace: Array<CourseResourcePaceInner>
   /**
    *
+   * @type {string}
+   * @memberof VideoPlaylistResource
+   */
+  children: string | null
+  /**
+   *
    * @type {VideoPlaylistResourceResourceTypeEnum}
    * @memberof VideoPlaylistResource
    */
@@ -5989,6 +6025,12 @@ export interface VideoResource {
    * @memberof VideoResource
    */
   pace: Array<CourseResourcePaceInner>
+  /**
+   *
+   * @type {string}
+   * @memberof VideoResource
+   */
+  children: string | null
   /**
    *
    * @type {VideoResourceResourceTypeEnum}

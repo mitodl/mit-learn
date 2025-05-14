@@ -9334,6 +9334,10 @@ components:
             - code
             - name
           readOnly: true
+        children:
+          type: string
+          readOnly: true
+          nullable: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/CourseResourceResourceTypeEnum'
@@ -9433,6 +9437,7 @@ components:
       required:
       - certification
       - certification_type
+      - children
       - course
       - course_feature
       - delivery
@@ -9892,6 +9897,10 @@ components:
             - code
             - name
           readOnly: true
+        children:
+          type: string
+          readOnly: true
+          nullable: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/LearningPathResourceResourceTypeEnum'
@@ -9990,6 +9999,7 @@ components:
       required:
       - certification
       - certification_type
+      - children
       - course_feature
       - delivery
       - departments
@@ -12410,6 +12420,10 @@ components:
             - code
             - name
           readOnly: true
+        children:
+          type: string
+          readOnly: true
+          nullable: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/PodcastEpisodeResourceResourceTypeEnum'
@@ -12509,6 +12523,7 @@ components:
       required:
       - certification
       - certification_type
+      - children
       - course_feature
       - delivery
       - departments
@@ -12808,6 +12823,10 @@ components:
             - code
             - name
           readOnly: true
+        children:
+          type: string
+          readOnly: true
+          nullable: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/PodcastResourceResourceTypeEnum'
@@ -12907,6 +12926,7 @@ components:
       required:
       - certification
       - certification_type
+      - children
       - course_feature
       - delivery
       - departments
@@ -13344,6 +13364,10 @@ components:
             - code
             - name
           readOnly: true
+        children:
+          type: string
+          readOnly: true
+          nullable: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/ProgramResourceResourceTypeEnum'
@@ -13443,6 +13467,7 @@ components:
       required:
       - certification
       - certification_type
+      - children
       - course_feature
       - delivery
       - departments
@@ -14014,6 +14039,10 @@ components:
             - code
             - name
           readOnly: true
+        children:
+          type: string
+          readOnly: true
+          nullable: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/VideoPlaylistResourceResourceTypeEnum'
@@ -14113,6 +14142,7 @@ components:
       required:
       - certification
       - certification_type
+      - children
       - course_feature
       - delivery
       - departments
@@ -14398,6 +14428,10 @@ components:
             - code
             - name
           readOnly: true
+        children:
+          type: string
+          readOnly: true
+          nullable: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/VideoResourceResourceTypeEnum'
@@ -14503,6 +14537,7 @@ components:
       required:
       - certification
       - certification_type
+      - children
       - course_feature
       - delivery
       - departments
