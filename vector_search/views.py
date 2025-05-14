@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from authentication.decorators import blocked_ip_exempt
+from learning_resources.constants import GROUP_CONTENT_FILE_CONTENT_VIEWERS
 from main.utils import cache_page_for_anonymous_users
 from vector_search.constants import CONTENT_FILES_COLLECTION_NAME
 from vector_search.serializers import (
@@ -107,9 +108,7 @@ class ContentFilesVectorSearchView(QdrantView):
                 return False
             if user.is_staff or user.is_superuser:
                 return True
-            return user.groups.filter(
-                name=settings.GROUP_CONTENT_FILE_CONTENT_VIEWERS
-            ).exists()
+            return user.groups.filter(name=GROUP_CONTENT_FILE_CONTENT_VIEWERS).exists()
 
     permission_classes = (IsAdminOrContentFileContentViewer,)
 
