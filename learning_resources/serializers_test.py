@@ -218,6 +218,9 @@ def test_learning_resource_serializer(  # noqa: PLR0913
         "languages": resource.languages,
         "last_modified": drf_datetime(resource.last_modified),
         "learning_path_parents": [],
+        "children": serializers.LearningResourceRelationshipChildField(
+            resource.children.all(), many=True
+        ).data,
         "offered_by": serializers.LearningResourceOfferorSerializer(
             instance=resource.offered_by
         ).data,
