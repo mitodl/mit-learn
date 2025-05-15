@@ -430,10 +430,6 @@ LOG_LEVEL = get_string("MITOL_LOG_LEVEL", "INFO")
 DJANGO_LOG_LEVEL = get_string("DJANGO_LOG_LEVEL", "INFO")
 OS_LOG_LEVEL = get_string("OS_LOG_LEVEL", "INFO")
 
-# For logging to a remote syslog host
-LOG_HOST = get_string("MITOL_LOG_HOST", "localhost")
-LOG_HOST_PORT = get_int("MITOL_LOG_HOST_PORT", 514)
-
 HOSTNAME = platform.node().split(".")[0]
 
 # nplusone profiler logger configuration
@@ -460,13 +456,6 @@ LOGGING = {
             "class": "logging.StreamHandler",
             "formatter": "verbose",
         },
-        "syslog": {
-            "level": LOG_LEVEL,
-            "class": "logging.handlers.SysLogHandler",
-            "facility": "local7",
-            "formatter": "verbose",
-            "address": (LOG_HOST, LOG_HOST_PORT),
-        },
         "mail_admins": {
             "level": "ERROR",
             "filters": ["require_debug_false"],
@@ -477,7 +466,7 @@ LOGGING = {
         "django": {
             "propagate": True,
             "level": DJANGO_LOG_LEVEL,
-            "handlers": ["console", "syslog"],
+            "handlers": ["console"],
         },
         "django.request": {
             "handlers": ["mail_admins"],
@@ -488,7 +477,7 @@ LOGGING = {
         "nplusone": {"handlers": ["console"], "level": "ERROR"},
         "boto3": {"handlers": ["console"], "level": "ERROR"},
     },
-    "root": {"handlers": ["console", "syslog"], "level": LOG_LEVEL},
+    "root": {"handlers": ["console"], "level": LOG_LEVEL},
 }
 
 STATUS_TOKEN = get_string("STATUS_TOKEN", "")
