@@ -1960,6 +1960,9 @@ def test_execute_learn_search_for_learning_resource_query(opensearch):
                 "resource_age_date",
                 "featured_rank",
                 "is_incomplete_or_stale",
+                "content",
+                "summary",
+                "flashcards",
             ]
         },
     }
@@ -2437,6 +2440,9 @@ def test_execute_learn_search_with_script_score(
                 "resource_age_date",
                 "featured_rank",
                 "is_incomplete_or_stale",
+                "content",
+                "summary",
+                "flashcards",
             ]
         },
     }
@@ -2865,6 +2871,9 @@ def test_execute_learn_search_with_min_score(mocker, settings, opensearch):
                 "resource_age_date",
                 "featured_rank",
                 "is_incomplete_or_stale",
+                "content",
+                "summary",
+                "flashcards",
             ]
         },
     }
@@ -3078,6 +3087,9 @@ def test_execute_learn_search_for_content_file_query(opensearch):
                 "resource_age_date",
                 "featured_rank",
                 "is_incomplete_or_stale",
+                "content",
+                "summary",
+                "flashcards",
             ]
         },
     }

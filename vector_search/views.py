@@ -6,10 +6,12 @@ from django.utils.decorators import method_decorator
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from qdrant_client.http.exceptions import UnexpectedResponse
 from rest_framework.decorators import action
+from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from authentication.decorators import blocked_ip_exempt
+from learning_resources.constants import GROUP_CONTENT_FILE_CONTENT_VIEWERS
 from main.utils import cache_page_for_anonymous_users
 from vector_search.constants import CONTENT_FILES_COLLECTION_NAME
 from vector_search.serializers import (
@@ -99,7 +101,16 @@ class ContentFilesVectorSearchView(QdrantView):
     Vector Search for content
     """
 
-    permission_classes = ()
+    class IsAdminOrContentFileContentViewer(BasePermission):
+        def has_permission(self, request, view):  # noqa: ARG002
+            user = request.user
+            if not user or not user.is_authenticated:
+                return False
+            if user.is_staff or user.is_superuser:
+                return True
+            return user.groups.filter(name=GROUP_CONTENT_FILE_CONTENT_VIEWERS).exists()
+
+    permission_classes = (IsAdminOrContentFileContentViewer,)
 
     @method_decorator(
         cache_page_for_anonymous_users(
@@ -134,6 +145,7 @@ class ContentFilesVectorSearchView(QdrantView):
                 response = ContentFileVectorSearchResponseSerializer(
                     response, context={"request": request}
                 ).data
+
                 response["results"] = list(response["results"])
                 return Response(response)
         else:
