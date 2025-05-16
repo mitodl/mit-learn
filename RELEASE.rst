@@ -1,6 +1,22 @@
 Release Notes
 =============
 
+Version 0.31.5
+--------------
+
+- config: Allow health endpoints to bypass SSL redirect
+- config: Remove syslog handler (#2250)
+- feat: Add health check (#2247)
+- Ensure celery tasks execute once (#2242)
+- Fix flaky test (#2246)
+- [pre-commit.ci] pre-commit autoupdate (#2248)
+- Set card link on org dashboard pages to courseware url (#2239)
+- [pre-commit.ci] pre-commit autoupdate (#2215)
+- chore(deps): pin dependencies (#2245)
+- fix(deps): update dependency youtube-transcript-api to v1 (#2206)
+- Tracking user account creation event in posthog  (#2237)
+- Fix ordering of modules in UAI dashboard (#2232)
+
 Version 0.31.3 (Released May 12, 2025)
 --------------
 
