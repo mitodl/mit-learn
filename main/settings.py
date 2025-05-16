@@ -34,7 +34,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.31.3"
+VERSION = "0.31.5"
 
 log = logging.getLogger()
 
@@ -80,6 +80,12 @@ ALLOWED_REDIRECT_HOSTS = get_list_of_str(
 AUTH_USER_MODEL = "users.User"
 
 SECURE_SSL_REDIRECT = get_bool("MITOL_SECURE_SSL_REDIRECT", True)  # noqa: FBT003
+SECURE_REDIRECT_EXEMPT = [
+    "^health/startup/$",
+    "^health/liveness/$",
+    "^health/readiness/$",
+    "^health/full/$",
+]
 
 SITE_ID = 1
 APP_BASE_URL = get_string("MITOL_APP_BASE_URL", None)
@@ -130,7 +136,46 @@ INSTALLED_APPS = (
     "data_fixtures",
     "vector_search",
     "mitol.scim.apps.ScimApp",
+    "health_check",
+    "health_check.cache",
+    "health_check.contrib.migrations",
+    "health_check.contrib.celery_ping",
+    "health_check.contrib.redis",
+    "health_check.contrib.db_heartbeat",
 )
+
+HEALTH_CHECK = {
+    "SUBSETS": {
+        # The 'startup' subset includes checks that must pass before the application can
+        # start.
+        "startup": [
+            "MigrationsHealthCheck",  # Ensures database migrations are applied.
+            "CacheBackend",  # Verifies the cache backend is operational.
+            "RedisHealthCheck",  # Confirms Redis is reachable and functional.
+            "DatabaseHeartBeatCheck",  # Checks the database connection is alive.
+        ],
+        # The 'liveness' subset includes checks to determine if the application is
+        # running.
+        "liveness": ["DatabaseHeartBeatCheck"],  # Minimal check to ensure the app is
+        # alive.
+        # The 'readiness' subset includes checks to determine if the application is
+        # ready to serve requests.
+        "readiness": [
+            "CacheBackend",  # Ensures the cache is ready for use.
+            "RedisHealthCheck",  # Confirms Redis is ready for use.
+            "DatabaseHeartBeatCheck",  # Verifies the database is ready for queries.
+        ],
+        # The 'full' subset includes all available health checks for a comprehensive
+        # status report.
+        "full": [
+            "MigrationsHealthCheck",  # Ensures database migrations are applied.
+            "CacheBackend",  # Verifies the cache backend is operational.
+            "RedisHealthCheck",  # Confirms Redis is reachable and functional.
+            "DatabaseHeartBeatCheck",  # Checks the database connection is alive.
+            "CeleryPingHealthCheck",  # Verifies Celery workers are responsive.
+        ],
+    }
+}
 
 if not get_bool("RUN_DATA_MIGRATIONS", default=False):
     MIGRATION_MODULES = {"data_fixtures": None}
@@ -391,10 +436,6 @@ LOG_LEVEL = get_string("MITOL_LOG_LEVEL", "INFO")
 DJANGO_LOG_LEVEL = get_string("DJANGO_LOG_LEVEL", "INFO")
 OS_LOG_LEVEL = get_string("OS_LOG_LEVEL", "INFO")
 
-# For logging to a remote syslog host
-LOG_HOST = get_string("MITOL_LOG_HOST", "localhost")
-LOG_HOST_PORT = get_int("MITOL_LOG_HOST_PORT", 514)
-
 HOSTNAME = platform.node().split(".")[0]
 
 # nplusone profiler logger configuration
@@ -421,13 +462,6 @@ LOGGING = {
             "class": "logging.StreamHandler",
             "formatter": "verbose",
         },
-        "syslog": {
-            "level": LOG_LEVEL,
-            "class": "logging.handlers.SysLogHandler",
-            "facility": "local7",
-            "formatter": "verbose",
-            "address": (LOG_HOST, LOG_HOST_PORT),
-        },
         "mail_admins": {
             "level": "ERROR",
             "filters": ["require_debug_false"],
@@ -438,7 +472,7 @@ LOGGING = {
         "django": {
             "propagate": True,
             "level": DJANGO_LOG_LEVEL,
-            "handlers": ["console", "syslog"],
+            "handlers": ["console"],
         },
         "django.request": {
             "handlers": ["mail_admins"],
@@ -449,11 +483,10 @@ LOGGING = {
         "nplusone": {"handlers": ["console"], "level": "ERROR"},
         "boto3": {"handlers": ["console"], "level": "ERROR"},
     },
-    "root": {"handlers": ["console", "syslog"], "level": LOG_LEVEL},
+    "root": {"handlers": ["console"], "level": LOG_LEVEL},
 }
 
 STATUS_TOKEN = get_string("STATUS_TOKEN", "")
-HEALTH_CHECK = ["CELERY", "REDIS", "POSTGRES", "OPEN_SEARCH"]
 
 GA_TRACKING_ID = get_string("GA_TRACKING_ID", "")
 GA_G_TRACKING_ID = get_string("GA_G_TRACKING_ID", "")

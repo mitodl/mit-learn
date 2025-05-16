@@ -1,16 +1,19 @@
 import React from "react"
 import { renderWithProviders, screen, within } from "@/test-utils"
 import OrganizationContent from "./OrganizationContent"
-import * as u from "api/test-utils"
 import { setMockResponse } from "api/test-utils"
 import { urls, factories } from "api/mitxonline-test-utils"
 import { mockOrgData } from "api/mitxonline-hooks/enrollment"
 import { useFeatureFlagEnabled } from "posthog-js/react"
+import {
+  mitxonlineCourses,
+  mitxonlineProgram,
+  sortDashboardCourses,
+} from "./CoursewareDisplay/transform"
+import { setupProgramsAndCourses } from "./CoursewareDisplay/test-utils"
 
 const makeCourseEnrollment = factories.enrollment.courseEnrollment
 const makeGrade = factories.enrollment.grade
-const makeProgram = factories.programs.program
-const makeCourses = factories.courses.courses
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest
@@ -21,41 +24,6 @@ describe("OrganizationContent", () => {
   beforeEach(() => {
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
   })
-
-  const setupProgramsAndCourses = () => {
-    const user = u.factories.user.user()
-    setMockResponse.get(u.urls.userMe.get(), user)
-
-    const orgId = mockOrgData.orgX.id
-    const coursesA = makeCourses({ count: 4 })
-    const coursesB = makeCourses({ count: 3 })
-    const programA = makeProgram({
-      courses: coursesA.results.map((c) => c.id),
-    })
-    const programB = makeProgram({
-      courses: coursesB.results.map((c) => c.id),
-    })
-
-    setMockResponse.get(
-      urls.programs.programsList({ orgId: mockOrgData.orgX.id }),
-      { results: [programA, programB] },
-    )
-    setMockResponse.get(urls.courses.coursesList({ id: programA.courses }), {
-      results: coursesA.results,
-    })
-    setMockResponse.get(urls.courses.coursesList({ id: programB.courses }), {
-      results: coursesB.results,
-    })
-
-    return {
-      orgId,
-      user,
-      programA,
-      programB,
-      coursesA: coursesA.results,
-      coursesB: coursesB.results,
-    }
-  }
 
   it("displays a header for each program returned and cards for courses in program", async () => {
     const { orgId, programA, programB, coursesA, coursesB } =
@@ -82,7 +50,7 @@ describe("OrganizationContent", () => {
   })
 
   test("Shows correct enrollment status", async () => {
-    const { orgId, coursesA } = setupProgramsAndCourses()
+    const { orgId, programA, coursesA } = setupProgramsAndCourses()
     const enrollments = [
       makeCourseEnrollment({
         run: { course: { id: coursesA[0].id, title: coursesA[0].title } },
@@ -104,15 +72,19 @@ describe("OrganizationContent", () => {
       "enrollment-card-desktop",
     )
     expect(cards.length).toBeGreaterThan(0)
+    const sortedCourses = sortDashboardCourses(
+      mitxonlineProgram(programA),
+      mitxonlineCourses({ courses: coursesA, enrollments: enrollments }),
+    )
     cards.forEach((card, i) => {
-      const course = coursesA[i]
+      const course = sortedCourses[i]
       expect(card).toHaveTextContent(course.title)
       const indicator = within(card).getByTestId("enrollment-status")
 
       if (i === 0) {
-        expect(indicator).toHaveTextContent("Completed")
-      } else if (i === 1) {
         expect(indicator).toHaveTextContent("Enrolled")
+      } else if (i === 1) {
+        expect(indicator).toHaveTextContent("Completed")
       } else {
         expect(indicator).toHaveTextContent("Not Enrolled")
       }
