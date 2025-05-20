@@ -2,10 +2,9 @@
 
 import React from "react"
 import Image from "next/image"
-import { User, useUserMe } from "api/hooks/user"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
-import { useQueries, useQuery, UseQueryResult } from "@tanstack/react-query"
+import { useQueries, useQuery } from "@tanstack/react-query"
 import { programsQueries } from "api/mitxonline-hooks/programs"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import * as transform from "./CoursewareDisplay/transform"
@@ -14,37 +13,9 @@ import { DashboardCard } from "./CoursewareDisplay/DashboardCard"
 import { PlainList, Stack, styled, Typography } from "ol-components"
 import { DashboardCourse, DashboardProgram } from "./CoursewareDisplay/types"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
-import { V2Program } from "@mitodl/mitxonline-api-axios/v1"
-
-type Organization = { id: number; name: string; logo?: string }
-type UserWithOrgsField = User & { organizations: Organization[] }
-
-/**
- * TEMPORARY MOCKED ORGANIZATIONS
- *
- * This should be replaced with useUserMe() once the backend is ready.
- */
-const useUserMeWithMockedOrgs = (): UseQueryResult<
-  UserWithOrgsField,
-  Error
-> => {
-  const query = useUserMe() as UseQueryResult<UserWithOrgsField, Error>
-  const isOrgDashboardEnabled = useFeatureFlagEnabled(
-    FeatureFlags.OrganizationDashboard,
-  )
-  if (!query.data) return query
-  const organizations = isOrgDashboardEnabled
-    ? [
-        { id: 488, name: "Organization X" },
-        {
-          id: 522,
-          name: "Organization Y",
-          logo: "https://brand.mit.edu/sites/default/files/styles/tile_narrow/public/2023-08/logo-colors-mit-red.png?itok=k08Ir4pB",
-        },
-      ]
-    : []
-  return { ...query, data: { ...query.data, organizations } }
-}
+import { OrganizationPage, V2Program } from "@mitodl/mitxonline-api-axios/v1"
+import { useMitxOnlineCurrentUser } from "api/mitxonline-hooks/user"
+import { organizationQueries } from "api/mitxonline-hooks/organizations"
 
 const HeaderRoot = styled.div({
   display: "flex",
@@ -65,7 +36,7 @@ const ImageContainer = styled.div(({ theme }) => ({
     height: "auto",
   },
 }))
-const OrganizationHeader: React.FC<{ org: Organization }> = ({ org }) => {
+const OrganizationHeader: React.FC<{ org?: OrganizationPage }> = ({ org }) => {
   return (
     <HeaderRoot>
       <ImageContainer>
@@ -77,15 +48,15 @@ const OrganizationHeader: React.FC<{ org: Organization }> = ({ org }) => {
           // reserving space for the image anyway. Using next/image still gets us
           // the image optimization, though.
           height={78}
-          src={org.logo ?? graduateLogo}
+          src={org?.logo ?? graduateLogo}
           alt=""
         />
       </ImageContainer>
       <Stack gap="8px">
         <Typography variant="h3" component="h1">
-          Your {org.name} Home
+          Your {org?.name} Home
         </Typography>
-        <Typography variant="body1">MIT courses for {org.name}</Typography>
+        <Typography variant="body1">MIT courses for {org?.name}</Typography>
       </Stack>
     </HeaderRoot>
   )
@@ -172,13 +143,28 @@ type OrganizationContentProps = {
   orgId: number
 }
 const OrganizationContent: React.FC<OrganizationContentProps> = ({ orgId }) => {
-  const user = useUserMeWithMockedOrgs()
-
+  const { isLoading: isLoadingMitxOnlineUser, data: mitxOnlineUser } =
+    useMitxOnlineCurrentUser()
+  const isOrgDashboardEnabled = useFeatureFlagEnabled(
+    FeatureFlags.OrganizationDashboard,
+  )
+  const b2bOrganization = mitxOnlineUser?.b2b_organizations.find(
+    (org) => org.id === orgId,
+  )
+  const organization = useQuery(
+    organizationQueries.organizationsRetrieve({
+      organization_slug: b2bOrganization?.slug,
+    }),
+  )
   const enrollments = useQuery(enrollmentQueries.coursesList({ orgId }))
   const programs = useQuery(programsQueries.programsList({ orgId }))
   const courseGroups = useMitxonlineProgramsCourses(
     programs.data?.results ?? [],
   )
+
+  if (!isOrgDashboardEnabled) return null
+  if (isLoadingMitxOnlineUser) return "Loading"
+  if (!b2bOrganization) return "Organization not found"
 
   const transformedCourseGroups = courseGroups.map((courseGroup) => {
     if (!courseGroup.data || !enrollments.data) return []
@@ -191,14 +177,9 @@ const OrganizationContent: React.FC<OrganizationContentProps> = ({ orgId }) => {
     transform.mitxonlineProgram(program),
   )
 
-  if (user.isLoading) return "Loading"
-  const organization = user.data?.organizations.find((org) => org.id === orgId)
-
-  if (!organization) return null
-
   return (
     <OrganizationRoot>
-      <OrganizationHeader org={organization} />
+      <OrganizationHeader org={organization.data} />
       {programs.isLoading
         ? "Programs Loading"
         : transformedPrograms?.map((program, index) => {
@@ -221,7 +202,3 @@ const OrganizationContent: React.FC<OrganizationContentProps> = ({ orgId }) => {
 export default OrganizationContent
 
 export type { OrganizationContentProps }
-
-// To be removed
-export { useUserMeWithMockedOrgs }
-export type { Organization, UserWithOrgsField }

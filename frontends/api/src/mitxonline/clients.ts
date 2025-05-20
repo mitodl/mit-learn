@@ -1,12 +1,14 @@
 import {
+  B2bApi,
   CoursesApi,
   EnrollmentsApi,
   ProgramsApi,
+  UsersApi,
 } from "@mitodl/mitxonline-api-axios/v1"
 import axios from "axios"
 
 const axiosInstance = axios.create({
-  baseURL: "https://mitxonline.c4103.com/",
+  baseURL: process.env.NEXT_PUBLIC_MITXONLINE_API_BASE_URL,
   xsrfCookieName: process.env.NEXT_PUBLIC_CSRF_COOKIE_NAME,
   xsrfHeaderName: "X-CSRFToken",
   withXSRFToken: true,
@@ -17,8 +19,17 @@ const axiosInstance = axios.create({
 const BASE_PATH =
   process.env.NEXT_PUBLIC_MITXONLINE_API_BASE_URL?.replace(/\/+$/, "") ?? ""
 
+const usersApi = new UsersApi(undefined, BASE_PATH, axiosInstance)
+const b2bApi = new B2bApi(undefined, BASE_PATH, axiosInstance)
 const enrollmentsApi = new EnrollmentsApi(undefined, BASE_PATH, axiosInstance)
 const programsApi = new ProgramsApi(undefined, BASE_PATH, axiosInstance)
 const coursesApi = new CoursesApi(undefined, BASE_PATH, axiosInstance)
 
-export { enrollmentsApi, programsApi, coursesApi, axiosInstance }
+export {
+  usersApi,
+  b2bApi,
+  enrollmentsApi,
+  programsApi,
+  coursesApi,
+  axiosInstance,
+}

@@ -35,9 +35,10 @@ import {
 } from "@/common/urls"
 import dynamic from "next/dynamic"
 import {
-  UserWithOrgsField,
-  useUserMeWithMockedOrgs,
-} from "./OrganizationContent"
+  useMitxOnlineCurrentUser,
+  MitxOnlineUser,
+} from "api/mitxonline-hooks/user"
+import { useUserMe } from "api/hooks/user"
 
 const LearningResourceDrawer = dynamic(
   () =>
@@ -249,8 +250,8 @@ type TabData = {
     desktop: React.ReactNode
   }
 }
-const getTabData = (user?: UserWithOrgsField): TabData[] => {
-  const orgs = user?.organizations ?? []
+const getTabData = (user?: MitxOnlineUser): TabData[] => {
+  const orgs = user?.b2b_organizations ?? []
   return [
     {
       value: DASHBOARD_HOME,
@@ -301,9 +302,14 @@ const DashboardPage: React.FC<{
   children: React.ReactNode
 }> = ({ children }) => {
   const pathname = usePathname()
-  const { isLoading: isLoadingUser, data: user } = useUserMeWithMockedOrgs()
+  const { isLoading: isLoadingUser, data: user } = useUserMe()
+  const { isLoading: isLoadingMitxOnlineUser, data: mitxOnlineUser } =
+    useMitxOnlineCurrentUser()
 
-  const tabData = useMemo(() => getTabData(user), [user])
+  const tabData = useMemo(
+    () => (isLoadingMitxOnlineUser ? [] : getTabData(mitxOnlineUser)),
+    [isLoadingMitxOnlineUser, mitxOnlineUser],
+  )
 
   const tabValue = useMemo(() => {
     /**

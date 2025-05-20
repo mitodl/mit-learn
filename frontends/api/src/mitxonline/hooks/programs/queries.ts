@@ -5,9 +5,6 @@ import type {
 } from "@mitodl/mitxonline-api-axios/v1"
 import { programsApi } from "../../clients"
 
-// import * as data from "./data"
-// import { axiosInstance } from "../../clients"
-
 type ProgramsListRequest = ProgramsApiProgramsListV2Request & {
   /**
    * NOT YET IMPLEMENTED
@@ -30,28 +27,6 @@ const programsQueries = {
       queryKey: programsKeys.programsList(opts),
       queryFn: async (): Promise<PaginatedV2ProgramList> => {
         return programsApi.programsListV2(opts).then((res) => res.data)
-        // if (process.env.NODE_ENV === "test") {
-        //   /**
-        //    * ALERT! This is a temporary solution while API is under development.
-        //    *
-        //    * Ideally we would use the real API client here:
-        //    * `enrollmentsApi.enrollmentsList(opts)`
-        //    *
-        //    * However, we are relying on yet-to-be-implemented query parameters
-        //    * (namely, orgId).
-        //    *
-        //    * The generated client ignores unsupported query parameters, which
-        //    * inhibits testing.
-        //    */
-        //   const urls = await import("../../test-utils/urls")
-        //   return axiosInstance
-        //     .request({
-        //       url: urls.programs.programsList(opts),
-        //       method: "GET",
-        //     })
-        //     .then((res) => res.data)
-        // }
-        // return data.universalAiProgramData
       },
     }),
 }
