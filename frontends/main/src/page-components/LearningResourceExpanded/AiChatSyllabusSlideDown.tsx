@@ -195,11 +195,19 @@ const AiChatSyllabusSlideDown = ({
             },
             credentials: "include",
           },
-          transformBody: (messages) => ({
-            collection_name: "content_files",
-            message: messages[messages.length - 1].content,
-            course_id: resource.readable_id,
-          }),
+          transformBody: (messages) => {
+            const params = {
+              collection_name: "content_files",
+              message: messages[messages.length - 1].content,
+              course_id: resource.readable_id,
+            }
+            if (resource.children) {
+              params["related_courses"] = resource.children.map(
+                (child) => child.readable_id,
+              )
+            }
+            return params
+          },
         }}
       />
     </SlideDown>
