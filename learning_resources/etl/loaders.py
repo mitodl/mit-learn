@@ -4,6 +4,7 @@ import logging
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.db.models import Q
 
 from learning_resources.constants import (
     LearningResourceDelivery,
@@ -293,6 +294,16 @@ def load_run(
         LearningResourceRun: the created/updated resource run
     """
     run_id = run_data.pop("run_id")
+    if (
+        LearningResourceRun.objects.filter(
+            run_id=run_id, learning_resource=learning_resource
+        ).exists()
+        and LearningResourceRun.objects.get(
+            run_id=run_id, learning_resource=learning_resource
+        ).learning_resource.test_mode
+    ):
+        return None
+
     image_data = run_data.pop("image", None)
     status = run_data.pop("status", None)
     instructors_data = run_data.pop("instructors", [])
@@ -498,7 +509,8 @@ def load_course(
             # The course ETL should be the ultimate source of truth for
             # courses and their runs.
             for run in learning_resource.runs.exclude(
-                run_id__in=run_ids_to_update_or_create
+                Q(run_id__in=run_ids_to_update_or_create)
+                | Q(learning_resource__test_mode=True)
             ).filter(published=True):
                 run.published = False
                 run.save()
@@ -613,7 +625,8 @@ def load_program(
         if config.prune:
             # mark runs no longer included here as unpublished
             for run in learning_resource.runs.exclude(
-                run_id__in=run_ids_to_update_or_create
+                Q(run_id__in=run_ids_to_update_or_create)
+                | Q(learning_resource__test_mode=True)
             ).filter(published=True):
                 run.published = False
                 run.save()
