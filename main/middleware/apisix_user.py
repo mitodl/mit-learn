@@ -8,8 +8,10 @@ from django.conf import settings
 from django.contrib.auth import get_user_model, login, logout
 from django.contrib.auth.middleware import RemoteUserMiddleware
 from django.db.models import Q
+from posthog import Posthog
 
 from authentication.api import user_created_actions
+from main.constants import PostHogEvents
 
 log = logging.getLogger(__name__)
 
@@ -99,6 +101,22 @@ def get_user_from_apisix_headers(request, decoded_headers, original_header):
             "get_user_from_apisix_headers: User %s not found, created new",
             global_id,
         )
+        # Send user creation event to PostHog
+        posthog = Posthog(
+            settings.POSTHOG_PROJECT_API_KEY, host=settings.POSTHOG_API_HOST
+        )
+        posthog.capture(
+            user.id,
+            event=PostHogEvents.ACCOUNT_CREATED.value,
+            properties={
+                "$current_url": request.build_absolute_uri(),
+                "global_id": global_id,
+                "email": email,
+                "first_name": decoded_headers.get("first_name", ""),
+                "last_name": decoded_headers.get("last_name", ""),
+            },
+        )
+
         user.set_unusable_password()
         user.is_active = True
         user.save()

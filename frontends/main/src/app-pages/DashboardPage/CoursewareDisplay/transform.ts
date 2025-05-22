@@ -105,4 +105,34 @@ const mitxonlineProgram = (raw: V2Program): DashboardProgram => {
   }
 }
 
-export { mitxonlineEnrollments, mitxonlineCourses, mitxonlineProgram }
+const sortDashboardCourses = (
+  program: DashboardProgram,
+  courses: DashboardCourse[],
+) => {
+  return courses.sort((a, b) => {
+    const aCompleted = a.enrollment?.status === EnrollmentStatus.Completed
+    const bCompleted = b.enrollment?.status === EnrollmentStatus.Completed
+    const aEnrolled = a.enrollment?.status === EnrollmentStatus.Enrolled
+    const bEnrolled = b.enrollment?.status === EnrollmentStatus.Enrolled
+    if (aEnrolled && !bEnrolled) {
+      return -1
+    }
+    if (!aEnrolled && bEnrolled) {
+      return 1
+    }
+    if (aCompleted && !bCompleted) {
+      return -1
+    }
+    if (!aCompleted && bCompleted) {
+      return 1
+    }
+    return 0
+  })
+}
+
+export {
+  mitxonlineEnrollments,
+  mitxonlineCourses,
+  mitxonlineProgram,
+  sortDashboardCourses,
+}
