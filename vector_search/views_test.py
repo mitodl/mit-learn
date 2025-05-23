@@ -1,6 +1,11 @@
+import pytest
+from django.contrib.auth.models import Group
 from django.urls import reverse
 from qdrant_client import models
 from qdrant_client.http.models.models import CountResult
+from rest_framework.exceptions import NotAuthenticated, PermissionDenied
+
+from learning_resources.constants import GROUP_CONTENT_FILE_CONTENT_VIEWERS
 
 
 def test_vector_search_filters(mocker, client):
@@ -94,7 +99,18 @@ def test_vector_search_filters_empty_query(mocker, client):
     )
 
 
-def test_content_file_vector_search_filters(mocker, client):
+@pytest.mark.parametrize(
+    "user_role",
+    [
+        "anonymous",
+        "normal",
+        "admin",
+        "group_content_file_content_viewer",
+    ],
+)
+def test_content_file_vector_search_filters(
+    mocker, client, django_user_model, user_role
+):
     """Test content file vector search with query uses query filters"""
 
     mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
@@ -115,34 +131,66 @@ def test_content_file_vector_search_filters(mocker, client):
         "resource_readable_id": ["test_resource_id_1", "test_resource_id_2"],
     }
 
-    client.get(reverse("vector_search:v0:vector_content_files_search"), data=params)
-    assert all(
-        condition in mock_qdrant.query_points.mock_calls[0].kwargs["query_filter"].must
-        for condition in [
-            models.FieldCondition(
-                key="offered_by.code", match=models.MatchAny(any=["ocw"])
-            ),
-            models.FieldCondition(
-                key="platform.code", match=models.MatchAny(any=["edx"])
-            ),
-            models.FieldCondition(
-                key="course_number", match=models.MatchAny(any=["test"])
-            ),
-            models.FieldCondition(
-                key="run_readable_id", match=models.MatchAny(any=["test_run_id"])
-            ),
-            models.FieldCondition(
-                key="content_feature_type", match=models.MatchAny(any=["test_feature"])
-            ),
-            models.FieldCondition(
-                key="resource_readable_id",
-                match=models.MatchAny(any=["test_resource_id_1", "test_resource_id_2"]),
-            ),
-        ]
-    )
+    if user_role == "admin":
+        admin_user = django_user_model.objects.create_superuser(
+            "admin", "admin@example.com", "pass"
+        )
+        client.force_login(admin_user)
+    elif user_role == "group_content_file_content_viewer":
+        user = django_user_model.objects.create()
+        group, _ = Group.objects.get_or_create(name=GROUP_CONTENT_FILE_CONTENT_VIEWERS)
+        group.user_set.add(user)
+        client.force_login(user)
+    elif user_role == "normal":
+        user = django_user_model.objects.create()
+        client.force_login(user)
+
+    if user_role in ["admin", "group_content_file_content_viewer"]:
+        client.get(reverse("vector_search:v0:vector_content_files_search"), data=params)
+        assert all(
+            condition
+            in mock_qdrant.query_points.mock_calls[0].kwargs["query_filter"].must
+            for condition in [
+                models.FieldCondition(
+                    key="offered_by.code", match=models.MatchAny(any=["ocw"])
+                ),
+                models.FieldCondition(
+                    key="platform.code", match=models.MatchAny(any=["edx"])
+                ),
+                models.FieldCondition(
+                    key="course_number", match=models.MatchAny(any=["test"])
+                ),
+                models.FieldCondition(
+                    key="run_readable_id", match=models.MatchAny(any=["test_run_id"])
+                ),
+                models.FieldCondition(
+                    key="content_feature_type",
+                    match=models.MatchAny(any=["test_feature"]),
+                ),
+                models.FieldCondition(
+                    key="resource_readable_id",
+                    match=models.MatchAny(
+                        any=["test_resource_id_1", "test_resource_id_2"]
+                    ),
+                ),
+            ]
+        )
+
+    elif user_role == "anonymous":
+        with pytest.raises(NotAuthenticated):
+            client.get(
+                reverse("vector_search:v0:vector_content_files_search"), data=params
+            )
+    elif user_role == "normal":
+        with pytest.raises(PermissionDenied):
+            client.get(
+                reverse("vector_search:v0:vector_content_files_search"), data=params
+            )
 
 
-def test_content_file_vector_search_filters_empty_query(mocker, client):
+def test_content_file_vector_search_filters_empty_query(
+    mocker, client, django_user_model
+):
     """Test content file vector search with query uses query filters"""
 
     mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
@@ -162,6 +210,11 @@ def test_content_file_vector_search_filters_empty_query(mocker, client):
         "run_readable_id": ["test_run_id"],
         "resource_readable_id": ["test_resource_id_1", "test_resource_id_2"],
     }
+
+    user = django_user_model.objects.create()
+    group, _ = Group.objects.get_or_create(name=GROUP_CONTENT_FILE_CONTENT_VIEWERS)
+    group.user_set.add(user)
+    client.force_login(user)
 
     client.get(reverse("vector_search:v0:vector_content_files_search"), data=params)
     assert all(
@@ -190,7 +243,9 @@ def test_content_file_vector_search_filters_empty_query(mocker, client):
     )
 
 
-def test_content_file_vector_search_filters_custom_collection(mocker, client):
+def test_content_file_vector_search_filters_custom_collection(
+    mocker, client, django_user_model
+):
     """Test content file vector search uses custom collection if specified"""
 
     mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
@@ -201,7 +256,7 @@ def test_content_file_vector_search_filters_custom_collection(mocker, client):
         return_value=mock_qdrant,
     )
     mock_qdrant.count.return_value = CountResult(count=10)
-    # omit the q param
+
     params = {
         "offered_by": ["ocw"],
         "platform": ["edx"],
@@ -213,7 +268,16 @@ def test_content_file_vector_search_filters_custom_collection(mocker, client):
         "collection_name": custom_collection_name,
     }
 
-    client.get(reverse("vector_search:v0:vector_content_files_search"), data=params)
+    user = django_user_model.objects.create()
+    group, _ = Group.objects.get_or_create(name=GROUP_CONTENT_FILE_CONTENT_VIEWERS)
+    group.user_set.add(user)
+    client.force_login(user)
+
+    response = client.get(
+        reverse("vector_search:v0:vector_content_files_search"), data=params
+    )
+
+    assert response.status_code == 200
     assert (
         mock_qdrant.scroll.mock_calls[0]
         .kwargs["collection_name"]

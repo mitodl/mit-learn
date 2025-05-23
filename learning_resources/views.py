@@ -27,6 +27,7 @@ from channels.constants import ChannelType
 from channels.models import Channel
 from learning_resources import permissions
 from learning_resources.constants import (
+    GROUP_CONTENT_FILE_CONTENT_VIEWERS,
     LearningResourceRelationTypes,
     LearningResourceType,
     PlatformType,
@@ -100,6 +101,23 @@ from main.permissions import (
     is_admin_user,
 )
 from main.utils import cache_page_for_all_users, cache_page_for_anonymous_users, chunks
+
+
+def show_content_file_content(user):
+    """
+    Check if the user is allowed to view content file content
+    """
+    return (
+        user
+        and user.is_authenticated
+        and (
+            user.is_superuser
+            or user.is_staff
+            or user.groups.filter(name=GROUP_CONTENT_FILE_CONTENT_VIEWERS).first()
+            is not None
+        )
+    )
+
 
 log = logging.getLogger(__name__)
 
@@ -775,6 +793,23 @@ class ContentFileViewSet(viewsets.ReadOnlyModelViewSet):
     pagination_class = DefaultPagination
     filter_backends = [MultipleOptionsFilterBackend]
     filterset_class = ContentFileFilter
+    private_fields = ["content"]
+
+    def get_serializer(self, *args, **kwargs):
+        """
+        Dynamically modify the serializer to hide the `content` field
+        for anonymous users.
+        """
+        serializer = ContentFileSerializer(*args, **kwargs)
+
+        if not show_content_file_content(self.request.user):
+            for field in self.private_fields:
+                if hasattr(serializer, "child"):
+                    serializer.child.fields.pop(field, None)
+                else:
+                    serializer.fields.pop(field, None)
+
+        return serializer
 
 
 @extend_schema_view(
