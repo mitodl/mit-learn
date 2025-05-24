@@ -1,4 +1,4 @@
-from learning_resources.models import LearningResource
+from learning_resources.models import LearningResource, LearningResourceRun
 
 
 class TestResourceConfigurationMixin:
@@ -13,6 +13,9 @@ class TestResourceConfigurationMixin:
         )
         if options.get("test_ids"):
             test_ids = options["test_ids"].split(",")
+            LearningResourceRun.objects.filter(
+                learning_resource__id__in=test_ids
+            ).update(published=True)
             LearningResource.objects.filter(id__in=test_ids).update(
                 test_mode=True, published=False
             )
