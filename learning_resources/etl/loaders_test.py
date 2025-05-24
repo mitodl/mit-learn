@@ -21,6 +21,7 @@ from learning_resources.constants import (
     PlatformType,
     RunStatus,
 )
+from learning_resources.etl import loaders
 from learning_resources.etl.constants import (
     CourseLoaderConfig,
     ETLSource,
@@ -274,6 +275,33 @@ def test_load_program(  # noqa: PLR0913
         )
     else:
         mock_upsert_tasks.upsert_learning_resource_immutable_signature.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_load_run_skips_test_mode_resource(mocker):
+    """
+    Test that load_run returns None if the run exists and the associated resource is in test_mode.
+    """
+    learning_resource = mocker.Mock(spec=LearningResource)
+    learning_resource.test_mode = True
+    run_id = "test_run_id"
+    run_data = {"run_id": run_id}
+
+    mock_qs = mocker.patch.object(
+        loaders.LearningResourceRun.objects, "filter", autospec=True
+    )
+    mock_qs.return_value.exists.return_value = True
+
+    mock_get = mocker.patch.object(
+        loaders.LearningResourceRun.objects, "get", autospec=True
+    )
+    mock_run = mocker.Mock()
+    mock_run.learning_resource.test_mode = True
+    mock_get.return_value = mock_run
+    result = loaders.load_run(learning_resource, run_data)
+    assert result is None
+    mock_qs.assert_called_once_with(run_id=run_id, learning_resource=learning_resource)
+    mock_get.assert_called_once_with(run_id=run_id, learning_resource=learning_resource)
 
 
 def test_load_program_bad_platform(mocker):
