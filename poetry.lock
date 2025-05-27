@@ -8497,14 +8497,14 @@ devenv = ["check-manifest", "pytest (>=4.3)", "pytest-cov", "pytest-mock (>=3.3)
 
 [[package]]
 name = "ulid-py"
-version = "0.2.0"
+version = "1.1.0"
 description = "Universally Unique Lexicographically Sortable Identifier"
 optional = false
 python-versions = "*"
 groups = ["main"]
 files = [
-    {file = "ulid-py-0.2.0.tar.gz", hash = "sha256:46976401cb0eee9134446c6d92899627c74945c0e46f16ca295a8c9c434507fd"},
-    {file = "ulid_py-0.2.0-py2.py3-none-any.whl", hash = "sha256:06f6de6a83c24f3b0af0528beff500b65b48c0101b208cfeba2133115788334a"},
+    {file = "ulid-py-1.1.0.tar.gz", hash = "sha256:dc6884be91558df077c3011b9fb0c87d1097cb8fc6534b11f310161afd5738f0"},
+    {file = "ulid_py-1.1.0-py2.py3-none-any.whl", hash = "sha256:b56a0f809ef90d6020b21b89a87a48edc7c03aea80e5ed5174172e82d76e3987"},
 ]
 
 [[package]]
@@ -9124,4 +9124,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.1"
 python-versions = "~3.12"
-content-hash = "1e7e123f6dd7a911c8ddcc1565224e235ad3b3e435e18ffc0ae2584d1997e18b"
+content-hash = "acb2b92c75d70ba52b5f22961bb96f0752b34c3aa44929ac92367e9478e896d9"
