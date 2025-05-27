@@ -147,7 +147,7 @@ def mock_upsert_tasks(mocker):
 @pytest.mark.parametrize("published", [False, True])
 @pytest.mark.parametrize("test_mode", [False, True])
 @pytest.mark.parametrize("newly_created", [False, True])
-def test_update_index_behavior(
+def test_update_index_test_mode_behavior(
     mocker,
     published,
     test_mode,
