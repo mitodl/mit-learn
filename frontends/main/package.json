@@ -53,7 +53,7 @@
     "eslint-config-next": "^14.2.7",
     "http-proxy-middleware": "^3.0.0",
     "jest": "^29.7.0",
-    "jest-extended": "^4.0.2",
+    "jest-extended": "^5.0.0",
     "jest-next-dynamic-ts": "^0.1.1",
     "ol-test-utilities": "0.0.0",
     "ts-jest": "^29.2.4",
