@@ -144,6 +144,28 @@ def mock_upsert_tasks(mocker):
     )
 
 
+@pytest.mark.parametrize("published", [False, True])
+@pytest.mark.parametrize("test_mode", [False, True])
+@pytest.mark.parametrize("newly_created", [False, True])
+def test_update_index_behavior(
+    mocker,
+    published,
+    test_mode,
+    newly_created,
+):
+    """Test update_index does not remove test_mode content files from index"""
+    resource_unpublished_actions = mocker.patch(
+        "learning_resources.etl.loaders.resource_unpublished_actions"
+    )
+    lr = LearningResourceFactory.create(published=published, test_mode=test_mode)
+
+    loaders.update_index(lr, newly_created)
+    if test_mode:
+        resource_unpublished_actions.assert_not_called()
+    elif not published and not newly_created:
+        resource_unpublished_actions.assert_called_once()
+
+
 @pytest.fixture
 def learning_resource_offeror():
     """Return a LearningResourceOfferer"""
