@@ -32,7 +32,7 @@ django-bitfield = "^2.2.0"
 django-cache-memoize = "^0.2.0"
 django-cors-headers = "^4.0.0"
 django-filter = "^2.4.0"
-django-guardian = "^2.4.0"
+django-guardian = "^3.0.0"
 django-health-check = { git = "https://github.com/revsys/django-health-check", rev="9cfe2eaec5a15219513a36210b34875c03c64fe4" }  # pragma: allowlist secret
 django-hijack = "^3.4.1"
 django-imagekit = "^5.0.0"
