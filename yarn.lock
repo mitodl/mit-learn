@@ -14579,13 +14579,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"next-router-mock@npm:^0.9.13":
-  version: 0.9.13
-  resolution: "next-router-mock@npm:0.9.13"
+"next-router-mock@npm:^1.0.0":
+  version: 1.0.2
+  resolution: "next-router-mock@npm:1.0.2"
   peerDependencies:
     next: ">=10.0.0"
     react: ">=17.0.0"
-  checksum: 10/582858b4521b987ff7299d97b81b526ba5debdb93b7ada83a595927ca1138082e902ff8dbb7c6cb9db79d65b1a7aa4d86fbbbf24ea73a033d317d964ca3ea95b
+  checksum: 10/a4f3a66efb51d7a43487ee2814a1e3d7d2135afd5913a587c71921e18e0519c54a240b9873a757b3e8eacb1805435f2dfac04b644ca0407cdef80f823cb4baee
   languageName: node
   linkType: hard
 
@@ -15038,7 +15038,7 @@ __metadata:
     dom-accessibility-api: "npm:^0.7.0"
     lodash: "npm:^4.17.21"
     moment-timezone: "npm:^0.6.0"
-    next-router-mock: "npm:^0.9.13"
+    next-router-mock: "npm:^1.0.0"
     tiny-invariant: "npm:^1.3.1"
   peerDependencies:
     react: ^19.0.0
