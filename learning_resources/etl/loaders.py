@@ -71,7 +71,11 @@ def update_index(learning_resource, newly_created):
         learning resource (LearningResource): a learning resource
         newly_created (bool): whether the learning resource has just been created
     """
-    if not newly_created and not learning_resource.published:
+    if (
+        not newly_created
+        and not learning_resource.published
+        and not learning_resource.test_mode
+    ):
         resource_unpublished_actions(learning_resource)
     elif learning_resource.published:
         resource_upserted_actions(learning_resource, percolate=False)
@@ -560,7 +564,10 @@ def load_courses(
     if courses and config.prune:
         for learning_resource in LearningResource.objects.filter(
             etl_source=etl_source, resource_type=LearningResourceType.course.name
-        ).exclude(id__in=[learning_resource.id for learning_resource in courses]):
+        ).exclude(
+            Q(id__in=[learning_resource.id for learning_resource in courses])
+            | Q(test_mode=True)
+        ):
             learning_resource.published = False
             learning_resource.save()
             resource_unpublished_actions(learning_resource)
