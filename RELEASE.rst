@@ -1,6 +1,19 @@
 Release Notes
 =============
 
+Version 0.33.1
+--------------
+
+- fix(deps): update dependency django-anymail to v13 (#2201)
+- Prevent test courses from being overwritten (#2262)
+- fix(deps): update dependency django-guardian to v3 (#2266)
+- fix(deps): update dependency ulid-py to v1 (#2268)
+- chore(deps): update dependency jest-extended to v5 (#2264)
+- fix(deps): update dependency cryptography to v45 (#2265)
+- fix(deps): update dependency moment-timezone to ^0.6.0 (#2263)
+- fix(deps): update dependency tika to v3 (#2202)
+- Tweaks to the nextjs dockerfile to give a build target for production. (#2260)
+
 Version 0.33.0 (Released May 28, 2025)
 --------------
 
