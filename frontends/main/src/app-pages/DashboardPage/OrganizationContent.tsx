@@ -153,11 +153,11 @@ const OrganizationContent: React.FC<OrganizationContentProps> = ({ orgId }) => {
   )
   const organization = useQuery(
     organizationQueries.organizationsRetrieve({
-      organization_slug: b2bOrganization?.slug,
+      organization_slug: b2bOrganization?.slug || "",
     }),
   )
-  const enrollments = useQuery(enrollmentQueries.coursesList({ orgId }))
-  const programs = useQuery(programsQueries.programsList({ orgId }))
+  const enrollments = useQuery(enrollmentQueries.enrollmentsList({}))
+  const programs = useQuery(programsQueries.programsList({ org_id: orgId }))
   const courseGroups = useMitxonlineProgramsCourses(
     programs.data?.results ?? [],
   )
