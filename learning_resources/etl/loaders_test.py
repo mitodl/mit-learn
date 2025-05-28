@@ -300,30 +300,40 @@ def test_load_program(  # noqa: PLR0913
 
 
 @pytest.mark.django_db
-def test_load_run_skips_test_mode_resource(mocker):
+def test_load_run_sets_test_resource_run_to_published(mocker):
     """
-    Test that load_run returns None if the run exists and the associated resource is in test_mode.
+    Test that load_run sets the test_mode run to published
     """
-    learning_resource = mocker.Mock(spec=LearningResource)
-    learning_resource.test_mode = True
-    run_id = "test_run_id"
-    run_data = {"run_id": run_id}
 
     mock_qs = mocker.patch.object(
         loaders.LearningResourceRun.objects, "filter", autospec=True
     )
     mock_qs.return_value.exists.return_value = True
 
-    mock_get = mocker.patch.object(
-        loaders.LearningResourceRun.objects, "get", autospec=True
+    test_mode_learning_resource = LearningResourceFactory.create(test_mode=True)
+
+    test_mode_run_id = "test_run_id"
+    test_mode_run_data = {"run_id": test_mode_run_id, "published": False}
+
+    LearningResourceRunFactory.create(
+        learning_resource=test_mode_learning_resource,
+        run_id=test_mode_run_id,
+        published=False,
     )
-    mock_run = mocker.Mock()
-    mock_run.learning_resource.test_mode = True
-    mock_get.return_value = mock_run
-    result = loaders.load_run(learning_resource, run_data)
-    assert result is None
-    mock_qs.assert_called_once_with(run_id=run_id, learning_resource=learning_resource)
-    mock_get.assert_called_once_with(run_id=run_id, learning_resource=learning_resource)
+
+    result = loaders.load_run(test_mode_learning_resource, test_mode_run_data)
+    assert result.published
+    regular_learning_resource = LearningResourceFactory.create(test_mode=False)
+    regular_run_id = "test_run_id"
+    regular_run_data = {"run_id": regular_run_id, "published": False}
+    LearningResourceRunFactory.create(
+        learning_resource=regular_learning_resource,
+        run_id=regular_run_id,
+        published=False,
+    )
+
+    result = loaders.load_run(regular_learning_resource, regular_run_data)
+    assert not result.published
 
 
 def test_load_program_bad_platform(mocker):

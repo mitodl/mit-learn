@@ -311,6 +311,9 @@ def load_run(
         run_data["prices"] = []
         resource_prices = []
 
+    if learning_resource.test_mode:
+        run_data["published"] = True
+
     with transaction.atomic():
         (
             learning_resource_run,
@@ -320,9 +323,6 @@ def load_run(
             run_id=run_id,
             defaults={**run_data},
         )
-        if learning_resource_run.learning_resource.test_mode:
-            learning_resource_run.published = True
-            learning_resource_run.save()
         load_instructors(learning_resource_run, instructors_data)
         load_prices(learning_resource_run, resource_prices)
         load_image(learning_resource_run, image_data)
