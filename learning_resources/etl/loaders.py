@@ -298,15 +298,6 @@ def load_run(
         LearningResourceRun: the created/updated resource run
     """
     run_id = run_data.pop("run_id")
-    if (
-        LearningResourceRun.objects.filter(
-            run_id=run_id, learning_resource=learning_resource
-        ).exists()
-        and LearningResourceRun.objects.get(
-            run_id=run_id, learning_resource=learning_resource
-        ).learning_resource.test_mode
-    ):
-        return None
 
     image_data = run_data.pop("image", None)
     status = run_data.pop("status", None)
@@ -329,7 +320,9 @@ def load_run(
             run_id=run_id,
             defaults={**run_data},
         )
-
+        if learning_resource_run.learning_resource.test_mode:
+            learning_resource_run.published = True
+            learning_resource_run.save()
         load_instructors(learning_resource_run, instructors_data)
         load_prices(learning_resource_run, resource_prices)
         load_image(learning_resource_run, image_data)
