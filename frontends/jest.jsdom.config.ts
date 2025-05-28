@@ -14,6 +14,9 @@ const config: Config.InitialOptions &
   moduleNameMapper: {
     "\\.(svg|jpg|jpeg|png)$": "ol-test-utilities/filemocks/imagemock.js",
     "\\.(css|scss)$": "ol-test-utilities/filemocks/filemock.js",
+    "^rehype-mathjax/browser$": "ol-test-utilities/filemocks/filemock.js",
+    "^rehype-raw$": "ol-test-utilities/filemocks/filemock.js",
+    "^remark-math$": "ol-test-utilities/filemocks/filemock.js",
   },
   rootDir: "./src",
 }
