@@ -5,16 +5,9 @@ import type {
 } from "@mitodl/mitxonline-api-axios/v1"
 import { programsApi } from "../../clients"
 
-type ProgramsListRequest = ProgramsApiProgramsListV2Request & {
-  /**
-   * NOT YET IMPLEMENTED
-   */
-  orgId?: number
-}
-
 const programsKeys = {
   root: ["mitxonline", "programs"],
-  programsList: (opts?: ProgramsListRequest) => [
+  programsList: (opts?: ProgramsApiProgramsListV2Request) => [
     ...programsKeys.root,
     "list",
     opts,
@@ -22,7 +15,7 @@ const programsKeys = {
 }
 
 const programsQueries = {
-  programsList: (opts: ProgramsListRequest) =>
+  programsList: (opts: ProgramsApiProgramsListV2Request) =>
     queryOptions({
       queryKey: programsKeys.programsList(opts),
       queryFn: async (): Promise<PaginatedV2ProgramList> => {
@@ -32,4 +25,3 @@ const programsQueries = {
 }
 
 export { programsQueries, programsKeys }
-export type { ProgramsListRequest }
