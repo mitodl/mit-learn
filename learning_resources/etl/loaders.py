@@ -4,6 +4,7 @@ import logging
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.db.models import Q
 
 from learning_resources.constants import (
     LearningResourceDelivery,
@@ -70,7 +71,11 @@ def update_index(learning_resource, newly_created):
         learning resource (LearningResource): a learning resource
         newly_created (bool): whether the learning resource has just been created
     """
-    if not newly_created and not learning_resource.published:
+    if (
+        not newly_created
+        and not learning_resource.published
+        and not learning_resource.test_mode
+    ):
         resource_unpublished_actions(learning_resource)
     elif learning_resource.published:
         resource_upserted_actions(learning_resource, percolate=False)
@@ -293,6 +298,7 @@ def load_run(
         LearningResourceRun: the created/updated resource run
     """
     run_id = run_data.pop("run_id")
+
     image_data = run_data.pop("image", None)
     status = run_data.pop("status", None)
     instructors_data = run_data.pop("instructors", [])
@@ -305,6 +311,9 @@ def load_run(
         run_data["prices"] = []
         resource_prices = []
 
+    if learning_resource.test_mode:
+        run_data["published"] = True
+
     with transaction.atomic():
         (
             learning_resource_run,
@@ -314,7 +323,6 @@ def load_run(
             run_id=run_id,
             defaults={**run_data},
         )
-
         load_instructors(learning_resource_run, instructors_data)
         load_prices(learning_resource_run, resource_prices)
         load_image(learning_resource_run, image_data)
@@ -498,7 +506,8 @@ def load_course(
             # The course ETL should be the ultimate source of truth for
             # courses and their runs.
             for run in learning_resource.runs.exclude(
-                run_id__in=run_ids_to_update_or_create
+                Q(run_id__in=run_ids_to_update_or_create)
+                | Q(learning_resource__test_mode=True)
             ).filter(published=True):
                 run.published = False
                 run.save()
@@ -548,7 +557,10 @@ def load_courses(
     if courses and config.prune:
         for learning_resource in LearningResource.objects.filter(
             etl_source=etl_source, resource_type=LearningResourceType.course.name
-        ).exclude(id__in=[learning_resource.id for learning_resource in courses]):
+        ).exclude(
+            Q(id__in=[learning_resource.id for learning_resource in courses])
+            | Q(test_mode=True)
+        ):
             learning_resource.published = False
             learning_resource.save()
             resource_unpublished_actions(learning_resource)
@@ -613,7 +625,8 @@ def load_program(
         if config.prune:
             # mark runs no longer included here as unpublished
             for run in learning_resource.runs.exclude(
-                run_id__in=run_ids_to_update_or_create
+                Q(run_id__in=run_ids_to_update_or_create)
+                | Q(learning_resource__test_mode=True)
             ).filter(published=True):
                 run.published = False
                 run.save()

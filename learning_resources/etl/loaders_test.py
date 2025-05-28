@@ -21,6 +21,7 @@ from learning_resources.constants import (
     PlatformType,
     RunStatus,
 )
+from learning_resources.etl import loaders
 from learning_resources.etl.constants import (
     CourseLoaderConfig,
     ETLSource,
@@ -141,6 +142,28 @@ def mock_upsert_tasks(mocker):
             "learning_resources_search.tasks.bulk_deindex_learning_resources.si"
         ),
     )
+
+
+@pytest.mark.parametrize("published", [False, True])
+@pytest.mark.parametrize("test_mode", [False, True])
+@pytest.mark.parametrize("newly_created", [False, True])
+def test_update_index_test_mode_behavior(
+    mocker,
+    published,
+    test_mode,
+    newly_created,
+):
+    """Test update_index does not remove test_mode content files from index"""
+    resource_unpublished_actions = mocker.patch(
+        "learning_resources.etl.loaders.resource_unpublished_actions"
+    )
+    lr = LearningResourceFactory.create(published=published, test_mode=test_mode)
+
+    loaders.update_index(lr, newly_created)
+    if test_mode:
+        resource_unpublished_actions.assert_not_called()
+    elif not published and not newly_created:
+        resource_unpublished_actions.assert_called_once()
 
 
 @pytest.fixture
@@ -274,6 +297,43 @@ def test_load_program(  # noqa: PLR0913
         )
     else:
         mock_upsert_tasks.upsert_learning_resource_immutable_signature.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_load_run_sets_test_resource_run_to_published(mocker):
+    """
+    Test that load_run sets the test_mode run to published
+    """
+
+    mock_qs = mocker.patch.object(
+        loaders.LearningResourceRun.objects, "filter", autospec=True
+    )
+    mock_qs.return_value.exists.return_value = True
+
+    test_mode_learning_resource = LearningResourceFactory.create(test_mode=True)
+
+    test_mode_run_id = "test_run_id"
+    test_mode_run_data = {"run_id": test_mode_run_id, "published": False}
+
+    LearningResourceRunFactory.create(
+        learning_resource=test_mode_learning_resource,
+        run_id=test_mode_run_id,
+        published=False,
+    )
+
+    result = loaders.load_run(test_mode_learning_resource, test_mode_run_data)
+    assert result.published
+    regular_learning_resource = LearningResourceFactory.create(test_mode=False)
+    regular_run_id = "test_run_id"
+    regular_run_data = {"run_id": regular_run_id, "published": False}
+    LearningResourceRunFactory.create(
+        learning_resource=regular_learning_resource,
+        run_id=regular_run_id,
+        published=False,
+    )
+
+    result = loaders.load_run(regular_learning_resource, regular_run_data)
+    assert not result.published
 
 
 def test_load_program_bad_platform(mocker):
