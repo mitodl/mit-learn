@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.33.0
+Version 0.33.0 (Released May 28, 2025)
 --------------
 
 - remove the backend heroku deploy step from the RC Github Actions build since that happens in Kubernetes now (#2258)
