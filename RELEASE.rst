@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.33.1
+Version 0.33.1 (Released May 29, 2025)
 --------------
 
 - fix(deps): update dependency django-anymail to v13 (#2201)
