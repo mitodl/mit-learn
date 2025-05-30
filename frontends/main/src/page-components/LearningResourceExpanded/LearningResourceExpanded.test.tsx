@@ -372,8 +372,10 @@ describe.each([true, false])(
           name: "Ask TIM about this course",
         })
         const shouldBeVisible =
-          (enabled && resourceType === ResourceTypeEnum.Course) ||
-          resourceType === ResourceTypeEnum.Program
+          enabled &&
+          (resourceType === ResourceTypeEnum.Course ||
+            resourceType === ResourceTypeEnum.Program)
+
         expect(!!chatButton).toBe(shouldBeVisible)
       },
     )
