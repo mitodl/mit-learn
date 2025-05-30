@@ -129,7 +129,7 @@ const TermsPage: React.FC = () => {
                       MITx Online:{" "}
                       <a href="https://mitxonline.mit.edu/terms-of-service/">
                         {" "}
-                        [https://mitxonline.mit.edu/terms-of-service/]{" "}
+                        https://mitxonline.mit.edu/terms-of-service/{" "}
                       </a>
                     </li>
                   </UnorderedList>
@@ -141,7 +141,7 @@ const TermsPage: React.FC = () => {
                       MITx Online:{" "}
                       <a href="https://mitxonline.mit.edu/privacy-policy/">
                         {" "}
-                        [https://mitxonline.mit.edu/privacy-policy/]{" "}
+                        https://mitxonline.mit.edu/privacy-policy/{" "}
                       </a>
                     </li>
                   </UnorderedList>
@@ -153,7 +153,7 @@ const TermsPage: React.FC = () => {
                       MITx Online:{" "}
                       <a href="https://mitxonline.mit.edu/honor-code/">
                         {" "}
-                        [https://mitxonline.mit.edu/honor-code/]{" "}
+                        https://mitxonline.mit.edu/honor-code/{" "}
                       </a>
                     </li>
                   </UnorderedList>
