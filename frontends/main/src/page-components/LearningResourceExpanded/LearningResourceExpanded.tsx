@@ -145,7 +145,8 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
 
   const chatEnabled =
     useFeatureFlagEnabled(FeatureFlags.LrDrawerChatbot) &&
-    resource?.resource_type === ResourceTypeEnum.Course
+    (resource?.resource_type === ResourceTypeEnum.Course ||
+      resource?.resource_type === ResourceTypeEnum.Program)
 
   useEffect(() => {
     // If URL indicates syllabus open, but it's not enabled, update URL

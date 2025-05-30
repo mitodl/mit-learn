@@ -111,7 +111,12 @@ const STARTERS: AiChatProps["conversationStarters"] = [
   { content: "What are the prerequisites for this course?" },
   { content: "How will this course be graded?" },
 ]
-
+type ChatParams = {
+  collection_name: string
+  message: string
+  course_id: string
+  related_courses?: string[]
+}
 export const AiChatSyllabusOpener = ({
   open,
   className,
@@ -195,11 +200,19 @@ const AiChatSyllabusSlideDown = ({
             },
             credentials: "include",
           },
-          transformBody: (messages) => ({
-            collection_name: "content_files",
-            message: messages[messages.length - 1].content,
-            course_id: resource.readable_id,
-          }),
+          transformBody: (messages) => {
+            const params: ChatParams = {
+              collection_name: "content_files",
+              message: messages[messages.length - 1].content,
+              course_id: resource.readable_id,
+            }
+            if (Array.isArray(resource.children)) {
+              params.related_courses = resource.children.map(
+                (child: { readable_id: string }) => child.readable_id,
+              )
+            }
+            return params
+          },
         }}
       />
     </SlideDown>

@@ -1021,6 +1021,12 @@ export interface CourseResource {
   pace: Array<CourseResourcePaceInner>
   /**
    *
+   * @type {LearningResourceRelationshipChildField}
+   * @memberof CourseResource
+   */
+  children: LearningResourceRelationshipChildField | null
+  /**
+   *
    * @type {CourseResourceResourceTypeEnum}
    * @memberof CourseResource
    */
@@ -2054,6 +2060,12 @@ export interface LearningPathResource {
   pace: Array<CourseResourcePaceInner>
   /**
    *
+   * @type {LearningResourceRelationshipChildField}
+   * @memberof LearningPathResource
+   */
+  children: LearningResourceRelationshipChildField | null
+  /**
+   *
    * @type {LearningPathResourceResourceTypeEnum}
    * @memberof LearningPathResource
    */
@@ -2567,6 +2579,44 @@ export interface LearningResourcePrice {
    */
   currency: string
 }
+/**
+ * Serializer field for the LearningResourceRelationship model that uses the LearningResourceSerializer to serialize the child resources
+ * @export
+ * @interface LearningResourceRelationshipChildField
+ */
+export interface LearningResourceRelationshipChildField {
+  /**
+   *
+   * @type {number}
+   * @memberof LearningResourceRelationshipChildField
+   */
+  child: number
+  /**
+   *
+   * @type {number}
+   * @memberof LearningResourceRelationshipChildField
+   */
+  position?: number
+  /**
+   *
+   * @type {RelationTypeEnum}
+   * @memberof LearningResourceRelationshipChildField
+   */
+  relation_type?: RelationTypeEnum
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceRelationshipChildField
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceRelationshipChildField
+   */
+  readable_id: string
+}
+
 /**
  * Serializer for the LearningResourceRun model
  * @export
@@ -3760,6 +3810,12 @@ export interface PodcastEpisodeResource {
   pace: Array<CourseResourcePaceInner>
   /**
    *
+   * @type {LearningResourceRelationshipChildField}
+   * @memberof PodcastEpisodeResource
+   */
+  children: LearningResourceRelationshipChildField | null
+  /**
+   *
    * @type {PodcastEpisodeResourceResourceTypeEnum}
    * @memberof PodcastEpisodeResource
    */
@@ -4059,6 +4115,12 @@ export interface PodcastResource {
    * @memberof PodcastResource
    */
   pace: Array<CourseResourcePaceInner>
+  /**
+   *
+   * @type {LearningResourceRelationshipChildField}
+   * @memberof PodcastResource
+   */
+  children: LearningResourceRelationshipChildField | null
   /**
    *
    * @type {PodcastResourceResourceTypeEnum}
@@ -4751,6 +4813,12 @@ export interface ProgramResource {
   pace: Array<CourseResourcePaceInner>
   /**
    *
+   * @type {LearningResourceRelationshipChildField}
+   * @memberof ProgramResource
+   */
+  children: LearningResourceRelationshipChildField | null
+  /**
+   *
    * @type {ProgramResourceResourceTypeEnum}
    * @memberof ProgramResource
    */
@@ -4917,6 +4985,41 @@ export const ProgramResourceResourceTypeEnum = {
 
 export type ProgramResourceResourceTypeEnum =
   (typeof ProgramResourceResourceTypeEnum)[keyof typeof ProgramResourceResourceTypeEnum]
+
+/**
+ * * `PROGRAM_COURSES` - Program Courses * `LEARNING_PATH_ITEMS` - Learning Path Items * `PODCAST_EPISODES` - Podcast Episodes * `PLAYLIST_VIDEOS` - Playlist Videos
+ * @export
+ * @enum {string}
+ */
+
+export const RelationTypeEnumDescriptions = {
+  PROGRAM_COURSES: "Program Courses",
+  LEARNING_PATH_ITEMS: "Learning Path Items",
+  PODCAST_EPISODES: "Podcast Episodes",
+  PLAYLIST_VIDEOS: "Playlist Videos",
+} as const
+
+export const RelationTypeEnum = {
+  /**
+   * Program Courses
+   */
+  ProgramCourses: "PROGRAM_COURSES",
+  /**
+   * Learning Path Items
+   */
+  LearningPathItems: "LEARNING_PATH_ITEMS",
+  /**
+   * Podcast Episodes
+   */
+  PodcastEpisodes: "PODCAST_EPISODES",
+  /**
+   * Playlist Videos
+   */
+  PlaylistVideos: "PLAYLIST_VIDEOS",
+} as const
+
+export type RelationTypeEnum =
+  (typeof RelationTypeEnum)[keyof typeof RelationTypeEnum]
 
 /**
  * * `news` - news * `events` - events
@@ -5690,6 +5793,12 @@ export interface VideoPlaylistResource {
   pace: Array<CourseResourcePaceInner>
   /**
    *
+   * @type {LearningResourceRelationshipChildField}
+   * @memberof VideoPlaylistResource
+   */
+  children: LearningResourceRelationshipChildField | null
+  /**
+   *
    * @type {VideoPlaylistResourceResourceTypeEnum}
    * @memberof VideoPlaylistResource
    */
@@ -5989,6 +6098,12 @@ export interface VideoResource {
    * @memberof VideoResource
    */
   pace: Array<CourseResourcePaceInner>
+  /**
+   *
+   * @type {LearningResourceRelationshipChildField}
+   * @memberof VideoResource
+   */
+  children: LearningResourceRelationshipChildField | null
   /**
    *
    * @type {VideoResourceResourceTypeEnum}
