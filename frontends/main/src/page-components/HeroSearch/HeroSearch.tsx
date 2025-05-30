@@ -15,13 +15,11 @@ import {
 } from "ol-components"
 import type { ChipLinkProps } from "ol-components"
 import {
-  ABOUT,
   SEARCH_CERTIFICATE,
   SEARCH_FREE,
   SEARCH_NEW,
   SEARCH_POPULAR,
   SEARCH_UPCOMING,
-  ABOUT_NON_DEGREE_LEARNING_FRAGMENT,
 } from "@/common/urls"
 import {
   RiAwardLine,
@@ -233,17 +231,7 @@ const HeroSearch: React.FC<{ imageIndex: number }> = ({ imageIndex }) => {
         >
           Learn with MIT
         </Typography>
-        <Typography>
-          Explore MIT's{" "}
-          <Link
-            color="black"
-            size="large"
-            href={`${ABOUT}#${ABOUT_NON_DEGREE_LEARNING_FRAGMENT}`}
-            prefetch={false}
-          >
-            Non-Degree Learning
-          </Link>
-        </Typography>
+        <Typography>Lifelong Learning. The MIT way.</Typography>
         <ControlsContainer>
           <SearchField
             size="hero"

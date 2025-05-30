@@ -10,6 +10,9 @@ const config: Config.InitialOptions = {
   moduleNameMapper: {
     ...baseConfig.moduleNameMapper,
     "^@/(.*)$": path.resolve(__dirname, "src/$1"),
+    "^rehype-mathjax/browser$": "ol-test-utilities/filemocks/filemock.js",
+    "^rehype-raw$": "ol-test-utilities/filemocks/filemock.js",
+    "^remark-math$": "ol-test-utilities/filemocks/filemock.js",
   },
 }
 export default config

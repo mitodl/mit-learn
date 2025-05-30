@@ -5,7 +5,10 @@ from typing import Optional
 
 from django.conf import settings
 from opentelemetry import trace
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
+    OTLPSpanExporter as OTLPSpanExporterGrpc,
+)
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.celery import CeleryInstrumentor
 from opentelemetry.instrumentation.django import DjangoInstrumentor
 from opentelemetry.instrumentation.psycopg import PsycopgInstrumentor
@@ -56,11 +59,18 @@ def configure_opentelemetry() -> Optional[TracerProvider]:
         headers = {}
 
         try:
-            otlp_exporter = OTLPSpanExporter(
-                endpoint=otlp_endpoint,
-                headers=headers,
-                insecure=getattr(settings, "OPENTELEMETRY_INSECURE", True),
-            )
+            use_grpc = getattr(settings, "OPENTELEMETRY_USE_GRPC", False)
+            if use_grpc:
+                otlp_exporter = OTLPSpanExporterGrpc(
+                    endpoint=otlp_endpoint,
+                    headers=headers,
+                    insecure=getattr(settings, "OPENTELEMETRY_INSECURE", True),
+                )
+            else:
+                otlp_exporter = OTLPSpanExporter(
+                    endpoint=otlp_endpoint,
+                    headers=headers,
+                )
 
             tracer_provider.add_span_processor(
                 BatchSpanProcessor(
