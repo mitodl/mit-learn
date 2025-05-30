@@ -2,12 +2,13 @@ import type {
   CoursesApiApiV2CoursesListRequest,
   ProgramsApiProgramsListV2Request,
 } from "@mitodl/mitxonline-api-axios/v1"
+import { RawAxiosRequestConfig } from "axios"
 import { queryify } from "ol-test-utilities"
-import type { EnrollmentsListOptions } from "../hooks/enrollment/queries"
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_MITXONLINE_API_BASE_URL
 
 const enrollment = {
-  courseEnrollment: (opts?: EnrollmentsListOptions) =>
+  courseEnrollment: (opts?: RawAxiosRequestConfig) =>
     `${API_BASE_URL}/api/v1/enrollments/${queryify(opts)}`,
 }
 
