@@ -28,7 +28,7 @@ routes:
           secret: ${{APISIX_SESSION_SECRET_KEY}}
           cookie:
             lifetime: 1209600
-            domain: ".c4103.com"
+            domain: ${{CSRF_COOKIE_DOMAIN}}
         logout_path: "/logout/oidc"
         post_logout_redirect_uri: ${{APISIX_LOGOUT_URL}}
         unauth_action: "pass"
@@ -61,7 +61,7 @@ routes:
           secret: ${{APISIX_SESSION_SECRET_KEY}}
           cookie:
             lifetime: 1209600
-            domain: ".c4103.com"
+            domain: ${{CSRF_COOKIE_DOMAIN}}
         logout_path: "/logout/oidc"
         post_logout_redirect_uri: ${{APISIX_LOGOUT_URL}}
         unauth_action: "auth"
@@ -96,7 +96,7 @@ routes:
           secret: ${{APISIX_SESSION_SECRET_KEY}}
           cookie:
             lifetime: 1209600
-            domain: ".c4103.com"
+            domain: ${{CSRF_COOKIE_DOMAIN}}
         logout_path: "/logout"
         post_logout_redirect_uri: ${{APISIX_LOGOUT_URL}}
         unauth_action: "pass"
