@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.33.2
+--------------
+
+- adding endpoint fix (#2270)
+- change hero text (#2271)
+- Upgrades Smoot Design (#2261)
+
 Version 0.33.1 (Released May 29, 2025)
 --------------
 
