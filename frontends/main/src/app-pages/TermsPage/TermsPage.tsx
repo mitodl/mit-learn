@@ -49,7 +49,7 @@ const BodyContainer = styled.div({
   flexDirection: "column",
   alignItems: "center",
   alignSelf: "stretch",
-  gap: "20px",
+  gap: "10px",
 })
 
 const BodyText = styled(Typography)(({ theme }) => ({
@@ -59,11 +59,14 @@ const BodyText = styled(Typography)(({ theme }) => ({
 
 const OrderedList = styled.ol(({ theme }) => ({
   ...theme.typography.body1,
+  li: {
+    marginTop: "10px",
+  },
 }))
 
 const LetteredOrderedList = styled.ol(({ theme }) => ({
-  type: "A",
   ...theme.typography.body1,
+  listStyleType: "upper-alpha",
 }))
 
 const UnorderedList = styled.ul(({ theme }) => ({
@@ -105,8 +108,12 @@ const TermsPage: React.FC = () => {
             </li>
             <li>
               MIT Learn respects your privacy. Please review
-              [https://learn.mit.edu/privacy] for more information on how this
-              Site collects, stores, and uses your personal information.
+              <a href="https://learn.mit.edu/privacy">
+                {" "}
+                [https://learn.mit.edu/privacy]{" "}
+              </a>
+              for more information on how this Site collects, stores, and uses
+              your personal information.
             </li>
             <li>
               Additional Terms of Service: Certain features or services offered
@@ -119,7 +126,11 @@ const TermsPage: React.FC = () => {
                   Terms of Service
                   <UnorderedList>
                     <li>
-                      MITx Online: https://mitxonline.mit.edu/terms-of-service/
+                      MITx Online:{" "}
+                      <a href="https://mitxonline.mit.edu/terms-of-service/">
+                        {" "}
+                        [https://mitxonline.mit.edu/terms-of-service/]{" "}
+                      </a>
                     </li>
                   </UnorderedList>
                 </li>
@@ -127,14 +138,24 @@ const TermsPage: React.FC = () => {
                   Privacy Policy
                   <UnorderedList>
                     <li>
-                      MITx Online: https://mitxonline.mit.edu/privacy-policy/
+                      MITx Online:{" "}
+                      <a href="https://mitxonline.mit.edu/privacy-policy/">
+                        {" "}
+                        [https://mitxonline.mit.edu/privacy-policy/]{" "}
+                      </a>
                     </li>
                   </UnorderedList>
                 </li>
                 <li>
                   Honor Code
                   <UnorderedList>
-                    <li>MITx Online: https://mitxonline.mit.edu/honor-code/</li>
+                    <li>
+                      MITx Online:{" "}
+                      <a href="https://mitxonline.mit.edu/honor-code/">
+                        {" "}
+                        [https://mitxonline.mit.edu/honor-code/]{" "}
+                      </a>
+                    </li>
                   </UnorderedList>
                 </li>
               </LetteredOrderedList>

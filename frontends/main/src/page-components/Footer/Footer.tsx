@@ -165,8 +165,8 @@ const Footer: FunctionComponent = () => {
                   href={urls.ACCESSIBILITY}
                 />
                 <FooterLinkComponent
-                  text="Privacy Policy"
-                  href={urls.PRIVACY}
+                  text="Terms of Service"
+                  href={urls.TERMS}
                 />
                 <FooterLinkComponent text="Contact Us" href={urls.CONTACT} />
               </FooterLinksContainer>
