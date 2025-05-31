@@ -7,6 +7,11 @@ import { queryify } from "ol-test-utilities"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_MITXONLINE_API_BASE_URL
 
+const currentUser = {
+  get: (opts?: RawAxiosRequestConfig) =>
+    `${API_BASE_URL}/api/v0/users/current_user/${queryify(opts)}`,
+}
+
 const enrollment = {
   courseEnrollment: (opts?: RawAxiosRequestConfig) =>
     `${API_BASE_URL}/api/v1/enrollments/${queryify(opts)}`,
@@ -22,4 +27,9 @@ const courses = {
     `${API_BASE_URL}/api/v2/courses/${queryify(opts, { explode: false })}`,
 }
 
-export { enrollment, programs, courses }
+const organization = {
+  organizationList: (organizationSlug: string) =>
+    `${API_BASE_URL}/api/v0/b2b/organizations/${organizationSlug}/`,
+}
+
+export { currentUser, enrollment, programs, courses, organization }

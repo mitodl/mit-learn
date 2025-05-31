@@ -9,7 +9,6 @@ import type { DashboardCourse } from "./types"
 import * as u from "api/test-utils"
 import { urls, factories } from "api/mitxonline-test-utils"
 import { setMockResponse } from "../../../test-utils"
-import { mockOrgData } from "api/mitxonline-hooks/enrollment"
 
 const makeCourses = factories.courses.courses
 const makeProgram = factories.programs.program
@@ -40,9 +39,13 @@ const dashboardCourse: PartialFactory<DashboardCourse> = (...overrides) => {
 
 const setupProgramsAndCourses = () => {
   const user = u.factories.user.user()
+  const orgX = factories.organizations.organization({ name: "Org X" })
+  const mitxOnlineUser = factories.user.user({ b2b_organizations: [orgX] })
   setMockResponse.get(u.urls.userMe.get(), user)
+  setMockResponse.get(urls.currentUser.get(), mitxOnlineUser)
+  setMockResponse.get(urls.organization.organizationList(""), orgX)
+  setMockResponse.get(urls.organization.organizationList(orgX.slug), orgX)
 
-  const orgId = mockOrgData.orgX.id
   const coursesA = makeCourses({ count: 4 })
   const coursesB = makeCourses({ count: 3 })
   const programA = makeProgram({
@@ -52,10 +55,9 @@ const setupProgramsAndCourses = () => {
     courses: coursesB.results.map((c) => c.id),
   })
 
-  setMockResponse.get(
-    urls.programs.programsList({ orgId: mockOrgData.orgX.id }),
-    { results: [programA, programB] },
-  )
+  setMockResponse.get(urls.programs.programsList({ org_id: orgX.id }), {
+    results: [programA, programB],
+  })
   setMockResponse.get(urls.courses.coursesList({ id: programA.courses }), {
     results: coursesA.results,
   })
@@ -64,8 +66,9 @@ const setupProgramsAndCourses = () => {
   })
 
   return {
-    orgId,
+    orgX,
     user,
+    mitxOnlineUser,
     programA,
     programB,
     coursesA: coursesA.results,
