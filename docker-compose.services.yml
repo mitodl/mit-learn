@@ -119,6 +119,7 @@ services:
       - apisix
     image: apache/apisix:latest
     environment:
+      - CSRF_COOKIE_DOMAIN=${CSRF_COOKIE_DOMAIN:-.odl.local}
       - KEYCLOAK_REALM_NAME=${KEYCLOAK_REALM_NAME:-ol-local}
       - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-apisix}
       - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}

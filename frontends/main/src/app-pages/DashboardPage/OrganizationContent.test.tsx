@@ -3,7 +3,6 @@ import { renderWithProviders, screen, within } from "@/test-utils"
 import OrganizationContent from "./OrganizationContent"
 import { setMockResponse } from "api/test-utils"
 import { urls, factories } from "api/mitxonline-test-utils"
-import { mockOrgData } from "api/mitxonline-hooks/enrollment"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import {
   mitxonlineCourses,
@@ -26,13 +25,13 @@ describe("OrganizationContent", () => {
   })
 
   it("displays a header for each program returned and cards for courses in program", async () => {
-    const { orgId, programA, programB, coursesA, coursesB } =
+    const { orgX, programA, programB, coursesA, coursesB } =
       setupProgramsAndCourses()
-    setMockResponse.get(urls.enrollment.courseEnrollment({ orgId }), [])
-    renderWithProviders(<OrganizationContent orgId={orgId} />)
+    setMockResponse.get(urls.enrollment.courseEnrollment({}), [])
+    renderWithProviders(<OrganizationContent orgId={orgX.id} />)
 
     await screen.findByRole("heading", {
-      name: `Your ${mockOrgData.orgX.name} Home`,
+      name: `Your ${orgX.name} Home`,
     })
     const programs = await screen.findAllByTestId("org-program-root")
     expect(programs.length).toBe(2)
@@ -50,7 +49,7 @@ describe("OrganizationContent", () => {
   })
 
   test("Shows correct enrollment status", async () => {
-    const { orgId, programA, coursesA } = setupProgramsAndCourses()
+    const { orgX, programA, coursesA } = setupProgramsAndCourses()
     const enrollments = [
       makeCourseEnrollment({
         run: { course: { id: coursesA[0].id, title: coursesA[0].title } },
@@ -61,11 +60,8 @@ describe("OrganizationContent", () => {
         grades: [],
       }),
     ]
-    setMockResponse.get(
-      urls.enrollment.courseEnrollment({ orgId }),
-      enrollments,
-    )
-    renderWithProviders(<OrganizationContent orgId={orgId} />)
+    setMockResponse.get(urls.enrollment.courseEnrollment({}), enrollments)
+    renderWithProviders(<OrganizationContent orgId={orgX.id} />)
 
     const [programElA] = await screen.findAllByTestId("org-program-root")
     const cards = await within(programElA).findAllByTestId(

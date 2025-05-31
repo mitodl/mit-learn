@@ -170,7 +170,7 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
 
 const EnrollmentDisplay = () => {
   const { data: enrolledCourses, isLoading } = useQuery({
-    ...enrollmentQueries.coursesList(),
+    ...enrollmentQueries.enrollmentsList({}),
     select: mitxonlineEnrollments,
   })
 
