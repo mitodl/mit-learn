@@ -8,7 +8,7 @@ import {
   CourseRunEnrollment,
   CourseWithCourseRuns,
   V2Program,
-} from "api/mitxonline"
+} from "@mitodl/mitxonline-api-axios/v1"
 
 import { DashboardResourceType, EnrollmentStatus } from "./types"
 import type { DashboardCourse, DashboardProgram } from "./types"
