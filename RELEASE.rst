@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.34.0
+Version 0.34.0 (Released June 02, 2025)
 --------------
 
 - chore(deps): update redis docker tag to v7.4.4 (#2277)
