@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.34.1
+Version 0.34.1 (Released June 02, 2025)
 --------------
 
 - chore(deps): update yarn to v4.9.1 (#2278)
