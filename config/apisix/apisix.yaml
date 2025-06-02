@@ -5,7 +5,7 @@ upstreams:
     type: roundrobin
   - id: 2
     nodes:
-      "192.168.1.50:8013": 1
+      "${{MITX_ONLINE_DOMAIN}}:8013": 1
     type: roundrobin
 
 routes:
