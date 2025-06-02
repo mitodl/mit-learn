@@ -39,6 +39,8 @@ import {
   MitxOnlineUser,
 } from "api/mitxonline-hooks/user"
 import { useUserMe } from "api/hooks/user"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { FeatureFlags } from "@/common/feature_flags"
 
 const LearningResourceDrawer = dynamic(
   () =>
@@ -250,8 +252,11 @@ type TabData = {
     desktop: React.ReactNode
   }
 }
-const getTabData = (user?: MitxOnlineUser): TabData[] => {
-  const orgs = user?.b2b_organizations ?? []
+const getTabData = (
+  orgsEnabled: boolean = false,
+  user?: MitxOnlineUser,
+): TabData[] => {
+  const orgs = orgsEnabled ? (user?.b2b_organizations ?? []) : []
   return [
     {
       value: DASHBOARD_HOME,
@@ -305,9 +310,11 @@ const DashboardPage: React.FC<{
   const { isLoading: isLoadingUser, data: user } = useUserMe()
   const { isLoading: isLoadingMitxOnlineUser, data: mitxOnlineUser } =
     useMitxOnlineCurrentUser()
+  const orgsEnabled = useFeatureFlagEnabled(FeatureFlags.OrganizationDashboard)
 
   const tabData = useMemo(
-    () => (isLoadingMitxOnlineUser ? [] : getTabData(mitxOnlineUser)),
+    () =>
+      isLoadingMitxOnlineUser ? [] : getTabData(orgsEnabled, mitxOnlineUser),
     [isLoadingMitxOnlineUser, mitxOnlineUser],
   )
 
