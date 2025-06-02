@@ -109,6 +109,11 @@ const List = styled.ul({
   },
 })
 
+const ExternalLink = styled(Link)(({ theme }) => ({
+  color: theme.custom.colors.red,
+  ...theme.typography.body1,
+}))
+
 const AboutPage: React.FC = () => {
   return (
     <PageContainer>
@@ -154,12 +159,13 @@ const AboutPage: React.FC = () => {
               </li>
               <li>
                 Earn program credentials and apply for an accelerated master's
-                degree program at MIT or at one of our
-                <Link
-                  href={"https://micromasters.mit.edu/dedp/pathways-masters/"}
+                degree program at MIT or at one of our{" "}
+                <ExternalLink
+                  target="_blank"
+                  href="https://micromasters.mit.edu/dedp/pathways-masters/"
                 >
                   pathway
-                </Link>
+                </ExternalLink>{" "}
                 universities around the world
               </li>
               <li>
