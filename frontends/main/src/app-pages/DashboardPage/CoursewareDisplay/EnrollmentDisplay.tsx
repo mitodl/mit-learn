@@ -174,21 +174,12 @@ const EnrollmentDisplay = () => {
     select: mitxonlineEnrollments,
   })
 
-  /**
-   * TODO:
-   * Consider handling UI logic in a component that expects standardized
-   * EnrollmentData objects. This will simplify testing and isolate API calls
-   * to the parent
-   *
-   * The constants below are separate for impending "Show All" functionality.
-   * The above TODO could be handled then.
-   */
   const { completed, expired, started, notStarted } = sortEnrollments(
     enrolledCourses || [],
   )
   const shownEnrollments = [...started, ...notStarted, ...completed]
 
-  return (
+  return shownEnrollments.length > 0 ? (
     <Wrapper>
       <Title variant="h5" component="h2">
         My Learning
@@ -199,7 +190,7 @@ const EnrollmentDisplay = () => {
         isLoading={isLoading}
       />
     </Wrapper>
-  )
+  ) : null
 }
 
 export { EnrollmentDisplay }
