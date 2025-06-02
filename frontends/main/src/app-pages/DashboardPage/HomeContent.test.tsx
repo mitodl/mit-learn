@@ -213,9 +213,9 @@ describe("HomeContent", () => {
         const enrollments = courseEnrollments(3)
         setMockResponse.get(mitxonline.urls.enrollment.courseEnrollment(), enrollments)
       }
-      
+
       renderWithProviders(<HomeContent />)
-      
+
       if (enrollmentsEnabled) {
         await screen.findByRole("heading", { name: "My Learning" })
       }
