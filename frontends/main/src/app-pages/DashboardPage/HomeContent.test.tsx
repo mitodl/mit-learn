@@ -211,15 +211,17 @@ describe("HomeContent", () => {
 
       if (enrollmentsEnabled) {
         const enrollments = courseEnrollments(3)
-        setMockResponse.get(mitxonline.urls.enrollment.courseEnrollment(), enrollments)
+        setMockResponse.get(
+          mitxonline.urls.enrollment.courseEnrollment(),
+          enrollments,
+        )
       }
 
       renderWithProviders(<HomeContent />)
 
       if (enrollmentsEnabled) {
         await screen.findByRole("heading", { name: "My Learning" })
-      }
-      else {
+      } else {
         expect(
           screen.queryByRole("heading", { name: "My Learning" }),
         ).not.toBeInTheDocument()

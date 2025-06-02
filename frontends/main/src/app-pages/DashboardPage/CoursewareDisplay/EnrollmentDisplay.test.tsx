@@ -26,20 +26,22 @@ describe("EnrollmentDisplay", () => {
         grades: [grade({ passed: true })],
       }),
     ]
-    const expired = includeExpired ? [
-      courseEnrollment({
-        run: {
-          title: "A Course Ended",
-          end_date: faker.date.past().toISOString(),
-        },
-      }),
-      courseEnrollment({
-        run: {
-          title: "B Course Ended",
-          end_date: faker.date.past().toISOString(),
-        },
-      }),
-    ] : []
+    const expired = includeExpired
+      ? [
+          courseEnrollment({
+            run: {
+              title: "A Course Ended",
+              end_date: faker.date.past().toISOString(),
+            },
+          }),
+          courseEnrollment({
+            run: {
+              title: "B Course Ended",
+              end_date: faker.date.past().toISOString(),
+            },
+          }),
+        ]
+      : []
     const started = [
       courseEnrollment({
         run: {
