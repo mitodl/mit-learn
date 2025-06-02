@@ -5,7 +5,7 @@ import type {
 import { RawAxiosRequestConfig } from "axios"
 import { queryify } from "ol-test-utilities"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_MITXONLINE_API_BASE_URL
+const API_BASE_URL = process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL
 
 const currentUser = {
   get: (opts?: RawAxiosRequestConfig) =>
