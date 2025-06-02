@@ -19,14 +19,14 @@ const mockedUseFeatureFlagEnabled = jest
 const courseEnrollment = mitxonline.factories.enrollment.courseEnrollment
 const grade = mitxonline.factories.enrollment.grade
 describe("EnrollmentDisplay", () => {
-  const setupApis = () => {
+  const setupApis = (includeExpired: boolean = true) => {
     const completed = [
       courseEnrollment({
         run: { title: "C Course Ended" },
         grades: [grade({ passed: true })],
       }),
     ]
-    const expired = [
+    const expired = includeExpired ? [
       courseEnrollment({
         run: {
           title: "A Course Ended",
@@ -39,7 +39,7 @@ describe("EnrollmentDisplay", () => {
           end_date: faker.date.past().toISOString(),
         },
       }),
-    ]
+    ] : []
     const started = [
       courseEnrollment({
         run: {
@@ -123,5 +123,14 @@ describe("EnrollmentDisplay", () => {
     expectedTitles.forEach((title, i) => {
       expect(cards[i]).toHaveTextContent(title)
     })
+  })
+
+  test("If there are no extra enrollments to display, there should be no show all", async () => {
+    setupApis(false)
+    renderWithProviders(<EnrollmentDisplay />)
+
+    await screen.findByRole("heading", { name: "My Learning" })
+
+    expect(screen.queryByText("Show all")).not.toBeInTheDocument()
   })
 })

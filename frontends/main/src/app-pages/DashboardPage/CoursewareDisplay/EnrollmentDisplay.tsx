@@ -146,24 +146,28 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
           />
         ))}
       </EnrollmentsList>
-      <Collapse orientation="vertical" in={shown}>
-        <HiddenEnrollmentsList itemSpacing={"16px"}>
-          {hiddenEnrollments.map((course) => (
-            <DashboardCardStyled
-              key={course.id}
-              Component="li"
-              dashboardResource={course}
-              showNotComplete={false}
-              isLoading={isLoading}
-            />
-          ))}
-        </HiddenEnrollmentsList>
-      </Collapse>
-      <ShowAllContainer>
-        <Link color="red" size="medium" onClick={handleToggle}>
-          {shown ? "Show less" : "Show all"}
-        </Link>
-      </ShowAllContainer>
+      {hiddenEnrollments.length === 0 ? null : (
+        <>
+          <Collapse orientation="vertical" in={shown}>
+            <HiddenEnrollmentsList itemSpacing={"16px"}>
+              {hiddenEnrollments.map((course) => (
+                <DashboardCardStyled
+                  key={course.id}
+                  Component="li"
+                  dashboardResource={course}
+                  showNotComplete={false}
+                  isLoading={isLoading}
+                />
+              ))}
+            </HiddenEnrollmentsList>
+          </Collapse>
+          <ShowAllContainer>
+            <Link color="red" size="medium" onClick={handleToggle}>
+              {shown ? "Show less" : "Show all"}
+            </Link>
+          </ShowAllContainer>
+        </>
+      )}
     </>
   )
 }
