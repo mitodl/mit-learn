@@ -100,10 +100,7 @@ routes:
         logout_path: "/logout"
         post_logout_redirect_uri: ${{APISIX_LOGOUT_URL}}
         unauth_action: "pass"
-      proxy-rewrite:
-        regex_uri:
-          - "/mitxonline/(.*)"
-          - "/$1"
-    uris:
-      - "/mitxonline/*"
+    uri: "*"
+    hosts:
+      - ${{MITX_ONLINE_DOMAIN}}
 #END
