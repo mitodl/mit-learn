@@ -59,8 +59,6 @@ urlpatterns = (
         re_path(r"", include("mitol.scim.urls")),
         re_path(r"", include(features_router.urls)),
         re_path(r"^app", RedirectView.as_view(url=settings.APP_BASE_URL)),
-        # Hijack
-        re_path(r"^hijack/", include("hijack.urls", namespace="hijack")),
         re_path(r"^health/", include("health_check.urls")),
     ]
     + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

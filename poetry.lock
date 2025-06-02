@@ -1590,26 +1590,6 @@ reference = "9cfe2eaec5a15219513a36210b34875c03c64fe4"
 resolved_reference = "9cfe2eaec5a15219513a36210b34875c03c64fe4"
 
 [[package]]
-name = "django-hijack"
-version = "3.7.2"
-description = "Enable users to hijack (=login as) and work on behalf of another user."
-optional = false
-python-versions = ">=3.9"
-groups = ["main"]
-files = [
-    {file = "django_hijack-3.7.2-py3-none-any.whl", hash = "sha256:dc834a015082dd2d49afd13da6cf6f571ce1a16894d6070887261a37633f8d06"},
-    {file = "django_hijack-3.7.2.tar.gz", hash = "sha256:eb02d285ec1564bfa77ac2e73b9bca28848caa7b04c1e1eef3d573353eb9efaa"},
-]
-
-[package.dependencies]
-django = ">=4.2"
-
-[package.extras]
-docs = ["mkdocs (==1.6.1)"]
-lint = ["msgcheck (==4.1.0)", "ruff (==0.11.8)"]
-test = ["pytest", "pytest-cov", "pytest-django"]
-
-[[package]]
 name = "django-imagekit"
 version = "5.0.0"
 description = "Automated image processing for Django models."
@@ -9124,4 +9104,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.1"
 python-versions = "~3.12"
-content-hash = "3713e919f0dc3515b42b9fdcab361b426a803100737a2052bff808ad135860d1"
+content-hash = "56d5701ee67939899d59ddaa32d3682503d37d09b68cd513825cd1304e6a9bf9"
