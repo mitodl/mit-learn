@@ -1,6 +1,16 @@
 Release Notes
 =============
 
+Version 0.34.0
+--------------
+
+- chore(deps): update redis docker tag to v7.4.4 (#2277)
+- chore(deps): update opensearchproject/opensearch docker tag to v2.19.2 (#2276)
+- chore(deps): update codecov/codecov-action action to v5.4.3 (#2275)
+- adding endpoint fix (#2270)
+- change hero text (#2271)
+- Upgrades Smoot Design (#2261)
+
 Version 0.33.1 (Released May 29, 2025)
 --------------
 
