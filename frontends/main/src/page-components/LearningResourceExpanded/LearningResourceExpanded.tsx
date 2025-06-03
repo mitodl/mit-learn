@@ -143,16 +143,16 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
     initialChatExpanded ? ChatTransitionState.Open : ChatTransitionState.Closed,
   )
 
-  const LrDrawerChatbotEnabled = useFeatureFlagEnabled(
+  const learningResourceChatbotEnabled = useFeatureFlagEnabled(
     FeatureFlags.LrDrawerChatbot,
   )
-  const PrDrawerChatbotEnabled = useFeatureFlagEnabled(
+  const programChatbotEnabled = useFeatureFlagEnabled(
     FeatureFlags.PrDrawerChatbot,
   )
   const chatEnabled =
-    (LrDrawerChatbotEnabled &&
+    (learningResourceChatbotEnabled &&
       resource?.resource_type === ResourceTypeEnum.Course) ||
-    (PrDrawerChatbotEnabled &&
+    (programChatbotEnabled &&
       resource?.resource_type === ResourceTypeEnum.Program)
 
   useEffect(() => {
