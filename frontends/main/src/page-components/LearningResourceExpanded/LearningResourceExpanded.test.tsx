@@ -361,7 +361,7 @@ describe.each([true, false])(
     })
 
     test.each(RESOURCE_TYPES)(
-      "Chat button visible only on courses ($resourceType)",
+      "Chat button visible only on courses or programs ($resourceType)",
       ({ resourceType }) => {
         const resource = factories.learningResources.resource({
           resource_type: resourceType,

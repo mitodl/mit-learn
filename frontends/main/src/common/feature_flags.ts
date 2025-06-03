@@ -4,6 +4,7 @@
 export enum FeatureFlags {
   EnableEcommerce = "enable-ecommerce",
   LrDrawerChatbot = "lr-drawer-chatbot",
+  PrDrawerChatbot = "pr-drawer-chatbot",
   RecommendationBot = "recommendation-bot",
   HomePageRecommendationBot = "home-page-recommendation-bot",
   EnrollmentDashboard = "enrollment-dashboard",
