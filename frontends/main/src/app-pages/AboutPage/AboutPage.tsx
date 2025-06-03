@@ -164,9 +164,9 @@ const AboutPage: React.FC = () => {
                   target="_blank"
                   href="https://micromasters.mit.edu/dedp/pathways-masters/"
                 >
-                  pathway
+                  pathway universities
                 </ExternalLink>{" "}
-                universities around the world
+                around the world
               </li>
               <li>
                 Download, share, and modify thousands of learning resources
@@ -202,14 +202,14 @@ const AboutPage: React.FC = () => {
               {SITE_NAME} offers a single AI-enabled platform for accessing all
               of MIT's non-degree learning resources. This includes courses,
               programs, and various educational materials from different MIT
-              units such as MIT Open Learning — including MITx, MIT Bootcamps,
-              MIT OpenCourseWare, MIT Professional Education, MIT Sloan
-              Executive Education, MIT xPRO, and other departments across the
+              units such as MIT Open Learning — including MITx, MIT
+              OpenCourseWare, and MIT xPRO — MIT Professional Education,MIT
+              Sloan Executive Education, and other departments across the
               Institute.
             </Typography>
             <Typography variant="body1">
               You can search and browse by topic or department to explore
-              popular and upcoming courses. You can also prompt “AskTIM,” an
+              popular and upcoming courses. You can also prompt “AskTIM”, an
               AI-powered recommendation feature, to quickly find courses and
               resources aligned with your goals and generate summaries of a
               course’s structure, topics, and expectations. In select offerings,
