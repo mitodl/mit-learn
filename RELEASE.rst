@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.34.3
+Version 0.34.3 (Released June 03, 2025)
 --------------
 
 - Feature flag syllabus chat for programs (#2284)
