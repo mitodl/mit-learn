@@ -240,7 +240,7 @@ describe("LearningResourceDrawer", () => {
       mockedUseFeatureFlagEnabled.mockReturnValue(true)
       const { resource } = setupApis({
         resource: {
-          // Chat is only enabled for courses
+          // Chat is only enabled for courses or programs
           resource_type: ResourceTypeEnum.Course,
         },
       })
