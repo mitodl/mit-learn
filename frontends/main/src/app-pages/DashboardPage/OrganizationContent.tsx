@@ -67,13 +67,13 @@ const OrganizationHeader: React.FC<{ org?: OrganizationPage }> = ({ org }) => {
  * [program1, program2] => [[...courses1], [...courses2]]
  */
 
-const useMitxonlineProgramsCourses = (programs: V2Program[]) => {
+const useMitxonlineProgramsCourses = (programs: V2Program[], orgId: number) => {
   const courseGroupIds =
     programs.map((program) => program.courses.map((id) => id as number)) ?? []
 
   const courseGroups = useQueries({
     queries: courseGroupIds.map((courseIds) =>
-      coursesQueries.coursesList({ id: courseIds }),
+      coursesQueries.coursesList({ org_id: orgId, id: courseIds }),
     ),
   })
 
@@ -160,6 +160,7 @@ const OrganizationContent: React.FC<OrganizationContentProps> = ({ orgId }) => {
   const programs = useQuery(programsQueries.programsList({ org_id: orgId }))
   const courseGroups = useMitxonlineProgramsCourses(
     programs.data?.results ?? [],
+    orgId,
   )
 
   if (!isOrgDashboardEnabled) return null

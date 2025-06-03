@@ -58,12 +58,18 @@ const setupProgramsAndCourses = () => {
   setMockResponse.get(urls.programs.programsList({ org_id: orgX.id }), {
     results: [programA, programB],
   })
-  setMockResponse.get(urls.courses.coursesList({ id: programA.courses }), {
-    results: coursesA.results,
-  })
-  setMockResponse.get(urls.courses.coursesList({ id: programB.courses }), {
-    results: coursesB.results,
-  })
+  setMockResponse.get(
+    urls.courses.coursesList({ id: programA.courses, org_id: orgX.id }),
+    {
+      results: coursesA.results,
+    },
+  )
+  setMockResponse.get(
+    urls.courses.coursesList({ id: programB.courses, org_id: orgX.id }),
+    {
+      results: coursesB.results,
+    },
+  )
 
   return {
     orgX,
