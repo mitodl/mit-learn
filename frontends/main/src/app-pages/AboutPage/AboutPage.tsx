@@ -246,7 +246,7 @@ const AboutPage: React.FC = () => {
             component="h2"
             id={ACADEMIC_AND_PROFESSIONAL_CONTENT}
           >
-            What is MIT’s academic and professional content
+            What is MIT’s academic and professional content?
           </Typography>
           <Typography variant="body1">
             MIT's non-degree offerings include content developed from MIT's
