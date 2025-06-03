@@ -9,31 +9,39 @@ import { EnrollmentDisplay } from "./EnrollmentDisplay"
 import * as mitxonline from "api/mitxonline-test-utils"
 import moment from "moment"
 import { faker } from "@faker-js/faker/locale/en"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+
+jest.mock("posthog-js/react")
+const mockedUseFeatureFlagEnabled = jest
+  .mocked(useFeatureFlagEnabled)
+  .mockImplementation(() => false)
 
 const courseEnrollment = mitxonline.factories.enrollment.courseEnrollment
 const grade = mitxonline.factories.enrollment.grade
 describe("EnrollmentDisplay", () => {
-  const setupApis = () => {
+  const setupApis = (includeExpired: boolean = true) => {
     const completed = [
       courseEnrollment({
         run: { title: "C Course Ended" },
         grades: [grade({ passed: true })],
       }),
     ]
-    const expired = [
-      courseEnrollment({
-        run: {
-          title: "A Course Ended",
-          end_date: faker.date.past().toISOString(),
-        },
-      }),
-      courseEnrollment({
-        run: {
-          title: "B Course Ended",
-          end_date: faker.date.past().toISOString(),
-        },
-      }),
-    ]
+    const expired = includeExpired
+      ? [
+          courseEnrollment({
+            run: {
+              title: "A Course Ended",
+              end_date: faker.date.past().toISOString(),
+            },
+          }),
+          courseEnrollment({
+            run: {
+              title: "B Course Ended",
+              end_date: faker.date.past().toISOString(),
+            },
+          }),
+        ]
+      : []
     const started = [
       courseEnrollment({
         run: {
@@ -67,6 +75,7 @@ describe("EnrollmentDisplay", () => {
       ...notStarted,
     ])
 
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(
       mitxonline.urls.enrollment.courseEnrollment(),
       mitxonlineCourseEnrollments,
@@ -82,7 +91,7 @@ describe("EnrollmentDisplay", () => {
     const { mitxonlineCourses } = setupApis()
     renderWithProviders(<EnrollmentDisplay />)
 
-    screen.getByRole("heading", { name: "My Learning" })
+    await screen.findByRole("heading", { name: "My Learning" })
 
     const cards = await screen.findAllByTestId("enrollment-card-desktop")
     const expectedTitles = [
@@ -100,9 +109,10 @@ describe("EnrollmentDisplay", () => {
     const { mitxonlineCourses } = setupApis()
     renderWithProviders(<EnrollmentDisplay />)
 
-    await user.click(screen.getByText("Show all"))
+    const showAllButton = await screen.findByText("Show all")
+    await user.click(showAllButton)
 
-    screen.getByRole("heading", { name: "My Learning" })
+    await screen.findByRole("heading", { name: "My Learning" })
 
     const cards = await screen.findAllByTestId("enrollment-card-desktop")
     const expectedTitles = [
@@ -115,5 +125,14 @@ describe("EnrollmentDisplay", () => {
     expectedTitles.forEach((title, i) => {
       expect(cards[i]).toHaveTextContent(title)
     })
+  })
+
+  test("If there are no extra enrollments to display, there should be no show all", async () => {
+    setupApis(false)
+    renderWithProviders(<EnrollmentDisplay />)
+
+    await screen.findByRole("heading", { name: "My Learning" })
+
+    expect(screen.queryByText("Show all")).not.toBeInTheDocument()
   })
 })

@@ -35,9 +35,12 @@ import {
 } from "@/common/urls"
 import dynamic from "next/dynamic"
 import {
-  UserWithOrgsField,
-  useUserMeWithMockedOrgs,
-} from "./OrganizationContent"
+  useMitxOnlineCurrentUser,
+  MitxOnlineUser,
+} from "api/mitxonline-hooks/user"
+import { useUserMe } from "api/hooks/user"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { FeatureFlags } from "@/common/feature_flags"
 
 const LearningResourceDrawer = dynamic(
   () =>
@@ -249,8 +252,11 @@ type TabData = {
     desktop: React.ReactNode
   }
 }
-const getTabData = (user?: UserWithOrgsField): TabData[] => {
-  const orgs = user?.organizations ?? []
+const getTabData = (
+  orgsEnabled: boolean = false,
+  user?: MitxOnlineUser,
+): TabData[] => {
+  const orgs = orgsEnabled ? (user?.b2b_organizations ?? []) : []
   return [
     {
       value: DASHBOARD_HOME,
@@ -301,9 +307,16 @@ const DashboardPage: React.FC<{
   children: React.ReactNode
 }> = ({ children }) => {
   const pathname = usePathname()
-  const { isLoading: isLoadingUser, data: user } = useUserMeWithMockedOrgs()
+  const { isLoading: isLoadingUser, data: user } = useUserMe()
+  const { isLoading: isLoadingMitxOnlineUser, data: mitxOnlineUser } =
+    useMitxOnlineCurrentUser()
+  const orgsEnabled = useFeatureFlagEnabled(FeatureFlags.OrganizationDashboard)
 
-  const tabData = useMemo(() => getTabData(user), [user])
+  const tabData = useMemo(
+    () =>
+      isLoadingMitxOnlineUser ? [] : getTabData(orgsEnabled, mitxOnlineUser),
+    [isLoadingMitxOnlineUser, mitxOnlineUser],
+  )
 
   const tabValue = useMemo(() => {
     /**

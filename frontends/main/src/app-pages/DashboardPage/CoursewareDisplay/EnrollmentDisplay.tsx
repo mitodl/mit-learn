@@ -146,49 +146,44 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
           />
         ))}
       </EnrollmentsList>
-      <Collapse orientation="vertical" in={shown}>
-        <HiddenEnrollmentsList itemSpacing={"16px"}>
-          {hiddenEnrollments.map((course) => (
-            <DashboardCardStyled
-              key={course.id}
-              Component="li"
-              dashboardResource={course}
-              showNotComplete={false}
-              isLoading={isLoading}
-            />
-          ))}
-        </HiddenEnrollmentsList>
-      </Collapse>
-      <ShowAllContainer>
-        <Link color="red" size="medium" onClick={handleToggle}>
-          {shown ? "Show less" : "Show all"}
-        </Link>
-      </ShowAllContainer>
+      {hiddenEnrollments.length === 0 ? null : (
+        <>
+          <Collapse orientation="vertical" in={shown}>
+            <HiddenEnrollmentsList itemSpacing={"16px"}>
+              {hiddenEnrollments.map((course) => (
+                <DashboardCardStyled
+                  key={course.id}
+                  Component="li"
+                  dashboardResource={course}
+                  showNotComplete={false}
+                  isLoading={isLoading}
+                />
+              ))}
+            </HiddenEnrollmentsList>
+          </Collapse>
+          <ShowAllContainer>
+            <Link color="red" size="medium" onClick={handleToggle}>
+              {shown ? "Show less" : "Show all"}
+            </Link>
+          </ShowAllContainer>
+        </>
+      )}
     </>
   )
 }
 
 const EnrollmentDisplay = () => {
   const { data: enrolledCourses, isLoading } = useQuery({
-    ...enrollmentQueries.coursesList(),
+    ...enrollmentQueries.enrollmentsList({}),
     select: mitxonlineEnrollments,
   })
 
-  /**
-   * TODO:
-   * Consider handling UI logic in a component that expects standardized
-   * EnrollmentData objects. This will simplify testing and isolate API calls
-   * to the parent
-   *
-   * The constants below are separate for impending "Show All" functionality.
-   * The above TODO could be handled then.
-   */
   const { completed, expired, started, notStarted } = sortEnrollments(
     enrolledCourses || [],
   )
   const shownEnrollments = [...started, ...notStarted, ...completed]
 
-  return (
+  return shownEnrollments.length > 0 ? (
     <Wrapper>
       <Title variant="h5" component="h2">
         My Learning
@@ -199,7 +194,7 @@ const EnrollmentDisplay = () => {
         isLoading={isLoading}
       />
     </Wrapper>
-  )
+  ) : null
 }
 
 export { EnrollmentDisplay }
