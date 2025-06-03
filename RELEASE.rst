@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.34.2
+--------------
+
+- [pre-commit.ci] pre-commit autoupdate (#2255)
+- Syllabus bot for programs (#2273)
+- Update legal docs (#2274)
+
 Version 0.34.1 (Released June 02, 2025)
 --------------
 
