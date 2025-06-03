@@ -112,8 +112,6 @@ INSTALLED_APPS = (
     "rest_framework",
     "corsheaders",
     "anymail",
-    "hijack",
-    "hijack.contrib.admin",
     "guardian",
     "imagekit",
     "django_json_widget",
@@ -195,7 +193,6 @@ MIDDLEWARE = (
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "authentication.middleware.BlockedIPMiddleware",
-    "hijack.middleware.HijackUserMiddleware",
     "oauth2_provider.middleware.OAuth2TokenMiddleware",
     "django_scim.middleware.SCIMAuthCheckMiddleware",
 )
@@ -684,9 +681,6 @@ REST_FRAMEWORK = {
 USE_X_FORWARDED_PORT = get_bool("USE_X_FORWARDED_PORT", False)  # noqa: FBT003
 USE_X_FORWARDED_HOST = get_bool("USE_X_FORWARDED_HOST", False)  # noqa: FBT003
 
-# Hijack
-HIJACK_ALLOW_GET_REQUESTS = True
-HIJACK_LOGOUT_REDIRECT_URL = "/admin/auth/user"
 
 # Guardian
 # disable the anonymous user creation

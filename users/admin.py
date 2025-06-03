@@ -2,13 +2,12 @@
 
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as ContribUserAdmin
-from hijack.contrib.admin import HijackUserAdminMixin
 
 from users.models import User
 
 
 @admin.register(User)
-class UserAdmin(ContribUserAdmin, HijackUserAdminMixin):
+class UserAdmin(ContribUserAdmin):
     """Admin for User"""
 
     readonly_fields = (
