@@ -7,7 +7,6 @@ import {
   theme,
   styled,
 } from "ol-components"
-import Link from "next/link"
 import { HOME, ABOUT_NON_DEGREE_LEARNING_FRAGMENT } from "@/common/urls"
 import React from "react"
 import domeImage from "@/public/mit-dome-2.jpg"
@@ -109,11 +108,6 @@ const List = styled.ul({
   },
 })
 
-const ExternalLink = styled(Link)(({ theme }) => ({
-  color: theme.custom.colors.red,
-  ...theme.typography.body1,
-}))
-
 const AboutPage: React.FC = () => {
   return (
     <PageContainer>
@@ -159,13 +153,7 @@ const AboutPage: React.FC = () => {
               </li>
               <li>
                 Earn program credentials and apply for an accelerated master's
-                degree program at MIT or at one of our{" "}
-                <ExternalLink
-                  target="_blank"
-                  href="https://micromasters.mit.edu/dedp/pathways-masters/"
-                >
-                  pathway universities
-                </ExternalLink>{" "}
+                degree program at MIT or at one of our partner universities
                 around the world
               </li>
               <li>
