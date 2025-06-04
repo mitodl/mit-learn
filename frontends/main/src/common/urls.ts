@@ -95,9 +95,9 @@ export const SETTINGS = dashboardView("settings")
 export const USERLIST_VIEW = "/dashboard/my-lists/[id]"
 export const userListView = (id: number) =>
   generatePath(USERLIST_VIEW, { id: String(id) })
-export const ORGANIZATION_VIEW = "/dashboard/organization/[id]"
-export const organizationView = (id: number) =>
-  generatePath(ORGANIZATION_VIEW, { id: String(id) })
+export const ORGANIZATION_VIEW = "/dashboard/organization/[slug]"
+export const organizationView = (slug: string) =>
+  generatePath(ORGANIZATION_VIEW, { slug: slug })
 
 export const SEARCH = "/search"
 

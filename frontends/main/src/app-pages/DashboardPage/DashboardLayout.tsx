@@ -267,8 +267,8 @@ const getTabData = (
       },
     },
     ...orgs.map((org) => ({
-      value: organizationView(org.id),
-      href: organizationView(org.id),
+      value: organizationView(org.slug.replace("org-", "")),
+      href: organizationView(org.slug.replace("org-", "")),
       label: {
         mobile: org.name,
         desktop: <DesktopTabLabel icon={<RiBuilding2Line />} text={org.name} />,
@@ -315,7 +315,7 @@ const DashboardPage: React.FC<{
   const tabData = useMemo(
     () =>
       isLoadingMitxOnlineUser ? [] : getTabData(orgsEnabled, mitxOnlineUser),
-    [isLoadingMitxOnlineUser, mitxOnlineUser],
+    [isLoadingMitxOnlineUser, orgsEnabled, mitxOnlineUser],
   )
 
   const tabValue = useMemo(() => {

@@ -3,12 +3,12 @@ import OrganizationContent from "@/app-pages/DashboardPage/OrganizationContent"
 import { PageParams } from "@/app/types"
 import invariant from "tiny-invariant"
 
-const Page: React.FC<PageParams<object, { id: string }>> = async ({
+const Page: React.FC<PageParams<object, { slug: string }>> = async ({
   params,
 }) => {
   const resolved = await params
-  invariant(resolved?.id, "id is required")
-  return <OrganizationContent orgId={Number(resolved.id)} />
+  invariant(resolved?.slug, "slug is required")
+  return <OrganizationContent orgSlug={resolved?.slug} />
 }
 
 export default Page
