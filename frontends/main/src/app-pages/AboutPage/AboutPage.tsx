@@ -127,15 +127,16 @@ const AboutPage: React.FC = () => {
         <Typography variant="body1">
           Since its founding in 1861, MIT has been committed to sharing
           knowledge with the world. At the beginning of the 21st century, MIT
-          expanded this mission by bringing learning resources online, reaching
-          a broader audience through digital platforms. Today, MIT continues to
-          advance this mission by offering non-degree learning resources,
-          including online, in-person, and blended courses and programs. These
-          opportunities allow learners to study with MIT faculty, industry
-          experts, and a global community without enrolling in a degree program.
-          Through these resources, millions of learners have acquired the
-          knowledge and skills needed to further their academic and professional
-          goals.
+          expanded this mission by becoming the first higher education
+          institution to make educational resources freely available to learners
+          regardless of geographical location or institutional affiliation.
+          Today, MIT continues to advance this mission by offering non-degree
+          learning resources, including online, in-person, and blended courses
+          and programs. These opportunities allow learners to study with MIT
+          faculty, industry experts, and a global community without enrolling in
+          a degree program. Through these resources, millions of learners have
+          acquired the knowledge and skills needed to further their academic and
+          professional goals.
         </Typography>
         <SubHeaderContainer>
           <SubHeaderTextContainer>
@@ -152,7 +153,8 @@ const AboutPage: React.FC = () => {
               </li>
               <li>
                 Earn program credentials and apply for an accelerated master's
-                degree program at MIT
+                degree program at MIT or at one of our partner universities
+                around the world
               </li>
               <li>
                 Download, share, and modify thousands of learning resources
@@ -185,19 +187,25 @@ const AboutPage: React.FC = () => {
               What is {SITE_NAME}?
             </Typography>
             <Typography variant="body1">
-              {SITE_NAME} offers a single platform for accessing all of MIT's
-              non-degree learning resources. This includes courses, programs,
-              and various educational materials from different MIT units such as
-              MITx, MIT Bootcamps, MIT OpenCourseWare, MIT Professional
-              Education, MIT Sloan Executive Education, MIT xPRO, and other
-              departments across the Institute.
+              {SITE_NAME} offers a single AI-enabled platform for accessing all
+              of MIT's non-degree learning resources. This includes courses,
+              programs, and various educational materials from different MIT
+              units such as MIT Open Learning — including MITx, MIT
+              OpenCourseWare, and MIT xPRO — MIT Professional Education,MIT
+              Sloan Executive Education, and other departments across the
+              Institute.
             </Typography>
             <Typography variant="body1">
-              Learners can search and browse by topic or department to explore
-              popular and upcoming courses. By creating a free account, they can
-              receive personalized recommendations tailored to their interests
-              and goals, create lists of learning resources, follow topics of
-              interest, and more
+              You can search and browse by topic or department to explore
+              popular and upcoming courses. You can also prompt “AskTIM”, an
+              AI-powered recommendation feature, to quickly find courses and
+              resources aligned with your goals and generate summaries of a
+              course’s structure, topics, and expectations. In select offerings,
+              you can interact with an AI tutor to support you as you work
+              through problem sets. By creating a free account, you can receive
+              personalized recommendations tailored to your interests and goals,
+              create lists of learning resources, follow topics of interest, and
+              more.
             </Typography>
           </HighlightContainer>
         </BodySection>
@@ -213,12 +221,11 @@ const AboutPage: React.FC = () => {
             MIT's non-degree learning programs offer targeted skills, knowledge,
             and certifications without the extensive time commitment of a full
             degree. These programs are designed to be flexible and accessible,
-            enabling professionals, students, and lifelong learners to engage
-            with MIT's educational offerings from anywhere in the world. Many
-            resources are available for free or at a low cost. Whether you want
-            to upskill, explore a new field, or deepen your understanding of a
-            subject, MIT's non-degree learning resources provide a pathway for
-            personal and professional growth.
+            enabling you to engage with MIT's educational offerings from
+            anywhere in the world. Many resources are available for free or at a
+            low cost. Whether you want to upskill, explore a new field, or
+            deepen your understanding of a subject, MIT's non-degree learning
+            resources provide a pathway for personal and professional growth.
           </Typography>
         </BodySection>
         <BodySection>
@@ -227,14 +234,14 @@ const AboutPage: React.FC = () => {
             component="h2"
             id={ACADEMIC_AND_PROFESSIONAL_CONTENT}
           >
-            Academic and Professional content
+            What is MIT’s academic and professional content?
           </Typography>
           <Typography variant="body1">
             MIT's non-degree offerings include content developed from MIT's
-            Academic and Professional curriculum.
+            academic and professional curriculum.
           </Typography>
           <Typography variant="body1">
-            MIT's Academic courses, programs, and materials mirror MIT
+            MIT's academic courses, programs, and materials mirror MIT
             curriculum and residential programs, making these available to a
             global audience. Approved by faculty committees, academic content
             furnishes a comprehensive foundation of knowledge, skills, and
@@ -243,10 +250,10 @@ const AboutPage: React.FC = () => {
             experience on par with the campus environment.
           </Typography>
           <Typography variant="body1">
-            MIT's Professional courses and programs are tailored for working
+            MIT's professional courses and programs are tailored for working
             professionals seeking essential practical skills across various
             industries. Led by MIT faculty and maintaining challenging
-            standards, Professional courses and programs prioritize real-world
+            standards, professional courses and programs prioritize real-world
             applications, emphasize practical skills, and are directly relevant
             to today's workforce.
           </Typography>
