@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+Version 0.35.0 (Released June 04, 2025)
+--------------
+
+- integrate mitxonline api (#2256)
+
 Version 0.34.3 (Released June 03, 2025)
 --------------
 
