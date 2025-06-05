@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.35.1
+Version 0.35.1 (Released June 05, 2025)
 --------------
 
 - Add permissions for content file content (#2249)
