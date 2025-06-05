@@ -14,6 +14,7 @@ import { useQuery } from "@tanstack/react-query"
 import { mitxonlineEnrollments } from "./transform"
 import { DashboardCard } from "./DashboardCard"
 import { DashboardCourse, EnrollmentStatus } from "./types"
+import { MaybeHasStatusAndDetail } from "@/app/getQueryClient"
 
 const Wrapper = styled.div(({ theme }) => ({
   marginTop: "32px",
@@ -176,6 +177,19 @@ const EnrollmentDisplay = () => {
   const { data: enrolledCourses, isLoading } = useQuery({
     ...enrollmentQueries.enrollmentsList({}),
     select: mitxonlineEnrollments,
+    throwOnError: (error) => {
+      const err = error as MaybeHasStatusAndDetail
+      const status = err?.response?.status
+      if (
+        status === 403 &&
+        err.response?.data?.detail ===
+          "Authentication credentials were not provided."
+      ) {
+        // For now, we don't want to throw an error if the user is not authenticated.
+        return false
+      }
+      return true
+    },
   })
 
   const { completed, expired, started, notStarted } = sortEnrollments(
