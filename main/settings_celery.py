@@ -81,8 +81,8 @@ CELERY_BEAT_SCHEDULE = {
     "update-youtube-videos": {
         "task": "learning_resources.tasks.get_youtube_data",
         "schedule": get_int(
-            "YOUTUBE_FETCH_SCHEDULE_SECONDS", 60 * 30
-        ),  # default is every 30 minutes
+            "YOUTUBE_FETCH_SCHEDULE_SECONDS", 60 * 30 * 4
+        ),  # default is every 4 hours
     },
     "update-youtube-transcripts": {
         "task": "learning_resources.tasks.get_youtube_transcripts",
