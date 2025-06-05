@@ -15,7 +15,6 @@ import { DashboardCourse, DashboardProgram } from "./CoursewareDisplay/types"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
 import { OrganizationPage, V2Program } from "@mitodl/mitxonline-api-axios/v1"
 import { useMitxOnlineCurrentUser } from "api/mitxonline-hooks/user"
-import { organizationQueries } from "api/mitxonline-hooks/organizations"
 
 const HeaderRoot = styled.div({
   display: "flex",
@@ -139,23 +138,16 @@ const OrganizationRoot = styled.div({
   gap: "40px",
 })
 
-type OrganizationContentProps = {
-  orgId: number
+type OrganizationContentInternalProps = {
+  org: OrganizationPage
 }
-const OrganizationContent: React.FC<OrganizationContentProps> = ({ orgId }) => {
-  const { isLoading: isLoadingMitxOnlineUser, data: mitxOnlineUser } =
-    useMitxOnlineCurrentUser()
+const OrganizationContentInternal: React.FC<
+  OrganizationContentInternalProps
+> = ({ org }) => {
   const isOrgDashboardEnabled = useFeatureFlagEnabled(
     FeatureFlags.OrganizationDashboard,
   )
-  const b2bOrganization = mitxOnlineUser?.b2b_organizations.find(
-    (org) => org.id === orgId,
-  )
-  const organization = useQuery(
-    organizationQueries.organizationsRetrieve({
-      organization_slug: b2bOrganization?.slug || "",
-    }),
-  )
+  const orgId = org.id
   const enrollments = useQuery(enrollmentQueries.enrollmentsList({}))
   const programs = useQuery(programsQueries.programsList({ org_id: orgId }))
   const courseGroups = useMitxonlineProgramsCourses(
@@ -164,8 +156,6 @@ const OrganizationContent: React.FC<OrganizationContentProps> = ({ orgId }) => {
   )
 
   if (!isOrgDashboardEnabled) return null
-  if (isLoadingMitxOnlineUser) return "Loading"
-  if (!b2bOrganization) return "Organization not found"
 
   const transformedCourseGroups = courseGroups.map((courseGroup) => {
     if (!courseGroup.data || !enrollments.data) return []
@@ -180,7 +170,7 @@ const OrganizationContent: React.FC<OrganizationContentProps> = ({ orgId }) => {
 
   return (
     <OrganizationRoot>
-      <OrganizationHeader org={organization.data} />
+      <OrganizationHeader org={org} />
       {programs.isLoading
         ? "Programs Loading"
         : transformedPrograms?.map((program, index) => {
@@ -198,6 +188,23 @@ const OrganizationContent: React.FC<OrganizationContentProps> = ({ orgId }) => {
           })}
     </OrganizationRoot>
   )
+}
+
+type OrganizationContentProps = {
+  orgSlug: string
+}
+const OrganizationContent: React.FC<OrganizationContentProps> = ({
+  orgSlug,
+}) => {
+  const { isLoading: isLoadingMitxOnlineUser, data: mitxOnlineUser } =
+    useMitxOnlineCurrentUser()
+  const b2bOrganization = mitxOnlineUser?.b2b_organizations.find(
+    (org) => org.slug.replace("org-", "") === orgSlug,
+  )
+  if (isLoadingMitxOnlineUser || isLoadingMitxOnlineUser) return "Loading"
+  return b2bOrganization ? (
+    <OrganizationContentInternal org={b2bOrganization} />
+  ) : null
 }
 
 export default OrganizationContent

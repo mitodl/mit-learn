@@ -69,7 +69,7 @@ describe("DashboardLayout", () => {
     const expectedUrls = [
       DASHBOARD_HOME,
       ...mitxOnlineUser.b2b_organizations.map((org) =>
-        organizationView(org.id),
+        organizationView(org.slug),
       ),
       MY_LISTS,
       PROFILE,

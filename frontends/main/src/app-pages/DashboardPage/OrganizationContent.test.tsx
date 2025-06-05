@@ -28,7 +28,7 @@ describe("OrganizationContent", () => {
     const { orgX, programA, programB, coursesA, coursesB } =
       setupProgramsAndCourses()
     setMockResponse.get(urls.enrollment.courseEnrollment({}), [])
-    renderWithProviders(<OrganizationContent orgId={orgX.id} />)
+    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
 
     await screen.findByRole("heading", {
       name: `Your ${orgX.name} Home`,
@@ -61,7 +61,7 @@ describe("OrganizationContent", () => {
       }),
     ]
     setMockResponse.get(urls.enrollment.courseEnrollment({}), enrollments)
-    renderWithProviders(<OrganizationContent orgId={orgX.id} />)
+    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
 
     const [programElA] = await screen.findAllByTestId("org-program-root")
     const cards = await within(programElA).findAllByTestId(
