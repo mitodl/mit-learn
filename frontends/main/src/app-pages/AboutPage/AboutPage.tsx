@@ -215,17 +215,18 @@ const AboutPage: React.FC = () => {
             component="h2"
             id={ABOUT_NON_DEGREE_LEARNING_FRAGMENT}
           >
-            What is non-degree learning at MIT?
+            What is lifelong learning at MIT?
           </Typography>
           <Typography variant="body1">
-            MIT's non-degree learning programs offer targeted skills, knowledge,
-            and certifications without the extensive time commitment of a full
-            degree. These programs are designed to be flexible and accessible,
-            enabling you to engage with MIT's educational offerings from
-            anywhere in the world. Many resources are available for free or at a
-            low cost. Whether you want to upskill, explore a new field, or
-            deepen your understanding of a subject, MIT's non-degree learning
-            resources provide a pathway for personal and professional growth.
+            Lifelong learning opportunities include MIT's non-degree learning
+            programs, which offer targeted skills, knowledge, and certifications
+            without the extensive time commitment of a full degree. These
+            programs are designed to be flexible and accessible, enabling you to
+            engage with MIT's educational offerings from anywhere in the world.
+            Many resources are available for free or at a low cost. Whether you
+            want to upskill, explore a new field, or deepen your understanding
+            of a subject, MIT's non-degree learning resources provide a pathway
+            for personal and professional growth.
           </Typography>
         </BodySection>
         <BodySection>
