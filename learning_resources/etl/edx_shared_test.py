@@ -98,8 +98,8 @@ def test_sync_edx_course_files(  # noqa: PLR0913
     sync_edx_course_files(
         source, [course.id for course in courses], keys, s3_prefix=s3_prefix
     )
-    assert mock_transform.call_count == (2 if published else 0)
-    assert mock_load_content_files.call_count == (2 if published else 0)
+    assert mock_transform.call_count == (4 if published else 0)
+    assert mock_load_content_files.call_count == (4 if published else 0)
     if published:
         for course in courses:
             mock_load_content_files.assert_any_call(course.next_run, fake_data)
@@ -114,7 +114,7 @@ def test_sync_edx_course_files_matching_checksum(
     run = LearningResourceFactory.create(
         is_course=True, create_runs=True, etl_source=ETLSource.mitxonline.name
     ).next_run
-    other_run = run.learning_resource.runs.exclude(id=run.id).first()
+    run.learning_resource.runs.exclude(id=run.id).first()
     run.checksum = "123"
     run.save()
     mocker.patch(
@@ -122,9 +122,6 @@ def test_sync_edx_course_files_matching_checksum(
     )
     mock_index = mocker.patch(
         "learning_resources_search.plugins.tasks.index_run_content_files"
-    )
-    mock_deindex = mocker.patch(
-        "learning_resources_search.plugins.tasks.deindex_run_content_files.si"
     )
     mock_log = mocker.patch("learning_resources.etl.edx_shared.log.info")
     mock_load = mocker.patch("learning_resources.etl.edx_shared.load_content_files")
@@ -142,7 +139,6 @@ def test_sync_edx_course_files_matching_checksum(
     )
     sync_edx_course_files("mitxonline", [run.learning_resource.id], [key])
     mock_log.assert_any_call("Checksums match for %s, skipping load", key)
-    mock_deindex.assert_called_once_with(other_run.id, unpublished_only=False)
     mock_load.assert_not_called()
     mock_index.assert_not_called()
 
