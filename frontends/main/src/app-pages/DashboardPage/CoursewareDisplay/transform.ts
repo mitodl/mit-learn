@@ -39,6 +39,7 @@ const mitxonlineEnrollment = (raw: CourseRunEnrollment): DashboardCourse => {
       coursewareUrl: raw.run.courseware_url,
     },
     enrollment: {
+      id: raw.id,
       mode: raw.enrollment_mode,
       status: raw.grades[0]?.passed
         ? EnrollmentStatus.Completed
