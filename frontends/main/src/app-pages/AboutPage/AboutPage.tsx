@@ -191,7 +191,7 @@ const AboutPage: React.FC = () => {
               of MIT's non-degree learning resources. This includes courses,
               programs, and various educational materials from different MIT
               units such as MIT Open Learning — including MITx, MIT
-              OpenCourseWare, and MIT xPRO — MIT Professional Education,MIT
+              OpenCourseWare, and MIT xPRO — MIT Professional Education, MIT
               Sloan Executive Education, and other departments across the
               Institute.
             </Typography>
