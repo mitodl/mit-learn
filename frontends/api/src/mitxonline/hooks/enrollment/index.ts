@@ -1,3 +1,7 @@
-import { enrollmentQueries } from "./queries"
+import {
+  enrollmentQueries,
+  enrollmentMutations,
+  enrollmentKeys,
+} from "./queries"
 
-export { enrollmentQueries }
+export { enrollmentQueries, enrollmentMutations, enrollmentKeys }

@@ -78,7 +78,7 @@ const MenuButton = styled(ActionButton)<{
     },
 ])
 
-const getDefaultContextMenuItems = (title: string) => {
+const getDefaultContextMenuItems = (title: string, id?: number) => {
   return [
     {
       className: "dashboard-card-menu-item",
@@ -93,7 +93,7 @@ const getDefaultContextMenuItems = (title: string) => {
       key: "unenroll",
       label: "Unenroll",
       onClick: () => {
-        NiceModal.show(UnenrollDialog, { title })
+        NiceModal.show(UnenrollDialog, { title, id })
       },
     },
   ]
@@ -332,7 +332,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   ) : run.startDate ? (
     <CourseStartCountdown startDate={run.startDate} />
   ) : null
-  const menuItems = contextMenuItems.concat(getDefaultContextMenuItems(title))
+  const menuItems = contextMenuItems.concat(
+    getDefaultContextMenuItems(title, enrollment?.id ?? 0),
+  )
   const contextMenu = isLoading ? (
     <Skeleton variant="rectangular" width={12} height={24} />
   ) : (

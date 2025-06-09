@@ -10,6 +10,11 @@ import { Button, Checkbox, Alert } from "@mitodl/smoot-design"
 
 import NiceModal, { muiDialogV5 } from "@ebay/nice-modal-react"
 import { useFormik } from "formik"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
+import {
+  enrollmentKeys,
+  enrollmentMutations,
+} from "api/mitxonline-hooks/enrollment"
 
 const BoldText = styled.span(({ theme }) => ({
   ...theme.typography.subtitle1,
@@ -17,6 +22,7 @@ const BoldText = styled.span(({ theme }) => ({
 
 type DashboardDialogProps = {
   title: string
+  id: number
 }
 const EmailSettingsDialogInner: React.FC<DashboardDialogProps> = ({
   title,
@@ -77,15 +83,28 @@ const EmailSettingsDialogInner: React.FC<DashboardDialogProps> = ({
   )
 }
 
-const UnenrollDialogInner: React.FC<DashboardDialogProps> = ({ title }) => {
+const UnenrollDialogInner: React.FC<DashboardDialogProps> = ({ title, id }) => {
   const modal = NiceModal.useModal()
+  const queryClient = useQueryClient()
+  const { mutate, isError, isSuccess, error } = useMutation(
+    enrollmentMutations.destroyEnrollment(id),
+  )
   const formik = useFormik({
     enableReinitialize: true,
     validateOnChange: false,
     validateOnBlur: false,
     initialValues: {},
     onSubmit: async () => {
-      // TODO: Handle form submission
+      mutate()
+      if (isSuccess) {
+        queryClient.invalidateQueries({
+          queryKey: enrollmentKeys.enrollmentsList(),
+        })
+        modal.hide()
+      }
+      if (isError) {
+        console.error("Error unenrolling:", error)
+      }
     },
   })
   return (
