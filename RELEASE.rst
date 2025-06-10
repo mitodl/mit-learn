@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.36.1
+--------------
+
+- Import files for all active runs (#2292)
+- locking qdrant client to specific version (#2297)
+- minor copy change (#2296)
+
 Version 0.36.0 (Released June 10, 2025)
 --------------
 
