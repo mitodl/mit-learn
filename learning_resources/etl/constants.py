@@ -90,6 +90,7 @@ class ETLSource(ExtendedEnum):
     see = "see"
     xpro = "xpro"
     youtube = "youtube"
+    canvas = "canvas"
 
 
 class CourseNumberType(Enum):

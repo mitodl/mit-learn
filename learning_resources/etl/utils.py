@@ -502,6 +502,7 @@ def get_learning_course_bucket_name(etl_source: str) -> str:
         ETLSource.xpro.name: settings.XPRO_LEARNING_COURSE_BUCKET_NAME,
         ETLSource.mitxonline.name: settings.MITX_ONLINE_LEARNING_COURSE_BUCKET_NAME,
         ETLSource.oll.name: settings.OLL_LEARNING_COURSE_BUCKET_NAME,
+        ETLSource.canvas.name: settings.CANVAS_COURSE_BUCKET_NAME,
     }
     return bucket_names.get(etl_source)
 
