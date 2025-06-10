@@ -9,6 +9,7 @@ import os
 import re
 import tarfile
 import uuid
+import zipfile
 from collections import Counter
 from collections.abc import Generator
 from datetime import UTC, datetime
@@ -537,6 +538,11 @@ def calc_checksum(filename) -> str:
     Returns:
         str: The md5 checksum of the file
     """
+    if zipfile.is_zipfile(filename):
+        with zipfile.ZipFile(filename, "r") as zip_file:
+            return str(
+                hash(tuple(f"{zp.filename}:{zp.file_size}" for zp in zip_file.filelist))
+            )
     with tarfile.open(filename, "r") as tgz_file:
         return str(hash(tuple(ti.chksum for ti in tgz_file.getmembers())))
 
