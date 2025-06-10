@@ -801,7 +801,7 @@ def load_content_files(
 
         if calc_completeness:
             calculate_completeness(course_run, content_tags=content_tags)
-        content_files_loaded_actions(run=course_run, deindex_only=False)
+        content_files_loaded_actions(run=course_run)
 
         return content_files_ids
     return None

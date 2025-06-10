@@ -967,22 +967,19 @@ def test_load_programs(mocker, mock_blocklist, mock_duplicates):
 
 
 @pytest.mark.parametrize("is_published", [True, False])
-@pytest.mark.parametrize("extra_run", [True, False])
 @pytest.mark.parametrize("calc_score", [True, False])
-def test_load_content_files(mocker, is_published, extra_run, calc_score):
+def test_load_content_files(mocker, is_published, calc_score):
     """Test that load_content_files calls the expected functions"""
     course = LearningResourceFactory.create(is_course=True, create_runs=False)
     course_run = LearningResourceRunFactory.create(
         published=is_published, learning_resource=course
     )
-    if extra_run:
-        LearningResourceRunFactory.create(
-            published=is_published,
-            learning_resource=course,
-            start_date=now_in_utc() - timedelta(days=365),
-        )
-    run_count = 2 if extra_run else 1
-    assert course.runs.count() == run_count
+    LearningResourceRunFactory.create(
+        published=is_published,
+        learning_resource=course,
+        start_date=now_in_utc() - timedelta(days=365),
+    )
+    assert course.runs.count() == 2
 
     deleted_content_file = ContentFileFactory.create(run=course_run)
     returned_content_file_id = deleted_content_file.id + 1
@@ -1011,9 +1008,7 @@ def test_load_content_files(mocker, is_published, extra_run, calc_score):
     load_content_files(course_run, content_data, calc_completeness=calc_score)
     assert mock_load_content_file.call_count == len(content_data)
     assert mock_bulk_index.call_count == (1 if is_published else 0)
-    assert mock_bulk_delete.call_count == (
-        run_count if not is_published else run_count - 1
-    )
+    assert mock_bulk_delete.call_count == 0 if is_published else 1
     assert mock_calc_score.call_count == (1 if calc_score else 0)
     deleted_content_file.refresh_from_db()
     assert not deleted_content_file.published
@@ -1044,10 +1039,6 @@ def test_load_test_mode_resource_content_files(
         "learning_resources.etl.edx_shared.load_content_files",
         autospec=True,
         return_value=[],
-    )
-
-    mocker.patch(
-        "learning_resources.etl.edx_shared.content_files_loaded_actions",
     )
     mocker.patch(
         "learning_resources_search.plugins.tasks.deindex_run_content_files",

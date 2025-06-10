@@ -187,36 +187,29 @@ class SearchIndexPlugin:
         run.delete()
 
     @hookimpl
-    def content_files_loaded(self, run, deindex_only):
+    def content_files_loaded(self, run):
         """
         Upsert a created/modified run's content files
 
          Args:
              run(LearningResourceRun): The LearningResourceRun that was upserted
-             deindex_only(bool): Only deindex the other runs' content files
         """
-        course_runs_to_deindex = run.learning_resource.runs.all()
         if run.published:
-            # Only one run per course should have contentfiles at any given time
-            course_runs_to_deindex = course_runs_to_deindex.exclude(id=run.id)
-            if not deindex_only:
-                index_tasks = []
-                if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
-                    index_tasks.append(
-                        vector_tasks.embed_run_content_files.si(run.id),
-                    )
+            index_tasks = []
+            if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
                 index_tasks.append(
-                    tasks.index_run_content_files.si(run.id),
+                    vector_tasks.embed_run_content_files.si(run.id),
                 )
-                try_with_retry_as_task(chain(*index_tasks))
-        for course_run in course_runs_to_deindex:
+            index_tasks.append(
+                tasks.index_run_content_files.si(run.id),
+            )
+            try_with_retry_as_task(chain(*index_tasks))
+        else:
             deindex_tasks = [
-                tasks.deindex_run_content_files.si(
-                    course_run.id, unpublished_only=False
-                ),
+                tasks.deindex_run_content_files.si(run.id, unpublished_only=False),
             ]
             if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
                 deindex_tasks.append(
-                    vector_tasks.remove_run_content_files.si(course_run.id),
+                    vector_tasks.remove_run_content_files.si(run.id),
                 )
             try_with_retry_as_task(chain(*deindex_tasks))
