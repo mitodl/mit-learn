@@ -18,7 +18,6 @@ import * as mitxonline from "api/mitxonline-test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import HomeContent from "./HomeContent"
 import invariant from "tiny-invariant"
-import { courseEnrollments } from "../../../../api/src/mitxonline/test-utils/factories/enrollment"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest
@@ -210,7 +209,7 @@ describe("HomeContent", () => {
       mockedUseFeatureFlagEnabled.mockReturnValue(enrollmentsEnabled)
 
       if (enrollmentsEnabled) {
-        const enrollments = courseEnrollments(3)
+        const enrollments = mitxonline.factories.enrollment.courseEnrollments(3)
         setMockResponse.get(
           mitxonline.urls.enrollment.courseEnrollment(),
           enrollments,
