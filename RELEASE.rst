@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.36.1
+Version 0.36.1 (Released June 10, 2025)
 --------------
 
 - Import files for all active runs (#2292)
