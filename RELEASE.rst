@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.36.0
+Version 0.36.0 (Released June 10, 2025)
 --------------
 
 - Update dependency Django to v4.2.22 [SECURITY] (#2293)
