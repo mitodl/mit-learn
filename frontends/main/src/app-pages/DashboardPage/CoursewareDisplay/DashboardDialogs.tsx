@@ -88,7 +88,7 @@ const EmailSettingsDialogInner: React.FC<DashboardDialogProps> = ({
 const UnenrollDialogInner: React.FC<DashboardDialogProps> = ({ title, id }) => {
   const modal = NiceModal.useModal()
   const queryClient = useQueryClient()
-  const { mutate, isError, isSuccess, error } = useMutation(
+  const { mutate, isSuccess } = useMutation(
     enrollmentMutations.destroyEnrollment(id),
   )
   const formik = useFormik({
@@ -103,9 +103,6 @@ const UnenrollDialogInner: React.FC<DashboardDialogProps> = ({ title, id }) => {
           queryKey: enrollmentKeys.enrollmentsList(),
         })
         modal.hide()
-      }
-      if (isError) {
-        console.error("Error unenrolling:", error)
       }
     },
   })
