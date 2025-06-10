@@ -13,8 +13,8 @@ const currentUser = {
 }
 
 const enrollment = {
-  courseEnrollment: (opts?: RawAxiosRequestConfig) =>
-    `${API_BASE_URL}/api/v1/enrollments/${queryify(opts)}`,
+  courseEnrollment: (id?: number) =>
+    `${API_BASE_URL}/api/v1/enrollments/${id ? `${id}/` : ""}`,
 }
 
 const programs = {

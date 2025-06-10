@@ -148,7 +148,7 @@ const OrganizationContentInternal: React.FC<
     FeatureFlags.OrganizationDashboard,
   )
   const orgId = org.id
-  const enrollments = useQuery(enrollmentQueries.enrollmentsList({}))
+  const enrollments = useQuery(enrollmentQueries.enrollmentsList())
   const programs = useQuery(programsQueries.programsList({ org_id: orgId }))
   const courseGroups = useMitxonlineProgramsCourses(
     programs.data?.results ?? [],

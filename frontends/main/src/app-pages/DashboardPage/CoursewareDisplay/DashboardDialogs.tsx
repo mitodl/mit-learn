@@ -22,7 +22,7 @@ const BoldText = styled.span(({ theme }) => ({
 
 type DashboardDialogProps = {
   title: string
-  id: number
+  enrollmentId: number
 }
 const EmailSettingsDialogInner: React.FC<DashboardDialogProps> = ({
   title,
@@ -83,11 +83,14 @@ const EmailSettingsDialogInner: React.FC<DashboardDialogProps> = ({
   )
 }
 
-const UnenrollDialogInner: React.FC<DashboardDialogProps> = ({ title, id }) => {
+const UnenrollDialogInner: React.FC<DashboardDialogProps> = ({
+  title,
+  enrollmentId,
+}) => {
   const modal = NiceModal.useModal()
   const queryClient = useQueryClient()
   const { mutate, isSuccess } = useMutation(
-    enrollmentMutations.destroyEnrollment(id),
+    enrollmentMutations.destroyEnrollment(enrollmentId),
   )
   const formik = useFormik({
     enableReinitialize: true,
