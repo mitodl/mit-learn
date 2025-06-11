@@ -350,6 +350,7 @@ describe.each([
     async ({ contextMenuItems }) => {
       const course = dashboardCourse()
       course.enrollment = {
+        id: faker.number.int(),
         status: EnrollmentStatus.Completed,
         mode: EnrollmentMode.Verified,
       }
@@ -366,7 +367,7 @@ describe.each([
       await user.click(contextMenuButton)
       const expectedMenuItems = [
         ...contextMenuItems,
-        ...getDefaultContextMenuItems("Test Course"),
+        ...getDefaultContextMenuItems("Test Course", course.enrollment.id),
       ]
       const menuItems = screen.getAllByRole("menuitem")
       for (let i = 0; i < expectedMenuItems.length; i++) {
