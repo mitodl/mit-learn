@@ -22,6 +22,7 @@ from tempfile import TemporaryDirectory
 import boto3
 import rapidjson
 import requests
+from defusedxml.ElementTree import parse as etree_parse
 from django.conf import settings
 from django.utils.dateparse import parse_duration
 from django.utils.text import slugify
@@ -407,6 +408,115 @@ def text_from_sjson_content(content: str):
     return " ".join(data.get("text", []))
 
 
+def parse_canvas_settings(manifest_path):
+    tree = etree_parse(manifest_path)
+    root = tree.getroot()
+    attributes = {}
+    for node in root.iter():
+        attributes[node.tag.split("}")[1]] = node.text
+    return attributes
+
+
+def transform_canvas_content_files(
+    course_zipfile: Path, *, overwrite: bool
+) -> Generator[dict, None, None]:
+    basedir = course_zipfile.name.split(".")[0]
+    with (
+        TemporaryDirectory(prefix=basedir) as olx_path,
+        zipfile.ZipFile(course_zipfile.name, "r") as course_archive,
+    ):
+        for member in course_archive.infolist():
+            course_archive.extract(member, path=olx_path)
+        course_info = parse_canvas_settings(
+            str(Path(olx_path, "course_settings/course_settings.xml"))
+        )
+        course_title = course_info.get("title")
+        readable_id = course_info.get("course_code")
+        # create placeholder learning resource
+        resource, _ = LearningResource.objects.get_or_create(
+            readable_id=readable_id,
+            defaults={
+                "title": course_title,
+                "published": False,
+                "etl_source": ETLSource.canvas.name,
+            },
+        )
+        if resource.runs.count() == 0:
+            LearningResourceRun.objects.create(
+                run_id=f"{readable_id}+canvas", learning_resource=resource
+            )
+        run = resource.runs.first()
+
+        yield from _process_olx_path(olx_path, run, overwrite=overwrite)
+
+
+def _process_olx_path(
+    olx_path: str, run: LearningResourceRun, *, overwrite: bool = False
+):
+    for document, metadata in documents_from_olx(olx_path):
+        source_path = metadata.get("source_path")
+        edx_module_id = get_edx_module_id(source_path, run)
+        key = edx_module_id
+        content_type = metadata["content_type"]
+        mime_type = metadata.get("mime_type")
+        file_extension = metadata.get("file_extension")
+
+        existing_content = ContentFile.objects.filter(key=key, run=run).first()
+        if (
+            not existing_content
+            or existing_content.archive_checksum != metadata.get("archive_checksum")
+        ) or overwrite:
+            if settings.SKIP_TIKA and settings.ENVIRONMENT != "production":
+                content_dict = {
+                    "content": "",
+                    "content_title": "",
+                }
+            else:
+                tika_output = extract_text_metadata(
+                    document,
+                    other_headers={"Content-Type": mime_type} if mime_type else {},
+                )
+
+                if tika_output is None:
+                    log.info("No tika response for %s", key)
+                    continue
+
+                tika_content = tika_output.get("content") or ""
+                tika_metadata = tika_output.get("metadata") or {}
+                content = tika_content.strip()
+                if file_extension == ".srt":
+                    content = text_from_srt_content(content)
+                elif file_extension == ".sjson":
+                    content = text_from_sjson_content(content)
+
+                if not content:
+                    continue
+
+                content_dict = {
+                    "content": content,
+                    "content_title": (
+                        metadata.get("title") or tika_metadata.get("title") or ""
+                    )[: get_max_contentfile_length("content_title")],
+                }
+        else:
+            content_dict = {
+                "content": existing_content.content,
+                "content_title": existing_content.content_title,
+            }
+        yield (
+            {
+                "key": key,
+                "published": True,
+                "content_type": content_type,
+                "archive_checksum": metadata.get("archive_checksum"),
+                "file_extension": file_extension,
+                "source_path": source_path,
+                "edx_module_id": edx_module_id,
+                **content_dict,
+            }
+        )
+
+
 def transform_content_files(
     course_tarpath: Path, run: LearningResourceRun, *, overwrite: bool
 ) -> Generator[dict, None, None]:
@@ -424,68 +534,7 @@ def transform_content_files(
     with TemporaryDirectory(prefix=basedir) as inner_tempdir:
         check_call(["tar", "xf", course_tarpath], cwd=inner_tempdir)  # noqa: S603,S607
         olx_path = glob.glob(inner_tempdir + "/*")[0]  # noqa: PTH207
-        for document, metadata in documents_from_olx(olx_path):
-            source_path = metadata.get("source_path")
-            edx_module_id = get_edx_module_id(source_path, run)
-            key = edx_module_id
-            content_type = metadata["content_type"]
-            mime_type = metadata.get("mime_type")
-            file_extension = metadata.get("file_extension")
-
-            existing_content = ContentFile.objects.filter(key=key, run=run).first()
-            if (
-                not existing_content
-                or existing_content.archive_checksum != metadata.get("archive_checksum")
-            ) or overwrite:
-                if settings.SKIP_TIKA and settings.ENVIRONMENT != "production":
-                    content_dict = {
-                        "content": "",
-                        "content_title": "",
-                    }
-                else:
-                    tika_output = extract_text_metadata(
-                        document,
-                        other_headers={"Content-Type": mime_type} if mime_type else {},
-                    )
-
-                    if tika_output is None:
-                        log.info("No tika response for %s", key)
-                        continue
-
-                    tika_content = tika_output.get("content") or ""
-                    tika_metadata = tika_output.get("metadata") or {}
-                    content = tika_content.strip()
-                    if file_extension == ".srt":
-                        content = text_from_srt_content(content)
-                    elif file_extension == ".sjson":
-                        content = text_from_sjson_content(content)
-
-                    if not content:
-                        continue
-
-                    content_dict = {
-                        "content": content,
-                        "content_title": (
-                            metadata.get("title") or tika_metadata.get("title") or ""
-                        )[: get_max_contentfile_length("content_title")],
-                    }
-            else:
-                content_dict = {
-                    "content": existing_content.content,
-                    "content_title": existing_content.content_title,
-                }
-            yield (
-                {
-                    "key": key,
-                    "published": True,
-                    "content_type": content_type,
-                    "archive_checksum": metadata.get("archive_checksum"),
-                    "file_extension": file_extension,
-                    "source_path": source_path,
-                    "edx_module_id": edx_module_id,
-                    **content_dict,
-                }
-            )
+        yield from _process_olx_path(olx_path, run, overwrite=overwrite)
 
 
 def get_learning_course_bucket_name(etl_source: str) -> str:
