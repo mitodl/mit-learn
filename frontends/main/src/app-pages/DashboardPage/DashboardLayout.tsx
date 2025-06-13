@@ -308,9 +308,9 @@ const DashboardPage: React.FC<{
 }> = ({ children }) => {
   const pathname = usePathname()
   const { isLoading: isLoadingUser, data: user } = useUserMe()
-  const { isLoading: isLoadingMitxOnlineUser, data: mitxOnlineUser } =
-    useMitxOnlineCurrentUser()
   const orgsEnabled = useFeatureFlagEnabled(FeatureFlags.OrganizationDashboard)
+  const { isLoading: isLoadingMitxOnlineUser, data: mitxOnlineUser } =
+    useMitxOnlineCurrentUser({ enabled: !!orgsEnabled })
 
   const tabData = useMemo(
     () =>
