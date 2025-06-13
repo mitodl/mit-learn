@@ -37,6 +37,7 @@ from learning_resources.constants import (
     DEPARTMENTS,
     VALID_TEXT_FILE_TYPES,
     LearningResourceDelivery,
+    LearningResourceType,
     LevelType,
     OfferedBy,
     RunStatus,
@@ -49,6 +50,7 @@ from learning_resources.etl.constants import (
     DurationConfig,
     ETLSource,
 )
+from learning_resources.etl.loaders import load_content_files
 from learning_resources.models import (
     ContentFile,
     Course,
@@ -408,51 +410,20 @@ def text_from_sjson_content(content: str):
     return " ".join(data.get("text", []))
 
 
-def parse_canvas_settings(manifest_path):
-    tree = etree_parse(manifest_path)
-    root = tree.getroot()
-    attributes = {}
-    for node in root.iter():
-        attributes[node.tag.split("}")[1]] = node.text
-    return attributes
-
-
 def transform_canvas_content_files(
-    course_zipfile: Path, *, overwrite: bool
+    course_zipfile: Path, run: LearningResourceRun, *, overwrite
 ) -> Generator[dict, None, None]:
     basedir = course_zipfile.name.split(".")[0]
     with (
         TemporaryDirectory(prefix=basedir) as olx_path,
-        zipfile.ZipFile(course_zipfile.name, "r") as course_archive,
+        zipfile.ZipFile(course_zipfile.absolute(), "r") as course_archive,
     ):
         for member in course_archive.infolist():
             course_archive.extract(member, path=olx_path)
-        course_info = parse_canvas_settings(
-            str(Path(olx_path, "course_settings/course_settings.xml"))
-        )
-        course_title = course_info.get("title")
-        readable_id = course_info.get("course_code")
-        # create placeholder learning resource
-        resource, _ = LearningResource.objects.get_or_create(
-            readable_id=readable_id,
-            defaults={
-                "title": course_title,
-                "published": False,
-                "etl_source": ETLSource.canvas.name,
-            },
-        )
-        if resource.runs.count() == 0:
-            LearningResourceRun.objects.create(
-                run_id=f"{readable_id}+canvas", learning_resource=resource
-            )
-        run = resource.runs.first()
-
         yield from _process_olx_path(olx_path, run, overwrite=overwrite)
 
 
-def _process_olx_path(
-    olx_path: str, run: LearningResourceRun, *, overwrite: bool = False
-):
+def _process_olx_path(olx_path: str, run: LearningResourceRun, *, overwrite):
     for document, metadata in documents_from_olx(olx_path):
         source_path = metadata.get("source_path")
         edx_module_id = get_edx_module_id(source_path, run)
@@ -460,7 +431,6 @@ def _process_olx_path(
         content_type = metadata["content_type"]
         mime_type = metadata.get("mime_type")
         file_extension = metadata.get("file_extension")
-
         existing_content = ContentFile.objects.filter(key=key, run=run).first()
         if (
             not existing_content
@@ -476,7 +446,6 @@ def _process_olx_path(
                     document,
                     other_headers={"Content-Type": mime_type} if mime_type else {},
                 )
-
                 if tika_output is None:
                     log.info("No tika response for %s", key)
                     continue
@@ -515,6 +484,61 @@ def _process_olx_path(
                 **content_dict,
             }
         )
+
+
+def sync_canvas_archive(bucket, key: str, overwrite):
+    with TemporaryDirectory() as export_tempdir:
+        course_archive_path = Path(export_tempdir, key.split("/")[-1])
+        bucket.download_file(key, course_archive_path)
+        run = run_for_canvas_archive(course_archive_path, overwrite=overwrite)
+        checksum = calc_checksum(course_archive_path)
+        load_content_files(
+            run,
+            transform_canvas_content_files(
+                course_archive_path, run, overwrite=overwrite
+            ),
+        )
+
+        run.checksum = checksum
+        run.save()
+
+
+def run_for_canvas_archive(course_archive_path, overwrite):
+    checksum = calc_checksum(course_archive_path)
+    course_info = parse_canvas_settings(course_archive_path)
+    course_title = course_info.get("title")
+    readable_id = course_info.get("course_code")
+    # create placeholder learning resource
+    resource, _ = LearningResource.objects.get_or_create(
+        readable_id=readable_id,
+        defaults={
+            "title": course_title,
+            "published": False,
+            "etl_source": ETLSource.canvas.name,
+            "resource_type": LearningResourceType.course.name,
+        },
+    )
+    if resource.runs.count() == 0:
+        LearningResourceRun.objects.create(
+            run_id=f"{readable_id}+canvas", learning_resource=resource
+        )
+    run = resource.runs.first()
+    if run.checksum == checksum and not overwrite:
+        log.info("Checksums match for %s, skipping load", readable_id)
+        return None
+    run.checksum = checksum
+    run.save()
+    return run
+
+
+def parse_canvas_settings(course_archive_path):
+    with zipfile.ZipFile(course_archive_path, "r") as course_archive:
+        xml_string = course_archive.read("course_settings/course_settings.xml")
+    tree = etree_parse(xml_string)
+    attributes = {}
+    for node in tree.iter():
+        attributes[node.tag.split("}")[1]] = node.text
+    return attributes
 
 
 def transform_content_files(

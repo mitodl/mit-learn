@@ -14,6 +14,7 @@ from django.utils import timezone
 
 from learning_resources.content_summarizer import ContentSummarizer
 from learning_resources.etl import pipelines, youtube
+from learning_resources.etl.canvas import sync_canvas_archive
 from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE, ETLSource
 from learning_resources.etl.edx_shared import (
     get_most_recent_course_archives,
@@ -21,7 +22,10 @@ from learning_resources.etl.edx_shared import (
 )
 from learning_resources.etl.loaders import load_run_dependent_values
 from learning_resources.etl.pipelines import ocw_courses_etl
-from learning_resources.etl.utils import get_learning_course_bucket_name
+from learning_resources.etl.utils import (
+    get_learning_course_bucket,
+    get_learning_course_bucket_name,
+)
 from learning_resources.models import ContentFile, LearningResource
 from learning_resources.site_scrapers.utils import scraper_for_site
 from learning_resources.utils import html_to_markdown, load_course_blocklist
@@ -462,6 +466,12 @@ def summarize_unprocessed_content(
         ]
     )
     return self.replace(summarizer_tasks)
+
+
+@app.task(acks_late=True)
+def ingest_canvas_course(archive_path):
+    bucket = get_learning_course_bucket(ETLSource.canvas.name)
+    sync_canvas_archive(bucket, archive_path, overwrite=True)
 
 
 @app.task(bind=True)
