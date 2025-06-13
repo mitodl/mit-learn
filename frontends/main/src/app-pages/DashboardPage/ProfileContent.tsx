@@ -6,13 +6,15 @@ import {
   styled,
   CircularProgress,
   CheckboxChoiceBoxField,
-  CheckboxChoiceField,
-  RadioChoiceField,
   SimpleSelectField,
-  TextField,
   Skeleton,
 } from "ol-components"
-import { Button } from "@mitodl/smoot-design"
+import {
+  Button,
+  CheckboxChoiceField,
+  RadioChoiceField,
+  TextField,
+} from "@mitodl/smoot-design"
 
 import { useLearningResourceTopics } from "api/hooks/learningResources"
 import {
