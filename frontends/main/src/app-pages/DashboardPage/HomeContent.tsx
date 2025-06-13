@@ -13,10 +13,10 @@ import {
   FREE_COURSES_CAROUSEL,
 } from "@/common/carousels"
 import ResourceCarousel from "@/page-components/ResourceCarousel/ResourceCarousel"
-import { useProfileMeQuery } from "api/hooks/profile"
 import { EnrollmentDisplay } from "./CoursewareDisplay/EnrollmentDisplay"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
+import { useUserMe } from "api/hooks/user"
 
 const SubTitleText = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
@@ -66,9 +66,9 @@ const TitleText = styled(Typography)(({ theme }) => ({
 })) as typeof Typography
 
 const HomeContent: React.FC = () => {
-  const { isLoading: isLoadingProfile, data: profile } = useProfileMeQuery()
-  const topics = profile?.preference_search_filters.topic
-  const certification = profile?.preference_search_filters.certification
+  const { isLoading: isLoadingProfile, data: user } = useUserMe()
+  const topics = user?.profile?.preference_search_filters.topic
+  const certification = user?.profile?.preference_search_filters.certification
   const showEnrollments = useFeatureFlagEnabled(
     FeatureFlags.EnrollmentDashboard,
   )
@@ -93,7 +93,7 @@ const HomeContent: React.FC = () => {
           titleComponent="h2"
           title="Top picks for you"
           isLoading={isLoadingProfile}
-          config={TopPicksCarouselConfig(profile)}
+          config={TopPicksCarouselConfig(user?.profile)}
         />
         {topics?.map((topic, index) => (
           <StyledResourceCarousel
