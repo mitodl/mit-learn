@@ -10,11 +10,10 @@ import {
   truncateText,
   css,
   Drawer,
-  Checkbox,
   VisuallyHidden,
   Stack,
 } from "ol-components"
-import { Button, ButtonProps } from "@mitodl/smoot-design"
+import { Button, ButtonProps, childCheckboxStyles } from "@mitodl/smoot-design"
 
 import {
   RiCloseLine,
@@ -195,7 +194,7 @@ const FacetStyles = styled.div`
         cursor: pointer;
       }
 
-      ${Checkbox.styles}
+      ${({ theme }) => childCheckboxStyles(theme)}
 
       .facet-count {
         font-size: 12px;
