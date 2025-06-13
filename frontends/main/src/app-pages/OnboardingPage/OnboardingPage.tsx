@@ -10,7 +10,6 @@ import {
   StepIconProps,
   Container,
   LoadingSpinner,
-  CircularProgress,
   Typography,
   CheckboxChoiceBoxField,
   RadioChoiceBoxField,
@@ -18,7 +17,7 @@ import {
   Skeleton,
   VisuallyHidden,
 } from "ol-components"
-import { Button } from "@mitodl/smoot-design"
+import { Button, ButtonLoadingIcon } from "@mitodl/smoot-design"
 
 import { RiArrowRightLine, RiArrowLeftLine } from "@remixicon/react"
 import { useProfileMeMutation, useProfileMeQuery } from "api/hooks/profile"
@@ -352,7 +351,7 @@ const OnboardingPage: React.FC = () => {
             endIcon={
               activeStep < NUM_STEPS - 1 ? (
                 isSaving ? (
-                  <CircularProgress />
+                  <ButtonLoadingIcon />
                 ) : (
                   <RiArrowRightLine />
                 )
