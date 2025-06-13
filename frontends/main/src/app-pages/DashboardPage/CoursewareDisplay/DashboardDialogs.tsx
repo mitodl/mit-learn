@@ -6,9 +6,8 @@ import {
   DialogActions,
   Stack,
   Alert,
-  Checkbox,
 } from "ol-components"
-import { Button } from "@mitodl/smoot-design"
+import { Button, Checkbox } from "@mitodl/smoot-design"
 
 import NiceModal, { muiDialogV5 } from "@ebay/nice-modal-react"
 import { useFormik } from "formik"

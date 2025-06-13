@@ -6,12 +6,11 @@ import {
   Alert,
   TextField,
   Autocomplete,
-  BooleanRadioChoiceField,
   FormDialog,
   Dialog,
   MenuItem,
 } from "ol-components"
-import { Button } from "@mitodl/smoot-design"
+import { Button, BooleanRadioChoiceField } from "@mitodl/smoot-design"
 import * as Yup from "yup"
 import { PrivacyLevelEnum, type LearningPathResource, UserList } from "api"
 

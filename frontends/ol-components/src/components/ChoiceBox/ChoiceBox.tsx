@@ -1,7 +1,7 @@
 import React from "react"
 import styled from "@emotion/styled"
 import { type GridProps } from "@mui/material/Grid"
-import { Checkbox } from "../Checkbox/Checkbox"
+import { Checkbox } from "@mitodl/smoot-design"
 import { Radio } from "../Radio/Radio"
 
 const Container = styled.label(({ theme }) => {
