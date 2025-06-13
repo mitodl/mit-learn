@@ -14,7 +14,6 @@ from django.utils import timezone
 
 from learning_resources.content_summarizer import ContentSummarizer
 from learning_resources.etl import pipelines, youtube
-from learning_resources.etl.canvas import sync_canvas_archive
 from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE, ETLSource
 from learning_resources.etl.edx_shared import (
     get_most_recent_course_archives,
@@ -25,6 +24,7 @@ from learning_resources.etl.pipelines import ocw_courses_etl
 from learning_resources.etl.utils import (
     get_learning_course_bucket,
     get_learning_course_bucket_name,
+    sync_canvas_archive,
 )
 from learning_resources.models import ContentFile, LearningResource
 from learning_resources.site_scrapers.utils import scraper_for_site

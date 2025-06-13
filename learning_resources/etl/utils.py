@@ -22,7 +22,7 @@ from tempfile import TemporaryDirectory
 import boto3
 import rapidjson
 import requests
-from defusedxml.ElementTree import parse as etree_parse
+from defusedxml import ElementTree
 from django.conf import settings
 from django.utils.dateparse import parse_duration
 from django.utils.text import slugify
@@ -50,7 +50,6 @@ from learning_resources.etl.constants import (
     DurationConfig,
     ETLSource,
 )
-from learning_resources.etl.loaders import load_content_files
 from learning_resources.models import (
     ContentFile,
     Course,
@@ -487,6 +486,8 @@ def _process_olx_path(olx_path: str, run: LearningResourceRun, *, overwrite):
 
 
 def sync_canvas_archive(bucket, key: str, overwrite):
+    from learning_resources.etl.loaders import load_content_files
+
     with TemporaryDirectory() as export_tempdir:
         course_archive_path = Path(export_tempdir, key.split("/")[-1])
         bucket.download_file(key, course_archive_path)
@@ -534,7 +535,7 @@ def run_for_canvas_archive(course_archive_path, overwrite):
 def parse_canvas_settings(course_archive_path):
     with zipfile.ZipFile(course_archive_path, "r") as course_archive:
         xml_string = course_archive.read("course_settings/course_settings.xml")
-    tree = etree_parse(xml_string)
+    tree = ElementTree.fromstring(xml_string)
     attributes = {}
     for node in tree.iter():
         attributes[node.tag.split("}")[1]] = node.text
