@@ -314,7 +314,9 @@ const DashboardPage: React.FC<{
 
   const tabData = useMemo(
     () =>
-      isLoadingMitxOnlineUser ? [] : getTabData(orgsEnabled, mitxOnlineUser),
+      isLoadingMitxOnlineUser
+        ? getTabData(orgsEnabled)
+        : getTabData(orgsEnabled, mitxOnlineUser),
     [isLoadingMitxOnlineUser, orgsEnabled, mitxOnlineUser],
   )
 
