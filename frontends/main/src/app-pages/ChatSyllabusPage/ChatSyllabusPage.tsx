@@ -1,11 +1,12 @@
 "use client"
 import React, { useState } from "react"
-import { styled, MenuItem, Alert } from "ol-components"
+import { styled, MenuItem } from "ol-components"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import StyledContainer from "@/page-components/StyledContainer/StyledContainer"
 // eslint-disable-next-line
 import { InputLabel, Select } from "@mui/material"
+import { Alert } from "@mitodl/smoot-design"
 import { AiChat, AiChatProps } from "@mitodl/smoot-design/ai"
 import { extractJSONFromComment } from "ol-utilities"
 import { getCsrfToken } from "@/common/utils"

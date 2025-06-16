@@ -3,14 +3,13 @@ import { useFormik, FormikConfig } from "formik"
 import NiceModal, { muiDialogV5 } from "@ebay/nice-modal-react"
 import { RiDeleteBinLine } from "@remixicon/react"
 import {
-  Alert,
   TextField,
   Autocomplete,
   FormDialog,
   Dialog,
   MenuItem,
 } from "ol-components"
-import { Button, BooleanRadioChoiceField } from "@mitodl/smoot-design"
+import { Button, BooleanRadioChoiceField, Alert } from "@mitodl/smoot-design"
 import * as Yup from "yup"
 import { PrivacyLevelEnum, type LearningPathResource, UserList } from "api"
 

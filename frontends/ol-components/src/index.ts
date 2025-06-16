@@ -102,7 +102,6 @@ export type { StepIconProps } from "@mui/material/StepIcon"
 export { default as FormGroup } from "@mui/material/FormGroup"
 export { default as Slider } from "@mui/material/Slider"
 
-export * from "./components/Alert/Alert"
 export * from "./components/BannerPage/BannerPage"
 export * from "./components/Breadcrumbs/Breadcrumbs"
 export * from "./components/Card/Card"
