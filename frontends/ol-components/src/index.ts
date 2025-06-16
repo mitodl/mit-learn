@@ -130,7 +130,6 @@ export * from "./components/SimpleMenu/SimpleMenu"
 export * from "./components/SortableList/SortableList"
 export * from "./components/ThemeProvider/ThemeProvider"
 export * from "./components/TruncateText/TruncateText"
-export * from "./components/VisuallyHidden/VisuallyHidden"
 
 export * from "./constants/imgConfigs"
 

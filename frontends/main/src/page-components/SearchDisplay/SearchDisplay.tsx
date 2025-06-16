@@ -10,10 +10,14 @@ import {
   truncateText,
   css,
   Drawer,
-  VisuallyHidden,
   Stack,
 } from "ol-components"
-import { Button, ButtonProps, childCheckboxStyles } from "@mitodl/smoot-design"
+import {
+  Button,
+  ButtonProps,
+  childCheckboxStyles,
+  VisuallyHidden,
+} from "@mitodl/smoot-design"
 
 import {
   RiCloseLine,

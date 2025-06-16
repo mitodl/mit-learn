@@ -15,9 +15,8 @@ import {
   RadioChoiceBoxField,
   SimpleSelectField,
   Skeleton,
-  VisuallyHidden,
 } from "ol-components"
-import { Button, ButtonLoadingIcon } from "@mitodl/smoot-design"
+import { Button, ButtonLoadingIcon, VisuallyHidden } from "@mitodl/smoot-design"
 
 import { RiArrowRightLine, RiArrowLeftLine } from "@remixicon/react"
 import { useProfileMeMutation, useProfileMeQuery } from "api/hooks/profile"

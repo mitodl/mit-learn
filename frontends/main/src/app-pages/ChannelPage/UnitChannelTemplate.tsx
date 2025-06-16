@@ -6,9 +6,9 @@ import {
   Stack,
   BannerBackground,
   Typography,
-  VisuallyHidden,
   UnitLogo,
 } from "ol-components"
+import { VisuallyHidden } from "@mitodl/smoot-design"
 import { OfferedByEnum, SourceTypeEnum } from "api"
 import { SearchSubscriptionToggle } from "@/page-components/SearchSubscriptionToggle/SearchSubscriptionToggle"
 import { ChannelDetails } from "@/page-components/ChannelDetails/ChannelDetails"
