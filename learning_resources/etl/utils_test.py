@@ -2,6 +2,7 @@
 
 import datetime
 import pathlib
+import zipfile
 from decimal import Decimal
 from random import randrange
 from subprocess import check_call
@@ -30,6 +31,22 @@ from learning_resources.factories import (
 )
 
 pytestmark = pytest.mark.django_db
+
+
+@pytest.fixture
+def canvas_settings_zip(tmp_path):
+    # Create a minimal XML for course_settings.xml
+    xml_content = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <course>
+        <title>Test Course Title</title>
+        <course_code>TEST-101</course_code>
+        <other_field>Other Value</other_field>
+    </course>
+    """
+    zip_path = tmp_path / "test_canvas_course.zip"
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr("course_settings/course_settings.xml", xml_content)
+    return zip_path
 
 
 def get_olx_test_docs():
@@ -558,3 +575,35 @@ def test_parse_resource_commitment(raw_value, min_hours, max_hours):
     assert utils.parse_resource_commitment(raw_value) == CommitmentConfig(
         commitment=raw_value, min_weekly_hours=min_hours, max_weekly_hours=max_hours
     )
+
+
+def test_parse_canvas_settings_returns_expected_dict(canvas_settings_zip):
+    attrs = utils.parse_canvas_settings(canvas_settings_zip)
+    assert attrs["title"] == "Test Course Title"
+    assert attrs["course_code"] == "TEST-101"
+    assert attrs["other_field"] == "Other Value"
+
+
+def test_parse_canvas_settings_missing_fields(tmp_path):
+    # XML with only one field
+    xml_content = b"""<course><title>Only Title</title></course>"""
+    zip_path = tmp_path / "test_canvas_course2.zip"
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr("course_settings/course_settings.xml", xml_content)
+    attrs = utils.parse_canvas_settings(zip_path)
+    assert attrs["title"] == "Only Title"
+    assert "course_code" not in attrs
+
+
+def test_parse_canvas_settings_handles_namespaces(tmp_path):
+    # XML with namespace
+    xml_content = b"""<ns0:course xmlns:ns0="http://example.com">
+        <ns0:title>Namespaced Title</ns0:title>
+        <ns0:course_code>NS-101</ns0:course_code>
+    </ns0:course>"""
+    zip_path = tmp_path / "test_canvas_course4.zip"
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr("course_settings/course_settings.xml", xml_content)
+    attrs = utils.parse_canvas_settings(zip_path)
+    assert attrs["title"] == "Namespaced Title"
+    assert attrs["course_code"] == "NS-101"
