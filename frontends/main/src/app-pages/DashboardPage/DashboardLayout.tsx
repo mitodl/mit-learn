@@ -14,14 +14,13 @@ import {
   Container,
   Skeleton,
   Tab,
-  TabButtonLink,
-  TabButtonList,
   TabContext,
   TabPanel,
   TabList,
   Typography,
   styled,
 } from "ol-components"
+import { TabButtonLink, TabButtonList } from "@mitodl/smoot-design"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import backgroundImage from "@/public/images/backgrounds/user_menu_background.svg"

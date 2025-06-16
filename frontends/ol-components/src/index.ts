@@ -64,12 +64,6 @@ export type { TabProps } from "@mui/material/Tab"
 export { default as TabList } from "@mui/lab/TabList"
 export type { TabListProps } from "@mui/lab/TabList"
 
-export {
-  TabButton,
-  TabButtonLink,
-  TabButtonList,
-} from "./components/TabButtons/TabButtonList"
-
 export { default as TabContext } from "@mui/lab/TabContext"
 export type { TabContextProps } from "@mui/lab/TabContext"
 export { default as TabPanel } from "@mui/lab/TabPanel"
