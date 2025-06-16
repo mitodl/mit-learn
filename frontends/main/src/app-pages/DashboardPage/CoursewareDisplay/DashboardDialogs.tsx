@@ -10,11 +10,7 @@ import { Button, Checkbox, Alert } from "@mitodl/smoot-design"
 
 import NiceModal, { muiDialogV5 } from "@ebay/nice-modal-react"
 import { useFormik } from "formik"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
-import {
-  enrollmentKeys,
-  enrollmentMutations,
-} from "api/mitxonline-hooks/enrollment"
+import { useDestroyEnrollment } from "api/mitxonline-hooks/enrollment"
 
 const BoldText = styled.span(({ theme }) => ({
   ...theme.typography.subtitle1,
@@ -88,23 +84,15 @@ const UnenrollDialogInner: React.FC<DashboardDialogProps> = ({
   enrollmentId,
 }) => {
   const modal = NiceModal.useModal()
-  const queryClient = useQueryClient()
-  const { mutate, isSuccess } = useMutation(
-    enrollmentMutations.destroyEnrollment(enrollmentId),
-  )
+  const destroyEnrollment = useDestroyEnrollment(enrollmentId)
   const formik = useFormik({
     enableReinitialize: true,
     validateOnChange: false,
     validateOnBlur: false,
     initialValues: {},
     onSubmit: async () => {
-      mutate()
-      if (isSuccess) {
-        queryClient.invalidateQueries({
-          queryKey: enrollmentKeys.enrollmentsList(),
-        })
-        modal.hide()
-      }
+      await destroyEnrollment.mutateAsync()
+      modal.hide()
     },
   })
   return (
