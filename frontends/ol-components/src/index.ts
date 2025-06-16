@@ -99,7 +99,6 @@ export { default as Step } from "@mui/material/Step"
 export { default as StepLabel } from "@mui/material/StepLabel"
 export type { StepIconProps } from "@mui/material/StepIcon"
 
-export { default as CircularProgress } from "@mui/material/CircularProgress"
 export { default as FormGroup } from "@mui/material/FormGroup"
 export { default as Slider } from "@mui/material/Slider"
 
