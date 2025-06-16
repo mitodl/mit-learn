@@ -1,7 +1,7 @@
 import React from "react"
 import { RiSearch2Line, RiCloseLine } from "@remixicon/react"
-import { Input, AdornmentButton } from "../Input/Input"
-import type { InputProps } from "../Input/Input"
+import { Input, AdornmentButton } from "@mitodl/smoot-design"
+import type { InputProps } from "@mitodl/smoot-design"
 import styled from "@emotion/styled"
 
 const StyledInput = styled(Input)(({ theme }) => ({

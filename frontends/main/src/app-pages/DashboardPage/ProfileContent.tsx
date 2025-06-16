@@ -5,13 +5,16 @@ import { useProfileMeMutation, useProfileMeQuery } from "api/hooks/profile"
 import {
   styled,
   CheckboxChoiceBoxField,
-  CheckboxChoiceField,
-  RadioChoiceField,
   SimpleSelectField,
-  TextField,
   Skeleton,
 } from "ol-components"
-import { Button, ButtonLoadingIcon } from "@mitodl/smoot-design"
+import {
+  Button,
+  CheckboxChoiceField,
+  RadioChoiceField,
+  TextField,
+  ButtonLoadingIcon,
+} from "@mitodl/smoot-design"
 
 import { useLearningResourceTopics } from "api/hooks/learningResources"
 import {
