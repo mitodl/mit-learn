@@ -139,7 +139,7 @@ export type {
   SearchInputProps,
   SearchSubmissionEvent,
 } from "./components/SearchInput/SearchInput"
-export { TextField } from "./components/TextField/TextField"
+
 export {
   SimpleSelect,
   SimpleSelectField,
@@ -150,7 +150,6 @@ export type {
   SimpleSelectOption,
 } from "./components/SimpleSelect/SimpleSelect"
 
-export type { TextFieldProps } from "./components/TextField/TextField"
 export { SelectField } from "./components/SelectField/SelectField"
 export type {
   SelectChangeEvent,
