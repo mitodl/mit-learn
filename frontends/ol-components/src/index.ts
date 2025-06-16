@@ -132,8 +132,6 @@ export * from "./components/TruncateText/TruncateText"
 
 export * from "./constants/imgConfigs"
 
-export { Input, AdornmentButton } from "./components/Input/Input"
-export type { InputProps, AdornmentButtonProps } from "./components/Input/Input"
 export { SearchInput } from "./components/SearchInput/SearchInput"
 export type {
   SearchInputProps,

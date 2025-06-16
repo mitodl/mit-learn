@@ -9,8 +9,8 @@ import type { InputBaseProps } from "@mui/material/InputBase"
 import { FormFieldWrapper } from "../FormHelpers/FormHelpers"
 import type { FormFieldWrapperProps } from "../FormHelpers/FormHelpers"
 import styled from "@emotion/styled"
-import { baseInputStyles } from "../Input/Input"
 import { RiArrowDownSLine } from "@remixicon/react"
+import type { Theme } from "@mui/material/styles"
 
 type SelectProps<Value = unknown> = Omit<
   MuiSelectProps<Value>,
@@ -21,6 +21,67 @@ type SelectInputProps = Omit<InputBaseProps, "size"> & {
 }
 
 const DEFAULT_SIZE = "medium"
+
+/**
+ * Base styles for Input and Select components. Includes border, color, hover effects.
+ *
+ * TODO: This is duplicated in smoot-design's <index className="tsx">
+ *
+ * When SelectField is moved, we can remove the duplication.
+ */
+const baseInputStyles = (theme: Theme) => ({
+  backgroundColor: "white",
+  color: theme.custom.colors.darkGray2,
+  borderColor: theme.custom.colors.silverGrayLight,
+  borderWidth: "1px",
+  borderStyle: "solid",
+  borderRadius: "4px",
+  "&.Mui-disabled": {
+    backgroundColor: theme.custom.colors.lightGray1,
+  },
+  "&:hover:not(.Mui-disabled):not(.Mui-focused)": {
+    borderColor: theme.custom.colors.darkGray2,
+  },
+  "&.Mui-focused": {
+    /**
+     * When change border width, it affects either the elements outside of it or
+     * inside based on the border-box setting.
+     *
+     * Instead of changing the border width, we hide the border and change width
+     * using outline.
+     */
+    borderColor: "transparent",
+    outline: "2px solid currentcolor",
+    outlineOffset: "-2px",
+  },
+  "&.Mui-error": {
+    borderColor: theme.custom.colors.red,
+    outlineColor: theme.custom.colors.red,
+  },
+  "& input::placeholder, textarea::placeholder": {
+    color: theme.custom.colors.silverGrayDark,
+    opacity: 1, // some browsers apply opacity to placeholder text
+  },
+  "& input:placeholder-shown, textarea:placeholder-shown": {
+    textOverflow: "ellipsis",
+  },
+  "& textarea": {
+    paddingTop: "8px",
+    paddingBottom: "8px",
+  },
+  "&.MuiInputBase-adornedStart": {
+    paddingLeft: "0",
+    input: {
+      paddingLeft: "8px",
+    },
+  },
+  "&.MuiInputBase-adornedEnd": {
+    paddingRight: "0",
+    input: {
+      paddingRight: "8px",
+    },
+  },
+})
 
 const SelectInput = styled(InputBase as React.FC<SelectInputProps>)(
   ({ theme, size = DEFAULT_SIZE }) => [

@@ -53,7 +53,7 @@ const Description = styled.span(({ theme }) => ({
   },
 }))
 
-const Input = styled.div({
+const InputContainer = styled.div({
   flexShrink: 0,
 })
 
@@ -82,7 +82,7 @@ const ChoiceBox = ({
         <Label>{label}</Label>
         {description ? <Description>{description}</Description> : null}
       </Text>
-      <Input>
+      <InputContainer>
         {type === "checkbox" ? (
           <Checkbox
             name={name}
@@ -99,7 +99,7 @@ const ChoiceBox = ({
             onChange={onChange}
           />
         ) : null}
-      </Input>
+      </InputContainer>
     </Container>
   )
 }
