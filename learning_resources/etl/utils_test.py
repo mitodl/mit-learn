@@ -20,7 +20,7 @@ from learning_resources.constants import (
     RunStatus,
 )
 from learning_resources.etl import utils
-from learning_resources.etl.constants import CommitmentConfig, DurationConfig
+from learning_resources.etl.constants import CommitmentConfig, DurationConfig, ETLSource
 from learning_resources.etl.utils import parse_certification, parse_string_to_int
 from learning_resources.factories import (
     ContentFileFactory,
@@ -29,6 +29,7 @@ from learning_resources.factories import (
     LearningResourceRunFactory,
     LearningResourceTopicFactory,
 )
+from learning_resources.models import LearningResource
 
 pytestmark = pytest.mark.django_db
 
@@ -607,3 +608,52 @@ def test_parse_canvas_settings_handles_namespaces(tmp_path):
     attrs = utils.parse_canvas_settings(zip_path)
     assert attrs["title"] == "Namespaced Title"
     assert attrs["course_code"] == "NS-101"
+
+
+@pytest.mark.django_db
+def test_run_for_canvas_archive_creates_resource_and_run(tmp_path, mocker):
+    # Setup: patch parse_canvas_settings and calc_checksum
+    mocker.patch(
+        "learning_resources.etl.utils.parse_canvas_settings",
+        return_value={"title": "Test Course", "course_code": "TEST101"},
+    )
+    mocker.patch("learning_resources.etl.utils.calc_checksum", return_value="abc123")
+    # No resource exists yet
+    course_archive_path = tmp_path / "archive.zip"
+    course_archive_path.write_text("dummy")
+    run = utils.run_for_canvas_archive(course_archive_path, overwrite=True)
+    resource = LearningResource.objects.get(readable_id="TEST101")
+    assert resource.title == "Test Course"
+    assert resource.etl_source == ETLSource.canvas.name
+    assert resource.resource_type == LearningResourceType.course.name
+    assert run is not None
+    assert run.learning_resource == resource
+    assert run.checksum == "abc123"
+
+
+@pytest.mark.django_db
+def test_run_for_canvas_archive_creates_run_if_none_exists(tmp_path, mocker):
+    # Setup: patch parse_canvas_settings and calc_checksum
+    mocker.patch(
+        "learning_resources.etl.utils.parse_canvas_settings",
+        return_value={"title": "Test Course", "course_code": "TEST104"},
+    )
+    mocker.patch(
+        "learning_resources.etl.utils.calc_checksum", return_value="checksum104"
+    )
+    # Create resource with no runs
+    resource = LearningResourceFactory.create(
+        readable_id="TEST104",
+        title="Test Course",
+        etl_source=ETLSource.canvas.name,
+        resource_type=LearningResourceType.course.name,
+        published=False,
+    )
+    resource.runs.all().delete()
+    assert resource.runs.count() == 0
+    course_archive_path = tmp_path / "archive4.zip"
+    course_archive_path.write_text("dummy")
+    run = utils.run_for_canvas_archive(course_archive_path, overwrite=True)
+    assert run is not None
+    assert run.learning_resource == resource
+    assert run.checksum == "checksum104"

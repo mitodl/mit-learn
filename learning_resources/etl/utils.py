@@ -538,7 +538,8 @@ def parse_canvas_settings(course_archive_path):
     tree = ElementTree.fromstring(xml_string)
     attributes = {}
     for node in tree.iter():
-        attributes[node.tag.split("}")[1]] = node.text
+        tag = node.tag.split("}")[1] if "}" in node.tag else node.tag
+        attributes[tag] = node.text
     return attributes
 
 
