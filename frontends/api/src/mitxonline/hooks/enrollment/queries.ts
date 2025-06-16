@@ -18,12 +18,4 @@ const enrollmentQueries = {
     }),
 }
 
-const enrollmentMutations = {
-  destroyEnrollment: (id: number) => ({
-    mutationFn: async (): Promise<void> => {
-      return enrollmentsApi.enrollmentsDestroy({ id }).then((res) => res.data)
-    },
-  }),
-}
-
-export { enrollmentQueries, enrollmentKeys, enrollmentMutations }
+export { enrollmentQueries, enrollmentKeys }
