@@ -311,7 +311,7 @@ def embed_new_content_files(self):
             created_on__gt=since,
         )
         .exclude(run__published=False)
-        .exclude(learning_resource__published=False)
+        .exclude(learning_resource__published=False, learning_resource__test_mode=False)
     )
 
     tasks = [
