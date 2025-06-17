@@ -1,7 +1,7 @@
 import React from "react"
 import type { Meta, StoryObj } from "@storybook/react"
 import { FormDialog, FormDialogProps } from "./FormDialog"
-import { TextField } from "../TextField/TextField"
+import { TextField } from "@mitodl/smoot-design"
 import MuiButton from "@mui/material/Button"
 import { action } from "@storybook/addon-actions"
 

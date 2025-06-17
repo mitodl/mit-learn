@@ -1,6 +1,21 @@
 Release Notes
 =============
 
+Version 0.36.1 (Released June 10, 2025)
+--------------
+
+- Import files for all active runs (#2292)
+- locking qdrant client to specific version (#2297)
+- minor copy change (#2296)
+
+Version 0.36.0 (Released June 10, 2025)
+--------------
+
+- Update dependency Django to v4.2.22 [SECURITY] (#2293)
+- Ignore authentication based 403's when querying enrollments from the dashboard home enrollment display (#2290)
+- more copy updates (#2291)
+- Use the org slug in the URL instead of the ID (#2288)
+
 Version 0.35.1 (Released June 05, 2025)
 --------------
 

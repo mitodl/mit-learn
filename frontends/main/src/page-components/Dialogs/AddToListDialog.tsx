@@ -3,11 +3,10 @@ import {
   LoadingSpinner,
   Typography,
   styled,
-  CheckboxChoiceField,
   FormDialog,
   DialogActions,
 } from "ol-components"
-import { Button } from "@mitodl/smoot-design"
+import { Button, CheckboxChoiceField } from "@mitodl/smoot-design"
 
 import { RiAddLine } from "@remixicon/react"
 import { usePostHog } from "posthog-js/react"
