@@ -24,10 +24,10 @@ import {
 import {
   RiAwardLine,
   RiFileAddLine,
+  RiPriceTag3Line,
   RiSearch2Line,
   RiThumbUpLine,
   RiTimeLine,
-  RiVerifiedBadgeLine,
 } from "@remixicon/react"
 import Image from "next/image"
 import { SearchField } from "@/page-components/SearchField/SearchField"
@@ -63,7 +63,7 @@ const SEARCH_CHIPS: SearchChip[] = [
     label: "Free",
     href: SEARCH_FREE,
     variant: "outlinedWhite",
-    icon: <RiVerifiedBadgeLine />,
+    icon: <RiPriceTag3Line />,
   },
   {
     label: "With Certificate",
