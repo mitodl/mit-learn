@@ -5,7 +5,7 @@ import {
   FormDialog,
   DialogActions,
   Stack,
-  CircularProgress,
+  LoadingSpinner,
 } from "ol-components"
 import { Button, Checkbox, Alert } from "@mitodl/smoot-design"
 
@@ -17,7 +17,7 @@ const BoldText = styled.span(({ theme }) => ({
   ...theme.typography.subtitle1,
 }))
 
-const ButtonCircularProgress = styled(CircularProgress)({
+const ButtonCircularProgress = styled(LoadingSpinner)({
   marginLeft: "8px",
 })
 
