@@ -75,7 +75,7 @@ const Info = ({
   return (
     <>
       <span>{getReadableResourceType(resource.resource_type)}</span>
-      <PriceContainer>
+      <PriceContainer size={size}>
         {resource.certification && (
           <Certificate>
             {size === "small" ? (
@@ -86,9 +86,11 @@ const Info = ({
               <RiAwardFill />
             )}
             {size === "small" ? "" : "Certificate"}
-            <CertificatePrice>
-              {certificatePrice ? `${separator}${certificatePrice}` : ""}
-            </CertificatePrice>
+            {certificatePrice ? (
+              <CertificatePrice>
+                {`${separator}${certificatePrice}`}
+              </CertificatePrice>
+            ) : null}
           </Certificate>
         )}
         <Price>{prices.course.display}</Price>
@@ -97,11 +99,11 @@ const Info = ({
   )
 }
 
-const PriceContainer = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-`
+const PriceContainer = styled.div<{ size: Size }>(({ size }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: size === "small" ? "4px" : "8px",
+}))
 
 const Certificate = styled.div`
   padding: 2px 4px;
