@@ -1,42 +1,59 @@
 import hashlib
 import hmac
+import json
 
 import pytest
-from django.test.client import RequestFactory
+from rest_framework.test import APIRequestFactory
 
 from webhooks.utils import SIGNATURE_HEADER_NAME, validate_webhook_signature
 
 
-@pytest.mark.parametrize("body", [b"test payload", b"another payload"])
-def test_validate_webhook_signature_valid(mock, body):
+@pytest.mark.parametrize(
+    "body", [{"test": "test_payload_1"}, {"test": "another payload"}]
+)
+def test_validate_webhook_signature_valid(settings, body):
     secret = "supersecret"  # noqa: S105
-    mock.setattr("django.conf.settings.WEBHOOK_SECRET", secret)
-    signature = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
-    request = RequestFactory().get("/webhooks/content_files")
-    request.body = body
-    request.headers = {SIGNATURE_HEADER_NAME: signature}
+    settings.WEBHOOK_SECRET = secret
+    payload = bytes(json.dumps(body), "utf-8")
+    signature = hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
+    request = APIRequestFactory().post(
+        "/webhooks/content_files",
+        data=body,
+        content_type="application/json",
+        headers={SIGNATURE_HEADER_NAME: signature},
+    )
+
     assert validate_webhook_signature(request) is True
 
 
-@pytest.mark.parametrize("body", [b"test payload", b"another payload"])
-def test_validate_webhook_signature_invalid(mock, body):
-    secret = "supersecret"  # noqa: S105
-    mock.setattr("django.conf.settings.WEBHOOK_SECRET", secret)
+@pytest.mark.parametrize(
+    "body", [{"test": "test_payload_1"}, {"test": "another payload"}]
+)
+def test_validate_webhook_signature_invalid(settings, body):
+    secret = "supoersecret"  # noqa: S105
+    settings.WEBHOOK_SECRET = secret
     # Use an incorrect signature
     bad_signature = (
-        "bad" + hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()[3:]
+        "bad"
+        + hmac.new(
+            secret.encode(), json.dumps(body).encode("utf-8"), hashlib.sha256
+        ).hexdigest()[3:]
     )
 
-    request = RequestFactory().get("/webhooks/content_files")
-    request.body = body
-    request.headers = {SIGNATURE_HEADER_NAME: bad_signature}
+    request = APIRequestFactory().post(
+        "/webhooks/content_files",
+        data=body,
+        content_type="application/json",
+        headers={SIGNATURE_HEADER_NAME: bad_signature},
+    )
+
     assert validate_webhook_signature(request) is False
 
 
-def test_validate_webhook_signature_missing_header(mock):
+def test_validate_webhook_signature_missing_header(settings):
     secret = "supersecret"  # noqa: S105
-    mock.setattr("django.conf.settings.WEBHOOK_SECRET", secret)
-    request = RequestFactory().get("/webhooks/content_files")
-    request.body = "test"
-    request.headers = {}
+    settings.WEBHOOK_SECRET = secret
+    request = APIRequestFactory().post(
+        "/webhooks/content_files", {}, content_type="application/json", headers={}
+    )
     assert validate_webhook_signature(request) is False

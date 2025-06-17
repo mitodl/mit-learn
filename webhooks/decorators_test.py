@@ -5,8 +5,8 @@ from django.test.client import RequestFactory
 from webhooks.decorators import require_signature
 
 
-def test_require_signature_allows_when_signature_valid(monkeypatch, dummy_request):
-    monkeypatch.setattr("webhooks.utils.validate_webhook_signature", lambda: True)
+def test_require_signature_allows_when_signature_valid(mocker):
+    mocker.patch("webhooks.decorators.validate_webhook_signature", return_value=True)
 
     called = {}
 
@@ -15,17 +15,17 @@ def test_require_signature_allows_when_signature_valid(monkeypatch, dummy_reques
         called["called"] = True
         return "ok"
 
-    result = view(RequestFactory().get("/webhooks/content_files"))
+    result = view(RequestFactory().post("/webhooks/content_files"))
     assert result == "ok"
     assert called["called"]
 
 
-def test_require_signature_denies_when_signature_invalid(monkeypatch, dummy_request):
-    monkeypatch.setattr("webhooks.utils.validate_webhook_signature", lambda: False)
+def test_require_signature_denies_when_signature_invalid(mocker):
+    mocker.patch("webhooks.decorators.validate_webhook_signature", return_value=False)
 
     @require_signature
     def view(request, *args, **kwargs):
         return "should not get here"
 
     with pytest.raises(PermissionDenied):
-        view(RequestFactory().get("/webhooks/content_files"))
+        view(RequestFactory().post("/webhooks/content_files"))
