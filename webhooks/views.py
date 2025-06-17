@@ -54,4 +54,4 @@ def process_content_file_request(data):
     url = data.get("content_url")
     if etl_source == ETLSource.canvas.name:
         log.info("Processing Canvas content file: %s", url)
-        ingest_canvas_course.apply_async([url])
+        ingest_canvas_course.apply_async([url, True])

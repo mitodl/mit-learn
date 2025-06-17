@@ -412,6 +412,9 @@ def text_from_sjson_content(content: str):
 def transform_canvas_content_files(
     course_zipfile: Path, run: LearningResourceRun, *, overwrite
 ) -> Generator[dict, None, None]:
+    """
+    Transform content files from a Canvas course zipfile
+    """
     basedir = course_zipfile.name.split(".")[0]
     with (
         TemporaryDirectory(prefix=basedir) as olx_path,
@@ -486,6 +489,9 @@ def _process_olx_path(olx_path: str, run: LearningResourceRun, *, overwrite):
 
 
 def sync_canvas_archive(bucket, key: str, overwrite):
+    """
+    Sync a Canvas course archive from S3
+    """
     from learning_resources.etl.loaders import load_content_files
 
     with TemporaryDirectory() as export_tempdir:
@@ -505,6 +511,9 @@ def sync_canvas_archive(bucket, key: str, overwrite):
 
 
 def run_for_canvas_archive(course_archive_path, overwrite):
+    """
+    Generate and return a LearningResourceRun for a Canvas course
+    """
     checksum = calc_checksum(course_archive_path)
     course_info = parse_canvas_settings(course_archive_path)
     course_title = course_info.get("title")
@@ -515,13 +524,14 @@ def run_for_canvas_archive(course_archive_path, overwrite):
         defaults={
             "title": course_title,
             "published": False,
+            "test_mode": True,
             "etl_source": ETLSource.canvas.name,
             "resource_type": LearningResourceType.course.name,
         },
     )
     if resource.runs.count() == 0:
         LearningResourceRun.objects.create(
-            run_id=f"{readable_id}+canvas", learning_resource=resource
+            run_id=f"{readable_id}+canvas", learning_resource=resource, published=True
         )
     run = resource.runs.first()
     if run.checksum == checksum and not overwrite:
@@ -533,6 +543,9 @@ def run_for_canvas_archive(course_archive_path, overwrite):
 
 
 def parse_canvas_settings(course_archive_path):
+    """
+    Get course attributes from a Canvas course archive
+    """
     with zipfile.ZipFile(course_archive_path, "r") as course_archive:
         xml_string = course_archive.read("course_settings/course_settings.xml")
     tree = ElementTree.fromstring(xml_string)
