@@ -355,8 +355,6 @@ const PaginationContainer = styled.div`
 
 const StyledResultsContainer = styled.div<{ fetching: boolean }>(
   ({ fetching }) => ({
-    marginTop: "16px",
-
     "ul > li + li": {
       marginTop: "8px",
     },
@@ -379,6 +377,9 @@ const StyledMainColumn = styled(GridColumn)`
   ${({ theme }) => theme.breakpoints.up("md")} {
     padding-left: 6px !important;
     padding-right: 0 !important;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
   }
 
   ${({ theme }) => theme.breakpoints.down("md")} {
@@ -393,15 +394,12 @@ const MobileFilter = styled.div`
 
   color: ${({ theme }) => theme.custom.colors.darkGray2};
   margin-top: 20px;
-
-  button {
-    svg {
-      margin-left: 8px;
-    }
-
-    margin-bottom: 10px;
-  }
+  margin-bottom: 16px;
 `
+const FilterButton = styled(Button)({
+  marginLeft: "-8px",
+  minWidth: 0,
+})
 
 const StyledDrawer = styled(Drawer)`
   .MuiPaper-root {
@@ -886,10 +884,14 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
             </Stack>
             <ResourceCategoryTabs.TabPanels tabs={TABS}>
               <MobileFilter>
-                <Button variant="text" onClick={toggleMobileDrawer(true)}>
-                  <Typography variant="subtitle1">Filter</Typography>
-                  <RiEqualizerLine fontSize="medium" />
-                </Button>
+                <FilterButton
+                  size="small"
+                  variant="text"
+                  startIcon={<RiEqualizerLine />}
+                  onClick={toggleMobileDrawer(true)}
+                >
+                  Filter
+                </FilterButton>
 
                 <StyledDrawer
                   anchor="left"
