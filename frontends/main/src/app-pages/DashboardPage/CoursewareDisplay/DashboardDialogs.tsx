@@ -17,7 +17,7 @@ const BoldText = styled.span(({ theme }) => ({
   ...theme.typography.subtitle1,
 }))
 
-const ButtonCircularProgress = styled(LoadingSpinner)({
+const SpinnerContainer = styled.div({
   marginLeft: "8px",
 })
 
@@ -125,9 +125,14 @@ const UnenrollDialogInner: React.FC<DashboardDialogProps> = ({
             disabled={destroyEnrollment.isPending}
           >
             Unenroll
-            {destroyEnrollment.isPending ? (
-              <ButtonCircularProgress size={16} />
-            ) : null}
+            {destroyEnrollment.isPending && (
+              <SpinnerContainer>
+                <LoadingSpinner
+                  loading={destroyEnrollment.isPending}
+                  size={16}
+                />
+              </SpinnerContainer>
+            )}
           </Button>
         </DialogActions>
       }
