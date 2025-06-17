@@ -15,7 +15,7 @@
     "@emotion/styled": "^11.11.0",
     "@mitodl/course-search-utils": "3.3.2",
     "@mitodl/mitxonline-api-axios": "^2025.6.3",
-    "@mitodl/smoot-design": "0.0.0-0a23f44",
+    "@mitodl/smoot-design": "^6.10.0",
     "@next/bundle-analyzer": "^14.2.15",
     "@remixicon/react": "^4.2.0",
     "@sentry/nextjs": "^9.0.0",
