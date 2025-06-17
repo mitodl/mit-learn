@@ -5,6 +5,7 @@ import {
   FormDialog,
   DialogActions,
   Stack,
+  CircularProgress,
 } from "ol-components"
 import { Button, Checkbox, Alert } from "@mitodl/smoot-design"
 
@@ -15,6 +16,10 @@ import { useDestroyEnrollment } from "api/mitxonline-hooks/enrollment"
 const BoldText = styled.span(({ theme }) => ({
   ...theme.typography.subtitle1,
 }))
+
+const ButtonCircularProgress = styled(CircularProgress)({
+  marginLeft: "8px",
+})
 
 type DashboardDialogProps = {
   title: string
@@ -92,7 +97,9 @@ const UnenrollDialogInner: React.FC<DashboardDialogProps> = ({
     initialValues: {},
     onSubmit: async () => {
       await destroyEnrollment.mutateAsync()
-      modal.hide()
+      if (!destroyEnrollment.isError) {
+        modal.hide()
+      }
     },
   })
   return (
@@ -112,8 +119,15 @@ const UnenrollDialogInner: React.FC<DashboardDialogProps> = ({
           >
             Cancel
           </Button>
-          <Button variant="primary" type="submit">
+          <Button
+            variant="primary"
+            type="submit"
+            disabled={destroyEnrollment.isPending}
+          >
             Unenroll
+            {destroyEnrollment.isPending ? (
+              <ButtonCircularProgress size={16} />
+            ) : null}
           </Button>
         </DialogActions>
       }
@@ -121,6 +135,12 @@ const UnenrollDialogInner: React.FC<DashboardDialogProps> = ({
       <Typography variant="body1">
         Are you sure you want to unenroll from {title}?
       </Typography>
+      {destroyEnrollment.isError && (
+        <Alert severity="error">
+          There was a problem unenrolling you from this course. Please try again
+          later.
+        </Alert>
+      )}
     </FormDialog>
   )
 }
