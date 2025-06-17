@@ -96,7 +96,7 @@ export const Title: React.FC<TitleProps> = styled(Linkable)`
   ${{ ...theme.typography.subtitle1 }}
   height: ${theme.typography.pxToRem(40)};
   ${theme.breakpoints.down("md")} {
-    ${{ ...theme.typography.subtitle2 }}
+    ${{ ...theme.typography.subtitle3 }}
     height: ${theme.typography.pxToRem(32)};
   }
 
