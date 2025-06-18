@@ -9,7 +9,7 @@ import {
   ListItem,
   ListItemLink,
   ListItemText,
-  Grid,
+  Grid2 as Grid,
   Banner,
   Breadcrumbs,
 } from "ol-components"
@@ -186,15 +186,6 @@ const SchoolDepartments: React.FC<SchoolDepartmentProps> = ({
   )
 }
 
-const SchoolList = styled.div(({ theme }) => ({
-  "> section": {
-    marginTop: "40px",
-    [theme.breakpoints.down("sm")]: {
-      marginTop: "30px",
-    },
-  },
-}))
-
 const DepartmentListingPage: React.FC = () => {
   const channelCountQuery = useChannelCounts("department")
   const courseCounts = channelCountQuery.data
@@ -222,19 +213,28 @@ const DepartmentListingPage: React.FC = () => {
       />
       <Container>
         <Grid container>
-          <Grid item xs={0} sm={1}></Grid>
-          <Grid item xs={12} sm={10}>
-            <SchoolList>
-              {schoolsQuery.data?.results?.map((school) => (
-                <SchoolDepartments
-                  as="li"
-                  key={school.id}
-                  school={school}
-                  courseCounts={courseCounts}
-                  programCounts={programCounts}
-                />
-              ))}
-            </SchoolList>
+          <Grid
+            size={{ xs: 12, sm: 10 }}
+            offset={{ xs: 0, sm: 1 }}
+            sx={(theme) => ({
+              display: "flex",
+              flexDirection: "column",
+              gap: "40px",
+              margin: "80px 0",
+              [theme.breakpoints.down("sm")]: {
+                margin: "20px 0",
+                gap: "30px",
+              },
+            })}
+          >
+            {schoolsQuery.data?.results?.map((school) => (
+              <SchoolDepartments
+                key={school.id}
+                school={school}
+                courseCounts={courseCounts}
+                programCounts={programCounts}
+              />
+            ))}
           </Grid>
         </Grid>
       </Container>
