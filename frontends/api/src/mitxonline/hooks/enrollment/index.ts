@@ -1,5 +1,4 @@
 import { enrollmentQueries, enrollmentKeys } from "./queries"
-import { enrollmentMutations } from "./mutations"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { enrollmentsApi } from "../../clients"
 
@@ -15,9 +14,4 @@ const useDestroyEnrollment = (enrollmentId: number) => {
   })
 }
 
-export {
-  enrollmentQueries,
-  enrollmentMutations,
-  enrollmentKeys,
-  useDestroyEnrollment,
-}
+export { enrollmentQueries, enrollmentKeys, useDestroyEnrollment }
