@@ -147,15 +147,6 @@ const FacetStyles = styled.div`
     }
   }
 
-  .facet-visible {
-    margin-top: 6px;
-    margin-bottom: 6px;
-  }
-
-  .facet-visible:last-child {
-    margin-bottom: 8px;
-  }
-
   .facet-list {
     margin-bottom: 8px;
   }
@@ -192,6 +183,12 @@ const FacetStyles = styled.div`
       font-size: 0.875em;
       gap: 4px;
       margin-left: -2px;
+      margin-top: 6px;
+      margin-bottom: 6px;
+
+      &:last-child {
+        margin-bottom: 8px;
+      }
 
       input,
       .facet-label {
@@ -286,16 +283,20 @@ const FacetStyles = styled.div`
     width: 100%;
   }
 
-  .multi-facet-group {
+  .facets.multi-facet-group {
     background: white;
     margin-top: 8px;
     margin-bottom: 8px;
     border-radius: 8px;
     border-bottom: solid 1px ${({ theme }) => theme.custom.colors.lightGray2};
+    padding-top: 12px;
     padding-bottom: 12px;
-    padding-top: 5px;
 
-    /* stylelint-disable no-descending-specificity */
+    .facet-visible {
+      margin-top: 0;
+      margin-bottom: 0;
+    }
+
     .facet-visible .facet-label {
       .facet-text,
       .facet-count {
@@ -304,7 +305,6 @@ const FacetStyles = styled.div`
 
       margin-bottom: 0;
     }
-    /* stylelint-enable no-descending-specificity */
   }
 `
 
