@@ -10,6 +10,9 @@ import { EnrollmentDisplay } from "./EnrollmentDisplay"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { setupEnrollments } from "./test-utils"
+import { faker } from "@faker-js/faker/locale/en"
+import { mockAxiosInstance } from "api/test-utils"
+import invariant from "tiny-invariant"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest
@@ -32,15 +35,12 @@ describe("DashboardDialogs", () => {
 
   test("Opening the unenroll dialog and confirming the unenroll fires the proper API call", async () => {
     const { enrollments } = setupApis()
-    let deleteCalls = 0
-    for (const enrollment of enrollments) {
-      setMockResponse.delete(
-        mitxonline.urls.enrollment.courseEnrollment(enrollment.id),
-        () => {
-          deleteCalls++
-        },
-      )
-    }
+    const enrollment = faker.helpers.arrayElement(enrollments)
+
+    setMockResponse.delete(
+      mitxonline.urls.enrollment.courseEnrollment(enrollment.id),
+      null,
+    )
     renderWithProviders(<EnrollmentDisplay />)
 
     await screen.findByRole("heading", { name: "My Learning" })
@@ -48,9 +48,12 @@ describe("DashboardDialogs", () => {
     const cards = await screen.findAllByTestId("enrollment-card-desktop")
     expect(cards.length).toBe(enrollments.length)
 
-    const contextMenuButton = await within(cards[0]).findByLabelText(
-      "More options",
+    const card = cards.find(
+      (c) => !!within(c).queryByText(enrollment.run.title),
     )
+    invariant(card)
+
+    const contextMenuButton = await within(card).findByLabelText("More options")
     await user.click(contextMenuButton)
 
     const unenrollButton = await screen.findByRole("menuitem", {
@@ -65,6 +68,11 @@ describe("DashboardDialogs", () => {
 
     await user.click(confirmButton)
 
-    expect(deleteCalls).toBe(1)
+    expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "DELETE",
+        url: mitxonline.urls.enrollment.courseEnrollment(enrollment.id),
+      }),
+    )
   })
 })
