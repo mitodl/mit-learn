@@ -42,7 +42,7 @@ type DashboardCourseEnrollment = {
   id: number
   status: EnrollmentStatus
   mode: EnrollmentMode
-  receiveEmails: boolean
+  receiveEmails?: boolean
 }
 
 type DashboardProgram = {
