@@ -11,6 +11,7 @@ import {
   css,
   Drawer,
   Stack,
+  Grid2 as Grid,
 } from "ol-components"
 import {
   Button,
@@ -35,7 +36,6 @@ import {
 } from "api"
 import { useLearningResourcesSearch } from "api/hooks/learningResources"
 import { useAdminSearchParams } from "api/hooks/adminSearchParams"
-import { GridColumn, GridContainer } from "@/components/GridLayout/GridLayout"
 import {
   AvailableFacets,
   UseResourceSearchParamsProps,
@@ -367,30 +367,6 @@ const StyledResultsContainer = styled.div<{ fetching: boolean }>(
   }),
 )
 
-const DesktopFiltersColumn = styled(GridColumn)`
-  ${({ theme }) => theme.breakpoints.down("md")} {
-    display: none;
-  }
-
-  padding-left: 0 !important;
-  padding-right: 18px !important;
-  padding-bottom: 25px;
-`
-
-const StyledMainColumn = styled(GridColumn)`
-  ${({ theme }) => theme.breakpoints.up("md")} {
-    padding-left: 6px !important;
-    padding-right: 0 !important;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  ${({ theme }) => theme.breakpoints.down("md")} {
-    padding-left: 0 !important;
-  }
-`
-
 const MobileFilter = styled.div`
   ${({ theme }) => theme.breakpoints.up("md")} {
     display: none;
@@ -449,19 +425,6 @@ const MobileFacetsTitleContainer = styled.div`
     margin-right: 10px;
     padding: 10px;
   }
-`
-
-const ReversedGridContainer = styled(GridContainer)`
-  max-width: 1272px !important;
-  margin-left: 0 !important;
-  width: 100% !important;
-
-  /**
-  We want the facets to be visually on left, but occur second in the DOM / tab
-  order. This makes it easier for keyboard navigators to get directly to the
-  search results.
-  */
-  flex-direction: row-reverse;
 `
 
 const ExplanationContainer = styled.div`
@@ -859,9 +822,17 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
 
   return (
     <Container>
-      <ReversedGridContainer>
+      <Grid container columnSpacing="24px" flexDirection="row-reverse">
         <ResourceCategoryTabs.Context activeTabName={activeTab.name}>
-          <StyledMainColumn component="section" variant="main-2">
+          <Grid
+            component="section"
+            size={{ xs: 12, md: 9 }}
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "16px",
+            }}
+          >
             <VisuallyHidden as={resultsHeadingEl}>
               Search Results
             </VisuallyHidden>
@@ -984,10 +955,15 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                 />
               </PaginationContainer>
             </ResourceCategoryTabs.TabPanels>
-          </StyledMainColumn>
-          <DesktopFiltersColumn
+          </Grid>
+          <Grid
             component="section"
-            variant="sidebar-2"
+            size={{ xs: 12, md: 3 }}
+            sx={(theme) => ({
+              [theme.breakpoints.down("md")]: {
+                display: "none",
+              },
+            })}
             data-testid="facets-container"
           >
             <FacetsTitleContainer>
@@ -1009,9 +985,9 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
               ) : null}
             </FacetsTitleContainer>
             {filterContents}
-          </DesktopFiltersColumn>
+          </Grid>
         </ResourceCategoryTabs.Context>
-      </ReversedGridContainer>
+      </Grid>
     </Container>
   )
 }
