@@ -27,7 +27,7 @@ describe("OrganizationContent", () => {
   it("displays a header for each program returned and cards for courses in program", async () => {
     const { orgX, programA, programB, coursesA, coursesB } =
       setupProgramsAndCourses()
-    setMockResponse.get(urls.enrollment.courseEnrollment({}), [])
+    setMockResponse.get(urls.enrollment.courseEnrollment(), [])
     renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
 
     await screen.findByRole("heading", {
@@ -60,7 +60,7 @@ describe("OrganizationContent", () => {
         grades: [],
       }),
     ]
-    setMockResponse.get(urls.enrollment.courseEnrollment({}), enrollments)
+    setMockResponse.get(urls.enrollment.courseEnrollment(), enrollments)
     renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
 
     const [programElA] = await screen.findAllByTestId("org-program-root")

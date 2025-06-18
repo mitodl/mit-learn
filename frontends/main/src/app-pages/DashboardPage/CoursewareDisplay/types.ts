@@ -31,6 +31,7 @@ type DashboardCourse = {
     canUpgrade: boolean
   }
   enrollment?: {
+    id: number
     status: EnrollmentStatus
     mode: EnrollmentMode
   }

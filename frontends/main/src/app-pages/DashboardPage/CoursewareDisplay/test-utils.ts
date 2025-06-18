@@ -9,9 +9,12 @@ import type { DashboardCourse } from "./types"
 import * as u from "api/test-utils"
 import { urls, factories } from "api/mitxonline-test-utils"
 import { setMockResponse } from "../../../test-utils"
+import moment from "moment"
 
 const makeCourses = factories.courses.courses
 const makeProgram = factories.programs.program
+const makeEnrollment = factories.enrollment.courseEnrollment
+const makeGrade = factories.enrollment.grade
 
 const dashboardCourse: PartialFactory<DashboardCourse> = (...overrides) => {
   return mergeOverrides<DashboardCourse>(
@@ -29,12 +32,77 @@ const dashboardCourse: PartialFactory<DashboardCourse> = (...overrides) => {
         coursewareUrl: faker.internet.url(),
       },
       enrollment: {
+        id: faker.number.int(),
         status: faker.helpers.arrayElement(Object.values(EnrollmentStatus)),
         mode: faker.helpers.arrayElement(Object.values(EnrollmentMode)),
       },
     },
     ...overrides,
   )
+}
+
+const setupEnrollments = (includeExpired: boolean) => {
+  const completed = [
+    makeEnrollment({
+      run: { title: "C Course Ended" },
+      grades: [makeGrade({ passed: true })],
+    }),
+  ]
+  const expired = includeExpired
+    ? [
+        makeEnrollment({
+          run: {
+            title: "A Course Ended",
+            end_date: faker.date.past().toISOString(),
+          },
+        }),
+        makeEnrollment({
+          run: {
+            title: "B Course Ended",
+            end_date: faker.date.past().toISOString(),
+          },
+        }),
+      ]
+    : []
+  const started = [
+    makeEnrollment({
+      run: {
+        title: "A Course Started",
+        start_date: faker.date.past().toISOString(),
+      },
+    }),
+    makeEnrollment({
+      run: {
+        title: "B Course Started",
+        start_date: faker.date.past().toISOString(),
+      },
+    }),
+  ]
+  const notStarted = [
+    makeEnrollment({
+      run: {
+        start_date: moment().add(1, "day").toISOString(), // Sooner first
+      },
+    }),
+    makeEnrollment({
+      run: {
+        start_date: moment().add(5, "day").toISOString(), // Later second
+      },
+    }),
+  ]
+  const enrollments = faker.helpers.shuffle([
+    ...expired,
+    ...completed,
+    ...started,
+    ...notStarted,
+  ])
+  return {
+    enrollments: enrollments,
+    completed: completed,
+    expired: expired,
+    started: started,
+    notStarted: notStarted,
+  }
 }
 
 const setupProgramsAndCourses = () => {
@@ -82,4 +150,4 @@ const setupProgramsAndCourses = () => {
   }
 }
 
-export { dashboardCourse, setupProgramsAndCourses }
+export { dashboardCourse, setupEnrollments, setupProgramsAndCourses }
