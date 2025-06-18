@@ -103,6 +103,8 @@ const FacetStyles = styled.div`
     margin-bottom: 16px;
     margin-top: 12px;
     border-radius: 4px;
+    color: ${({ theme }) => theme.custom.colors.darkGray2};
+    ${({ theme }) => css({ ...theme.typography.body2 })}
 
     &:focus-visible {
       outline: solid 2px ${({ theme }) => theme.custom.colors.darkGray2};
