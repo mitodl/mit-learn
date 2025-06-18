@@ -80,6 +80,8 @@ const SearchModeDropdownContainer = styled.div`
 `
 
 const FacetStyles = styled.div`
+  margin-top: 8px;
+
   div.facets:last-child {
     border-bottom-right-radius: 8px;
     border-bottom-left-radius: 8px;
@@ -834,25 +836,23 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
   }
 
   const filterContents = (
-    <>
-      <FacetStyles>
-        {showProfessionalToggle && (
-          <ProfessionalToggle
-            professionalSetting={requestParams.professional}
-            setParamValue={setParamValue}
-          />
-        )}
-        <AvailableFacets
-          facetManifest={facetManifest}
-          activeFacets={requestParams}
-          onFacetChange={toggleParamValue}
-          facetOptions={data?.metadata.aggregations ?? {}}
+    <FacetStyles>
+      {showProfessionalToggle && (
+        <ProfessionalToggle
+          professionalSetting={requestParams.professional}
+          setParamValue={setParamValue}
         />
-        {user?.is_learning_path_editor
-          ? AdminOptions(expandAdminOptions, setExpandAdminOptions, adminParams)
-          : null}
-      </FacetStyles>
-    </>
+      )}
+      <AvailableFacets
+        facetManifest={facetManifest}
+        activeFacets={requestParams}
+        onFacetChange={toggleParamValue}
+        facetOptions={data?.metadata.aggregations ?? {}}
+      />
+      {user?.is_learning_path_editor
+        ? AdminOptions(expandAdminOptions, setExpandAdminOptions, adminParams)
+        : null}
+    </FacetStyles>
   )
 
   return (

@@ -12,10 +12,7 @@ const StyledToggleButtonGroup = styled(ToggleButtonGroup)`
   height: 40px;
   border-radius: 4px;
 `
-const StyledButtonGroupContainer = styled.div`
-  margin-top: 10px;
-  margin-bottom: 10px;
-`
+
 const ExplanationContainer = styled.div`
   margin: 10px;
   font-size: 0.875em;
@@ -88,7 +85,7 @@ const ProfessionalToggle: React.FC<{
   }
 
   return (
-    <StyledButtonGroupContainer>
+    <div>
       <StyledToggleButtonGroup
         value={professionalSetting}
         exclusive
@@ -117,7 +114,7 @@ const ProfessionalToggle: React.FC<{
           Content developed from MIT's professional curriculum
         </ExplanationContainer>
       </Collapse>
-    </StyledButtonGroupContainer>
+    </div>
   )
 }
 
