@@ -29,10 +29,17 @@ const ItemsText = styled(Typography)(({ theme }) => ({
 const IconContainer = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
+  justifyContent: "center",
   gap: "8px",
   borderRadius: "4px",
   color: theme.custom.colors.silverGrayDark,
   background: theme.custom.colors.lightGray1,
+  width: "48px",
+  height: "48px",
+  svg: {
+    width: "32px",
+    height: "32px",
+  },
   [theme.breakpoints.down("sm")]: {
     display: "none",
   },
@@ -66,7 +73,7 @@ const UserListCardCondensed = ({
           </ItemsText>
         </TextContainer>
         <IconContainer>
-          <RiListCheck3 size="48" />
+          <RiListCheck3 />
         </IconContainer>
       </ListCardCondensed.Content>
     </StyledCard>

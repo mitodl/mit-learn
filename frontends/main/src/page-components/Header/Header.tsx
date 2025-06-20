@@ -14,9 +14,9 @@ import {
   RiVerifiedBadgeLine,
   RiFileAddLine,
   RiTimeLine,
-  RiHeartLine,
   RiPriceTag3Line,
   RiAwardLine,
+  RiThumbUpLine,
 } from "@remixicon/react"
 import { useToggle } from "ol-utilities"
 import MITLogoLink from "@/components/MITLogoLink/MITLogoLink"
@@ -242,16 +242,16 @@ const navData: NavData = {
           posthogEvent: PostHogEvents.ClickedNavBrowseNew,
         },
         {
+          title: "Popular",
+          href: SEARCH_POPULAR,
+          icon: <RiThumbUpLine />,
+          posthogEvent: PostHogEvents.ClickedNavBrowsePopular,
+        },
+        {
           title: "Upcoming",
           icon: <RiTimeLine />,
           href: SEARCH_UPCOMING,
           posthogEvent: PostHogEvents.ClickedNavBrowseUpcoming,
-        },
-        {
-          title: "Popular",
-          href: SEARCH_POPULAR,
-          icon: <RiHeartLine />,
-          posthogEvent: PostHogEvents.ClickedNavBrowsePopular,
         },
         {
           title: "Free",

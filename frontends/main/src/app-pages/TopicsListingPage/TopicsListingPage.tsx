@@ -5,7 +5,7 @@ import {
   Container,
   Typography,
   styled,
-  Grid,
+  Grid2 as Grid,
   PlainList,
   ChipLink,
   linkStyles,
@@ -269,11 +269,7 @@ const groupTopics = (
 }
 
 const RootTopicList = styled(PlainList)(({ theme }) => ({
-  marginTop: "80px",
-  [theme.breakpoints.down("sm")]: {
-    marginTop: "32px",
-  },
-  "> li": {
+  "> li:not(:last-of-type)": {
     paddingBottom: "32px",
   },
   "> li + li": {
@@ -316,8 +312,16 @@ const TopicsListingPage: React.FC = () => {
       />
       <Container>
         <Grid container>
-          <Grid item xs={0} sm={1}></Grid>
-          <Grid item xs={12} sm={10}>
+          <Grid
+            size={{ xs: 12, sm: 10 }}
+            offset={{ xs: 0, sm: 1 }}
+            sx={(theme) => ({
+              margin: "80px 0",
+              [theme.breakpoints.down("sm")]: {
+                margin: "32px 0",
+              },
+            })}
+          >
             <RootTopicList>
               {topicsQuery.isLoading
                 ? Array(10)
