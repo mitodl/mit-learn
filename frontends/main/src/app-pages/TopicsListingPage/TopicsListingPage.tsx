@@ -269,7 +269,7 @@ const groupTopics = (
 }
 
 const RootTopicList = styled(PlainList)(({ theme }) => ({
-  "> li": {
+  "> li:not(:last-of-type)": {
     paddingBottom: "32px",
   },
   "> li + li": {
