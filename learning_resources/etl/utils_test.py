@@ -20,7 +20,7 @@ from learning_resources.constants import (
     RunStatus,
 )
 from learning_resources.etl import utils
-from learning_resources.etl.canvas import parse_canvas_settings
+from learning_resources.etl.canvas import parse_canvas_settings, run_for_canvas_archive
 from learning_resources.etl.constants import CommitmentConfig, DurationConfig, ETLSource
 from learning_resources.etl.utils import parse_certification, parse_string_to_int
 from learning_resources.factories import (
@@ -632,7 +632,7 @@ def test_run_for_canvas_archive_creates_resource_and_run(tmp_path, mocker):
     # No resource exists yet
     course_archive_path = tmp_path / "archive.zip"
     course_archive_path.write_text("dummy")
-    run = utils.run_for_canvas_archive(course_archive_path, overwrite=True)
+    run = run_for_canvas_archive(course_archive_path, overwrite=True)
     resource = LearningResource.objects.get(readable_id="TEST101")
     assert resource.title == "Test Course"
     assert resource.etl_source == ETLSource.canvas.name
@@ -666,7 +666,7 @@ def test_run_for_canvas_archive_creates_run_if_none_exists(tmp_path, mocker):
     assert resource.runs.count() == 0
     course_archive_path = tmp_path / "archive4.zip"
     course_archive_path.write_text("dummy")
-    run = utils.run_for_canvas_archive(course_archive_path, overwrite=True)
+    run = run_for_canvas_archive(course_archive_path, overwrite=True)
     assert run is not None
     assert run.learning_resource == resource
     assert run.checksum == "checksum104"
