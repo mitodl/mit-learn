@@ -44,6 +44,7 @@ const mitxonlineEnrollment = (raw: CourseRunEnrollment): DashboardCourse => {
       status: raw.grades[0]?.passed
         ? EnrollmentStatus.Completed
         : EnrollmentStatus.Enrolled,
+      receiveEmails: raw.edx_emails_subscription ?? true,
     },
   }
 }
