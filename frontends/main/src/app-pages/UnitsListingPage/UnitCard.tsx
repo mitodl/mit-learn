@@ -29,7 +29,7 @@ const LogoContainer = styled.div({
   padding: "40px 32px",
   backgroundColor: theme.custom.colors.white,
   [theme.breakpoints.down("md")]: {
-    padding: "34px 0 14px",
+    padding: "24px 16px",
     ".MuiSkeleton-root": {
       margin: "0 auto",
     },
