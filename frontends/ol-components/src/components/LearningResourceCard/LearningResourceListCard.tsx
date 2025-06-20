@@ -22,7 +22,7 @@ import type { ActionButtonProps } from "@mitodl/smoot-design"
 import { theme } from "../ThemeProvider/ThemeProvider"
 
 const IMAGE_SIZES = {
-  mobile: { width: 116, height: 104 },
+  mobile: { width: 116, height: 106 },
   desktop: { width: 236, height: 122 },
 }
 
@@ -53,6 +53,7 @@ export const Certificate = styled.div`
 
   ${theme.breakpoints.down("md")} {
     ${{ ...theme.typography.body4 }}
+    padding: 2px 4px;
     color: ${theme.custom.colors.darkGray2};
     gap: 2px;
 
