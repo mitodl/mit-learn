@@ -12,6 +12,9 @@ from webhooks.utils import SIGNATURE_HEADER_NAME, validate_webhook_signature
     "body", [{"test": "test_payload_1"}, {"test": "another payload"}]
 )
 def test_validate_webhook_signature_valid(settings, body):
+    """
+    Test that the signature validation passes when the signature matches
+    """
     secret = "supersecret"  # noqa: S105
     settings.WEBHOOK_SECRET = secret
     payload = bytes(json.dumps(body), "utf-8")
@@ -30,6 +33,9 @@ def test_validate_webhook_signature_valid(settings, body):
     "body", [{"test": "test_payload_1"}, {"test": "another payload"}]
 )
 def test_validate_webhook_signature_invalid(settings, body):
+    """
+    Test that the signature validation fails when the signature does not match
+    """
     secret = "supoersecret"  # noqa: S105
     settings.WEBHOOK_SECRET = secret
     # Use an incorrect signature
@@ -51,6 +57,10 @@ def test_validate_webhook_signature_invalid(settings, body):
 
 
 def test_validate_webhook_signature_missing_header(settings):
+    """
+    Test that the signature validation fails when the signature header is missing
+    """
+
     secret = "supersecret"  # noqa: S105
     settings.WEBHOOK_SECRET = secret
     request = APIRequestFactory().post(

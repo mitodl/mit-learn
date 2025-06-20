@@ -6,8 +6,10 @@ from webhooks.decorators import require_signature
 
 
 def test_require_signature_allows_when_signature_valid(mocker):
+    """
+    Test that the decorator allows access when the signature is valid.
+    """
     mocker.patch("webhooks.decorators.validate_webhook_signature", return_value=True)
-
     called = {}
 
     @require_signature
@@ -21,6 +23,9 @@ def test_require_signature_allows_when_signature_valid(mocker):
 
 
 def test_require_signature_denies_when_signature_invalid(mocker):
+    """
+    Test that the decorator raises PermissionDenied when the signature is invalid.
+    """
     mocker.patch("webhooks.decorators.validate_webhook_signature", return_value=False)
 
     @require_signature
