@@ -628,7 +628,7 @@ def test_run_for_canvas_archive_creates_resource_and_run(tmp_path, mocker):
         "learning_resources.etl.canvas.parse_canvas_settings",
         return_value={"title": "Test Course", "course_code": "TEST101"},
     )
-    mocker.patch("learning_resources.etl.utils.calc_checksum", return_value="abc123")
+    mocker.patch("learning_resources.etl.canvas.calc_checksum", return_value="abc123")
     # No resource exists yet
     course_archive_path = tmp_path / "archive.zip"
     course_archive_path.write_text("dummy")
@@ -652,7 +652,7 @@ def test_run_for_canvas_archive_creates_run_if_none_exists(tmp_path, mocker):
         return_value={"title": "Test Course", "course_code": "TEST104"},
     )
     mocker.patch(
-        "learning_resources.etl.utils.calc_checksum", return_value="checksum104"
+        "learning_resources.etl.canvas.calc_checksum", return_value="checksum104"
     )
     # Create resource with no runs
     resource = LearningResourceFactory.create(
