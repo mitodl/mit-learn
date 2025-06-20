@@ -579,6 +579,9 @@ def test_parse_resource_commitment(raw_value, min_hours, max_hours):
 
 
 def test_parse_canvas_settings_returns_expected_dict(canvas_settings_zip):
+    """
+    Test that parse_canvas_settings returns a dictionary with expected attributes
+    """
     attrs = utils.parse_canvas_settings(canvas_settings_zip)
     assert attrs["title"] == "Test Course Title"
     assert attrs["course_code"] == "TEST-101"
@@ -586,7 +589,9 @@ def test_parse_canvas_settings_returns_expected_dict(canvas_settings_zip):
 
 
 def test_parse_canvas_settings_missing_fields(tmp_path):
-    # XML with only one field
+    """
+    Test that parse_canvas_settings handles missing fields gracefully
+    """
     xml_content = b"""<course><title>Only Title</title></course>"""
     zip_path = tmp_path / "test_canvas_course2.zip"
     with zipfile.ZipFile(zip_path, "w") as zf:
@@ -597,7 +602,9 @@ def test_parse_canvas_settings_missing_fields(tmp_path):
 
 
 def test_parse_canvas_settings_handles_namespaces(tmp_path):
-    # XML with namespace
+    """
+    Test that parse_canvas_settings can handle XML with namespaces
+    """
     xml_content = b"""<ns0:course xmlns:ns0="http://example.com">
         <ns0:title>Namespaced Title</ns0:title>
         <ns0:course_code>NS-101</ns0:course_code>
@@ -612,9 +619,12 @@ def test_parse_canvas_settings_handles_namespaces(tmp_path):
 
 @pytest.mark.django_db
 def test_run_for_canvas_archive_creates_resource_and_run(tmp_path, mocker):
-    # Setup: patch parse_canvas_settings and calc_checksum
+    """
+    Test that run_for_canvas_archive creates a LearningResource and Run
+    when given a valid canvas archive.
+    """
     mocker.patch(
-        "learning_resources.etl.utils.parse_canvas_settings",
+        "learning_resources.etl.canvas.parse_canvas_settings",
         return_value={"title": "Test Course", "course_code": "TEST101"},
     )
     mocker.patch("learning_resources.etl.utils.calc_checksum", return_value="abc123")
@@ -633,9 +643,11 @@ def test_run_for_canvas_archive_creates_resource_and_run(tmp_path, mocker):
 
 @pytest.mark.django_db
 def test_run_for_canvas_archive_creates_run_if_none_exists(tmp_path, mocker):
-    # Setup: patch parse_canvas_settings and calc_checksum
+    """
+    Test that run_for_canvas_archive creates a Run if no runs exist for the resource.
+    """
     mocker.patch(
-        "learning_resources.etl.utils.parse_canvas_settings",
+        "learning_resources.etl.canvas.parse_canvas_settings",
         return_value={"title": "Test Course", "course_code": "TEST104"},
     )
     mocker.patch(
