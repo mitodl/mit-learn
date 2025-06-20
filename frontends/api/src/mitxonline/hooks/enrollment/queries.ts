@@ -2,24 +2,18 @@ import { queryOptions } from "@tanstack/react-query"
 import type { CourseRunEnrollment } from "@mitodl/mitxonline-api-axios/v1"
 
 import { enrollmentsApi } from "../../clients"
-import { RawAxiosRequestConfig } from "axios"
 
 const enrollmentKeys = {
   root: ["mitxonline", "enrollments"],
-  enrollmentsList: (opts: RawAxiosRequestConfig) => [
-    ...enrollmentKeys.root,
-    "programEnrollments",
-    "list",
-    opts,
-  ],
+  enrollmentsList: () => [...enrollmentKeys.root, "programEnrollments", "list"],
 }
 
 const enrollmentQueries = {
-  enrollmentsList: (opts: RawAxiosRequestConfig) =>
+  enrollmentsList: () =>
     queryOptions({
-      queryKey: enrollmentKeys.enrollmentsList(opts),
+      queryKey: enrollmentKeys.enrollmentsList(),
       queryFn: async (): Promise<CourseRunEnrollment[]> => {
-        return enrollmentsApi.enrollmentsList(opts).then((res) => res.data)
+        return enrollmentsApi.enrollmentsList().then((res) => res.data)
       },
     }),
 }

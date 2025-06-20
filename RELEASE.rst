@@ -1,6 +1,20 @@
 Release Notes
 =============
 
+Version 0.36.3
+--------------
+
+- Ingest canvas courses (#2307)
+- Update dependency urllib3 to v2.5.0 [SECURITY] (#2311)
+- unpin dep (#2309)
+- dashboard unenroll dialog functionality (#2303)
+- update smoot to proper release (#2306)
+- Use smoot components; fix radio button focus ring (#2304)
+- update spinner usage (#2301)
+- Feature Flag for MITxOnline API Call (#2305)
+- Upgrade Smoot Design (#2302)
+- Update dependency requests to v2.32.4 [SECURITY] (#2299)
+
 Version 0.36.1 (Released June 10, 2025)
 --------------
 

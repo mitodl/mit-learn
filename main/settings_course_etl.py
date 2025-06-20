@@ -63,6 +63,9 @@ OLL_LEARNING_COURSE_BUCKET_PREFIX = get_string(
     "OLL_LEARNING_COURSE_BUCKET_PREFIX", "open-learning-library/courses"
 )
 
+# Canvas course settings
+CANVAS_COURSE_BUCKET_NAME = get_string("CANVAS_COURSE_BUCKET_NAME", None)
+CANVAS_COURSE_BUCKET_PREFIX = get_string("CANVAS_COURSE_BUCKET_PREFIX", "canvas")
 # More MIT URLs
 SEE_API_URL = get_string("SEE_API_URL", None)
 SEE_API_ACCESS_TOKEN_URL = get_string("SEE_API_ACCESS_TOKEN_URL", None)

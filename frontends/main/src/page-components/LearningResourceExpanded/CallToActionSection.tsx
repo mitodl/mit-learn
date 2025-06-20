@@ -7,14 +7,13 @@ import {
   theme,
   PlatformLogo,
   PLATFORM_LOGOS,
-  Input,
   Typography,
 } from "ol-components"
 import Link from "next/link"
 import type { ImageConfig, LearningResourceCardProps } from "ol-components"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
 import { ResourceTypeEnum, PlatformEnum } from "api"
-import { Button, ButtonLink, ButtonProps } from "@mitodl/smoot-design"
+import { Button, ButtonLink, ButtonProps, Input } from "@mitodl/smoot-design"
 import type { LearningResource } from "api"
 import {
   RiBookmarkFill,

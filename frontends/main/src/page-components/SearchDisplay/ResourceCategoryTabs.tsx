@@ -1,11 +1,6 @@
 import React from "react"
-import {
-  TabButton,
-  TabContext,
-  TabButtonList,
-  TabPanel,
-  styled,
-} from "ol-components"
+import { TabContext, TabPanel, styled } from "ol-components"
+import { TabButton, TabButtonList } from "@mitodl/smoot-design"
 import { ResourceCategoryEnum, LearningResourcesSearchResponse } from "api"
 
 const TabsList = styled(TabButtonList)(({ theme }) => ({

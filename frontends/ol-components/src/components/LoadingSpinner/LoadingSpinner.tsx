@@ -15,6 +15,7 @@ const Container = styled.div({
 
 type LoadingSpinnerProps = {
   loading: boolean
+  size?: number | string
   "aria-label"?: string
 }
 
@@ -22,12 +23,13 @@ const noDelay = { transitionDelay: "0ms" }
 
 const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   loading,
+  size,
   "aria-label": label = "Loading",
 }) => {
   return (
     <Container>
       <Fade in={loading} style={!loading ? noDelay : undefined} unmountOnExit>
-        <CircularProgress aria-label={label} />
+        <CircularProgress aria-label={label} size={size} />
       </Fade>
     </Container>
   )

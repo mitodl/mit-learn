@@ -9,7 +9,7 @@ import axios from "axios"
 
 const axiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL,
-  xsrfCookieName: process.env.NEXT_PUBLIC_CSRF_COOKIE_NAME,
+  xsrfCookieName: process.env.NEXT_PUBLIC_MITX_ONLINE_CSRF_COOKIE_NAME,
   xsrfHeaderName: "X-CSRFToken",
   withXSRFToken: true,
   withCredentials:

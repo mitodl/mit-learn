@@ -4,14 +4,13 @@ import React from "react"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import {
   Carousel,
-  TabButton,
   TabPanel,
   TabContext,
-  TabButtonList,
   styled,
   Typography,
   TypographyProps,
 } from "ol-components"
+import { TabButton, TabButtonList } from "@mitodl/smoot-design"
 import type { TabConfig } from "./types"
 import { LearningResource, PaginatedLearningResourceList } from "api"
 import { ResourceCard } from "../ResourceCard/ResourceCard"

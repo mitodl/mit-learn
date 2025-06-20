@@ -14,14 +14,13 @@ import {
   Container,
   Skeleton,
   Tab,
-  TabButtonLink,
-  TabButtonList,
   TabContext,
   TabPanel,
   TabList,
   Typography,
   styled,
 } from "ol-components"
+import { TabButtonLink, TabButtonList } from "@mitodl/smoot-design"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import backgroundImage from "@/public/images/backgrounds/user_menu_background.svg"
@@ -308,13 +307,15 @@ const DashboardPage: React.FC<{
 }> = ({ children }) => {
   const pathname = usePathname()
   const { isLoading: isLoadingUser, data: user } = useUserMe()
-  const { isLoading: isLoadingMitxOnlineUser, data: mitxOnlineUser } =
-    useMitxOnlineCurrentUser()
   const orgsEnabled = useFeatureFlagEnabled(FeatureFlags.OrganizationDashboard)
+  const { isLoading: isLoadingMitxOnlineUser, data: mitxOnlineUser } =
+    useMitxOnlineCurrentUser({ enabled: !!orgsEnabled })
 
   const tabData = useMemo(
     () =>
-      isLoadingMitxOnlineUser ? [] : getTabData(orgsEnabled, mitxOnlineUser),
+      isLoadingMitxOnlineUser
+        ? getTabData(orgsEnabled)
+        : getTabData(orgsEnabled, mitxOnlineUser),
     [isLoadingMitxOnlineUser, orgsEnabled, mitxOnlineUser],
   )
 

@@ -1,6 +1,7 @@
 import React from "react"
 import Image from "next/image"
-import { styled, VisuallyHidden } from "ol-components"
+import { styled } from "ol-components"
+import { VisuallyHidden } from "@mitodl/smoot-design"
 import CourseComplete from "@/public/images/icons/course-complete.svg"
 import CourseInProgress from "@/public/images/icons/course-in-progress.svg"
 import CourseUnenrolled from "@/public/images/icons/course-unenrolled.svg"

@@ -34,7 +34,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.36.1"
+VERSION = "0.36.3"
 
 log = logging.getLogger()
 
@@ -123,6 +123,7 @@ INSTALLED_APPS = (
     "authentication",
     "channels",
     "profiles",
+    "webhooks",
     "widgets",
     "learning_resources",
     "learning_resources_search",
@@ -141,6 +142,8 @@ INSTALLED_APPS = (
     "health_check.contrib.redis",
     "health_check.contrib.db_heartbeat",
 )
+
+WEBHOOK_SECRET = get_string("WEBHOOK_SECRET", "please-change-this")
 
 HEALTH_CHECK = {
     "SUBSETS": {
