@@ -7,6 +7,10 @@ SIGNATURE_HEADER_NAME = "X-MITLearn-Signature"
 
 
 def validate_webhook_signature(request):
+    """
+    Validate the signature of a webhook request.
+    Header name and signature must match
+    """
     if SIGNATURE_HEADER_NAME not in request.headers:
         return False
     secret = settings.WEBHOOK_SECRET

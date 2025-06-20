@@ -7,6 +7,12 @@ from webhooks.utils import validate_webhook_signature
 
 
 def require_signature(view_func):
+    """
+    Ensure that the view function is only called if the request
+    has a valid webhook signature.
+    Raises PermissionDenied if the signature is invalid.
+    """
+
     def _check_request(request):
         if not validate_webhook_signature(request):
             raise PermissionDenied
