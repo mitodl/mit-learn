@@ -9,6 +9,7 @@ import os
 import re
 import tarfile
 import uuid
+import zipfile
 from collections import Counter
 from collections.abc import Generator
 from datetime import UTC, datetime
@@ -406,6 +407,69 @@ def text_from_sjson_content(content: str):
     return " ".join(data.get("text", []))
 
 
+def _process_olx_path(olx_path: str, run: LearningResourceRun, *, overwrite):
+    for document, metadata in documents_from_olx(olx_path):
+        source_path = metadata.get("source_path")
+        edx_module_id = get_edx_module_id(source_path, run)
+        key = edx_module_id
+        content_type = metadata["content_type"]
+        mime_type = metadata.get("mime_type")
+        file_extension = metadata.get("file_extension")
+        existing_content = ContentFile.objects.filter(key=key, run=run).first()
+        if (
+            not existing_content
+            or existing_content.archive_checksum != metadata.get("archive_checksum")
+        ) or overwrite:
+            if settings.SKIP_TIKA and settings.ENVIRONMENT != "production":
+                content_dict = {
+                    "content": "",
+                    "content_title": "",
+                }
+            else:
+                tika_output = extract_text_metadata(
+                    document,
+                    other_headers={"Content-Type": mime_type} if mime_type else {},
+                )
+                if tika_output is None:
+                    log.info("No tika response for %s", key)
+                    continue
+
+                tika_content = tika_output.get("content") or ""
+                tika_metadata = tika_output.get("metadata") or {}
+                content = tika_content.strip()
+                if file_extension == ".srt":
+                    content = text_from_srt_content(content)
+                elif file_extension == ".sjson":
+                    content = text_from_sjson_content(content)
+
+                if not content:
+                    continue
+
+                content_dict = {
+                    "content": content,
+                    "content_title": (
+                        metadata.get("title") or tika_metadata.get("title") or ""
+                    )[: get_max_contentfile_length("content_title")],
+                }
+        else:
+            content_dict = {
+                "content": existing_content.content,
+                "content_title": existing_content.content_title,
+            }
+        yield (
+            {
+                "key": key,
+                "published": True,
+                "content_type": content_type,
+                "archive_checksum": metadata.get("archive_checksum"),
+                "file_extension": file_extension,
+                "source_path": source_path,
+                "edx_module_id": edx_module_id,
+                **content_dict,
+            }
+        )
+
+
 def transform_content_files(
     course_tarpath: Path, run: LearningResourceRun, *, overwrite: bool
 ) -> Generator[dict, None, None]:
@@ -423,68 +487,7 @@ def transform_content_files(
     with TemporaryDirectory(prefix=basedir) as inner_tempdir:
         check_call(["tar", "xf", course_tarpath], cwd=inner_tempdir)  # noqa: S603,S607
         olx_path = glob.glob(inner_tempdir + "/*")[0]  # noqa: PTH207
-        for document, metadata in documents_from_olx(olx_path):
-            source_path = metadata.get("source_path")
-            edx_module_id = get_edx_module_id(source_path, run)
-            key = edx_module_id
-            content_type = metadata["content_type"]
-            mime_type = metadata.get("mime_type")
-            file_extension = metadata.get("file_extension")
-
-            existing_content = ContentFile.objects.filter(key=key, run=run).first()
-            if (
-                not existing_content
-                or existing_content.archive_checksum != metadata.get("archive_checksum")
-            ) or overwrite:
-                if settings.SKIP_TIKA and settings.ENVIRONMENT != "production":
-                    content_dict = {
-                        "content": "",
-                        "content_title": "",
-                    }
-                else:
-                    tika_output = extract_text_metadata(
-                        document,
-                        other_headers={"Content-Type": mime_type} if mime_type else {},
-                    )
-
-                    if tika_output is None:
-                        log.info("No tika response for %s", key)
-                        continue
-
-                    tika_content = tika_output.get("content") or ""
-                    tika_metadata = tika_output.get("metadata") or {}
-                    content = tika_content.strip()
-                    if file_extension == ".srt":
-                        content = text_from_srt_content(content)
-                    elif file_extension == ".sjson":
-                        content = text_from_sjson_content(content)
-
-                    if not content:
-                        continue
-
-                    content_dict = {
-                        "content": content,
-                        "content_title": (
-                            metadata.get("title") or tika_metadata.get("title") or ""
-                        )[: get_max_contentfile_length("content_title")],
-                    }
-            else:
-                content_dict = {
-                    "content": existing_content.content,
-                    "content_title": existing_content.content_title,
-                }
-            yield (
-                {
-                    "key": key,
-                    "published": True,
-                    "content_type": content_type,
-                    "archive_checksum": metadata.get("archive_checksum"),
-                    "file_extension": file_extension,
-                    "source_path": source_path,
-                    "edx_module_id": edx_module_id,
-                    **content_dict,
-                }
-            )
+        yield from _process_olx_path(olx_path, run, overwrite=overwrite)
 
 
 def get_learning_course_bucket_name(etl_source: str) -> str:
@@ -502,6 +505,7 @@ def get_learning_course_bucket_name(etl_source: str) -> str:
         ETLSource.xpro.name: settings.XPRO_LEARNING_COURSE_BUCKET_NAME,
         ETLSource.mitxonline.name: settings.MITX_ONLINE_LEARNING_COURSE_BUCKET_NAME,
         ETLSource.oll.name: settings.OLL_LEARNING_COURSE_BUCKET_NAME,
+        ETLSource.canvas.name: settings.CANVAS_COURSE_BUCKET_NAME,
     }
     return bucket_names.get(etl_source)
 
@@ -536,6 +540,11 @@ def calc_checksum(filename) -> str:
     Returns:
         str: The md5 checksum of the file
     """
+    if zipfile.is_zipfile(filename):
+        with zipfile.ZipFile(filename, "r") as zip_file:
+            return str(
+                hash(tuple(f"{zp.filename}:{zp.file_size}" for zp in zip_file.filelist))
+            )
     with tarfile.open(filename, "r") as tgz_file:
         return str(hash(tuple(ti.chksum for ti in tgz_file.getmembers())))
 
