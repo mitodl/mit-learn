@@ -47,6 +47,7 @@ const SCHOOL_ICONS: Record<string, React.ReactNode> = {
 const SchoolTitle = styled.h2(({ theme }) => {
   return {
     marginBottom: "10px",
+    marginTop: "0",
     display: "flex",
     alignItems: "center",
     ...theme.typography.h5,
