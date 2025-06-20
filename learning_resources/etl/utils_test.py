@@ -20,6 +20,7 @@ from learning_resources.constants import (
     RunStatus,
 )
 from learning_resources.etl import utils
+from learning_resources.etl.canvas import parse_canvas_settings
 from learning_resources.etl.constants import CommitmentConfig, DurationConfig, ETLSource
 from learning_resources.etl.utils import parse_certification, parse_string_to_int
 from learning_resources.factories import (
@@ -582,7 +583,7 @@ def test_parse_canvas_settings_returns_expected_dict(canvas_settings_zip):
     """
     Test that parse_canvas_settings returns a dictionary with expected attributes
     """
-    attrs = utils.parse_canvas_settings(canvas_settings_zip)
+    attrs = parse_canvas_settings(canvas_settings_zip)
     assert attrs["title"] == "Test Course Title"
     assert attrs["course_code"] == "TEST-101"
     assert attrs["other_field"] == "Other Value"
@@ -596,7 +597,7 @@ def test_parse_canvas_settings_missing_fields(tmp_path):
     zip_path = tmp_path / "test_canvas_course2.zip"
     with zipfile.ZipFile(zip_path, "w") as zf:
         zf.writestr("course_settings/course_settings.xml", xml_content)
-    attrs = utils.parse_canvas_settings(zip_path)
+    attrs = parse_canvas_settings(zip_path)
     assert attrs["title"] == "Only Title"
     assert "course_code" not in attrs
 
@@ -612,7 +613,7 @@ def test_parse_canvas_settings_handles_namespaces(tmp_path):
     zip_path = tmp_path / "test_canvas_course4.zip"
     with zipfile.ZipFile(zip_path, "w") as zf:
         zf.writestr("course_settings/course_settings.xml", xml_content)
-    attrs = utils.parse_canvas_settings(zip_path)
+    attrs = parse_canvas_settings(zip_path)
     assert attrs["title"] == "Namespaced Title"
     assert attrs["course_code"] == "NS-101"
 
