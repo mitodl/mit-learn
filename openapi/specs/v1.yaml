@@ -8887,6 +8887,18 @@ paths:
         required: true
       tags:
       - webhooks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContentFileWebHookRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ContentFileWebHookRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ContentFileWebHookRequestRequest'
+        required: true
       responses:
         '200':
           content:
@@ -9169,6 +9181,18 @@ components:
       - next
       - previous
       - results
+    ContentFileWebHookRequestRequest:
+      type: object
+      description: Serializer for ContentFile webhook requests.
+      properties:
+        content_url:
+          type: string
+          minLength: 1
+        source:
+          $ref: '#/components/schemas/SourceEnum'
+      required:
+      - content_url
+      - source
     ContentTypeEnum:
       enum:
       - page
@@ -13799,6 +13823,44 @@ components:
       - Popularity ascending
       - Popularity descending
       - Next start date ascending
+    SourceEnum:
+      enum:
+      - micromasters
+      - mit_edx
+      - mitpe
+      - mitxonline
+      - oll
+      - ocw
+      - podcast
+      - see
+      - xpro
+      - youtube
+      - canvas
+      type: string
+      description: |-
+        * `micromasters` - micromasters
+        * `mit_edx` - mit_edx
+        * `mitpe` - mitpe
+        * `mitxonline` - mitxonline
+        * `oll` - oll
+        * `ocw` - ocw
+        * `podcast` - podcast
+        * `see` - see
+        * `xpro` - xpro
+        * `youtube` - youtube
+        * `canvas` - canvas
+      x-enum-descriptions:
+      - micromasters
+      - mit_edx
+      - mitpe
+      - mitxonline
+      - oll
+      - ocw
+      - podcast
+      - see
+      - xpro
+      - youtube
+      - canvas
     SourceTypeEnum:
       enum:
       - search_subscription_type
