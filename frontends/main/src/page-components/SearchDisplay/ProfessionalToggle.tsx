@@ -12,10 +12,7 @@ const StyledToggleButtonGroup = styled(ToggleButtonGroup)`
   height: 40px;
   border-radius: 4px;
 `
-const StyledButtonGroupContainer = styled.div`
-  margin-top: 10px;
-  margin-bottom: 10px;
-`
+
 const ExplanationContainer = styled.div`
   margin: 10px;
   font-size: 0.875em;
@@ -50,17 +47,40 @@ const StyledToggleButton = styled(ToggleButton)(({ theme }) => ({
     backgroundColor: theme.custom.colors.white,
   },
   ...theme.typography.subtitle3,
+
+  // MUI's ToggleButtonGroup have a -1 margin offset that caused problems for our borders.
+  "&.MuiToggleButtonGroup-middleButton, .MuiToggleButtonGroup-lastButton": {
+    margin: 0,
+  },
+  /**
+   * The goal here is to ensure the icons:
+   * - scale at same rate when container shrinks
+   * - are hidden if container is too small
+   *
+   * NOTE: containerType: size enables the container query but requires setting
+   * a width on the container. We are doing this anyway.
+   */
+  containerType: "size",
+  boxSizing: "border-box",
+  "& > span": {
+    minWidth: "70px",
+  },
+  "@container (max-width: 85px)": {
+    "& > svg": {
+      display: "none",
+    },
+  },
 }))
 
 const ViewAllButton = styled(StyledToggleButton)`
-  border-right: 2px solid;
+  border-right: 1px solid;
   border-color: ${({ theme }) => theme.custom.colors.silverGrayLight};
   width: 20%;
   border-top-left-radius: 4px;
   border-bottom-left-radius: 4px;
 `
 const AcademicButton = styled(StyledToggleButton)`
-  border-right: 2px solid;
+  border-right: 1px solid;
   border-color: ${({ theme }) => theme.custom.colors.silverGrayLight};
   width: 40%;
 `
@@ -88,7 +108,7 @@ const ProfessionalToggle: React.FC<{
   }
 
   return (
-    <StyledButtonGroupContainer>
+    <div>
       <StyledToggleButtonGroup
         value={professionalSetting}
         exclusive
@@ -96,10 +116,10 @@ const ProfessionalToggle: React.FC<{
       >
         <ViewAllButton value="">All</ViewAllButton>
         <AcademicButton value="false">
-          <StyledRiBookOpenLine /> Academic
+          <StyledRiBookOpenLine /> <span>Academic</span>
         </AcademicButton>
         <ProfesionalButton value="true">
-          <StyledRiBriefcase3Line /> Professional
+          <StyledRiBriefcase3Line /> <span>Professional</span>
         </ProfesionalButton>
       </StyledToggleButtonGroup>
       <Collapse in={professionalSetting === ""}>
@@ -117,7 +137,7 @@ const ProfessionalToggle: React.FC<{
           Content developed from MIT's professional curriculum
         </ExplanationContainer>
       </Collapse>
-    </StyledButtonGroupContainer>
+    </div>
   )
 }
 

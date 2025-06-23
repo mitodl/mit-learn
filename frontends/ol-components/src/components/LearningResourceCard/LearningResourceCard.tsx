@@ -75,9 +75,9 @@ const Info = ({
   return (
     <>
       <span>{getReadableResourceType(resource.resource_type)}</span>
-      <PriceContainer>
+      <PriceContainer size={size}>
         {resource.certification && (
-          <Certificate>
+          <Certificate size={size}>
             {size === "small" ? (
               <Tooltip title="Certificate">
                 <RiAwardFill />
@@ -86,9 +86,11 @@ const Info = ({
               <RiAwardFill />
             )}
             {size === "small" ? "" : "Certificate"}
-            <CertificatePrice>
-              {certificatePrice ? `${separator}${certificatePrice}` : ""}
-            </CertificatePrice>
+            {certificatePrice ? (
+              <CertificatePrice>
+                {`${separator}${certificatePrice}`}
+              </CertificatePrice>
+            ) : null}
           </Certificate>
         )}
         <Price>{prices.course.display}</Price>
@@ -97,14 +99,14 @@ const Info = ({
   )
 }
 
-const PriceContainer = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-`
+const PriceContainer = styled.div<{ size: Size }>(({ size }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: size === "small" ? "4px" : "8px",
+}))
 
-const Certificate = styled.div`
-  padding: 2px 4px;
+const Certificate = styled.div<{ size: Size }>`
+  padding: ${({ size }) => (size === "small" ? "2px" : "2px 4px")};
   border-radius: 4px;
   color: ${theme.custom.colors.silverGrayDark};
   background-color: ${theme.custom.colors.lightGray1};
