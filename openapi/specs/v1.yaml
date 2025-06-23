@@ -8844,6 +8844,52 @@ paths:
               schema:
                 $ref: '#/components/schemas/VideoResource'
           description: ''
+  /api/v1/webhooks/content_files/:
+    post:
+      operationId: webhooks_content_files_create
+      description: Handle POST requests to the webhook.
+      parameters:
+      - in: query
+        name: content_url
+        schema:
+          type: string
+          minLength: 1
+        required: true
+      - in: query
+        name: source
+        schema:
+          enum:
+          - micromasters
+          - mit_edx
+          - mitpe
+          - mitxonline
+          - oll
+          - ocw
+          - podcast
+          - see
+          - xpro
+          - youtube
+          - canvas
+          type: string
+          minLength: 1
+        description: |-
+          * `micromasters` - micromasters
+          * `mit_edx` - mit_edx
+          * `mitpe` - mitpe
+          * `mitxonline` - mitxonline
+          * `oll` - oll
+          * `ocw` - ocw
+          * `podcast` - podcast
+          * `see` - see
+          * `xpro` - xpro
+          * `youtube` - youtube
+          * `canvas` - canvas
+        required: true
+      tags:
+      - webhooks
+      responses:
+        '200':
+          description: No response body
 components:
   schemas:
     AggregationsEnum:

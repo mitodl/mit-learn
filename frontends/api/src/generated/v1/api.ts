@@ -29032,3 +29032,214 @@ export const VideosListSortbyEnum = {
 } as const
 export type VideosListSortbyEnum =
   (typeof VideosListSortbyEnum)[keyof typeof VideosListSortbyEnum]
+
+/**
+ * WebhooksApi - axios parameter creator
+ * @export
+ */
+export const WebhooksApiAxiosParamCreator = function (
+  configuration?: Configuration,
+) {
+  return {
+    /**
+     * Handle POST requests to the webhook.
+     * @param {string} content_url
+     * @param {WebhooksContentFilesCreateSourceEnum} source * &#x60;micromasters&#x60; - micromasters * &#x60;mit_edx&#x60; - mit_edx * &#x60;mitpe&#x60; - mitpe * &#x60;mitxonline&#x60; - mitxonline * &#x60;oll&#x60; - oll * &#x60;ocw&#x60; - ocw * &#x60;podcast&#x60; - podcast * &#x60;see&#x60; - see * &#x60;xpro&#x60; - xpro * &#x60;youtube&#x60; - youtube * &#x60;canvas&#x60; - canvas
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    webhooksContentFilesCreate: async (
+      content_url: string,
+      source: WebhooksContentFilesCreateSourceEnum,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'content_url' is not null or undefined
+      assertParamExists(
+        "webhooksContentFilesCreate",
+        "content_url",
+        content_url,
+      )
+      // verify required parameter 'source' is not null or undefined
+      assertParamExists("webhooksContentFilesCreate", "source", source)
+      const localVarPath = `/api/v1/webhooks/content_files/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "POST",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      if (content_url !== undefined) {
+        localVarQueryParameter["content_url"] = content_url
+      }
+
+      if (source !== undefined) {
+        localVarQueryParameter["source"] = source
+      }
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+  }
+}
+
+/**
+ * WebhooksApi - functional programming interface
+ * @export
+ */
+export const WebhooksApiFp = function (configuration?: Configuration) {
+  const localVarAxiosParamCreator = WebhooksApiAxiosParamCreator(configuration)
+  return {
+    /**
+     * Handle POST requests to the webhook.
+     * @param {string} content_url
+     * @param {WebhooksContentFilesCreateSourceEnum} source * &#x60;micromasters&#x60; - micromasters * &#x60;mit_edx&#x60; - mit_edx * &#x60;mitpe&#x60; - mitpe * &#x60;mitxonline&#x60; - mitxonline * &#x60;oll&#x60; - oll * &#x60;ocw&#x60; - ocw * &#x60;podcast&#x60; - podcast * &#x60;see&#x60; - see * &#x60;xpro&#x60; - xpro * &#x60;youtube&#x60; - youtube * &#x60;canvas&#x60; - canvas
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async webhooksContentFilesCreate(
+      content_url: string,
+      source: WebhooksContentFilesCreateSourceEnum,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.webhooksContentFilesCreate(
+          content_url,
+          source,
+          options,
+        )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["WebhooksApi.webhooksContentFilesCreate"]?.[index]
+          ?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+  }
+}
+
+/**
+ * WebhooksApi - factory interface
+ * @export
+ */
+export const WebhooksApiFactory = function (
+  configuration?: Configuration,
+  basePath?: string,
+  axios?: AxiosInstance,
+) {
+  const localVarFp = WebhooksApiFp(configuration)
+  return {
+    /**
+     * Handle POST requests to the webhook.
+     * @param {WebhooksApiWebhooksContentFilesCreateRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    webhooksContentFilesCreate(
+      requestParameters: WebhooksApiWebhooksContentFilesCreateRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<void> {
+      return localVarFp
+        .webhooksContentFilesCreate(
+          requestParameters.content_url,
+          requestParameters.source,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+  }
+}
+
+/**
+ * Request parameters for webhooksContentFilesCreate operation in WebhooksApi.
+ * @export
+ * @interface WebhooksApiWebhooksContentFilesCreateRequest
+ */
+export interface WebhooksApiWebhooksContentFilesCreateRequest {
+  /**
+   *
+   * @type {string}
+   * @memberof WebhooksApiWebhooksContentFilesCreate
+   */
+  readonly content_url: string
+
+  /**
+   * * &#x60;micromasters&#x60; - micromasters * &#x60;mit_edx&#x60; - mit_edx * &#x60;mitpe&#x60; - mitpe * &#x60;mitxonline&#x60; - mitxonline * &#x60;oll&#x60; - oll * &#x60;ocw&#x60; - ocw * &#x60;podcast&#x60; - podcast * &#x60;see&#x60; - see * &#x60;xpro&#x60; - xpro * &#x60;youtube&#x60; - youtube * &#x60;canvas&#x60; - canvas
+   * @type {'micromasters' | 'mit_edx' | 'mitpe' | 'mitxonline' | 'oll' | 'ocw' | 'podcast' | 'see' | 'xpro' | 'youtube' | 'canvas'}
+   * @memberof WebhooksApiWebhooksContentFilesCreate
+   */
+  readonly source: WebhooksContentFilesCreateSourceEnum
+}
+
+/**
+ * WebhooksApi - object-oriented interface
+ * @export
+ * @class WebhooksApi
+ * @extends {BaseAPI}
+ */
+export class WebhooksApi extends BaseAPI {
+  /**
+   * Handle POST requests to the webhook.
+   * @param {WebhooksApiWebhooksContentFilesCreateRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof WebhooksApi
+   */
+  public webhooksContentFilesCreate(
+    requestParameters: WebhooksApiWebhooksContentFilesCreateRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return WebhooksApiFp(this.configuration)
+      .webhooksContentFilesCreate(
+        requestParameters.content_url,
+        requestParameters.source,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
+}
+
+/**
+ * @export
+ */
+export const WebhooksContentFilesCreateSourceEnum = {
+  Micromasters: "micromasters",
+  MitEdx: "mit_edx",
+  Mitpe: "mitpe",
+  Mitxonline: "mitxonline",
+  Oll: "oll",
+  Ocw: "ocw",
+  Podcast: "podcast",
+  See: "see",
+  Xpro: "xpro",
+  Youtube: "youtube",
+  Canvas: "canvas",
+} as const
+export type WebhooksContentFilesCreateSourceEnum =
+  (typeof WebhooksContentFilesCreateSourceEnum)[keyof typeof WebhooksContentFilesCreateSourceEnum]

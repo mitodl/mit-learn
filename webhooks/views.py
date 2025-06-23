@@ -6,7 +6,8 @@ from django.http import HttpResponseBadRequest, JsonResponse
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
-from django.views.generic import View
+from drf_spectacular.utils import extend_schema, extend_schema_view
+from rest_framework import views
 
 from learning_resources.etl.constants import ETLSource
 from learning_resources.tasks import ingest_canvas_course
@@ -16,7 +17,7 @@ from webhooks.serializers import ContentFileWebHookRequestSerializer
 log = logging.getLogger(__name__)
 
 
-class BaseWebhookView(View):
+class BaseWebhookView(views.APIView):
     @method_decorator(require_POST)
     @method_decorator(require_signature)
     @method_decorator(non_atomic_requests)
@@ -25,6 +26,11 @@ class BaseWebhookView(View):
         return super().dispatch(request)
 
 
+@extend_schema_view(
+    post=extend_schema(
+        parameters=[ContentFileWebHookRequestSerializer()],
+    ),
+)
 class ContentFileWebhookView(BaseWebhookView):
     """
     Webhook handler for ContentFile updates
