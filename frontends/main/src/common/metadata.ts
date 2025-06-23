@@ -1,4 +1,7 @@
-import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
+import {
+  canonicalResourceDrawerUrl,
+  RESOURCE_DRAWER_PARAMS,
+} from "@/common/urls"
 import { learningResourcesApi } from "api/clients"
 import type { Metadata } from "next"
 import * as Sentry from "@sentry/nextjs"
@@ -26,17 +29,22 @@ export const getMetadataAsync = async ({
   imageAlt,
   searchParams,
   social = true,
+  alternates,
   ...otherMeta
 }: MetadataAsyncProps) => {
   // The learning resource drawer is open
-  const learningResourceId = (await searchParams)?.[
+  const learningResourceIds = (await searchParams)?.[
     RESOURCE_DRAWER_PARAMS.resource
   ]
+  const learningResourceId = Array.isArray(learningResourceIds)
+    ? Number(learningResourceIds[0])
+    : Number(learningResourceIds)
+  const alts = alternates ?? {}
   if (learningResourceId) {
     try {
       const { data } = await handleNotFound(
         learningResourcesApi.learningResourcesRetrieve({
-          id: Number(learningResourceId),
+          id: learningResourceId,
         }),
       )
 
@@ -44,6 +52,7 @@ export const getMetadataAsync = async ({
       description = data?.description?.replace(/<\/[^>]+(>|$)/g, "") ?? ""
       image = data?.image?.url || image
       imageAlt = image === data?.image?.url ? imageAlt : data?.image?.alt || ""
+      alts.canonical = canonicalResourceDrawerUrl(learningResourceId)
     } catch (error) {
       Sentry.captureException(error)
       console.error(
@@ -60,6 +69,7 @@ export const getMetadataAsync = async ({
     image,
     imageAlt,
     social,
+    alternates: alts,
     ...otherMeta,
   })
 }
