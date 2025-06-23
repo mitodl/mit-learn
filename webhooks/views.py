@@ -43,6 +43,7 @@ class ContentFileWebhookView(BaseWebhookView):
 
     permission_classes = []
     authentication_classes = []
+    serializer_class = ContentFileWebHookRequestSerializer
 
     def post(self, request):
         """
