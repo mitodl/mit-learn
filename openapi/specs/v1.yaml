@@ -8889,7 +8889,11 @@ paths:
       - webhooks
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookResponse'
+          description: ''
 components:
   schemas:
     AggregationsEnum:
@@ -14743,3 +14747,15 @@ components:
       type: string
       enum:
       - video
+    WebhookResponse:
+      type: object
+      description: Serializer for webhook responses.
+      properties:
+        status:
+          type: string
+        message:
+          type: string
+        error:
+          type: string
+      required:
+      - status

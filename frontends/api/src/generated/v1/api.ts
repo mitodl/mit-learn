@@ -7890,6 +7890,32 @@ export type VideoResourceResourceTypeEnum =
   (typeof VideoResourceResourceTypeEnum)[keyof typeof VideoResourceResourceTypeEnum]
 
 /**
+ * Serializer for webhook responses.
+ * @export
+ * @interface WebhookResponse
+ */
+export interface WebhookResponse {
+  /**
+   *
+   * @type {string}
+   * @memberof WebhookResponse
+   */
+  status: string
+  /**
+   *
+   * @type {string}
+   * @memberof WebhookResponse
+   */
+  message?: string
+  /**
+   *
+   * @type {string}
+   * @memberof WebhookResponse
+   */
+  error?: string
+}
+
+/**
  * ArticlesApi - axios parameter creator
  * @export
  */
@@ -29121,7 +29147,10 @@ export const WebhooksApiFp = function (configuration?: Configuration) {
       source: WebhooksContentFilesCreateSourceEnum,
       options?: RawAxiosRequestConfig,
     ): Promise<
-      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<WebhookResponse>
     > {
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.webhooksContentFilesCreate(
@@ -29164,7 +29193,7 @@ export const WebhooksApiFactory = function (
     webhooksContentFilesCreate(
       requestParameters: WebhooksApiWebhooksContentFilesCreateRequest,
       options?: RawAxiosRequestConfig,
-    ): AxiosPromise<void> {
+    ): AxiosPromise<WebhookResponse> {
       return localVarFp
         .webhooksContentFilesCreate(
           requestParameters.content_url,
