@@ -62,7 +62,7 @@ const Image = styled(NextImage)`
   object-fit: cover;
   ${theme.breakpoints.down("md")} {
     width: 111px;
-    height: 104px;
+    height: 106px;
     margin: 0;
     border-radius: 0;
   }
@@ -115,8 +115,11 @@ export const Bottom = styled.div`
   justify-content: space-between;
   align-items: flex-end;
   height: ${theme.typography.pxToRem(32)};
+  margin-top: 2px;
   ${theme.breakpoints.down("md")} {
-    height: ${theme.typography.pxToRem(18)};
+    height: ${theme.typography.pxToRem(16)};
+    margin-top: 8px;
+    align-items: center;
   }
 `
 
