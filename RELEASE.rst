@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.36.3
+Version 0.36.3 (Released June 24, 2025)
 --------------
 
 - Ingest canvas courses (#2307)
