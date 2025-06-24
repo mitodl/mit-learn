@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.36.4
+--------------
+
+- align LearningResourceListCard with figma (#2314)
+- Design QA (#2308)
+- [pre-commit.ci] pre-commit autoupdate (#2298)
+
 Version 0.36.3 (Released June 24, 2025)
 --------------
 
