@@ -1,6 +1,5 @@
 """WidgetInstnace serializer"""
 
-
 from rest_framework import serializers
 
 from main.serializers import WriteableSerializerMethodField
