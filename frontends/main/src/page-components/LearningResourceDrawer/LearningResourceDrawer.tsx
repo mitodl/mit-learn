@@ -7,7 +7,10 @@ import type {
 } from "ol-components"
 import { useLearningResourcesDetail } from "api/hooks/learningResources"
 
-import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
+import {
+  canonicalResourceDrawerUrl,
+  RESOURCE_DRAWER_PARAMS,
+} from "@/common/urls"
 import { useUserMe } from "api/hooks/user"
 import NiceModal from "@ebay/nice-modal-react"
 import {
@@ -214,7 +217,7 @@ const DrawerContent: React.FC<{
         bottomCarousels={bottomCarousels}
         chatExpanded={chatExpanded}
         user={user}
-        shareUrl={`${window.location.origin}/search?${RESOURCE_DRAWER_PARAMS.resource}=${resourceId}`}
+        shareUrl={canonicalResourceDrawerUrl(resourceId)}
         inLearningPath={inLearningPath}
         inUserList={inUserList}
         onAddToLearningPathClick={handleAddToLearningPathClick}

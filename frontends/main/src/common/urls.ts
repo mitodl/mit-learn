@@ -121,6 +121,9 @@ export const RESOURCE_DRAWER_PARAMS = {
   syllabus: "syllabus",
 } as const
 
+export const canonicalResourceDrawerUrl = (resourceId: number) =>
+  `${process.env.NEXT_PUBLIC_ORIGIN}/search?${RESOURCE_DRAWER_PARAMS.resource}=${resourceId}`
+
 export const querifiedSearchUrl = (
   params:
     | string
