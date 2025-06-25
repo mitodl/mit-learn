@@ -6,6 +6,7 @@ import {
   SimpleMenuItem,
   Stack,
   Skeleton,
+  LoadingSpinner,
 } from "ol-components"
 import NextLink from "next/link"
 import { EnrollmentStatus, EnrollmentMode } from "./types"
@@ -22,6 +23,7 @@ import { calendarDaysUntil, isInPast, NoSSR } from "ol-utilities"
 import { EnrollmentStatusIndicator } from "./EnrollmentStatusIndicator"
 import { EmailSettingsDialog, UnenrollDialog } from "./DashboardDialogs"
 import NiceModal from "@ebay/nice-modal-react"
+import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
 
 const CardRoot = styled.div<{
   screenSize: "desktop" | "mobile"
@@ -54,6 +56,10 @@ const CardRoot = styled.div<{
     },
   },
 ])
+
+const SpinnerContainer = styled.div({
+  marginLeft: "8px",
+})
 
 const TitleLink = styled(Link)(({ theme }) => ({
   [theme.breakpoints.down("md")]: {
@@ -103,14 +109,27 @@ const getDefaultContextMenuItems = (
 }
 
 type CoursewareButtonProps = {
+  coursewareId?: string | null
   startDate?: string | null
   endDate?: string | null
+  enrollmentStatus?: EnrollmentStatus | null
   href?: string | null
   className?: string
   courseNoun: string
   "data-testid"?: string
 }
-const getCoursewareText = ({ endDate, courseNoun }: CoursewareButtonProps) => {
+const getCoursewareText = ({
+  endDate,
+  enrollmentStatus,
+  courseNoun,
+}: {
+  endDate?: string | null
+  enrollmentStatus?: EnrollmentStatus | null
+  courseNoun: string
+}) => {
+  if (enrollmentStatus === EnrollmentStatus.NotEnrolled || !enrollmentStatus) {
+    return "Enroll"
+  }
   if (!endDate) return `Continue ${courseNoun}`
   if (isInPast(endDate)) {
     return `View ${courseNoun}`
@@ -119,26 +138,57 @@ const getCoursewareText = ({ endDate, courseNoun }: CoursewareButtonProps) => {
 }
 const CoursewareButton = styled(
   ({
+    coursewareId,
     startDate,
     endDate,
+    enrollmentStatus,
     href,
     className,
     courseNoun,
     ...others
   }: CoursewareButtonProps) => {
-    const children = getCoursewareText({ endDate, courseNoun })
+    const children = getCoursewareText({
+      endDate,
+      courseNoun,
+      enrollmentStatus,
+    })
     const hasStarted = startDate && isInPast(startDate)
+    const notEnrolled =
+      enrollmentStatus === EnrollmentStatus.NotEnrolled || !enrollmentStatus
+    const createEnrollment = useCreateEnrollment({
+      readable_id: coursewareId ?? "",
+    })
     return hasStarted && href ? (
-      <ButtonLink
-        size="small"
-        variant="primary"
-        endIcon={<RiArrowRightLine />}
-        href={href}
-        className={className}
-        {...others}
-      >
-        {children}
-      </ButtonLink>
+      !notEnrolled ? (
+        <ButtonLink
+          size="small"
+          variant="primary"
+          endIcon={<RiArrowRightLine />}
+          href={href}
+          className={className}
+          {...others}
+        >
+          {children}
+        </ButtonLink>
+      ) : (
+        <Button
+          size="small"
+          variant="primary"
+          className={className}
+          disabled={createEnrollment.isPending || !coursewareId}
+          onClick={async () => {
+            await createEnrollment.mutateAsync()
+          }}
+          {...others}
+        >
+          {children}
+          {createEnrollment.isPending && (
+            <SpinnerContainer>
+              <LoadingSpinner loading={createEnrollment.isPending} size={16} />
+            </SpinnerContainer>
+          )}
+        </Button>
+      )
     ) : (
       <Button
         size="small"
@@ -323,7 +373,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       />
       <CoursewareButton
         data-testid="courseware-button"
+        coursewareId={dashboardResource.coursewareId}
         startDate={run.startDate}
+        enrollmentStatus={enrollment?.status}
         href={buttonHref ? buttonHref : run.coursewareUrl}
         endDate={run.endDate}
         courseNoun={courseNoun}

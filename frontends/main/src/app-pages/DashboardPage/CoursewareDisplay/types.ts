@@ -20,6 +20,7 @@ type EnrollmentMode = (typeof EnrollmentMode)[keyof typeof EnrollmentMode]
 
 type DashboardCourse = {
   id: string
+  coursewareId: string | null
   title: string
   type: typeof DashboardResourceType.Course
   run: {
