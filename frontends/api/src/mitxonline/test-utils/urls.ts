@@ -17,6 +17,11 @@ const enrollment = {
     `${API_BASE_URL}/api/v1/enrollments/${id ? `${id}/` : ""}`,
 }
 
+const b2b = {
+  courseEnrollment: (readableId?: string) =>
+    `${API_BASE_URL}/api/v0/b2b/enroll/${readableId}/`,
+}
+
 const programs = {
   programsList: (opts?: ProgramsApiProgramsListV2Request) =>
     `${API_BASE_URL}/api/v2/programs/${queryify(opts)}`,
@@ -32,4 +37,4 @@ const organization = {
     `${API_BASE_URL}/api/v0/b2b/organizations/${organizationSlug}/`,
 }
 
-export { currentUser, enrollment, programs, courses, organization }
+export { b2b, currentUser, enrollment, programs, courses, organization }
