@@ -31,10 +31,18 @@ type DashboardCourse = {
     canUpgrade: boolean
   }
   enrollment?: {
+    id: number
     status: EnrollmentStatus
     mode: EnrollmentMode
+    receiveEmails?: boolean
   }
   marketingUrl: string
+}
+type DashboardCourseEnrollment = {
+  id: number
+  status: EnrollmentStatus
+  mode: EnrollmentMode
+  receiveEmails?: boolean
 }
 
 type DashboardProgram = {
@@ -49,4 +57,9 @@ type DashboardProgram = {
 type DashboardResource = DashboardCourse | DashboardProgram
 
 export { DashboardResourceType, EnrollmentStatus, EnrollmentMode }
-export type { DashboardResource, DashboardCourse, DashboardProgram }
+export type {
+  DashboardResource,
+  DashboardCourse,
+  DashboardCourseEnrollment,
+  DashboardProgram,
+}

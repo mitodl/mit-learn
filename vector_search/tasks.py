@@ -208,8 +208,7 @@ def embed_learning_resources_by_id(self, ids, skip_content_files, overwrite):
         return None
     resources = LearningResource.objects.filter(
         id__in=ids,
-        published=True,
-    )
+    ).filter(Q(published=True) | Q(test_mode=True))
     try:
         for resource_type in LEARNING_RESOURCE_TYPES:
             embed_resources = resources.filter(resource_type=resource_type)
@@ -312,7 +311,7 @@ def embed_new_content_files(self):
             created_on__gt=since,
         )
         .exclude(run__published=False)
-        .exclude(learning_resource__published=False)
+        .exclude(learning_resource__published=False, learning_resource__test_mode=False)
     )
 
     tasks = [

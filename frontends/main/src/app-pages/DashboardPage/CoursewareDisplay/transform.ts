@@ -8,7 +8,7 @@ import {
   CourseRunEnrollment,
   CourseWithCourseRuns,
   V2Program,
-} from "api/mitxonline"
+} from "@mitodl/mitxonline-api-axios/v1"
 
 import { DashboardResourceType, EnrollmentStatus } from "./types"
 import type { DashboardCourse, DashboardProgram } from "./types"
@@ -39,10 +39,12 @@ const mitxonlineEnrollment = (raw: CourseRunEnrollment): DashboardCourse => {
       coursewareUrl: raw.run.courseware_url,
     },
     enrollment: {
+      id: raw.id,
       mode: raw.enrollment_mode,
       status: raw.grades[0]?.passed
         ? EnrollmentStatus.Completed
         : EnrollmentStatus.Enrolled,
+      receiveEmails: raw.edx_emails_subscription ?? true,
     },
   }
 }

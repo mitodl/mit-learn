@@ -2,49 +2,19 @@
 
 import React from "react"
 import Image from "next/image"
-import { User, useUserMe } from "api/hooks/user"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
-import { useQueries, useQuery, UseQueryResult } from "@tanstack/react-query"
+import { useQueries, useQuery } from "@tanstack/react-query"
 import { programsQueries } from "api/mitxonline-hooks/programs"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
-import { V2Program } from "api/mitxonline"
 import * as transform from "./CoursewareDisplay/transform"
 import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
 import { DashboardCard } from "./CoursewareDisplay/DashboardCard"
 import { PlainList, Stack, styled, Typography } from "ol-components"
 import { DashboardCourse, DashboardProgram } from "./CoursewareDisplay/types"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
-
-type Organization = { id: number; name: string; logo?: string }
-type UserWithOrgsField = User & { organizations: Organization[] }
-
-/**
- * TEMPORARY MOCKED ORGANIZATIONS
- *
- * This should be replaced with useUserMe() once the backend is ready.
- */
-const useUserMeWithMockedOrgs = (): UseQueryResult<
-  UserWithOrgsField,
-  Error
-> => {
-  const query = useUserMe() as UseQueryResult<UserWithOrgsField, Error>
-  const isOrgDashboardEnabled = useFeatureFlagEnabled(
-    FeatureFlags.OrganizationDashboard,
-  )
-  if (!query.data) return query
-  const organizations = isOrgDashboardEnabled
-    ? [
-        { id: 488, name: "Organization X" },
-        {
-          id: 522,
-          name: "Organization Y",
-          logo: "https://brand.mit.edu/sites/default/files/styles/tile_narrow/public/2023-08/logo-colors-mit-red.png?itok=k08Ir4pB",
-        },
-      ]
-    : []
-  return { ...query, data: { ...query.data, organizations } }
-}
+import { OrganizationPage, V2Program } from "@mitodl/mitxonline-api-axios/v1"
+import { useMitxOnlineCurrentUser } from "api/mitxonline-hooks/user"
 
 const HeaderRoot = styled.div({
   display: "flex",
@@ -65,7 +35,7 @@ const ImageContainer = styled.div(({ theme }) => ({
     height: "auto",
   },
 }))
-const OrganizationHeader: React.FC<{ org: Organization }> = ({ org }) => {
+const OrganizationHeader: React.FC<{ org?: OrganizationPage }> = ({ org }) => {
   return (
     <HeaderRoot>
       <ImageContainer>
@@ -77,15 +47,15 @@ const OrganizationHeader: React.FC<{ org: Organization }> = ({ org }) => {
           // reserving space for the image anyway. Using next/image still gets us
           // the image optimization, though.
           height={78}
-          src={org.logo ?? graduateLogo}
+          src={org?.logo ?? graduateLogo}
           alt=""
         />
       </ImageContainer>
       <Stack gap="8px">
         <Typography variant="h3" component="h1">
-          Your {org.name} Home
+          Your {org?.name} Home
         </Typography>
-        <Typography variant="body1">MIT courses for {org.name}</Typography>
+        <Typography variant="body1">MIT courses for {org?.name}</Typography>
       </Stack>
     </HeaderRoot>
   )
@@ -95,13 +65,14 @@ const OrganizationHeader: React.FC<{ org: Organization }> = ({ org }) => {
  * For an array of programs, fetch the associated courses.
  * [program1, program2] => [[...courses1], [...courses2]]
  */
-const useMitxonlineProgramsCourses = (programs: V2Program[]) => {
+
+const useMitxonlineProgramsCourses = (programs: V2Program[], orgId: number) => {
   const courseGroupIds =
     programs.map((program) => program.courses.map((id) => id as number)) ?? []
 
   const courseGroups = useQueries({
     queries: courseGroupIds.map((courseIds) =>
-      coursesQueries.coursesList({ id: courseIds }),
+      coursesQueries.coursesList({ org_id: orgId, id: courseIds }),
     ),
   })
 
@@ -167,17 +138,24 @@ const OrganizationRoot = styled.div({
   gap: "40px",
 })
 
-type OrganizationContentProps = {
-  orgId: number
+type OrganizationContentInternalProps = {
+  org: OrganizationPage
 }
-const OrganizationContent: React.FC<OrganizationContentProps> = ({ orgId }) => {
-  const user = useUserMeWithMockedOrgs()
-
-  const enrollments = useQuery(enrollmentQueries.coursesList({ orgId }))
-  const programs = useQuery(programsQueries.programsList({ orgId }))
+const OrganizationContentInternal: React.FC<
+  OrganizationContentInternalProps
+> = ({ org }) => {
+  const isOrgDashboardEnabled = useFeatureFlagEnabled(
+    FeatureFlags.OrganizationDashboard,
+  )
+  const orgId = org.id
+  const enrollments = useQuery(enrollmentQueries.enrollmentsList())
+  const programs = useQuery(programsQueries.programsList({ org_id: orgId }))
   const courseGroups = useMitxonlineProgramsCourses(
     programs.data?.results ?? [],
+    orgId,
   )
+
+  if (!isOrgDashboardEnabled) return null
 
   const transformedCourseGroups = courseGroups.map((courseGroup) => {
     if (!courseGroup.data || !enrollments.data) return []
@@ -190,14 +168,9 @@ const OrganizationContent: React.FC<OrganizationContentProps> = ({ orgId }) => {
     transform.mitxonlineProgram(program),
   )
 
-  if (user.isLoading) return "Loading"
-  const organization = user.data?.organizations.find((org) => org.id === orgId)
-
-  if (!organization) return null
-
   return (
     <OrganizationRoot>
-      <OrganizationHeader org={organization} />
+      <OrganizationHeader org={org} />
       {programs.isLoading
         ? "Programs Loading"
         : transformedPrograms?.map((program, index) => {
@@ -217,10 +190,23 @@ const OrganizationContent: React.FC<OrganizationContentProps> = ({ orgId }) => {
   )
 }
 
+type OrganizationContentProps = {
+  orgSlug: string
+}
+const OrganizationContent: React.FC<OrganizationContentProps> = ({
+  orgSlug,
+}) => {
+  const { isLoading: isLoadingMitxOnlineUser, data: mitxOnlineUser } =
+    useMitxOnlineCurrentUser()
+  const b2bOrganization = mitxOnlineUser?.b2b_organizations.find(
+    (org) => org.slug.replace("org-", "") === orgSlug,
+  )
+  if (isLoadingMitxOnlineUser || isLoadingMitxOnlineUser) return "Loading"
+  return b2bOrganization ? (
+    <OrganizationContentInternal org={b2bOrganization} />
+  ) : null
+}
+
 export default OrganizationContent
 
 export type { OrganizationContentProps }
-
-// To be removed
-export { useUserMeWithMockedOrgs }
-export type { Organization, UserWithOrgsField }

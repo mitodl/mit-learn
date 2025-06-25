@@ -9,10 +9,12 @@ import type { DashboardCourse } from "./types"
 import * as u from "api/test-utils"
 import { urls, factories } from "api/mitxonline-test-utils"
 import { setMockResponse } from "../../../test-utils"
-import { mockOrgData } from "api/mitxonline-hooks/enrollment"
+import moment from "moment"
 
 const makeCourses = factories.courses.courses
 const makeProgram = factories.programs.program
+const makeEnrollment = factories.enrollment.courseEnrollment
+const makeGrade = factories.enrollment.grade
 
 const dashboardCourse: PartialFactory<DashboardCourse> = (...overrides) => {
   return mergeOverrides<DashboardCourse>(
@@ -30,6 +32,7 @@ const dashboardCourse: PartialFactory<DashboardCourse> = (...overrides) => {
         coursewareUrl: faker.internet.url(),
       },
       enrollment: {
+        id: faker.number.int(),
         status: faker.helpers.arrayElement(Object.values(EnrollmentStatus)),
         mode: faker.helpers.arrayElement(Object.values(EnrollmentMode)),
       },
@@ -38,11 +41,79 @@ const dashboardCourse: PartialFactory<DashboardCourse> = (...overrides) => {
   )
 }
 
+const setupEnrollments = (includeExpired: boolean) => {
+  const completed = [
+    makeEnrollment({
+      run: { title: "C Course Ended" },
+      grades: [makeGrade({ passed: true })],
+    }),
+  ]
+  const expired = includeExpired
+    ? [
+        makeEnrollment({
+          run: {
+            title: "A Course Ended",
+            end_date: faker.date.past().toISOString(),
+          },
+        }),
+        makeEnrollment({
+          run: {
+            title: "B Course Ended",
+            end_date: faker.date.past().toISOString(),
+          },
+        }),
+      ]
+    : []
+  const started = [
+    makeEnrollment({
+      run: {
+        title: "A Course Started",
+        start_date: faker.date.past().toISOString(),
+      },
+    }),
+    makeEnrollment({
+      run: {
+        title: "B Course Started",
+        start_date: faker.date.past().toISOString(),
+      },
+    }),
+  ]
+  const notStarted = [
+    makeEnrollment({
+      run: {
+        start_date: moment().add(1, "day").toISOString(), // Sooner first
+      },
+    }),
+    makeEnrollment({
+      run: {
+        start_date: moment().add(5, "day").toISOString(), // Later second
+      },
+    }),
+  ]
+  const enrollments = faker.helpers.shuffle([
+    ...expired,
+    ...completed,
+    ...started,
+    ...notStarted,
+  ])
+  return {
+    enrollments: enrollments,
+    completed: completed,
+    expired: expired,
+    started: started,
+    notStarted: notStarted,
+  }
+}
+
 const setupProgramsAndCourses = () => {
   const user = u.factories.user.user()
+  const orgX = factories.organizations.organization({ name: "Org X" })
+  const mitxOnlineUser = factories.user.user({ b2b_organizations: [orgX] })
   setMockResponse.get(u.urls.userMe.get(), user)
+  setMockResponse.get(urls.currentUser.get(), mitxOnlineUser)
+  setMockResponse.get(urls.organization.organizationList(""), orgX)
+  setMockResponse.get(urls.organization.organizationList(orgX.slug), orgX)
 
-  const orgId = mockOrgData.orgX.id
   const coursesA = makeCourses({ count: 4 })
   const coursesB = makeCourses({ count: 3 })
   const programA = makeProgram({
@@ -52,20 +123,26 @@ const setupProgramsAndCourses = () => {
     courses: coursesB.results.map((c) => c.id),
   })
 
+  setMockResponse.get(urls.programs.programsList({ org_id: orgX.id }), {
+    results: [programA, programB],
+  })
   setMockResponse.get(
-    urls.programs.programsList({ orgId: mockOrgData.orgX.id }),
-    { results: [programA, programB] },
+    urls.courses.coursesList({ id: programA.courses, org_id: orgX.id }),
+    {
+      results: coursesA.results,
+    },
   )
-  setMockResponse.get(urls.courses.coursesList({ id: programA.courses }), {
-    results: coursesA.results,
-  })
-  setMockResponse.get(urls.courses.coursesList({ id: programB.courses }), {
-    results: coursesB.results,
-  })
+  setMockResponse.get(
+    urls.courses.coursesList({ id: programB.courses, org_id: orgX.id }),
+    {
+      results: coursesB.results,
+    },
+  )
 
   return {
-    orgId,
+    orgX,
     user,
+    mitxOnlineUser,
     programA,
     programB,
     coursesA: coursesA.results,
@@ -73,4 +150,4 @@ const setupProgramsAndCourses = () => {
   }
 }
 
-export { dashboardCourse, setupProgramsAndCourses }
+export { dashboardCourse, setupEnrollments, setupProgramsAndCourses }

@@ -15,21 +15,19 @@ import {
 } from "ol-components"
 import type { ChipLinkProps } from "ol-components"
 import {
-  ABOUT,
   SEARCH_CERTIFICATE,
   SEARCH_FREE,
   SEARCH_NEW,
   SEARCH_POPULAR,
   SEARCH_UPCOMING,
-  ABOUT_NON_DEGREE_LEARNING_FRAGMENT,
 } from "@/common/urls"
 import {
   RiAwardLine,
   RiFileAddLine,
+  RiPriceTag3Line,
   RiSearch2Line,
   RiThumbUpLine,
   RiTimeLine,
-  RiVerifiedBadgeLine,
 } from "@remixicon/react"
 import Image from "next/image"
 import { SearchField } from "@/page-components/SearchField/SearchField"
@@ -65,7 +63,7 @@ const SEARCH_CHIPS: SearchChip[] = [
     label: "Free",
     href: SEARCH_FREE,
     variant: "outlinedWhite",
-    icon: <RiVerifiedBadgeLine />,
+    icon: <RiPriceTag3Line />,
   },
   {
     label: "With Certificate",
@@ -233,17 +231,7 @@ const HeroSearch: React.FC<{ imageIndex: number }> = ({ imageIndex }) => {
         >
           Learn with MIT
         </Typography>
-        <Typography>
-          Explore MIT's{" "}
-          <Link
-            color="black"
-            size="large"
-            href={`${ABOUT}#${ABOUT_NON_DEGREE_LEARNING_FRAGMENT}`}
-            prefetch={false}
-          >
-            Non-Degree Learning
-          </Link>
-        </Typography>
+        <Typography>Lifelong Learning. The MIT way.</Typography>
         <ControlsContainer>
           <SearchField
             size="hero"

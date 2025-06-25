@@ -18,7 +18,6 @@ import {
   Info as BaseInfo,
   Title as BaseTitle,
   Footer,
-  Bottom as BaseBottom,
 } from "./ListCard"
 import type { Card as BaseCard, TitleProps } from "./ListCard"
 
@@ -61,12 +60,11 @@ const Title = styled(BaseTitle)`
   }
 `
 
-const Bottom = styled(BaseBottom)`
-  height: auto;
+const Bottom = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
   min-height: 16px;
-  ${theme.breakpoints.down("md")} {
-    height: auto;
-  }
 `
 const Actions = styled.div`
   display: flex;

@@ -9,7 +9,7 @@ import {
 } from "ol-components"
 import NextLink from "next/link"
 import { EnrollmentStatus, EnrollmentMode } from "./types"
-import type { DashboardCourse } from "./types"
+import type { DashboardCourse, DashboardCourseEnrollment } from "./types"
 import { ActionButton, Button, ButtonLink } from "@mitodl/smoot-design"
 import {
   RiArrowRightLine,
@@ -78,14 +78,17 @@ const MenuButton = styled(ActionButton)<{
     },
 ])
 
-const getDefaultContextMenuItems = (title: string) => {
+const getDefaultContextMenuItems = (
+  title: string,
+  enrollment: DashboardCourseEnrollment,
+) => {
   return [
     {
       className: "dashboard-card-menu-item",
       key: "email-settings",
       label: "Email Settings",
       onClick: () => {
-        NiceModal.show(EmailSettingsDialog, { title })
+        NiceModal.show(EmailSettingsDialog, { title, enrollment })
       },
     },
     {
@@ -93,7 +96,7 @@ const getDefaultContextMenuItems = (title: string) => {
       key: "unenroll",
       label: "Unenroll",
       onClick: () => {
-        NiceModal.show(UnenrollDialog, { title })
+        NiceModal.show(UnenrollDialog, { title, enrollment })
       },
     },
   ]
@@ -332,10 +335,12 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   ) : run.startDate ? (
     <CourseStartCountdown startDate={run.startDate} />
   ) : null
-  const menuItems = contextMenuItems.concat(getDefaultContextMenuItems(title))
+  const menuItems = contextMenuItems.concat(
+    enrollment?.id ? getDefaultContextMenuItems(title, enrollment) : [],
+  )
   const contextMenu = isLoading ? (
     <Skeleton variant="rectangular" width={12} height={24} />
-  ) : (
+  ) : menuItems.length > 0 ? (
     <SimpleMenu
       items={menuItems}
       trigger={
@@ -349,7 +354,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         </MenuButton>
       }
     />
-  )
+  ) : null
   const desktopLayout = (
     <CardRoot
       screenSize="desktop"

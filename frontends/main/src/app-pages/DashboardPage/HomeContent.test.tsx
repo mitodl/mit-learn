@@ -207,14 +207,24 @@ describe("HomeContent", () => {
     async ({ enrollmentsEnabled }) => {
       setupAPIs()
       mockedUseFeatureFlagEnabled.mockReturnValue(enrollmentsEnabled)
+
       if (enrollmentsEnabled) {
-        setMockResponse.get(mitxonline.urls.enrollment.courseEnrollment(), [])
+        const enrollments = mitxonline.factories.enrollment.courseEnrollments(3)
+        setMockResponse.get(
+          mitxonline.urls.enrollment.courseEnrollment(),
+          enrollments,
+        )
       }
+
       renderWithProviders(<HomeContent />)
-      const enrollmentsHeading = screen.queryByRole("heading", {
-        name: "My Learning",
-      })
-      expect(!!enrollmentsHeading).toBe(enrollmentsEnabled)
+
+      if (enrollmentsEnabled) {
+        await screen.findByRole("heading", { name: "My Learning" })
+      } else {
+        expect(
+          screen.queryByRole("heading", { name: "My Learning" }),
+        ).not.toBeInTheDocument()
+      }
     },
   )
 })

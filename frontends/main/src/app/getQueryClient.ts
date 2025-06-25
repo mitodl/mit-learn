@@ -2,9 +2,12 @@
 
 import { QueryClient, isServer } from "@tanstack/react-query"
 
-type MaybeHasStatus = {
+type MaybeHasStatusAndDetail = {
   response?: {
     status?: number
+    data?: {
+      detail?: string
+    }
   }
 }
 
@@ -26,12 +29,12 @@ const makeQueryClient = (): QueryClient => {
          * be handled locally by components.
          */
         throwOnError: (error) => {
-          const status = (error as MaybeHasStatus)?.response?.status
+          const status = (error as MaybeHasStatusAndDetail)?.response?.status
           return THROW_ERROR_CODES.includes(status ?? 0)
         },
 
         retry: (failureCount, error) => {
-          const status = (error as MaybeHasStatus)?.response?.status
+          const status = (error as MaybeHasStatusAndDetail)?.response?.status
           const isNetworkError = status === undefined || status === 0
 
           /**
@@ -78,3 +81,4 @@ function getQueryClient() {
 }
 
 export { makeQueryClient, getQueryClient }
+export type { MaybeHasStatusAndDetail }

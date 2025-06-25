@@ -95,9 +95,9 @@ export const SETTINGS = dashboardView("settings")
 export const USERLIST_VIEW = "/dashboard/my-lists/[id]"
 export const userListView = (id: number) =>
   generatePath(USERLIST_VIEW, { id: String(id) })
-export const ORGANIZATION_VIEW = "/dashboard/organization/[id]"
-export const organizationView = (id: number) =>
-  generatePath(ORGANIZATION_VIEW, { id: String(id) })
+export const ORGANIZATION_VIEW = "/dashboard/organization/[slug]"
+export const organizationView = (slug: string) =>
+  generatePath(ORGANIZATION_VIEW, { slug: slug })
 
 export const SEARCH = "/search"
 
@@ -120,6 +120,9 @@ export const RESOURCE_DRAWER_PARAMS = {
   resource: "resource",
   syllabus: "syllabus",
 } as const
+
+export const canonicalResourceDrawerUrl = (resourceId: number) =>
+  `${process.env.NEXT_PUBLIC_ORIGIN}/search?${RESOURCE_DRAWER_PARAMS.resource}=${resourceId}`
 
 export const querifiedSearchUrl = (
   params:

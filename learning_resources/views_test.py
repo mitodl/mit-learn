@@ -4,6 +4,7 @@ import random
 from datetime import timedelta
 
 import pytest
+from django.contrib.auth.models import Group
 from django.utils import timezone
 from opensearch_dsl import response
 from qdrant_client import QdrantClient
@@ -12,6 +13,7 @@ from rest_framework.reverse import reverse
 from channels.factories import ChannelTopicDetailFactory, ChannelUnitDetailFactory
 from channels.models import Channel
 from learning_resources.constants import (
+    GROUP_CONTENT_FILE_CONTENT_VIEWERS,
     LearningResourceRelationTypes,
     LearningResourceType,
     OfferedBy,
@@ -169,7 +171,7 @@ def test_program_endpoint(client, url, params):
 def test_program_detail_endpoint(client, django_assert_num_queries, url):
     """Test program endpoint"""
     program = ProgramFactory.create()
-    with django_assert_num_queries(17):
+    with django_assert_num_queries(18 + program.learning_resource.children.count()):
         resp = client.get(reverse(url, args=[program.learning_resource.id]))
     assert resp.data.get("title") == program.learning_resource.title
     assert resp.data.get("resource_type") == LearningResourceType.program.name
@@ -241,17 +243,39 @@ def test_no_excess_offeror_queries(client, django_assert_num_queries, offeror_co
             assert result["channel_url"] is not None
 
 
-def test_list_content_files_list_endpoint(client):
+@pytest.mark.parametrize(
+    "user_role",
+    [
+        "anonymous",
+        "normal",
+        "admin",
+        "group_content_file_content_viewer",
+    ],
+)
+def test_list_content_files_list_endpoint(client, user_role, django_user_model):
     """Test ContentFile list endpoint"""
     course = CourseFactory.create()
     content_file_ids = [
         cf.id
         for cf in ContentFileFactory.create_batch(
-            2, run=course.learning_resource.runs.first()
+            2, run=course.learning_resource.runs.first(), content="some content"
         )
     ]
     # this should be filtered out
-    ContentFileFactory.create_batch(5, published=False)
+    ContentFileFactory.create_batch(5, published=False, content="some content")
+    if user_role == "admin":
+        admin_user = django_user_model.objects.create_superuser(
+            "admin", "admin@example.com", "pass"
+        )
+        client.force_login(admin_user)
+    elif user_role == "group_content_file_content_viewer":
+        user = django_user_model.objects.create()
+        group, _ = Group.objects.get_or_create(name=GROUP_CONTENT_FILE_CONTENT_VIEWERS)
+        group.user_set.add(user)
+        client.force_login(user)
+    elif user_role == "normal":
+        user = django_user_model.objects.create()
+        client.force_login(user)
 
     assert reverse("lr:v1:contentfiles_api-list") == "/api/v1/contentfiles/"
 
@@ -259,6 +283,11 @@ def test_list_content_files_list_endpoint(client):
     assert resp.data.get("count") == 2
     for result in resp.data.get("results"):
         assert result["id"] in content_file_ids
+
+        if user_role in ["admin", "group_content_file_content_viewer"]:
+            assert result["content"] is not None
+        else:
+            assert result.get("content") is None
 
 
 def test_list_content_files_list_endpoint_with_no_runs(client):
@@ -299,15 +328,43 @@ def test_list_content_files_list_filtered(client):
     assert resp.data.get("count") == 0
 
 
-def test_get_contentfiles_detail_endpoint(client):
+@pytest.mark.parametrize(
+    "user_role",
+    [
+        "anonymous",
+        "normal",
+        "admin",
+        "group_content_file_content_viewer",
+    ],
+)
+def test_get_contentfiles_detail_endpoint(client, user_role, django_user_model):
     """Test ContentFile detail endpoint"""
     content_file = ContentFileFactory.create()
+
+    if user_role == "admin":
+        admin_user = django_user_model.objects.create_superuser(
+            "admin", "admin@example.com", "pass"
+        )
+        client.force_login(admin_user)
+    elif user_role == "group_content_file_content_viewer":
+        user = django_user_model.objects.create()
+        group, _ = Group.objects.get_or_create(name=GROUP_CONTENT_FILE_CONTENT_VIEWERS)
+        group.user_set.add(user)
+        client.force_login(user)
+    elif user_role == "normal":
+        user = django_user_model.objects.create()
+        client.force_login(user)
 
     url = reverse("lr:v1:contentfiles_api-detail", args=[content_file.id])
     assert url == f"/api/v1/contentfiles/{content_file.id}/"
 
     resp = client.get(url)
-    assert resp.data == ContentFileSerializer(instance=content_file).data
+    if user_role in ["admin", "group_content_file_content_viewer"]:
+        assert resp.data == ContentFileSerializer(instance=content_file).data
+    else:
+        data = ContentFileSerializer(instance=content_file).data
+        data.pop("content")
+        assert resp.data == data
 
 
 @pytest.mark.parametrize(

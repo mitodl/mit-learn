@@ -1,7 +1,7 @@
 import React from "react"
 import styled from "@emotion/styled"
 import { type GridProps } from "@mui/material/Grid"
-import { Checkbox } from "../Checkbox/Checkbox"
+import { Checkbox } from "@mitodl/smoot-design"
 import { Radio } from "../Radio/Radio"
 
 const Container = styled.label(({ theme }) => {
@@ -53,7 +53,7 @@ const Description = styled.span(({ theme }) => ({
   },
 }))
 
-const Input = styled.div({
+const InputContainer = styled.div({
   flexShrink: 0,
 })
 
@@ -82,7 +82,7 @@ const ChoiceBox = ({
         <Label>{label}</Label>
         {description ? <Description>{description}</Description> : null}
       </Text>
-      <Input>
+      <InputContainer>
         {type === "checkbox" ? (
           <Checkbox
             name={name}
@@ -99,7 +99,7 @@ const ChoiceBox = ({
             onChange={onChange}
           />
         ) : null}
-      </Input>
+      </InputContainer>
     </Container>
   )
 }

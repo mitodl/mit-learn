@@ -14,14 +14,13 @@ import {
   Container,
   Skeleton,
   Tab,
-  TabButtonLink,
-  TabButtonList,
   TabContext,
   TabPanel,
   TabList,
   Typography,
   styled,
 } from "ol-components"
+import { TabButtonLink, TabButtonList } from "@mitodl/smoot-design"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import backgroundImage from "@/public/images/backgrounds/user_menu_background.svg"
@@ -35,9 +34,12 @@ import {
 } from "@/common/urls"
 import dynamic from "next/dynamic"
 import {
-  UserWithOrgsField,
-  useUserMeWithMockedOrgs,
-} from "./OrganizationContent"
+  useMitxOnlineCurrentUser,
+  MitxOnlineUser,
+} from "api/mitxonline-hooks/user"
+import { useUserMe } from "api/hooks/user"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { FeatureFlags } from "@/common/feature_flags"
 
 const LearningResourceDrawer = dynamic(
   () =>
@@ -249,8 +251,11 @@ type TabData = {
     desktop: React.ReactNode
   }
 }
-const getTabData = (user?: UserWithOrgsField): TabData[] => {
-  const orgs = user?.organizations ?? []
+const getTabData = (
+  orgsEnabled: boolean = false,
+  user?: MitxOnlineUser,
+): TabData[] => {
+  const orgs = orgsEnabled ? (user?.b2b_organizations ?? []) : []
   return [
     {
       value: DASHBOARD_HOME,
@@ -261,8 +266,8 @@ const getTabData = (user?: UserWithOrgsField): TabData[] => {
       },
     },
     ...orgs.map((org) => ({
-      value: organizationView(org.id),
-      href: organizationView(org.id),
+      value: organizationView(org.slug.replace("org-", "")),
+      href: organizationView(org.slug.replace("org-", "")),
       label: {
         mobile: org.name,
         desktop: <DesktopTabLabel icon={<RiBuilding2Line />} text={org.name} />,
@@ -301,9 +306,18 @@ const DashboardPage: React.FC<{
   children: React.ReactNode
 }> = ({ children }) => {
   const pathname = usePathname()
-  const { isLoading: isLoadingUser, data: user } = useUserMeWithMockedOrgs()
+  const { isLoading: isLoadingUser, data: user } = useUserMe()
+  const orgsEnabled = useFeatureFlagEnabled(FeatureFlags.OrganizationDashboard)
+  const { isLoading: isLoadingMitxOnlineUser, data: mitxOnlineUser } =
+    useMitxOnlineCurrentUser({ enabled: !!orgsEnabled })
 
-  const tabData = useMemo(() => getTabData(user), [user])
+  const tabData = useMemo(
+    () =>
+      isLoadingMitxOnlineUser
+        ? getTabData(orgsEnabled)
+        : getTabData(orgsEnabled, mitxOnlineUser),
+    [isLoadingMitxOnlineUser, orgsEnabled, mitxOnlineUser],
+  )
 
   const tabValue = useMemo(() => {
     /**

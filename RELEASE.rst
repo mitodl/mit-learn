@@ -1,6 +1,100 @@
 Release Notes
 =============
 
+Version 0.36.3 (Released June 24, 2025)
+--------------
+
+- Ingest canvas courses (#2307)
+- Update dependency urllib3 to v2.5.0 [SECURITY] (#2311)
+- unpin dep (#2309)
+- dashboard unenroll dialog functionality (#2303)
+- update smoot to proper release (#2306)
+- Use smoot components; fix radio button focus ring (#2304)
+- update spinner usage (#2301)
+- Feature Flag for MITxOnline API Call (#2305)
+- Upgrade Smoot Design (#2302)
+- Update dependency requests to v2.32.4 [SECURITY] (#2299)
+
+Version 0.36.1 (Released June 10, 2025)
+--------------
+
+- Import files for all active runs (#2292)
+- locking qdrant client to specific version (#2297)
+- minor copy change (#2296)
+
+Version 0.36.0 (Released June 10, 2025)
+--------------
+
+- Update dependency Django to v4.2.22 [SECURITY] (#2293)
+- Ignore authentication based 403's when querying enrollments from the dashboard home enrollment display (#2290)
+- more copy updates (#2291)
+- Use the org slug in the URL instead of the ID (#2288)
+
+Version 0.35.1 (Released June 05, 2025)
+--------------
+
+- Add permissions for content file content (#2249)
+- About page copy changes (#2282)
+
+Version 0.35.0 (Released June 04, 2025)
+--------------
+
+- integrate mitxonline api (#2256)
+
+Version 0.34.3 (Released June 03, 2025)
+--------------
+
+- Feature flag syllabus chat for programs (#2284)
+- Remove django-hijack (#2280)
+- [pre-commit.ci] pre-commit autoupdate (#2255)
+- Syllabus bot for programs (#2273)
+- Update legal docs (#2274)
+
+Version 0.34.1 (Released June 02, 2025)
+--------------
+
+- chore(deps): update yarn to v4.9.1 (#2278)
+
+Version 0.34.0 (Released June 02, 2025)
+--------------
+
+- chore(deps): update redis docker tag to v7.4.4 (#2277)
+- chore(deps): update opensearchproject/opensearch docker tag to v2.19.2 (#2276)
+- chore(deps): update codecov/codecov-action action to v5.4.3 (#2275)
+- adding endpoint fix (#2270)
+- change hero text (#2271)
+- Upgrades Smoot Design (#2261)
+
+Version 0.33.1 (Released May 29, 2025)
+--------------
+
+- fix(deps): update dependency django-anymail to v13 (#2201)
+- Prevent test courses from being overwritten (#2262)
+- fix(deps): update dependency django-guardian to v3 (#2266)
+- fix(deps): update dependency ulid-py to v1 (#2268)
+- chore(deps): update dependency jest-extended to v5 (#2264)
+- fix(deps): update dependency cryptography to v45 (#2265)
+- fix(deps): update dependency moment-timezone to ^0.6.0 (#2263)
+- fix(deps): update dependency tika to v3 (#2202)
+- Tweaks to the nextjs dockerfile to give a build target for production. (#2260)
+
+Version 0.33.0 (Released May 28, 2025)
+--------------
+
+- remove the backend heroku deploy step from the RC Github Actions build since that happens in Kubernetes now (#2258)
+- config: Allow health endpoints to bypass SSL redirect
+- config: Remove syslog handler (#2250)
+- feat: Add health check (#2247)
+- Ensure celery tasks execute once (#2242)
+- Fix flaky test (#2246)
+- [pre-commit.ci] pre-commit autoupdate (#2248)
+- Set card link on org dashboard pages to courseware url (#2239)
+- [pre-commit.ci] pre-commit autoupdate (#2215)
+- chore(deps): pin dependencies (#2245)
+- fix(deps): update dependency youtube-transcript-api to v1 (#2206)
+- Tracking user account creation event in posthog  (#2237)
+- Fix ordering of modules in UAI dashboard (#2232)
+
 Version 0.31.3 (Released May 12, 2025)
 --------------
 

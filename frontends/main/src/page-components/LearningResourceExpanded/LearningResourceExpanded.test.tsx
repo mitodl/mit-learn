@@ -361,7 +361,7 @@ describe.each([true, false])(
     })
 
     test.each(RESOURCE_TYPES)(
-      "Chat button visible only on courses ($resourceType)",
+      "Chat button visible only on courses or programs ($resourceType)",
       ({ resourceType }) => {
         const resource = factories.learningResources.resource({
           resource_type: resourceType,
@@ -372,7 +372,10 @@ describe.each([true, false])(
           name: "Ask TIM about this course",
         })
         const shouldBeVisible =
-          enabled && resourceType === ResourceTypeEnum.Course
+          enabled &&
+          (resourceType === ResourceTypeEnum.Course ||
+            resourceType === ResourceTypeEnum.Program)
+
         expect(!!chatButton).toBe(shouldBeVisible)
       },
     )

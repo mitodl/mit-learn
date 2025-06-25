@@ -10,11 +10,15 @@ import {
   truncateText,
   css,
   Drawer,
-  Checkbox,
-  VisuallyHidden,
   Stack,
+  Grid2 as Grid,
 } from "ol-components"
-import { Button, ButtonProps } from "@mitodl/smoot-design"
+import {
+  Button,
+  ButtonProps,
+  childCheckboxStyles,
+  VisuallyHidden,
+} from "@mitodl/smoot-design"
 
 import {
   RiCloseLine,
@@ -32,7 +36,6 @@ import {
 } from "api"
 import { useLearningResourcesSearch } from "api/hooks/learningResources"
 import { useAdminSearchParams } from "api/hooks/adminSearchParams"
-import { GridColumn, GridContainer } from "@/components/GridLayout/GridLayout"
 import {
   AvailableFacets,
   UseResourceSearchParamsProps,
@@ -77,6 +80,8 @@ const SearchModeDropdownContainer = styled.div`
 `
 
 const FacetStyles = styled.div`
+  margin-top: 8px;
+
   div.facets:last-child {
     border-bottom-right-radius: 8px;
     border-bottom-left-radius: 8px;
@@ -98,6 +103,8 @@ const FacetStyles = styled.div`
     margin-bottom: 16px;
     margin-top: 12px;
     border-radius: 4px;
+    color: ${({ theme }) => theme.custom.colors.darkGray2};
+    ${({ theme }) => css({ ...theme.typography.body2 })}
 
     &:focus-visible {
       outline: solid 2px ${({ theme }) => theme.custom.colors.darkGray2};
@@ -144,15 +151,6 @@ const FacetStyles = styled.div`
     }
   }
 
-  .facet-visible {
-    margin-top: 6px;
-    margin-bottom: 6px;
-  }
-
-  .facet-visible:last-child {
-    margin-bottom: 8px;
-  }
-
   .facet-list {
     margin-bottom: 8px;
   }
@@ -189,13 +187,19 @@ const FacetStyles = styled.div`
       font-size: 0.875em;
       gap: 4px;
       margin-left: -2px;
+      margin-top: 6px;
+      margin-bottom: 6px;
+
+      &:last-child {
+        margin-bottom: 8px;
+      }
 
       input,
       .facet-label {
         cursor: pointer;
       }
 
-      ${Checkbox.styles}
+      ${({ theme }) => childCheckboxStyles(theme)}
 
       .facet-count {
         font-size: 12px;
@@ -283,16 +287,20 @@ const FacetStyles = styled.div`
     width: 100%;
   }
 
-  .multi-facet-group {
+  .facets.multi-facet-group {
     background: white;
     margin-top: 8px;
     margin-bottom: 8px;
     border-radius: 8px;
     border-bottom: solid 1px ${({ theme }) => theme.custom.colors.lightGray2};
+    padding-top: 12px;
     padding-bottom: 12px;
-    padding-top: 5px;
 
-    /* stylelint-disable no-descending-specificity */
+    .facet-visible {
+      margin-top: 0;
+      margin-bottom: 0;
+    }
+
     .facet-visible .facet-label {
       .facet-text,
       .facet-count {
@@ -301,7 +309,6 @@ const FacetStyles = styled.div`
 
       margin-bottom: 0;
     }
-    /* stylelint-enable no-descending-specificity */
   }
 `
 
@@ -352,8 +359,6 @@ const PaginationContainer = styled.div`
 
 const StyledResultsContainer = styled.div<{ fetching: boolean }>(
   ({ fetching }) => ({
-    marginTop: "16px",
-
     "ul > li + li": {
       marginTop: "8px",
     },
@@ -362,27 +367,6 @@ const StyledResultsContainer = styled.div<{ fetching: boolean }>(
   }),
 )
 
-const DesktopFiltersColumn = styled(GridColumn)`
-  ${({ theme }) => theme.breakpoints.down("md")} {
-    display: none;
-  }
-
-  padding-left: 0 !important;
-  padding-right: 18px !important;
-  padding-bottom: 25px;
-`
-
-const StyledMainColumn = styled(GridColumn)`
-  ${({ theme }) => theme.breakpoints.up("md")} {
-    padding-left: 6px !important;
-    padding-right: 0 !important;
-  }
-
-  ${({ theme }) => theme.breakpoints.down("md")} {
-    padding-left: 0 !important;
-  }
-`
-
 const MobileFilter = styled.div`
   ${({ theme }) => theme.breakpoints.up("md")} {
     display: none;
@@ -390,15 +374,12 @@ const MobileFilter = styled.div`
 
   color: ${({ theme }) => theme.custom.colors.darkGray2};
   margin-top: 20px;
-
-  button {
-    svg {
-      margin-left: 8px;
-    }
-
-    margin-bottom: 10px;
-  }
+  margin-bottom: 16px;
 `
+const FilterButton = styled(Button)({
+  marginLeft: "-8px",
+  minWidth: 0,
+})
 
 const StyledDrawer = styled(Drawer)`
   .MuiPaper-root {
@@ -444,19 +425,6 @@ const MobileFacetsTitleContainer = styled.div`
     margin-right: 10px;
     padding: 10px;
   }
-`
-
-const ReversedGridContainer = styled(GridContainer)`
-  max-width: 1272px !important;
-  margin-left: 0 !important;
-  width: 100% !important;
-
-  /**
-  We want the facets to be visually on left, but occur second in the DOM / tab
-  order. This makes it easier for keyboard navigators to get directly to the
-  search results.
-  */
-  flex-direction: row-reverse;
 `
 
 const ExplanationContainer = styled.div`
@@ -833,32 +801,38 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
   }
 
   const filterContents = (
-    <>
-      <FacetStyles>
-        {showProfessionalToggle && (
-          <ProfessionalToggle
-            professionalSetting={requestParams.professional}
-            setParamValue={setParamValue}
-          />
-        )}
-        <AvailableFacets
-          facetManifest={facetManifest}
-          activeFacets={requestParams}
-          onFacetChange={toggleParamValue}
-          facetOptions={data?.metadata.aggregations ?? {}}
+    <FacetStyles>
+      {showProfessionalToggle && (
+        <ProfessionalToggle
+          professionalSetting={requestParams.professional}
+          setParamValue={setParamValue}
         />
-        {user?.is_learning_path_editor
-          ? AdminOptions(expandAdminOptions, setExpandAdminOptions, adminParams)
-          : null}
-      </FacetStyles>
-    </>
+      )}
+      <AvailableFacets
+        facetManifest={facetManifest}
+        activeFacets={requestParams}
+        onFacetChange={toggleParamValue}
+        facetOptions={data?.metadata.aggregations ?? {}}
+      />
+      {user?.is_learning_path_editor
+        ? AdminOptions(expandAdminOptions, setExpandAdminOptions, adminParams)
+        : null}
+    </FacetStyles>
   )
 
   return (
     <Container>
-      <ReversedGridContainer>
+      <Grid container columnSpacing="24px" flexDirection="row-reverse">
         <ResourceCategoryTabs.Context activeTabName={activeTab.name}>
-          <StyledMainColumn component="section" variant="main-2">
+          <Grid
+            component="section"
+            size={{ xs: 12, md: 9 }}
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "16px",
+            }}
+          >
             <VisuallyHidden as={resultsHeadingEl}>
               Search Results
             </VisuallyHidden>
@@ -883,10 +857,14 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
             </Stack>
             <ResourceCategoryTabs.TabPanels tabs={TABS}>
               <MobileFilter>
-                <Button variant="text" onClick={toggleMobileDrawer(true)}>
-                  <Typography variant="subtitle1">Filter</Typography>
-                  <RiEqualizerLine fontSize="medium" />
-                </Button>
+                <FilterButton
+                  size="small"
+                  variant="text"
+                  startIcon={<RiEqualizerLine />}
+                  onClick={toggleMobileDrawer(true)}
+                >
+                  Filter
+                </FilterButton>
 
                 <StyledDrawer
                   anchor="left"
@@ -977,10 +955,15 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                 />
               </PaginationContainer>
             </ResourceCategoryTabs.TabPanels>
-          </StyledMainColumn>
-          <DesktopFiltersColumn
+          </Grid>
+          <Grid
             component="section"
-            variant="sidebar-2"
+            size={{ xs: 12, md: 3 }}
+            sx={(theme) => ({
+              [theme.breakpoints.down("md")]: {
+                display: "none",
+              },
+            })}
             data-testid="facets-container"
           >
             <FacetsTitleContainer>
@@ -1002,9 +985,9 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
               ) : null}
             </FacetsTitleContainer>
             {filterContents}
-          </DesktopFiltersColumn>
+          </Grid>
         </ResourceCategoryTabs.Context>
-      </ReversedGridContainer>
+      </Grid>
     </Container>
   )
 }
