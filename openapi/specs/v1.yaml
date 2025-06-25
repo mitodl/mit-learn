@@ -8850,7 +8850,7 @@ paths:
       description: Handle POST requests to the webhook.
       parameters:
       - in: query
-        name: content_url
+        name: content_path
         schema:
           type: string
           minLength: 1
@@ -9185,13 +9185,13 @@ components:
       type: object
       description: Serializer for ContentFile webhook requests.
       properties:
-        content_url:
+        content_path:
           type: string
           minLength: 1
         source:
           $ref: '#/components/schemas/SourceEnum'
       required:
-      - content_url
+      - content_path
       - source
     ContentTypeEnum:
       enum:

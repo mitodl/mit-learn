@@ -73,7 +73,7 @@ def process_content_file_request(data):
     Process a content file webhhok request based on the ETL source
     """
     etl_source = data.get("source")
-    url = data.get("content_url")
+    content_path = data.get("content_path")
     if etl_source == ETLSource.canvas.name:
-        log.info("Processing Canvas content file: %s", url)
-        ingest_canvas_course.apply_async([url, True])
+        log.info("Processing Canvas content file: %s", content_path)
+        ingest_canvas_course.apply_async([content_path, True])
