@@ -45,6 +45,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
           id: apiData.id,
           status: enrollmentStatus,
           mode: apiData.enrollment_mode,
+          receiveEmails: apiData.edx_emails_subscription,
         },
       } satisfies DashboardResource)
     },

@@ -11,7 +11,11 @@ import { Button, Checkbox, Alert } from "@mitodl/smoot-design"
 
 import NiceModal, { muiDialogV5 } from "@ebay/nice-modal-react"
 import { useFormik } from "formik"
-import { useDestroyEnrollment } from "api/mitxonline-hooks/enrollment"
+import {
+  useDestroyEnrollment,
+  useUpdateEnrollment,
+} from "api/mitxonline-hooks/enrollment"
+import { DashboardCourseEnrollment } from "./types"
 
 const BoldText = styled.span(({ theme }) => ({
   ...theme.typography.subtitle1,
@@ -23,10 +27,11 @@ const SpinnerContainer = styled.div({
 
 type DashboardDialogProps = {
   title: string
-  enrollmentId: number
+  enrollment: DashboardCourseEnrollment
 }
 const EmailSettingsDialogInner: React.FC<DashboardDialogProps> = ({
   title,
+  enrollment,
 }) => {
   const modal = NiceModal.useModal()
   const formik = useFormik({
@@ -34,10 +39,20 @@ const EmailSettingsDialogInner: React.FC<DashboardDialogProps> = ({
     validateOnChange: false,
     validateOnBlur: false,
     initialValues: {
-      recieve_emails: true,
+      receive_emails: enrollment.receiveEmails ?? true,
     },
     onSubmit: async () => {
-      // TODO: Handle form submission
+      await updateEnrollment.mutateAsync()
+      if (!updateEnrollment.isError) {
+        modal.hide()
+      }
+    },
+  })
+  const updateEnrollment = useUpdateEnrollment({
+    id: enrollment.id,
+    PatchedCourseRunEnrollmentRequest: {
+      //@ts-expect-error This will be fixed after https://github.com/mitodl/mitxonline/pull/2737 is released
+      receive_emails: formik.values.receive_emails,
     },
   })
   return (
@@ -57,8 +72,20 @@ const EmailSettingsDialogInner: React.FC<DashboardDialogProps> = ({
           >
             Cancel
           </Button>
-          <Button variant="primary" type="submit" disabled={!formik.dirty}>
+          <Button
+            variant="primary"
+            type="submit"
+            disabled={!formik.dirty || updateEnrollment.isPending}
+          >
             Save Settings
+            {updateEnrollment.isPending && (
+              <SpinnerContainer>
+                <LoadingSpinner
+                  loading={updateEnrollment.isPending}
+                  size={16}
+                />
+              </SpinnerContainer>
+            )}
           </Button>
         </DialogActions>
       }
@@ -74,11 +101,17 @@ const EmailSettingsDialogInner: React.FC<DashboardDialogProps> = ({
           </Typography>
         </Alert>
         <Checkbox
-          name="recieve_emails"
+          name="receive_emails"
           label="Receive course emails"
-          checked={formik.values.recieve_emails}
+          checked={formik.values.receive_emails}
           onChange={formik.handleChange}
         />
+        {updateEnrollment.isError && (
+          <Alert severity="error">
+            There was a problem updating your email settings. Please try again
+            later.
+          </Alert>
+        )}
       </Stack>
     </FormDialog>
   )
@@ -86,10 +119,10 @@ const EmailSettingsDialogInner: React.FC<DashboardDialogProps> = ({
 
 const UnenrollDialogInner: React.FC<DashboardDialogProps> = ({
   title,
-  enrollmentId,
+  enrollment,
 }) => {
   const modal = NiceModal.useModal()
-  const destroyEnrollment = useDestroyEnrollment(enrollmentId)
+  const destroyEnrollment = useDestroyEnrollment(enrollment.id)
   const formik = useFormik({
     enableReinitialize: true,
     validateOnChange: false,
