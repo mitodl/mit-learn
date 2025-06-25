@@ -135,16 +135,32 @@ describe.each([
       const card = getCard()
       const coursewareCTA = within(card).getByTestId("courseware-button")
 
-      expect(coursewareCTA).toHaveTextContent(`${expected.labelPrefix} Course`)
+      if (
+        course.enrollment?.status === EnrollmentStatus.NotEnrolled ||
+        !course.enrollment
+      ) {
+        expect(coursewareCTA).toHaveTextContent("Enroll")
+      } else {
+        expect(coursewareCTA).toHaveTextContent(
+          `${expected.labelPrefix} Course`,
+        )
+      }
 
       const courseNoun = faker.word.noun()
       view.rerender(
         <DashboardCard courseNoun={courseNoun} dashboardResource={course} />,
       )
 
-      expect(coursewareCTA).toHaveTextContent(
-        `${expected.labelPrefix} ${courseNoun}`,
-      )
+      if (
+        course.enrollment?.status === EnrollmentStatus.NotEnrolled ||
+        !course.enrollment
+      ) {
+        expect(coursewareCTA).toHaveTextContent("Enroll")
+      } else {
+        expect(coursewareCTA).toHaveTextContent(
+          `${expected.labelPrefix} ${courseNoun}`,
+        )
+      }
     },
   )
 
