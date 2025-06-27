@@ -1,10 +1,18 @@
 import React from "react"
-import { renderWithProviders, screen, user, within } from "@/test-utils"
+import {
+  renderWithProviders,
+  screen,
+  setMockResponse,
+  user,
+  within,
+} from "@/test-utils"
+import * as mitxonline from "api/mitxonline-test-utils"
 import { DashboardCard, getDefaultContextMenuItems } from "./DashboardCard"
 import { dashboardCourse } from "./test-utils"
 import { faker } from "@faker-js/faker/locale/en"
 import moment from "moment"
 import { EnrollmentMode, EnrollmentStatus } from "./types"
+import { mockAxiosInstance } from "api/test-utils"
 
 const pastDashboardCourse: typeof dashboardCourse = (...overrides) => {
   return dashboardCourse(
@@ -135,16 +143,32 @@ describe.each([
       const card = getCard()
       const coursewareCTA = within(card).getByTestId("courseware-button")
 
-      expect(coursewareCTA).toHaveTextContent(`${expected.labelPrefix} Course`)
+      if (
+        course.enrollment?.status === EnrollmentStatus.NotEnrolled ||
+        !course.enrollment
+      ) {
+        expect(coursewareCTA).toHaveTextContent("Enroll")
+      } else {
+        expect(coursewareCTA).toHaveTextContent(
+          `${expected.labelPrefix} Course`,
+        )
+      }
 
       const courseNoun = faker.word.noun()
       view.rerender(
         <DashboardCard courseNoun={courseNoun} dashboardResource={course} />,
       )
 
-      expect(coursewareCTA).toHaveTextContent(
-        `${expected.labelPrefix} ${courseNoun}`,
-      )
+      if (
+        course.enrollment?.status === EnrollmentStatus.NotEnrolled ||
+        !course.enrollment
+      ) {
+        expect(coursewareCTA).toHaveTextContent("Enroll")
+      } else {
+        expect(coursewareCTA).toHaveTextContent(
+          `${expected.labelPrefix} ${courseNoun}`,
+        )
+      }
     },
   )
 
@@ -408,4 +432,61 @@ describe.each([
       }
     },
   )
+
+  test.each([
+    { status: EnrollmentStatus.Completed },
+    { status: EnrollmentStatus.Enrolled },
+    { status: EnrollmentStatus.NotEnrolled },
+  ])(
+    "CoursewareButton switches to Enroll functionality when enrollment status is not enrolled or undefined",
+    ({ status }) => {
+      const course = dashboardCourse()
+      course.enrollment = {
+        id: faker.number.int(),
+        status: status,
+        mode: EnrollmentMode.Audit,
+      }
+      renderWithProviders(<DashboardCard dashboardResource={course} />)
+      const card = getCard()
+      const coursewareButton = within(card).getByTestId("courseware-button")
+
+      if (
+        status === EnrollmentStatus.NotEnrolled ||
+        status === undefined ||
+        !course.enrollment
+      ) {
+        expect(coursewareButton).toHaveTextContent("Enroll")
+      } else {
+        expect(coursewareButton).toHaveTextContent("Continue Course")
+      }
+    },
+  )
+
+  test("CoursewareButton hits enroll endpoint appropriately", async () => {
+    const course = dashboardCourse({
+      coursewareId: faker.string.uuid(),
+      enrollment: {
+        id: faker.number.int(),
+        status: EnrollmentStatus.NotEnrolled,
+      },
+    })
+    setMockResponse.post(
+      mitxonline.urls.b2b.courseEnrollment(course.coursewareId ?? undefined),
+      { result: "b2b-enroll-success", order: 1 },
+    )
+    renderWithProviders(<DashboardCard dashboardResource={course} />)
+    const card = getCard()
+    const coursewareButton = within(card).getByTestId("courseware-button")
+
+    await user.click(coursewareButton)
+
+    expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "POST",
+        url: mitxonline.urls.b2b.courseEnrollment(
+          course.coursewareId ?? undefined,
+        ),
+      }),
+    )
+  })
 })
