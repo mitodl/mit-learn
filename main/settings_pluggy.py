@@ -2,7 +2,7 @@ from main.envs import get_string
 
 MITOL_AUTHENTICATION_PLUGINS = get_string(
     "MITOL_AUTHENTICATION_PLUGINS",
-    "learning_resources.plugins.FavoritesListPlugin,profiles.plugins.CreateProfilePlugin",
+    "learning_resources.plugins.FavoritesListPlugin,profiles.plugins.CreateProfilePlugin,learning_resources.plugins.FavoritesListPlugin",
 )
 MITOL_LEARNING_RESOURCES_PLUGINS = get_string(
     "MITOL_LEARNING_RESOURCES_PLUGINS",
