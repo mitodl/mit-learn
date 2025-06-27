@@ -1,14 +1,7 @@
 import React from "react"
 import type { OfferedByEnum } from "api"
 import type { UnitChannel } from "api/v0"
-import {
-  Card,
-  Skeleton,
-  Typography,
-  styled,
-  theme,
-  UnitLogo,
-} from "ol-components"
+import { Card, Skeleton, styled, theme, UnitLogo } from "ol-components"
 import Link from "next/link"
 import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
@@ -23,9 +16,6 @@ const UnitCardContainer = styled.div({
   alignItems: "center",
   height: "100%",
   backgroundColor: "rgba(243, 244, 248, 0.50)",
-  [theme.breakpoints.down("md")]: {
-    backgroundColor: theme.custom.colors.white,
-  },
 })
 
 const UnitCardContent = styled.div({
@@ -39,7 +29,7 @@ const LogoContainer = styled.div({
   padding: "40px 32px",
   backgroundColor: theme.custom.colors.white,
   [theme.breakpoints.down("md")]: {
-    padding: "34px 0 14px",
+    padding: "24px 16px",
     ".MuiSkeleton-root": {
       margin: "0 auto",
     },
@@ -50,6 +40,7 @@ const LogoContainer = styled.div({
       height: "40px",
       margin: "0 auto",
     },
+    maxWidth: "calc(100% - 32px)",
   },
 })
 
@@ -59,49 +50,24 @@ const CardBottom = styled.div({
   display: "flex",
   flexGrow: 1,
   flexDirection: "column",
+  justifyContent: "space-between",
   gap: "24px",
+  ...theme.typography.body1,
   [theme.breakpoints.down("md")]: {
+    ...theme.typography.body2,
     padding: "16px",
-    gap: "10px",
-    borderTop: "none",
+    gap: "16px",
   },
-})
-
-const ValuePropContainer = styled.div({
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "flex-start",
-  justifyContent: "flex-start",
-  flexGrow: 1,
-  paddingBottom: "16px",
 })
 
 const LoadingContent = styled.div({
   padding: "24px",
 })
 
-const HeadingText = styled.span(({ theme }) => ({
-  alignSelf: "stretch",
-  color: theme.custom.colors.darkGray2,
-  ...theme.typography.body2,
-}))
-
 const CountsTextContainer = styled.div({
   display: "flex",
   gap: "10px",
-  [theme.breakpoints.down("md")]: {
-    justifyContent: "flex-end",
-  },
 })
-
-const CountsText = styled(Typography)(({ theme }) => ({
-  color: theme.custom.colors.darkGray2,
-  ...theme.typography.body2,
-  [theme.breakpoints.down("md")]: {
-    ...theme.typography.body3,
-    color: theme.custom.colors.silverGrayDark,
-  },
-}))
 
 interface UnitCardsProps {
   channels: UnitChannel[] | undefined
@@ -144,16 +110,14 @@ const UnitCard: React.FC<UnitCardProps> = (props) => {
               </Link>
             </LogoContainer>
             <CardBottom>
-              <ValuePropContainer>
-                <HeadingText>{channel?.configuration?.heading}</HeadingText>
-              </ValuePropContainer>
+              {channel?.configuration?.heading}
               <CountsTextContainer>
-                <CountsText data-testid={`course-count-${unit.code}`}>
+                <span data-testid={`course-count-${unit.code}`}>
                   {courseCount > 0 ? `Courses: ${courseCount}` : ""}
-                </CountsText>
-                <CountsText data-testid={`program-count-${unit.code}`}>
+                </span>
+                <span data-testid={`program-count-${unit.code}`}>
                   {programCount > 0 ? `Programs: ${programCount}` : ""}
-                </CountsText>
+                </span>
               </CountsTextContainer>
             </CardBottom>
           </UnitCardContent>

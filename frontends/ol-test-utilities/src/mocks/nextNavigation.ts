@@ -51,7 +51,17 @@ const prependPathIfNeeded = (url: mocks.Url) => {
 mocks.memoryRouter.push = (url) => originalPush(prependPathIfNeeded(url))
 mocks.memoryRouter.replace = (url) => originalReplace(prependPathIfNeeded(url))
 
-export const nextNavigationMocks = {
+interface NextNavigationMocks {
+  memoryRouter: typeof mocks.memoryRouter
+  useRouter: typeof mocks.useRouter
+  notFound: jest.Mock
+  redirect: jest.Mock
+  usePathname: () => string
+  useSearchParams: () => URLSearchParams
+  useParams: () => Record<string, string>
+}
+
+export const nextNavigationMocks: NextNavigationMocks = {
   ...mocks,
   notFound: jest.fn(),
   redirect: jest.fn().mockImplementation((url: string) => {

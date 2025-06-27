@@ -487,14 +487,13 @@ def sync_canvas_courses(overwrite):
 
     bucket = get_learning_course_bucket(ETLSource.canvas.name)
     s3_prefix = f"{settings.CANVAS_COURSE_BUCKET_PREFIX}"
-
     exports = bucket.objects.filter(Prefix=s3_prefix)
-
     log.info("syncing all canvas courses")
     latest_archives = {}
     for archive in exports:
         key = archive.key
-        course_folder = key.split("/")[1]
+        course_folder = key.lstrip(settings.CANVAS_COURSE_BUCKET_PREFIX).split("/")[0]
+        log.info("processing course folder %s", course_folder)
         if course_folder not in latest_archives or (
             max(archive.last_modified, latest_archives[course_folder].last_modified)
             == archive.last_modified

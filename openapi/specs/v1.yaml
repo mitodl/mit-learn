@@ -8844,6 +8844,68 @@ paths:
               schema:
                 $ref: '#/components/schemas/VideoResource'
           description: ''
+  /api/v1/webhooks/content_files/:
+    post:
+      operationId: webhooks_content_files_create
+      description: Handle POST requests to the webhook.
+      parameters:
+      - in: query
+        name: content_path
+        schema:
+          type: string
+          minLength: 1
+        required: true
+      - in: query
+        name: source
+        schema:
+          enum:
+          - micromasters
+          - mit_edx
+          - mitpe
+          - mitxonline
+          - oll
+          - ocw
+          - podcast
+          - see
+          - xpro
+          - youtube
+          - canvas
+          type: string
+          minLength: 1
+        description: |-
+          * `micromasters` - micromasters
+          * `mit_edx` - mit_edx
+          * `mitpe` - mitpe
+          * `mitxonline` - mitxonline
+          * `oll` - oll
+          * `ocw` - ocw
+          * `podcast` - podcast
+          * `see` - see
+          * `xpro` - xpro
+          * `youtube` - youtube
+          * `canvas` - canvas
+        required: true
+      tags:
+      - webhooks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContentFileWebHookRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ContentFileWebHookRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ContentFileWebHookRequestRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookResponse'
+          description: ''
 components:
   schemas:
     AggregationsEnum:
@@ -9119,6 +9181,18 @@ components:
       - next
       - previous
       - results
+    ContentFileWebHookRequestRequest:
+      type: object
+      description: Serializer for ContentFile webhook requests.
+      properties:
+        content_path:
+          type: string
+          minLength: 1
+        source:
+          $ref: '#/components/schemas/SourceEnum'
+      required:
+      - content_path
+      - source
     ContentTypeEnum:
       enum:
       - page
@@ -13749,6 +13823,44 @@ components:
       - Popularity ascending
       - Popularity descending
       - Next start date ascending
+    SourceEnum:
+      enum:
+      - micromasters
+      - mit_edx
+      - mitpe
+      - mitxonline
+      - oll
+      - ocw
+      - podcast
+      - see
+      - xpro
+      - youtube
+      - canvas
+      type: string
+      description: |-
+        * `micromasters` - micromasters
+        * `mit_edx` - mit_edx
+        * `mitpe` - mitpe
+        * `mitxonline` - mitxonline
+        * `oll` - oll
+        * `ocw` - ocw
+        * `podcast` - podcast
+        * `see` - see
+        * `xpro` - xpro
+        * `youtube` - youtube
+        * `canvas` - canvas
+      x-enum-descriptions:
+      - micromasters
+      - mit_edx
+      - mitpe
+      - mitxonline
+      - oll
+      - ocw
+      - podcast
+      - see
+      - xpro
+      - youtube
+      - canvas
     SourceTypeEnum:
       enum:
       - search_subscription_type
@@ -14697,3 +14809,15 @@ components:
       type: string
       enum:
       - video
+    WebhookResponse:
+      type: object
+      description: Serializer for webhook responses.
+      properties:
+        status:
+          type: string
+        message:
+          type: string
+        error:
+          type: string
+      required:
+      - status

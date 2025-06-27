@@ -1,6 +1,22 @@
 Release Notes
 =============
 
+Version 0.36.5
+--------------
+
+- Fix flaky test by ensuring consistent ordering of children in serializers (#2321)
+- Canvas course webhook and ingestion format changes (#2320)
+- chore(deps): update actions/setup-python digest to a26af69 (#2254)
+- chore(deps): update actions/setup-node digest to 49933ea (#2253)
+- fix(deps): update dependency next-router-mock to v1 (#2267)
+- dashboard email settings dialog functionality (#2312)
+- Update django-health-check digest to 8c69e53 (#2294)
+- Update dependency posthog to v5 (#2318)
+- include canonical url in generatemetadata (#2316)
+- align LearningResourceListCard with figma (#2314)
+- Design QA (#2308)
+- [pre-commit.ci] pre-commit autoupdate (#2298)
+
 Version 0.36.3 (Released June 24, 2025)
 --------------
 
