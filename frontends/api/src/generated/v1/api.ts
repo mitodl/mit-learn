@@ -3150,6 +3150,25 @@ export interface LearningResourceSchool {
   departments: Array<LearningResourceBaseDepartment>
 }
 /**
+ * Minimal serializer for LearningResource - returns only essential fields for sitemap generation and other use cases requiring minimal data transfer.
+ * @export
+ * @interface LearningResourceSummary
+ */
+export interface LearningResourceSummary {
+  /**
+   *
+   * @type {number}
+   * @memberof LearningResourceSummary
+   */
+  id: number
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceSummary
+   */
+  last_modified?: string | null
+}
+/**
  * Serializer for LearningResourceTopic model
  * @export
  * @interface LearningResourceTopic
@@ -3784,6 +3803,37 @@ export interface PaginatedLearningResourceSchoolList {
    * @memberof PaginatedLearningResourceSchoolList
    */
   results: Array<LearningResourceSchool>
+}
+/**
+ *
+ * @export
+ * @interface PaginatedLearningResourceSummaryList
+ */
+export interface PaginatedLearningResourceSummaryList {
+  /**
+   *
+   * @type {number}
+   * @memberof PaginatedLearningResourceSummaryList
+   */
+  count: number
+  /**
+   *
+   * @type {string}
+   * @memberof PaginatedLearningResourceSummaryList
+   */
+  next?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof PaginatedLearningResourceSummaryList
+   */
+  previous?: string | null
+  /**
+   *
+   * @type {Array<LearningResourceSummary>}
+   * @memberof PaginatedLearningResourceSummaryList
+   */
+  results: Array<LearningResourceSummary>
 }
 /**
  *
@@ -13734,6 +13784,151 @@ export const LearningResourcesApiAxiosParamCreator = function (
       }
     },
     /**
+     * Get a paginated list of learning resources with summary data.
+     * @summary Get learning resources summary
+     * @param {boolean} [certification]
+     * @param {Array<LearningResourcesSummaryListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
+     * @param {Array<string>} [course_feature] Multiple values may be separated by commas.
+     * @param {Array<Array<LearningResourcesSummaryListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<LearningResourcesSummaryListDepartmentEnum>} [department] The department that offers learning resources  * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
+     * @param {boolean} [free] The course/program is offered for free
+     * @param {Array<LearningResourcesSummaryListLevelEnum>} [level] The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
+     * @param {number} [limit] Number of results to return per page.
+     * @param {Array<LearningResourcesSummaryListOfferedByEnum>} [offered_by] The organization that offers a learning resource  * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education
+     * @param {number} [offset] The initial index from which to return the results.
+     * @param {Array<LearningResourcesSummaryListPlatformEnum>} [platform] The platform on which learning resources are offered  * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube
+     * @param {boolean} [professional]
+     * @param {Array<string>} [readable_id] Multiple values may be separated by commas.
+     * @param {Array<LearningResourcesSummaryListResourceCategoryEnum>} [resource_category] The resource category of the learning resources  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {Array<LearningResourcesSummaryListResourceTypeEnum>} [resource_type] The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist
+     * @param {LearningResourcesSummaryListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
+     * @param {Array<string>} [topic] Multiple values may be separated by commas.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    learningResourcesSummaryList: async (
+      certification?: boolean,
+      certification_type?: Array<LearningResourcesSummaryListCertificationTypeEnum>,
+      course_feature?: Array<string>,
+      delivery?: Array<Array<LearningResourcesSummaryListDeliveryEnum>>,
+      department?: Array<LearningResourcesSummaryListDepartmentEnum>,
+      free?: boolean,
+      level?: Array<LearningResourcesSummaryListLevelEnum>,
+      limit?: number,
+      offered_by?: Array<LearningResourcesSummaryListOfferedByEnum>,
+      offset?: number,
+      platform?: Array<LearningResourcesSummaryListPlatformEnum>,
+      professional?: boolean,
+      readable_id?: Array<string>,
+      resource_category?: Array<LearningResourcesSummaryListResourceCategoryEnum>,
+      resource_type?: Array<LearningResourcesSummaryListResourceTypeEnum>,
+      sortby?: LearningResourcesSummaryListSortbyEnum,
+      topic?: Array<string>,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      const localVarPath = `/api/v1/learning_resources/summary/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      if (certification !== undefined) {
+        localVarQueryParameter["certification"] = certification
+      }
+
+      if (certification_type) {
+        localVarQueryParameter["certification_type"] = certification_type
+      }
+
+      if (course_feature) {
+        localVarQueryParameter["course_feature"] = course_feature.join(
+          COLLECTION_FORMATS.csv,
+        )
+      }
+
+      if (delivery) {
+        localVarQueryParameter["delivery"] = delivery
+      }
+
+      if (department) {
+        localVarQueryParameter["department"] = department
+      }
+
+      if (free !== undefined) {
+        localVarQueryParameter["free"] = free
+      }
+
+      if (level) {
+        localVarQueryParameter["level"] = level
+      }
+
+      if (limit !== undefined) {
+        localVarQueryParameter["limit"] = limit
+      }
+
+      if (offered_by) {
+        localVarQueryParameter["offered_by"] = offered_by
+      }
+
+      if (offset !== undefined) {
+        localVarQueryParameter["offset"] = offset
+      }
+
+      if (platform) {
+        localVarQueryParameter["platform"] = platform
+      }
+
+      if (professional !== undefined) {
+        localVarQueryParameter["professional"] = professional
+      }
+
+      if (readable_id) {
+        localVarQueryParameter["readable_id"] = readable_id.join(
+          COLLECTION_FORMATS.csv,
+        )
+      }
+
+      if (resource_category) {
+        localVarQueryParameter["resource_category"] = resource_category
+      }
+
+      if (resource_type) {
+        localVarQueryParameter["resource_type"] = resource_type
+      }
+
+      if (sortby !== undefined) {
+        localVarQueryParameter["sortby"] = sortby
+      }
+
+      if (topic) {
+        localVarQueryParameter["topic"] = topic.join(COLLECTION_FORMATS.csv)
+      }
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
      * Set User List Relationships on a given Learning Resource.
      * @summary Set User List Relationships
      * @param {number} id id of the learning resource
@@ -14360,6 +14555,88 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
         )(axios, operationBasePath || basePath)
     },
     /**
+     * Get a paginated list of learning resources with summary data.
+     * @summary Get learning resources summary
+     * @param {boolean} [certification]
+     * @param {Array<LearningResourcesSummaryListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
+     * @param {Array<string>} [course_feature] Multiple values may be separated by commas.
+     * @param {Array<Array<LearningResourcesSummaryListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<LearningResourcesSummaryListDepartmentEnum>} [department] The department that offers learning resources  * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
+     * @param {boolean} [free] The course/program is offered for free
+     * @param {Array<LearningResourcesSummaryListLevelEnum>} [level] The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
+     * @param {number} [limit] Number of results to return per page.
+     * @param {Array<LearningResourcesSummaryListOfferedByEnum>} [offered_by] The organization that offers a learning resource  * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education
+     * @param {number} [offset] The initial index from which to return the results.
+     * @param {Array<LearningResourcesSummaryListPlatformEnum>} [platform] The platform on which learning resources are offered  * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube
+     * @param {boolean} [professional]
+     * @param {Array<string>} [readable_id] Multiple values may be separated by commas.
+     * @param {Array<LearningResourcesSummaryListResourceCategoryEnum>} [resource_category] The resource category of the learning resources  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {Array<LearningResourcesSummaryListResourceTypeEnum>} [resource_type] The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist
+     * @param {LearningResourcesSummaryListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
+     * @param {Array<string>} [topic] Multiple values may be separated by commas.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async learningResourcesSummaryList(
+      certification?: boolean,
+      certification_type?: Array<LearningResourcesSummaryListCertificationTypeEnum>,
+      course_feature?: Array<string>,
+      delivery?: Array<Array<LearningResourcesSummaryListDeliveryEnum>>,
+      department?: Array<LearningResourcesSummaryListDepartmentEnum>,
+      free?: boolean,
+      level?: Array<LearningResourcesSummaryListLevelEnum>,
+      limit?: number,
+      offered_by?: Array<LearningResourcesSummaryListOfferedByEnum>,
+      offset?: number,
+      platform?: Array<LearningResourcesSummaryListPlatformEnum>,
+      professional?: boolean,
+      readable_id?: Array<string>,
+      resource_category?: Array<LearningResourcesSummaryListResourceCategoryEnum>,
+      resource_type?: Array<LearningResourcesSummaryListResourceTypeEnum>,
+      sortby?: LearningResourcesSummaryListSortbyEnum,
+      topic?: Array<string>,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<PaginatedLearningResourceSummaryList>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.learningResourcesSummaryList(
+          certification,
+          certification_type,
+          course_feature,
+          delivery,
+          department,
+          free,
+          level,
+          limit,
+          offered_by,
+          offset,
+          platform,
+          professional,
+          readable_id,
+          resource_category,
+          resource_type,
+          sortby,
+          topic,
+          options,
+        )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap[
+          "LearningResourcesApi.learningResourcesSummaryList"
+        ]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
      * Set User List Relationships on a given Learning Resource.
      * @summary Set User List Relationships
      * @param {number} id id of the learning resource
@@ -14672,6 +14949,40 @@ export const LearningResourcesApiFactory = function (
           requestParameters.level,
           requestParameters.limit,
           requestParameters.offered_by,
+          requestParameters.platform,
+          requestParameters.professional,
+          requestParameters.readable_id,
+          requestParameters.resource_category,
+          requestParameters.resource_type,
+          requestParameters.sortby,
+          requestParameters.topic,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * Get a paginated list of learning resources with summary data.
+     * @summary Get learning resources summary
+     * @param {LearningResourcesApiLearningResourcesSummaryListRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    learningResourcesSummaryList(
+      requestParameters: LearningResourcesApiLearningResourcesSummaryListRequest = {},
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<PaginatedLearningResourceSummaryList> {
+      return localVarFp
+        .learningResourcesSummaryList(
+          requestParameters.certification,
+          requestParameters.certification_type,
+          requestParameters.course_feature,
+          requestParameters.delivery,
+          requestParameters.department,
+          requestParameters.free,
+          requestParameters.level,
+          requestParameters.limit,
+          requestParameters.offered_by,
+          requestParameters.offset,
           requestParameters.platform,
           requestParameters.professional,
           requestParameters.readable_id,
@@ -15182,6 +15493,132 @@ export interface LearningResourcesApiLearningResourcesSimilarListRequest {
 }
 
 /**
+ * Request parameters for learningResourcesSummaryList operation in LearningResourcesApi.
+ * @export
+ * @interface LearningResourcesApiLearningResourcesSummaryListRequest
+ */
+export interface LearningResourcesApiLearningResourcesSummaryListRequest {
+  /**
+   *
+   * @type {boolean}
+   * @memberof LearningResourcesApiLearningResourcesSummaryList
+   */
+  readonly certification?: boolean
+
+  /**
+   * The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
+   * @type {Array<'completion' | 'micromasters' | 'none' | 'professional'>}
+   * @memberof LearningResourcesApiLearningResourcesSummaryList
+   */
+  readonly certification_type?: Array<LearningResourcesSummaryListCertificationTypeEnum>
+
+  /**
+   * Multiple values may be separated by commas.
+   * @type {Array<string>}
+   * @memberof LearningResourcesApiLearningResourcesSummaryList
+   */
+  readonly course_feature?: Array<string>
+
+  /**
+   * The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+   * @type {Array<Array<'online' | 'hybrid' | 'in_person' | 'offline'>>}
+   * @memberof LearningResourcesApiLearningResourcesSummaryList
+   */
+  readonly delivery?: Array<Array<LearningResourcesSummaryListDeliveryEnum>>
+
+  /**
+   * The department that offers learning resources  * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
+   * @type {Array<'1' | '10' | '11' | '12' | '14' | '15' | '16' | '17' | '18' | '2' | '20' | '21A' | '21G' | '21H' | '21L' | '21M' | '22' | '24' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | 'CC' | 'CMS-W' | 'EC' | 'ES' | 'ESD' | 'HST' | 'IDS' | 'MAS' | 'PE' | 'SP' | 'STS' | 'WGS'>}
+   * @memberof LearningResourcesApiLearningResourcesSummaryList
+   */
+  readonly department?: Array<LearningResourcesSummaryListDepartmentEnum>
+
+  /**
+   * The course/program is offered for free
+   * @type {boolean}
+   * @memberof LearningResourcesApiLearningResourcesSummaryList
+   */
+  readonly free?: boolean
+
+  /**
+   * The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
+   * @type {Array<'advanced' | 'graduate' | 'high_school' | 'intermediate' | 'introductory' | 'noncredit' | 'undergraduate'>}
+   * @memberof LearningResourcesApiLearningResourcesSummaryList
+   */
+  readonly level?: Array<LearningResourcesSummaryListLevelEnum>
+
+  /**
+   * Number of results to return per page.
+   * @type {number}
+   * @memberof LearningResourcesApiLearningResourcesSummaryList
+   */
+  readonly limit?: number
+
+  /**
+   * The organization that offers a learning resource  * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education
+   * @type {Array<'bootcamps' | 'mitpe' | 'mitx' | 'ocw' | 'see' | 'xpro'>}
+   * @memberof LearningResourcesApiLearningResourcesSummaryList
+   */
+  readonly offered_by?: Array<LearningResourcesSummaryListOfferedByEnum>
+
+  /**
+   * The initial index from which to return the results.
+   * @type {number}
+   * @memberof LearningResourcesApiLearningResourcesSummaryList
+   */
+  readonly offset?: number
+
+  /**
+   * The platform on which learning resources are offered  * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube
+   * @type {Array<'bootcamps' | 'csail' | 'ctl' | 'edx' | 'emeritus' | 'globalalumni' | 'mitpe' | 'mitxonline' | 'ocw' | 'oll' | 'podcast' | 'scc' | 'see' | 'simplilearn' | 'susskind' | 'whu' | 'xpro' | 'youtube'>}
+   * @memberof LearningResourcesApiLearningResourcesSummaryList
+   */
+  readonly platform?: Array<LearningResourcesSummaryListPlatformEnum>
+
+  /**
+   *
+   * @type {boolean}
+   * @memberof LearningResourcesApiLearningResourcesSummaryList
+   */
+  readonly professional?: boolean
+
+  /**
+   * Multiple values may be separated by commas.
+   * @type {Array<string>}
+   * @memberof LearningResourcesApiLearningResourcesSummaryList
+   */
+  readonly readable_id?: Array<string>
+
+  /**
+   * The resource category of the learning resources  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+   * @type {Array<'course' | 'learning_material' | 'program'>}
+   * @memberof LearningResourcesApiLearningResourcesSummaryList
+   */
+  readonly resource_category?: Array<LearningResourcesSummaryListResourceCategoryEnum>
+
+  /**
+   * The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist
+   * @type {Array<'course' | 'learning_path' | 'podcast' | 'podcast_episode' | 'program' | 'video' | 'video_playlist'>}
+   * @memberof LearningResourcesApiLearningResourcesSummaryList
+   */
+  readonly resource_type?: Array<LearningResourcesSummaryListResourceTypeEnum>
+
+  /**
+   * Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
+   * @type {'-id' | '-last_modified' | '-mitcoursenumber' | '-readable_id' | '-start_date' | '-views' | 'id' | 'last_modified' | 'mitcoursenumber' | 'new' | 'readable_id' | 'start_date' | 'upcoming' | 'views'}
+   * @memberof LearningResourcesApiLearningResourcesSummaryList
+   */
+  readonly sortby?: LearningResourcesSummaryListSortbyEnum
+
+  /**
+   * Multiple values may be separated by commas.
+   * @type {Array<string>}
+   * @memberof LearningResourcesApiLearningResourcesSummaryList
+   */
+  readonly topic?: Array<string>
+}
+
+/**
  * Request parameters for learningResourcesUserlistsPartialUpdate operation in LearningResourcesApi.
  * @export
  * @interface LearningResourcesApiLearningResourcesUserlistsPartialUpdateRequest
@@ -15536,6 +15973,42 @@ export class LearningResourcesApi extends BaseAPI {
         requestParameters.level,
         requestParameters.limit,
         requestParameters.offered_by,
+        requestParameters.platform,
+        requestParameters.professional,
+        requestParameters.readable_id,
+        requestParameters.resource_category,
+        requestParameters.resource_type,
+        requestParameters.sortby,
+        requestParameters.topic,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
+
+  /**
+   * Get a paginated list of learning resources with summary data.
+   * @summary Get learning resources summary
+   * @param {LearningResourcesApiLearningResourcesSummaryListRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof LearningResourcesApi
+   */
+  public learningResourcesSummaryList(
+    requestParameters: LearningResourcesApiLearningResourcesSummaryListRequest = {},
+    options?: RawAxiosRequestConfig,
+  ) {
+    return LearningResourcesApiFp(this.configuration)
+      .learningResourcesSummaryList(
+        requestParameters.certification,
+        requestParameters.certification_type,
+        requestParameters.course_feature,
+        requestParameters.delivery,
+        requestParameters.department,
+        requestParameters.free,
+        requestParameters.level,
+        requestParameters.limit,
+        requestParameters.offered_by,
+        requestParameters.offset,
         requestParameters.platform,
         requestParameters.professional,
         requestParameters.readable_id,
@@ -15971,6 +16444,169 @@ export const LearningResourcesSimilarListSortbyEnum = {
 } as const
 export type LearningResourcesSimilarListSortbyEnum =
   (typeof LearningResourcesSimilarListSortbyEnum)[keyof typeof LearningResourcesSimilarListSortbyEnum]
+/**
+ * @export
+ */
+export const LearningResourcesSummaryListCertificationTypeEnum = {
+  Completion: "completion",
+  Micromasters: "micromasters",
+  None: "none",
+  Professional: "professional",
+} as const
+export type LearningResourcesSummaryListCertificationTypeEnum =
+  (typeof LearningResourcesSummaryListCertificationTypeEnum)[keyof typeof LearningResourcesSummaryListCertificationTypeEnum]
+/**
+ * @export
+ */
+export const LearningResourcesSummaryListDeliveryEnum = {
+  Online: "online",
+  Hybrid: "hybrid",
+  InPerson: "in_person",
+  Offline: "offline",
+} as const
+export type LearningResourcesSummaryListDeliveryEnum =
+  (typeof LearningResourcesSummaryListDeliveryEnum)[keyof typeof LearningResourcesSummaryListDeliveryEnum]
+/**
+ * @export
+ */
+export const LearningResourcesSummaryListDepartmentEnum = {
+  _1: "1",
+  _10: "10",
+  _11: "11",
+  _12: "12",
+  _14: "14",
+  _15: "15",
+  _16: "16",
+  _17: "17",
+  _18: "18",
+  _2: "2",
+  _20: "20",
+  _21A: "21A",
+  _21G: "21G",
+  _21H: "21H",
+  _21L: "21L",
+  _21M: "21M",
+  _22: "22",
+  _24: "24",
+  _3: "3",
+  _4: "4",
+  _5: "5",
+  _6: "6",
+  _7: "7",
+  _8: "8",
+  _9: "9",
+  Cc: "CC",
+  CmsW: "CMS-W",
+  Ec: "EC",
+  Es: "ES",
+  Esd: "ESD",
+  Hst: "HST",
+  Ids: "IDS",
+  Mas: "MAS",
+  Pe: "PE",
+  Sp: "SP",
+  Sts: "STS",
+  Wgs: "WGS",
+} as const
+export type LearningResourcesSummaryListDepartmentEnum =
+  (typeof LearningResourcesSummaryListDepartmentEnum)[keyof typeof LearningResourcesSummaryListDepartmentEnum]
+/**
+ * @export
+ */
+export const LearningResourcesSummaryListLevelEnum = {
+  Advanced: "advanced",
+  Graduate: "graduate",
+  HighSchool: "high_school",
+  Intermediate: "intermediate",
+  Introductory: "introductory",
+  Noncredit: "noncredit",
+  Undergraduate: "undergraduate",
+} as const
+export type LearningResourcesSummaryListLevelEnum =
+  (typeof LearningResourcesSummaryListLevelEnum)[keyof typeof LearningResourcesSummaryListLevelEnum]
+/**
+ * @export
+ */
+export const LearningResourcesSummaryListOfferedByEnum = {
+  Bootcamps: "bootcamps",
+  Mitpe: "mitpe",
+  Mitx: "mitx",
+  Ocw: "ocw",
+  See: "see",
+  Xpro: "xpro",
+} as const
+export type LearningResourcesSummaryListOfferedByEnum =
+  (typeof LearningResourcesSummaryListOfferedByEnum)[keyof typeof LearningResourcesSummaryListOfferedByEnum]
+/**
+ * @export
+ */
+export const LearningResourcesSummaryListPlatformEnum = {
+  Bootcamps: "bootcamps",
+  Csail: "csail",
+  Ctl: "ctl",
+  Edx: "edx",
+  Emeritus: "emeritus",
+  Globalalumni: "globalalumni",
+  Mitpe: "mitpe",
+  Mitxonline: "mitxonline",
+  Ocw: "ocw",
+  Oll: "oll",
+  Podcast: "podcast",
+  Scc: "scc",
+  See: "see",
+  Simplilearn: "simplilearn",
+  Susskind: "susskind",
+  Whu: "whu",
+  Xpro: "xpro",
+  Youtube: "youtube",
+} as const
+export type LearningResourcesSummaryListPlatformEnum =
+  (typeof LearningResourcesSummaryListPlatformEnum)[keyof typeof LearningResourcesSummaryListPlatformEnum]
+/**
+ * @export
+ */
+export const LearningResourcesSummaryListResourceCategoryEnum = {
+  Course: "course",
+  LearningMaterial: "learning_material",
+  Program: "program",
+} as const
+export type LearningResourcesSummaryListResourceCategoryEnum =
+  (typeof LearningResourcesSummaryListResourceCategoryEnum)[keyof typeof LearningResourcesSummaryListResourceCategoryEnum]
+/**
+ * @export
+ */
+export const LearningResourcesSummaryListResourceTypeEnum = {
+  Course: "course",
+  LearningPath: "learning_path",
+  Podcast: "podcast",
+  PodcastEpisode: "podcast_episode",
+  Program: "program",
+  Video: "video",
+  VideoPlaylist: "video_playlist",
+} as const
+export type LearningResourcesSummaryListResourceTypeEnum =
+  (typeof LearningResourcesSummaryListResourceTypeEnum)[keyof typeof LearningResourcesSummaryListResourceTypeEnum]
+/**
+ * @export
+ */
+export const LearningResourcesSummaryListSortbyEnum = {
+  Id: "-id",
+  LastModified: "-last_modified",
+  Mitcoursenumber: "-mitcoursenumber",
+  ReadableId: "-readable_id",
+  StartDate: "-start_date",
+  Views: "-views",
+  Id2: "id",
+  LastModified2: "last_modified",
+  Mitcoursenumber2: "mitcoursenumber",
+  New: "new",
+  ReadableId2: "readable_id",
+  StartDate2: "start_date",
+  Upcoming: "upcoming",
+  Views2: "views",
+} as const
+export type LearningResourcesSummaryListSortbyEnum =
+  (typeof LearningResourcesSummaryListSortbyEnum)[keyof typeof LearningResourcesSummaryListSortbyEnum]
 /**
  * @export
  */
