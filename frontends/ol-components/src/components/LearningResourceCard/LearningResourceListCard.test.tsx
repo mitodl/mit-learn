@@ -154,6 +154,19 @@ describe("Learning Resource List Card", () => {
     screen.getByText("Certificate")
   })
 
+  test("Displays certificate type", () => {
+    const resource = factories.learningResources.resource({
+      certification: true,
+      certification_type: {
+        name: "Test Certificate",
+      },
+    })
+
+    setup({ resource })
+
+    screen.getByText("Test Certificate")
+  })
+
   test("Does not display certificate badge", () => {
     const resource = factories.learningResources.resource({
       certification: false,

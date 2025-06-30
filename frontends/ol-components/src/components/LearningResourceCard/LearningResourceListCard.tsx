@@ -120,7 +120,7 @@ const Info = ({ resource }: { resource: LearningResource }) => {
         <Certificate>
           <RiAwardFill />
           <CertificateText>
-            Certificate
+            {resource.certification_type?.name || "Certificate"}
             <CertificatePrice>
               {prices.certificate.display ? ": " : ""}{" "}
               {prices.certificate.display}
