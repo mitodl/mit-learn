@@ -29,7 +29,7 @@ from vector_search.constants import (
     QDRANT_RESOURCE_PARAM_MAP,
     RESOURCES_COLLECTION_NAME,
 )
-from vector_search.encoders.utils import dense_encoder
+from vector_search.encoders.utils import dense_encoder, sparse_encoder
 
 logger = logging.getLogger(__name__)
 
@@ -46,8 +46,8 @@ def qdrant_client():
 def points_generator(
     ids,
     metadata,
-    encoded_docs,
-    vector_name,
+    dense_encoded_docs,
+    sparse_encoded_docs,
 ):
     """
     Get a generator for embedding points to store in Qdrant
@@ -55,21 +55,31 @@ def points_generator(
     Args:
         ids (list): list of unique point ids
         metadata (list): list of metadata dictionaries
-        encoded_docs (list): list of vectorized documents
-        vector_name (str): name of the vector in qdrant
+        dense_encoded_docs (list): list of vectorized documents
+        sparse_encoded_docs
     Returns:
         generator:
             A generator of PointStruct objects
     """
+    dense_vector_name = dense_encoder().model_name
+    sparse_vector_name = sparse_encoder().model_name
     if ids is None:
         ids = iter(lambda: uuid.uuid4().hex, None)
     if metadata is None:
         metadata = iter(dict, None)
-    for idx, meta, vector in zip(ids, metadata, encoded_docs):
+    for idx, meta, dense_vector, sparse_vector in zip(
+        ids, metadata, dense_encoded_docs, sparse_encoded_docs
+    ):
         payload = meta
         point_data = {"id": idx, "payload": payload}
-        if any(vector):
-            point_vector: dict[str, models.Vector] = {vector_name: vector}
+        if any(dense_vector):
+            point_vector: dict[str, models.Vector] = {
+                dense_vector_name: dense_vector,
+                sparse_vector_name: models.SparseVector(
+                    indices=sparse_vector.indices.tolist(),
+                    values=sparse_vector.values.tolist(),
+                ),
+            }
             point_data["vector"] = point_vector
         yield models.PointStruct(**point_data)
 
@@ -86,6 +96,7 @@ def create_qdrant_collections(force_recreate):
     resources_collection_name = RESOURCES_COLLECTION_NAME
     content_files_collection_name = CONTENT_FILES_COLLECTION_NAME
     encoder = dense_encoder()
+    encoder_sparse = sparse_encoder()
     if (
         not client.collection_exists(collection_name=resources_collection_name)
         or force_recreate
@@ -97,16 +108,13 @@ def create_qdrant_collections(force_recreate):
             vectors_config={
                 encoder.model_short_name(): models.VectorParams(
                     size=encoder.dim(), distance=models.Distance.COSINE
-                ),
-                f"{encoder.model_short_name()}_content": models.VectorParams(
-                    size=encoder.dim(),
-                    distance=models.Distance.COSINE,
-                    multivector_config=models.MultiVectorConfig(
-                        comparator=models.MultiVectorComparator.MAX_SIM
-                    ),
-                ),
+                )
             },
-            sparse_vectors_config=client.get_fastembed_sparse_vector_params(),
+            sparse_vectors_config={
+                encoder_sparse.model_name: models.SparseVectorParams(
+                    index=models.SparseIndexParams(on_disk=True),
+                )
+            },
             optimizers_config=models.OptimizersConfigDiff(default_segment_number=2),
             quantization_config=models.ScalarQuantization(
                 scalar=models.ScalarQuantizationConfig(
@@ -129,7 +137,11 @@ def create_qdrant_collections(force_recreate):
                     size=encoder.dim(), distance=models.Distance.COSINE
                 ),
             },
-            sparse_vectors_config=client.get_fastembed_sparse_vector_params(),
+            sparse_vectors_config={
+                encoder_sparse.model_name: models.SparseVectorParams(
+                    index=models.SparseIndexParams(on_disk=True),
+                )
+            },
             optimizers_config=models.OptimizersConfigDiff(default_segment_number=2),
             quantization_config=models.ScalarQuantization(
                 scalar=models.ScalarQuantizationConfig(
@@ -227,7 +239,7 @@ def _process_resource_embeddings(serialized_resources):
     metadata = []
     ids = []
     encoder = dense_encoder()
-    vector_name = encoder.model_short_name()
+    encoder_sparse = sparse_encoder()
     for doc in serialized_resources:
         if not should_generate_resource_embeddings(doc):
             update_learning_resource_payload(doc)
@@ -238,7 +250,13 @@ def _process_resource_embeddings(serialized_resources):
         docs.append(_learning_resource_embedding_context(doc))
     if len(docs) > 0:
         embeddings = encoder.embed_documents(docs)
-        return points_generator(ids, metadata, embeddings, vector_name)
+        sparse_embeddings = encoder_sparse.embed_documents(docs)
+        return points_generator(
+            ids,
+            metadata,
+            dense_encoded_docs=embeddings,
+            sparse_encoded_docs=sparse_embeddings,
+        )
     return None
 
 
@@ -348,7 +366,7 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
     """
     client = qdrant_client()
     encoder = dense_encoder()
-    vector_name = encoder.model_short_name()
+    encoder_sparse = sparse_encoder()
     metadata = []
     ids = []
     docs = []
@@ -381,7 +399,13 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
         ids.extend(split_ids)
     if len(docs) > 0:
         embeddings = encoder.embed_documents(docs)
-        points = points_generator(ids, metadata, embeddings, vector_name)
+        sparse_embeddings = encoder_sparse.embed_documents(docs)
+        points = points_generator(
+            ids,
+            metadata,
+            dense_encoded_docs=embeddings,
+            sparse_encoded_docs=sparse_embeddings,
+        )
         client.upload_points(CONTENT_FILES_COLLECTION_NAME, points=points, wait=False)
 
 
@@ -390,10 +414,11 @@ def _process_content_embeddings(serialized_content):
     Chunk and embed content file documents
     """
     embeddings = []
+    sparse_embeddings = []
     metadata = []
     ids = []
     encoder = dense_encoder()
-    vector_name = encoder.model_short_name()
+    encoder_sparse = sparse_encoder()
     remove_docs = []
     for doc in serialized_content:
         embedding_context = _content_file_embedding_context(doc)
@@ -439,6 +464,7 @@ def _process_content_embeddings(serialized_content):
             for md in split_metadatas
         ]
         split_embeddings = []
+        split_sparse_embeddings = []
         """
         Break up requests according to chunk size to stay under openai limits
         600,000 tokens per request
@@ -451,13 +477,22 @@ def _process_content_embeddings(serialized_content):
         for i in range(0, len(split_texts), request_chunk_size):
             split_chunk = split_texts[i : i + request_chunk_size]
             split_embeddings.extend(list(encoder.embed_documents(split_chunk)))
+            split_sparse_embeddings.extend(
+                list(encoder_sparse.embed_documents(split_chunk))
+            )
         embeddings.extend(split_embeddings)
+        sparse_embeddings.extend(split_sparse_embeddings)
         metadata.extend(split_metadatas)
         ids.extend(split_ids)
     if remove_docs:
         remove_qdrant_records(remove_docs, CONTENT_FILE_TYPE)
     if ids:
-        return points_generator(ids, metadata, embeddings, vector_name)
+        return points_generator(
+            ids,
+            metadata,
+            dense_encoded_docs=embeddings,
+            sparse_encoded_docs=sparse_embeddings,
+        )
     return None
 
 

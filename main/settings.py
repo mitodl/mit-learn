@@ -783,10 +783,11 @@ QDRANT_BASE_COLLECTION_NAME = get_string(
     name="QDRANT_COLLECTION_NAME", default="resource_embeddings"
 )
 QDRANT_DENSE_MODEL = get_string(name="QDRANT_DENSE_MODEL", default=None)
-QDRANT_SPARSE_MODEL = get_string(
-    name="QDRANT_SPARSE_MODEL", default="prithivida/Splade_PP_en_v1"
+QDRANT_SPARSE_MODEL = get_string(name="QDRANT_SPARSE_MODEL", default="Qdrant/bm25")
+QDRANT_SPARSE_ENCODER = get_string(
+    name="QDRANT_SPARSE_ENCODER",
+    default="vector_search.encoders.fastembed.FastEmbedEncoder",
 )
-
 QDRANT_CHUNK_SIZE = get_int(
     name="QDRANT_CHUNK_SIZE",
     default=100,
