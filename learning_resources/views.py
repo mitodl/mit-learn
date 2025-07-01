@@ -306,7 +306,7 @@ class LearningResourceViewSet(
 
     @extend_schema(
         summary="Get learning resources summary",
-        description="Get a paginated list of learning resources with summary data.",
+        description="Get a paginated list of learning resources with summary fields",
         responses=LearningResourceSummarySerializer(many=True),
     )
     @action(
@@ -321,6 +321,7 @@ class LearningResourceViewSet(
 
         Returns:
             Paginated list of learning resources with summary fields only.
+            Intended to be performant with large page sizes.
         """
         queryset = self.filter_queryset(
             self.get_queryset().values("id", "last_modified")
