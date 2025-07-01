@@ -127,7 +127,7 @@ const getCoursewareText = ({
   enrollmentStatus?: EnrollmentStatus | null
   courseNoun: string
 }) => {
-  if (enrollmentStatus === EnrollmentStatus.NotEnrolled || !enrollmentStatus) {
+  if (!enrollmentStatus || enrollmentStatus === EnrollmentStatus.NotEnrolled) {
     return "Enroll"
   }
   if (!endDate) return `Continue ${courseNoun}`
@@ -153,13 +153,13 @@ const CoursewareButton = styled(
       enrollmentStatus,
     })
     const hasStarted = startDate && isInPast(startDate)
-    const notEnrolled =
-      enrollmentStatus === EnrollmentStatus.NotEnrolled || !enrollmentStatus
+    const hasEnrolled =
+      enrollmentStatus && enrollmentStatus !== EnrollmentStatus.NotEnrolled
     const createEnrollment = useCreateEnrollment({
       readable_id: coursewareId ?? "",
     })
     return hasStarted && href ? (
-      !notEnrolled ? (
+      hasEnrolled ? (
         <ButtonLink
           size="small"
           variant="primary"
