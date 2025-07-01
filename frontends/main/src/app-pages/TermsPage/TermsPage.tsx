@@ -59,9 +59,12 @@ const BodyText = styled(Typography)(({ theme }) => ({
 }))
 
 const UnorderedList = styled.ul(({ theme }) => ({
+  alignSelf: "stretch",
   ...theme.typography.body1,
   marginTop: "10px",
 }))
+
+const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME
 
 const TermsPage: React.FC = () => {
   return (
@@ -81,17 +84,17 @@ const TermsPage: React.FC = () => {
         </BannerContainer>
         <BodyContainer>
           <BodyText variant="body1">
-            Welcome to MIT Learn – the Massachusetts Institute of Technology's
+            Welcome to {SITE_NAME} – the Massachusetts Institute of Technology's
             single online platform for accessing all of MIT's non-degree
-            learning resources. Through MIT Learn, learners across the globe can
-            search and browse courses, programs, and various educational
+            learning resources. Through {SITE_NAME}, learners across the globe
+            can search and browse courses, programs, and various educational
             materials from across MIT, including Universal AI, MITx, MIT
             OpenCourseWare, MIT Professional Education, MIT Sloan Executive
             Education, MIT xPRO, and other departments across the Institute
             ("Offerings").
           </BodyText>
           <BodyText variant="body1">
-            Please read these Terms of Service ("TOS") and the MIT Learn{" "}
+            Please read these Terms of Service ("TOS") and the {SITE_NAME}{" "}
             <Link href={urls.PRIVACY} color="red" size="large">
               Privacy Policy
             </Link>{" "}
@@ -99,8 +102,9 @@ const TermsPage: React.FC = () => {
             <Link href={urls.PRIVACY} color="red" size="large">
               Honor Code
             </Link>{" "}
-            prior to registering for a MIT Learn account or using any portion of
-            the MIT Learn website ("Site"), including accessing any Offering.
+            prior to registering for a {SITE_NAME} account or using any portion
+            of the {SITE_NAME} website ("Site"), including accessing any
+            Offering.
           </BodyText>
           <BodyText variant="body1">
             These TOS, the Privacy Policy, and the Honor Code are agreements
@@ -110,7 +114,7 @@ const TermsPage: React.FC = () => {
             legally bound by the Agreements, whether or not you are a registered
             user. If you do not understand or do not wish to be bound by the
             terms of the Agreements, you should not use the Site. As used in
-            this Terms of Service, "we," "us," and "our" refer to MIT Learn.
+            this Terms of Service, "we," "us," and "our" refer to {SITE_NAME}.
           </BodyText>
           <BodyText variant="body1">
             We reserve the right to modify these TOS at any time without advance
@@ -135,13 +139,13 @@ const TermsPage: React.FC = () => {
             United States export control laws.
           </BodyText>
           <BodyText variant="body1">
-            As a condition of your use of the MIT Learn, you will not use the
+            As a condition of your use of the {SITE_NAME}, you will not use the
             Site or any Offering in any manner intended to damage, disable,
-            overburden, or impair any MIT Learn server(s) or the network(s)
-            connected to any MIT Learn server, or to interfere with any other
+            overburden, or impair any {SITE_NAME} server(s) or the network(s)
+            connected to any {SITE_NAME} server, or to interfere with any other
             party's use and enjoyment of the Site. You may not attempt to gain
             unauthorized access to the Site, other accounts, computer systems,
-            or networks connected to any MIT Learn server through hacking,
+            or networks connected to any {SITE_NAME} server through hacking,
             password mining, or any other means. You may not obtain or attempt
             to obtain any materials or information stored on the Site, its
             servers, or associated computers through any means not intentionally
@@ -163,24 +167,24 @@ const TermsPage: React.FC = () => {
           </BodyText>
 
           <UnorderedList>
-            <li>Content that defames, harasses, or threatens others&#59;</li>
+            <li>Content that defames, harasses, or threatens others;</li>
             <li>
               Content that discusses illegal activities with the intent to
-              commit them&#59;
+              commit them;
             </li>
             <li>
               Content that infringes another's intellectual property, including,
-              but not limited to, copyrights or trademarks&#59;
+              but not limited to, copyrights or trademarks;
             </li>
             <li>
               Profane, pornographic, obscene, indecent, or unlawful content;
             </li>
-            <li>Advertising or any form of commercial solicitation&#59;</li>
-            <li>Content related to partisan political activities&#59;</li>
+            <li>Advertising or any form of commercial solicitation;</li>
+            <li>Content related to partisan political activities;</li>
             <li>
               Viruses, Trojan horses, worms, time bombs, corrupted files,
               malware, spyware, or any other similar software that may damage
-              the operation of another's computer or property&#59; and
+              the operation of another's computer or property; and
             </li>
             <li>
               Content that contains intentionally inaccurate information or that
@@ -265,17 +269,17 @@ const TermsPage: React.FC = () => {
             By submitting or distributing your User Postings, you affirm,
             represent, and warrant (1) that you have the necessary rights,
             licenses, consents, and/or permissions to reproduce and publish the
-            User Postings and to authorize MIT Learn and its users to reproduce,
-            modify, publish, and otherwise use and distribute your User Postings
-            in a manner consistent with the licenses granted by you below, and
-            (2) that neither your submission of your User Postings nor the
-            exercise of the licenses granted below will infringe or violate the
-            rights of any third party. You, and not we, are solely responsible
-            for your User Postings and the consequences of posting or publishing
-            them.
+            User Postings and to authorize {SITE_NAME} and its users to
+            reproduce, modify, publish, and otherwise use and distribute your
+            User Postings in a manner consistent with the licenses granted by
+            you below, and (2) that neither your submission of your User
+            Postings nor the exercise of the licenses granted below will
+            infringe or violate the rights of any third party. You, and not we,
+            are solely responsible for your User Postings and the consequences
+            of posting or publishing them.
           </BodyText>
           <BodyText variant="body1" style={{ fontWeight: "bold" }}>
-            License Grant to MIT Learn.
+            License Grant to {SITE_NAME}.
           </BodyText>
           <BodyText variant="body1">
             By submitting or distributing your User Postings, you hereby grant
@@ -288,7 +292,7 @@ const TermsPage: React.FC = () => {
             now known or hereafter developed.
           </BodyText>
           <BodyText variant="body1" style={{ fontWeight: "bold" }}>
-            License Grant to MIT Learn Users.
+            License Grant to {SITE_NAME} Users.
           </BodyText>
           <BodyText variant="body1">
             By submitting or distributing your User Postings, you hereby grant
@@ -318,42 +322,42 @@ const TermsPage: React.FC = () => {
             authenticate your identity for verified Proctoring, you will be
             prompted to take a webcam photo of yourself, as well as a photo of
             an acceptable form of photo ID (described below). Although these
-            items are collected by MIT Learn in accordance with these TOS and
+            items are collected by {SITE_NAME} in accordance with these TOS and
             the Privacy Policy, you should be aware that the actual
-            authentication of your identity is performed by a MIT Learn
+            authentication of your identity is performed by a {SITE_NAME}
             third-party service provider and this information will be used only
             for the purpose of verifying your identity. Acceptable forms of
             photo ID's are:
-            <UnorderedList>
-              <li>Government or State-issued driver's license</li>
-              <li>Passport</li>
-              <li>National ID card</li>
-              <li>
-                State or Province ID card (including cards issued by motor
-                vehicle agencies)
-              </li>
-            </UnorderedList>
           </BodyText>
+          <UnorderedList>
+            <li>Government or State-issued driver's license</li>
+            <li>Passport</li>
+            <li>National ID card</li>
+            <li>
+              State or Province ID card (including cards issued by motor vehicle
+              agencies)
+            </li>
+          </UnorderedList>
           <BodyText variant="body1">
-            In order to be accepted by MIT Learn, your photo ID must:
-            <UnorderedList>
-              <li>
-                Contain your full name exactly (excluding hyphens, accents, and
-                spaces);
-              </li>
-              <li>Contain a relatively current photograph of yourself;</li>
-              <li>
-                Be an original document; photocopied documents cannot be
-                accepted; and
-              </li>
-              <li>
-                Be current and valid; expired documents cannot be accepted.
-              </li>
-            </UnorderedList>
+            In order to be accepted by {SITE_NAME}, your photo ID must:
           </BodyText>
+
+          <UnorderedList>
+            <li>
+              Contain your full name exactly (excluding hyphens, accents, and
+              spaces);
+            </li>
+            <li>Contain a relatively current photograph of yourself</li>
+            <li>
+              Be an original document; photocopied documents cannot be accepted;
+              and
+            </li>
+            <li>Be current and valid; expired documents cannot be accepted.</li>
+          </UnorderedList>
+
           <BodyText variant="body1">
             Unfortunately, if you do not possess a photo ID meeting the criteria
-            described above, MIT Learn is unable to validate your identity for
+            described above, {SITE_NAME} is unable to validate your identity for
             ID verified proctoring.
           </BodyText>
 
@@ -411,9 +415,10 @@ const TermsPage: React.FC = () => {
           </BodyText>
           <BodyText variant="body1">
             Once your payment transaction is completed, you will be re-routed to
-            an MIT Learn confirmation page and will receive a confirmation email
-            with your name, order number, and the payment amount. This email may
-            originate from Vendor. Please retain this email for your records.
+            an {SITE_NAME} confirmation page and will receive a confirmation
+            email with your name, order number, and the payment amount. This
+            email may originate from Vendor. Please retain this email for your
+            records.
           </BodyText>
           <BodyText variant="body1" style={{ fontWeight: "bold" }}>
             Refunds.
@@ -448,22 +453,22 @@ const TermsPage: React.FC = () => {
           </BodyText>
           <BodyText variant="body1">
             When you register for, take, or complete a module / course through
-            MIT Learn, you will not be an applicant for admission to, or
+            {SITE_NAME}, you will not be an applicant for admission to, or
             enrolled in, any degree program of MIT. You will not be entitled to
             use any of the resources of MIT beyond the online modules / courses
             provided on the Site, nor will you be eligible to receive the
             privileges or benefits provided to students enrolled in degree
             programs of MIT. You may not imply or state in any manner, written
-            or oral, that MIT or MIT Learn is granting academic credit for
+            or oral, that MIT or {SITE_NAME} is granting academic credit for
             enrollment in this professional module / course. None of the modules
-            / courses offered through MIT Learn award academic credit or
+            / courses offered through {SITE_NAME} award academic credit or
             degrees.
           </BodyText>
           <Header component="h1" variant="h3">
             Trademarks
           </Header>
           <BodyText variant="body1">
-            The MIT Learn names, logos and seals are trademarks ("Trademarks")
+            The {SITE_NAME} names, logos and seals are trademarks ("Trademarks")
             of MIT. You may not use any of these Trademarks, or any variations
             thereof, without MIT's prior written consent. You may not use any of
             these Trademarks, or any variations thereof, for promotional
@@ -527,14 +532,14 @@ const TermsPage: React.FC = () => {
             APPLICABLE LAW.
           </BodyText>
           <BodyText variant="body1">
-            MIT LEARN AND COLLABORATORS (AS HEREINAFTER DEFINED) DO NOT WARRANT
-            THAT THE SITE WILL OPERATE IN AN UNINTERRUPTED OR ERROR-FREE MANNER,
-            THAT THE SITE IS FREE OF VIRUSES OR OTHER HARMFUL COMPONENTS, OR
-            THAT THE MODULES OR CONTENT PROVIDED WILL MEET YOUR NEEDS OR
-            EXPECTATIONS.
+            {SITE_NAME} AND COLLABORATORS (AS HEREINAFTER DEFINED) DO NOT
+            WARRANT THAT THE SITE WILL OPERATE IN AN UNINTERRUPTED OR ERROR-FREE
+            MANNER, THAT THE SITE IS FREE OF VIRUSES OR OTHER HARMFUL
+            COMPONENTS, OR THAT THE MODULES OR CONTENT PROVIDED WILL MEET YOUR
+            NEEDS OR EXPECTATIONS.
           </BodyText>
           <BodyText variant="body1">
-            MIT LEARN AND COLLABORATORS ALSO MAKE NO WARRANTY ABOUT THE
+            {SITE_NAME} AND COLLABORATORS ALSO MAKE NO WARRANTY ABOUT THE
             ACCURACY, COMPLETENESS, TIMELINESS, OR QUALITY OF THE SITE OR ANY
             MODULES OR CONTENT, OR THAT ANY PARTICULAR MODULES OR CONTENT WILL
             CONTINUE TO BE MADE AVAILABLE. "COLLABORATORS" MEANS MIT, THE
@@ -556,18 +561,19 @@ const TermsPage: React.FC = () => {
           </BodyText>
           <BodyText variant="body1">
             You understand that when using the Site, you will be exposed to User
-            Postings from a variety of sources and that neither MIT Learn nor
+            Postings from a variety of sources and that neither {SITE_NAME} nor
             Collaborator are responsible for the accuracy, usefulness,
             reliability, or intellectual property rights of or relating to such
             User Postings. You further understand and acknowledge that you may
             be exposed to User Postings that are inaccurate, offensive,
             defamatory, indecent, or objectionable and you agree to waive, and
             hereby do waive, any legal or equitable rights or remedies you have
-            or may have against MIT Learn or Collaborators with respect thereto.
-            Neither MIT Learn nor Collaborators endorse any User Postings or any
-            opinion, recommendation, or advice expressed therein. Neither MIT
-            Learn nor Collaborators have any obligation to monitor any User
-            Postings or any other user communications through the Site.
+            or may have against {SITE_NAME} or Collaborators with respect
+            thereto. Neither {SITE_NAME} nor Collaborators endorse any User
+            Postings or any opinion, recommendation, or advice expressed
+            therein. Neither MIT Learn nor Collaborators have any obligation to
+            monitor any User Postings or any other user communications through
+            the Site.
           </BodyText>
           <BodyText variant="body1">
             However, we reserve the right to review User Postings and to
@@ -584,12 +590,12 @@ const TermsPage: React.FC = () => {
             Minors.
           </BodyText>
           <BodyText variant="body1">
-            The MIT Learn site and MIT Learn Modules / Courses are not intended
-            for children under 13 years of age, and no one under age 13 may
-            provide any personal information to us or through the Site. We do
-            not knowingly collect personal information from children under age
-            13. If you are under 13, do not use or provide any information on
-            our Site or on or through our services. If we learn that we have
+            The {SITE_NAME} site and {SITE_NAME} Modules / Courses are not
+            intended for children under 13 years of age, and no one under age 13
+            may provide any personal information to us or through the Site. We
+            do not knowingly collect personal information from children under
+            age 13. If you are under 13, do not use or provide any information
+            on our Site or on or through our services. If we learn that we have
             collected personal information from a child under age 13, we will
             delete it.
           </BodyText>
@@ -598,7 +604,7 @@ const TermsPage: React.FC = () => {
           </BodyText>
           <BodyText variant="body1">
             The Site may include hyperlinks to sites maintained or controlled by
-            others. MIT Learn and Collaborators are not responsible for and do
+            others. {SITE_NAME} and Collaborators are not responsible for and do
             not routinely screen, approve, review, or endorse the contents of or
             use of any of the products or services that may be offered at these
             sites. If you decide to access linked third-party websites, you do
@@ -606,7 +612,7 @@ const TermsPage: React.FC = () => {
           </BodyText>
           <BodyText variant="body1">
             TO THE FULLEST EXTENT PERMITTED BY APPLICABLE LAW, YOU AGREE THAT
-            NEITHER MIT LEARN NOR COLLABORATORS WILL BE LIABLE TO YOU FOR ANY
+            NEITHER {SITE_NAME} NOR COLLABORATORS WILL BE LIABLE TO YOU FOR ANY
             LOSS OR DAMAGES, EITHER ACTUAL OR CONSEQUENTIAL, ARISING OUT OF OR
             RELATING TO THESE TERMS OF SERVICE, OR YOUR (OR ANY THIRD PARTY'S)
             USE OF OR INABILITY TO USE THE SITE, OR YOUR PLACEMENT OF CONTENT ON
@@ -616,12 +622,14 @@ const TermsPage: React.FC = () => {
           </BodyText>
           <BodyText variant="body1">
             IN PARTICULAR, TO THE FULLEST EXTENT PERMITTED BY APPLICABLE LAW,
-            NEITHER MIT LEARN NOR COLLABORATORS WILL HAVE ANY LIABILITY FOR ANY
-            CONSEQUENTIAL, INDIRECT, PUNITIVE, SPECIAL, EXEMPLARY, OR INCIDENTAL
-            DAMAGES, WHETHER FORESEEABLE OR UNFORESEEABLE, AND WHETHER OR NOT
-            MIT LEARN OR COLLABORATORS HAVE BEEN NEGLIGENT OR OTHERWISE AT FAULT
-            (INCLUDING, BUT NOT LIMITED TO, CLAIMS FOR DEFAMATION, ERRORS, LOSS
-            OF PROFITS, LOSS OF DATA, OR INTERRUPTION IN AVAILABILITY OF DATA).
+            NEITHER {SITE_NAME} NOR COLLABORATORS WILL HAVE ANY LIABILITY FOR
+            ANY CONSEQUENTIAL, INDIRECT, PUNITIVE, SPECIAL, EXEMPLARY, OR
+            INCIDENTAL DAMAGES, WHETHER FORESEEABLE OR UNFORESEEABLE, AND
+            WHETHER OR NOT
+            {SITE_NAME} OR COLLABORATORS HAVE BEEN NEGLIGENT OR OTHERWISE AT
+            FAULT (INCLUDING, BUT NOT LIMITED TO, CLAIMS FOR DEFAMATION, ERRORS,
+            LOSS OF PROFITS, LOSS OF DATA, OR INTERRUPTION IN AVAILABILITY OF
+            DATA).
           </BodyText>
           <BodyText variant="body1">
             CERTAIN STATE LAWS DO NOT ALLOW LIMITATIONS ON IMPLIED WARRANTIES OR
@@ -635,7 +643,7 @@ const TermsPage: React.FC = () => {
             Indemnification
           </Header>
           <BodyText variant="body1">
-            You agree to defend, hold harmless, and indemnify MIT Learn, and
+            You agree to defend, hold harmless, and indemnify {SITE_NAME}, and
             their respective subsidiaries, affiliates, officers, faculty,
             students, fellows, governing board members, agents, and employees
             from and against any third party claims, actions or demands arising
@@ -643,7 +651,7 @@ const TermsPage: React.FC = () => {
             or in any Offering, including any liability or expense arising from
             any and all claims, losses, damages (actual and consequential),
             suits, judgments, litigation costs, and attorneys' fees, of every
-            kind and nature. In such a case, MIT Learn or a Participant will
+            kind and nature. In such a case, {SITE_NAME} or a Participant will
             provide you with written notice of such claim, suit, or action.
           </BodyText>
 
@@ -662,7 +670,7 @@ const TermsPage: React.FC = () => {
             such breach within 30 days of receiving written notice from us about
             the breach. We reserve the right at any time in our sole discretion
             to cancel, postpone, reschedule, or alter the format of any Offering
-            provided offered through MIT Learn, or to cease providing any part
+            provided offered through {SITE_NAME}, or to cease providing any part
             or all of the Site content or related services. If you no longer
             desire to participate in the Site, you may terminate your access at
             any time. The rights granted to you hereunder will terminate upon
@@ -674,7 +682,7 @@ const TermsPage: React.FC = () => {
           </BodyText>
           <BodyText variant="body1">
             These TOS, the Honor Code, and the Privacy Policy together
-            constitute the entire agreement between you and MIT Learn with
+            constitute the entire agreement between you and {SITE_NAME} with
             respect to your use of the Site and its Offerings, superseding any
             prior agreements between you and MIT regarding your use of the Site.
           </BodyText>
