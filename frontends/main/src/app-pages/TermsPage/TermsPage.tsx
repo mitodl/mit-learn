@@ -99,7 +99,7 @@ const TermsPage: React.FC = () => {
               Privacy Policy
             </Link>{" "}
             and{" "}
-            <Link href={urls.PRIVACY} color="red" size="large">
+            <Link href={urls.HONOR_CODE} color="red" size="large">
               Honor Code
             </Link>{" "}
             prior to registering for a {SITE_NAME} account or using any portion
