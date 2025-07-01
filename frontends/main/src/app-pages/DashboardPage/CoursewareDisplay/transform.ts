@@ -27,6 +27,7 @@ const mitxonlineEnrollment = (raw: CourseRunEnrollment): DashboardCourse => {
   const course = raw.run.course
   return {
     id: getId(sources.mitxonline, DashboardResourceType.Course, course.id),
+    coursewareId: raw.run.courseware_id ?? null,
     type: DashboardResourceType.Course,
     title: course.title,
     marketingUrl: course.page.page_url,
@@ -57,6 +58,7 @@ const mitxonlineUnenrolledCourse = (
   const run = course.courseruns.find((run) => run.id === course.next_run_id)
   return {
     id: getId(sources.mitxonline, DashboardResourceType.Course, course.id),
+    coursewareId: run?.courseware_id ?? null,
     type: DashboardResourceType.Course,
     title: course.title,
     marketingUrl: course.page.page_url,
