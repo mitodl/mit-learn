@@ -44,3 +44,10 @@ function formatSitemapIndex(sitemapUrls: string[]) {
   xml += "</sitemapindex>"
   return xml
 }
+
+/**
+ * By default in NextJS, this route would be statically generated at build time
+ * since it does not access a [dynamic api](https://nextjs.org/docs/app/guides/caching#dynamic-apis)
+ * We force it to be rendered for each request; caching headers are set in next.config.js
+ */
+export const dynamic = "force-dynamic"
