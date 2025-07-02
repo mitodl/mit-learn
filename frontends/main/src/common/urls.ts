@@ -108,6 +108,8 @@ export const ACCESSIBILITY = "https://accessibility.mit.edu/"
 
 export const PRIVACY = "/privacy"
 
+export const HONOR_CODE = "/honor_code"
+
 export const TERMS = "/terms"
 
 export const UNITS = "/units"
