@@ -5,7 +5,7 @@ import { HOME } from "@/common/urls"
 import Image from "next/image"
 import backgroundImage from "@/public/images/backgrounds/error_page_background.svg"
 import timImage from "@/public/images/tim_three_quarter_half.svg"
-import timSpeechBubble from "@/public/images/_Group_.svg"
+import timSpeechBubble from "@/public/images/tim_speech_bubble.svg"
 
 type ErrorPageTemplateProps = {
   title: string
