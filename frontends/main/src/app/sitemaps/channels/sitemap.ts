@@ -33,7 +33,16 @@ export default async function sitemap({
   })
 
   return data.results.map((channel) => ({
-    url: `${BASE_URL}/c/${channel.channel_type}/${channel.name}`,
-    changeFrequency: "monthly",
+    url: channel.channel_url,
   }))
 }
+
+/**
+ * By default in NextJS, sitemaps are statically generated at build time.
+ * We want to ensure up-to-date sitemaps.
+ *
+ * This forces the sitemaps to be rendered for each request.
+ * However, we we set s-maxage in the headers (next.config.js) to enable caching
+ * by a CDN.
+ */
+export const dynamic = "force-dynamic"
