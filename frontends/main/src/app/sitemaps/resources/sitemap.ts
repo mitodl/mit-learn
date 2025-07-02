@@ -29,17 +29,28 @@ export async function generateSitemaps(): Promise<GenerateSitemapResult[]> {
 }
 
 export default async function sitemap({
+  id,
   limit,
   offset,
 }: GenerateSitemapResult): Promise<MetadataRoute.Sitemap> {
-  const { data } = await learningResourcesApi.learningResourcesList({
+  console.log(`Generating sitemap for resources, page: ${id}`)
+  const { data } = await learningResourcesApi.learningResourcesSummaryList({
     limit,
     offset,
   })
 
   return data.results.map((resource) => ({
     url: `${BASE_URL}/search?resource=${resource.id}`,
-    changeFrequency: "monthly",
     lastModified: resource.last_modified ?? undefined,
   }))
 }
+
+/**
+ * By default in NextJS, sitemaps are statically generated at build time.
+ * We want to ensure up-to-date sitemaps.
+ *
+ * This forces the sitemaps to be rendered for each request.
+ * However, we we set s-maxage in the headers (next.config.js) to enable caching
+ * by a CDN.
+ */
+export const dynamic = "force-dynamic"
