@@ -3466,7 +3466,7 @@ paths:
   /api/v1/learning_resources/summary/:
     get:
       operationId: learning_resources_summary_list
-      description: Get a paginated list of learning resources with summary data.
+      description: Get a paginated list of learning resources with summary fields
       summary: Get learning resources summary
       parameters:
       - in: query
