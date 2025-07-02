@@ -7,7 +7,6 @@ invariant(process.env.NEXT_PUBLIC_ORIGIN, "NEXT_PUBLIC_ORIGIN must be defined")
 const BASE_URL: string = process.env.NEXT_PUBLIC_ORIGIN
 
 export async function GET() {
-  console.log("gogo sitemap index")
   const content = await buildSitemapIndex()
   return new NextResponse(content, {
     headers: {

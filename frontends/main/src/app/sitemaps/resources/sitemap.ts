@@ -29,11 +29,9 @@ export async function generateSitemaps(): Promise<GenerateSitemapResult[]> {
 }
 
 export default async function sitemap({
-  id,
   limit,
   offset,
 }: GenerateSitemapResult): Promise<MetadataRoute.Sitemap> {
-  console.log(`Generating sitemap for resources, page: ${id}`)
   const { data } = await learningResourcesApi.learningResourcesSummaryList({
     limit,
     offset,
