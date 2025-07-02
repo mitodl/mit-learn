@@ -13784,7 +13784,7 @@ export const LearningResourcesApiAxiosParamCreator = function (
       }
     },
     /**
-     * Get a paginated list of learning resources with summary data.
+     * Get a paginated list of learning resources with summary fields
      * @summary Get learning resources summary
      * @param {boolean} [certification]
      * @param {Array<LearningResourcesSummaryListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
@@ -14555,7 +14555,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
         )(axios, operationBasePath || basePath)
     },
     /**
-     * Get a paginated list of learning resources with summary data.
+     * Get a paginated list of learning resources with summary fields
      * @summary Get learning resources summary
      * @param {boolean} [certification]
      * @param {Array<LearningResourcesSummaryListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
@@ -14961,7 +14961,7 @@ export const LearningResourcesApiFactory = function (
         .then((request) => request(axios, basePath))
     },
     /**
-     * Get a paginated list of learning resources with summary data.
+     * Get a paginated list of learning resources with summary fields
      * @summary Get learning resources summary
      * @param {LearningResourcesApiLearningResourcesSummaryListRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
@@ -15986,7 +15986,7 @@ export class LearningResourcesApi extends BaseAPI {
   }
 
   /**
-   * Get a paginated list of learning resources with summary data.
+   * Get a paginated list of learning resources with summary fields
    * @summary Get learning resources summary
    * @param {LearningResourcesApiLearningResourcesSummaryListRequest} requestParameters Request parameters.
    * @param {*} [options] Override http request option.
