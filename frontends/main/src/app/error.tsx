@@ -28,7 +28,7 @@ const Error = ({ error }: { error: Error }) => {
     return <ForbiddenPage />
   }
 
-  return <FallbackErrorPage error={error} />
+  return <FallbackErrorPage />
 }
 
 export default Error
