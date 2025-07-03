@@ -7,7 +7,7 @@ import { dangerouslyDetectProductionBuildPhase } from "../util"
 const BASE_URL = process.env.NEXT_PUBLIC_ORIGIN
 invariant(BASE_URL, "NEXT_PUBLIC_ORIGIN must be defined")
 
-const TRY_FOR_PAGE_SIZE = 100
+const PAGE_SIZE = 100
 
 /**
  * By default in NextJS, sitemaps are statically generated at build time.
@@ -25,26 +25,23 @@ export async function generateSitemaps(): Promise<GenerateSitemapResult[]> {
    * Early exist here to avoid the useless build-time API calls.
    */
   if (dangerouslyDetectProductionBuildPhase()) return []
-  const { count, results } = (
-    await channelsApi.channelsList({ limit: TRY_FOR_PAGE_SIZE })
-  ).data
-  // In case api has a lower limit than PAGE_SIZE, calculate the page size based on the results
-  const pageSize = results.length
-  const pages = Math.ceil(count / pageSize)
+  const { count } = (await channelsApi.channelsList({ limit: PAGE_SIZE })).data
+
+  const pages = Math.ceil(count / PAGE_SIZE)
   return new Array(pages).fill(null).map((_, index) => ({
     id: index,
-    limit: pageSize,
-    offset: index * pageSize,
     location: `${BASE_URL}/sitemaps/channels/sitemap/${index}.xml`,
   }))
 }
 
 export default async function sitemap({
-  limit,
-  offset,
-}: GenerateSitemapResult): Promise<MetadataRoute.Sitemap> {
+  id,
+}: {
+  id: string
+}): Promise<MetadataRoute.Sitemap> {
+  const offset = +id * PAGE_SIZE
   const { data } = await channelsApi.channelsList({
-    limit,
+    limit: PAGE_SIZE,
     offset,
   })
 

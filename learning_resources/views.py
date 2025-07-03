@@ -139,13 +139,6 @@ class LargePagination(DefaultPagination):
     max_limit = 1000
 
 
-class VeryLargePagination(DefaultPagination):
-    """Large pagination for small resources, e.g., topics."""
-
-    default_limit = 10000
-    max_limit = 10000
-
-
 @extend_schema_view(
     list=extend_schema(
         summary="List",
@@ -313,7 +306,7 @@ class LearningResourceViewSet(
         detail=False,
         methods=["GET"],
         name="Get learning resources summary",
-        pagination_class=VeryLargePagination,
+        pagination_class=LargePagination,
     )
     def summary(self, request, **kwargs):  # noqa: ARG002
         """

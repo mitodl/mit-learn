@@ -5,17 +5,16 @@ import { setMockResponse, urls, factories } from "api/test-utils"
 const { resourceSummaries } = factories.learningResources
 
 describe("Resource Sitemaps", () => {
-  it("returns expected sitemap configuration for small datasets", async () => {
+  it("returns expected sitemap params", async () => {
     // Mock API response with fewer resources than TRY_FOR_PAGE_SIZE
-    const pageSize = faker.number.int({ min: 8, max: 10 })
     const pages = faker.number.int({ min: 4, max: 6 })
     const summaries = resourceSummaries({
-      count: pageSize * pages - 2,
-      pageSize,
+      count: pages * 1_000 - 350,
+      pageSize: 10, // should be 1_000, but let's keep it small for test
     })
 
     setMockResponse.get(
-      urls.learningResources.summaryList({ limit: 10_000 }),
+      urls.learningResources.summaryList({ limit: 1_000 }),
       summaries,
     )
 
@@ -25,33 +24,27 @@ describe("Resource Sitemaps", () => {
     expect(result).toEqual(
       new Array(pages).fill(null).map((_, index) => ({
         id: index,
-        limit: pageSize,
-        offset: index * pageSize,
         location: `http://test.learn.odl.local:8062/sitemaps/resources/sitemap/${index}.xml`,
       })),
     )
   })
 
-  it("generates expected sitemap GIVEN params from generateSitemaps", async () => {
-    const offset = faker.number.int({ min: 0, max: 100 })
-    // First, set up generateSitemaps to return some params
-    const pageSize = 5
+  it("generates expected sitemap/<id>", async () => {
+    const page = faker.number.int({ min: 5, max: 10 })
     const summaries = resourceSummaries({
-      count: 200,
-      pageSize,
+      count: 15_000,
+      pageSize: 5, // should be 1_000, but let's keep it small for test
     })
 
     setMockResponse.get(
-      urls.learningResources.summaryList({ limit: pageSize, offset }),
+      urls.learningResources.summaryList({
+        limit: 1_000,
+        offset: page * 1_000,
+      }),
       summaries,
     )
 
-    const sitemapPage = await sitemap({
-      limit: pageSize,
-      offset,
-      id: 3,
-      location: "whatever",
-    })
+    const sitemapPage = await sitemap({ id: String(page) })
     expect(sitemapPage).toEqual(
       summaries.results.map((resource) => ({
         url: `http://test.learn.odl.local:8062/search?resource=${resource.id}`,

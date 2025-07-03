@@ -9,8 +9,8 @@ export type GenerateSitemapResult = {
   id: number
   /**
    * We use this to generate the sitemap index file
+   *
+   * NOT passed to the sitemap function
    */
   location: string
-  limit: number
-  offset: number
 }

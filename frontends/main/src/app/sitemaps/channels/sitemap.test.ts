@@ -6,12 +6,10 @@ const { channels: makeChannels } = factories.channels
 
 describe("Resource Sitemaps", () => {
   it("returns expected sitemap configuration for small datasets", async () => {
-    // Mock API response with fewer resources than TRY_FOR_PAGE_SIZE
-    const pageSize = faker.number.int({ min: 8, max: 10 })
     const pages = faker.number.int({ min: 4, max: 6 })
     const channels = makeChannels({
-      count: pageSize * pages - 2,
-      pageSize,
+      count: pages * 100 - 35,
+      pageSize: 10, // should be 100, but let's keep it small for test
     })
 
     setMockResponse.get(urls.channels.list({ limit: 100 }), channels)
@@ -22,32 +20,26 @@ describe("Resource Sitemaps", () => {
     expect(result).toEqual(
       new Array(pages).fill(null).map((c, index) => ({
         id: index,
-        limit: pageSize,
-        offset: index * pageSize,
         location: `http://test.learn.odl.local:8062/sitemaps/channels/sitemap/${index}.xml`,
       })),
     )
   })
 
   it("generates expected sitemap given params from generateSitemaps", async () => {
-    const offset = faker.number.int({ min: 0, max: 100 })
-    // First, set up generateSitemaps to return some params
-    const pageSize = 5
+    const page = faker.number.int({ min: 5, max: 10 })
+
     const channels = makeChannels({
-      count: 200,
-      pageSize,
+      count: 750,
+      pageSize: 5, // should be 100, but let's keep it small for test
     })
 
     setMockResponse.get(
-      urls.channels.list({ limit: pageSize, offset }),
+      urls.channels.list({ limit: 100, offset: 100 * page }),
       channels,
     )
 
     const sitemapPage = await sitemap({
-      limit: pageSize,
-      offset,
-      id: 3,
-      location: "whatever",
+      id: String(page),
     })
     expect(sitemapPage).toEqual(
       channels.results.map((channel) => ({
