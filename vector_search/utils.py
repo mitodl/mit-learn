@@ -106,9 +106,7 @@ def create_qdrant_collections(force_recreate):
                     ),
                 ),
             },
-            sparse_vectors_config={
-                "bm25": models.SparseVectorParams(modifier=models.Modifier.IDF)
-            },
+            sparse_vectors_config=client.get_fastembed_sparse_vector_params(),
             optimizers_config=models.OptimizersConfigDiff(default_segment_number=2),
             quantization_config=models.ScalarQuantization(
                 scalar=models.ScalarQuantizationConfig(
@@ -131,9 +129,7 @@ def create_qdrant_collections(force_recreate):
                     size=encoder.dim(), distance=models.Distance.COSINE
                 ),
             },
-            sparse_vectors_config={
-                "bm25": models.SparseVectorParams(modifier=models.Modifier.IDF)
-            },
+            sparse_vectors_config=client.get_fastembed_sparse_vector_params(),
             optimizers_config=models.OptimizersConfigDiff(default_segment_number=2),
             quantization_config=models.ScalarQuantization(
                 scalar=models.ScalarQuantizationConfig(
