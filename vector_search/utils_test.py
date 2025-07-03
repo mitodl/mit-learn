@@ -634,4 +634,4 @@ def test_embed_learning_resources_summarizes_only_contentfiles_with_summary(mock
 
     # Only contentfiles with summary should be passed
     expected_ids = [cf.id for cf in contentfiles_with_summary]
-    summarize_mock.assert_called_once_with(expected_ids, overwrite=True)
+    summarize_mock.assert_called_once_with(expected_ids, True)  # noqa: FBT003
