@@ -106,7 +106,9 @@ def create_qdrant_collections(force_recreate):
                     ),
                 ),
             },
-            sparse_vectors_config=client.get_fastembed_sparse_vector_params(),
+            sparse_vectors_config={
+                "bm25": models.SparseVectorParams(modifier=models.Modifier.IDF)
+            },
             optimizers_config=models.OptimizersConfigDiff(default_segment_number=2),
             quantization_config=models.ScalarQuantization(
                 scalar=models.ScalarQuantizationConfig(
@@ -129,7 +131,9 @@ def create_qdrant_collections(force_recreate):
                     size=encoder.dim(), distance=models.Distance.COSINE
                 ),
             },
-            sparse_vectors_config=client.get_fastembed_sparse_vector_params(),
+            sparse_vectors_config={
+                "bm25": models.SparseVectorParams(modifier=models.Modifier.IDF)
+            },
             optimizers_config=models.OptimizersConfigDiff(default_segment_number=2),
             quantization_config=models.ScalarQuantization(
                 scalar=models.ScalarQuantizationConfig(
@@ -498,12 +502,17 @@ def embed_learning_resources(ids, resource_type, overwrite):
         points = _process_resource_embeddings(serialized_resources)
         _embed_course_metadata_as_contentfile(serialized_resources)
     else:
-        # Process content files summaries/flashcards if applicable before serialization
-        # TODO: Pass actual Ids when we want scheduled content file summarization  # noqa: FIX002, TD002, TD003 E501
-
-        ContentSummarizer().summarize_content_files_by_ids([], overwrite)
-
         serialized_resources = list(serialize_bulk_content_files(ids))
+        # TODO: Pass actual Ids when we want scheduled content file summarization  # noqa: FIX002, TD002, TD003 E501
+        existing_summary_content_ids = [
+            resource["id"]
+            for resource in serialized_resources
+            if resource.get("summary")
+        ]
+        ContentSummarizer().summarize_content_files_by_ids(
+            existing_summary_content_ids, overwrite
+        )
+
         collection_name = CONTENT_FILES_COLLECTION_NAME
         points = [
             (
