@@ -583,3 +583,55 @@ def test_update_payload_no_points(mocker):
     update_content_file_payload(serialized_files[0])
     # Verify set_payload not called
     mock_qdrant.set_payload.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_embed_learning_resources_summarizes_only_contentfiles_with_summary(mocker):
+    """
+    Test that summarize_content_files_by_ids is only called with contentfiles that have an existing summary
+    """
+    mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
+    mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
+    mocker.patch("vector_search.utils.create_qdrant_collections")
+    mocker.patch("vector_search.utils._process_content_embeddings", return_value=None)
+    mocker.patch(
+        "vector_search.utils.filter_existing_qdrant_points_by_ids", return_value=[]
+    )
+    mocker.patch("vector_search.utils.remove_qdrant_records")
+
+    # Create ContentFiles, some with summary, some without
+    contentfiles_with_summary = ContentFileFactory.create_batch(
+        2, content="abc", summary="summary text"
+    )
+    contentfiles_without_summary = ContentFileFactory.create_batch(
+        3, content="def", summary=None
+    )
+    all_contentfiles = contentfiles_with_summary + contentfiles_without_summary
+
+    # Patch serialize_bulk_content_files to return dicts with/without summary
+    serialized = []
+    for cf in all_contentfiles:
+        d = {
+            "id": cf.id,
+            "resource_readable_id": getattr(cf, "resource_readable_id", "resid"),
+            "run_readable_id": getattr(cf, "run_readable_id", "runid"),
+            "key": getattr(cf, "key", "key"),
+            "summary": cf.summary,
+            "content": cf.content,
+            "checksum": "checksum",
+        }
+        serialized.append(d)
+    mocker.patch(
+        "vector_search.utils.serialize_bulk_content_files", return_value=serialized
+    )
+
+    summarize_mock = mocker.patch(
+        "vector_search.utils.ContentSummarizer.summarize_content_files_by_ids"
+    )
+    embed_learning_resources(
+        [cf.id for cf in all_contentfiles], "content_file", overwrite=True
+    )
+
+    # Only contentfiles with summary should be passed
+    expected_ids = [cf.id for cf in contentfiles_with_summary]
+    summarize_mock.assert_called_once_with(expected_ids, overwrite=True)
