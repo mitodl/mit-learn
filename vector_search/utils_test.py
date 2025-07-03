@@ -604,7 +604,7 @@ def test_embed_learning_resources_summarizes_only_contentfiles_with_summary(mock
         2, content="abc", summary="summary text"
     )
     contentfiles_without_summary = ContentFileFactory.create_batch(
-        3, content="def", summary=None
+        3, content="def", summary=""
     )
     all_contentfiles = contentfiles_with_summary + contentfiles_without_summary
 
