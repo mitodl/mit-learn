@@ -17,14 +17,15 @@ export async function GET() {
 }
 
 async function buildSitemapIndex(): Promise<string> {
+  const sitemaps = await Promise.all([
+    resourceSitemap.generateSitemaps(),
+    channelsSitemap.generateSitemaps(),
+  ])
   const sitemapUrls = [
     `${BASE_URL}/sitemaps/static/sitemap.xml`,
-    ...(await resourceSitemap
-      .generateSitemaps()
-      .then((sitemaps) => sitemaps.map((sitemap) => sitemap.location))),
-    ...(await channelsSitemap
-      .generateSitemaps()
-      .then((sitemaps) => sitemaps.map((sitemap) => sitemap.location))),
+    ...sitemaps.flatMap((sitemap) =>
+      sitemap.map((sitemapItem) => sitemapItem.location),
+    ),
   ]
 
   return formatSitemapIndex(sitemapUrls)
