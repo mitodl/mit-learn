@@ -1352,3 +1352,36 @@ def test_learning_resources_display_info_detail_view(mocker, client):
     )
 
     assert resp.json() == serialized_resource
+
+
+def test_learning_resources_summary_listing_endpoint(django_assert_num_queries, client):
+    published = sorted(
+        [
+            # Some of the factories create multiple resources (e.g., program creates courses, too)
+            # We want to create a specific number, so use courses/videos only
+            *LearningResourceFactory.create_batch(
+                10, published=True, resource_type="course"
+            ),
+            *LearningResourceFactory.create_batch(
+                5, published=True, resource_type="video"
+            ),
+        ],
+        key=lambda lr: lr.id,
+    )
+    # Create some unpublished resources to ensure they are not included in the summary
+    LearningResourceFactory.create_batch(5, published=False, resource_type="course")
+    LearningResourceFactory.create_batch(5, published=False, resource_type="video")
+
+    with django_assert_num_queries(2):
+        # One query for the pagination count, one for the results
+        url = "lr:v1:learning_resources_api-summary"
+        resp = client.get(f"{reverse(url)}")
+
+    assert resp.data.get("count") == 15
+    assert [
+        {
+            "id": lr.id,
+            "last_modified": lr.last_modified.isoformat().replace("+00:00", "Z"),
+        }
+        for lr in published
+    ] == sorted(resp.data.get("results"), key=lambda x: int(x["id"]))
