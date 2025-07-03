@@ -100,7 +100,7 @@ const ErrorPageTemplate: React.FC<ErrorPageTemplateProps> = ({
           {title}
         </Typography>
         <Footer>
-          <Button variant="primary" href={HOME}>
+          <Button variant="primary" href={HOME} Component="a">
             Home
           </Button>
         </Footer>
