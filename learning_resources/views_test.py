@@ -54,6 +54,7 @@ from learning_resources.serializers import (
     VideoResourceSerializer,
     VideoSerializer,
 )
+from learning_resources.views import LearningResourceViewSet
 from learning_resources_search.api import Search
 from learning_resources_search.serializers import serialize_learning_resource_for_update
 
@@ -1385,3 +1386,21 @@ def test_learning_resources_summary_listing_endpoint(django_assert_num_queries, 
         }
         for lr in published
     ] == sorted(resp.data.get("results"), key=lambda x: int(x["id"]))
+
+
+def test_learning_resources_summary_listing_endpoint_large_pagesize():
+    """
+    Check the summary endpoint can handle large page sizes.
+    A more authentic test would be to query the API directly, but that requires
+    seeding the db with a large number of resources, making the test extremely
+    slow.
+
+    The frontend assumes page sizes of 1000 for sitemap generation.
+    """
+    action = next(
+        a
+        for a in LearningResourceViewSet.get_extra_actions()
+        if a.url_name == "summary"
+    )
+    pagination = action.kwargs["pagination_class"]
+    assert pagination.max_limit >= 1000
