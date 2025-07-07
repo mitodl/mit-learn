@@ -73,6 +73,7 @@ from learning_resources.serializers import (
     LearningResourceRelationshipSerializer,
     LearningResourceSchoolSerializer,
     LearningResourceSerializer,
+    LearningResourceSummarySerializer,
     LearningResourceTopicSerializer,
     MicroLearningPathRelationshipSerializer,
     MicroUserListRelationshipSerializer,
@@ -295,6 +296,33 @@ class LearningResourceViewSet(
         resource_data = serialize_learning_resource_for_update(learning_resource)
         similar = get_similar_resources(resource_data, limit, 2, 3, use_embeddings=True)
         return Response(LearningResourceSerializer(list(similar), many=True).data)
+
+    @extend_schema(
+        summary="Get learning resources summary",
+        description="Get a paginated list of learning resources with summary fields",
+        responses=LearningResourceSummarySerializer(many=True),
+    )
+    @action(
+        detail=False,
+        methods=["GET"],
+        name="Get learning resources summary",
+        pagination_class=LargePagination,
+    )
+    def summary(self, request, **kwargs):  # noqa: ARG002
+        """
+        Get learning resources summary data.
+
+        Returns:
+            Paginated list of learning resources with summary fields only.
+            Intended to be performant with large page sizes.
+        """
+        queryset = self.filter_queryset(
+            self.get_queryset().values("id", "last_modified")
+        )
+        page = self.paginate_queryset(queryset)
+
+        serializer = LearningResourceSummarySerializer(page, many=True)
+        return self.get_paginated_response(serializer.data)
 
 
 @extend_schema_view(

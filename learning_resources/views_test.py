@@ -54,6 +54,7 @@ from learning_resources.serializers import (
     VideoResourceSerializer,
     VideoSerializer,
 )
+from learning_resources.views import LearningResourceViewSet
 from learning_resources_search.api import Search
 from learning_resources_search.serializers import serialize_learning_resource_for_update
 
@@ -1352,3 +1353,54 @@ def test_learning_resources_display_info_detail_view(mocker, client):
     )
 
     assert resp.json() == serialized_resource
+
+
+def test_learning_resources_summary_listing_endpoint(django_assert_num_queries, client):
+    published = sorted(
+        [
+            # Some of the factories create multiple resources (e.g., program creates courses, too)
+            # We want to create a specific number, so use courses/videos only
+            *LearningResourceFactory.create_batch(
+                10, published=True, resource_type="course"
+            ),
+            *LearningResourceFactory.create_batch(
+                5, published=True, resource_type="video"
+            ),
+        ],
+        key=lambda lr: lr.id,
+    )
+    # Create some unpublished resources to ensure they are not included in the summary
+    LearningResourceFactory.create_batch(5, published=False, resource_type="course")
+    LearningResourceFactory.create_batch(5, published=False, resource_type="video")
+
+    with django_assert_num_queries(2):
+        # One query for the pagination count, one for the results
+        url = "lr:v1:learning_resources_api-summary"
+        resp = client.get(f"{reverse(url)}")
+
+    assert resp.data.get("count") == 15
+    assert [
+        {
+            "id": lr.id,
+            "last_modified": lr.last_modified.isoformat().replace("+00:00", "Z"),
+        }
+        for lr in published
+    ] == sorted(resp.data.get("results"), key=lambda x: int(x["id"]))
+
+
+def test_learning_resources_summary_listing_endpoint_large_pagesize():
+    """
+    Check the summary endpoint can handle large page sizes.
+    A more authentic test would be to query the API directly, but that requires
+    seeding the db with a large number of resources, making the test extremely
+    slow.
+
+    The frontend assumes page sizes of 1000 for sitemap generation.
+    """
+    action = next(
+        a
+        for a in LearningResourceViewSet.get_extra_actions()
+        if a.url_name == "summary"
+    )
+    pagination = action.kwargs["pagination_class"]
+    assert pagination.max_limit >= 1000

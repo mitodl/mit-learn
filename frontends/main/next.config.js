@@ -37,6 +37,15 @@ const nextConfig = {
 
   async headers() {
     return [
+      {
+        source: "/sitemaps/:path*.xml",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "s-maxage=1800",
+          },
+        ],
+      },
       /* This is intended to target the base HTML responses and streamed RSC
        * content. Some routes are dynamically rendered, so NextJS by default
        * sets no-cache. However we are currently serving public content that is

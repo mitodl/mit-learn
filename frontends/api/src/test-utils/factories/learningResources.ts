@@ -28,6 +28,7 @@ import type {
   VideoPlaylistResource,
   VideoResource,
   LearningResourceRelationship,
+  LearningResourceSummary,
 } from "api"
 import {
   AvailabilityEnum,
@@ -326,6 +327,17 @@ const learningResource: PartialFactory<LearningResource> = (overrides = {}) => {
 
 const learningResources = makePaginatedFactory(learningResource)
 
+const learningResourceSummary: LearningResourceFactory<
+  LearningResourceSummary
+> = (overrides = {}) => {
+  return {
+    id: uniqueEnforcerId.enforce(() => faker.number.int()),
+    last_modified: faker.date.recent().toISOString(),
+    ...overrides,
+  }
+}
+const learningResourceSummaries = makePaginatedFactory(learningResourceSummary)
+
 const program: PartialFactory<ProgramResource> = (overrides = {}) => {
   return mergeOverrides<ProgramResource>(
     _learningResourceShared(),
@@ -554,6 +566,8 @@ const videoPlaylists = makePaginatedFactory(videoPlaylist)
 export {
   learningResource as resource,
   learningResources as resources,
+  learningResourceSummaries as resourceSummaries,
+  learningResourceSummary as resourceSummary,
   learningResourceRun as run,
   learningResourceImage as image,
   learningResourceDepartment as department,
