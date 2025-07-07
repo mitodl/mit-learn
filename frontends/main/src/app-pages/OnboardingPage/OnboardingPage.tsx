@@ -32,6 +32,7 @@ import {
   DELIVERY_CHOICES,
   ProfileSchema,
 } from "@/common/profile"
+import { useSearchParams } from "next/navigation"
 
 const NUM_STEPS = 5
 
@@ -154,6 +155,8 @@ const OnboardingPage: React.FC = () => {
   const { isLoading: userLoading, data: user } = useUserMe()
   const [activeStep, setActiveStep] = React.useState<number>(0)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const nextUrl = searchParams.get("next")
 
   const formik = useFormik({
     enableReinitialize: true,
@@ -169,12 +172,22 @@ const OnboardingPage: React.FC = () => {
       if (activeStep < NUM_STEPS - 1) {
         setActiveStep((prevActiveStep) => prevActiveStep + 1)
       } else {
-        router.push(DASHBOARD_HOME)
+        if (nextUrl) {
+          router.push(nextUrl)
+        } else {
+          router.push(DASHBOARD_HOME)
+        }
       }
     },
     validateOnChange: false,
     validateOnBlur: false,
   })
+
+  useEffect(() => {
+    if (nextUrl) {
+      router.prefetch(nextUrl)
+    }
+  }, [nextUrl])
 
   const handleBack = () => {
     setActiveStep((prevActiveStep) => prevActiveStep - 1)
