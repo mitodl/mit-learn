@@ -19,7 +19,7 @@ export const assertInstanceOf: <
 /**
  * Returns `true` if and only if the value is not `null` or `undefined`.
  */
-export const isNotNil = <T>(x: T): x is NonNullable<T> => {
+const isNotNil = <T>(x: T): x is NonNullable<T> => {
   if (x === null || x === undefined) return false
   return true
 }
