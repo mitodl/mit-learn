@@ -1,4 +1,7 @@
 import { ChannelCounts } from "api/v0"
+import { login } from "./urls"
+import { usePathname, useSearchParams } from "next/navigation"
+
 const getSearchParamMap = (urlParams: URLSearchParams) => {
   const params: Record<string, string[] | string> = {}
   for (const [key] of urlParams.entries()) {
@@ -48,9 +51,26 @@ const getCsrfToken = () => {
   )
 }
 
+const useLoginToCurrent = () => {
+  /**
+   * NOTE: In contrast to, say
+   *  login({
+   *    pathname: window.location.pathname,
+   *    searchParams: new URLSearchParams(window.location.search)
+   * }),
+   * the version here is reactive: when pathname/searchParams change, the values
+   * here update automatically and will (appropriately) trigger a re-render.
+   *
+   */
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  return login({ pathname, searchParams })
+}
+
 export {
   getSearchParamMap,
   aggregateProgramCounts,
   aggregateCourseCounts,
   getCsrfToken,
+  useLoginToCurrent,
 }

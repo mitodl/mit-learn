@@ -285,6 +285,7 @@ describe("Home Page personalize section", () => {
       "href",
       routes.login({
         pathname: routes.DASHBOARD_HOME,
+        searchParams: null,
       }),
     )
   })

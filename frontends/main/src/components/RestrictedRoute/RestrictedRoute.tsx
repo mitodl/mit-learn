@@ -4,7 +4,7 @@ import React from "react"
 import { ForbiddenError } from "@/common/errors"
 import { Permission, useUserMe } from "api/hooks/user"
 import { redirect } from "next/navigation"
-import * as urls from "@/common/urls"
+import { useLoginToCurrent } from "@/common/utils"
 
 type RestrictedRouteProps = {
   children?: React.ReactNode
@@ -42,10 +42,9 @@ const RestrictedRoute: React.FC<RestrictedRouteProps> = ({
   requires,
 }) => {
   const { isLoading, data: user } = useUserMe()
+  const loginUrl = useLoginToCurrent()
   if (isLoading) return null
   if (!user?.is_authenticated) {
-    // Redirect unauthenticated users to login
-    const loginUrl = urls.login()
     redirect(loginUrl)
     return null
   }
