@@ -1,44 +1,63 @@
 import React from "react"
-import { renderWithProviders, screen } from "../../test-utils"
-import { HOME } from "@/common/urls"
+import { renderWithProviders, screen, waitFor } from "../../test-utils"
+import { HOME, login } from "@/common/urls"
 import ForbiddenPage from "./ForbiddenPage"
-import { setMockResponse, urls } from "api/test-utils"
-import { Permission } from "api/hooks/user"
+import { setMockResponse, urls, factories } from "api/test-utils"
+import { useUserMe } from "api/hooks/user"
+import { redirect } from "next/navigation"
 
-const oldWindowLocation = window.location
-
-beforeAll(() => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  delete (window as any).location
-
-  window.location = Object.defineProperties({} as Location, {
-    ...Object.getOwnPropertyDescriptors(oldWindowLocation),
-    assign: {
-      configurable: true,
-      value: jest.fn(),
-    },
-  })
+jest.mock("next/navigation", () => {
+  const actual = jest.requireActual("next/navigation")
+  return {
+    ...actual,
+    redirect: jest.fn(),
+  }
 })
+const mockedRedirect = jest.mocked(redirect)
 
-afterAll(() => {
-  window.location = oldWindowLocation
-})
+const makeUser = factories.user.user
 
-test("The ForbiddenPage loads with Correct Title", () => {
-  setMockResponse.get(urls.userMe.get(), {
-    [Permission.Authenticated]: true,
-  })
+test("The ForbiddenPage loads with Correct Title", async () => {
+  setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
   renderWithProviders(<ForbiddenPage />)
-  screen.getByRole("heading", {
+  await screen.findByRole("heading", {
     name: "You do not have permission to access this resource.",
   })
 })
 
-test("The ForbiddenPage loads with a link that directs to HomePage", () => {
-  setMockResponse.get(urls.userMe.get(), {
-    [Permission.Authenticated]: true,
-  })
+test("The ForbiddenPage loads with a link that directs to HomePage", async () => {
+  setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
   renderWithProviders(<ForbiddenPage />)
-  const homeLink = screen.getByRole("link", { name: "Home" })
+  const homeLink = await screen.findByRole("link", { name: "Home" })
   expect(homeLink).toHaveAttribute("href", HOME)
+})
+
+test("Fetches auth data afresh and redirects unauthenticated users to auth", async () => {
+  const user = makeUser()
+  setMockResponse.get(urls.userMe.get(), user)
+
+  const FakeHeader = ({ children }: { children?: React.ReactNode }) => {
+    const user = useUserMe()
+    return (
+      <div>
+        {user.data?.first_name}
+        {children}
+      </div>
+    )
+  }
+  const { view } = renderWithProviders(<FakeHeader />)
+
+  await screen.findByText(user.first_name)
+
+  setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: false }))
+
+  view.rerender(
+    <FakeHeader>
+      <ForbiddenPage />
+    </FakeHeader>,
+  )
+
+  await waitFor(() => {
+    expect(mockedRedirect).toHaveBeenCalledWith(login())
+  })
 })
