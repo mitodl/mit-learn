@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.36.5
+Version 0.36.5 (Released July 08, 2025)
 --------------
 
 - Fix flaky test by ensuring consistent ordering of children in serializers (#2321)
