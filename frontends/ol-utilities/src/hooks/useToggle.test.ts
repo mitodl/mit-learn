@@ -1,5 +1,5 @@
 import { renderHook, act } from "@testing-library/react"
-import useToggle from "./useToggle"
+import { useToggle } from "./useToggle"
 
 test.each([{ initialValue: true }, { initialValue: false }])(
   "useToggle($initialValue)'s initial state is $initialValue",

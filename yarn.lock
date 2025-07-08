@@ -15187,7 +15187,6 @@ __metadata:
     api: "workspace:*"
     casual-browserify: "npm:^1.5.19-2"
     classnames: "npm:^2.3.2"
-    css-mediaquery: "npm:^0.1.2"
     currency-symbol-map: "npm:^5.1.0"
     decimal.js-light: "npm:^2.5.1"
     html-entities: "npm:^2.4.0"

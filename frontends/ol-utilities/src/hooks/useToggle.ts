@@ -14,7 +14,7 @@ interface Toggler extends Dispatch<SetStateAction<boolean>> {
  * Wrapper around boolean `useState` that provides render-stable toggler
  * functions.
  */
-const useToggle = (initialValue: boolean): [boolean, Toggler] => {
+export const useToggle = (initialValue: boolean): [boolean, Toggler] => {
   const [value, setValue] = useState(initialValue)
 
   const toggler: Toggler = useMemo(() => {
@@ -28,5 +28,3 @@ const useToggle = (initialValue: boolean): [boolean, Toggler] => {
 
   return [value, toggler]
 }
-
-export default useToggle

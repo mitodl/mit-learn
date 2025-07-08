@@ -19,7 +19,7 @@ const getDescriptionsFor = (el: HTMLElement) => {
   const errIds = errIdsAttr.split(" ").filter((id) => id.trim())
   if (errIds.length === 0) {
     throw new Error(
-      "The specified element does not have associated ariia-describedby ids.",
+      "The specified element does not have associated aria-describedby ids.",
     )
   }
   const errEls = errIds.map((id) => {
