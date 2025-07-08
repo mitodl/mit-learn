@@ -1,7 +1,1 @@
-export {
-  initials,
-  capitalize,
-  emptyOrNil,
-  pluralize,
-  extractJSONFromComment,
-} from "./utils"
+export { initials, capitalize, emptyOrNil, pluralize } from "./utils"
