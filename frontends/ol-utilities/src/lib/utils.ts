@@ -13,8 +13,6 @@ export const initials = (title: string): string => {
 export const capitalize = (txt: string) =>
   (txt[0] ?? "").toUpperCase() + txt.slice(1).toLowerCase()
 
-export const emptyOrNil = (x: unknown): boolean => isNil(x) || isEmpty(x)
-
 /**
  * Append an 's' to the end of a string if the count is not 1. Optionally,
  * provide a custom plural string.

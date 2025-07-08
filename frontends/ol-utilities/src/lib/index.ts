@@ -1,1 +1,1 @@
-export { initials, capitalize, emptyOrNil, pluralize } from "./utils"
+export { initials, capitalize, pluralize } from "./utils"
