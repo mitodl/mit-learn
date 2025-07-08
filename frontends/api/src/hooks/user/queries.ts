@@ -11,6 +11,11 @@ const userQueries = {
     queryOptions({
       queryKey: userKeys.me(),
       queryFn: () => usersApi.usersMeRetrieve().then((res) => res.data),
+      /**
+       * Always refetch on window focus in case the user has logged in or out
+       * in another tab or window while this tab was inactive.
+       */
+      refetchOnWindowFocus: "always",
     }),
 }
 

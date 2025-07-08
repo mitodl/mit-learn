@@ -19,7 +19,6 @@ const makeQueryClient = (): QueryClient => {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        refetchOnWindowFocus: false,
         staleTime: Infinity,
 
         /**
