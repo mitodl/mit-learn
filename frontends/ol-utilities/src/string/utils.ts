@@ -1,6 +1,3 @@
-import isEmpty from "lodash/isEmpty"
-import isNil from "lodash/isNil"
-
 export const initials = (title: string): string => {
   return title
     .trim()
