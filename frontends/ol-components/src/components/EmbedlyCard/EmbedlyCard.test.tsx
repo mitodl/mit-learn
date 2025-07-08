@@ -1,6 +1,6 @@
 import React from "react"
 import { faker } from "@faker-js/faker/locale/en"
-import { assertInstanceOf } from "ol-utilities"
+import { assertInstanceOf } from "ol-test-utilities"
 import { render, screen, waitFor } from "@testing-library/react"
 import { EmbedlyCard } from "./EmbedlyCard"
 import type { EmbedlyCardProps } from "./EmbedlyCard"
