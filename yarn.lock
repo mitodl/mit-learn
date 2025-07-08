@@ -13388,6 +13388,7 @@ __metadata:
     moment: "npm:^2.30.1"
     next: "npm:^15.0.2"
     next-nprogress-bar: "npm:^2.4.2"
+    next-router-mock: "npm:^1.0.2"
     ol-components: "npm:0.0.0"
     ol-test-utilities: "npm:0.0.0"
     ol-utilities: "npm:0.0.0"
@@ -14707,7 +14708,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"next-router-mock@npm:^1.0.0":
+"next-router-mock@npm:^1.0.0, next-router-mock@npm:^1.0.2":
   version: 1.0.2
   resolution: "next-router-mock@npm:1.0.2"
   peerDependencies:

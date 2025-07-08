@@ -187,7 +187,7 @@ const OnboardingPage: React.FC = () => {
     if (nextUrl) {
       router.prefetch(nextUrl)
     }
-  }, [nextUrl])
+  }, [nextUrl, router])
 
   const handleBack = () => {
     setActiveStep((prevActiveStep) => prevActiveStep - 1)

@@ -1,6 +1,6 @@
 import React from "react"
 import { merge, times } from "lodash"
-
+import mockRouter from "next-router-mock"
 import {
   renderWithProviders,
   screen,
@@ -18,8 +18,11 @@ import {
   CertificateDesiredEnum,
   type Profile,
 } from "api/v0"
-
 import OnboardingPage from "./OnboardingPage"
+
+jest.mock("next/navigation", () =>
+  jest.requireActual("next-router-mock/navigation"),
+)
 
 const STEPS_DATA: Partial<Profile>[] = [
   {
@@ -154,14 +157,14 @@ describe("OnboardingPage", () => {
   )
 
   test("Redirects to next url after completion if present", async () => {
-    const nextUrl = `${process.env.NEXT_PUBLIC_ORIGIN}/search?resource=184`
-    await setupAndProgressToStep(STEPS_DATA.length - 1, nextUrl)
+    const nextUrl = encodeURIComponent(
+      `${process.env.NEXT_PUBLIC_ORIGIN}/search?resource=184`,
+    )
+    const url = `${process.env.NEXT_PUBLIC_ORIGIN}/onboarding?next=${nextUrl}`
+    await setupAndProgressToStep(STEPS_DATA.length - 1, url)
     const finishButton = await findFinishButton()
     await user.click(finishButton)
-    await waitFor(() =>
-      expect(window.location.pathname + window.location.search).toBe(
-        "/search?resource=184",
-      ),
-    )
+
+    expect(mockRouter.asPath).toEqual("/search?resource=184")
   })
 })
