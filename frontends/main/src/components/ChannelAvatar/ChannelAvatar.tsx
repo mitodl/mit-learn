@@ -1,6 +1,8 @@
 import React from "react"
 import type { Channel } from "api/v0"
 import { styled } from "ol-components"
+import { initials } from "ol-utilities"
+
 export const AVATAR_SMALL = "small" as const
 export const AVATAR_MEDIUM = "medium" as const
 export const AVATAR_LARGE = "large" as const
@@ -19,15 +21,6 @@ type AvatarProps = {
   formImageUrl?: string | null
   name?: string
   imageVariant?: ImageVariant | null
-}
-
-const initials = (title: string): string => {
-  return title
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((item) => (item[0] ?? "").toUpperCase())
-    .join("")
 }
 
 const getImage = (channel: Channel, imageSize: ImageSize | undefined) => {
