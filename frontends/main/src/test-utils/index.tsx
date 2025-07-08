@@ -9,6 +9,7 @@ import { makeQueryClient } from "@/app/getQueryClient"
 import { render } from "@testing-library/react"
 import { factories, setMockResponse } from "api/test-utils"
 import type { User } from "api/hooks/user"
+import { userQueries } from "api/hooks/user"
 import {
   mockRouter,
   createDynamicRouteParser,
@@ -67,7 +68,7 @@ const renderWithProviders = (
 
   if (allOpts.user) {
     const user = { ...defaultUser, ...allOpts.user }
-    queryClient.setQueryData(["userMe"], { ...user })
+    queryClient.setQueryData(userQueries.me().queryKey, { ...user })
   }
 
   mockRouter.setCurrentUrl(url)

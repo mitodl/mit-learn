@@ -1,5 +1,6 @@
 import { useEffect } from "react"
 import type { Query, QueryClient, QueryKey } from "@tanstack/react-query"
+import { userQueries } from "../hooks/user/queries"
 
 const logQueries = (...args: [...string[], Query[]]) => {
   const queries = args.pop() as Query[]
@@ -16,7 +17,7 @@ const logQueries = (...args: [...string[], Query[]]) => {
   )
 }
 
-const PREFETCH_EXEMPT_QUERIES = [["userMe"]]
+const PREFETCH_EXEMPT_QUERIES = [userQueries.me().queryKey]
 
 /**
  * Call this as high as possible in render tree to detect query usage on
