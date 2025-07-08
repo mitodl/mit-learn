@@ -2,8 +2,8 @@ import React, { useEffect } from "react"
 import ErrorPageTemplate from "./ErrorPageTemplate"
 import { userQueries } from "api/hooks/user"
 import { redirect } from "next/navigation"
-import * as urls from "@/common/urls"
 import { useQuery } from "@tanstack/react-query"
+import { useLoginToCurrent } from "@/common/utils"
 
 const ForbiddenPage: React.FC = () => {
   const user = useQuery({
@@ -14,12 +14,12 @@ const ForbiddenPage: React.FC = () => {
   const shouldRedirect =
     user.isFetchedAfterMount && !user.data?.is_authenticated
 
+  const loginUrl = useLoginToCurrent()
   useEffect(() => {
     if (shouldRedirect) {
-      const loginUrl = urls.login()
       redirect(loginUrl)
     }
-  }, [shouldRedirect])
+  }, [shouldRedirect, loginUrl])
 
   return (
     <ErrorPageTemplate

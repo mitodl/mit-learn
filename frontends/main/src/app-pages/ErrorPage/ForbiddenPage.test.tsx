@@ -6,13 +6,6 @@ import { setMockResponse, urls, factories } from "api/test-utils"
 import { useUserMe } from "api/hooks/user"
 import { redirect } from "next/navigation"
 
-jest.mock("next/navigation", () => {
-  const actual = jest.requireActual("next/navigation")
-  return {
-    ...actual,
-    redirect: jest.fn(),
-  }
-})
 const mockedRedirect = jest.mocked(redirect)
 
 const makeUser = factories.user.user
@@ -45,8 +38,9 @@ test("Fetches auth data afresh and redirects unauthenticated users to auth", asy
       </div>
     )
   }
-  const { view } = renderWithProviders(<FakeHeader />)
-
+  const { view } = renderWithProviders(<FakeHeader />, {
+    url: "/foo?cat=meow",
+  })
   await screen.findByText(user.first_name)
 
   setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: false }))
@@ -58,6 +52,11 @@ test("Fetches auth data afresh and redirects unauthenticated users to auth", asy
   )
 
   await waitFor(() => {
-    expect(mockedRedirect).toHaveBeenCalledWith(login())
+    expect(mockedRedirect).toHaveBeenCalledWith(
+      login({
+        pathname: "/foo",
+        searchParams: new URLSearchParams({ cat: "meow" }),
+      }),
+    )
   })
 })

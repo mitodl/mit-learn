@@ -11,8 +11,8 @@ import {
   RiArrowDownSLine,
 } from "@remixicon/react"
 import { useUserMe, User } from "api/hooks/user"
-import { usePathname, useSearchParams } from "next/navigation"
 import MITLogoLink from "@/components/MITLogoLink/MITLogoLink"
+import { useLoginToCurrent } from "@/common/utils"
 
 const FlexContainer = styled.div({
   display: "flex",
@@ -125,14 +125,12 @@ type UserMenuProps = {
 const UserMenu: React.FC<UserMenuProps> = ({ variant }) => {
   const [visible, setVisible] = useState(false)
 
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
+  const loginUrl = useLoginToCurrent()
 
   const { isLoading, data: user } = useUserMe()
   if (isLoading) {
     return null
   }
-  const loginUrl = urls.login({ pathname, searchParams })
 
   const items: UserMenuItem[] = [
     {
