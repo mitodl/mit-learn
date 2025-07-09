@@ -140,8 +140,6 @@ const TestimonialCardQuote = styled.div({
     flexGrow: "1",
     ...theme.typography.subtitle1,
   },
-
-  position: "relative",
 })
 
 const TestimonialQuoteOpener = styled.div(({ theme }) => ({
@@ -153,10 +151,9 @@ const TestimonialQuoteOpener = styled.div(({ theme }) => ({
   fontSize: pxToRem(60),
   lineHeight: pxToRem(108),
   [theme.breakpoints.down("md")]: {
-    fontSize: pxToRem(60),
     fontWeight: theme.typography.fontWeightLight,
     height: pxToRem(20),
-    lineHeight: "normal",
+    lineHeight: pxToRem(64),
     transform: "translateY(-8px)",
   },
 }))
@@ -206,6 +203,7 @@ const ButtonsContainer = styled.div({
 const TestimonialTruncateText = styled(TruncateText)({
   margin: "0px",
   textOverflow: "none",
+  overflow: "hidden",
   ...theme.typography.h4,
   fontSize: pxToRem(20), // This is a unicorn font size per the Figma design - it's not used anywhere else.
   lineHeight: pxToRem(26),
@@ -219,13 +217,14 @@ const TestimonialTruncateText = styled(TruncateText)({
     },
   },
   [theme.breakpoints.down("sm")]: {
-    height: "224px",
+    height: "208px",
     flexShrink: "0",
     ...theme.typography.subtitle1,
-    WebkitLineClamp: 11,
-    ["@supports (-webkit-line-clamp: 11)"]: {
-      WebkitLineClamp: 11,
+    WebkitLineClamp: 10,
+    ["@supports (-webkit-line-clamp: 10)"]: {
+      WebkitLineClamp: 10,
     },
+    marginBottom: 0,
   },
 })
 

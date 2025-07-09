@@ -36,7 +36,7 @@ const AttestantBlockContainer = styled.cite<AttestantBlockChildProps>(
     [theme.breakpoints.down("sm")]: {
       width: "100%",
       height: "56px",
-      marginTop: avatarPosition === "end" ? "0px" : "24px",
+      marginTop: avatarPosition === "end" ? "4px" : "24px",
       marginLeft: "0px",
     },
   }),
