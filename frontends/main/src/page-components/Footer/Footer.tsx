@@ -13,6 +13,7 @@ const FooterContainer = styled.div(({ theme }) => ({
   alignSelf: "stretch",
   backgroundColor: theme.custom.colors.white,
   borderTop: `1px solid ${theme.custom.colors.darkGray2}`,
+  flexGrow: 0,
 }))
 
 const FooterContainerInner = styled.div(({ theme }) => ({

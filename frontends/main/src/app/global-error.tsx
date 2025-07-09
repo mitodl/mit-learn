@@ -26,7 +26,7 @@ export default function GlobalError({ error }: { error: Error }) {
       <body>
         <ThemeProvider>
           <MITLearnGlobalStyles />
-          <FallbackErrorPage error={error} />
+          <FallbackErrorPage />
         </ThemeProvider>
       </body>
     </html>

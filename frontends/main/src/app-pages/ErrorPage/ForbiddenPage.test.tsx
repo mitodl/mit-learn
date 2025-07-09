@@ -29,7 +29,9 @@ test("The ForbiddenPage loads with Correct Title", () => {
     [Permission.Authenticated]: true,
   })
   renderWithProviders(<ForbiddenPage />)
-  screen.getByRole("heading", { name: "Not Allowed" })
+  screen.getByRole("heading", {
+    name: "You do not have permission to access this resource.",
+  })
 })
 
 test("The ForbiddenPage loads with a link that directs to HomePage", () => {

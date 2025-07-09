@@ -5,9 +5,10 @@ import ErrorPageTemplate from "./ErrorPageTemplate"
 
 const NotFoundPage: React.FC = () => {
   return (
-    <ErrorPageTemplate title="404 Not Found Error">
-      Resource Not Found
-    </ErrorPageTemplate>
+    <ErrorPageTemplate
+      title="Looks like we couldn't find what you were looking for!"
+      timSays="404"
+    />
   )
 }
 

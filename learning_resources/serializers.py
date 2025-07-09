@@ -1495,3 +1495,16 @@ class LearningResourceDisplayInfoResponseSerializer(
     """
 
     id = serializers.IntegerField()
+
+
+class LearningResourceSummarySerializer(serializers.ModelSerializer):
+    """
+    Minimal serializer for LearningResource - returns only essential fields
+    for sitemap generation and other use cases requiring minimal data transfer.
+    """
+
+    class Meta:
+        """Meta configuration for LearningResourceSummarySerializer"""
+
+        model = models.LearningResource
+        fields = ("id", "last_modified")
