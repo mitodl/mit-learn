@@ -1,6 +1,6 @@
 import React from "react"
 import { merge, times } from "lodash"
-
+import mockRouter from "next-router-mock"
 import {
   renderWithProviders,
   screen,
@@ -18,8 +18,11 @@ import {
   CertificateDesiredEnum,
   type Profile,
 } from "api/v0"
-
 import OnboardingPage from "./OnboardingPage"
+
+jest.mock("next/navigation", () =>
+  jest.requireActual("next-router-mock/navigation"),
+)
 
 const STEPS_DATA: Partial<Profile>[] = [
   {
@@ -59,7 +62,7 @@ const STEP_TITLES = [
 
 const PROFILES_FOR_STEPS = times(STEPS_DATA.length, profileForStep)
 
-const setup = async (profile: Profile) => {
+const setup = async (profile: Profile, url?: string) => {
   allowConsoleErrors()
   setMockResponse.get(urls.userMe.get(), factories.user.user())
   setMockResponse.get(urls.profileMe.get(), profile)
@@ -68,12 +71,12 @@ const setup = async (profile: Profile) => {
     ...req,
   }))
 
-  renderWithProviders(<OnboardingPage />)
+  renderWithProviders(<OnboardingPage />, url ? { url } : undefined)
 }
 
 // this function sets up the test and progresses the UI to the designated step
-const setupAndProgressToStep = async (step: number) => {
-  await setup(PROFILES_FOR_STEPS[step])
+const setupAndProgressToStep = async (step: number, url?: string) => {
+  await setup(PROFILES_FOR_STEPS[step], url)
 
   for (let stepIdx = 0; stepIdx < step; stepIdx++) {
     await user.click(await findNextButton())
@@ -152,4 +155,16 @@ describe("OnboardingPage", () => {
       )
     },
   )
+
+  test("Redirects to next url after completion if present", async () => {
+    const nextUrl = encodeURIComponent(
+      `${process.env.NEXT_PUBLIC_ORIGIN}/search?resource=184`,
+    )
+    const url = `${process.env.NEXT_PUBLIC_ORIGIN}/onboarding?next=${nextUrl}`
+    await setupAndProgressToStep(STEPS_DATA.length - 1, url)
+    const finishButton = await findFinishButton()
+    await user.click(finishButton)
+
+    expect(mockRouter.asPath).toEqual("/search?resource=184")
+  })
 })
