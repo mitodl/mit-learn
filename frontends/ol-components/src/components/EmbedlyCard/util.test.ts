@@ -1,5 +1,4 @@
 import { waitFor } from "@testing-library/react"
-import { assertNotNil } from "ol-utilities"
 import {
   createStylesheet,
   EmbedlyEventTypes,
@@ -85,9 +84,10 @@ describe("createStylesheet", () => {
     const iframe = document.createElement("iframe")
     document.body.appendChild(iframe)
 
-    assertNotNil(iframe.contentDocument)
-    createStylesheet(iframe.contentDocument, ".foo { color: blue }")
-    const styles = iframe.contentDocument.querySelectorAll("head style")
+    expect(iframe.contentDocument).not.toBeNull()
+    expect(iframe.contentDocument).toBeDefined()
+    createStylesheet(iframe.contentDocument!, ".foo { color: blue }")
+    const styles = iframe.contentDocument!.querySelectorAll("head style")
     expect(styles.length).toBe(1)
     expect(styles[0].innerHTML).toBe(".foo { color: blue }")
   })

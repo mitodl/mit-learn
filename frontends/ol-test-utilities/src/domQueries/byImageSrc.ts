@@ -114,22 +114,22 @@ const byImageSrc = buildQueries(
  */
 const queryByImageSrc = byImageSrc[0]
 /**
- * Get a 1+ image element matching specified src, or rerror.
+ * Get a 1+ image element matching specified src, or error.
  * NOTE: decodes NextJS optimized image src by default
  */
 const getAllByImageSrc = byImageSrc[1]
 /**
- * Get exactly 1 image element matching specified src, or rerror.
+ * Get exactly 1 image element matching specified src, or error.
  * NOTE: decodes NextJS optimized image src by default
  */
 const getByImageSrc = byImageSrc[2]
 /**
- * Async find 1+ image element matching specified src, or rerror.
+ * Async find 1+ image element matching specified src, or error.
  * NOTE: decodes NextJS optimized image src by default
  */
 const findAllByImageSrc = byImageSrc[3]
 /**
- * Async find exactly 1 image element matching specified src, or rerror.
+ * Async find exactly 1 image element matching specified src, or error.
  * NOTE: decodes NextJS optimized image src by default
  */
 const findByImageSrc = byImageSrc[4]

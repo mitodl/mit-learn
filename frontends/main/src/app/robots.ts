@@ -18,8 +18,6 @@ export default function robots(): MetadataRoute.Robots {
         "/learningpaths/",
         "/onboarding/",
         "/cart/",
-        "/chat/",
-        "/chat_syllabus/",
         "/program_letter/",
       ],
     },
