@@ -1,6 +1,6 @@
 import React from "react"
 import { faker } from "@faker-js/faker/locale/en"
-import { assertInstanceOf } from "ol-test-utilities"
+import invariant from "tiny-invariant"
 import { render, screen, waitFor } from "@testing-library/react"
 import { EmbedlyCard } from "./EmbedlyCard"
 import type { EmbedlyCardProps } from "./EmbedlyCard"
@@ -31,7 +31,10 @@ describe("EmbedlyCard", () => {
     const url = new URL(faker.internet.url()).toString()
     setupTest({ url })
     const a = screen.getByRole("link")
-    assertInstanceOf(a, HTMLAnchorElement)
+    invariant(
+      a instanceof HTMLAnchorElement,
+      "Expected link to be an anchor element",
+    )
     expect(a.href).toBe(url)
     expect(a.dataset.cardChrome).toBe("0")
     expect(a.dataset.cardControls).toBe("0")
