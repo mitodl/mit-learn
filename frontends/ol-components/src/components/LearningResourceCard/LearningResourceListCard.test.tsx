@@ -37,7 +37,7 @@ describe("Learning Resource List Card", () => {
     },
   )
 
-  test.only("Sets lang attribute on title and description", () => {
+  test("Sets lang attribute on title and description", () => {
     const resource = factories.learningResources.resource({
       resource_type: ResourceTypeEnum.Course,
       runs: [
