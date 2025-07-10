@@ -6,10 +6,14 @@ from tempfile import TemporaryDirectory
 
 from defusedxml import ElementTree
 
-from learning_resources.constants import LearningResourceType
+from learning_resources.constants import LearningResourceType, PlatformType
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.utils import _process_olx_path, calc_checksum
-from learning_resources.models import LearningResource, LearningResourceRun
+from learning_resources.models import (
+    LearningResource,
+    LearningResourcePlatform,
+    LearningResourceRun,
+)
 
 log = logging.getLogger(__name__)
 
@@ -52,6 +56,9 @@ def run_for_canvas_archive(course_archive_path, overwrite):
             "published": False,
             "test_mode": True,
             "etl_source": ETLSource.canvas.name,
+            "platform": LearningResourcePlatform.objects.get(
+                code=PlatformType.canvas.name
+            ),
             "resource_type": LearningResourceType.course.name,
         },
     )
