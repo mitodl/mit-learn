@@ -82,7 +82,7 @@ const TitleSection: React.FC<{
         >
           {type}
         </Typography>
-        {title}
+        <span lang={resource?.runs?.[0]?.languages?.[0]}>{title}</span>
       </Typography>
       <CloseButton
         variant="text"

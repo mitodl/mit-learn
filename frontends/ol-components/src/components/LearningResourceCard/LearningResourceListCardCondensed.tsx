@@ -128,7 +128,10 @@ const LearningResourceListCardCondensed: React.FC<
       <ListCardCondensed.Info>
         <Info resource={resource} />
       </ListCardCondensed.Info>
-      <ListCardCondensed.Title href={href}>
+      <ListCardCondensed.Title
+        href={href}
+        lang={resource.runs?.[0]?.languages?.[0]}
+      >
         {resource.title}
       </ListCardCondensed.Title>
       <ListCardCondensed.Actions>

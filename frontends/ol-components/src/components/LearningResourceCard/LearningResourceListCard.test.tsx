@@ -37,6 +37,22 @@ describe("Learning Resource List Card", () => {
     },
   )
 
+  test.only("Sets lang attribute on title and description", () => {
+    const resource = factories.learningResources.resource({
+      resource_type: ResourceTypeEnum.Course,
+      runs: [
+        factories.learningResources.run({
+          languages: ["pt-pt"],
+        }),
+      ],
+    })
+
+    setup({ resource })
+
+    const title = screen.getByText(resource.title)
+    expect(title).toHaveAttribute("lang", "pt-pt")
+  })
+
   test("Displays run start date", () => {
     const resource = factories.learningResources.resource({
       resource_type: ResourceTypeEnum.Course,

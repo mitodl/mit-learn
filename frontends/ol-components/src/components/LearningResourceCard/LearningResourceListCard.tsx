@@ -319,7 +319,9 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
       <ListCard.Info>
         <Info resource={resource} />
       </ListCard.Info>
-      <ListCard.Title href={href}>{resource.title}</ListCard.Title>
+      <ListCard.Title href={href} lang={resource.runs?.[0]?.languages?.[0]}>
+        {resource.title}
+      </ListCard.Title>
       <ListCard.Actions>
         {onAddToLearningPathClick && (
           <CardActionButton

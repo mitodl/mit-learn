@@ -114,6 +114,25 @@ describe("Learning Resource Expanded", () => {
     screen.getByText(resource.title)
   })
 
+  test("Sets lang attribute on title and description", () => {
+    const resource = factories.learningResources.resource({
+      resource_type: ResourceTypeEnum.Course,
+      runs: [
+        factories.learningResources.run({
+          languages: ["en-us"],
+        }),
+      ],
+    })
+
+    setup({ resource })
+
+    const title = screen.getByText(resource.title)
+    expect(title).toHaveAttribute("lang", "en-us")
+
+    const description = screen.getByText(resource.description!)
+    expect(description).toHaveAttribute("lang", "en-us")
+  })
+
   test.each([ResourceTypeEnum.Program, ResourceTypeEnum.LearningPath])(
     'Renders CTA button for resource type "%s"',
     (resourceType) => {

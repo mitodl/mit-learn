@@ -83,6 +83,7 @@ const ResourceDescription = ({ resource }: { resource?: LearningResource }) => {
          * backend during ETL. This is safe to render.
          */
         dangerouslySetInnerHTML={{ __html: resource.description || "" }}
+        lang={resource.runs?.[0]?.languages?.[0]}
       />
       {(isClamped || clampedOnFirstRender.current) && (
         <Link
