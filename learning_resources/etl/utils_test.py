@@ -624,6 +624,7 @@ def test_run_for_canvas_archive_creates_resource_and_run(tmp_path, mocker):
     Test that run_for_canvas_archive creates a LearningResource and Run
     when given a valid canvas archive.
     """
+    course_folder = "test"
     mocker.patch(
         "learning_resources.etl.canvas.parse_canvas_settings",
         return_value={"title": "Test Course", "course_code": "TEST101"},
@@ -635,7 +636,7 @@ def test_run_for_canvas_archive_creates_resource_and_run(tmp_path, mocker):
     run = run_for_canvas_archive(
         course_archive_path, course_folder="test", overwrite=True
     )
-    resource = LearningResource.objects.get(readable_id="TEST101")
+    resource = LearningResource.objects.get(readable_id=f"{course_folder}-TEST101")
     assert resource.title == "Test Course"
     assert resource.etl_source == ETLSource.canvas.name
     assert resource.resource_type == LearningResourceType.course.name
@@ -649,6 +650,7 @@ def test_run_for_canvas_archive_creates_run_if_none_exists(tmp_path, mocker):
     """
     Test that run_for_canvas_archive creates a Run if no runs exist for the resource.
     """
+    course_folder = "test"
     mocker.patch(
         "learning_resources.etl.canvas.parse_canvas_settings",
         return_value={"title": "Test Course", "course_code": "TEST104"},
@@ -658,7 +660,7 @@ def test_run_for_canvas_archive_creates_run_if_none_exists(tmp_path, mocker):
     )
     # Create resource with no runs
     resource = LearningResourceFactory.create(
-        readable_id="TEST104",
+        readable_id=f"{course_folder}-TEST104",
         title="Test Course",
         etl_source=ETLSource.canvas.name,
         resource_type=LearningResourceType.course.name,
@@ -669,7 +671,7 @@ def test_run_for_canvas_archive_creates_run_if_none_exists(tmp_path, mocker):
     course_archive_path = tmp_path / "archive4.zip"
     course_archive_path.write_text("dummy")
     run = run_for_canvas_archive(
-        course_archive_path, course_folder="test", overwrite=True
+        course_archive_path, course_folder=course_folder, overwrite=True
     )
     assert run is not None
     assert run.learning_resource == resource
