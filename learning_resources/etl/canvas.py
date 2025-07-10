@@ -48,10 +48,10 @@ def run_for_canvas_archive(course_archive_path, course_folder, overwrite):
     checksum = calc_checksum(course_archive_path)
     course_info = parse_canvas_settings(course_archive_path)
     course_title = course_info.get("title")
-    readable_id = course_info.get("course_code")
+    readable_id = f"{course_folder}-{course_info.get('course_code')}"
     # create placeholder learning resource
     resource, _ = LearningResource.objects.get_or_create(
-        readable_id=f"{course_folder}+{readable_id}",
+        readable_id=readable_id,
         defaults={
             "title": course_title,
             "published": False,
@@ -62,7 +62,7 @@ def run_for_canvas_archive(course_archive_path, course_folder, overwrite):
     )
     if resource.runs.count() == 0:
         LearningResourceRun.objects.create(
-            run_id=f"{course_folder}+{readable_id}+canvas",
+            run_id=f"{readable_id}+canvas",
             learning_resource=resource,
             published=True,
         )
