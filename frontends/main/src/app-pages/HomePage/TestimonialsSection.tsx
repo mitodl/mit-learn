@@ -124,14 +124,9 @@ const TestimonialCardQuote = styled.div({
   backgroundColor: theme.custom.colors.white,
   color: theme.custom.colors.black,
   padding: "0 32px 32px",
-  flexDirection: "column",
-  justifyContent: "space-between",
-  alignItems: "flex-start",
-  flex: "1 0 0",
   alignSelf: "stretch",
   alignContent: "center",
   borderRadius: "8px",
-  display: "flex",
   [theme.breakpoints.down("md")]: {
     width: "100%",
     height: "161px",
@@ -145,24 +140,23 @@ const TestimonialCardQuote = styled.div({
     flexGrow: "1",
     ...theme.typography.subtitle1,
   },
-
-  "div.testimonial-quote-opener": {
-    color: theme.custom.colors.mitRed,
-    fontStyle: "normal",
-    fontWeight: theme.typography.fontWeightBold,
-    height: pxToRem(60),
-    width: "100%",
-    fontSize: pxToRem(60),
-    lineHeight: pxToRem(120),
-    [theme.breakpoints.down("md")]: {
-      fontSize: pxToRem(60),
-      fontWeight: theme.typography.fontWeightLight,
-      height: pxToRem(20),
-      lineHeight: "normal",
-      transform: "translateY(-8px)",
-    },
-  },
 })
+
+const TestimonialQuoteOpener = styled.div(({ theme }) => ({
+  color: theme.custom.colors.mitRed,
+  fontStyle: "normal",
+  fontWeight: theme.typography.fontWeightBold,
+  height: pxToRem(56),
+  width: "100%",
+  fontSize: pxToRem(60),
+  lineHeight: pxToRem(108),
+  [theme.breakpoints.down("md")]: {
+    fontWeight: theme.typography.fontWeightLight,
+    height: pxToRem(20),
+    lineHeight: pxToRem(64),
+    transform: "translateY(-8px)",
+  },
+}))
 
 const TestimonialFadeLeft = styled.div({
   position: "absolute",
@@ -209,11 +203,13 @@ const ButtonsContainer = styled.div({
 const TestimonialTruncateText = styled(TruncateText)({
   margin: "0px",
   textOverflow: "none",
+  overflow: "hidden",
   ...theme.typography.h4,
   fontSize: pxToRem(20), // This is a unicorn font size per the Figma design - it's not used anywhere else.
   lineHeight: pxToRem(26),
   height: "182px",
   alignContent: "center",
+  marginBottom: "0.75rem",
   [theme.breakpoints.down("md")]: {
     WebkitLineClamp: 7,
     ["@supports (-webkit-line-clamp: 7)"]: {
@@ -221,13 +217,14 @@ const TestimonialTruncateText = styled(TruncateText)({
     },
   },
   [theme.breakpoints.down("sm")]: {
-    height: "224px",
+    height: "208px",
     flexShrink: "0",
     ...theme.typography.subtitle1,
-    WebkitLineClamp: 11,
-    ["@supports (-webkit-line-clamp: 11)"]: {
-      WebkitLineClamp: 11,
+    WebkitLineClamp: 10,
+    ["@supports (-webkit-line-clamp: 10)"]: {
+      WebkitLineClamp: 10,
     },
+    marginBottom: 0,
   },
 })
 
@@ -287,9 +284,9 @@ const SlickCarousel = () => {
                 />
               </TestimonialCardImage>
               <TestimonialCardQuote>
-                <div className="testimonial-quote-opener" aria-hidden>
+                <TestimonialQuoteOpener aria-hidden>
                   &ldquo;
-                </div>
+                </TestimonialQuoteOpener>
                 <TestimonialTruncateText as="blockquote" lineClamp={7}>
                   {resource.quote.slice(0, 350)}
                   {resource.quote.length >= 350 ? "..." : ""}
