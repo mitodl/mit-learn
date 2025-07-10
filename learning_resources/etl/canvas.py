@@ -5,6 +5,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from defusedxml import ElementTree
+from django.conf import settings
 
 from learning_resources.constants import LearningResourceType
 from learning_resources.etl.constants import ETLSource
@@ -20,10 +21,14 @@ def sync_canvas_archive(bucket, key: str, overwrite):
     """
     from learning_resources.etl.loaders import load_content_files
 
+    course_folder = key.lstrip(settings.CANVAS_COURSE_BUCKET_PREFIX).split("/")[0]
+
     with TemporaryDirectory() as export_tempdir:
         course_archive_path = Path(export_tempdir, key.split("/")[-1])
         bucket.download_file(key, course_archive_path)
-        run = run_for_canvas_archive(course_archive_path, overwrite=overwrite)
+        run = run_for_canvas_archive(
+            course_archive_path, course_folder=course_folder, overwrite=overwrite
+        )
         checksum = calc_checksum(course_archive_path)
         if run:
             load_content_files(
@@ -36,7 +41,7 @@ def sync_canvas_archive(bucket, key: str, overwrite):
             run.save()
 
 
-def run_for_canvas_archive(course_archive_path, overwrite):
+def run_for_canvas_archive(course_archive_path, course_folder, overwrite):
     """
     Generate and return a LearningResourceRun for a Canvas course
     """
@@ -46,7 +51,7 @@ def run_for_canvas_archive(course_archive_path, overwrite):
     readable_id = course_info.get("course_code")
     # create placeholder learning resource
     resource, _ = LearningResource.objects.get_or_create(
-        readable_id=readable_id,
+        readable_id=f"{course_folder}+{readable_id}",
         defaults={
             "title": course_title,
             "published": False,
@@ -57,7 +62,9 @@ def run_for_canvas_archive(course_archive_path, overwrite):
     )
     if resource.runs.count() == 0:
         LearningResourceRun.objects.create(
-            run_id=f"{readable_id}+canvas", learning_resource=resource, published=True
+            run_id=f"{course_folder}+{readable_id}+canvas",
+            learning_resource=resource,
+            published=True,
         )
     run = resource.runs.first()
     if run.checksum == checksum and not overwrite:
