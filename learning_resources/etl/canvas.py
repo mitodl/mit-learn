@@ -49,7 +49,7 @@ def run_for_canvas_archive(course_archive_path, overwrite):
     course_title = course_info.get("title")
     readable_id = course_info.get("course_code")
     # create placeholder learning resource
-    resource, _ = LearningResource.objects.get_or_create(
+    resource, _ = LearningResource.objects.update_or_create(
         readable_id=readable_id,
         defaults={
             "title": course_title,
