@@ -6,6 +6,7 @@ import HeroSearch from "@/page-components/HeroSearch/HeroSearch"
 import BrowseTopicsSection from "./BrowseTopicsSection"
 import NewsEventsSection from "./NewsEventsSection"
 import TestimonialsSection from "./TestimonialsSection"
+import VideoShortsSection from "./VideoShortsSection"
 import ResourceCarousel from "@/page-components/ResourceCarousel/ResourceCarousel"
 import PersonalizeSection from "./PersonalizeSection"
 import * as carousels from "./carousels"
@@ -66,6 +67,7 @@ const HomePage: React.FC<{ heroImageIndex: number }> = ({ heroImageIndex }) => {
         </StyledContainer>
       </FullWidthBackground>
       <PersonalizeSection />
+      <VideoShortsSection />
       <Container component="section">
         <MediaCarousel
           titleComponent="h2"
