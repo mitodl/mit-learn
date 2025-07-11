@@ -522,6 +522,7 @@ def sync_canvas_courses(overwrite):
         stale_courses.values_list("id", flat=True),
         LearningResourceType.course.name,
     )
+    stale_courses.delete()
 
 
 @app.task(bind=True)
