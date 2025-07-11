@@ -1153,6 +1153,7 @@ paths:
             - emeritus
             - podcast
             - youtube
+            - canvas
             type: string
             description: |-
               * `edx` - edX
@@ -1173,6 +1174,7 @@ paths:
               * `emeritus` - Emeritus
               * `podcast` - Podcast
               * `youtube` - YouTube
+              * `canvas` - Canvas
         description: "The platform on which the learning resource is offered     \
           \        \n\n* `edx` - edX\n* `ocw` - MIT OpenCourseWare\n* `oll` - Open\
           \ Learning Library\n* `mitxonline` - MITx Online\n* `bootcamps` - Bootcamps\n\
@@ -1181,7 +1183,7 @@ paths:
           \ Computing\n* `ctl` - Center for Transportation & Logistics\n* `whu` -\
           \ WHU\n* `susskind` - Susskind\n* `globalalumni` - Global Alumni\n* `simplilearn`\
           \ - Simplilearn\n* `emeritus` - Emeritus\n* `podcast` - Podcast\n* `youtube`\
-          \ - YouTube"
+          \ - YouTube\n* `canvas` - Canvas"
       - in: query
         name: professional
         schema:

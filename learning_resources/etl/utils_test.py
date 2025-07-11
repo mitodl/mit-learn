@@ -2,7 +2,6 @@
 
 import datetime
 import pathlib
-import zipfile
 from decimal import Decimal
 from random import randrange
 from subprocess import check_call
@@ -20,8 +19,7 @@ from learning_resources.constants import (
     RunStatus,
 )
 from learning_resources.etl import utils
-from learning_resources.etl.canvas import parse_canvas_settings, run_for_canvas_archive
-from learning_resources.etl.constants import CommitmentConfig, DurationConfig, ETLSource
+from learning_resources.etl.constants import CommitmentConfig, DurationConfig
 from learning_resources.etl.utils import parse_certification, parse_string_to_int
 from learning_resources.factories import (
     ContentFileFactory,
@@ -30,25 +28,8 @@ from learning_resources.factories import (
     LearningResourceRunFactory,
     LearningResourceTopicFactory,
 )
-from learning_resources.models import LearningResource
 
 pytestmark = pytest.mark.django_db
-
-
-@pytest.fixture
-def canvas_settings_zip(tmp_path):
-    # Create a minimal XML for course_settings.xml
-    xml_content = b"""<?xml version="1.0" encoding="UTF-8"?>
-    <course>
-        <title>Test Course Title</title>
-        <course_code>TEST-101</course_code>
-        <other_field>Other Value</other_field>
-    </course>
-    """
-    zip_path = tmp_path / "test_canvas_course.zip"
-    with zipfile.ZipFile(zip_path, "w") as zf:
-        zf.writestr("course_settings/course_settings.xml", xml_content)
-    return zip_path
 
 
 def get_olx_test_docs():
@@ -577,102 +558,3 @@ def test_parse_resource_commitment(raw_value, min_hours, max_hours):
     assert utils.parse_resource_commitment(raw_value) == CommitmentConfig(
         commitment=raw_value, min_weekly_hours=min_hours, max_weekly_hours=max_hours
     )
-
-
-def test_parse_canvas_settings_returns_expected_dict(canvas_settings_zip):
-    """
-    Test that parse_canvas_settings returns a dictionary with expected attributes
-    """
-    attrs = parse_canvas_settings(canvas_settings_zip)
-    assert attrs["title"] == "Test Course Title"
-    assert attrs["course_code"] == "TEST-101"
-    assert attrs["other_field"] == "Other Value"
-
-
-def test_parse_canvas_settings_missing_fields(tmp_path):
-    """
-    Test that parse_canvas_settings handles missing fields gracefully
-    """
-    xml_content = b"""<course><title>Only Title</title></course>"""
-    zip_path = tmp_path / "test_canvas_course2.zip"
-    with zipfile.ZipFile(zip_path, "w") as zf:
-        zf.writestr("course_settings/course_settings.xml", xml_content)
-    attrs = parse_canvas_settings(zip_path)
-    assert attrs["title"] == "Only Title"
-    assert "course_code" not in attrs
-
-
-def test_parse_canvas_settings_handles_namespaces(tmp_path):
-    """
-    Test that parse_canvas_settings can handle XML with namespaces
-    """
-    xml_content = b"""<ns0:course xmlns:ns0="http://example.com">
-        <ns0:title>Namespaced Title</ns0:title>
-        <ns0:course_code>NS-101</ns0:course_code>
-    </ns0:course>"""
-    zip_path = tmp_path / "test_canvas_course4.zip"
-    with zipfile.ZipFile(zip_path, "w") as zf:
-        zf.writestr("course_settings/course_settings.xml", xml_content)
-    attrs = parse_canvas_settings(zip_path)
-    assert attrs["title"] == "Namespaced Title"
-    assert attrs["course_code"] == "NS-101"
-
-
-@pytest.mark.django_db
-def test_run_for_canvas_archive_creates_resource_and_run(tmp_path, mocker):
-    """
-    Test that run_for_canvas_archive creates a LearningResource and Run
-    when given a valid canvas archive.
-    """
-    course_folder = "test"
-    mocker.patch(
-        "learning_resources.etl.canvas.parse_canvas_settings",
-        return_value={"title": "Test Course", "course_code": "TEST101"},
-    )
-    mocker.patch("learning_resources.etl.canvas.calc_checksum", return_value="abc123")
-    # No resource exists yet
-    course_archive_path = tmp_path / "archive.zip"
-    course_archive_path.write_text("dummy")
-    _, run = run_for_canvas_archive(
-        course_archive_path, course_folder="test", overwrite=True
-    )
-    resource = LearningResource.objects.get(readable_id=f"{course_folder}-TEST101")
-    assert resource.title == "Test Course"
-    assert resource.etl_source == ETLSource.canvas.name
-    assert resource.resource_type == LearningResourceType.course.name
-    assert run is not None
-    assert run.learning_resource == resource
-    assert run.checksum == "abc123"
-
-
-@pytest.mark.django_db
-def test_run_for_canvas_archive_creates_run_if_none_exists(tmp_path, mocker):
-    """
-    Test that run_for_canvas_archive creates a Run if no runs exist for the resource.
-    """
-    course_folder = "test"
-    mocker.patch(
-        "learning_resources.etl.canvas.parse_canvas_settings",
-        return_value={"title": "Test Course", "course_code": "TEST104"},
-    )
-    mocker.patch(
-        "learning_resources.etl.canvas.calc_checksum", return_value="checksum104"
-    )
-    # Create resource with no runs
-    resource = LearningResourceFactory.create(
-        readable_id=f"{course_folder}-TEST104",
-        title="Test Course",
-        etl_source=ETLSource.canvas.name,
-        resource_type=LearningResourceType.course.name,
-        published=False,
-    )
-    resource.runs.all().delete()
-    assert resource.runs.count() == 0
-    course_archive_path = tmp_path / "archive4.zip"
-    course_archive_path.write_text("dummy")
-    _, run = run_for_canvas_archive(
-        course_archive_path, course_folder=course_folder, overwrite=True
-    )
-    assert run is not None
-    assert run.learning_resource == resource
-    assert run.checksum == "checksum104"
