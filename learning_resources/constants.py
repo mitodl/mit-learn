@@ -87,6 +87,7 @@ class PlatformType(ExtendedEnum):
     emeritus = "Emeritus"
     podcast = "Podcast"
     youtube = "YouTube"
+    canvas = "Canvas"
 
 
 class PrivacyLevel(ExtendedEnum):

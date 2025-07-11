@@ -94,6 +94,8 @@ const Page: React.FC = async ({
   )
 
   const searchRequest = getSearchParams({
+    // @ts-expect-error Local openapi client https://www.npmjs.com/package/@mitodl/open-api-axios
+    // out of sync while we adding an enum value.
     requestParams: validateRequestParams(search!),
     constantSearchParams,
     facetNames,
