@@ -16,6 +16,7 @@ import {
   getLearningResourcePrices,
   getResourceDate,
   showStartAnytime,
+  getResourceLanguage,
 } from "ol-utilities"
 import { ListCard } from "../Card/ListCard"
 import type { ActionButtonProps } from "@mitodl/smoot-design"
@@ -319,7 +320,9 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
       <ListCard.Info>
         <Info resource={resource} />
       </ListCard.Info>
-      <ListCard.Title href={href}>{resource.title}</ListCard.Title>
+      <ListCard.Title href={href} lang={getResourceLanguage(resource)}>
+        {resource.title}
+      </ListCard.Title>
       <ListCard.Actions>
         {onAddToLearningPathClick && (
           <CardActionButton

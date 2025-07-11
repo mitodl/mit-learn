@@ -15,6 +15,7 @@ import {
   getLearningResourcePrices,
   getResourceDate,
   showStartAnytime,
+  getResourceLanguage,
 } from "ol-utilities"
 import { Card } from "../Card/Card"
 import type { Size } from "../Card/Card"
@@ -241,7 +242,9 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
       <Card.Info>
         <Info resource={resource} size={size} />
       </Card.Info>
-      <Card.Title href={href}>{resource.title}</Card.Title>
+      <Card.Title href={href} lang={getResourceLanguage(resource)}>
+        {resource.title}
+      </Card.Title>
       <Card.Actions>
         {onAddToLearningPathClick && (
           <CardActionButton

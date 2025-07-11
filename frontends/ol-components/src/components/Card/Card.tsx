@@ -230,6 +230,7 @@ type TitleProps = {
   href?: string
   lines?: number
   style?: CSSProperties
+  lang?: string
 }
 
 type SlotProps = { children?: ReactNode; style?: CSSProperties }

@@ -161,6 +161,10 @@ const allRunsAreIdentical = (resource: LearningResource) => {
   )
 }
 
+const getResourceLanguage = (resource: LearningResource) => {
+  return resource.runs?.[resource.runs.length - 1]?.languages?.[0]
+}
+
 export {
   DEFAULT_RESOURCE_IMG,
   embedlyCroppedImage,
@@ -169,5 +173,6 @@ export {
   findBestRun,
   formatRunDate,
   allRunsAreIdentical,
+  getResourceLanguage,
 }
 export type { EmbedlyConfig }

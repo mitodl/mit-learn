@@ -11,6 +11,7 @@ import { LearningResource } from "api"
 import {
   getReadableResourceType,
   getLearningResourcePrices,
+  getResourceLanguage,
 } from "ol-utilities"
 import { ListCardCondensed } from "../Card/ListCardCondensed"
 import {
@@ -128,7 +129,7 @@ const LearningResourceListCardCondensed: React.FC<
       <ListCardCondensed.Info>
         <Info resource={resource} />
       </ListCardCondensed.Info>
-      <ListCardCondensed.Title href={href}>
+      <ListCardCondensed.Title href={href} lang={getResourceLanguage(resource)}>
         {resource.title}
       </ListCardCondensed.Title>
       <ListCardCondensed.Actions>
