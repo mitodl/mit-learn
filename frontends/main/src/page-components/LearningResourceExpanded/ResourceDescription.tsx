@@ -2,6 +2,8 @@ import React, { useCallback, useRef, useState } from "react"
 import styled from "@emotion/styled"
 import { Skeleton, theme, Link } from "ol-components"
 import type { LearningResource } from "api"
+import { getResourceLanguage } from "ol-utilities"
+
 const DescriptionContainer = styled.div({
   display: "flex",
   flexDirection: "column",
@@ -83,7 +85,7 @@ const ResourceDescription = ({ resource }: { resource?: LearningResource }) => {
          * backend during ETL. This is safe to render.
          */
         dangerouslySetInnerHTML={{ __html: resource.description || "" }}
-        lang={resource.runs?.[0]?.languages?.[0]}
+        lang={getResourceLanguage(resource)}
       />
       {(isClamped || clampedOnFirstRender.current) && (
         <Link
