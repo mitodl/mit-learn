@@ -633,7 +633,7 @@ def test_run_for_canvas_archive_creates_resource_and_run(tmp_path, mocker):
     # No resource exists yet
     course_archive_path = tmp_path / "archive.zip"
     course_archive_path.write_text("dummy")
-    run = run_for_canvas_archive(
+    _, run = run_for_canvas_archive(
         course_archive_path, course_folder="test", overwrite=True
     )
     resource = LearningResource.objects.get(readable_id=f"{course_folder}-TEST101")
@@ -670,7 +670,7 @@ def test_run_for_canvas_archive_creates_run_if_none_exists(tmp_path, mocker):
     assert resource.runs.count() == 0
     course_archive_path = tmp_path / "archive4.zip"
     course_archive_path.write_text("dummy")
-    run = run_for_canvas_archive(
+    _, run = run_for_canvas_archive(
         course_archive_path, course_folder=course_folder, overwrite=True
     )
     assert run is not None
