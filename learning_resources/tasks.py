@@ -12,7 +12,6 @@ from django.conf import settings
 from django.db.models import Q
 from django.utils import timezone
 
-from learning_resources.constants import LearningResourceType
 from learning_resources.content_summarizer import ContentSummarizer
 from learning_resources.etl import pipelines, youtube
 from learning_resources.etl.canvas import (
@@ -32,9 +31,9 @@ from learning_resources.etl.utils import (
 from learning_resources.models import ContentFile, LearningResource
 from learning_resources.site_scrapers.utils import scraper_for_site
 from learning_resources.utils import (
-    bulk_resources_unpublished_actions,
     html_to_markdown,
     load_course_blocklist,
+    resource_unpublished_actions,
 )
 from learning_resources_search.exceptions import RetryError
 from main.celery import app
@@ -518,10 +517,7 @@ def sync_canvas_courses(overwrite):
         etl_source=ETLSource.canvas.name
     ).exclude(readable_id__in=canvas_readable_ids)
     stale_courses.update(test_mode=False, published=False)
-    bulk_resources_unpublished_actions(
-        stale_courses.values_list("id", flat=True),
-        LearningResourceType.course.name,
-    )
+    [resource_unpublished_actions(resource) for resource in stale_courses]
     stale_courses.delete()
 
 

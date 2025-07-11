@@ -618,7 +618,7 @@ def test_sync_canvas_courses_removes_stale_resources(
     sync_canvas_courses should unpublish and delete stale canvas LearningResources
     """
     settings.CANVAS_COURSE_BUCKET_PREFIX = "canvas/"
-    mocker.patch("learning_resources.tasks.bulk_resources_unpublished_actions")
+    mocker.patch("learning_resources.tasks.resource_unpublished_actions")
     mocker.patch("learning_resources.tasks.get_learning_course_bucket")
     mock_bucket = mocker.Mock()
     mock_archive1 = mocker.Mock()
