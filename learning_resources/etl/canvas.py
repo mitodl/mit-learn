@@ -26,7 +26,7 @@ def sync_canvas_archive(bucket, key: str, overwrite):
     with TemporaryDirectory() as export_tempdir:
         course_archive_path = Path(export_tempdir, key.split("/")[-1])
         bucket.download_file(key, course_archive_path)
-        run = run_for_canvas_archive(
+        resource_readable_id, run = run_for_canvas_archive(
             course_archive_path, course_folder=course_folder, overwrite=overwrite
         )
         checksum = calc_checksum(course_archive_path)
@@ -39,6 +39,7 @@ def sync_canvas_archive(bucket, key: str, overwrite):
             )
             run.checksum = checksum
             run.save()
+    return resource_readable_id, run
 
 
 def run_for_canvas_archive(course_archive_path, course_folder, overwrite):
@@ -67,12 +68,13 @@ def run_for_canvas_archive(course_archive_path, course_folder, overwrite):
             published=True,
         )
     run = resource.runs.first()
+    resource_readable_id = run.learning_resource.readable_id
     if run.checksum == checksum and not overwrite:
         log.info("Checksums match for %s, skipping load", readable_id)
-        return None
+        return resource_readable_id, None
     run.checksum = checksum
     run.save()
-    return run
+    return resource_readable_id, run
 
 
 def parse_canvas_settings(course_archive_path):
