@@ -76,7 +76,7 @@ const AUTH_TEXT_DATA = {
     text: "As a member, get personalized recommendations, curate learning lists, and follow your areas of interest.",
     linkProps: {
       children: "Sign Up for Free",
-      href: urls.login({ pathname: urls.DASHBOARD_HOME }),
+      href: urls.login({ pathname: urls.DASHBOARD_HOME, searchParams: null }),
     },
   },
 }

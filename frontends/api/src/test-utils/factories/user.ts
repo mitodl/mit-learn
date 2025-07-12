@@ -25,6 +25,17 @@ const profile: PartialFactory<Profile> = (overrides = {}): Profile => ({
 const enforcerId = new UniqueEnforcer()
 
 const user: PartialFactory<User> = (overrides = {}): User => {
+  if (overrides?.is_authenticated === false) {
+    return {
+      is_authenticated: false,
+      is_article_editor: false,
+      is_learning_path_editor: false,
+      // @ts-expect-error API Response can include anonymous user
+      id: null,
+      username: "",
+    }
+  }
+
   const result: User = {
     id: enforcerId.enforce(faker.number.int),
     first_name: faker.person.firstName(),

@@ -3,6 +3,9 @@ import { renderWithProviders, screen } from "@/test-utils"
 import { HOME } from "@/common/urls"
 import ErrorPage from "./error"
 import { ForbiddenError } from "@/common/errors"
+import { setMockResponse, urls, factories } from "api/test-utils"
+
+const makeUser = factories.user.user
 
 test("The error page shows error message", () => {
   const error = new Error("Ruh roh")
@@ -13,10 +16,12 @@ test("The error page shows error message", () => {
   expect(homeLink).toHaveAttribute("href", HOME)
 })
 
-test("The NotFoundPage loads with a link that directs to HomePage", () => {
+test("The Forbidden loads with a link that directs to HomePage", async () => {
   const error = new ForbiddenError()
-  renderWithProviders(<ErrorPage error={error} />, { user: {} })
-  screen.getByRole("heading", {
+  setMockResponse.get(urls.userMe.get(), makeUser())
+
+  renderWithProviders(<ErrorPage error={error} />)
+  await screen.findByRole("heading", {
     name: "You do not have permission to access this resource.",
   })
   screen.getByText("Oops!")
