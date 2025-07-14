@@ -1,6 +1,24 @@
 Release Notes
 =============
 
+Version 0.37.1
+--------------
+
+- add a healthcheck route (#2357)
+- fix price separator display (#2348)
+- chore(deps): update dependency eslint-plugin-jest to v29 (#2356)
+- canvas - separate courses per session (#2347)
+- fix(deps): update dependency litellm to v1.74.2 (#2354)
+- fix(deps): update dependency ruff to v0.12.3 (#2353)
+- fix(deps): update dependency onnxruntime to v1.22.1 (#2352)
+- chore(deps): update redis docker tag to v7.4.5 (#2351)
+- Set language attribute on resource title and descriptions (#2346)
+- Add Canvas platform for learning resources (#2345)
+- Shanbady/summary flashcard sync (#2339)
+- Testimonial spacing to allow 2 line attestation title (#2344)
+- Remove the chat demo pages (#2341)
+- Return to page after sign up (#2340)
+
 Version 0.37.0 (Released July 14, 2025)
 --------------
 
