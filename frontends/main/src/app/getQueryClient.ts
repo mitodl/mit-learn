@@ -19,7 +19,11 @@ const makeQueryClient = (): QueryClient => {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: Infinity,
+        /**
+         * Everything should be stable for ~24 hours (period of ETL tasks),
+         * but better to be conservative about freshness.
+         */
+        staleTime: 15 * 60 * 1000,
 
         /**
          * Throw runtime errors instead of marking query as errored.
