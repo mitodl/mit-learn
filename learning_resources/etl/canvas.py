@@ -107,25 +107,35 @@ def transform_canvas_content_files(
     Transform content files from a Canvas course zipfile
     """
     basedir = course_zipfile.name.split(".")[0]
+    module_metadata = parse_module_meta(course_zipfile.absolute())
+    published_items = [
+        Path(item["path"]).resolve() for item in module_metadata["active"]
+    ]
     with (
         TemporaryDirectory(prefix=basedir) as olx_path,
         zipfile.ZipFile(course_zipfile.absolute(), "r") as course_archive,
     ):
         for member in course_archive.infolist():
-            course_archive.extract(member, path=olx_path)
+            if Path(member.filename).resolve() in published_items:
+                course_archive.extract(member, path=olx_path)
+                log.info("processing active file %s", member.filename)
+            else:
+                log.info("skipping unpublished file %s", member.filename)
         yield from _process_olx_path(olx_path, run, overwrite=overwrite)
 
 
-def parse_module_meta(xml_path):
-    manifest_path = Path(xml_path).parent / Path("../imsmanifest.xml")
-    resource_map = extract_resources_by_identifierref(manifest_path)
-    """Parse module_meta.xml and return publish/active status of resources."""
+def parse_module_meta(course_archive_path):
+    """
+    Parse module_meta.xml and return publish/active status of resources.
+    """
+    with zipfile.ZipFile(course_archive_path, "r") as course_archive:
+        module_xml = course_archive.read("course_settings/module_meta.xml")
+        manifest_xml = course_archive.read("imsmanifest.xml")
+    resource_map = extract_resources_by_identifierref(manifest_xml)
     publish_status = {"active": [], "unpublished": []}
     try:
         namespaces = {"ns": "http://canvas.instructure.com/xsd/cccv1p0"}
-        tree = ElementTree.parse(xml_path)
-        root = tree.getroot()
-
+        root = ElementTree.fromstring(module_xml)
         for module in root.findall(".//ns:module", namespaces):
             module_title = module.find("ns:title", namespaces).text
 
@@ -141,7 +151,7 @@ def parse_module_meta(xml_path):
                 items = resource_map.get(identifierref, {})
                 for item_info in items:
                     for file in item_info.get("files", []):
-                        file_path = Path(xml_path).parent / Path("../", file)
+                        file_path = Path(file)
                         status = "active" if item_state == "active" else "unpublished"
                         publish_status[status].append(
                             {
@@ -157,12 +167,12 @@ def parse_module_meta(xml_path):
     return publish_status
 
 
-def extract_resources_by_identifierref(manifest_file):
+def extract_resources_by_identifierref(manifest_xml):
     """
     Extract resources from an IMS manifest file and return a map keyed by identifierref.
     """
-    tree = ElementTree.parse(manifest_file)
-    root = tree.getroot()
+    root = ElementTree.fromstring(manifest_xml)
+
     namespaces = {
         "imscp": "http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1",
         "lom": "http://ltsc.ieee.org/xsd/imsccv1p1/LOM/resource",
