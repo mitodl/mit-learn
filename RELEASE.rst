@@ -1,6 +1,25 @@
 Release Notes
 =============
 
+Version 0.37.0 (Released July 14, 2025)
+--------------
+
+- Add a Sitemap  (#2338)
+- chore(deps): update yarn to v4.9.2 (#2325)
+- fix(deps): update dependency ruff to v0.12.2 (#2333)
+- Updated Designs for 404 and Error pages (#2337)
+- New honor code page and copy updates to privacy policy and terms.  (#2336)
+- Display certificate type on list cards (#2335)
+- add one click enroll functionality to dashboard cards (#2319)
+- adding favorites list plugin (#2322)
+- fix(deps): update dependency onnxruntime to v1.22.0 (#2332)
+- fix(deps): update dependency llama-index-llms-openai to ^0.4.0 (#2331)
+- fix(deps): update dependency litellm to v1.73.6 (#2330)
+- fix(deps): update dependency cairosvg to v2.8.2 (#2329)
+- chore(deps): update node.js to v22.17.0 (#2328)
+- chore(deps): update nginx docker tag to v1.29.0 (#2327)
+- fix(deps): update dependency django to v4.2.23 (#2326)
+
 Version 0.36.5 (Released July 08, 2025)
 --------------
 
