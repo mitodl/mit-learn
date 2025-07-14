@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.37.0
+Version 0.37.0 (Released July 14, 2025)
 --------------
 
 - Add a Sitemap  (#2338)
