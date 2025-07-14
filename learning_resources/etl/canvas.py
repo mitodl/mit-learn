@@ -1,5 +1,7 @@
 import logging
+import sys
 import zipfile
+from collections import defaultdict
 from collections.abc import Generator
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -112,3 +114,81 @@ def transform_canvas_content_files(
         for member in course_archive.infolist():
             course_archive.extract(member, path=olx_path)
         yield from _process_olx_path(olx_path, run, overwrite=overwrite)
+
+
+def parse_module_meta(xml_path):
+    manifest_path = Path(xml_path).parent / Path("../imsmanifest.xml")
+    resource_map = extract_resources_by_identifierref(manifest_path)
+    """Parse module_meta.xml and return publish/active status of resources."""
+    publish_status = {"active": [], "unpublished": []}
+    try:
+        namespaces = {"ns": "http://canvas.instructure.com/xsd/cccv1p0"}
+        tree = ElementTree.parse(xml_path)
+        root = tree.getroot()
+
+        for module in root.findall(".//ns:module", namespaces):
+            module_title = module.find("ns:title", namespaces).text
+
+            for item in module.findall("ns:items/ns:item", namespaces):
+                item_state = item.find("ns:workflow_state", namespaces).text
+                item_title = item.find("ns:title", namespaces).text
+                identifierref = (
+                    item.find("ns:identifierref", namespaces).text
+                    if item.find("ns:identifierref", namespaces) is not None
+                    else None
+                )
+                content_type = item.find("ns:content_type", namespaces).text
+                items = resource_map.get(identifierref, {})
+                for item_info in items:
+                    for file in item_info.get("files", []):
+                        file_path = Path(xml_path).parent / Path("../", file)
+                        status = "active" if item_state == "active" else "unpublished"
+                        publish_status[status].append(
+                            {
+                                "title": item_title,
+                                "type": content_type,
+                                "path": file_path,
+                                "module": module_title,
+                            }
+                        )
+    except Exception:
+        log.exception("Error parsing XML: %s", sys.stderr)
+        return None
+    return publish_status
+
+
+def extract_resources_by_identifierref(manifest_file):
+    """
+    Extract resources from an IMS manifest file and return a map keyed by identifierref.
+    """
+    tree = ElementTree.parse(manifest_file)
+    root = tree.getroot()
+    namespaces = {
+        "imscp": "http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1",
+        "lom": "http://ltsc.ieee.org/xsd/imsccv1p1/LOM/resource",
+        "lomimscc": "http://ltsc.ieee.org/xsd/imsccv1p1/LOM/manifest",
+    }
+    # Dictionary to hold resources keyed by identifierref
+    resources_dict = defaultdict(list)
+    # Find all item elements with identifierref attributes
+    for item in root.findall(".//imscp:item[@identifierref]", namespaces):
+        identifierref = item.get("identifierref")
+        title = (
+            item.find("imscp:title", namespaces).text
+            if item.find("imscp:title", namespaces) is not None
+            else "No Title"
+        )
+        resource = root.find(
+            f'.//imscp:resource[@identifier="{identifierref}"]', namespaces
+        )
+        if resource is not None:
+            # Get all file elements within the resource
+            files = [
+                file_elem.get("href")
+                for file_elem in resource.findall("imscp:file", namespaces)
+            ]
+
+            resources_dict[identifierref].append(
+                {"title": title, "files": files, "type": resource.get("type")}
+            )
+    return dict(resources_dict)
