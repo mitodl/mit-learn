@@ -30,7 +30,11 @@ from learning_resources.etl.utils import (
 )
 from learning_resources.models import ContentFile, LearningResource
 from learning_resources.site_scrapers.utils import scraper_for_site
-from learning_resources.utils import html_to_markdown, load_course_blocklist
+from learning_resources.utils import (
+    html_to_markdown,
+    load_course_blocklist,
+    resource_unpublished_actions,
+)
 from learning_resources_search.exceptions import RetryError
 from main.celery import app
 from main.constants import ISOFORMAT
@@ -473,7 +477,7 @@ def summarize_unprocessed_content(
 @app.task(acks_late=True)
 def ingest_canvas_course(archive_path, overwrite):
     bucket = get_learning_course_bucket(ETLSource.canvas.name)
-    sync_canvas_archive(bucket, archive_path, overwrite=overwrite)
+    return sync_canvas_archive(bucket, archive_path, overwrite=overwrite)
 
 
 @app.task(acks_late=True)
@@ -499,14 +503,22 @@ def sync_canvas_courses(overwrite):
             == archive.last_modified
         ):
             latest_archives[course_folder] = archive
+    canvas_readable_ids = []
 
     for archive in latest_archives.values():
         key = archive.key
         log.info("Ingesting canvas course %s", key)
-        ingest_canvas_course(
+        resource_readable_id, canvas_run = ingest_canvas_course(
             key,
             overwrite=overwrite,
         )
+        canvas_readable_ids.append(resource_readable_id)
+    stale_courses = LearningResource.objects.filter(
+        etl_source=ETLSource.canvas.name
+    ).exclude(readable_id__in=canvas_readable_ids)
+    stale_courses.update(test_mode=False, published=False)
+    [resource_unpublished_actions(resource) for resource in stale_courses]
+    stale_courses.delete()
 
 
 @app.task(bind=True)
