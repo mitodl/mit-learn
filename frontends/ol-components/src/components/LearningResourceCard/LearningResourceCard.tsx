@@ -66,13 +66,18 @@ const Info = ({
   size: Size
 }) => {
   const prices = getLearningResourcePrices(resource)
-  const certificatePrice =
-    size === "small" && prices.certificate.display?.includes("–")
-      ? ""
-      : prices.certificate.display
-        ? prices.certificate.display
-        : ""
-  const separator = size === "small" ? "" : ": "
+  const getCertPriceAndLabel = () => {
+    if (size === "small") {
+      const label = ""
+      const hasRange = prices.course.display?.includes("–")
+      const certificatePrice = hasRange ? "" : prices.certificate.display
+      return { certificatePrice, label }
+    }
+    const certificatePrice = prices.certificate.display
+    const label = certificatePrice ? "Certificate:" : "Certificate"
+    return { certificatePrice, label }
+  }
+  const { certificatePrice, label } = getCertPriceAndLabel()
   return (
     <>
       <span>{getReadableResourceType(resource.resource_type)}</span>
@@ -84,14 +89,14 @@ const Info = ({
                 <RiAwardFill />
               </Tooltip>
             ) : (
-              <RiAwardFill />
+              <>
+                <RiAwardFill />
+                {label}
+                {certificatePrice ? (
+                  <CertificatePrice>{certificatePrice}</CertificatePrice>
+                ) : null}
+              </>
             )}
-            {size === "small" ? "" : "Certificate"}
-            {certificatePrice ? (
-              <CertificatePrice>
-                {`${separator}${certificatePrice}`}
-              </CertificatePrice>
-            ) : null}
           </Certificate>
         )}
         <Price>{prices.course.display}</Price>
