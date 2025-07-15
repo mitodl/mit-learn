@@ -1,5 +1,6 @@
 from mitol.scim.adapters import UserAdapter
 
+from authentication.hooks import get_plugin_manager
 from profiles.models import Profile
 
 
@@ -45,6 +46,10 @@ class LearnUserAdapter(UserAdapter):
         """
         self.obj.profile.user = self.obj
         self.obj.profile.save()
+
+        pm = get_plugin_manager()
+        hook = pm.hook
+        hook.user_created(user=self.obj)
 
     def _handle_replace_nested_path(self, nested_path, nested_value):
         """Per-path replacement handling"""
