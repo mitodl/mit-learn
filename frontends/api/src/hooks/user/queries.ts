@@ -9,6 +9,11 @@ const userKeys = {
 const userQueries = {
   me: () =>
     queryOptions({
+      /**
+       * Use a short stale-time to help keep the user data fresh.
+       * (Nonzero, since staleTime:0 can result in many fetches per page load.)
+       */
+      staleTime: 3 * 60 * 1000,
       queryKey: userKeys.me(),
       queryFn: () => usersApi.usersMeRetrieve().then((res) => res.data),
       /**
