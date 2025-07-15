@@ -747,9 +747,6 @@ POSTHOG_PROJECT_ID = get_int(
     default=None,
 )
 
-# Enable or disable search engine indexing
-MITOL_NOINDEX = get_bool("MITOL_NOINDEX", True)  # noqa: FBT003
-
 # Search defaults settings - adjustable throught the admin ui
 DEFAULT_SEARCH_MODE = get_string(name="DEFAULT_SEARCH_MODE", default="phrase")
 DEFAULT_SEARCH_SLOP = get_int(name="DEFAULT_SEARCH_SLOP", default=6)
