@@ -151,23 +151,22 @@ jobs:
 
       - name: Build the Docker image
         env:
-          ORIGIN: https://rc.learn.mit.edu
-          MITOL_API_BASE_URL: https://api.rc.learn.mit.edu
+          ORIGIN: http://fakelearn.odl.local:8062
+          MITOL_API_BASE_URL: http://api.fakelearn.odl.local:8065
           SITE_NAME: MIT Learn
           SUPPORT_EMAIL: mitlearn-support@mit.edu
-          EMBEDLY_KEY: ${{ secrets.EMBEDLY_KEY_RC }}
+          EMBEDLY_KEY: fake-embedly-key
           MITOL_AXIOS_WITH_CREDENTIALS: true
-          CSRF_COOKIE_NAME: ${{ secrets.CSRF_COOKIE_NAME_RC }}
+          CSRF_COOKIE_NAME: learn_csrftoken_ci
           POSTHOG_API_HOST: https://app.posthog.com
-          POSTHOG_PROJECT_ID: ${{ secrets.POSTHOG_PROJECT_ID_RC }}
-          POSTHOG_API_KEY: ${{ secrets.POSTHOG_PROJECT_API_KEY_RC }}
-          SENTRY_DSN: ${{ secrets.SENTRY_DSN_RC }}
-          SENTRY_ENV: ${{ secrets.MITOL_ENVIRONMENT_RC }}
-          SENTRY_PROFILES_SAMPLE_RATE: ${{ secrets.SENTRY_PROFILES_SAMPLE_RATE_RC }}
-          SENTRY_TRACES_SAMPLE_RATE: ${{ secrets.SENTRY_TRACES_SAMPLE_RATE_RC }}
-          APPZI_URL: ${{ secrets.APPZI_URL_RC }}
-          LEARN_AI_RECOMMENDATION_ENDPOINT: ${{ secrets.LEARN_AI_RECOMMENDATION_ENDPOINT_RC }}
-          LEARN_AI_SYLLABUS_ENDPOINT: ${{ secrets.LEARN_AI_SYLLABUS_ENDPOINT_RC }}
+          POSTHOG_PROJECT_ID: fake-posthog-project-id
+          POSTHOG_API_KEY: fake-posthog-api-key
+          SENTRY_DSN: fake-sentry-dsn
+          SENTRY_ENV: fake-sentry-env
+          SENTRY_PROFILES_SAMPLE_RATE: 0.1
+          SENTRY_TRACES_SAMPLE_RATE: 0.1
+          LEARN_AI_RECOMMENDATION_ENDPOINT: http://api.fakelearn.odl.local:8065/ai/http/recommendation_agent
+          LEARN_AI_SYLLABUS_ENDPOINT: http://api.fakelearn.odl.local:8065/ai/http/syllabus_agent
           VERSION: ${{ github.sha }}
         run: |
           docker build \
