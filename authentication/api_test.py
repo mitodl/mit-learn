@@ -37,29 +37,6 @@ def test_create_user(profile_data):
         assert user.profile.name is None
 
 
-@pytest.mark.django_db
-@pytest.mark.parametrize(
-    "profile_data",
-    [
-        {"name": "My Name", "image": "http://localhost/image.jpg"},
-        # None,
-    ],
-)
-def test_new_user_has_favorites_list(profile_data):
-    """Tests that a user created via the API has a favorites list"""
-    email = "email@localhost"
-    username = "username"
-    user = api.create_user(username, email, profile_data, {"first_name": "Bob"})
-
-    assert isinstance(user, User)
-    assert user.email == email
-    assert user.username == username
-    assert user.first_name == "Bob"
-
-    user.refresh_from_db()
-    assert user.user_lists.count() == 1
-
-
 @pytest.mark.parametrize(
     "mock_method",
     ["profiles.api.ensure_profile"],

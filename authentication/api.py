@@ -34,7 +34,9 @@ def create_user(username, email, profile_data=None, user_extra=None):
 
     with transaction.atomic():
         user, _ = User.objects.get_or_create(email=email, defaults=defaults)
-        user_created_actions(user=user, details=profile_data, is_new=True)
+
+        profile_api.ensure_profile(user, profile_data=profile_data)
+
     return user
 
 
@@ -46,4 +48,5 @@ def user_created_actions(*, user, details, **kwargs):
         pm = get_plugin_manager()
         hook = pm.hook
         hook.user_created(user=user, user_data={"profile": details})
-    profile_api.ensure_profile(user=user, profile_data=details)
+    else:
+        profile_api.ensure_profile(user=user, profile_data=details)
