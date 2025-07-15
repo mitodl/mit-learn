@@ -131,9 +131,9 @@ routes:
             Referrer-Policy: "origin"
       proxy-rewrite:
         regex_uri:
-          - "^/mitxonline(.*)"
+          - "^/mitxonline/(.*)"
           - "/$1"
-    uri: "/mitxonline*"
+    uri: "/mitxonline/*"
     hosts:
       - ${{MITOL_API_DOMAIN}}
 #END
