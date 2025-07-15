@@ -13,6 +13,7 @@ import ConfiguredPostHogProvider from "@/page-components/ConfiguredPostHogProvid
 import { usePrefetchWarnings } from "api/ssr/usePrefetchWarnings"
 import { AppProgressBar as ProgressBar } from "next-nprogress-bar"
 import type { NProgressOptions } from "next-nprogress-bar"
+import { ReloadOnUserChange } from "@/page-components/ReloadOnUserChange/ReloadOnUserChange"
 
 const PROGRESS_BAR_OPTS: NProgressOptions = { showSpinner: false }
 
@@ -30,6 +31,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         shallowRouting
       />
       <QueryClientProvider client={queryClient}>
+        <ReloadOnUserChange />
         <ConfiguredPostHogProvider>
           <NextJsAppRouterCacheProvider>
             <ThemeProvider>

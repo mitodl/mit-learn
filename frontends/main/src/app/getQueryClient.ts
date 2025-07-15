@@ -1,6 +1,6 @@
 // Based on https://tanstack.com/query/v5/docs/framework/react/guides/advanced-ssr
 
-import { QueryClient, isServer } from "@tanstack/react-query"
+import { QueryClient, isServer, focusManager } from "@tanstack/react-query"
 
 type MaybeHasStatusAndDetail = {
   response?: {
@@ -19,8 +19,11 @@ const makeQueryClient = (): QueryClient => {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        refetchOnWindowFocus: false,
-        staleTime: Infinity,
+        /**
+         * Everything should be stable for ~24 hours (period of ETL tasks),
+         * but better to be conservative about freshness.
+         */
+        staleTime: 15 * 60 * 1000,
 
         /**
          * Throw runtime errors instead of marking query as errored.
@@ -79,6 +82,58 @@ function getQueryClient() {
     return browserQueryClient
   }
 }
+
+/**
+ * Use a custom focus manager for react-query's refetchOnWindowFocus feature.
+ *
+ * NOTES:
+ *  - Despite its name, refetchOnWindowFocus doesn't map 1-to-1 to browser focus
+ *  - The default handlers only use visibilitychange. This triggers refetch when
+ *    switching between tabs in the same window or minimizing/restoring the
+ *    browser window, but NOT when switching between windows
+ *  - Our implementation refetches on both visibilitychange and focus events:
+ *      - focus handles switching between windows and, usually, tabs.
+ *        (Usually = as long as the site is focused, and not, say, the URL bar,
+ *         devtools, or other browser UI.)
+ *      - visibilitychange handles minimizing/restoring the browser window and
+ *        switching between tabs in the same window.
+ *
+ * Refetching on focus has some minor disadvantages. Chiefly:
+ *  - It refetches when focusing between main site and browser UI (devtools,
+ *    URL bar, etc.)
+ *
+ * See https://github.com/TanStack/query/discussions/6568 for discussion
+ *
+ */
+focusManager.setEventListener((setFocused) => {
+  const setFocusAndLogChange = (focused?: boolean) => {
+    if (focused && !focusManager.isFocused()) {
+      console.log(
+        "Site refocus detected; React Query will refetch stale queries.",
+      )
+    }
+    setFocused(focused)
+  }
+  const handleFocusChange = () => {
+    setFocusAndLogChange(document.hasFocus())
+  }
+  const handleVisibilityChange = () => {
+    setFocusAndLogChange(document.visibilityState === "visible")
+  }
+
+  if (typeof window !== "undefined" && window.addEventListener) {
+    window.addEventListener("visibilitychange", handleVisibilityChange, false)
+    window.addEventListener("focus", handleFocusChange, false)
+    window.addEventListener("blur", handleFocusChange, false)
+
+    return () => {
+      // Be sure to unsubscribe if a new handler is set
+      window.removeEventListener("focus", handleFocusChange)
+      window.removeEventListener("blur", handleFocusChange)
+      window.removeEventListener("visibilitychange", handleVisibilityChange)
+    }
+  }
+})
 
 export { makeQueryClient, getQueryClient }
 export type { MaybeHasStatusAndDetail }
