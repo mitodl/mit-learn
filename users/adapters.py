@@ -46,10 +46,9 @@ class LearnUserAdapter(UserAdapter):
         """
         self.obj.profile.user = self.obj
         self.obj.profile.save()
-
         pm = get_plugin_manager()
         hook = pm.hook
-        hook.user_created(user=self.obj)
+        hook.user_created(user=self.obj, user_data=self.to_dict())
 
     def _handle_replace_nested_path(self, nested_path, nested_value):
         """Per-path replacement handling"""
