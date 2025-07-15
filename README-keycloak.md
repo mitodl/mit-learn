@@ -50,3 +50,32 @@ follow these steps:
    in your `shared.local.env` file.
 2. Add `DISABLE_APISIX_USER_MIDDLEWARE=True` to your `backend.local.env` file
 3. Set `COMPOSE_PROFILES=backend,frontend` in your .env file
+
+### MITx Online integration
+
+The user dashboard at `/dashboard` includes some integration with the MITx Online
+application (https://github.com/mitodl/mitxonline). In order for the same session to
+be shared between the two applications, they need to both be accessed through the same
+instance of APISIX. The dev APISIX configuration (`config/apisix/apisix.yaml`) includes
+two routes:
+
+- MITx Online frontend: Set by `MITX_ONLINE_DOMAIN`, defaulting to `mitxonline.odl.local`, accessed through http://mitxonline.odl.local:8065/
+- Path prefixed API: Set by `MITOL_API_DOMAIN`, defaulting to `open.odl.local`, accessed through http://open.odl.local:8065/mitxonline/
+
+For local development you will need to configure some local DNS entries in your hosts file,
+pointing them at your local IP address. This is necessary so that the APISIX container can
+reach out to both the Learn Django server as well as the MITx Online Django server as upstreams.
+
+Here is an example of what the `hosts` entries might look like, assuming a local IP of 192.168.1.50:
+
+```
+192.168.1.50 open.odl.local
+192.168.1.50 api.open.odl.local
+192.168.1.50 kc.ol.local
+192.168.1.50 mitxonline.odl.local
+```
+
+In your MITx Online application, you will also need to set all the `KEYCLOAK_` prefixed env vars
+to be the same as they are here in MIT Learn. You will also need to set `CORS_ALLOWED_ORIGINS`,
+`CSRF_TRUSTED_ORIGINS`, `ALLOWED_REDIRECT_HOSTS` and `SOCIAL_AUTH_ALLOWED_REDIRECT_HOSTS` in both
+apps to allow them to communicate with one another.
