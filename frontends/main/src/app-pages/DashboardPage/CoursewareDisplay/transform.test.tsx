@@ -33,7 +33,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
         coursewareId: apiData.run.courseware_id ?? null,
         type: DashboardResourceType.Course,
         title: apiData.run.title,
-        marketingUrl: apiData.run.course.page.page_url,
+        marketingUrl: apiData.run.course.page?.page_url,
         run: {
           startDate: apiData.run.start_date,
           endDate: apiData.run.end_date,

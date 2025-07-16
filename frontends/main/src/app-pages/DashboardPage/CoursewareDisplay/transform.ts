@@ -30,7 +30,7 @@ const mitxonlineEnrollment = (raw: CourseRunEnrollment): DashboardCourse => {
     coursewareId: raw.run.courseware_id ?? null,
     type: DashboardResourceType.Course,
     title: course.title,
-    marketingUrl: course.page.page_url,
+    marketingUrl: course.page?.page_url,
     run: {
       startDate: raw.run.start_date,
       endDate: raw.run.end_date,
@@ -61,7 +61,7 @@ const mitxonlineUnenrolledCourse = (
     coursewareId: run?.courseware_id ?? null,
     type: DashboardResourceType.Course,
     title: course.title,
-    marketingUrl: course.page.page_url,
+    marketingUrl: course.page?.page_url,
     run: {
       startDate: run?.start_date,
       endDate: run?.end_date,
