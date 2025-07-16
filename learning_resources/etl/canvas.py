@@ -79,7 +79,7 @@ def run_for_canvas_archive(course_archive_path, course_folder, overwrite):
     run = resource.runs.first()
     resource_readable_id = run.learning_resource.readable_id
     if run.checksum == checksum and not overwrite:
-        log.info("Checksums match for %s, skipping load", readable_id)
+        log.debug("Checksums match for %s, skipping load", readable_id)
         return resource_readable_id, None
     run.checksum = checksum
     run.save()
@@ -118,9 +118,9 @@ def transform_canvas_content_files(
         for member in course_archive.infolist():
             if Path(member.filename).resolve() in published_items:
                 course_archive.extract(member, path=olx_path)
-                log.info("processing active file %s", member.filename)
+                log.debug("processing active file %s", member.filename)
             else:
-                log.info("skipping unpublished file %s", member.filename)
+                log.debug("skipping unpublished file %s", member.filename)
         yield from _process_olx_path(olx_path, run, overwrite=overwrite)
 
 
