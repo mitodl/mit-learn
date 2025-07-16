@@ -481,7 +481,7 @@ def ingest_canvas_course(archive_path, overwrite):
 
 
 @app.task(acks_late=True)
-def sync_canvas_courses(overwrite):
+def sync_canvas_courses(canvas_course_ids, overwrite):
     """
     Sync all canvas course files
 
@@ -494,12 +494,15 @@ def sync_canvas_courses(overwrite):
     exports = bucket.objects.filter(Prefix=s3_prefix)
     log.info("syncing all canvas courses")
     latest_archives = {}
+
     for archive in exports:
         key = archive.key
         course_folder = key.lstrip(settings.CANVAS_COURSE_BUCKET_PREFIX).split("/")[0]
         log.info("processing course folder %s", course_folder)
-        if course_folder not in latest_archives or (
-            max(archive.last_modified, latest_archives[course_folder].last_modified)
+
+        if (not canvas_course_ids or course_folder in canvas_course_ids) and (
+            (course_folder not in latest_archives)
+            or max(archive.last_modified, latest_archives[course_folder].last_modified)
             == archive.last_modified
         ):
             latest_archives[course_folder] = archive
@@ -513,12 +516,14 @@ def sync_canvas_courses(overwrite):
             overwrite=overwrite,
         )
         canvas_readable_ids.append(resource_readable_id)
-    stale_courses = LearningResource.objects.filter(
-        etl_source=ETLSource.canvas.name
-    ).exclude(readable_id__in=canvas_readable_ids)
-    stale_courses.update(test_mode=False, published=False)
-    [resource_unpublished_actions(resource) for resource in stale_courses]
-    stale_courses.delete()
+
+    if not canvas_course_ids:
+        stale_courses = LearningResource.objects.filter(
+            etl_source=ETLSource.canvas.name
+        ).exclude(readable_id__in=canvas_readable_ids)
+        stale_courses.update(test_mode=False, published=False)
+        [resource_unpublished_actions(resource) for resource in stale_courses]
+        stale_courses.delete()
 
 
 @app.task(bind=True)
