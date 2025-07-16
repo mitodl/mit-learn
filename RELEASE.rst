@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.38.0
+Version 0.38.0 (Released July 16, 2025)
 --------------
 
 - Fix CI docker build and remove old NextJS Release actions (#2359)
