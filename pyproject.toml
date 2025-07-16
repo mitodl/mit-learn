@@ -111,6 +111,7 @@ uwsgi = "^2.0.29"
 uwsgitop = "^0.12"
 wrapt = "^1.14.1"
 youtube-transcript-api = "^1.0.0"
+scikit-learn = "^1.7.0"
 
 [tool.poetry.group.dev.dependencies]
 bpython = "^0.25"
