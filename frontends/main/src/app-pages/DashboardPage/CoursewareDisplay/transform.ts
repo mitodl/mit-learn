@@ -17,16 +17,26 @@ import { groupBy } from "lodash"
 const sources = {
   mitxonline: "mitxonline",
 }
-const getId = (
-  source: string,
-  resourceType: DashboardResourceType,
-  id: number,
-) => `${source}-${resourceType}-${id}`
+type KeyOpts = {
+  source: string
+  resourceType: DashboardResourceType
+  id: number
+  runId?: number
+}
+const getKey = ({ source, resourceType, id, runId }: KeyOpts) => {
+  const base = `${source}-${resourceType}-${id}`
+  return runId ? `${base}-${runId}` : base
+}
 
 const mitxonlineEnrollment = (raw: CourseRunEnrollment): DashboardCourse => {
   const course = raw.run.course
   return {
-    id: getId(sources.mitxonline, DashboardResourceType.Course, course.id),
+    key: getKey({
+      source: sources.mitxonline,
+      resourceType: DashboardResourceType.Course,
+      id: course.id,
+      runId: raw.run.id,
+    }),
     coursewareId: raw.run.courseware_id ?? null,
     type: DashboardResourceType.Course,
     title: course.title,
@@ -57,7 +67,12 @@ const mitxonlineUnenrolledCourse = (
 ): DashboardCourse => {
   const run = course.courseruns.find((run) => run.id === course.next_run_id)
   return {
-    id: getId(sources.mitxonline, DashboardResourceType.Course, course.id),
+    key: getKey({
+      source: sources.mitxonline,
+      resourceType: DashboardResourceType.Course,
+      id: course.id,
+      runId: run?.id,
+    }),
     coursewareId: run?.courseware_id ?? null,
     type: DashboardResourceType.Course,
     title: course.title,
@@ -100,7 +115,11 @@ const mitxonlineCourses = (raw: {
 
 const mitxonlineProgram = (raw: V2Program): DashboardProgram => {
   return {
-    id: getId(sources.mitxonline, DashboardResourceType.Program, raw.id),
+    key: getKey({
+      source: sources.mitxonline,
+      resourceType: DashboardResourceType.Program,
+      id: raw.id,
+    }),
     type: DashboardResourceType.Program,
     title: raw.title,
     programType: raw.program_type,
@@ -113,7 +132,7 @@ const sortDashboardCourses = (
   program: DashboardProgram,
   courses: DashboardCourse[],
 ) => {
-  return courses.sort((a, b) => {
+  return [...courses].sort((a, b) => {
     const aCompleted = a.enrollment?.status === EnrollmentStatus.Completed
     const bCompleted = b.enrollment?.status === EnrollmentStatus.Completed
     const aEnrolled = a.enrollment?.status === EnrollmentStatus.Enrolled
