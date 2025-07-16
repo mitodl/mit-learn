@@ -76,8 +76,8 @@ def points_generator(
             point_vector: dict[str, models.Vector] = {
                 dense_vector_name: dense_vector,
                 sparse_vector_name: models.SparseVector(
-                    indices=sparse_vector.indices.tolist(),
-                    values=sparse_vector.values.tolist(),
+                    indices=sparse_vector["indices"],
+                    values=sparse_vector["values"],
                 ),
             }
             point_data["vector"] = point_vector
@@ -640,6 +640,7 @@ def vector_search(
 
     client = qdrant_client()
     encoder = dense_encoder()
+    encoder_sparse = sparse_encoder()
     qdrant_conditions = qdrant_query_conditions(
         params, collection_name=search_collection
     )
@@ -653,7 +654,19 @@ def vector_search(
         search_result = client.query_points(
             collection_name=search_collection,
             using=encoder.model_short_name(),
-            query=encoder.embed_query(query_string),
+            prefetch=[
+                models.Prefetch(
+                    query=models.SparseVector(**encoder_sparse.embed(query_string)),
+                    using="bm25",
+                    limit=20,
+                ),
+                models.Prefetch(
+                    query=encoder.embed_query(query_string),  # <-- dense vector
+                    using=encoder.model_short_name(),
+                    limit=20,
+                ),
+            ],
+            query=models.FusionQuery(fusion=models.Fusion.RRF),
             query_filter=search_filter,
             search_params=models.SearchParams(indexed_only=True),
             limit=limit,
