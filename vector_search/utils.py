@@ -641,6 +641,7 @@ def vector_search(
     client = qdrant_client()
     encoder = dense_encoder()
     encoder_sparse = sparse_encoder()
+
     qdrant_conditions = qdrant_query_conditions(
         params, collection_name=search_collection
     )
@@ -653,16 +654,15 @@ def vector_search(
     if query_string:
         search_result = client.query_points(
             collection_name=search_collection,
-            using=encoder.model_short_name(),
             prefetch=[
                 models.Prefetch(
                     query=models.SparseVector(**encoder_sparse.embed(query_string)),
-                    using="bm25",
+                    using=encoder_sparse.model_name,
                     limit=20,
                 ),
                 models.Prefetch(
                     query=encoder.embed_query(query_string),  # <-- dense vector
-                    using=encoder.model_short_name(),
+                    using=encoder.model_name,
                     limit=20,
                 ),
             ],
