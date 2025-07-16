@@ -124,7 +124,7 @@ def transform_canvas_content_files(
         yield from _process_olx_path(olx_path, run, overwrite=overwrite)
 
 
-def parse_module_meta(course_archive_path):
+def parse_module_meta(course_archive_path: str) -> dict:
     """
     Parse module_meta.xml and return publish/active status of resources.
     """
@@ -167,7 +167,7 @@ def parse_module_meta(course_archive_path):
     return publish_status
 
 
-def extract_resources_by_identifierref(manifest_xml):
+def extract_resources_by_identifierref(manifest_xml: str) -> dict:
     """
     Extract resources from an IMS manifest file and return a map keyed by identifierref.
     """
