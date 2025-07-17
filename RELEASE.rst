@@ -1,6 +1,16 @@
 Release Notes
 =============
 
+Version 0.38.1
+--------------
+
+- Ensure default favorites list gets created for new scim users (#2364)
+- Only ingest published canvas content (#2363)
+- remove MITOL_NOINDEX from django settings (unused) (#2361)
+- Add path prefixed MITx Online API config to local dev APISIX (#2360)
+- Handle stale auth better (#2342)
+- Fix Renovate PR #2334: Update @chromatic-com/storybook to compatible v3.2.7 (#2350)
+
 Version 0.38.0 (Released July 16, 2025)
 --------------
 
