@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query"
 import axios from "axios"
 
-const YOUTUBE_API_KEY = "AIzaSyBzQsnRUW5vkV8vYt9twPecl-nuM8ykLCY" // TODO temp
+// API key needed to access public YouTube API (quota limited) - not sensitive
+const YOUTUBE_API_KEY = "AIzaSyBzQsnRUW5vkV8vYt9twPecl-nuM8ykLCY" // pragma: allowlist secret
 
 // https://www.youtube.com/@MITOpenLearning
 const YOUTUBE_CHANNEL_ID = "UCN0QBfKk0ZSytyX_16M11fA"

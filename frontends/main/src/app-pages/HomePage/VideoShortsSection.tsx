@@ -37,24 +37,24 @@ const VideoShortsCarousel = styled(ResourceCarousel)(({ theme }) => ({
   },
 }))
 
-const StyledCarousel = styled(SlickCarousel)({
-  /**
-   * Our cards have a hover shadow that gets clipped by the carousel container.
-   * To compensate for this, we add a 4px padding to the left of each slide, and
-   * remove 4px from the gap.
-   */
-  width: "calc(100% + 4px)",
-  transform: "translateX(-4px)",
-  margin: "24px 0",
-  ".slick-track": {
-    display: "flex",
-    gap: "20px",
-    marginBottom: "4px",
-  },
-  ".slick-slide": {
-    paddingLeft: "4px",
-  },
-})
+// const StyledCarousel = styled(SlickCarousel)({
+//   /**
+//    * Our cards have a hover shadow that gets clipped by the carousel container.
+//    * To compensate for this, we add a 4px padding to the left of each slide, and
+//    * remove 4px from the gap.
+//    */
+//   width: "calc(100% + 4px)",
+//   transform: "translateX(-4px)",
+//   margin: "24px 0",
+//   ".slick-track": {
+//     display: "flex",
+//     gap: "20px",
+//     marginBottom: "4px",
+//   },
+//   ".slick-slide": {
+//     paddingLeft: "4px",
+//   },
+// })
 
 const ButtonsContainer = styled.div(({ theme }) => ({
   display: "flex",
@@ -143,7 +143,11 @@ const VideoShortsSection = () => {
   return (
     <Container component="section">
       {showModal ? (
-        <VideoShortsModal videoIndex={videoIndex} videoData={data} />
+        <VideoShortsModal
+          startIndex={videoIndex}
+          videoData={data}
+          onClose={() => setShowModal(false)}
+        />
       ) : null}
       <h1>Video Shorts</h1>
       <VideoShortsCarousel
@@ -221,33 +225,6 @@ const VideoShortsSection = () => {
           ))}
         </CarouselScroll>
       </Carousel>
-      <ButtonsContainer
-        role="group"
-        aria-label="Slide navigation"
-        ref={setButtonsRef}
-      />
-      <StyledCarousel arrowsContainer={buttonsRef}>
-        {data?.map((item: any, index: number) => (
-          <Card key={index}>
-            <Card.Content>
-              <CardContent
-                width={item.snippet.thumbnails.high.height * ASPECT_RATIO - 2}
-                height={item.snippet.thumbnails.high.height}
-              >
-                <Image
-                  width={item.snippet.thumbnails.high.width}
-                  height={item.snippet.thumbnails.high.height}
-                  src={item.snippet.thumbnails.high.url}
-                  alt={item.snippet.title}
-                />
-              </CardContent>
-            </Card.Content>
-          </Card>
-        ))}
-        {/* {data?.map((item: any) => (
-          // <div key={item.id}>{item.snippet.title}</div>
-        ))} */}
-      </StyledCarousel>
     </Container>
   )
 }
