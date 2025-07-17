@@ -1,3 +1,3 @@
-import { programsQueries } from "./queries"
+import { programsQueries, programCollectionQueries } from "./queries"
 
-export { programsQueries }
+export { programsQueries, programCollectionQueries }

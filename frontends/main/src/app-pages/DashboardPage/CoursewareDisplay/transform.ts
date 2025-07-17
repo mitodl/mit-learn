@@ -8,10 +8,15 @@ import {
   CourseRunEnrollment,
   CourseWithCourseRuns,
   V2Program,
+  V2ProgramCollection,
 } from "@mitodl/mitxonline-api-axios/v1"
 
 import { DashboardResourceType, EnrollmentStatus } from "./types"
-import type { DashboardCourse, DashboardProgram } from "./types"
+import type {
+  DashboardCourse,
+  DashboardProgram,
+  DashboardProgramCollection,
+} from "./types"
 import { groupBy } from "lodash"
 
 const sources = {
@@ -109,6 +114,18 @@ const mitxonlineProgram = (raw: V2Program): DashboardProgram => {
   }
 }
 
+const mitxonlineProgramCollection = (
+  raw: V2ProgramCollection,
+): DashboardProgramCollection => {
+  return {
+    id: raw.id,
+    type: DashboardResourceType.ProgramCollection,
+    title: raw.title,
+    description: raw.description ?? null,
+    programIds: raw.programs,
+  }
+}
+
 const sortDashboardCourses = (
   program: DashboardProgram,
   courses: DashboardCourse[],
@@ -138,5 +155,6 @@ export {
   mitxonlineEnrollments,
   mitxonlineCourses,
   mitxonlineProgram,
+  mitxonlineProgramCollection,
   sortDashboardCourses,
 }
