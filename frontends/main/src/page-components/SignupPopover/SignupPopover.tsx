@@ -2,8 +2,7 @@ import React from "react"
 import { Popover, Typography, styled } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
 import type { PopoverProps } from "ol-components"
-import * as urls from "@/common/urls"
-import { usePathname, useSearchParams } from "next/navigation"
+import { useLoginToCurrent } from "@/common/utils"
 
 const StyledPopover = styled(Popover)({
   width: "300px",
@@ -32,8 +31,7 @@ type SignupPopoverProps = Pick<
   "anchorEl" | "onClose" | "placement"
 >
 const SignupPopover: React.FC<SignupPopoverProps> = (props) => {
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
+  const loginUrl = useLoginToCurrent()
 
   return (
     <StyledPopover {...props} open={!!props.anchorEl}>
@@ -43,9 +41,7 @@ const SignupPopover: React.FC<SignupPopoverProps> = (props) => {
         and follow your areas of interest.
       </BodyText>
       <Footer>
-        <ButtonLink href={urls.login({ pathname, searchParams })}>
-          Sign Up
-        </ButtonLink>
+        <ButtonLink href={loginUrl}>Sign Up</ButtonLink>
       </Footer>
     </StyledPopover>
   )

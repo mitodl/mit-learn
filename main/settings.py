@@ -34,7 +34,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.38.0"
+VERSION = "0.38.1"
 
 log = logging.getLogger()
 
@@ -746,9 +746,6 @@ POSTHOG_PROJECT_ID = get_int(
     name="POSTHOG_PROJECT_ID",
     default=None,
 )
-
-# Enable or disable search engine indexing
-MITOL_NOINDEX = get_bool("MITOL_NOINDEX", True)  # noqa: FBT003
 
 # Search defaults settings - adjustable throught the admin ui
 DEFAULT_SEARCH_MODE = get_string(name="DEFAULT_SEARCH_MODE", default="phrase")

@@ -5,7 +5,11 @@ import zipfile
 import pytest
 
 from learning_resources.constants import LearningResourceType, PlatformType
-from learning_resources.etl.canvas import parse_canvas_settings, run_for_canvas_archive
+from learning_resources.etl.canvas import (
+    parse_canvas_settings,
+    parse_module_meta,
+    run_for_canvas_archive,
+)
 from learning_resources.etl.constants import ETLSource
 from learning_resources.factories import (
     LearningResourceFactory,
@@ -136,3 +140,113 @@ def test_run_for_canvas_archive_creates_run_if_none_exists(tmp_path, mocker):
     assert run is not None
     assert run.learning_resource == resource
     assert run.checksum == "checksum104"
+
+
+def make_canvas_zip_with_module_meta(tmp_path, module_xml, manifest_xml):
+    """
+    Create a zip file with module_meta.xml and imsmanifest.xml
+    """
+    zip_path = tmp_path / "canvas_course.zip"
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr("course_settings/module_meta.xml", module_xml)
+        zf.writestr("imsmanifest.xml", manifest_xml)
+    return zip_path
+
+
+def test_parse_module_meta_returns_active_and_unpublished(tmp_path):
+    """
+    Test that parse_module_meta returns active and unpublished items
+    """
+    module_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <modules xmlns="http://canvas.instructure.com/xsd/cccv1p0">
+      <module>
+        <title>Module 1</title>
+        <items>
+          <item>
+            <workflow_state>active</workflow_state>
+            <title>Item 1</title>
+            <identifierref>RES1</identifierref>
+            <content_type>resource</content_type>
+          </item>
+          <item>
+            <workflow_state>unpublished</workflow_state>
+            <title>Item 2</title>
+            <identifierref>RES2</identifierref>
+            <content_type>resource</content_type>
+          </item>
+        </items>
+      </module>
+    </modules>
+    """
+    manifest_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
+      <resources>
+        <resource identifier="RES1" type="webcontent">
+          <file href="file1.html"/>
+        </resource>
+        <resource identifier="RES2" type="webcontent">
+          <file href="file2.html"/>
+        </resource>
+      </resources>
+      <organizations>
+        <organization>
+          <item identifierref="RES1">
+            <title>Item 1</title>
+          </item>
+          <item identifierref="RES2">
+            <title>Item 2</title>
+          </item>
+        </organization>
+      </organizations>
+    </manifest>
+    """
+    zip_path = make_canvas_zip_with_module_meta(tmp_path, module_xml, manifest_xml)
+    result = parse_module_meta(zip_path)
+    assert "active" in result
+    assert "unpublished" in result
+
+    assert any(
+        item["title"] == "Item 1" and item["path"].name == "file1.html"
+        for item in result["active"]
+    )
+    assert any(
+        item["title"] == "Item 2" and item["path"].name == "file2.html"
+        for item in result["unpublished"]
+    )
+
+
+def test_parse_module_meta_handles_missing_identifierref(tmp_path):
+    """
+    Test that parse_module_meta doesnt fail in case of missing identifierref
+    """
+    module_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <modules xmlns="http://canvas.instructure.com/xsd/cccv1p0">
+      <module>
+        <title>Module 2</title>
+        <items>
+          <item>
+            <workflow_state>active</workflow_state>
+            <title>Item No Ref</title>
+            <content_type>resource</content_type>
+          </item>
+        </items>
+      </module>
+    </modules>
+    """
+    manifest_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
+      <resources></resources>
+      <organizations>
+        <organization>
+          <item>
+            <title>Item No Ref</title>
+          </item>
+        </organization>
+      </organizations>
+    </manifest>
+    """
+    zip_path = make_canvas_zip_with_module_meta(tmp_path, module_xml, manifest_xml)
+    result = parse_module_meta(zip_path)
+    assert "active" in result
+    assert len(result["active"]) == 0
+    assert len(result["unpublished"]) == 0

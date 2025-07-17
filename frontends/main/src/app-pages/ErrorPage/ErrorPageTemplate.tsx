@@ -1,5 +1,5 @@
 import React from "react"
-import { Typography, styled } from "ol-components"
+import { Container, Skeleton, Typography, styled } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { HOME } from "@/common/urls"
 import Image from "next/image"
@@ -10,9 +10,10 @@ import timSpeechBubble from "@/public/images/tim_speech_bubble.svg"
 type ErrorPageTemplateProps = {
   title: string
   timSays?: string
+  loading?: boolean
 }
 
-const Page = styled.div(({ theme }) => ({
+const Page = styled(Container)(({ theme }) => ({
   backgroundImage: `url(${backgroundImage.src})`,
   backgroundAttachment: "fixed",
   backgroundRepeat: "no-repeat",
@@ -83,7 +84,29 @@ const Button = styled(ButtonLink)({
 const ErrorPageTemplate: React.FC<ErrorPageTemplateProps> = ({
   title,
   timSays,
+  loading = false,
 }) => {
+  if (loading) {
+    return (
+      <Page>
+        <ErrorContainer>
+          <ImageContainer>
+            <Skeleton width="100%" height="100%" />
+          </ImageContainer>
+          <Typography
+            component="h1"
+            variant="h3"
+            sx={{ textAlign: "center", width: "50%" }}
+          >
+            <Skeleton />
+          </Typography>
+          <Footer>
+            <Skeleton width="200px" height="40px" />
+          </Footer>
+        </ErrorContainer>
+      </Page>
+    )
+  }
   return (
     <Page>
       <ErrorContainer>

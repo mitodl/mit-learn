@@ -9,6 +9,7 @@ import { makeQueryClient } from "@/app/getQueryClient"
 import { render } from "@testing-library/react"
 import { factories, setMockResponse } from "api/test-utils"
 import type { User } from "api/hooks/user"
+import { userQueries } from "api/hooks/user"
 import {
   mockRouter,
   createDynamicRouteParser,
@@ -67,7 +68,7 @@ const renderWithProviders = (
 
   if (allOpts.user) {
     const user = { ...defaultUser, ...allOpts.user }
-    queryClient.setQueryData(["userMe"], { ...user })
+    queryClient.setQueryData(userQueries.me().queryKey, { ...user })
   }
 
   mockRouter.setCurrentUrl(url)
@@ -225,6 +226,44 @@ const assertPartialMetas = (expected: Partial<TestableMetas>) => {
   )
 }
 
+type ErrorBoundaryProps = {
+  onError?: (error: unknown) => void
+  children?: React.ReactNode
+}
+type ErrorBoundaryState = { hasError: boolean }
+/**
+ * Useful in rare circumstances to test an error throw during subsequent
+ * renders:
+ *
+ * const Fallback = jest.fn()
+ * renderWithProviders(
+ *   <TestingErrorBoundary fallback={<Fallback />}>
+ *     <ComponentThatThrows />
+ *   </TestingErrorBoundary>
+ * )
+ */
+class TestingErrorBoundary extends React.Component<
+  ErrorBoundaryProps,
+  ErrorBoundaryState
+> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props)
+    this.state = { hasError: false }
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true }
+  }
+
+  componentDidCatch(error: Error): void {
+    this.props.onError?.(error)
+  }
+
+  render() {
+    return this.state.hasError ? null : this.props.children
+  }
+}
+
 export {
   renderWithProviders,
   renderWithTheme,
@@ -234,6 +273,7 @@ export {
   ignoreError,
   getMetas,
   assertPartialMetas,
+  TestingErrorBoundary,
 }
 // Conveniences
 export { setMockResponse }
