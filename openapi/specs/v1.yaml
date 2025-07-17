@@ -9272,7 +9272,7 @@ paths:
   /api/v1/webhooks/content_files/:
     post:
       operationId: webhooks_content_files_create
-      description: Handle POST requests to the webhook.
+      description: Webhook handler for ContentFile updates
       parameters:
       - in: query
         name: content_path
@@ -9280,6 +9280,10 @@ paths:
           type: string
           minLength: 1
         required: true
+      - in: query
+        name: course_id
+        schema:
+          type: string
       - in: query
         name: source
         schema:
@@ -9330,6 +9334,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/WebhookResponse'
+          description: ''
+  /api/v1/webhooks/content_files/delete/:
+    post:
+      operationId: webhooks_content_files_delete_create
+      description: Webhook handler for ContentFile updates
+      tags:
+      - webhooks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContentFileWebHookRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ContentFileWebHookRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ContentFileWebHookRequestRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentFileWebHookRequest'
           description: ''
 components:
   schemas:
@@ -9606,6 +9635,19 @@ components:
       - next
       - previous
       - results
+    ContentFileWebHookRequest:
+      type: object
+      description: Serializer for ContentFile webhook requests.
+      properties:
+        content_path:
+          type: string
+        source:
+          $ref: '#/components/schemas/SourceEnum'
+        course_id:
+          type: string
+      required:
+      - content_path
+      - source
     ContentFileWebHookRequestRequest:
       type: object
       description: Serializer for ContentFile webhook requests.
@@ -9615,6 +9657,8 @@ components:
           minLength: 1
         source:
           $ref: '#/components/schemas/SourceEnum'
+        course_id:
+          type: string
       required:
       - content_path
       - source
