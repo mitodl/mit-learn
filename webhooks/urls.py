@@ -1,7 +1,7 @@
 from django.urls import include, re_path
 from rest_framework.routers import SimpleRouter
 
-from webhooks.views import ContentFileWebhookView
+from webhooks.views import ContentFileDeleteWebhookView, ContentFileWebhookView
 
 router = SimpleRouter()
 
@@ -10,6 +10,11 @@ v1_urls = [
         r"^content_files/",
         ContentFileWebhookView.as_view(),
         name="content_file_webhook",
+    ),
+    re_path(
+        r"^content_files/delete/",
+        ContentFileDeleteWebhookView.as_view(),
+        name="content_file_delete_webhook",
     ),
 ]
 
