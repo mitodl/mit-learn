@@ -1,9 +1,11 @@
 import { queryOptions } from "@tanstack/react-query"
 import type {
+  PaginatedV2ProgramCollectionList,
   PaginatedV2ProgramList,
+  ProgramCollectionsApiProgramCollectionsListRequest,
   ProgramsApiProgramsListV2Request,
 } from "@mitodl/mitxonline-api-axios/v1"
-import { programsApi } from "../../clients"
+import { programCollectionsApi, programsApi } from "../../clients"
 
 const programsKeys = {
   root: ["mitxonline", "programs"],
@@ -12,6 +14,9 @@ const programsKeys = {
     "list",
     opts,
   ],
+  programCollectionsList: (
+    opts?: ProgramCollectionsApiProgramCollectionsListRequest,
+  ) => [...programsKeys.root, "collections", "list", opts],
 }
 
 const programsQueries = {
@@ -24,4 +29,18 @@ const programsQueries = {
     }),
 }
 
-export { programsQueries, programsKeys }
+const programCollectionQueries = {
+  programCollectionsList: (
+    opts: ProgramCollectionsApiProgramCollectionsListRequest,
+  ) =>
+    queryOptions({
+      queryKey: programsKeys.programCollectionsList(opts),
+      queryFn: async (): Promise<PaginatedV2ProgramCollectionList> => {
+        return programCollectionsApi
+          .programCollectionsList(opts)
+          .then((res) => res.data)
+      },
+    }),
+}
+
+export { programsQueries, programCollectionQueries, programsKeys }
