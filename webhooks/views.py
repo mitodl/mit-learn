@@ -1,6 +1,7 @@
 import json
 import logging
 
+from django.core.exceptions import BadRequest
 from django.db.transaction import non_atomic_requests
 from django.http import HttpResponseBadRequest
 from django.utils.decorators import method_decorator
@@ -49,10 +50,12 @@ class ContentFileWebhookView(BaseWebhookView):
     authentication_classes = []
     serializer_class = ContentFileWebHookRequestSerializer
 
-    def success(self, extra_data):
+    def success(self, extra_data=None):
         """
         Return a success response with optional extra data
         """
+        if not extra_data:
+            extra_data = {}
         response = WebhookResponseSerializer(
             data={"status": "success", "message": "Webhook received", **extra_data}
         )
@@ -70,7 +73,7 @@ class ContentFileWebhookView(BaseWebhookView):
         if not serializer.is_valid():
             log.error("Invalid webhook data: %s", serializer.errors)
             msg = "Invalid data"
-            raise HttpResponseBadRequest(msg)
+            raise BadRequest(msg)
         return serializer.validated_data
 
     def post(self, request):
@@ -84,6 +87,10 @@ class ContentFileWebhookView(BaseWebhookView):
 
 
 class ContentFileDeleteWebhookView(ContentFileWebhookView):
+    """
+    Webhook handler for ContentFile DELETE requests
+    """
+
     def post(self, request):
         try:
             data = self.get_data(request)
@@ -116,7 +123,9 @@ def process_delete_content_file_request(data):
                 resource = LearningResource.objects.get(
                     readable_id__istartswith=course_id, etl_source=ETLSource.canvas.name
                 )
-                resource.update(published=False, test_mode=False)
+                resource.published = False
+                resource.test_mode = False
+                resource.save()
                 resource_unpublished_actions(resource)
             except LearningResource.DoesNotExist:
                 log.warning("Resource with readable_id %s does not exist", course_id)

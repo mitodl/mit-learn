@@ -3,11 +3,12 @@ from rest_framework.routers import SimpleRouter
 
 from webhooks.views import ContentFileDeleteWebhookView, ContentFileWebhookView
 
+app_name = "webhooks"
 router = SimpleRouter()
 
 v1_urls = [
     re_path(
-        r"^content_files/",
+        r"^content_files/$",
         ContentFileWebhookView.as_view(),
         name="content_file_webhook",
     ),
