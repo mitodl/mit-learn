@@ -120,7 +120,7 @@ const OrgProgramDisplay: React.FC<{
         {transform.sortDashboardCourses(program, courses).map((course) => (
           <DashboardCardStyled
             Component="li"
-            key={course.id}
+            key={course.key}
             dashboardResource={course}
             courseNoun="Module"
             offerUpgrade={false}
@@ -178,7 +178,7 @@ const OrganizationContentInternal: React.FC<
             const programLoading = courseGroups[index].isLoading
             return (
               <OrgProgramDisplay
-                key={program.id}
+                key={program.key}
                 program={program}
                 courses={courses}
                 coursesLoading={courseGroups[index].isLoading}

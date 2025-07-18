@@ -29,7 +29,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
       const transformed = transform.mitxonlineEnrollments([apiData])
       expect(transformed).toHaveLength(1)
       expect(transformed[0]).toEqual({
-        id: `mitxonline-course-${apiData.run.course.id}`,
+        key: `mitxonline-course-${apiData.run.course.id}-${apiData.run.id}`,
         coursewareId: apiData.run.courseware_id ?? null,
         type: DashboardResourceType.Course,
         title: apiData.run.title,
@@ -79,16 +79,20 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
       }),
     ]
 
+    const transformedCourses = mitxonlineCourses({
+      courses: coursesA,
+      enrollments,
+    })
     const sortedCourses = sortDashboardCourses(
       mitxonlineProgram(programA),
-      mitxonlineCourses({ courses: coursesA, enrollments }),
+      transformedCourses,
     )
 
-    expect(sortedCourses.map((course) => course.id)).toEqual([
-      `mitxonline-course-${coursesA[1].id}`, // Enrolled course
-      `mitxonline-course-${coursesA[0].id}`, // Completed course
-      `mitxonline-course-${coursesA[2].id}`, // Not enrolled course
-      `mitxonline-course-${coursesA[3].id}`, // Not enrolled course
+    expect(sortedCourses).toEqual([
+      transformedCourses[1], // Enrolled course
+      transformedCourses[0], // Completed course
+      transformedCourses[2], // Not enrolled course
+      transformedCourses[3], // Not enrolled course
     ])
   })
 })
