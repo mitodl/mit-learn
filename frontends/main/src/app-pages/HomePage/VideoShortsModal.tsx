@@ -1,12 +1,15 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import { Button, EmbedlyCard, styled } from "ol-components"
 import { useVideoShortsList } from "api/hooks/videoShorts"
 import useEmblaCarousel from "embla-carousel-react"
 import { WheelGesturesPlugin } from "embla-carousel-wheel-gestures"
-import { RiArrowRightLine } from "@remixicon/react"
+import {
+  RiArrowRightLine,
+  RiArrowUpLine,
+  RiArrowDownLine,
+} from "@remixicon/react"
 import { ActionButton } from "@mitodl/smoot-design"
-import { RiArrowUpLine, RiArrowDownLine } from "@remixicon/react"
 
 const useWindowDimensions = () => {
   const [windowDimensions, setWindowDimensions] = useState({
@@ -52,13 +55,12 @@ const CarouselScroll = styled.div({
   flexDirection: "column",
   alignItems: "center",
   justifyContent: "flex-start",
-  // gap: "24px",
   height: "100%",
   border: "1px solid blue",
 })
 
 const CarouselSlide = styled.div<{ height: number; width: number }>(
-  ({ height, width }) => ({
+  ({ height, width, theme }) => ({
     // flex: "0 0 100%",
     // height: "calc(100vh - 60px)",
     // width: "calc((100vh - 60px) * 9 / 16)",
@@ -73,6 +75,14 @@ const CarouselSlide = styled.div<{ height: number; width: number }>(
     // border: "1px solid red",
     margin: "30px 0",
     position: "relative",
+    border: "1px solid red",
+
+    [theme.breakpoints.down("md")]: {
+      width: "100%",
+      flex: "0 0 100%",
+      margin: "0",
+      border: "1px solid blue",
+    },
   }),
 )
 
@@ -121,6 +131,15 @@ const EventOverlay = styled.div({
   backgroundColor: "rgba(0, 0, 0, 0.5)",
 })
 
+const Video = styled.video(({ height, width, theme }) => ({
+  width,
+  height,
+  [theme.breakpoints.down("md")]: {
+    width: "100%",
+    height: "100%",
+  },
+}))
+
 type VideoShortsModalProps = {
   startIndex: number
   videoData: any
@@ -132,7 +151,7 @@ const VideoShortsModal = ({
   onClose,
 }: VideoShortsModalProps) => {
   const { width, height } = useWindowDimensions()
-  console.log("height", height)
+
   const [emblaRef, emblaApi] = useEmblaCarousel(
     {
       align: "center",
@@ -151,15 +170,81 @@ const VideoShortsModal = ({
   const [canScrollPrev, setCanScrollPrev] = useState(false)
   const [canScrollNext, setCanScrollNext] = useState(true)
   const [selectedIndex, setSelectedIndex] = useState(startIndex)
+  const [navigating, setNavigating] = useState<1 | -1 | false>(false)
+
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const intersectionObserverRef = useRef<IntersectionObserver | null>(null)
+
+  const videosRef = useRef<(HTMLVideoElement | null)[]>([])
+
+  useEffect(() => {
+    videosRef.current = videosRef.current.slice(0, videoData.length)
+  }, [videoData])
+
+  // useEffect(() => {
+  //   if (scrollRef.current) {
+  //     if (intersectionObserverRef.current) {
+  //       intersectionObserverRef.current.disconnect()
+  //     }
+
+  //     intersectionObserverRef.current = new IntersectionObserver(
+  //       (entries) => {
+  //         entries.forEach((entry) => {
+  //           const index = parseInt(
+  //             entry.target.getAttribute("data-index") || "0",
+  //           )
+  //           console.log("INDEX", index)
+  //           if (entry.isIntersecting) {
+  //             console.log(`Slide ${index} VISIBLE`)
+  //           } else {
+  //             console.log(`Slide ${index} NOT VISIBLE`)
+  //           }
+  //         })
+  //       },
+  //       {
+  //         root: null,
+  //         rootMargin: "0px",
+  //         threshold: 0.5,
+  //       },
+  //     )
+
+  //     const slides = scrollRef.current.querySelectorAll("[data-index]")
+  //     slides.forEach((slide) => {
+  //       intersectionObserverRef.current?.observe(slide)
+  //     })
+
+  //     return () => {
+  //       if (intersectionObserverRef.current) {
+  //         intersectionObserverRef.current.disconnect()
+  //       }
+  //     }
+  //   }
+  // }, [videoData, selectedIndex])
 
   // const [startIndex, setVideoIndex] = useState(0)
 
   const scrollPrev = () => {
     emblaApi?.scrollPrev()
+    videosRef.current
+      .filter((video) => video)
+      .forEach((video) => {
+        video!.pause()
+      })
+    const prevVideo = videosRef.current[selectedIndex - 1]
+    setNavigating(-1)
+    prevVideo?.play()
   }
 
   const scrollNext = () => {
     emblaApi?.scrollNext()
+    videosRef.current
+      .filter((video) => video)
+      .forEach((video) => {
+        video!.pause()
+      })
+    const nextVideo = videosRef.current[selectedIndex + 1]
+    setNavigating(1)
+    nextVideo?.play()
   }
 
   useEffect(() => {
@@ -170,7 +255,6 @@ const VideoShortsModal = ({
   }, [emblaApi])
 
   useEffect(() => {
-    // console.log("SCROLLING TO VIDEO INDEX", startIndex)
     emblaApi?.scrollTo(startIndex)
   }, [emblaApi, startIndex])
 
@@ -179,9 +263,7 @@ const VideoShortsModal = ({
       if (event.key === "Escape" && onClose) {
         onClose()
       }
-      console.log("KEY DOWN", event.key)
       if (event.key === "ArrowUp") {
-        console.log("SCROLLING UP", emblaApi)
         emblaApi?.scrollPrev()
       }
 
@@ -200,17 +282,47 @@ const VideoShortsModal = ({
   }, [onClose, emblaApi])
 
   useEffect(() => {
-    emblaApi?.on("settle", (event) => {
+    emblaApi?.on("select", (event) => {
+      setNavigating(false)
+      console.log("SELECT", event)
+      // console.log("PAUSING VIDEO", videosRef.current[selectedIndex])
+
+      videosRef.current
+        .filter((video) => video)
+        .forEach((video) => {
+          video!.pause()
+        })
+
       const inView = event.slidesInView()
 
-      console.log("IN VIEW ", inView)
-      setSelectedIndex(inView[inView.length - 1])
+      const _selectedIndex = inView[inView.length - 1]
+      console.log(
+        "SELECTED ",
+        _selectedIndex,
+        videosRef.current[_selectedIndex],
+      )
+      setSelectedIndex(_selectedIndex)
+
+      if (videosRef.current[_selectedIndex]) {
+        videosRef.current[_selectedIndex]?.play()
+      }
+    })
+    emblaApi?.on("settle", (event) => {
+      console.log("SETTLE", event)
+    })
+    emblaApi?.on("slidesInView", (event) => {
+      console.log("SLIDES IN", event.slidesInView())
+      console.log("SLIDES OUT", event.slidesNotInView())
     })
   }, [emblaApi])
 
   useEffect(() => {
     emblaApi?.reInit()
   }, [selectedIndex, emblaApi])
+
+  useEffect(() => {
+    console.log("videosRef.current", videosRef.current)
+  }, [videosRef.current])
 
   // const handleWheel = (e: React.WheelEvent) => {
   //   e.preventDefault()
@@ -223,6 +335,8 @@ const VideoShortsModal = ({
   // }
 
   console.log("startIndex", startIndex)
+  console.log("selectedIndex", selectedIndex)
+
   return (
     <Overlay>
       {/* onWheel={handleWheel} onTouchMove={handleTouchMove} */}
@@ -232,7 +346,7 @@ const VideoShortsModal = ({
           edge="rounded"
           variant="text"
           onClick={scrollPrev}
-          disabled={!canScrollPrev}
+          disabled={!canScrollPrev || navigating === -1}
           // aria-label={prevLabel}
         >
           <RiArrowUpLine aria-hidden />
@@ -242,26 +356,59 @@ const VideoShortsModal = ({
           edge="rounded"
           variant="text"
           onClick={scrollNext}
-          disabled={!canScrollNext}
+          disabled={!canScrollNext || navigating === 1}
           // aria-label={nextLabel}
         >
           <RiArrowDownLine aria-hidden />
         </ActionButton>
       </ButtonsContainer>
       <Carousel ref={emblaRef}>
-        <CarouselScroll>
+        <CarouselScroll ref={scrollRef}>
           {videoData?.map((item: any, index: number) => (
             <CarouselSlide
               key={index}
               height={height - 60}
               width={(height - 60) * (9 / 16)}
+              data-index={index}
             >
-              {/* <span style={{ color: "white" }}>
+              {Math.abs(selectedIndex - index) < 2 ? (
+                <Video
+                  ref={(el) => {
+                    if (videosRef.current && el) {
+                      console.log("VIDEO ELEMENT", index, el)
+                      videosRef.current[index] = el
+
+                      // if (intersectionObserverRef.current) {
+                      //   intersectionObserverRef.current.observe(el)
+                      // }
+                    } else {
+                      console.info("Video element  - no ref")
+                    }
+                  }}
+                  // TODO: Using a temporary bucket on GCP owned by jk
+                  src={`https://storage.googleapis.com/mit-open-learning/${item.id.videoId}.mp4`}
+                  controls
+                  width={(height - 60) * (9 / 16)}
+                  height={height - 60}
+                  preload="metadata"
+                />
+              ) : (
+                <Placeholder />
+              )}
+            </CarouselSlide>
+          ))}
+        </CarouselScroll>
+      </Carousel>
+    </Overlay>
+  )
+}
+
+export default VideoShortsModal
+/* <span style={{ color: "white" }}>
                 selected: {selectedIndex} index: {index}
-              </span> */}
-              {selectedIndex === index ? (
-                <>
-                  <IFrame
+              </span> */
+
+/* <IFrame
                     src={`https://youtube.com/embed/${item.id.videoId}?autoplay=1&mute=0&loop=1`}
                     // src={`https://youtube.com/embed/${item.video_id}?si=gbiHIGhW2yBqAhxg?autoplay=1&&mute=1`}
                     width={(height - 60) * (9 / 16)}
@@ -283,8 +430,9 @@ const VideoShortsModal = ({
                         }
                       }
                     }}
-                  />
-                  <EventOverlay
+                  /> */
+
+/* <EventOverlay
                     onWheel={(e) => {
                       console.log("WHEEL EVENT", e)
                       e.preventDefault()
@@ -311,17 +459,4 @@ const VideoShortsModal = ({
                       // Prevent touch events from bubbling to iframe
                       e.stopPropagation()
                     }}
-                  />
-                </>
-              ) : (
-                <Placeholder />
-              )}
-            </CarouselSlide>
-          ))}
-        </CarouselScroll>
-      </Carousel>
-    </Overlay>
-  )
-}
-
-export default VideoShortsModal
+                  /> */
