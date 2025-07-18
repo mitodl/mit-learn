@@ -2105,10 +2105,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@faker-js/faker@npm:^9.0.0":
-  version: 9.0.3
-  resolution: "@faker-js/faker@npm:9.0.3"
-  checksum: 10/60ea71c31d6bd6317184736de17daee415e229cab5e10a4146a19622f3eb22f49f42345ff339dc9261f0214ca1f9b019c63fd9aac842a2d359f135102788ec90
+"@faker-js/faker@npm:^9.9.0":
+  version: 9.9.0
+  resolution: "@faker-js/faker@npm:9.9.0"
+  checksum: 10/b24b1be0fb3090d54abaaa3a814f37d1a7551f1207dcd330a1af2c70f6312a8b95ebb82653577757dd62f4cbbb56caa3c83513053253654dc3e286a05040ecbe
   languageName: node
   linkType: hard
 
@@ -7051,7 +7051,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "api@workspace:frontends/api"
   dependencies:
-    "@faker-js/faker": "npm:^9.0.0"
+    "@faker-js/faker": "npm:^9.9.0"
     "@mitodl/mitxonline-api-axios": "npm:^2025.6.23"
     "@tanstack/react-query": "npm:^5.66.0"
     "@testing-library/react": "npm:^16.1.0"
@@ -13458,7 +13458,7 @@ __metadata:
     "@ebay/nice-modal-react": "npm:^1.2.13"
     "@emotion/cache": "npm:^11.13.1"
     "@emotion/styled": "npm:^11.11.0"
-    "@faker-js/faker": "npm:^9.0.0"
+    "@faker-js/faker": "npm:^9.9.0"
     "@mitodl/course-search-utils": "npm:3.3.2"
     "@mitodl/mitxonline-api-axios": "npm:^2025.6.23"
     "@mitodl/smoot-design": "npm:^6.10.0"
@@ -15206,7 +15206,7 @@ __metadata:
     "@dnd-kit/utilities": "npm:^3.2.1"
     "@emotion/react": "npm:^11.11.1"
     "@emotion/styled": "npm:^11.11.0"
-    "@faker-js/faker": "npm:^9.0.0"
+    "@faker-js/faker": "npm:^9.9.0"
     "@mui/base": "npm:5.0.0-beta.70"
     "@mui/lab": "npm:6.0.0-dev.240424162023-9968b4889d"
     "@mui/material": "npm:^6.4.5"
@@ -15261,7 +15261,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "ol-test-utilities@workspace:frontends/ol-test-utilities"
   dependencies:
-    "@faker-js/faker": "npm:^9.0.0"
+    "@faker-js/faker": "npm:^9.9.0"
     "@testing-library/react": "npm:^16.1.0"
     "@types/lodash": "npm:^4.17.7"
     "@types/react": "npm:^19.0.6"
@@ -15283,7 +15283,7 @@ __metadata:
     "@dnd-kit/core": "npm:^6.0.8"
     "@dnd-kit/sortable": "npm:^10.0.0"
     "@dnd-kit/utilities": "npm:^3.2.1"
-    "@faker-js/faker": "npm:^9.0.0"
+    "@faker-js/faker": "npm:^9.9.0"
     "@testing-library/react": "npm:^16.1.0"
     "@testing-library/user-event": "npm:^14.5.2"
     "@types/validator": "npm:^13.7.6"
