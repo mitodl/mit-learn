@@ -1,11 +1,10 @@
 import React from "react"
-import { Typography, styled } from "ol-components"
-import { ButtonLink } from "@mitodl/smoot-design"
+import { Typography, styled, LinkAdapter } from "ol-components"
 import { RiSparkling2Line } from "@remixicon/react"
 import AiRecommendationBotDrawer from "./AiRecommendationBotDrawer"
 import { RECOMMENDER_QUERY_PARAM } from "@/common/urls"
 
-const StyledButton = styled(ButtonLink)(({ theme }) => ({
+const StyledButton = styled(LinkAdapter)(({ theme }) => ({
   display: "flex",
   flexDirection: "row",
   gap: "8px",
@@ -33,12 +32,7 @@ const StyledButton = styled(ButtonLink)(({ theme }) => ({
 const AskTIMButton = () => {
   return (
     <>
-      <StyledButton
-        shallow
-        variant="bordered"
-        edge="rounded"
-        href={`?${RECOMMENDER_QUERY_PARAM}`}
-      >
+      <StyledButton shallow href={`?${RECOMMENDER_QUERY_PARAM}`}>
         <RiSparkling2Line />
         <Typography variant="body1">
           Ask<strong>TIM</strong>
