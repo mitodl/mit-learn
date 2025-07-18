@@ -874,7 +874,6 @@ class TutorProblemFile(TimestampedModel):
         null=False,
     )
 
-    file_title = models.CharField(max_length=1024, null=True, blank=True)  # noqa: DJ001
     problem_title = models.CharField(max_length=1024, null=True, blank=True)  # noqa: DJ001
 
     type = models.CharField(
