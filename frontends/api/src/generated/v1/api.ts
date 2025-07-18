@@ -513,7 +513,7 @@ export interface ContentFileWebHookRequest {
    * @type {string}
    * @memberof ContentFileWebHookRequest
    */
-  content_path: string
+  content_path?: string
   /**
    *
    * @type {SourceEnum}
@@ -539,7 +539,7 @@ export interface ContentFileWebHookRequestRequest {
    * @type {string}
    * @memberof ContentFileWebHookRequestRequest
    */
-  content_path: string
+  content_path?: string
   /**
    *
    * @type {SourceEnum}
@@ -29852,26 +29852,20 @@ export const WebhooksApiAxiosParamCreator = function (
   return {
     /**
      * Webhook handler for ContentFile updates
-     * @param {string} content_path
      * @param {WebhooksContentFilesCreateSourceEnum} source * &#x60;micromasters&#x60; - micromasters * &#x60;mit_edx&#x60; - mit_edx * &#x60;mitpe&#x60; - mitpe * &#x60;mitxonline&#x60; - mitxonline * &#x60;oll&#x60; - oll * &#x60;ocw&#x60; - ocw * &#x60;podcast&#x60; - podcast * &#x60;see&#x60; - see * &#x60;xpro&#x60; - xpro * &#x60;youtube&#x60; - youtube * &#x60;canvas&#x60; - canvas
      * @param {ContentFileWebHookRequestRequest} ContentFileWebHookRequestRequest
+     * @param {string} [content_path]
      * @param {string} [course_id]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     webhooksContentFilesCreate: async (
-      content_path: string,
       source: WebhooksContentFilesCreateSourceEnum,
       ContentFileWebHookRequestRequest: ContentFileWebHookRequestRequest,
+      content_path?: string,
       course_id?: string,
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
-      // verify required parameter 'content_path' is not null or undefined
-      assertParamExists(
-        "webhooksContentFilesCreate",
-        "content_path",
-        content_path,
-      )
       // verify required parameter 'source' is not null or undefined
       assertParamExists("webhooksContentFilesCreate", "source", source)
       // verify required parameter 'ContentFileWebHookRequestRequest' is not null or undefined
@@ -29930,7 +29924,7 @@ export const WebhooksApiAxiosParamCreator = function (
       }
     },
     /**
-     * Webhook handler for ContentFile updates
+     * Webhook handler for ContentFile DELETE requests
      * @param {ContentFileWebHookRequestRequest} ContentFileWebHookRequestRequest
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -29994,17 +29988,17 @@ export const WebhooksApiFp = function (configuration?: Configuration) {
   return {
     /**
      * Webhook handler for ContentFile updates
-     * @param {string} content_path
      * @param {WebhooksContentFilesCreateSourceEnum} source * &#x60;micromasters&#x60; - micromasters * &#x60;mit_edx&#x60; - mit_edx * &#x60;mitpe&#x60; - mitpe * &#x60;mitxonline&#x60; - mitxonline * &#x60;oll&#x60; - oll * &#x60;ocw&#x60; - ocw * &#x60;podcast&#x60; - podcast * &#x60;see&#x60; - see * &#x60;xpro&#x60; - xpro * &#x60;youtube&#x60; - youtube * &#x60;canvas&#x60; - canvas
      * @param {ContentFileWebHookRequestRequest} ContentFileWebHookRequestRequest
+     * @param {string} [content_path]
      * @param {string} [course_id]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     async webhooksContentFilesCreate(
-      content_path: string,
       source: WebhooksContentFilesCreateSourceEnum,
       ContentFileWebHookRequestRequest: ContentFileWebHookRequestRequest,
+      content_path?: string,
       course_id?: string,
       options?: RawAxiosRequestConfig,
     ): Promise<
@@ -30015,9 +30009,9 @@ export const WebhooksApiFp = function (configuration?: Configuration) {
     > {
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.webhooksContentFilesCreate(
-          content_path,
           source,
           ContentFileWebHookRequestRequest,
+          content_path,
           course_id,
           options,
         )
@@ -30034,7 +30028,7 @@ export const WebhooksApiFp = function (configuration?: Configuration) {
         )(axios, operationBasePath || basePath)
     },
     /**
-     * Webhook handler for ContentFile updates
+     * Webhook handler for ContentFile DELETE requests
      * @param {ContentFileWebHookRequestRequest} ContentFileWebHookRequestRequest
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -30092,16 +30086,16 @@ export const WebhooksApiFactory = function (
     ): AxiosPromise<WebhookResponse> {
       return localVarFp
         .webhooksContentFilesCreate(
-          requestParameters.content_path,
           requestParameters.source,
           requestParameters.ContentFileWebHookRequestRequest,
+          requestParameters.content_path,
           requestParameters.course_id,
           options,
         )
         .then((request) => request(axios, basePath))
     },
     /**
-     * Webhook handler for ContentFile updates
+     * Webhook handler for ContentFile DELETE requests
      * @param {WebhooksApiWebhooksContentFilesDeleteCreateRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -30127,13 +30121,6 @@ export const WebhooksApiFactory = function (
  */
 export interface WebhooksApiWebhooksContentFilesCreateRequest {
   /**
-   *
-   * @type {string}
-   * @memberof WebhooksApiWebhooksContentFilesCreate
-   */
-  readonly content_path: string
-
-  /**
    * * &#x60;micromasters&#x60; - micromasters * &#x60;mit_edx&#x60; - mit_edx * &#x60;mitpe&#x60; - mitpe * &#x60;mitxonline&#x60; - mitxonline * &#x60;oll&#x60; - oll * &#x60;ocw&#x60; - ocw * &#x60;podcast&#x60; - podcast * &#x60;see&#x60; - see * &#x60;xpro&#x60; - xpro * &#x60;youtube&#x60; - youtube * &#x60;canvas&#x60; - canvas
    * @type {'micromasters' | 'mit_edx' | 'mitpe' | 'mitxonline' | 'oll' | 'ocw' | 'podcast' | 'see' | 'xpro' | 'youtube' | 'canvas'}
    * @memberof WebhooksApiWebhooksContentFilesCreate
@@ -30146,6 +30133,13 @@ export interface WebhooksApiWebhooksContentFilesCreateRequest {
    * @memberof WebhooksApiWebhooksContentFilesCreate
    */
   readonly ContentFileWebHookRequestRequest: ContentFileWebHookRequestRequest
+
+  /**
+   *
+   * @type {string}
+   * @memberof WebhooksApiWebhooksContentFilesCreate
+   */
+  readonly content_path?: string
 
   /**
    *
@@ -30189,9 +30183,9 @@ export class WebhooksApi extends BaseAPI {
   ) {
     return WebhooksApiFp(this.configuration)
       .webhooksContentFilesCreate(
-        requestParameters.content_path,
         requestParameters.source,
         requestParameters.ContentFileWebHookRequestRequest,
+        requestParameters.content_path,
         requestParameters.course_id,
         options,
       )
@@ -30199,7 +30193,7 @@ export class WebhooksApi extends BaseAPI {
   }
 
   /**
-   * Webhook handler for ContentFile updates
+   * Webhook handler for ContentFile DELETE requests
    * @param {WebhooksApiWebhooksContentFilesDeleteCreateRequest} requestParameters Request parameters.
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}

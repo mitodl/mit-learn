@@ -9278,8 +9278,6 @@ paths:
         name: content_path
         schema:
           type: string
-          minLength: 1
-        required: true
       - in: query
         name: course_id
         schema:
@@ -9338,7 +9336,7 @@ paths:
   /api/v1/webhooks/content_files/delete/:
     post:
       operationId: webhooks_content_files_delete_create
-      description: Webhook handler for ContentFile updates
+      description: Webhook handler for ContentFile DELETE requests
       tags:
       - webhooks
       requestBody:
@@ -9646,7 +9644,6 @@ components:
         course_id:
           type: string
       required:
-      - content_path
       - source
     ContentFileWebHookRequestRequest:
       type: object
@@ -9654,13 +9651,11 @@ components:
       properties:
         content_path:
           type: string
-          minLength: 1
         source:
           $ref: '#/components/schemas/SourceEnum'
         course_id:
           type: string
       required:
-      - content_path
       - source
     ContentTypeEnum:
       enum:
