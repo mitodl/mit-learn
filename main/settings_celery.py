@@ -130,6 +130,11 @@ CELERY_BEAT_SCHEDULE = {
             "NEWS_EVENTS_OL_EVENTS_SCHEDULE_SECONDS", 60 * 60 * 3
         ),  # default is every 3 hours
     },
+    "sync_canvas_courses-every-1-weeks": {
+        "task": "learning_resources.tasks.sync_canvas_courses",
+        "schedule": crontab(minute=0, hour=5, day_of_week=0),  # 12:00 PM EST on Sundays
+        "kwargs": {"overwrite": False},
+    },
     "update_posthog_events": {
         "task": "learning_resources.tasks.get_learning_resource_views",
         "schedule": get_int(
