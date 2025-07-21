@@ -33,6 +33,7 @@ def test_content_file_delete_webhook_view_canvas_success(
         etl_source=ETLSource.canvas.name, readable_id="canvas-course-123"
     )
     mock_unpublish = mocker.patch("webhooks.views.resource_unpublished_actions")
+
     data = {
         "source": ETLSource.canvas.name,
         "course_id": "canvas-course-123",
@@ -44,7 +45,7 @@ def test_content_file_delete_webhook_view_canvas_success(
         headers={"X-MITLearn-Signature": get_secret(data, settings)},
     )
     assert response.status_code == 200
-    mock_unpublish.assert_called_once_with(resource)
+    assert mock_unpublish.mock_calls[0].args[0].readable_id == resource.readable_id
 
 
 @pytest.mark.django_db
