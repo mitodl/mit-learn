@@ -43,6 +43,8 @@ from learning_resources.etl.loaders import (
     load_podcast,
     load_podcast_episode,
     load_podcasts,
+    load_problem_file,
+    load_problem_files,
     load_program,
     load_programs,
     load_run,
@@ -81,6 +83,7 @@ from learning_resources.models import (
     LearningResourceRun,
     PodcastEpisode,
     Program,
+    TutorProblemFile,
     Video,
     VideoChannel,
     VideoPlaylist,
@@ -1092,6 +1095,67 @@ def test_load_content_file():
         assert getattr(loaded_file, key) == value, (
             f"Property {key} should equal {value}"
         )
+
+
+def test_load_problem_file():
+    """Test that load_problem_file saves a TutorProblemFile object"""
+    learning_resource_run = LearningResourceRunFactory.create()
+
+    props = {
+        "problem_title": "Problem 1",
+        "type": "problem",
+        "source_path": "ai/tutor/problems/Problem 1/problem/problem1",
+        "content": "This is the content of the problem file.",
+    }
+
+    result = load_problem_file(learning_resource_run, props)
+
+    # assert we got an integer back
+    assert isinstance(result, int)
+
+    assert TutorProblemFile.objects.count() == 1
+
+    loaded_file = TutorProblemFile.objects.get(pk=result)
+    assert loaded_file.run == learning_resource_run
+
+    for key, value in props.items():
+        assert getattr(loaded_file, key) == value, (
+            f"Property {key} should equal {value}"
+        )
+
+
+def test_load_problem_files(mocker):
+    """Test that load_content_files calls the expected functions"""
+    course = LearningResourceFactory.create(is_course=True, create_runs=False)
+    course_run = LearningResourceRunFactory.create(learning_resource=course)
+    LearningResourceRunFactory.create(
+        learning_resource=course,
+        start_date=now_in_utc() - timedelta(days=365),
+    )
+    assert course.runs.count() == 2
+
+    deleted_problem_file = ContentFileFactory.create(run=course_run)
+
+    content_data = [
+        {
+            "problem_title": "Problem 1",
+            "type": "problem",
+            "source_path": "ai/tutor/problems/Problem 1/problem/problem1",
+        },
+        {
+            "problem_title": "Problem 1",
+            "type": "solution",
+            "source_path": "ai/tutor/problems/Problem 1/solution/sol1",
+        },
+    ]
+
+    load_problem_files(course_run, content_data)
+
+    assert TutorProblemFile.objects.filter(id=deleted_problem_file.id).exists() is False
+    for file in content_data:
+        assert TutorProblemFile.objects.filter(
+            run=course_run, source_path=file["source_path"]
+        ).exists()
 
 
 def test_load_image():

@@ -180,6 +180,11 @@ VALID_COURSE_CONTENT_CHOICES = list(
     zip(VALID_COURSE_CONTENT_TYPES, VALID_COURSE_CONTENT_TYPES)
 )
 
+VALID_TUTOR_PROBLEM_TYPES = ["problem", "solution"]
+VALID_TUTOR_PROBLEM_TYPE_CHOICES = list(
+    zip(VALID_TUTOR_PROBLEM_TYPES, VALID_TUTOR_PROBLEM_TYPES)
+)
+
 DEPARTMENTS = {
     "1": "Civil and Environmental Engineering",
     "2": "Mechanical Engineering",
