@@ -11017,7 +11017,7 @@ __metadata:
     eslint-plugin-testing-library: "npm:^7.0.0"
     jest: "npm:^29.7.0"
     jest-environment-jsdom: "npm:^29.5.0"
-    jest-extended: "npm:^5.0.0"
+    jest-extended: "npm:^6.0.0"
     jest-fail-on-console: "npm:^3.3.1"
     jest-watch-typeahead: "npm:^3.0.0"
     jest-when: "npm:^3.6.0"
@@ -12885,17 +12885,20 @@ __metadata:
   languageName: node
   linkType: hard
 
-"jest-extended@npm:^5.0.0":
-  version: 5.0.3
-  resolution: "jest-extended@npm:5.0.3"
+"jest-extended@npm:^6.0.0":
+  version: 6.0.0
+  resolution: "jest-extended@npm:6.0.0"
   dependencies:
     jest-diff: "npm:^29.0.0"
   peerDependencies:
     jest: ">=27.2.5"
+    typescript: ">=5.0.0"
   peerDependenciesMeta:
     jest:
       optional: true
-  checksum: 10/0eb0a6a9f898fb318f85d0596853b3db6d92f15efb4efa4e936a0934bb10f70eb89039ea09db4eb7f7d877a7a5363dac0dd0a1300ce9b5eb669fb529e8e3ed21
+    typescript:
+      optional: false
+  checksum: 10/9b23c9a42c46dd364dc9edcd8a6314b0ce6ec518d5453059b8b33fd5d559eadbbba1cb7c30cf7d642e50b41a433f107e55a278ea7cf8ba9c5f15663728ce79ae
   languageName: node
   linkType: hard
 
@@ -13840,7 +13843,7 @@ __metadata:
     http-proxy-middleware: "npm:^3.0.0"
     iso-639-1: "npm:^3.1.4"
     jest: "npm:^29.7.0"
-    jest-extended: "npm:^5.0.0"
+    jest-extended: "npm:^6.0.0"
     jest-next-dynamic-ts: "npm:^0.1.1"
     lodash: "npm:^4.17.21"
     moment: "npm:^2.30.1"
