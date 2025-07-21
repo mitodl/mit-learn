@@ -127,5 +127,6 @@ def process_delete_content_file_request(data):
                 resource.test_mode = False
                 resource.save()
                 resource_unpublished_actions(resource)
+                resource.delete()
             except LearningResource.DoesNotExist:
                 log.warning("Resource with readable_id %s does not exist", course_id)
