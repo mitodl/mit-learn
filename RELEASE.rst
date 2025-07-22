@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.38.1
+Version 0.38.1 (Released July 22, 2025)
 --------------
 
 - Ensure default favorites list gets created for new scim users (#2364)
