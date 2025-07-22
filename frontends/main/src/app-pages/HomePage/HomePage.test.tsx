@@ -283,9 +283,11 @@ describe("Home Page personalize section", () => {
     const link = within(personalize).getByRole("link")
     expect(link).toHaveAttribute(
       "href",
-      routes.login({
-        pathname: routes.DASHBOARD_HOME,
-        searchParams: null,
+      routes.auth({
+        loginNext: {
+          pathname: routes.DASHBOARD_HOME,
+          searchParams: null,
+        },
       }),
     )
   })
