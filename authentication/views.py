@@ -15,7 +15,7 @@ from main.middleware.apisix_user import ApisixUserMiddleware, decode_apisix_head
 log = logging.getLogger(__name__)
 
 
-def get_redirect_url(request):
+def get_redirect_url(request, param_name):
     """
     Get the redirect URL from the request.
 
@@ -25,7 +25,7 @@ def get_redirect_url(request):
     Returns:
         str: Redirect URL
     """
-    next_url = request.GET.get("next") or request.COOKIES.get("next")
+    next_url = request.GET.get(param_name) or request.COOKIES.get(param_name)
     return (
         next_url
         if next_url
@@ -51,7 +51,7 @@ class CustomLogoutView(View):
         GET endpoint reached after logging a user out from Keycloak
         """
         user = getattr(request, "user", None)
-        user_redirect_url = get_redirect_url(request)
+        user_redirect_url = get_redirect_url(request, "next")
         if user and user.is_authenticated:
             logout(request)
         if request.META.get(ApisixUserMiddleware.header):
@@ -77,7 +77,8 @@ class CustomLoginView(View):
         """
         GET endpoint for logging a user in.
         """
-        redirect_url = get_redirect_url(request)
+        redirect_url = get_redirect_url(request, "next")
+        signup_redirect_url = get_redirect_url(request, "signup_next")
         if not request.user.is_anonymous:
             profile = request.user.profile
 
@@ -108,7 +109,7 @@ class CustomLoginView(View):
                 not profile.has_logged_in
                 and request.GET.get("skip_onboarding", "0") == "0"
             ):
-                params = urlencode({"next": redirect_url})
+                params = urlencode({"next": signup_redirect_url})
                 redirect_url = f"{settings.MITOL_NEW_USER_LOGIN_URL}?{params}"
 
             if not profile.has_logged_in:
