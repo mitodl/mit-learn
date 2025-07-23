@@ -11,8 +11,6 @@ class LearnUserAdapter(UserAdapter):
     django_scim library.
     """
 
-    newly_created = False
-
     @property
     def display_name(self):
         """
@@ -42,9 +40,16 @@ class LearnUserAdapter(UserAdapter):
         self.obj.profile.name = d.get("fullName", d.get("name", ""))
         self.obj.profile.email_optin = d.get("emailOptIn", 1) == 1
 
-    def _save_user(self):
-        self.newly_created = self.is_new_user
-        super()._save_user()
+    def save(self):
+        """
+        Save the user object and any related objects, such as the profile.
+        """
+        newly_created = self.is_new_user
+        super().save()
+        if newly_created:
+            pm = get_plugin_manager()
+            hook = pm.hook
+            hook.user_created(user=self.obj, user_data={"profile": self.to_dict()})
 
     def _save_related(self):
         """
@@ -52,10 +57,6 @@ class LearnUserAdapter(UserAdapter):
         """
         self.obj.profile.user = self.obj
         self.obj.profile.save()
-        if self.newly_created:
-            pm = get_plugin_manager()
-            hook = pm.hook
-            hook.user_created(user=self.obj, user_data={"profile": self.to_dict()})
 
     def _handle_replace_nested_path(self, nested_path, nested_value):
         """Per-path replacement handling"""
