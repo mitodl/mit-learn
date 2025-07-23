@@ -134,9 +134,8 @@ def transform_canvas_content_files(
     ):
         for member in course_archive.infolist():
             if Path(member.filename).resolve() in published_items:
-                published_keys.append(
-                    get_edx_module_id(Path(olx_path) / Path(member.filename), run)
-                )
+                full_path = Path(olx_path) / Path(member.filename)
+                published_keys.append(get_edx_module_id(str(full_path), run))
                 course_archive.extract(member, path=olx_path)
                 log.debug("processing active file %s", member.filename)
             else:
@@ -144,8 +143,9 @@ def transform_canvas_content_files(
         yield from _process_olx_path(olx_path, run, overwrite=overwrite)
 
     unpublished_content = run.content_files.exclude(key__in=published_keys)
+
     bulk_resources_unpublished_actions(
-        unpublished_content.values_list("id", flat=True), CONTENT_FILE_TYPE
+        list(unpublished_content.values_list("id", flat=True)), CONTENT_FILE_TYPE
     )
     unpublished_content.delete()
 
@@ -200,7 +200,6 @@ def parse_module_meta(course_archive_path: str) -> dict:
         root = ElementTree.fromstring(module_xml)
         for module in root.findall(".//ns:module", namespaces):
             module_title = module.find("ns:title", namespaces).text
-
             for item in module.findall("ns:items/ns:item", namespaces):
                 item_state = item.find("ns:workflow_state", namespaces).text
                 item_title = item.find("ns:title", namespaces).text
