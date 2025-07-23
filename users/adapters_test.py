@@ -11,8 +11,12 @@ def test_save_related_creates_profile_and_favorites_if_missing(mocker, settings)
     Test that saving a LearnUserAdapter creates a profile and default favorites list
     """
     settings.MITOL_AUTHENTICATION_PLUGINS = "learning_resources.plugins.FavoritesListPlugin,profiles.plugins.CreateProfilePlugin"
-    user = UserFactory()
 
+    # simulate a new and blank unsaved user
+    user = UserFactory.create()
+    user.scim_id = None
+    user.global_id = None
+    user.id = None
     scimUser = LearnUserAdapter(user)
     scimUser.request = RequestFactory()
     scimUser.obj.request = RequestFactory()

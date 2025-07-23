@@ -1,6 +1,6 @@
 from mitol.scim.adapters import UserAdapter
 
-from authentication.api import user_created_actions
+from authentication.hooks import get_plugin_manager
 from profiles.models import Profile
 
 
@@ -10,6 +10,8 @@ class LearnUserAdapter(UserAdapter):
     to extend the profiles.models.Profile model to work with the
     django_scim library.
     """
+
+    newly_created = False
 
     @property
     def display_name(self):
@@ -40,13 +42,20 @@ class LearnUserAdapter(UserAdapter):
         self.obj.profile.name = d.get("fullName", d.get("name", ""))
         self.obj.profile.email_optin = d.get("emailOptIn", 1) == 1
 
+    def _save_user(self):
+        self.newly_created = self.is_new_user
+        super()._save_user()
+
     def _save_related(self):
         """
         Save models related to the user
         """
         self.obj.profile.user = self.obj
         self.obj.profile.save()
-        user_created_actions(user=self.obj, details=self.to_dict(), is_new=True)
+        if self.newly_created:
+            pm = get_plugin_manager()
+            hook = pm.hook
+            hook.user_created(user=self.obj, user_data={"profile": self.to_dict()})
 
     def _handle_replace_nested_path(self, nested_path, nested_value):
         """Per-path replacement handling"""
