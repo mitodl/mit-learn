@@ -48,6 +48,7 @@ type DashboardCourseEnrollment = {
 }
 
 type DashboardProgram = {
+  id: number
   key: string
   type: typeof DashboardResourceType.Program
   title: string

@@ -5,15 +5,26 @@ import Image from "next/image"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useQueries, useQuery } from "@tanstack/react-query"
-import { programsQueries } from "api/mitxonline-hooks/programs"
+import {
+  programsQueries,
+  programCollectionQueries,
+} from "api/mitxonline-hooks/programs"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import * as transform from "./CoursewareDisplay/transform"
 import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
 import { DashboardCard } from "./CoursewareDisplay/DashboardCard"
 import { PlainList, Stack, styled, Typography } from "ol-components"
-import { DashboardCourse, DashboardProgram } from "./CoursewareDisplay/types"
+import {
+  DashboardCourse,
+  DashboardProgram,
+  DashboardProgramCollection,
+} from "./CoursewareDisplay/types"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
-import { OrganizationPage, V2Program } from "@mitodl/mitxonline-api-axios/v1"
+import {
+  CourseRunEnrollment,
+  OrganizationPage,
+  V2Program,
+} from "@mitodl/mitxonline-api-axios/v1"
 import { useMitxOnlineCurrentUser } from "api/mitxonline-hooks/user"
 
 const HeaderRoot = styled.div({
@@ -102,6 +113,34 @@ const ProgramHeader = styled.div(({ theme }) => ({
   borderRadius: "8px 8px 0px 0px",
   border: `1px solid ${theme.custom.colors.lightGray2}`,
 }))
+
+const OrgProgramCollectionDisplay: React.FC<{
+  collection: DashboardProgramCollection
+  programs: DashboardProgram[]
+  enrollments?: CourseRunEnrollment[]
+  orgId: number
+}> = ({ collection, programs, enrollments, orgId }) => {
+  return (
+    <ProgramRoot data-testid="org-program-collection-root">
+      <ProgramHeader>
+        <Typography variant="h5" component="h2">
+          {collection.title}
+        </Typography>
+      </ProgramHeader>
+      <PlainList itemSpacing={0}>
+        {programs.map((program) => (
+          <ProgramCard
+            key={program.key}
+            program={program}
+            enrollments={enrollments}
+            orgId={orgId}
+          />
+        ))}
+      </PlainList>
+    </ProgramRoot>
+  )
+}
+
 const OrgProgramDisplay: React.FC<{
   program: DashboardProgram
   courses: DashboardCourse[]
@@ -132,6 +171,36 @@ const OrgProgramDisplay: React.FC<{
     </ProgramRoot>
   )
 }
+
+const ProgramCard: React.FC<{
+  program: DashboardProgram
+  enrollments?: CourseRunEnrollment[]
+  orgId: number
+}> = ({ program, enrollments, orgId }) => {
+  const courses = useQuery(
+    coursesQueries.coursesList({ id: program.courseIds, org_id: orgId }),
+  )
+  const transformedCourses = transform.mitxonlineCourses({
+    courses: courses.data?.results ?? [],
+    enrollments: enrollments ?? [],
+  })
+  if (courses.isLoading || !transformedCourses.length)
+    return "Loading Program Courses"
+  // For now we assume the first course is the main one for the program.
+  const course = transformedCourses[0]
+  return (
+    <DashboardCard
+      Component="li"
+      key={program.key}
+      dashboardResource={course}
+      courseNoun="Program"
+      offerUpgrade={false}
+      titleHref={course.run.coursewareUrl ?? ""}
+      buttonHref={course.run.coursewareUrl ?? ""}
+    />
+  )
+}
+
 const OrganizationRoot = styled.div({
   display: "flex",
   flexDirection: "column",
@@ -154,6 +223,9 @@ const OrganizationContentInternal: React.FC<
     programs.data?.results ?? [],
     orgId,
   )
+  const programCollections = useQuery(
+    programCollectionQueries.programCollectionsList({}),
+  )
 
   if (!isOrgDashboardEnabled) return null
 
@@ -168,24 +240,59 @@ const OrganizationContentInternal: React.FC<
     transform.mitxonlineProgram(program),
   )
 
+  // This needs to be better
+  const foundationalProgram = transformedPrograms?.find((program) =>
+    program.title.includes("Foundational"),
+  )
+  const foundationalCourses =
+    transformedCourseGroups.find((courses, index) => {
+      const program = programs.data?.results[index]
+      return (
+        program &&
+        foundationalProgram?.courseIds.some((courseId) =>
+          program.courses.includes(courseId),
+        )
+      )
+    }) ?? []
+
   return (
     <OrganizationRoot>
       <OrganizationHeader org={org} />
-      {programs.isLoading
-        ? "Programs Loading"
-        : transformedPrograms?.map((program, index) => {
-            const courses = transformedCourseGroups[index]
-            const programLoading = courseGroups[index].isLoading
+      {programs.isLoading || !foundationalProgram ? (
+        "Foundational Program Loading"
+      ) : (
+        <OrgProgramDisplay
+          key={foundationalProgram.key}
+          program={foundationalProgram}
+          courses={foundationalCourses}
+          coursesLoading={courseGroups[0].isLoading}
+          programLoading={programs.isLoading}
+        />
+      )}
+      {programCollections.isLoading ? (
+        "Industry Specific Verticals Loading"
+      ) : (
+        <PlainList itemSpacing={0}>
+          {programCollections.data?.results.map((collection) => {
+            const transformedCollection =
+              transform.mitxonlineProgramCollection(collection)
+            const collectionPrograms = transformedCollection.programIds
+              .map((programId) =>
+                transformedPrograms?.find((p) => p.id === programId),
+              )
+              .filter((p) => p !== undefined) as DashboardProgram[]
             return (
-              <OrgProgramDisplay
-                key={program.key}
-                program={program}
-                courses={courses}
-                coursesLoading={courseGroups[index].isLoading}
-                programLoading={programLoading}
+              <OrgProgramCollectionDisplay
+                key={collection.title}
+                collection={transformedCollection}
+                programs={collectionPrograms}
+                enrollments={enrollments.data}
+                orgId={orgId}
               />
             )
           })}
+        </PlainList>
+      )}
     </OrganizationRoot>
   )
 }
