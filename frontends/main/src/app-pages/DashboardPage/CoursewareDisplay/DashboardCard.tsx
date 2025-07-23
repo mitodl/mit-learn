@@ -10,7 +10,11 @@ import {
 } from "ol-components"
 import NextLink from "next/link"
 import { EnrollmentStatus, EnrollmentMode } from "./types"
-import type { DashboardCourse, DashboardCourseEnrollment } from "./types"
+import type {
+  DashboardResource,
+  DashboardCourse,
+  DashboardCourseEnrollment,
+} from "./types"
 import { ActionButton, Button, ButtonLink } from "@mitodl/smoot-design"
 import {
   RiArrowRightLine,
@@ -309,7 +313,7 @@ const CourseStartCountdown: React.FC<{
 
 type DashboardCardProps = {
   Component?: React.ElementType
-  dashboardResource: DashboardCourse
+  dashboardResource: DashboardResource
   showNotComplete?: boolean
   className?: string
   courseNoun?: string
@@ -319,6 +323,7 @@ type DashboardCardProps = {
   titleHref?: string | null
   buttonHref?: string | null
 }
+
 const DashboardCard: React.FC<DashboardCardProps> = ({
   dashboardResource,
   showNotComplete = true,
@@ -331,7 +336,8 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   titleHref,
   buttonHref,
 }) => {
-  const { title, marketingUrl, enrollment, run } = dashboardResource
+  const course = dashboardResource as DashboardCourse
+  const { title, marketingUrl, enrollment, run } = course
   const titleSection = isLoading ? (
     <>
       <Skeleton variant="text" width="95%" height={16} />
@@ -373,7 +379,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       />
       <CoursewareButton
         data-testid="courseware-button"
-        coursewareId={dashboardResource.coursewareId}
+        coursewareId={course.coursewareId}
         startDate={run.startDate}
         enrollmentStatus={enrollment?.status}
         href={buttonHref ? buttonHref : run.coursewareUrl}

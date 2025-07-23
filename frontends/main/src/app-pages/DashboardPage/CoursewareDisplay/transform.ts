@@ -120,6 +120,7 @@ const mitxonlineCourses = (raw: {
 
 const mitxonlineProgram = (raw: V2Program): DashboardProgram => {
   return {
+    id: raw.id,
     key: getKey({
       source: sources.mitxonline,
       resourceType: DashboardResourceType.Program,
