@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import axios from "axios"
 
-export const useVideoShortsList = () => {
+export const useVideoShortsList = (enabled: boolean) => {
   return useQuery({
     queryKey: ["youtube_shorts", "list"],
     queryFn: async () => {
@@ -13,6 +13,7 @@ export const useVideoShortsList = () => {
 
       return data.items
     },
+    enabled,
   })
 }
 

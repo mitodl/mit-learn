@@ -1,15 +1,28 @@
-import { useEffect, useRef, useState } from "react"
-import Image from "next/image"
-import { Button, EmbedlyCard, styled } from "ol-components"
-import { useVideoShortsList } from "api/hooks/videoShorts"
+import { useEffect, useRef, useState, useCallback } from "react"
+import { styled } from "ol-components"
 import useEmblaCarousel from "embla-carousel-react"
 import { WheelGesturesPlugin } from "embla-carousel-wheel-gestures"
-import {
-  RiArrowRightLine,
-  RiArrowUpLine,
-  RiArrowDownLine,
-} from "@remixicon/react"
+import { RiArrowUpLine, RiArrowDownLine, RiCloseLine } from "@remixicon/react"
 import { ActionButton } from "@mitodl/smoot-design"
+// import { useWheel } from "@use-gesture/react"
+// import { WheelGestures } from "wheel-gestures"
+import WheelIndicator from "wheel-indicator"
+
+// const wheelGestures = WheelGestures()
+
+const useThrottle = (callback: Function, delay: number) => {
+  const lastRun = useRef(Date.now())
+
+  return useCallback(
+    (...args: any[]) => {
+      if (Date.now() - lastRun.current >= delay) {
+        callback(...args)
+        lastRun.current = Date.now()
+      }
+    },
+    [callback, delay],
+  )
+}
 
 const useWindowDimensions = () => {
   const [windowDimensions, setWindowDimensions] = useState({
@@ -34,7 +47,7 @@ const useWindowDimensions = () => {
   return windowDimensions
 }
 
-const Overlay = styled.div({
+const Overlay = styled.div(({ theme }) => ({
   position: "fixed",
   top: 0,
   left: 0,
@@ -42,12 +55,39 @@ const Overlay = styled.div({
   height: "100%",
   backgroundColor: "rgba(0, 0, 0, 0.9)",
   zIndex: 1200,
+  [theme.breakpoints.down("md")]: {
+    backgroundColor: theme.custom.colors.black,
+  },
+}))
+
+const CloseContainer = styled.div(({ theme }) => ({
+  position: "absolute",
+  top: "16px",
+  right: "16px",
+  zIndex: 1,
+  svg: {
+    fill: "white",
+  },
+}))
+
+const Debug = styled.div({
+  position: "absolute",
+  top: "16px",
+  left: "16px",
+  zIndex: 1,
+  color: "white",
+  fontSize: "12px",
+  fontWeight: "bold",
+  backgroundColor: "rgba(0, 0, 0, 0.5)",
+  padding: "4px 8px",
 })
 
+const Debug2 = styled(Debug)({
+  top: "32px",
+})
 const Carousel = styled.div({
   // margin: "24px 0",
   height: "100%",
-  border: "1px solid green",
 })
 
 const CarouselScroll = styled.div({
@@ -56,7 +96,6 @@ const CarouselScroll = styled.div({
   alignItems: "center",
   justifyContent: "flex-start",
   height: "100%",
-  border: "1px solid blue",
 })
 
 const CarouselSlide = styled.div<{ height: number; width: number }>(
@@ -69,31 +108,31 @@ const CarouselSlide = styled.div<{ height: number; width: number }>(
     // margin: "20px 0",
     overflow: "hidden",
     borderRadius: "12px",
-    // border: "5px solid red",
 
     flex: "0 0 calc(100% - 60px)",
-    // border: "1px solid red",
     margin: "30px 0",
     position: "relative",
-    border: "1px solid red",
 
     [theme.breakpoints.down("md")]: {
       width: "100%",
-      flex: "0 0 100%",
-      margin: "0",
-      border: "1px solid blue",
+      margin: "10px 0",
+      flex: "0 0 calc(100% - 20px)",
+      borderRadius: 0,
     },
   }),
 )
 
-const Placeholder = styled.div({
+const Placeholder = styled.div(({ theme }) => ({
   width: "100%",
   height: "100%",
   backgroundColor: "black",
   borderRadius: "12px",
-})
+  [theme.breakpoints.down("md")]: {
+    borderRadius: 0,
+  },
+}))
 
-const ButtonsContainer = styled.div({
+const ButtonsContainer = styled.div(({ theme }) => ({
   position: "absolute",
   top: "50%",
   left: "calc(50% - ((100vh * 9 / 16) / 2) - 30px)",
@@ -104,32 +143,40 @@ const ButtonsContainer = styled.div({
   svg: {
     fill: "white",
   },
-})
-
-const IFrame = styled.iframe({
-  backgroundColor: "black",
-  position: "absolute",
-  top: 0,
-  left: 0,
-  width: "100%",
-  height: "100%",
-  zIndex: 1,
-})
-
-const EventOverlay = styled.div({
-  position: "absolute",
-  top: 0,
-  left: 0,
-  bottom: 40,
-  right: 0,
-  zIndex: 2,
-  // pointerEvents: "none", // Allow clicks to pass through
-  "&:hover": {
-    pointerEvents: "none", // Enable pointer events on hover to catch wheel events
+  [theme.breakpoints.down("md")]: {
+    display: "none",
   },
-  border: "1px solid green",
-  backgroundColor: "rgba(0, 0, 0, 0.5)",
-})
+}))
+
+// const IFrame = styled.iframe({
+//   backgroundColor: "black",
+//   position: "absolute",
+//   top: 0,
+//   left: 0,
+//   width: "100%",
+//   height: "100%",
+//   zIndex: 1,
+// })
+
+// const EventOverlay = styled.div({
+//   position: "absolute",
+//   top: 0,
+//   left: 0,
+//   bottom: 40,
+//   right: 0,
+//   zIndex: 2,
+//   // pointerEvents: "none", // Allow clicks to pass through
+//   "&:hover": {
+//     pointerEvents: "none", // Enable pointer events on hover to catch wheel events
+//   },
+//   border: "1px solid green",
+//   backgroundColor: "rgba(0, 0, 0, 0.5)",
+// })
+
+const StyledActionButton = styled(ActionButton)(({ disabled }) => ({
+  opacity: disabled ? 0.5 : 1,
+  cursor: disabled ? "not-allowed" : "pointer",
+}))
 
 const Video = styled.video(({ height, width, theme }) => ({
   width,
@@ -139,6 +186,19 @@ const Video = styled.video(({ height, width, theme }) => ({
     height: "100%",
   },
 }))
+
+const isPlaying = (videoElement: HTMLVideoElement | null): boolean => {
+  if (!videoElement) return false
+
+  const isPlaying =
+    !videoElement.paused && !videoElement.ended && videoElement.currentTime > 0
+
+  const isReady = videoElement.readyState >= 2
+
+  const hasDuration = videoElement.duration > 0
+
+  return isPlaying && isReady && hasDuration
+}
 
 type VideoShortsModalProps = {
   startIndex: number
@@ -151,29 +211,35 @@ const VideoShortsModal = ({
   onClose,
 }: VideoShortsModalProps) => {
   const { width, height } = useWindowDimensions()
+  const [debug, setDebug] = useState("")
+  const [debug2, setDebug2] = useState("")
+
+  // const bindWheel = useWheel((options) => {
+  //   console.log("OPTIONS", options)
+  // })
 
   const [emblaRef, emblaApi] = useEmblaCarousel(
     {
       align: "center",
       axis: "y",
       loop: false,
-      // skipSnaps: true,
+      skipSnaps: true,
       dragFree: false,
       // draggable: true,
       // containScroll: "trimSnaps",
       slidesToScroll: 1,
+      inViewThreshold: 1,
       // startIndex: startIndex,
     },
-    [WheelGesturesPlugin()],
+    [],
   )
 
   const [canScrollPrev, setCanScrollPrev] = useState(false)
   const [canScrollNext, setCanScrollNext] = useState(true)
   const [selectedIndex, setSelectedIndex] = useState(startIndex)
-  const [navigating, setNavigating] = useState<1 | -1 | false>(false)
+  // const [navigating, setNavigating] = useState<1 | -1 | false>(false)
 
   const scrollRef = useRef<HTMLDivElement>(null)
-  const intersectionObserverRef = useRef<IntersectionObserver | null>(null)
 
   const videosRef = useRef<(HTMLVideoElement | null)[]>([])
 
@@ -209,6 +275,7 @@ const VideoShortsModal = ({
   //     )
 
   //     const slides = scrollRef.current.querySelectorAll("[data-index]")
+  //     console.log("SLIDES", slides)
   //     slides.forEach((slide) => {
   //       intersectionObserverRef.current?.observe(slide)
   //     })
@@ -225,34 +292,34 @@ const VideoShortsModal = ({
 
   const scrollPrev = () => {
     emblaApi?.scrollPrev()
-    videosRef.current
-      .filter((video) => video)
-      .forEach((video) => {
-        video!.pause()
-      })
-    const prevVideo = videosRef.current[selectedIndex - 1]
-    setNavigating(-1)
-    prevVideo?.play()
+    // videosRef.current
+    //   .filter((video) => video)
+    //   .forEach((video) => {
+    //     video!.pause()
+    //   })
+    // const prevVideo = videosRef.current[selectedIndex - 1]
+    // setNavigating(-1)
+    // prevVideo?.play()
   }
 
   const scrollNext = () => {
     emblaApi?.scrollNext()
-    videosRef.current
-      .filter((video) => video)
-      .forEach((video) => {
-        video!.pause()
-      })
-    const nextVideo = videosRef.current[selectedIndex + 1]
-    setNavigating(1)
-    nextVideo?.play()
+    // videosRef.current
+    //   .filter((video) => video)
+    //   .forEach((video) => {
+    //     video!.pause()
+    //   })
+    // const nextVideo = videosRef.current[selectedIndex + 1]
+    // setNavigating(1)
+    // nextVideo?.play()
   }
 
-  useEffect(() => {
-    emblaApi?.on("scroll", () => {
-      setCanScrollPrev(emblaApi.canScrollPrev())
-      setCanScrollNext(emblaApi.canScrollNext())
-    })
-  }, [emblaApi])
+  // useEffect(() => {
+  //   emblaApi?.on("scroll", () => {
+  //     setCanScrollPrev(emblaApi.canScrollPrev())
+  //     setCanScrollNext(emblaApi.canScrollNext())
+  //   })
+  // }, [emblaApi])
 
   useEffect(() => {
     emblaApi?.scrollTo(startIndex)
@@ -271,6 +338,14 @@ const VideoShortsModal = ({
         emblaApi?.scrollNext()
       }
 
+      if (event.key === "Space") {
+        if (isPlaying(videosRef.current[selectedIndex])) {
+          videosRef.current[selectedIndex]?.pause()
+        } else {
+          videosRef.current[selectedIndex]?.play()
+        }
+      }
+
       // event.stopPropagation()
       event.preventDefault()
     }
@@ -279,40 +354,71 @@ const VideoShortsModal = ({
     return () => {
       document.removeEventListener("keydown", handleKeyDown)
     }
-  }, [onClose, emblaApi])
+  }, [onClose, emblaApi, selectedIndex])
 
   useEffect(() => {
     emblaApi?.on("select", (event) => {
-      setNavigating(false)
-      console.log("SELECT", event)
-      // console.log("PAUSING VIDEO", videosRef.current[selectedIndex])
-
-      videosRef.current
-        .filter((video) => video)
-        .forEach((video) => {
-          video!.pause()
-        })
-
-      const inView = event.slidesInView()
-
-      const _selectedIndex = inView[inView.length - 1]
-      console.log(
-        "SELECTED ",
-        _selectedIndex,
-        videosRef.current[_selectedIndex],
+      setDebug2(
+        `select: ${selectedIndex} inView: ${JSON.stringify(event.slidesInView())}`,
       )
-      setSelectedIndex(_selectedIndex)
+      console.log("SELECT IN", event.slidesInView())
+      //   setNavigating(false)
+      //   console.log("SELECT", event)
+      //   // console.log("PAUSING VIDEO", videosRef.current[selectedIndex])
 
-      if (videosRef.current[_selectedIndex]) {
-        videosRef.current[_selectedIndex]?.play()
-      }
+      //   videosRef.current
+      //     .filter((video) => video)
+      //     .forEach((video) => {
+      //       video!.pause()
+      //     })
+
+      //   const inView = event.slidesInView()
+
+      //   console.log("SELECTED IN VIEW", inView)
+
+      //   const _selectedIndex = inView[inView.length - 1]
+      //   // console.log(
+      //   //   "SELECTED ",
+      //   //   _selectedIndex,
+      //   //   videosRef.current[_selectedIndex],
+      //   // )
+      //   setSelectedIndex(_selectedIndex)
+
+      //   if (videosRef.current[_selectedIndex]) {
+      //     videosRef.current[_selectedIndex]?.play()
+      //   }
     })
+
     emblaApi?.on("settle", (event) => {
-      console.log("SETTLE", event)
+      console.log("SETTLE IN", event.slidesInView())
     })
     emblaApi?.on("slidesInView", (event) => {
       console.log("SLIDES IN", event.slidesInView())
-      console.log("SLIDES OUT", event.slidesNotInView())
+      // console.log("SLIDES OUT", event.slidesNotInView())
+
+      const inView = event.slidesInView()
+
+      setDebug(
+        `selectedIndex: ${selectedIndex} inView: ${JSON.stringify(inView)}`,
+      )
+
+      if (inView.length === 1) {
+        videosRef.current
+          .filter((video, index) => video && index !== inView[0])
+          .forEach((video) => {
+            video!.pause()
+          })
+        setSelectedIndex(inView[0])
+        setDebug(
+          `selectedIndex: ${inView[0]} inView: ${JSON.stringify(inView)}`,
+        )
+        if (videosRef.current[inView[0]]) {
+          videosRef.current[inView[0]]?.play()
+        }
+        // setNavigating(false)
+        setCanScrollPrev(emblaApi.canScrollPrev())
+        setCanScrollNext(emblaApi.canScrollNext())
+      }
     })
   }, [emblaApi])
 
@@ -324,10 +430,10 @@ const VideoShortsModal = ({
     console.log("videosRef.current", videosRef.current)
   }, [videosRef.current])
 
-  // const handleWheel = (e: React.WheelEvent) => {
-  //   e.preventDefault()
-  //   e.stopPropagation()
-  // }
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }
 
   // const handleTouchMove = (e: React.TouchEvent) => {
   //   e.preventDefault()
@@ -337,30 +443,87 @@ const VideoShortsModal = ({
   console.log("startIndex", startIndex)
   console.log("selectedIndex", selectedIndex)
 
+  // const handleWheelGesture = ({
+  //   isStart,
+  //   axisDelta,
+  // }: {
+  //   isStart: boolean
+  //   axisDelta: number[]
+  // }) => {
+  //   if (isStart) {
+  //     if (axisDelta[1] < 0) {
+  //       emblaApi?.scrollNext()
+  //     } else {
+  //       emblaApi?.scrollPrev()
+  //     }
+  //   }
+  // }
+
+  const handleWheelGesture = useCallback(
+    ({ direction }: { direction: "up" | "down" }) => {
+      console.log("WHEEL GESTURE", direction, !!emblaApi)
+      if (direction === "up") {
+        emblaApi?.scrollPrev()
+      } else {
+        emblaApi?.scrollNext()
+      }
+    },
+    [emblaApi],
+  )
+
+  const throttledHandleWheelGesture = useThrottle(handleWheelGesture, 400)
+  const overlayRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (overlayRef.current && emblaApi) {
+      const wheelIndicator = new WheelIndicator({
+        elem: overlayRef.current,
+        callback: throttledHandleWheelGesture,
+      })
+
+      return () => {
+        // Clean up the wheel indicator if needed
+        // wheelIndicator.destroy() // if the library has a destroy method
+      }
+    }
+  }, [emblaApi, throttledHandleWheelGesture])
+
   return (
-    <Overlay>
+    <Overlay ref={overlayRef}>
       {/* onWheel={handleWheel} onTouchMove={handleTouchMove} */}
+      <Debug>{debug}</Debug>
+      <Debug2>{debug2}</Debug2>
+      <CloseContainer>
+        <StyledActionButton
+          size="large"
+          edge="rounded"
+          variant="text"
+          onClick={onClose}
+        >
+          <RiCloseLine aria-hidden />
+        </StyledActionButton>
+      </CloseContainer>
       <ButtonsContainer role="group" aria-label="Video navigation">
-        <ActionButton
+        <StyledActionButton
           size="large"
           edge="rounded"
           variant="text"
           onClick={scrollPrev}
-          disabled={!canScrollPrev || navigating === -1}
+          disabled={!canScrollPrev}
           // aria-label={prevLabel}
         >
           <RiArrowUpLine aria-hidden />
-        </ActionButton>
-        <ActionButton
+        </StyledActionButton>
+        <StyledActionButton
           size="large"
           edge="rounded"
           variant="text"
           onClick={scrollNext}
-          disabled={!canScrollNext || navigating === 1}
+          disabled={!canScrollNext}
           // aria-label={nextLabel}
         >
           <RiArrowDownLine aria-hidden />
-        </ActionButton>
+        </StyledActionButton>
       </ButtonsContainer>
       <Carousel ref={emblaRef}>
         <CarouselScroll ref={scrollRef}>
@@ -391,6 +554,7 @@ const VideoShortsModal = ({
                   width={(height - 60) * (9 / 16)}
                   height={height - 60}
                   preload="metadata"
+                  loop
                 />
               ) : (
                 <Placeholder />

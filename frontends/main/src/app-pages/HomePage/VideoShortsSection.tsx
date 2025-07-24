@@ -1,41 +1,42 @@
 import { useEffect, useState } from "react"
 import Image from "next/image"
-import {
-  Carousel as SlickCarousel,
-  Container,
-  Typography,
-  Card,
-  styled,
-} from "ol-components"
+import { Container, Typography, Card, styled } from "ol-components"
 import { useVideoShortsList } from "api/hooks/videoShorts"
 import useEmblaCarousel from "embla-carousel-react"
 import { WheelGesturesPlugin } from "embla-carousel-wheel-gestures"
-import ResourceCarousel from "@/page-components/ResourceCarousel/ResourceCarousel"
-import * as carousels from "./carousels"
 import { ActionButton } from "@mitodl/smoot-design"
 import { RiArrowLeftLine, RiArrowRightLine } from "@remixicon/react"
 import VideoShortsModal from "./VideoShortsModal"
+import { FeatureFlags } from "@/common/feature_flags"
+import { useFeatureFlagEnabled } from "posthog-js/react"
 
-const HeaderContainer = styled(Container)(({ theme }) => ({
+const Section = styled.section(({ theme }) => ({
+  padding: "80px 0",
+  [theme.breakpoints.down("md")]: {
+    padding: "40px 0",
+  },
+}))
+
+const Header = styled(Container)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
   textAlign: "center",
   gap: "8px",
-  paddingBottom: "60px",
+
   [theme.breakpoints.down("md")]: {
     paddingBottom: "28px",
   },
 }))
 
-const VideoShortsCarousel = styled(ResourceCarousel)(({ theme }) => ({
-  margin: "80px 0",
-  minHeight: "388px",
-  [theme.breakpoints.down("md")]: {
-    margin: "40px 0",
-    minHeight: "418px",
-  },
-}))
+// const VideoShortsCarousel = styled(ResourceCarousel)(({ theme }) => ({
+//   margin: "80px 0",
+//   minHeight: "388px",
+//   [theme.breakpoints.down("md")]: {
+//     margin: "40px 0",
+//     minHeight: "418px",
+//   },
+// }))
 
 // const StyledCarousel = styled(SlickCarousel)({
 //   /**
@@ -103,7 +104,9 @@ const VideoShortsSection = () => {
   //   sortby: "new",
   // })
 
-  const { data } = useVideoShortsList()
+  const videoShortsEnabled = useFeatureFlagEnabled(FeatureFlags.VideoShorts)
+
+  const { data } = useVideoShortsList(!!videoShortsEnabled)
 
   const [emblaRef, emblaApi] = useEmblaCarousel(
     {
@@ -140,92 +143,96 @@ const VideoShortsSection = () => {
     })
   }, [emblaApi])
 
+  if (!videoShortsEnabled) {
+    return null
+  }
+
   return (
-    <Container component="section">
-      {showModal ? (
-        <VideoShortsModal
-          startIndex={videoIndex}
-          videoData={data}
-          onClose={() => setShowModal(false)}
-        />
-      ) : null}
-      <h1>Video Shorts</h1>
-      <VideoShortsCarousel
-        titleComponent="h2"
-        title="Video Shorts"
-        config={carousels.VIDEO_SHORTS_CAROUSEL}
-      />
-      <HeaderContainer>
-        <Typography component="h2" typography={{ xs: "h3", sm: "h2" }}>
-          Video Shorts
-        </Typography>
-        <Typography variant="body1">
-          Start your learning journey with our short-form educational videos
-        </Typography>
-      </HeaderContainer>
-      <ButtonsContainer role="group" aria-label="Slide navigation">
-        <ActionButton
-          size="small"
-          edge="rounded"
-          variant="tertiary"
-          onClick={scrollPrev}
-          disabled={!canScrollPrev}
-          // aria-label={prevLabel}
-        >
-          <RiArrowLeftLine aria-hidden />
-        </ActionButton>
-        <ActionButton
-          size="small"
-          edge="rounded"
-          variant="tertiary"
-          onClick={scrollNext}
-          disabled={!canScrollNext}
-          // aria-label={nextLabel}
-        >
-          <RiArrowRightLine aria-hidden />
-        </ActionButton>
-      </ButtonsContainer>
-      <Carousel ref={emblaRef}>
-        <CarouselScroll>
-          {data?.map((item: any, index: number) => (
-            <CarouselSlide width={235} height={235 / ASPECT_RATIO} key={index}>
-              {/* 235 is our fixed width to ensure slides align with the container edge */}
-              <Card
-                onClick={() => {
-                  setShowModal(true)
-                  setVideoIndex(index)
-                }}
+    <Section>
+      <Container>
+        {showModal ? (
+          <VideoShortsModal
+            startIndex={videoIndex}
+            videoData={data}
+            onClose={() => setShowModal(false)}
+          />
+        ) : null}
+        <Header>
+          <Typography component="h2" typography={{ xs: "h3", sm: "h2" }}>
+            Video Shorts
+          </Typography>
+          <Typography variant="body1">
+            Start your learning journey with our short-form educational videos
+          </Typography>
+        </Header>
+        <ButtonsContainer role="group" aria-label="Slide navigation">
+          <ActionButton
+            size="small"
+            edge="rounded"
+            variant="tertiary"
+            onClick={scrollPrev}
+            disabled={!canScrollPrev}
+            // aria-label={prevLabel}
+          >
+            <RiArrowLeftLine aria-hidden />
+          </ActionButton>
+          <ActionButton
+            size="small"
+            edge="rounded"
+            variant="tertiary"
+            onClick={scrollNext}
+            disabled={!canScrollNext}
+            // aria-label={nextLabel}
+          >
+            <RiArrowRightLine aria-hidden />
+          </ActionButton>
+        </ButtonsContainer>
+        <Carousel ref={emblaRef}>
+          <CarouselScroll>
+            {data?.map((item: any, index: number) => (
+              <CarouselSlide
+                width={235}
+                height={235 / ASPECT_RATIO}
+                key={index}
               >
-                <Card.Content>
-                  <CardContent
-                    width={235}
-                    height={
-                      235 / ASPECT_RATIO
-                      //item.snippet.thumbnails.high.height
-                    }
-                  >
-                    {/* The thumbnail images are e.g. width: 480, height: 360 (landscape) and pillarboxed.
+                {/* 235 is our fixed width to ensure slides align with the container edge */}
+                <Card
+                  onClick={() => {
+                    setShowModal(true)
+                    setVideoIndex(index)
+                  }}
+                >
+                  <Card.Content>
+                    <CardContent
+                      width={235}
+                      height={
+                        235 / ASPECT_RATIO
+                        //item.snippet.thumbnails.high.height
+                      }
+                    >
+                      {/* The thumbnail images are e.g. width: 480, height: 360 (landscape) and pillarboxed.
 
                      */}
-                    <Image
-                      width={
-                        (235 / ASPECT_RATIO) *
-                        (item.snippet.thumbnails.high.width /
-                          item.snippet.thumbnails.high.height)
-                      }
-                      // height={item.snippet.thumbnails.high.height}
-                      height={235 / ASPECT_RATIO}
-                      src={item.snippet.thumbnails.high.url}
-                      alt={item.snippet.title}
-                    />
-                  </CardContent>
-                </Card.Content>
-              </Card>
-            </CarouselSlide>
-          ))}
-        </CarouselScroll>
-      </Carousel>
-    </Container>
+                      <Image
+                        width={
+                          (235 / ASPECT_RATIO) *
+                          (item.snippet.thumbnails.high.width /
+                            item.snippet.thumbnails.high.height)
+                        }
+                        // height={item.snippet.thumbnails.high.height}
+                        height={235 / ASPECT_RATIO}
+                        src={item.snippet.thumbnails.high.url}
+                        alt={item.snippet.title}
+                      />
+                    </CardContent>
+                  </Card.Content>
+                </Card>
+              </CarouselSlide>
+            ))}
+          </CarouselScroll>
+        </Carousel>
+      </Container>
+    </Section>
   )
 }
 
