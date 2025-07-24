@@ -28,18 +28,6 @@ const CloseContainer = styled.div({
   },
 })
 
-const Debug = styled.div({
-  position: "absolute",
-  top: "16px",
-  left: "16px",
-  zIndex: 1,
-  color: "white",
-  fontSize: "12px",
-  fontWeight: "bold",
-  backgroundColor: "rgba(0, 0, 0, 0.5)",
-  padding: "4px 8px",
-})
-
 const CarouselSlide = styled.div<{ width: number }>(({ width, theme }) => ({
   width,
   overflow: "hidden",
@@ -168,7 +156,7 @@ const VideoShortsModal = ({
         initialSlide={startIndex}
         onSlidesInView={onSlidesInView}
       >
-        {videoData?.map((item: any, index: number) => (
+        {videoData?.map((item: VideoShort, index: number) => (
           <CarouselSlide
             key={index}
             width={(height - 60) * (9 / 16)}
