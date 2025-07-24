@@ -159,7 +159,10 @@ const CarouselV2Vertical: React.FC<CarouselV2VerticalProps> = ({
     [emblaApi],
   )
 
-  const throttledHandleWheelGesture = useThrottle(handleWheelGesture, 400)
+  const throttledHandleWheelGesture = useThrottle(
+    handleWheelGesture as (...args: unknown[]) => void,
+    400,
+  )
   const overlayRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
