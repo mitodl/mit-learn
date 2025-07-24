@@ -878,6 +878,25 @@ class VideoChannelFactory(DjangoModelFactory):
         skip_postgeneration_save = True
 
 
+class TutorProblemFileFactory(DjangoModelFactory):
+    """Factory for TutorProblemFiles"""
+
+    run = None
+    problem_title = factory.Faker("sentence")
+    type = FuzzyChoice("problem", "solution")
+    content = factory.Faker("text")
+    source_path = factory.Faker("file_path", extension="txt")
+
+    @classmethod
+    def _create(cls, model_class, *args, **kwargs):
+        run = kwargs.pop("run", None)
+        kwargs["run"] = run
+        return super()._create(model_class, *args, **kwargs)
+
+    class Meta:
+        model = models.TutorProblemFile
+
+
 class VideoPlaylistFactory(DjangoModelFactory):
     """Factory for Video Playlists"""
 

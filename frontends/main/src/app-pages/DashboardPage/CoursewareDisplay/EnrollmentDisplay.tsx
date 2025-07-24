@@ -139,7 +139,7 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
       <EnrollmentsList itemSpacing={"16px"}>
         {shownEnrollments.map((course) => (
           <DashboardCardStyled
-            key={course.id}
+            key={course.key}
             Component="li"
             dashboardResource={course}
             showNotComplete={false}
@@ -153,7 +153,7 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
             <HiddenEnrollmentsList itemSpacing={"16px"}>
               {hiddenEnrollments.map((course) => (
                 <DashboardCardStyled
-                  key={course.id}
+                  key={course.key}
                   Component="li"
                   dashboardResource={course}
                   showNotComplete={false}

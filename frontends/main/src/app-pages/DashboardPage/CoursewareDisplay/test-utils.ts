@@ -19,7 +19,7 @@ const makeGrade = factories.enrollment.grade
 const dashboardCourse: PartialFactory<DashboardCourse> = (...overrides) => {
   return mergeOverrides<DashboardCourse>(
     {
-      id: faker.string.uuid(),
+      key: faker.string.uuid(),
       coursewareId: faker.string.uuid(),
       type: DashboardResourceType.Course,
       title: faker.commerce.productName(),

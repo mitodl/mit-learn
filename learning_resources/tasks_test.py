@@ -611,9 +611,8 @@ def test_scrape_marketing_pages(mocker, settings, mocked_celery):
     mock_group.assert_called_once()
 
 
-def test_sync_canvas_courses_removes_stale_resources(
-    settings, mocker, django_assert_num_queries
-):
+@pytest.mark.parametrize("canvas_ids", [["1"], None])
+def test_sync_canvas_courses(settings, mocker, django_assert_num_queries, canvas_ids):
     """
     sync_canvas_courses should unpublish and delete stale canvas LearningResources
     """
@@ -622,10 +621,10 @@ def test_sync_canvas_courses_removes_stale_resources(
     mocker.patch("learning_resources.tasks.get_learning_course_bucket")
     mock_bucket = mocker.Mock()
     mock_archive1 = mocker.Mock()
-    mock_archive1.key = "canvas/course1/archive1.zip"
+    mock_archive1.key = "canvas/1/archive1.zip"
     mock_archive1.last_modified = now_in_utc()
     mock_archive2 = mocker.Mock()
-    mock_archive2.key = "canvas/course2/archive2.zip"
+    mock_archive2.key = "canvas/2/archive2.zip"
     mock_archive2.last_modified = now_in_utc() - timedelta(days=1)
     mock_bucket.objects.filter.return_value = [mock_archive1, mock_archive2]
     mocker.patch(
@@ -657,14 +656,22 @@ def test_sync_canvas_courses_removes_stale_resources(
     )
 
     # Patch ingest_canvas_course to return the readable_ids for the two non-stale courses
-    mocker.patch(
+    mock_ingest_course = mocker.patch(
         "learning_resources.tasks.ingest_canvas_course",
         side_effect=[("course1", lr1.runs.first()), ("course2", lr2.runs.first())],
     )
-    sync_canvas_courses(overwrite=False)
+    sync_canvas_courses(canvas_course_ids=canvas_ids, overwrite=False)
 
     # The stale course should be unpublished and deleted
-    assert not LearningResource.objects.filter(id=lr_stale.id).exists()
+    if canvas_ids:
+        assert LearningResource.objects.filter(id=lr_stale.id).exists()
+    else:
+        assert not LearningResource.objects.filter(id=lr_stale.id).exists()
     # The non-stale courses should still exist
     assert LearningResource.objects.filter(id=lr1.id).exists()
     assert LearningResource.objects.filter(id=lr2.id).exists()
+
+    if canvas_ids:
+        assert mock_ingest_course.call_count == 1
+    else:
+        assert mock_ingest_course.call_count == 2

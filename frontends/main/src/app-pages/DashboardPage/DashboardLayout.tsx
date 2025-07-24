@@ -77,28 +77,14 @@ const Background = styled.div(({ theme }) => ({
   },
 }))
 
-const Page = styled.div(({ theme }) => ({
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "flex-start",
-  padding: "40px 84px 80px 84px",
-  gap: "80px",
-  height: "100%",
-  [theme.breakpoints.down("md")]: {
-    padding: "0",
-    gap: "24px",
-  },
-}))
-
-const DashboardContainer = styled(Container)(({ theme }) => ({
-  [theme.breakpoints.down("md")]: {
-    padding: "24px 16px",
-    gap: "24px",
-  },
-}))
+const PageContainer = styled(Container)({
+  marginTop: "40px",
+  marginBottom: "80px",
+})
 
 const DashboardGrid = styled.div(({ theme }) => ({
   display: "grid",
+  width: "100%",
   gridTemplateColumns: "300px minmax(0, 1fr)",
   gap: "48px",
   [theme.breakpoints.down("md")]: {
@@ -114,17 +100,15 @@ const DashboardGridItem = styled.div({
   },
 })
 
-const ProfileSidebar = styled(Card)(({ theme }) => ({
+const ProfileSidebar = styled(Card)({
   position: "fixed",
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-start",
   width: "300px",
   boxShadow: "-4px 4px 0px 0px #A31F34",
-  [theme.breakpoints.down("md")]: {
-    position: "relative",
-  },
-}))
+  transform: "translateX(4px)", // keep solid shadow from bleeding into page margins
+})
 
 const ProfilePhotoContainer = styled.div(({ theme }) => ({
   display: "flex",
@@ -382,22 +366,20 @@ const DashboardPage: React.FC<{
 
   return (
     <Background>
-      <Page>
-        <LearningResourceDrawer />
-        <DashboardContainer>
-          <DashboardGrid>
-            <TabContext value={tabValue}>
-              <DashboardGridItem>
-                <MobileOnly>{mobileTabs}</MobileOnly>
-                <DesktopOnly>{desktopTabs}</DesktopOnly>
-              </DashboardGridItem>
-              <DashboardGridItem>
-                <TabPanelStyled value={tabValue}>{children}</TabPanelStyled>
-              </DashboardGridItem>
-            </TabContext>
-          </DashboardGrid>
-        </DashboardContainer>
-      </Page>
+      <PageContainer>
+        <DashboardGrid>
+          <TabContext value={tabValue}>
+            <DashboardGridItem>
+              <MobileOnly>{mobileTabs}</MobileOnly>
+              <DesktopOnly>{desktopTabs}</DesktopOnly>
+            </DashboardGridItem>
+            <DashboardGridItem>
+              <TabPanelStyled value={tabValue}>{children}</TabPanelStyled>
+            </DashboardGridItem>
+          </TabContext>
+        </DashboardGrid>
+      </PageContainer>
+      <LearningResourceDrawer />
     </Background>
   )
 }

@@ -19,7 +19,7 @@ const EnrollmentMode = {
 type EnrollmentMode = (typeof EnrollmentMode)[keyof typeof EnrollmentMode]
 
 type DashboardCourse = {
-  id: string
+  key: string
   coursewareId: string | null
   title: string
   type: typeof DashboardResourceType.Course
@@ -47,7 +47,7 @@ type DashboardCourseEnrollment = {
 }
 
 type DashboardProgram = {
-  id: string
+  key: string
   type: typeof DashboardResourceType.Program
   title: string
   programType?: string | null

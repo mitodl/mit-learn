@@ -44,6 +44,8 @@ const columnVariants: Record<ColumnVariant, GridProps> = {
 /**
  * This is a thin wrapper around MUI's [Grid](https://mui.com/material-ui/react-grid/)
  * component specifying some app-specific props.
+ * @deprecated The grid presets in this component predates formal designs for
+ * MIT Learn site and should be avoided.
  */
 const GridContainer: React.FC<GridContainerProps> = (props) => (
   <Grid container columnSpacing={6} {...props} />
@@ -55,6 +57,9 @@ const GridContainer: React.FC<GridContainerProps> = (props) => (
  *
  * This is a thin wrapper around MUI's [Grid](https://mui.com/material-ui/react-grid/)
  * component. This is a `<Grid item />` with breakpoint widths specified by `variant`.
+ *
+ * @deprecated The grid presets in this component predates formal designs for
+ * MIT Learn site and should be avoided.
  */
 const GridColumn: React.FC<GridItemProps> = ({ variant, ...others }) => (
   <Grid item {...columnVariants[variant]} {...others} />
