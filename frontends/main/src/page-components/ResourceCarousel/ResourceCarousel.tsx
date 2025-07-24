@@ -4,6 +4,7 @@ import React from "react"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import {
   Carousel,
+  CarouselV2,
   TabPanel,
   TabContext,
   styled,
@@ -20,7 +21,7 @@ import {
   UseQueryOptions,
 } from "@tanstack/react-query"
 
-const StyledCarousel = styled(Carousel)({
+const StyledCarousel = styled(CarouselV2)({
   /**
    * Our cards have a hover shadow that gets clipped by the carousel container.
    * To compensate for this, we add a 4px padding to the left of each slide, and

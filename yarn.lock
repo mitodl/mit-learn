@@ -6412,24 +6412,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@use-gesture/core@npm:10.3.1":
-  version: 10.3.1
-  resolution: "@use-gesture/core@npm:10.3.1"
-  checksum: 10/66c5bda4cf75927e0d1f9cb1b1a0a06d9812f918dfd634b768b6011385ce7b295ca89e0b016f4fe7a6d97d571726653b75c4271fd7f635bb8c159bf7886ce21c
-  languageName: node
-  linkType: hard
-
-"@use-gesture/react@npm:^10.3.1":
-  version: 10.3.1
-  resolution: "@use-gesture/react@npm:10.3.1"
-  dependencies:
-    "@use-gesture/core": "npm:10.3.1"
-  peerDependencies:
-    react: ">= 16.8.0"
-  checksum: 10/2c01c1b73bbdeecb9d51370f9117418953accad6789818e1b50f505dcba9e38685612b3fcb25a5dfcbf3a10ae561506378f5ab7586c773c4485ef86107d53898
-  languageName: node
-  linkType: hard
-
 "@vitest/expect@npm:2.0.5":
   version: 2.0.5
   resolution: "@vitest/expect@npm:2.0.5"
@@ -14637,10 +14619,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "mit-learn@workspace:."
   dependencies:
-    "@use-gesture/react": "npm:^10.3.1"
     syncpack: "npm:^13.0.0"
-    wheel-gestures: "npm:^2.2.48"
-    wheel-indicator: "npm:^1.3.0"
   languageName: unknown
   linkType: soft
 
@@ -15212,6 +15191,7 @@ __metadata:
     typescript: "npm:^5.5.4"
     validator: "npm:^13.11.0"
     webpack: "npm:^5.94.0"
+    wheel-indicator: "npm:^1.3.0"
   peerDependencies:
     "@mitodl/smoot-design": "*"
   languageName: unknown
@@ -19693,7 +19673,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"wheel-gestures@npm:^2.2.48, wheel-gestures@npm:^2.2.5":
+"wheel-gestures@npm:^2.2.5":
   version: 2.2.48
   resolution: "wheel-gestures@npm:2.2.48"
   checksum: 10/f9eefc90b2abde6e41d045f35c4b1cb486f9b2b2772724a590a794c3bc3d03c52301470b139f4812eec19eca495bf59e8cf85fe6cb8bb5abe786264c97d9ac4e

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import Image from "next/image"
-import { Container, Typography, Card, styled } from "ol-components"
+import { Container, Typography, Card, CarouselV2, styled } from "ol-components"
 import { useVideoShortsList } from "api/hooks/videoShorts"
 import useEmblaCarousel from "embla-carousel-react"
 import { WheelGesturesPlugin } from "embla-carousel-wheel-gestures"
@@ -108,40 +108,40 @@ const VideoShortsSection = () => {
 
   const { data } = useVideoShortsList(!!videoShortsEnabled)
 
-  const [emblaRef, emblaApi] = useEmblaCarousel(
-    {
-      align: "start",
-      loop: false,
-      // skipSnaps: true,
-      dragFree: true,
-      // draggable: true,
-      // containScroll: "trimSnaps",
-      slidesToScroll: 5,
-    },
-    [WheelGesturesPlugin()],
-  )
+  // const [emblaRef, emblaApi] = useEmblaCarousel(
+  //   {
+  //     align: "start",
+  //     loop: false,
+  //     // skipSnaps: true,
+  //     dragFree: true,
+  //     // draggable: true,
+  //     // containScroll: "trimSnaps",
+  //     slidesToScroll: 5,
+  //   },
+  //   [WheelGesturesPlugin()],
+  // )
 
-  const [buttonsRef, setButtonsRef] = useState<HTMLDivElement | null>(null)
-  const [canScrollPrev, setCanScrollPrev] = useState(false)
-  const [canScrollNext, setCanScrollNext] = useState(true)
+  // const [buttonsRef, setButtonsRef] = useState<HTMLDivElement | null>(null)
+  // const [canScrollPrev, setCanScrollPrev] = useState(false)
+  // const [canScrollNext, setCanScrollNext] = useState(true)
 
   const [showModal, setShowModal] = useState(false)
   const [videoIndex, setVideoIndex] = useState(0)
 
-  const scrollPrev = () => {
-    emblaApi?.scrollPrev()
-  }
+  // const scrollPrev = () => {
+  //   emblaApi?.scrollPrev()
+  // }
 
-  const scrollNext = () => {
-    emblaApi?.scrollNext()
-  }
+  // const scrollNext = () => {
+  //   emblaApi?.scrollNext()
+  // }
 
-  useEffect(() => {
-    emblaApi?.on("scroll", () => {
-      setCanScrollPrev(emblaApi.canScrollPrev())
-      setCanScrollNext(emblaApi.canScrollNext())
-    })
-  }, [emblaApi])
+  // useEffect(() => {
+  //   emblaApi?.on("scroll", () => {
+  //     setCanScrollPrev(emblaApi.canScrollPrev())
+  //     setCanScrollNext(emblaApi.canScrollNext())
+  //   })
+  // }, [emblaApi])
 
   if (!videoShortsEnabled) {
     return null
@@ -165,7 +165,7 @@ const VideoShortsSection = () => {
             Start your learning journey with our short-form educational videos
           </Typography>
         </Header>
-        <ButtonsContainer role="group" aria-label="Slide navigation">
+        {/* <ButtonsContainer role="group" aria-label="Slide navigation">
           <ActionButton
             size="small"
             edge="rounded"
@@ -186,51 +186,45 @@ const VideoShortsSection = () => {
           >
             <RiArrowRightLine aria-hidden />
           </ActionButton>
-        </ButtonsContainer>
-        <Carousel ref={emblaRef}>
-          <CarouselScroll>
-            {data?.map((item: any, index: number) => (
-              <CarouselSlide
-                width={235}
-                height={235 / ASPECT_RATIO}
-                key={index}
+        </ButtonsContainer> */}
+        <CarouselV2 initialSlide={2}>
+          {data?.map((item: any, index: number) => (
+            <CarouselSlide width={235} height={235 / ASPECT_RATIO} key={index}>
+              {/* 235 is our fixed width to ensure slides align with the container edge */}
+              <Card
+                onClick={() => {
+                  setShowModal(true)
+                  setVideoIndex(index)
+                }}
               >
-                {/* 235 is our fixed width to ensure slides align with the container edge */}
-                <Card
-                  onClick={() => {
-                    setShowModal(true)
-                    setVideoIndex(index)
-                  }}
-                >
-                  <Card.Content>
-                    <CardContent
-                      width={235}
-                      height={
-                        235 / ASPECT_RATIO
-                        //item.snippet.thumbnails.high.height
-                      }
-                    >
-                      {/* The thumbnail images are e.g. width: 480, height: 360 (landscape) and pillarboxed.
+                <Card.Content>
+                  <CardContent
+                    width={235}
+                    height={
+                      235 / ASPECT_RATIO
+                      //item.snippet.thumbnails.high.height
+                    }
+                  >
+                    {/* The thumbnail images are e.g. width: 480, height: 360 (landscape) and pillarboxed.
 
                      */}
-                      <Image
-                        width={
-                          (235 / ASPECT_RATIO) *
-                          (item.snippet.thumbnails.high.width /
-                            item.snippet.thumbnails.high.height)
-                        }
-                        // height={item.snippet.thumbnails.high.height}
-                        height={235 / ASPECT_RATIO}
-                        src={item.snippet.thumbnails.high.url}
-                        alt={item.snippet.title}
-                      />
-                    </CardContent>
-                  </Card.Content>
-                </Card>
-              </CarouselSlide>
-            ))}
-          </CarouselScroll>
-        </Carousel>
+                    <Image
+                      width={
+                        (235 / ASPECT_RATIO) *
+                        (item.snippet.thumbnails.high.width /
+                          item.snippet.thumbnails.high.height)
+                      }
+                      // height={item.snippet.thumbnails.high.height}
+                      height={235 / ASPECT_RATIO}
+                      src={item.snippet.thumbnails.high.url}
+                      alt={item.snippet.title}
+                    />
+                  </CardContent>
+                </Card.Content>
+              </Card>
+            </CarouselSlide>
+          ))}
+        </CarouselV2>
       </Container>
     </Section>
   )

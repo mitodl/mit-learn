@@ -1,5 +1,10 @@
 import { useQuery } from "@tanstack/react-query"
-import axios from "axios"
+
+export type VideoShort = {
+  id: {
+    videoId: string
+  }
+}
 
 export const useVideoShortsList = (enabled: boolean) => {
   return useQuery({
@@ -18,12 +23,12 @@ export const useVideoShortsList = (enabled: boolean) => {
 }
 
 // API key needed to access public YouTube API (quota limited) - not sensitive
-const YOUTUBE_API_KEY = "AIzaSyBzQsnRUW5vkV8vYt9twPecl-nuM8ykLCY" // pragma: allowlist secret
+// const YOUTUBE_API_KEY = "AIzaSyBzQsnRUW5vkV8vYt9twPecl-nuM8ykLCY" // pragma: allowlist secret
 
 // https://www.youtube.com/@MITOpenLearning
-const YOUTUBE_CHANNEL_ID = "UCN0QBfKk0ZSytyX_16M11fA"
+// const YOUTUBE_CHANNEL_ID = "UCN0QBfKk0ZSytyX_16M11fA"
 
-const CHANNEL_DATA_URL = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${YOUTUBE_CHANNEL_ID}&type=short&order=date&maxResults=50&key=${YOUTUBE_API_KEY}`
+// const CHANNEL_DATA_URL = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${YOUTUBE_CHANNEL_ID}&type=short&order=date&maxResults=50&key=${YOUTUBE_API_KEY}`
 
 const MOCK_DATA = {
   kind: "youtube#searchListResponse",
