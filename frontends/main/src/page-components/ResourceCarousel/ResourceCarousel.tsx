@@ -3,7 +3,6 @@
 import React from "react"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import {
-  Carousel,
   CarouselV2,
   TabPanel,
   TabContext,
@@ -271,22 +270,23 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
                 aria-label="Carousel Filters"
                 onChange={(e, newValue) => setTab(newValue)}
               >
-                {config.map((tabConfig, index) => {
-                  if (
-                    !isLoading &&
-                    !queries[index].isLoading &&
-                    !getCount(queries[index].data)
-                  ) {
-                    return null
-                  }
-                  return (
+                {config
+                  .map((tabConfig, index) => ({
+                    tabConfig,
+                    index,
+                    shouldShow:
+                      isLoading ||
+                      queries[index].isLoading ||
+                      getCount(queries[index].data) > 0,
+                  }))
+                  .filter(({ shouldShow }) => shouldShow)
+                  .map(({ tabConfig, index }) => (
                     <TabButton
                       key={index}
                       label={tabConfig.label}
                       value={index.toString()}
                     />
-                  )
-                })}
+                  ))}
               </TabsList>
               {buttonsContainerElement}
             </ControlsContainer>
@@ -311,15 +311,15 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
                       {...tabConfig.cardProps}
                     />
                   ))
-                : resources.map((resource) =>
-                    resource.id !== excludeResourceId ? (
+                : resources
+                    .filter((resource) => resource.id !== excludeResourceId)
+                    .map((resource) => (
                       <ResourceCard
                         key={resource.id}
                         resource={resource}
                         {...tabConfig.cardProps}
                       />
-                    ) : null,
-                  )}
+                    ))}
             </StyledCarousel>
           )}
         </PanelChildren>

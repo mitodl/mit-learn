@@ -3,8 +3,6 @@ import Image from "next/image"
 import { Container, Typography, Card, CarouselV2, styled } from "ol-components"
 import { useVideoShortsList, type VideoShort } from "api/hooks/videoShorts"
 import VideoShortsModal from "./VideoShortsModal"
-import { FeatureFlags } from "@/common/feature_flags"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 
 const Section = styled.section(({ theme }) => ({
   padding: "80px 0",
@@ -47,16 +45,10 @@ const CarouselSlide = styled.div<{ width: number; height: number }>(
 )
 
 const VideoShortsSection = () => {
-  const videoShortsEnabled = useFeatureFlagEnabled(FeatureFlags.VideoShorts)
-
-  const { data } = useVideoShortsList(!!videoShortsEnabled)
+  const { data } = useVideoShortsList()
 
   const [showModal, setShowModal] = useState(false)
   const [videoIndex, setVideoIndex] = useState(0)
-
-  if (!videoShortsEnabled) {
-    return null
-  }
 
   return (
     <Section>

@@ -16,14 +16,13 @@ export type VideoShort = {
   }
 }
 
-export const useVideoShortsList = (enabled: boolean) => {
+export const useVideoShortsList = () => {
   return useQuery({
     queryKey: ["youtube_shorts", "list"],
     queryFn: async () => {
       const data = MOCK_DATA
       return data.items
     },
-    enabled,
   })
 }
 

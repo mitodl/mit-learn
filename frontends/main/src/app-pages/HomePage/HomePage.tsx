@@ -1,18 +1,15 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React from "react"
 import { Container, styled, theme } from "ol-components"
 import HeroSearch from "@/page-components/HeroSearch/HeroSearch"
 import BrowseTopicsSection from "./BrowseTopicsSection"
 import NewsEventsSection from "./NewsEventsSection"
 import TestimonialsSection from "./TestimonialsSection"
-import VideoShortsSection from "./VideoShortsSection"
 import ResourceCarousel from "@/page-components/ResourceCarousel/ResourceCarousel"
 import PersonalizeSection from "./PersonalizeSection"
 import * as carousels from "./carousels"
 import dynamic from "next/dynamic"
-import { FeatureFlags } from "@/common/feature_flags"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 
 const FullWidthBackground = styled.div({
   background: "linear-gradient(0deg, #FFF 0%, #E9ECEF 100%);",
@@ -32,15 +29,6 @@ const FeaturedCoursesCarousel = styled(ResourceCarousel)(({ theme }) => ({
   },
 }))
 
-const MediaCarousel = styled(ResourceCarousel)(({ theme }) => ({
-  margin: "80px 0",
-  minHeight: "388px",
-  [theme.breakpoints.down("md")]: {
-    margin: "40px 0",
-    minHeight: "418px",
-  },
-}))
-
 const StyledContainer = styled(Container)({
   "@media (max-width: 1365px)": {
     overflow: "hidden",
@@ -52,16 +40,9 @@ const LearningResourceDrawer = dynamic(
     import("@/page-components/LearningResourceDrawer/LearningResourceDrawer"),
 )
 
+const MediaSection = dynamic(() => import("./MediaSection"))
+
 const HomePage: React.FC<{ heroImageIndex: number }> = ({ heroImageIndex }) => {
-  const videoShortsEnabled = useFeatureFlagEnabled(FeatureFlags.VideoShorts)
-  const [isClient, setIsClient] = useState(false)
-
-  useEffect(() => {
-    setIsClient(true)
-  }, [])
-
-  const canRenderVideo = isClient && videoShortsEnabled !== undefined
-
   return (
     <>
       <LearningResourceDrawer />
@@ -78,17 +59,7 @@ const HomePage: React.FC<{ heroImageIndex: number }> = ({ heroImageIndex }) => {
         </StyledContainer>
       </FullWidthBackground>
       <PersonalizeSection />
-      {canRenderVideo && videoShortsEnabled && <VideoShortsSection />}
-      {canRenderVideo && !videoShortsEnabled && (
-        <Container component="section">
-          <MediaCarousel
-            titleComponent="h2"
-            title="Media"
-            config={carousels.MEDIA_CAROUSEL}
-          />
-        </Container>
-      )}
-
+      <MediaSection />
       <BrowseTopicsSection />
       <TestimonialsSection />
       <NewsEventsSection />
