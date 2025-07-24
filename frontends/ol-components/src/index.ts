@@ -102,6 +102,7 @@ export * from "./components/Card/Card"
 export * from "./components/Card/ListCardCondensed"
 export * from "./components/Carousel/Carousel"
 export { onReInitSlickA11y } from "./components/Carousel/util"
+export * from "./components/CarouselV2/CarouselV2"
 
 export * from "./components/Chips/ChipLink"
 export * from "./components/ChoiceBox/ChoiceBox"

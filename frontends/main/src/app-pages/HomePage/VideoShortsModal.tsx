@@ -237,7 +237,6 @@ const VideoShortsModal = ({
   const [canScrollPrev, setCanScrollPrev] = useState(false)
   const [canScrollNext, setCanScrollNext] = useState(true)
   const [selectedIndex, setSelectedIndex] = useState(startIndex)
-  // const [navigating, setNavigating] = useState<1 | -1 | false>(false)
 
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -246,49 +245,6 @@ const VideoShortsModal = ({
   useEffect(() => {
     videosRef.current = videosRef.current.slice(0, videoData.length)
   }, [videoData])
-
-  // useEffect(() => {
-  //   if (scrollRef.current) {
-  //     if (intersectionObserverRef.current) {
-  //       intersectionObserverRef.current.disconnect()
-  //     }
-
-  //     intersectionObserverRef.current = new IntersectionObserver(
-  //       (entries) => {
-  //         entries.forEach((entry) => {
-  //           const index = parseInt(
-  //             entry.target.getAttribute("data-index") || "0",
-  //           )
-  //           console.log("INDEX", index)
-  //           if (entry.isIntersecting) {
-  //             console.log(`Slide ${index} VISIBLE`)
-  //           } else {
-  //             console.log(`Slide ${index} NOT VISIBLE`)
-  //           }
-  //         })
-  //       },
-  //       {
-  //         root: null,
-  //         rootMargin: "0px",
-  //         threshold: 0.5,
-  //       },
-  //     )
-
-  //     const slides = scrollRef.current.querySelectorAll("[data-index]")
-  //     console.log("SLIDES", slides)
-  //     slides.forEach((slide) => {
-  //       intersectionObserverRef.current?.observe(slide)
-  //     })
-
-  //     return () => {
-  //       if (intersectionObserverRef.current) {
-  //         intersectionObserverRef.current.disconnect()
-  //       }
-  //     }
-  //   }
-  // }, [videoData, selectedIndex])
-
-  // const [startIndex, setVideoIndex] = useState(0)
 
   const scrollPrev = () => {
     emblaApi?.scrollPrev()
@@ -346,7 +302,6 @@ const VideoShortsModal = ({
         }
       }
 
-      // event.stopPropagation()
       event.preventDefault()
     }
 
@@ -361,40 +316,10 @@ const VideoShortsModal = ({
       setDebug2(
         `select: ${selectedIndex} inView: ${JSON.stringify(event.slidesInView())}`,
       )
-      console.log("SELECT IN", event.slidesInView())
-      //   setNavigating(false)
-      //   console.log("SELECT", event)
-      //   // console.log("PAUSING VIDEO", videosRef.current[selectedIndex])
-
-      //   videosRef.current
-      //     .filter((video) => video)
-      //     .forEach((video) => {
-      //       video!.pause()
-      //     })
-
-      //   const inView = event.slidesInView()
-
-      //   console.log("SELECTED IN VIEW", inView)
-
-      //   const _selectedIndex = inView[inView.length - 1]
-      //   // console.log(
-      //   //   "SELECTED ",
-      //   //   _selectedIndex,
-      //   //   videosRef.current[_selectedIndex],
-      //   // )
-      //   setSelectedIndex(_selectedIndex)
-
-      //   if (videosRef.current[_selectedIndex]) {
-      //     videosRef.current[_selectedIndex]?.play()
-      //   }
     })
 
-    emblaApi?.on("settle", (event) => {
-      console.log("SETTLE IN", event.slidesInView())
-    })
     emblaApi?.on("slidesInView", (event) => {
       console.log("SLIDES IN", event.slidesInView())
-      // console.log("SLIDES OUT", event.slidesNotInView())
 
       const inView = event.slidesInView()
 
@@ -415,7 +340,6 @@ const VideoShortsModal = ({
         if (videosRef.current[inView[0]]) {
           videosRef.current[inView[0]]?.play()
         }
-        // setNavigating(false)
         setCanScrollPrev(emblaApi.canScrollPrev())
         setCanScrollNext(emblaApi.canScrollNext())
       }
@@ -435,33 +359,8 @@ const VideoShortsModal = ({
     e.stopPropagation()
   }
 
-  // const handleTouchMove = (e: React.TouchEvent) => {
-  //   e.preventDefault()
-  //   e.stopPropagation()
-  // }
-
-  console.log("startIndex", startIndex)
-  console.log("selectedIndex", selectedIndex)
-
-  // const handleWheelGesture = ({
-  //   isStart,
-  //   axisDelta,
-  // }: {
-  //   isStart: boolean
-  //   axisDelta: number[]
-  // }) => {
-  //   if (isStart) {
-  //     if (axisDelta[1] < 0) {
-  //       emblaApi?.scrollNext()
-  //     } else {
-  //       emblaApi?.scrollPrev()
-  //     }
-  //   }
-  // }
-
   const handleWheelGesture = useCallback(
     ({ direction }: { direction: "up" | "down" }) => {
-      console.log("WHEEL GESTURE", direction, !!emblaApi)
       if (direction === "up") {
         emblaApi?.scrollPrev()
       } else {
@@ -482,8 +381,7 @@ const VideoShortsModal = ({
       })
 
       return () => {
-        // Clean up the wheel indicator if needed
-        // wheelIndicator.destroy() // if the library has a destroy method
+        wheelIndicator.destroy()
       }
     }
   }, [emblaApi, throttledHandleWheelGesture])
