@@ -252,7 +252,7 @@ def transform_contentfile(
     file_type = contentfile_data.get("file_type")
     if contentfile_data.get("resource_type") == "Video":
         content_type = CONTENT_TYPE_VIDEO
-        file_s3_path = contentfile_data.get("transcript_file")
+        file_s3_path = contentfile_data.get("transcript_file") or ""
         image_src = contentfile_data.get("thumbnail_file")
         file_extension = Path(
             contentfile_data.get(
