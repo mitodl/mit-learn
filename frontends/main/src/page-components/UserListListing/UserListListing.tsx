@@ -12,7 +12,6 @@ import {
 import { Button } from "@mitodl/smoot-design"
 import { RiListCheck3 } from "@remixicon/react"
 import { useUserListList } from "api/hooks/userLists"
-import { GridColumn, GridContainer } from "@/components/GridLayout/GridLayout"
 import { manageListDialogs } from "@/page-components/ManageListDialogs/ManageListDialogs"
 import { userListView } from "@/common/urls"
 import UserListCardCondensed from "@/page-components/UserListCard/UserListCardCondensed"
@@ -71,55 +70,53 @@ const UserListListingComponent: React.FC<UserListListingComponentProps> = (
   }, [])
 
   return (
-    <GridContainer>
-      <GridColumn variant="single-full">
-        <Header component="h1" variant="h3">
-          {title}
-        </Header>
-        <section>
-          <LoadingSpinner loading={isLoading} />
-          {!data?.results.length && !isLoading ? (
-            <EmptyListCard>
-              <Card.Content>
-                <EmptyList>
-                  <IconContainer>
-                    <RiListCheck3 />
-                  </IconContainer>
-                  <Typography variant="body2">
-                    Create lists to save your courses and materials.
-                  </Typography>
-                  <Button variant="primary" size="large" onClick={handleCreate}>
-                    Create new list
-                  </Button>
-                </EmptyList>
-              </Card.Content>
-            </EmptyListCard>
-          ) : null}
-          {data ? (
-            <PlainList itemSpacing={3}>
-              {data.results?.map((list) => {
-                return (
-                  <li
-                    key={list.id}
-                    data-testid={`user-list-card-condensed-${list.id}`}
-                  >
-                    <UserListCardCondensed
-                      href={userListView(list.id)}
-                      userList={list}
-                    />
-                  </li>
-                )
-              })}
-            </PlainList>
-          ) : null}
-          {data?.results.length && !isLoading ? (
-            <NewListButton variant="primary" onClick={handleCreate}>
-              Create new list
-            </NewListButton>
-          ) : null}
-        </section>
-      </GridColumn>
-    </GridContainer>
+    <>
+      <Header component="h1" variant="h3">
+        {title}
+      </Header>
+      <section>
+        <LoadingSpinner loading={isLoading} />
+        {!data?.results.length && !isLoading ? (
+          <EmptyListCard>
+            <Card.Content>
+              <EmptyList>
+                <IconContainer>
+                  <RiListCheck3 />
+                </IconContainer>
+                <Typography variant="body2">
+                  Create lists to save your courses and materials.
+                </Typography>
+                <Button variant="primary" size="large" onClick={handleCreate}>
+                  Create new list
+                </Button>
+              </EmptyList>
+            </Card.Content>
+          </EmptyListCard>
+        ) : null}
+        {data ? (
+          <PlainList itemSpacing={3}>
+            {data.results?.map((list) => {
+              return (
+                <li
+                  key={list.id}
+                  data-testid={`user-list-card-condensed-${list.id}`}
+                >
+                  <UserListCardCondensed
+                    href={userListView(list.id)}
+                    userList={list}
+                  />
+                </li>
+              )
+            })}
+          </PlainList>
+        ) : null}
+        {data?.results.length && !isLoading ? (
+          <NewListButton variant="primary" onClick={handleCreate}>
+            Create new list
+          </NewListButton>
+        ) : null}
+      </section>
+    </>
   )
 }
 

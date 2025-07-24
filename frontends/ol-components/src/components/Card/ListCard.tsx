@@ -88,6 +88,7 @@ export const Info = styled.div`
 export type TitleProps = {
   children?: ReactNode
   href?: string
+  lang?: string
 }
 export const Title: React.FC<TitleProps> = styled(Linkable)`
   flex-grow: 1;
@@ -247,8 +248,10 @@ const ListCard: Card = ({
       <Body>
         <Info>{info}</Info>
         {title && (
-          <Title data-card-link={!!title.href} {...title} href={title.href}>
-            <TruncateText lineClamp={2}>{title.children}</TruncateText>
+          <Title data-card-link={!!title.href} href={title.href}>
+            <TruncateText lineClamp={2} lang={title.lang}>
+              {title.children}
+            </TruncateText>
           </Title>
         )}
         <Bottom>

@@ -17,14 +17,17 @@ from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE, ETLSource
 from learning_resources.factories import (
     LearningResourceFactory,
 )
+from learning_resources.models import LearningResource
 from learning_resources.tasks import (
     get_ocw_data,
     get_youtube_data,
     get_youtube_transcripts,
     marketing_page_for_resources,
     scrape_marketing_pages,
+    sync_canvas_courses,
     update_next_start_date_and_prices,
 )
+from main.utils import now_in_utc
 
 pytestmark = pytest.mark.django_db
 # pylint:disable=redefined-outer-name,unused-argument,too-many-arguments
@@ -606,3 +609,69 @@ def test_scrape_marketing_pages(mocker, settings, mocked_celery):
         eid in mock_marketing_page_task.mock_calls[0].args[0] for eid in expected_ids
     )
     mock_group.assert_called_once()
+
+
+@pytest.mark.parametrize("canvas_ids", [["1"], None])
+def test_sync_canvas_courses(settings, mocker, django_assert_num_queries, canvas_ids):
+    """
+    sync_canvas_courses should unpublish and delete stale canvas LearningResources
+    """
+    settings.CANVAS_COURSE_BUCKET_PREFIX = "canvas/"
+    mocker.patch("learning_resources.tasks.resource_unpublished_actions")
+    mocker.patch("learning_resources.tasks.get_learning_course_bucket")
+    mock_bucket = mocker.Mock()
+    mock_archive1 = mocker.Mock()
+    mock_archive1.key = "canvas/1/archive1.zip"
+    mock_archive1.last_modified = now_in_utc()
+    mock_archive2 = mocker.Mock()
+    mock_archive2.key = "canvas/2/archive2.zip"
+    mock_archive2.last_modified = now_in_utc() - timedelta(days=1)
+    mock_bucket.objects.filter.return_value = [mock_archive1, mock_archive2]
+    mocker.patch(
+        "learning_resources.tasks.get_learning_course_bucket", return_value=mock_bucket
+    )
+
+    # Create two canvas LearningResources - one stale
+
+    lr1 = LearningResourceFactory.create(
+        readable_id="course1",
+        etl_source=ETLSource.canvas.name,
+        published=True,
+        test_mode=True,
+        resource_type="course",
+    )
+    lr2 = LearningResourceFactory.create(
+        readable_id="course2",
+        etl_source=ETLSource.canvas.name,
+        published=True,
+        test_mode=True,
+        resource_type="course",
+    )
+    lr_stale = LearningResourceFactory.create(
+        readable_id="course3",
+        etl_source=ETLSource.canvas.name,
+        published=True,
+        test_mode=True,
+        resource_type="course",
+    )
+
+    # Patch ingest_canvas_course to return the readable_ids for the two non-stale courses
+    mock_ingest_course = mocker.patch(
+        "learning_resources.tasks.ingest_canvas_course",
+        side_effect=[("course1", lr1.runs.first()), ("course2", lr2.runs.first())],
+    )
+    sync_canvas_courses(canvas_course_ids=canvas_ids, overwrite=False)
+
+    # The stale course should be unpublished and deleted
+    if canvas_ids:
+        assert LearningResource.objects.filter(id=lr_stale.id).exists()
+    else:
+        assert not LearningResource.objects.filter(id=lr_stale.id).exists()
+    # The non-stale courses should still exist
+    assert LearningResource.objects.filter(id=lr1.id).exists()
+    assert LearningResource.objects.filter(id=lr2.id).exists()
+
+    if canvas_ids:
+        assert mock_ingest_course.call_count == 1
+    else:
+        assert mock_ingest_course.call_count == 2

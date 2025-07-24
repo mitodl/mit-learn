@@ -1,6 +1,54 @@
 Release Notes
 =============
 
+Version 0.38.1 (Released July 22, 2025)
+--------------
+
+- Ensure default favorites list gets created for new scim users (#2364)
+- Only ingest published canvas content (#2363)
+- remove MITOL_NOINDEX from django settings (unused) (#2361)
+- Add path prefixed MITx Online API config to local dev APISIX (#2360)
+- Handle stale auth better (#2342)
+- Fix Renovate PR #2334: Update @chromatic-com/storybook to compatible v3.2.7 (#2350)
+
+Version 0.38.0 (Released July 16, 2025)
+--------------
+
+- Fix CI docker build and remove old NextJS Release actions (#2359)
+- add a healthcheck route (#2357)
+- fix price separator display (#2348)
+- chore(deps): update dependency eslint-plugin-jest to v29 (#2356)
+- canvas - separate courses per session (#2347)
+- fix(deps): update dependency litellm to v1.74.2 (#2354)
+- fix(deps): update dependency ruff to v0.12.3 (#2353)
+- fix(deps): update dependency onnxruntime to v1.22.1 (#2352)
+- chore(deps): update redis docker tag to v7.4.5 (#2351)
+- Set language attribute on resource title and descriptions (#2346)
+- Add Canvas platform for learning resources (#2345)
+- Shanbady/summary flashcard sync (#2339)
+- Testimonial spacing to allow 2 line attestation title (#2344)
+- Remove the chat demo pages (#2341)
+- Return to page after sign up (#2340)
+
+Version 0.37.0 (Released July 14, 2025)
+--------------
+
+- Add a Sitemap  (#2338)
+- chore(deps): update yarn to v4.9.2 (#2325)
+- fix(deps): update dependency ruff to v0.12.2 (#2333)
+- Updated Designs for 404 and Error pages (#2337)
+- New honor code page and copy updates to privacy policy and terms.  (#2336)
+- Display certificate type on list cards (#2335)
+- add one click enroll functionality to dashboard cards (#2319)
+- adding favorites list plugin (#2322)
+- fix(deps): update dependency onnxruntime to v1.22.0 (#2332)
+- fix(deps): update dependency llama-index-llms-openai to ^0.4.0 (#2331)
+- fix(deps): update dependency litellm to v1.73.6 (#2330)
+- fix(deps): update dependency cairosvg to v2.8.2 (#2329)
+- chore(deps): update node.js to v22.17.0 (#2328)
+- chore(deps): update nginx docker tag to v1.29.0 (#2327)
+- fix(deps): update dependency django to v4.2.23 (#2326)
+
 Version 0.36.5 (Released July 08, 2025)
 --------------
 

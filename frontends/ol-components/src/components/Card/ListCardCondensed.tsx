@@ -159,7 +159,9 @@ const ListCardCondensed: Card = ({
       <Body>
         <Info>{info}</Info>
         <Title data-card-link={!!title.href} href={title.href}>
-          <TruncateText lineClamp={4}>{title.children}</TruncateText>
+          <TruncateText lineClamp={4} lang={title.lang}>
+            {title.children}
+          </TruncateText>
         </Title>
         <Bottom>
           <Footer>{footer}</Footer>

@@ -87,6 +87,7 @@ class PlatformType(ExtendedEnum):
     emeritus = "Emeritus"
     podcast = "Podcast"
     youtube = "YouTube"
+    canvas = "Canvas"
 
 
 class PrivacyLevel(ExtendedEnum):
@@ -177,6 +178,11 @@ VALID_COURSE_CONTENT_TYPES = (
 )
 VALID_COURSE_CONTENT_CHOICES = list(
     zip(VALID_COURSE_CONTENT_TYPES, VALID_COURSE_CONTENT_TYPES)
+)
+
+VALID_TUTOR_PROBLEM_TYPES = ["problem", "solution"]
+VALID_TUTOR_PROBLEM_TYPE_CHOICES = list(
+    zip(VALID_TUTOR_PROBLEM_TYPES, VALID_TUTOR_PROBLEM_TYPES)
 )
 
 DEPARTMENTS = {

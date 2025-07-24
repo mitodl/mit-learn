@@ -142,6 +142,10 @@ const ActionStrip = styled.div(({ theme }) => ({
   gap: "24px",
   marginTop: "16px",
   marginBottom: "24px",
+  /**
+   * minHeight 28px avoids layout shift as feature flag for AskTim button loads.
+   */
+  minHeight: "28px",
   [theme.breakpoints.down("sm")]: {
     marginTop: "0",
   },

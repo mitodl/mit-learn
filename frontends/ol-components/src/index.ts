@@ -150,6 +150,9 @@ export type {
   SelectFieldProps,
 } from "./components/SelectField/SelectField"
 
+export { LinkAdapter } from "./components/LinkAdapter/LinkAdapter"
+export type { LinkAdapterProps } from "./components/LinkAdapter/LinkAdapter"
+
 export { Link, linkStyles } from "./components/Link/Link"
 export type { LinkProps } from "./components/Link/Link"
 

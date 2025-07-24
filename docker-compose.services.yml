@@ -25,7 +25,7 @@ services:
   redis:
     profiles:
       - backend
-    image: redis:7.4.4
+    image: redis:7.4.5
     healthcheck:
       test: ["CMD", "redis-cli", "ping", "|", "grep", "PONG"]
       interval: 3s
@@ -128,6 +128,7 @@ services:
       - APISIX_PORT=${APISIX_PORT:-8065}
       - APISIX_SESSION_SECRET_KEY=${APISIX_SESSION_SECRET_KEY:-something_at_least_16_characters}
       - APISIX_LOGOUT_URL=${APISIX_LOGOUT_URL:-http://open.odl.local:8065/}
+      - MITOL_API_DOMAIN=${MITOL_API_DOMAIN:-open.odl.local}
       - MITX_ONLINE_UPSTREAM=${MITX_ONLINE_UPSTREAM:-mitxonline.odl.local:8013}
       - MITX_ONLINE_DOMAIN=${MITX_ONLINE_DOMAIN:-mitxonline.odl.local}
       - NGINX_PORT=${NGINX_PORT:-8062}

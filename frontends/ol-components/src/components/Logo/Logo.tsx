@@ -48,6 +48,8 @@ export const UNIT_LOGOS: Record<OfferedByEnum, LogoObject> = {
   },
 }
 
+// @ts-expect-error Local openapi client https://www.npmjs.com/package/@mitodl/open-api-axios
+// out of sync while we adding an enum value.
 export const PLATFORM_LOGOS: Record<PlatformEnum, LogoObject> = {
   [PlatformEnum.Ocw]: UNIT_LOGOS[OfferedByEnum.Ocw],
   [PlatformEnum.Edx]: {

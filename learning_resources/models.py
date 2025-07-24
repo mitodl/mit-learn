@@ -861,6 +861,32 @@ class ContentFileQuerySet(TimestampedModelQuerySet):
         )
 
 
+class TutorProblemFile(TimestampedModel):
+    """
+    Tutor Problem and Solution model
+    """
+
+    run = models.ForeignKey(
+        LearningResourceRun,
+        related_name="problem_files",
+        on_delete=models.CASCADE,
+        blank=False,
+        null=False,
+    )
+
+    problem_title = models.CharField(max_length=1024, null=True, blank=True)  # noqa: DJ001
+
+    type = models.CharField(
+        max_length=128, choices=constants.VALID_TUTOR_PROBLEM_TYPE_CHOICES
+    )
+
+    content = models.TextField(null=True, blank=True)  # noqa: DJ001
+
+    archive_checksum = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
+    source_path = models.CharField(max_length=1024, null=True, blank=True)  # noqa: DJ001
+    file_extension = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
+
+
 class ContentFile(TimestampedModel):
     """
     ContentFile model for LearningResourceRun files

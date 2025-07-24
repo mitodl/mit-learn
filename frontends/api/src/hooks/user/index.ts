@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
-import { usersApi } from "../../clients"
 import type { User } from "../../generated/v0/api"
+import { userQueries } from "./queries"
 
 enum Permission {
   ArticleEditor = "is_article_editor",
@@ -8,16 +8,7 @@ enum Permission {
   LearningPathEditor = "is_learning_path_editor",
 }
 
-const useUserMe = () =>
-  useQuery({
-    queryKey: ["userMe"],
-    queryFn: async (): Promise<User> => {
-      const response = await usersApi.usersMeRetrieve()
-      return {
-        ...response.data,
-      }
-    },
-  })
+const useUserMe = () => useQuery(userQueries.me())
 
 const useUserIsAuthenticated = () => {
   const { data: user } = useUserMe()
@@ -29,5 +20,11 @@ const useUserHasPermission = (permission: Permission) => {
   return !!user?.[permission]
 }
 
-export { useUserMe, useUserIsAuthenticated, useUserHasPermission, Permission }
+export {
+  userQueries,
+  useUserMe,
+  useUserIsAuthenticated,
+  useUserHasPermission,
+  Permission,
+}
 export type { User }

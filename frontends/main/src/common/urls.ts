@@ -61,16 +61,21 @@ export const LOGOUT = `${MITOL_API_BASE_URL}/logout/`
 /**
  * Returns the URL to the login page, with a `next` parameter to redirect back
  * to the given pathname + search parameters.
+ *
+ * NOTES:
+ *  1. useLoginToCurrent() is a convenience function that uses the current
+ *    pathname and search parameters to generate the next URL.
+ *  2. `next` is required to encourage its use. You can explicitly pass `null`
+ *    for values to skip them if desired.
  */
-export const login = ({
-  pathname = "/",
-  searchParams = new URLSearchParams(),
-  hash = "",
-}: {
-  pathname?: string | null
-  searchParams?: URLSearchParams
+export const login = (next: {
+  pathname: string | null
+  searchParams: URLSearchParams | null
   hash?: string | null
-} = {}) => {
+}) => {
+  const pathname = next.pathname ?? "/"
+  const searchParams = next.searchParams ?? new URLSearchParams()
+  const hash = next.hash ?? ""
   /**
    * To include search parameters in the next URL, we need to encode them.
    * If we pass `?next=/foo/bar?cat=meow` directly, Django receives two separate
@@ -79,9 +84,9 @@ export const login = ({
    * There's no need to encode the path parameter (it might contain slashes,
    * but those are allowed in search parameters) so let's keep it readable.
    */
-  const search = searchParams.toString() ? `?${searchParams.toString()}` : ""
-  const next = `${ORIGIN}${pathname}${encodeURIComponent(search)}${encodeURIComponent(hash as string)}`
-  return `${LOGIN}?next=${next}`
+  const search = searchParams?.toString() ? `?${searchParams.toString()}` : ""
+  const nextHref = `${ORIGIN}${pathname}${encodeURIComponent(search)}${encodeURIComponent(hash as string)}`
+  return `${LOGIN}?next=${nextHref}`
 }
 
 export const DASHBOARD_VIEW = "/dashboard/[tab]"

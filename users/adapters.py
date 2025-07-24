@@ -1,5 +1,6 @@
 from mitol.scim.adapters import UserAdapter
 
+from authentication.api import user_created_actions
 from profiles.models import Profile
 
 
@@ -45,6 +46,7 @@ class LearnUserAdapter(UserAdapter):
         """
         self.obj.profile.user = self.obj
         self.obj.profile.save()
+        user_created_actions(user=self.obj, details=self.to_dict(), is_new=True)
 
     def _handle_replace_nested_path(self, nested_path, nested_value):
         """Per-path replacement handling"""

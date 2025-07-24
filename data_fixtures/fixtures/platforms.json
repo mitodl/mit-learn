@@ -214,5 +214,17 @@
       "created_on": "2024-02-23T00:00:00+00:00",
       "updated_on": "2024-02-23T00:00:00+00:00"
     }
+  },
+  {
+    "model": "learning_resources.LearningResourcePlatform",
+    "fields": {
+      "code": "canvas",
+      "name": "Canvas",
+      "is_edx": false,
+      "has_content_files": true,
+      "url": "https://web.mit.edu/canvas/",
+      "created_on": "2025-07-10T00:00:00+00:00",
+      "updated_on": "2025-07-10T00:00:00+00:00"
+    }
   }
 ]
