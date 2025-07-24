@@ -8,9 +8,10 @@ class ContentFileWebHookRequestSerializer(serializers.Serializer):
     Serializer for ContentFile webhook requests.
     """
 
-    content_path = serializers.CharField()
+    content_path = serializers.CharField(required=False, allow_blank=True)
     source_choices = [(e.name.lower(), e.value) for e in ETLSource]
     source = serializers.ChoiceField(choices=source_choices)
+    course_id = serializers.CharField(required=False, allow_blank=True)
 
 
 class WebhookResponseSerializer(serializers.Serializer):
