@@ -11,11 +11,19 @@ from django.conf import settings
 
 from learning_resources.constants import LearningResourceType, PlatformType
 from learning_resources.etl.constants import ETLSource
-from learning_resources.etl.utils import _process_olx_path, calc_checksum
+from learning_resources.etl.utils import (
+    _process_olx_path,
+    calc_checksum,
+    get_edx_module_id,
+)
 from learning_resources.models import (
     LearningResource,
     LearningResourcePlatform,
     LearningResourceRun,
+)
+from learning_resources.utils import bulk_resources_unpublished_actions
+from learning_resources_search.constants import (
+    CONTENT_FILE_TYPE,
 )
 
 log = logging.getLogger(__name__)
@@ -119,17 +127,27 @@ def transform_canvas_content_files(
     published_items = [
         Path(item["path"]).resolve() for item in module_metadata["active"]
     ]
+    published_keys = []
     with (
         TemporaryDirectory(prefix=basedir) as olx_path,
         zipfile.ZipFile(course_zipfile.absolute(), "r") as course_archive,
     ):
         for member in course_archive.infolist():
             if Path(member.filename).resolve() in published_items:
+                full_path = Path(olx_path) / Path(member.filename)
+                published_keys.append(get_edx_module_id(str(full_path), run))
                 course_archive.extract(member, path=olx_path)
                 log.debug("processing active file %s", member.filename)
             else:
                 log.debug("skipping unpublished file %s", member.filename)
         yield from _process_olx_path(olx_path, run, overwrite=overwrite)
+
+    unpublished_content = run.content_files.exclude(key__in=published_keys)
+
+    bulk_resources_unpublished_actions(
+        list(unpublished_content.values_list("id", flat=True)), CONTENT_FILE_TYPE
+    )
+    unpublished_content.delete()
 
 
 def transform_canvas_problem_files(
@@ -182,7 +200,6 @@ def parse_module_meta(course_archive_path: str) -> dict:
         root = ElementTree.fromstring(module_xml)
         for module in root.findall(".//ns:module", namespaces):
             module_title = module.find("ns:title", namespaces).text
-
             for item in module.findall("ns:items/ns:item", namespaces):
                 item_state = item.find("ns:workflow_state", namespaces).text
                 item_title = item.find("ns:title", namespaces).text
