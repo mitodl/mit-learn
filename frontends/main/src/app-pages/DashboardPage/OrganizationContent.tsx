@@ -13,7 +13,7 @@ import { coursesQueries } from "api/mitxonline-hooks/courses"
 import * as transform from "./CoursewareDisplay/transform"
 import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
 import { DashboardCard } from "./CoursewareDisplay/DashboardCard"
-import { PlainList, Stack, styled, Typography } from "ol-components"
+import { PlainList, Skeleton, Stack, styled, Typography } from "ol-components"
 import {
   DashboardProgram,
   DashboardProgramCollection,
@@ -128,7 +128,10 @@ const OrgProgramDisplay: React.FC<{
   const courses = useQuery(
     coursesQueries.coursesList({ id: program.courseIds }),
   )
-  if (programLoading || courses.isLoading) return "Loading Program Courses"
+  const skeleton = (
+    <Skeleton width="100%" height="65px" style={{ marginBottom: "16px" }} />
+  )
+  if (programLoading || courses.isLoading) return skeleton
   const transformedCourses = transform.mitxonlineCourses({
     courses: courses.data?.results ?? [],
     enrollments: enrollments ?? [],
@@ -175,9 +178,11 @@ const ProgramCard: React.FC<{
       org_id: orgId,
     }),
   )
-  if (program.isLoading || !program.data?.results.length)
-    return "Loading Program"
-  if (courses.isLoading) return "Loading Program Courses"
+  const skeleton = (
+    <Skeleton width="100%" height="65px" style={{ marginBottom: "16px" }} />
+  )
+  if (program.isLoading || !program.data?.results.length) return skeleton
+  if (courses.isLoading) return skeleton
   const transformedProgram = transform.mitxonlineProgram(
     program.data?.results[0] ?? {},
   )
@@ -185,8 +190,7 @@ const ProgramCard: React.FC<{
     courses: courses.data?.results ?? [],
     enrollments: enrollments ?? [],
   })
-  if (courses.isLoading || !transformedCourses.length)
-    return "Loading Program Courses"
+  if (courses.isLoading || !transformedCourses.length) return skeleton
   // For now we assume the first course is the main one for the program.
   const course = transformedCourses[0]
   return (
@@ -230,11 +234,19 @@ const OrganizationContentInternal: React.FC<
     .filter((program) => program.collections.length === 0)
     .map((program) => transform.mitxonlineProgram(program))
 
+  const skeleton = (
+    <Stack gap="16px">
+      <Skeleton width="100%" height="65px" />
+      <Skeleton width="100%" height="65px" />
+      <Skeleton width="100%" height="65px" />
+    </Stack>
+  )
+
   return (
     <OrganizationRoot>
       <OrganizationHeader org={org} />
       {programs.isLoading || !transformedPrograms
-        ? "Programs Loading"
+        ? skeleton
         : transformedPrograms.map((program) => (
             <OrgProgramDisplay
               key={program.key}
@@ -244,7 +256,7 @@ const OrganizationContentInternal: React.FC<
             />
           ))}
       {programCollections.isLoading ? (
-        "Program Collections Loading"
+        skeleton
       ) : (
         <PlainList itemSpacing={0}>
           {programCollections.data?.results.map((collection) => {
@@ -276,7 +288,10 @@ const OrganizationContent: React.FC<OrganizationContentProps> = ({
   const b2bOrganization = mitxOnlineUser?.b2b_organizations.find(
     (org) => org.slug.replace("org-", "") === orgSlug,
   )
-  if (isLoadingMitxOnlineUser || isLoadingMitxOnlineUser) return "Loading"
+  const skeleton = (
+    <Skeleton width="100%" height="100px" style={{ marginBottom: "16px" }} />
+  )
+  if (isLoadingMitxOnlineUser || isLoadingMitxOnlineUser) return skeleton
   return b2bOrganization ? (
     <OrganizationContentInternal org={b2bOrganization} />
   ) : null
