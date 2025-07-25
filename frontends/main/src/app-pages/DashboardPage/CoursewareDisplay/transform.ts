@@ -130,6 +130,7 @@ const mitxonlineProgram = (raw: V2Program): DashboardProgram => {
     title: raw.title,
     programType: raw.program_type,
     courseIds: raw.courses,
+    collections: raw.collections,
     description: raw.page.description,
   }
 }
