@@ -1,5 +1,6 @@
 import type {
   CoursesApiApiV2CoursesListRequest,
+  ProgramCollectionsApiProgramCollectionsListRequest,
   ProgramsApiProgramsListV2Request,
 } from "@mitodl/mitxonline-api-axios/v1"
 import { RawAxiosRequestConfig } from "axios"
@@ -27,6 +28,12 @@ const programs = {
     `${API_BASE_URL}/api/v2/programs/${queryify(opts)}`,
 }
 
+const programCollections = {
+  programCollectionsList: (
+    opts?: ProgramCollectionsApiProgramCollectionsListRequest,
+  ) => `${API_BASE_URL}/api/v2/program-collections/${queryify(opts)}`,
+}
+
 const courses = {
   coursesList: (opts?: CoursesApiApiV2CoursesListRequest) =>
     `${API_BASE_URL}/api/v2/courses/${queryify(opts, { explode: false })}`,
@@ -37,4 +44,12 @@ const organization = {
     `${API_BASE_URL}/api/v0/b2b/organizations/${organizationSlug}/`,
 }
 
-export { b2b, currentUser, enrollment, programs, courses, organization }
+export {
+  b2b,
+  currentUser,
+  enrollment,
+  programs,
+  programCollections,
+  courses,
+  organization,
+}
