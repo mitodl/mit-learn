@@ -198,6 +198,21 @@ def transform_canvas_problem_files(
             yield problem_file_data
 
 
+def parse_context_xml(course_archive_path: str) -> dict:
+    with zipfile.ZipFile(course_archive_path, "r") as course_archive:
+        context = course_archive.read("course_settings/context.xml")
+    root = ElementTree.fromstring(context)
+    namespaces = {"ns": "http://canvas.instructure.com/xsd/cccv1p0"}
+    context_info = {}
+    item_keys = ["course_id", "root_account_id", "canvas_domain", "root_account_name"]
+    for key in item_keys:
+        element = root.find(f"ns:{key}", namespaces)
+        if element is not None:
+            context_info[key] = element.text
+
+    return context_info
+
+
 def parse_module_meta(course_archive_path: str) -> dict:
     """
     Parse module_meta.xml and return publish/active status of resources.
