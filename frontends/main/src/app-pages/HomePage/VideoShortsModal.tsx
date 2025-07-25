@@ -5,6 +5,19 @@ import { ActionButton } from "@mitodl/smoot-design"
 import { useWindowDimensions } from "ol-utilities"
 import type { VideoShort } from "api/hooks/videoShorts"
 
+const useIsSafari = () => {
+  const [isSafari, setIsSafari] = useState(false)
+
+  useEffect(() => {
+    const userAgent = navigator.userAgent.toLowerCase()
+    const isSafariBrowser =
+      /safari/.test(userAgent) && !/chrome/.test(userAgent)
+    setIsSafari(isSafariBrowser)
+  }, [])
+
+  return isSafari
+}
+
 const Overlay = styled.div(({ theme }) => ({
   position: "fixed",
   top: 0,
@@ -92,6 +105,7 @@ const VideoShortsModal = ({
 }: VideoShortsModalProps) => {
   const { height } = useWindowDimensions()
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
+  const isSafari = useIsSafari()
 
   const videosRef = useRef<(HTMLVideoElement | null)[]>([])
 
@@ -132,10 +146,12 @@ const VideoShortsModal = ({
         .filter((video, index) => video && index !== inView[0])
         .forEach((video) => {
           video!.pause()
+          // video!.muted = true
         })
       setSelectedIndex(inView[0])
       if (videosRef.current[inView[0]]) {
-        videosRef.current[inView[0]]?.play()
+        videosRef.current[inView[0]]!.play()
+        videosRef.current[inView[0]]!.muted = false
       }
     }
   }, [])
@@ -167,11 +183,27 @@ const VideoShortsModal = ({
                 ref={(el) => {
                   if (videosRef.current && el) {
                     videosRef.current[index] = el
+
+                    /* Required for iOS/Safari to avoid "The request is not allowed by the user agent or the platform in the current context" error */
+                    // el.muted = isSafari
+                    // el.playsInline = true
+                    // el.setAttribute("webkit-playsinline", "true")
+                    // el.disablePictureInPicture = true
+
+                    el.addEventListener("error", (e: Event) => {
+                      console.error("Video error:", e)
+                    })
                   }
                 }}
                 // TODO: Using a temporary bucket on GCP owned by jk
                 src={`https://storage.googleapis.com/mit-open-learning/${item.id.videoId}.mp4`}
                 controls
+                autoPlay
+                muted
+                playsInline
+                webkit-playsinline="true"
+                controlsList="nofullscreen"
+                disablePictureInPicture
                 width={(height - 60) * (9 / 16)}
                 height={height - 60}
                 preload="metadata"
