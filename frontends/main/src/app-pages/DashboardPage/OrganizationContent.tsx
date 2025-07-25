@@ -194,7 +194,7 @@ const ProgramCard: React.FC<{
       Component="li"
       key={transformedProgram.key}
       dashboardResource={course}
-      courseNoun="Program"
+      courseNoun={"Course"}
       offerUpgrade={false}
       titleHref={course.run.coursewareUrl ?? ""}
       buttonHref={course.run.coursewareUrl ?? ""}
