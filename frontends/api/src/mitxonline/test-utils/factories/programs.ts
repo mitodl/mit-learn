@@ -1,6 +1,9 @@
 import { mergeOverrides, makePaginatedFactory } from "ol-test-utilities"
 import type { PartialFactory } from "ol-test-utilities"
-import type { V2Program } from "@mitodl/mitxonline-api-axios/v1"
+import type {
+  V2Program,
+  V2ProgramCollection,
+} from "@mitodl/mitxonline-api-axios/v1"
 import { faker } from "@faker-js/faker/locale/en"
 import { UniqueEnforcer } from "enforce-unique"
 
@@ -33,10 +36,17 @@ const program: PartialFactory<V2Program> = (overrides = {}) => {
     ],
     live: faker.datatype.boolean(),
     courses: [],
+    collections: [],
     req_tree: [],
     requirements: {
-      required: [faker.number.int()],
-      electives: [faker.number.int()],
+      courses: {
+        required: [faker.number.int()],
+        electives: [faker.number.int()],
+      },
+      programs: {
+        required: [faker.number.int()],
+        electives: [faker.number.int()],
+      },
     },
     certificate_type: faker.lorem.word(),
     topics: [
@@ -52,6 +62,7 @@ const program: PartialFactory<V2Program> = (overrides = {}) => {
     availability: faker.helpers.arrayElement(["anytime", "dated"]),
     min_weekly_hours: `${faker.number.int({ min: 1, max: 5 })} hours`,
     max_weekly_hours: `${faker.number.int({ min: 6, max: 10 })} hours`,
+    start_date: faker.date.past().toISOString(),
   }
 
   return mergeOverrides<V2Program>(defaults, overrides)
@@ -59,4 +70,19 @@ const program: PartialFactory<V2Program> = (overrides = {}) => {
 
 const programs = makePaginatedFactory(program)
 
-export { program, programs }
+const programCollection: PartialFactory<V2ProgramCollection> = (
+  overrides = {},
+) => {
+  const defaults: V2ProgramCollection = {
+    id: uniqueProgramId.enforce(() => faker.number.int()),
+    description: faker.lorem.paragraph(),
+    programs: programs({ count: 2 }).results.map((p) => p.id),
+    title: faker.lorem.words(3),
+    created_on: faker.date.past().toISOString(),
+    updated_on: faker.date.recent().toISOString(),
+  }
+
+  return mergeOverrides<V2ProgramCollection>(defaults, overrides)
+}
+
+export { program, programs, programCollection }
