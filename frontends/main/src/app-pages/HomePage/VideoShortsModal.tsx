@@ -1,22 +1,9 @@
-import React, { useEffect, useRef, useState, useCallback } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import { styled, CarouselV2Vertical } from "ol-components"
-import { RiCloseLine } from "@remixicon/react"
+import { RiCloseLine, RiVolumeMuteLine, RiVolumeUpLine } from "@remixicon/react"
 import { ActionButton } from "@mitodl/smoot-design"
 import { useWindowDimensions } from "ol-utilities"
 import type { VideoShort } from "api/hooks/videoShorts"
-
-const useIsSafari = () => {
-  const [isSafari, setIsSafari] = useState(false)
-
-  useEffect(() => {
-    const userAgent = navigator.userAgent.toLowerCase()
-    const isSafariBrowser =
-      /safari/.test(userAgent) && !/chrome/.test(userAgent)
-    setIsSafari(isSafariBrowser)
-  }, [])
-
-  return isSafari
-}
 
 const Overlay = styled.div(({ theme }) => ({
   position: "fixed",
@@ -31,10 +18,20 @@ const Overlay = styled.div(({ theme }) => ({
   },
 }))
 
-const CloseContainer = styled.div({
+const CloseButton = styled(ActionButton)({
   position: "absolute",
   top: "16px",
   right: "16px",
+  zIndex: 1201,
+  svg: {
+    fill: "white",
+  },
+})
+
+const MuteButton = styled(ActionButton)({
+  position: "absolute",
+  right: "16px",
+  bottom: "16px",
   zIndex: 1201,
   svg: {
     fill: "white",
@@ -66,11 +63,6 @@ const Placeholder = styled.div(({ theme }) => ({
   },
 }))
 
-const StyledActionButton = styled(ActionButton)(({ disabled }) => ({
-  opacity: disabled ? 0.5 : 1,
-  cursor: disabled ? "not-allowed" : "pointer",
-}))
-
 const Video = styled.video(({ height, width, theme }) => ({
   width,
   height,
@@ -93,6 +85,10 @@ const isPlaying = (videoElement: HTMLVideoElement | null): boolean => {
   return isPlaying && isReady && hasDuration
 }
 
+const isIOS = () => {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent)
+}
+
 type VideoShortsModalProps = {
   startIndex: number
   videoData: VideoShort[]
@@ -105,7 +101,8 @@ const VideoShortsModal = ({
 }: VideoShortsModalProps) => {
   const { height } = useWindowDimensions()
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
-  const isSafari = useIsSafari()
+  const [muted, setMuted] = useState(true)
+  const [hasUserInteracted, setHasUserInteracted] = useState(false)
 
   const videosRef = useRef<(HTMLVideoElement | null)[]>([])
 
@@ -127,7 +124,7 @@ const VideoShortsModal = ({
         if (isPlaying(videosRef.current[selectedIndex])) {
           videosRef.current[selectedIndex]?.pause()
         } else {
-          videosRef.current[selectedIndex]?.play()
+          videosRef.current[selectedIndex]?.play().catch(() => {})
         }
       }
 
@@ -140,34 +137,67 @@ const VideoShortsModal = ({
     }
   }, [onClose, selectedIndex])
 
-  const onSlidesInView = useCallback((inView: number[]) => {
+  const onSlidesInView = (inView: number[]) => {
     if (inView.length === 1) {
       videosRef.current
         .filter((video, index) => video && index !== inView[0])
         .forEach((video) => {
           video!.pause()
-          // video!.muted = true
         })
       setSelectedIndex(inView[0])
       if (videosRef.current[inView[0]]) {
-        videosRef.current[inView[0]]!.play()
-        videosRef.current[inView[0]]!.muted = false
+        const video = videosRef.current[inView[0]]!
+        video.muted = muted
+
+        // On iOS, only autoplay if muted or if user has interacted
+        if (!isIOS() || muted || hasUserInteracted) {
+          video.play().catch(() => {})
+        }
       }
     }
-  }, [])
+  }
+
+  const onClickMute = () => {
+    if (selectedIndex !== null && videosRef.current[selectedIndex]) {
+      const video = videosRef.current[selectedIndex]!
+      const wasMuted = video.muted
+      video.muted = !wasMuted
+
+      setHasUserInteracted(true)
+
+      if (wasMuted && !video.paused) {
+        video.play().catch(() => {})
+      }
+    }
+    setMuted(!muted)
+  }
+
+  const handleVideoClick = () => {
+    if (selectedIndex !== null && videosRef.current[selectedIndex]) {
+      const video = videosRef.current[selectedIndex]!
+      setHasUserInteracted(true)
+
+      if (video.paused) {
+        video.play().catch(() => {})
+      } else {
+        video.pause()
+      }
+    }
+  }
 
   return (
     <Overlay>
-      <CloseContainer>
-        <StyledActionButton
-          size="large"
-          edge="rounded"
-          variant="text"
-          onClick={onClose}
-        >
-          <RiCloseLine aria-hidden />
-        </StyledActionButton>
-      </CloseContainer>
+      <CloseButton size="large" edge="rounded" variant="text" onClick={onClose}>
+        <RiCloseLine />
+      </CloseButton>
+      <MuteButton
+        size="large"
+        edge="rounded"
+        variant="text"
+        onClick={onClickMute}
+      >
+        {muted ? <RiVolumeMuteLine /> : <RiVolumeUpLine />}
+      </MuteButton>
       <CarouselV2Vertical
         initialSlide={startIndex}
         onSlidesInView={onSlidesInView}
@@ -183,21 +213,14 @@ const VideoShortsModal = ({
                 ref={(el) => {
                   if (videosRef.current && el) {
                     videosRef.current[index] = el
-
-                    /* Required for iOS/Safari to avoid "The request is not allowed by the user agent or the platform in the current context" error */
-                    // el.muted = isSafari
-                    // el.playsInline = true
-                    // el.setAttribute("webkit-playsinline", "true")
-                    // el.disablePictureInPicture = true
-
                     el.addEventListener("error", (e: Event) => {
                       console.error("Video error:", e)
                     })
                   }
                 }}
+                onClick={handleVideoClick}
                 // TODO: Using a temporary bucket on GCP owned by jk
                 src={`https://storage.googleapis.com/mit-open-learning/${item.id.videoId}.mp4`}
-                controls
                 autoPlay
                 muted
                 playsInline
