@@ -74,4 +74,15 @@ const MEDIA_CAROUSEL: ResourceCarouselProps["config"] = [
   },
 ]
 
-export { FEATURED_RESOURCES_CAROUSEL, MEDIA_CAROUSEL }
+const VIDEO_SHORTS_CAROUSEL: ResourceCarouselProps["config"] = [
+  {
+    label: "Videos",
+    cardProps: { size: "small", isMedia: true },
+    data: {
+      type: "resources",
+      params: { resource_type: ["video"], limit: 12, sortby: "new" },
+    },
+  },
+]
+
+export { FEATURED_RESOURCES_CAROUSEL, MEDIA_CAROUSEL, VIDEO_SHORTS_CAROUSEL }

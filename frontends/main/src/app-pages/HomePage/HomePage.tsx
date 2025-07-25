@@ -29,15 +29,6 @@ const FeaturedCoursesCarousel = styled(ResourceCarousel)(({ theme }) => ({
   },
 }))
 
-const MediaCarousel = styled(ResourceCarousel)(({ theme }) => ({
-  margin: "80px 0",
-  minHeight: "388px",
-  [theme.breakpoints.down("md")]: {
-    margin: "40px 0",
-    minHeight: "418px",
-  },
-}))
-
 const StyledContainer = styled(Container)({
   "@media (max-width: 1365px)": {
     overflow: "hidden",
@@ -48,6 +39,8 @@ const LearningResourceDrawer = dynamic(
   () =>
     import("@/page-components/LearningResourceDrawer/LearningResourceDrawer"),
 )
+
+const MediaSection = dynamic(() => import("./MediaSection"))
 
 const HomePage: React.FC<{ heroImageIndex: number }> = ({ heroImageIndex }) => {
   return (
@@ -66,13 +59,7 @@ const HomePage: React.FC<{ heroImageIndex: number }> = ({ heroImageIndex }) => {
         </StyledContainer>
       </FullWidthBackground>
       <PersonalizeSection />
-      <Container component="section">
-        <MediaCarousel
-          titleComponent="h2"
-          title="Media"
-          config={carousels.MEDIA_CAROUSEL}
-        />
-      </Container>
+      <MediaSection />
       <BrowseTopicsSection />
       <TestimonialsSection />
       <NewsEventsSection />
