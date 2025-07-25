@@ -4,7 +4,7 @@ import React from "react"
 import Image from "next/image"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
-import { useQueries, useQuery } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import {
   programsQueries,
   programCollectionQueries,
@@ -15,7 +15,6 @@ import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
 import { DashboardCard } from "./CoursewareDisplay/DashboardCard"
 import { PlainList, Stack, styled, Typography } from "ol-components"
 import {
-  DashboardCourse,
   DashboardProgram,
   DashboardProgramCollection,
 } from "./CoursewareDisplay/types"
@@ -23,7 +22,6 @@ import graduateLogo from "@/public/images/dashboard/graduate.png"
 import {
   CourseRunEnrollment,
   OrganizationPage,
-  V2Program,
 } from "@mitodl/mitxonline-api-axios/v1"
 import { useMitxOnlineCurrentUser } from "api/mitxonline-hooks/user"
 
@@ -72,24 +70,6 @@ const OrganizationHeader: React.FC<{ org?: OrganizationPage }> = ({ org }) => {
   )
 }
 
-/**
- * For an array of programs, fetch the associated courses.
- * [program1, program2] => [[...courses1], [...courses2]]
- */
-
-const useMitxonlineProgramsCourses = (programs: V2Program[], orgId: number) => {
-  const courseGroupIds =
-    programs.map((program) => program.courses.map((id) => id as number)) ?? []
-
-  const courseGroups = useQueries({
-    queries: courseGroupIds.map((courseIds) =>
-      coursesQueries.coursesList({ org_id: orgId, id: courseIds }),
-    ),
-  })
-
-  return courseGroups
-}
-
 const DashboardCardStyled = styled(DashboardCard)({
   borderRadius: "0px",
   borderTop: "none",
@@ -116,10 +96,9 @@ const ProgramHeader = styled.div(({ theme }) => ({
 
 const OrgProgramCollectionDisplay: React.FC<{
   collection: DashboardProgramCollection
-  programs: DashboardProgram[]
   enrollments?: CourseRunEnrollment[]
   orgId: number
-}> = ({ collection, programs, enrollments, orgId }) => {
+}> = ({ collection, enrollments, orgId }) => {
   return (
     <ProgramRoot data-testid="org-program-collection-root">
       <ProgramHeader>
@@ -128,10 +107,10 @@ const OrgProgramCollectionDisplay: React.FC<{
         </Typography>
       </ProgramHeader>
       <PlainList itemSpacing={0}>
-        {programs.map((program) => (
+        {collection.programIds.map((programId) => (
           <ProgramCard
-            key={program.key}
-            program={program}
+            key={programId}
+            programId={programId}
             enrollments={enrollments}
             orgId={orgId}
           />
@@ -143,10 +122,18 @@ const OrgProgramCollectionDisplay: React.FC<{
 
 const OrgProgramDisplay: React.FC<{
   program: DashboardProgram
-  courses: DashboardCourse[]
-  coursesLoading: boolean
+  enrollments?: CourseRunEnrollment[]
   programLoading: boolean
-}> = ({ program, courses }) => {
+}> = ({ program, enrollments, programLoading }) => {
+  const courses = useQuery(
+    coursesQueries.coursesList({ id: program.courseIds }),
+  )
+  if (programLoading || courses.isLoading) return "Loading Program Courses"
+  const transformedCourses = transform.mitxonlineCourses({
+    courses: courses.data?.results ?? [],
+    enrollments: enrollments ?? [],
+  })
+
   return (
     <ProgramRoot data-testid="org-program-root">
       <ProgramHeader>
@@ -156,29 +143,43 @@ const OrgProgramDisplay: React.FC<{
         <Typography variant="body1">{program.description}</Typography>
       </ProgramHeader>
       <PlainList itemSpacing={0}>
-        {transform.sortDashboardCourses(program, courses).map((course) => (
-          <DashboardCardStyled
-            Component="li"
-            key={course.key}
-            dashboardResource={course}
-            courseNoun="Module"
-            offerUpgrade={false}
-            titleHref={course.run?.coursewareUrl}
-            buttonHref={course.run?.coursewareUrl}
-          />
-        ))}
+        {transform
+          .sortDashboardCourses(program, transformedCourses)
+          .map((course) => (
+            <DashboardCardStyled
+              Component="li"
+              key={course.key}
+              dashboardResource={course}
+              courseNoun="Module"
+              offerUpgrade={false}
+              titleHref={course.run?.coursewareUrl}
+              buttonHref={course.run?.coursewareUrl}
+            />
+          ))}
       </PlainList>
     </ProgramRoot>
   )
 }
 
 const ProgramCard: React.FC<{
-  program: DashboardProgram
+  programId: number
   enrollments?: CourseRunEnrollment[]
   orgId: number
-}> = ({ program, enrollments, orgId }) => {
+}> = ({ programId, enrollments, orgId }) => {
+  const program = useQuery(
+    programsQueries.programsList({ id: programId, org_id: orgId }),
+  )
   const courses = useQuery(
-    coursesQueries.coursesList({ id: program.courseIds, org_id: orgId }),
+    coursesQueries.coursesList({
+      id: program.data?.results[0]?.courses,
+      org_id: orgId,
+    }),
+  )
+  if (program.isLoading || !program.data?.results.length)
+    return "Loading Program"
+  if (courses.isLoading) return "Loading Program Courses"
+  const transformedProgram = transform.mitxonlineProgram(
+    program.data?.results[0] ?? {},
   )
   const transformedCourses = transform.mitxonlineCourses({
     courses: courses.data?.results ?? [],
@@ -191,7 +192,7 @@ const ProgramCard: React.FC<{
   return (
     <DashboardCard
       Component="li"
-      key={program.key}
+      key={transformedProgram.key}
       dashboardResource={course}
       courseNoun="Program"
       offerUpgrade={false}
@@ -219,73 +220,40 @@ const OrganizationContentInternal: React.FC<
   const orgId = org.id
   const enrollments = useQuery(enrollmentQueries.enrollmentsList())
   const programs = useQuery(programsQueries.programsList({ org_id: orgId }))
-  const courseGroups = useMitxonlineProgramsCourses(
-    programs.data?.results ?? [],
-    orgId,
-  )
   const programCollections = useQuery(
     programCollectionQueries.programCollectionsList({}),
   )
 
   if (!isOrgDashboardEnabled) return null
 
-  const transformedCourseGroups = courseGroups.map((courseGroup) => {
-    if (!courseGroup.data || !enrollments.data) return []
-    return transform.mitxonlineCourses({
-      courses: courseGroup.data?.results ?? [],
-      enrollments: enrollments.data ?? [],
-    })
-  })
-  const transformedPrograms = programs.data?.results.map((program) =>
-    transform.mitxonlineProgram(program),
-  )
-
-  // This needs to be better
-  const foundationalProgram = transformedPrograms?.find((program) =>
-    program.title.includes("Foundational"),
-  )
-  const foundationalCourses =
-    transformedCourseGroups.find((courses, index) => {
-      const program = programs.data?.results[index]
-      return (
-        program &&
-        foundationalProgram?.courseIds.some((courseId) =>
-          program.courses.includes(courseId),
-        )
-      )
-    }) ?? []
+  const transformedPrograms = programs.data?.results
+    .filter((program) => program.collections.length === 0)
+    .map((program) => transform.mitxonlineProgram(program))
 
   return (
     <OrganizationRoot>
       <OrganizationHeader org={org} />
-      {programs.isLoading || !foundationalProgram ? (
-        "Foundational Program Loading"
-      ) : (
-        <OrgProgramDisplay
-          key={foundationalProgram.key}
-          program={foundationalProgram}
-          courses={foundationalCourses}
-          coursesLoading={courseGroups[0].isLoading}
-          programLoading={programs.isLoading}
-        />
-      )}
+      {programs.isLoading || !transformedPrograms
+        ? "Programs Loading"
+        : transformedPrograms.map((program) => (
+            <OrgProgramDisplay
+              key={program.key}
+              program={program}
+              enrollments={enrollments.data}
+              programLoading={programs.isLoading}
+            />
+          ))}
       {programCollections.isLoading ? (
-        "Industry Specific Verticals Loading"
+        "Program Collections Loading"
       ) : (
         <PlainList itemSpacing={0}>
           {programCollections.data?.results.map((collection) => {
             const transformedCollection =
               transform.mitxonlineProgramCollection(collection)
-            const collectionPrograms = transformedCollection.programIds
-              .map((programId) =>
-                transformedPrograms?.find((p) => p.id === programId),
-              )
-              .filter((p) => p !== undefined) as DashboardProgram[]
             return (
               <OrgProgramCollectionDisplay
                 key={collection.title}
                 collection={transformedCollection}
-                programs={collectionPrograms}
                 enrollments={enrollments.data}
                 orgId={orgId}
               />

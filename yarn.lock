@@ -3026,12 +3026,12 @@ __metadata:
   linkType: hard
 
 "@mitodl/mitxonline-api-axios@git+https://github.com/gumaerc/mitxonline-api-axios.git":
-  version: 2025.7.22
-  resolution: "@mitodl/mitxonline-api-axios@https://github.com/gumaerc/mitxonline-api-axios.git#commit=fd23f6f24e9f1cbb3a56f283c9788f0d629906f9"
+  version: 2025.7.22-2
+  resolution: "@mitodl/mitxonline-api-axios@https://github.com/gumaerc/mitxonline-api-axios.git#commit=c5e0a59d958e03a602b5313da47f3dcefbd7b33b"
   dependencies:
     "@types/node": "npm:^20.11.19"
     axios: "npm:^1.6.5"
-  checksum: 10/cbc1bbaef2921bbdab051223242ee9daca79a0377dcc9e23d1d423fc6f399ee6d2d224ed0db0c8c1b81b82118b39234e5f963b9329b65c199eb9246cc9c8461f
+  checksum: 10/3f099b749d7ebdaf398ea2ca40cf512ff91ad5f08852874205f45ee6d11e6f062a80b42d574f6dca62426e0863d666e5c3f2e807ca925cdfb0a9fa14b2036ff8
   languageName: node
   linkType: hard
 

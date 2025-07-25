@@ -54,6 +54,7 @@ type DashboardProgram = {
   title: string
   programType?: string | null
   courseIds: number[]
+  collections: number[]
   description: string
 }
 
