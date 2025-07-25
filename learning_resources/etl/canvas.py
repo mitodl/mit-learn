@@ -73,12 +73,14 @@ def run_for_canvas_archive(course_archive_path, course_folder, overwrite):
     course_info = parse_canvas_settings(course_archive_path)
     course_title = course_info.get("title")
     start_at = course_info.get("start_at")
-    if start_at:
-        try:
-            start_at = datetime.fromisoformat(start_at)
-        except ValueError:
-            log.warning("Invalid start_at date format: %s", start_at)
-            start_at = None
+    end_at = course_info.get("conclude_at")
+    try:
+        start_at = datetime.fromisoformat(start_at)
+        end_at = datetime.fromisoformat(end_at)
+    except ValueError:
+        log.warning("Invalid start_at date format: %s", start_at)
+        start_at = None
+        end_at = None
     readable_id = f"{course_folder}-{course_info.get('course_code')}"
     # create placeholder learning resource
     resource, _ = LearningResource.objects.update_or_create(
@@ -100,6 +102,7 @@ def run_for_canvas_archive(course_archive_path, course_folder, overwrite):
             learning_resource=resource,
             published=True,
             start_date=start_at,
+            end_date=end_at,
         )
     run = resource.runs.first()
     resource_readable_id = run.learning_resource.readable_id
