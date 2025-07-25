@@ -3,6 +3,7 @@ import sys
 import zipfile
 from collections import defaultdict
 from collections.abc import Generator
+from datetime import datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -71,6 +72,13 @@ def run_for_canvas_archive(course_archive_path, course_folder, overwrite):
     checksum = calc_checksum(course_archive_path)
     course_info = parse_canvas_settings(course_archive_path)
     course_title = course_info.get("title")
+    start_at = course_info.get("start_at")
+    if start_at:
+        try:
+            start_at = datetime.fromisoformat(start_at)
+        except ValueError:
+            log.warning("Invalid start_at date format: %s", start_at)
+            start_at = None
     readable_id = f"{course_folder}-{course_info.get('course_code')}"
     # create placeholder learning resource
     resource, _ = LearningResource.objects.update_or_create(
@@ -91,6 +99,7 @@ def run_for_canvas_archive(course_archive_path, course_folder, overwrite):
             run_id=f"{readable_id}+canvas",
             learning_resource=resource,
             published=True,
+            start_date=start_at,
         )
     run = resource.runs.first()
     resource_readable_id = run.learning_resource.readable_id
