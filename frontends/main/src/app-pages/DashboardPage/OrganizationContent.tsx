@@ -124,9 +124,10 @@ const OrgProgramDisplay: React.FC<{
   program: DashboardProgram
   enrollments?: CourseRunEnrollment[]
   programLoading: boolean
-}> = ({ program, enrollments, programLoading }) => {
+  orgId?: number
+}> = ({ program, enrollments, programLoading, orgId }) => {
   const courses = useQuery(
-    coursesQueries.coursesList({ id: program.courseIds }),
+    coursesQueries.coursesList({ id: program.courseIds, org_id: orgId }),
   )
   const skeleton = (
     <Skeleton width="100%" height="65px" style={{ marginBottom: "16px" }} />
@@ -253,6 +254,7 @@ const OrganizationContentInternal: React.FC<
               program={program}
               enrollments={enrollments.data}
               programLoading={programs.isLoading}
+              orgId={orgId}
             />
           ))}
       {programCollections.isLoading ? (
