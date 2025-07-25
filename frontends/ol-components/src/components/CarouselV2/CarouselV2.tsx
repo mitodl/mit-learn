@@ -15,14 +15,20 @@ const ButtonsContainer = styled.div(({ theme }) => ({
   },
 }))
 
-const CarouselContainer = styled.div({
+const CarouselContainer = styled.div(({ theme }) => ({
   overflow: "hidden",
   margin: "24px 0",
-})
+  [theme.breakpoints.down("sm")]: {
+    margin: "0 -16px",
+    padding: "0 32px 0 16px",
+  },
+}))
 
 const CarouselScroll = styled.div({
   display: "flex",
   gap: "24px",
+  /* Space for the card box shadow on hover to prevent clipping */
+  paddingBottom: "4px",
 })
 
 type CarouselV2Props = {

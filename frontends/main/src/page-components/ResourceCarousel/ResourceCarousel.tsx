@@ -20,12 +20,13 @@ import {
   UseQueryOptions,
 } from "@tanstack/react-query"
 
-const StyledCarousel = styled(CarouselV2)({
+/* Leaving for reference while we determine wether to swap out for CarouselV2
+const StyledCarousel = styled(Carousel)({
   /**
    * Our cards have a hover shadow that gets clipped by the carousel container.
    * To compensate for this, we add a 4px padding to the left of each slide, and
    * remove 4px from the gap.
-   */
+   *
   width: "calc(100% + 4px)",
   transform: "translateX(-4px)",
   ".slick-track": {
@@ -37,6 +38,7 @@ const StyledCarousel = styled(CarouselV2)({
     paddingLeft: "4px",
   },
 })
+*/
 
 const HeaderRow = styled.div(({ theme }) => ({
   display: "flex",
@@ -301,7 +303,7 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
           }
         >
           {({ resources, childrenLoading, tabConfig }) => (
-            <StyledCarousel arrowsContainer={ref}>
+            <CarouselV2 arrowsContainer={ref}>
               {isLoading || childrenLoading
                 ? Array.from({ length: 6 }).map((_, index) => (
                     <ResourceCard
@@ -320,7 +322,7 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
                         {...tabConfig.cardProps}
                       />
                     ))}
-            </StyledCarousel>
+            </CarouselV2>
           )}
         </PanelChildren>
       </TabContext>

@@ -11,7 +11,7 @@ const Section = styled.section(({ theme }) => ({
   },
 }))
 
-const Header = styled(Container)(({ theme }) => ({
+const Header = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
@@ -20,6 +20,12 @@ const Header = styled(Container)(({ theme }) => ({
 
   [theme.breakpoints.down("md")]: {
     paddingBottom: "28px",
+  },
+}))
+
+const StyledCarouselV2 = styled(CarouselV2)(({ theme }) => ({
+  [theme.breakpoints.down("sm")]: {
+    padding: "0 16px",
   },
 }))
 
@@ -68,7 +74,7 @@ const VideoShortsSection = () => {
             Start your learning journey with our short-form educational videos
           </Typography>
         </Header>
-        <CarouselV2>
+        <StyledCarouselV2>
           {data?.map((item: VideoShort, index: number) => (
             <CarouselSlide width={235} height={235 / ASPECT_RATIO} key={index}>
               {/* 235 is our fixed width to ensure slides align with the container edge */}
@@ -95,7 +101,7 @@ const VideoShortsSection = () => {
               </Card>
             </CarouselSlide>
           ))}
-        </CarouselV2>
+        </StyledCarouselV2>
       </Container>
     </Section>
   )
