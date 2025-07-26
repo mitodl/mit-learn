@@ -95,7 +95,7 @@ qdrant-client = {extras = ["fastembed"], version = "^1.14.3"}
 redis = "^5.0.0"
 requests = "^2.31.0"
 retry2 = "^0.9.5"
-ruff = "0.12.4"
+ruff = "0.12.5"
 selenium = "^4.30.0"
 sentry-sdk = "^2.25.1"
 social-auth-app-django = "^5.2.0"
