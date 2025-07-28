@@ -1,6 +1,26 @@
 Release Notes
 =============
 
+Version 0.38.2 (Released July 28, 2025)
+--------------
+
+- remove unpublished canvas content (#2386)
+- add tutorbot problems model and etl (#2373)
+- Resolve renovate dependency updates: dotenv v17 and stylelint-config-standard-scss v15 (#2383)
+- chore(deps): update dependency jest-extended to v6 (#2378)
+- chore(deps): update dependency jest-watch-typeahead to v3 (#2379)
+- prevent hero layout shift (#2370)
+- update faker (#2371)
+- update nextjs (#2372)
+- Disallow robot crawlers outside of Prod (#2381)
+- fix(deps): update dependency nh3 to ^0.3.0 (#2377)
+- fix(deps): update dependency ruff to v0.12.4 (#2376)
+- fix(deps): update dependency litellm to v1.74.6 (#2375)
+- Improve Dashboard Layout / Fix card Overflows (#2365)
+- Filter canvas etl to single course (#2368)
+- check that page exists before using it (#2366)
+- fix(deps): update django-health-check digest to 7fc1e3a (#2324)
+
 Version 0.38.1 (Released July 22, 2025)
 --------------
 
