@@ -105,8 +105,6 @@ export * from "./components/Card/Card"
 export * from "./components/Card/ListCardCondensed"
 export * from "./components/Carousel/Carousel"
 export { onReInitSlickA11y } from "./components/Carousel/util"
-export * from "./components/CarouselV2/CarouselV2"
-export * from "./components/CarouselV2/CarouselV2Vertical"
 export * from "./components/Chips/ChipLink"
 export * from "./components/ChoiceBox/ChoiceBox"
 export * from "./components/ChoiceBox/ChoiceBoxField"
@@ -164,15 +162,15 @@ export { MITLearnGlobalStyles } from "./components/ThemeProvider/MITLearnGlobalS
 
 export { AppRouterCacheProvider as NextJsAppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter"
 
-/**
- * @deprecated Please use component from @mitodl/smoot-design instead
- */
-const Migrated = () => {
-  throw new Error("Please use component from @mitodl/smoot-design instead")
-}
-export {
-  Migrated as ActionButton,
-  Migrated as ActionButtonLink,
-  Migrated as Button,
-  Migrated as ButtonLink,
-}
+// /**
+//  * @deprecated Please use component from @mitodl/smoot-design instead
+//  */
+// const Migrated = () => {
+//   throw new Error("Please use component from @mitodl/smoot-design instead")
+// }
+// export {
+//   Migrated as ActionButton,
+//   Migrated as ActionButtonLink,
+//   Migrated as Button,
+//   Migrated as ButtonLink,
+// }

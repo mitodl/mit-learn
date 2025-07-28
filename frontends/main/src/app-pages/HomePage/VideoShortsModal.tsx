@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react"
-import { styled, CarouselV2Vertical } from "ol-components"
+import { styled } from "ol-components"
+import { CarouselV2Vertical } from "ol-components/CarouselV2Vertical"
 import { RiCloseLine, RiVolumeMuteLine, RiVolumeUpLine } from "@remixicon/react"
 import { ActionButton } from "@mitodl/smoot-design"
 import { useWindowDimensions } from "ol-utilities"

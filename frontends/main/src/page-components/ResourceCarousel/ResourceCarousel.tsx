@@ -3,13 +3,13 @@
 import React from "react"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import {
-  CarouselV2,
   TabPanel,
   TabContext,
   styled,
   Typography,
   TypographyProps,
 } from "ol-components"
+import { CarouselV2 } from "ol-components/CarouselV2"
 import { TabButton, TabButtonList } from "@mitodl/smoot-design"
 import type { TabConfig } from "./types"
 import { LearningResource, PaginatedLearningResourceList } from "api"

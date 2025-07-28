@@ -1,6 +1,7 @@
 import React, { useState } from "react"
 import Image from "next/image"
-import { Container, Typography, Card, CarouselV2, styled } from "ol-components"
+import { Container, Typography, Card, styled } from "ol-components"
+import { CarouselV2 } from "ol-components/CarouselV2"
 import { useVideoShortsList, type VideoShort } from "api/hooks/videoShorts"
 import VideoShortsModal from "./VideoShortsModal"
 
