@@ -65,6 +65,11 @@ def sync_canvas_archive(bucket, key: str, overwrite):
     return resource_readable_id, run
 
 
+def _course_url(course_archive_path) -> str:
+    context_info = parse_context_xml(course_archive_path)
+    return f"https://{context_info.get('canvas_domain')}/courses/{context_info.get('course_id')}/"
+
+
 def run_for_canvas_archive(course_archive_path, course_folder, overwrite):
     """
     Generate and return a LearningResourceRun for a Canvas course
@@ -72,12 +77,13 @@ def run_for_canvas_archive(course_archive_path, course_folder, overwrite):
     checksum = calc_checksum(course_archive_path)
     course_info = parse_canvas_settings(course_archive_path)
     course_title = course_info.get("title")
+    url = _course_url(course_archive_path)
     start_at = course_info.get("start_at")
     end_at = course_info.get("conclude_at")
     try:
         start_at = datetime.fromisoformat(start_at)
         end_at = datetime.fromisoformat(end_at)
-    except ValueError:
+    except (ValueError, TypeError):
         log.warning("Invalid start_at date format: %s", start_at)
         start_at = None
         end_at = None
@@ -88,6 +94,7 @@ def run_for_canvas_archive(course_archive_path, course_folder, overwrite):
         defaults={
             "title": course_title,
             "published": False,
+            "url": url,
             "test_mode": True,
             "etl_source": ETLSource.canvas.name,
             "platform": LearningResourcePlatform.objects.get(
