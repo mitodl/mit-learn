@@ -17,6 +17,10 @@ import {
 import invariant from "tiny-invariant"
 import * as routes from "@/common/urls"
 import { assertHeadings } from "ol-test-utilities"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+
+jest.mock("posthog-js/react")
+const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
 
 const assertLinksTo = (
   el: HTMLElement,
@@ -78,6 +82,8 @@ const setupAPIs = () => {
     expect.stringContaining(urls.testimonials.list({})),
     attestations,
   )
+
+  mockedUseFeatureFlagEnabled.mockReturnValue(false)
 }
 
 describe("Home Page Hero", () => {
