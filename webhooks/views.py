@@ -15,7 +15,7 @@ from learning_resources.etl.constants import ETLSource
 from learning_resources.models import LearningResource
 from learning_resources.tasks import ingest_canvas_course
 from learning_resources.utils import (
-    resource_delete_actions,
+    resource_unpublished_actions,
 )
 from webhooks.decorators import require_signature
 from webhooks.serializers import (
@@ -124,9 +124,8 @@ def process_delete_content_file_request(data):
                     readable_id__istartswith=f"{course_id}_",
                     etl_source=ETLSource.canvas.name,
                 )
-                resource.published = False
-                resource.test_mode = False
                 resource.save()
-                resource_delete_actions(resource)
+                resource_unpublished_actions(resource)
+                resource.delete()
             except LearningResource.DoesNotExist:
                 log.warning("Resource with readable_id %s does not exist", course_id)
