@@ -121,7 +121,8 @@ def process_delete_content_file_request(data):
         if course_id:
             try:
                 resource = LearningResource.objects.get(
-                    readable_id__istartswith=course_id, etl_source=ETLSource.canvas.name
+                    readable_id__istartswith=f"{course_id}_",
+                    etl_source=ETLSource.canvas.name,
                 )
                 resource.published = False
                 resource.test_mode = False
