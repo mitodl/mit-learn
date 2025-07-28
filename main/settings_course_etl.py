@@ -68,6 +68,10 @@ CANVAS_COURSE_BUCKET_NAME = get_string("CANVAS_COURSE_BUCKET_NAME", None)
 CANVAS_COURSE_BUCKET_PREFIX = get_string(
     "CANVAS_COURSE_BUCKET_PREFIX", "canvas/course_content"
 )
+CANVAS_PDF_TRANSCRIPTION_MODEL = get_string(
+    name="CANVAS_PDF_TRANSCRIPTION_MODEL",
+    default=None,
+)
 # More MIT URLs
 SEE_API_URL = get_string("SEE_API_URL", None)
 SEE_API_ACCESS_TOKEN_URL = get_string("SEE_API_ACCESS_TOKEN_URL", None)
