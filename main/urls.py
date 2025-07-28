@@ -57,7 +57,7 @@ urlpatterns = (
         re_path(r"", include("testimonials.urls")),
         re_path(r"", include("news_events.urls")),
         re_path(r"", include("mitol.scim.urls")),
-        re_path(r"", include("webhooks.urls")),
+        re_path(r"", include("webhooks.urls", namespace="webhooks")),
         re_path(r"", include(features_router.urls)),
         re_path(r"^app", RedirectView.as_view(url=settings.APP_BASE_URL)),
         re_path(r"^health/", include("health_check.urls")),

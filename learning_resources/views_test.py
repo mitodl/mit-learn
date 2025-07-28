@@ -14,6 +14,7 @@ from channels.factories import ChannelTopicDetailFactory, ChannelUnitDetailFacto
 from channels.models import Channel
 from learning_resources.constants import (
     GROUP_CONTENT_FILE_CONTENT_VIEWERS,
+    GROUP_TUTOR_PROBLEM_VIEWERS,
     LearningResourceRelationTypes,
     LearningResourceType,
     OfferedBy,
@@ -33,6 +34,7 @@ from learning_resources.factories import (
     PodcastEpisodeFactory,
     PodcastFactory,
     ProgramFactory,
+    TutorProblemFileFactory,
     VideoFactory,
     VideoPlaylistFactory,
 )
@@ -1404,3 +1406,99 @@ def test_learning_resources_summary_listing_endpoint_large_pagesize():
     )
     pagination = action.kwargs["pagination_class"]
     assert pagination.max_limit >= 1000
+
+
+@pytest.mark.parametrize(
+    "user_role",
+    [
+        "anonymous",
+        "normal",
+        "admin",
+        "group_tutor_problem_viewer",
+    ],
+)
+def test_course_run_problems_endpoint(client, user_role, django_user_model):
+    """Test course run problems endpoint"""
+    course_run = LearningResourceRunFactory.create(
+        learning_resource=CourseFactory.create(
+            platform=PlatformType.canvas.name
+        ).learning_resource,
+    )
+
+    if user_role == "admin":
+        admin_user = django_user_model.objects.create_superuser(
+            "admin", "admin@example.com", "pass"
+        )
+        client.force_login(admin_user)
+    elif user_role == "group_tutor_problem_viewer":
+        user = django_user_model.objects.create()
+        group, _ = Group.objects.get_or_create(name=GROUP_TUTOR_PROBLEM_VIEWERS)
+        group.user_set.add(user)
+        client.force_login(user)
+    elif user_role == "normal":
+        user = django_user_model.objects.create()
+        client.force_login(user)
+
+    TutorProblemFileFactory.create(
+        run=course_run,
+        problem_title="Problem Set 1",
+        type="problem",
+        content="Content for Problem Set 1",
+    )
+
+    TutorProblemFileFactory.create(
+        run=course_run,
+        problem_title="Problem Set 1",
+        type="solution",
+        content="Content for Problem Set 1 Solution",
+    )
+    TutorProblemFileFactory.create(
+        run=course_run, problem_title="Problem Set 2", type="problem"
+    )
+    TutorProblemFileFactory.create(
+        run=course_run, problem_title="Problem Set 2", type="solution"
+    )
+
+    resp = client.get(
+        reverse("lr:v0:tutorproblem_api-list-problems", args=[course_run.run_id])
+    )
+
+    if user_role in ["admin", "group_tutor_problem_viewer"]:
+        assert resp.json() == {"problem_set_titles": ["Problem Set 1", "Problem Set 2"]}
+    elif user_role == "normal":
+        assert resp.status_code == 403
+        assert resp.json() == {
+            "detail": "You do not have permission to perform this action.",
+            "error_type": "PermissionDenied",
+        }
+    elif user_role == "anonymous":
+        assert resp.status_code == 403
+        assert resp.json() == {
+            "detail": "Authentication credentials were not provided.",
+            "error_type": "NotAuthenticated",
+        }
+
+    detail_resp = client.get(
+        reverse(
+            "lr:v0:tutorproblem_api-retrieve-problem",
+            args=[course_run.run_id, "Problem Set 1"],
+        )
+    )
+
+    if user_role in ["admin", "group_tutor_problem_viewer"]:
+        assert detail_resp.json() == {
+            "problem_set": "Content for Problem Set 1",
+            "solution_set": "Content for Problem Set 1 Solution",
+        }
+    elif user_role == "normal":
+        assert detail_resp.status_code == 403
+        assert detail_resp.json() == {
+            "detail": "You do not have permission to perform this action.",
+            "error_type": "PermissionDenied",
+        }
+    elif user_role == "anonymous":
+        assert detail_resp.status_code == 403
+        assert detail_resp.json() == {
+            "detail": "Authentication credentials were not provided.",
+            "error_type": "NotAuthenticated",
+        }
