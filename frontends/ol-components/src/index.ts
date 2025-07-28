@@ -2,6 +2,9 @@
 /// <reference types="./types/theme.d.ts" />
 /// <reference types="./types/typography.d.ts" />
 
+export { default as styled } from "@emotion/styled"
+export { css, Global } from "@emotion/react"
+
 /**
  * Re-exports from MUI.
  *
@@ -158,9 +161,6 @@ export type { LinkProps } from "./components/Link/Link"
 
 export { pxToRem } from "./components/ThemeProvider/typography"
 export { MITLearnGlobalStyles } from "./components/ThemeProvider/MITLearnGlobalStyles"
-
-export { default as styled } from "@emotion/styled"
-export { css, Global } from "@emotion/react"
 
 export { AppRouterCacheProvider as NextJsAppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter"
 
