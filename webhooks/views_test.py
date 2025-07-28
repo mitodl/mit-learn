@@ -30,13 +30,13 @@ def test_content_file_delete_webhook_view_canvas_success(
 
     url = reverse("webhooks:v1:content_file_delete_webhook")
     resource = LearningResourceFactory.create(
-        etl_source=ETLSource.canvas.name, readable_id="canvas-course-123"
+        etl_source=ETLSource.canvas.name, readable_id="123-canvas"
     )
-    mock_unpublish = mocker.patch("webhooks.views.resource_unpublished_actions")
+    mock_unpublish = mocker.patch("webhooks.views.resource_delete_actions")
 
     data = {
         "source": ETLSource.canvas.name,
-        "course_id": "canvas-course-123",
+        "course_id": "123",
     }
     response = client.post(
         url,
@@ -60,7 +60,7 @@ def test_content_file_delete_webhook_view_canvas_resource_not_found(
         "learning_resources.models.LearningResource.objects.get",
         side_effect=LearningResource.DoesNotExist,
     )
-    mocker.patch("webhooks.views.resource_unpublished_actions")
+    mocker.patch("webhooks.views.resource_delete_actions")
     mock_log = mocker.patch("webhooks.views.log")
     data = {
         "source": ETLSource.canvas.name,
