@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+Version 0.38.3
+--------------
+
+- update canvas etl (#2400)
+- Canvas problem apis (#2399)
+- fix(deps): update dependency ruff to v0.12.5 (#2394)
+- fix(deps): update dependency litellm to v1.74.8 (#2393)
+- chore(deps): update opensearchproject/opensearch docker tag to v2.19.3 (#2392)
+
 Version 0.38.2 (Released July 28, 2025)
 --------------
 
