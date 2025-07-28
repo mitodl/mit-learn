@@ -1,3 +1,5 @@
+import base64
+import json
 import logging
 import sys
 import zipfile
@@ -8,6 +10,9 @@ from tempfile import TemporaryDirectory
 
 from defusedxml import ElementTree
 from django.conf import settings
+from litellm import completion
+from litellm.utils import supports_pdf_input
+from pydantic import BaseModel
 
 from learning_resources.constants import LearningResourceType, PlatformType
 from learning_resources.etl.constants import ETLSource
@@ -27,6 +32,10 @@ from learning_resources_search.constants import (
 )
 
 log = logging.getLogger(__name__)
+
+
+class TranscribedTutorProblem(BaseModel):
+    markdown_content: str
 
 
 def sync_canvas_archive(bucket, key: str, overwrite):
@@ -176,6 +185,7 @@ def transform_canvas_problem_files(
             problem_file_data = {
                 key: file_data[key] for key in keys_to_keep if key in file_data
             }
+
             path = file_data["source_path"]
             path = path[len(settings.CANVAS_TUTORBOT_FOLDER) :]
             path_parts = path.split("/")
@@ -183,6 +193,14 @@ def transform_canvas_problem_files(
 
             if path_parts[1] in ["problem", "solution"]:
                 problem_file_data["type"] = path_parts[1]
+            if problem_file_data[
+                "file_extension"
+            ].lower() == ".pdf" and supports_pdf_input(
+                settings.CANVAS_PDF_TRANSCRIPTION_MODEL
+            ):
+                problem_file_data["content"] = _pdf_to_markdown(
+                    Path(olx_path) / Path(problem_file_data["source_path"])
+                )
             yield problem_file_data
 
 
@@ -263,3 +281,45 @@ def extract_resources_by_identifierref(manifest_xml: str) -> dict:
                 {"title": title, "files": files, "type": resource.get("type")}
             )
     return dict(resources_dict)
+
+
+def _pdf_to_base64(pdf_path):
+    """
+    Convert a PDF file to a base64-encoded string.
+
+    Args:
+        pdf_path (str): Path to the PDF file.
+
+    Returns:
+        str: Base64-encoded string of the PDF file's contents.
+    """
+    with Path.open(pdf_path, "rb") as pdf_file:
+        encoded_string = base64.b64encode(pdf_file.read())
+        return encoded_string.decode("utf-8")
+
+
+def _pdf_to_markdown(pdf_path):
+    encoded_pdf = _pdf_to_base64(pdf_path)
+    base64_url = f"data:application/pdf;base64,{encoded_pdf}"
+    file_content = [
+        {
+            "type": "text",
+            "text": (
+                "Transcribe this file as-is into markdown format"
+                "(do not rewrite anything). Give me the full transcription"
+            ),
+        },
+        {
+            "type": "file",
+            "file": {
+                "file_data": base64_url,
+            },
+        },
+    ]
+    response = completion(
+        model=settings.CANVAS_PDF_TRANSCRIPTION_MODEL,
+        messages=[{"role": "user", "content": file_content}],
+        response_format=TranscribedTutorProblem,
+        stream=False,
+    )
+    return json.load(response.choices[0].message.content)["markdown_content"]
