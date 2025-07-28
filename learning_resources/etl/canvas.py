@@ -11,11 +11,19 @@ from django.conf import settings
 
 from learning_resources.constants import LearningResourceType, PlatformType
 from learning_resources.etl.constants import ETLSource
-from learning_resources.etl.utils import _process_olx_path, calc_checksum
+from learning_resources.etl.utils import (
+    _process_olx_path,
+    calc_checksum,
+    get_edx_module_id,
+)
 from learning_resources.models import (
     LearningResource,
     LearningResourcePlatform,
     LearningResourceRun,
+)
+from learning_resources.utils import bulk_resources_unpublished_actions
+from learning_resources_search.constants import (
+    CONTENT_FILE_TYPE,
 )
 
 log = logging.getLogger(__name__)
@@ -25,7 +33,7 @@ def sync_canvas_archive(bucket, key: str, overwrite):
     """
     Sync a Canvas course archive from S3
     """
-    from learning_resources.etl.loaders import load_content_files
+    from learning_resources.etl.loaders import load_content_files, load_problem_files
 
     course_folder = key.lstrip(settings.CANVAS_COURSE_BUCKET_PREFIX).split("/")[0]
 
@@ -43,8 +51,16 @@ def sync_canvas_archive(bucket, key: str, overwrite):
                     course_archive_path, run, overwrite=overwrite
                 ),
             )
+
+            load_problem_files(
+                run,
+                transform_canvas_problem_files(
+                    course_archive_path, run, overwrite=overwrite
+                ),
+            )
             run.checksum = checksum
             run.save()
+
     return resource_readable_id, run
 
 
@@ -111,17 +127,63 @@ def transform_canvas_content_files(
     published_items = [
         Path(item["path"]).resolve() for item in module_metadata["active"]
     ]
+    published_keys = []
     with (
         TemporaryDirectory(prefix=basedir) as olx_path,
         zipfile.ZipFile(course_zipfile.absolute(), "r") as course_archive,
     ):
         for member in course_archive.infolist():
             if Path(member.filename).resolve() in published_items:
+                full_path = Path(olx_path) / Path(member.filename)
+                published_keys.append(get_edx_module_id(str(full_path), run))
                 course_archive.extract(member, path=olx_path)
                 log.debug("processing active file %s", member.filename)
             else:
                 log.debug("skipping unpublished file %s", member.filename)
         yield from _process_olx_path(olx_path, run, overwrite=overwrite)
+
+    unpublished_content = run.content_files.exclude(key__in=published_keys)
+
+    bulk_resources_unpublished_actions(
+        list(unpublished_content.values_list("id", flat=True)), CONTENT_FILE_TYPE
+    )
+    unpublished_content.delete()
+
+
+def transform_canvas_problem_files(
+    course_zipfile: Path, run: LearningResourceRun, *, overwrite
+) -> Generator[dict, None, None]:
+    """
+    Transform problem files from a Canvas course zipfile
+    """
+    basedir = course_zipfile.name.split(".")[0]
+    with (
+        TemporaryDirectory(prefix=basedir) as olx_path,
+        zipfile.ZipFile(course_zipfile.absolute(), "r") as course_archive,
+    ):
+        for member in course_archive.infolist():
+            if member.filename.startswith(settings.CANVAS_TUTORBOT_FOLDER):
+                course_archive.extract(member, path=olx_path)
+                log.debug("processing active problem set file %s", member.filename)
+        for file_data in _process_olx_path(olx_path, run, overwrite=overwrite):
+            keys_to_keep = [
+                "run",
+                "content",
+                "archive_checksum",
+                "source_path",
+                "file_extension",
+            ]
+            problem_file_data = {
+                key: file_data[key] for key in keys_to_keep if key in file_data
+            }
+            path = file_data["source_path"]
+            path = path[len(settings.CANVAS_TUTORBOT_FOLDER) :]
+            path_parts = path.split("/")
+            problem_file_data["problem_title"] = path_parts[0]
+
+            if path_parts[1] in ["problem", "solution"]:
+                problem_file_data["type"] = path_parts[1]
+            yield problem_file_data
 
 
 def parse_module_meta(course_archive_path: str) -> dict:
@@ -138,7 +200,6 @@ def parse_module_meta(course_archive_path: str) -> dict:
         root = ElementTree.fromstring(module_xml)
         for module in root.findall(".//ns:module", namespaces):
             module_title = module.find("ns:title", namespaces).text
-
             for item in module.findall("ns:items/ns:item", namespaces):
                 item_state = item.find("ns:workflow_state", namespaces).text
                 item_title = item.find("ns:title", namespaces).text

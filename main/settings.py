@@ -34,7 +34,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.38.0"
+VERSION = "0.38.1"
 
 log = logging.getLogger()
 
@@ -850,3 +850,4 @@ OPENTELEMETRY_INSECURE = get_bool("OPENTELEMETRY_INSECURE", default=True)
 OPENTELEMETRY_ENDPOINT = get_string("OPENTELEMETRY_ENDPOINT", None)
 OPENTELEMETRY_TRACES_BATCH_SIZE = get_int("OPENTELEMETRY_TRACES_BATCH_SIZE", 512)
 OPENTELEMETRY_EXPORT_TIMEOUT_MS = get_int("OPENTELEMETRY_EXPORT_TIMEOUT_MS", 5000)
+CANVAS_TUTORBOT_FOLDER = get_string("CANVAS_TUTORBOT_FOLDER", "web_resources/ai/tutor/")

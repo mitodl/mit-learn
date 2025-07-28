@@ -59,7 +59,7 @@ const user: PartialFactory<User> = (overrides = {}): User => {
   return mergeOverrides(
     {
       id: enforcerId.enforce(faker.number.int),
-      username: faker.internet.userName(),
+      username: faker.internet.username(),
       name: faker.person.fullName(),
       email: faker.internet.email(),
       legal_address: legalAddress(),

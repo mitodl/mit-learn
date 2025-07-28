@@ -59,7 +59,7 @@ import { usePostHog } from "posthog-js/react"
 import getSearchParams from "./getSearchParams"
 
 const StyledResourceTabs = styled(ResourceCategoryTabs.TabList)`
-  margin-top: 0 px;
+  margin-top: 0;
 `
 
 const DesktopSortContainer = styled.div`

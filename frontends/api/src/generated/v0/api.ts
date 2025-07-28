@@ -4316,6 +4316,19 @@ export interface PreferencesSearch {
   delivery?: Array<string>
 }
 /**
+ *
+ * @export
+ * @interface ProblemListResponse
+ */
+export interface ProblemListResponse {
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof ProblemListResponse
+   */
+  problem_set_titles: Array<string>
+}
+/**
  * Serializer for Profile
  * @export
  * @interface Profile
@@ -5046,6 +5059,25 @@ export const ResourceTypeEnum = {
 export type ResourceTypeEnum =
   (typeof ResourceTypeEnum)[keyof typeof ResourceTypeEnum]
 
+/**
+ *
+ * @export
+ * @interface RetrieveProblemResponse
+ */
+export interface RetrieveProblemResponse {
+  /**
+   *
+   * @type {string}
+   * @memberof RetrieveProblemResponse
+   */
+  problem_set: string
+  /**
+   *
+   * @type {string}
+   * @memberof RetrieveProblemResponse
+   */
+  solution_set: string
+}
 /**
  * * `facebook` - facebook * `linkedin` - linkedin * `personal` - personal * `twitter` - twitter
  * @export
@@ -9801,6 +9833,323 @@ export class TestimonialsApi extends BaseAPI {
   ) {
     return TestimonialsApiFp(this.configuration)
       .testimonialsRetrieve(requestParameters.id, options)
+      .then((request) => request(this.axios, this.basePath))
+  }
+}
+
+/**
+ * TutorApi - axios parameter creator
+ * @export
+ */
+export const TutorApiAxiosParamCreator = function (
+  configuration?: Configuration,
+) {
+  return {
+    /**
+     * Retrieve a list of problem names for a course run
+     * @summary Retrieve problem list
+     * @param {string} run_readable_id
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    listProblems: async (
+      run_readable_id: string,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'run_readable_id' is not null or undefined
+      assertParamExists("listProblems", "run_readable_id", run_readable_id)
+      const localVarPath = `/api/v0/tutor/problems/{run_readable_id}/`.replace(
+        `{${"run_readable_id"}}`,
+        encodeURIComponent(String(run_readable_id)),
+      )
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
+     * Retrieve a specific problem and its solution for a course run
+     * @summary Retrieve Problem
+     * @param {string} problem_title
+     * @param {string} run_readable_id
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    retrieveProblem: async (
+      problem_title: string,
+      run_readable_id: string,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'problem_title' is not null or undefined
+      assertParamExists("retrieveProblem", "problem_title", problem_title)
+      // verify required parameter 'run_readable_id' is not null or undefined
+      assertParamExists("retrieveProblem", "run_readable_id", run_readable_id)
+      const localVarPath =
+        `/api/v0/tutor/problems/{run_readable_id}/{problem_title}/`
+          .replace(
+            `{${"problem_title"}}`,
+            encodeURIComponent(String(problem_title)),
+          )
+          .replace(
+            `{${"run_readable_id"}}`,
+            encodeURIComponent(String(run_readable_id)),
+          )
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+  }
+}
+
+/**
+ * TutorApi - functional programming interface
+ * @export
+ */
+export const TutorApiFp = function (configuration?: Configuration) {
+  const localVarAxiosParamCreator = TutorApiAxiosParamCreator(configuration)
+  return {
+    /**
+     * Retrieve a list of problem names for a course run
+     * @summary Retrieve problem list
+     * @param {string} run_readable_id
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async listProblems(
+      run_readable_id: string,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<ProblemListResponse>
+    > {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.listProblems(
+        run_readable_id,
+        options,
+      )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["TutorApi.listProblems"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
+     * Retrieve a specific problem and its solution for a course run
+     * @summary Retrieve Problem
+     * @param {string} problem_title
+     * @param {string} run_readable_id
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async retrieveProblem(
+      problem_title: string,
+      run_readable_id: string,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<RetrieveProblemResponse>
+    > {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.retrieveProblem(
+        problem_title,
+        run_readable_id,
+        options,
+      )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["TutorApi.retrieveProblem"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+  }
+}
+
+/**
+ * TutorApi - factory interface
+ * @export
+ */
+export const TutorApiFactory = function (
+  configuration?: Configuration,
+  basePath?: string,
+  axios?: AxiosInstance,
+) {
+  const localVarFp = TutorApiFp(configuration)
+  return {
+    /**
+     * Retrieve a list of problem names for a course run
+     * @summary Retrieve problem list
+     * @param {TutorApiListProblemsRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    listProblems(
+      requestParameters: TutorApiListProblemsRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<ProblemListResponse> {
+      return localVarFp
+        .listProblems(requestParameters.run_readable_id, options)
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * Retrieve a specific problem and its solution for a course run
+     * @summary Retrieve Problem
+     * @param {TutorApiRetrieveProblemRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    retrieveProblem(
+      requestParameters: TutorApiRetrieveProblemRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<RetrieveProblemResponse> {
+      return localVarFp
+        .retrieveProblem(
+          requestParameters.problem_title,
+          requestParameters.run_readable_id,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+  }
+}
+
+/**
+ * Request parameters for listProblems operation in TutorApi.
+ * @export
+ * @interface TutorApiListProblemsRequest
+ */
+export interface TutorApiListProblemsRequest {
+  /**
+   *
+   * @type {string}
+   * @memberof TutorApiListProblems
+   */
+  readonly run_readable_id: string
+}
+
+/**
+ * Request parameters for retrieveProblem operation in TutorApi.
+ * @export
+ * @interface TutorApiRetrieveProblemRequest
+ */
+export interface TutorApiRetrieveProblemRequest {
+  /**
+   *
+   * @type {string}
+   * @memberof TutorApiRetrieveProblem
+   */
+  readonly problem_title: string
+
+  /**
+   *
+   * @type {string}
+   * @memberof TutorApiRetrieveProblem
+   */
+  readonly run_readable_id: string
+}
+
+/**
+ * TutorApi - object-oriented interface
+ * @export
+ * @class TutorApi
+ * @extends {BaseAPI}
+ */
+export class TutorApi extends BaseAPI {
+  /**
+   * Retrieve a list of problem names for a course run
+   * @summary Retrieve problem list
+   * @param {TutorApiListProblemsRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof TutorApi
+   */
+  public listProblems(
+    requestParameters: TutorApiListProblemsRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return TutorApiFp(this.configuration)
+      .listProblems(requestParameters.run_readable_id, options)
+      .then((request) => request(this.axios, this.basePath))
+  }
+
+  /**
+   * Retrieve a specific problem and its solution for a course run
+   * @summary Retrieve Problem
+   * @param {TutorApiRetrieveProblemRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof TutorApi
+   */
+  public retrieveProblem(
+    requestParameters: TutorApiRetrieveProblemRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return TutorApiFp(this.configuration)
+      .retrieveProblem(
+        requestParameters.problem_title,
+        requestParameters.run_readable_id,
+        options,
+      )
       .then((request) => request(this.axios, this.basePath))
   }
 }

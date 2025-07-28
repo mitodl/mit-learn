@@ -12,13 +12,18 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
-from rest_framework import views, viewsets
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    extend_schema,
+    extend_schema_view,
+    inline_serializer,
+)
+from rest_framework import serializers, views, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter
 from rest_framework.generics import get_object_or_404
 from rest_framework.pagination import LimitOffsetPagination
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_nested.viewsets import NestedViewSetMixin
 
@@ -28,6 +33,7 @@ from channels.models import Channel
 from learning_resources import permissions
 from learning_resources.constants import (
     GROUP_CONTENT_FILE_CONTENT_VIEWERS,
+    GROUP_TUTOR_PROBLEM_VIEWERS,
     LearningResourceRelationTypes,
     LearningResourceType,
     PlatformType,
@@ -51,6 +57,7 @@ from learning_resources.models import (
     LearningResourceRun,
     LearningResourceSchool,
     LearningResourceTopic,
+    TutorProblemFile,
     UserList,
     UserListRelationship,
 )
@@ -1348,3 +1355,98 @@ class LearningResourceDisplayInfoViewSet(BaseLearningResourceViewSet):
         instance = self.get_object()
         serializer = LearningResourceSerializer(instance)
         return Response(self.get_serializer(serializer.data).data)
+
+
+@extend_schema_view(
+    list_problems=extend_schema(
+        summary="Retrieve problem list",
+        description="Retrieve a list of problem names for a course run",
+        operation_id="list_problems",
+        responses={
+            200: inline_serializer(
+                name="ProblemListResponse",
+                fields={
+                    "problem_set_titles": serializers.ListField(
+                        child=serializers.CharField()
+                    )
+                },
+            )
+        },
+    ),
+    retrieve_problem=extend_schema(
+        summary="Retrieve Problem",
+        description="Retrieve a specific problem and its solution for a course run",
+        operation_id="retrieve_problem",
+        responses={
+            200: inline_serializer(
+                name="RetrieveProblemResponse",
+                fields={
+                    "problem_set": serializers.CharField(),
+                    "solution_set": serializers.CharField(),
+                },
+            )
+        },
+    ),
+)
+class CourseRunProblemsViewSet(viewsets.ViewSet):
+    """Viewset for all tutorbot problems and solutions for a course run"""
+
+    class IsAdminOrTutorProblemViewer(BasePermission):
+        def has_permission(self, request, view):  # noqa: ARG002
+            user = request.user
+            if not user or not user.is_authenticated:
+                return False
+            if user.is_staff or user.is_superuser:
+                return True
+            return user.groups.filter(name=GROUP_TUTOR_PROBLEM_VIEWERS).exists()
+
+    permission_classes = (IsAdminOrTutorProblemViewer,)
+
+    http_method_names = ["get"]
+    lookup_field = "run_readable_id"
+    lookup_url_kwarg = "run_readable_id"
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path=r"(?P<run_readable_id>[^/]+)",
+    )
+    def list_problems(self, request, run_readable_id):  # noqa: ARG002
+        """
+        Generate a QuerySet for fetching Tutorbot problems for a course run
+
+        Returns:
+            QuerySet of CourseRunProblem objects for the course run
+        """
+        run = LearningResourceRun.objects.filter(
+            run_id=run_readable_id,
+            learning_resource__platform=PlatformType.canvas.name,
+        ).first()
+        problem_list = (
+            TutorProblemFile.objects.filter(run=run)
+            .order_by("problem_title")
+            .values_list("problem_title", flat=True)
+            .distinct()
+        )
+        return Response({"problem_set_titles": list(problem_list)})
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path=r"(?P<run_readable_id>[^/]+)/(?P<problem_title>[^/]+)",
+    )
+    def retrieve_problem(self, request, run_readable_id, problem_title):  # noqa: ARG002
+        run = LearningResourceRun.objects.filter(
+            run_id=run_readable_id, learning_resource__platform=PlatformType.canvas.name
+        ).first()
+
+        problem_file = TutorProblemFile.objects.get(
+            run=run, problem_title=problem_title, type="problem"
+        )
+        solution_file = TutorProblemFile.objects.get(
+            run=run, problem_title=problem_title, type="solution"
+        )
+
+        return Response(
+            {"problem_set": problem_file.content, "solution_set": solution_file.content}
+        )

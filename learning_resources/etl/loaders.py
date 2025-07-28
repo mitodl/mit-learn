@@ -41,6 +41,7 @@ from learning_resources.models import (
     PodcastEpisode,
     Program,
     RunInstructorRelationship,
+    TutorProblemFile,
     Video,
     VideoChannel,
     VideoPlaylist,
@@ -805,6 +806,63 @@ def load_content_files(
 
         return content_files_ids
     return None
+
+
+def load_problem_file(
+    course_run: LearningResourceRun, problem_file_data: dict
+) -> ContentFile:
+    """
+    Sync a tutorbot problem to the database
+
+    Args:
+        course_run (LearningResourceRun): a LearningResourceRun for a Course
+        problem_file_data (dict): File metadata as JSON
+
+    Returns:
+        Int: the id of the object that was created or updated
+    """
+    try:
+        problem_file, _ = TutorProblemFile.objects.update_or_create(
+            run=course_run,
+            source_path=problem_file_data.get("source_path"),
+            defaults=problem_file_data,
+        )
+        return problem_file.id  # noqa: TRY300
+    except:  # noqa: E722
+        log.exception(
+            "ERROR syncing problem file  %s for run %d",
+            problem_file_data.get("source_path", ""),
+            course_run.id,
+        )
+
+
+def load_problem_files(
+    course_run: LearningResourceRun,
+    problem_files_data: list[dict],
+) -> list[int]:
+    """
+    Sync all problem files for canvas course
+
+    Args:
+        course_run (LearningResourceRun): a course run
+        problem_files_data (list or generator): Details about the problem files
+
+    Returns:
+        list of int: Ids of the TutorProblemFile objects that were created/updated
+
+    """
+    problem_files_ids = [
+        load_problem_file(course_run, problem_file)
+        for problem_file in problem_files_data
+    ]
+    for file in (
+        TutorProblemFile.objects.filter(run=course_run)
+        .exclude(id__in=problem_files_ids)
+        .all()
+    ):
+        file.delete()
+
+    return problem_files_ids
 
 
 def load_podcast_episode(episode_data: dict) -> LearningResource:
