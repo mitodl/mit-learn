@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.38.2
+Version 0.38.2 (Released July 28, 2025)
 --------------
 
 - remove unpublished canvas content (#2386)
