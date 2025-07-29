@@ -6,7 +6,7 @@
 
 import {
   CourseRunEnrollment,
-  CourseWithCourseRuns,
+  V2CourseWithCourseRuns,
   V2Program,
   V2ProgramCollection,
 } from "@mitodl/mitxonline-api-axios/v1"
@@ -68,7 +68,7 @@ const mitxonlineEnrollments = (data: CourseRunEnrollment[]) =>
   data.map((course) => mitxonlineEnrollment(course))
 
 const mitxonlineUnenrolledCourse = (
-  course: CourseWithCourseRuns,
+  course: V2CourseWithCourseRuns,
 ): DashboardCourse => {
   const run = course.courseruns.find((run) => run.id === course.next_run_id)
   return {
@@ -94,7 +94,7 @@ const mitxonlineUnenrolledCourse = (
 }
 
 const mitxonlineCourses = (raw: {
-  courses: CourseWithCourseRuns[]
+  courses: V2CourseWithCourseRuns[]
   enrollments: CourseRunEnrollment[]
 }) => {
   const enrollmentsByCourseId = groupBy(
