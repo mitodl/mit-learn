@@ -3025,13 +3025,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/mitxonline-api-axios@git+https://github.com/gumaerc/mitxonline-api-axios.git":
-  version: 2025.7.22-2
-  resolution: "@mitodl/mitxonline-api-axios@https://github.com/gumaerc/mitxonline-api-axios.git#commit=c5e0a59d958e03a602b5313da47f3dcefbd7b33b"
+"@mitodl/mitxonline-api-axios@npm:2025.7.28":
+  version: 2025.7.28
+  resolution: "@mitodl/mitxonline-api-axios@npm:2025.7.28"
   dependencies:
     "@types/node": "npm:^20.11.19"
     axios: "npm:^1.6.5"
-  checksum: 10/3f099b749d7ebdaf398ea2ca40cf512ff91ad5f08852874205f45ee6d11e6f062a80b42d574f6dca62426e0863d666e5c3f2e807ca925cdfb0a9fa14b2036ff8
+  checksum: 10/87e696455f1f6555aa40f5e966f34f39484b58953eebc257e0a4e78bc30c9b6dc489577d02213970f72196f725557e53f0986fe32df1d5f44514a64bf5043201
   languageName: node
   linkType: hard
 
@@ -7370,7 +7370,7 @@ __metadata:
   resolution: "api@workspace:frontends/api"
   dependencies:
     "@faker-js/faker": "npm:^9.9.0"
-    "@mitodl/mitxonline-api-axios": "git+https://github.com/gumaerc/mitxonline-api-axios.git"
+    "@mitodl/mitxonline-api-axios": "npm:2025.7.28"
     "@tanstack/react-query": "npm:^5.66.0"
     "@testing-library/react": "npm:^16.1.0"
     axios: "npm:^1.6.3"
@@ -13906,7 +13906,7 @@ __metadata:
     "@emotion/styled": "npm:^11.11.0"
     "@faker-js/faker": "npm:^9.9.0"
     "@mitodl/course-search-utils": "npm:3.3.2"
-    "@mitodl/mitxonline-api-axios": "git+https://github.com/gumaerc/mitxonline-api-axios.git"
+    "@mitodl/mitxonline-api-axios": "npm:2025.7.28"
     "@mitodl/smoot-design": "npm:^6.10.0"
     "@next/bundle-analyzer": "npm:^14.2.15"
     "@remixicon/react": "npm:^4.2.0"
