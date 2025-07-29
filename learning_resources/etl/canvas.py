@@ -1,17 +1,18 @@
 import base64
-import json
 import logging
 import sys
 import zipfile
 from collections import defaultdict
 from collections.abc import Generator
+from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from defusedxml import ElementTree
 from django.conf import settings
 from litellm import completion
-from litellm.utils import supports_pdf_input
+from pdf2image import convert_from_path
+from PIL import Image
 from pydantic import BaseModel
 
 from learning_resources.constants import LearningResourceType, PlatformType
@@ -193,14 +194,15 @@ def transform_canvas_problem_files(
 
             if path_parts[1] in ["problem", "solution"]:
                 problem_file_data["type"] = path_parts[1]
-            if problem_file_data[
-                "file_extension"
-            ].lower() == ".pdf" and supports_pdf_input(
-                settings.CANVAS_PDF_TRANSCRIPTION_MODEL
+            if (
+                problem_file_data["file_extension"].lower() == ".pdf"
+                and settings.CANVAS_PDF_TRANSCRIPTION_MODEL
             ):
-                problem_file_data["content"] = _pdf_to_markdown(
+                markdown_content = _pdf_to_markdown(
                     Path(olx_path) / Path(problem_file_data["source_path"])
                 )
+                if markdown_content:
+                    problem_file_data["content"] = markdown_content
             yield problem_file_data
 
 
@@ -283,43 +285,71 @@ def extract_resources_by_identifierref(manifest_xml: str) -> dict:
     return dict(resources_dict)
 
 
-def _pdf_to_base64(pdf_path):
+def pdf_to_base64_images(pdf_path, dpi=200, fmt="JPEG", max_size=2000, quality=85):
     """
-    Convert a PDF file to a base64-encoded string.
+    Convert a PDF file to a list of base64 encoded images (one per page).
+    Resizes images to reduce file size while keeping good OCR quality.
 
     Args:
-        pdf_path (str): Path to the PDF file.
+        pdf_path (str): Path to the PDF file
+        dpi (int): DPI for the output images (default: 200)
+        fmt (str): Output format ('JPEG' or 'PNG') (default: 'JPEG')
+        max_size (int): Maximum width/height in pixels (default: 2000)
+        quality (int): JPEG quality (1-100, default: 85)
 
     Returns:
-        str: Base64-encoded string of the PDF file's contents.
+        list: List of base64 encoded strings (one per page)
     """
-    with Path.open(pdf_path, "rb") as pdf_file:
-        encoded_string = base64.b64encode(pdf_file.read())
-        return encoded_string.decode("utf-8")
+    images = convert_from_path(pdf_path, dpi=dpi)
+    base64_images = []
+
+    for image in images:
+        # Resize the image if it's too large (preserving aspect ratio)
+        if max(image.size) > max_size:
+            image.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+
+        buffered = BytesIO()
+
+        # Save with optimized settings
+        if fmt.upper() == "JPEG":
+            image.save(buffered, format="JPEG", quality=quality, optimize=True)
+        else:  # PNG
+            image.save(buffered, format="PNG", optimize=True)
+
+        img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
+        base64_images.append(img_str)
+
+    return base64_images
 
 
 def _pdf_to_markdown(pdf_path):
-    encoded_pdf = _pdf_to_base64(pdf_path)
-    base64_url = f"data:application/pdf;base64,{encoded_pdf}"
-    file_content = [
-        {
-            "type": "text",
-            "text": (
-                "Transcribe this file as-is into markdown format"
-                "(do not rewrite anything). Give me the full transcription"
-            ),
-        },
-        {
-            "type": "file",
-            "file": {
-                "file_data": base64_url,
-            },
-        },
-    ]
-    response = completion(
-        model=settings.CANVAS_PDF_TRANSCRIPTION_MODEL,
-        messages=[{"role": "user", "content": file_content}],
-        response_format=TranscribedTutorProblem,
-        stream=False,
-    )
-    return json.load(response.choices[0].message.content)["markdown_content"]
+    markdown = ""
+    for im in pdf_to_base64_images(pdf_path):
+        response = completion(
+            model=settings.CANVAS_PDF_TRANSCRIPTION_MODEL,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": settings.CANVAS_TRANSCRIPTION_PROMPT,
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{im}",
+                            },
+                        },
+                    ],
+                }
+            ],
+        )
+        markdown_snippet = (
+            response.json()["choices"][0]["message"]["content"]
+            .removeprefix("```markdown\n")
+            .removesuffix("\n```")
+        )
+
+        markdown += markdown_snippet
+    return markdown
