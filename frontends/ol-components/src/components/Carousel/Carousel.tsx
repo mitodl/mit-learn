@@ -49,7 +49,7 @@ const SlickStyled = styled(Slick)<{ rendered: boolean }>(({ rendered }) => [
     ".slick-track": {
       /**
        * When react-slick renders on the server, it sets `style="width: 0px;"`
-       * on the `.slick-track` element. This, combined with auto margoins,
+       * on the `.slick-track` element. This, combined with auto margins,
        * causes the carousel to render with strange positioning initially.
        */
       width: "unset !important",
