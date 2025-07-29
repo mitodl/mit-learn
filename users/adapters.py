@@ -49,7 +49,7 @@ class LearnUserAdapter(UserAdapter):
         if newly_created:
             pm = get_plugin_manager()
             hook = pm.hook
-            hook.user_created(user=self.obj, user_data={"profile": self.to_dict()})
+            hook.user_created(user=self.obj, user_data={})
 
     def _save_related(self):
         """
