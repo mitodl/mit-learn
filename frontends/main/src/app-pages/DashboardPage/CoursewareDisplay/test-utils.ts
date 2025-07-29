@@ -136,6 +136,14 @@ const setupProgramsAndCourses = () => {
     results: [programCollection],
   })
   setMockResponse.get(
+    urls.programs.programsList({ id: programA.id, org_id: orgX.id }),
+    { results: [programA] },
+  )
+  setMockResponse.get(
+    urls.programs.programsList({ id: programB.id, org_id: orgX.id }),
+    { results: [programB] },
+  )
+  setMockResponse.get(
     urls.courses.coursesList({ id: programA.courses, org_id: orgX.id }),
     {
       results: coursesA.results,

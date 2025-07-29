@@ -108,7 +108,7 @@ const OrgProgramCollectionDisplay: React.FC<{
       </ProgramHeader>
       <PlainList itemSpacing={0}>
         {collection.programIds.map((programId) => (
-          <ProgramCard
+          <ProgramCollectionItem
             key={programId}
             programId={programId}
             enrollments={enrollments}
@@ -165,7 +165,7 @@ const OrgProgramDisplay: React.FC<{
   )
 }
 
-const ProgramCard: React.FC<{
+const ProgramCollectionItem: React.FC<{
   programId: number
   enrollments?: CourseRunEnrollment[]
   orgId: number
@@ -173,20 +173,38 @@ const ProgramCard: React.FC<{
   const program = useQuery(
     programsQueries.programsList({ id: programId, org_id: orgId }),
   )
+  if (program.isLoading || !program.data?.results.length) {
+    return (
+      <Skeleton width="100%" height="65px" style={{ marginBottom: "16px" }} />
+    )
+  }
+  const transformedProgram = transform.mitxonlineProgram(
+    program.data?.results[0],
+  )
+  return (
+    <ProgramCard
+      program={transformedProgram}
+      enrollments={enrollments}
+      orgId={orgId}
+    />
+  )
+}
+
+const ProgramCard: React.FC<{
+  program: DashboardProgram
+  enrollments?: CourseRunEnrollment[]
+  orgId?: number
+}> = ({ program, enrollments, orgId }) => {
   const courses = useQuery(
     coursesQueries.coursesList({
-      id: program.data?.results[0]?.courses,
+      id: program.courseIds,
       org_id: orgId,
     }),
   )
   const skeleton = (
     <Skeleton width="100%" height="65px" style={{ marginBottom: "16px" }} />
   )
-  if (program.isLoading || !program.data?.results.length) return skeleton
   if (courses.isLoading) return skeleton
-  const transformedProgram = transform.mitxonlineProgram(
-    program.data?.results[0] ?? {},
-  )
   const transformedCourses = transform.mitxonlineCourses({
     courses: courses.data?.results ?? [],
     enrollments: enrollments ?? [],
@@ -197,7 +215,7 @@ const ProgramCard: React.FC<{
   return (
     <DashboardCard
       Component="li"
-      key={transformedProgram.key}
+      key={program.key}
       dashboardResource={course}
       courseNoun={"Course"}
       offerUpgrade={false}
