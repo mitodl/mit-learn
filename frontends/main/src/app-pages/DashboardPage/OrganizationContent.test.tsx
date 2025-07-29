@@ -118,4 +118,23 @@ describe("OrganizationContent", () => {
     expect(collection.getAllByText(coursesA[0].title).length).toBeGreaterThan(0)
     expect(collection.getAllByText(coursesB[0].title).length).toBeGreaterThan(0)
   })
+
+  test("Does not render a program separately if it is part of a collection", async () => {
+    const { orgX, programA, programB, programCollection } =
+      setupProgramsAndCourses()
+    setMockResponse.get(urls.enrollment.enrollmentsList(), [])
+    programCollection.programs = [programA.id, programB.id]
+    setMockResponse.get(urls.programCollections.programCollectionsList(), {
+      results: [programCollection],
+    })
+
+    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+
+    const collectionItems = await screen.findAllByTestId(
+      "org-program-collection-root",
+    )
+    expect(collectionItems.length).toBe(1)
+    const programs = screen.queryAllByTestId("org-program-root")
+    expect(programs.length).toBe(0)
+  })
 })
