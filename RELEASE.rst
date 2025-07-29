@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.38.3
+Version 0.38.3 (Released July 29, 2025)
 --------------
 
 - update canvas etl (#2400)
