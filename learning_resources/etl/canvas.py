@@ -13,7 +13,6 @@ from django.conf import settings
 from litellm import completion
 from pdf2image import convert_from_path
 from PIL import Image
-from pydantic import BaseModel
 
 from learning_resources.constants import LearningResourceType, PlatformType
 from learning_resources.etl.constants import ETLSource
@@ -33,10 +32,6 @@ from learning_resources_search.constants import (
 )
 
 log = logging.getLogger(__name__)
-
-
-class TranscribedTutorProblem(BaseModel):
-    markdown_content: str
 
 
 def sync_canvas_archive(bucket, key: str, overwrite):
