@@ -338,3 +338,4 @@ CURRENCY_USD = "USD"
 
 
 GROUP_CONTENT_FILE_CONTENT_VIEWERS = "content_file_viewers"
+GROUP_TUTOR_PROBLEM_VIEWERS = "tutor_problem_viewers"

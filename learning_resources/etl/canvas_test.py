@@ -1,6 +1,7 @@
 """Tests for Canvas ETL functionality"""
 
 import zipfile
+from pathlib import Path
 
 import pytest
 
@@ -9,13 +10,18 @@ from learning_resources.etl.canvas import (
     parse_canvas_settings,
     parse_module_meta,
     run_for_canvas_archive,
+    transform_canvas_content_files,
 )
 from learning_resources.etl.constants import ETLSource
+from learning_resources.etl.utils import get_edx_module_id
 from learning_resources.factories import (
+    ContentFileFactory,
     LearningResourceFactory,
     LearningResourcePlatformFactory,
+    LearningResourceRunFactory,
 )
 from learning_resources.models import LearningResource
+from learning_resources_search.constants import CONTENT_FILE_TYPE
 
 pytestmark = pytest.mark.django_db
 
@@ -250,3 +256,85 @@ def test_parse_module_meta_handles_missing_identifierref(tmp_path):
     assert "active" in result
     assert len(result["active"]) == 0
     assert len(result["unpublished"]) == 0
+
+
+def test_transform_canvas_content_files_removes_unpublished_content(mocker, tmp_path):
+    """
+    Test that transform_canvas_content_files removes content files not marked as published.
+    """
+
+    # Setup: create a fake run with some content files
+    resource = LearningResourceFactory.create(etl_source=ETLSource.canvas.name)
+    run = LearningResourceRunFactory.create(learning_resource=resource)
+
+    published_path = "/test/published/file1.html"
+    unpublished_path = "/test/unpublished/file2.html"
+    unpublished_cf = ContentFileFactory.create(
+        run=run, published=True, key=get_edx_module_id(unpublished_path, run)
+    )
+    module_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <modules xmlns="http://canvas.instructure.com/xsd/cccv1p0">
+      <module>
+        <title>Module 1</title>
+        <items>
+          <item>
+            <workflow_state>active</workflow_state>
+            <title>Item 1</title>
+            <identifierref>RES1</identifierref>
+            <content_type>resource</content_type>
+          </item>
+          <item>
+            <workflow_state>unpublished</workflow_state>
+            <title>Item 2</title>
+            <identifierref>RES2</identifierref>
+            <content_type>resource</content_type>
+          </item>
+        </items>
+      </module>
+    </modules>
+    """
+    manifest_xml = bytes(
+        f"""<?xml version="1.0" encoding="UTF-8"?>
+    <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
+      <resources>
+        <resource identifier="RES1" type="webcontent">
+          <file href="{published_path}"/>
+        </resource>
+        <resource identifier="RES2" type="webcontent">
+          <file href="{unpublished_path}"/>
+        </resource>
+      </resources>
+      <organizations>
+        <organization>
+          <item identifierref="RES1">
+            <title>Item 1</title>
+          </item>
+          <item identifierref="RES2">
+            <title>Item 2</title>
+          </item>
+        </organization>
+      </organizations>
+    </manifest>
+    """,
+        "utf-8",
+    )
+    zip_path = tmp_path / "canvas_course.zip"
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr("course_settings/module_meta.xml", module_xml)
+        zf.writestr("imsmanifest.xml", manifest_xml)
+        zf.writestr(published_path, "content")
+        zf.writestr(unpublished_path, "content")
+    mocker.patch(
+        "learning_resources.etl.utils.extract_text_metadata",
+        return_value={"content": "test"},
+    )
+    bulk_unpub = mocker.patch(
+        "learning_resources.etl.canvas.bulk_resources_unpublished_actions"
+    )
+
+    # Create a fake zipfile with the published file
+
+    list(transform_canvas_content_files(Path(zip_path), run, overwrite=True))
+
+    # Ensure unpublished content is deleted and unpublished actions called
+    bulk_unpub.assert_called_once_with([unpublished_cf.id], CONTENT_FILE_TYPE)
