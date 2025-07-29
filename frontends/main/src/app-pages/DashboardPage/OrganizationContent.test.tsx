@@ -33,8 +33,13 @@ describe("OrganizationContent", () => {
     await screen.findByRole("heading", {
       name: `Your ${orgX.name} Home`,
     })
+
+    const programAHeader = await screen.findByText(programA.title)
+    const programBHeader = await screen.findByText(programB.title)
+    expect(programAHeader).toBeInTheDocument()
+    expect(programBHeader).toBeInTheDocument()
+
     const programs = await screen.findAllByTestId("org-program-root")
-    screen.debug(programs)
     expect(programs.length).toBe(2)
 
     await within(programs[0]).findByRole("heading", { name: programA.title })
