@@ -14,7 +14,11 @@ from litellm import completion
 from pdf2image import convert_from_path
 from PIL import Image
 
-from learning_resources.constants import LearningResourceType, PlatformType
+from learning_resources.constants import (
+    VALID_TUTOR_PROBLEM_TYPES,
+    LearningResourceType,
+    PlatformType,
+)
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.utils import (
     _process_olx_path,
@@ -184,11 +188,12 @@ def transform_canvas_problem_files(
 
             path = file_data["source_path"]
             path = path[len(settings.CANVAS_TUTORBOT_FOLDER) :]
-            path_parts = path.split("/")
+            path_parts = path.split("/", 1)
             problem_file_data["problem_title"] = path_parts[0]
-
-            if path_parts[1] in ["problem", "solution"]:
-                problem_file_data["type"] = path_parts[1]
+            for problem_type in VALID_TUTOR_PROBLEM_TYPES:
+                if problem_type in path_parts[1].lower():
+                    problem_file_data["type"] = problem_type
+                    break
             if (
                 problem_file_data["file_extension"].lower() == ".pdf"
                 and settings.CANVAS_PDF_TRANSCRIPTION_MODEL
