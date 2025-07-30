@@ -19,25 +19,41 @@ const Overlay = styled.div(({ theme }) => ({
   },
 }))
 
-const CloseButton = styled(ActionButton)({
+const BaseButton = styled(ActionButton)(({ theme }) => ({
   position: "absolute",
+  zIndex: 1201,
+  svg: {
+    fill: "white",
+  },
+  [theme.breakpoints.down("md")]: {
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    borderRadius: "50%",
+    height: "58px",
+    width: "58px",
+    right: "26px",
+    "&&:hover": {
+      backgroundColor: "rgba(40, 40, 40, 0.6)",
+    },
+  },
+}))
+
+const CloseButton = styled(BaseButton)(({ theme }) => ({
   top: "16px",
   right: "16px",
-  zIndex: 1201,
-  svg: {
-    fill: "white",
+  [theme.breakpoints.down("md")]: {
+    top: "26px",
+    right: "26px",
   },
-})
+}))
 
-const MuteButton = styled(ActionButton)({
-  position: "absolute",
+const MuteButton = styled(BaseButton)(({ theme }) => ({
   right: "16px",
   bottom: "16px",
-  zIndex: 1201,
-  svg: {
-    fill: "white",
+  [theme.breakpoints.down("md")]: {
+    bottom: "26px",
+    right: "26px",
   },
-})
+}))
 
 const CarouselSlide = styled.div<{ width: number }>(({ width, theme }) => ({
   width,
