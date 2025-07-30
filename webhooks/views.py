@@ -1,6 +1,7 @@
 import json
 import logging
 
+from django.core.exceptions import BadRequest
 from django.db.transaction import non_atomic_requests
 from django.http import HttpResponseBadRequest
 from django.utils.decorators import method_decorator
@@ -11,7 +12,11 @@ from rest_framework import generics
 from rest_framework.response import Response
 
 from learning_resources.etl.constants import ETLSource
+from learning_resources.models import LearningResource
 from learning_resources.tasks import ingest_canvas_course
+from learning_resources.utils import (
+    resource_delete_actions,
+)
 from webhooks.decorators import require_signature
 from webhooks.serializers import (
     ContentFileWebHookRequestSerializer,
@@ -45,35 +50,81 @@ class ContentFileWebhookView(BaseWebhookView):
     authentication_classes = []
     serializer_class = ContentFileWebHookRequestSerializer
 
+    def success(self, extra_data=None):
+        """
+        Return a success response with optional extra data
+        """
+        if not extra_data:
+            extra_data = {}
+        response = WebhookResponseSerializer(
+            data={"status": "success", "message": "Webhook received", **extra_data}
+        )
+        if response.is_valid():
+            return Response(response.data)
+        else:
+            log.error("Invalid response data: %s", response.errors)
+            return HttpResponseBadRequest("Invalid response data")
+
+    def get_data(self, request):
+        """
+        Get data from the serializer
+        """
+        serializer = ContentFileWebHookRequestSerializer(data=json.loads(request.body))
+        if not serializer.is_valid():
+            log.error("Invalid webhook data: %s", serializer.errors)
+            msg = "Invalid data"
+            raise BadRequest(msg)
+        return serializer.validated_data
+
     def post(self, request):
-        """
-        Handle POST requests to the webhook.
-        """
         try:
-            serializer = ContentFileWebHookRequestSerializer(
-                data=json.loads(request.body)
-            )
-            if not serializer.is_valid():
-                log.error("Invalid webhook data: %s", serializer.errors)
-                return HttpResponseBadRequest("Invalid data")
-            data = serializer.validated_data
+            data = self.get_data(request)
             log.info("Received webhook data: %s", data)
-            process_content_file_request(data)
-            response = WebhookResponseSerializer(
-                data={"status": "success", "message": "Webhook received"}
-            )
-            if response.is_valid():
-                return Response(response.data)
+            process_create_content_file_request(data)
+            return self.success()
         except json.JSONDecodeError:
             return HttpResponseBadRequest("Invalid JSON format")
 
 
-def process_content_file_request(data):
+class ContentFileDeleteWebhookView(ContentFileWebhookView):
     """
-    Process a content file webhhok request based on the ETL source
+    Webhook handler for ContentFile DELETE requests
+    """
+
+    def post(self, request):
+        try:
+            data = self.get_data(request)
+            process_delete_content_file_request(data)
+            return self.success()
+        except json.JSONDecodeError:
+            return HttpResponseBadRequest("Invalid JSON format")
+
+
+def process_create_content_file_request(data):
+    """
+    Process a content file CREATE webhook request based on the ETL source
     """
     etl_source = data.get("source")
     content_path = data.get("content_path")
     if etl_source == ETLSource.canvas.name:
         log.info("Processing Canvas content file: %s", content_path)
         ingest_canvas_course.apply_async([content_path, True])
+
+
+def process_delete_content_file_request(data):
+    """
+    Process a content file DELETE webhhook request based on the ETL source
+    """
+    etl_source = data.get("source")
+    if etl_source == ETLSource.canvas.name:
+        course_id = data.get("course_id")
+        if course_id:
+            try:
+                resource = LearningResource.objects.get(
+                    readable_id__istartswith=f"{course_id}-",
+                    etl_source=ETLSource.canvas.name,
+                )
+                resource.save()
+                resource_delete_actions(resource)
+            except LearningResource.DoesNotExist:
+                log.warning("Resource with readable_id %s does not exist", course_id)

@@ -60,7 +60,7 @@ const BottomContainer = styled.div(({ theme }) => ({
   },
   padding: "32px 28px",
   [theme.breakpoints.down("md")]: {
-    padding: "16px 0 16px 16px",
+    padding: "16px",
   },
 }))
 
