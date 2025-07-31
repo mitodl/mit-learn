@@ -21,7 +21,6 @@ import type {
   LearningResourceSchool,
   LearningResourceTopic,
   MicroLearningPathRelationship,
-  PaginatedLearningPathRelationshipList,
   PodcastResource,
   PodcastEpisodeResource,
   ProgramResource,
@@ -419,17 +418,11 @@ const learningResourceRelationship: Factory<LearningResourceRelationship> = (
 const learningResourceRelationships = ({
   count,
   parent,
-  pageSize,
-  next = null,
-  previous = null,
 }: {
   count: number
   parent: number
-  pageSize?: number
-  next?: string | null
-  previous?: string | null
 }) => {
-  const results: LearningPathRelationship[] = Array(pageSize ?? count)
+  return Array(count)
     .fill(null)
     .map((_val, index) => {
       return learningResourceRelationship({
@@ -437,12 +430,6 @@ const learningResourceRelationships = ({
         parent,
       })
     })
-  return {
-    count,
-    next,
-    previous,
-    results,
-  } satisfies PaginatedLearningPathRelationshipList
 }
 
 const learningPathRelationship: Factory<LearningPathRelationship> = (
