@@ -8230,18 +8230,6 @@ paths:
       description: Viewset for UserListRelationships
       summary: User List Resources List
       parameters:
-      - name: limit
-        required: false
-        in: query
-        description: Number of results to return per page.
-        schema:
-          type: integer
-      - name: offset
-        required: false
-        in: query
-        description: The initial index from which to return the results.
-        schema:
-          type: integer
       - in: path
         name: userlist_id
         schema:
@@ -8255,7 +8243,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedUserListRelationshipList'
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserListRelationship'
           description: ''
     post:
       operationId: userlists_items_create
@@ -12238,29 +12228,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/UserList'
-    PaginatedUserListRelationshipList:
-      type: object
-      required:
-      - count
-      - results
-      properties:
-        count:
-          type: integer
-          example: 123
-        next:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?offset=400&limit=100
-        previous:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?offset=200&limit=100
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/UserListRelationship'
     PaginatedVideoPlaylistResourceList:
       type: object
       required:

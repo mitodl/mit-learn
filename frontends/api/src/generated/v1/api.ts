@@ -4025,37 +4025,6 @@ export interface PaginatedUserListList {
 /**
  *
  * @export
- * @interface PaginatedUserListRelationshipList
- */
-export interface PaginatedUserListRelationshipList {
-  /**
-   *
-   * @type {number}
-   * @memberof PaginatedUserListRelationshipList
-   */
-  count: number
-  /**
-   *
-   * @type {string}
-   * @memberof PaginatedUserListRelationshipList
-   */
-  next?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof PaginatedUserListRelationshipList
-   */
-  previous?: string | null
-  /**
-   *
-   * @type {Array<UserListRelationship>}
-   * @memberof PaginatedUserListRelationshipList
-   */
-  results: Array<UserListRelationship>
-}
-/**
- *
- * @export
  * @interface PaginatedVideoPlaylistResourceList
  */
 export interface PaginatedVideoPlaylistResourceList {
@@ -26649,15 +26618,11 @@ export const UserlistsApiAxiosParamCreator = function (
      * Viewset for UserListRelationships
      * @summary User List Resources List
      * @param {number} userlist_id id of the parent user list
-     * @param {number} [limit] Number of results to return per page.
-     * @param {number} [offset] The initial index from which to return the results.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     userlistsItemsList: async (
       userlist_id: number,
-      limit?: number,
-      offset?: number,
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
       // verify required parameter 'userlist_id' is not null or undefined
@@ -26680,14 +26645,6 @@ export const UserlistsApiAxiosParamCreator = function (
       }
       const localVarHeaderParameter = {} as any
       const localVarQueryParameter = {} as any
-
-      if (limit !== undefined) {
-        localVarQueryParameter["limit"] = limit
-      }
-
-      if (offset !== undefined) {
-        localVarQueryParameter["offset"] = offset
-      }
 
       setSearchParams(localVarUrlObj, localVarQueryParameter)
       let headersFromBaseOptions =
@@ -27140,29 +27097,20 @@ export const UserlistsApiFp = function (configuration?: Configuration) {
      * Viewset for UserListRelationships
      * @summary User List Resources List
      * @param {number} userlist_id id of the parent user list
-     * @param {number} [limit] Number of results to return per page.
-     * @param {number} [offset] The initial index from which to return the results.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     async userlistsItemsList(
       userlist_id: number,
-      limit?: number,
-      offset?: number,
       options?: RawAxiosRequestConfig,
     ): Promise<
       (
         axios?: AxiosInstance,
         basePath?: string,
-      ) => AxiosPromise<PaginatedUserListRelationshipList>
+      ) => AxiosPromise<Array<UserListRelationship>>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.userlistsItemsList(
-          userlist_id,
-          limit,
-          offset,
-          options,
-        )
+        await localVarAxiosParamCreator.userlistsItemsList(userlist_id, options)
       const index = configuration?.serverIndex ?? 0
       const operationBasePath =
         operationServerMap["UserlistsApi.userlistsItemsList"]?.[index]?.url
@@ -27459,14 +27407,9 @@ export const UserlistsApiFactory = function (
     userlistsItemsList(
       requestParameters: UserlistsApiUserlistsItemsListRequest,
       options?: RawAxiosRequestConfig,
-    ): AxiosPromise<PaginatedUserListRelationshipList> {
+    ): AxiosPromise<Array<UserListRelationship>> {
       return localVarFp
-        .userlistsItemsList(
-          requestParameters.userlist_id,
-          requestParameters.limit,
-          requestParameters.offset,
-          options,
-        )
+        .userlistsItemsList(requestParameters.userlist_id, options)
         .then((request) => request(axios, basePath))
     },
     /**
@@ -27659,20 +27602,6 @@ export interface UserlistsApiUserlistsItemsListRequest {
    * @memberof UserlistsApiUserlistsItemsList
    */
   readonly userlist_id: number
-
-  /**
-   * Number of results to return per page.
-   * @type {number}
-   * @memberof UserlistsApiUserlistsItemsList
-   */
-  readonly limit?: number
-
-  /**
-   * The initial index from which to return the results.
-   * @type {number}
-   * @memberof UserlistsApiUserlistsItemsList
-   */
-  readonly offset?: number
 }
 
 /**
@@ -27876,12 +27805,7 @@ export class UserlistsApi extends BaseAPI {
     options?: RawAxiosRequestConfig,
   ) {
     return UserlistsApiFp(this.configuration)
-      .userlistsItemsList(
-        requestParameters.userlist_id,
-        requestParameters.limit,
-        requestParameters.offset,
-        options,
-      )
+      .userlistsItemsList(requestParameters.userlist_id, options)
       .then((request) => request(this.axios, this.basePath))
   }
 
