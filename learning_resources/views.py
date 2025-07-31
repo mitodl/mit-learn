@@ -1400,7 +1400,7 @@ class CourseRunProblemsViewSet(viewsets.ViewSet):
                 return True
             return user.groups.filter(name=GROUP_TUTOR_PROBLEM_VIEWERS).exists()
 
-    permission_classes = (IsAdminOrTutorProblemViewer,)
+    permission_classes = ()
 
     http_method_names = ["get"]
     lookup_field = "run_readable_id"
@@ -1410,6 +1410,7 @@ class CourseRunProblemsViewSet(viewsets.ViewSet):
         detail=False,
         methods=["get"],
         url_path=r"(?P<run_readable_id>[^/]+)",
+        permission_classes=[AnonymousAccessReadonlyPermission],
     )
     def list_problems(self, request, run_readable_id):  # noqa: ARG002
         """
@@ -1434,6 +1435,7 @@ class CourseRunProblemsViewSet(viewsets.ViewSet):
         detail=False,
         methods=["get"],
         url_path=r"(?P<run_readable_id>[^/]+)/(?P<problem_title>[^/]+)",
+        permission_classes=[IsAdminOrTutorProblemViewer],
     )
     def retrieve_problem(self, request, run_readable_id, problem_title):  # noqa: ARG002
         run = LearningResourceRun.objects.filter(
