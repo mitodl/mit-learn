@@ -6,7 +6,11 @@ from django.http import HttpRequest
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
-from learning_resources.constants import GROUP_STAFF_LISTS_EDITORS, PrivacyLevel
+from learning_resources.constants import (
+    GROUP_STAFF_LISTS_EDITORS,
+    GROUP_TUTOR_PROBLEM_VIEWERS,
+    PrivacyLevel,
+)
 from learning_resources.models import LearningPath, UserList
 from main.permissions import is_admin_user, is_readonly
 
@@ -115,3 +119,13 @@ class HasUserListItemPermissions(BasePermission):
                 or obj.parent.privacy_level == PrivacyLevel.unlisted.value
             )
         return request.user == obj.parent.author
+
+
+class IsAdminOrTutorProblemViewer(BasePermission):
+    def has_permission(self, request, view):  # noqa: ARG002
+        user = request.user
+        if not user or not user.is_authenticated:
+            return False
+        if user.is_staff or user.is_superuser:
+            return True
+        return user.groups.filter(name=GROUP_TUTOR_PROBLEM_VIEWERS).exists()
