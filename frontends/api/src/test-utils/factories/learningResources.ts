@@ -464,17 +464,11 @@ const learningPathRelationship: Factory<LearningPathRelationship> = (
 const learningPathRelationships = ({
   count,
   parent,
-  pageSize,
-  next = null,
-  previous = null,
 }: {
   count: number
   parent: number
-  pageSize?: number
-  next?: string | null
-  previous?: string | null
 }) => {
-  const results: LearningPathRelationship[] = Array(pageSize ?? count)
+  return Array(count)
     .fill(null)
     .map((_val, index) => {
       return learningPathRelationship({
@@ -482,12 +476,6 @@ const learningPathRelationships = ({
         parent,
       })
     })
-  return {
-    count,
-    next,
-    previous,
-    results,
-  } satisfies PaginatedLearningPathRelationshipList
 }
 
 const podcast: LearningResourceFactory<PodcastResource> = (overrides = {}) => {

@@ -30,12 +30,7 @@ const LearningPathDetailsPage: React.FC = () => {
   const pathQuery = useLearningPathsDetail(id)
   const itemsQuery = useInfiniteLearningPathItems({
     learning_resource_id: id,
-    limit: 100,
   })
-  const items = useMemo(() => {
-    const pages = itemsQuery.data?.pages
-    return pages?.flatMap((p) => p.results ?? []) ?? []
-  }, [itemsQuery.data])
   const list = useMemo(() => {
     if (!pathQuery.data) {
       return undefined
@@ -53,7 +48,7 @@ const LearningPathDetailsPage: React.FC = () => {
       <ListDetailsPage
         listType={ListType.LearningPath}
         list={list}
-        items={items}
+        items={itemsQuery.data?.pages?.flatMap((p) => p ?? []) ?? []}
         showSort={!!user?.is_authenticated}
         canEdit={!!user?.is_learning_path_editor}
         isLoading={itemsQuery.isLoading}

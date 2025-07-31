@@ -741,6 +741,7 @@ class LearningPathItemsViewSet(ResourceListItemsViewSet, viewsets.ModelViewSet):
 
     serializer_class = LearningPathRelationshipSerializer
     permission_classes = (permissions.HasLearningPathItemPermissions,)
+    pagination_class = None
     http_method_names = VALID_HTTP_METHODS
 
     @method_decorator(

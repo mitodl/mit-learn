@@ -1,9 +1,7 @@
 import { learningPathsApi } from "../../clients"
-import axiosInstance from "../../axios"
 import type {
   LearningpathsApiLearningpathsItemsListRequest as ItemsListRequest,
   LearningpathsApiLearningpathsListRequest as ListRequest,
-  PaginatedLearningPathRelationshipList,
 } from "../../generated/v1"
 import { clearListMemberships } from "../learningResources/queries"
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query"
@@ -38,28 +36,17 @@ const learningPathQueries = {
   infiniteItems: (id: number, listingParams: ItemsListRequest) =>
     infiniteQueryOptions({
       queryKey: learningPathKeys.infiniteItems(id, listingParams),
-      queryFn: async ({ pageParam }) => {
-        // Use generated API for first request, then use next parameter
-        const request = pageParam
-          ? axiosInstance.request<PaginatedLearningPathRelationshipList>({
-              method: "get",
-              url: pageParam,
-            })
-          : learningPathsApi.learningpathsItemsList(listingParams)
+      queryFn: async () => {
+        const request = learningPathsApi.learningpathsItemsList(listingParams)
         const { data } = await request
-        return {
-          ...data,
-          results: data.results.map((relation) => ({
-            ...relation,
-            resource: clearListMemberships(relation.resource),
-          })),
-        }
+        return data.map((relation) => ({
+          ...relation,
+          resource: clearListMemberships(relation.resource),
+        }))
       },
       // Casting is so infiniteQueryOptions can infer the correct type for initialPageParam
       initialPageParam: null as string | null,
-      getNextPageParam: (lastPage) => {
-        return lastPage.next ?? undefined
-      },
+      getNextPageParam: () => undefined,
     }),
   membershipList: () =>
     queryOptions({

@@ -149,6 +149,7 @@ const ItemsListing: React.FC<ItemsListingProps> = ({
   sortable = false,
   condensed = false,
 }) => {
+  console.log(items)
   return (
     <>
       {isLoading ? (

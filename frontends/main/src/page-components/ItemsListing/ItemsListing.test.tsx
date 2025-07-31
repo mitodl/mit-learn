@@ -49,11 +49,7 @@ const spySortableItem = jest.mocked(SortableItem)
 const learningResourcesFactory = factories.learningResources
 const userListsFactory = factories.userLists
 
-const getPaginatedRelationships = (
-  listType: string,
-  count: number,
-  parent: number,
-) => {
+const getRelationships = (listType: string, count: number, parent: number) => {
   if (listType === ListType.LearningPath) {
     return learningResourcesFactory.learningPathRelationships({
       count,
@@ -109,7 +105,7 @@ describe("ItemsListing", () => {
       setMockResponse.get(urls.userLists.membershipList(), [])
       setMockResponse.get(urls.learningPaths.membershipList(), [])
       const emptyMessage = faker.lorem.sentence()
-      const paginatedRelationships = getPaginatedRelationships(
+      const paginatedRelationships = getRelationships(
         listType,
         count,
         faker.number.int(),
@@ -118,7 +114,7 @@ describe("ItemsListing", () => {
         <ItemsListing
           listType={listType}
           emptyMessage={emptyMessage}
-          items={paginatedRelationships.results as LearningResourceListItem[]}
+          items={paginatedRelationships as LearningResourceListItem[]}
         />,
       )
       const emptyMessageElement = screen.queryByText(emptyMessage)
@@ -161,12 +157,12 @@ describe("ItemsListing", () => {
     "Shows a list of $listType LearningResourceCards with sortable=$sortable and condensed=$condensed",
     ({ listType, sortable, condensed, cardProps }) => {
       const emptyMessage = faker.lorem.sentence()
-      const paginatedRelationships = getPaginatedRelationships(
+      const paginatedRelationships = getRelationships(
         listType,
         faker.number.int({ min: 2, max: 4 }),
         faker.number.int(),
       )
-      const items = paginatedRelationships.results as LearningResourceListItem[]
+      const items = paginatedRelationships as LearningResourceListItem[]
       const user = factories.user.user()
       setMockResponse.get(urls.userMe.get(), user)
       setMockResponse.get(urls.userLists.membershipList(), [])
@@ -212,12 +208,8 @@ describe.each([ListType.LearningPath, ListType.UserList])(
       const listType = props.listType || ""
       const emptyMessage = faker.lorem.sentence()
       const parentId = faker.number.int()
-      const paginatedRelationships = getPaginatedRelationships(
-        listType,
-        5,
-        parentId,
-      )
-      const items = paginatedRelationships.results as LearningResourceListItem[]
+      const paginatedRelationships = getRelationships(listType, 5, parentId)
+      const items = paginatedRelationships as LearningResourceListItem[]
       const defaultProps: ItemsListingProps = {
         listType: listType,
         items: items,

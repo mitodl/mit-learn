@@ -3529,37 +3529,6 @@ export interface PaginatedCourseResourceList {
 /**
  *
  * @export
- * @interface PaginatedLearningPathRelationshipList
- */
-export interface PaginatedLearningPathRelationshipList {
-  /**
-   *
-   * @type {number}
-   * @memberof PaginatedLearningPathRelationshipList
-   */
-  count: number
-  /**
-   *
-   * @type {string}
-   * @memberof PaginatedLearningPathRelationshipList
-   */
-  next?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof PaginatedLearningPathRelationshipList
-   */
-  previous?: string | null
-  /**
-   *
-   * @type {Array<LearningPathRelationship>}
-   * @memberof PaginatedLearningPathRelationshipList
-   */
-  results: Array<LearningPathRelationship>
-}
-/**
- *
- * @export
  * @interface PaginatedLearningPathResourceList
  */
 export interface PaginatedLearningPathResourceList {
@@ -20510,16 +20479,12 @@ export const LearningpathsApiAxiosParamCreator = function (
     /**
      * Viewset for LearningPath related resources
      * @param {number} learning_resource_id The learning resource id of the learning path
-     * @param {number} [limit] Number of results to return per page.
-     * @param {number} [offset] The initial index from which to return the results.
      * @param {string} [sortby] Which field to use when ordering the results.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     learningpathsItemsList: async (
       learning_resource_id: number,
-      limit?: number,
-      offset?: number,
       sortby?: string,
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
@@ -20548,14 +20513,6 @@ export const LearningpathsApiAxiosParamCreator = function (
       }
       const localVarHeaderParameter = {} as any
       const localVarQueryParameter = {} as any
-
-      if (limit !== undefined) {
-        localVarQueryParameter["limit"] = limit
-      }
-
-      if (offset !== undefined) {
-        localVarQueryParameter["offset"] = offset
-      }
 
       if (sortby !== undefined) {
         localVarQueryParameter["sortby"] = sortby
@@ -21126,29 +21083,23 @@ export const LearningpathsApiFp = function (configuration?: Configuration) {
     /**
      * Viewset for LearningPath related resources
      * @param {number} learning_resource_id The learning resource id of the learning path
-     * @param {number} [limit] Number of results to return per page.
-     * @param {number} [offset] The initial index from which to return the results.
      * @param {string} [sortby] Which field to use when ordering the results.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     async learningpathsItemsList(
       learning_resource_id: number,
-      limit?: number,
-      offset?: number,
       sortby?: string,
       options?: RawAxiosRequestConfig,
     ): Promise<
       (
         axios?: AxiosInstance,
         basePath?: string,
-      ) => AxiosPromise<PaginatedLearningPathRelationshipList>
+      ) => AxiosPromise<Array<LearningPathRelationship>>
     > {
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.learningpathsItemsList(
           learning_resource_id,
-          limit,
-          offset,
           sortby,
           options,
         )
@@ -21511,12 +21462,10 @@ export const LearningpathsApiFactory = function (
     learningpathsItemsList(
       requestParameters: LearningpathsApiLearningpathsItemsListRequest,
       options?: RawAxiosRequestConfig,
-    ): AxiosPromise<PaginatedLearningPathRelationshipList> {
+    ): AxiosPromise<Array<LearningPathRelationship>> {
       return localVarFp
         .learningpathsItemsList(
           requestParameters.learning_resource_id,
-          requestParameters.limit,
-          requestParameters.offset,
           requestParameters.sortby,
           options,
         )
@@ -21727,20 +21676,6 @@ export interface LearningpathsApiLearningpathsItemsListRequest {
    * @memberof LearningpathsApiLearningpathsItemsList
    */
   readonly learning_resource_id: number
-
-  /**
-   * Number of results to return per page.
-   * @type {number}
-   * @memberof LearningpathsApiLearningpathsItemsList
-   */
-  readonly limit?: number
-
-  /**
-   * The initial index from which to return the results.
-   * @type {number}
-   * @memberof LearningpathsApiLearningpathsItemsList
-   */
-  readonly offset?: number
 
   /**
    * Which field to use when ordering the results.
@@ -22060,8 +21995,6 @@ export class LearningpathsApi extends BaseAPI {
     return LearningpathsApiFp(this.configuration)
       .learningpathsItemsList(
         requestParameters.learning_resource_id,
-        requestParameters.limit,
-        requestParameters.offset,
         requestParameters.sortby,
         options,
       )

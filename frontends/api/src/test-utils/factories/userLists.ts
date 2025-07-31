@@ -1,7 +1,6 @@
 import { Factory, makePaginatedFactory } from "ol-test-utilities"
 import {
   MicroUserListRelationship,
-  PaginatedUserListRelationshipList,
   PrivacyLevelEnum,
   UserList,
   UserListRelationship,
@@ -58,17 +57,11 @@ const userListRelationship: Factory<UserListRelationship> = (
 const userListRelationships = ({
   count,
   parent,
-  pageSize,
-  next = null,
-  previous = null,
 }: {
   count: number
   parent: number
-  pageSize?: number
-  next?: string | null
-  previous?: string | null
 }) => {
-  const results: UserListRelationship[] = Array(pageSize ?? count)
+  return Array(count)
     .fill(null)
     .map((_val, index) => {
       return userListRelationship({
@@ -76,12 +69,6 @@ const userListRelationships = ({
         parent,
       })
     })
-  return {
-    count,
-    next,
-    previous,
-    results,
-  } satisfies PaginatedUserListRelationshipList
 }
 
 export {

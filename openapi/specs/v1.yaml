@@ -6423,18 +6423,6 @@ paths:
           type: integer
         description: The learning resource id of the learning path
         required: true
-      - name: limit
-        required: false
-        in: query
-        description: Number of results to return per page.
-        schema:
-          type: integer
-      - name: offset
-        required: false
-        in: query
-        description: The initial index from which to return the results.
-        schema:
-          type: integer
       - name: sortby
         required: false
         in: query
@@ -6448,7 +6436,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedLearningPathRelationshipList'
+                type: array
+                items:
+                  $ref: '#/components/schemas/LearningPathRelationship'
           description: ''
     post:
       operationId: learningpaths_items_create
@@ -11860,29 +11850,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CourseResource'
-    PaginatedLearningPathRelationshipList:
-      type: object
-      required:
-      - count
-      - results
-      properties:
-        count:
-          type: integer
-          example: 123
-        next:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?offset=400&limit=100
-        previous:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?offset=200&limit=100
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/LearningPathRelationship'
     PaginatedLearningPathResourceList:
       type: object
       required:
