@@ -25,7 +25,7 @@ const BaseButton = styled(ActionButton)(({ theme }) => ({
   svg: {
     fill: "white",
   },
-  [theme.breakpoints.down("md")]: {
+  [`${theme.breakpoints.down("md")} and (orientation: portrait)`]: {
     backgroundColor: "rgba(0, 0, 0, 0.3)",
     borderRadius: "50%",
     height: "58px",
@@ -40,7 +40,7 @@ const BaseButton = styled(ActionButton)(({ theme }) => ({
 const CloseButton = styled(BaseButton)(({ theme }) => ({
   top: "16px",
   right: "16px",
-  [theme.breakpoints.down("md")]: {
+  [`${theme.breakpoints.down("md")} and (orientation: portrait)`]: {
     top: "26px",
     right: "26px",
   },
@@ -49,7 +49,7 @@ const CloseButton = styled(BaseButton)(({ theme }) => ({
 const MuteButton = styled(BaseButton)(({ theme }) => ({
   right: "16px",
   bottom: "16px",
-  [theme.breakpoints.down("md")]: {
+  [`${theme.breakpoints.down("md")} and (orientation: portrait)`]: {
     bottom: "26px",
     right: "26px",
   },
