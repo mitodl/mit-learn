@@ -33,7 +33,7 @@ def canvas_platform():
     return LearningResourcePlatformFactory.create(code=PlatformType.canvas.name)
 
 
-def canvas_zip_with_problem_files(tmp_path, files):
+def canvas_zip_with_problem_files(tmp_path: str, files: dict[tuple[str, bytes]]) -> str:
     """
     Create a Canvas zip with problem files in the tutorbot folder.
     `files` is a list of tuples: (filename, content_bytes)

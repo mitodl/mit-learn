@@ -326,6 +326,8 @@ def _pdf_to_markdown(pdf_path):
     markdown = ""
     for im in pdf_to_base64_images(pdf_path):
         response = completion(
+            api_base=settings.LITELLM_API_BASE,
+            custom_llm_provider=settings.LITELLM_CUSTOM_PROVIDER,
             model=settings.CANVAS_PDF_TRANSCRIPTION_MODEL,
             messages=[
                 {
