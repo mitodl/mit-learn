@@ -938,7 +938,7 @@ class UserListItemViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
         "position"
     )
     serializer_class = UserListRelationshipSerializer
-    pagination_class = DefaultPagination
+    pagination_class = None
     permission_classes = (HasUserListItemPermissions,)
     http_method_names = VALID_HTTP_METHODS
     parent_lookup_kwargs = {"userlist_id": "parent"}
