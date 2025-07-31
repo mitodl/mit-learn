@@ -13,7 +13,7 @@ import { DashboardCard } from "./CoursewareDisplay/DashboardCard"
 import { PlainList, Stack, styled, Typography } from "ol-components"
 import { DashboardCourse, DashboardProgram } from "./CoursewareDisplay/types"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
-import { OrganizationPage, V2Program } from "@mitodl/mitxonline-api-axios/v1"
+import { OrganizationPage, V2Program } from "@mitodl/mitxonline-api-axios/v2"
 import { useMitxOnlineCurrentUser } from "api/mitxonline-hooks/user"
 
 const HeaderRoot = styled.div({
@@ -132,6 +132,7 @@ const OrgProgramDisplay: React.FC<{
     </ProgramRoot>
   )
 }
+
 const OrganizationRoot = styled.div({
   display: "flex",
   flexDirection: "column",

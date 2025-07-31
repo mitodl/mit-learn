@@ -24,6 +24,9 @@ import { EnrollmentStatusIndicator } from "./EnrollmentStatusIndicator"
 import { EmailSettingsDialog, UnenrollDialog } from "./DashboardDialogs"
 import NiceModal from "@ebay/nice-modal-react"
 import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
+import { certificateQueries } from "api/mitxonline-hooks/certificates"
+import { useQuery } from "@tanstack/react-query"
+import path from "path"
 
 const CardRoot = styled.div<{
   screenSize: "desktop" | "mobile"
@@ -127,8 +130,12 @@ const getCoursewareText = ({
   enrollmentStatus?: EnrollmentStatus | null
   courseNoun: string
 }) => {
+  const completed = enrollmentStatus === EnrollmentStatus.Completed
   if (!enrollmentStatus || enrollmentStatus === EnrollmentStatus.NotEnrolled) {
     return "Enroll"
+  }
+  if (completed) {
+    return `View ${courseNoun}`
   }
   if (!endDate) return `Continue ${courseNoun}`
   if (isInPast(endDate)) {
@@ -233,6 +240,31 @@ const SubtitleLink = styled(NextLink)(({ theme }) => ({
     textDecoration: "underline",
   },
 }))
+
+const CertificateLink: React.FC<{
+  certificate: {
+    uuid: string
+    link: string
+  }
+}> = ({ certificate }) => {
+  const { data: courseRunCertificate } = useQuery({
+    ...certificateQueries.courseCertificatesRetrieve({
+      cert_uuid: certificate.uuid,
+    }),
+  })
+  console.log(courseRunCertificate)
+  const baseUrl = new URL(process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL ?? "")
+  const baseUrlPath = baseUrl.pathname
+  const certificatePath = certificate.link
+  const fullPath = path.join(baseUrlPath, certificatePath)
+  const certificateHref = new URL(fullPath, baseUrl.origin).href
+  return (
+    <SubtitleLink href={certificateHref}>
+      {<RiAwardLine size="16px" />}
+      View Certificate
+    </SubtitleLink>
+  )
+}
 
 const UpgradeBanner: React.FC<
   {
@@ -348,10 +380,12 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         {title}
       </TitleLink>
       {enrollment?.status === EnrollmentStatus.Completed ? (
-        <SubtitleLink href="#">
-          {<RiAwardLine size="16px" />}
-          View Certificate
-        </SubtitleLink>
+        <CertificateLink
+          certificate={{
+            uuid: enrollment.certificate?.uuid ?? "",
+            link: enrollment.certificate?.link ?? "",
+          }}
+        />
       ) : null}
       {enrollment?.mode !== EnrollmentMode.Verified && offerUpgrade ? (
         <UpgradeBanner

@@ -36,14 +36,23 @@ type DashboardCourse = {
     status: EnrollmentStatus
     mode: EnrollmentMode
     receiveEmails?: boolean
+    certificate?: {
+      uuid: string | null
+      link: string | null
+    }
   }
   marketingUrl: string
 }
+
 type DashboardCourseEnrollment = {
   id: number
   status: EnrollmentStatus
   mode: EnrollmentMode
   receiveEmails?: boolean
+  certificate?: {
+    uuid: string | null
+    link: string | null
+  }
 }
 
 type DashboardProgram = {

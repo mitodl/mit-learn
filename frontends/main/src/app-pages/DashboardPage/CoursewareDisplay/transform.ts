@@ -56,6 +56,10 @@ const mitxonlineEnrollment = (raw: CourseRunEnrollment): DashboardCourse => {
         ? EnrollmentStatus.Completed
         : EnrollmentStatus.Enrolled,
       receiveEmails: raw.edx_emails_subscription ?? true,
+      certificate: {
+        uuid: raw.certificate?.uuid ?? null,
+        link: raw.certificate?.link ?? null,
+      },
     },
   }
 }
