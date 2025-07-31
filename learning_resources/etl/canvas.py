@@ -1,13 +1,18 @@
+import base64
 import logging
 import sys
 import zipfile
 from collections import defaultdict
 from collections.abc import Generator
+from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from defusedxml import ElementTree
 from django.conf import settings
+from litellm import completion
+from pdf2image import convert_from_path
+from PIL import Image
 
 from learning_resources.constants import (
     VALID_TUTOR_PROBLEM_TYPES,
@@ -180,6 +185,7 @@ def transform_canvas_problem_files(
             problem_file_data = {
                 key: file_data[key] for key in keys_to_keep if key in file_data
             }
+
             path = file_data["source_path"]
             path = path[len(settings.CANVAS_TUTORBOT_FOLDER) :]
             path_parts = path.split("/", 1)
@@ -188,7 +194,15 @@ def transform_canvas_problem_files(
                 if problem_type in path_parts[1].lower():
                     problem_file_data["type"] = problem_type
                     break
-
+            if (
+                problem_file_data["file_extension"].lower() == ".pdf"
+                and settings.CANVAS_PDF_TRANSCRIPTION_MODEL
+            ):
+                markdown_content = _pdf_to_markdown(
+                    Path(olx_path) / Path(problem_file_data["source_path"])
+                )
+                if markdown_content:
+                    problem_file_data["content"] = markdown_content
             yield problem_file_data
 
 
@@ -269,3 +283,75 @@ def extract_resources_by_identifierref(manifest_xml: str) -> dict:
                 {"title": title, "files": files, "type": resource.get("type")}
             )
     return dict(resources_dict)
+
+
+def pdf_to_base64_images(pdf_path, dpi=200, fmt="JPEG", max_size=2000, quality=85):
+    """
+    Convert a PDF file to a list of base64 encoded images (one per page).
+    Resizes images to reduce file size while keeping good OCR quality.
+
+    Args:
+        pdf_path (str): Path to the PDF file
+        dpi (int): DPI for the output images (default: 200)
+        fmt (str): Output format ('JPEG' or 'PNG') (default: 'JPEG')
+        max_size (int): Maximum width/height in pixels (default: 2000)
+        quality (int): JPEG quality (1-100, default: 85)
+
+    Returns:
+        list: List of base64 encoded strings (one per page)
+    """
+    images = convert_from_path(pdf_path, dpi=dpi)
+    base64_images = []
+
+    for image in images:
+        # Resize the image if it's too large (preserving aspect ratio)
+        if max(image.size) > max_size:
+            image.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+
+        buffered = BytesIO()
+
+        # Save with optimized settings
+        if fmt.upper() == "JPEG":
+            image.save(buffered, format="JPEG", quality=quality, optimize=True)
+        else:  # PNG
+            image.save(buffered, format="PNG", optimize=True)
+
+        img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
+        base64_images.append(img_str)
+
+    return base64_images
+
+
+def _pdf_to_markdown(pdf_path):
+    markdown = ""
+    for im in pdf_to_base64_images(pdf_path):
+        response = completion(
+            api_base=settings.LITELLM_API_BASE,
+            custom_llm_provider=settings.LITELLM_CUSTOM_PROVIDER,
+            model=settings.CANVAS_PDF_TRANSCRIPTION_MODEL,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": settings.CANVAS_TRANSCRIPTION_PROMPT,
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{im}",
+                            },
+                        },
+                    ],
+                }
+            ],
+        )
+        markdown_snippet = (
+            response.json()["choices"][0]["message"]["content"]
+            .removeprefix("```markdown\n")
+            .removesuffix("\n```")
+        )
+
+        markdown += markdown_snippet
+    return markdown
