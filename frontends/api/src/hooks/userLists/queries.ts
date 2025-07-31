@@ -1,8 +1,7 @@
-import axiosInstance from "../../axios"
 import type {
   UserlistsApiUserlistsItemsListRequest as ItemsListRequest,
   UserlistsApiUserlistsListRequest as ListRequest,
-  PaginatedUserListRelationshipList,
+  UserListRelationship,
 } from "../../generated/v1"
 import { userListsApi } from "../../clients"
 import { clearListMemberships } from "../learningResources/queries"
@@ -37,30 +36,17 @@ const userlistQueries = {
   infiniteItems: (id: number, listingParams: ItemsListRequest) =>
     infiniteQueryOptions({
       queryKey: userlistKeys.infiniteItems(id, listingParams),
-      queryFn: async ({
-        pageParam,
-      }): Promise<PaginatedUserListRelationshipList> => {
-        // Use generated API for first request, then use next parameter
-        const request = pageParam
-          ? axiosInstance.request<PaginatedUserListRelationshipList>({
-              method: "get",
-              url: pageParam,
-            })
-          : userListsApi.userlistsItemsList(listingParams)
+      queryFn: async (): Promise<UserListRelationship[]> => {
+        const request = userListsApi.userlistsItemsList(listingParams)
         const { data } = await request
-        return {
-          ...data,
-          results: data.results.map((relation) => ({
-            ...relation,
-            resource: clearListMemberships(relation.resource),
-          })),
-        }
+        return data.map((relation) => ({
+          ...relation,
+          resource: clearListMemberships(relation.resource),
+        }))
       },
       // Casting is so infiniteQueryOptions can infer the correct type for initialPageParam
       initialPageParam: null as string | null,
-      getNextPageParam: (lastPage) => {
-        return lastPage.next ?? undefined
-      },
+      getNextPageParam: () => undefined,
     }),
   membershipList: () => ({
     queryKey: userlistKeys.membershipList(),

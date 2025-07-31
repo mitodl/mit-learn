@@ -1,5 +1,5 @@
 "use client"
-import React, { useMemo } from "react"
+import React from "react"
 import {
   useInfiniteUserListItems,
   useUserListsDetail,
@@ -9,6 +9,7 @@ import { ListType } from "api/constants"
 import { useUserMe } from "api/hooks/user"
 import { manageListDialogs } from "@/page-components/ManageListDialogs/ManageListDialogs"
 import ItemsListingComponent from "@/page-components/ItemsListing/ItemsListingComponent"
+import { LearningResourceListItem } from "@/page-components/ItemsListing/ItemsListing"
 
 interface UserListDetailsContentProps {
   userListId: number
@@ -24,11 +25,6 @@ const UserListDetailsContent: React.FC<UserListDetailsContentProps> = (
   const itemsQuery = useInfiniteUserListItems({ userlist_id: userListId })
   const router = useRouter()
 
-  const items = useMemo(() => {
-    const pages = itemsQuery.data?.pages
-    return pages?.flatMap((p) => p.results ?? []) ?? []
-  }, [itemsQuery.data])
-
   const onDestroyUserList = () => {
     router.push("/dashboard/my-lists")
   }
@@ -37,7 +33,13 @@ const UserListDetailsContent: React.FC<UserListDetailsContentProps> = (
     <ItemsListingComponent
       listType={ListType.UserList}
       list={listQuery.data}
-      items={items}
+      items={
+        itemsQuery.data
+          ? itemsQuery.data.pages.flatMap(
+              (page: LearningResourceListItem[]) => page,
+            )
+          : []
+      }
       isLoading={itemsQuery.isLoading}
       isFetching={itemsQuery.isFetching}
       showSort={!!user?.is_authenticated}
