@@ -21,7 +21,11 @@ const UserListDetailsContent: React.FC<UserListDetailsContentProps> = (
 
   const { data: user } = useUserMe()
   const listQuery = useUserListsDetail(userListId)
-  const itemsQuery = useInfiniteUserListItems({ userlist_id: userListId })
+  // Very high limit set here beacuse pagination not implemented on the frontend
+  const itemsQuery = useInfiniteUserListItems({
+    userlist_id: userListId,
+    limit: 1000,
+  })
   const router = useRouter()
 
   const items = useMemo(() => {
