@@ -106,7 +106,7 @@ const OrgProgramCollectionDisplay: React.FC<{
           {collection.title}
         </Typography>
       </ProgramHeader>
-      <PlainList itemSpacing={0}>
+      <PlainList>
         {collection.programIds.map((programId) => (
           <ProgramCollectionItem
             key={programId}
@@ -146,7 +146,7 @@ const OrgProgramDisplay: React.FC<{
         </Typography>
         <Typography variant="body1">{program.description}</Typography>
       </ProgramHeader>
-      <PlainList itemSpacing={0}>
+      <PlainList>
         {transform
           .sortDashboardCourses(program, transformedCourses)
           .map((course) => (
@@ -278,7 +278,7 @@ const OrganizationContentInternal: React.FC<
       {programCollections.isLoading ? (
         skeleton
       ) : (
-        <PlainList itemSpacing={0}>
+        <PlainList>
           {programCollections.data?.results.map((collection) => {
             const transformedCollection =
               transform.mitxonlineProgramCollection(collection)
