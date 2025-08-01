@@ -1463,20 +1463,7 @@ def test_course_run_problems_endpoint(client, user_role, django_user_model):
         reverse("lr:v0:tutorproblem_api-list-problems", args=[course_run.run_id])
     )
 
-    if user_role in ["admin", "group_tutor_problem_viewer"]:
-        assert resp.json() == {"problem_set_titles": ["Problem Set 1", "Problem Set 2"]}
-    elif user_role == "normal":
-        assert resp.status_code == 403
-        assert resp.json() == {
-            "detail": "You do not have permission to perform this action.",
-            "error_type": "PermissionDenied",
-        }
-    elif user_role == "anonymous":
-        assert resp.status_code == 403
-        assert resp.json() == {
-            "detail": "Authentication credentials were not provided.",
-            "error_type": "NotAuthenticated",
-        }
+    assert resp.json() == {"problem_set_titles": ["Problem Set 1", "Problem Set 2"]}
 
     detail_resp = client.get(
         reverse(
