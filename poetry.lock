@@ -1568,7 +1568,7 @@ django = ">=3.2"
 
 [[package]]
 name = "django-health-check"
-version = "3.20.1.dev3+g7fc1e3a"
+version = "3.20.1.dev4+gb0500d1"
 description = "Monitor the health of your Django app and its connected services."
 optional = false
 python-versions = ">=3.9"
@@ -1587,8 +1587,8 @@ test = ["boto3", "celery", "django-storages", "pytest", "pytest-cov", "pytest-dj
 [package.source]
 type = "git"
 url = "https://github.com/revsys/django-health-check"
-reference = "7fc1e3a70d2d98ccc388926a2fab0626acf0acff"
-resolved_reference = "7fc1e3a70d2d98ccc388926a2fab0626acf0acff"
+reference = "b0500d14c338040984f02ee34ffbe6643b005084"
+resolved_reference = "b0500d14c338040984f02ee34ffbe6643b005084"
 
 [[package]]
 name = "django-imagekit"
@@ -5511,6 +5511,21 @@ pygments = "*"
 testing = ["ipython", "pexpect", "pytest", "pytest-cov"]
 
 [[package]]
+name = "pdf2image"
+version = "1.17.0"
+description = "A wrapper around the pdftoppm and pdftocairo command line tools to convert PDF to a PIL Image list."
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "pdf2image-1.17.0-py3-none-any.whl", hash = "sha256:ecdd58d7afb810dffe21ef2b1bbc057ef434dabbac6c33778a38a3f7744a27e2"},
+    {file = "pdf2image-1.17.0.tar.gz", hash = "sha256:eaa959bc116b420dd7ec415fcae49b98100dda3dd18cd2fdfa86d09f112f6d57"},
+]
+
+[package.dependencies]
+pillow = "*"
+
+[[package]]
 name = "pexpect"
 version = "4.9.0"
 description = "Pexpect allows easy control of interactive console applications."
@@ -9088,4 +9103,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.1"
 python-versions = "~3.12"
-content-hash = "5f3bc029ac5f5738e82afac9782fb1199535f8ea69b82c645f89332bd0d5959c"
+content-hash = "535e0dd08f62db3cdaab603124cc1115c4a51c4159a5bc80ca7393f69dbaa690"

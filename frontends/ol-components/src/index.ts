@@ -2,6 +2,9 @@
 /// <reference types="./types/theme.d.ts" />
 /// <reference types="./types/typography.d.ts" />
 
+export { default as styled } from "@emotion/styled"
+export { css, Global } from "@emotion/react"
+
 /**
  * Re-exports from MUI.
  *
@@ -102,7 +105,6 @@ export * from "./components/Card/Card"
 export * from "./components/Card/ListCardCondensed"
 export * from "./components/Carousel/Carousel"
 export { onReInitSlickA11y } from "./components/Carousel/util"
-
 export * from "./components/Chips/ChipLink"
 export * from "./components/ChoiceBox/ChoiceBox"
 export * from "./components/ChoiceBox/ChoiceBoxField"
@@ -158,20 +160,17 @@ export type { LinkProps } from "./components/Link/Link"
 export { pxToRem } from "./components/ThemeProvider/typography"
 export { MITLearnGlobalStyles } from "./components/ThemeProvider/MITLearnGlobalStyles"
 
-export { default as styled } from "@emotion/styled"
-export { css, Global } from "@emotion/react"
-
 export { AppRouterCacheProvider as NextJsAppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter"
 
-/**
- * @deprecated Please use component from @mitodl/smoot-design instead
- */
-const Migrated = () => {
-  throw new Error("Please use component from @mitodl/smoot-design instead")
-}
-export {
-  Migrated as ActionButton,
-  Migrated as ActionButtonLink,
-  Migrated as Button,
-  Migrated as ButtonLink,
-}
+// /**
+//  * @deprecated Please use component from @mitodl/smoot-design instead
+//  */
+// const Migrated = () => {
+//   throw new Error("Please use component from @mitodl/smoot-design instead")
+// }
+// export {
+//   Migrated as ActionButton,
+//   Migrated as ActionButtonLink,
+//   Migrated as Button,
+//   Migrated as ButtonLink,
+// }

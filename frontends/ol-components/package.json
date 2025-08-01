@@ -8,7 +8,9 @@
   },
   "exports": {
     ".": "./src/index.ts",
-    "./deprecated": "./src/components/deprecated/index.ts"
+    "./deprecated": "./src/components/deprecated/index.ts",
+    "./CarouselV2": "./src/components/CarouselV2/CarouselV2.tsx",
+    "./CarouselV2Vertical": "./src/components/CarouselV2/CarouselV2Vertical.tsx"
   },
   "sideEffects": false,
   "dependencies": {
@@ -28,6 +30,8 @@
     "@types/tinycolor2": "^1.4.6",
     "api": "workspace:*",
     "classnames": "^2.5.1",
+    "embla-carousel-react": "^8.6.0",
+    "embla-carousel-wheel-gestures": "^8.0.2",
     "lodash": "^4.17.21",
     "material-ui-popup-state": "^5.1.0",
     "next": "^15.4.1",
@@ -40,7 +44,8 @@
     "react-slick": "^0.30.2",
     "tiny-invariant": "^1.3.1",
     "tinycolor2": "^1.6.0",
-    "validator": "^13.11.0"
+    "validator": "^13.11.0",
+    "wheel-indicator": "^1.3.0"
   },
   "devDependencies": {
     "@chromatic-com/storybook": "^3.2.7",

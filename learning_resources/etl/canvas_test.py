@@ -11,6 +11,7 @@ from learning_resources.etl.canvas import (
     parse_module_meta,
     run_for_canvas_archive,
     transform_canvas_content_files,
+    transform_canvas_problem_files,
 )
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.utils import get_edx_module_id
@@ -30,6 +31,18 @@ pytestmark = pytest.mark.django_db
 def canvas_platform():
     """Fixture for the canvas platform"""
     return LearningResourcePlatformFactory.create(code=PlatformType.canvas.name)
+
+
+def canvas_zip_with_problem_files(tmp_path: str, files: dict[tuple[str, bytes]]) -> str:
+    """
+    Create a Canvas zip with problem files in the tutorbot folder.
+    `files` is a list of tuples: (filename, content_bytes)
+    """
+    zip_path = tmp_path / "canvas_course_with_problems.zip"
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        for filename, content in files:
+            zf.writestr(f"tutorbot/{filename}", content)
+    return zip_path
 
 
 @pytest.fixture
@@ -347,3 +360,80 @@ def test_transform_canvas_content_files_removes_unpublished_content(mocker, tmp_
 
     # Ensure unpublished content is deleted and unpublished actions called
     bulk_unpub.assert_called_once_with([unpublished_cf.id], CONTENT_FILE_TYPE)
+
+
+def test_transform_canvas_problem_files_pdf_calls_pdf_to_markdown(
+    tmp_path, mocker, settings
+):
+    """
+    Test that transform_canvas_problem_files calls _pdf_to_markdown for PDF files.
+    """
+
+    settings.CANVAS_TUTORBOT_FOLDER = "tutorbot/"
+    settings.CANVAS_PDF_TRANSCRIPTION_MODEL = "fake-model"
+    pdf_filename = "problemset1/problem.pdf"
+    pdf_content = b"%PDF-1.4 fake pdf content"
+    zip_path = canvas_zip_with_problem_files(tmp_path, [(pdf_filename, pdf_content)])
+
+    # return a file with pdf extension
+    fake_file_data = {
+        "run": "run",
+        "content": "original pdf content",
+        "archive_checksum": "checksum",
+        "source_path": f"tutorbot/{pdf_filename}",
+        "file_extension": ".pdf",
+    }
+    mocker.patch(
+        "learning_resources.etl.canvas._process_olx_path",
+        return_value=iter([fake_file_data]),
+    )
+
+    # Patch _pdf_to_markdown to return a known value
+    pdf_to_md = mocker.patch(
+        "learning_resources.etl.canvas._pdf_to_markdown",
+        return_value="markdown content from pdf",
+    )
+
+    # Patch Path(olx_path) / Path(problem_file_data["source_path"]) to exist
+    run = mocker.Mock()
+
+    results = list(transform_canvas_problem_files(zip_path, run, overwrite=True))
+
+    pdf_to_md.assert_called_once()
+    assert results[0]["content"] == "markdown content from pdf"
+    assert results[0]["problem_title"] == "problemset1"
+
+
+def test_transform_canvas_problem_files_non_pdf_does_not_call_pdf_to_markdown(
+    tmp_path, mocker, settings
+):
+    """
+    Test that transform_canvas_problem_files does not call _pdf_to_markdown for non-PDF files.
+    """
+    settings.CANVAS_TUTORBOT_FOLDER = "tutorbot/"
+    settings.CANVAS_PDF_TRANSCRIPTION_MODEL = "fake-model"
+    html_filename = "problemset2/problem.html"
+    html_content = b"<html>problem</html>"
+    zip_path = canvas_zip_with_problem_files(tmp_path, [(html_filename, html_content)])
+
+    fake_file_data = {
+        "run": "run",
+        "content": "original html content",
+        "archive_checksum": "checksum",
+        "source_path": f"tutorbot/{html_filename}",
+        "file_extension": ".html",
+    }
+    mocker.patch(
+        "learning_resources.etl.canvas._process_olx_path",
+        return_value=iter([fake_file_data]),
+    )
+
+    pdf_to_md = mocker.patch("learning_resources.etl.canvas._pdf_to_markdown")
+
+    run = mocker.Mock()
+
+    results = list(transform_canvas_problem_files(zip_path, run, overwrite=True))
+
+    pdf_to_md.assert_not_called()
+    assert results[0]["content"] == "original html content"
+    assert results[0]["problem_title"] == "problemset2"

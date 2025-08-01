@@ -3,13 +3,13 @@
 import React from "react"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import {
-  Carousel,
   TabPanel,
   TabContext,
   styled,
   Typography,
   TypographyProps,
 } from "ol-components"
+import { CarouselV2 } from "ol-components/CarouselV2"
 import { TabButton, TabButtonList } from "@mitodl/smoot-design"
 import type { TabConfig } from "./types"
 import { LearningResource, PaginatedLearningResourceList } from "api"
@@ -20,12 +20,13 @@ import {
   UseQueryOptions,
 } from "@tanstack/react-query"
 
+/* Leaving for reference while we determine wether to swap out for CarouselV2
 const StyledCarousel = styled(Carousel)({
   /**
    * Our cards have a hover shadow that gets clipped by the carousel container.
    * To compensate for this, we add a 4px padding to the left of each slide, and
    * remove 4px from the gap.
-   */
+   *
   width: "calc(100% + 4px)",
   transform: "translateX(-4px)",
   ".slick-track": {
@@ -37,6 +38,7 @@ const StyledCarousel = styled(Carousel)({
     paddingLeft: "4px",
   },
 })
+*/
 
 const HeaderRow = styled.div(({ theme }) => ({
   display: "flex",
@@ -270,22 +272,23 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
                 aria-label="Carousel Filters"
                 onChange={(e, newValue) => setTab(newValue)}
               >
-                {config.map((tabConfig, index) => {
-                  if (
-                    !isLoading &&
-                    !queries[index].isLoading &&
-                    !getCount(queries[index].data)
-                  ) {
-                    return null
-                  }
-                  return (
+                {config
+                  .map((tabConfig, index) => ({
+                    tabConfig,
+                    index,
+                    shouldShow:
+                      isLoading ||
+                      queries[index].isLoading ||
+                      getCount(queries[index].data) > 0,
+                  }))
+                  .filter(({ shouldShow }) => shouldShow)
+                  .map(({ tabConfig, index }) => (
                     <TabButton
                       key={index}
                       label={tabConfig.label}
                       value={index.toString()}
                     />
-                  )
-                })}
+                  ))}
               </TabsList>
               {buttonsContainerElement}
             </ControlsContainer>
@@ -300,7 +303,7 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
           }
         >
           {({ resources, childrenLoading, tabConfig }) => (
-            <StyledCarousel arrowsContainer={ref}>
+            <CarouselV2 arrowsContainer={ref}>
               {isLoading || childrenLoading
                 ? Array.from({ length: 6 }).map((_, index) => (
                     <ResourceCard
@@ -310,16 +313,16 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
                       {...tabConfig.cardProps}
                     />
                   ))
-                : resources.map((resource) =>
-                    resource.id !== excludeResourceId ? (
+                : resources
+                    .filter((resource) => resource.id !== excludeResourceId)
+                    .map((resource) => (
                       <ResourceCard
                         key={resource.id}
                         resource={resource}
                         {...tabConfig.cardProps}
                       />
-                    ) : null,
-                  )}
-            </StyledCarousel>
+                    ))}
+            </CarouselV2>
           )}
         </PanelChildren>
       </TabContext>

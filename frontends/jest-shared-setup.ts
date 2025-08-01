@@ -33,6 +33,12 @@ Object.defineProperty(window, "matchMedia", {
 
 Element.prototype.scrollIntoView = jest.fn()
 
+window.IntersectionObserver = jest.fn().mockImplementation(() => ({
+  observe: () => null,
+  unobserve: () => null,
+  disconnect: () => null,
+}))
+
 /*
  * This used to live in ol-ckeditor but we also need it now for NukaCarousel,
  * so it's now here so it's available across the board.
