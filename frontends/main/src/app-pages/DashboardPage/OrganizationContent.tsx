@@ -22,7 +22,7 @@ import graduateLogo from "@/public/images/dashboard/graduate.png"
 import {
   CourseRunEnrollment,
   OrganizationPage,
-} from "@mitodl/mitxonline-api-axios/v1"
+} from "@mitodl/mitxonline-api-axios/v2"
 import { useMitxOnlineCurrentUser } from "api/mitxonline-hooks/user"
 
 const HeaderRoot = styled.div({

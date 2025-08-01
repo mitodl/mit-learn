@@ -9,7 +9,7 @@ import {
   V2CourseWithCourseRuns,
   V2Program,
   V2ProgramCollection,
-} from "@mitodl/mitxonline-api-axios/v1"
+} from "@mitodl/mitxonline-api-axios/v2"
 
 import { DashboardResourceType, EnrollmentStatus } from "./types"
 import type {
