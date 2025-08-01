@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query"
-import type { CourseRunEnrollment } from "@mitodl/mitxonline-api-axios/v1"
+import type { CourseRunEnrollment } from "@mitodl/mitxonline-api-axios/v2"
 
 import { enrollmentsApi } from "../../clients"
 
