@@ -44,7 +44,6 @@ export {
   programsApi,
   courseCertificatesApi,
   programCertificatesApi,
-  programCollectionsApi,
   coursesApi,
   axiosInstance,
 }
