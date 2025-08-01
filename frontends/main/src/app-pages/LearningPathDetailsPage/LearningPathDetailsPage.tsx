@@ -28,9 +28,10 @@ const LearningPathDetailsPage: React.FC = () => {
   const id = parseInt(params.id)
 
   const pathQuery = useLearningPathsDetail(id)
+  // Very high limit set here because pagination is not implemented on the frontend
   const itemsQuery = useInfiniteLearningPathItems({
     learning_resource_id: id,
-    limit: 100,
+    limit: 1000,
   })
   const items = useMemo(() => {
     const pages = itemsQuery.data?.pages
