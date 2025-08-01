@@ -309,6 +309,7 @@ class LearningResourceDelivery(ExtendedEnum):
     hybrid = "Hybrid"
     in_person = "In person"
     offline = "Offline"
+    other = "Other"
 
 
 class CertificationType(ExtendedEnum):

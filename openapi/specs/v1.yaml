@@ -592,17 +592,20 @@ paths:
               - hybrid
               - in_person
               - offline
+              - other
               type: string
               description: |-
                 * `online` - Online
                 * `hybrid` - Hybrid
                 * `in_person` - In person
                 * `offline` - Offline
+                * `other` - Other
             enum:
             - hybrid
             - in_person
             - offline
             - online
+            - other
         description: |-
           The delivery of course/program resources
 
@@ -610,6 +613,7 @@ paths:
           * `hybrid` - Hybrid
           * `in_person` - In person
           * `offline` - Offline
+          * `other` - Other
         explode: true
         style: form
       - in: query
@@ -1216,17 +1220,20 @@ paths:
               - hybrid
               - in_person
               - offline
+              - other
               type: string
               description: |-
                 * `online` - Online
                 * `hybrid` - Hybrid
                 * `in_person` - In person
                 * `offline` - Offline
+                * `other` - Other
             enum:
             - hybrid
             - in_person
             - offline
             - online
+            - other
         description: |-
           The delivery of course/program resources
 
@@ -1234,6 +1241,7 @@ paths:
           * `hybrid` - Hybrid
           * `in_person` - In person
           * `offline` - Offline
+          * `other` - Other
         explode: true
         style: form
       - in: query
@@ -1622,17 +1630,20 @@ paths:
               - hybrid
               - in_person
               - offline
+              - other
               type: string
               description: |-
                 * `online` - Online
                 * `hybrid` - Hybrid
                 * `in_person` - In person
                 * `offline` - Offline
+                * `other` - Other
             enum:
             - hybrid
             - in_person
             - offline
             - online
+            - other
         description: |-
           The delivery of course/program resources
 
@@ -1640,6 +1651,7 @@ paths:
           * `hybrid` - Hybrid
           * `in_person` - In person
           * `offline` - Offline
+          * `other` - Other
         explode: true
         style: form
       - in: query
@@ -2028,17 +2040,20 @@ paths:
               - hybrid
               - in_person
               - offline
+              - other
               type: string
               description: |-
                 * `online` - Online
                 * `hybrid` - Hybrid
                 * `in_person` - In person
                 * `offline` - Offline
+                * `other` - Other
             enum:
             - hybrid
             - in_person
             - offline
             - online
+            - other
         description: |-
           The delivery of course/program resources
 
@@ -2046,6 +2061,7 @@ paths:
           * `hybrid` - Hybrid
           * `in_person` - In person
           * `offline` - Offline
+          * `other` - Other
         explode: true
         style: form
       - in: query
@@ -2441,17 +2457,20 @@ paths:
               - hybrid
               - in_person
               - offline
+              - other
               type: string
               description: |-
                 * `online` - Online
                 * `hybrid` - Hybrid
                 * `in_person` - In person
                 * `offline` - Offline
+                * `other` - Other
             enum:
             - hybrid
             - in_person
             - offline
             - online
+            - other
         description: |-
           The delivery of course/program resources
 
@@ -2459,6 +2478,7 @@ paths:
           * `hybrid` - Hybrid
           * `in_person` - In person
           * `offline` - Offline
+          * `other` - Other
         explode: true
         style: form
       - in: query
@@ -2832,17 +2852,20 @@ paths:
               - hybrid
               - in_person
               - offline
+              - other
               type: string
               description: |-
                 * `online` - Online
                 * `hybrid` - Hybrid
                 * `in_person` - In person
                 * `offline` - Offline
+                * `other` - Other
             enum:
             - hybrid
             - in_person
             - offline
             - online
+            - other
         description: |-
           The delivery of course/program resources
 
@@ -2850,6 +2873,7 @@ paths:
           * `hybrid` - Hybrid
           * `in_person` - In person
           * `offline` - Offline
+          * `other` - Other
         explode: true
         style: form
       - in: query
@@ -3534,17 +3558,20 @@ paths:
               - hybrid
               - in_person
               - offline
+              - other
               type: string
               description: |-
                 * `online` - Online
                 * `hybrid` - Hybrid
                 * `in_person` - In person
                 * `offline` - Offline
+                * `other` - Other
             enum:
             - hybrid
             - in_person
             - offline
             - online
+            - other
         description: |-
           The delivery of course/program resources
 
@@ -3552,6 +3579,7 @@ paths:
           * `hybrid` - Hybrid
           * `in_person` - In person
           * `offline` - Offline
+          * `other` - Other
         explode: true
         style: form
       - in: query
@@ -3962,15 +3990,17 @@ paths:
             - hybrid
             - in_person
             - offline
+            - other
             type: string
             description: |-
               * `online` - Online
               * `hybrid` - Hybrid
               * `in_person` - In person
               * `offline` - Offline
+              * `other` - Other
         description: "The delivery options in which the learning resource is offered\
           \             \n\n* `online` - Online\n* `hybrid` - Hybrid\n* `in_person`\
-          \ - In person\n* `offline` - Offline"
+          \ - In person\n* `offline` - Offline\n* `other` - Other"
       - in: query
         name: department
         schema:
@@ -4462,15 +4492,17 @@ paths:
             - hybrid
             - in_person
             - offline
+            - other
             type: string
             description: |-
               * `online` - Online
               * `hybrid` - Hybrid
               * `in_person` - In person
               * `offline` - Offline
+              * `other` - Other
         description: "The delivery options in which the learning resource is offered\
           \             \n\n* `online` - Online\n* `hybrid` - Hybrid\n* `in_person`\
-          \ - In person\n* `offline` - Offline"
+          \ - In person\n* `offline` - Offline\n* `other` - Other"
       - in: query
         name: department
         schema:
@@ -4987,15 +5019,17 @@ paths:
             - hybrid
             - in_person
             - offline
+            - other
             type: string
             description: |-
               * `online` - Online
               * `hybrid` - Hybrid
               * `in_person` - In person
               * `offline` - Offline
+              * `other` - Other
         description: "The delivery options in which the learning resource is offered\
           \             \n\n* `online` - Online\n* `hybrid` - Hybrid\n* `in_person`\
-          \ - In person\n* `offline` - Offline"
+          \ - In person\n* `offline` - Offline\n* `other` - Other"
       - in: query
         name: department
         schema:
@@ -5503,15 +5537,17 @@ paths:
             - hybrid
             - in_person
             - offline
+            - other
             type: string
             description: |-
               * `online` - Online
               * `hybrid` - Hybrid
               * `in_person` - In person
               * `offline` - Offline
+              * `other` - Other
         description: "The delivery options in which the learning resource is offered\
           \             \n\n* `online` - Online\n* `hybrid` - Hybrid\n* `in_person`\
-          \ - In person\n* `offline` - Offline"
+          \ - In person\n* `offline` - Offline\n* `other` - Other"
       - in: query
         name: department
         schema:
@@ -5985,17 +6021,20 @@ paths:
               - hybrid
               - in_person
               - offline
+              - other
               type: string
               description: |-
                 * `online` - Online
                 * `hybrid` - Hybrid
                 * `in_person` - In person
                 * `offline` - Offline
+                * `other` - Other
             enum:
             - hybrid
             - in_person
             - offline
             - online
+            - other
         description: |-
           The delivery of course/program resources
 
@@ -6003,6 +6042,7 @@ paths:
           * `hybrid` - Hybrid
           * `in_person` - In person
           * `offline` - Offline
+          * `other` - Other
         explode: true
         style: form
       - in: query
@@ -6731,17 +6771,20 @@ paths:
               - hybrid
               - in_person
               - offline
+              - other
               type: string
               description: |-
                 * `online` - Online
                 * `hybrid` - Hybrid
                 * `in_person` - In person
                 * `offline` - Offline
+                * `other` - Other
             enum:
             - hybrid
             - in_person
             - offline
             - online
+            - other
         description: |-
           The delivery of course/program resources
 
@@ -6749,6 +6792,7 @@ paths:
           * `hybrid` - Hybrid
           * `in_person` - In person
           * `offline` - Offline
+          * `other` - Other
         explode: true
         style: form
       - in: query
@@ -7137,17 +7181,20 @@ paths:
               - hybrid
               - in_person
               - offline
+              - other
               type: string
               description: |-
                 * `online` - Online
                 * `hybrid` - Hybrid
                 * `in_person` - In person
                 * `offline` - Offline
+                * `other` - Other
             enum:
             - hybrid
             - in_person
             - offline
             - online
+            - other
         description: |-
           The delivery of course/program resources
 
@@ -7155,6 +7202,7 @@ paths:
           * `hybrid` - Hybrid
           * `in_person` - In person
           * `offline` - Offline
+          * `other` - Other
         explode: true
         style: form
       - in: query
@@ -7630,17 +7678,20 @@ paths:
               - hybrid
               - in_person
               - offline
+              - other
               type: string
               description: |-
                 * `online` - Online
                 * `hybrid` - Hybrid
                 * `in_person` - In person
                 * `offline` - Offline
+                * `other` - Other
             enum:
             - hybrid
             - in_person
             - offline
             - online
+            - other
         description: |-
           The delivery of course/program resources
 
@@ -7648,6 +7699,7 @@ paths:
           * `hybrid` - Hybrid
           * `in_person` - In person
           * `offline` - Offline
+          * `other` - Other
         explode: true
         style: form
       - in: query
@@ -8442,17 +8494,20 @@ paths:
               - hybrid
               - in_person
               - offline
+              - other
               type: string
               description: |-
                 * `online` - Online
                 * `hybrid` - Hybrid
                 * `in_person` - In person
                 * `offline` - Offline
+                * `other` - Other
             enum:
             - hybrid
             - in_person
             - offline
             - online
+            - other
         description: |-
           The delivery of course/program resources
 
@@ -8460,6 +8515,7 @@ paths:
           * `hybrid` - Hybrid
           * `in_person` - In person
           * `offline` - Offline
+          * `other` - Other
         explode: true
         style: form
       - in: query
@@ -8914,17 +8970,20 @@ paths:
               - hybrid
               - in_person
               - offline
+              - other
               type: string
               description: |-
                 * `online` - Online
                 * `hybrid` - Hybrid
                 * `in_person` - In person
                 * `offline` - Offline
+                * `other` - Other
             enum:
             - hybrid
             - in_person
             - offline
             - online
+            - other
         description: |-
           The delivery of course/program resources
 
@@ -8932,6 +8991,7 @@ paths:
           * `hybrid` - Hybrid
           * `in_person` - In person
           * `offline` - Offline
+          * `other` - Other
         explode: true
         style: form
       - in: query
@@ -9828,6 +9888,7 @@ components:
                 - hybrid
                 - in_person
                 - offline
+                - other
               name:
                 type: string
             required:
@@ -10110,17 +10171,20 @@ components:
       - hybrid
       - in_person
       - offline
+      - other
       type: string
       description: |-
         * `online` - Online
         * `hybrid` - Hybrid
         * `in_person` - In person
         * `offline` - Offline
+        * `other` - Other
       x-enum-descriptions:
       - Online
       - Hybrid
       - In person
       - Offline
+      - Other
     DepartmentEnum:
       enum:
       - '1'
@@ -10392,6 +10456,7 @@ components:
                 - hybrid
                 - in_person
                 - offline
+                - other
               name:
                 type: string
             required:
@@ -11305,6 +11370,7 @@ components:
                 - hybrid
                 - in_person
                 - offline
+                - other
               name:
                 type: string
             required:
@@ -12650,7 +12716,7 @@ components:
             $ref: '#/components/schemas/DeliveryEnum'
           description: "The delivery options in which the learning resource is offered\
             \             \n\n* `online` - Online\n* `hybrid` - Hybrid\n* `in_person`\
-            \ - In person\n* `offline` - Offline"
+            \ - In person\n* `offline` - Offline\n* `other` - Other"
         resource_category:
           type: array
           items:
@@ -12981,6 +13047,7 @@ components:
                 - hybrid
                 - in_person
                 - offline
+                - other
               name:
                 type: string
             required:
@@ -13385,6 +13452,7 @@ components:
                 - hybrid
                 - in_person
                 - offline
+                - other
               name:
                 type: string
             required:
@@ -13927,6 +13995,7 @@ components:
                 - hybrid
                 - in_person
                 - offline
+                - other
               name:
                 type: string
             required:
@@ -14641,6 +14710,7 @@ components:
                 - hybrid
                 - in_person
                 - offline
+                - other
               name:
                 type: string
             required:
@@ -15031,6 +15101,7 @@ components:
                 - hybrid
                 - in_person
                 - offline
+                - other
               name:
                 type: string
             required:

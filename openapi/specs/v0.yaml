@@ -999,15 +999,17 @@ paths:
             - hybrid
             - in_person
             - offline
+            - other
             type: string
             description: |-
               * `online` - Online
               * `hybrid` - Hybrid
               * `in_person` - In person
               * `offline` - Offline
+              * `other` - Other
         description: "The delivery options in which the learning resource is offered\
           \             \n\n* `online` - Online\n* `hybrid` - Hybrid\n* `in_person`\
-          \ - In person\n* `offline` - Offline"
+          \ - In person\n* `offline` - Offline\n* `other` - Other"
       - in: query
         name: department
         schema:
@@ -2073,6 +2075,7 @@ components:
                 - hybrid
                 - in_person
                 - offline
+                - other
               name:
                 type: string
             required:
@@ -2720,6 +2723,7 @@ components:
                 - hybrid
                 - in_person
                 - offline
+                - other
               name:
                 type: string
             required:
@@ -3231,6 +3235,7 @@ components:
                 - hybrid
                 - in_person
                 - offline
+                - other
               name:
                 type: string
             required:
@@ -4043,6 +4048,7 @@ components:
                 - hybrid
                 - in_person
                 - offline
+                - other
               name:
                 type: string
             required:
@@ -4321,6 +4327,7 @@ components:
                 - hybrid
                 - in_person
                 - offline
+                - other
               name:
                 type: string
             required:
@@ -4877,6 +4884,7 @@ components:
                 - hybrid
                 - in_person
                 - offline
+                - other
               name:
                 type: string
             required:
@@ -5593,6 +5601,7 @@ components:
                 - hybrid
                 - in_person
                 - offline
+                - other
               name:
                 type: string
             required:
@@ -5871,6 +5880,7 @@ components:
                 - hybrid
                 - in_person
                 - offline
+                - other
               name:
                 type: string
             required:

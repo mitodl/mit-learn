@@ -1010,6 +1010,7 @@ export const CourseResourceDeliveryInnerCodeEnum = {
   Hybrid: "hybrid",
   InPerson: "in_person",
   Offline: "offline",
+  Other: "other",
 } as const
 
 export type CourseResourceDeliveryInnerCodeEnum =
@@ -1235,7 +1236,7 @@ export type CourseResourceResourceTypeEnum =
   (typeof CourseResourceResourceTypeEnum)[keyof typeof CourseResourceResourceTypeEnum]
 
 /**
- * * `online` - Online * `hybrid` - Hybrid * `in_person` - In person * `offline` - Offline
+ * * `online` - Online * `hybrid` - Hybrid * `in_person` - In person * `offline` - Offline * `other` - Other
  * @export
  * @enum {string}
  */
@@ -1245,6 +1246,7 @@ export const DeliveryEnumDescriptions = {
   hybrid: "Hybrid",
   in_person: "In person",
   offline: "Offline",
+  other: "Other",
 } as const
 
 export const DeliveryEnum = {
@@ -1264,6 +1266,10 @@ export const DeliveryEnum = {
    * Offline
    */
   Offline: "offline",
+  /**
+   * Other
+   */
+  Other: "other",
 } as const
 
 export type DeliveryEnum = (typeof DeliveryEnum)[keyof typeof DeliveryEnum]
@@ -4571,7 +4577,7 @@ export interface PercolateQuerySubscriptionRequestRequest {
    */
   aggregations?: Array<AggregationsEnum>
   /**
-   * The delivery options in which the learning resource is offered               * `online` - Online * `hybrid` - Hybrid * `in_person` - In person * `offline` - Offline
+   * The delivery options in which the learning resource is offered               * `online` - Online * `hybrid` - Hybrid * `in_person` - In person * `offline` - Offline * `other` - Other
    * @type {Array<DeliveryEnum>}
    * @memberof PercolateQuerySubscriptionRequestRequest
    */
@@ -10261,7 +10267,7 @@ export const CoursesApiAxiosParamCreator = function (
      * @param {boolean} [certification]
      * @param {Array<CoursesListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {Array<string>} [course_feature] Multiple values may be separated by commas.
-     * @param {Array<Array<CoursesListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<Array<CoursesListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
      * @param {Array<CoursesListDepartmentEnum>} [department] The department that offers learning resources  * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean} [free] The course/program is offered for free
      * @param {Array<CoursesListLevelEnum>} [level] The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
@@ -10551,7 +10557,7 @@ export const CoursesApiFp = function (configuration?: Configuration) {
      * @param {boolean} [certification]
      * @param {Array<CoursesListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {Array<string>} [course_feature] Multiple values may be separated by commas.
-     * @param {Array<Array<CoursesListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<Array<CoursesListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
      * @param {Array<CoursesListDepartmentEnum>} [department] The department that offers learning resources  * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean} [free] The course/program is offered for free
      * @param {Array<CoursesListLevelEnum>} [level] The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
@@ -10882,8 +10888,8 @@ export interface CoursesApiCoursesListRequest {
   readonly course_feature?: Array<string>
 
   /**
-   * The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
-   * @type {Array<Array<'online' | 'hybrid' | 'in_person' | 'offline'>>}
+   * The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
+   * @type {Array<Array<'online' | 'hybrid' | 'in_person' | 'offline' | 'other'>>}
    * @memberof CoursesApiCoursesList
    */
   readonly delivery?: Array<Array<CoursesListDeliveryEnum>>
@@ -11162,6 +11168,7 @@ export const CoursesListDeliveryEnum = {
   Hybrid: "hybrid",
   InPerson: "in_person",
   Offline: "offline",
+  Other: "other",
 } as const
 export type CoursesListDeliveryEnum =
   (typeof CoursesListDeliveryEnum)[keyof typeof CoursesListDeliveryEnum]
@@ -11636,7 +11643,7 @@ export const FeaturedApiAxiosParamCreator = function (
      * @param {boolean} [certification]
      * @param {Array<FeaturedListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {Array<string>} [course_feature] Multiple values may be separated by commas.
-     * @param {Array<Array<FeaturedListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<Array<FeaturedListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
      * @param {Array<FeaturedListDepartmentEnum>} [department] The department that offers learning resources  * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean} [free] The course/program is offered for free
      * @param {Array<FeaturedListLevelEnum>} [level] The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
@@ -11837,7 +11844,7 @@ export const FeaturedApiFp = function (configuration?: Configuration) {
      * @param {boolean} [certification]
      * @param {Array<FeaturedListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {Array<string>} [course_feature] Multiple values may be separated by commas.
-     * @param {Array<Array<FeaturedListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<Array<FeaturedListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
      * @param {Array<FeaturedListDepartmentEnum>} [department] The department that offers learning resources  * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean} [free] The course/program is offered for free
      * @param {Array<FeaturedListLevelEnum>} [level] The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
@@ -12033,8 +12040,8 @@ export interface FeaturedApiFeaturedListRequest {
   readonly course_feature?: Array<string>
 
   /**
-   * The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
-   * @type {Array<Array<'online' | 'hybrid' | 'in_person' | 'offline'>>}
+   * The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
+   * @type {Array<Array<'online' | 'hybrid' | 'in_person' | 'offline' | 'other'>>}
    * @memberof FeaturedApiFeaturedList
    */
   readonly delivery?: Array<Array<FeaturedListDeliveryEnum>>
@@ -12225,6 +12232,7 @@ export const FeaturedListDeliveryEnum = {
   Hybrid: "hybrid",
   InPerson: "in_person",
   Offline: "offline",
+  Other: "other",
 } as const
 export type FeaturedListDeliveryEnum =
   (typeof FeaturedListDeliveryEnum)[keyof typeof FeaturedListDeliveryEnum]
@@ -12385,7 +12393,7 @@ export const LearningResourceDisplayInfoApiAxiosParamCreator = function (
      * @param {boolean} [certification]
      * @param {Array<LearningResourceDisplayInfoListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {Array<string>} [course_feature] Multiple values may be separated by commas.
-     * @param {Array<Array<LearningResourceDisplayInfoListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<Array<LearningResourceDisplayInfoListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
      * @param {Array<LearningResourceDisplayInfoListDepartmentEnum>} [department] The department that offers learning resources  * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean} [free] The course/program is offered for free
      * @param {Array<LearningResourceDisplayInfoListLevelEnum>} [level] The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
@@ -12590,7 +12598,7 @@ export const LearningResourceDisplayInfoApiFp = function (
      * @param {boolean} [certification]
      * @param {Array<LearningResourceDisplayInfoListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {Array<string>} [course_feature] Multiple values may be separated by commas.
-     * @param {Array<Array<LearningResourceDisplayInfoListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<Array<LearningResourceDisplayInfoListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
      * @param {Array<LearningResourceDisplayInfoListDepartmentEnum>} [department] The department that offers learning resources  * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean} [free] The course/program is offered for free
      * @param {Array<LearningResourceDisplayInfoListLevelEnum>} [level] The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
@@ -12794,8 +12802,8 @@ export interface LearningResourceDisplayInfoApiLearningResourceDisplayInfoListRe
   readonly course_feature?: Array<string>
 
   /**
-   * The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
-   * @type {Array<Array<'online' | 'hybrid' | 'in_person' | 'offline'>>}
+   * The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
+   * @type {Array<Array<'online' | 'hybrid' | 'in_person' | 'offline' | 'other'>>}
    * @memberof LearningResourceDisplayInfoApiLearningResourceDisplayInfoList
    */
   readonly delivery?: Array<Array<LearningResourceDisplayInfoListDeliveryEnum>>
@@ -12986,6 +12994,7 @@ export const LearningResourceDisplayInfoListDeliveryEnum = {
   Hybrid: "hybrid",
   InPerson: "in_person",
   Offline: "offline",
+  Other: "other",
 } as const
 export type LearningResourceDisplayInfoListDeliveryEnum =
   (typeof LearningResourceDisplayInfoListDeliveryEnum)[keyof typeof LearningResourceDisplayInfoListDeliveryEnum]
@@ -13495,7 +13504,7 @@ export const LearningResourcesApiAxiosParamCreator = function (
      * @param {boolean} [certification]
      * @param {Array<LearningResourcesListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {Array<string>} [course_feature] Multiple values may be separated by commas.
-     * @param {Array<Array<LearningResourcesListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<Array<LearningResourcesListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
      * @param {Array<LearningResourcesListDepartmentEnum>} [department] The department that offers learning resources  * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean} [free] The course/program is offered for free
      * @param {Array<LearningResourcesListLevelEnum>} [level] The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
@@ -13687,7 +13696,7 @@ export const LearningResourcesApiAxiosParamCreator = function (
      * @param {boolean} [certification]
      * @param {Array<LearningResourcesSimilarListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {Array<string>} [course_feature] Multiple values may be separated by commas.
-     * @param {Array<Array<LearningResourcesSimilarListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<Array<LearningResourcesSimilarListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
      * @param {Array<LearningResourcesSimilarListDepartmentEnum>} [department] The department that offers learning resources  * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean} [free] The course/program is offered for free
      * @param {Array<LearningResourcesSimilarListLevelEnum>} [level] The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
@@ -13832,7 +13841,7 @@ export const LearningResourcesApiAxiosParamCreator = function (
      * @param {boolean} [certification]
      * @param {Array<LearningResourcesSummaryListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {Array<string>} [course_feature] Multiple values may be separated by commas.
-     * @param {Array<Array<LearningResourcesSummaryListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<Array<LearningResourcesSummaryListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
      * @param {Array<LearningResourcesSummaryListDepartmentEnum>} [department] The department that offers learning resources  * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean} [free] The course/program is offered for free
      * @param {Array<LearningResourcesSummaryListLevelEnum>} [level] The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
@@ -14039,7 +14048,7 @@ export const LearningResourcesApiAxiosParamCreator = function (
      * @param {boolean} [certification]
      * @param {Array<LearningResourcesVectorSimilarListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {Array<string>} [course_feature] Multiple values may be separated by commas.
-     * @param {Array<Array<LearningResourcesVectorSimilarListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<Array<LearningResourcesVectorSimilarListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
      * @param {Array<LearningResourcesVectorSimilarListDepartmentEnum>} [department] The department that offers learning resources  * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean} [free] The course/program is offered for free
      * @param {Array<LearningResourcesVectorSimilarListLevelEnum>} [level] The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
@@ -14408,7 +14417,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
      * @param {boolean} [certification]
      * @param {Array<LearningResourcesListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {Array<string>} [course_feature] Multiple values may be separated by commas.
-     * @param {Array<Array<LearningResourcesListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<Array<LearningResourcesListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
      * @param {Array<LearningResourcesListDepartmentEnum>} [department] The department that offers learning resources  * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean} [free] The course/program is offered for free
      * @param {Array<LearningResourcesListLevelEnum>} [level] The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
@@ -14522,7 +14531,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
      * @param {boolean} [certification]
      * @param {Array<LearningResourcesSimilarListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {Array<string>} [course_feature] Multiple values may be separated by commas.
-     * @param {Array<Array<LearningResourcesSimilarListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<Array<LearningResourcesSimilarListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
      * @param {Array<LearningResourcesSimilarListDepartmentEnum>} [department] The department that offers learning resources  * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean} [free] The course/program is offered for free
      * @param {Array<LearningResourcesSimilarListLevelEnum>} [level] The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
@@ -14603,7 +14612,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
      * @param {boolean} [certification]
      * @param {Array<LearningResourcesSummaryListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {Array<string>} [course_feature] Multiple values may be separated by commas.
-     * @param {Array<Array<LearningResourcesSummaryListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<Array<LearningResourcesSummaryListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
      * @param {Array<LearningResourcesSummaryListDepartmentEnum>} [department] The department that offers learning resources  * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean} [free] The course/program is offered for free
      * @param {Array<LearningResourcesSummaryListLevelEnum>} [level] The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
@@ -14726,7 +14735,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
      * @param {boolean} [certification]
      * @param {Array<LearningResourcesVectorSimilarListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {Array<string>} [course_feature] Multiple values may be separated by commas.
-     * @param {Array<Array<LearningResourcesVectorSimilarListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<Array<LearningResourcesVectorSimilarListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
      * @param {Array<LearningResourcesVectorSimilarListDepartmentEnum>} [department] The department that offers learning resources  * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean} [free] The course/program is offered for free
      * @param {Array<LearningResourcesVectorSimilarListLevelEnum>} [level] The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
@@ -15297,8 +15306,8 @@ export interface LearningResourcesApiLearningResourcesListRequest {
   readonly course_feature?: Array<string>
 
   /**
-   * The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
-   * @type {Array<Array<'online' | 'hybrid' | 'in_person' | 'offline'>>}
+   * The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
+   * @type {Array<Array<'online' | 'hybrid' | 'in_person' | 'offline' | 'other'>>}
    * @memberof LearningResourcesApiLearningResourcesList
    */
   readonly delivery?: Array<Array<LearningResourcesListDeliveryEnum>>
@@ -15444,8 +15453,8 @@ export interface LearningResourcesApiLearningResourcesSimilarListRequest {
   readonly course_feature?: Array<string>
 
   /**
-   * The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
-   * @type {Array<Array<'online' | 'hybrid' | 'in_person' | 'offline'>>}
+   * The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
+   * @type {Array<Array<'online' | 'hybrid' | 'in_person' | 'offline' | 'other'>>}
    * @memberof LearningResourcesApiLearningResourcesSimilarList
    */
   readonly delivery?: Array<Array<LearningResourcesSimilarListDeliveryEnum>>
@@ -15563,8 +15572,8 @@ export interface LearningResourcesApiLearningResourcesSummaryListRequest {
   readonly course_feature?: Array<string>
 
   /**
-   * The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
-   * @type {Array<Array<'online' | 'hybrid' | 'in_person' | 'offline'>>}
+   * The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
+   * @type {Array<Array<'online' | 'hybrid' | 'in_person' | 'offline' | 'other'>>}
    * @memberof LearningResourcesApiLearningResourcesSummaryList
    */
   readonly delivery?: Array<Array<LearningResourcesSummaryListDeliveryEnum>>
@@ -15724,8 +15733,8 @@ export interface LearningResourcesApiLearningResourcesVectorSimilarListRequest {
   readonly course_feature?: Array<string>
 
   /**
-   * The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
-   * @type {Array<Array<'online' | 'hybrid' | 'in_person' | 'offline'>>}
+   * The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
+   * @type {Array<Array<'online' | 'hybrid' | 'in_person' | 'offline' | 'other'>>}
    * @memberof LearningResourcesApiLearningResourcesVectorSimilarList
    */
   readonly delivery?: Array<
@@ -16181,6 +16190,7 @@ export const LearningResourcesListDeliveryEnum = {
   Hybrid: "hybrid",
   InPerson: "in_person",
   Offline: "offline",
+  Other: "other",
 } as const
 export type LearningResourcesListDeliveryEnum =
   (typeof LearningResourcesListDeliveryEnum)[keyof typeof LearningResourcesListDeliveryEnum]
@@ -16345,6 +16355,7 @@ export const LearningResourcesSimilarListDeliveryEnum = {
   Hybrid: "hybrid",
   InPerson: "in_person",
   Offline: "offline",
+  Other: "other",
 } as const
 export type LearningResourcesSimilarListDeliveryEnum =
   (typeof LearningResourcesSimilarListDeliveryEnum)[keyof typeof LearningResourcesSimilarListDeliveryEnum]
@@ -16509,6 +16520,7 @@ export const LearningResourcesSummaryListDeliveryEnum = {
   Hybrid: "hybrid",
   InPerson: "in_person",
   Offline: "offline",
+  Other: "other",
 } as const
 export type LearningResourcesSummaryListDeliveryEnum =
   (typeof LearningResourcesSummaryListDeliveryEnum)[keyof typeof LearningResourcesSummaryListDeliveryEnum]
@@ -16673,6 +16685,7 @@ export const LearningResourcesVectorSimilarListDeliveryEnum = {
   Hybrid: "hybrid",
   InPerson: "in_person",
   Offline: "offline",
+  Other: "other",
 } as const
 export type LearningResourcesVectorSimilarListDeliveryEnum =
   (typeof LearningResourcesVectorSimilarListDeliveryEnum)[keyof typeof LearningResourcesVectorSimilarListDeliveryEnum]
@@ -16835,7 +16848,7 @@ export const LearningResourcesSearchApiAxiosParamCreator = function (
      * @param {Array<LearningResourcesSearchRetrieveCertificationTypeEnum>} [certification_type] The type of certificate               * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {number | null} [content_file_score_weight] Score weight for content file data.  1 is the default. 0 means content files are ignored
      * @param {Array<string>} [course_feature] The course feature. Possible options are at api/v1/course_features/
-     * @param {Array<LearningResourcesSearchRetrieveDeliveryEnum>} [delivery] The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<LearningResourcesSearchRetrieveDeliveryEnum>} [delivery] The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
      * @param {Array<LearningResourcesSearchRetrieveDepartmentEnum>} [department] The department that offers the learning resource               * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean | null} [dev_mode] If true return raw open search results with score explanations
      * @param {boolean | null} [free]
@@ -17051,7 +17064,7 @@ export const LearningResourcesSearchApiFp = function (
      * @param {Array<LearningResourcesSearchRetrieveCertificationTypeEnum>} [certification_type] The type of certificate               * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {number | null} [content_file_score_weight] Score weight for content file data.  1 is the default. 0 means content files are ignored
      * @param {Array<string>} [course_feature] The course feature. Possible options are at api/v1/course_features/
-     * @param {Array<LearningResourcesSearchRetrieveDeliveryEnum>} [delivery] The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<LearningResourcesSearchRetrieveDeliveryEnum>} [delivery] The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
      * @param {Array<LearningResourcesSearchRetrieveDepartmentEnum>} [department] The department that offers the learning resource               * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean | null} [dev_mode] If true return raw open search results with score explanations
      * @param {boolean | null} [free]
@@ -17258,8 +17271,8 @@ export interface LearningResourcesSearchApiLearningResourcesSearchRetrieveReques
   readonly course_feature?: Array<string>
 
   /**
-   * The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
-   * @type {Array<'online' | 'hybrid' | 'in_person' | 'offline'>}
+   * The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
+   * @type {Array<'online' | 'hybrid' | 'in_person' | 'offline' | 'other'>}
    * @memberof LearningResourcesSearchApiLearningResourcesSearchRetrieve
    */
   readonly delivery?: Array<LearningResourcesSearchRetrieveDeliveryEnum>
@@ -17505,6 +17518,7 @@ export const LearningResourcesSearchRetrieveDeliveryEnum = {
   Hybrid: "hybrid",
   InPerson: "in_person",
   Offline: "offline",
+  Other: "other",
 } as const
 export type LearningResourcesSearchRetrieveDeliveryEnum =
   (typeof LearningResourcesSearchRetrieveDeliveryEnum)[keyof typeof LearningResourcesSearchRetrieveDeliveryEnum]
@@ -17678,7 +17692,7 @@ export const LearningResourcesUserSubscriptionApiAxiosParamCreator = function (
      * @param {Array<LearningResourcesUserSubscriptionCheckListCertificationTypeEnum>} [certification_type] The type of certificate               * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {number | null} [content_file_score_weight] Score weight for content file data.  1 is the default. 0 means content files are ignored
      * @param {Array<string>} [course_feature] The course feature. Possible options are at api/v1/course_features/
-     * @param {Array<LearningResourcesUserSubscriptionCheckListDeliveryEnum>} [delivery] The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<LearningResourcesUserSubscriptionCheckListDeliveryEnum>} [delivery] The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
      * @param {Array<LearningResourcesUserSubscriptionCheckListDepartmentEnum>} [department] The department that offers the learning resource               * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean | null} [dev_mode] If true return raw open search results with score explanations
      * @param {boolean | null} [free]
@@ -17887,7 +17901,7 @@ export const LearningResourcesUserSubscriptionApiAxiosParamCreator = function (
      * @param {Array<LearningResourcesUserSubscriptionListCertificationTypeEnum>} [certification_type] The type of certificate               * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {number | null} [content_file_score_weight] Score weight for content file data.  1 is the default. 0 means content files are ignored
      * @param {Array<string>} [course_feature] The course feature. Possible options are at api/v1/course_features/
-     * @param {Array<LearningResourcesUserSubscriptionListDeliveryEnum>} [delivery] The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<LearningResourcesUserSubscriptionListDeliveryEnum>} [delivery] The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
      * @param {Array<LearningResourcesUserSubscriptionListDepartmentEnum>} [department] The department that offers the learning resource               * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean | null} [dev_mode] If true return raw open search results with score explanations
      * @param {boolean | null} [free]
@@ -18090,7 +18104,7 @@ export const LearningResourcesUserSubscriptionApiAxiosParamCreator = function (
      * @param {Array<LearningResourcesUserSubscriptionSubscribeCreateCertificationTypeEnum>} [certification_type] The type of certificate               * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {number | null} [content_file_score_weight] Score weight for content file data.  1 is the default. 0 means content files are ignored
      * @param {Array<string>} [course_feature] The course feature. Possible options are at api/v1/course_features/
-     * @param {Array<LearningResourcesUserSubscriptionSubscribeCreateDeliveryEnum>} [delivery] The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<LearningResourcesUserSubscriptionSubscribeCreateDeliveryEnum>} [delivery] The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
      * @param {Array<LearningResourcesUserSubscriptionSubscribeCreateDepartmentEnum>} [department] The department that offers the learning resource               * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean | null} [dev_mode] If true return raw open search results with score explanations
      * @param {boolean | null} [free]
@@ -18372,7 +18386,7 @@ export const LearningResourcesUserSubscriptionApiFp = function (
      * @param {Array<LearningResourcesUserSubscriptionCheckListCertificationTypeEnum>} [certification_type] The type of certificate               * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {number | null} [content_file_score_weight] Score weight for content file data.  1 is the default. 0 means content files are ignored
      * @param {Array<string>} [course_feature] The course feature. Possible options are at api/v1/course_features/
-     * @param {Array<LearningResourcesUserSubscriptionCheckListDeliveryEnum>} [delivery] The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<LearningResourcesUserSubscriptionCheckListDeliveryEnum>} [delivery] The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
      * @param {Array<LearningResourcesUserSubscriptionCheckListDepartmentEnum>} [department] The department that offers the learning resource               * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean | null} [dev_mode] If true return raw open search results with score explanations
      * @param {boolean | null} [free]
@@ -18487,7 +18501,7 @@ export const LearningResourcesUserSubscriptionApiFp = function (
      * @param {Array<LearningResourcesUserSubscriptionListCertificationTypeEnum>} [certification_type] The type of certificate               * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {number | null} [content_file_score_weight] Score weight for content file data.  1 is the default. 0 means content files are ignored
      * @param {Array<string>} [course_feature] The course feature. Possible options are at api/v1/course_features/
-     * @param {Array<LearningResourcesUserSubscriptionListDeliveryEnum>} [delivery] The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<LearningResourcesUserSubscriptionListDeliveryEnum>} [delivery] The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
      * @param {Array<LearningResourcesUserSubscriptionListDepartmentEnum>} [department] The department that offers the learning resource               * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean | null} [dev_mode] If true return raw open search results with score explanations
      * @param {boolean | null} [free]
@@ -18599,7 +18613,7 @@ export const LearningResourcesUserSubscriptionApiFp = function (
      * @param {Array<LearningResourcesUserSubscriptionSubscribeCreateCertificationTypeEnum>} [certification_type] The type of certificate               * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {number | null} [content_file_score_weight] Score weight for content file data.  1 is the default. 0 means content files are ignored
      * @param {Array<string>} [course_feature] The course feature. Possible options are at api/v1/course_features/
-     * @param {Array<LearningResourcesUserSubscriptionSubscribeCreateDeliveryEnum>} [delivery] The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<LearningResourcesUserSubscriptionSubscribeCreateDeliveryEnum>} [delivery] The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
      * @param {Array<LearningResourcesUserSubscriptionSubscribeCreateDepartmentEnum>} [department] The department that offers the learning resource               * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean | null} [dev_mode] If true return raw open search results with score explanations
      * @param {boolean | null} [free]
@@ -18949,8 +18963,8 @@ export interface LearningResourcesUserSubscriptionApiLearningResourcesUserSubscr
   readonly course_feature?: Array<string>
 
   /**
-   * The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
-   * @type {Array<'online' | 'hybrid' | 'in_person' | 'offline'>}
+   * The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
+   * @type {Array<'online' | 'hybrid' | 'in_person' | 'offline' | 'other'>}
    * @memberof LearningResourcesUserSubscriptionApiLearningResourcesUserSubscriptionCheckList
    */
   readonly delivery?: Array<LearningResourcesUserSubscriptionCheckListDeliveryEnum>
@@ -19152,8 +19166,8 @@ export interface LearningResourcesUserSubscriptionApiLearningResourcesUserSubscr
   readonly course_feature?: Array<string>
 
   /**
-   * The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
-   * @type {Array<'online' | 'hybrid' | 'in_person' | 'offline'>}
+   * The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
+   * @type {Array<'online' | 'hybrid' | 'in_person' | 'offline' | 'other'>}
    * @memberof LearningResourcesUserSubscriptionApiLearningResourcesUserSubscriptionList
    */
   readonly delivery?: Array<LearningResourcesUserSubscriptionListDeliveryEnum>
@@ -19348,8 +19362,8 @@ export interface LearningResourcesUserSubscriptionApiLearningResourcesUserSubscr
   readonly course_feature?: Array<string>
 
   /**
-   * The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
-   * @type {Array<'online' | 'hybrid' | 'in_person' | 'offline'>}
+   * The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
+   * @type {Array<'online' | 'hybrid' | 'in_person' | 'offline' | 'other'>}
    * @memberof LearningResourcesUserSubscriptionApiLearningResourcesUserSubscriptionSubscribeCreate
    */
   readonly delivery?: Array<LearningResourcesUserSubscriptionSubscribeCreateDeliveryEnum>
@@ -19738,6 +19752,7 @@ export const LearningResourcesUserSubscriptionCheckListDeliveryEnum = {
   Hybrid: "hybrid",
   InPerson: "in_person",
   Offline: "offline",
+  Other: "other",
 } as const
 export type LearningResourcesUserSubscriptionCheckListDeliveryEnum =
   (typeof LearningResourcesUserSubscriptionCheckListDeliveryEnum)[keyof typeof LearningResourcesUserSubscriptionCheckListDeliveryEnum]
@@ -19942,6 +19957,7 @@ export const LearningResourcesUserSubscriptionListDeliveryEnum = {
   Hybrid: "hybrid",
   InPerson: "in_person",
   Offline: "offline",
+  Other: "other",
 } as const
 export type LearningResourcesUserSubscriptionListDeliveryEnum =
   (typeof LearningResourcesUserSubscriptionListDeliveryEnum)[keyof typeof LearningResourcesUserSubscriptionListDeliveryEnum]
@@ -20139,6 +20155,7 @@ export const LearningResourcesUserSubscriptionSubscribeCreateDeliveryEnum = {
   Hybrid: "hybrid",
   InPerson: "in_person",
   Offline: "offline",
+  Other: "other",
 } as const
 export type LearningResourcesUserSubscriptionSubscribeCreateDeliveryEnum =
   (typeof LearningResourcesUserSubscriptionSubscribeCreateDeliveryEnum)[keyof typeof LearningResourcesUserSubscriptionSubscribeCreateDeliveryEnum]
@@ -20735,7 +20752,7 @@ export const LearningpathsApiAxiosParamCreator = function (
      * @param {boolean} [certification]
      * @param {Array<LearningpathsListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {Array<string>} [course_feature] Multiple values may be separated by commas.
-     * @param {Array<Array<LearningpathsListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<Array<LearningpathsListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
      * @param {Array<LearningpathsListDepartmentEnum>} [department] The department that offers learning resources  * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean} [free] The course/program is offered for free
      * @param {Array<LearningpathsListLevelEnum>} [level] The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
@@ -21278,7 +21295,7 @@ export const LearningpathsApiFp = function (configuration?: Configuration) {
      * @param {boolean} [certification]
      * @param {Array<LearningpathsListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {Array<string>} [course_feature] Multiple values may be separated by commas.
-     * @param {Array<Array<LearningpathsListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<Array<LearningpathsListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
      * @param {Array<LearningpathsListDepartmentEnum>} [department] The department that offers learning resources  * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean} [free] The course/program is offered for free
      * @param {Array<LearningpathsListLevelEnum>} [level] The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
@@ -21858,8 +21875,8 @@ export interface LearningpathsApiLearningpathsListRequest {
   readonly course_feature?: Array<string>
 
   /**
-   * The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
-   * @type {Array<Array<'online' | 'hybrid' | 'in_person' | 'offline'>>}
+   * The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
+   * @type {Array<Array<'online' | 'hybrid' | 'in_person' | 'offline' | 'other'>>}
    * @memberof LearningpathsApiLearningpathsList
    */
   readonly delivery?: Array<Array<LearningpathsListDeliveryEnum>>
@@ -22249,6 +22266,7 @@ export const LearningpathsListDeliveryEnum = {
   Hybrid: "hybrid",
   InPerson: "in_person",
   Offline: "offline",
+  Other: "other",
 } as const
 export type LearningpathsListDeliveryEnum =
   (typeof LearningpathsListDeliveryEnum)[keyof typeof LearningpathsListDeliveryEnum]
@@ -23021,7 +23039,7 @@ export const PodcastEpisodesApiAxiosParamCreator = function (
      * @param {boolean} [certification]
      * @param {Array<PodcastEpisodesListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {Array<string>} [course_feature] Multiple values may be separated by commas.
-     * @param {Array<Array<PodcastEpisodesListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<Array<PodcastEpisodesListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
      * @param {Array<PodcastEpisodesListDepartmentEnum>} [department] The department that offers learning resources  * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean} [free] The course/program is offered for free
      * @param {Array<PodcastEpisodesListLevelEnum>} [level] The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
@@ -23223,7 +23241,7 @@ export const PodcastEpisodesApiFp = function (configuration?: Configuration) {
      * @param {boolean} [certification]
      * @param {Array<PodcastEpisodesListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {Array<string>} [course_feature] Multiple values may be separated by commas.
-     * @param {Array<Array<PodcastEpisodesListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<Array<PodcastEpisodesListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
      * @param {Array<PodcastEpisodesListDepartmentEnum>} [department] The department that offers learning resources  * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean} [free] The course/program is offered for free
      * @param {Array<PodcastEpisodesListLevelEnum>} [level] The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
@@ -23423,8 +23441,8 @@ export interface PodcastEpisodesApiPodcastEpisodesListRequest {
   readonly course_feature?: Array<string>
 
   /**
-   * The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
-   * @type {Array<Array<'online' | 'hybrid' | 'in_person' | 'offline'>>}
+   * The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
+   * @type {Array<Array<'online' | 'hybrid' | 'in_person' | 'offline' | 'other'>>}
    * @memberof PodcastEpisodesApiPodcastEpisodesList
    */
   readonly delivery?: Array<Array<PodcastEpisodesListDeliveryEnum>>
@@ -23615,6 +23633,7 @@ export const PodcastEpisodesListDeliveryEnum = {
   Hybrid: "hybrid",
   InPerson: "in_person",
   Offline: "offline",
+  Other: "other",
 } as const
 export type PodcastEpisodesListDeliveryEnum =
   (typeof PodcastEpisodesListDeliveryEnum)[keyof typeof PodcastEpisodesListDeliveryEnum]
@@ -23900,7 +23919,7 @@ export const PodcastsApiAxiosParamCreator = function (
      * @param {boolean} [certification]
      * @param {Array<PodcastsListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {Array<string>} [course_feature] Multiple values may be separated by commas.
-     * @param {Array<Array<PodcastsListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<Array<PodcastsListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
      * @param {Array<PodcastsListDepartmentEnum>} [department] The department that offers learning resources  * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean} [free] The course/program is offered for free
      * @param {Array<PodcastsListLevelEnum>} [level] The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
@@ -24177,7 +24196,7 @@ export const PodcastsApiFp = function (configuration?: Configuration) {
      * @param {boolean} [certification]
      * @param {Array<PodcastsListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {Array<string>} [course_feature] Multiple values may be separated by commas.
-     * @param {Array<Array<PodcastsListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<Array<PodcastsListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
      * @param {Array<PodcastsListDepartmentEnum>} [department] The department that offers learning resources  * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean} [free] The course/program is offered for free
      * @param {Array<PodcastsListLevelEnum>} [level] The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
@@ -24469,8 +24488,8 @@ export interface PodcastsApiPodcastsListRequest {
   readonly course_feature?: Array<string>
 
   /**
-   * The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
-   * @type {Array<Array<'online' | 'hybrid' | 'in_person' | 'offline'>>}
+   * The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
+   * @type {Array<Array<'online' | 'hybrid' | 'in_person' | 'offline' | 'other'>>}
    * @memberof PodcastsApiPodcastsList
    */
   readonly delivery?: Array<Array<PodcastsListDeliveryEnum>>
@@ -24705,6 +24724,7 @@ export const PodcastsListDeliveryEnum = {
   Hybrid: "hybrid",
   InPerson: "in_person",
   Offline: "offline",
+  Other: "other",
 } as const
 export type PodcastsListDeliveryEnum =
   (typeof PodcastsListDeliveryEnum)[keyof typeof PodcastsListDeliveryEnum]
@@ -25024,7 +25044,7 @@ export const ProgramsApiAxiosParamCreator = function (
      * @param {boolean} [certification]
      * @param {Array<ProgramsListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {Array<string>} [course_feature] Multiple values may be separated by commas.
-     * @param {Array<Array<ProgramsListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<Array<ProgramsListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
      * @param {Array<ProgramsListDepartmentEnum>} [department] The department that offers learning resources  * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean} [free] The course/program is offered for free
      * @param {Array<ProgramsListLevelEnum>} [level] The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
@@ -25225,7 +25245,7 @@ export const ProgramsApiFp = function (configuration?: Configuration) {
      * @param {boolean} [certification]
      * @param {Array<ProgramsListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {Array<string>} [course_feature] Multiple values may be separated by commas.
-     * @param {Array<Array<ProgramsListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<Array<ProgramsListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
      * @param {Array<ProgramsListDepartmentEnum>} [department] The department that offers learning resources  * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean} [free] The course/program is offered for free
      * @param {Array<ProgramsListLevelEnum>} [level] The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
@@ -25421,8 +25441,8 @@ export interface ProgramsApiProgramsListRequest {
   readonly course_feature?: Array<string>
 
   /**
-   * The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
-   * @type {Array<Array<'online' | 'hybrid' | 'in_person' | 'offline'>>}
+   * The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
+   * @type {Array<Array<'online' | 'hybrid' | 'in_person' | 'offline' | 'other'>>}
    * @memberof ProgramsApiProgramsList
    */
   readonly delivery?: Array<Array<ProgramsListDeliveryEnum>>
@@ -25613,6 +25633,7 @@ export const ProgramsListDeliveryEnum = {
   Hybrid: "hybrid",
   InPerson: "in_person",
   Offline: "offline",
+  Other: "other",
 } as const
 export type ProgramsListDeliveryEnum =
   (typeof ProgramsListDeliveryEnum)[keyof typeof ProgramsListDeliveryEnum]
@@ -28137,7 +28158,7 @@ export const VideoPlaylistsApiAxiosParamCreator = function (
      * @param {boolean} [certification]
      * @param {Array<VideoPlaylistsListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {Array<string>} [course_feature] Multiple values may be separated by commas.
-     * @param {Array<Array<VideoPlaylistsListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<Array<VideoPlaylistsListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
      * @param {Array<VideoPlaylistsListDepartmentEnum>} [department] The department that offers learning resources  * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean} [free] The course/program is offered for free
      * @param {Array<VideoPlaylistsListLevelEnum>} [level] The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
@@ -28418,7 +28439,7 @@ export const VideoPlaylistsApiFp = function (configuration?: Configuration) {
      * @param {boolean} [certification]
      * @param {Array<VideoPlaylistsListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {Array<string>} [course_feature] Multiple values may be separated by commas.
-     * @param {Array<Array<VideoPlaylistsListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<Array<VideoPlaylistsListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
      * @param {Array<VideoPlaylistsListDepartmentEnum>} [department] The department that offers learning resources  * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean} [free] The course/program is offered for free
      * @param {Array<VideoPlaylistsListLevelEnum>} [level] The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
@@ -28712,8 +28733,8 @@ export interface VideoPlaylistsApiVideoPlaylistsListRequest {
   readonly course_feature?: Array<string>
 
   /**
-   * The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
-   * @type {Array<Array<'online' | 'hybrid' | 'in_person' | 'offline'>>}
+   * The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
+   * @type {Array<Array<'online' | 'hybrid' | 'in_person' | 'offline' | 'other'>>}
    * @memberof VideoPlaylistsApiVideoPlaylistsList
    */
   readonly delivery?: Array<Array<VideoPlaylistsListDeliveryEnum>>
@@ -28948,6 +28969,7 @@ export const VideoPlaylistsListDeliveryEnum = {
   Hybrid: "hybrid",
   InPerson: "in_person",
   Offline: "offline",
+  Other: "other",
 } as const
 export type VideoPlaylistsListDeliveryEnum =
   (typeof VideoPlaylistsListDeliveryEnum)[keyof typeof VideoPlaylistsListDeliveryEnum]
@@ -29108,7 +29130,7 @@ export const VideosApiAxiosParamCreator = function (
      * @param {boolean} [certification]
      * @param {Array<VideosListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {Array<string>} [course_feature] Multiple values may be separated by commas.
-     * @param {Array<Array<VideosListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<Array<VideosListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
      * @param {Array<VideosListDepartmentEnum>} [department] The department that offers learning resources  * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean} [free] The course/program is offered for free
      * @param {Array<VideosListLevelEnum>} [level] The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
@@ -29309,7 +29331,7 @@ export const VideosApiFp = function (configuration?: Configuration) {
      * @param {boolean} [certification]
      * @param {Array<VideosListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {Array<string>} [course_feature] Multiple values may be separated by commas.
-     * @param {Array<Array<VideosListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<Array<VideosListDeliveryEnum>>} [delivery] The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
      * @param {Array<VideosListDepartmentEnum>} [department] The department that offers learning resources  * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
      * @param {boolean} [free] The course/program is offered for free
      * @param {Array<VideosListLevelEnum>} [level] The academic level of the resources  * &#x60;undergraduate&#x60; - Undergraduate * &#x60;graduate&#x60; - Graduate * &#x60;high_school&#x60; - High School * &#x60;noncredit&#x60; - Non-Credit * &#x60;advanced&#x60; - Advanced * &#x60;intermediate&#x60; - Intermediate * &#x60;introductory&#x60; - Introductory
@@ -29504,8 +29526,8 @@ export interface VideosApiVideosListRequest {
   readonly course_feature?: Array<string>
 
   /**
-   * The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
-   * @type {Array<Array<'online' | 'hybrid' | 'in_person' | 'offline'>>}
+   * The delivery of course/program resources  * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline * &#x60;other&#x60; - Other
+   * @type {Array<Array<'online' | 'hybrid' | 'in_person' | 'offline' | 'other'>>}
    * @memberof VideosApiVideosList
    */
   readonly delivery?: Array<Array<VideosListDeliveryEnum>>
@@ -29696,6 +29718,7 @@ export const VideosListDeliveryEnum = {
   Hybrid: "hybrid",
   InPerson: "in_person",
   Offline: "offline",
+  Other: "other",
 } as const
 export type VideosListDeliveryEnum =
   (typeof VideosListDeliveryEnum)[keyof typeof VideosListDeliveryEnum]
