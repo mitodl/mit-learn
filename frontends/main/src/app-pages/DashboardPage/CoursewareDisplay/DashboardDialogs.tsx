@@ -50,8 +50,7 @@ const EmailSettingsDialogInner: React.FC<DashboardDialogProps> = ({
   })
   const updateEnrollment = useUpdateEnrollment({
     id: enrollment.id,
-    PatchedCourseRunEnrollmentRequest: {
-      //@ts-expect-error This will be fixed after https://github.com/mitodl/mitxonline/pull/2737 is released
+    PatchedUpdateCourseRunEnrollmentRequest: {
       receive_emails: formik.values.receive_emails,
     },
   })

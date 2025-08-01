@@ -2,6 +2,7 @@ import {
   B2bApi,
   CoursesApi,
   EnrollmentsApi,
+  ProgramCollectionsApi,
   ProgramsApi,
   UsersApi,
 } from "@mitodl/mitxonline-api-axios/v1"
@@ -23,6 +24,11 @@ const usersApi = new UsersApi(undefined, BASE_PATH, axiosInstance)
 const b2bApi = new B2bApi(undefined, BASE_PATH, axiosInstance)
 const enrollmentsApi = new EnrollmentsApi(undefined, BASE_PATH, axiosInstance)
 const programsApi = new ProgramsApi(undefined, BASE_PATH, axiosInstance)
+const programCollectionsApi = new ProgramCollectionsApi(
+  undefined,
+  BASE_PATH,
+  axiosInstance,
+)
 const coursesApi = new CoursesApi(undefined, BASE_PATH, axiosInstance)
 
 export {
@@ -30,6 +36,7 @@ export {
   b2bApi,
   enrollmentsApi,
   programsApi,
+  programCollectionsApi,
   coursesApi,
   axiosInstance,
 }
