@@ -6,7 +6,7 @@ import type {
   ProgramsApiProgramsListV2Request,
   ProgramsApiProgramsRetrieveV2Request,
   V2Program,
-} from "@mitodl/mitxonline-api-axios/v1"
+} from "@mitodl/mitxonline-api-axios/v2"
 import { programCollectionsApi, programsApi } from "../../clients"
 
 const programsKeys = {

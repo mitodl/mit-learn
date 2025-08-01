@@ -2,7 +2,7 @@ import { queryOptions } from "@tanstack/react-query"
 import type {
   CoursesApiApiV2CoursesListRequest,
   PaginatedV2CourseWithCourseRunsList,
-} from "@mitodl/mitxonline-api-axios/v1"
+} from "@mitodl/mitxonline-api-axios/v2"
 import { coursesApi } from "../../clients"
 
 const coursesKeys = {

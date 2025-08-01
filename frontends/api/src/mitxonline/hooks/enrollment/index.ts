@@ -4,7 +4,7 @@ import { b2bApi, enrollmentsApi } from "../../clients"
 import {
   B2bApiB2bEnrollCreateRequest,
   EnrollmentsApiEnrollmentsPartialUpdateRequest,
-} from "@mitodl/mitxonline-api-axios/v1"
+} from "@mitodl/mitxonline-api-axios/v2"
 
 const useCreateEnrollment = (opts: B2bApiB2bEnrollCreateRequest) => {
   const queryClient = useQueryClient()
