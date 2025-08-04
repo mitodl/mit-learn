@@ -91,10 +91,12 @@ def run_for_canvas_archive(course_archive_path, course_folder, overwrite):
     end_at = course_info.get("conclude_at")
     try:
         start_at = datetime.fromisoformat(start_at)
-        end_at = datetime.fromisoformat(end_at)
     except (ValueError, TypeError):
         log.warning("Invalid start_at date format: %s", start_at)
         start_at = None
+    try:
+        end_at = datetime.fromisoformat(end_at)
+    except (ValueError, TypeError):
         end_at = None
     readable_id = f"{course_folder}-{course_info.get('course_code')}"
     # create placeholder learning resource
