@@ -1418,7 +1418,17 @@ def test_learning_resources_summary_listing_endpoint_large_pagesize():
     ],
 )
 def test_course_run_problems_endpoint(client, user_role, django_user_model):
-    """Test course run problems endpoint"""
+    """
+    Test course run problems endpoint.
+
+    All types of users should be able to get a list of problem set titles
+    for a course run from api/v0/tutorproblems/<run_readable_id>
+
+    Only admin and group_tutor_problem_viewer users should be able to get
+    problem and solution content from
+    api/v0/tutorproblems/<run_readable_id>/<problem_set_title>
+    Normal users and anonymous users should receive a 403  response
+    """
     course_run = LearningResourceRunFactory.create(
         learning_resource=CourseFactory.create(
             platform=PlatformType.canvas.name
@@ -1463,20 +1473,7 @@ def test_course_run_problems_endpoint(client, user_role, django_user_model):
         reverse("lr:v0:tutorproblem_api-list-problems", args=[course_run.run_id])
     )
 
-    if user_role in ["admin", "group_tutor_problem_viewer"]:
-        assert resp.json() == {"problem_set_titles": ["Problem Set 1", "Problem Set 2"]}
-    elif user_role == "normal":
-        assert resp.status_code == 403
-        assert resp.json() == {
-            "detail": "You do not have permission to perform this action.",
-            "error_type": "PermissionDenied",
-        }
-    elif user_role == "anonymous":
-        assert resp.status_code == 403
-        assert resp.json() == {
-            "detail": "Authentication credentials were not provided.",
-            "error_type": "NotAuthenticated",
-        }
+    assert resp.json() == {"problem_set_titles": ["Problem Set 1", "Problem Set 2"]}
 
     detail_resp = client.get(
         reverse(
