@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.39.0
+Version 0.39.0 (Released August 04, 2025)
 --------------
 
 - Video Shorts / Media Section (#2388)
