@@ -870,8 +870,8 @@ class TutorProblemFile(TimestampedModel):
         LearningResourceRun,
         related_name="problem_files",
         on_delete=models.CASCADE,
-        blank=True,
-        null=True,
+        blank=False,
+        null=False,
     )
 
     problem_title = models.CharField(max_length=1024, null=True, blank=True)  # noqa: DJ001
