@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.39.0 (Released August 04, 2025)
+--------------
+
+- Video Shorts / Media Section (#2388)
+- unpublish contentfiles webhook endpoint (#2374)
+
 Version 0.38.3 (Released July 29, 2025)
 --------------
 
