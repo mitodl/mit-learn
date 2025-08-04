@@ -4,6 +4,7 @@ import sys
 import zipfile
 from collections import defaultdict
 from collections.abc import Generator
+from datetime import datetime
 from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -73,6 +74,11 @@ def sync_canvas_archive(bucket, key: str, overwrite):
     return resource_readable_id, run
 
 
+def _course_url(course_archive_path) -> str:
+    context_info = parse_context_xml(course_archive_path)
+    return f"https://{context_info.get('canvas_domain')}/courses/{context_info.get('course_id')}/"
+
+
 def run_for_canvas_archive(course_archive_path, course_folder, overwrite):
     """
     Generate and return a LearningResourceRun for a Canvas course
@@ -80,6 +86,20 @@ def run_for_canvas_archive(course_archive_path, course_folder, overwrite):
     checksum = calc_checksum(course_archive_path)
     course_info = parse_canvas_settings(course_archive_path)
     course_title = course_info.get("title")
+    url = _course_url(course_archive_path)
+    start_at = course_info.get("start_at")
+    end_at = course_info.get("conclude_at")
+    if start_at:
+        try:
+            start_at = datetime.fromisoformat(start_at)
+        except (ValueError, TypeError):
+            log.warning("Invalid start_at date format: %s", start_at)
+    if end_at:
+        try:
+            end_at = datetime.fromisoformat(end_at)
+        except (ValueError, TypeError):
+            log.warning("Invalid start_at date format: %s", end_at)
+
     readable_id = f"{course_folder}-{course_info.get('course_code')}"
     # create placeholder learning resource
     resource, _ = LearningResource.objects.update_or_create(
@@ -87,6 +107,7 @@ def run_for_canvas_archive(course_archive_path, course_folder, overwrite):
         defaults={
             "title": course_title,
             "published": False,
+            "url": url,
             "test_mode": True,
             "etl_source": ETLSource.canvas.name,
             "platform": LearningResourcePlatform.objects.get(
@@ -100,6 +121,8 @@ def run_for_canvas_archive(course_archive_path, course_folder, overwrite):
             run_id=f"{readable_id}+canvas",
             learning_resource=resource,
             published=True,
+            start_date=start_at,
+            end_date=end_at,
         )
     run = resource.runs.first()
     resource_readable_id = run.learning_resource.readable_id
@@ -204,6 +227,21 @@ def transform_canvas_problem_files(
                 if markdown_content:
                     problem_file_data["content"] = markdown_content
             yield problem_file_data
+
+
+def parse_context_xml(course_archive_path: str) -> dict:
+    with zipfile.ZipFile(course_archive_path, "r") as course_archive:
+        context = course_archive.read("course_settings/context.xml")
+    root = ElementTree.fromstring(context)
+    namespaces = {"ns": "http://canvas.instructure.com/xsd/cccv1p0"}
+    context_info = {}
+    item_keys = ["course_id", "root_account_id", "canvas_domain", "root_account_name"]
+    for key in item_keys:
+        element = root.find(f"ns:{key}", namespaces)
+        if element is not None:
+            context_info[key] = element.text
+
+    return context_info
 
 
 def parse_module_meta(course_archive_path: str) -> dict:
