@@ -359,7 +359,9 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
         serializer = LearningResourceMetadataDisplaySerializer(doc)
         serialized_document = serializer.render_document()
         checksum = checksum_for_content(str(serialized_document))
+        key = f"{doc['readable_id']}.course_metadata"
         serialized_document["checksum"] = checksum
+        serialized_document["key"] = key
         document_point_id = vector_point_id(
             f"{doc['readable_id']}.course_information.0"
         )
@@ -367,6 +369,10 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
             serialized_document, document_point_id
         ):
             continue
+        # remove existing course info docs
+        remove_points_matching_params(
+            {"key": key}, collection_name=CONTENT_FILES_COLLECTION_NAME
+        )
         split_texts = serializer.render_chunks()
         split_metadatas = [
             {
@@ -375,6 +381,8 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
                 "chunk_content": chunk_content,
                 "resource_readable_id": doc["readable_id"],
                 "file_extension": ".txt",
+                "file_type": "course_metadata",
+                "key": key,
                 "checksum": checksum,
                 **{key: doc[key] for key in ["offered_by", "platform"]},
             }
