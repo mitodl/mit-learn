@@ -11,7 +11,7 @@ export async function register() {
     await import("../sentry.edge.config")
   }
 
-  registerOTel({ serviceName: "mitlearn-frontend" })
+  registerOTel({ serviceName: process.env.OTEL_SERVICE_NAME || "mitlearn-frontend" })
 }
 
 export const onRequestError = Sentry.captureRequestError
