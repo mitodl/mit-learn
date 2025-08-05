@@ -21,6 +21,7 @@ from learning_resources_search.serializers import (
     serialize_bulk_content_files,
     serialize_bulk_learning_resources,
 )
+from main.utils import checksum_for_content
 from vector_search.constants import (
     CONTENT_FILES_COLLECTION_NAME,
     QDRANT_CONTENT_FILE_INDEXES,
@@ -319,18 +320,18 @@ def should_generate_resource_embeddings(serialized_document):
     return True
 
 
-def should_generate_content_embeddings(serialized_document):
+def should_generate_content_embeddings(serialized_document, point_id=None):
     """
     Determine if we should generate embeddings for a content file
     """
     client = qdrant_client()
-
-    # we just need metadata from the first chunk
-    point_id = vector_point_id(
-        f"{serialized_document['resource_readable_id']}."
-        f"{serialized_document.get('run_readable_id', '')}."
-        f"{serialized_document['key']}.0"
-    )
+    if not point_id:
+        # we just need metadata from the first chunk
+        point_id = vector_point_id(
+            f"{serialized_document['resource_readable_id']}."
+            f"{serialized_document.get('run_readable_id', '')}."
+            f"{serialized_document['key']}.0"
+        )
     response = client.retrieve(
         collection_name=CONTENT_FILES_COLLECTION_NAME,
         ids=[point_id],
@@ -353,11 +354,19 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
     ids = []
     docs = []
     for doc in serialized_resources:
-        if not should_generate_resource_embeddings(doc):
-            continue
         readable_id = doc["readable_id"]
         resource_vector_point_id = str(vector_point_id(readable_id))
         serializer = LearningResourceMetadataDisplaySerializer(doc)
+        serialized_document = serializer.render_document()
+        checksum = checksum_for_content(str(serialized_document))
+        serialized_document["checksum"] = checksum
+        document_point_id = vector_point_id(
+            f"{doc['readable_id']}.course_information.0"
+        )
+        if not should_generate_content_embeddings(
+            serialized_document, document_point_id
+        ):
+            continue
         split_texts = serializer.render_chunks()
         split_metadatas = [
             {
@@ -366,6 +375,7 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
                 "chunk_content": chunk_content,
                 "resource_readable_id": doc["readable_id"],
                 "file_extension": ".txt",
+                "checksum": checksum,
                 **{key: doc[key] for key in ["offered_by", "platform"]},
             }
             for chunk_id, chunk_content in enumerate(split_texts)

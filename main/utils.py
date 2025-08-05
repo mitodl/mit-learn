@@ -5,6 +5,7 @@ import logging
 import os
 from enum import Flag, auto
 from functools import wraps
+from hashlib import md5
 from itertools import islice
 from urllib.parse import urljoin
 
@@ -364,3 +365,11 @@ def clear_search_cache():
         search_keys = cache.keys("views.decorators.cache.cache_header.search.*")
         cleared += cache.delete_many(search_keys) or 0
     return cleared
+
+
+def checksum_for_content(content):
+    hasher = md5()  # noqa: S324
+    if content:
+        hasher.update(content.encode("utf-8"))
+        return hasher.hexdigest()
+    return None
