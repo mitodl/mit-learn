@@ -39,6 +39,10 @@ type DashboardCourse = {
     receiveEmails?: boolean
   }
   marketingUrl: string
+  certificate?: {
+    uuid: string
+    link: string
+  }
 }
 type DashboardCourseEnrollment = {
   id: number

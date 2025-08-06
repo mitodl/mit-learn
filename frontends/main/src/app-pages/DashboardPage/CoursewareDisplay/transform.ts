@@ -62,6 +62,10 @@ const mitxonlineEnrollment = (raw: CourseRunEnrollment): DashboardCourse => {
         : EnrollmentStatus.Enrolled,
       receiveEmails: raw.edx_emails_subscription ?? true,
     },
+    certificate: {
+      uuid: raw.certificate?.uuid ?? "",
+      link: raw.certificate?.link ?? "",
+    },
   }
 }
 const mitxonlineEnrollments = (data: CourseRunEnrollment[]) =>
