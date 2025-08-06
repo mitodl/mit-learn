@@ -367,7 +367,7 @@ def clear_search_cache():
     return cleared
 
 
-def checksum_for_content(content):
+def checksum_for_content(content: str) -> str:
     """
     Generate a checksum based on the provided content string
     """
