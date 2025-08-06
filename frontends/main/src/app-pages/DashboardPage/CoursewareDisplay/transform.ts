@@ -53,6 +53,10 @@ const mitxonlineEnrollment = (raw: CourseRunEnrollment): DashboardCourse => {
       certificateUpgradePrice: raw.run.products[0]?.price,
       canUpgrade: raw.run.is_upgradable,
       coursewareUrl: raw.run.courseware_url,
+      certificate: {
+        uuid: raw.certificate?.uuid ?? "",
+        link: raw.certificate?.link ?? "",
+      },
     },
     enrollment: {
       id: raw.id,
@@ -61,10 +65,6 @@ const mitxonlineEnrollment = (raw: CourseRunEnrollment): DashboardCourse => {
         ? EnrollmentStatus.Completed
         : EnrollmentStatus.Enrolled,
       receiveEmails: raw.edx_emails_subscription ?? true,
-    },
-    certificate: {
-      uuid: raw.certificate?.uuid ?? "",
-      link: raw.certificate?.link ?? "",
     },
   }
 }

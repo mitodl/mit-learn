@@ -34,7 +34,10 @@ const courseEnrollment: PartialFactory<CourseRunEnrollment> = (
 
   const defaults: CourseRunEnrollment = {
     id: uniqueEnrollmentId.enforce(() => faker.number.int()),
-    certificate: null,
+    certificate: {
+      uuid: faker.string.uuid(),
+      link: faker.internet.url(),
+    },
     approved_flexible_price_exists: faker.datatype.boolean(),
     grades: [],
     enrollment_mode: faker.helpers.arrayElement(["audit", "verified"]),
