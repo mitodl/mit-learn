@@ -368,6 +368,9 @@ def clear_search_cache():
 
 
 def checksum_for_content(content):
+    """
+    Generate a checksum based on the provided content string
+    """
     hasher = md5()  # noqa: S324
     if content:
         hasher.update(content.encode("utf-8"))
