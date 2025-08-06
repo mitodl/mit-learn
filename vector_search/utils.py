@@ -254,11 +254,13 @@ def update_learning_resource_payload(serialized_document):
 
 
 def update_content_file_payload(serialized_document):
-    params = {
-        "resource_readable_id": serialized_document["resource_readable_id"],
-        "key": serialized_document["key"],
-        "run_readable_id": serialized_document["run_readable_id"],
-    }
+    search_keys = ["resource_readable_id", "key", "run_readable_id"]
+    params = {}
+    for key in search_keys:
+        if key in serialized_document:
+            params[key] = serialized_document[key]
+    if not params:
+        return
     points = [
         point.id
         for point in retrieve_points_matching_params(
@@ -380,6 +382,7 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
                 "chunk_number": chunk_id,
                 "chunk_content": chunk_content,
                 "resource_readable_id": doc["readable_id"],
+                "run_readable_id": doc["readable_id"],
                 "file_extension": ".txt",
                 "file_type": "course_metadata",
                 "key": key,

@@ -682,3 +682,44 @@ def test_embed_course_metadata_as_contentfile_uploads_points_on_change(mocker):
 
     # nothing has changed - no updates to make
     assert not mock_client.upload_points.called
+
+
+@pytest.mark.parametrize(
+    ("serialized_document", "expected_params"),
+    [
+        (
+            {"resource_readable_id": "r1", "key": "k1", "run_readable_id": "run1"},
+            {"resource_readable_id": "r1", "key": "k1", "run_readable_id": "run1"},
+        ),
+        (
+            {"resource_readable_id": "r2", "key": "k2"},
+            {"resource_readable_id": "r2", "key": "k2"},
+        ),
+        (
+            {"run_readable_id": "run3"},
+            {"run_readable_id": "run3"},
+        ),
+        ({"test": "run3"}, None),
+    ],
+)
+def test_update_content_file_payload_only_includes_existing_keys(
+    mocker, serialized_document, expected_params
+):
+    """
+    Test that params only includes keys
+    that are defined in the input document
+    """
+    mock_retrieve = mocker.patch(
+        "vector_search.utils.retrieve_points_matching_params", return_value=[]
+    )
+    mocker.patch("vector_search.utils._set_payload")
+
+    update_content_file_payload(serialized_document)
+    if expected_params:
+        # Check that retrieve_points_matching_params was called with only the expected keys
+        mock_retrieve.assert_called_once_with(
+            expected_params,
+            collection_name=CONTENT_FILES_COLLECTION_NAME,
+        )
+    else:
+        mock_retrieve.assert_not_called()
