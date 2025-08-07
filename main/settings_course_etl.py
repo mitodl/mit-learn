@@ -105,3 +105,16 @@ TIKA_ACCESS_TOKEN = get_string("TIKA_ACCESS_TOKEN", None)
 TIKA_TIMEOUT = get_int("TIKA_TIMEOUT", 60)
 TIKA_OCR_STRATEGY = get_string("TIKA_OCR_STRATEGY", "no_ocr")
 SKIP_TIKA = get_bool("SKIP_TIKA", default=False)
+
+
+# Base content URLs for different sources
+CONTENT_BASE_URL_MITXONLINE = get_string(
+    "CONTENT_BASE_URL_MITXONLINE", "https://courses.mitxonline.mit.edu"
+)
+CONTENT_BASE_URL_XPRO = get_string(
+    "CONTENT_BASE_URL_XPRO", "https://courses.xpro.mit.edu"
+)
+CONTENT_BASE_URL_OLL = get_string(
+    "CONTENT_BASE_URL_OLL", "https://openlearninglibrary.mit.edu"
+)
+CONTENT_BASE_URL_EDX = get_string("CONTENT_BASE_URL_EDX", "https://courses.edx.org")

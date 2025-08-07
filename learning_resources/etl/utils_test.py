@@ -224,6 +224,21 @@ def test_transform_content_files(  # noqa: PLR0913
         "learning_resources.etl.utils.extract_text_metadata", return_value=tika_output
     )
 
+    # Mock the new functions called by _process_olx_path
+    assets_metadata = {"test": "assets"}
+    video_metadata = {"test": "video"}
+    test_url = "https://example.com/test"
+
+    mocker.patch(
+        "learning_resources.etl.utils.get_assets_metadata", return_value=assets_metadata
+    )
+    mocker.patch(
+        "learning_resources.etl.utils.get_video_metadata", return_value=video_metadata
+    )
+    mocker.patch(
+        "learning_resources.etl.utils.get_url_from_module_id", return_value=test_url
+    )
+
     script_dir = (pathlib.Path(__file__).parent.absolute()).parent.parent
 
     content = list(
@@ -248,6 +263,7 @@ def test_transform_content_files(  # noqa: PLR0913
                 "file_extension": file_extension,
                 "source_path": f"root/{folder}/uuid{file_extension}",
                 "edx_module_id": edx_module_id,
+                "url": test_url,
             }
         ]
     else:
@@ -558,3 +574,286 @@ def test_parse_resource_commitment(raw_value, min_hours, max_hours):
     assert utils.parse_resource_commitment(raw_value) == CommitmentConfig(
         commitment=raw_value, min_weekly_hours=min_hours, max_weekly_hours=max_hours
     )
+
+
+@pytest.mark.parametrize(
+    ("uuid_string", "expected"),
+    [
+        ("550e8400-e29b-41d4-a716-446655440000", True),
+        ("123e4567e89b12d3a456426614174000", True),
+        ("not-a-uuid", False),
+        ("", False),
+        ("123", False),
+        ("550e8400-e29b-41d4-a716", False),  # too short
+        ("550e8400e29b41d4a71644665544000g", False),  # invalid character
+    ],
+)
+def test_is_valid_uuid(uuid_string, expected):
+    """Test that is_valid_uuid correctly validates UUID strings"""
+    assert utils.is_valid_uuid(uuid_string) == expected
+
+
+@pytest.mark.parametrize("assets_exist", [True, False])
+def test_get_assets_metadata(mocker, tmp_path, assets_exist):
+    """Test that get_assets_metadata returns correct metadata when assets.json exists"""
+    olx_path = tmp_path / "course"
+    policies_dir = olx_path / "policies"
+    policies_dir.mkdir(parents=True)
+
+    if assets_exist:
+        assets_data = {
+            "course-v1:MITx+6.00x+2T2017": {
+                "static/image.png": {"custom_md5": "abc123"},
+                "static/video.mp4": {"custom_md5": "def456"},
+            }
+        }
+        assets_file = policies_dir / "assets.json"
+        assets_file.write_text(str(assets_data).replace("'", '"'))
+
+        result = utils.get_assets_metadata(str(olx_path))
+        assert result == assets_data
+    else:
+        # No assets.json file exists
+        mock_log = mocker.patch("learning_resources.etl.utils.log")
+        result = utils.get_assets_metadata(str(olx_path))
+        assert result is None
+        mock_log.warning.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    ("xml_content", "file_name", "expected_mapping"),
+    [
+        (
+            """<video url_name="test_video">
+                <transcript src="test_transcript.srt" />
+                <transcript src="test_transcript_es.srt" />
+            </video>""",
+            "test_video.xml",
+            {
+                "asset-v1:test_run+type@asset+block@test_transcript.srt": "block-v1:test_run+type@video+block@test_video",
+                "asset-v1:test_run+type@asset+block@test_transcript_es.srt": "block-v1:test_run+type@video+block@test_video",
+            },
+        ),
+        (
+            """<video url_name="another_video">
+                <transcript src="another_transcript.srt" />
+            </video>""",
+            "another_video.xml",
+            {
+                "asset-v1:test_run+type@asset+block@another_transcript.srt": "block-v1:test_run+type@video+block@another_video"
+            },
+        ),
+        (
+            """<video>
+                <transcript src="no_url_name.srt" />
+            </video>""",
+            "no_url_name.xml",
+            {},  # No url_name, should return empty dict
+        ),
+        (
+            """<video url_name="no_transcripts">
+            </video>""",
+            "no_transcripts.xml",
+            {},  # No transcripts, should return empty dict
+        ),
+        (
+            """invalid xml content""",
+            "invalid.xml",
+            {},  # Invalid XML, should return empty dict
+        ),
+    ],
+)
+def test_parse_video_transcripts_xml(mocker, xml_content, file_name, expected_mapping):
+    """Test that parse_video_transcripts_xml correctly parses video XML and creates transcript mapping"""
+    run = LearningResourceRunFactory.create(run_id="course-v1:test_run")
+    path = mocker.Mock()
+    path.__str__ = mocker.Mock(return_value=f"video/{file_name}")
+
+    mock_log = mocker.patch("learning_resources.etl.utils.log")
+
+    result = utils.parse_video_transcripts_xml(run, xml_content, path)
+
+    assert result == expected_mapping
+
+    # Check if warning/exception was logged for invalid XML
+    if "invalid xml" in xml_content.lower():
+        mock_log.exception.assert_called_once()
+
+
+@pytest.mark.parametrize("video_dir_exists", [True, False])
+def test_get_video_metadata(mocker, tmp_path, video_dir_exists):
+    """Test that get_video_metadata correctly processes video directory and returns transcript mappings"""
+    run = LearningResourceRunFactory.create(run_id="course-v1:test_run")
+    olx_path = tmp_path / "course"
+    olx_path.mkdir()
+
+    mock_log = mocker.patch("learning_resources.etl.utils.log")
+
+    if video_dir_exists:
+        video_dir = olx_path / "video"
+        video_dir.mkdir()
+
+        # Create a test video XML file
+        video_xml = """<video url_name="test_video">
+            <transcript src="test_transcript1.srt" />
+            <transcript src="test_transcript2.srt" />
+        </video>"""
+
+        video_file = video_dir / "test_video.xml"
+        video_file.write_text(video_xml)
+
+        # Mock parse_video_transcripts_xml to return expected mapping
+        expected_mapping = {
+            "asset-v1:test_run+type@asset+block@test_transcript1.srt": "block-v1:test_run+type@video+block@test_video",
+            "asset-v1:test_run+type@asset+block@test_transcript2.srt": "block-v1:test_run+type@video+block@test_video",
+        }
+        mock_parse = mocker.patch(
+            "learning_resources.etl.utils.parse_video_transcripts_xml",
+            return_value=expected_mapping,
+        )
+
+        result = utils.get_video_metadata(str(olx_path), run)
+
+        assert result == expected_mapping
+        # The function passes a file object to parse_video_transcripts_xml, not a Path
+        assert mock_parse.call_count == 1
+        call_args = mock_parse.call_args[0]
+        assert call_args[0] == run
+        assert call_args[1] == video_xml
+        # The third argument is a file object, so we can't easily check its exact value
+        mock_log.debug.assert_called()
+    else:
+        # No video directory
+        result = utils.get_video_metadata(str(olx_path), run)
+        assert result == {}
+        mock_log.warning.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    (
+        "etl_source",
+        "module_id",
+        "has_video_meta",
+        "has_asset_meta",
+        "expected_url_pattern",
+    ),
+    [
+        # Asset URLs
+        (
+            "mit_edx",
+            "asset-v1:test+type@asset+block@image.png",
+            False,
+            True,
+            "https://edx.org/asset-v1:test+type@asset+block@image.png",
+        ),  # No custom_md5 in path
+        (
+            "mit_edx",
+            "asset-v1:test+type@asset+block@video.mp4",
+            False,
+            False,
+            "https://edx.org/asset-v1:test+type@asset+block@video.mp4",
+        ),
+        (
+            "mit_edx",
+            "asset-v1:test+type@asset+block@transcript.srt",
+            True,
+            False,
+            "https://edx.org/courses/course-v1:test_run/jump_to/test_video",
+        ),
+        (
+            "mit_edx",
+            "asset-v1:test+type@asset+block@transcript.srt",
+            False,
+            False,
+            "https://edx.org/asset-v1:test+type@asset+block@transcript.srt",
+        ),  # SRT without video meta returns asset URL
+        # Block URLs with valid UUID
+        (
+            "mit_edx",
+            "block-v1:test+type@html+block@550e8400-e29b-41d4-a716-446655440000",
+            False,
+            False,
+            "https://edx.org/courses/course-v1:test_run/jump_to_id/550e8400-e29b-41d4-a716-446655440000",
+        ),
+        # OLL source with run_id modification
+        (
+            "oll",
+            "block-v1:test+type@html+block@550e8400-e29b-41d4-a716-446655440000",
+            False,
+            False,
+            "https://oll.org/courses/course-v1:course-v1:test_run/jump_to_id/550e8400-e29b-41d4-a716-446655440000",
+        ),
+        # Invalid cases
+        (
+            "",
+            "asset-v1:test+type@asset+block@file.txt",
+            False,
+            False,
+            "None/asset-v1:test+type@asset+block@file.txt",
+        ),  # Empty etl_source returns None as root_url
+        (
+            "mit_edx",
+            "block-v1:test+type@html+block@invalid-uuid",
+            False,
+            False,
+            None,
+        ),  # Invalid UUID
+        ("mit_edx", "unknown-format", False, False, None),  # Unknown format
+    ],
+)
+def test_get_url_from_module_id(  # noqa: PLR0913
+    mocker,
+    settings,
+    etl_source,
+    module_id,
+    has_video_meta,
+    has_asset_meta,
+    expected_url_pattern,
+):
+    """Test that get_url_from_module_id generates correct URLs for different module types"""
+    # Setup settings
+    settings.CONTENT_BASE_URL_EDX = "https://edx.org"
+    settings.CONTENT_BASE_URL_OLL = "https://oll.org"
+
+    run = LearningResourceRunFactory.create(
+        run_id="course-v1:test_run", learning_resource__etl_source=etl_source
+    )
+
+    olx_path = "/path/to/course-v1:test_run"
+
+    # Setup metadata
+    assets_metadata = (
+        {
+            "course-v1:test_run": {
+                "static/image.png": {}  # No custom_md5 for simplicity
+            }
+        }
+        if has_asset_meta
+        else None
+    )
+
+    video_srt_metadata = (
+        {
+            "asset-v1:test+type@asset+block@transcript.srt": "block-v1:test+type@video+block@test_video"
+        }
+        if has_video_meta
+        else None
+    )
+
+    # Mock log for warning cases
+    mock_log = mocker.patch("learning_resources.etl.utils.log")
+
+    result = utils.get_url_from_module_id(
+        olx_path, module_id, run, assets_metadata, video_srt_metadata
+    )
+
+    if expected_url_pattern:
+        assert result == expected_url_pattern
+    else:
+        assert result is None
+        if not module_id:
+            mock_log.warning.assert_any_call("Module ID is empty")
+        elif module_id.endswith(".srt") and not has_video_meta:
+            mock_log.debug.assert_any_call("No video metadata for %s", module_id)
+        elif "unknown-format" in module_id or "invalid-uuid" in module_id:
+            mock_log.warning.assert_any_call("Unknown module ID format: %s", module_id)

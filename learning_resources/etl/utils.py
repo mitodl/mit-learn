@@ -23,7 +23,7 @@ from typing import Optional
 import boto3
 import rapidjson
 import requests
-from defusedxml.ElementTree import ParseError, parse
+from defusedxml import ElementTree
 from django.conf import settings
 from django.utils.dateparse import parse_duration
 from django.utils.text import slugify
@@ -420,10 +420,10 @@ def get_root_url_for_source(etl_source: str) -> tuple[str, str]:
         tuple[str, str]: The base URL and path
     """
     mapping = {
-        ETLSource.mitxonline.value: "https://courses.mitxonline.mit.edu",
-        ETLSource.xpro.value: "https://courses.xpro.mit.edu",
-        ETLSource.mit_edx.value: "https://www.edx.org",
-        ETLSource.oll.value: "https://openlearninglibrary.mit.edu",
+        ETLSource.mitxonline.value: settings.CONTENT_BASE_URL_MITXONLINE,
+        ETLSource.xpro.value: settings.CONTENT_BASE_URL_XPRO,
+        ETLSource.oll.value: settings.CONTENT_BASE_URL_OLL,
+        ETLSource.mit_edx.value: settings.CONTENT_BASE_URL_EDX,
     }
     return mapping.get(etl_source)
 
@@ -460,23 +460,27 @@ def get_url_from_module_id(
         log.warning("Module ID is empty")
         return None
     root_url = get_root_url_for_source(run.learning_resource.etl_source)
-    with Path.open("video_metadata.json", "w") as f:
-        json.dump(video_srt_metadata, f, indent=2)
+    # OLL needs to have 'course-v1:' added to the run_id
+    run_id = (
+        f"course-v1:{run.run_id}"
+        if run.learning_resource.etl_source == ETLSource.oll.value
+        else run.run_id
+    )
     if module_id.startswith("asset"):
-        log.info("Getting URL for asset %s", module_id)
+        log.debug("Getting URL for asset %s", module_id)
         asset_meta = (
             assets_metadata.get(Path(olx_path).parts[-1], {}) if assets_metadata else {}
         )
         video_meta = video_srt_metadata.get(module_id, {}) if video_srt_metadata else {}
         if video_meta:
-            log.info("Found video metadata for %s", module_id)
-            return f"{root_url}/xblock/{video_meta}"
+            log.debug("Found video metadata for %s", module_id)
+            return f"{root_url}/courses/{run_id}/jump_to/{video_meta.split('@')[-1]}"
         elif module_id.endswith(".srt"):
-            log.info("NO VIDEO METADATA FOR %s", module_id)
+            log.debug("No video metadata for %s", module_id)
         middle_path = asset_meta.get("custom_md5", "")
         return f"{root_url}/{(middle_path + '/') if middle_path else ''}{module_id}"
     elif module_id.startswith("block") and is_valid_uuid(module_id.split("@")[-1]):
-        return f"{root_url}/xblock/{module_id}"
+        return f"{root_url}/courses/{run_id}/jump_to_id/{module_id.split('@')[-1]}"
     else:
         log.warning("Unknown module ID format: %s", module_id)
         return None
@@ -505,7 +509,7 @@ def parse_video_transcripts_xml(
     """
     transcript_mapping = {}
     try:
-        root = parse(xml_content)
+        root = ElementTree.fromstring(xml_content)
 
         # Get the video url_name from the root video element
         video_url_name = root.get("url_name")
@@ -520,7 +524,7 @@ def parse_video_transcripts_xml(
                 transcript_mapping[
                     get_edx_module_id(f"static/{transcript_src}", run)
                 ] = get_edx_module_id(str(path), run)
-    except ParseError:
+    except ElementTree.ParseError:
         log.exception("Error parsing video XML for %s:  %s", run, path)
     return transcript_mapping
 
@@ -537,7 +541,7 @@ def get_video_metadata(olx_path: str, run: LearningResourceRun) -> dict:
     for root, _, files in os.walk(str(Path(olx_path, "video"))):
         path = "/".join(root.split("/")[3:])
         for filename in files:
-            log.info("Processing video file %s in %s", filename, path)
+            log.debug("Processing video file %s in %s", filename, path)
             extension_lower = Path(filename).suffix.lower()
             if extension_lower == ".xml":
                 with Path.open(Path(root, filename), "rb") as f:
