@@ -8,24 +8,32 @@ import pytest
 from django.conf import settings
 from django.test import RequestFactory
 from django.urls import reverse
+from django.utils.http import urlencode
 
 from authentication.views import CustomLoginView, get_redirect_url
 
 
 @pytest.mark.parametrize(
-    ("next_url", "allowed"),
+    ("next_url", "allowed", "param_name"),
     [
-        ("/app", True),
-        ("http://open.odl.local:8062/search", True),
-        ("http://open.odl.local:8069/search", False),
-        ("https://ocw.mit.edu", True),
-        ("https://fake.fake.edu", False),
+        ("/app", True, "next"),
+        ("http://open.odl.local:8062/search", True, "next"),
+        ("http://open.odl.local:8069/search", False, "next"),
+        ("https://ocw.mit.edu", True, "next"),
+        ("https://fake.fake.edu", False, "next"),
+        ("/app", True, "signup_next"),
+        ("http://open.odl.local:8062/search", True, "signup_next"),
+        ("http://open.odl.local:8069/search", False, "signup_next"),
+        ("https://ocw.mit.edu", True, "signup_next"),
+        ("https://fake.fake.edu", False, "signup_next"),
     ],
 )
-def test_custom_login(mocker, next_url, allowed):
+def test_get_redirect_url(mocker, next_url, allowed, param_name):
     """Next url should be respected if host is allowed"""
-    mock_request = mocker.MagicMock(GET={"next": next_url})
-    assert get_redirect_url(mock_request) == (next_url if allowed else "/app")
+    mock_request = mocker.MagicMock(GET={param_name: next_url})
+    assert get_redirect_url(mock_request, param_name=param_name) == (
+        next_url if allowed else "/app"
+    )
 
 
 @pytest.mark.parametrize("has_apisix_header", [True, False])
@@ -116,13 +124,12 @@ def test_custom_logout_view(mocker, client, user, is_authenticated, has_next):
 def test_custom_login_view_authenticated_user_with_onboarding(mocker):
     """Test CustomLoginView for an authenticated user with incomplete onboarding"""
     factory = RequestFactory()
-    request = factory.get(reverse("login"), {"next": "/dashboard"})
+    request = factory.get(
+        reverse("login"),
+        {"next": "/irrelevant", "signup_next": "/search?resource=184"},
+    )
     request.user = MagicMock(is_anonymous=False)
     request.user.profile = MagicMock(completed_onboarding=False)
-    mocker.patch("authentication.views.get_redirect_url", return_value="/dashboard")
-    mocker.patch(
-        "authentication.views.urlencode", return_value="next=/search?resource=184"
-    )
     mocker.patch(
         "authentication.views.settings.MITOL_NEW_USER_LOGIN_URL", "/onboarding"
     )
@@ -130,18 +137,22 @@ def test_custom_login_view_authenticated_user_with_onboarding(mocker):
     response = CustomLoginView().get(request)
 
     assert response.status_code == 302
-    assert response.url == "/onboarding?next=/search?resource=184"
+    assert response.url == f"/onboarding?{urlencode({'next': '/search?resource=184'})}"
 
 
 def test_custom_login_view_authenticated_user_skip_onboarding(mocker):
     """Test skip_onboarding flag skips redirect to onboarding and sets completed_onboarding"""
     factory = RequestFactory()
     request = factory.get(
-        reverse("login"), {"next": "/dashboard", "skip_onboarding": "1"}
+        reverse("login"),
+        {
+            "next": "/irrelevant",
+            "signup_next": "/search?resource=184",
+            "skip_onboarding": "1",
+        },
     )
     request.user = MagicMock(is_anonymous=False)
     request.user.profile = MagicMock(completed_onboarding=False)
-    mocker.patch("authentication.views.get_redirect_url", return_value="/dashboard")
 
     response = CustomLoginView().get(request)
     request.user.profile.refresh_from_db()
@@ -149,16 +160,17 @@ def test_custom_login_view_authenticated_user_skip_onboarding(mocker):
     assert request.user.profile.completed_onboarding is False
 
     assert response.status_code == 302
-    assert response.url == "/dashboard"
+    assert response.url == "/search?resource=184"
 
 
 def test_custom_login_view_authenticated_user_with_completed_onboarding(mocker):
     """Test test that user who has completed onboarding is redirected to next url"""
     factory = RequestFactory()
-    request = factory.get(reverse("login"), {"next": "/dashboard"})
+    request = factory.get(
+        reverse("login"), {"next": "/dashboard", "signup_next": "/irrelevant"}
+    )
     request.user = MagicMock(is_anonymous=False)
     request.user.profile = MagicMock(completed_onboarding=True)
-    mocker.patch("authentication.views.get_redirect_url", return_value="/dashboard")
 
     response = CustomLoginView().get(request)
 
