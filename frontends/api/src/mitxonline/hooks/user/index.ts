@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { usersApi } from "../../clients"
-import type { User } from "@mitodl/mitxonline-api-axios/v1"
+import type { User } from "@mitodl/mitxonline-api-axios/v2"
 
 const useMitxOnlineCurrentUser = (opts: { enabled?: boolean } = {}) =>
   useQuery({

@@ -31,6 +31,10 @@ type DashboardCourse = {
     certificateUpgradePrice?: string | null
     coursewareUrl?: string | null
     canUpgrade: boolean
+    certificate?: {
+      uuid: string
+      link: string
+    }
   }
   enrollment?: {
     id: number

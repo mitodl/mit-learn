@@ -4,7 +4,7 @@ import type { PartialFactory } from "ol-test-utilities"
 import type {
   CourseRunEnrollment,
   CourseRunGrade,
-} from "@mitodl/mitxonline-api-axios/v1"
+} from "@mitodl/mitxonline-api-axios/v2"
 import { UniqueEnforcer } from "enforce-unique"
 
 const uniqueEnrollmentId = new UniqueEnforcer()
@@ -34,7 +34,10 @@ const courseEnrollment: PartialFactory<CourseRunEnrollment> = (
 
   const defaults: CourseRunEnrollment = {
     id: uniqueEnrollmentId.enforce(() => faker.number.int()),
-    certificate: null,
+    certificate: {
+      uuid: faker.string.uuid(),
+      link: faker.internet.url(),
+    },
     approved_flexible_price_exists: faker.datatype.boolean(),
     grades: [],
     enrollment_mode: faker.helpers.arrayElement(["audit", "verified"]),
