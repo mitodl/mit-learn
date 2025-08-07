@@ -19,7 +19,7 @@ const B2BAttachPage: React.FC<B2BAttachPageProps> = ({ code }) => {
   React.useEffect(() => attach(code), [attach, code])
 
   if (isSuccess) {
-    //window.history.replaceState(null, "", urls.DASHBOARD_HOME);
+    window.history.replaceState(null, "", urls.DASHBOARD_HOME);
   }
 
   return (
