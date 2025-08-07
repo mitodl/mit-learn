@@ -52,6 +52,7 @@ def generate_embeddings(ids, resource_type, overwrite):
         resource_type (string): resource_type value for the learning resource objects
 
     """
+    return None
     try:
         with wrap_retry_exception(*SEARCH_CONN_EXCEPTIONS):
             embed_learning_resources(ids, resource_type, overwrite)

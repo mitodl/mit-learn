@@ -398,6 +398,7 @@ def index_run_content_files(run_id, index_types):
         index_types (string): one of the values IndexestoUpdate. Whether the default
             index, the reindexing index or both need to be updated
     """
+    return
     run = LearningResourceRun.objects.get(pk=run_id)
     content_file_ids = run.content_files.filter(published=True).values_list(
         "id", flat=True
