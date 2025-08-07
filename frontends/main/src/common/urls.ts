@@ -167,3 +167,7 @@ export const SEARCH_LEARNING_MATERIAL = querifiedSearchUrl({
 })
 
 export const ECOMMERCE_CART = "/cart/" as const
+
+export const B2B_ATTACH_VIEW = "/attach/[code]"
+export const b2bAttachView = (code: string) =>
+  generatePath(B2B_ATTACH_VIEW, { code: code })
