@@ -132,7 +132,7 @@ const getCoursewareText = ({
   courseNoun: string
 }) => {
   if (!enrollmentStatus || enrollmentStatus === EnrollmentStatus.NotEnrolled) {
-    return "Enroll"
+    return `Start ${courseNoun}`
   }
   if (!endDate) return `Continue ${courseNoun}`
   if (isInPast(endDate)) {
@@ -398,7 +398,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   )
   const contextMenu = isLoading ? (
     <Skeleton variant="rectangular" width={12} height={24} />
-  ) : menuItems.length > 0 ? (
+  ) : (
     <SimpleMenu
       items={menuItems}
       trigger={
@@ -407,12 +407,13 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
           variant="text"
           aria-label="More options"
           status={enrollment?.status}
+          hidden={menuItems.length === 0}
         >
           <RiMore2Line />
         </MenuButton>
       }
     />
-  ) : null
+  )
   const desktopLayout = (
     <CardRoot
       screenSize="desktop"
