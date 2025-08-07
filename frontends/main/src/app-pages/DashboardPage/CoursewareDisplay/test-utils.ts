@@ -13,6 +13,7 @@ import moment from "moment"
 
 const makeCourses = factories.courses.courses
 const makeProgram = factories.programs.program
+const makeProgramCollection = factories.programs.programCollection
 const makeEnrollment = factories.enrollment.courseEnrollment
 const makeGrade = factories.enrollment.grade
 
@@ -123,10 +124,25 @@ const setupProgramsAndCourses = () => {
   const programB = makeProgram({
     courses: coursesB.results.map((c) => c.id),
   })
+  const programCollection = makeProgramCollection({
+    title: "Program Collection",
+    programs: [],
+  })
 
   setMockResponse.get(urls.programs.programsList({ org_id: orgX.id }), {
     results: [programA, programB],
   })
+  setMockResponse.get(urls.programCollections.programCollectionsList(), {
+    results: [programCollection],
+  })
+  setMockResponse.get(
+    urls.programs.programsList({ id: programA.id, org_id: orgX.id }),
+    { results: [programA] },
+  )
+  setMockResponse.get(
+    urls.programs.programsList({ id: programB.id, org_id: orgX.id }),
+    { results: [programB] },
+  )
   setMockResponse.get(
     urls.courses.coursesList({ id: programA.courses, org_id: orgX.id }),
     {
@@ -146,6 +162,7 @@ const setupProgramsAndCourses = () => {
     mitxOnlineUser,
     programA,
     programB,
+    programCollection,
     coursesA: coursesA.results,
     coursesB: coursesB.results,
   }

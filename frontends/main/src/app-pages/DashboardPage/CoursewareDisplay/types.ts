@@ -1,6 +1,7 @@
 const DashboardResourceType = {
   Course: "course",
   Program: "program",
+  ProgramCollection: "program_collection",
 } as const
 type DashboardResourceType =
   (typeof DashboardResourceType)[keyof typeof DashboardResourceType]
@@ -47,15 +48,28 @@ type DashboardCourseEnrollment = {
 }
 
 type DashboardProgram = {
+  id: number
   key: string
   type: typeof DashboardResourceType.Program
   title: string
   programType?: string | null
   courseIds: number[]
+  collections: number[]
   description: string
 }
 
-type DashboardResource = DashboardCourse | DashboardProgram
+type DashboardProgramCollection = {
+  id: number
+  type: typeof DashboardResourceType.ProgramCollection
+  title: string
+  description?: string | null
+  programIds: number[]
+}
+
+type DashboardResource =
+  | DashboardCourse
+  | DashboardProgram
+  | DashboardProgramCollection
 
 export { DashboardResourceType, EnrollmentStatus, EnrollmentMode }
 export type {
@@ -63,4 +77,5 @@ export type {
   DashboardCourse,
   DashboardCourseEnrollment,
   DashboardProgram,
+  DashboardProgramCollection,
 }

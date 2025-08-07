@@ -4,16 +4,25 @@ import React from "react"
 import Image from "next/image"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
-import { useQueries, useQuery } from "@tanstack/react-query"
-import { programsQueries } from "api/mitxonline-hooks/programs"
+import { useQuery } from "@tanstack/react-query"
+import {
+  programsQueries,
+  programCollectionQueries,
+} from "api/mitxonline-hooks/programs"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import * as transform from "./CoursewareDisplay/transform"
 import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
 import { DashboardCard } from "./CoursewareDisplay/DashboardCard"
-import { PlainList, Stack, styled, Typography } from "ol-components"
-import { DashboardCourse, DashboardProgram } from "./CoursewareDisplay/types"
+import { PlainList, Skeleton, Stack, styled, Typography } from "ol-components"
+import {
+  DashboardProgram,
+  DashboardProgramCollection,
+} from "./CoursewareDisplay/types"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
-import { OrganizationPage, V2Program } from "@mitodl/mitxonline-api-axios/v1"
+import {
+  CourseRunEnrollment,
+  OrganizationPage,
+} from "@mitodl/mitxonline-api-axios/v1"
 import { useMitxOnlineCurrentUser } from "api/mitxonline-hooks/user"
 
 const HeaderRoot = styled.div({
@@ -61,24 +70,6 @@ const OrganizationHeader: React.FC<{ org?: OrganizationPage }> = ({ org }) => {
   )
 }
 
-/**
- * For an array of programs, fetch the associated courses.
- * [program1, program2] => [[...courses1], [...courses2]]
- */
-
-const useMitxonlineProgramsCourses = (programs: V2Program[], orgId: number) => {
-  const courseGroupIds =
-    programs.map((program) => program.courses.map((id) => id as number)) ?? []
-
-  const courseGroups = useQueries({
-    queries: courseGroupIds.map((courseIds) =>
-      coursesQueries.coursesList({ org_id: orgId, id: courseIds }),
-    ),
-  })
-
-  return courseGroups
-}
-
 const DashboardCardStyled = styled(DashboardCard)({
   borderRadius: "0px",
   borderTop: "none",
@@ -102,12 +93,51 @@ const ProgramHeader = styled.div(({ theme }) => ({
   borderRadius: "8px 8px 0px 0px",
   border: `1px solid ${theme.custom.colors.lightGray2}`,
 }))
+
+const OrgProgramCollectionDisplay: React.FC<{
+  collection: DashboardProgramCollection
+  enrollments?: CourseRunEnrollment[]
+  orgId: number
+}> = ({ collection, enrollments, orgId }) => {
+  return (
+    <ProgramRoot data-testid="org-program-collection-root">
+      <ProgramHeader>
+        <Typography variant="h5" component="h2">
+          {collection.title}
+        </Typography>
+      </ProgramHeader>
+      <PlainList>
+        {collection.programIds.map((programId) => (
+          <ProgramCollectionItem
+            key={programId}
+            programId={programId}
+            enrollments={enrollments}
+            orgId={orgId}
+          />
+        ))}
+      </PlainList>
+    </ProgramRoot>
+  )
+}
+
 const OrgProgramDisplay: React.FC<{
   program: DashboardProgram
-  courses: DashboardCourse[]
-  coursesLoading: boolean
+  enrollments?: CourseRunEnrollment[]
   programLoading: boolean
-}> = ({ program, courses }) => {
+  orgId?: number
+}> = ({ program, enrollments, programLoading, orgId }) => {
+  const courses = useQuery(
+    coursesQueries.coursesList({ id: program.courseIds, org_id: orgId }),
+  )
+  const skeleton = (
+    <Skeleton width="100%" height="65px" style={{ marginBottom: "16px" }} />
+  )
+  if (programLoading || courses.isLoading) return skeleton
+  const transformedCourses = transform.mitxonlineCourses({
+    courses: courses.data?.results ?? [],
+    enrollments: enrollments ?? [],
+  })
+
   return (
     <ProgramRoot data-testid="org-program-root">
       <ProgramHeader>
@@ -116,22 +146,85 @@ const OrgProgramDisplay: React.FC<{
         </Typography>
         <Typography variant="body1">{program.description}</Typography>
       </ProgramHeader>
-      <PlainList itemSpacing={0}>
-        {transform.sortDashboardCourses(program, courses).map((course) => (
-          <DashboardCardStyled
-            Component="li"
-            key={course.key}
-            dashboardResource={course}
-            courseNoun="Module"
-            offerUpgrade={false}
-            titleHref={course.run?.coursewareUrl}
-            buttonHref={course.run?.coursewareUrl}
-          />
-        ))}
+      <PlainList>
+        {transform
+          .sortDashboardCourses(program, transformedCourses)
+          .map((course) => (
+            <DashboardCardStyled
+              Component="li"
+              key={course.key}
+              dashboardResource={course}
+              courseNoun="Module"
+              offerUpgrade={false}
+              titleHref={course.run?.coursewareUrl}
+              buttonHref={course.run?.coursewareUrl}
+            />
+          ))}
       </PlainList>
     </ProgramRoot>
   )
 }
+
+const ProgramCollectionItem: React.FC<{
+  programId: number
+  enrollments?: CourseRunEnrollment[]
+  orgId: number
+}> = ({ programId, enrollments, orgId }) => {
+  const program = useQuery(
+    programsQueries.programsList({ id: programId, org_id: orgId }),
+  )
+  if (program.isLoading || !program.data?.results.length) {
+    return (
+      <Skeleton width="100%" height="65px" style={{ marginBottom: "16px" }} />
+    )
+  }
+  const transformedProgram = transform.mitxonlineProgram(
+    program.data?.results[0],
+  )
+  return (
+    <ProgramCard
+      program={transformedProgram}
+      enrollments={enrollments}
+      orgId={orgId}
+    />
+  )
+}
+
+const ProgramCard: React.FC<{
+  program: DashboardProgram
+  enrollments?: CourseRunEnrollment[]
+  orgId?: number
+}> = ({ program, enrollments, orgId }) => {
+  const courses = useQuery(
+    coursesQueries.coursesList({
+      id: program.courseIds,
+      org_id: orgId,
+    }),
+  )
+  const skeleton = (
+    <Skeleton width="100%" height="65px" style={{ marginBottom: "16px" }} />
+  )
+  if (courses.isLoading) return skeleton
+  const transformedCourses = transform.mitxonlineCourses({
+    courses: courses.data?.results ?? [],
+    enrollments: enrollments ?? [],
+  })
+  if (courses.isLoading || !transformedCourses.length) return skeleton
+  // For now we assume the first course is the main one for the program.
+  const course = transformedCourses[0]
+  return (
+    <DashboardCard
+      Component="li"
+      key={program.key}
+      dashboardResource={course}
+      courseNoun={"Course"}
+      offerUpgrade={false}
+      titleHref={course.run.coursewareUrl ?? ""}
+      buttonHref={course.run.coursewareUrl ?? ""}
+    />
+  )
+}
+
 const OrganizationRoot = styled.div({
   display: "flex",
   flexDirection: "column",
@@ -150,42 +243,56 @@ const OrganizationContentInternal: React.FC<
   const orgId = org.id
   const enrollments = useQuery(enrollmentQueries.enrollmentsList())
   const programs = useQuery(programsQueries.programsList({ org_id: orgId }))
-  const courseGroups = useMitxonlineProgramsCourses(
-    programs.data?.results ?? [],
-    orgId,
+  const programCollections = useQuery(
+    programCollectionQueries.programCollectionsList({}),
   )
 
   if (!isOrgDashboardEnabled) return null
 
-  const transformedCourseGroups = courseGroups.map((courseGroup) => {
-    if (!courseGroup.data || !enrollments.data) return []
-    return transform.mitxonlineCourses({
-      courses: courseGroup.data?.results ?? [],
-      enrollments: enrollments.data ?? [],
-    })
-  })
-  const transformedPrograms = programs.data?.results.map((program) =>
-    transform.mitxonlineProgram(program),
+  const transformedPrograms = programs.data?.results
+    .filter((program) => program.collections.length === 0)
+    .map((program) => transform.mitxonlineProgram(program))
+
+  const skeleton = (
+    <Stack gap="16px">
+      <Skeleton width="100%" height="65px" />
+      <Skeleton width="100%" height="65px" />
+      <Skeleton width="100%" height="65px" />
+    </Stack>
   )
 
   return (
     <OrganizationRoot>
       <OrganizationHeader org={org} />
-      {programs.isLoading
-        ? "Programs Loading"
-        : transformedPrograms?.map((program, index) => {
-            const courses = transformedCourseGroups[index]
-            const programLoading = courseGroups[index].isLoading
+      {programs.isLoading || !transformedPrograms
+        ? skeleton
+        : transformedPrograms.map((program) => (
+            <OrgProgramDisplay
+              key={program.key}
+              program={program}
+              enrollments={enrollments.data}
+              programLoading={programs.isLoading}
+              orgId={orgId}
+            />
+          ))}
+      {programCollections.isLoading ? (
+        skeleton
+      ) : (
+        <PlainList>
+          {programCollections.data?.results.map((collection) => {
+            const transformedCollection =
+              transform.mitxonlineProgramCollection(collection)
             return (
-              <OrgProgramDisplay
-                key={program.key}
-                program={program}
-                courses={courses}
-                coursesLoading={courseGroups[index].isLoading}
-                programLoading={programLoading}
+              <OrgProgramCollectionDisplay
+                key={collection.title}
+                collection={transformedCollection}
+                enrollments={enrollments.data}
+                orgId={orgId}
               />
             )
           })}
+        </PlainList>
+      )}
     </OrganizationRoot>
   )
 }
@@ -201,7 +308,10 @@ const OrganizationContent: React.FC<OrganizationContentProps> = ({
   const b2bOrganization = mitxOnlineUser?.b2b_organizations.find(
     (org) => org.slug.replace("org-", "") === orgSlug,
   )
-  if (isLoadingMitxOnlineUser || isLoadingMitxOnlineUser) return "Loading"
+  const skeleton = (
+    <Skeleton width="100%" height="100px" style={{ marginBottom: "16px" }} />
+  )
+  if (isLoadingMitxOnlineUser || isLoadingMitxOnlineUser) return skeleton
   return b2bOrganization ? (
     <OrganizationContentInternal org={b2bOrganization} />
   ) : null

@@ -1,13 +1,19 @@
+import base64
 import logging
 import sys
 import zipfile
 from collections import defaultdict
 from collections.abc import Generator
+from datetime import datetime
+from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from defusedxml import ElementTree
 from django.conf import settings
+from litellm import completion
+from pdf2image import convert_from_path
+from PIL import Image
 
 from learning_resources.constants import (
     VALID_TUTOR_PROBLEM_TYPES,
@@ -68,6 +74,11 @@ def sync_canvas_archive(bucket, key: str, overwrite):
     return resource_readable_id, run
 
 
+def _course_url(course_archive_path) -> str:
+    context_info = parse_context_xml(course_archive_path)
+    return f"https://{context_info.get('canvas_domain')}/courses/{context_info.get('course_id')}/"
+
+
 def run_for_canvas_archive(course_archive_path, course_folder, overwrite):
     """
     Generate and return a LearningResourceRun for a Canvas course
@@ -75,6 +86,20 @@ def run_for_canvas_archive(course_archive_path, course_folder, overwrite):
     checksum = calc_checksum(course_archive_path)
     course_info = parse_canvas_settings(course_archive_path)
     course_title = course_info.get("title")
+    url = _course_url(course_archive_path)
+    start_at = course_info.get("start_at")
+    end_at = course_info.get("conclude_at")
+    if start_at:
+        try:
+            start_at = datetime.fromisoformat(start_at)
+        except (ValueError, TypeError):
+            log.warning("Invalid start_at date format: %s", start_at)
+    if end_at:
+        try:
+            end_at = datetime.fromisoformat(end_at)
+        except (ValueError, TypeError):
+            log.warning("Invalid start_at date format: %s", end_at)
+
     readable_id = f"{course_folder}-{course_info.get('course_code')}"
     # create placeholder learning resource
     resource, _ = LearningResource.objects.update_or_create(
@@ -82,6 +107,7 @@ def run_for_canvas_archive(course_archive_path, course_folder, overwrite):
         defaults={
             "title": course_title,
             "published": False,
+            "url": url,
             "test_mode": True,
             "etl_source": ETLSource.canvas.name,
             "platform": LearningResourcePlatform.objects.get(
@@ -95,6 +121,8 @@ def run_for_canvas_archive(course_archive_path, course_folder, overwrite):
             run_id=f"{readable_id}+canvas",
             learning_resource=resource,
             published=True,
+            start_date=start_at,
+            end_date=end_at,
         )
     run = resource.runs.first()
     resource_readable_id = run.learning_resource.readable_id
@@ -180,6 +208,7 @@ def transform_canvas_problem_files(
             problem_file_data = {
                 key: file_data[key] for key in keys_to_keep if key in file_data
             }
+
             path = file_data["source_path"]
             path = path[len(settings.CANVAS_TUTORBOT_FOLDER) :]
             path_parts = path.split("/", 1)
@@ -188,8 +217,31 @@ def transform_canvas_problem_files(
                 if problem_type in path_parts[1].lower():
                     problem_file_data["type"] = problem_type
                     break
-
+            if (
+                problem_file_data["file_extension"].lower() == ".pdf"
+                and settings.CANVAS_PDF_TRANSCRIPTION_MODEL
+            ):
+                markdown_content = _pdf_to_markdown(
+                    Path(olx_path) / Path(problem_file_data["source_path"])
+                )
+                if markdown_content:
+                    problem_file_data["content"] = markdown_content
             yield problem_file_data
+
+
+def parse_context_xml(course_archive_path: str) -> dict:
+    with zipfile.ZipFile(course_archive_path, "r") as course_archive:
+        context = course_archive.read("course_settings/context.xml")
+    root = ElementTree.fromstring(context)
+    namespaces = {"ns": "http://canvas.instructure.com/xsd/cccv1p0"}
+    context_info = {}
+    item_keys = ["course_id", "root_account_id", "canvas_domain", "root_account_name"]
+    for key in item_keys:
+        element = root.find(f"ns:{key}", namespaces)
+        if element is not None:
+            context_info[key] = element.text
+
+    return context_info
 
 
 def parse_module_meta(course_archive_path: str) -> dict:
@@ -269,3 +321,75 @@ def extract_resources_by_identifierref(manifest_xml: str) -> dict:
                 {"title": title, "files": files, "type": resource.get("type")}
             )
     return dict(resources_dict)
+
+
+def pdf_to_base64_images(pdf_path, dpi=200, fmt="JPEG", max_size=2000, quality=85):
+    """
+    Convert a PDF file to a list of base64 encoded images (one per page).
+    Resizes images to reduce file size while keeping good OCR quality.
+
+    Args:
+        pdf_path (str): Path to the PDF file
+        dpi (int): DPI for the output images (default: 200)
+        fmt (str): Output format ('JPEG' or 'PNG') (default: 'JPEG')
+        max_size (int): Maximum width/height in pixels (default: 2000)
+        quality (int): JPEG quality (1-100, default: 85)
+
+    Returns:
+        list: List of base64 encoded strings (one per page)
+    """
+    images = convert_from_path(pdf_path, dpi=dpi)
+    base64_images = []
+
+    for image in images:
+        # Resize the image if it's too large (preserving aspect ratio)
+        if max(image.size) > max_size:
+            image.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+
+        buffered = BytesIO()
+
+        # Save with optimized settings
+        if fmt.upper() == "JPEG":
+            image.save(buffered, format="JPEG", quality=quality, optimize=True)
+        else:  # PNG
+            image.save(buffered, format="PNG", optimize=True)
+
+        img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
+        base64_images.append(img_str)
+
+    return base64_images
+
+
+def _pdf_to_markdown(pdf_path):
+    markdown = ""
+    for im in pdf_to_base64_images(pdf_path):
+        response = completion(
+            api_base=settings.LITELLM_API_BASE,
+            custom_llm_provider=settings.LITELLM_CUSTOM_PROVIDER,
+            model=settings.CANVAS_PDF_TRANSCRIPTION_MODEL,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": settings.CANVAS_TRANSCRIPTION_PROMPT,
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{im}",
+                            },
+                        },
+                    ],
+                }
+            ],
+        )
+        markdown_snippet = (
+            response.json()["choices"][0]["message"]["content"]
+            .removeprefix("```markdown\n")
+            .removesuffix("\n```")
+        )
+
+        markdown += markdown_snippet
+    return markdown

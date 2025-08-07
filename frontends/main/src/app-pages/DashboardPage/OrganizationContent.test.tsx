@@ -33,6 +33,12 @@ describe("OrganizationContent", () => {
     await screen.findByRole("heading", {
       name: `Your ${orgX.name} Home`,
     })
+
+    const programAHeader = await screen.findByText(programA.title)
+    const programBHeader = await screen.findByText(programB.title)
+    expect(programAHeader).toBeInTheDocument()
+    expect(programBHeader).toBeInTheDocument()
+
     const programs = await screen.findAllByTestId("org-program-root")
     expect(programs.length).toBe(2)
 
@@ -85,5 +91,50 @@ describe("OrganizationContent", () => {
         expect(indicator).toHaveTextContent("Not Enrolled")
       }
     })
+  })
+
+  test("Renders program collections", async () => {
+    const { orgX, programA, programB, programCollection, coursesA, coursesB } =
+      setupProgramsAndCourses()
+    setMockResponse.get(urls.enrollment.enrollmentsList(), [])
+    programCollection.programs = [programA.id, programB.id]
+    setMockResponse.get(urls.programCollections.programCollectionsList(), {
+      results: [programCollection],
+    })
+
+    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+
+    const collectionHeader = await screen.findByRole("heading", {
+      name: programCollection.title,
+    })
+    expect(collectionHeader).toBeInTheDocument()
+    const collectionItems = await screen.findAllByTestId(
+      "org-program-collection-root",
+    )
+    expect(collectionItems.length).toBe(1)
+    const collection = within(collectionItems[0])
+    expect(collection.getByText(programCollection.title)).toBeInTheDocument()
+    // Check that the first course from each program is displayed
+    expect(collection.getAllByText(coursesA[0].title).length).toBeGreaterThan(0)
+    expect(collection.getAllByText(coursesB[0].title).length).toBeGreaterThan(0)
+  })
+
+  test("Does not render a program separately if it is part of a collection", async () => {
+    const { orgX, programA, programB, programCollection } =
+      setupProgramsAndCourses()
+    setMockResponse.get(urls.enrollment.enrollmentsList(), [])
+    programCollection.programs = [programA.id, programB.id]
+    setMockResponse.get(urls.programCollections.programCollectionsList(), {
+      results: [programCollection],
+    })
+
+    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+
+    const collectionItems = await screen.findAllByTestId(
+      "org-program-collection-root",
+    )
+    expect(collectionItems.length).toBe(1)
+    const programs = screen.queryAllByTestId("org-program-root")
+    expect(programs.length).toBe(0)
   })
 })

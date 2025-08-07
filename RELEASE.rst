@@ -1,6 +1,23 @@
 Release Notes
 =============
 
+Version 0.39.3
+--------------
+
+- Regenerate course metadata when course information updates (#2419)
+- properly mock posthog.capture (#2409)
+- Populate more fields for canvas courses (#2404)
+- change problem set list permissions (#2406)
+- fix(deps): update dependency ruff to v0.12.7 (#2413)
+- fix(deps): update dependency litellm to v1.74.14 (#2412)
+- raise page size of userlists and learning paths (#2408)
+- Add support for ProgramCollection (#2369)
+- Backgrounds for video buttons (#2405)
+- fix(deps): update django-health-check digest to b0500d1 (#2391)
+- chore(deps): update peter-evans/create-or-update-comment action to v4 (#2396)
+- Process pdf problem sets (#2402)
+- call user_created plugin method for SCIM users (#2387)
+
 Version 0.39.0 (Released August 04, 2025)
 --------------
 

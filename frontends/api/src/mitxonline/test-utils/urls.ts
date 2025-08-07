@@ -1,5 +1,6 @@
 import type {
   CoursesApiApiV2CoursesListRequest,
+  ProgramCollectionsApiProgramCollectionsListRequest,
   ProgramsApiProgramsListV2Request,
 } from "@mitodl/mitxonline-api-axios/v1"
 import { RawAxiosRequestConfig } from "axios"
@@ -13,6 +14,7 @@ const currentUser = {
 }
 
 const enrollment = {
+  enrollmentsList: () => `${API_BASE_URL}/api/v1/enrollments/`,
   courseEnrollment: (id?: number) =>
     `${API_BASE_URL}/api/v1/enrollments/${id ? `${id}/` : ""}`,
 }
@@ -25,6 +27,13 @@ const b2b = {
 const programs = {
   programsList: (opts?: ProgramsApiProgramsListV2Request) =>
     `${API_BASE_URL}/api/v2/programs/${queryify(opts)}`,
+  programDetail: (id: number) => `${API_BASE_URL}/api/v2/programs/${id}/`,
+}
+
+const programCollections = {
+  programCollectionsList: (
+    opts?: ProgramCollectionsApiProgramCollectionsListRequest,
+  ) => `${API_BASE_URL}/api/v2/program-collections/${queryify(opts)}`,
 }
 
 const courses = {
@@ -37,4 +46,12 @@ const organization = {
     `${API_BASE_URL}/api/v0/b2b/organizations/${organizationSlug}/`,
 }
 
-export { b2b, currentUser, enrollment, programs, courses, organization }
+export {
+  b2b,
+  currentUser,
+  enrollment,
+  programs,
+  programCollections,
+  courses,
+  organization,
+}

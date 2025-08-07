@@ -1,14 +1,14 @@
 import { mergeOverrides, makePaginatedFactory } from "ol-test-utilities"
 import type { PartialFactory } from "ol-test-utilities"
-import type { CourseWithCourseRuns } from "@mitodl/mitxonline-api-axios/v1"
+import type { V2CourseWithCourseRuns } from "@mitodl/mitxonline-api-axios/v1"
 import { faker } from "@faker-js/faker/locale/en"
 import { UniqueEnforcer } from "enforce-unique"
 
 const uniqueCourseId = new UniqueEnforcer()
 const uniqueCourseRunId = new UniqueEnforcer()
 
-const course: PartialFactory<CourseWithCourseRuns> = (overrides = {}) => {
-  const defaults: CourseWithCourseRuns = {
+const course: PartialFactory<V2CourseWithCourseRuns> = (overrides = {}) => {
+  const defaults: V2CourseWithCourseRuns = {
     id: uniqueCourseId.enforce(() => faker.number.int()),
     title: faker.lorem.words(3),
     readable_id: faker.lorem.slug(),
@@ -80,9 +80,13 @@ const course: PartialFactory<CourseWithCourseRuns> = (overrides = {}) => {
         approved_flexible_price_exists: faker.datatype.boolean(),
       },
     ],
+    min_price: faker.number.int({ min: 0, max: 1000 }),
+    max_price: faker.number.int({ min: 1000, max: 2000 }),
+    include_in_learn_catalog: faker.datatype.boolean(),
+    ingest_content_files_for_ai: faker.datatype.boolean(),
   }
 
-  return mergeOverrides<CourseWithCourseRuns>(defaults, overrides)
+  return mergeOverrides<V2CourseWithCourseRuns>(defaults, overrides)
 }
 
 const courses = makePaginatedFactory(course)

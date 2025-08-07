@@ -6,12 +6,17 @@
 
 import {
   CourseRunEnrollment,
-  CourseWithCourseRuns,
+  V2CourseWithCourseRuns,
   V2Program,
+  V2ProgramCollection,
 } from "@mitodl/mitxonline-api-axios/v1"
 
 import { DashboardResourceType, EnrollmentStatus } from "./types"
-import type { DashboardCourse, DashboardProgram } from "./types"
+import type {
+  DashboardCourse,
+  DashboardProgram,
+  DashboardProgramCollection,
+} from "./types"
 import { groupBy } from "lodash"
 
 const sources = {
@@ -63,7 +68,7 @@ const mitxonlineEnrollments = (data: CourseRunEnrollment[]) =>
   data.map((course) => mitxonlineEnrollment(course))
 
 const mitxonlineUnenrolledCourse = (
-  course: CourseWithCourseRuns,
+  course: V2CourseWithCourseRuns,
 ): DashboardCourse => {
   const run = course.courseruns.find((run) => run.id === course.next_run_id)
   return {
@@ -89,7 +94,7 @@ const mitxonlineUnenrolledCourse = (
 }
 
 const mitxonlineCourses = (raw: {
-  courses: CourseWithCourseRuns[]
+  courses: V2CourseWithCourseRuns[]
   enrollments: CourseRunEnrollment[]
 }) => {
   const enrollmentsByCourseId = groupBy(
@@ -115,6 +120,7 @@ const mitxonlineCourses = (raw: {
 
 const mitxonlineProgram = (raw: V2Program): DashboardProgram => {
   return {
+    id: raw.id,
     key: getKey({
       source: sources.mitxonline,
       resourceType: DashboardResourceType.Program,
@@ -124,7 +130,20 @@ const mitxonlineProgram = (raw: V2Program): DashboardProgram => {
     title: raw.title,
     programType: raw.program_type,
     courseIds: raw.courses,
+    collections: raw.collections,
     description: raw.page.description,
+  }
+}
+
+const mitxonlineProgramCollection = (
+  raw: V2ProgramCollection,
+): DashboardProgramCollection => {
+  return {
+    id: raw.id,
+    type: DashboardResourceType.ProgramCollection,
+    title: raw.title,
+    description: raw.description ?? null,
+    programIds: raw.programs,
   }
 }
 
@@ -157,5 +176,6 @@ export {
   mitxonlineEnrollments,
   mitxonlineCourses,
   mitxonlineProgram,
+  mitxonlineProgramCollection,
   sortDashboardCourses,
 }

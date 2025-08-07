@@ -17,10 +17,16 @@ import {
 import invariant from "tiny-invariant"
 import * as routes from "@/common/urls"
 import { assertHeadings } from "ol-test-utilities"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+const mockedPostHogCapture = jest.fn()
+jest.mock("posthog-js/react")
+jest.mocked(usePostHog).mockReturnValue(
+  // @ts-expect-error Not mocking all of posthog
+  { capture: mockedPostHogCapture },
+)
 
 const assertLinksTo = (
   el: HTMLElement,

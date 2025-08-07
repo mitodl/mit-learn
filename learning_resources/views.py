@@ -23,7 +23,7 @@ from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter
 from rest_framework.generics import get_object_or_404
 from rest_framework.pagination import LimitOffsetPagination
-from rest_framework.permissions import BasePermission, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_nested.viewsets import NestedViewSetMixin
 
@@ -33,7 +33,6 @@ from channels.models import Channel
 from learning_resources import permissions
 from learning_resources.constants import (
     GROUP_CONTENT_FILE_CONTENT_VIEWERS,
-    GROUP_TUTOR_PROBLEM_VIEWERS,
     LearningResourceRelationTypes,
     LearningResourceType,
     PlatformType,
@@ -1391,16 +1390,7 @@ class LearningResourceDisplayInfoViewSet(BaseLearningResourceViewSet):
 class CourseRunProblemsViewSet(viewsets.ViewSet):
     """Viewset for all tutorbot problems and solutions for a course run"""
 
-    class IsAdminOrTutorProblemViewer(BasePermission):
-        def has_permission(self, request, view):  # noqa: ARG002
-            user = request.user
-            if not user or not user.is_authenticated:
-                return False
-            if user.is_staff or user.is_superuser:
-                return True
-            return user.groups.filter(name=GROUP_TUTOR_PROBLEM_VIEWERS).exists()
-
-    permission_classes = (IsAdminOrTutorProblemViewer,)
+    permission_classes = ()
 
     http_method_names = ["get"]
     lookup_field = "run_readable_id"
@@ -1410,13 +1400,15 @@ class CourseRunProblemsViewSet(viewsets.ViewSet):
         detail=False,
         methods=["get"],
         url_path=r"(?P<run_readable_id>[^/]+)",
+        permission_classes=[AnonymousAccessReadonlyPermission],
     )
     def list_problems(self, request, run_readable_id):  # noqa: ARG002
         """
-        Generate a QuerySet for fetching Tutorbot problems for a course run
+        Fetch Tutorbot problem titles for a course run
 
         Returns:
-            QuerySet of CourseRunProblem objects for the course run
+            Array of strings of problem titles from TutorProblemFile objects for a
+            course run
         """
         run = LearningResourceRun.objects.filter(
             run_id=run_readable_id,
@@ -1434,8 +1426,15 @@ class CourseRunProblemsViewSet(viewsets.ViewSet):
         detail=False,
         methods=["get"],
         url_path=r"(?P<run_readable_id>[^/]+)/(?P<problem_title>[^/]+)",
+        permission_classes=[permissions.IsAdminOrTutorProblemViewer],
     )
     def retrieve_problem(self, request, run_readable_id, problem_title):  # noqa: ARG002
+        """
+        Fetch Tutorbot problem and solution content for a course run
+
+        Returns:
+            json object with problem and solution content for a specific problem
+        """
         run = LearningResourceRun.objects.filter(
             run_id=run_readable_id, learning_resource__platform=PlatformType.canvas.name
         ).first()
