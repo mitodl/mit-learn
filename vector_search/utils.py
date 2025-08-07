@@ -646,7 +646,7 @@ def vector_search(
         }
         if "group_by" in params:
             search_params["group_by"] = params.get("group_by")
-            search_params["group_size"] = params.get("group_size", 10)
+            search_params["group_size"] = params.get("group_size", 1)
             group_result = client.query_points_groups(**search_params)
             search_result = []
             for group in group_result.groups:
