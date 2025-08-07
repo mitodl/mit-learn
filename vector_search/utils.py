@@ -652,8 +652,8 @@ def vector_search(
             for group in group_result.groups:
                 payloads = [hit.payload for hit in group.hits]
                 response_hit = _merge_dicts(payloads)
-                chunks = [payload["chunk_content"] for payload in payloads]
-                response_hit["chunk_content"] = "".join(chunks)
+                chunks = [payload.get("chunk_content") for payload in payloads]
+                response_hit["chunk_content"] = " ".join(chunks)
                 response_hit["chunks"] = chunks
                 response_row = {
                     "id": response_hit[search_params["group_by"]],
