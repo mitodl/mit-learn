@@ -3,7 +3,6 @@
 import uuid
 from abc import abstractmethod
 from functools import cached_property
-from hashlib import md5
 from typing import TYPE_CHECKING, Optional
 
 from django.conf import settings
@@ -25,6 +24,7 @@ from learning_resources.constants import (
     PrivacyLevel,
 )
 from main.models import TimestampedModel, TimestampedModelQuerySet
+from main.utils import checksum_for_content
 
 if TYPE_CHECKING:
     from django.contrib.auth import get_user_model
@@ -942,15 +942,8 @@ class ContentFile(TimestampedModel):
     summary = models.TextField(blank=True, default="")
     flashcards = models.JSONField(blank=True, default=list)
 
-    def content_checksum(self):
-        hasher = md5()  # noqa: S324
-        if self.content:
-            hasher.update(self.content.encode("utf-8"))
-            return hasher.hexdigest()
-        return None
-
     def save(self, **kwargs):
-        self.checksum = self.content_checksum()
+        self.checksum = checksum_for_content(self.content)
         super().save(**kwargs)
 
     class Meta:
