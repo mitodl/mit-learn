@@ -2,7 +2,8 @@ import React from "react"
 import { Metadata } from "next"
 import { standardizeMetadata } from "@/common/metadata"
 import invariant from "tiny-invariant"
-
+import { Permission } from "api/hooks/user"
+import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
 import type { PageParams } from "@/app/types"
 import B2BAttachPage from "@/app-pages/B2BAttachPage/B2BAttachPage"
 
@@ -15,7 +16,11 @@ const Page: React.FC<PageParams<object, { code: string }>> = async ({
 }) => {
   const resolved = await params
   invariant(resolved?.code, "code is required")
-  return <B2BAttachPage code={resolved?.code} />
+  return (
+    <RestrictedRoute requires={Permission.Authenticated}>
+      <B2BAttachPage code={resolved?.code} />
+    </RestrictedRoute>
+  )
 }
 
 export default Page
