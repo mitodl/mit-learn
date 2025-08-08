@@ -457,7 +457,6 @@ def get_url_from_module_id(
         str: The URL for the module
     """
     if not module_id:
-        log.warning("Module ID is empty")
         return None
     root_url = get_root_url_for_source(run.learning_resource.etl_source)
     # OLL needs to have 'course-v1:' added to the run_id
@@ -479,7 +478,6 @@ def get_url_from_module_id(
     elif module_id.startswith("block") and is_valid_uuid(module_id.split("@")[-1]):
         return f"{root_url}/courses/{run_id}/jump_to_id/{module_id.split('@')[-1]}"
     else:
-        log.warning("Unknown module ID format: %s", module_id)
         return None
 
 
@@ -494,7 +492,7 @@ def get_assets_metadata(olx_path: str) -> dict:
         with Path.open(Path(olx_path, "policies/assets.json"), "rb") as f:
             return json.loads(f.read())
     except FileNotFoundError:
-        log.warning("Assets metadata file does not exist: %s", olx_path)
+        log.debug("Assets metadata file does not exist: %s", olx_path)
 
 
 def parse_video_transcripts_xml(
@@ -533,7 +531,7 @@ def get_video_metadata(olx_path: str, run: LearningResourceRun) -> dict:
     video_transcript_mapping = {}
     video_path = Path(olx_path, "video")
     if not video_path.exists():
-        log.warning("No video directory found in OLX path: %s", olx_path)
+        log.debug("No video directory found in OLX path: %s", olx_path)
         return video_transcript_mapping
     for root, _, files in os.walk(str(Path(olx_path, "video"))):
         for filename in files:

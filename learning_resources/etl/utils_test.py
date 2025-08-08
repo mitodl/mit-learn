@@ -614,10 +614,7 @@ def test_get_assets_metadata(mocker, tmp_path, assets_exist):
         assert result == assets_data
     else:
         # No assets.json file exists
-        mock_log = mocker.patch("learning_resources.etl.utils.log")
-        result = utils.get_assets_metadata(str(olx_path))
-        assert result is None
-        mock_log.warning.assert_called_once()
+        assert utils.get_assets_metadata(str(olx_path)) is None
 
 
 @pytest.mark.parametrize(
@@ -687,8 +684,6 @@ def test_get_video_metadata(mocker, tmp_path, video_dir_exists):
     olx_path = tmp_path / "course"
     olx_path.mkdir()
 
-    mock_log = mocker.patch("learning_resources.etl.utils.log")
-
     if video_dir_exists:
         video_dir = olx_path / "video"
         video_dir.mkdir()
@@ -720,9 +715,7 @@ def test_get_video_metadata(mocker, tmp_path, video_dir_exists):
         assert call_args[1] == video_xml
     else:
         # No video directory
-        result = utils.get_video_metadata(str(olx_path), run)
-        assert result == {}
-        mock_log.warning.assert_called_once()
+        assert utils.get_video_metadata(str(olx_path), run) == {}
 
 
 @pytest.mark.parametrize(
@@ -798,7 +791,6 @@ def test_get_video_metadata(mocker, tmp_path, video_dir_exists):
     ],
 )
 def test_get_url_from_module_id(  # noqa: PLR0913
-    mocker,
     settings,
     etl_source,
     module_id,
@@ -836,9 +828,6 @@ def test_get_url_from_module_id(  # noqa: PLR0913
         else None
     )
 
-    # Mock log for warning cases
-    mock_log = mocker.patch("learning_resources.etl.utils.log")
-
     result = utils.get_url_from_module_id(
         olx_path, module_id, run, assets_metadata, video_srt_metadata
     )
@@ -847,9 +836,3 @@ def test_get_url_from_module_id(  # noqa: PLR0913
         assert result == expected_url_pattern
     else:
         assert result is None
-        if not module_id:
-            mock_log.warning.assert_any_call("Module ID is empty")
-        elif module_id.endswith(".srt") and not has_video_meta:
-            mock_log.debug.assert_any_call("No video metadata for %s", module_id)
-        elif "unknown-format" in module_id or "invalid-uuid" in module_id:
-            mock_log.warning.assert_any_call("Unknown module ID format: %s", module_id)
