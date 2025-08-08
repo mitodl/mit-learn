@@ -440,10 +440,8 @@ def is_valid_uuid(uuid_string: str) -> bool:
 
 
 def get_url_from_module_id(
-    olx_path: str,
     module_id: str,
     run: LearningResourceRun,
-    assets_metadata: Optional[dict] = None,
     video_srt_metadata: Optional[dict] = None,
 ) -> str:
     """
@@ -466,33 +464,15 @@ def get_url_from_module_id(
         else run.run_id
     )
     if module_id.startswith("asset"):
-        asset_meta = (
-            assets_metadata.get(Path(olx_path).parts[-1], {}) if assets_metadata else {}
-        )
         video_meta = video_srt_metadata.get(module_id, {}) if video_srt_metadata else {}
         if video_meta:
             # Link to the parent video
             return f"{root_url}/courses/{run_id}/jump_to/{video_meta.split('@')[-1]}"
-        middle_path = asset_meta.get("custom_md5", "")
-        return f"{root_url}/{(middle_path + '/') if middle_path else ''}{module_id}"
+        return f"{root_url}/{module_id}"
     elif module_id.startswith("block") and is_valid_uuid(module_id.split("@")[-1]):
         return f"{root_url}/courses/{run_id}/jump_to_id/{module_id.split('@')[-1]}"
     else:
         return None
-
-
-def get_assets_metadata(olx_path: str) -> dict:
-    """
-    Get metadata for assets in an OLX path
-
-    Args:
-        olx_path (str): The path to the OLX directory
-    """
-    try:
-        with Path.open(Path(olx_path, "policies/assets.json"), "rb") as f:
-            return json.loads(f.read())
-    except FileNotFoundError:
-        log.debug("Assets metadata file does not exist: %s", olx_path)
 
 
 def parse_video_transcripts_xml(
@@ -548,7 +528,6 @@ def get_video_metadata(olx_path: str, run: LearningResourceRun) -> dict:
 
 
 def _process_olx_path(olx_path: str, run: LearningResourceRun, *, overwrite):
-    assets_metadata = get_assets_metadata(olx_path)
     video_srt_metadata = get_video_metadata(olx_path, run)
     for document, metadata in documents_from_olx(olx_path):
         source_path = metadata.get("source_path")
@@ -607,9 +586,7 @@ def _process_olx_path(olx_path: str, run: LearningResourceRun, *, overwrite):
                 "file_extension": file_extension,
                 "source_path": source_path,
                 "edx_module_id": edx_module_id,
-                "url": get_url_from_module_id(
-                    source_path, edx_module_id, run, assets_metadata, video_srt_metadata
-                ),
+                "url": get_url_from_module_id(edx_module_id, run, video_srt_metadata),
                 **content_dict,
             }
         )

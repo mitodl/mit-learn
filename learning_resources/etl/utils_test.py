@@ -225,13 +225,9 @@ def test_transform_content_files(  # noqa: PLR0913
     )
 
     # Mock the new functions called by _process_olx_path
-    assets_metadata = {"test": "assets"}
     video_metadata = {"test": "video"}
     test_url = "https://example.com/test"
 
-    mocker.patch(
-        "learning_resources.etl.utils.get_assets_metadata", return_value=assets_metadata
-    )
     mocker.patch(
         "learning_resources.etl.utils.get_video_metadata", return_value=video_metadata
     )
@@ -593,30 +589,6 @@ def test_is_valid_uuid(uuid_string, expected):
     assert utils.is_valid_uuid(uuid_string) == expected
 
 
-@pytest.mark.parametrize("assets_exist", [True, False])
-def test_get_assets_metadata(mocker, tmp_path, assets_exist):
-    """Test that get_assets_metadata returns correct metadata when assets.json exists"""
-    olx_path = tmp_path / "course"
-    policies_dir = olx_path / "policies"
-    policies_dir.mkdir(parents=True)
-
-    if assets_exist:
-        assets_data = {
-            "course-v1:MITx+6.00x+2T2017": {
-                "static/image.png": {"custom_md5": "abc123"},
-                "static/video.mp4": {"custom_md5": "def456"},
-            }
-        }
-        assets_file = policies_dir / "assets.json"
-        assets_file.write_text(str(assets_data).replace("'", '"'))
-
-        result = utils.get_assets_metadata(str(olx_path))
-        assert result == assets_data
-    else:
-        # No assets.json file exists
-        assert utils.get_assets_metadata(str(olx_path)) is None
-
-
 @pytest.mark.parametrize(
     ("xml_content", "file_name", "expected_mapping"),
     [
@@ -723,7 +695,6 @@ def test_get_video_metadata(mocker, tmp_path, video_dir_exists):
         "etl_source",
         "module_id",
         "has_video_meta",
-        "has_asset_meta",
         "expected_url_pattern",
     ),
     [
@@ -732,13 +703,11 @@ def test_get_video_metadata(mocker, tmp_path, video_dir_exists):
             "mit_edx",
             "asset-v1:test+type@asset+block@image.png",
             False,
-            True,
             "https://edx.org/asset-v1:test+type@asset+block@image.png",
-        ),  # No custom_md5 in path
+        ),
         (
             "mit_edx",
             "asset-v1:test+type@asset+block@video.mp4",
-            False,
             False,
             "https://edx.org/asset-v1:test+type@asset+block@video.mp4",
         ),
@@ -746,13 +715,11 @@ def test_get_video_metadata(mocker, tmp_path, video_dir_exists):
             "mit_edx",
             "asset-v1:test+type@asset+block@transcript.srt",
             True,
-            False,
             "https://edx.org/courses/course-v1:test_run/jump_to/test_video",
         ),
         (
             "mit_edx",
             "asset-v1:test+type@asset+block@transcript.srt",
-            False,
             False,
             "https://edx.org/asset-v1:test+type@asset+block@transcript.srt",
         ),  # SRT without video meta returns asset URL
@@ -761,14 +728,12 @@ def test_get_video_metadata(mocker, tmp_path, video_dir_exists):
             "mit_edx",
             "block-v1:test+type@html+block@550e8400-e29b-41d4-a716-446655440000",
             False,
-            False,
             "https://edx.org/courses/course-v1:test_run/jump_to_id/550e8400-e29b-41d4-a716-446655440000",
         ),
         # OLL source with run_id modification
         (
             "oll",
             "block-v1:test+type@html+block@550e8400-e29b-41d4-a716-446655440000",
-            False,
             False,
             "https://oll.org/courses/course-v1:course-v1:test_run/jump_to_id/550e8400-e29b-41d4-a716-446655440000",
         ),
@@ -777,25 +742,22 @@ def test_get_video_metadata(mocker, tmp_path, video_dir_exists):
             "",
             "asset-v1:test+type@asset+block@file.txt",
             False,
-            False,
             "None/asset-v1:test+type@asset+block@file.txt",
         ),  # Empty etl_source returns None as root_url
         (
             "mit_edx",
             "block-v1:test+type@html+block@invalid-uuid",
             False,
-            False,
             None,
         ),  # Invalid UUID
-        ("mit_edx", "unknown-format", False, False, None),  # Unknown format
+        ("mit_edx", "unknown-format", False, None),  # Unknown format
     ],
 )
-def test_get_url_from_module_id(  # noqa: PLR0913
+def test_get_url_from_module_id(
     settings,
     etl_source,
     module_id,
     has_video_meta,
-    has_asset_meta,
     expected_url_pattern,
 ):
     """Test that get_url_from_module_id generates correct URLs for different module types"""
@@ -807,19 +769,7 @@ def test_get_url_from_module_id(  # noqa: PLR0913
         run_id="course-v1:test_run", learning_resource__etl_source=etl_source
     )
 
-    olx_path = "/path/to/course-v1:test_run"
-
     # Setup metadata
-    assets_metadata = (
-        {
-            "course-v1:test_run": {
-                "static/image.png": {}  # No custom_md5 for simplicity
-            }
-        }
-        if has_asset_meta
-        else None
-    )
-
     video_srt_metadata = (
         {
             "asset-v1:test+type@asset+block@transcript.srt": "block-v1:test+type@video+block@test_video"
@@ -828,9 +778,7 @@ def test_get_url_from_module_id(  # noqa: PLR0913
         else None
     )
 
-    result = utils.get_url_from_module_id(
-        olx_path, module_id, run, assets_metadata, video_srt_metadata
-    )
+    result = utils.get_url_from_module_id(module_id, run, video_srt_metadata)
 
     if expected_url_pattern:
         assert result == expected_url_pattern
