@@ -655,7 +655,7 @@ def test_vector_search_group_by(mocker):
     mock_group1_hit1 = mocker.MagicMock()
     mock_group1_hit1.payload = {
         group_by_field: resource_id_1,
-        "chunk_content": "First part. ",
+        "chunk_content": "First part.",
         "common_field": "value1",
     }
     mock_group1_hit2 = mocker.MagicMock()
