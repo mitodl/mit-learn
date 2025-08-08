@@ -147,7 +147,7 @@ describe.each([
         course.enrollment?.status === EnrollmentStatus.NotEnrolled ||
         !course.enrollment
       ) {
-        expect(coursewareCTA).toHaveTextContent("Enroll")
+        expect(coursewareCTA).toHaveTextContent("Start Course")
       } else {
         expect(coursewareCTA).toHaveTextContent(
           `${expected.labelPrefix} Course`,
@@ -163,7 +163,7 @@ describe.each([
         course.enrollment?.status === EnrollmentStatus.NotEnrolled ||
         !course.enrollment
       ) {
-        expect(coursewareCTA).toHaveTextContent("Enroll")
+        expect(coursewareCTA).toHaveTextContent(`Start ${courseNoun}`)
       } else {
         expect(coursewareCTA).toHaveTextContent(
           `${expected.labelPrefix} ${courseNoun}`,
@@ -455,7 +455,7 @@ describe.each([
         status === undefined ||
         !course.enrollment
       ) {
-        expect(coursewareButton).toHaveTextContent("Enroll")
+        expect(coursewareButton).toHaveTextContent("Start Course")
       } else {
         expect(coursewareButton).toHaveTextContent("Continue Course")
       }

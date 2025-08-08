@@ -1,6 +1,7 @@
 "use client"
 
 import React from "react"
+import DOMPurify from "dompurify"
 import Image from "next/image"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -89,22 +90,33 @@ const ProgramHeader = styled.div(({ theme }) => ({
   flexDirection: "column",
 
   gap: "16px",
-  backgroundColor: "rgba(243, 244, 248, 0.60)", // lightGray1 at 60%
+  backgroundColor: theme.custom.colors.white,
   borderRadius: "8px 8px 0px 0px",
   border: `1px solid ${theme.custom.colors.lightGray2}`,
+  borderBottom: `1px solid ${theme.custom.colors.red}`,
 }))
+const ProgramDescription = styled(Typography)({
+  p: {
+    margin: 0,
+  },
+})
 
 const OrgProgramCollectionDisplay: React.FC<{
   collection: DashboardProgramCollection
   enrollments?: CourseRunEnrollment[]
   orgId: number
 }> = ({ collection, enrollments, orgId }) => {
+  const sanitizedDescription = DOMPurify.sanitize(collection.description ?? "")
   return (
     <ProgramRoot data-testid="org-program-collection-root">
       <ProgramHeader>
         <Typography variant="h5" component="h2">
           {collection.title}
         </Typography>
+        <ProgramDescription
+          variant="body2"
+          dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
+        />
       </ProgramHeader>
       <PlainList>
         {collection.programIds.map((programId) => (
@@ -122,10 +134,10 @@ const OrgProgramCollectionDisplay: React.FC<{
 
 const OrgProgramDisplay: React.FC<{
   program: DashboardProgram
-  enrollments?: CourseRunEnrollment[]
+  courseRunEnrollments?: CourseRunEnrollment[]
   programLoading: boolean
   orgId?: number
-}> = ({ program, enrollments, programLoading, orgId }) => {
+}> = ({ program, courseRunEnrollments, programLoading, orgId }) => {
   const courses = useQuery(
     coursesQueries.coursesList({ id: program.courseIds, org_id: orgId }),
   )
@@ -135,8 +147,9 @@ const OrgProgramDisplay: React.FC<{
   if (programLoading || courses.isLoading) return skeleton
   const transformedCourses = transform.mitxonlineCourses({
     courses: courses.data?.results ?? [],
-    enrollments: enrollments ?? [],
+    enrollments: courseRunEnrollments ?? [],
   })
+  const sanitizedHtml = DOMPurify.sanitize(program.description)
 
   return (
     <ProgramRoot data-testid="org-program-root">
@@ -144,7 +157,10 @@ const OrgProgramDisplay: React.FC<{
         <Typography variant="h5" component="h2">
           {program.title}
         </Typography>
-        <Typography variant="body1">{program.description}</Typography>
+        <ProgramDescription
+          variant="body2"
+          dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+        />
       </ProgramHeader>
       <PlainList>
         {transform
@@ -217,7 +233,7 @@ const ProgramCard: React.FC<{
       Component="li"
       key={program.key}
       dashboardResource={course}
-      courseNoun={"Course"}
+      courseNoun={"Module"}
       offerUpgrade={false}
       titleHref={course.run.coursewareUrl ?? ""}
       buttonHref={course.run.coursewareUrl ?? ""}
@@ -241,7 +257,9 @@ const OrganizationContentInternal: React.FC<
     FeatureFlags.OrganizationDashboard,
   )
   const orgId = org.id
-  const enrollments = useQuery(enrollmentQueries.enrollmentsList())
+  const courseRunEnrollments = useQuery(
+    enrollmentQueries.courseRunEnrollmentsList(),
+  )
   const programs = useQuery(programsQueries.programsList({ org_id: orgId }))
   const programCollections = useQuery(
     programCollectionQueries.programCollectionsList({}),
@@ -270,7 +288,7 @@ const OrganizationContentInternal: React.FC<
             <OrgProgramDisplay
               key={program.key}
               program={program}
-              enrollments={enrollments.data}
+              courseRunEnrollments={courseRunEnrollments.data}
               programLoading={programs.isLoading}
               orgId={orgId}
             />
@@ -286,7 +304,7 @@ const OrganizationContentInternal: React.FC<
               <OrgProgramCollectionDisplay
                 key={collection.title}
                 collection={transformedCollection}
-                enrollments={enrollments.data}
+                enrollments={courseRunEnrollments.data}
                 orgId={orgId}
               />
             )
