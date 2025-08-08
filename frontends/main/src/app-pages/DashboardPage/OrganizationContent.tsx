@@ -5,7 +5,7 @@ import DOMPurify from "dompurify"
 import Image from "next/image"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
-import { useQuery } from "@tanstack/react-query"
+import { useQueries, useQuery } from "@tanstack/react-query"
 import {
   programsQueries,
   programCollectionQueries,
@@ -101,35 +101,42 @@ const ProgramDescription = styled(Typography)({
   },
 })
 
-const ProgramCollectionItemWithQuery: React.FC<{
-  programId: number
-  enrollments?: CourseRunEnrollment[]
-  orgId: number
-}> = ({ programId, enrollments, orgId }) => {
-  const program = useQuery(
-    programsQueries.programsList({ id: programId, org_id: orgId }),
-  )
+// Custom hook to handle multiple program queries and check if any have courses
+const useProgramCollectionCourses = (programIds: number[], orgId: number) => {
+  const programQueries = useQueries({
+    queries: programIds.map((programId) => ({
+      ...programsQueries.programsList({ id: programId, org_id: orgId }),
+      queryKey: [
+        ...programsQueries.programsList({ id: programId, org_id: orgId })
+          .queryKey,
+      ],
+    })),
+  })
 
-  if (program.isLoading) {
-    return (
-      <Skeleton width="100%" height="65px" style={{ marginBottom: "16px" }} />
-    )
+  const isLoading = programQueries.some((query) => query.isLoading)
+
+  const programsWithCourses = programQueries
+    .map((query, index) => {
+      if (!query.data?.results || !query.data.results.length) {
+        return null
+      }
+      const program = query.data.results[0]
+      const transformedProgram = transform.mitxonlineProgram(program)
+      return {
+        programId: programIds[index],
+        program: transformedProgram,
+        hasCourses: program.courses && program.courses.length > 0,
+      }
+    })
+    .filter(Boolean)
+
+  const hasAnyCourses = programsWithCourses.some((p) => p?.hasCourses)
+
+  return {
+    isLoading,
+    programsWithCourses,
+    hasAnyCourses,
   }
-
-  if (!program.data?.results || !program.data.results.length) {
-    return null
-  }
-
-  const transformedProgram = transform.mitxonlineProgram(
-    program.data?.results[0],
-  )
-
-  return (
-    <ProgramCollectionItem
-      program={transformedProgram}
-      enrollments={enrollments}
-    />
-  )
 }
 
 const OrgProgramCollectionDisplay: React.FC<{
@@ -138,6 +145,36 @@ const OrgProgramCollectionDisplay: React.FC<{
   orgId: number
 }> = ({ collection, enrollments, orgId }) => {
   const sanitizedDescription = DOMPurify.sanitize(collection.description ?? "")
+  const { isLoading, programsWithCourses, hasAnyCourses } =
+    useProgramCollectionCourses(collection.programIds, orgId)
+
+  if (isLoading) {
+    return (
+      <ProgramRoot data-testid="org-program-collection-root">
+        <ProgramHeader>
+          <Typography variant="h5" component="h2">
+            {collection.title}
+          </Typography>
+          <ProgramDescription
+            variant="body2"
+            dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
+          />
+        </ProgramHeader>
+        <PlainList>
+          <Skeleton
+            width="100%"
+            height="65px"
+            style={{ marginBottom: "16px" }}
+          />
+        </PlainList>
+      </ProgramRoot>
+    )
+  }
+
+  // Only render if at least one program has courses
+  if (!hasAnyCourses) {
+    return null
+  }
 
   return (
     <ProgramRoot data-testid="org-program-collection-root">
@@ -151,14 +188,15 @@ const OrgProgramCollectionDisplay: React.FC<{
         />
       </ProgramHeader>
       <PlainList>
-        {collection.programIds.map((programId) => (
-          <ProgramCollectionItemWithQuery
-            key={programId}
-            programId={programId}
-            enrollments={enrollments}
-            orgId={orgId}
-          />
-        ))}
+        {programsWithCourses.map((item) =>
+          item ? (
+            <ProgramCollectionItem
+              key={item.programId}
+              program={item.program}
+              enrollments={enrollments}
+            />
+          ) : null,
+        )}
       </PlainList>
     </ProgramRoot>
   )
