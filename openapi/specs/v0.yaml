@@ -867,6 +867,18 @@ paths:
             minLength: 1
         description: 'The extension of the content file. '
       - in: query
+        name: group_by
+        schema:
+          type: string
+          minLength: 1
+        description: The attribute to group results by
+      - in: query
+        name: group_size
+        schema:
+          type: integer
+        description: The number of chunks in each group. Only relevant when group_by
+          is used
+      - in: query
         name: key
         schema:
           type: array
