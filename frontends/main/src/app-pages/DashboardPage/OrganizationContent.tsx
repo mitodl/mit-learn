@@ -101,12 +101,44 @@ const ProgramDescription = styled(Typography)({
   },
 })
 
+const ProgramCollectionItemWithQuery: React.FC<{
+  programId: number
+  enrollments?: CourseRunEnrollment[]
+  orgId: number
+}> = ({ programId, enrollments, orgId }) => {
+  const program = useQuery(
+    programsQueries.programsList({ id: programId, org_id: orgId }),
+  )
+
+  if (program.isLoading) {
+    return (
+      <Skeleton width="100%" height="65px" style={{ marginBottom: "16px" }} />
+    )
+  }
+
+  if (!program.data?.results || !program.data.results.length) {
+    return null
+  }
+
+  const transformedProgram = transform.mitxonlineProgram(
+    program.data?.results[0],
+  )
+
+  return (
+    <ProgramCollectionItem
+      program={transformedProgram}
+      enrollments={enrollments}
+    />
+  )
+}
+
 const OrgProgramCollectionDisplay: React.FC<{
   collection: DashboardProgramCollection
   enrollments?: CourseRunEnrollment[]
   orgId: number
 }> = ({ collection, enrollments, orgId }) => {
   const sanitizedDescription = DOMPurify.sanitize(collection.description ?? "")
+
   return (
     <ProgramRoot data-testid="org-program-collection-root">
       <ProgramHeader>
@@ -120,7 +152,7 @@ const OrgProgramCollectionDisplay: React.FC<{
       </ProgramHeader>
       <PlainList>
         {collection.programIds.map((programId) => (
-          <ProgramCollectionItem
+          <ProgramCollectionItemWithQuery
             key={programId}
             programId={programId}
             enrollments={enrollments}
@@ -182,28 +214,10 @@ const OrgProgramDisplay: React.FC<{
 }
 
 const ProgramCollectionItem: React.FC<{
-  programId: number
+  program: DashboardProgram
   enrollments?: CourseRunEnrollment[]
-  orgId: number
-}> = ({ programId, enrollments, orgId }) => {
-  const program = useQuery(
-    programsQueries.programsList({ id: programId, org_id: orgId }),
-  )
-  if (program.isLoading || !program.data?.results.length) {
-    return (
-      <Skeleton width="100%" height="65px" style={{ marginBottom: "16px" }} />
-    )
-  }
-  const transformedProgram = transform.mitxonlineProgram(
-    program.data?.results[0],
-  )
-  return (
-    <ProgramCard
-      program={transformedProgram}
-      enrollments={enrollments}
-      orgId={orgId}
-    />
-  )
+}> = ({ program, enrollments }) => {
+  return <ProgramCard program={program} enrollments={enrollments} />
 }
 
 const ProgramCard: React.FC<{
@@ -310,6 +324,13 @@ const OrganizationContentInternal: React.FC<
             )
           })}
         </PlainList>
+      )}
+      {programs.data?.results.length === 0 && (
+        <HeaderRoot>
+          <Typography variant="h3" component="h1">
+            No programs found
+          </Typography>
+        </HeaderRoot>
       )}
     </OrganizationRoot>
   )
