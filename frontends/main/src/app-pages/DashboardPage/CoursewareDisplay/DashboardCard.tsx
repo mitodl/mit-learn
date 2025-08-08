@@ -456,7 +456,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       <Stack
         direction="row"
         alignItems="center"
-        justifyContent="space-between"
+        justifyContent="end"
         width="100%"
       >
         {startDateSection}
