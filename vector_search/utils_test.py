@@ -708,7 +708,7 @@ def test_vector_search_group_by(mocker):
 
     assert hit1.payload["chunk_content"] == "First part. Second part."
     assert hit1.payload["common_field"] == "value1"
-    assert hit1.payload["chunks"] == ["First part. ", "Second part."]
+    assert hit1.payload["chunks"] == ["First part.", "Second part."]
 
     assert hit2.payload["chunk_content"] == "Only part."
     assert hit2.payload["common_field"] == "value2"
