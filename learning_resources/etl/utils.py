@@ -467,16 +467,13 @@ def get_url_from_module_id(
         else run.run_id
     )
     if module_id.startswith("asset"):
-        log.debug("Getting URL for asset %s", module_id)
         asset_meta = (
             assets_metadata.get(Path(olx_path).parts[-1], {}) if assets_metadata else {}
         )
         video_meta = video_srt_metadata.get(module_id, {}) if video_srt_metadata else {}
         if video_meta:
-            log.debug("Found video metadata for %s", module_id)
+            # Link to the parent video
             return f"{root_url}/courses/{run_id}/jump_to/{video_meta.split('@')[-1]}"
-        elif module_id.endswith(".srt"):
-            log.debug("No video metadata for %s", module_id)
         middle_path = asset_meta.get("custom_md5", "")
         return f"{root_url}/{(middle_path + '/') if middle_path else ''}{module_id}"
     elif module_id.startswith("block") and is_valid_uuid(module_id.split("@")[-1]):
@@ -531,7 +528,7 @@ def parse_video_transcripts_xml(
 
 def get_video_metadata(olx_path: str, run: LearningResourceRun) -> dict:
     """
-    Get metadata for video SRT files in an OLX path
+    Get metadata for video SRT/VTT files in an OLX path
     """
     video_transcript_mapping = {}
     video_path = Path(olx_path, "video")
@@ -539,9 +536,7 @@ def get_video_metadata(olx_path: str, run: LearningResourceRun) -> dict:
         log.warning("No video directory found in OLX path: %s", olx_path)
         return video_transcript_mapping
     for root, _, files in os.walk(str(Path(olx_path, "video"))):
-        path = "/".join(root.split("/")[3:])
         for filename in files:
-            log.debug("Processing video file %s in %s", filename, path)
             extension_lower = Path(filename).suffix.lower()
             if extension_lower == ".xml":
                 with Path.open(Path(root, filename), "rb") as f:

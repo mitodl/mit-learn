@@ -711,17 +711,13 @@ def test_get_video_metadata(mocker, tmp_path, video_dir_exists):
             "learning_resources.etl.utils.parse_video_transcripts_xml",
             return_value=expected_mapping,
         )
-
         result = utils.get_video_metadata(str(olx_path), run)
 
         assert result == expected_mapping
-        # The function passes a file object to parse_video_transcripts_xml, not a Path
         assert mock_parse.call_count == 1
         call_args = mock_parse.call_args[0]
         assert call_args[0] == run
         assert call_args[1] == video_xml
-        # The third argument is a file object, so we can't easily check its exact value
-        mock_log.debug.assert_called()
     else:
         # No video directory
         result = utils.get_video_metadata(str(olx_path), run)
