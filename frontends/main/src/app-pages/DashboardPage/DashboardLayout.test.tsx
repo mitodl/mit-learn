@@ -22,7 +22,7 @@ import {
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
 import { useFeatureFlagEnabled } from "posthog-js/react"
-import { OrganizationPage } from "@mitodl/mitxonline-api-axios/v1"
+import { OrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)

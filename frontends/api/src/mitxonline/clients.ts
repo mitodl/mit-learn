@@ -1,11 +1,13 @@
 import {
   B2bApi,
   CoursesApi,
+  CourseCertificatesApi,
   EnrollmentsApi,
   ProgramCollectionsApi,
   ProgramsApi,
+  ProgramCertificatesApi,
   UsersApi,
-} from "@mitodl/mitxonline-api-axios/v1"
+} from "@mitodl/mitxonline-api-axios/v2"
 import axios from "axios"
 
 const axiosInstance = axios.create({
@@ -29,7 +31,17 @@ const programCollectionsApi = new ProgramCollectionsApi(
   BASE_PATH,
   axiosInstance,
 )
+const programCertificatesApi = new ProgramCertificatesApi(
+  undefined,
+  BASE_PATH,
+  axiosInstance,
+)
 const coursesApi = new CoursesApi(undefined, BASE_PATH, axiosInstance)
+const courseCertificatesApi = new CourseCertificatesApi(
+  undefined,
+  BASE_PATH,
+  axiosInstance,
+)
 
 export {
   usersApi,
@@ -38,5 +50,7 @@ export {
   programsApi,
   programCollectionsApi,
   coursesApi,
+  programCertificatesApi,
+  courseCertificatesApi,
   axiosInstance,
 }

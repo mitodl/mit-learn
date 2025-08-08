@@ -9,7 +9,7 @@ import {
   V2CourseWithCourseRuns,
   V2Program,
   V2ProgramCollection,
-} from "@mitodl/mitxonline-api-axios/v1"
+} from "@mitodl/mitxonline-api-axios/v2"
 
 import { DashboardResourceType, EnrollmentStatus } from "./types"
 import type {
@@ -53,6 +53,10 @@ const mitxonlineEnrollment = (raw: CourseRunEnrollment): DashboardCourse => {
       certificateUpgradePrice: raw.run.products[0]?.price,
       canUpgrade: raw.run.is_upgradable,
       coursewareUrl: raw.run.courseware_url,
+      certificate: {
+        uuid: raw.certificate?.uuid ?? "",
+        link: raw.certificate?.link ?? "",
+      },
     },
     enrollment: {
       id: raw.id,

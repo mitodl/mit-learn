@@ -41,6 +41,10 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
           certificateUpgradeDeadline: apiData.run.upgrade_deadline,
           certificateUpgradePrice: apiData.run.products[0]?.price,
           canUpgrade: expect.any(Boolean), // check this in a moment
+          certificate: {
+            uuid: apiData.certificate?.uuid ?? "",
+            link: apiData.certificate?.link ?? "",
+          },
         },
         enrollment: {
           id: apiData.id,

@@ -2,7 +2,7 @@ import type {
   CoursesApiApiV2CoursesListRequest,
   ProgramCollectionsApiProgramCollectionsListRequest,
   ProgramsApiProgramsListV2Request,
-} from "@mitodl/mitxonline-api-axios/v1"
+} from "@mitodl/mitxonline-api-axios/v2"
 import { RawAxiosRequestConfig } from "axios"
 import { queryify } from "ol-test-utilities"
 

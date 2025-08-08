@@ -12,10 +12,12 @@ from learning_resources.factories import (
     LearningResourceRunFactory,
 )
 from learning_resources.models import LearningResource
+from learning_resources.serializers import LearningResourceMetadataDisplaySerializer
 from learning_resources_search.serializers import (
     serialize_bulk_content_files,
     serialize_bulk_learning_resources,
 )
+from main.utils import checksum_for_content
 from vector_search.constants import (
     CONTENT_FILES_COLLECTION_NAME,
     QDRANT_CONTENT_FILE_PARAM_MAP,
@@ -718,3 +720,89 @@ def test_vector_search_group_by(mocker):
     call_args = mock_qdrant.query_points_groups.call_args.kwargs
     assert call_args["group_by"] == group_by_field
     assert call_args["group_size"] == 2
+
+
+@pytest.mark.django_db
+def test_embed_course_metadata_as_contentfile_uploads_points_on_change(mocker):
+    """
+    Test that _embed_course_metadata_as_contentfile uploads points to Qdrant
+    if any property of a serialized_resource has changed
+    """
+
+    mock_client = mocker.patch("vector_search.utils.qdrant_client").return_value
+    mock_encoder = mocker.patch("vector_search.utils.dense_encoder").return_value
+    mock_encoder.model_short_name.return_value = "test-model"
+    mock_encoder.embed_documents.return_value = [[0.1, 0.2, 0.3]]
+    resource = LearningResourceFactory.create()
+    serialized_resource = next(serialize_bulk_learning_resources([resource.id]))
+    serializer = LearningResourceMetadataDisplaySerializer(serialized_resource)
+    rendered_document = serializer.render_document()
+    resource_checksum = checksum_for_content(str(rendered_document))
+
+    """
+    Simulate qdrant returning a checksum for existing
+    record that matches the checksum of metadata doc
+    """
+    mock_point = mocker.Mock()
+    mock_point.payload = {"checksum": "checksum2"}
+    mock_client.retrieve.return_value = [mock_point]
+
+    _embed_course_metadata_as_contentfile([serialized_resource])
+
+    # Assert upload_points was called
+    assert mock_client.upload_points.called
+    args, kwargs = mock_client.upload_points.call_args
+    assert args[0] == CONTENT_FILES_COLLECTION_NAME
+    points = list(kwargs["points"])
+    assert len(points) == 1
+    assert points[0].payload["resource_readable_id"] == resource.readable_id
+    assert points[0].payload["checksum"] == resource_checksum
+
+    # simulate qdrant returning the same checksum for the metadata doc
+    mock_point.payload = {"checksum": resource_checksum}
+    mock_client.upload_points.reset_mock()
+    _embed_course_metadata_as_contentfile([serialized_resource])
+
+    # nothing has changed - no updates to make
+    assert not mock_client.upload_points.called
+
+
+@pytest.mark.parametrize(
+    ("serialized_document", "expected_params"),
+    [
+        (
+            {"resource_readable_id": "r1", "key": "k1", "run_readable_id": "run1"},
+            {"resource_readable_id": "r1", "key": "k1", "run_readable_id": "run1"},
+        ),
+        (
+            {"resource_readable_id": "r2", "key": "k2"},
+            {"resource_readable_id": "r2", "key": "k2"},
+        ),
+        (
+            {"run_readable_id": "run3"},
+            {"run_readable_id": "run3"},
+        ),
+        ({"test": "run3"}, None),
+    ],
+)
+def test_update_content_file_payload_only_includes_existing_keys(
+    mocker, serialized_document, expected_params
+):
+    """
+    Test that params only includes keys
+    that are defined in the input document
+    """
+    mock_retrieve = mocker.patch(
+        "vector_search.utils.retrieve_points_matching_params", return_value=[]
+    )
+    mocker.patch("vector_search.utils._set_payload")
+
+    update_content_file_payload(serialized_document)
+    if expected_params:
+        # Check that retrieve_points_matching_params was called with only the expected keys
+        mock_retrieve.assert_called_once_with(
+            expected_params,
+            collection_name=CONTENT_FILES_COLLECTION_NAME,
+        )
+    else:
+        mock_retrieve.assert_not_called()
