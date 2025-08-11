@@ -529,6 +529,9 @@ def embed_learning_resources(ids, resource_type, overwrite):
             resource["id"]
             for resource in serialized_resources
             if resource.get("summary")
+            or ContentFile.objects.filter(run__id=resource.get("run_id"))
+            .exclude(summary="")
+            .exists()
         ]
         ContentSummarizer().summarize_content_files_by_ids(
             existing_summary_content_ids, overwrite
