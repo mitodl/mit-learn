@@ -117,7 +117,7 @@ const useProgramCollectionCourses = (programIds: number[], orgId: number) => {
 
   const programsWithCourses = programQueries
     .map((query, index) => {
-      if (!query.data?.results || !query.data.results.length) {
+      if (!query.data?.results?.length) {
         return null
       }
       const program = query.data.results[0]
