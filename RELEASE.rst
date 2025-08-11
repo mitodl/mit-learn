@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.39.3
+Version 0.39.3 (Released August 11, 2025)
 --------------
 
 - Regenerate course metadata when course information updates (#2419)
