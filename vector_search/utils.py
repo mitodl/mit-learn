@@ -88,10 +88,13 @@ def create_qdrant_collections(force_recreate):
     resources_collection_name = RESOURCES_COLLECTION_NAME
     content_files_collection_name = CONTENT_FILES_COLLECTION_NAME
     encoder = dense_encoder()
+    # True if either of the collections were recreated
+    collection_recreated = False
     if (
         not client.collection_exists(collection_name=resources_collection_name)
         or force_recreate
     ):
+        collection_recreated = True
         client.delete_collection(resources_collection_name)
         client.recreate_collection(
             collection_name=resources_collection_name,
@@ -100,19 +103,13 @@ def create_qdrant_collections(force_recreate):
                 encoder.model_short_name(): models.VectorParams(
                     size=encoder.dim(), distance=models.Distance.COSINE
                 ),
-                f"{encoder.model_short_name()}_content": models.VectorParams(
-                    size=encoder.dim(),
-                    distance=models.Distance.COSINE,
-                    multivector_config=models.MultiVectorConfig(
-                        comparator=models.MultiVectorComparator.MAX_SIM
-                    ),
-                ),
             },
+            replication_factor=2,
+            strict_mode_config=models.StrictModeConfig(enabled=True),
             sparse_vectors_config=client.get_fastembed_sparse_vector_params(),
             optimizers_config=models.OptimizersConfigDiff(default_segment_number=2),
-            quantization_config=models.ScalarQuantization(
-                scalar=models.ScalarQuantizationConfig(
-                    type=models.ScalarType.INT8,
+            quantization_config=models.BinaryQuantization(
+                binary=models.BinaryQuantizationConfig(
                     always_ram=True,
                 ),
             ),
@@ -122,6 +119,7 @@ def create_qdrant_collections(force_recreate):
         not client.collection_exists(collection_name=content_files_collection_name)
         or force_recreate
     ):
+        collection_recreated = True
         client.delete_collection(content_files_collection_name)
         client.recreate_collection(
             collection_name=content_files_collection_name,
@@ -131,16 +129,17 @@ def create_qdrant_collections(force_recreate):
                     size=encoder.dim(), distance=models.Distance.COSINE
                 ),
             },
+            replication_factor=2,
+            strict_mode_config=models.StrictModeConfig(enabled=True),
             sparse_vectors_config=client.get_fastembed_sparse_vector_params(),
             optimizers_config=models.OptimizersConfigDiff(default_segment_number=2),
-            quantization_config=models.ScalarQuantization(
-                scalar=models.ScalarQuantizationConfig(
-                    type=models.ScalarType.INT8,
+            quantization_config=models.BinaryQuantization(
+                binary=models.BinaryQuantizationConfig(
                     always_ram=True,
                 ),
             ),
         )
-    if force_recreate:
+    if collection_recreated:
         create_qdrant_indexes()
 
 
