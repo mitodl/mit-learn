@@ -6,7 +6,6 @@ import logging
 from collections.abc import Generator
 from datetime import UTC, datetime
 from http import HTTPStatus
-from typing import Optional
 from urllib.parse import urljoin
 
 import requests
@@ -32,16 +31,16 @@ class PostHogEvent:
     event: str
     properties: str
     timestamp: datetime
-    distinct_id: Optional[str] = None
-    elements_chain: Optional[str] = None
-    created_at: Optional[datetime] = None
-    dollar_session_id: Optional[str] = None
-    dollar_window_id: Optional[str] = None
-    dollar_group_0: Optional[str] = None
-    dollar_group_1: Optional[str] = None
-    dollar_group_2: Optional[str] = None
-    dollar_group_3: Optional[str] = None
-    dollar_group_4: Optional[str] = None
+    distinct_id: str | None = None
+    elements_chain: str | None = None
+    created_at: datetime | None = None
+    dollar_session_id: str | None = None
+    dollar_window_id: str | None = None
+    dollar_group_0: str | None = None
+    dollar_group_1: str | None = None
+    dollar_group_2: str | None = None
+    dollar_group_3: str | None = None
+    dollar_group_4: str | None = None
 
 
 @dataclasses.dataclass
