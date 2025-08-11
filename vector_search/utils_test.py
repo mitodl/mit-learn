@@ -13,6 +13,9 @@ from learning_resources.factories import (
 )
 from learning_resources.models import LearningResource
 from learning_resources.serializers import LearningResourceMetadataDisplaySerializer
+from learning_resources_search.constants import (
+    CONTENT_FILE_TYPE,
+)
 from learning_resources_search.serializers import (
     serialize_bulk_content_files,
     serialize_bulk_learning_resources,
@@ -723,3 +726,44 @@ def test_update_content_file_payload_only_includes_existing_keys(
         )
     else:
         mock_retrieve.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_embed_learning_resources_contentfile_summarization_filter(mocker):
+    """
+    Test that the summarizer runs for a content file if another content file
+    in the parent learning run also has a summary.
+    """
+    settings.OPENAI_API_KEY = "test"
+    settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = True
+    mock_content_summarizer = mocker.patch(
+        "learning_resources.content_summarizer.ContentSummarizer.summarize_content_files_by_ids"
+    )
+    mock_chat_llm = mocker.patch(
+        "learning_resources.content_summarizer.ChatLiteLLM", autospec=True
+    )
+    mock_instance = mock_chat_llm.return_value
+    mock_summary_response = mocker.MagicMock()
+    mock_summary_response.content = "mocked summary"
+    mock_instance.invoke.return_value = mock_summary_response
+    mock_instance.with_structured_output.return_value.invoke.return_value = {
+        "flashcards": [
+            {
+                "question": "Generated Question",
+                "answer": "Generated Answer",
+            }
+        ]
+    }
+
+    run = LearningResourceRunFactory.create(published=True)
+    ContentFileFactory.create_batch(
+        2, content="test content", summary="summary text", run=run
+    )
+    new_content_files = ContentFileFactory.create_batch(
+        2, content="new content", summary="", run=run
+    )
+    cf_ids = [cf.id for cf in new_content_files]
+    embed_learning_resources(cf_ids, resource_type=CONTENT_FILE_TYPE, overwrite=False)
+
+    # Assert that the summarizer was called with the correct content file IDs
+    assert sorted(mock_content_summarizer.mock_calls[0].args[0]) == sorted(cf_ids)
