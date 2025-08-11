@@ -115,9 +115,9 @@ const MobileLearnLogo = styled.div(({ theme }) => ({
   position: "relative",
 }))
 
-const MobileMITLogo = styled.div(({ theme }) => ({
+const MobileMITLogo = styled.div({
   padding: "0 8px",
-}))
+})
 
 const OrganizationText = styled(Typography)(({ theme }) => ({
   fontSize: theme.typography.pxToRem(14),
