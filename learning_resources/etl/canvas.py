@@ -9,10 +9,10 @@ from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import fitz
 from defusedxml import ElementTree
 from django.conf import settings
 from litellm import completion
-from pdf2image import convert_from_path
 from PIL import Image
 
 from learning_resources.constants import (
@@ -323,7 +323,7 @@ def extract_resources_by_identifierref(manifest_xml: str) -> dict:
     return dict(resources_dict)
 
 
-def pdf_to_base64_images(pdf_path, dpi=200, fmt="JPEG", max_size=2000, quality=85):
+def pdf_to_base64_images(pdf_path, fmt="JPEG", max_size=2000, quality=85):
     """
     Convert a PDF file to a list of base64 encoded images (one per page).
     Resizes images to reduce file size while keeping good OCR quality.
@@ -338,11 +338,16 @@ def pdf_to_base64_images(pdf_path, dpi=200, fmt="JPEG", max_size=2000, quality=8
     Returns:
         list: List of base64 encoded strings (one per page)
     """
-    images = convert_from_path(pdf_path, dpi=dpi)
-    base64_images = []
+    doc = fitz.open(pdf_path)
 
-    for image in images:
+    for page_num in range(len(doc)):
         # Resize the image if it's too large (preserving aspect ratio)
+        page = doc.load_page(page_num)
+        pixel_map = page.get_pixmap()
+        image = pixel_map.pil_image()
+
+        # explicit free
+        pixel_map = None
         if max(image.size) > max_size:
             image.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
 
@@ -355,9 +360,7 @@ def pdf_to_base64_images(pdf_path, dpi=200, fmt="JPEG", max_size=2000, quality=8
             image.save(buffered, format="PNG", optimize=True)
 
         img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
-        base64_images.append(img_str)
-
-    return base64_images
+        yield img_str
 
 
 def _pdf_to_markdown(pdf_path):
