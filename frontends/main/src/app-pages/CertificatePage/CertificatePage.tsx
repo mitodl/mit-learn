@@ -430,12 +430,14 @@ const CertificatePage: React.FC = () => {
             {/* TODO Are all certificates for the full series? Is that the product name? These are being linked to from course runs (not necessarily full courses) */}
             <AchievementText>
               has successfully completed all requirements of the{" "}
-              <strong>{data?.certificate_page.product_name}</strong> series:{" "}
+              <strong>Universal Artificial Intelligence</strong> series:
               {/* TODO we need a type field that provides series|module|program */}
             </AchievementText>
           </Certification>
           <CourseInfo>
-            <Typography variant="h2">{course?.title}</Typography>
+            <Typography variant="h2">
+              {data?.certificate_page.product_name}
+            </Typography>
             {/* CEUs are an xPRO feature that aren't in MITx Online yet */}
             {data?.certificate_page.CEUs ? (
               <Typography variant="h4">
