@@ -8,11 +8,8 @@ import backgroundImage from "@/public/images/backgrounds/error_page_background.s
 import { certificateQueries } from "api/mitxonline-hooks/certificates"
 import { useQuery } from "@tanstack/react-query"
 import OpenLearningLogo from "@/public/images/mit-open-learning-logo.svg"
-import MITLearnLogo from "@/public/images/mit-learn-logo-black.svg"
-import MITLogo from "@/public/images/mit-logo-black.svg"
-import CertificateRibbon from "@/public/images/certificate-ribbon.svg"
-import CertificateBadge from "@/public/images/certificate-badge.svg"
-import MITSeal from "@/public/images/mit-seal.svg"
+import CertificateBadgeDesktop from "@/public/images/certificate-badge-desktop.svg"
+import CertificateBadgeMobile from "@/public/images/certificate-badge-mobile.svg"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { formatDate, NoSSR } from "ol-utilities"
 
@@ -27,7 +24,7 @@ const Page = styled.div(({ theme }) => ({
   padding: "0 16px 90px",
   [theme.breakpoints.down("sm")]: {
     backgroundImage: "none",
-    paddingBottom: "24px",
+    padding: "40px",
   },
 }))
 
@@ -40,7 +37,7 @@ const Title = styled(Typography)(({ theme }) => ({
   },
   [theme.breakpoints.down("md")]: {
     textAlign: "left",
-    margin: "24px 0 32px",
+    margin: "0 0 32px",
     span: {
       fontSize: theme.typography.pxToRem(24),
       lineHeight: theme.typography.pxToRem(30),
@@ -61,10 +58,6 @@ const Certificate = styled.div(({ theme }) => ({
     border: "none",
     maxWidth: "unset",
     minWidth: "unset",
-    fontFamily: "Georgia, serif",
-    "p, span": {
-      fontFamily: "Georgia, serif",
-    },
   },
 }))
 
@@ -87,49 +80,34 @@ const Logo = styled(Image)(({ theme }) => ({
   width: "260px",
   height: "auto",
   [theme.breakpoints.down("md")]: {
-    display: "none",
+    width: "129px",
+    margin: "0 auto",
   },
-}))
-
-const MobileHeader = styled.div(({ theme }) => ({
-  display: "none",
-  [theme.breakpoints.down("md")]: {
-    display: "block",
-  },
-}))
-
-const MobileLogos = styled.div(({ theme }) => ({
-  display: "flex",
-  flexDirection: "row",
-  gap: "16px",
-  alignItems: "center",
-  justifyContent: "center",
-  img: {
-    fill: theme.custom.colors.black,
-  },
-}))
-
-const MobileLearnLogo = styled.div(({ theme }) => ({
-  borderRight: `1px solid ${theme.custom.colors.silverGray}`,
-  paddingRight: "16px",
-  position: "relative",
-}))
-
-const MobileMITLogo = styled.div({
-  padding: "0 8px",
-})
-
-const OrganizationText = styled(Typography)(({ theme }) => ({
-  fontSize: theme.typography.pxToRem(14),
-  color: theme.custom.colors.darkGray1,
-  textAlign: "center",
-  marginTop: "12px",
 }))
 
 const Medallion = styled.div(({ theme }) => ({
   [theme.breakpoints.down("md")]: {
     position: "relative",
-    height: "278px",
+    height: "191px",
+  },
+}))
+
+const Badge = styled.div(({ theme }) => ({
+  backgroundImage: `url(${CertificateBadgeDesktop.src})`,
+  position: "absolute",
+  top: 0,
+  right: "67px",
+  width: "230px",
+  height: "391px",
+  textAlign: "center",
+  padding: "81px 34px",
+  [theme.breakpoints.down("md")]: {
+    backgroundImage: `url(${CertificateBadgeMobile.src})`,
+    width: "156px",
+    height: "191px",
+    top: 0,
+    right: "50%",
+    transform: "translateX(50%)",
   },
 }))
 
@@ -142,58 +120,13 @@ const BadgeText = styled(Typography)(({ theme }) => ({
   textAlign: "center",
   [theme.breakpoints.down("md")]: {
     fontSize: theme.typography.pxToRem(16),
-    fontWeight: theme.typography.fontWeightRegular,
-    lineHeight: theme.typography.pxToRem(20),
+    fontWeight: theme.typography.fontWeightMedium,
+    lineHeight: "150%",
     width: "130px",
     position: "absolute",
-    top: "20px",
+    top: "50px",
     right: "50%",
     transform: "translateX(50%)",
-  },
-}))
-
-const Ribbon = styled.div(({ theme }) => ({
-  backgroundImage: `url(${CertificateRibbon.src})`,
-  position: "absolute",
-  top: 0,
-  right: "114px",
-  width: "139px",
-  height: "391px",
-  [theme.breakpoints.down("md")]: {
-    backgroundImage: "none",
-    backgroundColor: theme.custom.colors.mitRed,
-    width: "113px",
-    height: "157px",
-    right: "50%",
-    transform: "translateX(50%)",
-    borderRadius: "4px",
-  },
-}))
-
-const Badge = styled.div(({ theme }) => ({
-  backgroundImage: `url(${CertificateBadge.src})`,
-  position: "absolute",
-  top: "87px",
-  right: "67px",
-  width: "230px",
-  height: "223px",
-  textAlign: "center",
-  padding: "81px 34px",
-  [theme.breakpoints.down("md")]: {
-    display: "none",
-  },
-}))
-
-const Seal = styled(Image)(({ theme }) => ({
-  width: "200px",
-  height: "199px",
-  top: "80px",
-  display: "none",
-  position: "absolute",
-  right: "50%",
-  transform: "translateX(50%)",
-  [theme.breakpoints.down("md")]: {
-    display: "block",
   },
 }))
 
@@ -210,6 +143,9 @@ const Certification = styled.div(({ theme }) => ({
     gap: 0,
     ".MuiTypography-h4": {
       fontSize: theme.typography.pxToRem(16),
+      fontWeight: theme.typography.fontWeightMedium,
+      lineHeight: "150%",
+      color: theme.custom.colors.silverGrayDark,
     },
   },
 }))
@@ -219,8 +155,8 @@ const NameText = styled(Typography)(({ theme }) => ({
   display: "block",
   [theme.breakpoints.down("md")]: {
     fontSize: theme.typography.pxToRem(24),
-    color: theme.custom.colors.black,
-    lineHeight: "100%",
+    lineHeight: theme.typography.pxToRem(30),
+    marginTop: "4px",
   },
 }))
 
@@ -234,7 +170,7 @@ const AchievementText = styled(Typography)(({ theme }) => ({
   },
   [theme.breakpoints.down("md")]: {
     fontSize: theme.typography.pxToRem(14),
-    lineHeight: theme.typography.pxToRem(20),
+    lineHeight: theme.typography.pxToRem(18),
     marginTop: "16px",
   },
 }))
@@ -249,21 +185,14 @@ const CourseInfo = styled.div(({ theme }) => ({
   },
   [theme.breakpoints.down("md")]: {
     ".MuiTypography-h2": {
-      fontSize: theme.typography.pxToRem(20),
-      lineHeight: theme.typography.pxToRem(25),
+      fontSize: theme.typography.pxToRem(18),
+      lineHeight: theme.typography.pxToRem(26),
+      fontWeight: theme.typography.fontWeightMedium,
     },
     ".MuiTypography-h4": {
       fontSize: theme.typography.pxToRem(14),
-      lineHeight: theme.typography.pxToRem(20),
+      lineHeight: theme.typography.pxToRem(18),
       color: theme.custom.colors.darkGray1,
-    },
-  },
-}))
-
-const DatesText = styled(Typography)(({ theme }) => ({
-  "&&": {
-    [theme.breakpoints.down("md")]: {
-      color: theme.custom.colors.black,
     },
   },
 }))
@@ -296,10 +225,13 @@ const Signatory = styled.div(({ theme }) => ({
     ".MuiTypography-body1": {
       color: theme.custom.colors.darkGray1,
       fontSize: theme.typography.pxToRem(14),
-      lineHeight: theme.typography.pxToRem(20),
+      lineHeight: theme.typography.pxToRem(18),
     },
     borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
     paddingBottom: "24px",
+    p: {
+      marginTop: "8px",
+    },
   },
 }))
 
@@ -314,15 +246,12 @@ const Signature = styled.img(({ theme }) => ({
 const SignatoryName = styled(Typography)(({ theme }) => ({
   marginBottom: "8px",
   [theme.breakpoints.down("md")]: {
-    fontSize: theme.typography.pxToRem(14),
-    lineHeight: "100%",
+    fontSize: theme.typography.pxToRem(16),
+    lineHeight: "150%",
+    fontWeight: theme.typography.fontWeightMedium,
     marginTop: "16px",
   },
 }))
-
-const SignatoryOrganization = styled(Typography)({
-  marginTop: "8px",
-})
 
 const CertificateId = styled(Typography)(({ theme }) => ({
   span: {
@@ -333,6 +262,7 @@ const CertificateId = styled(Typography)(({ theme }) => ({
     lineHeight: theme.typography.pxToRem(20),
     span: {
       display: "block",
+      color: theme.custom.colors.darkGray1,
     },
   },
 }))
@@ -366,8 +296,6 @@ const CertificatePage: React.FC = () => {
     }),
   )
 
-  // const { data: courseData } = useLearningResourcesDetail(data?.course_run)
-
   const { data: courseData } = useQuery(
     coursesQueries.coursesList({ id: [data?.course_run as number] }),
   )
@@ -400,29 +328,9 @@ const CertificatePage: React.FC = () => {
       <Certificate>
         <Inner>
           <Logo src={OpenLearningLogo} alt="MIT Open Learning" />
-          <MobileHeader>
-            <MobileLogos>
-              <MobileLearnLogo>
-                <Image
-                  src={MITLearnLogo}
-                  alt="MIT Learn Logo"
-                  width={107}
-                  height={18}
-                />
-              </MobileLearnLogo>
-              <MobileMITLogo>
-                <Image src={MITLogo} alt="MIT Logo" width={34} height={18} />
-              </MobileMITLogo>
-            </MobileLogos>
-            <OrganizationText>
-              Massachusetts Institute of Technology
-            </OrganizationText>
-          </MobileHeader>
           <Medallion>
-            <Ribbon />
             <Badge />
             <BadgeText variant="h4">{course?.certificate_type}</BadgeText>
-            <Seal src={MITSeal} alt="MIT Seal" />
           </Medallion>
           <Certification>
             <Typography variant="h4">This is to certify that</Typography>
@@ -446,11 +354,11 @@ const CertificatePage: React.FC = () => {
               </Typography>
             ) : null}
             {run?.start_date && run?.end_date && (
-              <DatesText variant="h4">
+              <Typography variant="h4">
                 <NoSSR>
                   {formatDate(run?.start_date)} - {formatDate(run?.end_date)}
                 </NoSSR>
-              </DatesText>
+              </Typography>
             )}
             {data?.certificate_page.CEUs ? null : <Spacer />}
           </CourseInfo>
@@ -467,9 +375,9 @@ const CertificatePage: React.FC = () => {
                   <Typography variant="body1">{signatory.title_1}</Typography>
                   <Typography variant="body1">{signatory.title_2}</Typography>
                   {/* TODO The design shows 3 title but Wagtail supports up to 2 */}
-                  <SignatoryOrganization variant="body1">
+                  <Typography variant="body1">
                     {signatory.organization}
-                  </SignatoryOrganization>
+                  </Typography>
                 </Signatory>
               ),
             )}
