@@ -708,11 +708,11 @@ def test_vector_search_group_by(mocker):
         h for h in results["hits"] if h.payload[group_by_field] == resource_id_2
     )
 
-    assert hit1.payload["chunk_content"] == "First part. Second part."
+    assert hit1.payload["chunk_content"] is None
     assert hit1.payload["common_field"] == "value1"
     assert hit1.payload["chunks"] == ["First part.", "Second part."]
 
-    assert hit2.payload["chunk_content"] == "Only part."
+    assert hit2.payload["chunk_content"] is None
     assert hit2.payload["common_field"] == "value2"
     assert hit2.payload["chunks"] == ["Only part."]
 
