@@ -323,7 +323,7 @@ def extract_resources_by_identifierref(manifest_xml: str) -> dict:
     return dict(resources_dict)
 
 
-def pdf_to_base64_images(pdf_path, fmt="JPEG", max_size=2000, quality=85):
+def pdf_to_base64_images(pdf_path, dpi=200, fmt="JPEG", max_size=2000, quality=85):
     """
     Convert a PDF file to a list of base64 encoded images (one per page).
     Resizes images to reduce file size while keeping good OCR quality.
@@ -343,7 +343,7 @@ def pdf_to_base64_images(pdf_path, fmt="JPEG", max_size=2000, quality=85):
     for page_num in range(len(doc)):
         # Resize the image if it's too large (preserving aspect ratio)
         page = doc.load_page(page_num)
-        pixel_map = page.get_pixmap()
+        pixel_map = page.get_pixmap(dpi=dpi, alpha=False)
         image = pixel_map.pil_image()
 
         # explicit free
