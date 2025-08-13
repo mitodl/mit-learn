@@ -51,7 +51,8 @@ jobs:
         run: python --version
       - name: Validate lockfile
         run: poetry check --lock
-
+      - name: Set Poetry Python
+        run: poetry env use python3.12
       - name: Install dependencies
         run: poetry install --no-interaction
 
