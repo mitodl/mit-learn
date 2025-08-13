@@ -24,7 +24,7 @@ const Page = styled.div(({ theme }) => ({
   padding: "0 16px 90px",
   [theme.breakpoints.down("sm")]: {
     backgroundImage: "none",
-    padding: "40px",
+    padding: "0 40px 40px",
   },
 }))
 
@@ -35,9 +35,15 @@ const Title = styled(Typography)(({ theme }) => ({
     fontWeight: theme.typography.fontWeightLight,
     color: theme.custom.colors.darkGray2,
   },
+  [theme.breakpoints.down("lg")]: {
+    span: {
+      fontSize: theme.typography.pxToRem(26),
+      lineHeight: theme.typography.pxToRem(30),
+    },
+  },
   [theme.breakpoints.down("md")]: {
     textAlign: "left",
-    margin: "0 0 32px",
+    margin: "24px 0",
     span: {
       fontSize: theme.typography.pxToRem(24),
       lineHeight: theme.typography.pxToRem(30),
@@ -53,7 +59,7 @@ const Certificate = styled.div(({ theme }) => ({
   backgroundColor: theme.custom.colors.white,
   marginTop: "50px",
   margin: "0 auto",
-  [theme.breakpoints.down("md")]: {
+  [theme.breakpoints.down("lg")]: {
     padding: 0,
     border: "none",
     maxWidth: "unset",
@@ -68,6 +74,10 @@ const Inner = styled.div(({ theme }) => ({
   flexDirection: "column",
   gap: "56px",
   position: "relative",
+  [theme.breakpoints.down("lg")]: {
+    padding: "40px",
+    gap: "40px",
+  },
   [theme.breakpoints.down("md")]: {
     border: `2px solid ${theme.custom.colors.lightGray2}`,
     padding: "24px 16px",
@@ -79,16 +89,13 @@ const Inner = styled.div(({ theme }) => ({
 const Logo = styled(Image)(({ theme }) => ({
   width: "260px",
   height: "auto",
+  [theme.breakpoints.down("lg")]: {
+    width: "230px",
+    height: "59px",
+  },
   [theme.breakpoints.down("md")]: {
     width: "129px",
     margin: "0 auto",
-  },
-}))
-
-const Medallion = styled.div(({ theme }) => ({
-  [theme.breakpoints.down("md")]: {
-    position: "relative",
-    height: "191px",
   },
 }))
 
@@ -101,27 +108,39 @@ const Badge = styled.div(({ theme }) => ({
   height: "391px",
   textAlign: "center",
   padding: "81px 34px",
-  [theme.breakpoints.down("md")]: {
+  backgroundRepeat: "no-repeat",
+  [theme.breakpoints.down("lg")]: {
     backgroundImage: `url(${CertificateBadgeMobile.src})`,
+    top: "24px",
+    right: "40px",
     width: "156px",
     height: "191px",
+  },
+  [theme.breakpoints.down("md")]: {
+    position: "relative",
+    height: "191px",
     top: 0,
-    right: "50%",
-    transform: "translateX(50%)",
+    right: 0,
+    margin: "0 auto",
   },
 }))
 
 const BadgeText = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.white,
   position: "absolute",
-  top: "167px",
-  right: "96px",
+  top: "169px",
+  right: "26px",
   width: "175px",
   textAlign: "center",
-  [theme.breakpoints.down("md")]: {
+  [theme.breakpoints.down("lg")]: {
     fontSize: theme.typography.pxToRem(16),
-    fontWeight: theme.typography.fontWeightMedium,
     lineHeight: "150%",
+    fontWeight: theme.typography.fontWeightMedium,
+    top: "53px",
+    right: "18px",
+    width: "119px",
+  },
+  [theme.breakpoints.down("md")]: {
     width: "130px",
     position: "absolute",
     top: "50px",
@@ -139,6 +158,11 @@ const Certification = styled.div(({ theme }) => ({
     fontWeight: theme.typography.fontWeightLight,
     color: theme.custom.colors.silverGrayDark,
   },
+  [theme.breakpoints.down("lg")]: {
+    ".MuiTypography-h4": {
+      fontSize: theme.typography.pxToRem(16),
+    },
+  },
   [theme.breakpoints.down("md")]: {
     gap: 0,
     ".MuiTypography-h4": {
@@ -153,6 +177,10 @@ const Certification = styled.div(({ theme }) => ({
 const NameText = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.red,
   display: "block",
+  [theme.breakpoints.down("lg")]: {
+    fontSize: theme.typography.pxToRem(34),
+    lineHeight: theme.typography.pxToRem(40),
+  },
   [theme.breakpoints.down("md")]: {
     fontSize: theme.typography.pxToRem(24),
     lineHeight: theme.typography.pxToRem(30),
@@ -167,6 +195,10 @@ const AchievementText = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
   strong: {
     fontWeight: theme.typography.fontWeightBold,
+  },
+  [theme.breakpoints.down("lg")]: {
+    fontSize: theme.typography.pxToRem(16),
+    lineHeight: theme.typography.pxToRem(24),
   },
   [theme.breakpoints.down("md")]: {
     fontSize: theme.typography.pxToRem(14),
@@ -183,6 +215,16 @@ const CourseInfo = styled.div(({ theme }) => ({
     fontWeight: theme.typography.fontWeightLight,
     color: theme.custom.colors.silverGrayDark,
   },
+  [theme.breakpoints.down("lg")]: {
+    ".MuiTypography-h2": {
+      fontSize: theme.typography.pxToRem(28),
+      lineHeight: theme.typography.pxToRem(36),
+    },
+    ".MuiTypography-h4": {
+      fontSize: theme.typography.pxToRem(16),
+      lineHeight: theme.typography.pxToRem(20),
+    },
+  },
   [theme.breakpoints.down("md")]: {
     ".MuiTypography-h2": {
       fontSize: theme.typography.pxToRem(18),
@@ -197,9 +239,12 @@ const CourseInfo = styled.div(({ theme }) => ({
   },
 }))
 
-const Spacer = styled.div({
+const Spacer = styled.div(({ theme }) => ({
   height: "30px",
-})
+  [theme.breakpoints.down("lg")]: {
+    display: "none",
+  },
+}))
 
 const Signatories = styled.div(({ theme }) => ({
   display: "flex",
@@ -221,6 +266,15 @@ const Signatory = styled.div(({ theme }) => ({
   ".MuiTypography-body1": {
     color: theme.custom.colors.silverGrayDark,
   },
+  [theme.breakpoints.down("lg")]: {
+    ".MuiTypography-body1": {
+      fontSize: theme.typography.pxToRem(12),
+      lineHeight: theme.typography.pxToRem(16),
+    },
+    ".MuiTypography-body1:last-child": {
+      marginTop: "8px",
+    },
+  },
   [theme.breakpoints.down("md")]: {
     ".MuiTypography-body1": {
       color: theme.custom.colors.darkGray1,
@@ -238,6 +292,9 @@ const Signatory = styled.div(({ theme }) => ({
 const Signature = styled.img(({ theme }) => ({
   width: "auto",
   height: "60px",
+  [theme.breakpoints.down("lg")]: {
+    height: "54px",
+  },
   [theme.breakpoints.down("md")]: {
     height: "40px",
   },
@@ -245,10 +302,14 @@ const Signature = styled.img(({ theme }) => ({
 
 const SignatoryName = styled(Typography)(({ theme }) => ({
   marginBottom: "8px",
+  [theme.breakpoints.down("lg")]: {
+    fontSize: theme.typography.pxToRem(18),
+    lineHeight: theme.typography.pxToRem(26),
+    fontWeight: theme.typography.fontWeightMedium,
+  },
   [theme.breakpoints.down("md")]: {
     fontSize: theme.typography.pxToRem(16),
     lineHeight: "150%",
-    fontWeight: theme.typography.fontWeightMedium,
     marginTop: "16px",
   },
 }))
@@ -257,12 +318,15 @@ const CertificateId = styled(Typography)(({ theme }) => ({
   span: {
     color: theme.custom.colors.silverGrayDark,
   },
+  [theme.breakpoints.down("lg")]: {
+    fontSize: theme.typography.pxToRem(12),
+    lineHeight: theme.typography.pxToRem(16),
+  },
   [theme.breakpoints.down("md")]: {
     fontSize: theme.typography.pxToRem(14),
     lineHeight: theme.typography.pxToRem(20),
     span: {
       display: "block",
-      color: theme.custom.colors.darkGray1,
     },
   },
 }))
@@ -276,14 +340,16 @@ const Note = styled(Typography)(({ theme }) => ({
     textDecoration: "underline",
     fontSize: theme.typography.pxToRem(16),
   },
-  [theme.breakpoints.down("md")]: {
-    margin: "32px 0 16px",
+  [theme.breakpoints.down("lg")]: {
     fontSize: theme.typography.pxToRem(14),
     lineHeight: theme.typography.pxToRem(18),
-    textAlign: "left",
     a: {
       fontSize: theme.typography.pxToRem(14),
     },
+  },
+  [theme.breakpoints.down("md")]: {
+    margin: "32px 0 16px",
+    textAlign: "left",
   },
 }))
 
@@ -328,10 +394,9 @@ const CertificatePage: React.FC = () => {
       <Certificate>
         <Inner>
           <Logo src={OpenLearningLogo} alt="MIT Open Learning" />
-          <Medallion>
-            <Badge />
+          <Badge>
             <BadgeText variant="h4">{course?.certificate_type}</BadgeText>
-          </Medallion>
+          </Badge>
           <Certification>
             <Typography variant="h4">This is to certify that</Typography>
             <NameText variant="h1">{data?.user.name}</NameText>
