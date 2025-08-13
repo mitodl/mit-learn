@@ -34,6 +34,8 @@ django-cors-headers = "^4.0.0"
 django-filter = "^2.4.0"
 django-guardian = "^3.0.0"
 django-health-check = { git = "https://github.com/revsys/django-health-check", rev="b0500d14c338040984f02ee34ffbe6643b005084" }  # pragma: allowlist secret
+pypdfium2 = { git = "https://github.com/pypdfium2-team/pypdfium2"}  # pragma: allowlist secret
+
 django-imagekit = "^5.0.0"
 django-ipware = "^7.0.0"
 django-json-widget = "^2.0.0"
@@ -111,7 +113,8 @@ uwsgi = "^2.0.29"
 uwsgitop = "^0.12"
 wrapt = "^1.14.1"
 youtube-transcript-api = "^1.0.0"
-pypdfium2 = "^4.30.0"
+
+
 
 [tool.poetry.group.dev.dependencies]
 bpython = "^0.25"
