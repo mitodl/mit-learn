@@ -1,6 +1,16 @@
 Release Notes
 =============
 
+Version 0.40.0
+--------------
+
+- Append UTM query params (#2430)
+- Ability to group ContentFile vector search results  (#2426)
+- better bad data handling for the org dashboard (#2427)
+- org dashboard design updates (#2425)
+- Assign urls to edx contentfiles when possible (#2420)
+- add mitxonline certificate api (#2410)
+
 Version 0.39.3 (Released August 11, 2025)
 --------------
 
