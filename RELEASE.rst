@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.40.0
+Version 0.40.0 (Released August 13, 2025)
 --------------
 
 - Append UTM query params (#2430)
