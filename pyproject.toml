@@ -1,3 +1,8 @@
+[project]
+requires-python = ">=3.12"
+name = "mit-learn"
+
+
 [tool.poetry]
 # Don't try to install mit-learn as a package on deploy
 package-mode = false
@@ -9,6 +14,7 @@ readme = "README.md"
 packages = []
 authors  = ["MIT ODL"]
 requires-poetry = ">2.1,<3"
+
 
 
 [tool.poetry.dependencies]
