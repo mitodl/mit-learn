@@ -49,17 +49,12 @@ jobs:
           cache: "poetry"
       - name: Install poetry with pip
         run: python -m pip install poetry
-      - name: Check Python version
-        run: python --version
       - name: Validate lockfile
         run: poetry check --lock
-      - name: Set Poetry Python
-        run: poetry env use python3.12
       - name: Install dependencies
         run: |
           source $(poetry env info --path)/bin/activate
           poetry install --no-interaction
-
       - name: Create test local state
         run: ./scripts/test/stub-data.sh
 
