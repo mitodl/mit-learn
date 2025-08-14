@@ -1,31 +1,24 @@
 import React from "react"
-import { renderWithProviders, setMockResponse } from "@/test-utils"
+import { renderWithProviders, setMockResponse, waitFor } from "@/test-utils"
 import { urls } from "api/test-utils"
 import { urls as b2bUrls } from "api/mitxonline-test-utils"
 import * as commonUrls from "@/common/urls"
 import { Permission } from "api/hooks/user"
 import B2BAttachPage from "./B2BAttachPage"
+import { redirect } from "next/navigation"
 
-const oldWindowLocation = window.location
+// Mock Next.js redirect function
+jest.mock("next/navigation", () => ({
+  redirect: jest.fn(),
+}))
 
-beforeAll(() => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  delete (window as any).location
-
-  window.location = Object.defineProperties({} as Location, {
-    ...Object.getOwnPropertyDescriptors(oldWindowLocation),
-    assign: {
-      configurable: true,
-      value: jest.fn(),
-    },
-  })
-})
-
-afterAll(() => {
-  window.location = oldWindowLocation
-})
+const mockRedirect = jest.mocked(redirect)
 
 describe("B2BAttachPage", () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
   test("Renders when logged in", async () => {
     setMockResponse.get(urls.userMe.get(), {
       [Permission.Authenticated]: true,
@@ -35,6 +28,23 @@ describe("B2BAttachPage", () => {
 
     renderWithProviders(<B2BAttachPage code="test-code" />, {
       url: commonUrls.B2B_ATTACH_VIEW,
+    })
+  })
+
+  test("Redirects to dashboard on successful attachment", async () => {
+    setMockResponse.get(urls.userMe.get(), {
+      [Permission.Authenticated]: true,
+    })
+
+    setMockResponse.post(b2bUrls.b2bAttach.b2bAttachView("test-code"), [])
+
+    renderWithProviders(<B2BAttachPage code="test-code" />, {
+      url: commonUrls.B2B_ATTACH_VIEW,
+    })
+
+    // Wait for the mutation to complete and verify redirect was called
+    await waitFor(() => {
+      expect(mockRedirect).toHaveBeenCalledWith(commonUrls.DASHBOARD_HOME)
     })
   })
 })

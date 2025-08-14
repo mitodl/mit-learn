@@ -1,5 +1,6 @@
 "use client"
 import React from "react"
+import { redirect } from "next/navigation"
 import { styled, Breadcrumbs, Container, Typography } from "ol-components"
 import * as urls from "@/common/urls"
 import { useB2BAttachMutation } from "api/mitxonline-hooks/organizations"
@@ -14,12 +15,18 @@ const InterstitialMessage = styled(Typography)(({ theme }) => ({
 }))
 
 const B2BAttachPage: React.FC<B2BAttachPageProps> = ({ code }) => {
-  const { mutate: attach, isSuccess } = useB2BAttachMutation(code)
+  const {
+    mutate: attach,
+    isSuccess,
+    isPending,
+  } = useB2BAttachMutation({
+    enrollment_code: code,
+  })
 
-  React.useEffect(() => attach(code), [attach, code])
+  React.useEffect(() => attach(), [attach])
 
   if (isSuccess) {
-    window.history.replaceState(null, "", urls.DASHBOARD_HOME)
+    redirect(urls.DASHBOARD_HOME)
   }
 
   return (
@@ -29,8 +36,9 @@ const B2BAttachPage: React.FC<B2BAttachPageProps> = ({ code }) => {
         ancestors={[{ href: urls.HOME, label: "Home" }]}
         current="Use Enrollment Code"
       />
-
-      <InterstitialMessage>Validating code "{code}"...</InterstitialMessage>
+      {isPending && (
+        <InterstitialMessage>Validating code "{code}"...</InterstitialMessage>
+      )}
     </Container>
   )
 }
