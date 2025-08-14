@@ -207,7 +207,7 @@ const OrgProgramDisplay: React.FC<{
   program: DashboardProgram
   courseRunEnrollments?: CourseRunEnrollment[]
   programLoading: boolean
-  orgId?: number
+  orgId: number
 }> = ({ program, courseRunEnrollments, programLoading, orgId }) => {
   const courses = useQuery(
     coursesQueries.coursesList({ id: program.courseIds, org_id: orgId }),
@@ -255,7 +255,7 @@ const OrgProgramDisplay: React.FC<{
 const ProgramCollectionItem: React.FC<{
   program: DashboardProgram
   enrollments?: CourseRunEnrollment[]
-  orgId?: number
+  orgId: number
 }> = ({ program, enrollments, orgId }) => {
   return (
     <ProgramCard program={program} enrollments={enrollments} orgId={orgId} />
@@ -265,7 +265,7 @@ const ProgramCollectionItem: React.FC<{
 const ProgramCard: React.FC<{
   program: DashboardProgram
   enrollments?: CourseRunEnrollment[]
-  orgId?: number
+  orgId: number
 }> = ({ program, enrollments, orgId }) => {
   const courses = useQuery(
     coursesQueries.coursesList({
