@@ -5,8 +5,8 @@ import * as urls from "@/common/urls"
 import { useB2BAttachMutation } from "api/mitxonline-hooks/organizations"
 
 type B2BAttachPageProps = {
-  code: string;
-};
+  code: string
+}
 
 const InterstitialMessage = styled(Typography)(({ theme }) => ({
   ...theme.typography.body1,
@@ -19,7 +19,7 @@ const B2BAttachPage: React.FC<B2BAttachPageProps> = ({ code }) => {
   React.useEffect(() => attach(code), [attach, code])
 
   if (isSuccess) {
-    window.history.replaceState(null, "", urls.DASHBOARD_HOME);
+    window.history.replaceState(null, "", urls.DASHBOARD_HOME)
   }
 
   return (
@@ -30,9 +30,7 @@ const B2BAttachPage: React.FC<B2BAttachPageProps> = ({ code }) => {
         current="Use Enrollment Code"
       />
 
-      <InterstitialMessage>
-        Validating code "{code}"...
-      </InterstitialMessage>
+      <InterstitialMessage>Validating code "{code}"...</InterstitialMessage>
     </Container>
   )
 }

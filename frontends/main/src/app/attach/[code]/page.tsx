@@ -12,7 +12,7 @@ export const metadata: Metadata = standardizeMetadata({
 })
 
 const Page: React.FC<PageParams<object, { code: string }>> = async ({
-  params
+  params,
 }) => {
   const resolved = await params
   invariant(resolved?.code, "code is required")
