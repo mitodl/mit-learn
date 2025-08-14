@@ -55,7 +55,11 @@ const mitxonlineEnrollment = (raw: CourseRunEnrollment): DashboardCourse => {
       coursewareUrl: raw.run.courseware_url,
       certificate: {
         uuid: raw.certificate?.uuid ?? "",
-        link: raw.certificate?.link ?? "",
+        link:
+          raw.certificate?.link?.replace(
+            /^\/certificate\/([^/]+)\/$/,
+            "/certificate/course/$1/",
+          ) ?? "",
       },
     },
     enrollment: {

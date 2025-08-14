@@ -11,6 +11,7 @@ import OpenLearningLogo from "@/public/images/mit-open-learning-logo.svg"
 import CertificateBadgeDesktop from "@/public/images/certificate-badge-desktop.svg"
 import CertificateBadgeMobile from "@/public/images/certificate-badge-mobile.svg"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
+import { programsQueries } from "api/mitxonline-hooks/programs"
 import { formatDate, NoSSR } from "ol-utilities"
 
 const Page = styled.div(({ theme }) => ({
@@ -153,7 +154,7 @@ const Certification = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "16px",
-  maxWidth: "800px",
+  maxWidth: "850px",
   ".MuiTypography-h4": {
     fontWeight: theme.typography.fontWeightLight,
     color: theme.custom.colors.silverGrayDark,
@@ -353,33 +354,90 @@ const Note = styled(Typography)(({ theme }) => ({
   },
 }))
 
-const CertificatePage: React.FC = () => {
-  const { uuid } = useParams<{ uuid: string }>()
+enum CertificateType {
+  Course = "course",
+  Program = "program",
+}
 
-  const { data, isLoading } = useQuery(
-    certificateQueries.courseCertificatesRetrieve({
+const CertificatePage: React.FC = () => {
+  const { certificateType, uuid } = useParams<{
+    certificateType: CertificateType
+    uuid: string
+  }>()
+
+  console.log("certificateType", certificateType)
+  console.log("uuid", uuid)
+
+  const { data: courseCertData, isLoading: isCourseLoading } = useQuery({
+    ...certificateQueries.courseCertificatesRetrieve({
       cert_uuid: uuid,
     }),
-  )
+    enabled: certificateType === CertificateType.Course,
+  })
 
-  const { data: courseData } = useQuery(
-    coursesQueries.coursesList({ id: [data?.course_run as number] }),
-  )
+  const { data: programCertData, isLoading: isProgramLoading } = useQuery({
+    ...certificateQueries.programCertificatesRetrieve({
+      cert_uuid: uuid,
+    }),
+    enabled: certificateType === CertificateType.Program,
+  })
 
-  console.log("certificateData", isLoading, data)
-  console.log("courseData", courseData)
+  // const data =
+  //   certificateType === CertificateType.Course
+  //     ? courseCertData
+  //     : programCertData
+
+  const isLoading = isCourseLoading || isProgramLoading
+
+  console.log("isLoading", isLoading)
+  console.log("courseCertData", courseCertData)
+  console.log("programCertData", programCertData)
 
   if (isLoading) {
     return <Page />
   }
 
-  const course = courseData?.results[0]
+  const title =
+    certificateType === CertificateType.Course
+      ? courseCertData?.course_run?.course?.title
+      : programCertData?.program?.title
 
-  /* TODO: The certificate is providing the run ID, but not the course ID.
-   * For now, we're pulling a course and grabbing the first run, but this is not correct.
-   * course ID is needed on the certificate API
-   */
-  const run = course?.courseruns[0]
+  const displayType =
+    certificateType === CertificateType.Course
+      ? "Module Certificate"
+      : `${programCertData?.program?.program_type} Certificate`
+
+  const userName =
+    certificateType === CertificateType.Course
+      ? courseCertData?.user?.name
+      : programCertData?.user?.name
+
+  const shortDisplayType =
+    certificateType === CertificateType.Course
+      ? "module"
+      : programCertData?.program?.program_type === "Series"
+        ? "series"
+        : `${programCertData?.program?.program_type} program`
+
+  const ceus =
+    certificateType === CertificateType.Course
+      ? null
+      : programCertData?.certificate_page?.CEUs
+
+  const signatories =
+    certificateType === CertificateType.Course
+      ? courseCertData?.certificate_page?.signatory_items
+      : programCertData?.certificate_page?.signatory_items
+
+  const startDate =
+    certificateType === CertificateType.Course
+      ? courseCertData?.course_run?.start_date
+      : programCertData?.program?.start_date
+
+  const endDate =
+    certificateType === CertificateType.Course
+      ? courseCertData?.course_run?.end_date
+      : programCertData?.program?.end_date
 
   return (
     <Page>
@@ -387,65 +445,57 @@ const CertificatePage: React.FC = () => {
         <Typography variant="h3">
           {/* TODO The designs show "Series Certificate" but .certificate_page.title includes "Certificate for..."
            * Can we add the program/course/run name to the API? */}
-          <strong>{data?.certificate_page.product_name}</strong>{" "}
-          {course?.certificate_type}
+          <strong>{title}</strong> {displayType}
         </Typography>
       </Title>
       <Certificate>
         <Inner>
           <Logo src={OpenLearningLogo} alt="MIT Open Learning" />
           <Badge>
-            <BadgeText variant="h4">{course?.certificate_type}</BadgeText>
+            <BadgeText variant="h4">{displayType}</BadgeText>
           </Badge>
           <Certification>
             <Typography variant="h4">This is to certify that</Typography>
-            <NameText variant="h1">{data?.user.name}</NameText>
-            {/* TODO Are all certificates for the full series? Is that the product name? These are being linked to from course runs (not necessarily full courses) */}
+            <NameText variant="h1">{userName}</NameText>
             <AchievementText>
               has successfully completed all requirements of the{" "}
-              <strong>Universal Artificial Intelligence</strong> series:
-              {/* TODO we need a type field that provides series|module|program */}
+              <strong>Universal Artificial Intelligence</strong>{" "}
+              {shortDisplayType}:
             </AchievementText>
           </Certification>
           <CourseInfo>
-            <Typography variant="h2">
-              {data?.certificate_page.product_name}
-            </Typography>
-            {/* CEUs are an xPRO feature that aren't in MITx Online yet */}
-            {data?.certificate_page.CEUs ? (
+            <Typography variant="h2">{title}</Typography>
+            {ceus ? (
               <Typography variant="h4">
-                Awarded {data?.certificate_page.CEUs} Continuing Education Units
-                (CEUs)
+                Awarded {ceus} Continuing Education Units (CEUs)
               </Typography>
             ) : null}
-            {run?.start_date && run?.end_date && (
+            {startDate && endDate && (
               <Typography variant="h4">
                 <NoSSR>
-                  {formatDate(run?.start_date)} - {formatDate(run?.end_date)}
+                  {formatDate(startDate)} - {formatDate(endDate)}
                 </NoSSR>
               </Typography>
             )}
-            {data?.certificate_page.CEUs ? null : <Spacer />}
+            {ceus ? null : <Spacer />}
           </CourseInfo>
           <Signatories>
             {/* TODO The design shows 3 signatories but Wagtail supports up to 5 */}
-            {data?.certificate_page?.signatory_items?.map(
-              (signatory, index) => (
-                <Signatory key={index}>
-                  <Signature
-                    src={`${process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL}${signatory.signature_image}`}
-                    alt={signatory.name}
-                  />
-                  <SignatoryName variant="h3">{signatory.name}</SignatoryName>
-                  <Typography variant="body1">{signatory.title_1}</Typography>
-                  <Typography variant="body1">{signatory.title_2}</Typography>
-                  {/* TODO The design shows 3 title but Wagtail supports up to 2 */}
-                  <Typography variant="body1">
-                    {signatory.organization}
-                  </Typography>
-                </Signatory>
-              ),
-            )}
+            {signatories?.map((signatory, index) => (
+              <Signatory key={index}>
+                <Signature
+                  src={`${process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL}${signatory.signature_image}`}
+                  alt={signatory.name}
+                />
+                <SignatoryName variant="h3">{signatory.name}</SignatoryName>
+                <Typography variant="body1">{signatory.title_1}</Typography>
+                <Typography variant="body1">{signatory.title_2}</Typography>
+                {/* TODO The design shows 3 title but Wagtail supports up to 2 */}
+                <Typography variant="body1">
+                  {signatory.organization}
+                </Typography>
+              </Signatory>
+            ))}
           </Signatories>
           <CertificateId variant="body1">
             Valid Certificate ID: <span>{uuid}</span>

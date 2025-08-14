@@ -338,6 +338,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
 }) => {
   const course = dashboardResource as DashboardCourse
   const { title, marketingUrl, enrollment, run } = course
+
   const titleSection = isLoading ? (
     <>
       <Skeleton variant="text" width="95%" height={16} />
