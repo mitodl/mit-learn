@@ -11020,6 +11020,8 @@ export const VectorContentFilesSearchApiAxiosParamCreator = function (
      * @param {Array<string>} [course_number] Course number of the content file
      * @param {Array<string>} [edx_module_id] The edx_module_id of the content file
      * @param {Array<string>} [file_extension] The extension of the content file.
+     * @param {string} [group_by] The attribute to group results by
+     * @param {number} [group_size] The number of chunks in each group. Only relevant when group_by is used
      * @param {Array<string>} [key] The filename of the content file
      * @param {number} [limit] Number of results to return per page
      * @param {Array<string>} [offered_by] Offeror of the content file
@@ -11038,6 +11040,8 @@ export const VectorContentFilesSearchApiAxiosParamCreator = function (
       course_number?: Array<string>,
       edx_module_id?: Array<string>,
       file_extension?: Array<string>,
+      group_by?: string,
+      group_size?: number,
       key?: Array<string>,
       limit?: number,
       offered_by?: Array<string>,
@@ -11083,6 +11087,14 @@ export const VectorContentFilesSearchApiAxiosParamCreator = function (
 
       if (file_extension) {
         localVarQueryParameter["file_extension"] = file_extension
+      }
+
+      if (group_by !== undefined) {
+        localVarQueryParameter["group_by"] = group_by
+      }
+
+      if (group_size !== undefined) {
+        localVarQueryParameter["group_size"] = group_size
       }
 
       if (key) {
@@ -11156,6 +11168,8 @@ export const VectorContentFilesSearchApiFp = function (
      * @param {Array<string>} [course_number] Course number of the content file
      * @param {Array<string>} [edx_module_id] The edx_module_id of the content file
      * @param {Array<string>} [file_extension] The extension of the content file.
+     * @param {string} [group_by] The attribute to group results by
+     * @param {number} [group_size] The number of chunks in each group. Only relevant when group_by is used
      * @param {Array<string>} [key] The filename of the content file
      * @param {number} [limit] Number of results to return per page
      * @param {Array<string>} [offered_by] Offeror of the content file
@@ -11174,6 +11188,8 @@ export const VectorContentFilesSearchApiFp = function (
       course_number?: Array<string>,
       edx_module_id?: Array<string>,
       file_extension?: Array<string>,
+      group_by?: string,
+      group_size?: number,
       key?: Array<string>,
       limit?: number,
       offered_by?: Array<string>,
@@ -11197,6 +11213,8 @@ export const VectorContentFilesSearchApiFp = function (
           course_number,
           edx_module_id,
           file_extension,
+          group_by,
+          group_size,
           key,
           limit,
           offered_by,
@@ -11253,6 +11271,8 @@ export const VectorContentFilesSearchApiFactory = function (
           requestParameters.course_number,
           requestParameters.edx_module_id,
           requestParameters.file_extension,
+          requestParameters.group_by,
+          requestParameters.group_size,
           requestParameters.key,
           requestParameters.limit,
           requestParameters.offered_by,
@@ -11309,6 +11329,20 @@ export interface VectorContentFilesSearchApiVectorContentFilesSearchRetrieveRequ
    * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
    */
   readonly file_extension?: Array<string>
+
+  /**
+   * The attribute to group results by
+   * @type {string}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly group_by?: string
+
+  /**
+   * The number of chunks in each group. Only relevant when group_by is used
+   * @type {number}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly group_size?: number
 
   /**
    * The filename of the content file
@@ -11400,6 +11434,8 @@ export class VectorContentFilesSearchApi extends BaseAPI {
         requestParameters.course_number,
         requestParameters.edx_module_id,
         requestParameters.file_extension,
+        requestParameters.group_by,
+        requestParameters.group_size,
         requestParameters.key,
         requestParameters.limit,
         requestParameters.offered_by,

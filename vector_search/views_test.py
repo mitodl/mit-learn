@@ -283,3 +283,74 @@ def test_content_file_vector_search_filters_custom_collection(
         .kwargs["collection_name"]
         .endswith(custom_collection_name)
     )
+
+
+def test_content_file_vector_search_group_parameters(mocker, client, django_user_model):
+    """Test content file vector search uses custom collection if specified"""
+
+    mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
+    custom_collection_name = "foo_bar_collection"
+
+    mocker.patch(
+        "vector_search.utils.qdrant_client",
+        return_value=mock_qdrant,
+    )
+    mock_qdrant.count.return_value = CountResult(count=10)
+    contentfile_keys = ["somefile.pdf", "trest.csv", "newfile.txt", "presentation.pptx"]
+
+    mock_groups = []
+
+    for i in range(4):
+        mock_group = mocker.MagicMock()
+        hits = []
+        key = contentfile_keys[i % len(contentfile_keys)]
+        for j in range(i + 1):
+            mock_point = mocker.MagicMock()
+            mock_point.payload = {
+                "key": key,
+                "course_number": f"course-{j}",
+                "common_attribute_1": "common",
+                "common_attribute_2": "common2",
+                "common_attribute_different_value": f"different-{j}",
+                "chunk_content": "test",
+                "content_feature_type": "test_feature",
+                "run_readable_id": f"run-{j}",
+                "resource_readable_id": f"resource-{j}",
+            }
+            hits.append(mock_point)
+        mock_group.hits = hits
+        mock_groups.append(mock_group)
+    mock_group_result = mocker.MagicMock()
+    mock_group_result.groups = mock_groups
+    mock_qdrant.query_points_groups.return_value = mock_group_result
+    params = {
+        "group_by": "key",
+        "resource_readable_id": ["test_resource_id_1", "test_resource_id_2"],
+        "collection_name": custom_collection_name,
+        "q": "test",
+    }
+    user = django_user_model.objects.create()
+    group, _ = Group.objects.get_or_create(name=GROUP_CONTENT_FILE_CONTENT_VIEWERS)
+    group.user_set.add(user)
+    client.force_login(user)
+
+    response = client.get(
+        reverse("vector_search:v0:vector_content_files_search"), data=params
+    )
+    response_json = response.json()
+
+    assert response.status_code == 200
+    for i in range(len(response_json["results"])):
+        result = response_json["results"][i]
+        assert result["key"] in contentfile_keys
+        assert result["common_attribute_1"] == "common"
+        assert result["common_attribute_2"] == "common2"
+        assert len(result["chunks"]) == i + 1
+        if i > 1:
+            assert "common_attribute_different_value" not in result
+    assert len(response_json["results"]) == len(contentfile_keys)
+    assert (
+        mock_qdrant.query_points_groups.mock_calls[0]
+        .kwargs["collection_name"]
+        .endswith(custom_collection_name)
+    )

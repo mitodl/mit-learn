@@ -24,20 +24,28 @@ const BASE_PATH =
 
 const usersApi = new UsersApi(undefined, BASE_PATH, axiosInstance)
 const b2bApi = new B2bApi(undefined, BASE_PATH, axiosInstance)
-const enrollmentsApi = new EnrollmentsApi(undefined, BASE_PATH, axiosInstance)
 const programsApi = new ProgramsApi(undefined, BASE_PATH, axiosInstance)
 const programCollectionsApi = new ProgramCollectionsApi(
   undefined,
   BASE_PATH,
   axiosInstance,
 )
+
 const programCertificatesApi = new ProgramCertificatesApi(
   undefined,
   BASE_PATH,
   axiosInstance,
 )
+
 const coursesApi = new CoursesApi(undefined, BASE_PATH, axiosInstance)
+
 const courseCertificatesApi = new CourseCertificatesApi(
+  undefined,
+  BASE_PATH,
+  axiosInstance,
+)
+
+const courseRunEnrollmentsApi = new EnrollmentsApi(
   undefined,
   BASE_PATH,
   axiosInstance,
@@ -46,7 +54,7 @@ const courseCertificatesApi = new CourseCertificatesApi(
 export {
   usersApi,
   b2bApi,
-  enrollmentsApi,
+  courseRunEnrollmentsApi,
   programsApi,
   programCollectionsApi,
   coursesApi,

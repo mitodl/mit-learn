@@ -10,6 +10,7 @@ import { PLATFORM_LOGOS } from "ol-components"
 import user from "@testing-library/user-event"
 import { renderWithProviders } from "@/test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
+import { kebabCase } from "lodash"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest
@@ -95,7 +96,9 @@ describe("Learning Resource Expanded", () => {
           name: linkName,
         }) as HTMLAnchorElement
         expect(link.target).toBe("_blank")
-        expect(link.href).toMatch(new RegExp(`^${resource.url}/?$`))
+        expect(link.href).toBe(
+          `${resource.url?.replace(/\/$/, "")}/?utm_source=mit-learn&utm_medium=referral&utm_content=${kebabCase(resource.title)}`,
+        )
       }
     },
   )
@@ -134,9 +137,10 @@ describe("Learning Resource Expanded", () => {
   })
 
   test.each([ResourceTypeEnum.Program, ResourceTypeEnum.LearningPath])(
-    'Renders CTA button for resource type "%s"',
+    'Renders CTA button for resource type "%s" with UTM params',
     (resourceType) => {
       const resource = factories.learningResources.resource({
+        title: "Test Resource",
         resource_type: resourceType,
       })
 
@@ -148,7 +152,9 @@ describe("Learning Resource Expanded", () => {
           name: linkName,
         }) as HTMLAnchorElement
 
-        expect(link.href).toMatch(new RegExp(`^${resource.url}/?$`))
+        expect(link.href).toBe(
+          `${resource.url?.replace(/\/$/, "")}/?utm_source=mit-learn&utm_medium=referral&utm_content=test-resource`,
+        )
         expect(link.getAttribute("data-ph-action")).toBe("click-cta")
       }
     },
