@@ -194,6 +194,7 @@ const OrgProgramCollectionDisplay: React.FC<{
               key={item.programId}
               program={item.program}
               enrollments={enrollments}
+              orgId={orgId}
             />
           ) : null,
         )}
@@ -254,8 +255,11 @@ const OrgProgramDisplay: React.FC<{
 const ProgramCollectionItem: React.FC<{
   program: DashboardProgram
   enrollments?: CourseRunEnrollment[]
-}> = ({ program, enrollments }) => {
-  return <ProgramCard program={program} enrollments={enrollments} />
+  orgId?: number
+}> = ({ program, enrollments, orgId }) => {
+  return (
+    <ProgramCard program={program} enrollments={enrollments} orgId={orgId} />
+  )
 }
 
 const ProgramCard: React.FC<{
