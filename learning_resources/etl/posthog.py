@@ -278,7 +278,7 @@ def load_posthog_lrd_view_events(
 
     events = [load_posthog_lrd_view_event(event) for event in events]
     learning_resource_ids = [
-        event.learning_resource.id for event in events if event is not None
+        event.learning_resource_id for event in events if event is not None
     ]
     learning_resource_ids = set(learning_resource_ids)
     for resource_id in learning_resource_ids:
