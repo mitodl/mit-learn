@@ -31,7 +31,7 @@ const B2BAttachPage: React.FC<B2BAttachPageProps> = ({ code }) => {
       />
 
       <InterstitialMessage>
-        Validating code "{code}"... 
+        Validating code "{code}"...
       </InterstitialMessage>
     </Container>
   )
