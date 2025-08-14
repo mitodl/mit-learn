@@ -47,8 +47,6 @@ jobs:
         with:
           python-version-file: "pyproject.toml"
           cache: "poetry"
-      - name: Install poetry with pip
-        run: python -m pip install poetry
       - name: Validate lockfile
         run: poetry check --lock
       - name: Install dependencies
