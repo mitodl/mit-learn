@@ -71,7 +71,7 @@ def sync_canvas_archive(bucket, key: str, overwrite):
             run.checksum = checksum
             run.save()
 
-    return resource_readable_id, run
+    return resource_readable_id
 
 
 def _course_url(course_archive_path) -> str:

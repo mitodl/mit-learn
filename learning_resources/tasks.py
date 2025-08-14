@@ -511,7 +511,7 @@ def sync_canvas_courses(canvas_course_ids, overwrite):
     for archive in latest_archives.values():
         key = archive.key
         log.info("Ingesting canvas course %s", key)
-        resource_readable_id, canvas_run = ingest_canvas_course(
+        resource_readable_id = ingest_canvas_course(
             key,
             overwrite=overwrite,
         )
