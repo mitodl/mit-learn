@@ -10,8 +10,6 @@ import { useQuery } from "@tanstack/react-query"
 import OpenLearningLogo from "@/public/images/mit-open-learning-logo.svg"
 import CertificateBadgeDesktop from "@/public/images/certificate-badge-desktop.svg"
 import CertificateBadgeMobile from "@/public/images/certificate-badge-mobile.svg"
-import { coursesQueries } from "api/mitxonline-hooks/courses"
-import { programsQueries } from "api/mitxonline-hooks/programs"
 import { formatDate, NoSSR } from "ol-utilities"
 
 const Page = styled.div(({ theme }) => ({
@@ -382,16 +380,7 @@ const CertificatePage: React.FC = () => {
     enabled: certificateType === CertificateType.Program,
   })
 
-  // const data =
-  //   certificateType === CertificateType.Course
-  //     ? courseCertData
-  //     : programCertData
-
   const isLoading = isCourseLoading || isProgramLoading
-
-  console.log("isLoading", isLoading)
-  console.log("courseCertData", courseCertData)
-  console.log("programCertData", programCertData)
 
   if (isLoading) {
     return <Page />
@@ -443,8 +432,6 @@ const CertificatePage: React.FC = () => {
     <Page>
       <Title>
         <Typography variant="h3">
-          {/* TODO The designs show "Series Certificate" but .certificate_page.title includes "Certificate for..."
-           * Can we add the program/course/run name to the API? */}
           <strong>{title}</strong> {displayType}
         </Typography>
       </Title>
@@ -480,7 +467,6 @@ const CertificatePage: React.FC = () => {
             {ceus ? null : <Spacer />}
           </CourseInfo>
           <Signatories>
-            {/* TODO The design shows 3 signatories but Wagtail supports up to 5 */}
             {signatories?.map((signatory, index) => (
               <Signatory key={index}>
                 <Signature
