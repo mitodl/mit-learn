@@ -54,7 +54,7 @@ QDRANT_LEARNING_RESOURCE_INDEXES = {
     "course_feature": models.PayloadSchemaType.KEYWORD,
     "topics[].name": models.PayloadSchemaType.KEYWORD,
     "ocw_topics": models.PayloadSchemaType.KEYWORD,
-    "runs[].level[].code": models.PayloadSchemaType.KEYWORD,
+    "runs[].level.code": models.PayloadSchemaType.KEYWORD,
     "departments.department_id": models.PayloadSchemaType.KEYWORD,
     "platform.code": models.PayloadSchemaType.KEYWORD,
     "offered_by.code": models.PayloadSchemaType.KEYWORD,
@@ -76,4 +76,8 @@ QDRANT_CONTENT_FILE_INDEXES = {
     "resource_readable_id": models.PayloadSchemaType.KEYWORD,
     "run_title": models.PayloadSchemaType.KEYWORD,
     "edx_module_id": models.PayloadSchemaType.KEYWORD,
+    "checksum": models.PayloadSchemaType.KEYWORD,
+    "content_type": models.PayloadSchemaType.KEYWORD,
+    "edx_block_id": models.PayloadSchemaType.KEYWORD,
+    "url": models.PayloadSchemaType.KEYWORD,
 }
