@@ -19,6 +19,10 @@ const enrollment = {
     `${API_BASE_URL}/api/v1/enrollments/${id ? `${id}/` : ""}`,
 }
 
+const programEnrollments = {
+  enrollmentsList: () => `${API_BASE_URL}/api/v1/program_enrollments/`,
+}
+
 const b2b = {
   courseEnrollment: (readableId?: string) =>
     `${API_BASE_URL}/api/v0/b2b/enroll/${readableId}/`,
@@ -59,4 +63,5 @@ export {
   programCollections,
   courses,
   organization,
+  programEnrollments,
 }

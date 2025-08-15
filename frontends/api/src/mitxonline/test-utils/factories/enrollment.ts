@@ -4,8 +4,10 @@ import type { PartialFactory } from "ol-test-utilities"
 import type {
   CourseRunEnrollment,
   CourseRunGrade,
+  UserProgramEnrollmentDetail,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { UniqueEnforcer } from "enforce-unique"
+import { factories } from ".."
 
 const uniqueEnrollmentId = new UniqueEnforcer()
 const uniqueRunId = new UniqueEnforcer()
@@ -99,9 +101,56 @@ const courseEnrollment: PartialFactory<CourseRunEnrollment> = (
   return mergeOverrides<CourseRunEnrollment>(defaults, overrides)
 }
 
+const programEnrollment: PartialFactory<UserProgramEnrollmentDetail> = (
+  overrides = {},
+): UserProgramEnrollmentDetail => {
+  const defaults: UserProgramEnrollmentDetail = {
+    certificate: faker.datatype.boolean()
+      ? {
+          uuid: faker.string.uuid(),
+          link: faker.internet.url(),
+        }
+      : null,
+    program: {
+      id: faker.number.int(),
+      title: faker.lorem.words(3),
+      readable_id: faker.lorem.slug(),
+      courses: factories.courses.v1Course(),
+      requirements: {
+        required: [faker.number.int()],
+        electives: [faker.number.int()],
+      },
+      req_tree: [],
+      page: {
+        feature_image_src: faker.image.url(),
+        page_url: faker.internet.url(),
+        financial_assistance_form_url: faker.internet.url(),
+        description: faker.lorem.paragraph(),
+        live: faker.datatype.boolean(),
+        length: `${faker.number.int({ min: 1, max: 12 })} weeks`,
+        effort: `${faker.number.int({ min: 1, max: 10 })} hours/week`,
+        price: faker.commerce.price(),
+      },
+      program_type: faker.helpers.arrayElement([
+        "certificate",
+        "degree",
+        "diploma",
+      ]),
+      departments: [
+        {
+          name: faker.company.name(),
+        },
+      ],
+      live: faker.datatype.boolean(),
+    },
+    enrollments: [courseEnrollment()],
+  }
+  return mergeOverrides<UserProgramEnrollmentDetail>(defaults, overrides)
+}
+
 // Not paginated
 const courseEnrollments = (count: number): CourseRunEnrollment[] => {
   return new Array(count).fill(null).map(() => courseEnrollment())
 }
 
-export { courseEnrollment, courseEnrollments, grade }
+export { courseEnrollment, courseEnrollments, grade, programEnrollment }
