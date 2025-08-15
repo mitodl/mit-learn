@@ -13,7 +13,7 @@ type ErrorPageTemplateProps = {
   loading?: boolean
 }
 
-const Page = styled(Container)(({ theme }) => ({
+const Page = styled.div(({ theme }) => ({
   backgroundImage: `url(${backgroundImage.src})`,
   backgroundAttachment: "fixed",
   backgroundRepeat: "no-repeat",
@@ -25,7 +25,7 @@ const Page = styled(Container)(({ theme }) => ({
   },
 }))
 
-const ErrorContainer = styled.div(({ theme }) => ({
+const ErrorContainer = styled(Container)(({ theme }) => ({
   padding: "56px 0",
   display: "flex",
   flexDirection: "column",
