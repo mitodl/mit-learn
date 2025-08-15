@@ -105,7 +105,9 @@ def create_qdrant_collections(force_recreate):
                 ),
             },
             replication_factor=2,
-            strict_mode_config=models.StrictModeConfig(enabled=True),
+            strict_mode_config=models.StrictModeConfig(
+                enabled=True, unindexed_filtering_retrieve=False
+            ),
             sparse_vectors_config=client.get_fastembed_sparse_vector_params(),
             optimizers_config=models.OptimizersConfigDiff(default_segment_number=2),
             quantization_config=models.BinaryQuantization(
@@ -130,7 +132,9 @@ def create_qdrant_collections(force_recreate):
                 ),
             },
             replication_factor=2,
-            strict_mode_config=models.StrictModeConfig(enabled=True),
+            strict_mode_config=models.StrictModeConfig(
+                enabled=True, unindexed_filtering_retrieve=False
+            ),
             sparse_vectors_config=client.get_fastembed_sparse_vector_params(),
             optimizers_config=models.OptimizersConfigDiff(default_segment_number=2),
             quantization_config=models.BinaryQuantization(
