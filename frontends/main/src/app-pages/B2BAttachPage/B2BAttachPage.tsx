@@ -23,11 +23,15 @@ const B2BAttachPage: React.FC<B2BAttachPageProps> = ({ code }) => {
     enrollment_code: code,
   })
 
-  React.useEffect(() => attach(), [attach])
+  React.useEffect(() => {
+    attach()
+  }, [])
 
-  if (isSuccess) {
-    redirect(urls.DASHBOARD_HOME)
-  }
+  React.useEffect(() => {
+    if (isSuccess) {
+      redirect(urls.DASHBOARD_HOME)
+    }
+  }, [isSuccess])
 
   return (
     <Container>
