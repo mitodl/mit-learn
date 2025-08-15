@@ -476,7 +476,6 @@ const CertificatePage: React.FC = () => {
                 <SignatoryName variant="h3">{signatory.name}</SignatoryName>
                 <Typography variant="body1">{signatory.title_1}</Typography>
                 <Typography variant="body1">{signatory.title_2}</Typography>
-                {/* TODO The design shows 3 title but Wagtail supports up to 2 */}
                 <Typography variant="body1">
                   {signatory.organization}
                 </Typography>

@@ -8,10 +8,10 @@ enum CertificateType {
 }
 
 interface PageProps {
-  params: {
+  params: Promise<{
     certificateType: CertificateType
     uuid: string
-  }
+  }>
 }
 
 const Page: React.FC<PageProps> = async ({ params }) => {
