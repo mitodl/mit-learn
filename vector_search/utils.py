@@ -106,7 +106,9 @@ def create_qdrant_collections(force_recreate):
             },
             replication_factor=2,
             strict_mode_config=models.StrictModeConfig(
-                enabled=True, unindexed_filtering_retrieve=False
+                enabled=True,
+                unindexed_filtering_retrieve=False,
+                unindexed_filtering_update=False,
             ),
             sparse_vectors_config=client.get_fastembed_sparse_vector_params(),
             optimizers_config=models.OptimizersConfigDiff(default_segment_number=2),
@@ -133,7 +135,9 @@ def create_qdrant_collections(force_recreate):
             },
             replication_factor=2,
             strict_mode_config=models.StrictModeConfig(
-                enabled=True, unindexed_filtering_retrieve=False
+                enabled=True,
+                unindexed_filtering_retrieve=False,
+                unindexed_filtering_update=False,
             ),
             sparse_vectors_config=client.get_fastembed_sparse_vector_params(),
             optimizers_config=models.OptimizersConfigDiff(default_segment_number=2),
