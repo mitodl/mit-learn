@@ -1,10 +1,11 @@
 "use client"
 
 import React from "react"
+import DOMPurify from "dompurify"
 import Image from "next/image"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
-import { useQuery } from "@tanstack/react-query"
+import { useQueries, useQuery } from "@tanstack/react-query"
 import {
   programsQueries,
   programCollectionQueries,
@@ -89,32 +90,113 @@ const ProgramHeader = styled.div(({ theme }) => ({
   flexDirection: "column",
 
   gap: "16px",
-  backgroundColor: "rgba(243, 244, 248, 0.60)", // lightGray1 at 60%
+  backgroundColor: theme.custom.colors.white,
   borderRadius: "8px 8px 0px 0px",
   border: `1px solid ${theme.custom.colors.lightGray2}`,
+  borderBottom: `1px solid ${theme.custom.colors.red}`,
 }))
+const ProgramDescription = styled(Typography)({
+  p: {
+    margin: 0,
+  },
+})
+
+// Custom hook to handle multiple program queries and check if any have courses
+const useProgramCollectionCourses = (programIds: number[], orgId: number) => {
+  const programQueries = useQueries({
+    queries: programIds.map((programId) => ({
+      ...programsQueries.programsList({ id: programId, org_id: orgId }),
+      queryKey: [
+        ...programsQueries.programsList({ id: programId, org_id: orgId })
+          .queryKey,
+      ],
+    })),
+  })
+
+  const isLoading = programQueries.some((query) => query.isLoading)
+
+  const programsWithCourses = programQueries
+    .map((query, index) => {
+      if (!query.data?.results?.length) {
+        return null
+      }
+      const program = query.data.results[0]
+      const transformedProgram = transform.mitxonlineProgram(program)
+      return {
+        programId: programIds[index],
+        program: transformedProgram,
+        hasCourses: program.courses && program.courses.length > 0,
+      }
+    })
+    .filter(Boolean)
+
+  const hasAnyCourses = programsWithCourses.some((p) => p?.hasCourses)
+
+  return {
+    isLoading,
+    programsWithCourses,
+    hasAnyCourses,
+  }
+}
 
 const OrgProgramCollectionDisplay: React.FC<{
   collection: DashboardProgramCollection
   enrollments?: CourseRunEnrollment[]
   orgId: number
 }> = ({ collection, enrollments, orgId }) => {
+  const sanitizedDescription = DOMPurify.sanitize(collection.description ?? "")
+  const { isLoading, programsWithCourses, hasAnyCourses } =
+    useProgramCollectionCourses(collection.programIds, orgId)
+
+  if (isLoading) {
+    return (
+      <ProgramRoot data-testid="org-program-collection-root">
+        <ProgramHeader>
+          <Typography variant="h5" component="h2">
+            {collection.title}
+          </Typography>
+          <ProgramDescription
+            variant="body2"
+            dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
+          />
+        </ProgramHeader>
+        <PlainList>
+          <Skeleton
+            width="100%"
+            height="65px"
+            style={{ marginBottom: "16px" }}
+          />
+        </PlainList>
+      </ProgramRoot>
+    )
+  }
+
+  // Only render if at least one program has courses
+  if (!hasAnyCourses) {
+    return null
+  }
+
   return (
     <ProgramRoot data-testid="org-program-collection-root">
       <ProgramHeader>
         <Typography variant="h5" component="h2">
           {collection.title}
         </Typography>
+        <ProgramDescription
+          variant="body2"
+          dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
+        />
       </ProgramHeader>
       <PlainList>
-        {collection.programIds.map((programId) => (
-          <ProgramCollectionItem
-            key={programId}
-            programId={programId}
-            enrollments={enrollments}
-            orgId={orgId}
-          />
-        ))}
+        {programsWithCourses.map((item) =>
+          item ? (
+            <ProgramCollectionItem
+              key={item.programId}
+              program={item.program}
+              enrollments={enrollments}
+            />
+          ) : null,
+        )}
       </PlainList>
     </ProgramRoot>
   )
@@ -122,10 +204,10 @@ const OrgProgramCollectionDisplay: React.FC<{
 
 const OrgProgramDisplay: React.FC<{
   program: DashboardProgram
-  enrollments?: CourseRunEnrollment[]
+  courseRunEnrollments?: CourseRunEnrollment[]
   programLoading: boolean
   orgId?: number
-}> = ({ program, enrollments, programLoading, orgId }) => {
+}> = ({ program, courseRunEnrollments, programLoading, orgId }) => {
   const courses = useQuery(
     coursesQueries.coursesList({ id: program.courseIds, org_id: orgId }),
   )
@@ -135,8 +217,9 @@ const OrgProgramDisplay: React.FC<{
   if (programLoading || courses.isLoading) return skeleton
   const transformedCourses = transform.mitxonlineCourses({
     courses: courses.data?.results ?? [],
-    enrollments: enrollments ?? [],
+    enrollments: courseRunEnrollments ?? [],
   })
+  const sanitizedHtml = DOMPurify.sanitize(program.description)
 
   return (
     <ProgramRoot data-testid="org-program-root">
@@ -144,7 +227,10 @@ const OrgProgramDisplay: React.FC<{
         <Typography variant="h5" component="h2">
           {program.title}
         </Typography>
-        <Typography variant="body1">{program.description}</Typography>
+        <ProgramDescription
+          variant="body2"
+          dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+        />
       </ProgramHeader>
       <PlainList>
         {transform
@@ -166,28 +252,10 @@ const OrgProgramDisplay: React.FC<{
 }
 
 const ProgramCollectionItem: React.FC<{
-  programId: number
+  program: DashboardProgram
   enrollments?: CourseRunEnrollment[]
-  orgId: number
-}> = ({ programId, enrollments, orgId }) => {
-  const program = useQuery(
-    programsQueries.programsList({ id: programId, org_id: orgId }),
-  )
-  if (program.isLoading || !program.data?.results.length) {
-    return (
-      <Skeleton width="100%" height="65px" style={{ marginBottom: "16px" }} />
-    )
-  }
-  const transformedProgram = transform.mitxonlineProgram(
-    program.data?.results[0],
-  )
-  return (
-    <ProgramCard
-      program={transformedProgram}
-      enrollments={enrollments}
-      orgId={orgId}
-    />
-  )
+}> = ({ program, enrollments }) => {
+  return <ProgramCard program={program} enrollments={enrollments} />
 }
 
 const ProgramCard: React.FC<{
@@ -217,7 +285,7 @@ const ProgramCard: React.FC<{
       Component="li"
       key={program.key}
       dashboardResource={course}
-      courseNoun={"Course"}
+      courseNoun={"Module"}
       offerUpgrade={false}
       titleHref={course.run.coursewareUrl ?? ""}
       buttonHref={course.run.coursewareUrl ?? ""}
@@ -241,7 +309,9 @@ const OrganizationContentInternal: React.FC<
     FeatureFlags.OrganizationDashboard,
   )
   const orgId = org.id
-  const enrollments = useQuery(enrollmentQueries.enrollmentsList())
+  const courseRunEnrollments = useQuery(
+    enrollmentQueries.courseRunEnrollmentsList(),
+  )
   const programs = useQuery(programsQueries.programsList({ org_id: orgId }))
   const programCollections = useQuery(
     programCollectionQueries.programCollectionsList({}),
@@ -270,7 +340,7 @@ const OrganizationContentInternal: React.FC<
             <OrgProgramDisplay
               key={program.key}
               program={program}
-              enrollments={enrollments.data}
+              courseRunEnrollments={courseRunEnrollments.data}
               programLoading={programs.isLoading}
               orgId={orgId}
             />
@@ -286,12 +356,19 @@ const OrganizationContentInternal: React.FC<
               <OrgProgramCollectionDisplay
                 key={collection.title}
                 collection={transformedCollection}
-                enrollments={enrollments.data}
+                enrollments={courseRunEnrollments.data}
                 orgId={orgId}
               />
             )
           })}
         </PlainList>
+      )}
+      {programs.data?.results.length === 0 && (
+        <HeaderRoot>
+          <Typography variant="h3" component="h1">
+            No programs found
+          </Typography>
+        </HeaderRoot>
       )}
     </OrganizationRoot>
   )

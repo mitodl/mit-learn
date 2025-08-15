@@ -37,6 +37,7 @@ from vector_search.utils import (
     update_content_file_payload,
     update_learning_resource_payload,
     vector_point_id,
+    vector_search,
 )
 
 pytestmark = pytest.mark.django_db
@@ -637,6 +638,88 @@ def test_embed_learning_resources_summarizes_only_contentfiles_with_summary(mock
     # Only contentfiles with summary should be passed
     expected_ids = [cf.id for cf in contentfiles_with_summary]
     summarize_mock.assert_called_once_with(expected_ids, True)  # noqa: FBT003
+
+
+def test_vector_search_group_by(mocker):
+    """
+    Test that vector_search with group_by parameter returns grouped results
+    where chunks are merged on common fields
+    """
+    mock_qdrant = mocker.patch("vector_search.utils.qdrant_client")()
+    mock_encoder = mocker.patch("vector_search.utils.dense_encoder")()
+    mock_encoder.embed_query.return_value = [0.1, 0.2, 0.3]
+    mock_encoder.model_short_name.return_value = "test-encoder"
+
+    group_by_field = "resource_readable_id"
+    resource_id_1 = "resource1"
+    resource_id_2 = "resource2"
+
+    mock_group1_hit1 = mocker.MagicMock()
+    mock_group1_hit1.payload = {
+        group_by_field: resource_id_1,
+        "chunk_content": "First part.",
+        "common_field": "value1",
+    }
+    mock_group1_hit2 = mocker.MagicMock()
+    mock_group1_hit2.payload = {
+        group_by_field: resource_id_1,
+        "chunk_content": "Second part.",
+        "common_field": "value1",
+    }
+
+    mock_group2_hit1 = mocker.MagicMock()
+    mock_group2_hit1.payload = {
+        group_by_field: resource_id_2,
+        "chunk_content": "Only part.",
+        "common_field": "value2",
+    }
+
+    mock_group1 = mocker.MagicMock()
+    mock_group1.hits = [mock_group1_hit1, mock_group1_hit2]
+    mock_group2 = mocker.MagicMock()
+    mock_group2.hits = [mock_group2_hit1]
+
+    mock_group_result = mocker.MagicMock()
+    mock_group_result.groups = [mock_group1, mock_group2]
+    mock_qdrant.query_points_groups.return_value = mock_group_result
+    mock_qdrant.count.return_value = models.CountResult(count=2)
+
+    mocker.patch(
+        "vector_search.utils._content_file_vector_hits", side_effect=lambda x: x
+    )
+
+    params = {
+        "group_by": group_by_field,
+        "group_size": 2,
+    }
+    results = vector_search(
+        "test query",
+        params,
+        search_collection=CONTENT_FILES_COLLECTION_NAME,
+    )
+
+    assert len(results["hits"]) == 2
+    assert results["total"]["value"] == 2
+
+    hit1 = next(
+        h for h in results["hits"] if h.payload[group_by_field] == resource_id_1
+    )
+    hit2 = next(
+        h for h in results["hits"] if h.payload[group_by_field] == resource_id_2
+    )
+
+    assert hit1.payload["chunk_content"] is None
+    assert hit1.payload["common_field"] == "value1"
+    assert hit1.payload["chunks"] == ["First part.", "Second part."]
+
+    assert hit2.payload["chunk_content"] is None
+    assert hit2.payload["common_field"] == "value2"
+    assert hit2.payload["chunks"] == ["Only part."]
+
+    mock_qdrant.query_points_groups.assert_called_once()
+    call_args = mock_qdrant.query_points_groups.call_args.kwargs
+    assert call_args["group_by"] == group_by_field
+    assert call_args["group_size"] == 2
 
 
 @pytest.mark.django_db

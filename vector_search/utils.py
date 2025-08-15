@@ -610,6 +610,21 @@ def _content_file_vector_hits(search_result):
     return results
 
 
+def _merge_dicts(dicts):
+    """
+    Return a dictionary with keys and values that are common across all input dicts
+    """
+    if not dicts:
+        return {}
+    common_keys = set.intersection(*(set(d.keys()) for d in dicts))
+    result = {}
+    for key in common_keys:
+        values = [d[key] for d in dicts]
+        if all(v == values[0] for v in values):
+            result[key] = values[0]
+    return result
+
+
 def vector_search(
     query_string: str,
     params: dict,
@@ -644,15 +659,35 @@ def vector_search(
         ]
     )
     if query_string:
-        search_result = client.query_points(
-            collection_name=search_collection,
-            using=encoder.model_short_name(),
-            query=encoder.embed_query(query_string),
-            query_filter=search_filter,
-            search_params=models.SearchParams(indexed_only=True),
-            limit=limit,
-            offset=offset,
-        ).points
+        search_params = {
+            "collection_name": search_collection,
+            "using": encoder.model_short_name(),
+            "query": encoder.embed_query(query_string),
+            "query_filter": search_filter,
+            "search_params": models.SearchParams(indexed_only=True),
+            "limit": limit,
+        }
+        if "group_by" in params:
+            search_params["group_by"] = params.get("group_by")
+            search_params["group_size"] = params.get("group_size", 1)
+            group_result = client.query_points_groups(**search_params)
+            search_result = []
+            for group in group_result.groups:
+                payloads = [hit.payload for hit in group.hits]
+                response_hit = _merge_dicts(payloads)
+                chunks = [payload.get("chunk_content") for payload in payloads]
+                response_hit["chunk_content"] = None
+                response_hit["chunks"] = chunks
+                response_row = {
+                    "id": response_hit[search_params["group_by"]],
+                    "payload": response_hit,
+                    "vector": [],
+                }
+                search_result.append(models.PointStruct(**response_row))
+
+        else:
+            search_params["offset"] = offset
+            search_result = client.query_points(**search_params).points
     else:
         search_result = client.scroll(
             collection_name=search_collection,
