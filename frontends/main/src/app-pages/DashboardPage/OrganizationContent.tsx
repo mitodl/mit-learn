@@ -94,13 +94,20 @@ const ProgramHeader = styled.div(({ theme }) => ({
   padding: "24px",
   flexDirection: "row",
   justifyContent: "space-between",
-
   gap: "16px",
   backgroundColor: theme.custom.colors.white,
   borderRadius: "8px 8px 0px 0px",
   border: `1px solid ${theme.custom.colors.lightGray2}`,
   borderBottom: `1px solid ${theme.custom.colors.red}`,
+  [theme.breakpoints.down("sm")]: {
+    flexDirection: "column",
+  },
 }))
+
+const ProgramHeaderText = styled.div({
+  flexDirection: "column",
+  gap: "8px",
+})
 
 const ProgramCertificateButton = styled(ButtonLink)(({ theme }) => ({
   color: theme.custom.colors.red,
@@ -168,7 +175,7 @@ const OrgProgramCollectionDisplay: React.FC<{
 
   const header = (
     <ProgramHeader>
-      <Stack direction="column" gap="8px">
+      <ProgramHeaderText>
         <Typography variant="h5" component="h2">
           {collection.title}
         </Typography>
@@ -176,7 +183,7 @@ const OrgProgramCollectionDisplay: React.FC<{
           variant="body2"
           dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
         />
-      </Stack>
+      </ProgramHeaderText>
     </ProgramHeader>
   )
 
@@ -252,7 +259,7 @@ const OrgProgramDisplay: React.FC<{
   return (
     <ProgramRoot data-testid="org-program-root">
       <ProgramHeader>
-        <Stack direction="column" gap="8px">
+        <ProgramHeaderText>
           <Typography variant="h5" component="h2">
             {program.title}
           </Typography>
@@ -260,7 +267,7 @@ const OrgProgramDisplay: React.FC<{
             variant="body2"
             dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
           />
-        </Stack>
+        </ProgramHeaderText>
         {hasValidCertificate && (
           <ProgramCertificateButton
             size="small"
