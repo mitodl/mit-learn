@@ -24,8 +24,8 @@ const B2BAttachPage: React.FC<B2BAttachPageProps> = ({ code }) => {
   })
 
   React.useEffect(() => {
-    attach()
-  }, [])
+    attach?.()
+  }, [attach])
 
   React.useEffect(() => {
     if (isSuccess) {
