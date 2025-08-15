@@ -21,6 +21,11 @@ from learning_resources.models import ContentFile
 pytestmark = pytest.mark.django_db
 
 
+@pytest.fixture(autouse=True)
+def setup_settings(settings):
+    settings.LITELLM_API_BASE = "https://test/api/"
+
+
 @pytest.fixture
 def mock_summarize_single_content_file(mocker):
     """Fixture for mocking the process single file method"""

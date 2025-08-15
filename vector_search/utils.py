@@ -524,11 +524,15 @@ def embed_learning_resources(ids, resource_type, overwrite):
     else:
         serialized_resources = list(serialize_bulk_content_files(ids))
         # TODO: Pass actual Ids when we want scheduled content file summarization  # noqa: FIX002, TD002, TD003 E501
-        # Currently we only want to summarize content that already has a summary
+        # Currently we only want to summarize content that either already has a summary
+        # OR is in a course where atleast one other content file has a summary
         existing_summary_content_ids = [
             resource["id"]
             for resource in serialized_resources
             if resource.get("summary")
+            or ContentFile.objects.filter(run__id=resource.get("run_id"))
+            .exclude(summary="")
+            .exists()
         ]
         ContentSummarizer().summarize_content_files_by_ids(
             existing_summary_content_ids, overwrite

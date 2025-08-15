@@ -147,6 +147,7 @@ VALID_TEXT_FILE_TYPES = [
     ".json",
     ".md",
     ".pdf",
+    ".tex",
     ".ppt",
     ".pptx",
     ".rtf",

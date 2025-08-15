@@ -9,10 +9,10 @@ from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import pypdfium2 as pdfium
 from defusedxml import ElementTree
 from django.conf import settings
 from litellm import completion
-from pdf2image import convert_from_path
 from PIL import Image
 
 from learning_resources.constants import (
@@ -71,7 +71,7 @@ def sync_canvas_archive(bucket, key: str, overwrite):
             run.checksum = checksum
             run.save()
 
-    return resource_readable_id, run
+    return resource_readable_id
 
 
 def _course_url(course_archive_path) -> str:
@@ -323,7 +323,7 @@ def extract_resources_by_identifierref(manifest_xml: str) -> dict:
     return dict(resources_dict)
 
 
-def pdf_to_base64_images(pdf_path, dpi=200, fmt="JPEG", max_size=2000, quality=85):
+def pdf_to_base64_images(pdf_path, fmt="JPEG", max_size=2000, quality=85):
     """
     Convert a PDF file to a list of base64 encoded images (one per page).
     Resizes images to reduce file size while keeping good OCR quality.
@@ -338,26 +338,24 @@ def pdf_to_base64_images(pdf_path, dpi=200, fmt="JPEG", max_size=2000, quality=8
     Returns:
         list: List of base64 encoded strings (one per page)
     """
-    images = convert_from_path(pdf_path, dpi=dpi)
-    base64_images = []
 
-    for image in images:
+    pdf = pdfium.PdfDocument(pdf_path)
+    for page_index in range(len(pdf)):
+        page = pdf.get_page(page_index)
+        image = page.render(scale=2).to_pil()
+        page.close()
         # Resize the image if it's too large (preserving aspect ratio)
         if max(image.size) > max_size:
             image.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
-
         buffered = BytesIO()
-
         # Save with optimized settings
         if fmt.upper() == "JPEG":
             image.save(buffered, format="JPEG", quality=quality, optimize=True)
         else:  # PNG
             image.save(buffered, format="PNG", optimize=True)
-
         img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
-        base64_images.append(img_str)
-
-    return base64_images
+        yield img_str
+    pdf.close()
 
 
 def _pdf_to_markdown(pdf_path):

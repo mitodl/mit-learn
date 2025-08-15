@@ -215,11 +215,15 @@ class ContentSummarizer:
         if not settings.LITELLM_CUSTOM_PROVIDER:
             raise ValueError("The 'LITELLM_CUSTOM_PROVIDER' setting must be set.")  # noqa: EM101, TRY003
 
+        if not settings.LITELLM_API_BASE:
+            raise ValueError("The 'LITELLM_API_BASE' setting must be set.")  # noqa: EM101, TRY003
+
         return ChatLiteLLM(
             model=model,
             temperature=temperature,
             max_tokens=max_tokens,
             custom_llm_provider=settings.LITELLM_CUSTOM_PROVIDER,
+            api_base=settings.LITELLM_API_BASE,
         )
 
     def _generate_summary(self, content: str, llm_model: str) -> str:

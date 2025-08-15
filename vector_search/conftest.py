@@ -31,6 +31,7 @@ def _use_dummy_encoder(settings):
 def _use_test_qdrant_settings(settings, mocker):
     settings.QDRANT_HOST = "https://test"
     settings.QDRANT_BASE_COLLECTION_NAME = "test"
+    settings.LITELLM_API_BASE = "https://test/api/"
     settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = 0
     settings.CONTENT_FILE_EMBEDDING_SEMANTIC_CHUNKING_ENABLED = False
     mock_qdrant = mocker.patch("qdrant_client.QdrantClient")

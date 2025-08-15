@@ -658,7 +658,7 @@ def test_sync_canvas_courses(settings, mocker, django_assert_num_queries, canvas
     # Patch ingest_canvas_course to return the readable_ids for the two non-stale courses
     mock_ingest_course = mocker.patch(
         "learning_resources.tasks.ingest_canvas_course",
-        side_effect=[("course1", lr1.runs.first()), ("course2", lr2.runs.first())],
+        side_effect=["course1", "course2"],
     )
     sync_canvas_courses(canvas_course_ids=canvas_ids, overwrite=False)
 
