@@ -46,8 +46,13 @@ const organization = {
     `${API_BASE_URL}/api/v0/b2b/organizations/${organizationSlug}/`,
 }
 
+const b2bAttach = {
+  b2bAttachView: (code: string) => `${API_BASE_URL}/api/v0/b2b/attach/${code}/`,
+}
+
 export {
   b2b,
+  b2bAttach,
   currentUser,
   enrollment,
   programs,
