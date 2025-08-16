@@ -1113,6 +1113,16 @@ def load_playlist(video_channel: VideoChannel, playlist_data: dict) -> LearningR
 
     video_resources = load_videos(videos_data)
     load_topics(playlist_resource, most_common_topics(video_resources))
+    unpublished_videos = playlist_resource.resources.filter(
+        resource_type=LearningResourceType.video.name,
+        published=True,
+    ).exclude(id__in=[video.id for video in video_resources])
+    unpublished_videos.update(published=False)
+    bulk_resources_unpublished_actions(
+        unpublished_videos.values_list("id", flat=True),
+        LearningResourceType.video.name,
+    )
+
     playlist_resource.resources.clear()
     for idx, video in enumerate(video_resources):
         playlist_resource.resources.add(

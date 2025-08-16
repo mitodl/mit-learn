@@ -1463,7 +1463,8 @@ def test_load_videos():
     assert Video.objects.count() == len(video_resources)
 
 
-def test_load_playlist(mocker):
+@pytest.mark.parametrize("playlist_exists", [True, False])
+def test_load_playlist(mocker, playlist_exists):
     """Test load_playlist"""
     expected_topics = [{"name": "Biology"}, {"name": "Physics"}]
     [
@@ -1475,9 +1476,19 @@ def test_load_playlist(mocker):
         return_value=expected_topics,
     )
     channel = VideoChannelFactory.create()
-    playlist = VideoPlaylistFactory.build().learning_resource
-    assert VideoPlaylist.objects.count() == 0
-    assert Video.objects.count() == 0
+    if playlist_exists:
+        playlist = VideoPlaylistFactory.create(channel=channel).learning_resource
+        deleted_video = VideoFactory.create().learning_resource
+        playlist.resources.add(
+            deleted_video,
+            through_defaults={
+                "relation_type": LearningResourceRelationTypes.PLAYLIST_VIDEOS,
+                "position": 1,
+            },
+        )
+    else:
+        playlist = VideoPlaylistFactory.build().learning_resource
+
     video_resources = [video.learning_resource for video in VideoFactory.build_batch(5)]
     videos_data = [
         {
@@ -1511,6 +1522,9 @@ def test_load_playlist(mocker):
     assert list(result.topics.values_list("name", flat=True).order_by("name")) == [
         topic["name"] for topic in expected_topics
     ]
+    if playlist_exists:
+        deleted_video.refresh_from_db()
+        assert not deleted_video.published
 
 
 def test_load_playlists_unpublish(mocker):
