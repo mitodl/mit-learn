@@ -421,6 +421,7 @@ def get_learning_resource_views():
     """Load learning resource views from the PostHog ETL."""
 
     pipelines.posthog_etl()
+    clear_search_cache()
 
 
 @app.task(acks_late=True)
