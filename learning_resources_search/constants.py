@@ -122,6 +122,7 @@ LEARNING_RESOURCE_MAP = {
             "name": {"type": "keyword"},
         },
     },
+    "views": {"type": "integer"},
     "pace": {
         "type": "nested",
         "properties": {
