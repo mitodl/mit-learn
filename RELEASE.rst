@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.40.1
+Version 0.40.1 (Released August 18, 2025)
 --------------
 
 - fix program collection org filter bug (#2435)
