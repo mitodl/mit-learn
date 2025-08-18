@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+Version 0.41.1 (Released August 18, 2025)
+--------------
+
+- removing check for api base (#2442)
+- fix video etl (#2438)
+- fix popular search (#2436)
+- B2B Provisioning: Add interstitial page to process redemption code retrieval (#2422)
+
 Version 0.40.1 (Released August 18, 2025)
 --------------
 
