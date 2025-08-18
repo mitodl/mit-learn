@@ -242,7 +242,7 @@ const OrgProgramDisplay: React.FC<{
   const programEnrollment = programEnrollments?.find(
     (enrollment) => enrollment.program.id === program.id,
   )
-  const hasValidCertificate = programEnrollment?.certificate ? true : false
+  const hasValidCertificate = !!programEnrollment?.certificate
   const courses = useQuery(
     coursesQueries.coursesList({ id: program.courseIds, org_id: orgId }),
   )
