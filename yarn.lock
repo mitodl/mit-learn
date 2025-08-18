@@ -3028,16 +3028,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/mitxonline-api-axios@npm:2025.8.6":
-  version: 2025.8.6
-  resolution: "@mitodl/mitxonline-api-axios@npm:2025.8.6"
-  dependencies:
-    "@types/node": "npm:^20.11.19"
-    axios: "npm:^1.6.5"
-  checksum: 10/6e20c0ff75a3700a39e16b6b88bf6fba1d682a8abf1d7dbbd369d5072530457ec535c4bc501933a0fb0602ea489cf2f8549d8806180040edf2ba1f0a4360ae84
-  languageName: node
-  linkType: hard
-
 "@mitodl/open-api-axios@npm:2024.9.16":
   version: 2024.9.16
   resolution: "@mitodl/open-api-axios@npm:2024.9.16"
@@ -13960,7 +13950,7 @@ __metadata:
     "@emotion/styled": "npm:^11.11.0"
     "@faker-js/faker": "npm:^9.9.0"
     "@mitodl/course-search-utils": "npm:3.3.2"
-    "@mitodl/mitxonline-api-axios": "npm:2025.8.6"
+    "@mitodl/mitxonline-api-axios": "npm:2025.8.12"
     "@mitodl/smoot-design": "npm:^6.10.0"
     "@next/bundle-analyzer": "npm:^14.2.15"
     "@remixicon/react": "npm:^4.2.0"

@@ -2,8 +2,8 @@
 
 from django.core.management import BaseCommand
 
-from learning_resources.etl.pipelines import posthog_etl
 from learning_resources.models import LearningResourceViewEvent
+from learning_resources.tasks import get_learning_resource_views
 
 
 class Command(BaseCommand):
@@ -16,7 +16,8 @@ class Command(BaseCommand):
 
         self.stdout.write("Running the ETL pipeline...")
 
-        posthog_etl()
+        task = get_learning_resource_views.delay()
+        task.get()
 
         ev_count = LearningResourceViewEvent.objects.count()
 

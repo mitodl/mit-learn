@@ -515,9 +515,7 @@ class LearningResource(TimestampedModel):
     @cached_property
     def views_count(self) -> int:
         """Return the number of views for the resource."""
-        return models.LearningResourceViewEvent.objects.filter(
-            learning_resource=self
-        ).count()
+        return LearningResourceViewEvent.objects.filter(learning_resource=self).count()
 
     @cached_property
     def user_list_parents(self) -> list["LearningResourceRelationship"]:

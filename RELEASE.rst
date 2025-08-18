@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+Version 0.40.1 (Released August 18, 2025)
+--------------
+
+- fix program collection org filter bug (#2435)
+- Optimize memory footprint of pdf problem transcription task (#2433)
+- Replace the social media image (#2434)
+- Generate summaries for new video transcripts (#2428)
+
 Version 0.40.0 (Released August 13, 2025)
 --------------
 
