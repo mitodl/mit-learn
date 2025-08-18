@@ -215,9 +215,6 @@ class ContentSummarizer:
         if not settings.LITELLM_CUSTOM_PROVIDER:
             raise ValueError("The 'LITELLM_CUSTOM_PROVIDER' setting must be set.")  # noqa: EM101, TRY003
 
-        if not settings.LITELLM_API_BASE:
-            raise ValueError("The 'LITELLM_API_BASE' setting must be set.")  # noqa: EM101, TRY003
-
         return ChatLiteLLM(
             model=model,
             temperature=temperature,
