@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.41.1
+Version 0.41.1 (Released August 18, 2025)
 --------------
 
 - removing check for api base (#2442)
