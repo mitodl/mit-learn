@@ -463,14 +463,15 @@ def get_url_from_module_id(
         if run.learning_resource.etl_source == ETLSource.oll.value
         else run.run_id
     )
+    base_jump_url = f"{root_url}/courses/{run_id}/jump_to_id/"
     if module_id.startswith("asset"):
         video_meta = video_srt_metadata.get(module_id, {}) if video_srt_metadata else {}
         if video_meta:
             # Link to the parent video
-            return f"{root_url}/courses/{run_id}/jump_to/{video_meta.split('@')[-1]}"
+            return f"{base_jump_url}{video_meta.split('@')[-1]}"
         return f"{root_url}/{module_id}"
     elif module_id.startswith("block") and is_valid_uuid(module_id.split("@")[-1]):
-        return f"{root_url}/courses/{run_id}/jump_to_id/{module_id.split('@')[-1]}"
+        return f"{base_jump_url}{module_id.split('@')[-1]}"
     else:
         return None
 
