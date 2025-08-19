@@ -3028,6 +3028,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@mitodl/mitxonline-api-axios@npm:2025.8.18":
+  version: 2025.8.18
+  resolution: "@mitodl/mitxonline-api-axios@npm:2025.8.18"
+  dependencies:
+    "@types/node": "npm:^20.11.19"
+    axios: "npm:^1.6.5"
+  checksum: 10/91ff2d63fd251ef07dcea8c34497ddbd3b24046ba639b5ac6819d7bcdef560ea4838ecfd2e8db7876d4611072c7d37250d0bd8bc7e643d96d17d61b4db0c192e
+  languageName: node
+  linkType: hard
+
 "@mitodl/open-api-axios@npm:2024.9.16":
   version: 2024.9.16
   resolution: "@mitodl/open-api-axios@npm:2024.9.16"
@@ -7363,7 +7373,7 @@ __metadata:
   resolution: "api@workspace:frontends/api"
   dependencies:
     "@faker-js/faker": "npm:^9.9.0"
-    "@mitodl/mitxonline-api-axios": "npm:2025.8.12"
+    "@mitodl/mitxonline-api-axios": "npm:2025.8.18"
     "@tanstack/react-query": "npm:^5.66.0"
     "@testing-library/react": "npm:^16.1.0"
     axios: "npm:^1.6.3"
