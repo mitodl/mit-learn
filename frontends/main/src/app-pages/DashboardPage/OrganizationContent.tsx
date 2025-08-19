@@ -23,8 +23,11 @@ import graduateLogo from "@/public/images/dashboard/graduate.png"
 import {
   CourseRunEnrollment,
   OrganizationPage,
+  UserProgramEnrollmentDetail,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { useMitxOnlineCurrentUser } from "api/mitxonline-hooks/user"
+import { ButtonLink } from "@mitodl/smoot-design"
+import { RiAwardFill } from "@remixicon/react"
 
 const HeaderRoot = styled.div({
   display: "flex",
@@ -78,23 +81,45 @@ const DashboardCardStyled = styled(DashboardCard)({
     borderRadius: "0px 0px 8px 8px",
   },
 })
+
 const ProgramRoot = styled.div(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
   boxShadow: "0px 4px 8px 0px rgba(19, 20, 21, 0.08)",
   backgroundColor: theme.custom.colors.white,
   borderRadius: "8px",
 }))
+
 const ProgramHeader = styled.div(({ theme }) => ({
   display: "flex",
   padding: "24px",
-  flexDirection: "column",
-
+  flexDirection: "row",
+  justifyContent: "space-between",
   gap: "16px",
   backgroundColor: theme.custom.colors.white,
   borderRadius: "8px 8px 0px 0px",
   border: `1px solid ${theme.custom.colors.lightGray2}`,
   borderBottom: `1px solid ${theme.custom.colors.red}`,
+  [theme.breakpoints.down("sm")]: {
+    flexDirection: "column",
+  },
 }))
+
+const ProgramHeaderText = styled.div({
+  flexDirection: "column",
+  gap: "8px",
+})
+
+const ProgramCertificateButton = styled(ButtonLink)(({ theme }) => ({
+  color: theme.custom.colors.red,
+  display: "flex",
+  width: "192px",
+  height: "32px",
+  padding: "12px 12px 12px 8px",
+  justifyContent: "center",
+  alignItems: "center",
+  gap: "10px",
+}))
+
 const ProgramDescription = styled(Typography)({
   p: {
     margin: 0,
@@ -148,18 +173,24 @@ const OrgProgramCollectionDisplay: React.FC<{
   const { isLoading, programsWithCourses, hasAnyCourses } =
     useProgramCollectionCourses(collection.programIds, orgId)
 
+  const header = (
+    <ProgramHeader>
+      <ProgramHeaderText>
+        <Typography variant="h5" component="h2">
+          {collection.title}
+        </Typography>
+        <ProgramDescription
+          variant="body2"
+          dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
+        />
+      </ProgramHeaderText>
+    </ProgramHeader>
+  )
+
   if (isLoading) {
     return (
       <ProgramRoot data-testid="org-program-collection-root">
-        <ProgramHeader>
-          <Typography variant="h5" component="h2">
-            {collection.title}
-          </Typography>
-          <ProgramDescription
-            variant="body2"
-            dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
-          />
-        </ProgramHeader>
+        {header}
         <PlainList>
           <Skeleton
             width="100%"
@@ -178,15 +209,7 @@ const OrgProgramCollectionDisplay: React.FC<{
 
   return (
     <ProgramRoot data-testid="org-program-collection-root">
-      <ProgramHeader>
-        <Typography variant="h5" component="h2">
-          {collection.title}
-        </Typography>
-        <ProgramDescription
-          variant="body2"
-          dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
-        />
-      </ProgramHeader>
+      {header}
       <PlainList>
         {programsWithCourses.map((item) =>
           item ? (
@@ -206,9 +229,20 @@ const OrgProgramCollectionDisplay: React.FC<{
 const OrgProgramDisplay: React.FC<{
   program: DashboardProgram
   courseRunEnrollments?: CourseRunEnrollment[]
+  programEnrollments?: UserProgramEnrollmentDetail[]
   programLoading: boolean
   orgId: number
-}> = ({ program, courseRunEnrollments, programLoading, orgId }) => {
+}> = ({
+  program,
+  courseRunEnrollments,
+  programEnrollments,
+  programLoading,
+  orgId,
+}) => {
+  const programEnrollment = programEnrollments?.find(
+    (enrollment) => enrollment.program.id === program.id,
+  )
+  const hasValidCertificate = !!programEnrollment?.certificate
   const courses = useQuery(
     coursesQueries.coursesList({ id: program.courseIds, org_id: orgId }),
   )
@@ -225,13 +259,25 @@ const OrgProgramDisplay: React.FC<{
   return (
     <ProgramRoot data-testid="org-program-root">
       <ProgramHeader>
-        <Typography variant="h5" component="h2">
-          {program.title}
-        </Typography>
-        <ProgramDescription
-          variant="body2"
-          dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
-        />
+        <ProgramHeaderText>
+          <Typography variant="h5" component="h2">
+            {program.title}
+          </Typography>
+          <ProgramDescription
+            variant="body2"
+            dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+          />
+        </ProgramHeaderText>
+        {hasValidCertificate && (
+          <ProgramCertificateButton
+            size="small"
+            variant="bordered"
+            startIcon={<RiAwardFill />}
+            href={programEnrollment?.certificate?.link}
+          >
+            View {program.programType} Certificate
+          </ProgramCertificateButton>
+        )}
       </ProgramHeader>
       <PlainList>
         {transform
@@ -316,6 +362,9 @@ const OrganizationContentInternal: React.FC<
   const courseRunEnrollments = useQuery(
     enrollmentQueries.courseRunEnrollmentsList(),
   )
+  const programEnrollments = useQuery(
+    enrollmentQueries.programEnrollmentsList(),
+  )
   const programs = useQuery(programsQueries.programsList({ org_id: orgId }))
   const programCollections = useQuery(
     programCollectionQueries.programCollectionsList({}),
@@ -345,6 +394,7 @@ const OrganizationContentInternal: React.FC<
               key={program.key}
               program={program}
               courseRunEnrollments={courseRunEnrollments.data}
+              programEnrollments={programEnrollments.data}
               programLoading={programs.isLoading}
               orgId={orgId}
             />

@@ -24,6 +24,8 @@ describe("OrganizationContent", () => {
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
     // Set default empty enrollments for all tests
     setMockResponse.get(urls.enrollment.enrollmentsList(), [])
+    // Add missing program enrollments mock
+    setMockResponse.get(urls.programEnrollments.enrollmentsList(), [])
   })
 
   it("displays a header for each program returned and cards for courses in program", async () => {
@@ -299,5 +301,42 @@ describe("OrganizationContent", () => {
         0,
       )
     })
+  })
+
+  test("Shows the program certificate link button if the program has a certificate", async () => {
+    const { orgX, programA } = setupProgramsAndCourses()
+
+    // Mock the program to have a certificate
+    const programWithCertificate = {
+      ...programA,
+      program_type: "Program", // Set specific program type
+      certificate: {
+        uuid: "cert-123",
+        url: "/certificates/program/1",
+      },
+    }
+    const programEnrollment = factories.enrollment.programEnrollment({
+      program: { id: programWithCertificate.id },
+      certificate: {
+        link: programWithCertificate.certificate.url,
+      },
+    })
+    setMockResponse.get(urls.programs.programsList({ org_id: orgX.id }), {
+      results: [programWithCertificate],
+    })
+    setMockResponse.get(urls.programEnrollments.enrollmentsList(), [
+      programEnrollment,
+    ])
+
+    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+
+    const programRoot = await screen.findByTestId("org-program-root")
+    const certificateButton = within(programRoot).getByRole("link", {
+      name: "View Program Certificate",
+    })
+    expect(certificateButton).toHaveAttribute(
+      "href",
+      programWithCertificate.certificate.url,
+    )
   })
 })

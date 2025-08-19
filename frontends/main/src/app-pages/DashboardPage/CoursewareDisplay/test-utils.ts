@@ -14,7 +14,7 @@ import moment from "moment"
 const makeCourses = factories.courses.courses
 const makeProgram = factories.programs.program
 const makeProgramCollection = factories.programs.programCollection
-const makeEnrollment = factories.enrollment.courseEnrollment
+const makeCourseEnrollment = factories.enrollment.courseEnrollment
 const makeGrade = factories.enrollment.grade
 
 const dashboardCourse: PartialFactory<DashboardCourse> = (...overrides) => {
@@ -45,20 +45,20 @@ const dashboardCourse: PartialFactory<DashboardCourse> = (...overrides) => {
 
 const setupEnrollments = (includeExpired: boolean) => {
   const completed = [
-    makeEnrollment({
+    makeCourseEnrollment({
       run: { title: "C Course Ended" },
       grades: [makeGrade({ passed: true })],
     }),
   ]
   const expired = includeExpired
     ? [
-        makeEnrollment({
+        makeCourseEnrollment({
           run: {
             title: "A Course Ended",
             end_date: faker.date.past().toISOString(),
           },
         }),
-        makeEnrollment({
+        makeCourseEnrollment({
           run: {
             title: "B Course Ended",
             end_date: faker.date.past().toISOString(),
@@ -67,13 +67,13 @@ const setupEnrollments = (includeExpired: boolean) => {
       ]
     : []
   const started = [
-    makeEnrollment({
+    makeCourseEnrollment({
       run: {
         title: "A Course Started",
         start_date: faker.date.past().toISOString(),
       },
     }),
-    makeEnrollment({
+    makeCourseEnrollment({
       run: {
         title: "B Course Started",
         start_date: faker.date.past().toISOString(),
@@ -81,12 +81,12 @@ const setupEnrollments = (includeExpired: boolean) => {
     }),
   ]
   const notStarted = [
-    makeEnrollment({
+    makeCourseEnrollment({
       run: {
         start_date: moment().add(1, "day").toISOString(), // Sooner first
       },
     }),
-    makeEnrollment({
+    makeCourseEnrollment({
       run: {
         start_date: moment().add(5, "day").toISOString(), // Later second
       },
