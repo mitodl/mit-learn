@@ -8,7 +8,11 @@ from langchain_experimental.text_splitter import SemanticChunker
 from qdrant_client import QdrantClient, models
 
 from learning_resources.content_summarizer import ContentSummarizer
-from learning_resources.models import ContentFile, LearningResource
+from learning_resources.models import (
+    ContentFile,
+    ContentSummarizerConfiguration,
+    LearningResource,
+)
 from learning_resources.serializers import (
     ContentFileSerializer,
     LearningResourceMetadataDisplaySerializer,
@@ -526,6 +530,13 @@ def embed_learning_resources(ids, resource_type, overwrite):
         # TODO: Pass actual Ids when we want scheduled content file summarization  # noqa: FIX002, TD002, TD003 E501
         # Currently we only want to summarize content that either already has a summary
         # OR is in a course where atleast one other content file has a summary
+        summarizer_resource_readable_ids = []
+        [
+            summarizer_resource_readable_ids.extend(course_readable_ids)
+            for course_readable_ids in ContentSummarizerConfiguration.objects.filter(
+                is_active=True
+            ).values_list("course_readable_ids", flat=True)
+        ]
         existing_summary_content_ids = [
             resource["id"]
             for resource in serialized_resources
@@ -533,6 +544,7 @@ def embed_learning_resources(ids, resource_type, overwrite):
             or ContentFile.objects.filter(run__id=resource.get("run_id"))
             .exclude(summary="")
             .exists()
+            or resource["resource_readable_id"] in summarizer_resource_readable_ids
         ]
         ContentSummarizer().summarize_content_files_by_ids(
             existing_summary_content_ids, overwrite
