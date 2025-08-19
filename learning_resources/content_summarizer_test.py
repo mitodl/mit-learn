@@ -1,5 +1,8 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
 
+from learning_resources.admin import ContentSummarizerConfigurationAdmin
 from learning_resources.constants import (
     CONTENT_TYPE_FILE,
     CONTENT_TYPE_PAGE,
@@ -14,9 +17,14 @@ from learning_resources.factories import (
     ContentFileFactory,
     ContentSummarizerConfigurationFactory,
     LearningResourceFactory,
+    LearningResourcePlatformFactory,
     LearningResourceRunFactory,
 )
-from learning_resources.models import ContentFile
+from learning_resources.models import (
+    ContentFile,
+    ContentSummarizerConfiguration,
+    LearningResource,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -416,4 +424,55 @@ def test_summarize_single_content_file_with_exception(
     assert (
         error
         == f"Flashcards generation failed for CONTENT_FILE_ID: {content_file.id}\nError: INVALID_FORMAT\n\n"
+    )
+
+
+@pytest.mark.django_db
+@patch("learning_resources.admin.ContentSummarizer")
+@patch("learning_resources.admin.summarize_unprocessed_content")
+def test_save_model_runs_summarization(
+    mock_summarize_task, mock_content_summarizer, admin_user, rf
+):
+    """
+    Test that saving the ContentSummarizerConfigurationAdmin triggers summarization
+    for the resources in the course_readable_ids field.
+    """
+
+    mock_summarizer_instance = MagicMock()
+    mock_content_summarizer.return_value = mock_summarizer_instance
+    mock_summarizer_instance.get_unprocessed_content_file_ids.return_value = [1, 2, 3]
+
+    config = ContentSummarizerConfiguration.objects.create(
+        llm_model="test_model",
+        platform=LearningResourcePlatformFactory.create(name="test_platform"),
+        allowed_content_types=["type1", "type2"],
+        allowed_extensions=[".txt", ".pdf"],
+        is_active=True,
+        course_readable_ids=["course1", "course2"],
+    )
+
+    # Mock LearningResource objects
+    LearningResource.objects.create(id=1, readable_id="course1")
+    LearningResource.objects.create(id=2, readable_id="course2")
+
+    # Create the admin instance
+    admin = ContentSummarizerConfigurationAdmin(
+        ContentSummarizerConfiguration, admin_site=None
+    )
+
+    # Mock request and form
+    request = rf.post("/")
+    request.user = admin_user
+    form = MagicMock()
+
+    admin.save_model(request, config, form, change=False)
+
+    mock_summarizer_instance.get_unprocessed_content_file_ids.assert_called_once_with(
+        learning_resource_ids=[1, 2],
+        overwrite=False,
+    )
+    mock_summarize_task.delay.assert_called_once_with(
+        unprocessed_content_ids=[1, 2, 3],
+        overwrite=False,
+        batch_size=3,
     )
