@@ -4,6 +4,8 @@ from django.contrib import admin
 from django.contrib.admin import TabularInline
 
 from learning_resources import models
+from learning_resources.content_summarizer import ContentSummarizer
+from learning_resources.tasks import summarize_unprocessed_content
 
 
 class LearningResourceInstructorAdmin(admin.ModelAdmin):
@@ -245,6 +247,29 @@ class ContentSummarizerConfigurationAdmin(admin.ModelAdmin):
         "allowed_extensions",
         "is_active",
     )
+
+    def save_model(self, request, obj, form, change):
+        """
+        Generate flashcards and summaries for unprocessed content files
+        if specific readable ids are specified
+        """
+        if obj.is_active and obj.course_readable_ids:
+            resource_ids = list(
+                models.LearningResource.objects.filter(
+                    readable_id__in=obj.course_readable_ids
+                ).values_list("id", flat=True)
+            )
+            summarizer = ContentSummarizer()
+            unprocessed_content_file_ids = summarizer.get_unprocessed_content_file_ids(
+                learning_resource_ids=resource_ids,
+                overwrite=False,
+            )
+            summarize_unprocessed_content.delay(
+                unprocessed_content_ids=unprocessed_content_file_ids,
+                overwrite=False,
+                batch_size=3,
+            )
+        super().save_model(request, obj, form, change)
 
 
 admin.site.register(models.LearningResourceTopic, LearningResourceTopicAdmin)
