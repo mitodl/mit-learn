@@ -1215,11 +1215,5 @@ class ContentSummarizerConfiguration(TimestampedModel):
         blank=True,
         default=list,
     )
-    course_readable_ids = ArrayField(
-        models.CharField(max_length=512, blank=True, default=""),
-        null=True,
-        blank=True,
-        default=list,
-        help_text="List of course readable_ids to limit summarization to.",
-    )
+    learning_resources = models.ManyToManyField(LearningResource, blank=True)
     is_active = models.BooleanField(default=True)
