@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.41.3
+--------------
+
+- Certificate page UI (#2429)
+- Fix bad urls for edx video contentfiles (#2444)
+- add program enrollments api and view program certificate button (#2439)
+
 Version 0.41.1 (Released August 18, 2025)
 --------------
 
