@@ -7,7 +7,6 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_experimental.text_splitter import SemanticChunker
 from qdrant_client import QdrantClient, models
 
-from learning_resources.content_summarizer import ContentSummarizer
 from learning_resources.models import ContentFile, LearningResource
 from learning_resources.serializers import (
     ContentFileSerializer,
@@ -493,6 +492,8 @@ def embed_learning_resources(ids, resource_type, overwrite):
         ids (list of int): Ids of learning resources to embed
         resource_type (str): Type of learning resource to embed
     """
+    from learning_resources.tasks import summarize_unprocessed_content
+
     if (
         resource_type not in LEARNING_RESOURCE_TYPES
         and resource_type != CONTENT_FILE_TYPE
@@ -526,16 +527,18 @@ def embed_learning_resources(ids, resource_type, overwrite):
         # TODO: Pass actual Ids when we want scheduled content file summarization  # noqa: FIX002, TD002, TD003 E501
         # Currently we only want to summarize content that either already has a summary
         # OR is in a course where atleast one other content file has a summary
-        existing_summary_content_ids = [
+        summary_content_ids = [
             resource["id"]
             for resource in serialized_resources
             if resource.get("summary")
-            or ContentFile.objects.filter(run__id=resource.get("run_id"))
-            .exclude(summary="")
+            or resource.get("require_summaries")
+            or ContentFile.objects.exclude(summary="")
+            .filter(run__id=resource.get("run_id"))
             .exists()
         ]
-        ContentSummarizer().summarize_content_files_by_ids(
-            existing_summary_content_ids, overwrite
+        summarize_unprocessed_content.delay(
+            unprocessed_content_ids=summary_content_ids,
+            overwrite=overwrite,
         )
 
         collection_name = CONTENT_FILES_COLLECTION_NAME
