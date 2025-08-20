@@ -25,6 +25,7 @@ from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.utils import most_common_topics
 from learning_resources.models import (
     ContentFile,
+    ContentSummarizerConfiguration,
     Course,
     LearningResource,
     LearningResourceContentTag,
@@ -477,6 +478,7 @@ def load_course(
     course_data = resource_data.pop("course", None)
     department_data = resource_data.pop("departments", [])
     content_tags_data = resource_data.pop("content_tags", [])
+    force_ingest = resource_data.pop("force_ingest", False)
     resource_data.setdefault("delivery", [LearningResourceDelivery.online.name])
     runs_data = resource_data.get("runs", [])
 
@@ -494,7 +496,25 @@ def load_course(
         Course.objects.get_or_create(
             learning_resource=learning_resource, defaults=course_data
         )
-
+        if force_ingest:
+            """
+            for the case where we are force ingesting the content and published=False
+            we set the course to "test_mode" in learn
+            """
+            if learning_resource.published is False:
+                learning_resource.test_mode = True
+                learning_resource.save()
+            if ContentSummarizerConfiguration.objects.filter(
+                platform=learning_resource.platform
+            ).exists():
+                summarizer_configurations = (
+                    ContentSummarizerConfiguration.objects.filter(
+                        platform=learning_resource.platform
+                    )
+                )
+                for summary_config in summarizer_configurations:
+                    summary_config.learning_resources.add(learning_resource)
+                    summary_config.save()
         run_ids_to_update_or_create = [run["run_id"] for run in runs_data]
 
         for course_run_data in runs_data:

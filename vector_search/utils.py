@@ -7,7 +7,6 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_experimental.text_splitter import SemanticChunker
 from qdrant_client import QdrantClient, models
 
-from learning_resources.content_summarizer import ContentSummarizer
 from learning_resources.models import (
     ContentFile,
     ContentSummarizerConfiguration,
@@ -497,6 +496,8 @@ def embed_learning_resources(ids, resource_type, overwrite):
         ids (list of int): Ids of learning resources to embed
         resource_type (str): Type of learning resource to embed
     """
+    from learning_resources.tasks import summarize_unprocessed_content
+
     if (
         resource_type not in LEARNING_RESOURCE_TYPES
         and resource_type != CONTENT_FILE_TYPE
@@ -530,14 +531,12 @@ def embed_learning_resources(ids, resource_type, overwrite):
         # TODO: Pass actual Ids when we want scheduled content file summarization  # noqa: FIX002, TD002, TD003 E501
         # Currently we only want to summarize content that either already has a summary
         # OR is in a course where atleast one other content file has a summary
-        summarizer_resource_readable_ids = []
-        [
-            summarizer_resource_readable_ids.extend(course_readable_ids)
-            for course_readable_ids in ContentSummarizerConfiguration.objects.filter(
-                is_active=True
-            ).values_list("course_readable_ids", flat=True)
-        ]
-        existing_summary_content_ids = [
+        summarizer_resource_readable_ids = (
+            ContentSummarizerConfiguration.objects.filter(is_active=True).values_list(
+                "learning_resources__readable_id", flat=True
+            )
+        )
+        summary_content_ids = [
             resource["id"]
             for resource in serialized_resources
             if resource.get("summary")
@@ -546,8 +545,10 @@ def embed_learning_resources(ids, resource_type, overwrite):
             .exists()
             or resource["resource_readable_id"] in summarizer_resource_readable_ids
         ]
-        ContentSummarizer().summarize_content_files_by_ids(
-            existing_summary_content_ids, overwrite
+        summarize_unprocessed_content.delay(
+            unprocessed_content_ids=summary_content_ids,
+            overwrite=overwrite,
+            batch_size=3,
         )
 
         collection_name = CONTENT_FILES_COLLECTION_NAME

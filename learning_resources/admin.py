@@ -253,12 +253,9 @@ class ContentSummarizerConfigurationAdmin(admin.ModelAdmin):
         Generate flashcards and summaries for unprocessed content files
         if specific readable ids are specified
         """
-        if obj.is_active and obj.course_readable_ids:
-            resource_ids = list(
-                models.LearningResource.objects.filter(
-                    readable_id__in=obj.course_readable_ids
-                ).values_list("id", flat=True)
-            )
+        super().save_model(request, obj, form, change)
+        if obj.is_active and obj.learning_resources.count() > 0:
+            resource_ids = list(obj.learning_resources.values_list("id", flat=True))
             summarizer = ContentSummarizer()
             unprocessed_content_file_ids = summarizer.get_unprocessed_content_file_ids(
                 learning_resource_ids=resource_ids,
@@ -269,7 +266,6 @@ class ContentSummarizerConfigurationAdmin(admin.ModelAdmin):
                 overwrite=False,
                 batch_size=3,
             )
-        super().save_model(request, obj, form, change)
 
 
 admin.site.register(models.LearningResourceTopic, LearningResourceTopicAdmin)

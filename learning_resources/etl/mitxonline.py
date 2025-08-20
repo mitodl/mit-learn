@@ -286,6 +286,7 @@ def _transform_course(course):
         "topics": transform_topics(course.get("topics", []), OFFERED_BY["code"]),
         "departments": parse_departments(course.get("departments", [])),
         "runs": runs,
+        "force_ingest": course.get("ingest_content_files_for_ai", False),
         "course": {
             "course_numbers": generate_course_numbers_json(
                 course["readable_id"], is_ocw=False

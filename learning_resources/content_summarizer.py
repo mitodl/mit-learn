@@ -4,7 +4,7 @@ from typing import Annotated, Optional
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
-from langchain_community.chat_models import ChatLiteLLM
+from langchain_litellm import ChatLiteLLM
 from typing_extensions import TypedDict
 
 from learning_resources.exceptions import (
@@ -269,8 +269,11 @@ class ContentSummarizer:
             response = structured_llm.invoke(
                 f"Generate flashcards from the following transcript. Each flashcard should have a question and answer. Transcript:{content}"  # noqa: E501
             )
-            generated_flashcards = response.get("flashcards")
-            logger.info("Generated flashcards: %s", generated_flashcards)
+            if response:
+                generated_flashcards = response.get("flashcards", [])
+                logger.info("Generated flashcards: %s", generated_flashcards)
+            else:
+                return []
         except Exception as exc:
             # We do not want to raise the exception as is, we will log the exception and
             # raise FlashcardsGenerationError that will be used to make further
