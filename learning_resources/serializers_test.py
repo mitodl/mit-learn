@@ -218,6 +218,7 @@ def test_learning_resource_serializer(  # noqa: PLR0913
         "languages": resource.languages,
         "last_modified": drf_datetime(resource.last_modified),
         "learning_path_parents": [],
+        "require_summaries": resource.require_summaries,
         "children": serializers.LearningResourceRelationshipChildField(
             resource.children.all(), many=True
         ).data,
@@ -572,6 +573,7 @@ def test_content_file_serializer(settings, expected_types, has_channels):
             "uid": content_file.uid,
             "title": content_file.title,
             "description": content_file.description,
+            "require_summaries": content_file.run.learning_resource.require_summaries,
             "file_type": content_file.file_type,
             "content_type": content_file.content_type,
             "checksum": content_file.checksum,
