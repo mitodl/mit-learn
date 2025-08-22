@@ -1251,6 +1251,7 @@ class ContentFileSerializer(serializers.ModelSerializer):
             return instance.run.learning_resource
         return instance.learning_resource
 
+    @extend_schema_field({"type": "boolean"})
     def get_require_summaries(self, instance):
         """Return whether the run requires summaries"""
         return self.get_learning_resource(instance).require_summaries

@@ -5,6 +5,7 @@
   "results": [
     {
       "id": 62,
+      "ingest_content_files_for_ai": false,
       "title": "Introduction to Differential Equations",
       "readable_id": "course-v1:MITxT+18.03.1x",
       "next_run_id": 256,
@@ -96,6 +97,7 @@
           "is_self_paced": false,
           "run_tag": "2T2023",
           "id": 174,
+          "ingest_content_files_for_ai": false,
           "live": true,
           "course_number": "18.03.1x",
           "products": [
@@ -191,6 +193,7 @@
     },
     {
       "id": 79,
+      "ingest_content_files_for_ai": true,
       "title": "Linear Algebra and NxN Systems",
       "readable_id": "course-v1:MITxT+18.03.3x",
       "next_run_id": null,
