@@ -114,6 +114,7 @@ uwsgitop = "^0.12"
 wrapt = "^1.14.1"
 youtube-transcript-api = "^1.0.0"
 pypdfium2 = "^4.30.0"
+langchain-litellm = "^0.2.2"
 
 
 
