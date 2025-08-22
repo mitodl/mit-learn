@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.41.3
+Version 0.41.3 (Released August 22, 2025)
 --------------
 
 - Certificate page UI (#2429)
