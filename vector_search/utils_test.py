@@ -64,7 +64,7 @@ def test_vector_point_id_used_for_embed(mocker, content_type):
         resources = ContentFileFactory.create_batch(5, content="test content")
 
     summarize_content_files_by_ids_mock = mocker.patch(
-        "vector_search.utils.ContentSummarizer.summarize_content_files_by_ids"
+        "learning_resources.content_summarizer.ContentSummarizer.summarize_content_files_by_ids"
     )
 
     embed_learning_resources(
@@ -133,7 +133,7 @@ def test_embed_learning_resources_no_overwrite(mocker, content_type):
             ],
         )
     summarize_content_files_by_ids_mock = mocker.patch(
-        "vector_search.utils.ContentSummarizer.summarize_content_files_by_ids"
+        "learning_resources.content_summarizer.ContentSummarizer.summarize_content_files_by_ids"
     )
     embed_learning_resources(
         [resource.id for resource in resources], content_type, overwrite=False
@@ -632,7 +632,7 @@ def test_embed_learning_resources_summarizes_only_contentfiles_with_summary(mock
     )
 
     summarize_mock = mocker.patch(
-        "vector_search.utils.ContentSummarizer.summarize_content_files_by_ids"
+        "learning_resources.content_summarizer.ContentSummarizer.summarize_content_files_by_ids"
     )
     embed_learning_resources(
         [cf.id for cf in all_contentfiles], "content_file", overwrite=True

@@ -7,6 +7,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_experimental.text_splitter import SemanticChunker
 from qdrant_client import QdrantClient, models
 
+from learning_resources.content_summarizer import ContentSummarizer
 from learning_resources.models import ContentFile, LearningResource
 from learning_resources.serializers import (
     ContentFileSerializer,
@@ -492,7 +493,6 @@ def embed_learning_resources(ids, resource_type, overwrite):
         ids (list of int): Ids of learning resources to embed
         resource_type (str): Type of learning resource to embed
     """
-    from learning_resources.tasks import summarize_unprocessed_content
 
     if (
         resource_type not in LEARNING_RESOURCE_TYPES
@@ -536,9 +536,8 @@ def embed_learning_resources(ids, resource_type, overwrite):
             .filter(run__id=resource.get("run_id"))
             .exists()
         ]
-        summarize_unprocessed_content.delay(
-            unprocessed_content_ids=summary_content_ids,
-            overwrite=overwrite,
+        ContentSummarizer().summarize_content_files_by_ids(
+            summary_content_ids, overwrite
         )
 
         collection_name = CONTENT_FILES_COLLECTION_NAME
