@@ -3,7 +3,7 @@
 import json
 import random
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pytest
 from django.conf import settings
@@ -56,10 +56,10 @@ def generate_fake_posthog_query_event(learning_resource=None, **kwargs):
         kwargs.get(
             "properties", generate_fake_posthog_lr_properties(learning_resource)
         ),
-        kwargs.get("timestamp", datetime.now().isoformat()),  # noqa: DTZ005
+        kwargs.get("timestamp", datetime.now(UTC).isoformat()),
         kwargs.get("distinct_id", ""),
         kwargs.get("elements_chain", ""),
-        kwargs.get("created_at", datetime.now().isoformat()),  # noqa: DTZ005
+        kwargs.get("created_at", datetime.now(UTC).isoformat()),
         kwargs.get("dollar_session_id", ""),
         kwargs.get("dollar_window_id", ""),
         kwargs.get("dollar_group_0", ""),
@@ -72,7 +72,9 @@ def generate_fake_posthog_query_event(learning_resource=None, **kwargs):
 
 def generate_hogql_query_result(result_count: int = 5):
     """Return a faked-out HogQL result."""
-    learning_resource = LearningResourceFactory.create()
+    learning_resource = LearningResourceFactory.create(
+        published=random.choice([True, False])  # noqa: S311
+    )
 
     return {
         "clickhouse": "",
@@ -239,7 +241,7 @@ def test_posthog_transform_lrd_view_events(mocker):
 
 
 @pytest.mark.django_db
-def load_posthog_lrd_view_events(mocker):
+def test_load_posthog_lrd_view_events(mocker):
     """Ensure the loader stage of the extractor creates database records"""
 
     LearningResourceViewEvent.objects.all().delete()
@@ -262,13 +264,18 @@ def load_posthog_lrd_view_events(mocker):
 
     lr_events = posthog.posthog_transform_lrd_view_events(posthog_events)
 
-    stored_events = load_posthog_lrd_view_events(lr_events)
+    stored_events = posthog.load_posthog_lrd_view_events(lr_events)
 
     assert LearningResourceViewEvent.objects.count() == len(stored_events)
     learning_resource_ids = [
         event.learning_resource_id for event in stored_events if event is not None
     ]
     learning_resource_ids = set(learning_resource_ids)
+    actual_calls = [call[0][0] for call in upsert_mock.call_args_list]
+
     for resource_id in learning_resource_ids:
         learning_resource = LearningResource.objects.get(id=resource_id)
-        upsert_mock.assert_any_call(learning_resource, percolate=False)
+        if learning_resource.published:
+            upsert_mock.assert_any_call(learning_resource, percolate=False)
+        else:
+            assert learning_resource not in actual_calls

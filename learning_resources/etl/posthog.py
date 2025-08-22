@@ -282,7 +282,10 @@ def load_posthog_lrd_view_events(
     }
 
     for resource_id in learning_resource_ids:
-        learning_resource = LearningResource.objects.get(id=resource_id)
-        resource_upserted_actions(learning_resource, percolate=False)
+        learning_resource = LearningResource.objects.filter(
+            id=resource_id, published=True
+        ).first()
+        if learning_resource:
+            resource_upserted_actions(learning_resource, percolate=False)
 
     return events
