@@ -290,9 +290,7 @@ def get_captions_for_video(video_resource: LearningResource) -> str:
 
     """
     try:
-        transcript_list = YouTubeTranscriptApi.list_transcripts(
-            video_resource.readable_id
-        )
+        transcript_list = YouTubeTranscriptApi.list(video_resource.readable_id)
         transcript = transcript_list.find_manually_created_transcript(["en"])
         if not transcript:
             transcript = transcript_list.find_generated_transcript(["en"])
