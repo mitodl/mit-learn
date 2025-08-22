@@ -4,7 +4,7 @@ from typing import Annotated, Optional
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
-from langchain_community.chat_models import ChatLiteLLM
+from langchain_litellm import ChatLiteLLM
 from typing_extensions import TypedDict
 
 from learning_resources.exceptions import (
