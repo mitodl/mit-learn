@@ -356,7 +356,11 @@ def test_transform_canvas_content_files_removes_unpublished_content(mocker, tmp_
 
     # Create a fake zipfile with the published file
 
-    list(transform_canvas_content_files(Path(zip_path), run, overwrite=True))
+    list(
+        transform_canvas_content_files(
+            Path(zip_path), run, url_config={}, overwrite=True
+        )
+    )
 
     # Ensure unpublished content is deleted and unpublished actions called
     bulk_unpub.assert_called_once_with([unpublished_cf.id], CONTENT_FILE_TYPE)
