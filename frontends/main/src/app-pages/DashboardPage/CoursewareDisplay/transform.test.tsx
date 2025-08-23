@@ -72,12 +72,18 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
 
     const enrollments = [
       mitx.enrollment.courseEnrollment({
-        run: { course: { id: coursesA[0].id } },
+        run: {
+          id: coursesA[0].courseruns[0].id,
+          course: { id: coursesA[0].id },
+        },
         grades: [mitx.enrollment.grade({ passed: true })],
         enrollment_mode: "audit",
       }),
       mitx.enrollment.courseEnrollment({
-        run: { course: { id: coursesA[1].id } },
+        run: {
+          id: coursesA[1].courseruns[0].id,
+          course: { id: coursesA[1].id },
+        },
         grades: [],
         enrollment_mode: "verified",
       }),
@@ -92,11 +98,27 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
       transformedCourses,
     )
 
-    expect(sortedCourses).toEqual([
-      transformedCourses[1], // Enrolled course
-      transformedCourses[0], // Completed course
-      transformedCourses[2], // Not enrolled course
-      transformedCourses[3], // Not enrolled course
-    ])
+    const enrolledCourse = sortedCourses.find(
+      (course) => course.enrollment?.status === EnrollmentStatus.Enrolled,
+    )
+    const completedCourse = sortedCourses.find(
+      (course) => course.enrollment?.status === EnrollmentStatus.Completed,
+    )
+    const notEnrolledCourses = sortedCourses.filter(
+      (course) =>
+        !course.enrollment ||
+        course.enrollment.status === EnrollmentStatus.NotEnrolled,
+    )
+
+    // Verify we found all expected courses
+    expect(enrolledCourse).toBeDefined()
+    expect(completedCourse).toBeDefined()
+    expect(notEnrolledCourses).toHaveLength(2)
+
+    // Verify sorting: enrolled first, then completed, then not enrolled
+    expect(sortedCourses[0]).toEqual(enrolledCourse) // Enrolled course should be first
+    expect(sortedCourses[1]).toEqual(completedCourse) // Completed course should be second
+    expect(sortedCourses[2]).toEqual(notEnrolledCourses[0]) // First not enrolled course
+    expect(sortedCourses[3]).toEqual(notEnrolledCourses[1]) // Second not enrolled course
   })
 })

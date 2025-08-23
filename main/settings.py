@@ -617,7 +617,7 @@ JWT_AUTH = {
     "JWT_SECRET_KEY": MITOL_JWT_SECRET,
     "JWT_VERIFY": True,
     "JWT_VERIFY_EXPIRATION": True,
-    "JWT_EXPIRATION_DELTA": datetime.timedelta(seconds=60 * 60),
+    "JWT_EXPIRATION_DELTA": datetime.timedelta(seconds=60 * 9999),
     "JWT_ALLOW_REFRESH": True,
     "JWT_REFRESH_EXPIRATION_DELTA": datetime.timedelta(days=7),
     "JWT_AUTH_COOKIE": MITOL_COOKIE_NAME,

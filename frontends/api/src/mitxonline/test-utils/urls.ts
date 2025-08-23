@@ -54,6 +54,10 @@ const b2bAttach = {
   b2bAttachView: (code: string) => `${API_BASE_URL}/api/v0/b2b/attach/${code}/`,
 }
 
+const contracts = {
+  contractsList: () => `${API_BASE_URL}/api/v0/b2b/contracts/`,
+}
+
 export {
   b2b,
   b2bAttach,
@@ -64,4 +68,5 @@ export {
   courses,
   organization,
   programEnrollments,
+  contracts,
 }

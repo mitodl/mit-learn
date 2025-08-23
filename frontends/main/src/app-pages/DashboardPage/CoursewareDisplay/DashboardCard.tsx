@@ -151,7 +151,7 @@ const CoursewareButton = styled(
     courseNoun,
     ...others
   }: CoursewareButtonProps) => {
-    const children = getCoursewareText({
+    const coursewareText = getCoursewareText({
       endDate,
       courseNoun,
       enrollmentStatus,
@@ -162,8 +162,8 @@ const CoursewareButton = styled(
     const createEnrollment = useCreateEnrollment({
       readable_id: coursewareId ?? "",
     })
-    return hasStarted && href ? (
-      hasEnrolled ? (
+    return (hasStarted && href) || !hasEnrolled ? (
+      hasEnrolled && href ? (
         <ButtonLink
           size="small"
           variant="primary"
@@ -172,7 +172,7 @@ const CoursewareButton = styled(
           className={className}
           {...others}
         >
-          {children}
+          {coursewareText}
         </ButtonLink>
       ) : (
         <Button
@@ -185,7 +185,7 @@ const CoursewareButton = styled(
           }}
           {...others}
         >
-          {children}
+          {coursewareText}
           {createEnrollment.isPending && (
             <SpinnerContainer>
               <LoadingSpinner loading={createEnrollment.isPending} size={16} />
@@ -202,7 +202,7 @@ const CoursewareButton = styled(
         className={className}
         {...others}
       >
-        {children}
+        {coursewareText}
       </Button>
     )
   },
@@ -364,7 +364,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       {enrollment?.mode !== EnrollmentMode.Verified && offerUpgrade ? (
         <UpgradeBanner
           data-testid="upgrade-root"
-          canUpgrade={run.canUpgrade}
+          canUpgrade={run.canUpgrade ?? false}
           certificateUpgradeDeadline={run.certificateUpgradeDeadline}
           certificateUpgradePrice={run.certificateUpgradePrice}
         />

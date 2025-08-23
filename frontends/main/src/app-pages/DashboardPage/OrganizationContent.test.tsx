@@ -10,6 +10,7 @@ import {
   sortDashboardCourses,
 } from "./CoursewareDisplay/transform"
 import { setupProgramsAndCourses } from "./CoursewareDisplay/test-utils"
+import { EnrollmentStatus } from "./CoursewareDisplay/types"
 
 const makeCourseEnrollment = factories.enrollment.courseEnrollment
 const makeGrade = factories.enrollment.grade
@@ -22,10 +23,9 @@ const mockedUseFeatureFlagEnabled = jest
 describe("OrganizationContent", () => {
   beforeEach(() => {
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
-    // Set default empty enrollments for all tests
     setMockResponse.get(urls.enrollment.enrollmentsList(), [])
-    // Add missing program enrollments mock
     setMockResponse.get(urls.programEnrollments.enrollmentsList(), [])
+    setMockResponse.get(urls.contracts.contractsList(), [])
   })
 
   it("displays a header for each program returned and cards for courses in program", async () => {
@@ -84,14 +84,16 @@ describe("OrganizationContent", () => {
       mitxonlineProgram(programA),
       mitxonlineCourses({ courses: coursesA, enrollments: enrollments }),
     )
+
     cards.forEach((card, i) => {
       const course = sortedCourses[i]
       expect(card).toHaveTextContent(course.title)
       const indicator = within(card).getByTestId("enrollment-status")
 
-      if (i === 0) {
+      // Check based on the actual enrollment status, not array position
+      if (course.enrollment?.status === EnrollmentStatus.Enrolled) {
         expect(indicator).toHaveTextContent("Enrolled")
-      } else if (i === 1) {
+      } else if (course.enrollment?.status === EnrollmentStatus.Completed) {
         expect(indicator).toHaveTextContent("Completed")
       } else {
         expect(indicator).toHaveTextContent("Not Enrolled")

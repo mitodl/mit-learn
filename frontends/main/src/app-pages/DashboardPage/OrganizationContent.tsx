@@ -11,6 +11,7 @@ import {
   programCollectionQueries,
 } from "api/mitxonline-hooks/programs"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
+import { contractQueries } from "api/mitxonline-hooks/contracts"
 import * as transform from "./CoursewareDisplay/transform"
 import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
 import { DashboardCard } from "./CoursewareDisplay/DashboardCard"
@@ -21,6 +22,7 @@ import {
 } from "./CoursewareDisplay/types"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
 import {
+  ContractPage,
   CourseRunEnrollment,
   OrganizationPage,
   UserProgramEnrollmentDetail,
@@ -166,9 +168,10 @@ const useProgramCollectionCourses = (programIds: number[], orgId: number) => {
 
 const OrgProgramCollectionDisplay: React.FC<{
   collection: DashboardProgramCollection
+  contracts?: ContractPage[]
   enrollments?: CourseRunEnrollment[]
   orgId: number
-}> = ({ collection, enrollments, orgId }) => {
+}> = ({ collection, contracts, enrollments, orgId }) => {
   const sanitizedDescription = DOMPurify.sanitize(collection.description ?? "")
   const { isLoading, programsWithCourses, hasAnyCourses } =
     useProgramCollectionCourses(collection.programIds, orgId)
@@ -216,6 +219,7 @@ const OrgProgramCollectionDisplay: React.FC<{
             <ProgramCollectionItem
               key={item.programId}
               program={item.program}
+              contracts={contracts}
               enrollments={enrollments}
               orgId={orgId}
             />
@@ -228,12 +232,14 @@ const OrgProgramCollectionDisplay: React.FC<{
 
 const OrgProgramDisplay: React.FC<{
   program: DashboardProgram
+  contracts?: ContractPage[]
   courseRunEnrollments?: CourseRunEnrollment[]
   programEnrollments?: UserProgramEnrollmentDetail[]
   programLoading: boolean
   orgId: number
 }> = ({
   program,
+  contracts,
   courseRunEnrollments,
   programEnrollments,
   programLoading,
@@ -250,8 +256,9 @@ const OrgProgramDisplay: React.FC<{
     <Skeleton width="100%" height="65px" style={{ marginBottom: "16px" }} />
   )
   if (programLoading || courses.isLoading) return skeleton
-  const transformedCourses = transform.mitxonlineCourses({
+  const transformedCourses = transform.mitxonlineOrgCourses({
     courses: courses.data?.results ?? [],
+    contracts: contracts ?? [],
     enrollments: courseRunEnrollments ?? [],
   })
   const sanitizedHtml = DOMPurify.sanitize(program.description)
@@ -300,19 +307,26 @@ const OrgProgramDisplay: React.FC<{
 
 const ProgramCollectionItem: React.FC<{
   program: DashboardProgram
+  contracts?: ContractPage[]
   enrollments?: CourseRunEnrollment[]
   orgId: number
-}> = ({ program, enrollments, orgId }) => {
+}> = ({ program, contracts, enrollments, orgId }) => {
   return (
-    <ProgramCard program={program} enrollments={enrollments} orgId={orgId} />
+    <ProgramCard
+      program={program}
+      contracts={contracts}
+      enrollments={enrollments}
+      orgId={orgId}
+    />
   )
 }
 
 const ProgramCard: React.FC<{
   program: DashboardProgram
+  contracts?: ContractPage[]
   enrollments?: CourseRunEnrollment[]
   orgId: number
-}> = ({ program, enrollments, orgId }) => {
+}> = ({ program, contracts, enrollments, orgId }) => {
   const courses = useQuery(
     coursesQueries.coursesList({
       id: program.courseIds,
@@ -323,8 +337,9 @@ const ProgramCard: React.FC<{
     <Skeleton width="100%" height="65px" style={{ marginBottom: "16px" }} />
   )
   if (courses.isLoading) return skeleton
-  const transformedCourses = transform.mitxonlineCourses({
+  const transformedCourses = transform.mitxonlineOrgCourses({
     courses: courses.data?.results ?? [],
+    contracts: contracts ?? [],
     enrollments: enrollments ?? [],
   })
   if (courses.isLoading || !transformedCourses.length) return skeleton
@@ -359,6 +374,10 @@ const OrganizationContentInternal: React.FC<
     FeatureFlags.OrganizationDashboard,
   )
   const orgId = org.id
+  const contracts = useQuery(contractQueries.contractsList())
+  const orgContracts = contracts.data?.filter(
+    (contract) => contract.organization === orgId,
+  )
   const courseRunEnrollments = useQuery(
     enrollmentQueries.courseRunEnrollmentsList(),
   )
@@ -392,6 +411,7 @@ const OrganizationContentInternal: React.FC<
         : transformedPrograms.map((program) => (
             <OrgProgramDisplay
               key={program.key}
+              contracts={orgContracts}
               program={program}
               courseRunEnrollments={courseRunEnrollments.data}
               programEnrollments={programEnrollments.data}
@@ -410,6 +430,7 @@ const OrganizationContentInternal: React.FC<
               <OrgProgramCollectionDisplay
                 key={collection.title}
                 collection={transformedCollection}
+                contracts={orgContracts}
                 enrollments={courseRunEnrollments.data}
                 orgId={orgId}
               />
