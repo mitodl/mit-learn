@@ -114,9 +114,6 @@ const mitxonlineEnrollmentsToDashboardCourses = (
   })
 }
 
-// Add the function that tests expect
-const mitxonlineEnrollments = mitxonlineEnrollmentsToDashboardCourses
-
 const mitxonlineOrgContract = (raw: ContractPage): DashboardContract => {
   return {
     id: raw.id,
@@ -291,7 +288,6 @@ const sortDashboardCourses = (
 
 export {
   mitxonlineCourse,
-  mitxonlineEnrollments,
   mitxonlineEnrollmentsToDashboardCourses,
   mitxonlineCourses,
   mitxonlineOrgContract,

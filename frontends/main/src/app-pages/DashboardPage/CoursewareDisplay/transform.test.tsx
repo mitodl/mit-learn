@@ -26,7 +26,9 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
       const apiData = mitx.enrollment.courseEnrollment({
         grades,
       })
-      const transformed = transform.mitxonlineEnrollments([apiData])
+      const transformed = transform.mitxonlineEnrollmentsToDashboardCourses([
+        apiData,
+      ])
       expect(transformed).toHaveLength(1)
       expect(transformed[0]).toEqual({
         key: `mitxonline-course-${apiData.run.course.id}-${apiData.run.id}`,
@@ -62,7 +64,9 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
       // @ts-expect-error not fully implementing product objects
       run: { products: [{ price: "10" }, { price: "20" }] },
     })
-    const transformed = transform.mitxonlineEnrollments([apiData])
+    const transformed = transform.mitxonlineEnrollmentsToDashboardCourses([
+      apiData,
+    ])
     expect(transformed).toHaveLength(1)
     expect(transformed[0].run.certificateUpgradePrice).toEqual("10")
   })
