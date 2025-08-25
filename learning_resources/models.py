@@ -336,72 +336,73 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
 
     def for_serialization(self, *, user: Optional["User"] = None):
         """Return the list of prefetches"""
-        return (
-            self.prefetch_related(
-                Prefetch(
-                    "topics",
-                    queryset=LearningResourceTopic.objects.for_serialization(),
+        return self.prefetch_related(
+            Prefetch(
+                "topics",
+                queryset=LearningResourceTopic.objects.for_serialization(),
+            ),
+            Prefetch("resource_prices"),
+            Prefetch(
+                "offered_by",
+                queryset=LearningResourceOfferor.objects.for_serialization(),
+            ),
+            Prefetch(
+                "departments",
+                queryset=LearningResourceDepartment.objects.for_serialization().select_related(
+                    "school"
                 ),
-                Prefetch("resource_prices"),
-                Prefetch(
-                    "offered_by",
-                    queryset=LearningResourceOfferor.objects.for_serialization(),
+            ),
+            "content_tags",
+            Prefetch(
+                "runs",
+                queryset=LearningResourceRun.objects.filter(
+                    published=True
+                ).for_serialization(),
+            ),
+            Prefetch(
+                "parents",
+                queryset=LearningResourceRelationship.objects.filter(
+                    relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value
+                )
+                if user is not None
+                and user.is_authenticated
+                and (
+                    user.is_staff
+                    or user.is_superuser
+                    or user.groups.filter(
+                        name=constants.GROUP_STAFF_LISTS_EDITORS
+                    ).exists()
+                )
+                else LearningResourceRelationship.objects.none(),
+                to_attr="_learning_path_parents",
+            ),
+            Prefetch(
+                "parents",
+                queryset=LearningResourceRelationship.objects.filter(
+                    relation_type=LearningResourceRelationTypes.PODCAST_EPISODES.value,
                 ),
-                Prefetch(
-                    "departments",
-                    queryset=LearningResourceDepartment.objects.for_serialization().select_related(
-                        "school"
-                    ),
-                ),
-                "content_tags",
-                Prefetch(
-                    "runs",
-                    queryset=LearningResourceRun.objects.filter(
-                        published=True
-                    ).for_serialization(),
-                ),
-                Prefetch(
-                    "parents",
-                    queryset=LearningResourceRelationship.objects.filter(
-                        relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value
-                    )
-                    if user is not None
-                    and user.is_authenticated
-                    and (
-                        user.is_staff
-                        or user.is_superuser
-                        or user.groups.filter(
-                            name=constants.GROUP_STAFF_LISTS_EDITORS
-                        ).exists()
-                    )
-                    else LearningResourceRelationship.objects.none(),
-                    to_attr="_learning_path_parents",
-                ),
-                Prefetch(
-                    "parents",
-                    queryset=LearningResourceRelationship.objects.filter(
-                        relation_type=LearningResourceRelationTypes.PODCAST_EPISODES.value,
-                    ),
-                    to_attr="_podcasts",
-                ),
-                Prefetch(
-                    "children",
-                    queryset=LearningResourceRelationship.objects.select_related(
-                        "child"
-                    ).order_by("position"),
-                ),
-                Prefetch(
-                    "user_lists",
-                    queryset=UserListRelationship.objects.filter(parent__author=user)
-                    if user is not None and user.is_authenticated
-                    else UserListRelationship.objects.none(),
-                    to_attr="_user_list_parents",
-                ),
-                *LearningResourceDetailModel.get_subclass_prefetches(),
-            )
-            .select_related("image", "platform")
-            .annotate(views_count=Count("views"))
-        )
+                to_attr="_podcasts",
+            ),
+            Prefetch(
+                "children",
+                queryset=LearningResourceRelationship.objects.select_related(
+                    "child"
+                ).order_by("position"),
+            ),
+            Prefetch(
+                "user_lists",
+                queryset=UserListRelationship.objects.filter(parent__author=user)
+                if user is not None and user.is_authenticated
+                else UserListRelationship.objects.none(),
+                to_attr="_user_list_parents",
+            ),
+            Prefetch(
+                "views",
+                queryset=LearningResourceViewEvent.objects.all(),
+                to_attr="_views",
+            ),
+            *LearningResourceDetailModel.get_subclass_prefetches(),
+        ).select_related("image", "platform")
 
     def for_search_serialization(self):
         return self.for_serialization().annotate(
@@ -522,6 +523,8 @@ class LearningResource(TimestampedModel):
     @cached_property
     def views_count(self) -> int:
         """Return the number of views for the resource."""
+        if hasattr(self, "_views"):
+            return len(self._views)
         return LearningResourceViewEvent.objects.filter(learning_resource=self).count()
 
     @cached_property
