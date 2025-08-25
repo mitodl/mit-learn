@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.41.4 (Released August 25, 2025)
+--------------
+
+- Do not upsert unpublished resources (#2449)
+- Fix renovate dependency conflicts: update llama-index to ^0.13.0 and llama-index-llms-openai to ^0.5.0 (#2448)
+
 Version 0.41.3 (Released August 22, 2025)
 --------------
 

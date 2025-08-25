@@ -1801,6 +1801,9 @@ components:
         description:
           type: string
           nullable: true
+        require_summaries:
+          type: boolean
+          readOnly: true
         url:
           type: string
           nullable: true
@@ -1876,6 +1879,7 @@ components:
       - id
       - offered_by
       - platform
+      - require_summaries
       - resource_id
       - resource_readable_id
       - topics
@@ -2230,6 +2234,9 @@ components:
           maximum: 2147483647
           minimum: -2147483648
           nullable: true
+        require_summaries:
+          type: boolean
+          readOnly: true
       required:
       - certification
       - certification_type
@@ -2250,6 +2257,7 @@ components:
       - prices
       - professional
       - readable_id
+      - require_summaries
       - resource_category
       - resource_prices
       - resource_type
@@ -2876,6 +2884,8 @@ components:
           maximum: 2147483647
           minimum: -2147483648
           nullable: true
+        require_summaries:
+          type: boolean
       required:
       - certification
       - certification_type
@@ -4200,6 +4210,9 @@ components:
           maximum: 2147483647
           minimum: -2147483648
           nullable: true
+        require_summaries:
+          type: boolean
+          readOnly: true
       required:
       - certification
       - certification_type
@@ -4220,6 +4233,7 @@ components:
       - prices
       - professional
       - readable_id
+      - require_summaries
       - resource_category
       - resource_prices
       - resource_type
@@ -4478,6 +4492,9 @@ components:
           maximum: 2147483647
           minimum: -2147483648
           nullable: true
+        require_summaries:
+          type: boolean
+          readOnly: true
       required:
       - certification
       - certification_type
@@ -4498,6 +4515,7 @@ components:
       - prices
       - professional
       - readable_id
+      - require_summaries
       - resource_category
       - resource_prices
       - resource_type
@@ -5034,6 +5052,9 @@ components:
           maximum: 2147483647
           minimum: -2147483648
           nullable: true
+        require_summaries:
+          type: boolean
+          readOnly: true
       required:
       - certification
       - certification_type
@@ -5054,6 +5075,7 @@ components:
       - professional
       - program
       - readable_id
+      - require_summaries
       - resource_category
       - resource_prices
       - resource_type
@@ -5750,6 +5772,9 @@ components:
           maximum: 2147483647
           minimum: -2147483648
           nullable: true
+        require_summaries:
+          type: boolean
+          readOnly: true
       required:
       - certification
       - certification_type
@@ -5769,6 +5794,7 @@ components:
       - prices
       - professional
       - readable_id
+      - require_summaries
       - resource_category
       - resource_prices
       - resource_type
@@ -6034,6 +6060,9 @@ components:
           maximum: 2147483647
           minimum: -2147483648
           nullable: true
+        require_summaries:
+          type: boolean
+          readOnly: true
       required:
       - certification
       - certification_type
@@ -6054,6 +6083,7 @@ components:
       - prices
       - professional
       - readable_id
+      - require_summaries
       - resource_category
       - resource_prices
       - resource_type

@@ -1819,3 +1819,35 @@ def test_calculate_completeness(mocker, is_scholar_course, tag_counts, expected_
         == expected_score
     )
     assert mock_index.call_count == (1 if resource.completeness != 1.0 else 0)
+
+
+def test_course_with_unpublished_force_ingest_is_test_mode():
+    """
+    Test that a course with force_ingest set to True
+    and published set to False is marked as a test mode course
+    """
+    platform = LearningResourcePlatformFactory.create()
+    course_data = {
+        "readable_id": "testid",
+        "platform": platform.code,
+        "professional": True,
+        "title": "test",
+        "image": {"url": "http://test.com"},
+        "description": "test",
+        "force_ingest": True,
+        "url": "http://test.com",
+        "published": False,
+        "departments": [],
+        "runs": [
+            {
+                "run_id": "test-run",
+                "enrollment_start": "2017-01-01T00:00:00Z",
+                "start_date": "2017-01-20T00:00:00Z",
+                "end_date": "2017-06-20T00:00:00Z",
+            }
+        ],
+    }
+    course = load_course(course_data, [], [])
+    assert course.require_summaries is True
+    assert course.test_mode is True
+    assert course.published is False

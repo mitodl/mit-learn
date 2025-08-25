@@ -126,7 +126,6 @@ def test_mitxonline_transform_programs(
     )
 
     result = transform_programs(mock_mitxonline_programs_data["results"])
-
     expected = [
         {
             "readable_id": program_data["readable_id"],
@@ -205,6 +204,9 @@ def test_mitxonline_transform_programs(
                     "resource_type": LearningResourceType.course.name,
                     "professional": False,
                     "etl_source": ETLSource.mitxonline.value,
+                    "force_ingest": course_data.get(
+                        "ingest_content_files_for_ai", False
+                    ),
                     "departments": [
                         get_department_id_by_name(course_data["departments"][0]["name"])
                     ],
@@ -338,6 +340,7 @@ def test_mitxonline_transform_courses(settings, mock_mitxonline_courses_data):
             "readable_id": course_data["readable_id"],
             "platform": PlatformType.mitxonline.name,
             "etl_source": ETLSource.mitxonline.name,
+            "force_ingest": course_data.get("ingest_content_files_for_ai", False),
             "resource_type": LearningResourceType.course.name,
             "departments": [
                 get_department_id_by_name(course_data["departments"][0]["name"])
