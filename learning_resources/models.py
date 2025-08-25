@@ -495,6 +495,7 @@ class LearningResource(TimestampedModel):
     time_commitment = models.CharField(max_length=256, blank=True)
     min_weekly_hours = models.IntegerField(null=True, blank=True)
     max_weekly_hours = models.IntegerField(null=True, blank=True)
+    require_summaries = models.BooleanField(default=False)
 
     @property
     def audience(self) -> str | None:
