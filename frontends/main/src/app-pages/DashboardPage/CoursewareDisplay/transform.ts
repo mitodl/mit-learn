@@ -289,6 +289,7 @@ export {
   mitxonlineOrgContract,
   mitxonlineOrgEnrollments,
   mitxonlineOrgCourses,
+  mitxonlineOrgUnenrolledCourse,
   mitxonlineProgram,
   mitxonlineProgramCollection,
   sortDashboardCourses,

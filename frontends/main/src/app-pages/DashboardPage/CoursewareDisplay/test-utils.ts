@@ -7,9 +7,19 @@ import {
 } from "./types"
 import type { DashboardCourse } from "./types"
 import * as u from "api/test-utils"
+import * as mitxonline from "api/mitxonline-test-utils"
 import { urls, factories } from "api/mitxonline-test-utils"
 import { setMockResponse } from "../../../test-utils"
 import moment from "moment"
+import {
+  ContractPage,
+  CourseRunEnrollment,
+  CourseWithCourseRunsSerializerV2,
+  IntegrationTypeEnum,
+  OrganizationPage,
+  User,
+  V2Program,
+} from "@mitodl/mitxonline-api-axios/v2"
 
 const makeCourses = factories.courses.courses
 const makeProgram = factories.programs.program
@@ -168,4 +178,163 @@ const setupProgramsAndCourses = () => {
   }
 }
 
-export { dashboardCourse, setupEnrollments, setupProgramsAndCourses }
+/**
+ * Test utility to create enrollments for contract-scoped runs
+ */
+const createEnrollmentsForContractRuns = (
+  courses: CourseWithCourseRunsSerializerV2[],
+  contractIds: number[],
+): CourseRunEnrollment[] => {
+  return courses.flatMap((course) =>
+    course.courseruns
+      .filter(
+        (run) => run.b2b_contract && contractIds.includes(run.b2b_contract),
+      )
+      .map((run) =>
+        factories.enrollment.courseEnrollment({
+          run: {
+            id: run.id,
+            course: {
+              id: course.id,
+              title: course.title,
+            },
+            title: run.title,
+          },
+        }),
+      ),
+  )
+}
+
+/**
+ * Helper function to set up organization, user, and related data
+ */
+function setupOrgAndUser() {
+  const user = u.urls.userMe.get()
+  const orgX = factories.organizations.organization({ name: "Test Org" })
+  const mitxOnlineUser = factories.user.user({
+    b2b_organizations: [
+      {
+        ...orgX,
+        slug: `org-${orgX.slug}`,
+      },
+    ],
+  })
+
+  return { orgX, user, mitxOnlineUser }
+}
+
+/**
+ * Helper function to set up all necessary API mocks for organization dashboard
+ */
+function setupOrgDashboardMocks(
+  org: OrganizationPage,
+  user: User,
+  mitxOnlineUser: User,
+  programs: V2Program[],
+  courses: CourseWithCourseRunsSerializerV2[],
+  contracts: ContractPage[],
+) {
+  // Basic user and org setup
+  setMockResponse.get(u.urls.userMe.get(), user)
+  setMockResponse.get(mitxonline.urls.currentUser.get(), mitxOnlineUser)
+  setMockResponse.get(
+    mitxonline.urls.organization.organizationList(org.slug),
+    org,
+  )
+
+  // Empty defaults
+  setMockResponse.get(mitxonline.urls.enrollment.enrollmentsList(), [])
+  setMockResponse.get(mitxonline.urls.programEnrollments.enrollmentsList(), [])
+  setMockResponse.get(mitxonline.urls.contracts.contractsList(), contracts)
+  setMockResponse.get(
+    mitxonline.urls.programCollections.programCollectionsList(),
+    { results: [] },
+  )
+
+  // Program and course data
+  setMockResponse.get(
+    mitxonline.urls.programs.programsList({ org_id: org.id }),
+    { results: programs },
+  )
+
+  programs.forEach((program) => {
+    setMockResponse.get(
+      mitxonline.urls.courses.coursesList({
+        id: program.courses,
+        org_id: org.id,
+      }),
+      { results: courses },
+    )
+  })
+}
+
+/**
+ * Test utility to create B2B contracts for testing
+ */
+const createTestContracts = (
+  orgId: number,
+  count: number = 1,
+): ContractPage[] => {
+  return Array.from({ length: count }, () => ({
+    id: faker.number.int(),
+    active: true,
+    contract_end: faker.date.future().toISOString(),
+    contract_start: faker.date.past().toISOString(),
+    description: faker.lorem.sentence(),
+    integration_type: IntegrationTypeEnum.NonSso,
+    name: faker.company.name(),
+    organization: orgId,
+    slug: faker.lorem.slug(),
+  }))
+}
+
+/**
+ * Test utility to create courses with contract-scoped course runs
+ */
+const createCoursesWithContractRuns = (contracts: ContractPage[]) => {
+  const contractIds = contracts.map((c) => c.id)
+
+  return factories.courses.courses({ count: 3 }).results.map((course) => ({
+    ...course,
+    courseruns: [
+      // First run associated with organization's contract
+      {
+        ...course.courseruns[0],
+        id: faker.number.int(),
+        b2b_contract: contractIds[0], // Associated with org contract
+        start_date: faker.date.future().toISOString(),
+        end_date: faker.date.future().toISOString(),
+        title: `${course.title} - Org Contract Run`,
+      },
+      // Second run associated with different organization's contract
+      {
+        ...course.courseruns[0],
+        id: faker.number.int(),
+        b2b_contract: faker.number.int(), // Different contract ID
+        start_date: faker.date.past().toISOString(),
+        end_date: faker.date.past().toISOString(),
+        title: `${course.title} - Other Org Run`,
+      },
+      // Third run with no contract (general enrollment)
+      {
+        ...course.courseruns[0],
+        id: faker.number.int(),
+        b2b_contract: null,
+        start_date: faker.date.future().toISOString(),
+        end_date: faker.date.future().toISOString(),
+        title: `${course.title} - General Run`,
+      },
+    ],
+  }))
+}
+
+export {
+  dashboardCourse,
+  setupEnrollments,
+  setupProgramsAndCourses,
+  setupOrgAndUser,
+  setupOrgDashboardMocks,
+  createTestContracts,
+  createCoursesWithContractRuns,
+  createEnrollmentsForContractRuns,
+}
