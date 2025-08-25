@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.41.5
+Version 0.41.5 (Released August 25, 2025)
 --------------
 
 - Ensure summaries and flashcards for specific courses (#2452)
