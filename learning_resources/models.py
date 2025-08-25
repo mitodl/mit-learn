@@ -385,6 +385,13 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
                     to_attr="_podcasts",
                 ),
                 Prefetch(
+                    "children",
+                    queryset=LearningResourceRelationship.objects.filter(
+                        relation_type=LearningResourceRelationTypes.PROGRAM_COURSES.value,
+                    ),
+                    to_attr="_courses",
+                ),
+                Prefetch(
                     "user_lists",
                     queryset=UserListRelationship.objects.filter(parent__author=user)
                     if user is not None and user.is_authenticated
@@ -543,6 +550,17 @@ class LearningResource(TimestampedModel):
             self.parents.filter(
                 relation_type=LearningResourceRelationTypes.PODCAST_EPISODES.value,
             ),
+        )
+
+    @cached_property
+    def courses(self) -> list["LearningResourceRelationship"]:
+        """Return a list of courses that a resource contains"""
+        return getattr(
+            self,
+            "_courses",
+            self.children.filter(
+                relation_type=LearningResourceRelationTypes.PROGRAM_COURSES.value,
+            ).order_by("position"),
         )
 
     class Meta:
