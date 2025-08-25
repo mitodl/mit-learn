@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.41.4
+Version 0.41.4 (Released August 25, 2025)
 --------------
 
 - Do not upsert unpublished resources (#2449)
