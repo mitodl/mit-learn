@@ -58,7 +58,7 @@ MITOL_WEB_MEM_LIMIT
 ```
 
 If any resource limits are set too low, you may encounter OOMKilled errors in the logs of those services. The primary way this will manifest is that containers may unexpectedly die during operation resulting in 500 errors or unusual celery task execution.
-Given a container that is unexpectedly down, you can verify that it was OOMKilled by running `docker inspect <container_name> -f '{{json .State.OOMKilled}}'`, or by checking the Docker VM kernel message logs for relevant output. 
+Given a container that is unexpectedly down, you can verify that it was OOMKilled by running `docker inspect <container_name> -f '{{json .State.OOMKilled}}'`, or by checking the Docker VM kernel message logs for relevant output.
 
 ### Loading Data
 
