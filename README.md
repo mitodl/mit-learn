@@ -17,6 +17,13 @@ MIT Learn follows the same [initial setup steps outlined in the common OL web ap
 Run through those steps **including the addition of `/etc/hosts` aliases and the optional step for running the
 `createsuperuser` command**.
 
+For `/etc/hosts`, you'll need to add entries for the following domains if you are relying on the sample environment variables:
+```
+api.open.odl.local
+open.odl.local
+kc.ol.local
+```
+
 ### Configuration
 
 Configuration can be put in the following files which are gitignored:
@@ -26,7 +33,7 @@ mit-learn/
   ├── env/
   │   ├── shared.local.env (provided to both frontend and backend containers)
   │   ├── frontend.local.env (provided only to frontend containers)
-  │   └── backend.local.env (provided only to frontend containers)
+  │   └── backend.local.env (provided only to backend containers)
   └── .env (legacy file)
 ```
 
@@ -42,6 +49,16 @@ The following settings must be configured before running the app:
   You can set these values to any non-empty string value if email-sending functionality
   is not needed. It's recommended that you eventually configure the site to be able
   to send emails. Those configuration steps can be found [below](#enabling-email).
+
+Before proceeding with any additional setup, you may want to adjust your docker settings to allow more memory to be used by the containers. Many engineers allocate the bulk of their system resources by navigating to Settings -> Resources in Docker Desktop.
+Additionally, the `web` and `celery` services specify `memory_limit` values, which you can adjust using the following environment variables:
+```
+MITOL_CELERY_MEM_LIMIT
+MITOL_WEB_MEM_LIMIT
+```
+
+If any resource limits are set too low, you may encounter OOMKilled errors in the logs of those services. The primary way this will manifest is that containers may unexpectedly die during operation resulting in 500 errors or unusual celery task execution.
+Given a container that is unexpectedly down, you can verify that it was OOMKilled by running `docker inspect <container_name> -f '{{json .State.OOMKilled}}'`, or by checking the Docker VM kernel message logs for relevant output. 
 
 ### Loading Data
 
@@ -62,11 +79,20 @@ docker compose run --rm web python manage.py backpopulate_xpro_data
 
 See [learning_resources/management/commands](learning_resources/management/commands) and [main/settings_course_etl.py](main/settings_course_etl.py) for more ETL commands and their relevant environment variables.
 
+You may also want to generate embeddings once you have populated some data in so vector search and recommendations function as expected. See [docs/how-to/embeddings.md](docs/how-to/embeddings.md) for more details on this process.
+
 ### Frontend Development
 
 The frontend package root is at [./frontends](./frontends). A `watch` container is provided to serve and rebuild the front end when there are changes to source files, which is started alongside backing services with `docker compose up`.
 
 Package scripts are also provided for building and serving the frontend in isolation. More detail can be found in the [Frontend README](./frontends/README.md#frontend-development).
+
+### Connecting with Keycloak for authentication
+
+While not technically required to get the app running, it is the preferred way to work on features which require authentication.
+
+Please read [the Keycloak README](README-keycloak.md) for instructions on authenticating via
+local Keycloak and APISIX containers.
 
 ## Code Generation
 
@@ -210,11 +236,6 @@ This repo includes a config for running a [Jupyter notebook](https://jupyter.org
 - Execute the first block to confirm it's working properly (click inside the block and press Shift+Enter)
 
 From there, you should be able to run code snippets with a live Django app just like you would in a Django shell.
-
-### Connecting with Keycloak for authentication
-
-Please read [the Keycloak README](README-keycloak.md) for instructions on authenticating via
-local Keycloak and APISIX containers.
 
 ### Configuring PostHog Support
 
