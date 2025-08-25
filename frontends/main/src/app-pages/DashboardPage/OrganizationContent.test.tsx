@@ -5,7 +5,7 @@ import { setMockResponse } from "api/test-utils"
 import { urls, factories } from "api/mitxonline-test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import {
-  mitxonlineCourses,
+  mitxonlineOrgCourses,
   mitxonlineProgram,
   sortDashboardCourses,
 } from "./CoursewareDisplay/transform"
@@ -82,7 +82,7 @@ describe("OrganizationContent", () => {
     expect(cards.length).toBeGreaterThan(0)
     const sortedCourses = sortDashboardCourses(
       mitxonlineProgram(programA),
-      mitxonlineCourses({ courses: coursesA, enrollments: enrollments }),
+      mitxonlineOrgCourses({ courses: coursesA, enrollments: enrollments }),
     )
 
     cards.forEach((card, i) => {

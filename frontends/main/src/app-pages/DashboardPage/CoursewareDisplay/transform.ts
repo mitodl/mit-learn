@@ -239,9 +239,6 @@ const mitxonlineOrgCourses = (raw: {
   return transformedCourses
 }
 
-// Add the function that tests expect
-const mitxonlineCourses = mitxonlineOrgCourses
-
 const mitxonlineProgram = (raw: V2Program): DashboardProgram => {
   return {
     id: raw.id,
@@ -289,7 +286,6 @@ const sortDashboardCourses = (
 export {
   mitxonlineCourse,
   mitxonlineEnrollmentsToDashboardCourses,
-  mitxonlineCourses,
   mitxonlineOrgContract,
   mitxonlineOrgEnrollments,
   mitxonlineOrgCourses,

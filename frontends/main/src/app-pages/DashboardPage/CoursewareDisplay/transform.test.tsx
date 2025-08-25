@@ -3,7 +3,7 @@ import * as transform from "./transform"
 import { DashboardResourceType, EnrollmentStatus } from "./types"
 import type { DashboardResource } from "./types"
 import {
-  mitxonlineCourses,
+  mitxonlineOrgCourses,
   mitxonlineProgram,
   sortDashboardCourses,
 } from "./transform"
@@ -93,7 +93,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
       }),
     ]
 
-    const transformedCourses = mitxonlineCourses({
+    const transformedCourses = mitxonlineOrgCourses({
       courses: coursesA,
       enrollments,
     })
