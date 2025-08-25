@@ -17,6 +17,7 @@ import {
   CourseWithCourseRunsSerializerV2,
   IntegrationTypeEnum,
   OrganizationPage,
+  User,
   V2Program,
 } from "@mitodl/mitxonline-api-axios/v2"
 
@@ -228,7 +229,7 @@ function setupOrgAndUser() {
 function setupOrgDashboardMocks(
   org: OrganizationPage,
   user: string,
-  mitxOnlineUser: string,
+  mitxOnlineUser: User,
   programs: V2Program[],
   courses: CourseWithCourseRunsSerializerV2[],
   contracts: ContractPage[],
