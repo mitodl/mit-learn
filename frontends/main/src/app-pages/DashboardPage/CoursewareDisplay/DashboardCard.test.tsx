@@ -99,9 +99,14 @@ describe.each([
       case: "current",
     },
     {
-      course: futureDashboardCourse(),
+      course: futureDashboardCourse({
+        enrollment: {
+          status: EnrollmentStatus.Enrolled,
+          mode: EnrollmentMode.Audit,
+        },
+      }),
       expected: { enabled: false },
-      label: "future",
+      case: "future",
     },
   ])(
     "Courseware CTA and is enabled/disabled (enabled=$expected.enabled) based on date (case: $case)",

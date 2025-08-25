@@ -11,7 +11,7 @@ import {
   theme,
 } from "ol-components"
 import { useQuery } from "@tanstack/react-query"
-import { mitxonlineEnrollments } from "./transform"
+import { mitxonlineEnrollmentsToDashboardCourses } from "./transform"
 import { DashboardCard } from "./DashboardCard"
 import { DashboardCourse, EnrollmentStatus } from "./types"
 import { MaybeHasStatusAndDetail } from "@/app/getQueryClient"
@@ -176,7 +176,7 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
 const EnrollmentDisplay = () => {
   const { data: enrolledCourses, isLoading } = useQuery({
     ...enrollmentQueries.courseRunEnrollmentsList(),
-    select: mitxonlineEnrollments,
+    select: mitxonlineEnrollmentsToDashboardCourses,
     throwOnError: (error) => {
       const err = error as MaybeHasStatusAndDetail
       const status = err?.response?.status

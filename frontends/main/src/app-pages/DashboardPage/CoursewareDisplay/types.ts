@@ -1,4 +1,5 @@
 const DashboardResourceType = {
+  Contract: "contract",
   Course: "course",
   Program: "program",
   ProgramCollection: "program_collection",
@@ -19,6 +20,18 @@ const EnrollmentMode = {
 } as const
 type EnrollmentMode = (typeof EnrollmentMode)[keyof typeof EnrollmentMode]
 
+type DashboardContract = {
+  id: number
+  active: boolean
+  contract_end: string | null
+  contract_start: string | null
+  description: string | null
+  integration_type: string | null
+  name: string | null
+  organization: number | null
+  slug: string | null
+}
+
 type DashboardCourse = {
   key: string
   coursewareId: string | null
@@ -30,22 +43,18 @@ type DashboardCourse = {
     certificateUpgradeDeadline?: string | null
     certificateUpgradePrice?: string | null
     coursewareUrl?: string | null
-    canUpgrade: boolean
+    canUpgrade: boolean | undefined
     certificate?: {
       uuid: string
       link: string
     }
   }
-  enrollment?: {
-    id: number
-    status: EnrollmentStatus
-    mode: EnrollmentMode
-    receiveEmails?: boolean
-  }
+  enrollment?: DashboardCourseEnrollment
   marketingUrl: string
 }
 type DashboardCourseEnrollment = {
   id: number
+  b2b_contract?: number | null | undefined
   status: EnrollmentStatus
   mode: EnrollmentMode
   receiveEmails?: boolean
@@ -78,6 +87,7 @@ type DashboardResource =
 export { DashboardResourceType, EnrollmentStatus, EnrollmentMode }
 export type {
   DashboardResource,
+  DashboardContract,
   DashboardCourse,
   DashboardCourseEnrollment,
   DashboardProgram,
