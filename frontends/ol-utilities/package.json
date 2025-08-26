@@ -15,7 +15,7 @@
     "@dnd-kit/core": "^6.0.8",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.1",
-    "@faker-js/faker": "^9.9.0",
+    "@faker-js/faker": "^10.0.0",
     "api": "workspace:*",
     "classnames": "^2.3.2",
     "currency-symbol-map": "^5.1.0",
