@@ -37,6 +37,7 @@ from learning_resources.utils import bulk_resources_unpublished_actions
 from learning_resources_search.constants import (
     CONTENT_FILE_TYPE,
 )
+from main.utils import now_in_utc
 
 log = logging.getLogger(__name__)
 
@@ -268,6 +269,86 @@ def parse_context_xml(course_archive_path: str) -> dict:
             context_info[key] = element.text
 
     return context_info
+
+
+def is_file_published(file_meta: dict) -> bool:
+    """
+    Determine if a Canvas file (from files_meta.xml) is published/visible to students.
+
+    Args:
+        file_meta (dict): Parsed metadata for a file.
+    Returns:
+        bool: True if file is published/visible, False otherwise.
+    """
+    now = now_in_utc()
+
+    hidden = str(file_meta.get("hidden", "false")).lower() == "true"
+    locked = str(file_meta.get("locked", "false")).lower() == "true"
+
+    unlock_at = file_meta.get("unlock_at")
+    lock_at = file_meta.get("lock_at")
+
+    visibility = file_meta.get("visibility", "inherit")
+
+    # If explicitly hidden or locked → unpublished
+    if hidden or locked:
+        return False
+
+    if unlock_at and unlock_at.lower() != "nil":
+        try:
+            unlock_dt = datetime.fromisoformat(unlock_at.replace("Z", "+00:00"))
+            if now < unlock_dt:
+                return False
+        except Exception:
+            log.exception("Error parsing date: %s", unlock_at)
+
+    if lock_at and lock_at.lower() != "nil":
+        try:
+            lock_dt = datetime.fromisoformat(lock_at.replace("Z", "+00:00"))
+            if now > lock_dt:
+                return False
+        except Exception:
+            log.exception("Error parsing date: %s", lock_at)
+    # Visibility rules
+    if visibility in ("course", "inherit"):
+        return True
+    elif visibility in ("institution", "public"):
+        return True  # technically more visible
+    return False
+
+
+def parse_files_meta(course_archive_path: str) -> dict:
+    """
+    Parse module_meta.xml and return publish/active status of resources.
+    """
+    with zipfile.ZipFile(course_archive_path, "r") as course_archive:
+        files_xml = course_archive.read("course_settings/files_meta.xml")
+    publish_status = {"active": [], "unpublished": []}
+    root = ElementTree.fromstring(files_xml)
+    namespaces = {"c": "http://canvas.instructure.com/xsd/cccv1p0"}
+    try:
+        for file_elem in root.findall(".//c:file", namespaces):
+            meta = dict(file_elem.attrib)
+            for child in file_elem:
+                tag = child.tag
+                # strip namespace
+                if "}" in tag:
+                    tag = tag.split("}", 1)[1]
+                # handle nil cases
+                if child.attrib.get("nil") == "true":
+                    value = None
+                else:
+                    value = (child.text or "").strip()
+                meta[tag] = value
+            meta["published"] = is_file_published(meta)
+            if meta["published"]:
+                publish_status["active"].append(meta)
+            else:
+                publish_status["unpublished"].append(meta)
+    except Exception:
+        log.exception("Error parsing XML: %s", sys.stderr)
+        return None
+    return publish_status
 
 
 def parse_module_meta(course_archive_path: str) -> dict:
