@@ -386,10 +386,9 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
                 ),
                 Prefetch(
                     "children",
-                    queryset=LearningResourceRelationship.objects.filter(
-                        relation_type=LearningResourceRelationTypes.PROGRAM_COURSES.value,
-                    ),
-                    to_attr="_courses",
+                    queryset=LearningResourceRelationship.objects.select_related(
+                        "child"
+                    ).order_by("position"),
                 ),
                 Prefetch(
                     "user_lists",
@@ -550,17 +549,6 @@ class LearningResource(TimestampedModel):
             self.parents.filter(
                 relation_type=LearningResourceRelationTypes.PODCAST_EPISODES.value,
             ),
-        )
-
-    @cached_property
-    def courses(self) -> list["LearningResourceRelationship"]:
-        """Return a list of courses that a resource contains"""
-        return getattr(
-            self,
-            "_courses",
-            self.children.filter(
-                relation_type=LearningResourceRelationTypes.PROGRAM_COURSES.value,
-            ).order_by("position"),
         )
 
     class Meta:

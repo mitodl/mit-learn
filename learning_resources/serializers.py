@@ -444,26 +444,6 @@ class MicroUserListRelationshipSerializer(serializers.ModelSerializer):
         fields = ("id", "parent", "child")
 
 
-class MicroProgramRelationshipSerializer(serializers.ModelSerializer):
-    """
-    Serializer containing only parent and child ids for a program_course_relationship
-    """
-
-    child = serializers.ReadOnlyField(source="child_id")
-    readable_id = serializers.ReadOnlyField(source="child.readable_id")
-    title = serializers.ReadOnlyField(source="child.title")
-
-    class Meta:
-        model = models.LearningResourceRelationship
-        fields = (
-            "child",
-            "position",
-            "relation_type",
-            "title",
-            "readable_id",
-        )
-
-
 class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
     """
     Serializer to render course information as a text document
@@ -930,13 +910,13 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
     resource_category = serializers.SerializerMethodField()
     format = serializers.ListField(child=FormatSerializer(), read_only=True)
     pace = serializers.ListField(child=PaceSerializer(), read_only=True)
-    children = MicroProgramRelationshipSerializer(many=True, read_only=True)
+    children = serializers.SerializerMethodField(allow_null=True)
 
-    # @extend_schema_field(LearningResourceRelationshipChildField(allow_null=True))
-    # def get_children(self, instance):
-    #     return LearningResourceRelationshipChildField(
-    #         instance.courses, many=True, read_only=True
-    #     ).data
+    @extend_schema_field(LearningResourceRelationshipChildField(allow_null=True))
+    def get_children(self, instance):
+        return LearningResourceRelationshipChildField(
+            instance.children, many=True, read_only=True
+        ).data
 
     def get_resource_category(self, instance) -> str:
         """Return the resource category of the resource"""
