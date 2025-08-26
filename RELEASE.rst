@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.41.6
+--------------
+
+- Minor tweaks to initial setup instructions, add memory env var for web container, note minimum required domain config for things to "work out of box" (#2458)
+- Add (citation) urls for canvas contentfiles (#2457)
+- fix one-click enrollment for the same course across multiple orgs (#2453)
+
 Version 0.41.5 (Released August 25, 2025)
 --------------
 
