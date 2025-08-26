@@ -9,10 +9,12 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  MenuItem,
+  SelectField,
 } from "ol-components"
-import React from "react"
+import React, { useEffect, useRef } from "react"
 import Image from "next/image"
-import { Button } from "@mitodl/smoot-design"
+import { Button, ButtonLink, Input } from "@mitodl/smoot-design"
 import { CarouselV2 } from "ol-components/CarouselV2"
 import { RiAddLine, RiSubtractLine } from "@remixicon/react"
 
@@ -82,7 +84,7 @@ const HeroImage = styled.div({
   width: "50%",
 })
 
-const InquireButton = styled(Button)({
+const InquireButton = styled(ButtonLink)({
   size: "large",
   variant: "primary",
   width: "200px",
@@ -257,6 +259,27 @@ const FAQInquireButtonContainer = styled.div({
   marginTop: "40px",
 })
 
+/*
+  Since Hubspot only provides an injectable script to render forms, we have
+  to manually style everything based on their classes.
+*/
+const HubspotFormSection = styled.div({
+  display: "flex",
+  backgroundColor: theme.custom.colors.white,
+  width: "100%",
+  minWidth: "1276px",
+  borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
+  "#hubspotPlaceholders": {
+    display: "none",
+  },
+  "#hubspotContainer": {
+    display: "flex",
+    justifyContent: "center",
+    padding: "80px 200px",
+    width: "100%",
+  },
+})
+
 const FAQItem: React.FC<{ question: string; answer: string }> = ({
   question,
   answer,
@@ -289,6 +312,159 @@ const FAQItem: React.FC<{ question: string; answer: string }> = ({
         <Typography variant="body1">{answer}</Typography>
       </AccordionDetails>
     </FAQAccordion>
+  )
+}
+
+const HubspotForm: React.FC = () => {
+  /*
+    Hubspot only provides an injectable script to render forms. This component
+    dynamically loads the script and renders the form in a div with id 'hubspotForm'.
+
+    To style the form to match Smoot Design, we create hidden elements with
+    Smoot Design components to extract their computed styles and apply them
+    to the Hubspot form via a dynamically created stylesheet.
+
+    This is a terrible hack, and it should be replaced with usage of Hubspot's API
+    to create custom forms that we can fully control the markup and styling of.
+  */
+  useEffect(() => {
+    const script = document.createElement("script")
+    script.src = "https://js.hsforms.net/forms/v2.js"
+    document.body.appendChild(script)
+
+    script.addEventListener("load", () => {
+      // @ts-expect-error hubspot directly mutates window
+      if (window.hbspt) {
+        // @ts-expect-error hubspot directly mutates window
+        window.hbspt.forms.create({
+          portalId: "4994459",
+          formId: "60a1983b-361a-4e80-a0db-d24ff636d7bf",
+          target: "#hubspotForm",
+        })
+      }
+    })
+  }, [])
+
+  const hiddenInputRef = useRef<HTMLInputElement>(null)
+  const hiddenLabelRef = useRef<HTMLLabelElement>(null)
+  const hiddenSelectRef = useRef<HTMLSelectElement>(null)
+  const hiddenMenuItemRef = useRef<HTMLLIElement>(null)
+  const hiddenButtonRef = useRef<HTMLButtonElement>(null)
+
+  const getCssString = (obj: CSSStyleDeclaration) => {
+    if (!obj) return ""
+    const allStyles: Record<string, string> = {}
+    for (let i = 0; i < obj.length; i++) {
+      const key = obj[i]
+      allStyles[key] = obj.getPropertyValue(key)
+    }
+    return Object.entries(allStyles)
+      .map(([property, value]) => `${property}: ${value};`)
+      .join("\n  ")
+  }
+
+  useEffect(() => {
+    if (
+      hiddenInputRef.current &&
+      hiddenLabelRef.current &&
+      hiddenSelectRef.current &&
+      hiddenMenuItemRef.current &&
+      hiddenButtonRef.current
+    ) {
+      const computedInputStyles = window.getComputedStyle(
+        hiddenInputRef.current,
+      )
+      const computedLabelStyles = window.getComputedStyle(
+        hiddenLabelRef.current,
+      )
+      const computedSelectStyles = window.getComputedStyle(
+        hiddenSelectRef.current,
+      )
+      const computedMenuItemStyles = window.getComputedStyle(
+        hiddenMenuItemRef.current,
+      )
+      const computedButtonStyles = window.getComputedStyle(
+        hiddenButtonRef.current,
+      )
+
+      const inputCssString = getCssString(computedInputStyles)
+      const labelCssString = getCssString(computedLabelStyles)
+      const selectCssString = getCssString(computedSelectStyles)
+      const menuItemCssString = getCssString(computedMenuItemStyles)
+      const buttonCssString = getCssString(computedButtonStyles)
+
+      const styleSheet = document.createElement("style")
+      styleSheet.textContent = `
+      #hubspotForm {
+        width: 100%;
+        max-width: 1276px;
+        form {
+          display: flex;
+          flex-direction: column;
+          gap: 40px;
+          width: 100%;
+          fieldset {
+            display: flex;
+            max-width: 1276px;
+            .hs-form-field {
+              width: 100%;
+              .hs-error-msgs {
+                display: none;
+              }
+            }
+          }
+          label {
+            .hs-form-required {
+              color: ${theme.custom.colors.red};
+            }
+            ${labelCssString}
+          }
+          input[type="text"], input[type="email"] {
+            width: 100% !important;
+            ${inputCssString}
+          }
+          select {
+            padding-left: 8px !important;
+            width: 100% !important;
+            ${selectCssString}
+            option {
+              ${menuItemCssString}
+            }
+          }
+          input[type="submit"] {
+            ${buttonCssString}
+          }
+        }
+      }
+      `
+      document.head.appendChild(styleSheet)
+    }
+  }, [])
+
+  return (
+    <div id="hubspotContainer">
+      <div id="hubspotPlaceholders">
+        <Input id="inputPlaceholder" ref={hiddenInputRef} />
+        <Typography
+          id="labelPlaceholder"
+          variant="subtitle2"
+          ref={hiddenLabelRef}
+        />
+        <SelectField
+          id="selectPlaceholder"
+          label="Placeholder"
+          displayEmpty
+          ref={hiddenSelectRef}
+        ></SelectField>
+        <MenuItem id="menuItemPlaceholder" ref={hiddenMenuItemRef}>
+          Placeholder
+        </MenuItem>
+        <Button id="buttonPlaceholder" size="large" ref={hiddenButtonRef}>
+          Placeholder
+        </Button>
+      </div>
+      <div id="hubspotForm"></div>
+    </div>
   )
 }
 
@@ -411,7 +587,9 @@ const UAILandingPage: React.FC = () => {
                     in a way that is approachable to learners without a strong
                     technical background.
                   </Typography>
-                  <InquireButton>Inquire Now</InquireButton>
+                  <InquireButton href="#hubspotContainer">
+                    Inquire Now
+                  </InquireButton>
                 </HeroText>
                 <HeroImage>
                   <Image
@@ -498,7 +676,7 @@ const UAILandingPage: React.FC = () => {
               </StyledCarousel>
             </CarouselContainer>
             {arrows}
-            <InquireButton>Inquire Now</InquireButton>
+            <InquireButton href="#hubspotContainer">Inquire Now</InquireButton>
           </CarouselSection>
         </ProgramContainer>
       </ProgramSection>
@@ -534,11 +712,16 @@ const UAILandingPage: React.FC = () => {
               </FAQItemContainer>
             </FAQWrapper>
             <FAQInquireButtonContainer>
-              <InquireButton>Inquire Now</InquireButton>
+              <InquireButton href="#hubspotContainer">
+                Inquire Now
+              </InquireButton>
             </FAQInquireButtonContainer>
           </FAQContainerInner>
         </FAQContainerOuter>
       </FAQSection>
+      <HubspotFormSection>
+        <HubspotForm />
+      </HubspotFormSection>
     </PageContainer>
   )
 }
