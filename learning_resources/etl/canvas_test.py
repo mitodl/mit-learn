@@ -2,6 +2,7 @@
 
 import zipfile
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -33,7 +34,7 @@ def canvas_platform():
     return LearningResourcePlatformFactory.create(code=PlatformType.canvas.name)
 
 
-def canvas_zip_with_problem_files(tmp_path: str, files: dict[tuple[str, bytes]]) -> str:
+def canvas_zip_with_files(tmp_path: str, files: dict[tuple[str, bytes]]) -> str:
     """
     Create a Canvas zip with problem files in the tutorbot folder.
     `files` is a list of tuples: (filename, content_bytes)
@@ -41,7 +42,7 @@ def canvas_zip_with_problem_files(tmp_path: str, files: dict[tuple[str, bytes]])
     zip_path = tmp_path / "canvas_course_with_problems.zip"
     with zipfile.ZipFile(zip_path, "w") as zf:
         for filename, content in files:
-            zf.writestr(f"tutorbot/{filename}", content)
+            zf.writestr(filename, content)
     return zip_path
 
 
@@ -356,7 +357,11 @@ def test_transform_canvas_content_files_removes_unpublished_content(mocker, tmp_
 
     # Create a fake zipfile with the published file
 
-    list(transform_canvas_content_files(Path(zip_path), run, overwrite=True))
+    list(
+        transform_canvas_content_files(
+            Path(zip_path), run, url_config={}, overwrite=True
+        )
+    )
 
     # Ensure unpublished content is deleted and unpublished actions called
     bulk_unpub.assert_called_once_with([unpublished_cf.id], CONTENT_FILE_TYPE)
@@ -373,7 +378,9 @@ def test_transform_canvas_problem_files_pdf_calls_pdf_to_markdown(
     settings.CANVAS_PDF_TRANSCRIPTION_MODEL = "fake-model"
     pdf_filename = "problemset1/problem.pdf"
     pdf_content = b"%PDF-1.4 fake pdf content"
-    zip_path = canvas_zip_with_problem_files(tmp_path, [(pdf_filename, pdf_content)])
+    zip_path = canvas_zip_with_files(
+        tmp_path, [(f"tutorbot/{pdf_filename}", pdf_content)]
+    )
 
     # return a file with pdf extension
     fake_file_data = {
@@ -414,7 +421,9 @@ def test_transform_canvas_problem_files_non_pdf_does_not_call_pdf_to_markdown(
     settings.CANVAS_PDF_TRANSCRIPTION_MODEL = "fake-model"
     html_filename = "problemset2/problem.html"
     html_content = b"<html>problem</html>"
-    zip_path = canvas_zip_with_problem_files(tmp_path, [(html_filename, html_content)])
+    zip_path = canvas_zip_with_files(
+        tmp_path, [(f"tutorbot/{html_filename}", html_content)]
+    )
 
     fake_file_data = {
         "run": "run",
@@ -437,3 +446,49 @@ def test_transform_canvas_problem_files_non_pdf_does_not_call_pdf_to_markdown(
     pdf_to_md.assert_not_called()
     assert results[0]["content"] == "original html content"
     assert results[0]["problem_title"] == "problemset2"
+
+
+@pytest.mark.django_db
+def test_transform_canvas_content_files_url_assignment(mocker, tmp_path):
+    """
+    Test that transform_canvas_content_files assigns URLs based on url_config.
+    """
+    run = MagicMock()
+    run.id = 1
+    url_config = {"/folder/file1.html": "https://cdn.example.com/file1.html"}
+    # Patch _process_olx_path to yield content_data with source_path
+    mock_content_data = [
+        {"source_path": "data/folder/file1.html", "key": "file1"},
+    ]
+    mocker.patch(
+        "learning_resources.etl.canvas._process_olx_path",
+        return_value=mock_content_data,
+    )
+    mocker.patch(
+        "learning_resources.etl.canvas.parse_module_meta",
+        return_value={"active": [], "unpublished": []},
+    )
+    # Use a real zip file
+    course_zipfile = canvas_zip_with_files(
+        tmp_path, [("folder/file1.html", "fake content")]
+    )
+    # Patch published_items to always match
+    mocker.patch(
+        "learning_resources.etl.canvas.get_edx_module_id", return_value="file1"
+    )
+    # Patch bulk_resources_unpublished_actions to do nothing
+    mocker.patch("learning_resources.etl.canvas.bulk_resources_unpublished_actions")
+    # Patch run.content_files.exclude to return a mock with delete method
+    run.content_files.exclude.return_value.values_list.return_value = []
+    run.content_files.exclude.return_value.delete = lambda: None
+
+    results = list(
+        transform_canvas_content_files(
+            Path(course_zipfile),
+            run=run,
+            url_config=url_config,
+            overwrite=False,
+        )
+    )
+    file1 = next(item for item in results if item["key"] == "file1")
+    assert file1["url"] == "https://cdn.example.com/file1.html"

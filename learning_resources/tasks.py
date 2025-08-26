@@ -501,10 +501,16 @@ def sync_canvas_courses(canvas_course_ids, overwrite):
         course_folder = key.lstrip(settings.CANVAS_COURSE_BUCKET_PREFIX).split("/")[0]
         log.info("processing course folder %s", course_folder)
 
-        if (not canvas_course_ids or course_folder in canvas_course_ids) and (
-            (course_folder not in latest_archives)
-            or max(archive.last_modified, latest_archives[course_folder].last_modified)
-            == archive.last_modified
+        if (
+            key.endswith("imscc")
+            and (not canvas_course_ids or course_folder in canvas_course_ids)
+            and (
+                (course_folder not in latest_archives)
+                or max(
+                    archive.last_modified, latest_archives[course_folder].last_modified
+                )
+                == archive.last_modified
+            )
         ):
             latest_archives[course_folder] = archive
     canvas_readable_ids = []

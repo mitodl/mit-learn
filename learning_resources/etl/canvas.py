@@ -1,4 +1,5 @@
 import base64
+import json
 import logging
 import sys
 import zipfile
@@ -8,6 +9,7 @@ from datetime import datetime
 from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from urllib.parse import unquote_plus
 
 import pypdfium2 as pdfium
 from defusedxml import ElementTree
@@ -46,10 +48,11 @@ def sync_canvas_archive(bucket, key: str, overwrite):
     from learning_resources.etl.loaders import load_content_files, load_problem_files
 
     course_folder = key.lstrip(settings.CANVAS_COURSE_BUCKET_PREFIX).split("/")[0]
-
+    url_config_file = f"{key.split('.imscc')[0]}.metadata.json"
     with TemporaryDirectory() as export_tempdir:
         course_archive_path = Path(export_tempdir, key.split("/")[-1])
         bucket.download_file(key, course_archive_path)
+        url_config = _get_url_config(bucket, export_tempdir, url_config_file)
         resource_readable_id, run = run_for_canvas_archive(
             course_archive_path, course_folder=course_folder, overwrite=overwrite
         )
@@ -58,7 +61,7 @@ def sync_canvas_archive(bucket, key: str, overwrite):
             load_content_files(
                 run,
                 transform_canvas_content_files(
-                    course_archive_path, run, overwrite=overwrite
+                    course_archive_path, run, url_config=url_config, overwrite=overwrite
                 ),
             )
 
@@ -72,6 +75,22 @@ def sync_canvas_archive(bucket, key: str, overwrite):
             run.save()
 
     return resource_readable_id
+
+
+def _get_url_config(bucket, export_tempdir: str, url_config_file: str) -> dict:
+    """
+    Get URL (citation) config from the metadata JSON file
+    """
+    url_config_path = Path(export_tempdir, url_config_file.split("/")[-1])
+    # download the url config file
+    bucket.download_file(url_config_file, url_config_path)
+    url_config = {}
+    with Path.open(url_config_path, "rb") as f:
+        for url_item in json.loads(f.read().decode("utf-8")).get("course_files", []):
+            url_key = url_item["file_path"]
+            url_key = unquote_plus(url_key.lstrip(url_key.split("/")[0]))
+            url_config[url_key] = url_item["url"]
+    return url_config
 
 
 def _course_url(course_archive_path) -> str:
@@ -149,7 +168,7 @@ def parse_canvas_settings(course_archive_path):
 
 
 def transform_canvas_content_files(
-    course_zipfile: Path, run: LearningResourceRun, *, overwrite
+    course_zipfile: Path, run: LearningResourceRun, url_config: list, *, overwrite
 ) -> Generator[dict, None, None]:
     """
     Transform content files from a Canvas course zipfile
@@ -172,7 +191,14 @@ def transform_canvas_content_files(
                 log.debug("processing active file %s", member.filename)
             else:
                 log.debug("skipping unpublished file %s", member.filename)
-        yield from _process_olx_path(olx_path, run, overwrite=overwrite)
+        for content_data in _process_olx_path(olx_path, run, overwrite=overwrite):
+            url_path = content_data["source_path"].lstrip(
+                content_data["source_path"].split("/")[0]
+            )
+            content_url = url_config.get(url_path, "")
+            if content_url:
+                content_data["url"] = content_url
+            yield content_data
 
     unpublished_content = run.content_files.exclude(key__in=published_keys)
 

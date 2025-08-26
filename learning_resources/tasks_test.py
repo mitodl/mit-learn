@@ -621,10 +621,10 @@ def test_sync_canvas_courses(settings, mocker, django_assert_num_queries, canvas
     mocker.patch("learning_resources.tasks.get_learning_course_bucket")
     mock_bucket = mocker.Mock()
     mock_archive1 = mocker.Mock()
-    mock_archive1.key = "canvas/1/archive1.zip"
+    mock_archive1.key = "canvas/1/archive1.imscc"
     mock_archive1.last_modified = now_in_utc()
     mock_archive2 = mocker.Mock()
-    mock_archive2.key = "canvas/2/archive2.zip"
+    mock_archive2.key = "canvas/2/archive2.imscc"
     mock_archive2.last_modified = now_in_utc() - timedelta(days=1)
     mock_bucket.objects.filter.return_value = [mock_archive1, mock_archive2]
     mocker.patch(
