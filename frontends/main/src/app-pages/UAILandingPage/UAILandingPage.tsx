@@ -11,6 +11,8 @@ import {
   AccordionDetails,
   MenuItem,
   SelectField,
+  Skeleton,
+  Stack,
 } from "ol-components"
 import React, { useEffect, useRef } from "react"
 import Image from "next/image"
@@ -463,7 +465,21 @@ const HubspotForm: React.FC = () => {
           Placeholder
         </Button>
       </div>
-      <div id="hubspotForm"></div>
+      <div id="hubspotForm">
+        <Stack direction={"column"} gap={2}>
+          <Stack direction="row" gap={2}>
+            <Skeleton variant="rectangular" height={32} width={200} />
+            <Skeleton variant="rectangular" height={32} width={200} />
+          </Stack>
+          <Skeleton variant="rectangular" height={32} width={416} />
+          <Skeleton variant="rectangular" height={32} width={416} />
+          <Skeleton variant="rectangular" height={32} width={416} />
+          <Skeleton variant="rectangular" height={32} width={416} />
+          <Skeleton variant="rectangular" height={32} width={416} />
+          <Skeleton variant="rectangular" height={32} width={416} />
+          <Skeleton variant="rectangular" height={32} width={416} />
+        </Stack>
+      </div>
     </div>
   )
 }
