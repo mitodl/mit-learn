@@ -915,7 +915,7 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
     @extend_schema_field(LearningResourceRelationshipChildField(allow_null=True))
     def get_children(self, instance):
         return LearningResourceRelationshipChildField(
-            instance.children.order_by("position"), many=True, read_only=True
+            instance.children, many=True, read_only=True
         ).data
 
     def get_resource_category(self, instance) -> str:

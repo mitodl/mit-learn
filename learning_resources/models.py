@@ -385,6 +385,12 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
                     to_attr="_podcasts",
                 ),
                 Prefetch(
+                    "children",
+                    queryset=LearningResourceRelationship.objects.select_related(
+                        "child"
+                    ).order_by("position"),
+                ),
+                Prefetch(
                     "user_lists",
                     queryset=UserListRelationship.objects.filter(parent__author=user)
                     if user is not None and user.is_authenticated
