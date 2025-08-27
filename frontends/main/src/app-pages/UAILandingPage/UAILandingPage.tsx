@@ -355,6 +355,7 @@ const FAQImageContainerOuter = styled.div({
   position: "relative",
   marginRight: "80px",
   width: "50%",
+  height: "500px",
   [theme.breakpoints.down("md")]: {
     display: "none",
   },
