@@ -79,6 +79,14 @@ const HeaderContainer = styled.div({
   },
 })
 
+const TopHeader = styled.div({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  textAlign: "center",
+  gap: "16px",
+})
+
 const HeroContainerOuter = styled.div({
   display: "flex",
   justifyContent: "center",
@@ -88,7 +96,7 @@ const HeroContainerOuter = styled.div({
 const HeroContainerInner = styled.div({
   display: "flex",
   position: "relative",
-  padding: "16px 0",
+  padding: "64px 0",
   justifyContent: "center",
   alignItems: "stretch",
   alignSelf: "stretch",
@@ -126,7 +134,7 @@ const SubheaderText = styled(Typography)({
 const HeroText = styled.div({
   display: "flex",
   flexDirection: "column",
-  padding: "56px 56px 56px 0",
+  padding: "0 56px 56px 0",
   gap: "16px",
   width: "50%",
   [theme.breakpoints.down("md")]: {
@@ -147,7 +155,7 @@ const HeroTextCard = styled.div({
 })
 
 const HeroHeaderText = styled(Typography)({
-  ...theme.typography.h2,
+  ...theme.typography.h3,
   [theme.breakpoints.down("md")]: {
     ...theme.typography.h4,
     textAlign: "center",
@@ -811,17 +819,20 @@ const UAILandingPage: React.FC = () => {
       <GradientWrapper>
         <TopSection>
           <HeaderContainer>
-            <TopHeaderText variant="h1" justifyContent="center">
-              Equip your institution with resilient AI education
-            </TopHeaderText>
-            <SubheaderText>
-              Preparing learners for a future powered by AI.
-            </SubheaderText>
+            <TopHeader>
+              <TopHeaderText variant="h1">
+                Equip your institution with resilient AI education
+              </TopHeaderText>
+              <SubheaderText>
+                Build the AI competencies and strategic thinking required to
+                drive innovation and solve real-world problems.
+              </SubheaderText>
+            </TopHeader>
             <HeroContainerOuter>
               <HeroContainerInner>
                 <HeroText>
                   <HeroHeaderText>
-                    Learning content, for everyone
+                    A dynamic online learning experience
                   </HeroHeaderText>
                   <HeroSubheaderText>
                     With Universal AI, MIT experts equip learners from
@@ -839,7 +850,7 @@ const UAILandingPage: React.FC = () => {
                   <HeroTextCard>
                     <Typography variant="body1">
                       Identify opportunities to increase efficiency and improve
-                      decision making in the workplace.
+                      decision-making in the workplace.
                     </Typography>
                   </HeroTextCard>
                   <HeroTextCard>
@@ -870,11 +881,10 @@ const UAILandingPage: React.FC = () => {
           <ProgramSectionTitle>
             <HeaderText>What to expect</HeaderText>
             <SubheaderText>
-              Universal AI consists of both foundational modules and the
-              domain-specific vertical modules that teach the underlying
-              theories, concepts, and technologies of artificial intelligence.
-              The experience is augmented by AI tutors that provide personalized
-              support to learners.
+              Universal AI consists of foundational and vertical modules that
+              teach the underlying theories, concepts, and technologies of
+              artificial intelligence. The self-paced experience is augmented by
+              AI tutors that provide personalized support to learners.
             </SubheaderText>
           </ProgramSectionTitle>
           <FoundationalCarouselContainer>
@@ -888,7 +898,7 @@ const UAILandingPage: React.FC = () => {
               </Typography>
               <Typography variant="body1" color={theme.custom.colors.darkGray2}>
                 Designed to teach AI fluency for all learners, the foundational
-                curriculum is grounded in real-world case studies rather than
+                modules are grounded in real-world case studies rather than
                 traditional mathematical models and principles. Selected modules
                 include:
               </Typography>
@@ -916,9 +926,9 @@ const UAILandingPage: React.FC = () => {
                 Domain-Specific Vertical Modules
               </Typography>
               <Typography variant="body1" color={theme.custom.colors.darkGray2}>
-                Building on the foundational curriculum, the vertical modules
-                leverage case studies to apply AI concepts to specific
-                industries and trending topic areas. Selected modules include:
+                Building on the foundational material, the vertical modules
+                apply AI concepts to specific industries and trending topic
+                areas. Selected modules include:
               </Typography>
             </ProgramSectionHeader>
             <DesktopOnly>
@@ -940,12 +950,11 @@ const UAILandingPage: React.FC = () => {
         <FAQContainerOuter>
           <FAQContainerInner>
             <FAQHeader>
-              <HeaderText>FAQ</HeaderText>
+              <HeaderText>Frequently Asked Questions</HeaderText>
               <SubheaderText>
-                Created by a team of 30+ faculty and experts from across MIT,
-                and drawing on their existing courses and research, Universal AI
-                offers an integrated learning experience focused on real-world
-                application.
+                Created by a team of 20+ faculty and experts from across MIT,
+                Universal AI offers a self-paced learning experience focused on
+                real-world application.
               </SubheaderText>
             </FAQHeader>
             <FAQWrapper>
@@ -983,7 +992,7 @@ const UAILandingPage: React.FC = () => {
       </FAQSection>
       <HubspotFormSection>
         <HeaderText>
-          Get in touch to learn more about Universal AI from MIT
+          Get in touch to learn more about Universal AI from MIT Open Learning
         </HeaderText>
         <HubspotForm />
       </HubspotFormSection>
