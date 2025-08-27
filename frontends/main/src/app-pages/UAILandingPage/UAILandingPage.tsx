@@ -859,7 +859,7 @@ const UAILandingPage: React.FC = () => {
                       personal or professional interests.
                     </Typography>
                   </HeroTextCard>
-                  <InquireButton href="#hubspotContainer">
+                  <InquireButton href="#hubspotSection">
                     Learn More
                   </InquireButton>
                 </HeroText>
@@ -942,7 +942,7 @@ const UAILandingPage: React.FC = () => {
             <MobileOnly>
               <MobileCards>{domainSpecificCards}</MobileCards>
             </MobileOnly>
-            <InquireButton href="#hubspotContainer">Learn More</InquireButton>
+            <InquireButton href="#hubspotSection">Learn More</InquireButton>
           </IndustrySpecificCarouselContainer>
         </ProgramContainer>
       </ProgramSection>
@@ -985,12 +985,12 @@ const UAILandingPage: React.FC = () => {
               </FAQItemContainer>
             </FAQWrapper>
             <FAQInquireButtonContainer>
-              <InquireButton href="#hubspotContainer">Learn More</InquireButton>
+              <InquireButton href="#hubspotSection">Learn More</InquireButton>
             </FAQInquireButtonContainer>
           </FAQContainerInner>
         </FAQContainerOuter>
       </FAQSection>
-      <HubspotFormSection>
+      <HubspotFormSection id="hubspotSection">
         <HeaderText>
           Get in touch to learn more about Universal AI from MIT Open Learning
         </HeaderText>
