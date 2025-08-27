@@ -171,25 +171,28 @@ const InquireButton = styled(ButtonLink)({
 
 const ProgramSection = styled.div({
   display: "flex",
+  justifyContent: "center",
   backgroundColor: theme.custom.colors.white,
   backgroundImage: "url('/images/backgrounds/uai_landing_background.svg')",
   backgroundRepeat: "no-repeat",
   color: theme.custom.colors.lightGray2,
+  padding: "80px 200px",
   width: "100%",
   minWidth: "1276px",
   borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
   [theme.breakpoints.down("md")]: {
     backgroundImage: "none",
+    padding: "32px 16px",
     minWidth: "0",
   },
 })
 
 const ProgramContainer = styled.div({
-  padding: "80px 200px",
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
   width: "100%",
-  [theme.breakpoints.down("md")]: {
-    padding: "32px 16px",
-  },
+  maxWidth: "1276px",
 })
 
 const ProgramSectionTitle = styled.div({
@@ -197,15 +200,27 @@ const ProgramSectionTitle = styled.div({
   flexDirection: "column",
   alignSelf: "stretch",
   alignItems: "center",
+  textAlign: "center",
   gap: "8px",
-  marginBottom: "40px",
+  paddingBottom: "48px",
   color: theme.custom.colors.darkGray2,
+  borderBottom: `1px solid ${theme.custom.colors.red}`,
 })
 
-const FoundationalProgramContainer = styled.div({
+const FoundationalCarouselContainer = styled.div({
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
+  gap: "48px",
+  padding: "48px 0",
+})
+
+const ProgramSectionHeader = styled.div({
+  display: "flex",
+  flexDirection: "column",
+  alignSelf: "stretch",
+  alignItems: "center",
+  textAlign: "center",
 })
 
 const CardImage = styled(Image)({
@@ -232,18 +247,17 @@ const BracketSeparator = styled.div({
   backgroundRepeat: "no-repeat",
   backgroundPosition: "center",
   backgroundSize: "contain",
-  marginTop: "24px",
   paddingBottom: "32px",
   width: "100%",
   height: "157px",
 })
 
-const CarouselSection = styled.div({
+const IndustrySpecificCarouselContainer = styled.div({
   display: "flex",
   flexDirection: "column",
   justifyContent: "center",
   alignItems: "center",
-  gap: "40px",
+  gap: "48px",
   width: "100%",
 })
 
@@ -600,56 +614,53 @@ const HubspotForm: React.FC = () => {
 }
 
 const UAILandingPage: React.FC = () => {
-  const carouselItems = [
+  const foundationalCarouselItems = [
     {
-      image: "/images/uai_landing/cards/ai-in-healthcare.jpg",
-      title: "AI in Healthcare",
-      subtitle: "Machine Learning in Healthcare and Biomedicine",
+      image: "/images/uai_landing/cards/hands-on-deep-learning.jpg",
+      title: "Hands-On Deep Learning",
     },
     {
-      image: "/images/uai_landing/cards/ai-in-climate.jpg",
-      title: "AI in Climate",
-      subtitle: "AI in Climate Change and Environmental Science",
+      image: "/images/uai_landing/cards/large-language-models.jpg",
+      title: "Large Language Models",
     },
     {
-      image: "/images/uai_landing/cards/ai-in-finance.jpg",
-      title: "AI in Finance",
-      subtitle: "AI Applications in Finance and Fintech",
+      image:
+        "/images/uai_landing/cards/generative-ai-future-of-work-human-creativity.jpg",
+      title: "Generative AI, the Future of Work, and Human Creativity",
     },
     {
-      image: "/images/uai_landing/cards/ai-in-agriculture.jpg",
-      title: "AI in Agriculture",
-      subtitle: "AI in Agriculture and Food Security",
+      image: "/images/uai_landing/cards/multimodal-ai.jpg",
+      title: "Multimodal AI",
     },
     {
-      image: "/images/uai_landing/cards/ai-in-transportation.jpg",
-      title: "AI in Transportation",
-      subtitle: "Machine Learning in Transportation and Logistics",
+      image: "/images/uai_landing/cards/explanation-reasoning-ai-ethics.jpg",
+      title: "Explanation, Reasoning, and AI Ethics",
+    },
+  ]
+  const domainSpecificCarouselItems = [
+    {
+      image: "/images/uai_landing/cards/ai-sustainability-transportation.jpg",
+      title: "AI + Sustainability: Transportation",
     },
     {
-      image: "/images/uai_landing/cards/ai-in-education.jpg",
-      title: "AI in Education",
-      subtitle: "AI in Education and E-learning",
+      image: "/images/uai_landing/cards/ai-sustainability-energy.jpg",
+      title: "AI + Sustainability: Energy",
     },
     {
-      image: "/images/uai_landing/cards/ai-in-gaming.jpg",
-      title: "AI in Gaming",
-      subtitle: "AI in Entertainment and Gaming",
+      image: "/images/uai_landing/cards/ai-entrepreneurship.jpg",
+      title: "AI + Entrepreneurship",
     },
     {
-      image: "/images/uai_landing/cards/ai-in-urban-planning.jpg",
-      title: "AI in Urban Planning",
-      subtitle: "Data Science for Urban Planning and Smart Cities",
+      image: "/images/uai_landing/cards/ai-healthcare.jpg",
+      title: "AI + Healthcare",
     },
     {
-      image: "/images/uai_landing/cards/ai-in-manufacturing.jpg",
-      title: "AI in Manufacturing",
-      subtitle: "AI in Manufacturing and Industry 4.0",
+      image: "/images/uai_landing/cards/ai-finance.jpg",
+      title: "AI + Finance",
     },
     {
-      image: "/images/uai_landing/cards/ai-in-astronomy.jpg",
-      title: "AI in Astronomy",
-      subtitle: "Machine Learning in Astronomy and Space Exploration",
+      image: "/images/uai_landing/cards/ai-agriculture.jpg",
+      title: "AI + Agriculture",
     },
   ]
 
@@ -678,13 +689,22 @@ const UAILandingPage: React.FC = () => {
     },
   ]
 
-  const [arrowsContainerRef, setArrowsContainerRef] =
+  const [foundationalArrowsRef, setFoundationalArrowsRef] =
     React.useState<HTMLDivElement | null>(null)
-  const arrows = (
+  const foundationalArrows = (
     <ArrowButtonsContainer
       role="group"
       aria-label="Slide navigation"
-      ref={setArrowsContainerRef}
+      ref={setFoundationalArrowsRef}
+    />
+  )
+  const [domainSpecificArrowsRef, setDomainSpecificArrowsRef] =
+    React.useState<HTMLDivElement | null>(null)
+  const domainSpecificArrows = (
+    <ArrowButtonsContainer
+      role="group"
+      aria-label="Slide navigation"
+      ref={setDomainSpecificArrowsRef}
     />
   )
 
@@ -753,48 +773,35 @@ const UAILandingPage: React.FC = () => {
       <ProgramSection>
         <ProgramContainer>
           <ProgramSectionTitle>
-            <Typography variant="h2">How does it work?</Typography>
+            <Typography variant="h2">What to expect</Typography>
             <Typography variant="h5">
-              Start with the building blocks of Artificial Intelligence
+              Universal AI consists of both foundational modules and the
+              domain-specific vertical modules that teach the underlying
+              theories, concepts, and technologies of artificial intelligence.
+              The experience is augmented by AI tutors that provide personalized
+              support to learners.
             </Typography>
           </ProgramSectionTitle>
-          <FoundationalProgramContainer>
-            <Card size="medium">
-              <Card.Content>
-                <CardImage
-                  src="/images/uai_landing/cards/foundational-ai-modules.jpg"
-                  alt=""
-                  height={170}
-                  width={298}
-                />
-                <CardText>
-                  <Typography
-                    variant="subtitle3"
-                    color={theme.custom.colors.silverGrayDark}
-                  >
-                    Program
-                  </Typography>
-                  <Typography
-                    variant="subtitle1"
-                    color={theme.custom.colors.darkGray2}
-                  >
-                    Foundational AI Modules
-                  </Typography>
-                </CardText>
-              </Card.Content>
-            </Card>
-          </FoundationalProgramContainer>
-          <BracketSeparator>
-            <Typography variant="h5" color={theme.custom.colors.darkGray2}>
-              Then apply this foundational knowledge to different fields of
-              study
-            </Typography>
-          </BracketSeparator>
-          <CarouselSection>
+          <FoundationalCarouselContainer>
+            <ProgramSectionHeader>
+              <Typography
+                variant="h4"
+                color={theme.custom.colors.darkGray2}
+                gutterBottom
+              >
+                Foundational Modules
+              </Typography>
+              <Typography variant="body1" color={theme.custom.colors.darkGray2}>
+                Designed to teach AI fluency for all learners, the foundational
+                curriculum is grounded in real-world case studies rather than
+                traditional mathematical models and principles. Selected modules
+                include:
+              </Typography>
+            </ProgramSectionHeader>
             <DesktopOnly>
               <CarouselContainer>
-                <StyledCarousel arrowsContainer={arrowsContainerRef}>
-                  {carouselItems.map((item, index) => (
+                <StyledCarousel arrowsContainer={foundationalArrowsRef}>
+                  {foundationalCarouselItems.map((item, index) => (
                     <Card key={index} size="medium">
                       <Card.Content>
                         <CardImage
@@ -805,16 +812,10 @@ const UAILandingPage: React.FC = () => {
                         />
                         <CardText>
                           <Typography
-                            variant="subtitle3"
-                            color={theme.custom.colors.silverGrayDark}
-                          >
-                            {item.title}
-                          </Typography>
-                          <Typography
-                            variant="subtitle1"
+                            variant="h5"
                             color={theme.custom.colors.darkGray2}
                           >
-                            {item.subtitle}
+                            {item.title}
                           </Typography>
                         </CardText>
                       </Card.Content>
@@ -823,9 +824,53 @@ const UAILandingPage: React.FC = () => {
                 </StyledCarousel>
               </CarouselContainer>
             </DesktopOnly>
-            {arrows}
+            {foundationalArrows}
+          </FoundationalCarouselContainer>
+          <BracketSeparator />
+          <IndustrySpecificCarouselContainer>
+            <ProgramSectionHeader>
+              <Typography
+                variant="h4"
+                color={theme.custom.colors.darkGray2}
+                gutterBottom
+              >
+                Domain-Specific Vertical Modules
+              </Typography>
+              <Typography variant="body1" color={theme.custom.colors.darkGray2}>
+                Building on the foundational curriculum, the vertical modules
+                leverage case studies to apply AI concepts to specific
+                industries and trending topic areas. Selected modules include:
+              </Typography>
+            </ProgramSectionHeader>
+            <DesktopOnly>
+              <CarouselContainer>
+                <StyledCarousel arrowsContainer={domainSpecificArrowsRef}>
+                  {domainSpecificCarouselItems.map((item, index) => (
+                    <Card key={index} size="medium">
+                      <Card.Content>
+                        <CardImage
+                          src={item.image}
+                          alt=""
+                          height={170}
+                          width={298}
+                        />
+                        <CardText>
+                          <Typography
+                            variant="h5"
+                            color={theme.custom.colors.darkGray2}
+                          >
+                            {item.title}
+                          </Typography>
+                        </CardText>
+                      </Card.Content>
+                    </Card>
+                  ))}
+                </StyledCarousel>
+              </CarouselContainer>
+            </DesktopOnly>
+            {domainSpecificArrows}
             <InquireButton href="#hubspotContainer">Learn More</InquireButton>
-          </CarouselSection>
+          </IndustrySpecificCarouselContainer>
         </ProgramContainer>
       </ProgramSection>
       <FAQSection>
