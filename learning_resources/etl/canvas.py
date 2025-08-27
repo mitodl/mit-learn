@@ -59,11 +59,14 @@ def sync_canvas_archive(bucket, key: str, overwrite):
         )
         checksum = calc_checksum(course_archive_path)
         if run:
-            load_content_files(
-                run,
+            canvas_content_files = list(
                 transform_canvas_content_files(
                     course_archive_path, run, url_config=url_config, overwrite=overwrite
-                ),
+                )
+            )
+            load_content_files(
+                run,
+                canvas_content_files,
             )
 
             load_problem_files(
