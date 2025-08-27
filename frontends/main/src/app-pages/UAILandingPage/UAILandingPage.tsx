@@ -29,6 +29,15 @@ const DesktopOnly = styled.div(({ theme }) => ({
   },
 }))
 
+const MobileOnly = styled.div(({ theme }) => ({
+  [theme.breakpoints.up("sm")]: {
+    display: "none",
+  },
+  [theme.breakpoints.down("sm")]: {
+    display: "flex",
+  },
+}))
+
 const PageContainer = styled(Container)({
   backgroundColor: theme.custom.colors.white,
   display: "flex",
@@ -213,6 +222,10 @@ const FoundationalCarouselContainer = styled.div({
   alignItems: "center",
   gap: "48px",
   padding: "48px 0",
+  [theme.breakpoints.down("md")]: {
+    gap: "16px",
+    padding: "32px 0",
+  },
 })
 
 const ProgramSectionHeader = styled.div({
@@ -259,6 +272,9 @@ const IndustrySpecificCarouselContainer = styled.div({
   alignItems: "center",
   gap: "48px",
   width: "100%",
+  [theme.breakpoints.down("md")]: {
+    gap: "16px",
+  },
 })
 
 const CarouselContainer = styled.div({
@@ -276,6 +292,12 @@ const ArrowButtonsContainer = styled.div({
   [theme.breakpoints.down("sm")]: {
     display: "none",
   },
+})
+
+const MobileCards = styled.div({
+  display: "flex",
+  flexDirection: "column",
+  gap: "16px",
 })
 
 const FAQSection = styled.div({
@@ -708,6 +730,32 @@ const UAILandingPage: React.FC = () => {
     />
   )
 
+  const foundationalCards = foundationalCarouselItems.map((item, index) => (
+    <Card key={index} size="medium">
+      <Card.Content>
+        <CardImage src={item.image} alt="" height={170} width={298} />
+        <CardText>
+          <Typography variant="h5" color={theme.custom.colors.darkGray2}>
+            {item.title}
+          </Typography>
+        </CardText>
+      </Card.Content>
+    </Card>
+  ))
+
+  const domainSpecificCards = domainSpecificCarouselItems.map((item, index) => (
+    <Card key={index} size="medium">
+      <Card.Content>
+        <CardImage src={item.image} alt="" height={170} width={298} />
+        <CardText>
+          <Typography variant="h5" color={theme.custom.colors.darkGray2}>
+            {item.title}
+          </Typography>
+        </CardText>
+      </Card.Content>
+    </Card>
+  ))
+
   return (
     <PageContainer>
       <GradientWrapper>
@@ -801,30 +849,14 @@ const UAILandingPage: React.FC = () => {
             <DesktopOnly>
               <CarouselContainer>
                 <StyledCarousel arrowsContainer={foundationalArrowsRef}>
-                  {foundationalCarouselItems.map((item, index) => (
-                    <Card key={index} size="medium">
-                      <Card.Content>
-                        <CardImage
-                          src={item.image}
-                          alt=""
-                          height={170}
-                          width={298}
-                        />
-                        <CardText>
-                          <Typography
-                            variant="h5"
-                            color={theme.custom.colors.darkGray2}
-                          >
-                            {item.title}
-                          </Typography>
-                        </CardText>
-                      </Card.Content>
-                    </Card>
-                  ))}
+                  {foundationalCards}
                 </StyledCarousel>
               </CarouselContainer>
             </DesktopOnly>
             {foundationalArrows}
+            <MobileOnly>
+              <MobileCards>{foundationalCards}</MobileCards>
+            </MobileOnly>
           </FoundationalCarouselContainer>
           <BracketSeparator />
           <IndustrySpecificCarouselContainer>
@@ -845,30 +877,14 @@ const UAILandingPage: React.FC = () => {
             <DesktopOnly>
               <CarouselContainer>
                 <StyledCarousel arrowsContainer={domainSpecificArrowsRef}>
-                  {domainSpecificCarouselItems.map((item, index) => (
-                    <Card key={index} size="medium">
-                      <Card.Content>
-                        <CardImage
-                          src={item.image}
-                          alt=""
-                          height={170}
-                          width={298}
-                        />
-                        <CardText>
-                          <Typography
-                            variant="h5"
-                            color={theme.custom.colors.darkGray2}
-                          >
-                            {item.title}
-                          </Typography>
-                        </CardText>
-                      </Card.Content>
-                    </Card>
-                  ))}
+                  {domainSpecificCards}
                 </StyledCarousel>
               </CarouselContainer>
             </DesktopOnly>
             {domainSpecificArrows}
+            <MobileOnly>
+              <MobileCards>{domainSpecificCards}</MobileCards>
+            </MobileOnly>
             <InquireButton href="#hubspotContainer">Learn More</InquireButton>
           </IndustrySpecificCarouselContainer>
         </ProgramContainer>
