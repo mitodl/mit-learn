@@ -107,7 +107,15 @@ const TopHeaderText = styled(Typography)({
   },
 })
 
-const TopSubheaderText = styled(Typography)({
+const HeaderText = styled(Typography)({
+  ...theme.typography.h2,
+  [theme.breakpoints.down("md")]: {
+    textAlign: "center",
+    ...theme.typography.h4,
+  },
+})
+
+const SubheaderText = styled(Typography)({
   ...theme.typography.h5,
   [theme.breakpoints.down("md")]: {
     textAlign: "center",
@@ -413,9 +421,13 @@ const FAQInquireButtonContainer = styled.div({
 */
 const HubspotFormSection = styled.div({
   display: "flex",
-  backgroundColor: theme.custom.colors.white,
+  flexDirection: "column",
+  alignItems: "center",
+  gap: "40px",
+  paddingTop: "80px",
   width: "100%",
   minWidth: "1276px",
+  backgroundColor: theme.custom.colors.white,
   borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
   "#hubspotPlaceholders": {
     display: "none",
@@ -423,7 +435,7 @@ const HubspotFormSection = styled.div({
   "#hubspotContainer": {
     display: "flex",
     justifyContent: "center",
-    padding: "80px 200px",
+    padding: "0 200px 80px 200px",
     width: "100%",
     [theme.breakpoints.down("md")]: {
       padding: "0",
@@ -802,9 +814,9 @@ const UAILandingPage: React.FC = () => {
               </TopHeaderText>{" "}
               AI Education from MIT
             </TopHeaderText>
-            <TopSubheaderText>
+            <SubheaderText>
               Preparing learners for a future powered by AI.
-            </TopSubheaderText>
+            </SubheaderText>
             <HeroContainerOuter>
               <HeroContainerInner>
                 <HeroText>
@@ -856,14 +868,14 @@ const UAILandingPage: React.FC = () => {
       <ProgramSection>
         <ProgramContainer>
           <ProgramSectionTitle>
-            <Typography variant="h2">What to expect</Typography>
-            <Typography variant="h5">
+            <HeaderText>What to expect</HeaderText>
+            <SubheaderText>
               Universal AI consists of both foundational modules and the
               domain-specific vertical modules that teach the underlying
               theories, concepts, and technologies of artificial intelligence.
               The experience is augmented by AI tutors that provide personalized
               support to learners.
-            </Typography>
+            </SubheaderText>
           </ProgramSectionTitle>
           <FoundationalCarouselContainer>
             <ProgramSectionHeader>
@@ -928,13 +940,13 @@ const UAILandingPage: React.FC = () => {
         <FAQContainerOuter>
           <FAQContainerInner>
             <FAQHeader>
-              <Typography variant="h2">FAQ</Typography>
-              <Typography variant="subtitle1">
+              <HeaderText>FAQ</HeaderText>
+              <SubheaderText>
                 Created by a team of 30+ faculty and experts from across MIT,
                 and drawing on their existing courses and research, Universal AI
                 offers an integrated learning experience focused on real-world
                 application.
-              </Typography>
+              </SubheaderText>
             </FAQHeader>
             <FAQWrapper>
               <FAQImageContainerOuter>
@@ -970,6 +982,9 @@ const UAILandingPage: React.FC = () => {
         </FAQContainerOuter>
       </FAQSection>
       <HubspotFormSection>
+        <HeaderText>
+          Get in touch to learn more about Universal AI from MIT
+        </HeaderText>
         <HubspotForm />
       </HubspotFormSection>
     </PageContainer>
