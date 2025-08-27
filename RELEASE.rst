@@ -1,6 +1,20 @@
 Release Notes
 =============
 
+Version 0.41.8
+--------------
+
+- Ingest non-module canvas files (#2471)
+- Update dependency ruff to v0.12.10 (#2468)
+- Update dependency litellm to v1.76.0 (#2469)
+- Update dependency @sentry/nextjs to v10 (#2462)
+- Update smoot version (#2459)
+- Update dependency lxml to v6 (#2465)
+- Update dependency tiktoken to ^0.11.0 (#2464)
+- Minor tweaks to initial setup instructions, add memory env var for web container, note minimum required domain config for things to "work out of box" (#2458)
+- Add (citation) urls for canvas contentfiles (#2457)
+- fix one-click enrollment for the same course across multiple orgs (#2453)
+
 Version 0.41.5 (Released August 25, 2025)
 --------------
 
