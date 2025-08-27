@@ -682,7 +682,11 @@ def test_published_module_and_files_meta_content_ingestion(mocker, tmp_path):
     )
     run = LearningResourceRunFactory.create()
     stale_contentfile = ContentFileFactory.create(run=run)
-    results = list(transform_canvas_content_files(zip_path, run=run, overwrite=False))
+    results = list(
+        transform_canvas_content_files(
+            zip_path, run=run, url_config={}, overwrite=False
+        )
+    )
     result_paths = [result["source_path"] for result in results]
     assert len(results) == 2
     assert "/file1.html" in result_paths
