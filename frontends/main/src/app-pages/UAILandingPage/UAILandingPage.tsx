@@ -342,13 +342,29 @@ const FAQWrapper = styled.div({
   display: "flex",
 })
 
-const FAQImageContainer = styled.div({
+const FAQImageContainerOuter = styled.div({
   display: "flex",
-  paddingRight: "80px",
+  position: "relative",
+  marginRight: "80px",
   width: "50%",
   [theme.breakpoints.down("md")]: {
     display: "none",
   },
+})
+
+const FAQImageRedRing = styled(Image)({
+  position: "absolute",
+  left: "-100px",
+  bottom: "-100px",
+  transform: "rotate(5deg)",
+})
+
+const FAQImageContainerInner = styled.div({
+  display: "flex",
+  position: "relative",
+  width: "100%",
+  borderRadius: "12px 200px",
+  overflow: "hidden",
 })
 
 const FAQItemContainer = styled.div({
@@ -902,14 +918,22 @@ const UAILandingPage: React.FC = () => {
               </Typography>
             </FAQHeader>
             <FAQWrapper>
-              <FAQImageContainer>
-                <Image
+              <FAQImageContainerOuter>
+                <FAQImageRedRing
                   alt=""
-                  src="/images/uai_landing/uai-faq.png"
-                  width={568}
-                  height={528}
+                  src="/images/uai_landing/uai-faq-red-ring.svg"
+                  width={520}
+                  height={491}
                 />
-              </FAQImageContainer>
+                <FAQImageContainerInner>
+                  <Image
+                    alt=""
+                    src="/images/uai_landing/uai-faq.jpg"
+                    objectFit="cover"
+                    fill
+                  />
+                </FAQImageContainerInner>
+              </FAQImageContainerOuter>
               <FAQItemContainer>
                 {faqItems.map((item, index) => (
                   <FAQItem
