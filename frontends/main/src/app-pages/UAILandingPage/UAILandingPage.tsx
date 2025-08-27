@@ -20,6 +20,15 @@ import { Button, ButtonLink, Input } from "@mitodl/smoot-design"
 import { CarouselV2 } from "ol-components/CarouselV2"
 import { RiAddLine, RiSubtractLine } from "@remixicon/react"
 
+const DesktopOnly = styled.div(({ theme }) => ({
+  [theme.breakpoints.up("sm")]: {
+    display: "flex",
+  },
+  [theme.breakpoints.down("sm")]: {
+    display: "none",
+  },
+}))
+
 const PageContainer = styled(Container)({
   backgroundColor: theme.custom.colors.white,
   display: "flex",
@@ -42,6 +51,10 @@ const TopSection = styled.div({
   color: theme.custom.colors.darkGray2,
   width: "100%",
   minWidth: "1276px",
+  [theme.breakpoints.down("md")]: {
+    backgroundImage: "none",
+    minWidth: "0",
+  },
 })
 
 const HeaderContainer = styled.div({
@@ -51,6 +64,9 @@ const HeaderContainer = styled.div({
   justifyContent: "center",
   gap: "16px",
   padding: "80px 200px 64px 200px",
+  [theme.breakpoints.down("md")]: {
+    padding: "32px 16px",
+  },
 })
 
 const HeroContainerOuter = styled.div({
@@ -67,6 +83,26 @@ const HeroContainerInner = styled.div({
   alignItems: "stretch",
   alignSelf: "stretch",
   maxWidth: "1276px",
+  [theme.breakpoints.down("md")]: {
+    flexDirection: "column-reverse",
+    padding: "0px",
+  },
+})
+
+const TopHeaderText = styled(Typography)({
+  ...theme.typography.h1,
+  [theme.breakpoints.down("md")]: {
+    textAlign: "center",
+    ...theme.typography.h3,
+  },
+})
+
+const TopSubheaderText = styled(Typography)({
+  ...theme.typography.h5,
+  [theme.breakpoints.down("md")]: {
+    textAlign: "center",
+    ...theme.typography.subtitle1,
+  },
 })
 
 const HeroText = styled.div({
@@ -75,6 +111,26 @@ const HeroText = styled.div({
   padding: "56px 56px 56px 0",
   gap: "40px",
   width: "50%",
+  [theme.breakpoints.down("md")]: {
+    padding: "0",
+    gap: "16px",
+    width: "100%",
+  },
+})
+
+const HeroHeaderText = styled(Typography)({
+  ...theme.typography.h2,
+  [theme.breakpoints.down("md")]: {
+    ...theme.typography.h4,
+    textAlign: "center",
+  },
+})
+
+const HeroSubheaderText = styled(Typography)({
+  ...theme.typography.body1,
+  [theme.breakpoints.down("md")]: {
+    ...theme.typography.body2,
+  },
 })
 
 const HeroImage = styled.div({
@@ -84,6 +140,10 @@ const HeroImage = styled.div({
   flexGrow: 1,
   borderRadius: "8px",
   width: "50%",
+  [theme.breakpoints.down("md")]: {
+    width: "100%",
+    height: "300px",
+  },
 })
 
 const InquireButton = styled(ButtonLink)({
@@ -92,6 +152,9 @@ const InquireButton = styled(ButtonLink)({
   width: "200px",
   height: "48px",
   padding: "18px 24px",
+  [theme.breakpoints.down("md")]: {
+    width: "100%",
+  },
 })
 
 const ProgramSection = styled.div({
@@ -103,11 +166,18 @@ const ProgramSection = styled.div({
   width: "100%",
   minWidth: "1276px",
   borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
+  [theme.breakpoints.down("md")]: {
+    backgroundImage: "none",
+    minWidth: "0",
+  },
 })
 
 const ProgramContainer = styled.div({
   padding: "80px 200px",
   width: "100%",
+  [theme.breakpoints.down("md")]: {
+    padding: "32px 16px",
+  },
 })
 
 const ProgramSectionTitle = styled.div({
@@ -189,6 +259,9 @@ const FAQSection = styled.div({
   width: "100%",
   minWidth: "1276px",
   borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
+  [theme.breakpoints.down("md")]: {
+    minWidth: "0",
+  },
 })
 
 const FAQContainerOuter = styled.div({
@@ -196,6 +269,9 @@ const FAQContainerOuter = styled.div({
   justifyContent: "center",
   padding: "80px 200px",
   width: "100%",
+  [theme.breakpoints.down("md")]: {
+    padding: "32px 16px",
+  },
 })
 
 const FAQContainerInner = styled.div({
@@ -222,6 +298,9 @@ const FAQImageContainer = styled.div({
   display: "flex",
   paddingRight: "80px",
   width: "50%",
+  [theme.breakpoints.down("md")]: {
+    display: "none",
+  },
 })
 
 const FAQItemContainer = styled.div({
@@ -229,6 +308,9 @@ const FAQItemContainer = styled.div({
   flexDirection: "column",
   gap: "32px",
   width: "50%",
+  [theme.breakpoints.down("md")]: {
+    width: "100%",
+  },
 })
 
 const FAQAccordion = styled(Accordion)({
@@ -279,6 +361,14 @@ const HubspotFormSection = styled.div({
     justifyContent: "center",
     padding: "80px 200px",
     width: "100%",
+    [theme.breakpoints.down("md")]: {
+      padding: "0",
+      minWidth: "0",
+    },
+  },
+  [theme.breakpoints.down("md")]: {
+    padding: "32px 16px",
+    minWidth: "0",
   },
 })
 
@@ -444,6 +534,11 @@ const HubspotForm: React.FC = () => {
           input[type="submit"]:hover {
             background-color: ${theme.custom.colors.red};
           }
+          ${`@media (max-width: ${theme.breakpoints.values.md}px)`} {
+            input[type="submit"] {
+              width: 100%;
+            }
+          }
         }
       }
       `
@@ -586,22 +681,22 @@ const UAILandingPage: React.FC = () => {
       <GradientWrapper>
         <TopSection>
           <HeaderContainer>
-            <Typography variant="h1" justifyContent="center">
-              <Typography variant="h1" color={theme.custom.colors.lightRed}>
+            <TopHeaderText variant="h1" justifyContent="center">
+              <TopHeaderText variant="h1" color={theme.custom.colors.lightRed}>
                 Universal
-              </Typography>{" "}
+              </TopHeaderText>{" "}
               AI Education from MIT
-            </Typography>
-            <Typography variant="h5">
+            </TopHeaderText>
+            <TopSubheaderText>
               Preparing learners for a future powered by AI.
-            </Typography>
+            </TopSubheaderText>
             <HeroContainerOuter>
               <HeroContainerInner>
                 <HeroText>
-                  <Typography variant="h2">
+                  <HeroHeaderText>
                     Learning content, for everyone
-                  </Typography>
-                  <Typography variant="body1">
+                  </HeroHeaderText>
+                  <HeroSubheaderText>
                     Universal AI education from MIT is a dynamic online learning
                     experience that spans the theoretical foundations and
                     real-world applications of artificial intelligence,
@@ -610,7 +705,7 @@ const UAILandingPage: React.FC = () => {
                     education on how to understand, use, apply, and interpret AI
                     in a way that is approachable to learners without a strong
                     technical background.
-                  </Typography>
+                  </HeroSubheaderText>
                   <InquireButton href="#hubspotContainer">
                     Inquire Now
                   </InquireButton>
@@ -669,36 +764,38 @@ const UAILandingPage: React.FC = () => {
             </Typography>
           </BracketSeparator>
           <CarouselSection>
-            <CarouselContainer>
-              <StyledCarousel arrowsContainer={arrowsContainerRef}>
-                {carouselItems.map((item, index) => (
-                  <Card key={index} size="medium">
-                    <Card.Content>
-                      <CardImage
-                        src={item.image}
-                        alt=""
-                        height={170}
-                        width={298}
-                      />
-                      <CardText>
-                        <Typography
-                          variant="subtitle3"
-                          color={theme.custom.colors.silverGrayDark}
-                        >
-                          {item.title}
-                        </Typography>
-                        <Typography
-                          variant="subtitle1"
-                          color={theme.custom.colors.darkGray2}
-                        >
-                          {item.subtitle}
-                        </Typography>
-                      </CardText>
-                    </Card.Content>
-                  </Card>
-                ))}
-              </StyledCarousel>
-            </CarouselContainer>
+            <DesktopOnly>
+              <CarouselContainer>
+                <StyledCarousel arrowsContainer={arrowsContainerRef}>
+                  {carouselItems.map((item, index) => (
+                    <Card key={index} size="medium">
+                      <Card.Content>
+                        <CardImage
+                          src={item.image}
+                          alt=""
+                          height={170}
+                          width={298}
+                        />
+                        <CardText>
+                          <Typography
+                            variant="subtitle3"
+                            color={theme.custom.colors.silverGrayDark}
+                          >
+                            {item.title}
+                          </Typography>
+                          <Typography
+                            variant="subtitle1"
+                            color={theme.custom.colors.darkGray2}
+                          >
+                            {item.subtitle}
+                          </Typography>
+                        </CardText>
+                      </Card.Content>
+                    </Card>
+                  ))}
+                </StyledCarousel>
+              </CarouselContainer>
+            </DesktopOnly>
             {arrows}
             <InquireButton href="#hubspotContainer">Inquire Now</InquireButton>
           </CarouselSection>
