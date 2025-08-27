@@ -230,6 +230,8 @@ const FoundationalCarouselContainer = styled.div({
   alignItems: "center",
   gap: "48px",
   padding: "48px 0",
+  maxWidth: "1276px",
+  width: "100%",
   [theme.breakpoints.down("md")]: {
     gap: "16px",
     padding: "32px 0",
@@ -810,10 +812,7 @@ const UAILandingPage: React.FC = () => {
         <TopSection>
           <HeaderContainer>
             <TopHeaderText variant="h1" justifyContent="center">
-              <TopHeaderText variant="h1" color={theme.custom.colors.lightRed}>
-                Universal
-              </TopHeaderText>{" "}
-              AI Education from MIT
+              Equip your institution with resilient AI education
             </TopHeaderText>
             <SubheaderText>
               Preparing learners for a future powered by AI.
