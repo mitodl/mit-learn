@@ -1,6 +1,7 @@
 """Tests for Canvas ETL functionality"""
 
 import zipfile
+from datetime import timedelta
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -8,6 +9,7 @@ import pytest
 
 from learning_resources.constants import LearningResourceType, PlatformType
 from learning_resources.etl.canvas import (
+    is_file_published,
     parse_canvas_settings,
     parse_module_meta,
     run_for_canvas_archive,
@@ -24,6 +26,7 @@ from learning_resources.factories import (
 )
 from learning_resources.models import LearningResource
 from learning_resources_search.constants import CONTENT_FILE_TYPE
+from main.utils import now_in_utc
 
 pytestmark = pytest.mark.django_db
 
@@ -492,3 +495,95 @@ def test_transform_canvas_content_files_url_assignment(mocker, tmp_path):
     )
     file1 = next(item for item in results if item["key"] == "file1")
     assert file1["url"] == "https://cdn.example.com/file1.html"
+
+
+@pytest.mark.parametrize(
+    ("file_meta", "expected"),
+    [
+        # Test case: File is explicitly hidden
+        ({"hidden": "true", "locked": "false"}, False),
+        # Test case: File is explicitly locked
+        ({"hidden": "false", "locked": "true"}, False),
+        # Test case: File is neither hidden nor locked, visibility is "inherit"
+        ({"hidden": "false", "locked": "false", "visibility": "inherit"}, True),
+        # Test case: File is neither hidden nor locked, visibility is "course"
+        ({"hidden": "false", "locked": "false", "visibility": "course"}, True),
+        # Test case: File is neither hidden nor locked, visibility is "institution"
+        ({"hidden": "false", "locked": "false", "visibility": "institution"}, True),
+        # Test case: File is neither hidden nor locked, visibility is "public"
+        ({"hidden": "false", "locked": "false", "visibility": "public"}, True),
+        # Test case: File is neither hidden nor locked, visibility is unknown
+        ({"hidden": "false", "locked": "false", "visibility": "unknown"}, False),
+        # Test case: File is neither hidden nor locked, unlock_at is in the future
+        (
+            {
+                "hidden": "false",
+                "locked": "false",
+                "unlock_at": (now_in_utc() + timedelta(days=1)).isoformat(),
+            },
+            False,
+        ),
+        # Test case: File is neither hidden nor locked, unlock_at is in the past
+        (
+            {
+                "hidden": "false",
+                "locked": "false",
+                "unlock_at": (now_in_utc() - timedelta(days=1)).isoformat(),
+            },
+            True,
+        ),
+        # Test case: File is neither hidden nor locked, lock_at is in the future
+        (
+            {
+                "hidden": "false",
+                "locked": "false",
+                "lock_at": (now_in_utc() + timedelta(days=1)).isoformat(),
+            },
+            True,
+        ),
+        # Test case: File is neither hidden nor locked, lock_at is in the past
+        (
+            {
+                "hidden": "false",
+                "locked": "false",
+                "lock_at": (now_in_utc() - timedelta(days=1)).isoformat(),
+            },
+            False,
+        ),
+        # Test case: File is neither hidden nor locked, unlock_at and lock_at are valid
+        (
+            {
+                "hidden": "false",
+                "locked": "false",
+                "unlock_at": (now_in_utc() - timedelta(days=1)).isoformat(),
+                "lock_at": (now_in_utc() + timedelta(days=1)).isoformat(),
+            },
+            True,
+        ),
+        # Test case: File is neither hidden nor locked, unlock_at is in the future, lock_at is in the past
+        (
+            {
+                "hidden": "false",
+                "locked": "false",
+                "unlock_at": (now_in_utc() + timedelta(days=1)).isoformat(),
+                "lock_at": (now_in_utc() - timedelta(days=1)).isoformat(),
+            },
+            False,
+        ),
+        # Test case: File is neither hidden nor locked, unlock_at and lock_at are invalid
+        (
+            {
+                "hidden": "false",
+                "locked": "false",
+                "unlock_at": "invalid_date",
+                "lock_at": "invalid_date",
+            },
+            True,
+        ),
+    ],
+)
+def test_is_file_published(file_meta, expected):
+    """
+    Test is_file_published for all conditions in file metadata
+    """
+    assert is_file_published(file_meta) == expected

@@ -118,7 +118,7 @@ def run_for_canvas_archive(course_archive_path, course_folder, overwrite):
         try:
             end_at = datetime.fromisoformat(end_at)
         except (ValueError, TypeError):
-            log.warning("Invalid start_at date format: %s", end_at)
+            log.warning("Invalid end_at date format: %s", end_at)
 
     readable_id = f"{course_folder}-{course_info.get('course_code')}"
     # create placeholder learning resource
@@ -172,17 +172,23 @@ def transform_canvas_content_files(
     course_zipfile: Path, run: LearningResourceRun, url_config: list, *, overwrite
 ) -> Generator[dict, None, None]:
     """
-    Transform content files from a Canvas course zipfile
+    Transform published content files from a Canvas course zipfile
     """
     basedir = course_zipfile.name.split(".")[0]
-    module_metadata = parse_module_meta(course_zipfile.absolute())
+    zipfile_path = course_zipfile.absolute()
+
+    # grab published module and file items
     published_items = [
-        Path(item["path"]).resolve() for item in module_metadata["active"]
+        Path(item["path"]).resolve()
+        for item in parse_module_meta(zipfile_path)["active"]
+    ] + [
+        Path(item["path"]).resolve()
+        for item in parse_files_meta(zipfile_path)["active"]
     ]
     published_keys = []
     with (
         TemporaryDirectory(prefix=basedir) as olx_path,
-        zipfile.ZipFile(course_zipfile.absolute(), "r") as course_archive,
+        zipfile.ZipFile(zipfile_path, "r") as course_archive,
     ):
         for member in course_archive.infolist():
             if Path(member.filename).resolve() in published_items:
@@ -200,9 +206,8 @@ def transform_canvas_content_files(
             if content_url:
                 content_data["url"] = content_url
             yield content_data
-
     unpublished_content = run.content_files.exclude(key__in=published_keys)
-
+    # remove unpublished contentfiles
     bulk_resources_unpublished_actions(
         list(unpublished_content.values_list("id", flat=True)), CONTENT_FILE_TYPE
     )
@@ -319,11 +324,17 @@ def is_file_published(file_meta: dict) -> bool:
 
 def parse_files_meta(course_archive_path: str) -> dict:
     """
-    Parse module_meta.xml and return publish/active status of resources.
+    Parse course_settings/files_meta.xml and return publish/active status of resources.
     """
-    with zipfile.ZipFile(course_archive_path, "r") as course_archive:
-        files_xml = course_archive.read("course_settings/files_meta.xml")
     publish_status = {"active": [], "unpublished": []}
+    with zipfile.ZipFile(course_archive_path, "r") as course_archive:
+        files_meta_path = "course_settings/files_meta.xml"
+        if files_meta_path not in course_archive.namelist():
+            return publish_status
+        files_xml = course_archive.read(files_meta_path)
+        manifest_xml = course_archive.read("imsmanifest.xml")
+    resource_map = extract_resources_by_identifier(manifest_xml)
+
     root = ElementTree.fromstring(files_xml)
     namespaces = {"c": "http://canvas.instructure.com/xsd/cccv1p0"}
     try:
@@ -334,17 +345,22 @@ def parse_files_meta(course_archive_path: str) -> dict:
                 # strip namespace
                 if "}" in tag:
                     tag = tag.split("}", 1)[1]
-                # handle nil cases
                 if child.attrib.get("nil") == "true":
                     value = None
                 else:
                     value = (child.text or "").strip()
                 meta[tag] = value
+            item_info = resource_map.get(meta.get("identifier"), {})
             meta["published"] = is_file_published(meta)
-            if meta["published"]:
-                publish_status["active"].append(meta)
-            else:
-                publish_status["unpublished"].append(meta)
+            for file in item_info.get("files", []):
+                file_data = meta.copy()
+                file_path = Path(file)
+                file_data["path"] = file_path
+                file_data["title"] = file_data.get("display_name")
+                if file_data["published"]:
+                    publish_status["active"].append(file_data)
+                else:
+                    publish_status["unpublished"].append(file_data)
     except Exception:
         log.exception("Error parsing XML: %s", sys.stderr)
         return None
@@ -395,7 +411,8 @@ def parse_module_meta(course_archive_path: str) -> dict:
 
 def extract_resources_by_identifierref(manifest_xml: str) -> dict:
     """
-    Extract resources from an IMS manifest file and return a map keyed by identifierref.
+    Extract resources from an IMS manifest file and
+    return a map keyed by identifierref.
     """
     root = ElementTree.fromstring(manifest_xml)
 
@@ -428,6 +445,51 @@ def extract_resources_by_identifierref(manifest_xml: str) -> dict:
                 {"title": title, "files": files, "type": resource.get("type")}
             )
     return dict(resources_dict)
+
+
+def extract_resources_by_identifier(manifest_xml: str) -> dict:
+    """
+    Extract resources from an IMS manifest
+    file and return a map keyed by identifier.
+    """
+    root = ElementTree.fromstring(manifest_xml)
+
+    namespaces = {
+        "imscp": "http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1",
+        "lom": "http://ltsc.ieee.org/xsd/imsccv1p1/LOM/resource",
+        "lomimscc": "http://ltsc.ieee.org/xsd/imsccv1p1/LOM/manifest",
+    }
+
+    resources_dict = {}
+
+    # Find all resource elements
+    for resource in root.findall(".//imscp:resource[@identifier]", namespaces):
+        identifier = resource.get("identifier")
+        resource_type = resource.get("type")
+        href = resource.get("href")
+
+        # Get all file elements within the resource
+        files = [
+            file_elem.get("href")
+            for file_elem in resource.findall("imscp:file", namespaces)
+        ]
+
+        # Extract metadata if present
+        metadata = {}
+        metadata_elem = resource.find("imscp:metadata", namespaces)
+        if metadata_elem is not None:
+            # You can expand this to extract specific metadata fields as needed
+            metadata["has_metadata"] = True
+
+        resources_dict[identifier] = {
+            "identifier": identifier,
+            "type": resource_type,
+            "href": href,
+            "files": files,
+            "metadata": metadata,
+        }
+
+    return resources_dict
 
 
 def pdf_to_base64_images(pdf_path, fmt="JPEG", max_size=2000, quality=85):
