@@ -587,3 +587,104 @@ def test_is_file_published(file_meta, expected):
     Test is_file_published for all conditions in file metadata
     """
     assert is_file_published(file_meta) == expected
+
+
+def test_published_module_and_files_meta_content_ingestion(mocker, tmp_path):
+    """
+    Test published files from files_meta and module_meta are retained,
+    """
+
+    module_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <modules xmlns="http://canvas.instructure.com/xsd/cccv1p0">
+      <module>
+        <title>Module 1</title>
+        <items>
+          <item>
+            <workflow_state>active</workflow_state>
+            <title>Item 1</title>
+            <identifierref>RES1</identifierref>
+            <content_type>resource</content_type>
+          </item>
+          <item>
+            <workflow_state>unpublished</workflow_state>
+            <title>Item 2</title>
+            <identifierref>RES2</identifierref>
+            <content_type>resource</content_type>
+          </item>
+        </items>
+      </module>
+    </modules>
+    """
+
+    files_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <fileMeta xmlns="http://canvas.instructure.com/xsd/cccv1p0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://canvas.instructure.com/xsd/cccv1p0 https://canvas.instructure.com/xsd/cccv1p0.xsd">
+    <files>
+    <file identifier="RES3">
+      <category>uncategorized</category>
+    </file>
+    <file identifier="RES4">
+      <locked>true</locked>
+      <category>uncategorized</category>
+    </file>
+    </files>
+    </fileMeta>
+    """
+    manifest_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
+      <resources>
+        <resource identifier="RES1" type="webcontent">
+          <file href="file1.html"/>
+        </resource>
+        <resource identifier="RES2" type="webcontent">
+          <file href="file2.html"/>
+        </resource>
+        <resource identifier="RES3" type="webcontent">
+          <file href="file3.html"/>
+        </resource>
+        <resource identifier="RES4" type="webcontent">
+          <file href="file4.html"/>
+        </resource>
+      </resources>
+      <organizations>
+        <organization>
+          <item identifierref="RES1">
+            <title>Item 1</title>
+          </item>
+          <item identifierref="RES2">
+            <title>Item 2</title>
+          </item>
+
+        </organization>
+      </organizations>
+    </manifest>
+    """
+
+    mocker.patch(
+        "learning_resources.etl.utils.extract_text_metadata",
+        return_value={"content": "TEXT"},
+    )
+    bulk_unpub = mocker.patch(
+        "learning_resources.etl.canvas.bulk_resources_unpublished_actions"
+    )
+    zip_path = canvas_zip_with_files(
+        tmp_path,
+        [
+            ("course_settings/module_meta.xml", module_xml),
+            ("course_settings/files_meta.xml", files_xml),
+            ("imsmanifest.xml", manifest_xml),
+            ("file1.html", b"<html/>"),
+            ("file2html", b"<html/>"),
+            ("file3.html", b"<html/>"),
+            ("file4.html", b"<html/>"),
+        ],
+    )
+    run = LearningResourceRunFactory.create()
+    stale_contentfile = ContentFileFactory.create(run=run)
+    results = list(transform_canvas_content_files(zip_path, run=run, overwrite=False))
+    result_paths = [result["source_path"] for result in results]
+    assert len(results) == 2
+    assert "/file1.html" in result_paths
+    assert "/file3.html" in result_paths
+    assert bulk_unpub.mock_calls[0].args[0] == [stale_contentfile.id]

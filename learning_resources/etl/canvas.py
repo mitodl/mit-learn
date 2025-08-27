@@ -169,7 +169,7 @@ def parse_canvas_settings(course_archive_path):
 
 
 def transform_canvas_content_files(
-    course_zipfile: Path, run: LearningResourceRun, url_config: list, *, overwrite
+    course_zipfile: Path, run: LearningResourceRun, url_config: dict, *, overwrite
 ) -> Generator[dict, None, None]:
     """
     Transform published content files from a Canvas course zipfile
