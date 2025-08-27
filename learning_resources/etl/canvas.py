@@ -179,7 +179,6 @@ def transform_canvas_content_files(
     """
     basedir = course_zipfile.name.split(".")[0]
     zipfile_path = course_zipfile.absolute()
-
     # grab published module and file items
     published_items = [
         Path(item["path"]).resolve()
@@ -188,27 +187,35 @@ def transform_canvas_content_files(
         Path(item["path"]).resolve()
         for item in parse_files_meta(zipfile_path)["active"]
     ]
+
+    def _generate_content():
+        """Inner generator for yielding content data"""
+        with (
+            TemporaryDirectory(prefix=basedir) as olx_path,
+            zipfile.ZipFile(zipfile_path, "r") as course_archive,
+        ):
+            for member in course_archive.infolist():
+                if Path(member.filename).resolve() in published_items:
+                    course_archive.extract(member, path=olx_path)
+                    log.debug("processing active file %s", member.filename)
+                else:
+                    log.debug("skipping unpublished file %s", member.filename)
+
+            for content_data in _process_olx_path(olx_path, run, overwrite=overwrite):
+                url_path = content_data["source_path"].lstrip(
+                    content_data["source_path"].split("/")[0]
+                )
+                content_url = url_config.get(url_path, "")
+                if content_url:
+                    content_data["url"] = content_url
+                yield content_data
+
+    # use subgenerator for yielding content data
     published_keys = []
-    with (
-        TemporaryDirectory(prefix=basedir) as olx_path,
-        zipfile.ZipFile(zipfile_path, "r") as course_archive,
-    ):
-        for member in course_archive.infolist():
-            if Path(member.filename).resolve() in published_items:
-                full_path = Path(olx_path) / Path(member.filename)
-                published_keys.append(get_edx_module_id(str(full_path), run))
-                course_archive.extract(member, path=olx_path)
-                log.debug("processing active file %s", member.filename)
-            else:
-                log.debug("skipping unpublished file %s", member.filename)
-        for content_data in _process_olx_path(olx_path, run, overwrite=overwrite):
-            url_path = content_data["source_path"].lstrip(
-                content_data["source_path"].split("/")[0]
-            )
-            content_url = url_config.get(url_path, "")
-            if content_url:
-                content_data["url"] = content_url
-            yield content_data
+    for content_data in _generate_content():
+        full_path = Path(basedir) / Path(content_data["source_path"])
+        published_keys.append(get_edx_module_id(str(full_path), run))
+        yield content_data
     unpublished_content = run.content_files.exclude(key__in=published_keys)
     # remove unpublished contentfiles
     bulk_resources_unpublished_actions(
