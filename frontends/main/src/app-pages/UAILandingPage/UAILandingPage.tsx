@@ -110,7 +110,7 @@ const HeroText = styled.div({
   display: "flex",
   flexDirection: "column",
   padding: "56px 56px 56px 0",
-  gap: "40px",
+  gap: "16px",
   width: "50%",
   [theme.breakpoints.down("md")]: {
     padding: "0",
@@ -118,6 +118,15 @@ const HeroText = styled.div({
     gap: "24px",
     width: "100%",
   },
+})
+
+const HeroTextCard = styled.div({
+  display: "flex",
+  alignItems: "center",
+  alignSelf: "stretch",
+  borderRadius: "8px",
+  backgroundColor: theme.custom.colors.white,
+  padding: "16px 24px",
 })
 
 const HeroHeaderText = styled(Typography)({
@@ -700,15 +709,30 @@ const UAILandingPage: React.FC = () => {
                     Learning content, for everyone
                   </HeroHeaderText>
                   <HeroSubheaderText>
-                    Universal AI education from MIT is a dynamic online learning
-                    experience that spans the theoretical foundations and
-                    real-world applications of artificial intelligence,
-                    preparing learners for employment in our rapidly evolving
-                    job market. MIT faculty and experts provide universal
-                    education on how to understand, use, apply, and interpret AI
-                    in a way that is approachable to learners without a strong
-                    technical background.
+                    With Universal AI, MIT experts equip learners from
+                    universities and companies with a shared language and
+                    understanding of the possibilities and limitations of AI –
+                    from the theoretical foundations to real-world applications
+                    across industries.
                   </HeroSubheaderText>
+                  <HeroTextCard>
+                    <Typography variant="body1">
+                      Gain a robust understanding of the theories, concepts, and
+                      problem-solving approaches of AI systems.
+                    </Typography>
+                  </HeroTextCard>
+                  <HeroTextCard>
+                    <Typography variant="body1">
+                      Identify opportunities to increase efficiency and improve
+                      decision making in the workplace.
+                    </Typography>
+                  </HeroTextCard>
+                  <HeroTextCard>
+                    <Typography variant="body1">
+                      Apply competencies in domain-specific contexts based on
+                      personal or professional interests.
+                    </Typography>
+                  </HeroTextCard>
                   <InquireButton href="#hubspotContainer">
                     Inquire Now
                   </InquireButton>
