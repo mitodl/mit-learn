@@ -436,10 +436,10 @@ const HubspotFormSection = styled.div({
   },
 })
 
-const FAQItem: React.FC<{ question: string; answer: string }> = ({
-  question,
-  answer,
-}) => {
+const FAQItem: React.FC<{
+  question: string
+  answer: string | React.ReactElement
+}> = ({ question, answer }) => {
   const [expanded, setExpanded] = React.useState(false)
 
   const handleChange = () => {
@@ -464,9 +464,7 @@ const FAQItem: React.FC<{ question: string; answer: string }> = ({
           {question}
         </Typography>
       </FAQAccordionSummary>
-      <AccordionDetails>
-        <Typography variant="body1">{answer}</Typography>
-      </AccordionDetails>
+      <AccordionDetails>{answer}</AccordionDetails>
     </FAQAccordion>
   )
 }
@@ -704,26 +702,47 @@ const UAILandingPage: React.FC = () => {
 
   const faqItems = [
     {
-      question: "How are the lectures by MIT faculty structured?",
-      answer: "This is a placeholder answer for the question provided.",
+      question: "Who is Universal AI for?",
+      answer: (
+        <>
+          Universal AI is a flexible curriculum designed for the needs of a
+          variety of institutions including universities and companies.
+          <br />
+          <br />
+          For universities looking to:
+          <ul>
+            <li>Access the latest AI research and knowledge</li>
+            <li>Complement and fill curriculum gaps</li>
+            <li>Offer elective or add-on programs to students</li>
+          </ul>
+          For companies looking to:
+          <ul>
+            <li>Improve business processes, innovations, and outcomes</li>
+            <li>Close the AI knowledge gap amongst employees</li>
+            <li>Invest in their talent pipelines</li>
+          </ul>
+        </>
+      ),
     },
     {
-      question: "How do guided exercises support learning?",
-      answer: "This is a placeholder answer for the question provided.",
+      question: "What does a module look like?",
+      answer:
+        "Universal AI is entirely self-paced and asynchronous, allowing learners to progress at their own speed. Each module is comprised of 4-8 lectures accompanied by knowledge checks, guided exercises, and assignments. Learners can get help and ask questions from the AskTIM AI tutor.",
     },
     {
-      question:
-        "What is the AI-powered AskTIM feature and how does it support learners?",
-      answer: "This is a placeholder answer for the question provided.",
+      question: "Are there hands-on exercises?",
+      answer:
+        "Hands-on exercises, led by MIT teaching assistants, accompany each module. Building on the theories and concepts introduced in the lectures, the TA’s ask learners to apply them to real-world examples using provided codes to complete the assignments.",
     },
     {
-      question: "How is learning assessed throughout the modules?",
-      answer: "This is a placeholder answer for the question provided.",
+      question: "What is the AI tutor? How does it work?",
+      answer:
+        "The AI tutor, AskTIM, supports a more personalized Universal AI learning experience on the MIT Learn platform. Learners can interact with the AskTIM chatbot to ask questions about the lectures and exercises or get help on homework and knowledge checks. AskTIM can also help learners chart their unique learning journey through the Universal AI curriculum based on their specific goals.",
     },
     {
-      question:
-        "What kind of support is available for administrators and instructors?",
-      answer: "This is a placeholder answer for the question provided.",
+      question: "Can learners earn certificates?",
+      answer:
+        "Yes, learners earn and stack certificates as they progress through the curriculum. Learners earn a Universal AI Module Certificate after successfully completing a module. These can be stacked towards a Universal AI Foundations Series Certificate (earned after completing all foundational modules) and a Universal AI Program Certificate (earned after completing all foundational modules plus at least one vertical module).",
     },
   ]
 
