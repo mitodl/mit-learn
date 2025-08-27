@@ -65,6 +65,7 @@ const HeaderContainer = styled.div({
   gap: "16px",
   padding: "80px 200px 64px 200px",
   [theme.breakpoints.down("md")]: {
+    gap: "24px",
     padding: "32px 16px",
   },
 })
@@ -85,7 +86,7 @@ const HeroContainerInner = styled.div({
   maxWidth: "1276px",
   [theme.breakpoints.down("md")]: {
     flexDirection: "column-reverse",
-    padding: "0px",
+    padding: "0",
   },
 })
 
@@ -113,7 +114,8 @@ const HeroText = styled.div({
   width: "50%",
   [theme.breakpoints.down("md")]: {
     padding: "0",
-    gap: "16px",
+    paddingTop: "24px",
+    gap: "24px",
     width: "100%",
   },
 })
@@ -136,9 +138,10 @@ const HeroSubheaderText = styled(Typography)({
 const HeroImage = styled.div({
   display: "flex",
   position: "relative",
-  objectFit: "contain",
+  objectFit: "cover",
   flexGrow: 1,
   borderRadius: "8px",
+  overflow: "hidden",
   width: "50%",
   [theme.breakpoints.down("md")]: {
     width: "100%",
@@ -713,9 +716,9 @@ const UAILandingPage: React.FC = () => {
                 <HeroImage>
                   <Image
                     alt=""
-                    src="/images/uai_landing/uai-landing-hero.jpg"
+                    src="/images/uai_landing/uai-landing-hero-2.jpg"
                     layout="fill"
-                    objectFit="contain"
+                    objectFit="cover"
                   />
                 </HeroImage>
               </HeroContainerInner>
