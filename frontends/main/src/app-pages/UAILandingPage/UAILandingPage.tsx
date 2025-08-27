@@ -425,6 +425,11 @@ const HubspotForm: React.FC = () => {
             width: 100% !important;
             ${inputCssString}
           }
+          input[type="text"]:hover, input[type="email"]:hover,
+          input[type="text"]:focus, input[type="email"]:focus {
+            border-color: ${theme.custom.colors.darkGray2};
+            border-width: 2px;
+          }
           select {
             padding-left: 8px !important;
             width: 100% !important;
@@ -435,6 +440,9 @@ const HubspotForm: React.FC = () => {
           }
           input[type="submit"] {
             ${buttonCssString}
+          }
+          input[type="submit"]:hover {
+            background-color: ${theme.custom.colors.red};
           }
         }
       }
