@@ -734,7 +734,7 @@ const UAILandingPage: React.FC = () => {
                     </Typography>
                   </HeroTextCard>
                   <InquireButton href="#hubspotContainer">
-                    Inquire Now
+                    Learn More
                   </InquireButton>
                 </HeroText>
                 <HeroImage>
@@ -824,7 +824,7 @@ const UAILandingPage: React.FC = () => {
               </CarouselContainer>
             </DesktopOnly>
             {arrows}
-            <InquireButton href="#hubspotContainer">Inquire Now</InquireButton>
+            <InquireButton href="#hubspotContainer">Learn More</InquireButton>
           </CarouselSection>
         </ProgramContainer>
       </ProgramSection>
@@ -860,9 +860,7 @@ const UAILandingPage: React.FC = () => {
               </FAQItemContainer>
             </FAQWrapper>
             <FAQInquireButtonContainer>
-              <InquireButton href="#hubspotContainer">
-                Inquire Now
-              </InquireButton>
+              <InquireButton href="#hubspotContainer">Learn More</InquireButton>
             </FAQInquireButtonContainer>
           </FAQContainerInner>
         </FAQContainerOuter>
