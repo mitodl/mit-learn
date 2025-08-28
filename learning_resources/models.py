@@ -407,8 +407,8 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
                 "views",
                 queryset=LearningResourceViewEvent.objects.all(),
                 to_attr="_views",
-            )
-            * LearningResourceDetailModel.get_subclass_prefetches(),
+            ),
+            *LearningResourceDetailModel.get_subclass_prefetches(),
         ).select_related("image", "platform")
 
     def for_search_serialization(self):
