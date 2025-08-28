@@ -342,8 +342,7 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
     """QuerySet for LearningResource"""
 
     def for_serialization(self, *, user: Optional["User"] = None):
-        """QuerySet for LearningResource"""
-
+        """Return the list of prefetches"""
         return self.prefetch_related(
             Prefetch(
                 "topics",
