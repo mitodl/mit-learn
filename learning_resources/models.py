@@ -8,7 +8,14 @@ from typing import TYPE_CHECKING, Optional
 from django.conf import settings
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
-from django.db.models import CharField, Count, JSONField, OuterRef, Prefetch, Q
+from django.db.models import (
+    CharField,
+    Count,
+    JSONField,
+    OuterRef,
+    Prefetch,
+    Q,
+)
 from django.db.models.functions import Lower
 from django.utils import timezone
 
@@ -334,7 +341,7 @@ class LearningResourceInstructor(TimestampedModel):
 class LearningResourceQuerySet(TimestampedModelQuerySet):
     """QuerySet for LearningResource"""
 
-    def for_serialization(self, *, user: Optional["User"] = None):
+    def for_serialization_base(self):
         """Return the list of prefetches"""
         return self.prefetch_related(
             Prefetch(
@@ -362,6 +369,30 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
             Prefetch(
                 "parents",
                 queryset=LearningResourceRelationship.objects.filter(
+                    relation_type=LearningResourceRelationTypes.PODCAST_EPISODES.value,
+                ),
+                to_attr="_podcasts",
+            ),
+            Prefetch(
+                "children",
+                queryset=LearningResourceRelationship.objects.select_related(
+                    "child"
+                ).order_by("position"),
+            ),
+            Prefetch(
+                "views",
+                queryset=LearningResourceViewEvent.objects.all(),
+                to_attr="_views",
+            ),
+            *LearningResourceDetailModel.get_subclass_prefetches(),
+        ).select_related("image", "platform")
+
+    def for_serialization(self, *, user: Optional["User"] = None):
+        """Return a QuerySet for serialization"""
+        return self.for_serialization_base().prefetch_related(
+            Prefetch(
+                "parents",
+                queryset=LearningResourceRelationship.objects.filter(
                     relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value
                 )
                 if user is not None
@@ -377,36 +408,24 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
                 to_attr="_learning_path_parents",
             ),
             Prefetch(
-                "parents",
-                queryset=LearningResourceRelationship.objects.filter(
-                    relation_type=LearningResourceRelationTypes.PODCAST_EPISODES.value,
-                ),
-                to_attr="_podcasts",
-            ),
-            Prefetch(
-                "children",
-                queryset=LearningResourceRelationship.objects.select_related(
-                    "child"
-                ).order_by("position"),
-            ),
-            Prefetch(
                 "user_lists",
                 queryset=UserListRelationship.objects.filter(parent__author=user)
                 if user is not None and user.is_authenticated
                 else UserListRelationship.objects.none(),
                 to_attr="_user_list_parents",
             ),
-            Prefetch(
-                "views",
-                queryset=LearningResourceViewEvent.objects.all(),
-                to_attr="_views",
-            ),
-            *LearningResourceDetailModel.get_subclass_prefetches(),
-        ).select_related("image", "platform")
+        )
 
     def for_search_serialization(self):
-        return self.for_serialization().annotate(
-            in_featured_lists=Count("parents__parent__channel")
+        return self.for_serialization_base().prefetch_related(
+            Prefetch(
+                "parents",
+                queryset=LearningResourceRelationship.objects.filter(
+                    relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
+                    parent__channel__isnull=False,
+                ),
+                to_attr="_featured_learning_path_parents",
+            )
         )
 
 
@@ -526,6 +545,17 @@ class LearningResource(TimestampedModel):
         if hasattr(self, "_views"):
             return len(self._views)
         return LearningResourceViewEvent.objects.filter(learning_resource=self).count()
+
+    @cached_property
+    def in_featured_lists(self) -> int:
+        """Return the number of featured lists the resource is in"""
+        if hasattr(self, "_featured_learning_path_parents"):
+            return len(self._featured_learning_path_parents)
+        return LearningResourceRelationship.objects.filter(
+            child=self,
+            relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
+            parent__channel__isnull=False,
+        ).count()
 
     @cached_property
     def user_list_parents(self) -> list["LearningResourceRelationship"]:
