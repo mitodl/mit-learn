@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.41.8
+Version 0.41.8 (Released August 28, 2025)
 --------------
 
 - Ingest non-module canvas files (#2471)
