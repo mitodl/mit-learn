@@ -172,11 +172,13 @@ const HeroSubheaderText = styled(Typography)({
 const HeroImage = styled.div({
   display: "flex",
   position: "relative",
-  objectFit: "cover",
   flexGrow: 1,
   borderRadius: "8px",
   overflow: "hidden",
   width: "50%",
+  img: {
+    objectFit: "cover",
+  },
   [theme.breakpoints.down("md")]: {
     width: "100%",
     height: "300px",
@@ -256,7 +258,7 @@ const ProgramSectionHeader = styled.div({
 
 const CardImage = styled(Image)({
   display: "block",
-  width: "100%",
+  width: "auto",
   height: "182px",
   backgroundColor: theme.custom.colors.lightGray1,
   objectFit: "cover",
@@ -384,6 +386,9 @@ const FAQImageContainerInner = styled.div({
   width: "100%",
   borderRadius: "12px 200px",
   overflow: "hidden",
+  img: {
+    objectFit: "cover",
+  },
 })
 
 const FAQItemContainer = styled.div({
@@ -645,8 +650,17 @@ const HubspotForm: React.FC = () => {
           label="Placeholder"
           displayEmpty
           ref={hiddenSelectRef}
-        ></SelectField>
-        <MenuItem id="menuItemPlaceholder" ref={hiddenMenuItemRef}>
+          value="placeholder"
+        >
+          <MenuItem id="menuItemPlaceholder1" value="placeholder">
+            Placeholder
+          </MenuItem>
+        </SelectField>
+        <MenuItem
+          id="menuItemPlaceholder2"
+          ref={hiddenMenuItemRef}
+          value="placeholder"
+        >
           Placeholder
         </MenuItem>
         <Button id="buttonPlaceholder" size="large" ref={hiddenButtonRef}>
@@ -867,8 +881,8 @@ const UAILandingPage: React.FC = () => {
                   <Image
                     alt=""
                     src="/images/uai_landing/uai-landing-hero-2.jpg"
-                    layout="fill"
-                    objectFit="cover"
+                    sizes={`(max-width: ${theme.breakpoints.values.md}px) 50vw, 100vw`}
+                    fill
                   />
                 </HeroImage>
               </HeroContainerInner>
@@ -969,7 +983,7 @@ const UAILandingPage: React.FC = () => {
                   <Image
                     alt=""
                     src="/images/uai_landing/uai-faq.jpg"
-                    objectFit="cover"
+                    sizes={`(max-width: ${theme.breakpoints.values.md}px) 50vw, 100vw`}
                     fill
                   />
                 </FAQImageContainerInner>
