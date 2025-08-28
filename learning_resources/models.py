@@ -412,7 +412,7 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
         ).select_related("image", "platform")
 
     def for_search_serialization(self):
-        return self.for_serialization_base().prefetch_related(
+        return self.for_serialization().prefetch_related(
             Prefetch(
                 "parents",
                 queryset=LearningResourceRelationship.objects.filter(
