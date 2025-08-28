@@ -4,7 +4,7 @@ import { UAILandingPage } from "@/app-pages/UAILandingPage/UAILandingPage"
 import { standardizeMetadata } from "@/common/metadata"
 
 export const metadata: Metadata = standardizeMetadata({
-  title: "UAI Landing",
+  title: "Universal AI",
 })
 
 const Page: React.FC = () => {
