@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.41.9
+--------------
+
+- UAI Landing Page (#2460)
+- Get rid of n+1 queries in learning_resources API (#2466)
+
 Version 0.41.8 (Released August 28, 2025)
 --------------
 
