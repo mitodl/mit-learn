@@ -760,6 +760,7 @@ def test_embed_course_metadata_as_contentfile_uploads_points_on_change(mocker):
     assert len(points) == 1
     assert points[0].payload["resource_readable_id"] == resource.readable_id
     assert points[0].payload["checksum"] == resource_checksum
+    assert points[0].payload["url"] == resource.url
 
     # simulate qdrant returning the same checksum for the metadata doc
     mock_point.payload = {"checksum": resource_checksum}

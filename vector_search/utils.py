@@ -390,7 +390,7 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
                 "file_type": "course_metadata",
                 "key": key,
                 "checksum": checksum,
-                **{key: doc[key] for key in ["offered_by", "platform"]},
+                **{key: doc[key] for key in ["offered_by", "platform", "url"]},
             }
             for chunk_id, chunk_content in enumerate(split_texts)
         ]
