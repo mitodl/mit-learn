@@ -585,5 +585,6 @@ def marketing_page_for_resources(resource_ids):
                 },
             )
             content_file.key = marketing_page_url
+            content_file.url = marketing_page_url
             content_file.content = html_to_markdown(page_content)
             content_file.save()
