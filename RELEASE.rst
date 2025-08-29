@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.42.0
+--------------
+
+- Populate urls for marketing site and course metadata contentfiles (#2475)
+- UAI Landing Page (#2460)
+- Get rid of n+1 queries in learning_resources API (#2466)
+
 Version 0.41.8 (Released August 28, 2025)
 --------------
 
