@@ -551,6 +551,7 @@ def test_marketing_page_for_resources_with_webdriver(mocker, settings):
         learning_resource=course, file_type=MARKETING_PAGE_FILE_TYPE
     )
     assert content_file.key == course.url
+    assert content_file.url == course.url
     assert content_file.content == markdown_content
     assert content_file.file_extension == ".md"
 
