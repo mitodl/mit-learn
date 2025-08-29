@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.42.0
+Version 0.42.0 (Released August 29, 2025)
 --------------
 
 - Populate urls for marketing site and course metadata contentfiles (#2475)
