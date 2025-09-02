@@ -679,7 +679,7 @@ def test_sync_canvas_courses(settings, mocker, django_assert_num_queries, canvas
         assert mock_ingest_course.call_count == 2
 
 
-def test_remove_duplicate_resources(mocker):
+def test_remove_duplicate_resources(mocker, mocked_celery):
     """
     Test that remove_duplicate_resources removes duplicate unpublished resources
     while keeping the most recently created resource.
@@ -689,5 +689,6 @@ def test_remove_duplicate_resources(mocker):
     LearningResourceFactory.create_batch(3, readable_id=duplicate_id, published=False)
     LearningResourceFactory.create(readable_id=duplicate_id)
     assert LearningResource.objects.filter(readable_id=duplicate_id).count() == 4
-    remove_duplicate_resources()
+    with pytest.raises(mocked_celery.replace_exception_class):
+        remove_duplicate_resources()
     assert LearningResource.objects.filter(readable_id=duplicate_id).count() == 1
