@@ -915,7 +915,7 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
     @extend_schema_field(LearningResourceRelationshipChildField(allow_null=True))
     def get_children(self, instance):
         return LearningResourceRelationshipChildField(
-            instance.children.order_by("position"), many=True, read_only=True
+            instance.children, many=True, read_only=True
         ).data
 
     def get_resource_category(self, instance) -> str:
@@ -974,6 +974,7 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
             "views",
             "learning_path_parents",
             "user_list_parents",
+            "require_summaries",
         ]
         exclude = ["content_tags", "resources", "etl_source", *COMMON_IGNORED_FIELDS]
 
@@ -1193,6 +1194,7 @@ class ContentFileSerializer(serializers.ModelSerializer):
     run_title = serializers.CharField(source="run.title", required=False)
     run_slug = serializers.CharField(source="run.slug", required=False)
     semester = serializers.CharField(source="run.semester", required=False)
+    require_summaries = serializers.SerializerMethodField()
     checksum = serializers.CharField(required=False)
     year = serializers.IntegerField(source="run.year", required=False)
     topics = serializers.SerializerMethodField()
@@ -1249,6 +1251,11 @@ class ContentFileSerializer(serializers.ModelSerializer):
             return instance.run.learning_resource
         return instance.learning_resource
 
+    @extend_schema_field({"type": "boolean"})
+    def get_require_summaries(self, instance):
+        """Return whether the run requires summaries"""
+        return self.get_learning_resource(instance).require_summaries
+
     @extend_schema_field(LearningResourcePlatformSerializer())
     def get_platform(self, instance):
         platform = self.get_learning_resource(instance).platform
@@ -1301,6 +1308,7 @@ class ContentFileSerializer(serializers.ModelSerializer):
             "uid",
             "title",
             "description",
+            "require_summaries",
             "url",
             "content_feature_type",
             "content_type",

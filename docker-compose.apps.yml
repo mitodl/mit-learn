@@ -9,7 +9,7 @@ services:
       context: .
       dockerfile: Dockerfile
       target: final
-    mem_limit: 1gb
+    mem_limit: ${MITOL_WEB_MEM_LIMIT:-2gb}
     cpus: 2
     command: ./scripts/run-django-dev.sh
     stdin_open: true
@@ -54,7 +54,7 @@ services:
       context: .
       dockerfile: Dockerfile
       target: final
-    mem_limit: ${MITOL_CELERY_MEM_LIMIT:-2gb}
+    mem_limit: ${MITOL_CELERY_MEM_LIMIT:-4gb}
     cpus: ${MITOL_CELERY_CPU_LIMIT:-2}
     command: >
       /bin/bash -c '

@@ -27,7 +27,7 @@ The following embeddings related settings are available in the `settings.py` fil
 
 ## Embeddings for New Content
 
-Embeddings are automatically generated for new conetnt by a periodic celery task. The tasks are defined `vector_search/tasks.py`.
+Embeddings are automatically generated for new content by a periodic celery task. The tasks are defined `vector_search/tasks.py`.
 
 ## Embeddings for Existing Content
 

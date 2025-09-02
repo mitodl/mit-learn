@@ -1,6 +1,71 @@
 Release Notes
 =============
 
+Version 0.42.0 (Released August 29, 2025)
+--------------
+
+- Populate urls for marketing site and course metadata contentfiles (#2475)
+- UAI Landing Page (#2460)
+- Get rid of n+1 queries in learning_resources API (#2466)
+
+Version 0.41.8 (Released August 28, 2025)
+--------------
+
+- Ingest non-module canvas files (#2471)
+- Update dependency ruff to v0.12.10 (#2468)
+- Update dependency litellm to v1.76.0 (#2469)
+- Update dependency @sentry/nextjs to v10 (#2462)
+- Update smoot version (#2459)
+- Update dependency lxml to v6 (#2465)
+- Update dependency tiktoken to ^0.11.0 (#2464)
+- Minor tweaks to initial setup instructions, add memory env var for web container, note minimum required domain config for things to "work out of box" (#2458)
+- Add (citation) urls for canvas contentfiles (#2457)
+- fix one-click enrollment for the same course across multiple orgs (#2453)
+
+Version 0.41.5 (Released August 25, 2025)
+--------------
+
+- Ensure summaries and flashcards for specific courses (#2452)
+
+Version 0.41.4 (Released August 25, 2025)
+--------------
+
+- Do not upsert unpublished resources (#2449)
+- Fix renovate dependency conflicts: update llama-index to ^0.13.0 and llama-index-llms-openai to ^0.5.0 (#2448)
+
+Version 0.41.3 (Released August 22, 2025)
+--------------
+
+- Certificate page UI (#2429)
+- Fix bad urls for edx video contentfiles (#2444)
+- add program enrollments api and view program certificate button (#2439)
+
+Version 0.41.1 (Released August 18, 2025)
+--------------
+
+- removing check for api base (#2442)
+- fix video etl (#2438)
+- fix popular search (#2436)
+- B2B Provisioning: Add interstitial page to process redemption code retrieval (#2422)
+
+Version 0.40.1 (Released August 18, 2025)
+--------------
+
+- fix program collection org filter bug (#2435)
+- Optimize memory footprint of pdf problem transcription task (#2433)
+- Replace the social media image (#2434)
+- Generate summaries for new video transcripts (#2428)
+
+Version 0.40.0 (Released August 13, 2025)
+--------------
+
+- Append UTM query params (#2430)
+- Ability to group ContentFile vector search results  (#2426)
+- better bad data handling for the org dashboard (#2427)
+- org dashboard design updates (#2425)
+- Assign urls to edx contentfiles when possible (#2420)
+- add mitxonline certificate api (#2410)
+
 Version 0.39.3 (Released August 11, 2025)
 --------------
 

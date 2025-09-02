@@ -198,6 +198,7 @@ class LearningResourceAdmin(admin.ModelAdmin):
         "title",
         "platform",
         "etl_source",
+        "require_summaries",
         "offered_by",
         "resource_type",
         "published",

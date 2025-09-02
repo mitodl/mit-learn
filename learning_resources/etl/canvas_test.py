@@ -1,12 +1,15 @@
 """Tests for Canvas ETL functionality"""
 
 import zipfile
+from datetime import timedelta
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
 from learning_resources.constants import LearningResourceType, PlatformType
 from learning_resources.etl.canvas import (
+    is_file_published,
     parse_canvas_settings,
     parse_module_meta,
     run_for_canvas_archive,
@@ -23,6 +26,7 @@ from learning_resources.factories import (
 )
 from learning_resources.models import LearningResource
 from learning_resources_search.constants import CONTENT_FILE_TYPE
+from main.utils import now_in_utc
 
 pytestmark = pytest.mark.django_db
 
@@ -33,7 +37,7 @@ def canvas_platform():
     return LearningResourcePlatformFactory.create(code=PlatformType.canvas.name)
 
 
-def canvas_zip_with_problem_files(tmp_path: str, files: dict[tuple[str, bytes]]) -> str:
+def canvas_zip_with_files(tmp_path: str, files: dict[tuple[str, bytes]]) -> str:
     """
     Create a Canvas zip with problem files in the tutorbot folder.
     `files` is a list of tuples: (filename, content_bytes)
@@ -41,7 +45,7 @@ def canvas_zip_with_problem_files(tmp_path: str, files: dict[tuple[str, bytes]])
     zip_path = tmp_path / "canvas_course_with_problems.zip"
     with zipfile.ZipFile(zip_path, "w") as zf:
         for filename, content in files:
-            zf.writestr(f"tutorbot/{filename}", content)
+            zf.writestr(filename, content)
     return zip_path
 
 
@@ -356,7 +360,11 @@ def test_transform_canvas_content_files_removes_unpublished_content(mocker, tmp_
 
     # Create a fake zipfile with the published file
 
-    list(transform_canvas_content_files(Path(zip_path), run, overwrite=True))
+    list(
+        transform_canvas_content_files(
+            Path(zip_path), run, url_config={}, overwrite=True
+        )
+    )
 
     # Ensure unpublished content is deleted and unpublished actions called
     bulk_unpub.assert_called_once_with([unpublished_cf.id], CONTENT_FILE_TYPE)
@@ -373,7 +381,9 @@ def test_transform_canvas_problem_files_pdf_calls_pdf_to_markdown(
     settings.CANVAS_PDF_TRANSCRIPTION_MODEL = "fake-model"
     pdf_filename = "problemset1/problem.pdf"
     pdf_content = b"%PDF-1.4 fake pdf content"
-    zip_path = canvas_zip_with_problem_files(tmp_path, [(pdf_filename, pdf_content)])
+    zip_path = canvas_zip_with_files(
+        tmp_path, [(f"tutorbot/{pdf_filename}", pdf_content)]
+    )
 
     # return a file with pdf extension
     fake_file_data = {
@@ -414,7 +424,9 @@ def test_transform_canvas_problem_files_non_pdf_does_not_call_pdf_to_markdown(
     settings.CANVAS_PDF_TRANSCRIPTION_MODEL = "fake-model"
     html_filename = "problemset2/problem.html"
     html_content = b"<html>problem</html>"
-    zip_path = canvas_zip_with_problem_files(tmp_path, [(html_filename, html_content)])
+    zip_path = canvas_zip_with_files(
+        tmp_path, [(f"tutorbot/{html_filename}", html_content)]
+    )
 
     fake_file_data = {
         "run": "run",
@@ -437,3 +449,246 @@ def test_transform_canvas_problem_files_non_pdf_does_not_call_pdf_to_markdown(
     pdf_to_md.assert_not_called()
     assert results[0]["content"] == "original html content"
     assert results[0]["problem_title"] == "problemset2"
+
+
+@pytest.mark.django_db
+def test_transform_canvas_content_files_url_assignment(mocker, tmp_path):
+    """
+    Test that transform_canvas_content_files assigns URLs based on url_config.
+    """
+    run = MagicMock()
+    run.id = 1
+    url_config = {"/folder/file1.html": "https://cdn.example.com/file1.html"}
+    # Patch _process_olx_path to yield content_data with source_path
+    mock_content_data = [
+        {"source_path": "data/folder/file1.html", "key": "file1"},
+    ]
+    mocker.patch(
+        "learning_resources.etl.canvas._process_olx_path",
+        return_value=mock_content_data,
+    )
+    mocker.patch(
+        "learning_resources.etl.canvas.parse_module_meta",
+        return_value={"active": [], "unpublished": []},
+    )
+    # Use a real zip file
+    course_zipfile = canvas_zip_with_files(
+        tmp_path, [("folder/file1.html", "fake content")]
+    )
+    # Patch published_items to always match
+    mocker.patch(
+        "learning_resources.etl.canvas.get_edx_module_id", return_value="file1"
+    )
+    # Patch bulk_resources_unpublished_actions to do nothing
+    mocker.patch("learning_resources.etl.canvas.bulk_resources_unpublished_actions")
+    # Patch run.content_files.exclude to return a mock with delete method
+    run.content_files.exclude.return_value.values_list.return_value = []
+    run.content_files.exclude.return_value.delete = lambda: None
+
+    results = list(
+        transform_canvas_content_files(
+            Path(course_zipfile),
+            run=run,
+            url_config=url_config,
+            overwrite=False,
+        )
+    )
+    file1 = next(item for item in results if item["key"] == "file1")
+    assert file1["url"] == "https://cdn.example.com/file1.html"
+
+
+@pytest.mark.parametrize(
+    ("file_meta", "expected"),
+    [
+        # Test case: File is explicitly hidden
+        ({"hidden": "true", "locked": "false"}, False),
+        # Test case: File is explicitly locked
+        ({"hidden": "false", "locked": "true"}, False),
+        # Test case: File is neither hidden nor locked, visibility is "inherit"
+        ({"hidden": "false", "locked": "false", "visibility": "inherit"}, True),
+        # Test case: File is neither hidden nor locked, visibility is "course"
+        ({"hidden": "false", "locked": "false", "visibility": "course"}, True),
+        # Test case: File is neither hidden nor locked, visibility is "institution"
+        ({"hidden": "false", "locked": "false", "visibility": "institution"}, True),
+        # Test case: File is neither hidden nor locked, visibility is "public"
+        ({"hidden": "false", "locked": "false", "visibility": "public"}, True),
+        # Test case: File is neither hidden nor locked, visibility is unknown
+        ({"hidden": "false", "locked": "false", "visibility": "unknown"}, False),
+        # Test case: File is neither hidden nor locked, unlock_at is in the future
+        (
+            {
+                "hidden": "false",
+                "locked": "false",
+                "unlock_at": (now_in_utc() + timedelta(days=1)).isoformat(),
+            },
+            False,
+        ),
+        # Test case: File is neither hidden nor locked, unlock_at is in the past
+        (
+            {
+                "hidden": "false",
+                "locked": "false",
+                "unlock_at": (now_in_utc() - timedelta(days=1)).isoformat(),
+            },
+            True,
+        ),
+        # Test case: File is neither hidden nor locked, lock_at is in the future
+        (
+            {
+                "hidden": "false",
+                "locked": "false",
+                "lock_at": (now_in_utc() + timedelta(days=1)).isoformat(),
+            },
+            True,
+        ),
+        # Test case: File is neither hidden nor locked, lock_at is in the past
+        (
+            {
+                "hidden": "false",
+                "locked": "false",
+                "lock_at": (now_in_utc() - timedelta(days=1)).isoformat(),
+            },
+            False,
+        ),
+        # Test case: File is neither hidden nor locked, unlock_at and lock_at are valid
+        (
+            {
+                "hidden": "false",
+                "locked": "false",
+                "unlock_at": (now_in_utc() - timedelta(days=1)).isoformat(),
+                "lock_at": (now_in_utc() + timedelta(days=1)).isoformat(),
+            },
+            True,
+        ),
+        # Test case: File is neither hidden nor locked, unlock_at is in the future, lock_at is in the past
+        (
+            {
+                "hidden": "false",
+                "locked": "false",
+                "unlock_at": (now_in_utc() + timedelta(days=1)).isoformat(),
+                "lock_at": (now_in_utc() - timedelta(days=1)).isoformat(),
+            },
+            False,
+        ),
+        # Test case: File is neither hidden nor locked, unlock_at and lock_at are invalid
+        (
+            {
+                "hidden": "false",
+                "locked": "false",
+                "unlock_at": "invalid_date",
+                "lock_at": "invalid_date",
+            },
+            True,
+        ),
+    ],
+)
+def test_is_file_published(file_meta, expected):
+    """
+    Test is_file_published for all conditions in file metadata
+    """
+    assert is_file_published(file_meta) == expected
+
+
+def test_published_module_and_files_meta_content_ingestion(mocker, tmp_path):
+    """
+    Test published files from files_meta and module_meta are retained,
+    """
+
+    module_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <modules xmlns="http://canvas.instructure.com/xsd/cccv1p0">
+      <module>
+        <title>Module 1</title>
+        <items>
+          <item>
+            <workflow_state>active</workflow_state>
+            <title>Item 1</title>
+            <identifierref>RES1</identifierref>
+            <content_type>resource</content_type>
+          </item>
+          <item>
+            <workflow_state>unpublished</workflow_state>
+            <title>Item 2</title>
+            <identifierref>RES2</identifierref>
+            <content_type>resource</content_type>
+          </item>
+        </items>
+      </module>
+    </modules>
+    """
+
+    files_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <fileMeta xmlns="http://canvas.instructure.com/xsd/cccv1p0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://canvas.instructure.com/xsd/cccv1p0 https://canvas.instructure.com/xsd/cccv1p0.xsd">
+    <files>
+    <file identifier="RES3">
+      <category>uncategorized</category>
+    </file>
+    <file identifier="RES4">
+      <locked>true</locked>
+      <category>uncategorized</category>
+    </file>
+    </files>
+    </fileMeta>
+    """
+    manifest_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
+      <resources>
+        <resource identifier="RES1" type="webcontent">
+          <file href="file1.html"/>
+        </resource>
+        <resource identifier="RES2" type="webcontent">
+          <file href="file2.html"/>
+        </resource>
+        <resource identifier="RES3" type="webcontent">
+          <file href="file3.html"/>
+        </resource>
+        <resource identifier="RES4" type="webcontent">
+          <file href="file4.html"/>
+        </resource>
+      </resources>
+      <organizations>
+        <organization>
+          <item identifierref="RES1">
+            <title>Item 1</title>
+          </item>
+          <item identifierref="RES2">
+            <title>Item 2</title>
+          </item>
+
+        </organization>
+      </organizations>
+    </manifest>
+    """
+
+    mocker.patch(
+        "learning_resources.etl.utils.extract_text_metadata",
+        return_value={"content": "TEXT"},
+    )
+    bulk_unpub = mocker.patch(
+        "learning_resources.etl.canvas.bulk_resources_unpublished_actions"
+    )
+    zip_path = canvas_zip_with_files(
+        tmp_path,
+        [
+            ("course_settings/module_meta.xml", module_xml),
+            ("course_settings/files_meta.xml", files_xml),
+            ("imsmanifest.xml", manifest_xml),
+            ("file1.html", b"<html/>"),
+            ("file2html", b"<html/>"),
+            ("file3.html", b"<html/>"),
+            ("file4.html", b"<html/>"),
+        ],
+    )
+    run = LearningResourceRunFactory.create()
+    stale_contentfile = ContentFileFactory.create(run=run)
+    results = list(
+        transform_canvas_content_files(
+            zip_path, run=run, url_config={}, overwrite=False
+        )
+    )
+    result_paths = [result["source_path"] for result in results]
+    assert len(results) == 2
+    assert "/file1.html" in result_paths
+    assert "/file3.html" in result_paths
+    assert bulk_unpub.mock_calls[0].args[0] == [stale_contentfile.id]

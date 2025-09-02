@@ -220,6 +220,7 @@ class ContentSummarizer:
             temperature=temperature,
             max_tokens=max_tokens,
             custom_llm_provider=settings.LITELLM_CUSTOM_PROVIDER,
+            api_base=settings.LITELLM_API_BASE,
         )
 
     def _generate_summary(self, content: str, llm_model: str) -> str:
@@ -235,9 +236,9 @@ class ContentSummarizer:
             response = llm.invoke(
                 f"Summarize the key points from this video. Transcript:{content}"
             )
-            logger.info("Generating Summary using model: %s", llm)
+            logger.debug("Generating Summary using model: %s", llm)
             generated_summary = response.content
-            logger.info("Generated summary: %s", generated_summary)
+            logger.debug("Generated summary: %s", generated_summary)
 
         except Exception as exc:
             # We do not want to raise the exception as is, we will log the exception and
@@ -263,13 +264,16 @@ class ContentSummarizer:
         """
         try:
             llm = self._get_llm(model=llm_model, temperature=0.3, max_tokens=1000)
-            logger.info("Generating flashcards using model: %s", llm)
+            logger.debug("Generating flashcards using model: %s", llm)
             structured_llm = llm.with_structured_output(FlashcardsResponse)
             response = structured_llm.invoke(
                 f"Generate flashcards from the following transcript. Each flashcard should have a question and answer. Transcript:{content}"  # noqa: E501
             )
-            generated_flashcards = response.get("flashcards")
-            logger.info("Generated flashcards: %s", generated_flashcards)
+            if response:
+                generated_flashcards = response.get("flashcards", [])
+                logger.debug("Generated flashcards: %s", generated_flashcards)
+            else:
+                return []
         except Exception as exc:
             # We do not want to raise the exception as is, we will log the exception and
             # raise FlashcardsGenerationError that will be used to make further

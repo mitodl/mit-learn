@@ -5,11 +5,20 @@ import { setMockResponse } from "api/test-utils"
 import { urls, factories } from "api/mitxonline-test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import {
-  mitxonlineCourses,
+  mitxonlineOrgCourses,
   mitxonlineProgram,
   sortDashboardCourses,
 } from "./CoursewareDisplay/transform"
-import { setupProgramsAndCourses } from "./CoursewareDisplay/test-utils"
+import {
+  createCoursesWithContractRuns,
+  createEnrollmentsForContractRuns,
+  createTestContracts,
+  setupOrgAndUser,
+  setupProgramsAndCourses,
+  setupOrgDashboardMocks,
+} from "./CoursewareDisplay/test-utils"
+import { EnrollmentStatus } from "./CoursewareDisplay/types"
+import { faker } from "@faker-js/faker/locale/en"
 
 const makeCourseEnrollment = factories.enrollment.courseEnrollment
 const makeGrade = factories.enrollment.grade
@@ -22,8 +31,9 @@ const mockedUseFeatureFlagEnabled = jest
 describe("OrganizationContent", () => {
   beforeEach(() => {
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
-    // Set default empty enrollments for all tests
     setMockResponse.get(urls.enrollment.enrollmentsList(), [])
+    setMockResponse.get(urls.programEnrollments.enrollmentsList(), [])
+    setMockResponse.get(urls.contracts.contractsList(), [])
   })
 
   it("displays a header for each program returned and cards for courses in program", async () => {
@@ -80,16 +90,18 @@ describe("OrganizationContent", () => {
     expect(cards.length).toBeGreaterThan(0)
     const sortedCourses = sortDashboardCourses(
       mitxonlineProgram(programA),
-      mitxonlineCourses({ courses: coursesA, enrollments: enrollments }),
+      mitxonlineOrgCourses({ courses: coursesA, enrollments: enrollments }),
     )
+
     cards.forEach((card, i) => {
       const course = sortedCourses[i]
       expect(card).toHaveTextContent(course.title)
       const indicator = within(card).getByTestId("enrollment-status")
 
-      if (i === 0) {
+      // Check based on the actual enrollment status, not array position
+      if (course.enrollment?.status === EnrollmentStatus.Enrolled) {
         expect(indicator).toHaveTextContent("Enrolled")
-      } else if (i === 1) {
+      } else if (course.enrollment?.status === EnrollmentStatus.Completed) {
         expect(indicator).toHaveTextContent("Completed")
       } else {
         expect(indicator).toHaveTextContent("Not Enrolled")
@@ -299,5 +311,360 @@ describe("OrganizationContent", () => {
         0,
       )
     })
+  })
+
+  test("Shows the program certificate link button if the program has a certificate", async () => {
+    const { orgX, programA } = setupProgramsAndCourses()
+
+    // Mock the program to have a certificate
+    const programWithCertificate = {
+      ...programA,
+      program_type: "Program", // Set specific program type
+      certificate: {
+        uuid: "cert-123",
+        url: "/certificates/program/1",
+      },
+    }
+    const programEnrollment = factories.enrollment.programEnrollment({
+      program: { id: programWithCertificate.id },
+      certificate: {
+        link: programWithCertificate.certificate.url,
+      },
+    })
+    setMockResponse.get(urls.programs.programsList({ org_id: orgX.id }), {
+      results: [programWithCertificate],
+    })
+    setMockResponse.get(urls.programEnrollments.enrollmentsList(), [
+      programEnrollment,
+    ])
+
+    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+
+    const programRoot = await screen.findByTestId("org-program-root")
+    const certificateButton = within(programRoot).getByRole("link", {
+      name: "View Program Certificate",
+    })
+    expect(certificateButton).toHaveAttribute(
+      "href",
+      programWithCertificate.certificate.url,
+    )
+  })
+
+  test("displays only courses with contract-scoped runs", async () => {
+    const { orgX, user, mitxOnlineUser } = setupOrgAndUser()
+    const contracts = createTestContracts(orgX.id, 1)
+    const courses = createCoursesWithContractRuns(contracts).map((course) => ({
+      ...course,
+      courseruns: course.courseruns.map((run) => {
+        if (run.b2b_contract === contracts[0].id) {
+          return {
+            ...run,
+            start_date: faker.date.past().toISOString(), // Make it started
+          }
+        }
+        return run
+      }),
+    }))
+    const program = factories.programs.program({
+      courses: courses.map((c) => c.id),
+    })
+
+    // Create enrollments so the button will have href
+    const enrollments = createEnrollmentsForContractRuns(courses, [
+      contracts[0].id,
+    ])
+
+    // Setup API mocks
+    setupOrgDashboardMocks(
+      orgX,
+      user,
+      mitxOnlineUser,
+      [program],
+      courses,
+      contracts,
+    )
+
+    // Override enrollments for this test
+    setMockResponse.get(urls.enrollment.enrollmentsList(), enrollments)
+
+    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+
+    // Wait for programs to load
+    const programElements = await screen.findAllByTestId("org-program-root")
+    expect(programElements).toHaveLength(1)
+
+    // Verify courses are displayed with correct run information
+    const cards = await within(programElements[0]).findAllByTestId(
+      "enrollment-card-desktop",
+    )
+    expect(cards.length).toBeGreaterThan(0)
+
+    // Check that each card shows course information from contract-scoped run
+    cards.forEach((card, index) => {
+      const course = courses[index]
+      const contractRun = course.courseruns.find(
+        (run) =>
+          run.b2b_contract && contracts.some((c) => c.id === run.b2b_contract),
+      )
+
+      expect(card).toHaveTextContent(course.title)
+
+      // Verify we're using the contract-scoped run, not the other runs
+      expect(contractRun).toBeDefined()
+      expect(contractRun?.b2b_contract).toBe(contracts[0].id)
+
+      // Check that the card displays information from the correct course run
+      const coursewareButton = within(card).getByTestId("courseware-button")
+
+      // The courseware button shows different text based on course type and enrollment status
+      // For enrolled users in started courses, it shows "Continue Course" or "Continue Module"
+      expect(coursewareButton).toHaveTextContent(/Continue (Course|Module)/i)
+
+      // Verify the courseware button has the correct href from the contract run
+      // Only check href if the course has started and user is enrolled
+      if (
+        contractRun?.courseware_url &&
+        new Date(contractRun.start_date) <= new Date()
+      ) {
+        expect(coursewareButton).toHaveAttribute(
+          "href",
+          contractRun.courseware_url,
+        )
+      }
+
+      // Check for enrollment status indicator showing "Enrolled" since we created enrollments
+      const enrollmentStatus = within(card).getByTestId("enrollment-status")
+      expect(enrollmentStatus).toHaveTextContent("Enrolled")
+    })
+  })
+
+  test("shows correct run dates from contract-scoped runs", async () => {
+    const { orgX, user, mitxOnlineUser } = setupOrgAndUser()
+    const contracts = createTestContracts(orgX.id, 1)
+
+    // Create courses with specific, predictable dates for the contract runs
+    const specificStartDate = "2025-12-01T00:00:00Z"
+    const specificEndDate = "2026-01-15T00:00:00Z"
+
+    const courses = createCoursesWithContractRuns(contracts).map((course) => ({
+      ...course,
+      courseruns: course.courseruns.map((run) => {
+        if (run.b2b_contract === contracts[0].id) {
+          return {
+            ...run,
+            start_date: specificStartDate,
+            end_date: specificEndDate,
+          }
+        }
+        return run
+      }),
+    }))
+
+    const program = factories.programs.program({
+      courses: courses.map((c) => c.id),
+    })
+
+    setupOrgDashboardMocks(
+      orgX,
+      user,
+      mitxOnlineUser,
+      [program],
+      courses,
+      contracts,
+    )
+
+    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+
+    const cards = await within(
+      await screen.findByTestId("org-program-root"),
+    ).findAllByTestId("enrollment-card-desktop")
+
+    // Verify that the displayed information comes from the contract run dates
+    cards.forEach((card) => {
+      // Check for start date countdown - the actual format is "Starts in X days"
+      // Since we set a specific future date, it should show the countdown
+      expect(card).toHaveTextContent(/Starts in \d+ days?/i)
+    })
+  })
+
+  test("ignores non-contract runs when displaying course information", async () => {
+    const { orgX, user, mitxOnlineUser } = setupOrgAndUser()
+    const contracts = createTestContracts(orgX.id, 1)
+
+    // Create courses where non-contract runs have different, easily identifiable data
+    const courses = createCoursesWithContractRuns(contracts).map((course) => ({
+      ...course,
+      courseruns: course.courseruns.map((run) => {
+        if (run.b2b_contract !== contracts[0].id) {
+          return {
+            ...run,
+            title: `WRONG RUN - ${run.title}`,
+            courseware_url: "https://wrong-run.example.com",
+            start_date: "2023-01-01T00:00:00Z", // Past date
+          }
+        }
+        return {
+          ...run,
+          title: `CORRECT RUN - ${run.title}`,
+          courseware_url: "https://correct-run.example.com",
+          start_date: "2025-12-01T00:00:00Z", // Future date
+        }
+      }),
+    }))
+
+    const program = factories.programs.program({
+      courses: courses.map((c) => c.id),
+    })
+
+    setupOrgDashboardMocks(
+      orgX,
+      user,
+      mitxOnlineUser,
+      [program],
+      courses,
+      contracts,
+    )
+
+    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+
+    const cards = await within(
+      await screen.findByTestId("org-program-root"),
+    ).findAllByTestId("enrollment-card-desktop")
+
+    cards.forEach((card) => {
+      // Verify we're NOT seeing data from the wrong runs
+      expect(card).not.toHaveTextContent("WRONG RUN")
+
+      // Verify courseware button doesn't point to wrong run URL
+      const coursewareButton = within(card).getByTestId("courseware-button")
+      expect(coursewareButton).not.toHaveAttribute(
+        "href",
+        "https://wrong-run.example.com",
+      )
+
+      // Should show countdown for future date (from correct run), not past date
+      // The actual format is "Starts in X days"
+      expect(card).toHaveTextContent(/Starts in \d+ days?/i)
+    })
+  })
+
+  test("displays correct pricing from contract-scoped runs", async () => {
+    const { orgX, user, mitxOnlineUser } = setupOrgAndUser()
+    const contracts = createTestContracts(orgX.id, 1)
+
+    // Create courses with different pricing for contract vs non-contract runs
+    const courses = createCoursesWithContractRuns(contracts).map((course) => ({
+      ...course,
+      courseruns: course.courseruns.map((run) => {
+        if (run.b2b_contract === contracts[0].id) {
+          return {
+            ...run,
+            products: [
+              {
+                id: faker.number.int(),
+                price: "299.00", // Contract-specific price
+                description: "B2B Contract Price",
+                is_active: true,
+                product_flexible_price: null,
+              },
+            ],
+            can_upgrade: true,
+            upgrade_deadline: faker.date.future().toISOString(),
+          }
+        }
+        return {
+          ...run,
+          products: [
+            {
+              id: faker.number.int(),
+              price: "599.00", // Different price for non-contract
+              description: "Regular Price",
+              is_active: true,
+              product_flexible_price: null,
+            },
+          ],
+        }
+      }),
+    }))
+
+    const program = factories.programs.program({
+      courses: courses.map((c) => c.id),
+    })
+
+    setupOrgDashboardMocks(
+      orgX,
+      user,
+      mitxOnlineUser,
+      [program],
+      courses,
+      contracts,
+    )
+
+    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+
+    const cards = await within(
+      await screen.findByTestId("org-program-root"),
+    ).findAllByTestId("enrollment-card-desktop")
+
+    cards.forEach((card) => {
+      // Should show upgrade banner with contract pricing, not regular pricing
+      const upgradeRoot = within(card).queryByTestId("upgrade-root")
+      if (upgradeRoot) {
+        expect(upgradeRoot).toHaveTextContent("$299")
+        expect(upgradeRoot).not.toHaveTextContent("$599")
+      }
+    })
+  })
+
+  test("handles mixed scenarios with enrolled and non-enrolled contract runs", async () => {
+    const { orgX, user, mitxOnlineUser } = setupOrgAndUser()
+    const contracts = createTestContracts(orgX.id, 1)
+    const contractIds = contracts.map((c) => c.id)
+    const courses = createCoursesWithContractRuns(contracts)
+
+    // Create enrollment for first course only
+    const enrollments = [
+      factories.enrollment.courseEnrollment({
+        run: {
+          id: courses[0].courseruns.find(
+            (r) => r.b2b_contract === contractIds[0],
+          )?.id,
+          course: { id: courses[0].id, title: courses[0].title },
+        },
+        grades: [], // No grades = enrolled but not completed
+      }),
+    ]
+
+    const program = factories.programs.program({
+      courses: courses.map((c) => c.id),
+    })
+
+    setupOrgDashboardMocks(
+      orgX,
+      user,
+      mitxOnlineUser,
+      [program],
+      courses,
+      contracts,
+    )
+
+    // Override enrollments for this test
+    setMockResponse.get(urls.enrollment.enrollmentsList(), enrollments)
+
+    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+
+    const cards = await within(
+      await screen.findByTestId("org-program-root"),
+    ).findAllByTestId("enrollment-card-desktop")
+
+    // First card should show enrolled status
+    const firstCardStatus = within(cards[0]).getByTestId("enrollment-status")
+    expect(firstCardStatus).toHaveTextContent("Enrolled")
+
+    // Remaining cards should show not enrolled
+    for (let i = 1; i < cards.length; i++) {
+      const cardStatus = within(cards[i]).getByTestId("enrollment-status")
+      expect(cardStatus).toHaveTextContent("Not Enrolled")
+    }
   })
 })

@@ -385,6 +385,12 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
                     to_attr="_podcasts",
                 ),
                 Prefetch(
+                    "children",
+                    queryset=LearningResourceRelationship.objects.select_related(
+                        "child"
+                    ).order_by("position"),
+                ),
+                Prefetch(
                     "user_lists",
                     queryset=UserListRelationship.objects.filter(parent__author=user)
                     if user is not None and user.is_authenticated
@@ -495,6 +501,7 @@ class LearningResource(TimestampedModel):
     time_commitment = models.CharField(max_length=256, blank=True)
     min_weekly_hours = models.IntegerField(null=True, blank=True)
     max_weekly_hours = models.IntegerField(null=True, blank=True)
+    require_summaries = models.BooleanField(default=False)
 
     @property
     def audience(self) -> str | None:
@@ -515,9 +522,7 @@ class LearningResource(TimestampedModel):
     @cached_property
     def views_count(self) -> int:
         """Return the number of views for the resource."""
-        return models.LearningResourceViewEvent.objects.filter(
-            learning_resource=self
-        ).count()
+        return LearningResourceViewEvent.objects.filter(learning_resource=self).count()
 
     @cached_property
     def user_list_parents(self) -> list["LearningResourceRelationship"]:

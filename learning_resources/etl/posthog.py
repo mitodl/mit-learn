@@ -14,6 +14,7 @@ from django.conf import settings
 
 from learning_resources.exceptions import PostHogAuthenticationError, PostHogQueryError
 from learning_resources.models import LearningResource, LearningResourceViewEvent
+from learning_resources.utils import resource_upserted_actions
 
 log = logging.getLogger(__name__)
 
@@ -275,4 +276,16 @@ def load_posthog_lrd_view_events(
     List of LearningResourceViewEvent
     """
 
-    return [load_posthog_lrd_view_event(event) for event in events]
+    events = [load_posthog_lrd_view_event(event) for event in events]
+    learning_resource_ids = {
+        event.learning_resource_id for event in events if event is not None
+    }
+
+    for resource_id in learning_resource_ids:
+        learning_resource = LearningResource.objects.filter(
+            id=resource_id, published=True
+        ).first()
+        if learning_resource:
+            resource_upserted_actions(learning_resource, percolate=False)
+
+    return events

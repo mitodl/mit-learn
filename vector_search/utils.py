@@ -397,7 +397,7 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
                 "file_type": "course_metadata",
                 "key": key,
                 "checksum": checksum,
-                **{key: doc[key] for key in ["offered_by", "platform"]},
+                **{key: doc[key] for key in ["offered_by", "platform", "url"]},
             }
             for chunk_id, chunk_content in enumerate(split_texts)
         ]
@@ -500,6 +500,7 @@ def embed_learning_resources(ids, resource_type, overwrite):
         ids (list of int): Ids of learning resources to embed
         resource_type (str): Type of learning resource to embed
     """
+
     if (
         resource_type not in LEARNING_RESOURCE_TYPES
         and resource_type != CONTENT_FILE_TYPE
@@ -531,14 +532,19 @@ def embed_learning_resources(ids, resource_type, overwrite):
     else:
         serialized_resources = list(serialize_bulk_content_files(ids))
         # TODO: Pass actual Ids when we want scheduled content file summarization  # noqa: FIX002, TD002, TD003 E501
-        # Currently we only want to summarize content that already has a summary
-        existing_summary_content_ids = [
+        # Currently we only want to summarize content that either already has a summary
+        # OR is in a course where atleast one other content file has a summary
+        summary_content_ids = [
             resource["id"]
             for resource in serialized_resources
             if resource.get("summary")
+            or resource.get("require_summaries")
+            or ContentFile.objects.exclude(summary="")
+            .filter(run__id=resource.get("run_id"))
+            .exists()
         ]
         ContentSummarizer().summarize_content_files_by_ids(
-            existing_summary_content_ids, overwrite
+            summary_content_ids, overwrite
         )
 
         collection_name = CONTENT_FILES_COLLECTION_NAME

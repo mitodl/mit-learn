@@ -29,6 +29,7 @@ import {
 import type { User } from "api/hooks/user"
 import { PostHogEvents } from "@/common/constants"
 import VideoFrame from "./VideoFrame"
+import { kebabCase } from "lodash"
 
 const showChatClass = "show-chat"
 const showChatSelector = `.${showChatClass} &`
@@ -262,6 +263,23 @@ const getCallToActionText = (resource: LearningResource): string => {
   }
 }
 
+const buildCtaUrl = (url?: string | null, resourceTitle?: string) => {
+  if (!url) return "#"
+  try {
+    const parsedUrl = new URL(url)
+    parsedUrl.searchParams.set("utm_source", "mit-learn")
+    parsedUrl.searchParams.set("utm_medium", "referral")
+    if (resourceTitle) {
+      parsedUrl.searchParams.set("utm_content", kebabCase(resourceTitle))
+    }
+    return parsedUrl.toString()
+  } catch {
+    const separator = url.includes("?") ? "&" : "?"
+    const utm = `utm_source=mit-learn&utm_medium=referral${resourceTitle ? `&utm_content=${kebabCase(resourceTitle)}` : ""}`
+    return `${url}${separator}${utm}`
+  }
+}
+
 const CallToActionSection = ({
   imgConfig,
   resource,
@@ -322,7 +340,7 @@ const CallToActionSection = ({
           target="_blank"
           size="medium"
           endIcon={<RiExternalLinkLine />}
-          href={resource.url || ""}
+          href={buildCtaUrl(resource.url, resource.title)}
           onClick={() => {
             if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
               posthog.capture(PostHogEvents.CallToActionClicked, { resource })

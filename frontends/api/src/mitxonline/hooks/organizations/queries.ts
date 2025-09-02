@@ -1,7 +1,14 @@
-import { B2bApiB2bOrganizationsRetrieveRequest } from "@mitodl/mitxonline-api-axios/v0"
-import { OrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
-import { queryOptions } from "@tanstack/react-query"
+import {
+  queryOptions,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query"
 import { b2bApi } from "../../clients"
+import {
+  OrganizationPage,
+  B2bApiB2bAttachCreateRequest,
+  B2bApiB2bOrganizationsRetrieveRequest,
+} from "@mitodl/mitxonline-api-axios/v2"
 
 const organizationKeys = {
   root: ["mitxonline", "organizations"],
@@ -22,4 +29,16 @@ const organizationQueries = {
     }),
 }
 
-export { organizationQueries, organizationKeys }
+const useB2BAttachMutation = (opts: B2bApiB2bAttachCreateRequest) => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => b2bApi.b2bAttachCreate(opts),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: organizationKeys.organizationsRetrieve(),
+      })
+    },
+  })
+}
+
+export { organizationQueries, organizationKeys, useB2BAttachMutation }

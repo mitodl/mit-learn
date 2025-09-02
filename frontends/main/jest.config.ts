@@ -13,6 +13,7 @@ const config: Config.InitialOptions = {
     "^rehype-mathjax/browser$": "ol-test-utilities/filemocks/filemock.js",
     "^rehype-raw$": "ol-test-utilities/filemocks/filemock.js",
     "^remark-math$": "ol-test-utilities/filemocks/filemock.js",
+    "^remark-supersub$": "ol-test-utilities/filemocks/filemock.js",
   },
 }
 export default config

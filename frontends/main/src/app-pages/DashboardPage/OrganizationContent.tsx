@@ -11,6 +11,7 @@ import {
   programCollectionQueries,
 } from "api/mitxonline-hooks/programs"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
+import { contractQueries } from "api/mitxonline-hooks/contracts"
 import * as transform from "./CoursewareDisplay/transform"
 import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
 import { DashboardCard } from "./CoursewareDisplay/DashboardCard"
@@ -21,10 +22,14 @@ import {
 } from "./CoursewareDisplay/types"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
 import {
+  ContractPage,
   CourseRunEnrollment,
   OrganizationPage,
+  UserProgramEnrollmentDetail,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { useMitxOnlineCurrentUser } from "api/mitxonline-hooks/user"
+import { ButtonLink } from "@mitodl/smoot-design"
+import { RiAwardFill } from "@remixicon/react"
 
 const HeaderRoot = styled.div({
   display: "flex",
@@ -78,23 +83,45 @@ const DashboardCardStyled = styled(DashboardCard)({
     borderRadius: "0px 0px 8px 8px",
   },
 })
+
 const ProgramRoot = styled.div(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
   boxShadow: "0px 4px 8px 0px rgba(19, 20, 21, 0.08)",
   backgroundColor: theme.custom.colors.white,
   borderRadius: "8px",
 }))
+
 const ProgramHeader = styled.div(({ theme }) => ({
   display: "flex",
   padding: "24px",
-  flexDirection: "column",
-
+  flexDirection: "row",
+  justifyContent: "space-between",
   gap: "16px",
   backgroundColor: theme.custom.colors.white,
   borderRadius: "8px 8px 0px 0px",
   border: `1px solid ${theme.custom.colors.lightGray2}`,
   borderBottom: `1px solid ${theme.custom.colors.red}`,
+  [theme.breakpoints.down("sm")]: {
+    flexDirection: "column",
+  },
 }))
+
+const ProgramHeaderText = styled.div({
+  flexDirection: "column",
+  gap: "8px",
+})
+
+const ProgramCertificateButton = styled(ButtonLink)(({ theme }) => ({
+  color: theme.custom.colors.red,
+  display: "flex",
+  width: "192px",
+  height: "32px",
+  padding: "12px 12px 12px 8px",
+  justifyContent: "center",
+  alignItems: "center",
+  gap: "10px",
+}))
+
 const ProgramDescription = styled(Typography)({
   p: {
     margin: 0,
@@ -141,25 +168,32 @@ const useProgramCollectionCourses = (programIds: number[], orgId: number) => {
 
 const OrgProgramCollectionDisplay: React.FC<{
   collection: DashboardProgramCollection
+  contracts?: ContractPage[]
   enrollments?: CourseRunEnrollment[]
   orgId: number
-}> = ({ collection, enrollments, orgId }) => {
+}> = ({ collection, contracts, enrollments, orgId }) => {
   const sanitizedDescription = DOMPurify.sanitize(collection.description ?? "")
   const { isLoading, programsWithCourses, hasAnyCourses } =
     useProgramCollectionCourses(collection.programIds, orgId)
 
+  const header = (
+    <ProgramHeader>
+      <ProgramHeaderText>
+        <Typography variant="h5" component="h2">
+          {collection.title}
+        </Typography>
+        <ProgramDescription
+          variant="body2"
+          dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
+        />
+      </ProgramHeaderText>
+    </ProgramHeader>
+  )
+
   if (isLoading) {
     return (
       <ProgramRoot data-testid="org-program-collection-root">
-        <ProgramHeader>
-          <Typography variant="h5" component="h2">
-            {collection.title}
-          </Typography>
-          <ProgramDescription
-            variant="body2"
-            dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
-          />
-        </ProgramHeader>
+        {header}
         <PlainList>
           <Skeleton
             width="100%"
@@ -178,22 +212,16 @@ const OrgProgramCollectionDisplay: React.FC<{
 
   return (
     <ProgramRoot data-testid="org-program-collection-root">
-      <ProgramHeader>
-        <Typography variant="h5" component="h2">
-          {collection.title}
-        </Typography>
-        <ProgramDescription
-          variant="body2"
-          dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
-        />
-      </ProgramHeader>
+      {header}
       <PlainList>
         {programsWithCourses.map((item) =>
           item ? (
             <ProgramCollectionItem
               key={item.programId}
               program={item.program}
+              contracts={contracts}
               enrollments={enrollments}
+              orgId={orgId}
             />
           ) : null,
         )}
@@ -204,10 +232,23 @@ const OrgProgramCollectionDisplay: React.FC<{
 
 const OrgProgramDisplay: React.FC<{
   program: DashboardProgram
+  contracts?: ContractPage[]
   courseRunEnrollments?: CourseRunEnrollment[]
+  programEnrollments?: UserProgramEnrollmentDetail[]
   programLoading: boolean
-  orgId?: number
-}> = ({ program, courseRunEnrollments, programLoading, orgId }) => {
+  orgId: number
+}> = ({
+  program,
+  contracts,
+  courseRunEnrollments,
+  programEnrollments,
+  programLoading,
+  orgId,
+}) => {
+  const programEnrollment = programEnrollments?.find(
+    (enrollment) => enrollment.program.id === program.id,
+  )
+  const hasValidCertificate = !!programEnrollment?.certificate
   const courses = useQuery(
     coursesQueries.coursesList({ id: program.courseIds, org_id: orgId }),
   )
@@ -215,8 +256,9 @@ const OrgProgramDisplay: React.FC<{
     <Skeleton width="100%" height="65px" style={{ marginBottom: "16px" }} />
   )
   if (programLoading || courses.isLoading) return skeleton
-  const transformedCourses = transform.mitxonlineCourses({
+  const transformedCourses = transform.mitxonlineOrgCourses({
     courses: courses.data?.results ?? [],
+    contracts: contracts ?? [],
     enrollments: courseRunEnrollments ?? [],
   })
   const sanitizedHtml = DOMPurify.sanitize(program.description)
@@ -224,13 +266,25 @@ const OrgProgramDisplay: React.FC<{
   return (
     <ProgramRoot data-testid="org-program-root">
       <ProgramHeader>
-        <Typography variant="h5" component="h2">
-          {program.title}
-        </Typography>
-        <ProgramDescription
-          variant="body2"
-          dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
-        />
+        <ProgramHeaderText>
+          <Typography variant="h5" component="h2">
+            {program.title}
+          </Typography>
+          <ProgramDescription
+            variant="body2"
+            dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+          />
+        </ProgramHeaderText>
+        {hasValidCertificate && (
+          <ProgramCertificateButton
+            size="small"
+            variant="bordered"
+            startIcon={<RiAwardFill />}
+            href={programEnrollment?.certificate?.link}
+          >
+            View {program.programType} Certificate
+          </ProgramCertificateButton>
+        )}
       </ProgramHeader>
       <PlainList>
         {transform
@@ -253,16 +307,26 @@ const OrgProgramDisplay: React.FC<{
 
 const ProgramCollectionItem: React.FC<{
   program: DashboardProgram
+  contracts?: ContractPage[]
   enrollments?: CourseRunEnrollment[]
-}> = ({ program, enrollments }) => {
-  return <ProgramCard program={program} enrollments={enrollments} />
+  orgId: number
+}> = ({ program, contracts, enrollments, orgId }) => {
+  return (
+    <ProgramCard
+      program={program}
+      contracts={contracts}
+      enrollments={enrollments}
+      orgId={orgId}
+    />
+  )
 }
 
 const ProgramCard: React.FC<{
   program: DashboardProgram
+  contracts?: ContractPage[]
   enrollments?: CourseRunEnrollment[]
-  orgId?: number
-}> = ({ program, enrollments, orgId }) => {
+  orgId: number
+}> = ({ program, contracts, enrollments, orgId }) => {
   const courses = useQuery(
     coursesQueries.coursesList({
       id: program.courseIds,
@@ -273,8 +337,9 @@ const ProgramCard: React.FC<{
     <Skeleton width="100%" height="65px" style={{ marginBottom: "16px" }} />
   )
   if (courses.isLoading) return skeleton
-  const transformedCourses = transform.mitxonlineCourses({
+  const transformedCourses = transform.mitxonlineOrgCourses({
     courses: courses.data?.results ?? [],
+    contracts: contracts ?? [],
     enrollments: enrollments ?? [],
   })
   if (courses.isLoading || !transformedCourses.length) return skeleton
@@ -309,8 +374,15 @@ const OrganizationContentInternal: React.FC<
     FeatureFlags.OrganizationDashboard,
   )
   const orgId = org.id
+  const contracts = useQuery(contractQueries.contractsList())
+  const orgContracts = contracts.data?.filter(
+    (contract) => contract.organization === orgId,
+  )
   const courseRunEnrollments = useQuery(
     enrollmentQueries.courseRunEnrollmentsList(),
+  )
+  const programEnrollments = useQuery(
+    enrollmentQueries.programEnrollmentsList(),
   )
   const programs = useQuery(programsQueries.programsList({ org_id: orgId }))
   const programCollections = useQuery(
@@ -339,8 +411,10 @@ const OrganizationContentInternal: React.FC<
         : transformedPrograms.map((program) => (
             <OrgProgramDisplay
               key={program.key}
+              contracts={orgContracts}
               program={program}
               courseRunEnrollments={courseRunEnrollments.data}
+              programEnrollments={programEnrollments.data}
               programLoading={programs.isLoading}
               orgId={orgId}
             />
@@ -356,6 +430,7 @@ const OrganizationContentInternal: React.FC<
               <OrgProgramCollectionDisplay
                 key={collection.title}
                 collection={transformedCollection}
+                contracts={orgContracts}
                 enrollments={courseRunEnrollments.data}
                 orgId={orgId}
               />

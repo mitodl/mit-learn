@@ -715,7 +715,7 @@ def test_get_video_metadata(mocker, tmp_path, video_dir_exists):
             "mit_edx",
             "asset-v1:test+type@asset+block@transcript.srt",
             True,
-            "https://edx.org/courses/course-v1:test_run/jump_to/test_video",
+            "https://edx.org/courses/course-v1:test_run/jump_to_id/test_video",
         ),
         (
             "mit_edx",

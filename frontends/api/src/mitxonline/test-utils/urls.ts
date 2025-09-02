@@ -19,6 +19,10 @@ const enrollment = {
     `${API_BASE_URL}/api/v1/enrollments/${id ? `${id}/` : ""}`,
 }
 
+const programEnrollments = {
+  enrollmentsList: () => `${API_BASE_URL}/api/v1/program_enrollments/`,
+}
+
 const b2b = {
   courseEnrollment: (readableId?: string) =>
     `${API_BASE_URL}/api/v0/b2b/enroll/${readableId}/`,
@@ -46,12 +50,23 @@ const organization = {
     `${API_BASE_URL}/api/v0/b2b/organizations/${organizationSlug}/`,
 }
 
+const b2bAttach = {
+  b2bAttachView: (code: string) => `${API_BASE_URL}/api/v0/b2b/attach/${code}/`,
+}
+
+const contracts = {
+  contractsList: () => `${API_BASE_URL}/api/v0/b2b/contracts/`,
+}
+
 export {
   b2b,
+  b2bAttach,
   currentUser,
   enrollment,
   programs,
   programCollections,
   courses,
   organization,
+  programEnrollments,
+  contracts,
 }

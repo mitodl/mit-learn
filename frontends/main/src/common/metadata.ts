@@ -98,8 +98,8 @@ export const standardizeMetadata = ({
           images: [
             {
               url: image,
-              width: image === DEFAULT_OG_IMAGE ? "" : 967,
-              height: image === DEFAULT_OG_IMAGE ? "" : 511,
+              width: image === DEFAULT_OG_IMAGE ? 967 : "",
+              height: image === DEFAULT_OG_IMAGE ? 511 : "",
               alt: imageAlt,
             },
           ],

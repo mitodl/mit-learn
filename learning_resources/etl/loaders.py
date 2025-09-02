@@ -479,6 +479,7 @@ def load_course(
     content_tags_data = resource_data.pop("content_tags", [])
     resource_data.setdefault("delivery", [LearningResourceDelivery.online.name])
     runs_data = resource_data.get("runs", [])
+    force_ingest = resource_data.pop("force_ingest", False)
 
     with transaction.atomic():
         learning_resource, created = upsert_course_or_program(
@@ -496,7 +497,15 @@ def load_course(
         )
 
         run_ids_to_update_or_create = [run["run_id"] for run in runs_data]
-
+        if force_ingest:
+            """
+            for the case where we are force ingesting the content and published=False
+            we set the course to "test_mode" in learn
+            """
+            learning_resource.require_summaries = True
+            if learning_resource.published is False:
+                learning_resource.test_mode = True
+            learning_resource.save()
         for course_run_data in runs_data:
             load_run(learning_resource, course_run_data)
 
@@ -1113,6 +1122,16 @@ def load_playlist(video_channel: VideoChannel, playlist_data: dict) -> LearningR
 
     video_resources = load_videos(videos_data)
     load_topics(playlist_resource, most_common_topics(video_resources))
+    unpublished_videos = playlist_resource.resources.filter(
+        resource_type=LearningResourceType.video.name,
+        published=True,
+    ).exclude(id__in=[video.id for video in video_resources])
+    unpublished_videos.update(published=False)
+    bulk_resources_unpublished_actions(
+        unpublished_videos.values_list("id", flat=True),
+        LearningResourceType.video.name,
+    )
+
     playlist_resource.resources.clear()
     for idx, video in enumerate(video_resources):
         playlist_resource.resources.add(

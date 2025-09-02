@@ -551,6 +551,7 @@ def test_marketing_page_for_resources_with_webdriver(mocker, settings):
         learning_resource=course, file_type=MARKETING_PAGE_FILE_TYPE
     )
     assert content_file.key == course.url
+    assert content_file.url == course.url
     assert content_file.content == markdown_content
     assert content_file.file_extension == ".md"
 
@@ -621,10 +622,10 @@ def test_sync_canvas_courses(settings, mocker, django_assert_num_queries, canvas
     mocker.patch("learning_resources.tasks.get_learning_course_bucket")
     mock_bucket = mocker.Mock()
     mock_archive1 = mocker.Mock()
-    mock_archive1.key = "canvas/1/archive1.zip"
+    mock_archive1.key = "canvas/1/archive1.imscc"
     mock_archive1.last_modified = now_in_utc()
     mock_archive2 = mocker.Mock()
-    mock_archive2.key = "canvas/2/archive2.zip"
+    mock_archive2.key = "canvas/2/archive2.imscc"
     mock_archive2.last_modified = now_in_utc() - timedelta(days=1)
     mock_bucket.objects.filter.return_value = [mock_archive1, mock_archive2]
     mocker.patch(
@@ -658,7 +659,7 @@ def test_sync_canvas_courses(settings, mocker, django_assert_num_queries, canvas
     # Patch ingest_canvas_course to return the readable_ids for the two non-stale courses
     mock_ingest_course = mocker.patch(
         "learning_resources.tasks.ingest_canvas_course",
-        side_effect=[("course1", lr1.runs.first()), ("course2", lr2.runs.first())],
+        side_effect=["course1", "course2"],
     )
     sync_canvas_courses(canvas_course_ids=canvas_ids, overwrite=False)
 

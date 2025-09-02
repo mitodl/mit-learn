@@ -1,3 +1,3 @@
-import { organizationQueries } from "./queries"
+import { organizationQueries, useB2BAttachMutation } from "./queries"
 
-export { organizationQueries }
+export { organizationQueries, useB2BAttachMutation }

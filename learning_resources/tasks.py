@@ -421,6 +421,7 @@ def get_learning_resource_views():
     """Load learning resource views from the PostHog ETL."""
 
     pipelines.posthog_etl()
+    clear_search_cache()
 
 
 @app.task(acks_late=True)
@@ -500,10 +501,16 @@ def sync_canvas_courses(canvas_course_ids, overwrite):
         course_folder = key.lstrip(settings.CANVAS_COURSE_BUCKET_PREFIX).split("/")[0]
         log.info("processing course folder %s", course_folder)
 
-        if (not canvas_course_ids or course_folder in canvas_course_ids) and (
-            (course_folder not in latest_archives)
-            or max(archive.last_modified, latest_archives[course_folder].last_modified)
-            == archive.last_modified
+        if (
+            key.endswith("imscc")
+            and (not canvas_course_ids or course_folder in canvas_course_ids)
+            and (
+                (course_folder not in latest_archives)
+                or max(
+                    archive.last_modified, latest_archives[course_folder].last_modified
+                )
+                == archive.last_modified
+            )
         ):
             latest_archives[course_folder] = archive
     canvas_readable_ids = []
@@ -511,7 +518,7 @@ def sync_canvas_courses(canvas_course_ids, overwrite):
     for archive in latest_archives.values():
         key = archive.key
         log.info("Ingesting canvas course %s", key)
-        resource_readable_id, canvas_run = ingest_canvas_course(
+        resource_readable_id = ingest_canvas_course(
             key,
             overwrite=overwrite,
         )
@@ -578,5 +585,6 @@ def marketing_page_for_resources(resource_ids):
                 },
             )
             content_file.key = marketing_page_url
+            content_file.url = marketing_page_url
             content_file.content = html_to_markdown(page_content)
             content_file.save()

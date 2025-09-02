@@ -3,20 +3,21 @@
 import json
 import random
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pytest
 from django.conf import settings
 from faker import Faker
 
 from learning_resources.etl import posthog
-from learning_resources.models import LearningResourceViewEvent
+from learning_resources.factories import LearningResourceFactory
+from learning_resources.models import LearningResource, LearningResourceViewEvent
 from main.test_utils import MockResponse
 
 fake = Faker()
 
 
-def generate_fake_posthog_lr_properties():
+def generate_fake_posthog_lr_properties(learning_resource):
     """
     Generate a fake set of properties for a PostHog event.
 
@@ -27,16 +28,16 @@ def generate_fake_posthog_lr_properties():
 
     return json.dumps(
         {
-            "resourceType": fake.word(ext_word_list=["course", "program", "video"]),
+            "resourceType": learning_resource.resource_type,
             "platformCode": random.randrange(0, 9999),  # noqa: S311
-            "resourceId": random.randrange(0, 9999),  # noqa: S311
+            "resourceId": learning_resource.id,
             "readableId": str(uuid.uuid4()),
             "event_date": fake.date_time().isoformat(),
         }
     )
 
 
-def generate_fake_posthog_query_event(**kwargs):
+def generate_fake_posthog_query_event(learning_resource=None, **kwargs):
     """
     Generate a fake PostHog query event.
 
@@ -47,15 +48,18 @@ def generate_fake_posthog_query_event(**kwargs):
     """
 
     # datetimes here are all naive because this is what PostHog returns.
-
+    if learning_resource is None:
+        learning_resource = LearningResourceFactory.create()
     return [
         kwargs.get("uuid", str(uuid.uuid4())),
         kwargs.get("event", ""),
-        kwargs.get("properties", generate_fake_posthog_lr_properties()),
-        kwargs.get("timestamp", datetime.now().isoformat()),  # noqa: DTZ005
+        kwargs.get(
+            "properties", generate_fake_posthog_lr_properties(learning_resource)
+        ),
+        kwargs.get("timestamp", datetime.now(UTC).isoformat()),
         kwargs.get("distinct_id", ""),
         kwargs.get("elements_chain", ""),
-        kwargs.get("created_at", datetime.now().isoformat()),  # noqa: DTZ005
+        kwargs.get("created_at", datetime.now(UTC).isoformat()),
         kwargs.get("dollar_session_id", ""),
         kwargs.get("dollar_window_id", ""),
         kwargs.get("dollar_group_0", ""),
@@ -68,6 +72,9 @@ def generate_fake_posthog_query_event(**kwargs):
 
 def generate_hogql_query_result(result_count: int = 5):
     """Return a faked-out HogQL result."""
+    learning_resource = LearningResourceFactory.create(
+        published=random.choice([True, False])  # noqa: S311
+    )
 
     return {
         "clickhouse": "",
@@ -98,7 +105,10 @@ def generate_hogql_query_result(result_count: int = 5):
         },
         "offset": None,
         "query": None,
-        "results": [generate_fake_posthog_query_event() for _ in range(result_count)],
+        "results": [
+            generate_fake_posthog_query_event(learning_resource)
+            for _ in range(result_count)
+        ],
         "timings": [],
         "types": [],
     }
@@ -111,6 +121,7 @@ def hogql_query_result():
     return generate_hogql_query_result()
 
 
+@pytest.mark.django_db
 @pytest.mark.parametrize(
     "skip_setting", [[None], ["ph_api_key"], ["ph_root_endpoint"], ["ph_project_id"]]
 )
@@ -230,7 +241,7 @@ def test_posthog_transform_lrd_view_events(mocker):
 
 
 @pytest.mark.django_db
-def load_posthog_lrd_view_events(mocker):
+def test_load_posthog_lrd_view_events(mocker):
     """Ensure the loader stage of the extractor creates database records"""
 
     LearningResourceViewEvent.objects.all().delete()
@@ -245,10 +256,26 @@ def load_posthog_lrd_view_events(mocker):
 
     mocker.patch("requests.post", side_effect=api_call_results)
 
+    upsert_mock = mocker.patch(
+        "learning_resources.etl.posthog.resource_upserted_actions",
+        autospec=True,
+    )
     posthog_events = posthog.posthog_extract_lrd_view_events()
 
     lr_events = posthog.posthog_transform_lrd_view_events(posthog_events)
 
-    stored_events = load_posthog_lrd_view_events(lr_events)
+    stored_events = posthog.load_posthog_lrd_view_events(lr_events)
 
     assert LearningResourceViewEvent.objects.count() == len(stored_events)
+    learning_resource_ids = [
+        event.learning_resource_id for event in stored_events if event is not None
+    ]
+    learning_resource_ids = set(learning_resource_ids)
+    actual_calls = [call[0][0] for call in upsert_mock.call_args_list]
+
+    for resource_id in learning_resource_ids:
+        learning_resource = LearningResource.objects.get(id=resource_id)
+        if learning_resource.published:
+            upsert_mock.assert_any_call(learning_resource, percolate=False)
+        else:
+            assert learning_resource not in actual_calls
