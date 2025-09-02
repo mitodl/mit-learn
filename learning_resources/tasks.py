@@ -9,7 +9,7 @@ from typing import Optional
 import boto3
 import celery
 from django.conf import settings
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.utils import timezone
 
 from learning_resources.content_summarizer import ContentSummarizer
@@ -41,6 +41,25 @@ from main.constants import ISOFORMAT
 from main.utils import chunks, clear_search_cache
 
 log = logging.getLogger(__name__)
+
+
+@app.task
+def remove_duplicate_resources():
+    """Remove duplicate unpublished resources"""
+
+    duplicates = (
+        LearningResource.objects.values("readable_id")
+        .annotate(count_id=Count("id"))
+        .filter(count_id__gt=1)
+    )
+
+    for duplicate in duplicates:
+        resources = LearningResource.objects.filter(
+            readable_id=duplicate["readable_id"],
+            published=False,
+        ).values_list("id", flat=True)
+        # keep the most recently created resource, delete the rest
+        LearningResource.objects.filter(id__in=resources).delete()
 
 
 @app.task
