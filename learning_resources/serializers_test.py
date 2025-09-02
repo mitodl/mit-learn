@@ -646,7 +646,7 @@ def test_set_userlist_request_serializer():
     }
 
     invalid = serializers.SetUserListsRequestSerializer(
-        data={"userlist_ids": [1, 2], "learning_resource_id": 3}
+        data={"userlist_ids": [-1, -2], "learning_resource_id": resource.id + 1}
     )
     assert invalid.is_valid() is False
     assert "userlist_ids" in invalid.errors
