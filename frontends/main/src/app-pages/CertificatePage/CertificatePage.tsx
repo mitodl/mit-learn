@@ -363,9 +363,6 @@ const CertificatePage: React.FC = () => {
     uuid: string
   }>()
 
-  console.log("certificateType", certificateType)
-  console.log("uuid", uuid)
-
   const { data: courseCertData, isLoading: isCourseLoading } = useQuery({
     ...certificateQueries.courseCertificatesRetrieve({
       cert_uuid: uuid,
@@ -470,7 +467,11 @@ const CertificatePage: React.FC = () => {
             {signatories?.map((signatory, index) => (
               <Signatory key={index}>
                 <Signature
-                  src={`${process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL}${signatory.signature_image}`}
+                  src={
+                    signatory.signature_image.startsWith("http")
+                      ? signatory.signature_image
+                      : `${process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL}${signatory.signature_image}`
+                  }
                   alt={signatory.name}
                 />
                 <SignatoryName variant="h3">{signatory.name}</SignatoryName>
