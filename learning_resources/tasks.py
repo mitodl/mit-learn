@@ -35,6 +35,7 @@ from learning_resources.utils import (
     load_course_blocklist,
     resource_unpublished_actions,
 )
+from learning_resources_search.constants import COURSE_TYPE
 from learning_resources_search.exceptions import RetryError
 from main.celery import app
 from main.constants import ISOFORMAT
@@ -43,23 +44,32 @@ from main.utils import chunks, clear_search_cache
 log = logging.getLogger(__name__)
 
 
-@app.task
-def remove_duplicate_resources():
+@app.task(bind=True)
+def remove_duplicate_resources(self):
     """Remove duplicate unpublished resources"""
+    from vector_search.tasks import generate_embeddings
 
     duplicates = (
         LearningResource.objects.values("readable_id")
         .annotate(count_id=Count("id"))
         .filter(count_id__gt=1)
     )
-
+    embed_tasks = []
     for duplicate in duplicates:
-        resources = LearningResource.objects.filter(
+        unpublished_resources = LearningResource.objects.filter(
+            readable_id=duplicate["readable_id"],
+            published=False,
+        ).values_list("id", flat=True)
+        published_resources = LearningResource.objects.filter(
             readable_id=duplicate["readable_id"],
             published=False,
         ).values_list("id", flat=True)
         # keep the most recently created resource, delete the rest
-        LearningResource.objects.filter(id__in=resources).delete()
+        LearningResource.objects.filter(id__in=unpublished_resources).delete()
+        embed_tasks.append(
+            generate_embeddings.si(published_resources, COURSE_TYPE, overwrite=True)
+        )
+    self.replace(celery.chain(*embed_tasks))
 
 
 @app.task
