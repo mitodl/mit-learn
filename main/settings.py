@@ -499,8 +499,8 @@ RECAPTCHA_SECRET_KEY = get_string("RECAPTCHA_SECRET_KEY", "")
 MEDIA_ROOT = get_string("MEDIA_ROOT", "/var/media/")
 MEDIA_URL = "/media/"
 MITOL_USE_S3 = get_bool("MITOL_USE_S3", False)  # noqa: FBT003
-AWS_ACCESS_KEY_ID = get_string("AWS_ACCESS_KEY_ID", False)  # noqa: FBT003
-AWS_SECRET_ACCESS_KEY = get_string("AWS_SECRET_ACCESS_KEY", False)  # noqa: FBT003
+AWS_ACCESS_KEY_ID = get_string("AWS_ACCESS_KEY_ID", None)
+AWS_SECRET_ACCESS_KEY = get_string("AWS_SECRET_ACCESS_KEY", None)
 AWS_STORAGE_BUCKET_NAME = get_string("AWS_STORAGE_BUCKET_NAME", False)  # noqa: FBT003
 AWS_QUERYSTRING_AUTH = get_string("AWS_QUERYSTRING_AUTH", False)  # noqa: FBT003
 # Provide nice validation of the configuration
@@ -746,6 +746,7 @@ POSTHOG_PROJECT_ID = get_int(
     name="POSTHOG_PROJECT_ID",
     default=None,
 )
+POSTHOG_EVENT_S3_FOLDER = get_string(name="POSTHOG_EVENT_S3_FOLDER", default="None")
 
 # Search defaults settings - adjustable throught the admin ui
 DEFAULT_SEARCH_MODE = get_string(name="DEFAULT_SEARCH_MODE", default="phrase")

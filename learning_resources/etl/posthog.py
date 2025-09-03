@@ -5,16 +5,14 @@ import json
 import logging
 from collections.abc import Generator
 from datetime import UTC, datetime
-from http import HTTPStatus
 from typing import Optional
-from urllib.parse import urljoin
 
+import boto3
 import requests
 from django.conf import settings
 
-from learning_resources.exceptions import PostHogAuthenticationError, PostHogQueryError
 from learning_resources.models import LearningResource, LearningResourceViewEvent
-from learning_resources.utils import resource_upserted_actions
+from learning_resources.utils import get_s3_object_and_read, resource_upserted_actions
 
 log = logging.getLogger(__name__)
 
@@ -43,6 +41,34 @@ class PostHogEvent:
     dollar_group_2: Optional[str] = None
     dollar_group_3: Optional[str] = None
     dollar_group_4: Optional[str] = None
+
+
+def parse_posthog_event(event_json: dict) -> PostHogEvent:
+    """
+    Parse a JSON dictionary into a PostHogEvent dataclass.
+
+    Args:
+    - event_json (dict): the JSON dictionary representing the event
+    Returns:
+    PostHogEvent
+    """
+
+    return PostHogEvent(
+        uuid=event_json.get("uuid"),
+        event=event_json.get("event"),
+        properties=event_json.get("properties"),
+        timestamp=event_json.get("timestamp"),
+        distinct_id=event_json.get("distinct_id"),
+        elements_chain=event_json.get("elements_chain"),
+        created_at=event_json.get("created_at"),
+        dollar_session_id=event_json.get("$session_id"),
+        dollar_window_id=event_json.get("$window_id"),
+        dollar_group_0=event_json.get("$group_0"),
+        dollar_group_1=event_json.get("$group_1"),
+        dollar_group_2=event_json.get("$group_2"),
+        dollar_group_3=event_json.get("$group_3"),
+        dollar_group_4=event_json.get("$group_4"),
+    )
 
 
 @dataclasses.dataclass
@@ -76,62 +102,6 @@ class PostHogApiAuth(requests.auth.AuthBase):
         return request
 
 
-def posthog_run_query(query: str) -> dict:
-    """
-    Run a HogQL query agains the PostHog private API.
-
-    A personal API key is required for this to work. The project key is not
-    sufficient.
-
-    This will format the payload for you - just specify the actual HogQL query
-    here.
-
-    Args:
-    - query (str): the HogQL query to run
-    Returns:
-    - dict, the de-JSONified data from PostHog
-    """
-
-    ph_api_key = settings.POSTHOG_PERSONAL_API_KEY or None
-    ph_root_endpoint = settings.POSTHOG_API_HOST or None
-    ph_project_id = settings.POSTHOG_PROJECT_ID or None
-
-    if ph_api_key is None:
-        error = "No PostHog personal API key configured."
-        raise AttributeError(error)
-
-    if ph_root_endpoint is None:
-        error = "No PostHog API endpoint configured."
-        raise AttributeError(error)
-
-    if ph_project_id is None:
-        error = "No PostHog project ID."
-        raise AttributeError(error)
-
-    ph_query_endpoint = urljoin(ph_root_endpoint, f"api/projects/{ph_project_id}/query")
-
-    query_body = {"query": {"kind": "HogQLQuery", "query": query}}
-
-    query_result = requests.post(
-        ph_query_endpoint,
-        json=query_body,
-        auth=PostHogApiAuth(ph_api_key),
-        timeout=1500,
-    )
-
-    if query_result.status_code >= HTTPStatus.BAD_REQUEST.value:
-        log.error("PostHog query API returned an error: %s", query_result.status_code)
-
-        error_result = query_result.json()
-
-        if "type" in error_result and error_result["type"] == "authentication_error":
-            raise PostHogAuthenticationError(error_result)
-
-        raise PostHogQueryError(error_result)
-
-    return query_result.json()
-
-
 def posthog_extract_lrd_view_events() -> Generator[PostHogEvent, None, None]:
     """
     Retrieve lrd_view events from the PostHog Query API.
@@ -153,44 +123,23 @@ def posthog_extract_lrd_view_events() -> Generator[PostHogEvent, None, None]:
     last_event = LearningResourceViewEvent.objects.order_by("-event_date").first()
 
     if last_event:
-        last_event_day = (
-            last_event.event_date.astimezone(UTC).replace(tzinfo=None).isoformat()
-        )
-
-        query = (
-            "select uuid, event, properties, timestamp from events where "  # noqa: S608
-            f"timestamp > '{last_event_day}'"
-        )
+        last_event_time = last_event.event_date.astimezone(UTC)
     else:
-        query = "select uuid, event, properties, timestamp from events"
+        last_event_time = None
 
-    int_query = "{} limit {} offset {}"
+    s3 = boto3.resource(
+        "s3",
+        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+    )
+    posthog_events_bucket = s3.Bucket(settings.POSTHOG_EVENT_S3_FOLDER)
 
-    limit = 100
-    offset = 0
-    has_next_page = True
-
-    def _run_query() -> dict:
-        return posthog_run_query(int_query.format(query, limit, offset))
-
-    results = _run_query()
-
-    cols = results["columns"]
-
-    while has_next_page:
-        for result in results["results"]:
-            formatted_result = {}
-
-            for i, column in enumerate(cols):
-                formatted_result[column.replace("$", "dollar_")] = result[i]
-
-            yield PostHogEvent(**formatted_result)
-
-        if len(results["results"]) == limit:
-            offset += limit
-            results = _run_query()
-        else:
-            has_next_page = False
+    for obj in posthog_events_bucket.objects.all():
+        if last_event_time is None or obj.last_modified > last_event_time:
+            get_s3_object_and_read(obj)
+            for line in get_s3_object_and_read(obj).splitlines():
+                event = json.loads(line)
+                yield event.get("properties")
 
 
 def posthog_transform_lrd_view_events(
@@ -206,7 +155,7 @@ def posthog_transform_lrd_view_events(
     """
 
     for result in events:
-        props = json.loads(result.properties)
+        props = json.loads(result)
 
         yield PostHogLearningResourceViewEvent(
             resourceType=props.get("resourceType", ""),
