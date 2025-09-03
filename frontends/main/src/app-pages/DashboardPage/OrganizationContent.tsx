@@ -1,11 +1,11 @@
 "use client"
 
-import React from "react"
+import React, { useMemo } from "react"
 import DOMPurify from "dompurify"
 import Image from "next/image"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
-import { useQueries, useQuery } from "@tanstack/react-query"
+import { useInfiniteQuery, useQueries, useQuery } from "@tanstack/react-query"
 import {
   programsQueries,
   programCollectionQueries,
@@ -26,6 +26,7 @@ import {
   CourseRunEnrollment,
   OrganizationPage,
   UserProgramEnrollmentDetail,
+  CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { useMitxOnlineCurrentUser } from "api/mitxonline-hooks/user"
 import { ButtonLink } from "@mitodl/smoot-design"
@@ -249,15 +250,24 @@ const OrgProgramDisplay: React.FC<{
     (enrollment) => enrollment.program.id === program.id,
   )
   const hasValidCertificate = !!programEnrollment?.certificate
-  const courses = useQuery(
-    coursesQueries.coursesList({ id: program.courseIds, org_id: orgId }),
+  const courses = useInfiniteQuery(
+    coursesQueries.coursesListInfinite({ id: program.courseIds, org_id: orgId }),
   )
   const skeleton = (
     <Skeleton width="100%" height="65px" style={{ marginBottom: "16px" }} />
   )
   if (programLoading || courses.isLoading) return skeleton
+  if (!courses.isLoading) console.log(courses.data)
   const transformedCourses = transform.mitxonlineOrgCourses({
-    courses: courses.data?.results ?? [],
+    courses: (() =>{
+      let courseData: Array<CourseWithCourseRunsSerializerV2> = []
+
+      for (const page of courses.data?.pages || []) {
+        courseData = courseData.concat(page.results)
+      }
+
+      return courseData
+    })(),
     contracts: contracts ?? [],
     enrollments: courseRunEnrollments ?? [],
   })

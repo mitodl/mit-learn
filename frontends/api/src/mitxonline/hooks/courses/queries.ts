@@ -1,4 +1,4 @@
-import { queryOptions } from "@tanstack/react-query"
+import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query"
 import type {
   CoursesApiApiV2CoursesListRequest,
   PaginatedCourseWithCourseRunsSerializerV2List,
@@ -22,6 +22,18 @@ const coursesQueries = {
         async (): Promise<PaginatedCourseWithCourseRunsSerializerV2List> => {
           return coursesApi.apiV2CoursesList(opts).then((res) => res.data)
         },
+    }),
+  coursesListInfinite: (opts?: CoursesApiApiV2CoursesListRequest) =>
+    infiniteQueryOptions({
+      queryKey: coursesKeys.coursesList(opts),
+      queryFn:
+        async ({ pageParam = 1 }): Promise<PaginatedCourseWithCourseRunsSerializerV2List> => {
+          return coursesApi.apiV2CoursesList({ ...opts, page: pageParam }).then((res) => res.data)
+        },
+      initialPageParam: 1,
+      getNextPageParam: (lastPage, allPages, pageParam): number => {
+        return lastPage && lastPage.next ? (pageParam ? pageParam + 1 : 1) : 1
+      },
     }),
 }
 
