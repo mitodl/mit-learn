@@ -211,3 +211,28 @@ def test_custom_login_view_first_time_login_sets_has_logged_in(mocker):
 
     # Verify redirect was called with the correct URL
     mock_redirect.assert_called_once_with("/dashboard")
+def test_login_org_user_redirect(mocker, client, user):
+    """Test that a user belonging to an organization is redirected to the org dashboard"""
+    header_str = b64encode(
+        json.dumps(
+            {
+                "username": user.username,
+                "email": user.email,
+                "global_id": user.global_id,
+                "organizations": {
+                    "Test Organization": {
+                        "role": "member",
+                        "id": "org-123",
+                    }
+                },
+            }
+        ).encode()
+    )
+    client.force_login(user)
+    response = client.get(
+        "/login/",
+        follow=False,
+        HTTP_X_USERINFO=header_str,
+    )
+    assert response.status_code == 302
+    assert response.url == "/dashboard/organization/test-organization"

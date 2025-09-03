@@ -356,6 +356,7 @@ APISIX_USERDATA_MAP = {
         "first_name": "given_name",
         "last_name": "family_name",
         "name": "name",
+        "organizations": "organization",
     },
     "profiles.Profile": {
         "name": "name",
