@@ -216,10 +216,10 @@ def test_login_org_user_redirect(mocker, client, user):
     header_str = b64encode(
         json.dumps(
             {
-                "username": user.username,
+                "preferred_username": user.username,
                 "email": user.email,
-                "global_id": user.global_id,
-                "organizations": {
+                "sub": user.global_id,
+                "organization": {
                     "Test Organization": {
                         "role": "member",
                         "id": "org-123",
