@@ -149,6 +149,9 @@ def create_qdrant_collections(force_recreate):
 
 
 def update_qdrant_indexes():
+    """
+    Create or update Qdrant indexes based on mapping in constants
+    """
     client = qdrant_client()
     for index_field in QDRANT_LEARNING_RESOURCE_INDEXES:
         collection_name = RESOURCES_COLLECTION_NAME
