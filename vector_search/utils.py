@@ -89,12 +89,11 @@ def create_qdrant_collections(force_recreate):
     content_files_collection_name = CONTENT_FILES_COLLECTION_NAME
     encoder = dense_encoder()
     # True if either of the collections were recreated
-    collection_recreated = False
+
     if (
         not client.collection_exists(collection_name=resources_collection_name)
         or force_recreate
     ):
-        collection_recreated = True
         client.delete_collection(resources_collection_name)
         client.recreate_collection(
             collection_name=resources_collection_name,
@@ -123,7 +122,6 @@ def create_qdrant_collections(force_recreate):
         not client.collection_exists(collection_name=content_files_collection_name)
         or force_recreate
     ):
-        collection_recreated = True
         client.delete_collection(content_files_collection_name)
         client.recreate_collection(
             collection_name=content_files_collection_name,
@@ -147,24 +145,29 @@ def create_qdrant_collections(force_recreate):
                 ),
             ),
         )
-    if collection_recreated:
-        create_qdrant_indexes()
+    update_qdrant_indexes()
 
 
-def create_qdrant_indexes():
+def update_qdrant_indexes():
     client = qdrant_client()
     for index_field in QDRANT_LEARNING_RESOURCE_INDEXES:
-        client.create_payload_index(
-            collection_name=RESOURCES_COLLECTION_NAME,
-            field_name=index_field,
-            field_schema=QDRANT_LEARNING_RESOURCE_INDEXES[index_field],
-        )
+        collection_name = RESOURCES_COLLECTION_NAME
+        collection = client.get_collection(collection_name=collection_name)
+        if index_field not in collection.payload_schema:
+            client.create_payload_index(
+                collection_name=collection_name,
+                field_name=index_field,
+                field_schema=QDRANT_LEARNING_RESOURCE_INDEXES[index_field],
+            )
     for index_field in QDRANT_CONTENT_FILE_INDEXES:
-        client.create_payload_index(
-            collection_name=CONTENT_FILES_COLLECTION_NAME,
-            field_name=index_field,
-            field_schema=QDRANT_CONTENT_FILE_INDEXES[index_field],
-        )
+        collection_name = CONTENT_FILES_COLLECTION_NAME
+        collection = client.get_collection(collection_name=collection_name)
+        if index_field not in collection.payload_schema:
+            client.create_payload_index(
+                collection_name=collection_name,
+                field_name=index_field,
+                field_schema=QDRANT_CONTENT_FILE_INDEXES[index_field],
+            )
 
 
 def vector_point_id(readable_id):
