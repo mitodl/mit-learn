@@ -104,6 +104,7 @@ def create_qdrant_collections(force_recreate):
                 ),
             },
             replication_factor=2,
+            shard_number=6,
             strict_mode_config=models.StrictModeConfig(
                 enabled=True,
                 unindexed_filtering_retrieve=False,
@@ -132,6 +133,7 @@ def create_qdrant_collections(force_recreate):
                 ),
             },
             replication_factor=2,
+            shard_number=6,
             strict_mode_config=models.StrictModeConfig(
                 enabled=True,
                 unindexed_filtering_retrieve=False,
