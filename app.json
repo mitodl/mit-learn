@@ -701,6 +701,14 @@
       "description": "PostHog project ID for the application",
       "required": false
     },
+    "POSTHOG_EVENT_S3_PREFIX": {
+      "description": "S3 prefix for PostHog event uploads",
+      "required": false
+    },
+    "POSTHOG_EVENT_S3_FOLDER": {
+      "description": " S3 bucket where PostHog event files are stored",
+      "required": false
+    },
     "POSTHOG_TIMEOUT_MS": {
       "description": "Timeout for communication with PostHog API",
       "required": false
