@@ -257,7 +257,9 @@ const OrgProgramDisplay: React.FC<{
     <Skeleton width="100%" height="65px" style={{ marginBottom: "16px" }} />
   )
   if (programLoading || courses.isLoading) return skeleton
-  if (!courses.isLoading) console.log(courses.data)
+
+  if (courses.hasNextPage && !courses.isFetching) courses.fetchNextPage()
+
   const transformedCourses = transform.mitxonlineOrgCourses({
     courses: (() =>{
       let courseData: Array<CourseWithCourseRunsSerializerV2> = []

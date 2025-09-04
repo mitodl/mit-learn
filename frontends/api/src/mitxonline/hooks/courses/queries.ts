@@ -31,8 +31,8 @@ const coursesQueries = {
           return coursesApi.apiV2CoursesList({ ...opts, page: pageParam }).then((res) => res.data)
         },
       initialPageParam: 1,
-      getNextPageParam: (lastPage, allPages, pageParam): number => {
-        return lastPage && lastPage.next ? (pageParam ? pageParam + 1 : 1) : 1
+      getNextPageParam: (lastPage, allPages, pageParam): number | null => {
+        return lastPage && lastPage.next ? (pageParam ? pageParam + 1 : null) : null
       },
     }),
 }
