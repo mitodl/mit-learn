@@ -82,7 +82,7 @@ class CustomLoginView(View):
             if not profile.has_logged_in:
                 profile.has_logged_in = True
                 profile.save()
-            
+
             apisix_header = decode_apisix_headers(request, self.header)
 
             # Check if user belongs to any organizations
