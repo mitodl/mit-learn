@@ -213,8 +213,31 @@ def test_custom_login_view_first_time_login_sets_has_logged_in(mocker):
     mock_redirect.assert_called_once_with("/dashboard")
 
 
-def test_login_org_user_redirect(mocker, client, user):
-    """Test that a user belonging to an organization is redirected to the org dashboard"""
+@pytest.mark.parametrize(
+    ("profile_state", "expected_url"),
+    [
+        (
+            (False, False),
+            "/dashboard/organization/test-organization",
+        ),  # First-time login → org dashboard
+        (
+            (False, True),
+            "/dashboard/organization/test-organization",
+        ),  # First-time login → org dashboard
+        ((True, False), "/app"),  # Subsequent login → normal app (not onboarding!)
+        ((True, True), "/app"),  # Subsequent login → normal app
+    ],
+)
+def test_login_org_user_redirect(mocker, client, user, profile_state, expected_url):
+    """Test organization user redirect behavior - org users skip onboarding regardless of onboarding status"""
+    # Unpack profile state
+    has_logged_in, completed_onboarding = profile_state
+
+    # Set up user profile based on test scenario
+    user.profile.has_logged_in = has_logged_in
+    user.profile.completed_onboarding = completed_onboarding
+    user.profile.save()
+
     header_str = b64encode(
         json.dumps(
             {
@@ -237,4 +260,8 @@ def test_login_org_user_redirect(mocker, client, user):
         HTTP_X_USERINFO=header_str,
     )
     assert response.status_code == 302
-    assert response.url == "/dashboard/organization/test-organization"
+    assert response.url == expected_url
+
+    # Verify that org users are never sent to onboarding
+    # (onboarding URL would contain settings.MITOL_NEW_USER_LOGIN_URL)
+    assert settings.MITOL_NEW_USER_LOGIN_URL not in response.url
