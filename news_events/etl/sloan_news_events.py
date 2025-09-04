@@ -40,7 +40,7 @@ def extract() -> list:
         "div", class_="content-tiles-wrapper row blog-page-wrapper"
     )
     if not content_wrapper:
-        log.warning("Could not find content-tiles-wrapper")
+        log.error("Could not find content section")
         return []
 
     # Extract all content-tile elements

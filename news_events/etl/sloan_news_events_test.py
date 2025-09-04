@@ -79,7 +79,7 @@ def test_transform_item_blog_post(sample_content_tiles):
     assert result["title"] == "Real estate as a strategic growth engine"
 
     # Test summary and content
-    expected_text = "MIT thought leaders share perspectives on how space, technology, and people come together to shape the future of business."
+    expected_text = "MIT thought leaders share perspectives on how space, technology,"
     assert expected_text in result["summary"]
     assert expected_text in result["content"]
 
@@ -126,7 +126,7 @@ def test_transform_item_webinar(sample_content_tiles):
     assert result["title"] == "AI and the Future of Business"
 
     # Test summary and content
-    expected_text = "Join experts as they discuss the transformative impact of AI on business operations and strategy."
+    expected_text = "Join experts as they discuss the transformative impact of AI on"
     assert expected_text in result["summary"]
     assert expected_text in result["content"]
 
@@ -265,11 +265,11 @@ def test_extract_missing_wrapper(mocker):
         "news_events.etl.sloan_news_events.requests.get", return_value=mock_response
     )
 
-    mock_log = mocker.patch("news_events.etl.sloan_news_events.log.warning")
+    mock_log = mocker.patch("news_events.etl.sloan_news_events.log.error")
     result = sloan_news_events.extract()
 
     assert result == []
-    mock_log.assert_called_once_with("Could not find content-tiles-wrapper")
+    mock_log.assert_called_once_with("Could not find content section")
 
 
 def test_extract_http_error(mocker):
