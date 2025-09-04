@@ -52,7 +52,7 @@ def extract() -> list:
     return content_tiles
 
 
-def transform_item(item_data) -> dict:
+def transform_item(item_data: BeautifulSoup) -> dict:
     """
     Transform item from Sloan School of Management blog
 
