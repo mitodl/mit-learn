@@ -5,7 +5,6 @@ import json
 import logging
 from collections.abc import Generator
 from datetime import UTC, datetime
-from typing import Optional
 
 import boto3
 import requests
@@ -15,60 +14,6 @@ from learning_resources.models import LearningResource, LearningResourceViewEven
 from learning_resources.utils import get_s3_object_and_read, resource_upserted_actions
 
 log = logging.getLogger(__name__)
-
-
-@dataclasses.dataclass
-class PostHogEvent:
-    """
-    Represents the raw event data returned by a HogQL query.
-
-    This isn't specific to the lrd_view event. There are some elemnts to this
-    that start with a $, so here they're prefixed with "dollar_". Many of these
-    are optional so we can query just for the most salient columns later.
-    """
-
-    uuid: str
-    event: str
-    properties: str
-    timestamp: datetime
-    distinct_id: Optional[str] = None
-    elements_chain: Optional[str] = None
-    created_at: Optional[datetime] = None
-    dollar_session_id: Optional[str] = None
-    dollar_window_id: Optional[str] = None
-    dollar_group_0: Optional[str] = None
-    dollar_group_1: Optional[str] = None
-    dollar_group_2: Optional[str] = None
-    dollar_group_3: Optional[str] = None
-    dollar_group_4: Optional[str] = None
-
-
-def parse_posthog_event(event_json: dict) -> PostHogEvent:
-    """
-    Parse a JSON dictionary into a PostHogEvent dataclass.
-
-    Args:
-    - event_json (dict): the JSON dictionary representing the event
-    Returns:
-    PostHogEvent
-    """
-
-    return PostHogEvent(
-        uuid=event_json.get("uuid"),
-        event=event_json.get("event"),
-        properties=event_json.get("properties"),
-        timestamp=event_json.get("timestamp"),
-        distinct_id=event_json.get("distinct_id"),
-        elements_chain=event_json.get("elements_chain"),
-        created_at=event_json.get("created_at"),
-        dollar_session_id=event_json.get("$session_id"),
-        dollar_window_id=event_json.get("$window_id"),
-        dollar_group_0=event_json.get("$group_0"),
-        dollar_group_1=event_json.get("$group_1"),
-        dollar_group_2=event_json.get("$group_2"),
-        dollar_group_3=event_json.get("$group_3"),
-        dollar_group_4=event_json.get("$group_4"),
-    )
 
 
 @dataclasses.dataclass
@@ -102,7 +47,7 @@ class PostHogApiAuth(requests.auth.AuthBase):
         return request
 
 
-def posthog_extract_lrd_view_events() -> Generator[PostHogEvent, None, None]:
+def posthog_extract_lrd_view_events() -> Generator[dict, None, None]:
     """
     Retrieve lrd_view events from the PostHog Query API.
 
@@ -122,10 +67,7 @@ def posthog_extract_lrd_view_events() -> Generator[PostHogEvent, None, None]:
 
     last_event = LearningResourceViewEvent.objects.order_by("-event_date").first()
 
-    if last_event:
-        last_event_time = last_event.event_date.astimezone(UTC)
-    else:
-        last_event_time = None
+    last_event_time = last_event.event_date.astimezone(UTC) if last_event else None
 
     s3 = boto3.resource(
         "s3",
