@@ -112,14 +112,11 @@ def load_feed_item(source: FeedSource, item_data: dict) -> FeedItem:
     return item
 
 
-def load_feed_source(
-    feed_type: str, source_data: dict
-) -> tuple[FeedSource, list[FeedItem]]:
+def load_feed_source(source_data: dict) -> tuple[FeedSource, list[FeedItem]]:
     """
     Load a feed source
 
     Args:
-        feed_type (str): The type of feed source (news/events)
         source_data (dict): The feed source data
 
     Returns:
@@ -132,7 +129,7 @@ def load_feed_source(
     image_data = source_data.pop("image", None)
 
     source, _ = FeedSource.objects.update_or_create(
-        feed_type=feed_type,
+        feed_type=source_data.get("feed_type"),
         url=source_data.get("url"),
         defaults={
             "description": source_data.get("description"),
@@ -165,7 +162,7 @@ def load_feed_source(
 
 
 def load_feed_sources(
-    feed_type: str, sources_data: list[dict]
+    sources_data: list[dict],
 ) -> list[tuple[FeedSource, list[FeedItem]]]:
     """
     Load feed sources for a given feed type
@@ -182,7 +179,7 @@ def load_feed_sources(
     return [
         (source, items)
         for (source, items) in [
-            load_feed_source(feed_type, source_data)
+            load_feed_source(source_data)
             for source_data in sources_list
             if source_data is not None
         ]

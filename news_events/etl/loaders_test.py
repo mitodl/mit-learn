@@ -23,7 +23,7 @@ def test_load_feed_sources(sources_data, feed_type):
     is_news = feed_type == FeedType.news.name
     original_data = sources_data.news if is_news else sources_data.events
     loaded_data = deepcopy(original_data)
-    results = loaders.load_feed_sources(feed_type, loaded_data)
+    results = loaders.load_feed_sources(loaded_data)
     for idx, result in enumerate(results):
         assert result[0].url == original_data[idx]["url"]
         assert len(result[1]) == len(original_data[idx]["items"])
@@ -63,7 +63,7 @@ def load_feed_sources_bad_item(mocker, sources_data):
     mock_log = mocker.patch("news_events.etl.loaders.log.exception")
     original_data = sources_data.news
     original_data[0]["items"].append({"bad": "item"})
-    loaders.load_feed_sources(FeedType.news.name, original_data)
+    loaders.load_feed_sources(original_data)
     mock_log.assert_called_once_with(
         "Error loading item %s for %s", {"bad": "item"}, ANY
     )
@@ -87,7 +87,7 @@ def test_load_feed_sources_delete_old_items(sources_data, empty_data):
 
     if empty_data:
         source_data[0]["items"] = []
-    loaders.load_feed_sources(FeedType.events.name, source_data)
+    loaders.load_feed_sources(source_data)
 
     # Existing feed items with future dates should be removed only if source data exists
     assert FeedItem.objects.filter(pk=omitted_event_item.pk).exists() is empty_data
@@ -113,4 +113,4 @@ def test_load_item_null_data():
 
 def test_load_source_null_data():
     """None should be returned from load_feed_source if input data is None"""
-    assert loaders.load_feed_source(FeedType.news.name, None) is None
+    assert loaders.load_feed_source(None) is None
