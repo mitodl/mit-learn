@@ -79,9 +79,6 @@ class CustomLoginView(View):
         redirect_url = get_redirect_url(request)
         if not request.user.is_anonymous:
             profile = request.user.profile
-            if not profile.has_logged_in:
-                profile.has_logged_in = True
-                profile.save()
 
             apisix_header = decode_apisix_headers(request, self.header)
 
@@ -91,19 +88,20 @@ class CustomLoginView(View):
             )
 
             if user_organizations:
-                # Get the first organization (since user could be part of multiple)
-                first_org_name = next(iter(user_organizations.keys()))
-                org_slug = slugify(first_org_name)
+                # First-time login for org user: redirect to org dashboard
+                if not profile.has_logged_in:
+                    first_org_name = next(iter(user_organizations.keys()))
+                    org_slug = slugify(first_org_name)
 
-                log.info(
-                    "User %s belongs to organization: %s (slug: %s)",
-                    request.user.email,
-                    first_org_name,
-                    org_slug,
-                )
+                    log.info(
+                        "User %s belongs to organization: %s (slug: %s)",
+                        request.user.email,
+                        first_org_name,
+                        org_slug,
+                    )
 
-                # Set redirect URL to organization dashboard
-                redirect_url = f"/dashboard/organization/{org_slug}"
+                    redirect_url = f"/dashboard/organization/{org_slug}"
+            # Non-organization users: apply onboarding logic
             elif (
                 not profile.completed_onboarding
                 and request.GET.get("skip_onboarding", "0") == "0"
@@ -112,4 +110,9 @@ class CustomLoginView(View):
                 redirect_url = f"{settings.MITOL_NEW_USER_LOGIN_URL}?{params}"
                 profile.completed_onboarding = True
                 profile.save()
+
+            if not profile.has_logged_in:
+                profile.has_logged_in = True
+                profile.save()
+
         return redirect(redirect_url)
