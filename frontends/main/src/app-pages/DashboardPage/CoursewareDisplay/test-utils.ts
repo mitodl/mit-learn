@@ -154,13 +154,13 @@ const setupProgramsAndCourses = () => {
     { results: [programB] },
   )
   setMockResponse.get(
-    urls.courses.coursesList({ id: programA.courses, org_id: orgX.id }),
+    urls.courses.coursesList({ id: programA.courses, org_id: orgX.id, page: 1 }),
     {
       results: coursesA.results,
     },
   )
   setMockResponse.get(
-    urls.courses.coursesList({ id: programB.courses, org_id: orgX.id }),
+    urls.courses.coursesList({ id: programB.courses, org_id: orgX.id, page: 1 }),
     {
       results: coursesB.results,
     },
@@ -262,6 +262,7 @@ function setupOrgDashboardMocks(
       mitxonline.urls.courses.coursesList({
         id: program.courses,
         org_id: org.id,
+        page: 1,
       }),
       { results: courses },
     )

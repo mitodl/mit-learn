@@ -144,6 +144,8 @@ describe("OrganizationContent", () => {
       { results: coursesB },
     )
 
+    console.log(coursesA, coursesB)
+
     renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
 
     const collectionHeader = await screen.findByRole("heading", {
@@ -156,6 +158,7 @@ describe("OrganizationContent", () => {
     expect(collectionItems.length).toBe(1)
     const collection = within(collectionItems[0])
     expect(collection.getByText(programCollection.title)).toBeInTheDocument()
+    console.log(collectionItems[0])
 
     // Wait for the course data to load and check that courses are displayed
     await waitFor(() => {

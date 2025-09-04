@@ -26,13 +26,20 @@ const coursesQueries = {
   coursesListInfinite: (opts?: CoursesApiApiV2CoursesListRequest) =>
     infiniteQueryOptions({
       queryKey: coursesKeys.coursesList(opts),
-      queryFn:
-        async ({ pageParam = 1 }): Promise<PaginatedCourseWithCourseRunsSerializerV2List> => {
-          return coursesApi.apiV2CoursesList({ ...opts, page: pageParam }).then((res) => res.data)
-        },
+      queryFn: async ({
+        pageParam = 1,
+      }): Promise<PaginatedCourseWithCourseRunsSerializerV2List> => {
+        return coursesApi
+          .apiV2CoursesList({ ...opts, page: pageParam })
+          .then((res) => res.data)
+      },
       initialPageParam: 1,
       getNextPageParam: (lastPage, allPages, pageParam): number | null => {
-        return lastPage && lastPage.next ? (pageParam ? pageParam + 1 : null) : null
+        return lastPage && lastPage.next
+          ? pageParam
+            ? pageParam + 1
+            : null
+          : null
       },
     }),
 }

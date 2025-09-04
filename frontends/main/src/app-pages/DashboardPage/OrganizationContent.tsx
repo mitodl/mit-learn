@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useMemo } from "react"
+import React from "react"
 import DOMPurify from "dompurify"
 import Image from "next/image"
 import { useFeatureFlagEnabled } from "posthog-js/react"
@@ -251,7 +251,10 @@ const OrgProgramDisplay: React.FC<{
   )
   const hasValidCertificate = !!programEnrollment?.certificate
   const courses = useInfiniteQuery(
-    coursesQueries.coursesListInfinite({ id: program.courseIds, org_id: orgId }),
+    coursesQueries.coursesListInfinite({
+      id: program.courseIds,
+      org_id: orgId,
+    }),
   )
   const skeleton = (
     <Skeleton width="100%" height="65px" style={{ marginBottom: "16px" }} />
@@ -261,7 +264,7 @@ const OrgProgramDisplay: React.FC<{
   if (courses.hasNextPage && !courses.isFetching) courses.fetchNextPage()
 
   const transformedCourses = transform.mitxonlineOrgCourses({
-    courses: (() =>{
+    courses: (() => {
       let courseData: Array<CourseWithCourseRunsSerializerV2> = []
 
       for (const page of courses.data?.pages || []) {
