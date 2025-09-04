@@ -20,6 +20,7 @@ class ProfileAdmin(admin.ModelAdmin):
     search_fields = ["name", "user__email", "user__username"]
     raw_id_fields = ("user",)
     readonly_fields = (
+        "has_logged_in",
         "image",
         "image_small",
         "image_medium",
