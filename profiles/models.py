@@ -117,6 +117,8 @@ class Profile(models.Model):
 
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
+    has_logged_in = models.BooleanField(default=False)
+
     name = models.TextField(blank=True, null=True)  # noqa: DJ001
 
     image = models.CharField(  # noqa: DJ001
