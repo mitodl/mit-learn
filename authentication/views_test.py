@@ -177,3 +177,37 @@ def test_custom_login_view_anonymous_user(mocker):
 
     assert response.status_code == 302
     assert response.url == "/dashboard"
+
+
+def test_custom_login_view_first_time_login_sets_has_logged_in(mocker):
+    """Test that has_logged_in flag is set to True for first-time login"""
+    factory = RequestFactory()
+    request = factory.get("/login/", {"next": "/dashboard"})
+
+    # Create a mock user with a profile that has has_logged_in=False
+    mock_profile = MagicMock()
+    mock_profile.has_logged_in = False
+    mock_profile.completed_onboarding = True  # Avoid onboarding redirect
+
+    mock_user = MagicMock()
+    mock_user.is_anonymous = False
+    mock_user.profile = mock_profile
+
+    request.user = mock_user
+
+    # Mock the redirect function to avoid URL resolution
+    mock_redirect = mocker.patch("authentication.views.redirect")
+    mock_redirect.return_value = MagicMock(status_code=302, url="/dashboard")
+    mocker.patch("authentication.views.get_redirect_url", return_value="/dashboard")
+
+    response = CustomLoginView().get(request)
+
+    # Verify the response
+    assert response.status_code == 302
+
+    # Verify that has_logged_in was set to True and profile was saved
+    assert mock_profile.has_logged_in is True
+    mock_profile.save.assert_called_once()
+
+    # Verify redirect was called with the correct URL
+    mock_redirect.assert_called_once_with("/dashboard")
