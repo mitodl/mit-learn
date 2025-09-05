@@ -301,7 +301,7 @@ const OrgProgramDisplay: React.FC<{
           </ProgramCertificateButton>
         )}
       </ProgramHeader>
-      <PlainList>
+      <PlainList data-test-id="org-program-courses-list">
         {transform
           .sortDashboardCourses(program, transformedCourses)
           .map((course) => (

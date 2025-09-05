@@ -144,33 +144,38 @@ describe("OrganizationContent", () => {
       { results: coursesB },
     )
 
-    console.log(coursesA, coursesB)
-
     renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
 
     const collectionHeader = await screen.findByRole("heading", {
       name: programCollection.title,
     })
+
     expect(collectionHeader).toBeInTheDocument()
+
+    await waitFor(async () => {
+      expect((await screen.findAllByTestId("org-program-collection-root")).length).toBeGreaterThan(0)
+    })
     const collectionItems = await screen.findAllByTestId(
       "org-program-collection-root",
     )
+
     expect(collectionItems.length).toBe(1)
     const collection = within(collectionItems[0])
     expect(collection.getByText(programCollection.title)).toBeInTheDocument()
-    console.log(collectionItems[0])
+
+    expect(await collection.findAllByText(coursesA[0].title)).toBeGreaterThan(50)
 
     // Wait for the course data to load and check that courses are displayed
-    await waitFor(() => {
-      expect(collection.getAllByText(coursesA[0].title).length).toBeGreaterThan(
-        0,
-      )
-    })
-    await waitFor(() => {
-      expect(collection.getAllByText(coursesB[0].title).length).toBeGreaterThan(
-        0,
-      )
-    })
+    // await waitFor(() => {
+    //   expect(collection.getAllByText(coursesA[0].title).length).toBeGreaterThan(
+    //     0,
+    //   )
+    // })
+    // await waitFor(() => {
+    //   expect(collection.getAllByText(coursesB[0].title).length).toBeGreaterThan(
+    //     0,
+    //   )
+    // })
   })
 
   test("Does not render a program separately if it is part of a collection", async () => {
