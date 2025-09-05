@@ -108,18 +108,6 @@ CELERY_BEAT_SCHEDULE = {
             "NEWS_EVENTS_MITPE_NEWS_SCHEDULE_SECONDS", 60 * 60 * 3
         ),  # default is every 3 hours
     },
-    "update_sloan_news": {
-        "task": "news_events.tasks.get_sloan_exec_news",
-        "schedule": get_int(
-            "NEWS_EVENTS_SLOAN_EXEC_NEWS_SCHEDULE_SECONDS", 60 * 60 * 3
-        ),  # default is every 3 hours
-    },
-    "update_sloan_webinars": {
-        "task": "news_events.tasks.get_sloan_exec_webinars",
-        "schedule": get_int(
-            "NEWS_EVENTS_SLOAN_EXEC_WEBINAR_SCHEDULE_SECONDS", 60 * 60 * 12
-        ),  # default is every 12 hours
-    },
     "update_sloan_courses": {
         "task": "learning_resources.tasks.get_sloan_data",
         "schedule": crontab(minute=30, hour=4),  # 12:30am EST
