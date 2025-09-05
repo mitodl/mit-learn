@@ -746,6 +746,7 @@ POSTHOG_PROJECT_ID = get_int(
     name="POSTHOG_PROJECT_ID",
     default=None,
 )
+POSTHOG_EVENT_S3_FOLDER = get_string(name="POSTHOG_EVENT_S3_FOLDER", default="None")
 
 # Search defaults settings - adjustable throught the admin ui
 DEFAULT_SEARCH_MODE = get_string(name="DEFAULT_SEARCH_MODE", default="phrase")
