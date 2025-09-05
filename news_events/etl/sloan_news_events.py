@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 
 SLOAN_EXEC_TITLE = "MIT Sloan Executive Education"
 SLOAN_BASE_URL = "https://executive.mit.edu/"
-SLOAN_EXEC_NEWS_URL = urljoin(SLOAN_BASE_URL, "/insights")
+SLOAN_EXEC_NEWS_URL = urljoin(SLOAN_BASE_URL, "/s/blog")
 SLOAN_EXEC_WEBINARS_URL = urljoin(SLOAN_BASE_URL, "/webinars.html")
 SLOAN_EXEC_SEARCH_URL = urljoin(
     SLOAN_BASE_URL,
@@ -39,12 +39,7 @@ def extract() -> list:
         return []
 
     # Extract all content-tile elements
-    content_tiles = content_wrapper.find_all(
-        "div", class_="content-tile col-12 col-md-4"
-    )
-
-    log.info("Found %d content tiles", len(content_tiles))
-    return content_tiles
+    return content_wrapper.find_all("div", class_="content-tile col-12 col-md-4")
 
 
 def transform_item(item_data: BeautifulSoup) -> dict:
