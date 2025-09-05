@@ -156,7 +156,7 @@ def load_feed_source(source_data: dict) -> tuple[FeedSource, list[FeedItem]]:
     if source.feed_type == FeedType.events.name:
         FeedItem.objects.filter(
             source=source,
-            event_details__event_datetime__lt=now_in_utc(),
+            event_details__event_end_datetime__lt=now_in_utc(),
         ).delete()
     return source, items
 

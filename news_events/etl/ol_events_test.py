@@ -38,6 +38,9 @@ def test_transform(mock_get_json_data, ol_events_json_data, expected_event):
     expected_event["detail"]["event_datetime"] = datetime.datetime.strptime(
         expected_event["detail"]["event_datetime"], "%Y-%m-%dT%H:%M:%SZ"
     ).replace(tzinfo=datetime.UTC)
+    expected_event["detail"]["event_end_datetime"] = expected_event["detail"][
+        "event_datetime"
+    ]
     extracted = ol_events.extract()
     assert extracted == ol_events_json_data[0]
     sources = ol_events.transform(extracted)

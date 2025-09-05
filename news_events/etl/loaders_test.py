@@ -80,6 +80,7 @@ def test_load_feed_sources_delete_old_items(sources_data, empty_data):
 
     expired_event_item = FeedItemFactory.create(is_event=True, source=source)
     expired_event_item.event_details.event_datetime = "2000-01-01T00:00:00Z"
+    expired_event_item.event_details.event_end_datetime = "2000-01-02T00:00:00Z"
     expired_event_item.event_details.save()
 
     other_source_item = FeedItemFactory.create(is_event=True)
