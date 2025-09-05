@@ -28,6 +28,7 @@ import { EnrollmentStatusIndicator } from "./EnrollmentStatusIndicator"
 import { EmailSettingsDialog, UnenrollDialog } from "./DashboardDialogs"
 import NiceModal from "@ebay/nice-modal-react"
 import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
+import { redirect } from "next/navigation"
 
 const CardRoot = styled.div<{
   screenSize: "desktop" | "mobile"
@@ -159,9 +160,7 @@ const CoursewareButton = styled(
     const hasStarted = startDate && isInPast(startDate)
     const hasEnrolled =
       enrollmentStatus && enrollmentStatus !== EnrollmentStatus.NotEnrolled
-    const createEnrollment = useCreateEnrollment({
-      readable_id: coursewareId ?? "",
-    })
+    const createEnrollment = useCreateEnrollment()
     return (hasStarted && href) || !hasEnrolled ? (
       hasEnrolled && href ? (
         <ButtonLink
@@ -181,7 +180,16 @@ const CoursewareButton = styled(
           className={className}
           disabled={createEnrollment.isPending || !coursewareId}
           onClick={async () => {
-            await createEnrollment.mutateAsync()
+            await createEnrollment.mutateAsync(
+              { readable_id: coursewareId ?? "" },
+              {
+                onSuccess: () => {
+                  if (href) {
+                    redirect(href)
+                  }
+                },
+              },
+            )
           }}
           {...others}
         >

@@ -2,11 +2,18 @@
 
 import pytest
 
-from learning_resources.constants import LearningResourceType
+from channels.factories import ChannelFactory
+from learning_resources.constants import (
+    LearningResourceRelationTypes,
+    LearningResourceType,
+)
 from learning_resources.factories import (
     CourseFactory,
+    LearningPathFactory,
+    LearningResourceViewEventFactory,
     ProgramFactory,
 )
+from learning_resources.models import LearningResource
 
 pytestmark = [pytest.mark.django_db]
 
@@ -49,3 +56,65 @@ def test_course_creation():
     assert resource.offered_by is not None
     assert resource.runs.count() == course.runs.count()
     assert len(resource.resource_prices.all()) == 0
+
+
+def test_learning_resources_views_count():
+    """Test that views count is correct"""
+    course = CourseFactory.create()
+    resource = course.learning_resource
+    LearningResourceViewEventFactory.create_batch(3, learning_resource=resource)
+    assert resource.views_count == 3
+    assert (
+        LearningResource.objects.for_serialization().get(id=resource.id).views_count
+        == 3
+    )
+    assert (
+        LearningResource.objects.for_search_serialization()
+        .get(id=resource.id)
+        .views_count
+        == 3
+    )
+
+
+def test_learning_resources_in_featured_lists_count():
+    """Test that in_featured_lists count is correct"""
+    course = CourseFactory.create()
+    resource = course.learning_resource
+    assert resource.in_featured_lists == 0
+
+    channel = ChannelFactory.create()
+    featured_learning_path = LearningPathFactory.create().learning_resource
+    featured_learning_path.resources.set(
+        [resource],
+        through_defaults={
+            "relation_type": LearningResourceRelationTypes.LEARNING_PATH_ITEMS
+        },
+    )
+
+    channel = ChannelFactory.create()
+    channel.featured_list = featured_learning_path
+    channel.save()
+
+    other_learning_path = LearningPathFactory.create().learning_resource
+    other_learning_path.resources.set(
+        [resource],
+        through_defaults={
+            "relation_type": LearningResourceRelationTypes.LEARNING_PATH_ITEMS
+        },
+    )
+
+    assert featured_learning_path.resources.count() == 1
+    assert featured_learning_path.channel.first() == channel
+    assert LearningResource.objects.get(id=resource.id).in_featured_lists == 1
+    assert (
+        LearningResource.objects.for_serialization()
+        .get(id=resource.id)
+        .in_featured_lists
+        == 1
+    )
+    assert (
+        LearningResource.objects.for_search_serialization()
+        .get(id=resource.id)
+        .in_featured_lists
+        == 1
+    )

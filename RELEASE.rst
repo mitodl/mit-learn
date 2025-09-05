@@ -1,6 +1,18 @@
 Release Notes
 =============
 
+Version 0.42.2
+--------------
+
+- moving replacement of spaces to get_edx_module_id method (#2484)
+- Qdrant collection and parameter updates (#2481)
+- track first login on profile (#2488)
+- Fix popularity (#2473)
+- remove unpublished resources with duplicate readable_ids (#2478)
+- refactor mutations to accept args on mutation function itself rather than on instantiation, then on success of the create enrollment hook redirect to the courseware url (#2480)
+- Fix flaky test (#2477)
+- Fix for absolute certificate signature URLs (#2479)
+
 Version 0.42.0 (Released August 29, 2025)
 --------------
 

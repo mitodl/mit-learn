@@ -343,7 +343,7 @@ def documents_from_olx(
                         "mime_type": mimetype,
                         "archive_checksum": archive_checksum,
                         "file_extension": extension_lower,
-                        "source_path": f"{path}/{filename.replace(' ', '_')}",
+                        "source_path": f"{path}/{filename}",
                     },
                 )
 
@@ -358,6 +358,7 @@ def get_edx_module_id(path: str, run: LearningResourceRun) -> str:
     Returns:
         str: The XBlock ID
     """
+    path = path.replace(" ", "_")
     folder = path.split("/")[-2]
 
     if folder == "static":

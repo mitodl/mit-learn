@@ -6,11 +6,12 @@ import {
   EnrollmentsApiEnrollmentsPartialUpdateRequest,
 } from "@mitodl/mitxonline-api-axios/v2"
 
-const useCreateEnrollment = (opts: B2bApiB2bEnrollCreateRequest) => {
+const useCreateEnrollment = () => {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: () => b2bApi.b2bEnrollCreate(opts),
-    onSuccess: () => {
+    mutationFn: (opts: B2bApiB2bEnrollCreateRequest) =>
+      b2bApi.b2bEnrollCreate(opts),
+    onSettled: () => {
       queryClient.invalidateQueries({
         queryKey: enrollmentKeys.courseRunEnrollmentsList(),
       })
@@ -18,13 +19,12 @@ const useCreateEnrollment = (opts: B2bApiB2bEnrollCreateRequest) => {
   })
 }
 
-const useUpdateEnrollment = (
-  opts: EnrollmentsApiEnrollmentsPartialUpdateRequest,
-) => {
+const useUpdateEnrollment = () => {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: () => courseRunEnrollmentsApi.enrollmentsPartialUpdate(opts),
-    onSuccess: () => {
+    mutationFn: (opts: EnrollmentsApiEnrollmentsPartialUpdateRequest) =>
+      courseRunEnrollmentsApi.enrollmentsPartialUpdate(opts),
+    onSettled: () => {
       queryClient.invalidateQueries({
         queryKey: enrollmentKeys.courseRunEnrollmentsList(),
       })
@@ -32,12 +32,12 @@ const useUpdateEnrollment = (
   })
 }
 
-const useDestroyEnrollment = (enrollmentId: number) => {
+const useDestroyEnrollment = () => {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: () =>
+    mutationFn: (enrollmentId: number) =>
       courseRunEnrollmentsApi.enrollmentsDestroy({ id: enrollmentId }),
-    onSuccess: () => {
+    onSettled: () => {
       queryClient.invalidateQueries({
         queryKey: enrollmentKeys.courseRunEnrollmentsList(),
       })
