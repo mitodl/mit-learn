@@ -5,7 +5,7 @@ import logging
 import re
 from datetime import UTC
 from decimal import Decimal
-from urllib.parse import urljoin
+from urllib.parse import parse_qs, urljoin, urlparse
 
 import requests
 from dateutil.parser import parse
@@ -46,9 +46,14 @@ def _fetch_data(url, params=None):
             url, params=params, timeout=settings.REQUESTS_TIMEOUT
         ).json()
         results = response["results"]
-
         yield from results
-        url = response.get("next")
+        next_url = response.get("next")
+        if next_url:
+            parsed = urlparse(next_url)
+            url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+            params = parse_qs(parsed.query)
+        else:
+            url = None
 
 
 def _parse_datetime(value):
