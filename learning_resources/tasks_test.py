@@ -16,6 +16,7 @@ from learning_resources.constants import LearningResourceType, PlatformType
 from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE, ETLSource
 from learning_resources.factories import (
     LearningResourceFactory,
+    LearningResourcePlatformFactory,
 )
 from learning_resources.models import LearningResource
 from learning_resources.tasks import (
@@ -686,8 +687,19 @@ def test_remove_duplicate_resources(mocker, mocked_celery):
     """
     duplicate_id = "duplicate_id"
 
-    LearningResourceFactory.create_batch(3, readable_id=duplicate_id, published=False)
-    LearningResourceFactory.create(readable_id=duplicate_id)
+    for platform_type in [PlatformType.edx, PlatformType.xpro, PlatformType.youtube]:
+        LearningResourceFactory.create(
+            readable_id=duplicate_id,
+            published=False,
+            platform=LearningResourcePlatformFactory.create(code=platform_type.name),
+        )
+
+    LearningResourceFactory.create(
+        readable_id=duplicate_id,
+        platform=LearningResourcePlatformFactory.create(
+            code=platform_type.mitxonline.name
+        ),
+    )
     assert LearningResource.objects.filter(readable_id=duplicate_id).count() == 4
     with pytest.raises(mocked_celery.replace_exception_class):
         remove_duplicate_resources()
