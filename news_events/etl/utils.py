@@ -2,6 +2,7 @@
 
 import logging
 import re
+import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from time import mktime, struct_time
@@ -271,3 +272,18 @@ def parse_date_time_range(
     return convert_to_utc(start_date, start_time.tz), convert_to_utc(
         end_date, end_time.tz
     )
+
+
+def generate_uuid(domain: str, url_path: str) -> str:
+    """
+    Generate a UUID from a domain and URL path.
+
+    Args:
+        domain (str): The domain of the source
+        url_path (str): The URL path of the item
+
+    Returns:
+        str: The generated UUID asa string
+    """
+    namespace = uuid.uuid5(uuid.NAMESPACE_DNS, domain)
+    return str(uuid.uuid5(namespace, url_path))

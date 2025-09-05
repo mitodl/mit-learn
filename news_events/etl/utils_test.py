@@ -216,3 +216,42 @@ def test_parse_date_time_range(
     assert utils.parse_date_time_range(
         start_date_str, end_date_str, time_range_str
     ) == (start_dt, end_dt)
+
+
+def test_generate_uuid_reproducibility():
+    """generate_uuid should return the same UUID for the same inputs"""
+    domain = "https://executive.mit.edu/"
+    url_path = "/blog/test-article.html"
+
+    # Generate UUID multiple times
+    uuid1 = utils.generate_uuid(domain, url_path)
+    uuid2 = utils.generate_uuid(domain, url_path)
+    uuid3 = utils.generate_uuid(domain, url_path)
+
+    # All should be identical
+    assert uuid1 == uuid2 == uuid3
+
+
+def test_generate_uuid_different_inputs():
+    """generate_uuid should return different UUIDs for different inputs"""
+    domain = "https://executive.mit.edu/"
+
+    uuid1 = utils.generate_uuid(domain, "/blog/article-1.html")
+    uuid2 = utils.generate_uuid(domain, "/blog/article-2.html")
+    uuid3 = utils.generate_uuid("https://different.edu/", "/blog/article-1.html")
+
+    # All should be different
+    assert uuid1 != uuid2
+    assert uuid1 != uuid3
+    assert uuid2 != uuid3
+
+
+def test_generate_uuid_namespace_isolation():
+    """generate_uuid should create different namespaces for different domains"""
+    url_path = "/same/path"
+
+    uuid_mit = utils.generate_uuid("https://executive.mit.edu/", url_path)
+    uuid_other = utils.generate_uuid("https://other-university.edu/", url_path)
+
+    # Same path but different domains should produce different UUIDs
+    assert uuid_mit != uuid_other

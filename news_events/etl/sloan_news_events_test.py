@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 
 from news_events.constants import FeedType
 from news_events.etl import sloan_news_events
-from news_events.etl.utils import parse_date
+from news_events.etl.utils import generate_uuid, parse_date
 
 
 @pytest.fixture
@@ -33,9 +33,7 @@ def mock_requests_get(mocker, mock_html_content):
     mock_response = mocker.Mock()
     mock_response.content = mock_html_content.encode("utf-8")
     mock_response.raise_for_status.return_value = None
-    mocker.patch(
-        "news_events.etl.sloan_news_events.requests.get", return_value=mock_response
-    )
+    mocker.patch("news_events.etl.utils.requests.get", return_value=mock_response)
 
 
 def test_extract():
@@ -61,12 +59,11 @@ def test_transform_item_blog_post(sample_content_tiles):
     assert isinstance(result, dict)
     assert result["type"] == "news"
 
-    # Test guid generation from href hash
-    import hashlib
-
-    expected_guid = hashlib.md5(  # noqa: S324
-        b"/blog/real-estate-as-strategic-growth-engine.html"
-    ).hexdigest()
+    # Test guid generation from href using UUID
+    expected_guid = generate_uuid(
+        sloan_news_events.SLOAN_BASE_URL,
+        "/blog/real-estate-as-strategic-growth-engine.html",
+    )
     assert result["guid"] == expected_guid
 
     # Test URL construction
@@ -113,10 +110,10 @@ def test_transform_item_webinar(sample_content_tiles):
     assert isinstance(result, dict)
     assert result["type"] == FeedType.events.name  # Should be event for webinars
 
-    # Test guid generation
-    import hashlib
-
-    expected_guid = hashlib.md5(b"/webinar/ai-future-business.html").hexdigest()  # noqa: S324
+    # Test guid generation using UUID
+    expected_guid = generate_uuid(
+        sloan_news_events.SLOAN_BASE_URL, "/webinar/ai-future-business.html"
+    )
     assert result["guid"] == expected_guid
 
     # Test URL construction
@@ -261,9 +258,7 @@ def test_extract_missing_wrapper(mocker):
     mock_response = mocker.Mock()
     mock_response.content = html_without_wrapper.encode("utf-8")
     mock_response.raise_for_status.return_value = None
-    mocker.patch(
-        "news_events.etl.sloan_news_events.requests.get", return_value=mock_response
-    )
+    mocker.patch("news_events.etl.utils.requests.get", return_value=mock_response)
 
     mock_log = mocker.patch("news_events.etl.sloan_news_events.log.error")
     result = sloan_news_events.extract()
@@ -276,9 +271,7 @@ def test_extract_http_error(mocker):
     """Test extract handles HTTP errors properly"""
     mock_response = mocker.Mock()
     mock_response.raise_for_status.side_effect = Exception("HTTP 404 Error")
-    mocker.patch(
-        "news_events.etl.sloan_news_events.requests.get", return_value=mock_response
-    )
+    mocker.patch("news_events.etl.utils.requests.get", return_value=mock_response)
 
     # Should propagate the exception
     with pytest.raises(Exception, match="HTTP 404 Error"):
@@ -300,9 +293,7 @@ def test_extract_empty_content_tiles(mocker):
     mock_response = mocker.Mock()
     mock_response.content = html_with_empty_wrapper.encode("utf-8")
     mock_response.raise_for_status.return_value = None
-    mocker.patch(
-        "news_events.etl.sloan_news_events.requests.get", return_value=mock_response
-    )
+    mocker.patch("news_events.etl.utils.requests.get", return_value=mock_response)
 
     result = sloan_news_events.extract()
     assert result == []
@@ -413,9 +404,7 @@ def test_transform_with_mixed_content_types(mocker):
         content=mixed_html.encode("utf-8"), raise_for_status=mocker.Mock()
     )
 
-    with mocker.patch(
-        "news_events.etl.sloan_news_events.requests.get", return_value=mock_response
-    ):
+    with mocker.patch("news_events.etl.utils.requests.get", return_value=mock_response):
         result = sloan_news_events.transform(sloan_news_events.extract())
 
     # Should handle all tiles, even malformed ones

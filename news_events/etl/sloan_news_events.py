@@ -1,15 +1,13 @@
 """ETL for blog/news from Sloan School of Management Executive Education"""
 
-import hashlib
 import logging
 from urllib.parse import urljoin
 
-import requests
 from bs4 import BeautifulSoup
 
 from main.utils import clean_data
 from news_events.constants import ALL_AUDIENCES, FeedType
-from news_events.etl.utils import parse_date
+from news_events.etl.utils import generate_uuid, get_soup, parse_date
 
 log = logging.getLogger(__name__)
 
@@ -30,10 +28,7 @@ def extract() -> list:
     Returns:
         list: BeautifulSoup elements from content tiles
     """
-    response = requests.get(SLOAN_EXEC_SEARCH_URL, timeout=30)
-    response.raise_for_status()
-
-    soup = BeautifulSoup(response.content, "html.parser")
+    soup = get_soup(SLOAN_EXEC_SEARCH_URL)
 
     # Find the content-tiles-wrapper
     content_wrapper = soup.find(
@@ -69,7 +64,7 @@ def transform_item(item_data: BeautifulSoup) -> dict:
     if not href:
         log.error("No url found for Sloan news_event content")
         return None
-    url = urljoin("https://executive.mit.edu", href)
+    url = urljoin(SLOAN_BASE_URL, href)
 
     # Get summary/content from p tag
     summary_elem = item_data.find(
@@ -127,7 +122,7 @@ def transform_item(item_data: BeautifulSoup) -> dict:
     title_text = title_elem.get_text(strip=True) if title_elem else ""
 
     return {
-        "guid": hashlib.md5(href.encode()).hexdigest(),  # noqa: S324
+        "guid": generate_uuid(SLOAN_BASE_URL, href),
         "title": title_text,
         "summary": clean_data(summary_text),
         "content": clean_data(summary_text),
@@ -167,16 +162,15 @@ def transform_items(source_data: dict) -> list[dict]:
     return news_items, webinar_items
 
 
-def transform(source_data: dict) -> list[dict]:
+def transform(source_data: list[BeautifulSoup]) -> list[dict]:
     """
     Transform the data from Sloan School of Management's blog.
 
     Args:
-        source_data (Soup): BeautifulSoup representation of Sloan index page
-        news_data (dict): JSON data from Sloan blog API request
+        source_data (list[BeautifulSoup]): BeautifulSoup objects of content tiles
 
     Returns:
-        list of dict: List of transformed source data
+        list of dict: List of transformed sources with news/event items
 
     """
     news_items, webinar_items = transform_items(source_data)
@@ -192,7 +186,7 @@ def transform(source_data: dict) -> list[dict]:
             "title": f"{SLOAN_EXEC_TITLE} - Webinars",
             "url": SLOAN_EXEC_WEBINARS_URL,
             "feed_type": FeedType.events.name,
-            "description": f"{SLOAN_EXEC_TITLE} - Blog & Stories",
+            "description": f"{SLOAN_EXEC_TITLE} - Webinars",
             "items": webinar_items,
         },
     ]
