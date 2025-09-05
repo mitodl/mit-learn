@@ -7,7 +7,6 @@ from collections.abc import Generator
 from datetime import UTC, datetime
 
 import boto3
-import requests
 from django.conf import settings
 
 from learning_resources.models import LearningResource, LearningResourceViewEvent
@@ -30,21 +29,6 @@ class PostHogLearningResourceViewEvent:
     resourceId: int  # noqa: N815
     readableId: str  # noqa: N815
     event_date: datetime
-
-
-class PostHogApiAuth(requests.auth.AuthBase):
-    """Implements Bearer authentication for the PostHog private API"""
-
-    def __init__(self, token):
-        """Store the passed-in token."""
-
-        self.token = token
-
-    def __call__(self, request):
-        """Add the bearer token to the headers."""
-
-        request.headers["Authorization"] = f"Bearer {self.token}"
-        return request
 
 
 def posthog_extract_lrd_view_events() -> Generator[dict, None, None]:
@@ -81,7 +65,7 @@ def posthog_extract_lrd_view_events() -> Generator[dict, None, None]:
             get_s3_object_and_read(obj)
             for line in get_s3_object_and_read(obj).splitlines():
                 event = json.loads(line)
-                yield event.get("properties")
+                yield event
 
 
 def posthog_transform_lrd_view_events(
@@ -96,15 +80,14 @@ def posthog_transform_lrd_view_events(
     Generator that yields PostHogLearningResourceViewEvent
     """
 
-    for result in events:
-        props = json.loads(result)
-
+    for event in events:
+        resource = event.get("properties", {}).get("resource", {})
         yield PostHogLearningResourceViewEvent(
-            resourceType=props.get("resourceType", ""),
-            platformCode=props.get("platformCode", ""),
-            resourceId=props.get("resourceId", ""),
-            readableId=props.get("readableId", ""),
-            event_date=result.timestamp,
+            resourceType=resource.get("resource_type"),
+            platformCode=resource.get("platform", {}).get("code"),
+            resourceId=resource.get("id"),
+            readableId=resource.get("readable_id"),
+            event_date=event.get("timestamp"),
         )
 
 
