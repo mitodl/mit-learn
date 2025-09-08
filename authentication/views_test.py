@@ -3,9 +3,9 @@
 import json
 from base64 import b64encode
 from unittest.mock import MagicMock
+from urllib.parse import urljoin
 
 import pytest
-from django.conf import settings
 from django.test import RequestFactory
 from django.urls import reverse
 
@@ -28,10 +28,18 @@ def test_custom_login(mocker, next_url, allowed):
     assert get_redirect_url(mock_request) == (next_url if allowed else "/app")
 
 
-@pytest.mark.parametrize("has_apisix_header", [True, False])
-@pytest.mark.parametrize("next_url", ["/search", None])
-def test_logout(mocker, next_url, client, user, has_apisix_header):
+@pytest.mark.parametrize(
+    "test_params",
+    [
+        (True, "/search"),
+        (True, None),
+        (False, "/search"),
+        (False, None),
+    ],
+)
+def test_logout(mocker, client, user, test_params, settings):
     """User should be properly redirected and logged out"""
+    has_apisix_header, next_url = test_params
     header_str = b64encode(
         json.dumps(
             {
@@ -55,10 +63,10 @@ def test_logout(mocker, next_url, client, user, has_apisix_header):
     mock_logout.assert_called_once()
 
 
-@pytest.mark.parametrize("is_authenticated", [True])
-@pytest.mark.parametrize("has_next", [False])
-def test_next_logout(mocker, client, user, is_authenticated, has_next):
+@pytest.mark.parametrize("test_params", [(True, False)])
+def test_next_logout(mocker, client, user, test_params, settings):
     """Test logout redirect cache assignment"""
+    is_authenticated, has_next = test_params
     next_url = "https://ocw.mit.edu"
     mock_request = mocker.MagicMock(
         GET={"next": next_url if has_next else None},
@@ -211,3 +219,60 @@ def test_custom_login_view_first_time_login_sets_has_logged_in(mocker):
 
     # Verify redirect was called with the correct URL
     mock_redirect.assert_called_once_with("/dashboard")
+
+
+@pytest.mark.parametrize(
+    "test_case",
+    [
+        (
+            (False, False),
+            "/dashboard/organization/test-organization",
+        ),  # First-time login → org dashboard
+        (
+            (False, True),
+            "/dashboard/organization/test-organization",
+        ),  # First-time login → org dashboard
+        ((True, False), "/app"),  # Subsequent login → normal app (not onboarding!)
+        ((True, True), "/app"),  # Subsequent login → normal app
+    ],
+)
+def test_login_org_user_redirect(mocker, client, user, test_case, settings):
+    """Test organization user redirect behavior - org users skip onboarding regardless of onboarding status"""
+    # Unpack test case
+    profile_state, expected_url = test_case
+    has_logged_in, completed_onboarding = profile_state
+
+    # Set up user profile based on test scenario
+    user.profile.has_logged_in = has_logged_in
+    user.profile.completed_onboarding = completed_onboarding
+    user.profile.save()
+
+    header_str = b64encode(
+        json.dumps(
+            {
+                "preferred_username": user.username,
+                "email": user.email,
+                "sub": user.global_id,
+                "organization": {
+                    "Test Organization": {
+                        "role": "member",
+                        "id": "org-123",
+                    }
+                },
+            }
+        ).encode()
+    )
+    client.force_login(user)
+    response = client.get(
+        "/login/",
+        follow=False,
+        HTTP_X_USERINFO=header_str,
+    )
+    assert response.status_code == 302
+    # Handle environment differences - in some envs it returns full URL, in others just path
+    expected_full_url = urljoin(settings.APP_BASE_URL, expected_url)
+    assert response.url in [expected_url, expected_full_url]
+
+    # Verify that org users are never sent to onboarding
+    # (onboarding URL would contain settings.MITOL_NEW_USER_LOGIN_URL)
+    assert settings.MITOL_NEW_USER_LOGIN_URL not in response.url
