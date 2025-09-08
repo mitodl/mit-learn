@@ -14,26 +14,37 @@ from authentication.views import CustomLoginView, get_redirect_url
 
 
 @pytest.mark.parametrize(
-    ("next_url", "allowed", "param_name"),
+    ("param_names", "expected_redirect"),
     [
-        ("/app", True, "next"),
-        ("http://open.odl.local:8062/search", True, "next"),
-        ("http://open.odl.local:8069/search", False, "next"),
-        ("https://ocw.mit.edu", True, "next"),
-        ("https://fake.fake.edu", False, "next"),
-        ("/app", True, "signup_next"),
-        ("http://open.odl.local:8062/search", True, "signup_next"),
-        ("http://open.odl.local:8069/search", False, "signup_next"),
-        ("https://ocw.mit.edu", True, "signup_next"),
-        ("https://fake.fake.edu", False, "signup_next"),
+        (["exists-a"], "/url-a"),
+        (["exists-b"], "/url-b"),
+        (["exists-a", "exists-b"], "/url-a"),
+        (["exists-b", "exists-a"], "/url-b"),
+        (["not-exists-x", "exists-a"], "/url-a"),
+        (["not-exists-x", "not-exists-y"], "/app"),
+        # With disallowed hosts in the params
+        (["disallowed-1"], "/app"),
+        (["not-exists-x", "disallowed-1"], "/app"),
+        (["disallowed-1", "exists-a"], "/url-a"),
+        (["allowed-2"], "https://good.com/url-2"),
     ],
 )
-def test_get_redirect_url(mocker, next_url, allowed, param_name):
+def test_get_redirect_url(mocker, param_names, expected_redirect):
     """Next url should be respected if host is allowed"""
-    mock_request = mocker.MagicMock(GET={param_name: next_url})
-    assert get_redirect_url(mock_request, param_name=param_name) == (
-        next_url if allowed else "/app"
+    GET = {
+        "exists-a": "/url-a",
+        "exists-b": "/url-b",
+        "exists-c": "/url-c",
+        "disallowed-a": "https://malicious.com/url-1",
+        "allowed-2": "https://good.com/url-2",
+    }
+    mocker.patch(
+        "authentication.views.settings.ALLOWED_REDIRECT_HOSTS",
+        ["good.com"],
     )
+
+    mock_request = mocker.MagicMock(GET=GET)
+    assert get_redirect_url(mock_request, param_names) == expected_redirect
 
 
 @pytest.mark.parametrize(
@@ -129,13 +140,39 @@ def test_custom_logout_view(mocker, client, user, is_authenticated, has_next):
     assert resp.url == (next_url if has_next else "/app")
 
 
-def test_custom_login_view_authenticated_user_with_onboarding(mocker):
-    """Test CustomLoginView for an authenticated user who has never logged in before"""
+@pytest.mark.parametrize(
+    (
+        "req_data",
+        "expected_redirect",
+    ),
+    [
+        (
+            {"next": "/irrelevant", "signup_next": "/this?after=signup"},
+            "/this?after=signup",
+        ),
+        (
+            {"next": "/redirect?here=ok"},  # falls back to next
+            "/redirect?here=ok",
+        ),
+    ],
+)
+@pytest.mark.parametrize(
+    ("skip_onboarding", "expect_onboarding"),
+    [
+        (None, True),  # default behavior is to do onboarding
+        ("0", True),  # explicit skip_onboarding=0 means do onboarding
+        ("1", False),  # explicit skip_onboarding=1 means skip onboarding
+    ],
+)
+def test_custom_login_view_authenticated_user_needs_onboarding(
+    mocker, req_data, expected_redirect, skip_onboarding, expect_onboarding
+):
+    """Test CustomLoginView for an authenticated user with incomplete onboarding"""
     factory = RequestFactory()
-    request = factory.get(
-        reverse("login"),
-        {"next": "/irrelevant", "signup_next": "/search?resource=184"},
-    )
+    if skip_onboarding is not None:
+        req_data["skip_onboarding"] = skip_onboarding
+    request = factory.get(reverse("login"), req_data)
+
     request.user = MagicMock(is_anonymous=False)
     request.user.profile = MagicMock(has_logged_in=False)
     mocker.patch(
@@ -146,38 +183,19 @@ def test_custom_login_view_authenticated_user_with_onboarding(mocker):
     response = CustomLoginView().get(request)
 
     assert response.status_code == 302
-    assert response.url == f"/onboarding?{urlencode({'next': '/search?resource=184'})}"
 
-
-def test_custom_login_view_authenticated_user_skip_onboarding(mocker):
-    """Test skip_onboarding flag skips redirect to onboarding"""
-    factory = RequestFactory()
-    request = factory.get(
-        reverse("login"),
-        {
-            "next": "/irrelevant",
-            "signup_next": "/search?resource=184",
-            "skip_onboarding": "1",
-        },
-    )
-    request.user = MagicMock(is_anonymous=False)
-    request.user.profile = MagicMock(has_logged_in=False)
-
-    response = CustomLoginView().get(request)
-
-    # Verify has_logged_in was set to True and profile was saved
-    assert request.user.profile.has_logged_in is True
-    request.user.profile.save.assert_called_once()
-
-    assert response.status_code == 302
-    assert response.url == "/search?resource=184"
+    if expect_onboarding:
+        assert response.url == f"/onboarding?{urlencode({'next': expected_redirect})}"
+    else:
+        assert response.url == expected_redirect
 
 
 def test_custom_login_view_authenticated_user_who_has_logged_in_before(mocker):
     """Test that user who has logged in before is redirected to next url"""
     factory = RequestFactory()
     request = factory.get(
-        reverse("login"), {"next": "/dashboard", "signup_next": "/irrelevant"}
+        reverse("login"),
+        {"next": "/should-be-redirect?foo", "signup_next": "/irrelevant"},
     )
     request.user = MagicMock(is_anonymous=False)
     request.user.profile = MagicMock(has_logged_in=True)
@@ -185,13 +203,15 @@ def test_custom_login_view_authenticated_user_who_has_logged_in_before(mocker):
     response = CustomLoginView().get(request)
 
     assert response.status_code == 302
-    assert response.url == "/dashboard"
+    assert response.url == "/should-be-redirect?foo"
 
 
 def test_custom_login_view_anonymous_user(mocker):
     """Test redirect for anonymous user"""
     factory = RequestFactory()
-    request = factory.get(reverse("login"), {"next": "/some-url"})
+    request = factory.get(
+        reverse("login"), {"next": "/some-url", "signup_next": "/irrelevant"}
+    )
     request.user = MagicMock(is_anonymous=True)
 
     response = CustomLoginView().get(request)
@@ -215,12 +235,6 @@ def test_custom_login_view_first_time_login_sets_has_logged_in(mocker):
 
     request.user = mock_user
 
-    # Mock the redirect function to avoid URL resolution
-    mock_redirect = mocker.patch("authentication.views.redirect")
-    mock_redirect.return_value = MagicMock(status_code=302, url="/dashboard")
-    mocker.patch("authentication.views.get_redirect_url", return_value="/dashboard")
-    mocker.patch("authentication.views.decode_apisix_headers", return_value={})
-
     response = CustomLoginView().get(request)
 
     # Verify the response
@@ -229,9 +243,6 @@ def test_custom_login_view_first_time_login_sets_has_logged_in(mocker):
     # Verify that has_logged_in was set to True and profile was saved
     assert mock_profile.has_logged_in is True
     mock_profile.save.assert_called_once()
-
-    # Verify redirect was called with the correct URL
-    mock_redirect.assert_called_once_with("/dashboard")
 
 
 @pytest.mark.parametrize(
