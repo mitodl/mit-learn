@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.42.2
+Version 0.42.2 (Released September 08, 2025)
 --------------
 
 - moving replacement of spaces to get_edx_module_id method (#2484)
