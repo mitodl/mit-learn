@@ -1,7 +1,7 @@
 """Authentication views"""
 
 import logging
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 from django.contrib.auth import logout
 from django.shortcuts import redirect
@@ -90,8 +90,10 @@ class CustomLoginView(View):
             )
 
             # Check if the next URL is for B2B attach page (should skip onboarding)
-            next_url = request.GET.get("next") or request.COOKIES.get("next")
-            is_attach_url = next_url and next_url.startswith(B2B_ATTACH_URL_PATTERN)
+            next_path = urlparse(
+                request.GET.get("next") or request.COOKIES.get("next")
+            ).path
+            is_attach_url = next_path and next_path.startswith(B2B_ATTACH_URL_PATTERN)
 
             if user_organizations:
                 # First-time login for org user: redirect to org dashboard
