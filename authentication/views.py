@@ -105,12 +105,14 @@ class CustomLoginView(View):
                     redirect_url = urljoin(
                         settings.APP_BASE_URL, f"/dashboard/organization/{org_slug}"
                     )
-            elif (
-                not profile.has_logged_in
-                and request.GET.get("skip_onboarding", "0") == "0"
-            ):
-                params = urlencode({"next": signup_redirect_url})
-                redirect_url = f"{settings.MITOL_NEW_USER_LOGIN_URL}?{params}"
+            # first-time non-org users
+            elif not profile.has_logged_in:
+                if request.GET.get("skip_onboarding", "0") == "0":
+                    params = urlencode({"next": signup_redirect_url})
+                    redirect_url = f"{settings.MITOL_NEW_USER_LOGIN_URL}?{params}"
+                    profile.save()
+                else:
+                    redirect_url = signup_redirect_url
 
             if not profile.has_logged_in:
                 profile.has_logged_in = True
