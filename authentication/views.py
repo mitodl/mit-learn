@@ -10,6 +10,7 @@ from django.utils.text import slugify
 from django.views import View
 
 from main import settings
+from main.constants import B2B_ATTACH_URL_PATTERN
 from main.middleware.apisix_user import ApisixUserMiddleware, decode_apisix_headers
 
 log = logging.getLogger(__name__)
@@ -88,6 +89,10 @@ class CustomLoginView(View):
                 apisix_header.get("organizations", {}) if apisix_header else {}
             )
 
+            # Check if the next URL is for B2B attach page (should skip onboarding)
+            next_url = request.GET.get("next") or request.COOKIES.get("next")
+            is_attach_url = next_url and next_url.startswith(B2B_ATTACH_URL_PATTERN)
+
             if user_organizations:
                 # First-time login for org user: redirect to org dashboard
                 if not profile.has_logged_in:
@@ -104,10 +109,11 @@ class CustomLoginView(View):
                     redirect_url = urljoin(
                         settings.APP_BASE_URL, f"/dashboard/organization/{org_slug}"
                     )
-            # Non-organization users: apply onboarding logic
+            # Non-organization users: apply onboarding logic (but skip for attach URLs)
             elif (
                 not profile.completed_onboarding
                 and request.GET.get("skip_onboarding", "0") == "0"
+                and not is_attach_url
             ):
                 params = urlencode({"next": redirect_url})
                 redirect_url = f"{settings.MITOL_NEW_USER_LOGIN_URL}?{params}"

@@ -42,6 +42,10 @@ ALLOWED_HTML_TAGS = {
 ALLOWED_HTML_ATTRIBUTES = {}
 
 
+# URL patterns for shared use between Django and frontend
+B2B_ATTACH_URL_PATTERN = "/attach/"
+
+
 class PostHogEvents(Enum):
     """
     Enum for PostHog events

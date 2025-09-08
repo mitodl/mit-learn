@@ -276,3 +276,35 @@ def test_login_org_user_redirect(mocker, client, user, test_case, settings):
     # Verify that org users are never sent to onboarding
     # (onboarding URL would contain settings.MITOL_NEW_USER_LOGIN_URL)
     assert settings.MITOL_NEW_USER_LOGIN_URL not in response.url
+
+
+def test_custom_login_view_attach_url_skips_onboarding(mocker):
+    """Test that users going to attach URLs skip onboarding"""
+    factory = RequestFactory()
+    attach_url = "/attach/12345678-1234-1234-1234-123456789abc"
+    request = factory.get("/login/", {"next": attach_url})
+
+    # Create user that would normally go through onboarding
+    request.user = MagicMock(is_anonymous=False)
+    request.user.profile = MagicMock(
+        completed_onboarding=False,  # Would normally trigger onboarding
+        has_logged_in=False,
+    )
+
+    # Mock the redirect function and other dependencies
+    mock_redirect = mocker.patch("authentication.views.redirect")
+    mock_redirect.return_value = MagicMock(status_code=302, url=attach_url)
+    mocker.patch("authentication.views.get_redirect_url", return_value=attach_url)
+    mocker.patch("authentication.views.decode_apisix_headers", return_value={})
+
+    response = CustomLoginView().get(request)
+
+    # Verify user goes directly to attach URL, not onboarding
+    assert response.status_code == 302
+    mock_redirect.assert_called_once_with(attach_url)
+
+    # Verify onboarding was NOT completed (since they're going to attach page)
+    assert request.user.profile.completed_onboarding is False
+
+    # Verify has_logged_in is still set to True
+    assert request.user.profile.has_logged_in is True
