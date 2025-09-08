@@ -1,6 +1,7 @@
 """Authentication views"""
 
 import logging
+from urllib.parse import urljoin
 
 from django.contrib.auth import logout
 from django.shortcuts import redirect
@@ -100,7 +101,9 @@ class CustomLoginView(View):
                         org_slug,
                     )
 
-                    redirect_url = f"/dashboard/organization/{org_slug}"
+                    redirect_url = urljoin(
+                        settings.APP_BASE_URL, f"/dashboard/organization/{org_slug}"
+                    )
             # Non-organization users: apply onboarding logic
             elif (
                 not profile.completed_onboarding
