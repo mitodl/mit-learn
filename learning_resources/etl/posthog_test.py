@@ -27,7 +27,7 @@ def test_posthog_extract_lrd_view_events(
     """
 
     bucket = mock_posthog_event_bucket.bucket
-    settings.POSTHOG_EVENT_S3_FOLDER = bucket.name
+    settings.POSTHOG_EVENT_S3_BUCKET = bucket.name
 
     if existing_events:
         lr = LearningResourceFactory.create()
@@ -70,7 +70,7 @@ def test_posthog_transform_lrd_view_events(mocker, mock_posthog_event_bucket, se
     """Ensure the second stage of the extractor loads properly"""
 
     bucket = mock_posthog_event_bucket.bucket
-    settings.POSTHOG_EVENT_S3_FOLDER = bucket.name
+    settings.POSTHOG_EVENT_S3_BUCKET = bucket.name
     with Path.open(
         Path("test_json/posthog/test_posthog_events1.jsonl"), "rb"
     ) as infile:
@@ -107,7 +107,7 @@ def test_load_posthog_lrd_view_events(
     """Ensure the loader stage of the extractor creates database records"""
 
     bucket = mock_posthog_event_bucket.bucket
-    settings.POSTHOG_EVENT_S3_FOLDER = bucket.name
+    settings.POSTHOG_EVENT_S3_BUCKET = bucket.name
     with Path.open(
         Path("test_json/posthog/test_posthog_events1.jsonl"), "rb"
     ) as infile:

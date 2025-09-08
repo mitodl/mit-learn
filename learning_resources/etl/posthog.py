@@ -60,7 +60,9 @@ def posthog_extract_lrd_view_events() -> Generator[dict, None, None]:
     )
     posthog_events_bucket = s3.Bucket(settings.POSTHOG_EVENT_S3_FOLDER)
 
-    for obj in posthog_events_bucket.objects.all():
+    for obj in posthog_events_bucket.objects.filter(
+        Prefix=settings.POSTHOG_EVENT_S3_PREFIX
+    ):
         if last_event_time is None or obj.last_modified > last_event_time:
             get_s3_object_and_read(obj)
             for line in get_s3_object_and_read(obj).splitlines():
