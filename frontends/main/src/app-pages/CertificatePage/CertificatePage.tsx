@@ -4,7 +4,7 @@ import React, { useRef } from "react"
 import { useParams } from "next/navigation"
 import Image from "next/image"
 import { Link, Typography, styled } from "ol-components"
-import { Button } from "@mitodl/smoot-design"
+import { Button, ButtonLink } from "@mitodl/smoot-design"
 import backgroundImage from "@/public/images/backgrounds/error_page_background.svg"
 import { certificateQueries } from "api/mitxonline-hooks/certificates"
 import { useQuery } from "@tanstack/react-query"
@@ -14,6 +14,9 @@ import CertificateBadgeMobile from "@/public/images/certificate-badge-mobile.svg
 import { formatDate, NoSSR } from "ol-utilities"
 import { RiDownloadLine, RiPrinterLine } from "@remixicon/react"
 import { useReactToPrint } from "react-to-print"
+import html2pdf from "html2pdf.js"
+import CertificatePDF from "./CertificatePDF"
+import ReactPDF, { PDFViewer } from "@react-pdf/renderer"
 
 const Page = styled.div(({ theme }) => ({
   backgroundImage: `url(${backgroundImage.src})`,
@@ -77,8 +80,10 @@ const Certificate = styled.div(({ theme }) => ({
     },
   },
   "@media print": {
-    height: "100%",
+    // height: "100%",
     boxSizing: "border-box",
+    width: "21cm",
+    height: "29.7cm",
   },
 }))
 
@@ -434,6 +439,10 @@ const PrintContainer = styled.div(({ theme }) => ({
   "@page": {
     size: "A4 landscape",
     margin: "1cm",
+
+    // Safari
+    height: "21cm",
+    width: "29.7cm",
   },
   "@media print": {
     position: "absolute",
@@ -549,7 +558,7 @@ const CertificatePage: React.FC = () => {
       signatory_items: [
         {
           name: "Chris Capozzola",
-          title_1: "Senio Associate Dean for open Learning",
+          title_1: "Senior Associate Dean for Open Learning",
           title_2: "Professor of History",
           organization: "Massachusetts Institute of Technology",
           signature_image:
@@ -577,6 +586,8 @@ const CertificatePage: React.FC = () => {
       id: 2,
       courses: [16, 17],
       collections: [],
+      start_date: "2024-01-01",
+      end_date: "2025-01-01",
       requirements: {
         courses: {
           required: [16, 17],
@@ -679,8 +690,6 @@ const CertificatePage: React.FC = () => {
       live: true,
       topics: [],
       availability: "anytime",
-      start_date: null,
-      end_date: null,
       enrollment_start: null,
       enrollment_end: null,
       required_prerequisites: false,
@@ -699,11 +708,93 @@ const CertificatePage: React.FC = () => {
       ? courseCertData?.course_run?.course?.title
       : programCertData?.program?.title
 
-  const print = useReactToPrint({
-    contentRef,
-    // pageStyle: printStyles,
-    documentTitle: `${title} Certificate`,
-  })
+  // const print = useReactToPrint({
+  //   contentRef,
+  //   // pageStyle: printStyles,
+  //   documentTitle: `${title} MIT Open LearningCertificate`,
+  // })
+
+  const print = async () => {
+    const pdfUrl = `/certificate/${certificateType}/${uuid}/pdf`
+    fetch(pdfUrl)
+      .then((res) => res.blob())
+      .then((blob) => {
+        const url = URL.createObjectURL(blob)
+        const iframe = document.createElement("iframe")
+        iframe.style.display = "none"
+        iframe.src = url
+        document.body.appendChild(iframe)
+        iframe.onload = () => {
+          iframe.contentWindow?.print()
+        }
+      })
+  }
+
+  const download = async () => {
+    // if (contentRef.current) {
+    //   html2pdf()
+    //     .set({
+    //       type: "jpeg",
+    //       quality: 1,
+    //       margin: 10,
+    //       filename: `${title} MIT Open Learning Certificate.pdf`,
+    //       html2canvas: {
+    //         scale: 4,
+    //         width: 1200,
+    //         height: 900,
+    //         windowWidth: 1400,
+    //         windowHeight: 1400,
+    //       },
+    //       jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },
+    //       pagebreak: { mode: "avoid" },
+    //     })
+    //     .from(contentRef.current)
+    //     .save()
+    // }
+
+    // const res = await fetch(`/certificate/${certificateType}/${uuid}/pdf`)
+    // const blob = await res.blob()
+
+    // const url = window.URL.createObjectURL(blob)
+    // const a = document.createElement("a")
+    // a.href = url
+    // a.download = `certificate-${uuid}.pdf`
+    // document.body.appendChild(a)
+    // a.click()
+    // document.body.removeChild(a)
+    // window.URL.revokeObjectURL(url)
+
+    await ReactPDF.render(
+      <CertificatePDF certificateType={certificateType} uuid={uuid} />,
+      `${title} Certificate - MIT Open Learning.pdf`,
+    )
+  }
+
+  // const download = useReactToPrint({
+  //   contentRef,
+  //   // pageStyle: printStyles,
+  //   documentTitle: `${title} MIT Open LearningCertificate`,
+  //   print: async (printIframe: HTMLIFrameElement) => {
+  //     html2pdf()
+  //       .set({
+  //         type: "jpeg",
+  //         quality: 1,
+  //         margin: 10,
+  //         filename: `${title} MIT Open Learning Certificate.pdf`,
+  //         html2canvas: {
+  //           scale: 4,
+  //           // width: 1200,
+  //           // height: 900,
+  //           // windowWidth: 1400,
+  //           // windowHeight: 1400,
+  //         },
+  //         jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },
+  //         pagebreak: { mode: "avoid" },
+  //       })
+  //       .from(printIframe.contentWindow?.document.body)
+  //       .save()
+  //   },
+  // })
 
   const displayType =
     certificateType === CertificateType.Course
@@ -744,13 +835,18 @@ const CertificatePage: React.FC = () => {
 
   return (
     <Page>
-      <Title className="no-print">
+      <Title>
         <Typography variant="h3">
           <strong>{title}</strong> {displayType}
         </Typography>
       </Title>
-      <Buttons className="no-print">
-        <Button variant="primary" startIcon={<RiDownloadLine />}>
+      <Buttons>
+        <Button
+          variant="primary"
+          startIcon={<RiDownloadLine />}
+          // href={`/certificate/${certificateType}/${uuid}/pdf`}
+          onClick={download}
+        >
           Download PDF
         </Button>
         <Button
@@ -762,31 +858,17 @@ const CertificatePage: React.FC = () => {
         </Button>
       </Buttons>
       <PrintContainer ref={contentRef}>
-        <Certificate className="certificate-print-container">
-          <Inner className="certificate-inner">
-            <Logo
-              src={OpenLearningLogo}
-              alt="MIT Open Learning"
-              className="certificate-logo"
-            />
-            <PrintLogo
-              src={OpenLearningLogo.src}
-              alt="MIT Open Learning"
-              className="certificate-logo-print"
-            />
-            <Badge className="certificate-badge">
-              <BadgeText variant="h4" className="certificate-badge-text">
-                {displayType}
-              </BadgeText>
+        <Certificate>
+          <Inner>
+            <Logo src={OpenLearningLogo} alt="MIT Open Learning" />
+            <PrintLogo src={OpenLearningLogo.src} alt="MIT Open Learning" />
+            <Badge>
+              <BadgeText variant="h4">{displayType}</BadgeText>
             </Badge>
             <Certification>
-              <Typography variant="h4" className="certificate-title">
-                This is to certify that
-              </Typography>
-              <NameText variant="h1" className="certificate-name">
-                {userName}
-              </NameText>
-              <AchievementText className="certificate-achievement">
+              <Typography variant="h4">This is to certify that</Typography>
+              <NameText variant="h1">{userName}</NameText>
+              <AchievementText>
                 has successfully completed all requirements of the{" "}
                 <PrintBreak />
                 <strong>Universal Artificial Intelligence</strong>{" "}
@@ -794,12 +876,7 @@ const CertificatePage: React.FC = () => {
               </AchievementText>
             </Certification>
             <CourseInfo>
-              <Typography variant="h2" className="certificate-course-title">
-                {title}
-              </Typography>
-              <Typography variant="h4">
-                Awarded 8 Continuing Education Units (CEUs)
-              </Typography>
+              <Typography variant="h2">{title}</Typography>
               {ceus ? (
                 <Typography variant="h4">
                   Awarded {ceus} Continuing Education Units (CEUs)
@@ -814,9 +891,9 @@ const CertificatePage: React.FC = () => {
               )}
               {ceus ? null : <Spacer />}
             </CourseInfo>
-            <Signatories className="certificate-signatories">
+            <Signatories>
               {signatories?.map((signatory, index) => (
-                <Signatory key={index} className="certificate-signatory">
+                <Signatory key={index}>
                   <Signature
                     src={
                       signatory.signature_image.startsWith("http")
@@ -824,15 +901,9 @@ const CertificatePage: React.FC = () => {
                         : `${process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL}${signatory.signature_image}`
                     }
                     alt={signatory.name}
-                    className="certificate-signature"
                     crossOrigin="anonymous"
                   />
-                  <SignatoryName
-                    variant="h3"
-                    className="certificate-signatory-name"
-                  >
-                    {signatory.name}
-                  </SignatoryName>
+                  <SignatoryName variant="h3">{signatory.name}</SignatoryName>
                   <Typography variant="body1">{signatory.title_1}</Typography>
                   <Typography variant="body1">{signatory.title_2}</Typography>
                   <Typography variant="body1">
@@ -841,13 +912,13 @@ const CertificatePage: React.FC = () => {
                 </Signatory>
               ))}
             </Signatories>
-            <CertificateId variant="body1" className="certificate-id">
+            <CertificateId variant="body1">
               Valid Certificate ID: <span>{uuid}</span>
             </CertificateId>
           </Inner>
         </Certificate>
       </PrintContainer>
-      <Note className="no-print">
+      <Note>
         <strong>Note:</strong> The name displayed on your certificate is based
         on your{" "}
         <Link href="/dashboard/profile" color="red">
