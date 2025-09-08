@@ -148,7 +148,7 @@ def test_custom_login_view_authenticated_user_with_onboarding(mocker):
     assert response.url == f"/onboarding?{urlencode({'next': '/search?resource=184'})}"
 
 
-def test_custom_login_view_authenticated_user_skip_onboarding(mocker):
+def test_custom_login_view_authenticated_user_skip_onboarding():
     """Test skip_onboarding flag skips redirect to onboarding and sets completed_onboarding"""
     factory = RequestFactory()
     request = factory.get(
@@ -171,7 +171,7 @@ def test_custom_login_view_authenticated_user_skip_onboarding(mocker):
     assert response.url == "/search?resource=184"
 
 
-def test_custom_login_view_authenticated_user_with_completed_onboarding(mocker):
+def test_custom_login_view_authenticated_user_with_completed_onboarding():
     """Test test that user who has completed onboarding is redirected to next url"""
     factory = RequestFactory()
     request = factory.get(
@@ -189,14 +189,13 @@ def test_custom_login_view_authenticated_user_with_completed_onboarding(mocker):
 def test_custom_login_view_anonymous_user(mocker):
     """Test redirect for anonymous user"""
     factory = RequestFactory()
-    request = factory.get(reverse("login"), {"next": "/dashboard"})
+    request = factory.get(reverse("login"), {"next": "/some-url"})
     request.user = MagicMock(is_anonymous=True)
-    mocker.patch("authentication.views.get_redirect_url", return_value="/dashboard")
 
     response = CustomLoginView().get(request)
 
     assert response.status_code == 302
-    assert response.url == "/dashboard"
+    assert response.url == "/some-url"
 
 
 def test_custom_login_view_first_time_login_sets_has_logged_in(mocker):
