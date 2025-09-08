@@ -15,25 +15,26 @@ from main.middleware.apisix_user import ApisixUserMiddleware, decode_apisix_head
 log = logging.getLogger(__name__)
 
 
-def get_redirect_url(request, param_name):
+def get_redirect_url(request, param_names):
     """
     Get the redirect URL from the request.
 
     Args:
         request: Django request object
+        param_names: Names of the GET parameter or cookie to look for the redirect URL;
+            first match will be used.
 
     Returns:
         str: Redirect URL
     """
-    next_url = request.GET.get(param_name) or request.COOKIES.get(param_name)
-    return (
-        next_url
-        if next_url
-        and url_has_allowed_host_and_scheme(
+    for param_name in param_names:
+        next_url = request.GET.get(param_name) or request.COOKIES.get(param_name)
+        if next_url and url_has_allowed_host_and_scheme(
             next_url, allowed_hosts=settings.ALLOWED_REDIRECT_HOSTS
-        )
-        else "/app"
-    )
+        ):
+            return next_url
+
+    return "/app"
 
 
 class CustomLogoutView(View):
@@ -51,7 +52,7 @@ class CustomLogoutView(View):
         GET endpoint reached after logging a user out from Keycloak
         """
         user = getattr(request, "user", None)
-        user_redirect_url = get_redirect_url(request, "next")
+        user_redirect_url = get_redirect_url(request, ["next"])
         if user and user.is_authenticated:
             logout(request)
         if request.META.get(ApisixUserMiddleware.header):
@@ -77,8 +78,8 @@ class CustomLoginView(View):
         """
         GET endpoint for logging a user in.
         """
-        redirect_url = get_redirect_url(request, "next")
-        signup_redirect_url = get_redirect_url(request, "signup_next")
+        redirect_url = get_redirect_url(request, ["next"])
+        signup_redirect_url = get_redirect_url(request, ["signup_next", "next"])
         if not request.user.is_anonymous:
             profile = request.user.profile
 
