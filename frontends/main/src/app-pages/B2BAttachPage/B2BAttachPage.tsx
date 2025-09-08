@@ -4,6 +4,7 @@ import { redirect } from "next/navigation"
 import { styled, Breadcrumbs, Container, Typography } from "ol-components"
 import * as urls from "@/common/urls"
 import { useB2BAttachMutation } from "api/mitxonline-hooks/organizations"
+import { useMitxOnlineCurrentUser } from "api/mitxonline-hooks/user"
 
 type B2BAttachPageProps = {
   code: string
@@ -23,15 +24,21 @@ const B2BAttachPage: React.FC<B2BAttachPageProps> = ({ code }) => {
     enrollment_code: code,
   })
 
+  const { data: mitxOnlineUser } = useMitxOnlineCurrentUser()
+
   React.useEffect(() => {
     attach?.()
   }, [attach])
 
   React.useEffect(() => {
     if (isSuccess) {
-      redirect(urls.DASHBOARD_HOME)
+      const orgs = mitxOnlineUser?.b2b_organizations || []
+      if (orgs.length > 0) {
+        const org = orgs[0]
+        redirect(urls.organizationView(org.slug.replace("org-", "")))
+      }
     }
-  }, [isSuccess])
+  }, [isSuccess, mitxOnlineUser])
 
   return (
     <Container>
