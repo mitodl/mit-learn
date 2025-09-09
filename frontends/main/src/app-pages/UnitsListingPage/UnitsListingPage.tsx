@@ -16,7 +16,10 @@ import { RiBookOpenLine, RiSuitcaseLine } from "@remixicon/react"
 import type { Channel, UnitChannel } from "api/v0"
 import { HOME } from "@/common/urls"
 import { UnitCards, UnitCardLoading } from "./UnitCard"
-import { aggregateProgramCounts, aggregateCourseCounts } from "@/common/utils"
+import {
+  aggregateProgramCounts,
+  aggregateCourseCounts,
+} from "@/common/client-utils"
 
 const DESKTOP_WIDTH = "1056px"
 

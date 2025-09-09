@@ -14,15 +14,9 @@ import {
 } from "api/hooks/newsEvents"
 import { prefetch } from "api/ssr/prefetch"
 
-type SearchParams = {
-  [key: string]: string | string[] | undefined
-}
-
 export async function generateMetadata({
   searchParams,
-}: {
-  searchParams: Promise<SearchParams>
-}): Promise<Metadata> {
+}: PageProps<"/">): Promise<Metadata> {
   return await getMetadataAsync({
     title: "Learn with MIT",
     searchParams,
@@ -41,7 +35,7 @@ export async function generateMetadata({
  */
 export const dynamic = "force-dynamic"
 
-const Page: React.FC = async () => {
+const Page: React.FC<PageProps<"/">> = async () => {
   const { dehydratedState } = await prefetch([
     // Featured Courses carousel "All"
     learningResourceQueries.featured({

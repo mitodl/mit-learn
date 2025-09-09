@@ -10,7 +10,7 @@ export const metadata: Metadata = standardizeMetadata({
   title: "Units",
 })
 
-const Page: React.FC = async () => {
+const Page: React.FC<PageProps<"/units">> = async () => {
   const { dehydratedState } = await prefetch([
     channelQueries.countsByType("unit"),
     channelQueries.list({ channel_type: "unit" }),

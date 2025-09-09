@@ -3,7 +3,7 @@ import { styled, RoutedDrawer } from "ol-components"
 import { RiCloseLine } from "@remixicon/react"
 import { ActionButton } from "@mitodl/smoot-design"
 import { AiChat } from "@mitodl/smoot-design/ai"
-import { getCsrfToken } from "@/common/utils"
+import { getCsrfToken } from "@/common/client-utils"
 import { RECOMMENDER_QUERY_PARAM } from "@/common/urls"
 
 const CloseButtonContainer = styled("div")({
