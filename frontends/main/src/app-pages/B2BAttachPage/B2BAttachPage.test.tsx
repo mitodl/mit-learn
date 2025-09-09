@@ -23,6 +23,30 @@ describe("B2BAttachPage", () => {
     jest.clearAllMocks()
   })
 
+  test("Redirects to login when not authenticated", async () => {
+    setMockResponse.get(urls.userMe.get(), {
+      [Permission.Authenticated]: false,
+    })
+
+    // Mock MitxOnline API responses that may be called before redirect
+    setMockResponse.get(mitxOnlineUrls.currentUser.get(), null)
+    setMockResponse.post(b2bUrls.b2bAttach.b2bAttachView("test-code"), [])
+
+    renderWithProviders(<B2BAttachPage code="test-code" />, {
+      url: commonUrls.B2B_ATTACH_VIEW,
+    })
+
+    // Wait for the redirect to be called
+    await waitFor(() => {
+      expect(mockRedirect).toHaveBeenCalledWith(
+        commonUrls.login({
+          pathname: commonUrls.b2bAttachView("test-code"),
+          searchParams: new URLSearchParams({ skip_onboarding: "1" }),
+        }),
+      )
+    })
+  })
+
   test("Renders when logged in", async () => {
     setMockResponse.get(urls.userMe.get(), {
       [Permission.Authenticated]: true,

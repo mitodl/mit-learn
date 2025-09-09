@@ -5,6 +5,8 @@ import { styled, Breadcrumbs, Container, Typography } from "ol-components"
 import * as urls from "@/common/urls"
 import { useB2BAttachMutation } from "api/mitxonline-hooks/organizations"
 import { useMitxOnlineCurrentUser } from "api/mitxonline-hooks/user"
+import { userQueries } from "api/hooks/user"
+import { useQuery } from "@tanstack/react-query"
 
 type B2BAttachPageProps = {
   code: string
@@ -24,6 +26,10 @@ const B2BAttachPage: React.FC<B2BAttachPageProps> = ({ code }) => {
     enrollment_code: code,
   })
 
+  const { isLoading: userLoading, data: user } = useQuery({
+    ...userQueries.me(),
+    staleTime: 0,
+  })
   const { data: mitxOnlineUser } = useMitxOnlineCurrentUser()
 
   React.useEffect(() => {
@@ -31,6 +37,16 @@ const B2BAttachPage: React.FC<B2BAttachPageProps> = ({ code }) => {
   }, [attach])
 
   React.useEffect(() => {
+    if (userLoading) {
+      return
+    }
+    if (!user?.is_authenticated) {
+      const loginUrl = urls.login({
+        pathname: urls.b2bAttachView(code),
+        searchParams: new URLSearchParams({ skip_onboarding: "1" }),
+      })
+      redirect(loginUrl)
+    }
     if (isSuccess) {
       const orgs = mitxOnlineUser?.b2b_organizations || []
       if (orgs.length > 0) {
@@ -38,7 +54,7 @@ const B2BAttachPage: React.FC<B2BAttachPageProps> = ({ code }) => {
         redirect(urls.organizationView(org.slug.replace("org-", "")))
       }
     }
-  }, [isSuccess, mitxOnlineUser])
+  }, [isSuccess, userLoading, user, mitxOnlineUser, code])
 
   return (
     <Container>
