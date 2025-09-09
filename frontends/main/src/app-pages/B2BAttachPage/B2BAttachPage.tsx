@@ -48,9 +48,8 @@ const B2BAttachPage: React.FC<B2BAttachPageProps> = ({ code }) => {
       redirect(loginUrl)
     }
     if (isSuccess) {
-      const orgs = mitxOnlineUser?.b2b_organizations || []
-      if (orgs.length > 0) {
-        const org = orgs[0]
+      const org = mitxOnlineUser?.b2b_organizations?.[0]
+      if (org) {
         redirect(urls.organizationView(org.slug.replace("org-", "")))
       }
     }
