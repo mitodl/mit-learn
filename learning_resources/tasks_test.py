@@ -694,13 +694,18 @@ def test_remove_duplicate_resources(mocker, mocked_celery):
             platform=LearningResourcePlatformFactory.create(code=platform_type.name),
         )
 
-    LearningResourceFactory.create(
+    published_reasource = LearningResourceFactory.create(
         readable_id=duplicate_id,
+        published=True,
         platform=LearningResourcePlatformFactory.create(
             code=platform_type.mitxonline.name
         ),
     )
+    generate_embeddings_mock = mocker.patch(
+        "vector_search.tasks.generate_embeddings", autospec=True
+    )
     assert LearningResource.objects.filter(readable_id=duplicate_id).count() == 4
     with pytest.raises(mocked_celery.replace_exception_class):
         remove_duplicate_resources()
+    assert generate_embeddings_mock.mock_calls[0].args[0] == [published_reasource.id]
     assert LearningResource.objects.filter(readable_id=duplicate_id).count() == 1
