@@ -1,7 +1,7 @@
 """Authentication views"""
 
 import logging
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
 
 from django.contrib.auth import logout
 from django.shortcuts import redirect
@@ -10,7 +10,6 @@ from django.utils.text import slugify
 from django.views import View
 
 from main import settings
-from main.constants import B2B_ATTACH_URL_PATTERN
 from main.middleware.apisix_user import ApisixUserMiddleware, decode_apisix_headers
 
 log = logging.getLogger(__name__)
@@ -89,12 +88,6 @@ class CustomLoginView(View):
                 apisix_header.get("organizations", {}) if apisix_header else {}
             )
 
-            # Check if the next URL is for B2B attach page (should skip onboarding)
-            next_path = urlparse(
-                request.GET.get("next") or request.COOKIES.get("next")
-            ).path
-            is_attach_url = next_path and next_path.startswith(B2B_ATTACH_URL_PATTERN)
-
             if user_organizations:
                 # First-time login for org user: redirect to org dashboard
                 if not profile.has_logged_in:
@@ -114,7 +107,6 @@ class CustomLoginView(View):
             elif (
                 not profile.has_logged_in
                 and request.GET.get("skip_onboarding", "0") == "0"
-                and not is_attach_url
             ):
                 params = urlencode({"next": redirect_url})
                 redirect_url = f"{settings.MITOL_NEW_USER_LOGIN_URL}?{params}"
