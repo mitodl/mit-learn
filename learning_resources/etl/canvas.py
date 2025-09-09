@@ -430,7 +430,7 @@ def parse_module_meta(course_archive_path: str) -> dict:
     return publish_status
 
 
-def _compact_element(element):
+def _compact_element(element: ElementTree.Element) -> dict | str | None:
     """Recursively compact an element into a nested dictionary"""
     if len(element) == 0:  # No children, return text
         return element.text.strip() if element.text else None
@@ -442,7 +442,7 @@ def _compact_element(element):
     }
 
 
-def _workflow_state_from_html(html):
+def _workflow_state_from_html(html: str) -> str:
     """
     Extract the workflow_state meta tag from html
     """
@@ -465,7 +465,7 @@ def _workflow_state_from_xml(xml):
         log.exception("Error parsing XML: %s", sys.stderr)
 
 
-def _title_from_html(html):
+def _title_from_html(html: str) -> str:
     """
     Extract the title element from HTML content
     """
@@ -642,6 +642,9 @@ def pdf_to_base64_images(pdf_path, fmt="JPEG", max_size=2000, quality=85):
 
 
 def _pdf_to_markdown(pdf_path):
+    """
+    Convert a PDF file to markdown using an llm
+    """
     markdown = ""
     for im in pdf_to_base64_images(pdf_path):
         response = completion(
