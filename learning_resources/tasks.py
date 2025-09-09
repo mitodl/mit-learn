@@ -62,7 +62,7 @@ def remove_duplicate_resources(self):
         ).values_list("id", flat=True)
         published_resources = LearningResource.objects.filter(
             readable_id=duplicate["readable_id"],
-            published=False,
+            published=True,
         ).values_list("id", flat=True)
         # keep the most recently created resource, delete the rest
         LearningResource.objects.filter(id__in=unpublished_resources).delete()
