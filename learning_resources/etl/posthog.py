@@ -7,10 +7,11 @@ from collections.abc import Generator
 from datetime import UTC, datetime
 
 import boto3
+import pandas as pd
 from django.conf import settings
 
 from learning_resources.models import LearningResource, LearningResourceViewEvent
-from learning_resources.utils import get_s3_object_and_read, resource_upserted_actions
+from learning_resources.utils import resource_upserted_actions
 
 log = logging.getLogger(__name__)
 
@@ -58,16 +59,16 @@ def posthog_extract_lrd_view_events() -> Generator[dict, None, None]:
         aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
         aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
     )
-    posthog_events_bucket = s3.Bucket(settings.POSTHOG_EVENT_S3_FOLDER)
+    posthog_events_bucket = s3.Bucket(settings.POSTHOG_EVENT_S3_BUCKET)
 
     for obj in posthog_events_bucket.objects.filter(
         Prefix=settings.POSTHOG_EVENT_S3_PREFIX
     ):
         if last_event_time is None or obj.last_modified > last_event_time:
-            get_s3_object_and_read(obj)
-            for line in get_s3_object_and_read(obj).splitlines():
-                event = json.loads(line)
-                yield event
+            s3_path = f"s3://{settings.POSTHOG_EVENT_S3_BUCKET}/{obj.key}"
+            df = pd.read_parquet(s3_path)
+            for _, row in list(df.iterrows()):
+                yield row.to_dict()
 
 
 def posthog_transform_lrd_view_events(
@@ -83,7 +84,10 @@ def posthog_transform_lrd_view_events(
     """
 
     for event in events:
-        resource = event.get("properties", {}).get("resource", {})
+        properties = event.get("properties", "{}")
+        properties = json.loads(properties)
+        resource = properties.get("resource", {})
+
         yield PostHogLearningResourceViewEvent(
             resourceType=resource.get("resource_type"),
             platformCode=resource.get("platform", {}).get("code"),
