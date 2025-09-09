@@ -13,6 +13,7 @@ from learning_resources.etl.canvas import (
     _compact_element,
     is_file_published,
     parse_canvas_settings,
+    parse_files_meta,
     parse_module_meta,
     parse_web_content,
     run_for_canvas_archive,
@@ -857,3 +858,51 @@ def test_parse_web_content_excludes_instructor_only_content(tmp_path):
     assert len(result["unpublished"]) == 1
     assert result["unpublished"][0]["title"] == "Instructor Only Content"
     assert result["unpublished"][0]["path"] == "file1.html"
+
+
+def test_parse_files_meta_excludes_tutorbot_folder(tmp_path, settings):
+    """
+    Test that parse_files_meta explicitly excludes files in the tutorbot folder
+    even if they are marked as published in the files_meta.xml.
+    """
+    settings.CANVAS_TUTORBOT_FOLDER = "web_resources/ai/tutor/"
+    files_meta_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <files xmlns="http://canvas.instructure.com/xsd/cccv1p0">
+      <file identifier="file1">
+        <display_name>Published File</display_name>
+        <hidden>false</hidden>
+        <locked>false</locked>
+        <path>web_resources/ai/tutor/tutorfile.html</path>
+      </file>
+      <file identifier="file2">
+        <display_name>Regular File</display_name>
+        <hidden>false</hidden>
+        <locked>false</locked>
+        <path>regular_folder/file2.html</path>
+      </file>
+    </files>
+    """
+    manifest_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
+      <resources>
+        <resource identifier="file1" type="webcontent">
+          <file href="web_resources/ai/tutor/tutorfile.html"/>
+        </resource>
+        <resource identifier="file2" type="webcontent">
+          <file href="regular_folder/file2.html"/>
+        </resource>
+      </resources>
+    </manifest>
+    """
+    zip_path = tmp_path / "canvas_course.zip"
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr("course_settings/files_meta.xml", files_meta_xml)
+        zf.writestr("imsmanifest.xml", manifest_xml)
+
+    result = parse_files_meta(zip_path)
+
+    # Ensure the file in the tutorbot folder is excluded
+    assert len(result["active"]) == 1
+    assert result["active"][0]["path"].name == "file2.html"
+    assert len(result["unpublished"]) == 1
+    assert result["unpublished"][0]["path"].name == "tutorfile.html"
