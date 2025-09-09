@@ -8,7 +8,7 @@ const Page: React.FC<PageParams<never, { id: string }>> = async ({
 }) => {
   const resolved = await params!
   const id = Number(resolved.id)
-  invariant(!id, "id is required")
+  invariant(id, "id is required")
   return <UserListDetailsContent userListId={id} />
 }
 
