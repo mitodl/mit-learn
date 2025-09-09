@@ -430,7 +430,7 @@ def parse_module_meta(course_archive_path: str) -> dict:
     return publish_status
 
 
-def _compact_element(element: ElementTree.Element) -> dict | str | None:
+def _compact_element(element) -> dict | str | None:
     """Recursively compact an element into a nested dictionary"""
     if len(element) == 0:  # No children, return text
         return element.text.strip() if element.text else None
