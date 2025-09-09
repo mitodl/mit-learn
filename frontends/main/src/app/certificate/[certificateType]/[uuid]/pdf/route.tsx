@@ -261,13 +261,13 @@ const CertificateDoc = ({
       pageLayout="singlePage"
     >
       <Page
-        size="A4"
+        size="LETTER"
         orientation="landscape"
         dpi={72}
         style={{
           flexDirection: "column",
           backgroundColor: "#fff",
-          padding: "27pt",
+          padding: "16pt",
         }}
       >
         <View
@@ -346,6 +346,7 @@ const CertificateDoc = ({
                 ...typography.h2,
                 fontFamily: "Neue Haas Grotesk Text 700",
                 color: colors.black,
+                width: pxToPt(1150),
               }}
             >
               {title}
@@ -386,7 +387,7 @@ const CertificateDoc = ({
                 gap: "16px",
                 position: "absolute",
                 left: pxToPt(46),
-                top: pxToPt(570),
+                top: pxToPt(580),
                 right: pxToPt(46),
               }}
             >

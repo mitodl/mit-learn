@@ -1,10 +1,10 @@
 "use client"
 
-import React, { useRef } from "react"
+import React, { useRef, useEffect } from "react"
 import { useParams } from "next/navigation"
 import Image from "next/image"
-import { Link, Typography, styled } from "ol-components"
-import { Button, ButtonLink } from "@mitodl/smoot-design"
+import { Link, Typography, styled, theme as themeObject } from "ol-components"
+import { Button } from "@mitodl/smoot-design"
 import backgroundImage from "@/public/images/backgrounds/error_page_background.svg"
 import { certificateQueries } from "api/mitxonline-hooks/certificates"
 import { useQuery } from "@tanstack/react-query"
@@ -13,10 +13,9 @@ import CertificateBadgeDesktop from "@/public/images/certificate-badge-desktop.s
 import CertificateBadgeMobile from "@/public/images/certificate-badge-mobile.svg"
 import { formatDate, NoSSR } from "ol-utilities"
 import { RiDownloadLine, RiPrinterLine } from "@remixicon/react"
-import { useReactToPrint } from "react-to-print"
-import html2pdf from "html2pdf.js"
-import CertificatePDF from "./CertificatePDF"
-import ReactPDF, { PDFViewer } from "@react-pdf/renderer"
+import { V2ProgramCertificate } from "@mitodl/mitxonline-api-axios/v2"
+
+console.log("themeObject", themeObject)
 
 const Page = styled.div(({ theme }) => ({
   backgroundImage: `url(${backgroundImage.src})`,
@@ -56,14 +55,14 @@ const Title = styled(Typography)(({ theme }) => ({
   },
 }))
 
-const Buttons = styled.div(({ theme }) => ({
+const Buttons = styled.div({
   display: "flex",
   gap: "12px",
   justifyContent: "center",
   marginBottom: "50px",
-}))
+})
 
-const Certificate = styled.div(({ theme }) => ({
+const Outer = styled.div(({ theme }) => ({
   maxWidth: "1306px",
   minWidth: "1200px",
   border: `4px solid ${theme.custom.colors.silverGray}`,
@@ -259,12 +258,12 @@ const AchievementText = styled(Typography)(({ theme }) => ({
   },
 }))
 
-const PrintBreak = styled.br(({ theme }) => ({
+const PrintBreak = styled.br({
   display: "none",
   "@media print": {
     display: "block",
   },
-}))
+})
 
 const CourseInfo = styled.div(({ theme }) => ({
   display: "flex",
@@ -434,7 +433,7 @@ const Note = styled(Typography)(({ theme }) => ({
   },
 }))
 
-const PrintContainer = styled.div(({ theme }) => ({
+const PrintContainer = styled.div({
   pageBreakInside: "avoid",
   "@page": {
     size: "A4 landscape",
@@ -480,7 +479,157 @@ const PrintContainer = styled.div(({ theme }) => ({
       display: "none",
     },
   },
-}))
+})
+
+const Certificate = ({
+  title,
+  displayType,
+  userName,
+  shortDisplayType,
+  ceus,
+  signatories,
+  startDate,
+  endDate,
+  uuid,
+}: {
+  title: string
+  displayType: string
+  userName?: string
+  shortDisplayType: string
+  ceus?: string
+  signatories: SignatoryItem[]
+  startDate?: string | null
+  endDate?: string | null
+  uuid: string
+}) => {
+  return (
+    <Outer>
+      <Inner>
+        <Logo src={OpenLearningLogo} alt="MIT Open Learning" />
+        <PrintLogo src={OpenLearningLogo.src} alt="MIT Open Learning" />
+        <Badge>
+          <BadgeText variant="h4">{displayType}</BadgeText>
+        </Badge>
+        <Certification>
+          <Typography variant="h4">This is to certify that</Typography>
+          <NameText variant="h1">{userName}</NameText>
+          <AchievementText>
+            has successfully completed all requirements of the <PrintBreak />
+            <strong>Universal Artificial Intelligence</strong>{" "}
+            {shortDisplayType}:
+          </AchievementText>
+        </Certification>
+        <CourseInfo>
+          <Typography variant="h2">{title}</Typography>
+          {ceus ? (
+            <Typography variant="h4">
+              Awarded {ceus} Continuing Education Units (CEUs)
+            </Typography>
+          ) : null}
+          {startDate && endDate && (
+            <Typography variant="h4">
+              <NoSSR>
+                {formatDate(startDate)} - {formatDate(endDate)}
+              </NoSSR>
+            </Typography>
+          )}
+          {ceus ? null : <Spacer />}
+        </CourseInfo>
+        <Signatories>
+          {signatories?.map((signatory, index) => (
+            <Signatory key={index}>
+              <Signature
+                src={
+                  signatory.signature_image.startsWith("http")
+                    ? signatory.signature_image
+                    : `${process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL}${signatory.signature_image}`
+                }
+                alt={signatory.name}
+                crossOrigin="anonymous"
+              />
+              <SignatoryName variant="h3">{signatory.name}</SignatoryName>
+              <Typography variant="body1">{signatory.title_1}</Typography>
+              <Typography variant="body1">{signatory.title_2}</Typography>
+              <Typography variant="body1">{signatory.organization}</Typography>
+            </Signatory>
+          ))}
+        </Signatories>
+        <CertificateId variant="body1">
+          Valid Certificate ID: <span>{uuid}</span>
+        </CertificateId>
+      </Inner>
+    </Outer>
+  )
+}
+
+const CourseCertificate = ({
+  certificate,
+}: {
+  certificate: V2CourseRunCertificate
+}) => {
+  const title = certificate?.course_run?.course?.title
+
+  const displayType = "Module Certificate"
+
+  const userName = certificate?.user?.name
+
+  const shortDisplayType = "module"
+
+  const signatories = certificate?.certificate_page?.signatory_items
+
+  const startDate = certificate?.course_run?.start_date
+
+  const endDate = certificate?.course_run?.end_date
+
+  return (
+    <Certificate
+      title={title}
+      displayType={displayType}
+      userName={userName}
+      shortDisplayType={shortDisplayType}
+      signatories={signatories}
+      startDate={startDate}
+      endDate={endDate}
+      uuid={certificate?.uuid}
+    />
+  )
+}
+
+const ProgramCertificate = ({
+  certificate,
+}: {
+  certificate: V2ProgramCertificate
+}) => {
+  const title = certificate?.program?.title
+
+  const displayType = `${certificate?.program?.program_type} Certificate`
+
+  const userName = certificate?.user?.name
+
+  const shortDisplayType = `${certificate?.program?.program_type} program`
+
+  const ceus = certificate?.certificate_page?.CEUs
+
+  const signatories = certificate?.certificate_page?.signatory_items
+
+  const startDate = certificate?.program?.start_date
+
+  const endDate = certificate?.program?.end_date
+
+  return (
+    <Certificate
+      title={title}
+      displayType={displayType}
+      userName={userName}
+      shortDisplayType={shortDisplayType}
+      ceus={ceus}
+      signatories={signatories}
+      startDate={startDate}
+      endDate={endDate}
+      uuid={certificate?.uuid}
+    />
+  )
+}
 
 enum CertificateType {
   Course = "course",
@@ -493,220 +642,26 @@ const CertificatePage: React.FC = () => {
     uuid: string
   }>()
 
-  const { data: courseCertData, isLoading: isCourseLoading } = useQuery({
+  const { data: courseCertificateData, isLoading: isCourseLoading } = useQuery({
     ...certificateQueries.courseCertificatesRetrieve({
       cert_uuid: uuid,
     }),
-    enabled: certificateType === CertificateType.Course,
   })
 
+  const { data: programCertificateData, isLoading: isProgramLoading } =
+    useQuery({
+      ...certificateQueries.programCertificatesRetrieve({
+        cert_uuid: uuid,
+      }),
+      enabled: certificateType === CertificateType.Program,
+    })
   const contentRef = useRef<HTMLDivElement>(null)
 
-  // const { data: courseCertData, isLoading: isCourseLoading } = useQuery({
-  //   ...certificateQueries.courseCertificatesRetrieve({
-  //     cert_uuid: uuid,
-  //   }),
-  //   enabled: certificateType === CertificateType.Course,
-  // })
+  const isLoading = isCourseLoading || isProgramLoading
 
-  // const { data: programCertData, isLoading: isProgramLoading } = useQuery({
-  //   ...certificateQueries.programCertificatesRetrieve({
-  //     cert_uuid: uuid,
-  //   }),
-  //   enabled: certificateType === CertificateType.Program,
-  // })
-
-  // const isLoading = isCourseLoading || isProgramLoading
-
-  // if (isLoading) {
-  //   return <Page />
-  // }
-
-  // const courseCertData = null
-
-  const programCertData = {
-    user: {
-      id: 2,
-      username: "admin",
-      name: "Test Admin",
-      created_on: "2025-07-21T20:43:59.722355Z",
-      updated_on: "2025-08-21T14:02:34.802327Z",
-    },
-    uuid: "603d5d51-7b16-4f4c-9083-33ae02868d39",
-    is_revoked: false,
-    certificate_page: {
-      id: 39,
-      meta: {
-        type: "cms.CertificatePage",
-        detail_url: "/api/v2/pages/39/",
-        html_url:
-          "http://localhost/programs/foundational-ai-modules/certificate-38/",
-        slug: "certificate-38",
-        show_in_menus: false,
-        seo_title: "",
-        search_description: "",
-        first_published_at: "2025-08-05T19:41:27.373303Z",
-        alias_of: null,
-        locale: "en",
-        live: true,
-        last_published_at: null,
-      },
-      title: "Certificate For Foundational AI Modules",
-      product_name: "Foundational AI Modules",
-      CEUs: null,
-      overrides: [],
-      signatory_items: [
-        {
-          name: "Chris Capozzola",
-          title_1: "Senior Associate Dean for Open Learning",
-          title_2: "Professor of History",
-          organization: "Massachusetts Institute of Technology",
-          signature_image:
-            "https://ol-mitxonline-app-qa.s3.amazonaws.com/original_images/Dimitris_Bertsimas_Signature.original.png",
-        },
-        {
-          name: "Dimitris Bertsimas",
-          title_1: "Vice Provost for Open Learning",
-          organization: "Massachusetts Institute of Technology",
-          signature_image:
-            "https://ol-mitxonline-app-qa.s3.amazonaws.com/original_images/Dimitris_Bertsimas_Signature.original.png",
-        },
-        {
-          name: "Dimitris Bertsimas",
-          title_1: "Vice Provost for Open Learning",
-          organization: "Massachusetts Institute of Technology",
-          signature_image:
-            "https://ol-mitxonline-app-qa.s3.amazonaws.com/original_images/Dimitris_Bertsimas_Signature.original.png",
-        },
-      ],
-    },
-    program: {
-      title: "Foundational AI Modules",
-      readable_id: "foundational-ai-modules",
-      id: 2,
-      courses: [16, 17],
-      collections: [],
-      start_date: "2024-01-01",
-      end_date: "2025-01-01",
-      requirements: {
-        courses: {
-          required: [16, 17],
-          electives: [],
-        },
-        programs: {
-          required: [],
-          electives: [],
-        },
-      },
-      req_tree: [
-        {
-          data: {
-            node_type: "program_root",
-            operator: null,
-            operator_value: null,
-            program: 2,
-            course: null,
-            required_program: null,
-            title: "",
-            elective_flag: false,
-          },
-          id: 2,
-          children: [
-            {
-              data: {
-                node_type: "operator",
-                operator: "all_of",
-                operator_value: null,
-                program: 2,
-                course: null,
-                required_program: null,
-                title: "Required Courses",
-                elective_flag: false,
-              },
-              id: 3,
-              children: [
-                {
-                  data: {
-                    node_type: "course",
-                    operator: null,
-                    operator_value: null,
-                    program: 2,
-                    course: 16,
-                    required_program: null,
-                    title: null,
-                    elective_flag: false,
-                  },
-                  id: 4,
-                },
-                {
-                  data: {
-                    node_type: "course",
-                    operator: null,
-                    operator_value: null,
-                    program: 2,
-                    course: 17,
-                    required_program: null,
-                    title: null,
-                    elective_flag: false,
-                  },
-                  id: 5,
-                },
-              ],
-            },
-            {
-              data: {
-                node_type: "operator",
-                operator: "all_of",
-                operator_value: null,
-                program: 2,
-                course: null,
-                required_program: null,
-                title: "Elective Courses",
-                elective_flag: true,
-              },
-              id: 6,
-            },
-          ],
-        },
-      ],
-      page: {
-        feature_image_src: "/static/images/mit-dome.png",
-        page_url: "/programs/foundational-ai-modules/",
-        financial_assistance_form_url: "",
-        description:
-          '<p data-block-key="206az">Earn a <b>Module Certificate</b> for each completed Foundational AI module.</p><p data-block-key="8i6rd">Complete all modules to receive a <b>Series Certificate</b>.</p>',
-        live: true,
-        length: "4 weeks",
-        effort: null,
-        price: "Zero Dollars",
-      },
-      program_type: "Series",
-      certificate_type: "Certificate of Completion",
-      departments: [
-        {
-          name: "UAI",
-        },
-      ],
-      live: true,
-      topics: [],
-      availability: "anytime",
-      enrollment_start: null,
-      enrollment_end: null,
-      required_prerequisites: false,
-      duration: "4 weeks",
-      min_weeks: null,
-      max_weeks: null,
-      time_commitment: null,
-      min_weekly_hours: "4",
-      max_weekly_hours: "4",
-    },
-    certificate_page_revision: 26,
+  if (isLoading) {
+    return <Page />
   }
-
-  const title =
-    certificateType === CertificateType.Course
-      ? courseCertData?.course_run?.course?.title
-      : programCertData?.program?.title
 
   // const print = useReactToPrint({
   //   contentRef,
@@ -731,43 +686,16 @@ const CertificatePage: React.FC = () => {
   }
 
   const download = async () => {
-    // if (contentRef.current) {
-    //   html2pdf()
-    //     .set({
-    //       type: "jpeg",
-    //       quality: 1,
-    //       margin: 10,
-    //       filename: `${title} MIT Open Learning Certificate.pdf`,
-    //       html2canvas: {
-    //         scale: 4,
-    //         width: 1200,
-    //         height: 900,
-    //         windowWidth: 1400,
-    //         windowHeight: 1400,
-    //       },
-    //       jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },
-    //       pagebreak: { mode: "avoid" },
-    //     })
-    //     .from(contentRef.current)
-    //     .save()
-    // }
-
-    // const res = await fetch(`/certificate/${certificateType}/${uuid}/pdf`)
-    // const blob = await res.blob()
-
-    // const url = window.URL.createObjectURL(blob)
-    // const a = document.createElement("a")
-    // a.href = url
-    // a.download = `certificate-${uuid}.pdf`
-    // document.body.appendChild(a)
-    // a.click()
-    // document.body.removeChild(a)
-    // window.URL.revokeObjectURL(url)
-
-    await ReactPDF.render(
-      <CertificatePDF certificateType={certificateType} uuid={uuid} />,
-      `${title} Certificate - MIT Open Learning.pdf`,
-    )
+    const res = await fetch(`/certificate/${certificateType}/${uuid}/pdf`)
+    const blob = await res.blob()
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `${title} Certificate - MIT Open Learning.pdf`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
   }
 
   // const download = useReactToPrint({
@@ -796,42 +724,15 @@ const CertificatePage: React.FC = () => {
   //   },
   // })
 
+  const title =
+    certificateType === CertificateType.Course
+      ? courseCertificateData?.course_run?.course?.title
+      : programCertificateData?.program?.title
+
   const displayType =
     certificateType === CertificateType.Course
       ? "Module Certificate"
-      : `${programCertData?.program?.program_type} Certificate`
-
-  const userName =
-    certificateType === CertificateType.Course
-      ? courseCertData?.user?.name
-      : programCertData?.user?.name
-
-  const shortDisplayType =
-    certificateType === CertificateType.Course
-      ? "module"
-      : programCertData?.program?.program_type === "Series"
-        ? "series"
-        : `${programCertData?.program?.program_type} program`
-
-  const ceus =
-    certificateType === CertificateType.Course
-      ? null
-      : programCertData?.certificate_page?.CEUs
-
-  const signatories =
-    certificateType === CertificateType.Course
-      ? courseCertData?.certificate_page?.signatory_items
-      : programCertData?.certificate_page?.signatory_items
-
-  const startDate =
-    certificateType === CertificateType.Course
-      ? courseCertData?.course_run?.start_date
-      : programCertData?.program?.start_date
-
-  const endDate =
-    certificateType === CertificateType.Course
-      ? courseCertData?.course_run?.end_date
-      : programCertData?.program?.end_date
+      : `${programCertificateData?.program?.program_type} Certificate`
 
   return (
     <Page>
@@ -844,7 +745,6 @@ const CertificatePage: React.FC = () => {
         <Button
           variant="primary"
           startIcon={<RiDownloadLine />}
-          // href={`/certificate/${certificateType}/${uuid}/pdf`}
           onClick={download}
         >
           Download PDF
@@ -858,65 +758,11 @@ const CertificatePage: React.FC = () => {
         </Button>
       </Buttons>
       <PrintContainer ref={contentRef}>
-        <Certificate>
-          <Inner>
-            <Logo src={OpenLearningLogo} alt="MIT Open Learning" />
-            <PrintLogo src={OpenLearningLogo.src} alt="MIT Open Learning" />
-            <Badge>
-              <BadgeText variant="h4">{displayType}</BadgeText>
-            </Badge>
-            <Certification>
-              <Typography variant="h4">This is to certify that</Typography>
-              <NameText variant="h1">{userName}</NameText>
-              <AchievementText>
-                has successfully completed all requirements of the{" "}
-                <PrintBreak />
-                <strong>Universal Artificial Intelligence</strong>{" "}
-                {shortDisplayType}:
-              </AchievementText>
-            </Certification>
-            <CourseInfo>
-              <Typography variant="h2">{title}</Typography>
-              {ceus ? (
-                <Typography variant="h4">
-                  Awarded {ceus} Continuing Education Units (CEUs)
-                </Typography>
-              ) : null}
-              {startDate && endDate && (
-                <Typography variant="h4">
-                  <NoSSR>
-                    {formatDate(startDate)} - {formatDate(endDate)}
-                  </NoSSR>
-                </Typography>
-              )}
-              {ceus ? null : <Spacer />}
-            </CourseInfo>
-            <Signatories>
-              {signatories?.map((signatory, index) => (
-                <Signatory key={index}>
-                  <Signature
-                    src={
-                      signatory.signature_image.startsWith("http")
-                        ? signatory.signature_image
-                        : `${process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL}${signatory.signature_image}`
-                    }
-                    alt={signatory.name}
-                    crossOrigin="anonymous"
-                  />
-                  <SignatoryName variant="h3">{signatory.name}</SignatoryName>
-                  <Typography variant="body1">{signatory.title_1}</Typography>
-                  <Typography variant="body1">{signatory.title_2}</Typography>
-                  <Typography variant="body1">
-                    {signatory.organization}
-                  </Typography>
-                </Signatory>
-              ))}
-            </Signatories>
-            <CertificateId variant="body1">
-              Valid Certificate ID: <span>{uuid}</span>
-            </CertificateId>
-          </Inner>
-        </Certificate>
+        {certificateType === CertificateType.Course ? (
+          <CourseCertificate certificate={courseCertificateData} />
+        ) : (
+          <ProgramCertificate certificate={programCertificateData!} />
+        )}
       </PrintContainer>
       <Note>
         <strong>Note:</strong> The name displayed on your certificate is based
