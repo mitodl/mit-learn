@@ -1,6 +1,9 @@
 import React from "react"
 import { notFound } from "next/navigation"
 import CertificatePage from "@/app-pages/CertificatePage/CertificatePage"
+import { prefetch } from "api/ssr/prefetch"
+import { certificateQueries } from "api/mitxonline-hooks/certificates"
+import { HydrationBoundary } from "@tanstack/react-query"
 
 enum CertificateType {
   Course = "course",
@@ -15,7 +18,7 @@ interface PageProps {
 }
 
 const Page: React.FC<PageProps> = async ({ params }) => {
-  const { certificateType } = await params
+  const { certificateType, uuid } = await params
 
   if (
     ![CertificateType.Course, CertificateType.Program].includes(
@@ -25,7 +28,21 @@ const Page: React.FC<PageProps> = async ({ params }) => {
     notFound()
   }
 
-  return <CertificatePage />
+  const { dehydratedState } = await prefetch([
+    certificateType === CertificateType.Course
+      ? certificateQueries.courseCertificatesRetrieve({
+          cert_uuid: uuid,
+        })
+      : certificateQueries.programCertificatesRetrieve({
+          cert_uuid: uuid,
+        }),
+  ])
+
+  return (
+    <HydrationBoundary state={dehydratedState}>
+      <CertificatePage />
+    </HydrationBoundary>
+  )
 }
 
 export default Page
