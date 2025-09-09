@@ -459,7 +459,10 @@ def parse_web_content(course_archive_path: str) -> dict:
     publish_status = {"active": [], "unpublished": []}
 
     with zipfile.ZipFile(course_archive_path, "r") as course_archive:
-        manifest_xml = course_archive.read("imsmanifest.xml")
+        manifest_path = "imsmanifest.xml"
+        if manifest_path not in course_archive.namelist():
+            return publish_status
+        manifest_xml = course_archive.read(manifest_path)
         resource_map = extract_resources_by_identifier(manifest_xml)
         for item in resource_map:
             item_link = resource_map[item].get("href")
