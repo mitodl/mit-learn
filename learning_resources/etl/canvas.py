@@ -43,6 +43,14 @@ from main.utils import now_in_utc
 log = logging.getLogger(__name__)
 
 
+NAMESPACES = {
+    "cccv1p0": "http://canvas.instructure.com/xsd/cccv1p0",
+    "imscp": "http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1",
+    "lom": "http://ltsc.ieee.org/xsd/imsccv1p1/LOM/resource",
+    "lomimscc": "http://ltsc.ieee.org/xsd/imsccv1p1/LOM/manifest",
+}
+
+
 def sync_canvas_archive(bucket, key: str, overwrite):
     """
     Sync a Canvas course archive from S3
@@ -286,11 +294,10 @@ def parse_context_xml(course_archive_path: str) -> dict:
     with zipfile.ZipFile(course_archive_path, "r") as course_archive:
         context = course_archive.read("course_settings/context.xml")
     root = ElementTree.fromstring(context)
-    namespaces = {"ns": "http://canvas.instructure.com/xsd/cccv1p0"}
     context_info = {}
     item_keys = ["course_id", "root_account_id", "canvas_domain", "root_account_name"]
     for key in item_keys:
-        element = root.find(f"ns:{key}", namespaces)
+        element = root.find(f"cccv1p0:{key}", NAMESPACES)
         if element is not None:
             context_info[key] = element.text
 
@@ -310,12 +317,9 @@ def is_file_published(file_meta: dict) -> bool:
 
     hidden = str(file_meta.get("hidden", "false")).lower() == "true"
     locked = str(file_meta.get("locked", "false")).lower() == "true"
-
     unlock_at = file_meta.get("unlock_at")
     lock_at = file_meta.get("lock_at")
-
     visibility = file_meta.get("visibility", "inherit")
-
     # If explicitly hidden or locked → unpublished
     if hidden or locked:
         return False
@@ -355,11 +359,9 @@ def parse_files_meta(course_archive_path: str) -> dict:
         files_xml = course_archive.read(files_meta_path)
         manifest_xml = course_archive.read("imsmanifest.xml")
     resource_map = extract_resources_by_identifier(manifest_xml)
-
     root = ElementTree.fromstring(files_xml)
-    namespaces = {"c": "http://canvas.instructure.com/xsd/cccv1p0"}
     try:
-        for file_elem in root.findall(".//c:file", namespaces):
+        for file_elem in root.findall(".//cccv1p0:file", NAMESPACES):
             meta = dict(file_elem.attrib)
             for child in file_elem:
                 tag = child.tag
@@ -398,19 +400,18 @@ def parse_module_meta(course_archive_path: str) -> dict:
     resource_map = extract_resources_by_identifierref(manifest_xml)
     publish_status = {"active": [], "unpublished": []}
     try:
-        namespaces = {"ns": "http://canvas.instructure.com/xsd/cccv1p0"}
         root = ElementTree.fromstring(module_xml)
-        for module in root.findall(".//ns:module", namespaces):
-            module_title = module.find("ns:title", namespaces).text
-            for item in module.findall("ns:items/ns:item", namespaces):
-                item_state = item.find("ns:workflow_state", namespaces).text
-                item_title = item.find("ns:title", namespaces).text
+        for module in root.findall(".//cccv1p0:module", NAMESPACES):
+            module_title = module.find("cccv1p0:title", NAMESPACES).text
+            for item in module.findall("cccv1p0:items/cccv1p0:item", NAMESPACES):
+                item_state = item.find("cccv1p0:workflow_state", NAMESPACES).text
+                item_title = item.find("cccv1p0:title", NAMESPACES).text
                 identifierref = (
-                    item.find("ns:identifierref", namespaces).text
-                    if item.find("ns:identifierref", namespaces) is not None
+                    item.find("cccv1p0:identifierref", NAMESPACES).text
+                    if item.find("cccv1p0:identifierref", NAMESPACES) is not None
                     else None
                 )
-                content_type = item.find("ns:content_type", namespaces).text
+                content_type = item.find("cccv1p0:content_type", NAMESPACES).text
                 items = resource_map.get(identifierref, {})
                 for item_info in items:
                     for file in item_info.get("files", []):
@@ -457,8 +458,8 @@ def _workflow_state_from_xml(xml):
     """
     try:
         root = ElementTree.fromstring(xml)
-        namespace = {"ns": "http://canvas.instructure.com/xsd/cccv1p0"}
-        workflow_element = root.find("ns:workflow_state", namespace)
+
+        workflow_element = root.find("cccv1p0:workflow_state", NAMESPACES)
         return workflow_element.text.strip() if workflow_element is not None else None
 
     except Exception:
@@ -537,29 +538,24 @@ def extract_resources_by_identifierref(manifest_xml: str) -> dict:
     """
     root = ElementTree.fromstring(manifest_xml)
 
-    namespaces = {
-        "imscp": "http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1",
-        "lom": "http://ltsc.ieee.org/xsd/imsccv1p1/LOM/resource",
-        "lomimscc": "http://ltsc.ieee.org/xsd/imsccv1p1/LOM/manifest",
-    }
     # Dictionary to hold resources keyed by identifierref
     resources_dict = defaultdict(list)
     # Find all item elements with identifierref attributes
-    for item in root.findall(".//imscp:item[@identifierref]", namespaces):
+    for item in root.findall(".//imscp:item[@identifierref]", NAMESPACES):
         identifierref = item.get("identifierref")
         title = (
-            item.find("imscp:title", namespaces).text
-            if item.find("imscp:title", namespaces) is not None
+            item.find("imscp:title", NAMESPACES).text
+            if item.find("imscp:title", NAMESPACES) is not None
             else "No Title"
         )
         resource = root.find(
-            f'.//imscp:resource[@identifier="{identifierref}"]', namespaces
+            f'.//imscp:resource[@identifier="{identifierref}"]', NAMESPACES
         )
         if resource is not None:
             # Get all file elements within the resource
             files = [
                 file_elem.get("href")
-                for file_elem in resource.findall("imscp:file", namespaces)
+                for file_elem in resource.findall("imscp:file", NAMESPACES)
             ]
 
             resources_dict[identifierref].append(
@@ -574,14 +570,9 @@ def extract_resources_by_identifier(manifest_xml: str) -> dict:
     file and return a map keyed by identifier.
     """
     root = ElementTree.fromstring(manifest_xml)
-    namespaces = {
-        "imscp": "http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1",
-        "lom": "http://ltsc.ieee.org/xsd/imsccv1p1/LOM/resource",
-        "lomimscc": "http://ltsc.ieee.org/xsd/imsccv1p1/LOM/manifest",
-    }
     resources_dict = {}
     # Find all resource elements
-    for resource in root.findall(".//imscp:resource[@identifier]", namespaces):
+    for resource in root.findall(".//imscp:resource[@identifier]", NAMESPACES):
         identifier = resource.get("identifier")
         resource_type = resource.get("type")
         href = resource.get("href")
@@ -589,11 +580,11 @@ def extract_resources_by_identifier(manifest_xml: str) -> dict:
         # Get all file elements within the resource
         files = [
             file_elem.get("href")
-            for file_elem in resource.findall("imscp:file", namespaces)
+            for file_elem in resource.findall("imscp:file", NAMESPACES)
         ]
         # Extract metadata if present
         metadata = {}
-        metadata_elem = resource.find("imscp:metadata", namespaces)
+        metadata_elem = resource.find("imscp:metadata", NAMESPACES)
         if metadata_elem is not None:
             metadata.update(_compact_element(metadata_elem))
         resources_dict[identifier] = {
