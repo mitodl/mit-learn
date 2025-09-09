@@ -1,9 +1,9 @@
 "use client"
 
-import React, { useRef, useEffect } from "react"
+import React, { useRef, useEffect, useCallback } from "react"
 import { useParams } from "next/navigation"
 import Image from "next/image"
-import { Link, Typography, styled, theme as themeObject } from "ol-components"
+import { Link, Typography, styled } from "ol-components"
 import { Button } from "@mitodl/smoot-design"
 import backgroundImage from "@/public/images/backgrounds/error_page_background.svg"
 import { certificateQueries } from "api/mitxonline-hooks/certificates"
@@ -13,9 +13,11 @@ import CertificateBadgeDesktop from "@/public/images/certificate-badge-desktop.s
 import CertificateBadgeMobile from "@/public/images/certificate-badge-mobile.svg"
 import { formatDate, NoSSR } from "ol-utilities"
 import { RiDownloadLine, RiPrinterLine } from "@remixicon/react"
-import { V2ProgramCertificate } from "@mitodl/mitxonline-api-axios/v2"
-
-console.log("themeObject", themeObject)
+import {
+  V2ProgramCertificate,
+  V2CourseRunCertificate,
+  SignatoryItem,
+} from "@mitodl/mitxonline-api-axios/v2"
 
 const Page = styled.div(({ theme }) => ({
   backgroundImage: `url(${backgroundImage.src})`,
@@ -79,7 +81,6 @@ const Outer = styled.div(({ theme }) => ({
     },
   },
   "@media print": {
-    // height: "100%",
     boxSizing: "border-box",
     width: "21cm",
     height: "29.7cm",
@@ -657,19 +658,7 @@ const CertificatePage: React.FC = () => {
     })
   const contentRef = useRef<HTMLDivElement>(null)
 
-  const isLoading = isCourseLoading || isProgramLoading
-
-  if (isLoading) {
-    return <Page />
-  }
-
-  // const print = useReactToPrint({
-  //   contentRef,
-  //   // pageStyle: printStyles,
-  //   documentTitle: `${title} MIT Open LearningCertificate`,
-  // })
-
-  const print = async () => {
+  const print = useCallback(async () => {
     const pdfUrl = `/certificate/${certificateType}/${uuid}/pdf`
     fetch(pdfUrl)
       .then((res) => res.blob())
@@ -683,6 +672,25 @@ const CertificatePage: React.FC = () => {
           iframe.contentWindow?.print()
         }
       })
+  }, [certificateType, uuid])
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.metaKey && event.key === "p") {
+        event.preventDefault()
+        print()
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown)
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown)
+    }
+  }, [print])
+
+  const isLoading = isCourseLoading || isProgramLoading
+
+  if (isLoading) {
+    return <Page />
   }
 
   const download = async () => {
@@ -697,32 +705,6 @@ const CertificatePage: React.FC = () => {
     document.body.removeChild(a)
     window.URL.revokeObjectURL(url)
   }
-
-  // const download = useReactToPrint({
-  //   contentRef,
-  //   // pageStyle: printStyles,
-  //   documentTitle: `${title} MIT Open LearningCertificate`,
-  //   print: async (printIframe: HTMLIFrameElement) => {
-  //     html2pdf()
-  //       .set({
-  //         type: "jpeg",
-  //         quality: 1,
-  //         margin: 10,
-  //         filename: `${title} MIT Open Learning Certificate.pdf`,
-  //         html2canvas: {
-  //           scale: 4,
-  //           // width: 1200,
-  //           // height: 900,
-  //           // windowWidth: 1400,
-  //           // windowHeight: 1400,
-  //         },
-  //         jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },
-  //         pagebreak: { mode: "avoid" },
-  //       })
-  //       .from(printIframe.contentWindow?.document.body)
-  //       .save()
-  //   },
-  // })
 
   const title =
     certificateType === CertificateType.Course
@@ -759,7 +741,7 @@ const CertificatePage: React.FC = () => {
       </Buttons>
       <PrintContainer ref={contentRef}>
         {certificateType === CertificateType.Course ? (
-          <CourseCertificate certificate={courseCertificateData} />
+          <CourseCertificate certificate={courseCertificateData!} />
         ) : (
           <ProgramCertificate certificate={programCertificateData!} />
         )}

@@ -33,13 +33,10 @@
     "next-nprogress-bar": "^2.4.2",
     "ol-components": "0.0.0",
     "ol-utilities": "0.0.0",
-    "pdfkit": "^0.17.2",
     "posthog-js": "^1.157.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-pdf": "^10.1.0",
     "react-slick": "^0.30.2",
-    "react-to-print": "^3.1.1",
     "slick-carousel": "^1.8.1",
     "tiny-invariant": "^1.3.3",
     "yup": "^1.4.0"
