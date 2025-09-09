@@ -314,7 +314,6 @@ def is_file_published(file_meta: dict) -> bool:
         bool: True if file is published/visible, False otherwise.
     """
     now = now_in_utc()
-
     hidden = str(file_meta.get("hidden", "false")).lower() == "true"
     locked = str(file_meta.get("locked", "false")).lower() == "true"
     unlock_at = file_meta.get("unlock_at")
@@ -380,7 +379,10 @@ def parse_files_meta(course_archive_path: str) -> dict:
                 file_path = Path(file)
                 file_data["path"] = file_path
                 file_data["title"] = file_data.get("display_name")
-                if file_data["published"]:
+                # explicitly exclude files in web_resources/ai/tutor
+                if file_data["published"] and not file.startswith(
+                    settings.CANVAS_TUTORBOT_FOLDER
+                ):
                     publish_status["active"].append(file_data)
                 else:
                     publish_status["unpublished"].append(file_data)
