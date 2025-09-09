@@ -97,7 +97,16 @@ const useLearningResourceSetUserListRelationships = () => {
       params: LearningResourcesApiLearningResourcesUserlistsPartialUpdateRequest,
     ) => learningResourcesApi.learningResourcesUserlistsPartialUpdate(params),
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: userlistKeys.membershipList() })
+      /**
+       * We need to invalidate:
+       * - membership check
+       * - list of user lists (count has changed)
+       * - userlist detail annd listing for any lists we modified
+       *
+       * That's a lot. Let's just invalidate root.
+       * Additionally, the lists we've removed from the resource are not easily available.
+       */
+      queryClient.invalidateQueries({ queryKey: userlistKeys.root })
     },
   })
 }
@@ -110,9 +119,16 @@ const useLearningResourceSetLearningPathRelationships = () => {
     ) =>
       learningResourcesApi.learningResourcesLearningPathsPartialUpdate(params),
     onSettled: () => {
-      queryClient.invalidateQueries({
-        queryKey: learningPathKeys.membershipList(),
-      })
+      /**
+       * We need to invalidate:
+       * - membership check
+       * - list of user lists (count has changed)
+       * - userlist detail annd listing for any lists we modified
+       *
+       * That's a lot. Let's just invalidate root.
+       * Additionally, the lists we've removed from the resource are not easily available.
+       */
+      queryClient.invalidateQueries({ queryKey: learningPathKeys.root })
     },
   })
 }
