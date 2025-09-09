@@ -12,6 +12,7 @@ from tempfile import TemporaryDirectory
 from urllib.parse import unquote_plus
 
 import pypdfium2 as pdfium
+from bs4 import BeautifulSoup
 from defusedxml import ElementTree
 from django.conf import settings
 from litellm import completion
@@ -180,13 +181,20 @@ def transform_canvas_content_files(
     basedir = course_zipfile.name.split(".")[0]
     zipfile_path = course_zipfile.absolute()
     # grab published module and file items
-    published_items = [
-        Path(item["path"]).resolve()
-        for item in parse_module_meta(zipfile_path)["active"]
-    ] + [
-        Path(item["path"]).resolve()
-        for item in parse_files_meta(zipfile_path)["active"]
-    ]
+    published_items = (
+        [
+            Path(item["path"]).resolve()
+            for item in parse_module_meta(zipfile_path)["active"]
+        ]
+        + [
+            Path(item["path"]).resolve()
+            for item in parse_files_meta(zipfile_path)["active"]
+        ]
+        + [
+            Path(item["path"]).resolve()
+            for item in parse_web_content(zipfile_path)["active"]
+        ]
+    )
 
     def _generate_content():
         """Inner generator for yielding content data"""
@@ -416,6 +424,72 @@ def parse_module_meta(course_archive_path: str) -> dict:
     except Exception:
         log.exception("Error parsing XML: %s", sys.stderr)
         return None
+    return publish_status
+
+
+def _workflow_state_from_html(html):
+    soup = BeautifulSoup(html, "html.parser")
+
+    meta = soup.find("meta", attrs={"name": "workflow_state"})
+    return meta.get("content") if meta else None
+
+
+def _workflow_state_from_xml(xml):
+    try:
+        root = ElementTree.fromstring(xml)
+        namespace = {"ns": "http://canvas.instructure.com/xsd/cccv1p0"}
+        workflow_element = root.find("ns:workflow_state", namespace)
+        return workflow_element.text.strip() if workflow_element is not None else None
+
+    except Exception:
+        log.exception("Error parsing XML: %s", sys.stderr)
+
+
+def _title_from_html(html):
+    soup = BeautifulSoup(html, "html.parser")
+    title = soup.find("title")
+    return title.get_text().strip() if title else ""
+
+
+def parse_web_content(course_archive_path: str) -> dict:
+    """
+    Parse course_settings/files_meta.xml and return publish/active status of resources.
+    """
+
+    publish_status = {"active": [], "unpublished": []}
+
+    with zipfile.ZipFile(course_archive_path, "r") as course_archive:
+        manifest_xml = course_archive.read("imsmanifest.xml")
+        resource_map = extract_resources_by_identifier(manifest_xml)
+        for item in resource_map:
+            item_link = resource_map[item].get("href")
+            assignment_settings = None
+            for file in resource_map[item].get("files", []):
+                if file.endswith("assignment_settings.xml"):
+                    assignment_settings = file
+            if item_link and item_link.endswith(".html"):
+                file_path = resource_map[item]["href"]
+                html_content = course_archive.read(file_path)
+                if assignment_settings:
+                    xml_content = course_archive.read(assignment_settings)
+                    workflow_state = _workflow_state_from_xml(xml_content)
+                else:
+                    workflow_state = _workflow_state_from_html(html_content)
+                title = _title_from_html(html_content)
+                if workflow_state in ["active", "published"]:
+                    publish_status["active"].append(
+                        {
+                            "title": title,
+                            "path": file_path,
+                        }
+                    )
+                else:
+                    publish_status["unpublished"].append(
+                        {
+                            "title": title,
+                            "path": file_path,
+                        }
+                    )
     return publish_status
 
 
