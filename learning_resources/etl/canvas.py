@@ -280,6 +280,9 @@ def transform_canvas_problem_files(
 
 
 def parse_context_xml(course_archive_path: str) -> dict:
+    """
+    Parse course_settings/context.xml and return context info
+    """
     with zipfile.ZipFile(course_archive_path, "r") as course_archive:
         context = course_archive.read("course_settings/context.xml")
     root = ElementTree.fromstring(context)
@@ -427,14 +430,31 @@ def parse_module_meta(course_archive_path: str) -> dict:
     return publish_status
 
 
-def _workflow_state_from_html(html):
-    soup = BeautifulSoup(html, "html.parser")
+def _compact_element(element):
+    """Recursively compact an element into a nested dictionary"""
+    if len(element) == 0:  # No children, return text
+        return element.text.strip() if element.text else None
+    return {
+        child.tag.split("}")[-1] if "}" in child.tag else child.tag: _compact_element(
+            child
+        )
+        for child in element
+    }
 
+
+def _workflow_state_from_html(html):
+    """
+    Extract the workflow_state meta tag from html
+    """
+    soup = BeautifulSoup(html, "html.parser")
     meta = soup.find("meta", attrs={"name": "workflow_state"})
     return meta.get("content") if meta else None
 
 
 def _workflow_state_from_xml(xml):
+    """
+    Extract the workflow_state element from xml
+    """
     try:
         root = ElementTree.fromstring(xml)
         namespace = {"ns": "http://canvas.instructure.com/xsd/cccv1p0"}
@@ -446,6 +466,9 @@ def _workflow_state_from_xml(xml):
 
 
 def _title_from_html(html):
+    """
+    Extract the title element from HTML content
+    """
     soup = BeautifulSoup(html, "html.parser")
     title = soup.find("title")
     return title.get_text().strip() if title else ""
@@ -453,7 +476,7 @@ def _title_from_html(html):
 
 def parse_web_content(course_archive_path: str) -> dict:
     """
-    Parse course_settings/files_meta.xml and return publish/active status of resources.
+    Parse html pages and assignments and return publish/active status of resources
     """
 
     publish_status = {"active": [], "unpublished": []}
@@ -465,13 +488,14 @@ def parse_web_content(course_archive_path: str) -> dict:
         manifest_xml = course_archive.read(manifest_path)
         resource_map = extract_resources_by_identifier(manifest_xml)
         for item in resource_map:
-            item_link = resource_map[item].get("href")
+            resource_map_item = resource_map[item]
+            item_link = resource_map_item.get("href")
             assignment_settings = None
-            for file in resource_map[item].get("files", []):
+            for file in resource_map_item.get("files", []):
                 if file.endswith("assignment_settings.xml"):
                     assignment_settings = file
             if item_link and item_link.endswith(".html"):
-                file_path = resource_map[item]["href"]
+                file_path = resource_map_item["href"]
                 html_content = course_archive.read(file_path)
                 if assignment_settings:
                     xml_content = course_archive.read(assignment_settings)
@@ -479,7 +503,17 @@ def parse_web_content(course_archive_path: str) -> dict:
                 else:
                     workflow_state = _workflow_state_from_html(html_content)
                 title = _title_from_html(html_content)
-                if workflow_state in ["active", "published"]:
+
+                lom_elem = (
+                    resource_map_item.get("metadata", {})
+                    .get("lom", {})
+                    .get("educational", {})
+                )
+                # Determine if the content is intended for authors or instructors only
+                intended_role = lom_elem.get("intendedEndUserRole", {}).get("value")
+                authors_only = intended_role and intended_role.lower() != "student"
+
+                if workflow_state in ["active", "published"] and not authors_only:
                     publish_status["active"].append(
                         {
                             "title": title,
@@ -540,15 +574,12 @@ def extract_resources_by_identifier(manifest_xml: str) -> dict:
     file and return a map keyed by identifier.
     """
     root = ElementTree.fromstring(manifest_xml)
-
     namespaces = {
         "imscp": "http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1",
         "lom": "http://ltsc.ieee.org/xsd/imsccv1p1/LOM/resource",
         "lomimscc": "http://ltsc.ieee.org/xsd/imsccv1p1/LOM/manifest",
     }
-
     resources_dict = {}
-
     # Find all resource elements
     for resource in root.findall(".//imscp:resource[@identifier]", namespaces):
         identifier = resource.get("identifier")
@@ -560,14 +591,11 @@ def extract_resources_by_identifier(manifest_xml: str) -> dict:
             file_elem.get("href")
             for file_elem in resource.findall("imscp:file", namespaces)
         ]
-
         # Extract metadata if present
         metadata = {}
         metadata_elem = resource.find("imscp:metadata", namespaces)
         if metadata_elem is not None:
-            # You can expand this to extract specific metadata fields as needed
-            metadata["has_metadata"] = True
-
+            metadata.update(_compact_element(metadata_elem))
         resources_dict[identifier] = {
             "identifier": identifier,
             "type": resource_type,
@@ -575,7 +603,6 @@ def extract_resources_by_identifier(manifest_xml: str) -> dict:
             "files": files,
             "metadata": metadata,
         }
-
     return resources_dict
 
 
