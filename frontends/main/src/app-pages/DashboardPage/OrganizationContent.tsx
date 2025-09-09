@@ -250,7 +250,11 @@ const OrgProgramDisplay: React.FC<{
   )
   const hasValidCertificate = !!programEnrollment?.certificate
   const courses = useQuery(
-    coursesQueries.coursesList({ id: program.courseIds, org_id: orgId }),
+    coursesQueries.coursesList({
+      id: program.courseIds,
+      org_id: orgId,
+      page_size: 30,
+    }),
   )
   const skeleton = (
     <Skeleton width="100%" height="65px" style={{ marginBottom: "16px" }} />

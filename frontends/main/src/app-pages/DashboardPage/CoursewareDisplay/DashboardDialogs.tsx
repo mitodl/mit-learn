@@ -42,18 +42,18 @@ const EmailSettingsDialogInner: React.FC<DashboardDialogProps> = ({
       receive_emails: enrollment.receiveEmails ?? true,
     },
     onSubmit: async () => {
-      await updateEnrollment.mutateAsync()
+      await updateEnrollment.mutateAsync({
+        id: enrollment.id,
+        PatchedUpdateCourseRunEnrollmentRequest: {
+          receive_emails: formik.values.receive_emails,
+        },
+      })
       if (!updateEnrollment.isError) {
         modal.hide()
       }
     },
   })
-  const updateEnrollment = useUpdateEnrollment({
-    id: enrollment.id,
-    PatchedUpdateCourseRunEnrollmentRequest: {
-      receive_emails: formik.values.receive_emails,
-    },
-  })
+  const updateEnrollment = useUpdateEnrollment()
   return (
     <FormDialog
       title={"Email Settings"}
@@ -121,14 +121,14 @@ const UnenrollDialogInner: React.FC<DashboardDialogProps> = ({
   enrollment,
 }) => {
   const modal = NiceModal.useModal()
-  const destroyEnrollment = useDestroyEnrollment(enrollment.id)
+  const destroyEnrollment = useDestroyEnrollment()
   const formik = useFormik({
     enableReinitialize: true,
     validateOnChange: false,
     validateOnBlur: false,
     initialValues: {},
     onSubmit: async () => {
-      await destroyEnrollment.mutateAsync()
+      await destroyEnrollment.mutateAsync(enrollment.id)
       if (!destroyEnrollment.isError) {
         modal.hide()
       }

@@ -34,7 +34,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.42.0"
+VERSION = "0.42.2"
 
 log = logging.getLogger()
 
@@ -356,6 +356,7 @@ APISIX_USERDATA_MAP = {
         "first_name": "given_name",
         "last_name": "family_name",
         "name": "name",
+        "organizations": "organization",
     },
     "profiles.Profile": {
         "name": "name",

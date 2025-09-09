@@ -3,6 +3,10 @@ const { validateEnv } = require("./validateEnv")
 
 validateEnv()
 
+const OPTIMIZE_IMAGES = Boolean(
+  (process.env.OPTIMIZE_IMAGES ?? "true") === "true",
+)
+
 const processFeatureFlags = () => {
   const featureFlagPrefix =
     process.env.NEXT_PUBLIC_POSTHOG_FEATURE_PREFIX || "FEATURE_"
@@ -90,6 +94,7 @@ const nextConfig = {
   transpilePackages: ["@mitodl/smoot-design/ai"],
 
   images: {
+    unoptimized: !OPTIMIZE_IMAGES,
     remotePatterns: [
       {
         hostname: "**",
