@@ -228,11 +228,6 @@ enum CertificateType {
   Program = "program",
 }
 
-type RouteContext = {
-  params: { certificateType: string; uuid: string }
-  certificate: V2CourseRunCertificate | V2ProgramCertificate
-}
-
 const CertificateDoc = ({
   uuid,
   title,
@@ -546,7 +541,11 @@ const ProgramCertificate = ({
   )
 }
 
-export async function GET(_req: NextRequest, ctx: RouteContext) {
+type RouteContext = {
+  params: Promise<{ certificateType: string; uuid: string }>
+}
+
+export async function GET(req: NextRequest, ctx: RouteContext) {
   const { certificateType, uuid } = await ctx.params
 
   let pdfDoc
@@ -555,14 +554,12 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
     const certificate = await courseCertificatesApi.courseCertificatesRetrieve({
       cert_uuid: uuid,
     })
-    console.log("certificate", certificate)
     pdfDoc = pdf(<CourseCertificate certificate={certificate.data} />)
   } else {
     const certificate =
       await programCertificatesApi.programCertificatesRetrieve({
         cert_uuid: uuid,
       })
-    console.log("certificate", certificate)
     pdfDoc = pdf(<ProgramCertificate certificate={certificate.data} />)
   }
 
