@@ -1,7 +1,6 @@
 "use client"
 
 import React, { useRef, useEffect, useCallback } from "react"
-import { useParams } from "next/navigation"
 import Image from "next/image"
 import { Link, Typography, styled } from "ol-components"
 import { Button } from "@mitodl/smoot-design"
@@ -13,7 +12,7 @@ import CertificateBadgeDesktop from "@/public/images/certificate-badge-desktop.s
 import CertificateBadgeMobile from "@/public/images/certificate-badge-mobile.svg"
 import { formatDate, NoSSR } from "ol-utilities"
 import { RiDownloadLine, RiPrinterLine } from "@remixicon/react"
-import {
+import type {
   V2ProgramCertificate,
   V2CourseRunCertificate,
   SignatoryItem,
@@ -632,21 +631,20 @@ const ProgramCertificate = ({
   )
 }
 
-enum CertificateType {
+export enum CertificateType {
   Course = "course",
   Program = "program",
 }
 
-const CertificatePage: React.FC = () => {
-  const { certificateType, uuid } = useParams<{
-    certificateType: CertificateType
-    uuid: string
-  }>()
-
+const CertificatePage: React.FC<{
+  certificateType: CertificateType
+  uuid: string
+}> = ({ certificateType, uuid }) => {
   const { data: courseCertificateData, isLoading: isCourseLoading } = useQuery({
     ...certificateQueries.courseCertificatesRetrieve({
       cert_uuid: uuid,
     }),
+    enabled: certificateType === CertificateType.Course,
   })
 
   const { data: programCertificateData, isLoading: isProgramLoading } =
@@ -656,6 +654,7 @@ const CertificatePage: React.FC = () => {
       }),
       enabled: certificateType === CertificateType.Program,
     })
+
   const contentRef = useRef<HTMLDivElement>(null)
 
   const print = useCallback(async () => {

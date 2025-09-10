@@ -40,7 +40,7 @@ const Page: React.FC<PageProps> = async ({ params }) => {
 
   return (
     <HydrationBoundary state={dehydratedState}>
-      <CertificatePage />
+      <CertificatePage certificateType={certificateType} uuid={uuid} />
     </HydrationBoundary>
   )
 }
