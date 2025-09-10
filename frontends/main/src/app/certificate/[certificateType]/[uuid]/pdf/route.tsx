@@ -1,5 +1,6 @@
 /* eslint-disable no-restricted-syntax */
 import React from "react"
+import type { AxiosError } from "axios"
 import type { NextRequest } from "next/server"
 import moment from "moment"
 import { courseCertificatesApi, programCertificatesApi } from "api/mitxonline"
@@ -20,6 +21,7 @@ import {
   Image,
   pdf,
 } from "@react-pdf/renderer"
+import { redirect } from "next/navigation"
 
 /* Enables use of the CertificatePage pixel units styles
   - Browsers print at 96 dpi, PDFs default to 72 dpi
@@ -550,17 +552,34 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
 
   let pdfDoc
 
-  if (certificateType === CertificateType.Course) {
-    const certificate = await courseCertificatesApi.courseCertificatesRetrieve({
-      cert_uuid: uuid,
+  try {
+    if (certificateType === CertificateType.Course) {
+      const certificate =
+        await courseCertificatesApi.courseCertificatesRetrieve({
+          cert_uuid: uuid,
+        })
+      pdfDoc = pdf(<CourseCertificate certificate={certificate.data} />)
+    } else {
+      const certificate =
+        await programCertificatesApi.programCertificatesRetrieve({
+          cert_uuid: uuid,
+        })
+      pdfDoc = pdf(<ProgramCertificate certificate={certificate.data} />)
+    }
+  } catch (error) {
+    if (
+      (error as AxiosError).status === 404 ||
+      // The mitxonline API returns a 500 with HTML including "DoesNotExist" error message (local only?)
+      (error as AxiosError).response?.data?.toString().includes("DoesNotExist")
+    ) {
+      return redirect("/not-found")
+    }
+    console.error("Error fetching certificate for PDF generation", {
+      certificateType,
+      uuid,
+      error,
     })
-    pdfDoc = pdf(<CourseCertificate certificate={certificate.data} />)
-  } else {
-    const certificate =
-      await programCertificatesApi.programCertificatesRetrieve({
-        cert_uuid: uuid,
-      })
-    pdfDoc = pdf(<ProgramCertificate certificate={certificate.data} />)
+    return new Response("Error generating certificate", { status: 500 })
   }
 
   const pdfStream = await pdfDoc.toBuffer()
