@@ -41,11 +41,14 @@ const B2BAttachPage: React.FC<B2BAttachPageProps> = ({ code }) => {
       return
     }
     if (!user?.is_authenticated) {
-      const loginUrl = urls.login({
+      const loginUrlString = urls.login({
         pathname: urls.b2bAttachView(code),
-        searchParams: new URLSearchParams({ skip_onboarding: "1" }),
+        searchParams: new URLSearchParams(),
       })
-      redirect(loginUrl)
+      const loginUrl = new URL(loginUrlString)
+      const skipOnboarding = new URLSearchParams({ skip_onboarding: "1" })
+      loginUrl.search = skipOnboarding.toString()
+      redirect(loginUrl.toString())
     }
     if (isSuccess) {
       const org = mitxOnlineUser?.b2b_organizations?.[0]
