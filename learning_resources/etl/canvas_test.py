@@ -6,12 +6,16 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
+from defusedxml import ElementTree
 
 from learning_resources.constants import LearningResourceType, PlatformType
 from learning_resources.etl.canvas import (
+    _compact_element,
     is_file_published,
     parse_canvas_settings,
+    parse_files_meta,
     parse_module_meta,
+    parse_web_content,
     run_for_canvas_archive,
     transform_canvas_content_files,
     transform_canvas_problem_files,
@@ -591,7 +595,7 @@ def test_is_file_published(file_meta, expected):
 
 def test_published_module_and_files_meta_content_ingestion(mocker, tmp_path):
     """
-    Test published files from files_meta and module_meta are retained,
+    Test published files from files_meta and module_meta are retained
     """
 
     module_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
@@ -692,3 +696,213 @@ def test_published_module_and_files_meta_content_ingestion(mocker, tmp_path):
     assert "/file1.html" in result_paths
     assert "/file3.html" in result_paths
     assert bulk_unpub.mock_calls[0].args[0] == [stale_contentfile.id]
+
+
+@pytest.mark.parametrize(
+    ("element", "expected"),
+    [
+        # Test case: Element with no children, only text
+        (
+            ElementTree.fromstring("""<tag>Sample Text</tag>"""),
+            "Sample Text",
+        ),
+        # Test case: Element with children, nested structure
+        (
+            ElementTree.fromstring(
+                """<parent>
+                <child1>Child 1 Text</child1>
+                <child2>
+                    <subchild>Subchild Text</subchild>
+                </child2>
+            </parent>
+        """
+            ),
+            {
+                "child1": "Child 1 Text",
+                "child2": {"subchild": "Subchild Text"},
+            },
+        ),
+        # Test case: Element with mixed text and children
+        (
+            ElementTree.fromstring(
+                """<mixed>Parent Text<child>Child Text</child></mixed>"""
+            ),
+            {
+                "child": "Child Text",
+            },
+        ),
+    ],
+)
+def test_compact_element(element, expected):
+    """
+    Test _compact_element function with nested tags.
+    """
+    result = _compact_element(element)
+    assert result == expected
+
+
+def test_parse_web_content_returns_active_and_unpublished(tmp_path):
+    """
+    Test that parse_web_content returns active and unpublished items
+    """
+    manifest_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
+      <resources>
+        <resource identifier="RES1" type="webcontent" href="file1.html">
+          <file href="file1.html"/>
+        </resource>
+        <resource identifier="RES2" type="webcontent" href="file2.html">
+          <file href="file2.html"/>
+        </resource>
+      </resources>
+    </manifest>
+    """
+    html_content_active = b"""<html>
+    <head><title>Active Content</title><meta name="workflow_state" content="active"></head>
+    <body>Content</body>
+    </html>
+    """
+    html_content_unpublished = b"""<html>
+    <head><title>Unpublished Content</title><meta name="workflow_state" content="unpublished"></head>
+    <body>Content</body>
+    </html>
+    """
+    zip_path = tmp_path / "canvas_course.zip"
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr("imsmanifest.xml", manifest_xml)
+        zf.writestr("file1.html", html_content_active)
+        zf.writestr("file2.html", html_content_unpublished)
+
+    result = parse_web_content(zip_path)
+    assert "active" in result
+    assert "unpublished" in result
+
+    assert any(
+        item["title"] == "Active Content" and item["path"] == "file1.html"
+        for item in result["active"]
+    )
+    assert any(
+        item["title"] == "Unpublished Content" and item["path"] == "file2.html"
+        for item in result["unpublished"]
+    )
+
+
+def test_parse_web_content_handles_missing_workflow_state(tmp_path):
+    """
+    Test that parse_web_content handles missing workflow_state gracefully
+    """
+    manifest_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
+      <resources>
+        <resource identifier="RES1" type="webcontent" href="file1.html">
+          <file href="file1.html"/>
+        </resource>
+      </resources>
+    </manifest>
+    """
+    html_content = b"""<html>
+    <head><title>No Workflow State</title></head>
+    <body>Content</body>
+    </html>
+    """
+    zip_path = tmp_path / "canvas_course.zip"
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr("imsmanifest.xml", manifest_xml)
+        zf.writestr("file1.html", html_content)
+
+    result = parse_web_content(zip_path)
+    assert "active" in result
+    assert "unpublished" in result
+    assert len(result["active"]) == 0
+    assert len(result["unpublished"]) == 1
+    assert result["unpublished"][0]["title"] == "No Workflow State"
+    assert result["unpublished"][0]["path"] == "file1.html"
+
+
+def test_parse_web_content_excludes_instructor_only_content(tmp_path):
+    """
+    Test that parse_web_content excludes content intended for Instructors only
+    """
+    manifest_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
+      <resources>
+        <resource identifier="RES1" type="webcontent" href="file1.html">
+          <file href="file1.html"/>
+          <metadata>
+            <lom>
+              <educational>
+                <intendedEndUserRole>
+                  <value>Instructor</value>
+                </intendedEndUserRole>
+              </educational>
+            </lom>
+          </metadata>
+        </resource>
+      </resources>
+    </manifest>
+    """
+    html_content = b"""<html>
+    <head><title>Instructor Only Content</title><meta name="workflow_state" content="active"></head>
+    <body>Content</body>
+    </html>
+    """
+    zip_path = tmp_path / "canvas_course.zip"
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr("imsmanifest.xml", manifest_xml)
+        zf.writestr("file1.html", html_content)
+
+    result = parse_web_content(zip_path)
+    assert "active" in result
+    assert "unpublished" in result
+    assert len(result["active"]) == 0
+    assert len(result["unpublished"]) == 1
+    assert result["unpublished"][0]["title"] == "Instructor Only Content"
+    assert result["unpublished"][0]["path"] == "file1.html"
+
+
+def test_parse_files_meta_excludes_tutorbot_folder(tmp_path, settings):
+    """
+    Test that parse_files_meta explicitly excludes files in the tutorbot folder
+    even if they are marked as published in the files_meta.xml.
+    """
+    settings.CANVAS_TUTORBOT_FOLDER = "web_resources/ai/tutor/"
+    files_meta_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <files xmlns="http://canvas.instructure.com/xsd/cccv1p0">
+      <file identifier="file1">
+        <display_name>Published File</display_name>
+        <hidden>false</hidden>
+        <locked>false</locked>
+        <path>web_resources/ai/tutor/tutorfile.html</path>
+      </file>
+      <file identifier="file2">
+        <display_name>Regular File</display_name>
+        <hidden>false</hidden>
+        <locked>false</locked>
+        <path>regular_folder/file2.html</path>
+      </file>
+    </files>
+    """
+    manifest_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
+      <resources>
+        <resource identifier="file1" type="webcontent">
+          <file href="web_resources/ai/tutor/tutorfile.html"/>
+        </resource>
+        <resource identifier="file2" type="webcontent">
+          <file href="regular_folder/file2.html"/>
+        </resource>
+      </resources>
+    </manifest>
+    """
+    zip_path = tmp_path / "canvas_course.zip"
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr("course_settings/files_meta.xml", files_meta_xml)
+        zf.writestr("imsmanifest.xml", manifest_xml)
+
+    result = parse_files_meta(zip_path)
+
+    # Ensure the file in the tutorbot folder is excluded
+    assert len(result["active"]) == 1
+    assert result["active"][0]["path"].name == "file2.html"
+    assert len(result["unpublished"]) == 1
+    assert result["unpublished"][0]["path"].name == "tutorfile.html"
