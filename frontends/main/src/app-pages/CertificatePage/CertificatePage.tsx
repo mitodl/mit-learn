@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useRef, useEffect, useCallback } from "react"
+import { notFound } from "next/navigation"
 import Image from "next/image"
 import { Link, Typography, styled } from "ol-components"
 import { Button } from "@mitodl/smoot-design"
@@ -640,20 +641,27 @@ const CertificatePage: React.FC<{
   certificateType: CertificateType
   uuid: string
 }> = ({ certificateType, uuid }) => {
-  const { data: courseCertificateData, isLoading: isCourseLoading } = useQuery({
+  const {
+    data: courseCertificateData,
+    isLoading: isCourseLoading,
+    isError: isCourseError,
+  } = useQuery({
     ...certificateQueries.courseCertificatesRetrieve({
       cert_uuid: uuid,
     }),
     enabled: certificateType === CertificateType.Course,
   })
 
-  const { data: programCertificateData, isLoading: isProgramLoading } =
-    useQuery({
-      ...certificateQueries.programCertificatesRetrieve({
-        cert_uuid: uuid,
-      }),
-      enabled: certificateType === CertificateType.Program,
-    })
+  const {
+    data: programCertificateData,
+    isLoading: isProgramLoading,
+    isError: isProgramError,
+  } = useQuery({
+    ...certificateQueries.programCertificatesRetrieve({
+      cert_uuid: uuid,
+    }),
+    enabled: certificateType === CertificateType.Program,
+  })
 
   const contentRef = useRef<HTMLDivElement>(null)
 
@@ -686,10 +694,13 @@ const CertificatePage: React.FC<{
     }
   }, [print])
 
-  const isLoading = isCourseLoading || isProgramLoading
-
-  if (isLoading) {
+  if (isCourseLoading || isProgramLoading) {
     return <Page />
+  }
+
+  // MITx Online returns 500 for non-existent certificates. We can assume not found.
+  if (isCourseError || isProgramError) {
+    return notFound()
   }
 
   const download = async () => {
