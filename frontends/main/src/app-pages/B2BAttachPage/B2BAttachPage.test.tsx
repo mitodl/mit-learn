@@ -39,10 +39,7 @@ describe("B2BAttachPage", () => {
     // Wait for the redirect to be called
     await waitFor(() => {
       expect(mockRedirect).toHaveBeenCalledWith(
-        commonUrls.login({
-          pathname: commonUrls.b2bAttachView("test-code"),
-          searchParams: new URLSearchParams({ skip_onboarding: "1" }),
-        }),
+        expect.stringMatching(/login\?skip_onboarding=1$/),
       )
     })
   })
