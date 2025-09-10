@@ -42,6 +42,15 @@ from main.utils import now_in_utc
 
 log = logging.getLogger(__name__)
 
+# list of file regexes we should ignore
+IGNORE_FILES = [
+    r"course_settings/course_settings.xml",
+    r"course_settings/context.xml",
+    r"course_settings/files_meta.xml",
+    r"course_settings/module_meta.xml",
+    r"imsmanifest.xml",
+    r"*/assignment_settings.xml",
+]
 
 NAMESPACES = {
     "cccv1p0": "http://canvas.instructure.com/xsd/cccv1p0",
