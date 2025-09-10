@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.42.3
+Version 0.42.3 (Released September 10, 2025)
 --------------
 
 - ingest canvas html content (#2502)
