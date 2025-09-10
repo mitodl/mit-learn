@@ -304,6 +304,35 @@ def parse_context_xml(course_archive_path: str) -> dict:
     return context_info
 
 
+def is_date_locked(lock_at: str, unlock_at: str) -> bool:
+    """
+    Determine if a resource is currently date-locked based
+    on lock_at and unlock_at strings.
+    Args:
+        lock_at (str): ISO 8601 date string when the resource locks
+        unlock_at (str): ISO 8601 date string when the resource unlocks
+    Returns:
+        bool: True if the resource is currently locked, False otherwise
+    """
+    now = now_in_utc()
+    if unlock_at and unlock_at.lower() != "nil":
+        try:
+            unlock_dt = datetime.fromisoformat(unlock_at.replace("Z", "+00:00"))
+            if now < unlock_dt:
+                return True
+        except Exception:
+            log.exception("Error parsing unlock_at date: %s", unlock_at)
+
+    if lock_at and lock_at.lower() != "nil":
+        try:
+            lock_dt = datetime.fromisoformat(lock_at.replace("Z", "+00:00"))
+            if now > lock_dt:
+                return True
+        except Exception:
+            log.exception("Error parsing lock_at date: %s", lock_at)
+    return False
+
+
 def is_file_published(file_meta: dict) -> bool:
     """
     Determine if a Canvas file (from files_meta.xml) is published/visible to students.
@@ -313,7 +342,7 @@ def is_file_published(file_meta: dict) -> bool:
     Returns:
         bool: True if file is published/visible, False otherwise.
     """
-    now = now_in_utc()
+
     hidden = str(file_meta.get("hidden", "false")).lower() == "true"
     locked = str(file_meta.get("locked", "false")).lower() == "true"
     unlock_at = file_meta.get("unlock_at")
@@ -323,21 +352,8 @@ def is_file_published(file_meta: dict) -> bool:
     if hidden or locked:
         return False
 
-    if unlock_at and unlock_at.lower() != "nil":
-        try:
-            unlock_dt = datetime.fromisoformat(unlock_at.replace("Z", "+00:00"))
-            if now < unlock_dt:
-                return False
-        except Exception:
-            log.exception("Error parsing date: %s", unlock_at)
-
-    if lock_at and lock_at.lower() != "nil":
-        try:
-            lock_dt = datetime.fromisoformat(lock_at.replace("Z", "+00:00"))
-            if now > lock_dt:
-                return False
-        except Exception:
-            log.exception("Error parsing date: %s", lock_at)
+    if is_date_locked(lock_at, unlock_at):
+        return False
     # Visibility rules
     if visibility in ("course", "inherit"):
         return True
@@ -454,18 +470,43 @@ def _workflow_state_from_html(html: str) -> str:
     return meta.get("content") if meta else None
 
 
-def _workflow_state_from_xml(xml):
+def _workflow_state_from_xml(xml_string: str) -> bool:
     """
-    Extract the workflow_state element from xml
+    Determine the workflow_state (published/unpublished) from assignment_settings.xml
     """
+
+    def _get_text(tag):
+        el = root.find(f"cccv1p0:{tag}", NAMESPACES)
+        return el.text.strip() if el is not None and el.text else ""
+
     try:
-        root = ElementTree.fromstring(xml)
-
-        workflow_element = root.find("cccv1p0:workflow_state", NAMESPACES)
-        return workflow_element.text.strip() if workflow_element is not None else None
-
+        root = ElementTree.fromstring(xml_string)
     except Exception:
         log.exception("Error parsing XML: %s", sys.stderr)
+        return "unpublished"
+
+    if (
+        (
+            # workflow_state must be published
+            _get_text("workflow_state") != "published"
+        )
+        or (
+            # only_visible_to_overrides must not be true
+            _get_text("only_visible_to_overrides") == "true"
+        )
+        or (
+            # hide_in_gradebook must not be true (hidden from gradebook)
+            _get_text("hide_in_gradebook") == "true"
+        )
+    ):
+        return "unpublished"
+
+    lock_at = _get_text("lock_at")
+    unlock_at = _get_text("unlock_at")
+    if _get_text("module_locked") == "true" or is_date_locked(lock_at, unlock_at):
+        return "unpublished"
+
+    return "published"
 
 
 def _title_from_html(html: str) -> str:
