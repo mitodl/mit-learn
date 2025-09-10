@@ -46,8 +46,7 @@ const B2BAttachPage: React.FC<B2BAttachPageProps> = ({ code }) => {
         searchParams: new URLSearchParams(),
       })
       const loginUrl = new URL(loginUrlString)
-      const skipOnboarding = new URLSearchParams({ skip_onboarding: "1" })
-      loginUrl.search = skipOnboarding.toString()
+      loginUrl.searchParams.set("skip_onboarding", "1")
       redirect(loginUrl.toString())
     }
     if (isSuccess) {

@@ -28,7 +28,6 @@ describe("B2BAttachPage", () => {
       [Permission.Authenticated]: false,
     })
 
-    // Mock MitxOnline API responses that may be called before redirect
     setMockResponse.get(mitxOnlineUrls.currentUser.get(), null)
     setMockResponse.post(b2bUrls.b2bAttach.b2bAttachView("test-code"), [])
 
@@ -36,10 +35,9 @@ describe("B2BAttachPage", () => {
       url: commonUrls.B2B_ATTACH_VIEW,
     })
 
-    // Wait for the redirect to be called
     await waitFor(() => {
       expect(mockRedirect).toHaveBeenCalledWith(
-        expect.stringMatching(/login\?skip_onboarding=1$/),
+        expect.stringMatching(/login.*next=.*skip_onboarding=1/),
       )
     })
   })
@@ -88,7 +86,6 @@ describe("B2BAttachPage", () => {
       url: commonUrls.B2B_ATTACH_VIEW,
     })
 
-    // Wait for the mutation to complete and verify redirect was called
     await waitFor(() => {
       expect(mockRedirect).toHaveBeenCalledWith(
         commonUrls.organizationView(orgSlug),
