@@ -1,6 +1,19 @@
 Release Notes
 =============
 
+Version 0.42.3 (Released September 10, 2025)
+--------------
+
+- ingest canvas html content (#2502)
+- Fix userlist stale data (#2501)
+- redirect org users to org dashboard (#2482)
+- Set page size to 30 for the course query for programs in the org dash (#2494)
+- Update dependency Django to v4.2.24 (#2496)
+- adding fix for flaky test (#2491)
+- Toggle NextJS image optimization with an env var (#2385)
+- Stop running Sloan news/event tasks (#2493)
+- Update actions/checkout digest to 08eba0b (#2454)
+
 Version 0.42.2 (Released September 08, 2025)
 --------------
 

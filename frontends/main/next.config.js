@@ -46,7 +46,8 @@ const nextConfig = {
         headers: [
           {
             key: "Cache-Control",
-            value: "s-maxage=1800",
+            value:
+              "s-maxage=1800, stale-if-error=86400, stale-while-revalidate=86400",
           },
         ],
       },
@@ -62,7 +63,8 @@ const nextConfig = {
         headers: [
           {
             key: "Cache-Control",
-            value: "s-maxage=1800",
+            value:
+              "s-maxage=1800, stale-if-error=86400, stale-while-revalidate=86400",
           },
         ],
       },
@@ -100,6 +102,7 @@ const nextConfig = {
         hostname: "**",
       },
     ],
+    qualities: [25, 50, 75, 100],
   },
 
   env: {

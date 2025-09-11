@@ -5,7 +5,7 @@ import { RiSparkling2Line, RiArrowDownSLine } from "@remixicon/react"
 import type { AiChatProps } from "@mitodl/smoot-design/ai"
 import { LearningResource } from "api"
 import { AiChat } from "@mitodl/smoot-design/ai"
-import { getCsrfToken } from "@/common/utils"
+import { getCsrfToken } from "@/common/client-utils"
 
 export enum ChatTransitionState {
   Closed = "Closed",

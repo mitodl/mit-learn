@@ -2,7 +2,7 @@ import React, { useEffect } from "react"
 import ErrorPageTemplate from "./ErrorPageTemplate"
 import { userQueries } from "api/hooks/user"
 import { useQuery } from "@tanstack/react-query"
-import { redirectLoginToCurrent } from "@/common/utils"
+import { redirectLoginToCurrent } from "@/common/client-utils"
 
 const ForbiddenPage: React.FC = () => {
   const user = useQuery({

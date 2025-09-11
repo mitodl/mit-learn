@@ -3489,10 +3489,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@next/env@npm:15.4.3":
-  version: 15.4.3
-  resolution: "@next/env@npm:15.4.3"
-  checksum: 10/ff8e2a4e14965e5d3376c3c40778a2afaec45595076429647f17842b0cf534bf770071c105ef0131405e07d79ea238d417413180cccd1ccd1c3182c34605c237
+"@next/env@npm:15.5.3":
+  version: 15.5.3
+  resolution: "@next/env@npm:15.5.3"
+  checksum: 10/59985b98142864685b804c1582427a81863f72c0a55e95ed1c3e680c4ebb7b4d8db0cc61ef415966ceb1509b4d886988ecd62f78cf7d9f0071fc2a15d97ed9cf
   languageName: node
   linkType: hard
 
@@ -3505,58 +3505,58 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@next/swc-darwin-arm64@npm:15.4.3":
-  version: 15.4.3
-  resolution: "@next/swc-darwin-arm64@npm:15.4.3"
+"@next/swc-darwin-arm64@npm:15.5.3":
+  version: 15.5.3
+  resolution: "@next/swc-darwin-arm64@npm:15.5.3"
   conditions: os=darwin & cpu=arm64
   languageName: node
   linkType: hard
 
-"@next/swc-darwin-x64@npm:15.4.3":
-  version: 15.4.3
-  resolution: "@next/swc-darwin-x64@npm:15.4.3"
+"@next/swc-darwin-x64@npm:15.5.3":
+  version: 15.5.3
+  resolution: "@next/swc-darwin-x64@npm:15.5.3"
   conditions: os=darwin & cpu=x64
   languageName: node
   linkType: hard
 
-"@next/swc-linux-arm64-gnu@npm:15.4.3":
-  version: 15.4.3
-  resolution: "@next/swc-linux-arm64-gnu@npm:15.4.3"
+"@next/swc-linux-arm64-gnu@npm:15.5.3":
+  version: 15.5.3
+  resolution: "@next/swc-linux-arm64-gnu@npm:15.5.3"
   conditions: os=linux & cpu=arm64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@next/swc-linux-arm64-musl@npm:15.4.3":
-  version: 15.4.3
-  resolution: "@next/swc-linux-arm64-musl@npm:15.4.3"
+"@next/swc-linux-arm64-musl@npm:15.5.3":
+  version: 15.5.3
+  resolution: "@next/swc-linux-arm64-musl@npm:15.5.3"
   conditions: os=linux & cpu=arm64 & libc=musl
   languageName: node
   linkType: hard
 
-"@next/swc-linux-x64-gnu@npm:15.4.3":
-  version: 15.4.3
-  resolution: "@next/swc-linux-x64-gnu@npm:15.4.3"
+"@next/swc-linux-x64-gnu@npm:15.5.3":
+  version: 15.5.3
+  resolution: "@next/swc-linux-x64-gnu@npm:15.5.3"
   conditions: os=linux & cpu=x64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@next/swc-linux-x64-musl@npm:15.4.3":
-  version: 15.4.3
-  resolution: "@next/swc-linux-x64-musl@npm:15.4.3"
+"@next/swc-linux-x64-musl@npm:15.5.3":
+  version: 15.5.3
+  resolution: "@next/swc-linux-x64-musl@npm:15.5.3"
   conditions: os=linux & cpu=x64 & libc=musl
   languageName: node
   linkType: hard
 
-"@next/swc-win32-arm64-msvc@npm:15.4.3":
-  version: 15.4.3
-  resolution: "@next/swc-win32-arm64-msvc@npm:15.4.3"
+"@next/swc-win32-arm64-msvc@npm:15.5.3":
+  version: 15.5.3
+  resolution: "@next/swc-win32-arm64-msvc@npm:15.5.3"
   conditions: os=win32 & cpu=arm64
   languageName: node
   linkType: hard
 
-"@next/swc-win32-x64-msvc@npm:15.4.3":
-  version: 15.4.3
-  resolution: "@next/swc-win32-x64-msvc@npm:15.4.3"
+"@next/swc-win32-x64-msvc@npm:15.5.3":
+  version: 15.5.3
+  resolution: "@next/swc-win32-x64-msvc@npm:15.5.3"
   conditions: os=win32 & cpu=x64
   languageName: node
   linkType: hard
@@ -14392,7 +14392,7 @@ __metadata:
     jest-next-dynamic-ts: "npm:^0.1.1"
     lodash: "npm:^4.17.21"
     moment: "npm:^2.30.1"
-    next: "npm:^15.4.1"
+    next: "npm:^15.5.2"
     next-nprogress-bar: "npm:^2.4.2"
     next-router-mock: "npm:^1.0.2"
     ol-components: "npm:0.0.0"
@@ -15740,19 +15740,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"next@npm:^15.4.1":
-  version: 15.4.3
-  resolution: "next@npm:15.4.3"
+"next@npm:^15.5.2":
+  version: 15.5.3
+  resolution: "next@npm:15.5.3"
   dependencies:
-    "@next/env": "npm:15.4.3"
-    "@next/swc-darwin-arm64": "npm:15.4.3"
-    "@next/swc-darwin-x64": "npm:15.4.3"
-    "@next/swc-linux-arm64-gnu": "npm:15.4.3"
-    "@next/swc-linux-arm64-musl": "npm:15.4.3"
-    "@next/swc-linux-x64-gnu": "npm:15.4.3"
-    "@next/swc-linux-x64-musl": "npm:15.4.3"
-    "@next/swc-win32-arm64-msvc": "npm:15.4.3"
-    "@next/swc-win32-x64-msvc": "npm:15.4.3"
+    "@next/env": "npm:15.5.3"
+    "@next/swc-darwin-arm64": "npm:15.5.3"
+    "@next/swc-darwin-x64": "npm:15.5.3"
+    "@next/swc-linux-arm64-gnu": "npm:15.5.3"
+    "@next/swc-linux-arm64-musl": "npm:15.5.3"
+    "@next/swc-linux-x64-gnu": "npm:15.5.3"
+    "@next/swc-linux-x64-musl": "npm:15.5.3"
+    "@next/swc-win32-arm64-msvc": "npm:15.5.3"
+    "@next/swc-win32-x64-msvc": "npm:15.5.3"
     "@swc/helpers": "npm:0.5.15"
     caniuse-lite: "npm:^1.0.30001579"
     postcss: "npm:8.4.31"
@@ -15795,7 +15795,7 @@ __metadata:
       optional: true
   bin:
     next: dist/bin/next
-  checksum: 10/53a0ebb97b25ee91b8dede4abaa0e2c6892039d960d74e1a48ec9daab87c02c3ce8425339f7659b880deb85d8de8a81648b94fdb26cf6fac13b0f0bafdf8a00d
+  checksum: 10/96c49c31ed7c32a4e1792b4a4c6405c80e8b973bbb83649ea7c0d9919ad2c4e7171464b2d61faaa5ab688f84cd88516846fb090f707b7efdb20335424ce9c673
   languageName: node
   linkType: hard
 
@@ -16166,7 +16166,7 @@ __metadata:
     embla-carousel-wheel-gestures: "npm:^8.0.2"
     lodash: "npm:^4.17.21"
     material-ui-popup-state: "npm:^5.1.0"
-    next: "npm:^15.4.1"
+    next: "npm:^15.5.2"
     ol-test-utilities: "npm:0.0.0"
     ol-utilities: "npm:0.0.0"
     prop-types: "npm:^15.8.1"

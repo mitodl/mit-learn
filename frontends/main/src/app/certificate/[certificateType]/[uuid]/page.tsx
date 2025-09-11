@@ -1,30 +1,22 @@
 import React from "react"
-import { notFound } from "next/navigation"
 import CertificatePage from "@/app-pages/CertificatePage/CertificatePage"
 import { prefetch } from "api/ssr/prefetch"
 import { certificateQueries } from "api/mitxonline-hooks/certificates"
 import { HydrationBoundary } from "@tanstack/react-query"
+import { isInEnum } from "@/common/utils"
+import { notFound } from "next/navigation"
 
 enum CertificateType {
   Course = "course",
   Program = "program",
 }
 
-interface PageProps {
-  params: Promise<{
-    certificateType: CertificateType
-    uuid: string
-  }>
-}
-
-const Page: React.FC<PageProps> = async ({ params }) => {
+const Page: React.FC<
+  PageProps<"/certificate/[certificateType]/[uuid]">
+> = async ({ params }) => {
   const { certificateType, uuid } = await params
 
-  if (
-    ![CertificateType.Course, CertificateType.Program].includes(
-      certificateType as CertificateType,
-    )
-  ) {
+  if (!isInEnum(certificateType, CertificateType)) {
     notFound()
   }
 

@@ -12,6 +12,7 @@ from tempfile import TemporaryDirectory
 from urllib.parse import unquote_plus
 
 import pypdfium2 as pdfium
+from bs4 import BeautifulSoup
 from defusedxml import ElementTree
 from django.conf import settings
 from litellm import completion
@@ -40,6 +41,14 @@ from learning_resources_search.constants import (
 from main.utils import now_in_utc
 
 log = logging.getLogger(__name__)
+
+
+NAMESPACES = {
+    "cccv1p0": "http://canvas.instructure.com/xsd/cccv1p0",
+    "imscp": "http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1",
+    "lom": "http://ltsc.ieee.org/xsd/imsccv1p1/LOM/resource",
+    "lomimscc": "http://ltsc.ieee.org/xsd/imsccv1p1/LOM/manifest",
+}
 
 
 def sync_canvas_archive(bucket, key: str, overwrite):
@@ -180,13 +189,20 @@ def transform_canvas_content_files(
     basedir = course_zipfile.name.split(".")[0]
     zipfile_path = course_zipfile.absolute()
     # grab published module and file items
-    published_items = [
-        Path(item["path"]).resolve()
-        for item in parse_module_meta(zipfile_path)["active"]
-    ] + [
-        Path(item["path"]).resolve()
-        for item in parse_files_meta(zipfile_path)["active"]
-    ]
+    published_items = (
+        [
+            Path(item["path"]).resolve()
+            for item in parse_module_meta(zipfile_path)["active"]
+        ]
+        + [
+            Path(item["path"]).resolve()
+            for item in parse_files_meta(zipfile_path)["active"]
+        ]
+        + [
+            Path(item["path"]).resolve()
+            for item in parse_web_content(zipfile_path)["active"]
+        ]
+    )
 
     def _generate_content():
         """Inner generator for yielding content data"""
@@ -272,18 +288,49 @@ def transform_canvas_problem_files(
 
 
 def parse_context_xml(course_archive_path: str) -> dict:
+    """
+    Parse course_settings/context.xml and return context info
+    """
     with zipfile.ZipFile(course_archive_path, "r") as course_archive:
         context = course_archive.read("course_settings/context.xml")
     root = ElementTree.fromstring(context)
-    namespaces = {"ns": "http://canvas.instructure.com/xsd/cccv1p0"}
     context_info = {}
     item_keys = ["course_id", "root_account_id", "canvas_domain", "root_account_name"]
     for key in item_keys:
-        element = root.find(f"ns:{key}", namespaces)
+        element = root.find(f"cccv1p0:{key}", NAMESPACES)
         if element is not None:
             context_info[key] = element.text
 
     return context_info
+
+
+def is_date_locked(lock_at: str, unlock_at: str) -> bool:
+    """
+    Determine if a resource is currently date-locked based
+    on lock_at and unlock_at strings.
+    Args:
+        lock_at (str): ISO 8601 date string when the resource locks
+        unlock_at (str): ISO 8601 date string when the resource unlocks
+    Returns:
+        bool: True if the resource is currently locked, False otherwise
+    """
+    now = now_in_utc()
+    if unlock_at and unlock_at.lower() != "nil":
+        try:
+            unlock_dt = datetime.fromisoformat(unlock_at.replace("Z", "+00:00"))
+            if now < unlock_dt:
+                return True
+        except Exception:
+            log.exception("Error parsing unlock_at date: %s", unlock_at)
+
+    if lock_at and lock_at.lower() != "nil":
+        try:
+            lock_dt = datetime.fromisoformat(lock_at.replace("Z", "+00:00"))
+            if now > lock_dt:
+                return True
+        except Exception:
+            log.exception("Error parsing lock_at date: %s", lock_at)
+    return False
 
 
 def is_file_published(file_meta: dict) -> bool:
@@ -295,35 +342,18 @@ def is_file_published(file_meta: dict) -> bool:
     Returns:
         bool: True if file is published/visible, False otherwise.
     """
-    now = now_in_utc()
 
     hidden = str(file_meta.get("hidden", "false")).lower() == "true"
     locked = str(file_meta.get("locked", "false")).lower() == "true"
-
     unlock_at = file_meta.get("unlock_at")
     lock_at = file_meta.get("lock_at")
-
     visibility = file_meta.get("visibility", "inherit")
-
     # If explicitly hidden or locked → unpublished
     if hidden or locked:
         return False
 
-    if unlock_at and unlock_at.lower() != "nil":
-        try:
-            unlock_dt = datetime.fromisoformat(unlock_at.replace("Z", "+00:00"))
-            if now < unlock_dt:
-                return False
-        except Exception:
-            log.exception("Error parsing date: %s", unlock_at)
-
-    if lock_at and lock_at.lower() != "nil":
-        try:
-            lock_dt = datetime.fromisoformat(lock_at.replace("Z", "+00:00"))
-            if now > lock_dt:
-                return False
-        except Exception:
-            log.exception("Error parsing date: %s", lock_at)
+    if is_date_locked(lock_at, unlock_at):
+        return False
     # Visibility rules
     if visibility in ("course", "inherit"):
         return True
@@ -344,11 +374,9 @@ def parse_files_meta(course_archive_path: str) -> dict:
         files_xml = course_archive.read(files_meta_path)
         manifest_xml = course_archive.read("imsmanifest.xml")
     resource_map = extract_resources_by_identifier(manifest_xml)
-
     root = ElementTree.fromstring(files_xml)
-    namespaces = {"c": "http://canvas.instructure.com/xsd/cccv1p0"}
     try:
-        for file_elem in root.findall(".//c:file", namespaces):
+        for file_elem in root.findall(".//cccv1p0:file", NAMESPACES):
             meta = dict(file_elem.attrib)
             for child in file_elem:
                 tag = child.tag
@@ -367,7 +395,10 @@ def parse_files_meta(course_archive_path: str) -> dict:
                 file_path = Path(file)
                 file_data["path"] = file_path
                 file_data["title"] = file_data.get("display_name")
-                if file_data["published"]:
+                # explicitly exclude files in web_resources/ai/tutor
+                if file_data["published"] and not file.startswith(
+                    settings.CANVAS_TUTORBOT_FOLDER
+                ):
                     publish_status["active"].append(file_data)
                 else:
                     publish_status["unpublished"].append(file_data)
@@ -387,19 +418,18 @@ def parse_module_meta(course_archive_path: str) -> dict:
     resource_map = extract_resources_by_identifierref(manifest_xml)
     publish_status = {"active": [], "unpublished": []}
     try:
-        namespaces = {"ns": "http://canvas.instructure.com/xsd/cccv1p0"}
         root = ElementTree.fromstring(module_xml)
-        for module in root.findall(".//ns:module", namespaces):
-            module_title = module.find("ns:title", namespaces).text
-            for item in module.findall("ns:items/ns:item", namespaces):
-                item_state = item.find("ns:workflow_state", namespaces).text
-                item_title = item.find("ns:title", namespaces).text
+        for module in root.findall(".//cccv1p0:module", NAMESPACES):
+            module_title = module.find("cccv1p0:title", NAMESPACES).text
+            for item in module.findall("cccv1p0:items/cccv1p0:item", NAMESPACES):
+                item_state = item.find("cccv1p0:workflow_state", NAMESPACES).text
+                item_title = item.find("cccv1p0:title", NAMESPACES).text
                 identifierref = (
-                    item.find("ns:identifierref", namespaces).text
-                    if item.find("ns:identifierref", namespaces) is not None
+                    item.find("cccv1p0:identifierref", NAMESPACES).text
+                    if item.find("cccv1p0:identifierref", NAMESPACES) is not None
                     else None
                 )
-                content_type = item.find("ns:content_type", namespaces).text
+                content_type = item.find("cccv1p0:content_type", NAMESPACES).text
                 items = resource_map.get(identifierref, {})
                 for item_info in items:
                     for file in item_info.get("files", []):
@@ -419,6 +449,131 @@ def parse_module_meta(course_archive_path: str) -> dict:
     return publish_status
 
 
+def _compact_element(element) -> dict | str | None:
+    """Recursively compact an element into a nested dictionary"""
+    if len(element) == 0:  # No children, return text
+        return element.text.strip() if element.text else None
+    return {
+        child.tag.split("}")[-1] if "}" in child.tag else child.tag: _compact_element(
+            child
+        )
+        for child in element
+    }
+
+
+def _workflow_state_from_html(html: str) -> str:
+    """
+    Extract the workflow_state meta tag from html
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    meta = soup.find("meta", attrs={"name": "workflow_state"})
+    return meta.get("content") if meta else None
+
+
+def _workflow_state_from_xml(xml_string: str) -> bool:
+    """
+    Determine the workflow_state (published/unpublished) from assignment_settings.xml
+    """
+
+    def _get_text(tag):
+        el = root.find(f"cccv1p0:{tag}", NAMESPACES)
+        return el.text.strip() if el is not None and el.text else ""
+
+    try:
+        root = ElementTree.fromstring(xml_string)
+    except Exception:
+        log.exception("Error parsing XML: %s", sys.stderr)
+        return "unpublished"
+
+    if (
+        (
+            # workflow_state must be published
+            _get_text("workflow_state") != "published"
+        )
+        or (
+            # only_visible_to_overrides must not be true
+            _get_text("only_visible_to_overrides") == "true"
+        )
+        or (
+            # hide_in_gradebook must not be true (hidden from gradebook)
+            _get_text("hide_in_gradebook") == "true"
+        )
+    ):
+        return "unpublished"
+
+    lock_at = _get_text("lock_at")
+    unlock_at = _get_text("unlock_at")
+    if _get_text("module_locked") == "true" or is_date_locked(lock_at, unlock_at):
+        return "unpublished"
+
+    return "published"
+
+
+def _title_from_html(html: str) -> str:
+    """
+    Extract the title element from HTML content
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    title = soup.find("title")
+    return title.get_text().strip() if title else ""
+
+
+def parse_web_content(course_archive_path: str) -> dict:
+    """
+    Parse html pages and assignments and return publish/active status of resources
+    """
+
+    publish_status = {"active": [], "unpublished": []}
+
+    with zipfile.ZipFile(course_archive_path, "r") as course_archive:
+        manifest_path = "imsmanifest.xml"
+        if manifest_path not in course_archive.namelist():
+            return publish_status
+        manifest_xml = course_archive.read(manifest_path)
+        resource_map = extract_resources_by_identifier(manifest_xml)
+        for item in resource_map:
+            resource_map_item = resource_map[item]
+            item_link = resource_map_item.get("href")
+            assignment_settings = None
+            for file in resource_map_item.get("files", []):
+                if file.endswith("assignment_settings.xml"):
+                    assignment_settings = file
+            if item_link and item_link.endswith(".html"):
+                file_path = resource_map_item["href"]
+                html_content = course_archive.read(file_path)
+                if assignment_settings:
+                    xml_content = course_archive.read(assignment_settings)
+                    workflow_state = _workflow_state_from_xml(xml_content)
+                else:
+                    workflow_state = _workflow_state_from_html(html_content)
+                title = _title_from_html(html_content)
+
+                lom_elem = (
+                    resource_map_item.get("metadata", {})
+                    .get("lom", {})
+                    .get("educational", {})
+                )
+                # Determine if the content is intended for authors or instructors only
+                intended_role = lom_elem.get("intendedEndUserRole", {}).get("value")
+                authors_only = intended_role and intended_role.lower() != "student"
+
+                if workflow_state in ["active", "published"] and not authors_only:
+                    publish_status["active"].append(
+                        {
+                            "title": title,
+                            "path": file_path,
+                        }
+                    )
+                else:
+                    publish_status["unpublished"].append(
+                        {
+                            "title": title,
+                            "path": file_path,
+                        }
+                    )
+    return publish_status
+
+
 def extract_resources_by_identifierref(manifest_xml: str) -> dict:
     """
     Extract resources from an IMS manifest file and
@@ -426,29 +581,24 @@ def extract_resources_by_identifierref(manifest_xml: str) -> dict:
     """
     root = ElementTree.fromstring(manifest_xml)
 
-    namespaces = {
-        "imscp": "http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1",
-        "lom": "http://ltsc.ieee.org/xsd/imsccv1p1/LOM/resource",
-        "lomimscc": "http://ltsc.ieee.org/xsd/imsccv1p1/LOM/manifest",
-    }
     # Dictionary to hold resources keyed by identifierref
     resources_dict = defaultdict(list)
     # Find all item elements with identifierref attributes
-    for item in root.findall(".//imscp:item[@identifierref]", namespaces):
+    for item in root.findall(".//imscp:item[@identifierref]", NAMESPACES):
         identifierref = item.get("identifierref")
         title = (
-            item.find("imscp:title", namespaces).text
-            if item.find("imscp:title", namespaces) is not None
+            item.find("imscp:title", NAMESPACES).text
+            if item.find("imscp:title", NAMESPACES) is not None
             else "No Title"
         )
         resource = root.find(
-            f'.//imscp:resource[@identifier="{identifierref}"]', namespaces
+            f'.//imscp:resource[@identifier="{identifierref}"]', NAMESPACES
         )
         if resource is not None:
             # Get all file elements within the resource
             files = [
                 file_elem.get("href")
-                for file_elem in resource.findall("imscp:file", namespaces)
+                for file_elem in resource.findall("imscp:file", NAMESPACES)
             ]
 
             resources_dict[identifierref].append(
@@ -463,17 +613,9 @@ def extract_resources_by_identifier(manifest_xml: str) -> dict:
     file and return a map keyed by identifier.
     """
     root = ElementTree.fromstring(manifest_xml)
-
-    namespaces = {
-        "imscp": "http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1",
-        "lom": "http://ltsc.ieee.org/xsd/imsccv1p1/LOM/resource",
-        "lomimscc": "http://ltsc.ieee.org/xsd/imsccv1p1/LOM/manifest",
-    }
-
     resources_dict = {}
-
     # Find all resource elements
-    for resource in root.findall(".//imscp:resource[@identifier]", namespaces):
+    for resource in root.findall(".//imscp:resource[@identifier]", NAMESPACES):
         identifier = resource.get("identifier")
         resource_type = resource.get("type")
         href = resource.get("href")
@@ -481,16 +623,13 @@ def extract_resources_by_identifier(manifest_xml: str) -> dict:
         # Get all file elements within the resource
         files = [
             file_elem.get("href")
-            for file_elem in resource.findall("imscp:file", namespaces)
+            for file_elem in resource.findall("imscp:file", NAMESPACES)
         ]
-
         # Extract metadata if present
         metadata = {}
-        metadata_elem = resource.find("imscp:metadata", namespaces)
+        metadata_elem = resource.find("imscp:metadata", NAMESPACES)
         if metadata_elem is not None:
-            # You can expand this to extract specific metadata fields as needed
-            metadata["has_metadata"] = True
-
+            metadata.update(_compact_element(metadata_elem))
         resources_dict[identifier] = {
             "identifier": identifier,
             "type": resource_type,
@@ -498,7 +637,6 @@ def extract_resources_by_identifier(manifest_xml: str) -> dict:
             "files": files,
             "metadata": metadata,
         }
-
     return resources_dict
 
 
@@ -538,6 +676,9 @@ def pdf_to_base64_images(pdf_path, fmt="JPEG", max_size=2000, quality=85):
 
 
 def _pdf_to_markdown(pdf_path):
+    """
+    Convert a PDF file to markdown using an llm
+    """
     markdown = ""
     for im in pdf_to_base64_images(pdf_path):
         response = completion(

@@ -1,4 +1,4 @@
-import { getSearchParamMap } from "./utils"
+import { getSearchParamMap } from "./client-utils"
 
 describe("getSearchParamMap", () => {
   it("should return an empty object when there are no parameters", () => {
