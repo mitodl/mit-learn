@@ -1,6 +1,7 @@
 """PostHog ETL"""
 
 import dataclasses
+import io
 import json
 import logging
 from collections.abc import Generator
@@ -65,8 +66,10 @@ def posthog_extract_lrd_view_events() -> Generator[dict, None, None]:
         Prefix=settings.POSTHOG_EVENT_S3_PREFIX
     ):
         if last_event_time is None or obj.last_modified > last_event_time:
-            s3_path = f"s3://{settings.POSTHOG_EVENT_S3_BUCKET}/{obj.key}"
-            df = pd.read_parquet(s3_path)
+            s3_object = s3.Object(settings.POSTHOG_EVENT_S3_BUCKET, obj.key)
+            parquet_data = io.BytesIO(s3_object.get()["Body"].read())
+
+            df = pd.read_parquet(parquet_data)
             for _, row in list(df.iterrows()):
                 yield row.to_dict()
 
