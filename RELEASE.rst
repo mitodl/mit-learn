@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.42.4
+--------------
+
+- Update NextJS for better typed routes and route params (#2500)
+- Add CDN instruction to serve stale content if origin error (#2505)
+- Implement memory usage fixes for LearningResource admin pages (#2497)
+
 Version 0.42.3 (Released September 10, 2025)
 --------------
 
