@@ -1,6 +1,7 @@
 export * as articles from "./articles"
 export * as channels from "./channels"
 export * as learningResources from "./learningResources"
+export * as mitxonline from "./mitxonline"
 export * as newsEvents from "./newsEvents"
 export * as percolateQueries from "./percolateQueries"
 export * as letters from "./programLetters"

@@ -1,5 +1,7 @@
 import type {
   CoursesApiApiV2CoursesListRequest,
+  CourseCertificatesApiCourseCertificatesRetrieveRequest,
+  ProgramCertificatesApiProgramCertificatesRetrieveRequest,
   ProgramCollectionsApiProgramCollectionsListRequest,
   ProgramsApiProgramsListV2Request,
 } from "@mitodl/mitxonline-api-axios/v2"
@@ -58,6 +60,15 @@ const contracts = {
   contractsList: () => `${API_BASE_URL}/api/v0/b2b/contracts/`,
 }
 
+const certificates = {
+  courseCertificatesRetrieve: (
+    params: CourseCertificatesApiCourseCertificatesRetrieveRequest,
+  ) => `${API_BASE_URL}/api/v2/course_certificates/${params.cert_uuid}/`,
+  programCertificatesRetrieve: (
+    params: ProgramCertificatesApiProgramCertificatesRetrieveRequest,
+  ) => `${API_BASE_URL}/api/v2/program_certificates/${params.cert_uuid}/`,
+}
+
 export {
   b2b,
   b2bAttach,
@@ -69,4 +80,5 @@ export {
   organization,
   programEnrollments,
   contracts,
+  certificates,
 }
