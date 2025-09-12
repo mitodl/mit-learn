@@ -113,8 +113,8 @@ describe("OrganizationContent", () => {
     const { orgX, programA, programB, programCollection, coursesA, coursesB } =
       setupProgramsAndCourses()
 
-    // Set up the collection to include both programs
-    programCollection.programs = [programA.id, programB.id]
+    // Set up the collection to include both programs in a specific order
+    programCollection.programs = [programB.id, programA.id] // Note: B first, then A
     setMockResponse.get(urls.programCollections.programCollectionsList(), {
       results: [programCollection],
     })
@@ -157,17 +157,16 @@ describe("OrganizationContent", () => {
     const collection = within(collectionItems[0])
     expect(collection.getByText(programCollection.title)).toBeInTheDocument()
 
-    // Wait for the course data to load and check that courses are displayed
+    // Wait for program cards to be rendered
     await waitFor(() => {
-      expect(collection.getAllByText(coursesA[0].title).length).toBeGreaterThan(
-        0,
-      )
+      const programCards = collection.getAllByTestId("enrollment-card-desktop")
+      expect(programCards.length).toBe(2)
     })
-    await waitFor(() => {
-      expect(collection.getAllByText(coursesB[0].title).length).toBeGreaterThan(
-        0,
-      )
-    })
+
+    // Verify the order matches the programCollection.programs array [programB.id, programA.id]
+    const programCards = collection.getAllByTestId("enrollment-card-desktop")
+    expect(programCards[0]).toHaveTextContent(coursesB[0].title)
+    expect(programCards[1]).toHaveTextContent(coursesA[0].title)
   })
 
   test("Does not render a program separately if it is part of a collection", async () => {

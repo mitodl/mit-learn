@@ -291,19 +291,17 @@ const OrgProgramDisplay: React.FC<{
         )}
       </ProgramHeader>
       <PlainList>
-        {transform
-          .sortDashboardCourses(program, transformedCourses)
-          .map((course) => (
-            <DashboardCardStyled
-              Component="li"
-              key={course.key}
-              dashboardResource={course}
-              courseNoun="Module"
-              offerUpgrade={false}
-              titleHref={course.run?.coursewareUrl}
-              buttonHref={course.run?.coursewareUrl}
-            />
-          ))}
+        {transformedCourses.map((course) => (
+          <DashboardCardStyled
+            Component="li"
+            key={course.key}
+            dashboardResource={course}
+            courseNoun="Module"
+            offerUpgrade={false}
+            titleHref={course.run?.coursewareUrl}
+            buttonHref={course.run?.coursewareUrl}
+          />
+        ))}
       </PlainList>
     </ProgramRoot>
   )
