@@ -34,9 +34,7 @@ const useB2BAttachMutation = (opts: B2bApiB2bAttachCreateRequest) => {
   return useMutation({
     mutationFn: () => b2bApi.b2bAttachCreate(opts),
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: organizationKeys.organizationsRetrieve(),
-      })
+      queryClient.invalidateQueries({ queryKey: ["mitxonline"] })
     },
   })
 }

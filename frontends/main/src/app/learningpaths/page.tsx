@@ -9,7 +9,7 @@ export const metadata: Metadata = standardizeMetadata({
   title: "Learning Paths",
 })
 
-const Page: React.FC = () => {
+const Page: React.FC<PageProps<"/learningpaths">> = () => {
   return (
     <RestrictedRoute requires={Permission.LearningPathEditor}>
       <LearningPathListingPage />

@@ -2,7 +2,7 @@ import React from "react"
 import { Popover, Typography, styled } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
 import type { PopoverProps } from "ol-components"
-import { useLoginToCurrent } from "@/common/utils"
+import { useLoginToCurrent } from "@/common/client-utils"
 
 const StyledPopover = styled(Popover)({
   width: "300px",

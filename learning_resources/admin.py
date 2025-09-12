@@ -81,6 +81,10 @@ class LearningResourceRunAdmin(admin.ModelAdmin):
     )
     autocomplete_fields = ("instructors", "learning_resource")
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.for_serialization()
+
 
 class LearningResourceRunInline(TabularInline):
     """Inline list items for course/program runs"""
@@ -149,6 +153,7 @@ class LearningPathInline(TabularInline):
     model = models.LearningPath
     extra = 0
     show_change_link = True
+    readonly_fields = ("author",)
 
 
 class VideoInline(TabularInline):
@@ -216,6 +221,10 @@ class LearningResourceAdmin(admin.ModelAdmin):
     ]
     autocomplete_fields = ("topics",)
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.for_serialization()
+
 
 class UserListAdmin(admin.ModelAdmin):
     """UserList Admin"""
@@ -223,6 +232,7 @@ class UserListAdmin(admin.ModelAdmin):
     model = models.UserList
     search_fields = ("title", "author__username", "author__email")
     list_display = ("title", "author", "created_on", "updated_on")
+    readonly_fields = ("author",)
 
 
 class VideoChannelAdmin(admin.ModelAdmin):

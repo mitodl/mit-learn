@@ -28,7 +28,10 @@ import {
 } from "@remixicon/react"
 import { HOME } from "@/common/urls"
 import backgroundSteps from "@/public/images/backgrounds/background_steps.jpg"
-import { aggregateProgramCounts, aggregateCourseCounts } from "@/common/utils"
+import {
+  aggregateProgramCounts,
+  aggregateCourseCounts,
+} from "@/common/client-utils"
 import { useChannelCounts } from "api/hooks/channels"
 import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"

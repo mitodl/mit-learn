@@ -11,7 +11,7 @@ export const metadata: Metadata = standardizeMetadata({
   title: "Departments",
 })
 
-const Page: React.FC = async () => {
+const Page: React.FC<PageProps<"/departments">> = async () => {
   const { dehydratedState } = await prefetch([
     channelQueries.countsByType("department"),
     schoolQueries.list(),

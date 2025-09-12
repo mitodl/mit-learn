@@ -18,25 +18,20 @@ import {
 import { channelQueries } from "api/hooks/channels"
 import { testimonialsQueries } from "api/hooks/testimonials"
 import handleNotFound from "@/common/handleNotFound"
-import type { PageParams } from "@/app/types"
 import getSearchParams from "@/page-components/SearchDisplay/getSearchParams"
 import validateRequestParams from "@/page-components/SearchDisplay/validateRequestParams"
-import type { ResourceSearchRequest } from "@/page-components/SearchDisplay/validateRequestParams"
 import {
   getConstantSearchParams,
   getFacets,
 } from "@/app-pages/ChannelPage/searchRequests"
-
-type RouteParams = {
-  channelType: ChannelTypeEnum
-  name: FeaturedListOfferedByEnum
-}
+import { isInEnum } from "@/common/utils"
+import { notFound } from "next/navigation"
 
 export async function generateMetadata({
   searchParams,
   params,
-}: PageParams<{ [key: string]: string }, RouteParams>) {
-  const { channelType, name } = await params!
+}: PageProps<"/c/[channelType]/[name]">) {
+  const { channelType, name } = await params
 
   const { data } = await handleNotFound(
     channelsApi.channelsTypeRetrieve({ channel_type: channelType, name: name }),
@@ -49,11 +44,15 @@ export async function generateMetadata({
   })
 }
 
-const Page: React.FC = async ({
+const Page: React.FC<PageProps<"/c/[channelType]/[name]">> = async ({
   params,
   searchParams,
-}: PageParams<ResourceSearchRequest & { page?: string }, RouteParams>) => {
-  const { channelType, name } = await params!
+}) => {
+  const { name, channelType } = await params
+  if (!isInEnum(channelType, ChannelTypeEnum)) {
+    notFound()
+  }
+
   const search = await searchParams
 
   const { queryClient } = await prefetch([
@@ -61,7 +60,7 @@ const Page: React.FC = async ({
     channelType === ChannelTypeEnum.Unit &&
       learningResourceQueries.featured({
         limit: 12,
-        offered_by: [name],
+        offered_by: [name as FeaturedListOfferedByEnum],
       }),
     channelType === ChannelTypeEnum.Unit &&
       testimonialsQueries.list({ offerors: [name] }),
@@ -96,10 +95,10 @@ const Page: React.FC = async ({
   const searchRequest = getSearchParams({
     // @ts-expect-error Local openapi client https://www.npmjs.com/package/@mitodl/open-api-axios
     // out of sync while we adding an enum value.
-    requestParams: validateRequestParams(search!),
+    requestParams: validateRequestParams(search),
     constantSearchParams,
     facetNames,
-    page: Number(search!.page ?? 1),
+    page: Number(search.page ?? 1),
   })
 
   const { dehydratedState } = await prefetch(

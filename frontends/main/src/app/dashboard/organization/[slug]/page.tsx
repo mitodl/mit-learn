@@ -1,9 +1,8 @@
 import React from "react"
 import OrganizationContent from "@/app-pages/DashboardPage/OrganizationContent"
-import { PageParams } from "@/app/types"
 import invariant from "tiny-invariant"
 
-const Page: React.FC<PageParams<object, { slug: string }>> = async ({
+const Page: React.FC<PageProps<"/dashboard/organization/[slug]">> = async ({
   params,
 }) => {
   const resolved = await params

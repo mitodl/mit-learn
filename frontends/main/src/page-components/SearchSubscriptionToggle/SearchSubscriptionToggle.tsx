@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react"
-import { getSearchParamMap } from "@/common/utils"
+import { getSearchParamMap } from "@/common/client-utils"
 import {
   useSearchSubscriptionCreate,
   useSearchSubscriptionList,

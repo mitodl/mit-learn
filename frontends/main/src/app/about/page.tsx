@@ -7,7 +7,7 @@ export const metadata: Metadata = standardizeMetadata({
   title: "About Us",
 })
 
-const Page: React.FC = () => {
+const Page: React.FC<PageProps<"/about">> = () => {
   return <AboutPage />
 }
 

@@ -2,7 +2,7 @@ import React, { useMemo } from "react"
 import { Popover, Typography, styled } from "ol-components"
 import { Button } from "@mitodl/smoot-design"
 import type { PopoverProps } from "ol-components"
-import { getSearchParamMap } from "@/common/utils"
+import { getSearchParamMap } from "@/common/client-utils"
 
 import { SignupPopover } from "../SignupPopover/SignupPopover"
 

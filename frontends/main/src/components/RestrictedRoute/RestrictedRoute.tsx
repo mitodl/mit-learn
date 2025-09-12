@@ -3,7 +3,7 @@
 import React, { useEffect } from "react"
 import { ForbiddenError } from "@/common/errors"
 import { Permission, userQueries } from "api/hooks/user"
-import { redirectLoginToCurrent } from "@/common/utils"
+import { redirectLoginToCurrent } from "@/common/client-utils"
 import { useQuery } from "@tanstack/react-query"
 
 type RestrictedRouteProps = {

@@ -7,7 +7,7 @@ export const metadata: Metadata = standardizeMetadata({
   title: "Privacy Policy",
 })
 
-const Page: React.FC = () => {
+const Page: React.FC<PageProps<"/privacy">> = () => {
   return <PrivacyPage />
 }
 

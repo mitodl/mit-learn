@@ -12,7 +12,7 @@ import {
 } from "@remixicon/react"
 import { useUserMe, User } from "api/hooks/user"
 import MITLogoLink from "@/components/MITLogoLink/MITLogoLink"
-import { useLoginToCurrent } from "@/common/utils"
+import { useLoginToCurrent } from "@/common/client-utils"
 
 const FlexContainer = styled.div({
   display: "flex",

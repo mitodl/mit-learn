@@ -5,6 +5,7 @@ import {
   setMockResponse,
   user,
   within,
+  expectWindowNavigation,
 } from "@/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { DashboardCard, getDefaultContextMenuItems } from "./DashboardCard"
@@ -483,7 +484,9 @@ describe.each([
     const card = getCard()
     const coursewareButton = within(card).getByTestId("courseware-button")
 
-    await user.click(coursewareButton)
+    await expectWindowNavigation(async () => {
+      await user.click(coursewareButton)
+    })
 
     expect(mockAxiosInstance.request).toHaveBeenCalledWith(
       expect.objectContaining({

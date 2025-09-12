@@ -5,7 +5,6 @@ import {
   learningResourceQueries,
   offerorQueries,
 } from "api/hooks/learningResources"
-import type { PageParams } from "@/app/types"
 import { getMetadataAsync } from "@/common/metadata"
 import SearchPage from "@/app-pages/SearchPage/SearchPage"
 import { facetNames } from "@/app-pages/SearchPage/searchRequests"
@@ -14,7 +13,7 @@ import validateRequestParams from "@/page-components/SearchDisplay/validateReque
 import type { ResourceSearchRequest } from "@/page-components/SearchDisplay/validateRequestParams"
 import { LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LRSearchRequest } from "api"
 
-export async function generateMetadata({ searchParams }: PageParams) {
+export async function generateMetadata({ searchParams }: PageProps<"/search">) {
   return await getMetadataAsync({
     title: "Search",
     searchParams,
@@ -33,18 +32,18 @@ export async function generateMetadata({ searchParams }: PageParams) {
  */
 export const dynamic = "force-dynamic"
 
-const Page: React.FC = async ({
-  searchParams,
-}: PageParams<ResourceSearchRequest & { page?: string }>) => {
-  const search = await searchParams
+const Page: React.FC<PageProps<"/search">> = async ({ searchParams }) => {
+  const search = (await searchParams) as ResourceSearchRequest & {
+    page?: string
+  }
 
   const params = getSearchParams({
     // @ts-expect-error Local openapi client https://www.npmjs.com/package/@mitodl/open-api-axios
     // out of sync while we adding an enum value.
-    requestParams: validateRequestParams(search!),
+    requestParams: validateRequestParams(search),
     constantSearchParams: {},
     facetNames,
-    page: Number(search!.page ?? 1),
+    page: Number(search.page ?? 1),
   })
 
   const { dehydratedState } = await prefetch([

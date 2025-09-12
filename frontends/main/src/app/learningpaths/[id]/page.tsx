@@ -3,7 +3,7 @@ import { Permission } from "api/hooks/user"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
 import LearningPathDetailsPage from "@/app-pages/LearningPathDetailsPage/LearningPathDetailsPage"
 
-const Page: React.FC = () => {
+const Page: React.FC<PageProps<"/learningpaths/[id]">> = () => {
   return (
     <RestrictedRoute requires={Permission.LearningPathEditor}>
       <LearningPathDetailsPage />

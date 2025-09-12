@@ -96,4 +96,16 @@ afterEach(() => {
  * - beforeEach hooks declared earlier than this call
  * - afterEach hooks declared later than this call
  */
-failOnConsole()
+failOnConsole({
+  allowMessage(message, _methodName, _context) {
+    const ALLLOWED_PATTERNS = [
+      /**
+       * A warning thrown by next/image.
+       * See https://nextjs.org/docs/messages/next-image-unconfigured-qualities
+       * We do not currently use next/jest, but that may eventually handle this.
+       */
+      /which is not configured in images.qualities/.test(message),
+    ]
+    return ALLLOWED_PATTERNS.some((x) => x === true)
+  },
+})
