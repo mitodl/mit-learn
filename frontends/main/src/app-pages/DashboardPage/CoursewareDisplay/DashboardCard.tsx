@@ -28,7 +28,6 @@ import { EnrollmentStatusIndicator } from "./EnrollmentStatusIndicator"
 import { EmailSettingsDialog, UnenrollDialog } from "./DashboardDialogs"
 import NiceModal from "@ebay/nice-modal-react"
 import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
-import { redirect } from "next/navigation"
 
 const CardRoot = styled.div<{
   screenSize: "desktop" | "mobile"
@@ -185,7 +184,7 @@ const CoursewareButton = styled(
               {
                 onSuccess: () => {
                   if (href) {
-                    redirect(href)
+                    window.location.href = href
                   }
                 },
               },
