@@ -9,18 +9,19 @@ import {
 import * as commonUrls from "@/common/urls"
 import { Permission } from "api/hooks/user"
 import B2BAttachPage from "./B2BAttachPage"
-import { redirect } from "next/navigation"
 
-// Mock Next.js redirect function
-jest.mock("next/navigation", () => ({
-  redirect: jest.fn(),
+// Mock next-nprogress-bar for App Router
+const mockPush = jest.fn()
+jest.mock("next-nprogress-bar", () => ({
+  useRouter: () => ({
+    push: mockPush,
+  }),
 }))
-
-const mockRedirect = jest.mocked(redirect)
 
 describe("B2BAttachPage", () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockPush.mockClear()
   })
 
   test("Redirects to login when not authenticated", async () => {
@@ -36,7 +37,7 @@ describe("B2BAttachPage", () => {
     })
 
     await waitFor(() => {
-      expect(mockRedirect).toHaveBeenCalledWith(
+      expect(mockPush).toHaveBeenCalledWith(
         expect.stringMatching(/login.*next=.*skip_onboarding=1/),
       )
     })
@@ -87,7 +88,7 @@ describe("B2BAttachPage", () => {
     })
 
     await waitFor(() => {
-      expect(mockRedirect).toHaveBeenCalledWith(
+      expect(mockPush).toHaveBeenCalledWith(
         commonUrls.organizationView(orgSlug),
       )
     })
