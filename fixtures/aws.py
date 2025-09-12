@@ -41,6 +41,15 @@ def ocw_aws_settings(aws_settings):
     return aws_settings
 
 
+@pytest.fixture(autouse=True)
+def posthog_aws_settings(aws_settings):
+    """Default PostHog test settings"""  # noqa: D401
+    aws_settings.POSTHOG_EVENT_BUCKET_NAME = (  # impossible bucket name
+        "test-posthog-event-bucket"
+    )
+    return aws_settings
+
+
 @pytest.fixture
 def mock_ocw_learning_bucket(
     ocw_aws_settings,
@@ -151,4 +160,19 @@ def mock_oll_learning_bucket(
         aws_secret_access_key=oll_aws_settings.AWS_SECRET_ACCESS_KEY,
     )
     bucket = s3.create_bucket(Bucket=oll_aws_settings.OLL_LEARNING_COURSE_BUCKET_NAME)
+    return SimpleNamespace(s3=s3, bucket=bucket)
+
+
+@pytest.fixture
+def mock_posthog_event_bucket(
+    posthog_aws_settings,
+    mock_s3_fixture,  # noqa: ARG001
+):  # pylint: disable=unused-argument
+    """Mock PostHog event bucket"""
+    s3 = boto3.resource(
+        "s3",
+        aws_access_key_id=posthog_aws_settings.AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=posthog_aws_settings.AWS_SECRET_ACCESS_KEY,
+    )
+    bucket = s3.create_bucket(Bucket=posthog_aws_settings.POSTHOG_EVENT_BUCKET_NAME)
     return SimpleNamespace(s3=s3, bucket=bucket)
