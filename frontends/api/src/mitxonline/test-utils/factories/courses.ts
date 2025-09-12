@@ -3,6 +3,7 @@ import type { PartialFactory } from "ol-test-utilities"
 import type {
   CourseWithCourseRunsSerializerV2,
   V1CourseWithCourseRuns,
+  V2Course,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { faker } from "@faker-js/faker/locale/en"
 import { UniqueEnforcer } from "enforce-unique"
@@ -73,6 +74,60 @@ const v1Course: PartialFactory<V1CourseWithCourseRuns> = (overrides = {}) => {
   }
 
   return mergeOverrides<V1CourseWithCourseRuns>(defaults, overrides)
+}
+
+const v2Course: PartialFactory<V2Course> = (overrides = {}) => {
+  const defaults: V2Course = {
+    id: uniqueCourseId.enforce(() => faker.number.int()),
+    title: faker.lorem.words(3),
+    readable_id: faker.lorem.slug(),
+    page: {
+      feature_image_src: faker.image.avatar(),
+      page_url: faker.internet.url(),
+      description: faker.lorem.paragraph(),
+      live: faker.datatype.boolean(),
+      length: `${faker.number.int({ min: 1, max: 12 })} weeks`,
+      effort: `${faker.number.int({ min: 1, max: 10 })} hours/week`,
+      financial_assistance_form_url: faker.internet.url(),
+      instructors: [
+        {
+          name: faker.person.fullName(),
+          bio: faker.lorem.paragraph(),
+        },
+        {
+          name: faker.person.fullName(),
+          bio: faker.lorem.paragraph(),
+        },
+      ],
+      current_price: faker.number.int({ min: 0, max: 1000 }),
+    },
+    availability: faker.helpers.arrayElement(["anytime", "dated"]),
+    min_weekly_hours: `${faker.number.int({ min: 1, max: 5 })} hours`,
+    max_weekly_hours: `${faker.number.int({ min: 6, max: 10 })} hours`,
+    certificate_type: faker.lorem.word(),
+    required_prerequisites: faker.datatype.boolean(),
+    duration: `${faker.number.int({ min: 1, max: 12 })} weeks`,
+    min_weeks: faker.number.int({ min: 1, max: 4 }),
+    max_weeks: faker.number.int({ min: 5, max: 12 }),
+    time_commitment: `${faker.number.int({ min: 1, max: 10 })} hours/week`,
+    topics: [
+      {
+        name: faker.lorem.word(),
+      },
+    ],
+    departments: [
+      {
+        name: faker.company.name(),
+      },
+    ],
+    programs: null,
+    min_price: faker.number.int({ min: 0, max: 1000 }),
+    max_price: faker.number.int({ min: 1000, max: 2000 }),
+    include_in_learn_catalog: faker.datatype.boolean(),
+    ingest_content_files_for_ai: faker.datatype.boolean(),
+    next_run_id: faker.number.int(),
+  }
+  return mergeOverrides<V2Course>(defaults, overrides)
 }
 
 const course: PartialFactory<CourseWithCourseRunsSerializerV2> = (
@@ -162,4 +217,4 @@ const course: PartialFactory<CourseWithCourseRunsSerializerV2> = (
 const v1Courses = makePaginatedFactory(v1Course)
 const courses = makePaginatedFactory(course)
 
-export { v1Course, v1Courses, course, courses }
+export { v1Course, v2Course, v1Courses, course, courses }
