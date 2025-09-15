@@ -25,6 +25,9 @@ import { groupBy } from "lodash"
 const sources = {
   mitxonline: "mitxonline",
 }
+
+const CERTIFICATE_LINK_PATTERN = /\/certificate\/([^/]+)\/$/
+
 type KeyOpts = {
   source: string
   resourceType: DashboardResourceType
@@ -99,7 +102,7 @@ const userEnrollmentsToDashboardCourses = (
           uuid: enrollment.certificate?.uuid ?? "",
           link:
             enrollment.certificate?.link?.replace(
-              /\/certificate\/([^/]+)\/$/,
+              CERTIFICATE_LINK_PATTERN,
               "/certificate/course/$1/",
             ) ?? "",
         },
@@ -149,7 +152,7 @@ const enrollmentToOrgDashboardEnrollment = (
       uuid: raw.certificate?.uuid ?? "",
       link:
         raw.certificate?.link?.replace(
-          /\/certificate\/([^/]+)\/$/,
+          CERTIFICATE_LINK_PATTERN,
           "/certificate/course/$1/",
         ) ?? "",
     },
