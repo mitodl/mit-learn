@@ -567,11 +567,7 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
       pdfDoc = pdf(<ProgramCertificate certificate={certificate.data} />)
     }
   } catch (error) {
-    if (
-      (error as AxiosError).status === 404 ||
-      // The mitxonline API returns a 500 with HTML including "DoesNotExist" error message (local only?)
-      (error as AxiosError).response?.data?.toString().includes("DoesNotExist")
-    ) {
+    if ([400, 404].includes((error as AxiosError).status ?? -1)) {
       return redirect("/not-found")
     }
     console.error("Error fetching certificate for PDF generation", {
@@ -579,7 +575,12 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
       uuid,
       error,
     })
-    return new Response("Error generating certificate", { status: 500 })
+    return new Response("Error generating certificate", {
+      status:
+        typeof (error as AxiosError).status === "number"
+          ? (error as AxiosError).status
+          : 500,
+    })
   }
 
   const pdfStream = await pdfDoc.toBuffer()
