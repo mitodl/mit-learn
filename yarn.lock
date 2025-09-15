@@ -3025,13 +3025,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/mitxonline-api-axios@npm:^2025.9.3":
-  version: 2025.9.3
-  resolution: "@mitodl/mitxonline-api-axios@npm:2025.9.3"
+"@mitodl/mitxonline-api-axios@npm:^2025.9.11":
+  version: 2025.9.11
+  resolution: "@mitodl/mitxonline-api-axios@npm:2025.9.11"
   dependencies:
     "@types/node": "npm:^20.11.19"
     axios: "npm:^1.6.5"
-  checksum: 10/f9234de576f5e22413fa46cc4a4c0788e24d85066d77339f3149bdec4ed94226fc3bbd0349f176e4c543d2edcd5abaf98b48e568de883b53534608e3bea7a8c8
+  checksum: 10/c5457baed2a27f77877556e5055786e7680749382f2f03936014199a30b86626e90126697f85b9aa9f9fbd910111f00e327a765ce41c89d96a05a46c123c52c6
   languageName: node
   linkType: hard
 
@@ -7663,7 +7663,7 @@ __metadata:
   resolution: "api@workspace:frontends/api"
   dependencies:
     "@faker-js/faker": "npm:^9.9.0"
-    "@mitodl/mitxonline-api-axios": "npm:^2025.9.3"
+    "@mitodl/mitxonline-api-axios": "npm:^2025.9.11"
     "@tanstack/react-query": "npm:^5.66.0"
     "@testing-library/react": "npm:^16.1.0"
     axios: "npm:^1.6.3"
@@ -14362,7 +14362,7 @@ __metadata:
     "@emotion/styled": "npm:^11.11.0"
     "@faker-js/faker": "npm:^9.9.0"
     "@mitodl/course-search-utils": "npm:3.3.2"
-    "@mitodl/mitxonline-api-axios": "npm:^2025.9.3"
+    "@mitodl/mitxonline-api-axios": "npm:^2025.9.11"
     "@mitodl/smoot-design": "npm:^6.17.1"
     "@next/bundle-analyzer": "npm:^14.2.15"
     "@react-pdf/renderer": "npm:^4.3.0"
