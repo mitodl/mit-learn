@@ -65,10 +65,13 @@ const mitxonlineCourse = (
   if (enrollment) {
     transformedCourse.enrollment = enrollment
   }
+  if (enrollment?.certificate) {
+    transformedCourse.run.certificate = enrollment.certificate
+  }
   return transformedCourse
 }
 
-const mitxonlineEnrollmentsToDashboardCourses = (
+const userEnrollmentsToDashboardCourses = (
   data: CourseRunEnrollment[],
 ): DashboardCourse[] => {
   return data.map((enrollment) => {
@@ -96,7 +99,7 @@ const mitxonlineEnrollmentsToDashboardCourses = (
           uuid: enrollment.certificate?.uuid ?? "",
           link:
             enrollment.certificate?.link?.replace(
-              /^\/certificate\/([^/]+)\/$/,
+              /\/certificate\/([^/]+)\/$/,
               "/certificate/course/$1/",
             ) ?? "",
         },
@@ -128,7 +131,7 @@ const mitxonlineOrgContract = (raw: ContractPage): DashboardContract => {
   }
 }
 
-const mitxonlineOrgEnrollment = (
+const enrollmentToOrgDashboardEnrollment = (
   raw: CourseRunEnrollment,
   course: CourseWithCourseRunsSerializerV2,
 ): DashboardCourseEnrollment => {
@@ -142,15 +145,26 @@ const mitxonlineOrgEnrollment = (
         : EnrollmentStatus.Enrolled,
     mode: raw.enrollment_mode,
     receiveEmails: raw.edx_emails_subscription ?? true,
+    certificate: {
+      uuid: raw.certificate?.uuid ?? "",
+      link:
+        raw.certificate?.link?.replace(
+          /\/certificate\/([^/]+)\/$/,
+          "/certificate/course/$1/",
+        ) ?? "",
+    },
   }
 }
-const mitxonlineOrgEnrollments = (
+
+const enrollmentsToOrgDashboardEnrollments = (
   data: CourseRunEnrollment[],
   course: CourseWithCourseRunsSerializerV2,
 ): DashboardCourseEnrollment[] =>
-  data.map((enrollment) => mitxonlineOrgEnrollment(enrollment, course))
+  data.map((enrollment) =>
+    enrollmentToOrgDashboardEnrollment(enrollment, course),
+  )
 
-const mitxonlineOrgUnenrolledCourse = (
+const createOrgUnenrolledCourse = (
   course: CourseWithCourseRunsSerializerV2,
   contracts: ContractPage[] | undefined,
 ): DashboardCourse => {
@@ -180,7 +194,7 @@ const mitxonlineOrgUnenrolledCourse = (
   }
 }
 
-const mitxonlineOrgCourses = (raw: {
+const organizationCoursesWithContracts = (raw: {
   courses: CourseWithCourseRunsSerializerV2[]
   contracts?: ContractPage[] // Make optional
   enrollments: CourseRunEnrollment[]
@@ -197,7 +211,7 @@ const mitxonlineOrgCourses = (raw: {
     const enrollments = enrollmentsByCourseId[course.id]
 
     if (enrollments?.length > 0) {
-      const transformedEnrollments = mitxonlineOrgEnrollments(
+      const transformedEnrollments = enrollmentsToOrgDashboardEnrollments(
         enrollments,
         course,
       )
@@ -216,7 +230,7 @@ const mitxonlineOrgCourses = (raw: {
         }
 
         // If contracts are provided but a matching one isn't found, treat it as unenrolled
-        return mitxonlineOrgUnenrolledCourse(course, raw.contracts)
+        return createOrgUnenrolledCourse(course, raw.contracts)
       } else if (enrollments?.length > 0) {
         // If no contracts provided, just find the matching enrollment to the course
         const matchingEnrollment = enrollments.find(
@@ -227,14 +241,14 @@ const mitxonlineOrgCourses = (raw: {
         if (matchingEnrollment) {
           return mitxonlineCourse(
             course,
-            mitxonlineOrgEnrollment(matchingEnrollment, course),
+            enrollmentToOrgDashboardEnrollment(matchingEnrollment, course),
           )
         }
       }
     }
 
     // If no enrollments or no matching enrollment found, treat it as unenrolled
-    return mitxonlineOrgUnenrolledCourse(course, raw.contracts)
+    return createOrgUnenrolledCourse(course, raw.contracts)
   })
   return transformedCourses
 }
@@ -285,11 +299,11 @@ const sortDashboardCourses = (
 
 export {
   mitxonlineCourse,
-  mitxonlineEnrollmentsToDashboardCourses,
+  userEnrollmentsToDashboardCourses,
   mitxonlineOrgContract,
-  mitxonlineOrgEnrollments,
-  mitxonlineOrgCourses,
-  mitxonlineOrgUnenrolledCourse,
+  enrollmentsToOrgDashboardEnrollments,
+  organizationCoursesWithContracts,
+  createOrgUnenrolledCourse,
   mitxonlineProgram,
   mitxonlineProgramCollection,
   sortDashboardCourses,
