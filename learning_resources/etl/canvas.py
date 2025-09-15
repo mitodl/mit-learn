@@ -21,7 +21,8 @@ from litellm import completion
 from PIL import Image
 
 from learning_resources.constants import (
-    VALID_TUTOR_PROBLEM_TYPES,
+    TUTOR_PROBLEM_TYPE,
+    TUTOR_SOLUTION_TYPE,
     LearningResourceType,
     PlatformType,
 )
@@ -298,11 +299,24 @@ def transform_canvas_problem_files(
             path = file_data["source_path"]
             path = path[len(settings.CANVAS_TUTORBOT_FOLDER) :]
             path_parts = path.split("/", 1)
+
+            if len(path_parts) != 2:  # noqa: PLR2004
+                log.warning(
+                    "unnested file in problem folder for course run %s: %s",
+                    run.id,
+                    path,
+                )
+                continue
+
             problem_file_data["problem_title"] = path_parts[0]
-            for problem_type in VALID_TUTOR_PROBLEM_TYPES:
-                if problem_type in path_parts[1].lower():
-                    problem_file_data["type"] = problem_type
-                    break
+
+            problem_file_data["file_name"] = path_parts[1]
+
+            if TUTOR_SOLUTION_TYPE in problem_file_data["file_name"].lower():
+                problem_file_data["type"] = TUTOR_SOLUTION_TYPE
+            else:
+                problem_file_data["type"] = TUTOR_PROBLEM_TYPE
+
             if (
                 problem_file_data["file_extension"].lower() == ".pdf"
                 and settings.CANVAS_PDF_TRANSCRIPTION_MODEL
