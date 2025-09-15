@@ -19,7 +19,8 @@ from litellm import completion
 from PIL import Image
 
 from learning_resources.constants import (
-    VALID_TUTOR_PROBLEM_TYPES,
+    TUTOR_PROBLEM_PROBLEM,
+    TUTOR_PROBLEM_SOLUTION,
     LearningResourceType,
     PlatformType,
 )
@@ -271,10 +272,12 @@ def transform_canvas_problem_files(
             path = path[len(settings.CANVAS_TUTORBOT_FOLDER) :]
             path_parts = path.split("/", 1)
             problem_file_data["problem_title"] = path_parts[0]
-            for problem_type in VALID_TUTOR_PROBLEM_TYPES:
-                if problem_type in path_parts[1].lower():
-                    problem_file_data["type"] = problem_type
-                    break
+
+            if TUTOR_PROBLEM_SOLUTION in path_parts[1].lower():
+                problem_file_data["type"] = TUTOR_PROBLEM_SOLUTION
+            else:
+                problem_file_data["type"] = TUTOR_PROBLEM_PROBLEM
+
             if (
                 problem_file_data["file_extension"].lower() == ".pdf"
                 and settings.CANVAS_PDF_TRANSCRIPTION_MODEL
