@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.42.5
+Version 0.42.5 (Released September 15, 2025)
 --------------
 
 - redirect attach to org dashboard (#2498)
