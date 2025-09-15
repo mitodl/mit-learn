@@ -189,20 +189,16 @@ def transform_canvas_content_files(
     basedir = course_zipfile.name.split(".")[0]
     zipfile_path = course_zipfile.absolute()
     # grab published module and file items
-    published_items = (
-        [
-            Path(item["path"]).resolve()
-            for item in parse_module_meta(zipfile_path)["active"]
-        ]
-        + [
-            Path(item["path"]).resolve()
-            for item in parse_files_meta(zipfile_path)["active"]
-        ]
-        + [
-            Path(item["path"]).resolve()
-            for item in parse_web_content(zipfile_path)["active"]
-        ]
+    all_published_items = (
+        parse_module_meta(zipfile_path)["active"]
+        + parse_files_meta(zipfile_path)["active"]
+        + parse_web_content(zipfile_path)["active"]
     )
+    published_items = {}
+    for item in all_published_items:
+        path = str(Path(item["path"]).resolve())
+        path = path.lstrip(path.split("/")[0])
+        published_items[path] = item
 
     def _generate_content():
         """Inner generator for yielding content data"""
@@ -211,7 +207,9 @@ def transform_canvas_content_files(
             zipfile.ZipFile(zipfile_path, "r") as course_archive,
         ):
             for member in course_archive.infolist():
-                if Path(member.filename).resolve() in published_items:
+                member_path = str(Path(member.filename).resolve())
+                member_path = member_path.lstrip(member_path.split("/")[0])
+                if member_path in published_items:
                     course_archive.extract(member, path=olx_path)
                     log.debug("processing active file %s", member.filename)
                 else:
@@ -518,6 +516,19 @@ def _title_from_html(html: str) -> str:
     return title.get_text().strip() if title else ""
 
 
+def _title_from_assignment_settings(xml_string: str) -> str:
+    """
+    Extract the title from assignment_settings.xml
+    """
+    try:
+        root = ElementTree.fromstring(xml_string)
+    except Exception:
+        log.exception("Error parsing XML: %s", sys.stderr)
+        return ""
+    title_elem = root.find("cccv1p0:title", NAMESPACES)
+    return title_elem.text.strip() if title_elem is not None and title_elem.text else ""
+
+
 def parse_web_content(course_archive_path: str) -> dict:
     """
     Parse html pages and assignments and return publish/active status of resources
@@ -544,9 +555,10 @@ def parse_web_content(course_archive_path: str) -> dict:
                 if assignment_settings:
                     xml_content = course_archive.read(assignment_settings)
                     workflow_state = _workflow_state_from_xml(xml_content)
+                    title = _title_from_assignment_settings(xml_content)
                 else:
                     workflow_state = _workflow_state_from_html(html_content)
-                title = _title_from_html(html_content)
+                    title = _title_from_html(html_content)
 
                 lom_elem = (
                     resource_map_item.get("metadata", {})
