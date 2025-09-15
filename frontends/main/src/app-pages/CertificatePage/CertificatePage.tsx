@@ -568,19 +568,19 @@ const CourseCertificate = ({
 }: {
   certificate: V2CourseRunCertificate
 }) => {
-  const title = certificate?.course_run?.course?.title
+  const title = certificate.course_run.course.title
 
   const displayType = "Module Certificate"
 
-  const userName = certificate?.user?.name
+  const userName = certificate.user.name
 
   const shortDisplayType = "module"
 
-  const signatories = certificate?.certificate_page?.signatory_items
+  const signatories = certificate.certificate_page.signatory_items
 
-  const startDate = certificate?.course_run?.start_date
+  const startDate = certificate.course_run.start_date
 
-  const endDate = certificate?.course_run?.end_date
+  const endDate = certificate.course_run.end_date
 
   return (
     <Certificate
@@ -591,7 +591,7 @@ const CourseCertificate = ({
       signatories={signatories}
       startDate={startDate}
       endDate={endDate}
-      uuid={certificate?.uuid}
+      uuid={certificate.uuid}
     />
   )
 }
@@ -601,21 +601,21 @@ const ProgramCertificate = ({
 }: {
   certificate: V2ProgramCertificate
 }) => {
-  const title = certificate?.program?.title
+  const title = certificate.program.title
 
-  const displayType = `${certificate?.program?.program_type} Certificate`
+  const displayType = `${certificate.program.program_type} Certificate`
 
-  const userName = certificate?.user?.name
+  const userName = certificate.user.name
 
-  const shortDisplayType = `${certificate?.program?.program_type} program`
+  const shortDisplayType = `${certificate.program.program_type} program`
 
-  const ceus = certificate?.certificate_page?.CEUs
+  const ceus = certificate.certificate_page.CEUs
 
-  const signatories = certificate?.certificate_page?.signatory_items
+  const signatories = certificate.certificate_page.signatory_items
 
-  const startDate = certificate?.program?.start_date
+  const startDate = certificate.program.start_date
 
-  const endDate = certificate?.program?.end_date
+  const endDate = certificate.program.end_date
 
   return (
     <Certificate
@@ -627,7 +627,7 @@ const ProgramCertificate = ({
       signatories={signatories}
       startDate={startDate}
       endDate={endDate}
-      uuid={certificate?.uuid}
+      uuid={certificate.uuid}
     />
   )
 }
@@ -718,13 +718,13 @@ const CertificatePage: React.FC<{
 
   const title =
     certificateType === CertificateType.Course
-      ? courseCertificateData?.course_run?.course?.title
-      : programCertificateData?.program?.title
+      ? courseCertificateData?.course_run.course.title
+      : programCertificateData?.program.title
 
   const displayType =
     certificateType === CertificateType.Course
       ? "Module Certificate"
-      : `${programCertificateData?.program?.program_type} Certificate`
+      : `${programCertificateData?.program.program_type} Certificate`
 
   return (
     <Page>
