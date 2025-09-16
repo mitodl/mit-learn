@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.42.6
+Version 0.42.6 (Released September 16, 2025)
 --------------
 
 - canvas: ingest files referenced in content (#2509)
