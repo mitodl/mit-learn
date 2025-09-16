@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.43.0
+--------------
+
+- Exception in remove_duplicate_resources task (#2499)
+- fix course run certificate link in org dashboard (#2513)
+
 Version 0.42.6 (Released September 16, 2025)
 --------------
 
