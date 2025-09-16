@@ -115,12 +115,9 @@ def _get_url_config(bucket, export_tempdir: str, url_config_file: str) -> dict:
             url_key = url_item["file_path"]
             url_key = unquote_plus(url_key.lstrip(url_key.split("/")[0]))
             url_config[url_key] = url_item["url"]
-        for url_item in url_json.get("course_assignments", []) + url_json.get(
-            "course_modules", []
-        ):
-            url_key = url_item["file_path"]
-            url_key = unquote_plus(url_key.lstrip(url_key.split("/")[0]))
-            url_config[url_key] = url_item["url"]
+        for url_item in url_json.get("assignments", []) + url_json.get("pages", []):
+            url_key = url_item.get("name", url_item.get("title"))
+            url_config[url_key] = url_item.get("html_url")
     return url_config
 
 
@@ -215,13 +212,11 @@ def transform_canvas_content_files(
     )
     published_items = {}
     for item in all_published_items:
-        path = str(Path(item["path"]).resolve())
-        path = path.lstrip(path.split("/")[0])
+        path = Path(item["path"]).resolve()
         published_items[path] = item
         for embedded_file in item.get("embedded_files", []):
-            embedded_path = str(Path(embedded_file).resolve())
-            embedded_path = embedded_path.lstrip(embedded_path.split("/")[0])
-            published_items[embedded_path] = {"file_path": embedded_path, "title": ""}
+            embedded_path = Path(embedded_file).resolve()
+            published_items[embedded_path] = {"path": embedded_path, "title": ""}
 
     def _generate_content():
         """Inner generator for yielding content data"""
@@ -230,8 +225,8 @@ def transform_canvas_content_files(
             zipfile.ZipFile(zipfile_path, "r") as course_archive,
         ):
             for member in course_archive.infolist():
-                member_path = str(Path(member.filename).resolve())
-                member_path = member_path.lstrip(member_path.split("/")[0])
+                member_path = Path(member.filename).resolve()
+
                 if member_path in published_items:
                     course_archive.extract(member, path=olx_path)
                     log.debug("processing active file %s", member.filename)
@@ -242,7 +237,14 @@ def transform_canvas_content_files(
                 url_path = content_data["source_path"].lstrip(
                     content_data["source_path"].split("/")[0]
                 )
-                content_url = url_config.get(url_path, "")
+                item_meta = published_items.get(
+                    Path(content_data["source_path"]).resolve(), {}
+                )
+
+                content_url = url_config.get(url_path) or url_config.get(
+                    item_meta.get("title")
+                )
+
                 if content_url:
                     content_data["url"] = content_url
                 yield content_data
