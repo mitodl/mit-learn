@@ -1,8 +1,6 @@
 import { queryOptions } from "@tanstack/react-query"
 import { pagesApi } from "../../clients"
 
-globalThis.pagesApi = pagesApi
-
 const pagesKeys = {
   root: ["mitxonline", "pages"],
   coursePageDetail: (readableId: string) => [

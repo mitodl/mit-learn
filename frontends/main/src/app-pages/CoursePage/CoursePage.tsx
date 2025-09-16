@@ -16,6 +16,7 @@ import { pagesQueries } from "api/mitxonline-hooks/pages"
 import { useQuery } from "@tanstack/react-query"
 import { Button, ButtonLink } from "@mitodl/smoot-design"
 import Image from "next/image"
+import DOMPurify from "isomorphic-dompurify"
 
 type CoursePageProps = {
   readableId: string
@@ -46,6 +47,39 @@ const OfferedByTag = styled.div(({ theme }) => ({
   },
 }))
 
+const Page = styled.div(({ theme }) => ({
+  ...theme.typography.body1,
+  backgroundColor: theme.custom.colors.white,
+  ".raw-include": {
+    lineHeight: "1.5",
+    p: {
+      marginTop: "16px",
+      marginBottom: "0",
+    },
+    "& > ul": {
+      listStyleType: "none",
+      marginTop: "16px",
+      marginBottom: 0,
+      padding: 0,
+      "> li": {
+        padding: "16px",
+        border: `1px solid ${theme.custom.colors.lightGray2}`,
+        borderBottom: "none",
+        ":first-of-type": {
+          borderRadius: "4px 4px 0 0",
+        },
+        ":last-of-type": {
+          borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
+          borderRadius: "0 0 4px 4px",
+        },
+        ":first-of-type:last-of-type": {
+          borderRadius: "4px",
+        },
+      },
+    },
+  },
+}))
+
 const TopContainer = styled(Container)({
   display: "flex",
   justifyContent: "space-between",
@@ -56,6 +90,7 @@ const BottomContainer = styled(Container)(({ theme }) => ({
   justifyContent: "space-between",
   gap: "60px",
   flexDirection: "row-reverse",
+
   [theme.breakpoints.down("sm")]: {
     flexDirection: "column",
   },
@@ -121,11 +156,27 @@ const WideButton = styled(Button)({
   width: "100%",
 })
 
+const RawHTML: React.FC<{ html: string }> = ({ html }) => {
+  return (
+    <div
+      className="raw-include"
+      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}
+    />
+  )
+}
+
+const AboutSection = styled.section({
+  marginTop: "40px",
+})
+const WhatSection = styled.section({})
+const PrerequisitesSection = styled.section({})
+
 enum HeadingIds {
   About = "about",
   What = "what-you-will-learn",
   Prerequisites = "prerequisites",
-  Instrucctors = "instructors",
+  Instructors = "instructors",
+  WhoCanTake = "who-can-take-this-course",
 }
 
 type HeadingData = {
@@ -141,7 +192,7 @@ const HEADINGS: HeadingData[] = [
     label: "Prerequisites",
     variant: "secondary",
   },
-  { id: HeadingIds.Instrucctors, label: "Instructors", variant: "secondary" },
+  { id: HeadingIds.Instructors, label: "Instructors", variant: "secondary" },
 ]
 
 const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
@@ -149,7 +200,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
   const coursePage = pagesDetail.data?.items[0]
   if (!coursePage) return
   return (
-    <>
+    <Page>
       <BannerBackground backgroundUrl={backgroundSrcSetCSS(backgroundSteps)}>
         <TopContainer>
           <MainCol>
@@ -183,7 +234,6 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
               alt=""
             />
           </SidebarImageWrapper>
-
           <SidebarInfo>
             <WideButton variant="primary" size="large">
               Enroll for free
@@ -207,18 +257,39 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
               )
             })}
           </LinksContainer>
-          {new Array(100).fill(null).map((_, idx) => (
-            <p key={idx}>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed
-              euismod, nunc ut laoreet tincidunt, nunc nisl aliquam nunc, eget
-              aliquam nisl nunc euismod nunc. Sed euismod, nunc ut laoreet
-              tincidunt, nunc nisl aliquam nunc, eget aliquam nisl nunc euismod
-              nunc.
-            </p>
-          ))}
+          <Stack gap={{ xs: "40px", sm: "56px" }}>
+            <AboutSection>
+              <Typography variant="h3" component="h2" id={HeadingIds.About}>
+                About this course
+              </Typography>
+              <RawHTML html={coursePage.about} />
+            </AboutSection>
+            <WhatSection>
+              <Typography variant="h4" component="h2" id={HeadingIds.What}>
+                What you'll learn
+              </Typography>
+              <RawHTML html={coursePage.what_you_learn} />
+            </WhatSection>
+            <PrerequisitesSection>
+              <Typography
+                variant="h4"
+                component="h2"
+                id={HeadingIds.Prerequisites}
+              >
+                Prerequisites
+              </Typography>
+              <RawHTML html={coursePage.prerequisites} />
+            </PrerequisitesSection>
+            <Typography variant="h4" component="h2" id={HeadingIds.Instructors}>
+              Meet your instructors
+            </Typography>
+            <Typography variant="h4" component="h2" id={HeadingIds.WhoCanTake}>
+              Who can take this course?
+            </Typography>
+          </Stack>
         </MainCol>
       </BottomContainer>
-    </>
+    </Page>
   )
 }
 
