@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.43.0
+Version 0.43.0 (Released September 16, 2025)
 --------------
 
 - Exception in remove_duplicate_resources task (#2499)
