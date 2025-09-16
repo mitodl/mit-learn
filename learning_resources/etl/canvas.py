@@ -99,7 +99,14 @@ def _get_url_config(bucket, export_tempdir: str, url_config_file: str) -> dict:
     bucket.download_file(url_config_file, url_config_path)
     url_config = {}
     with Path.open(url_config_path, "rb") as f:
-        for url_item in json.loads(f.read().decode("utf-8")).get("course_files", []):
+        url_json = json.loads(f.read().decode("utf-8"))
+        for url_item in url_json.get("course_files", []):
+            url_key = url_item["file_path"]
+            url_key = unquote_plus(url_key.lstrip(url_key.split("/")[0]))
+            url_config[url_key] = url_item["url"]
+        for url_item in url_json.get("course_assignments", []) + url_json.get(
+            "course_modules", []
+        ):
             url_key = url_item["file_path"]
             url_key = unquote_plus(url_key.lstrip(url_key.split("/")[0]))
             url_config[url_key] = url_item["url"]
@@ -556,9 +563,11 @@ def parse_web_content(course_archive_path: str) -> dict:
                     xml_content = course_archive.read(assignment_settings)
                     workflow_state = _workflow_state_from_xml(xml_content)
                     title = _title_from_assignment_settings(xml_content)
+                    canvas_type = "assignment"
                 else:
                     workflow_state = _workflow_state_from_html(html_content)
                     title = _title_from_html(html_content)
+                    canvas_type = "page"
 
                 lom_elem = (
                     resource_map_item.get("metadata", {})
@@ -571,17 +580,11 @@ def parse_web_content(course_archive_path: str) -> dict:
 
                 if workflow_state in ["active", "published"] and not authors_only:
                     publish_status["active"].append(
-                        {
-                            "title": title,
-                            "path": file_path,
-                        }
+                        {"title": title, "path": file_path, "canvas_type": canvas_type}
                     )
                 else:
                     publish_status["unpublished"].append(
-                        {
-                            "title": title,
-                            "path": file_path,
-                        }
+                        {"title": title, "path": file_path, "canvas_type": canvas_type}
                     )
     return publish_status
 
