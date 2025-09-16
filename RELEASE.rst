@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.42.6 (Released September 16, 2025)
+--------------
+
+- canvas: ingest files referenced in content (#2509)
+- Generate Certificate PDFs for print and download (#2503)
+- remove priority ordering from org dashboard programs (#2510)
+
 Version 0.42.5 (Released September 15, 2025)
 --------------
 
