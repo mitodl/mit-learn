@@ -5,12 +5,14 @@ import sys
 import zipfile
 from collections import defaultdict
 from collections.abc import Generator
-from datetime import datetime
+from datetime import UTC, datetime
 from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from urllib.parse import unquote_plus
+from urllib.parse import unquote, unquote_plus
+from zoneinfo import ZoneInfo
 
+import dateutil
 import pypdfium2 as pdfium
 from bs4 import BeautifulSoup
 from defusedxml import ElementTree
@@ -42,6 +44,15 @@ from main.utils import now_in_utc
 
 log = logging.getLogger(__name__)
 
+# list of file regexes we should ignore
+IGNORE_FILES = [
+    "course_settings.xml",
+    "context.xml",
+    "files_meta.xml",
+    "module_meta.xml",
+    "imsmanifest.xml",
+    "assignment_settings.xml",
+]
 
 NAMESPACES = {
     "cccv1p0": "http://canvas.instructure.com/xsd/cccv1p0",
@@ -196,6 +207,7 @@ def transform_canvas_content_files(
     basedir = course_zipfile.name.split(".")[0]
     zipfile_path = course_zipfile.absolute()
     # grab published module and file items
+
     all_published_items = (
         parse_module_meta(zipfile_path)["active"]
         + parse_files_meta(zipfile_path)["active"]
@@ -206,6 +218,10 @@ def transform_canvas_content_files(
         path = str(Path(item["path"]).resolve())
         path = path.lstrip(path.split("/")[0])
         published_items[path] = item
+        for embedded_file in item.get("embedded_files", []):
+            embedded_path = str(Path(embedded_file).resolve())
+            embedded_path = embedded_path.lstrip(embedded_path.split("/")[0])
+            published_items[embedded_path] = {"file_path": embedded_path, "title": ""}
 
     def _generate_content():
         """Inner generator for yielding content data"""
@@ -322,7 +338,12 @@ def is_date_locked(lock_at: str, unlock_at: str) -> bool:
     now = now_in_utc()
     if unlock_at and unlock_at.lower() != "nil":
         try:
-            unlock_dt = datetime.fromisoformat(unlock_at.replace("Z", "+00:00"))
+            unlock_dt = (
+                dateutil.parser.parse(unlock_at)
+                .replace(tzinfo=ZoneInfo("US/Eastern"))
+                .astimezone(UTC)
+            )
+
             if now < unlock_dt:
                 return True
         except Exception:
@@ -330,7 +351,11 @@ def is_date_locked(lock_at: str, unlock_at: str) -> bool:
 
     if lock_at and lock_at.lower() != "nil":
         try:
-            lock_dt = datetime.fromisoformat(lock_at.replace("Z", "+00:00"))
+            lock_dt = (
+                dateutil.parser.parse(lock_at)
+                .replace(tzinfo=ZoneInfo("US/Eastern"))
+                .astimezone(UTC)
+            )
             if now > lock_dt:
                 return True
         except Exception:
@@ -475,6 +500,28 @@ def _workflow_state_from_html(html: str) -> str:
     return meta.get("content") if meta else None
 
 
+def _embedded_files_from_html(html: str) -> list[str]:
+    """
+    Extract Canvas file links from HTML, replacing $IMS-CC-FILEBASE$ with web_resources
+    and returning URL-decoded paths without query params.
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    links = []
+
+    for a in soup.find_all("a", href=True):
+        href = a["href"]
+        if href.startswith("$IMS-CC-FILEBASE$"):
+            # Remove query parameters if present
+            clean_href = href.split("?")[0]
+            # Replace $IMS-CC-FILEBASE$ with "web_resources"
+            clean_href = clean_href.replace("$IMS-CC-FILEBASE$", "web_resources")
+            # URL decode
+            decoded = unquote(clean_href)
+            links.append(decoded)
+
+    return links
+
+
 def _workflow_state_from_xml(xml_string: str) -> bool:
     """
     Determine the workflow_state (published/unpublished) from assignment_settings.xml
@@ -559,6 +606,7 @@ def parse_web_content(course_archive_path: str) -> dict:
             if item_link and item_link.endswith(".html"):
                 file_path = resource_map_item["href"]
                 html_content = course_archive.read(file_path)
+                embedded_files = _embedded_files_from_html(html_content)
                 if assignment_settings:
                     xml_content = course_archive.read(assignment_settings)
                     workflow_state = _workflow_state_from_xml(xml_content)
@@ -580,11 +628,21 @@ def parse_web_content(course_archive_path: str) -> dict:
 
                 if workflow_state in ["active", "published"] and not authors_only:
                     publish_status["active"].append(
-                        {"title": title, "path": file_path, "canvas_type": canvas_type}
+                        {
+                            "title": title,
+                            "path": file_path,
+                            "canvas_type": canvas_type,
+                            "embedded_files": embedded_files,
+                        }
                     )
                 else:
                     publish_status["unpublished"].append(
-                        {"title": title, "path": file_path, "canvas_type": canvas_type}
+                        {
+                            "title": title,
+                            "path": file_path,
+                            "canvas_type": canvas_type,
+                            "embedded_files": embedded_files,
+                        }
                     )
     return publish_status
 

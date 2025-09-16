@@ -260,7 +260,7 @@ const OrgProgramDisplay: React.FC<{
     <Skeleton width="100%" height="65px" style={{ marginBottom: "16px" }} />
   )
   if (programLoading || courses.isLoading) return skeleton
-  const transformedCourses = transform.mitxonlineOrgCourses({
+  const transformedCourses = transform.organizationCoursesWithContracts({
     courses: courses.data?.results ?? [],
     contracts: contracts ?? [],
     enrollments: courseRunEnrollments ?? [],
@@ -339,7 +339,7 @@ const ProgramCard: React.FC<{
     <Skeleton width="100%" height="65px" style={{ marginBottom: "16px" }} />
   )
   if (courses.isLoading) return skeleton
-  const transformedCourses = transform.mitxonlineOrgCourses({
+  const transformedCourses = transform.organizationCoursesWithContracts({
     courses: courses.data?.results ?? [],
     contracts: contracts ?? [],
     enrollments: enrollments ?? [],
