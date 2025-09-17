@@ -17,6 +17,7 @@ import { useQuery } from "@tanstack/react-query"
 import { Button, ButtonLink } from "@mitodl/smoot-design"
 import Image from "next/image"
 import DOMPurify from "isomorphic-dompurify"
+import type { Faculty } from "@mitodl/mitxonline-api-axios/v2"
 
 type CoursePageProps = {
   readableId: string
@@ -50,6 +51,10 @@ const OfferedByTag = styled.div(({ theme }) => ({
 const Page = styled.div(({ theme }) => ({
   ...theme.typography.body1,
   backgroundColor: theme.custom.colors.white,
+  paddingBottom: "80px",
+  [theme.breakpoints.down("md")]: {
+    paddingBottom: "24px",
+  },
   ".raw-include": {
     lineHeight: "1.5",
     p: {
@@ -91,7 +96,7 @@ const BottomContainer = styled(Container)(({ theme }) => ({
   gap: "60px",
   flexDirection: "row-reverse",
 
-  [theme.breakpoints.down("sm")]: {
+  [theme.breakpoints.down("md")]: {
     flexDirection: "column",
   },
 }))
@@ -100,9 +105,15 @@ const MainCol = styled.div({
   flex: 1,
 })
 
-const SidebarCol = styled.div({
+const SidebarCol = styled.div(() => ({
   width: "410px",
-})
+}))
+const SidebarSpacer = styled.div(({ theme }) => ({
+  width: "410px",
+  [theme.breakpoints.down("md")]: {
+    display: "none",
+  },
+}))
 
 const StyledLink = styled(ButtonLink)(({ theme }) => ({
   backgroundColor: theme.custom.colors.white,
@@ -133,24 +144,30 @@ const LinksContainer = styled.div(({ theme }) => ({
   },
 }))
 
-const SidebarImageWrapper = styled.div({
-  height: "0px",
-})
-const SidebarImage = styled(Image)({
+const SidebarImageWrapper = styled.div(({ theme }) => ({
+  [theme.breakpoints.up("md")]: {
+    height: "0px",
+  },
+}))
+const SidebarImage = styled(Image)(({ theme }) => ({
   borderRadius: "4px",
   width: "410px",
   height: "230px",
-  transform: "translateY(-100%)",
-})
+  [theme.breakpoints.up("md")]: {
+    transform: "translateY(-100%)",
+  },
+}))
 const SidebarInfo = styled.div(({ theme }) => ({
   border: `1px solid ${theme.custom.colors.lightGray2}`,
   backgroundColor: theme.custom.colors.white,
   borderRadius: "4px",
   boxShadow: "0 8px 20px 0 rgba(120, 147, 172, 0.10)",
   padding: "24px 32px",
-  position: "sticky",
-  marginTop: "-24px",
-  top: "calc(40px + 32px + 24px)",
+  [theme.breakpoints.up("md")]: {
+    position: "sticky",
+    marginTop: "-24px",
+    top: "calc(40px + 32px + 24px)",
+  },
 }))
 const WideButton = styled(Button)({
   width: "100%",
@@ -170,6 +187,73 @@ const AboutSection = styled.section({
 })
 const WhatSection = styled.section({})
 const PrerequisitesSection = styled.section({})
+const InstructorsSection = styled.section({})
+
+const InstructorsList = styled.ul({
+  display: "flex",
+  flexWrap: "wrap",
+  gap: "16px",
+  padding: 0,
+  margin: 0,
+  marginTop: "24px",
+})
+const InstructorCardRoot = styled.li(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: "8px",
+  border: `1px solid ${theme.custom.colors.lightGray2}`,
+  borderRadius: "8px",
+  padding: "16px",
+  width: "252px",
+  minHeight: "272px",
+  [theme.breakpoints.down("sm")]: {
+    width: "171px",
+  },
+}))
+const InstructorImage = styled(Image)(({ theme }) => ({
+  height: "140px",
+  width: "220px",
+  objectFit: "cover",
+  borderRadius: "8px",
+  [theme.breakpoints.down("sm")]: {
+    height: "155px",
+    width: "140px",
+  },
+}))
+const InstructorCard: React.FC<{
+  instructor: Faculty
+}> = ({ instructor }) => {
+  return (
+    <InstructorCardRoot>
+      <InstructorImage
+        width={220}
+        height={140}
+        src={instructor.feature_image_src}
+        alt=""
+      />
+      <Typography variant="h5" sx={{ marginTop: "8px" }}>
+        {instructor.instructor_name}
+      </Typography>
+      <Typography variant="body3">{instructor.instructor_title}</Typography>
+    </InstructorCardRoot>
+  )
+}
+
+const WhoCanTakeSection = styled.section(({ theme }) => ({
+  padding: "32px",
+  border: `1px solid ${theme.custom.colors.lightGray2}`,
+  borderRadius: "8px",
+  display: "flex",
+  flexDirection: "column",
+  gap: "24px",
+  ...theme.typography.body1,
+  lineHeight: "1.5",
+  [theme.breakpoints.down("md")]: {
+    padding: "16px",
+    gap: "16px",
+    ...theme.typography.body2,
+  },
+}))
 
 enum HeadingIds {
   About = "about",
@@ -221,7 +305,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
               </Stack>
             </TitleBox>
           </MainCol>
-          <SidebarCol></SidebarCol>
+          <SidebarSpacer></SidebarSpacer>
         </TopContainer>
       </BannerBackground>
       <BottomContainer>
@@ -280,12 +364,41 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
               </Typography>
               <RawHTML html={coursePage.prerequisites} />
             </PrerequisitesSection>
-            <Typography variant="h4" component="h2" id={HeadingIds.Instructors}>
-              Meet your instructors
-            </Typography>
-            <Typography variant="h4" component="h2" id={HeadingIds.WhoCanTake}>
-              Who can take this course?
-            </Typography>
+            <InstructorsSection>
+              <Typography
+                variant="h4"
+                component="h2"
+                id={HeadingIds.Instructors}
+              >
+                Meet your instructors
+              </Typography>
+              <InstructorsList>
+                {coursePage.faculty.map((instructor) => {
+                  return (
+                    <InstructorCard
+                      key={instructor.id}
+                      instructor={instructor}
+                    />
+                  )
+                })}
+              </InstructorsList>
+            </InstructorsSection>
+
+            <WhoCanTakeSection>
+              <Typography
+                variant="h4"
+                component="h2"
+                id={HeadingIds.WhoCanTake}
+              >
+                Who can take this course?
+              </Typography>
+              Because of U.S. Office of Foreign Assets Control (OFAC)
+              restrictions and other U.S. federal regulations, learners residing
+              in one or more of the following countries or regions will not be
+              able to register for this course: Iran, Cuba, Syria, North Korea
+              and the Crimea, Donetsk People's Republic and Luhansk People's
+              Republic regions of Ukraine.
+            </WhoCanTakeSection>
           </Stack>
         </MainCol>
       </BottomContainer>
