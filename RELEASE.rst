@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+Version 0.44.0
+--------------
+
+- Use posthog bulk export (#2489)
+
 Version 0.43.0 (Released September 16, 2025)
 --------------
 
