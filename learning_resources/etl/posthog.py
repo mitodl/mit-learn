@@ -26,7 +26,10 @@ class PostHogLearningResourceViewEvent:
     the lrd_view specific properties.
     """
 
-    resource_id: int
+    resourceType: str  # noqa: N815
+    platformCode: str  # noqa: N815
+    resourceId: int  # noqa: N815
+    readableId: str  # noqa: N815
     event_date: datetime
 
 
@@ -89,7 +92,10 @@ def posthog_transform_lrd_view_events(
         resource = properties.get("resource", {})
 
         yield PostHogLearningResourceViewEvent(
-            resource_id=resource.get("id"),
+            resourceType=resource.get("resource_type"),
+            platformCode=resource.get("platform", {}).get("code"),
+            resourceId=resource.get("id"),
+            readableId=resource.get("readable_id"),
             event_date=event.get("timestamp"),
         )
 
@@ -107,24 +113,24 @@ def load_posthog_lrd_view_event(
     """
 
     try:
-        learning_resource = LearningResource.objects.filter(pk=event.resource_id).get()
+        learning_resource = LearningResource.objects.filter(pk=event.resourceId).get()
     except LearningResource.DoesNotExist:
         skip_warning = (
-            f"WARNING: skipping event for resource ID {event.resource_id}"
+            f"WARNING: skipping event for resource ID {event.resourceId}"
             " - resource not found"
         )
         log.warning(skip_warning)
         return None
     except LearningResource.MultipleObjectsReturned:
         skip_warning = (
-            f"WARNING: skipping event for resource ID {event.resource_id}"
+            f"WARNING: skipping event for resource ID {event.resourceId}"
             " - multiple objects returned"
         )
         log.warning(skip_warning)
         return None
     except ValueError:
         skip_warning = (
-            f"WARNING: skipping event for resource ID {event.resource_id} - invalid ID"
+            f"WARNING: skipping event for resource ID {event.resourceId} - invalid ID"
         )
         log.warning(skip_warning)
         return None
