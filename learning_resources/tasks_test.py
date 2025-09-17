@@ -238,10 +238,13 @@ def test_get_content_tasks(
         3, etl_source=etl_source, platform=platform
     )
     if with_learning_resource_ids:
-        learning_resource_ids = sorted([
-            courses[0].learning_resource_id,
-            courses[1].learning_resource_id,
-        ], reverse=True)
+        learning_resource_ids = sorted(
+            [
+                courses[0].learning_resource_id,
+                courses[1].learning_resource_id,
+            ],
+            reverse=True,
+        )
     else:
         learning_resource_ids = None
     s3_prefix = "course-prefix"

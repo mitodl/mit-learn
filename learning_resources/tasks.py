@@ -207,9 +207,13 @@ def get_content_tasks(  # noqa: PLR0913
     )
 
     if learning_resource_ids:
-        learning_resources = LearningResource.objects.filter(
-            id__in=learning_resource_ids, etl_source=etl_source
-        ).order_by("-id").values_list("id", flat=True)
+        learning_resources = (
+            LearningResource.objects.filter(
+                id__in=learning_resource_ids, etl_source=etl_source
+            )
+            .order_by("-id")
+            .values_list("id", flat=True)
+        )
     else:
         learning_resources = (
             LearningResource.objects.filter(Q(published=True) | Q(test_mode=True))
