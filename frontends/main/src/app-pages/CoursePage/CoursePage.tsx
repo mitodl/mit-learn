@@ -18,7 +18,7 @@ import Image from "next/image"
 import DOMPurify from "isomorphic-dompurify"
 import type { Faculty } from "@mitodl/mitxonline-api-axios/v2"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
-import { CourseInfo } from "./CourseInfo"
+import { CourseInfo, UnderlinedLink } from "./CourseInfo"
 
 type CoursePageProps = {
   readableId: string
@@ -57,6 +57,9 @@ const Page = styled.div(({ theme }) => ({
     paddingBottom: "24px",
   },
   ".raw-include": {
+    "*:first-child": {
+      marginTop: 0,
+    },
     lineHeight: "1.5",
     p: {
       marginTop: "16px",
@@ -184,9 +187,30 @@ const RawHTML: React.FC<{ html: string }> = ({ html }) => {
   )
 }
 
-const AboutSection = styled.section({})
-const WhatSection = styled.section({})
-const PrerequisitesSection = styled.section({})
+const AboutSection = styled.section<{ expanded: boolean }>(({ expanded }) => {
+  return [
+    {
+      display: "flex",
+      flexDirection: "column",
+      gap: "16px",
+    },
+    !expanded && {
+      ".raw-include > *:not(:first-child)": {
+        display: "none",
+      },
+    },
+  ]
+})
+const WhatSection = styled.section({
+  display: "flex",
+  flexDirection: "column",
+  gap: "16px",
+})
+const PrerequisitesSection = styled.section({
+  display: "flex",
+  flexDirection: "column",
+  gap: "16px",
+})
 const InstructorsSection = styled.section({})
 
 const InstructorsList = styled.ul({
@@ -286,6 +310,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
   )
   const page = pagesDetail.data?.items[0]
   const course = courses.data?.results?.[0]
+  const [aboutExpanded, setAboutExpanded] = React.useState(false)
   if (!page || !course) return
   return (
     <Page>
@@ -342,11 +367,22 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
             })}
           </LinksContainer>
           <Stack gap={{ xs: "40px", sm: "56px" }}>
-            <AboutSection>
+            <AboutSection expanded={aboutExpanded}>
               <Typography variant="h3" component="h2" id={HeadingIds.About}>
                 About this course
               </Typography>
               <RawHTML html={page.about} />
+              <UnderlinedLink
+                href=""
+                color="red"
+                role="button"
+                onClick={(e) => {
+                  e.preventDefault()
+                  setAboutExpanded((curr) => !curr)
+                }}
+              >
+                Show more
+              </UnderlinedLink>
             </AboutSection>
             <WhatSection>
               <Typography variant="h4" component="h2" id={HeadingIds.What}>

@@ -13,7 +13,7 @@ import {
   CourseRunV2,
 } from "@mitodl/mitxonline-api-axios/v2"
 
-const StyledLink = styled(Link)({
+const UnderlinedLink = styled(Link)({
   textDecoration: "underline",
 })
 
@@ -174,7 +174,7 @@ const PacingRow: React.FC<InfoRowProps> = ({ course, nextRun }) => {
       <RiComputerLine aria-hidden="true" />
       <InfoRowInner>
         <InfoLabelValue label="Course Format" value={format} />
-        <StyledLink
+        <UnderlinedLink
           href="https://mitxonline.zendesk.com/hc/en-us/articles/21994872904475-What-are-Self-Paced-courses-on-MITx-Online */"
           color="red"
           target="_blank"
@@ -184,7 +184,7 @@ const PacingRow: React.FC<InfoRowProps> = ({ course, nextRun }) => {
           }}
         >
           What's this?
-        </StyledLink>
+        </UnderlinedLink>
       </InfoRowInner>
     </InfoRow>
   )
@@ -207,14 +207,14 @@ const CertificateBox: React.FC<InfoRowProps> = ({ course, nextRun }) => {
   const certificatePrice = INFO.certificatePrice(course, nextRun)
 
   const certInfoLink = (
-    <StyledLink
+    <UnderlinedLink
       color="red"
       href="https://mitxonline.zendesk.com/hc/en-us/articles/28158506908699-What-is-the-Certificate-Track-What-are-Course-and-Program-Certificates"
       target="_blank"
       rel="noopener noreferrer"
     >
       Learn More
-    </StyledLink>
+    </UnderlinedLink>
   )
   const upgradeDeadline = INFO.upgradeDealine(course, nextRun)
   return (
@@ -319,4 +319,4 @@ const CourseInfo: React.FC<{
   )
 }
 
-export { CourseInfo }
+export { CourseInfo, UnderlinedLink }
