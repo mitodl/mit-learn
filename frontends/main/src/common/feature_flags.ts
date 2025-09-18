@@ -10,4 +10,5 @@ export enum FeatureFlags {
   EnrollmentDashboard = "enrollment-dashboard",
   OrganizationDashboard = "mitlearn-organization-dashboard",
   VideoShorts = "video-shorts",
+  ProductPageCourse = "product-page-course",
 }
