@@ -203,8 +203,6 @@ def transform_canvas_content_files(
     """
     basedir = course_zipfile.name.split(".")[0]
     zipfile_path = course_zipfile.absolute()
-    # grab published module and file items
-
     all_published_items = (
         parse_module_meta(zipfile_path)["active"]
         + parse_files_meta(zipfile_path)["active"]
@@ -216,7 +214,12 @@ def transform_canvas_content_files(
         published_items[path] = item
         for embedded_file in item.get("embedded_files", []):
             embedded_path = Path(embedded_file).resolve()
-            published_items[embedded_path] = {"path": embedded_path, "title": ""}
+            if embedded_path in all_published_items:
+                continue
+            published_items[embedded_path] = {
+                "path": embedded_path,
+                "title": "",
+            }
 
     def _generate_content():
         """Inner generator for yielding content data"""
@@ -226,7 +229,6 @@ def transform_canvas_content_files(
         ):
             for member in course_archive.infolist():
                 member_path = Path(member.filename).resolve()
-
                 if member_path in published_items:
                     course_archive.extract(member, path=olx_path)
                     log.debug("processing active file %s", member.filename)
