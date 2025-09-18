@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useRef, useEffect, useCallback } from "react"
+import React, { useRef, useEffect, useCallback, useState } from "react"
 import { notFound } from "next/navigation"
 import Image from "next/image"
 import { Link, Typography, styled } from "ol-components"
@@ -12,12 +12,13 @@ import OpenLearningLogo from "@/public/images/mit-open-learning-logo.svg"
 import CertificateBadgeDesktop from "@/public/images/certificate-badge-desktop.svg"
 import CertificateBadgeMobile from "@/public/images/certificate-badge-mobile.svg"
 import { formatDate, NoSSR } from "ol-utilities"
-import { RiDownloadLine, RiPrinterLine } from "@remixicon/react"
+import { RiDownloadLine, RiPrinterLine, RiShareLine } from "@remixicon/react"
 import type {
   V2ProgramCertificate,
   V2CourseRunCertificate,
   SignatoryItem,
 } from "@mitodl/mitxonline-api-axios/v2"
+import SharePopover from "./SharePopover"
 
 const Page = styled.div(({ theme }) => ({
   backgroundImage: `url(${backgroundImage.src})`,
@@ -694,6 +695,9 @@ const CertificatePage: React.FC<{
     }
   }, [print])
 
+  const [shareOpen, setShareOpen] = useState(false)
+  const shareButtonRef = useRef<HTMLButtonElement>(null)
+
   if (isCourseLoading || isProgramLoading) {
     return <Page />
   }
@@ -728,6 +732,12 @@ const CertificatePage: React.FC<{
 
   return (
     <Page>
+      <SharePopover
+        open={shareOpen}
+        title={`${title} Certificate - MIT Open Learning`}
+        anchorEl={shareButtonRef.current}
+        onClose={() => setShareOpen(false)}
+      />
       <Title>
         <Typography variant="h3">
           <strong>{title}</strong> {displayType}
@@ -740,6 +750,14 @@ const CertificatePage: React.FC<{
           onClick={download}
         >
           Download PDF
+        </Button>
+        <Button
+          variant="bordered"
+          startIcon={<RiShareLine />}
+          onClick={() => setShareOpen(true)}
+          ref={shareButtonRef}
+        >
+          Share
         </Button>
         <Button
           variant="bordered"
