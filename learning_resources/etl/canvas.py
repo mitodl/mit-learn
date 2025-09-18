@@ -664,7 +664,7 @@ def extract_resources_by_identifierref(manifest_xml: str) -> dict:
         title = (
             item.find("imscp:title", NAMESPACES).text
             if item.find("imscp:title", NAMESPACES) is not None
-            else "No Title"
+            else ""
         )
         resource = root.find(
             f'.//imscp:resource[@identifier="{identifierref}"]', NAMESPACES
