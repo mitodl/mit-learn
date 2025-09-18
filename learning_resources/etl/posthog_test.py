@@ -82,18 +82,11 @@ def test_posthog_transform_lrd_view_events(mocker, mock_posthog_event_bucket, se
     transformed_events = list(transformed_events)
     assert len(transformed_events) == 4
 
-    assert transformed_events[0].resourceType == "course"
-    assert transformed_events[0].platformCode == "see"
-    assert transformed_events[0].resourceId == 3235
-    assert transformed_events[0].readableId == "a05U1000004xD2BIAU"
+    assert transformed_events[0].resource_id == 3235
     assert transformed_events[0].event_date.to_pydatetime() == datetime(
         2025, 8, 28, 15, 20, 10, 403000, tzinfo=UTC
     )
-
-    assert transformed_events[1].resourceType == "course"
-    assert transformed_events[1].platformCode == "see"
-    assert transformed_events[1].resourceId == 3235
-    assert transformed_events[1].readableId == "a05U1000004xD2BIAU"
+    assert transformed_events[1].resource_id == 3235
     assert transformed_events[1].event_date.to_pydatetime() == datetime(
         2025, 8, 28, 15, 20, 13, 620000, tzinfo=UTC
     )

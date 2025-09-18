@@ -26,10 +26,7 @@ class PostHogLearningResourceViewEvent:
     the lrd_view specific properties.
     """
 
-    resourceType: str  # noqa: N815
-    platformCode: str  # noqa: N815
-    resourceId: int  # noqa: N815
-    readableId: str  # noqa: N815
+    resource_id: int
     event_date: datetime
 
 
@@ -91,13 +88,13 @@ def posthog_transform_lrd_view_events(
         properties = json.loads(properties)
         resource = properties.get("resource", {})
 
-        yield PostHogLearningResourceViewEvent(
-            resourceType=resource.get("resource_type"),
-            platformCode=resource.get("platform", {}).get("code"),
-            resourceId=resource.get("id"),
-            readableId=resource.get("readable_id"),
-            event_date=event.get("timestamp"),
-        )
+        # The PostHog data files contain other kinds of events, for example llm calls.
+        # We only want to the resource views
+        if resource:
+            yield PostHogLearningResourceViewEvent(
+                resource_id=resource.get("id"),
+                event_date=event.get("timestamp"),
+            )
 
 
 def load_posthog_lrd_view_event(
@@ -113,24 +110,24 @@ def load_posthog_lrd_view_event(
     """
 
     try:
-        learning_resource = LearningResource.objects.filter(pk=event.resourceId).get()
+        learning_resource = LearningResource.objects.filter(pk=event.resource_id).get()
     except LearningResource.DoesNotExist:
         skip_warning = (
-            f"WARNING: skipping event for resource ID {event.resourceId}"
+            f"WARNING: skipping event for resource ID {event.resource_id}"
             " - resource not found"
         )
         log.warning(skip_warning)
         return None
     except LearningResource.MultipleObjectsReturned:
         skip_warning = (
-            f"WARNING: skipping event for resource ID {event.resourceId}"
+            f"WARNING: skipping event for resource ID {event.resource_id}"
             " - multiple objects returned"
         )
         log.warning(skip_warning)
         return None
     except ValueError:
         skip_warning = (
-            f"WARNING: skipping event for resource ID {event.resourceId} - invalid ID"
+            f"WARNING: skipping event for resource ID {event.resource_id} - invalid ID"
         )
         log.warning(skip_warning)
         return None
