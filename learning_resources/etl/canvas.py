@@ -244,7 +244,7 @@ def transform_canvas_content_files(
                 content_url = url_config.get(url_path) or url_config.get(
                     item_meta.get("title")
                 )
-
+                content_data["content_title"] = item_meta.get("title")
                 if content_url:
                     content_data["url"] = content_url
                 yield content_data

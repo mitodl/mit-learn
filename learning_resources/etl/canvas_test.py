@@ -981,3 +981,80 @@ def test_embedded_files_from_html(tmp_path, mocker):
     )
 
     assert any(file["source_path"] == "web_resources/html_page.html" for file in files)
+
+
+def test_get_url_config_assignments_and_pages(mocker, tmp_path):
+    """
+    Test that _get_url_config correctly maps assignments and pages to URLs using their titles.
+    """
+    hmtl_page_title = "html page"
+
+    url_config = {
+        hmtl_page_title: "https://example.com/htmlpage",
+        "/file2.html": "https://example.com/file2",
+    }
+
+    run = LearningResourceRunFactory.create()
+
+    html_content = f"""
+    <html>
+    <head><meta name="workflow_state" content="active"/><title>{hmtl_page_title}</title></head>
+        <body>
+
+        </body>
+    </html>
+    """
+    module_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <modules xmlns="http://canvas.instructure.com/xsd/cccv1p0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    >
+      <module>
+        <title>Module 1</title>
+        <items>
+          <item identifier="RES3">
+            <workflow_state>active</workflow_state>
+            <title>Item 1</title>
+            <hidden>false</hidden>
+             <locked>false</locked>
+            <identifierref>RES3</identifierref>
+            <content_type>resource</content_type>
+          </item>
+        </items>
+      </module>
+    </modules>
+    """
+    manifest_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
+      <resources>
+        <resource identifier="RES1" type="webcontent"  href="web_resources/file1.pdf">
+          <file href="web_resources/file1.pdf"/>
+        </resource>
+        <resource identifier="RES2" type="webcontent" href="web_resources/file2.html">
+          <file href="web_resources/file2.html"/>
+        </resource>
+        <resource identifier="RES3" type="webcontent" href="web_resources/html_page.html">
+          <file href="web_resources/html_page.html"/>
+        </resource>
+      </resources>
+    </manifest>
+    """
+    zip_path = make_canvas_zip_with_module_meta(tmp_path, module_xml, manifest_xml)
+    with zipfile.ZipFile(zip_path, "a") as zf:
+        zf.writestr("web_resources/file1.pdf", "content of file1")
+        zf.writestr("web_resources/file2.html", "content of file2")
+        zf.writestr("web_resources/html_page.html", html_content)
+    mocker.patch(
+        "learning_resources.etl.utils.extract_text_metadata",
+        return_value={"content": "test"},
+    )
+    mocker.patch("learning_resources.etl.canvas.bulk_resources_unpublished_actions")
+    results = list(
+        transform_canvas_content_files(
+            Path(zip_path),
+            run=run,
+            url_config=url_config,
+            overwrite=False,
+        )
+    )
+    results = list(results)
+    assert results[0]["url"] == "https://example.com/htmlpage"
