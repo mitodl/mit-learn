@@ -5,7 +5,6 @@ import {
   Container,
   Stack,
   Breadcrumbs,
-  styled,
   BannerBackground,
   Typography,
 } from "ol-components"
@@ -14,10 +13,12 @@ import { HOME } from "@/common/urls"
 import backgroundSteps from "@/public/images/backgrounds/background_steps.jpg"
 import { pagesQueries } from "api/mitxonline-hooks/pages"
 import { useQuery } from "@tanstack/react-query"
-import { Button, ButtonLink } from "@mitodl/smoot-design"
+import { ButtonLink, styled } from "@mitodl/smoot-design"
 import Image from "next/image"
 import DOMPurify from "isomorphic-dompurify"
 import type { Faculty } from "@mitodl/mitxonline-api-axios/v2"
+import { coursesQueries } from "api/mitxonline-hooks/courses"
+import { CourseInfo } from "./CourseInfo"
 
 type CoursePageProps = {
   readableId: string
@@ -98,15 +99,23 @@ const BottomContainer = styled(Container)(({ theme }) => ({
 
   [theme.breakpoints.down("md")]: {
     flexDirection: "column",
+    alignItems: "center",
+    gap: "0px",
   },
 }))
 
 const MainCol = styled.div({
   flex: 1,
+  display: "flex",
+  flexDirection: "column",
 })
 
-const SidebarCol = styled.div(() => ({
-  width: "410px",
+const SidebarCol = styled.div(({ theme }) => ({
+  width: "100%",
+  maxWidth: "410px",
+  [theme.breakpoints.down("md")]: {
+    marginTop: "24px",
+  },
 }))
 const SidebarSpacer = styled.div(({ theme }) => ({
   width: "410px",
@@ -136,11 +145,14 @@ const LinksContainer = styled.div(({ theme }) => ({
     boxShadow: "0 8px 20px 0 rgba(120, 147, 172, 0.10)",
     marginTop: "-24px",
     width: "calc(100%)",
+    marginBottom: "40px",
   },
   [theme.breakpoints.down("md")]: {
+    alignSelf: "center",
     gap: "8px",
     rowGap: "16px",
     padding: 0,
+    margin: "24px 0",
   },
 }))
 
@@ -153,25 +165,15 @@ const SidebarImage = styled(Image)(({ theme }) => ({
   borderRadius: "4px",
   width: "410px",
   height: "230px",
+  display: "block",
   [theme.breakpoints.up("md")]: {
     transform: "translateY(-100%)",
   },
-}))
-const SidebarInfo = styled.div(({ theme }) => ({
-  border: `1px solid ${theme.custom.colors.lightGray2}`,
-  backgroundColor: theme.custom.colors.white,
-  borderRadius: "4px",
-  boxShadow: "0 8px 20px 0 rgba(120, 147, 172, 0.10)",
-  padding: "24px 32px",
-  [theme.breakpoints.up("md")]: {
-    position: "sticky",
-    marginTop: "-24px",
-    top: "calc(40px + 32px + 24px)",
+  [theme.breakpoints.down("md")]: {
+    border: `1px solid ${theme.custom.colors.lightGray2}`,
+    borderRadius: "4px 4px 0 0",
   },
 }))
-const WideButton = styled(Button)({
-  width: "100%",
-})
 
 const RawHTML: React.FC<{ html: string }> = ({ html }) => {
   return (
@@ -182,9 +184,7 @@ const RawHTML: React.FC<{ html: string }> = ({ html }) => {
   )
 }
 
-const AboutSection = styled.section({
-  marginTop: "40px",
-})
+const AboutSection = styled.section({})
 const WhatSection = styled.section({})
 const PrerequisitesSection = styled.section({})
 const InstructorsSection = styled.section({})
@@ -281,8 +281,12 @@ const HEADINGS: HeadingData[] = [
 
 const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
   const pagesDetail = useQuery(pagesQueries.pagesDetail(readableId))
-  const coursePage = pagesDetail.data?.items[0]
-  if (!coursePage) return
+  const courses = useQuery(
+    coursesQueries.coursesList({ readable_id: readableId }),
+  )
+  const page = pagesDetail.data?.items[0]
+  const course = courses.data?.results?.[0]
+  if (!page || !course) return
   return (
     <Page>
       <BannerBackground backgroundUrl={backgroundSrcSetCSS(backgroundSteps)}>
@@ -297,10 +301,10 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
               <OfferedByTag>MITx</OfferedByTag>
               <Stack alignItems="flex-start" gap="16px">
                 <Typography typography={{ xs: "h3", sm: "h2" }}>
-                  {coursePage.title}
+                  {page.title}
                 </Typography>
                 <Typography typography={{ xs: "body2", sm: "body1" }}>
-                  {coursePage.course_details.page.description}
+                  {page.course_details.page.description}
                 </Typography>
               </Stack>
             </TitleBox>
@@ -314,15 +318,11 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
             <SidebarImage
               width={410}
               height={230}
-              src={coursePage.course_details.page.feature_image_src}
+              src={page.course_details.page.feature_image_src}
               alt=""
             />
           </SidebarImageWrapper>
-          <SidebarInfo>
-            <WideButton variant="primary" size="large">
-              Enroll for free
-            </WideButton>
-          </SidebarInfo>
+          <CourseInfo course={course} />
         </SidebarCol>
         <MainCol>
           <LinksContainer>
@@ -346,13 +346,13 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
               <Typography variant="h3" component="h2" id={HeadingIds.About}>
                 About this course
               </Typography>
-              <RawHTML html={coursePage.about} />
+              <RawHTML html={page.about} />
             </AboutSection>
             <WhatSection>
               <Typography variant="h4" component="h2" id={HeadingIds.What}>
                 What you'll learn
               </Typography>
-              <RawHTML html={coursePage.what_you_learn} />
+              <RawHTML html={page.what_you_learn} />
             </WhatSection>
             <PrerequisitesSection>
               <Typography
@@ -362,7 +362,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
               >
                 Prerequisites
               </Typography>
-              <RawHTML html={coursePage.prerequisites} />
+              <RawHTML html={page.prerequisites} />
             </PrerequisitesSection>
             <InstructorsSection>
               <Typography
@@ -373,7 +373,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
                 Meet your instructors
               </Typography>
               <InstructorsList>
-                {coursePage.faculty.map((instructor) => {
+                {page.faculty.map((instructor) => {
                   return (
                     <InstructorCard
                       key={instructor.id}
