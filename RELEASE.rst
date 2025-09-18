@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.43.1
+Version 0.43.1 (Released September 18, 2025)
 --------------
 
 - Fix posthog import (#2518)
