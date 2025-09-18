@@ -19,6 +19,9 @@ import DOMPurify from "isomorphic-dompurify"
 import type { Faculty } from "@mitodl/mitxonline-api-axios/v2"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { CourseInfo, UnderlinedLink } from "./CourseInfo"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { FeatureFlags } from "@/common/feature_flags"
+import { notFound } from "next/navigation"
 
 type CoursePageProps = {
   readableId: string
@@ -311,6 +314,11 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
   const page = pagesDetail.data?.items[0]
   const course = courses.data?.results?.[0]
   const [aboutExpanded, setAboutExpanded] = React.useState(false)
+  const enabled = useFeatureFlagEnabled(FeatureFlags.ProductPageCourse)
+  if (enabled === false) {
+    return notFound()
+  }
+  if (!enabled) return
   if (!page || !course) return
   return (
     <Page>
