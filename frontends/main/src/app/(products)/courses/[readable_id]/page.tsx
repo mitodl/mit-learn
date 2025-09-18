@@ -7,6 +7,7 @@ import { pagesApi } from "api/mitxonline"
 import * as Sentry from "@sentry/nextjs"
 import { notFound } from "next/navigation"
 import { pagesQueries } from "api/mitxonline-hooks/pages"
+import { coursesQueries } from "api/mitxonline-hooks/courses"
 
 export const generateMetadata = async (
   props: PageProps<"/courses/[readable_id]">,
@@ -24,6 +25,7 @@ export const generateMetadata = async (
     return standardizeMetadata({
       title: course.title,
       image: course.course_details.page.feature_image_src,
+      robots: "noindex, nofollow",
     })
   } catch (error) {
     Sentry.captureException(error)
@@ -40,6 +42,7 @@ const Page: React.FC<PageProps<"/courses/[readable_id]">> = async (props) => {
   const readableId = decodeURIComponent(params.readable_id)
   const { dehydratedState } = await prefetch([
     pagesQueries.pagesDetail(readableId),
+    coursesQueries.coursesList({ readable_id: readableId }),
   ])
   return (
     <HydrationBoundary state={dehydratedState}>
