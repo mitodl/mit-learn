@@ -571,17 +571,16 @@ def parse_web_content(course_archive_path: str) -> dict:
 
     publish_status = {"active": [], "unpublished": []}
     course_settings = parse_canvas_settings(course_archive_path)
-
     public_syllabus_setting = course_settings.get("public_syllabus", "true").lower()
     public_syllabus_to_auth_setting = course_settings.get(
         "public_syllabus_to_auth", "true"
     ).lower()
-    ingest_syllabus = False
-    if not (
+    ingest_syllabus = True
+    if (
         public_syllabus_setting == "false"
         and public_syllabus_to_auth_setting == "false"
     ):
-        ingest_syllabus = True
+        ingest_syllabus = False
     with zipfile.ZipFile(course_archive_path, "r") as course_archive:
         manifest_path = "imsmanifest.xml"
         if manifest_path not in course_archive.namelist():
@@ -616,10 +615,11 @@ def parse_web_content(course_archive_path: str) -> dict:
                 intended_role = lom_elem.get("intendedEndUserRole", {}).get("value")
                 authors_only = intended_role and intended_role.lower() != "student"
                 intended_use = resource_map_item.get("intendeduse", "")
-
-                if (workflow_state in ["active", "published"] and not authors_only) or (
-                    ingest_syllabus and intended_use == "syllabus"
-                ):
+                if (
+                    workflow_state in ["active", "published"]
+                    and not authors_only
+                    and intended_use != "syllabus"
+                ) or (ingest_syllabus and intended_use == "syllabus"):
                     publish_status["active"].append(
                         {
                             "title": title,
