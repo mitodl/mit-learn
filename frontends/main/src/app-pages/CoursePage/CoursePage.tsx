@@ -7,13 +7,14 @@ import {
   Breadcrumbs,
   BannerBackground,
   Typography,
+  MuiDialog,
 } from "ol-components"
 import { backgroundSrcSetCSS } from "ol-utilities"
 import { HOME } from "@/common/urls"
 import backgroundSteps from "@/public/images/backgrounds/background_steps.jpg"
 import { pagesQueries } from "api/mitxonline-hooks/pages"
 import { useQuery } from "@tanstack/react-query"
-import { ButtonLink, styled } from "@mitodl/smoot-design"
+import { ActionButton, ButtonLink, styled } from "@mitodl/smoot-design"
 import Image from "next/image"
 import DOMPurify from "isomorphic-dompurify"
 import type { Faculty } from "@mitodl/mitxonline-api-axios/v2"
@@ -22,6 +23,7 @@ import { CourseInfo, UnderlinedLink } from "./CourseInfo"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { notFound } from "next/navigation"
+import { RiCloseLine } from "@remixicon/react"
 
 type CoursePageProps = {
   readableId: string
@@ -53,7 +55,6 @@ const OfferedByTag = styled.div(({ theme }) => ({
 }))
 
 const Page = styled.div(({ theme }) => ({
-  ...theme.typography.body1,
   backgroundColor: theme.custom.colors.white,
   paddingBottom: "80px",
   [theme.breakpoints.down("md")]: {
@@ -63,6 +64,7 @@ const Page = styled.div(({ theme }) => ({
     "*:first-child": {
       marginTop: 0,
     },
+    ...theme.typography.body1,
     lineHeight: "1.5",
     p: {
       marginTop: "16px",
@@ -88,6 +90,10 @@ const Page = styled.div(({ theme }) => ({
           borderRadius: "4px",
         },
       },
+    },
+
+    [theme.breakpoints.down("md")]: {
+      ...theme.typography.body2,
     },
   },
 }))
@@ -169,7 +175,8 @@ const SidebarImageWrapper = styled.div(({ theme }) => ({
 }))
 const SidebarImage = styled(Image)(({ theme }) => ({
   borderRadius: "4px",
-  width: "410px",
+  width: "100%",
+  maxWidth: "410px",
   height: "230px",
   display: "block",
   [theme.breakpoints.up("md")]: {
@@ -214,8 +221,8 @@ const PrerequisitesSection = styled.section({
   flexDirection: "column",
   gap: "16px",
 })
-const InstructorsSection = styled.section({})
 
+const InstructorsSection = styled.section({})
 const InstructorsList = styled.ul({
   display: "flex",
   flexWrap: "wrap",
@@ -236,6 +243,19 @@ const InstructorCardRoot = styled.li(({ theme }) => ({
   [theme.breakpoints.down("sm")]: {
     width: "171px",
   },
+  ":hover": {
+    boxShadow: "0 8px 20px 0 rgba(120, 147, 172, 0.10)",
+    cursor: "pointer",
+  },
+}))
+const InstructorButton = styled.button(({ theme }) => ({
+  backgroundColor: "unset",
+  border: "none",
+  textAlign: "left",
+  padding: 0,
+  ...theme.typography.h5,
+  marginTop: "8px",
+  cursor: "inherit",
 }))
 const InstructorImage = styled(Image)(({ theme }) => ({
   height: "140px",
@@ -250,19 +270,97 @@ const InstructorImage = styled(Image)(({ theme }) => ({
 const InstructorCard: React.FC<{
   instructor: Faculty
 }> = ({ instructor }) => {
+  const [open, setOpen] = React.useState(false)
   return (
-    <InstructorCardRoot>
-      <InstructorImage
-        width={220}
-        height={140}
+    <>
+      <InstructorCardRoot onClick={() => setOpen(true)}>
+        <InstructorImage
+          width={220}
+          height={140}
+          src={instructor.feature_image_src}
+          alt=""
+        />
+        <InstructorButton>{instructor.instructor_name}</InstructorButton>
+        <Typography variant="body3">{instructor.instructor_title}</Typography>
+      </InstructorCardRoot>
+      <InstructorDialog
+        instructor={instructor}
+        open={open}
+        onClose={() => setOpen(false)}
+      />
+    </>
+  )
+}
+
+const CloseButton = styled(ActionButton)(({ theme }) => ({
+  position: "absolute",
+  top: "24px",
+  right: "28px",
+  backgroundColor: theme.custom.colors.lightGray2,
+  "&&:hover": {
+    backgroundColor: theme.custom.colors.red,
+    color: theme.custom.colors.white,
+  },
+  [theme.breakpoints.down("md")]: {
+    right: "16px",
+  },
+}))
+const DialogImage = styled(Image)({
+  width: "100%",
+  aspectRatio: "1.92",
+  objectFit: "cover",
+})
+const DialogContent = styled.div(({ theme }) => ({
+  padding: "32px",
+  ".raw-include": {
+    ...theme.typography.body2,
+    "*:first-child": {
+      marginTop: 0,
+    },
+    p: {
+      marginTop: "8px",
+      marginBottom: "0",
+    },
+  },
+}))
+const InstructorDialog: React.FC<{
+  instructor: Faculty
+  open: boolean
+  onClose: () => void
+}> = ({ instructor, open, onClose }) => {
+  return (
+    <MuiDialog
+      open={open}
+      maxWidth="md"
+      onClose={onClose}
+      slotProps={{
+        paper: { sx: { borderRadius: "8px", maxWidth: "770px" } },
+      }}
+    >
+      <CloseButton
+        onClick={onClose}
+        variant="text"
+        size="medium"
+        aria-label="Close"
+      >
+        <RiCloseLine />
+      </CloseButton>
+      <DialogImage
+        width={770}
+        height={400}
         src={instructor.feature_image_src}
         alt=""
       />
-      <Typography variant="h5" sx={{ marginTop: "8px" }}>
-        {instructor.instructor_name}
-      </Typography>
-      <Typography variant="body3">{instructor.instructor_title}</Typography>
-    </InstructorCardRoot>
+      <DialogContent>
+        <Typography component="h2" variant="h4" sx={{ marginBottom: "8px" }}>
+          {instructor.instructor_name}
+        </Typography>
+        <Typography variant="subtitle1" sx={{ marginBottom: "16px" }}>
+          {instructor.instructor_title}
+        </Typography>
+        <RawHTML html={instructor.instructor_bio_long} />
+      </DialogContent>
+    </MuiDialog>
   )
 }
 
