@@ -133,10 +133,6 @@ const useProgramCollectionCourses = (programIds: number[], orgId: number) => {
   const programQueries = useQueries({
     queries: programIds.map((programId) => ({
       ...programsQueries.programsList({ id: programId, org_id: orgId }),
-      queryKey: [
-        ...programsQueries.programsList({ id: programId, org_id: orgId })
-          .queryKey,
-      ],
     })),
   })
 
