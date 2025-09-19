@@ -28,6 +28,7 @@ const setupRoutes = () => {
       urls.PROGRAMLETTER_VIEW,
       urls.CHANNEL_VIEW,
       urls.DASHBOARD_VIEW,
+      urls.COURSE_PAGE_VIEW,
     ]),
   )
 }

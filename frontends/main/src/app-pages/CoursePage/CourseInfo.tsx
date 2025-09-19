@@ -321,9 +321,9 @@ const CourseInfo: React.FC<{
   const nextRunId = course.next_run_id
   const nextRun = course.courseruns.find((run) => run.id === nextRunId)
   return (
-    <SidebarSummaryRoot role="region" aria-labelledby="course-info">
+    <SidebarSummaryRoot role="region" aria-labelledby="course-summary">
       <VisuallyHidden>
-        <h2 id="course-info">Course Information</h2>
+        <h2 id="course-summary">Course summary</h2>
       </VisuallyHidden>
       <Stack gap={{ xs: "24px", md: "32px" }}>
         {nextRun ? (

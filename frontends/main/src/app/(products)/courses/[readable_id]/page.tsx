@@ -41,7 +41,7 @@ const Page: React.FC<PageProps<"/courses/[readable_id]">> = async (props) => {
   const params = await props.params
   const readableId = decodeURIComponent(params.readable_id)
   const { dehydratedState } = await prefetch([
-    pagesQueries.pagesDetail(readableId),
+    pagesQueries.courseDetail(readableId),
     coursesQueries.coursesList({ readable_id: readableId }),
   ])
   return (
