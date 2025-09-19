@@ -110,10 +110,14 @@ def _get_url_config(bucket, export_tempdir: str, url_config_file: str) -> dict:
     bucket.download_file(url_config_file, url_config_path)
     url_config = {}
     with Path.open(url_config_path, "rb") as f:
-        for url_item in json.loads(f.read().decode("utf-8")).get("course_files", []):
+        url_json = json.loads(f.read().decode("utf-8"))
+        for url_item in url_json.get("course_files", []):
             url_key = url_item["file_path"]
             url_key = unquote_plus(url_key.lstrip(url_key.split("/")[0]))
             url_config[url_key] = url_item["url"]
+        for url_item in url_json.get("assignments", []) + url_json.get("pages", []):
+            url_key = url_item.get("name", url_item.get("title"))
+            url_config[url_key] = url_item.get("html_url")
     return url_config
 
 
@@ -199,22 +203,23 @@ def transform_canvas_content_files(
     """
     basedir = course_zipfile.name.split(".")[0]
     zipfile_path = course_zipfile.absolute()
-    # grab published module and file items
-    published_items = [
-        Path(item["path"]).resolve()
-        for item in parse_module_meta(zipfile_path)["active"]
-    ] + [
-        Path(item["path"]).resolve()
-        for item in parse_files_meta(zipfile_path)["active"]
-    ]
-    for item in parse_web_content(zipfile_path)["active"]:
-        published_items.append(Path(item["path"]).resolve())
-        published_items.extend(
-            [
-                Path(embedded_file).resolve()
-                for embedded_file in item.get("embedded_files", [])
-            ]
-        )
+    all_published_items = (
+        parse_module_meta(zipfile_path)["active"]
+        + parse_files_meta(zipfile_path)["active"]
+        + parse_web_content(zipfile_path)["active"]
+    )
+    published_items = {}
+    for item in all_published_items:
+        path = Path(item["path"]).resolve()
+        published_items[path] = item
+        for embedded_file in item.get("embedded_files", []):
+            embedded_path = Path(embedded_file).resolve()
+            if embedded_path in all_published_items:
+                continue
+            published_items[embedded_path] = {
+                "path": embedded_path,
+                "title": "",
+            }
 
     def _generate_content():
         """Inner generator for yielding content data"""
@@ -223,7 +228,8 @@ def transform_canvas_content_files(
             zipfile.ZipFile(zipfile_path, "r") as course_archive,
         ):
             for member in course_archive.infolist():
-                if Path(member.filename).resolve() in published_items:
+                member_path = Path(member.filename).resolve()
+                if member_path in published_items:
                     course_archive.extract(member, path=olx_path)
                     log.debug("processing active file %s", member.filename)
                 else:
@@ -233,7 +239,14 @@ def transform_canvas_content_files(
                 url_path = content_data["source_path"].lstrip(
                     content_data["source_path"].split("/")[0]
                 )
-                content_url = url_config.get(url_path, "")
+                item_meta = published_items.get(
+                    Path(content_data["source_path"]).resolve(), {}
+                )
+
+                content_url = url_config.get(url_path) or url_config.get(
+                    item_meta.get("title")
+                )
+                content_data["content_title"] = item_meta.get("title")
                 if content_url:
                     content_data["url"] = content_url
                 yield content_data
@@ -561,6 +574,19 @@ def _title_from_html(html: str) -> str:
     return title.get_text().strip() if title else ""
 
 
+def _title_from_assignment_settings(xml_string: str) -> str:
+    """
+    Extract the title from assignment_settings.xml
+    """
+    try:
+        root = ElementTree.fromstring(xml_string)
+    except Exception:
+        log.exception("Error parsing XML: %s", sys.stderr)
+        return ""
+    title_elem = root.find("cccv1p0:title", NAMESPACES)
+    return title_elem.text.strip() if title_elem is not None and title_elem.text else ""
+
+
 def parse_web_content(course_archive_path: str) -> dict:
     """
     Parse html pages and assignments and return publish/active status of resources
@@ -588,9 +614,12 @@ def parse_web_content(course_archive_path: str) -> dict:
                 if assignment_settings:
                     xml_content = course_archive.read(assignment_settings)
                     workflow_state = _workflow_state_from_xml(xml_content)
+                    title = _title_from_assignment_settings(xml_content)
+                    canvas_type = "assignment"
                 else:
                     workflow_state = _workflow_state_from_html(html_content)
-                title = _title_from_html(html_content)
+                    title = _title_from_html(html_content)
+                    canvas_type = "page"
 
                 lom_elem = (
                     resource_map_item.get("metadata", {})
@@ -606,6 +635,7 @@ def parse_web_content(course_archive_path: str) -> dict:
                         {
                             "title": title,
                             "path": file_path,
+                            "canvas_type": canvas_type,
                             "embedded_files": embedded_files,
                         }
                     )
@@ -614,6 +644,7 @@ def parse_web_content(course_archive_path: str) -> dict:
                         {
                             "title": title,
                             "path": file_path,
+                            "canvas_type": canvas_type,
                             "embedded_files": embedded_files,
                         }
                     )
@@ -635,7 +666,7 @@ def extract_resources_by_identifierref(manifest_xml: str) -> dict:
         title = (
             item.find("imscp:title", NAMESPACES).text
             if item.find("imscp:title", NAMESPACES) is not None
-            else "No Title"
+            else ""
         )
         resource = root.find(
             f'.//imscp:resource[@identifier="{identifierref}"]', NAMESPACES
