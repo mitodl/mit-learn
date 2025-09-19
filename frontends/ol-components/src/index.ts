@@ -42,6 +42,8 @@ export type { ClickAwayListenerProps } from "@mui/material/ClickAwayListener"
 export { default as Container } from "@mui/material/Container"
 export type { ContainerProps } from "@mui/material/Container"
 
+export { default as MuiDialog } from "@mui/material/Dialog"
+
 export { default as Divider } from "@mui/material/Divider"
 export type { DividerProps } from "@mui/material/Divider"
 

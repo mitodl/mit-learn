@@ -89,6 +89,8 @@ export const login = (next: {
   return `${LOGIN}?next=${nextHref}`
 }
 
+export const COURSE_PAGE_VIEW = "/courses/[readableId]/"
+
 export const DASHBOARD_VIEW = "/dashboard/[tab]"
 const dashboardView = (tab: string) => generatePath(DASHBOARD_VIEW, { tab })
 
