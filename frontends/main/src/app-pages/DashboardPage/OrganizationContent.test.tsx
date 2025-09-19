@@ -66,6 +66,31 @@ describe("OrganizationContent", () => {
     })
   })
 
+  it("displays courses in the correct order based on program.courseIds, regardless of API response order", async () => {
+    const { orgX, programA, coursesA } = setupProgramsAndCourses()
+
+    // Mock API to return courses in reverse order from program.courseIds
+    const reversedCoursesA = [...coursesA].reverse()
+    setMockResponse.get(
+      expect.stringContaining(
+        `/api/v2/courses/?id=${programA.courses.join("%2C")}`,
+      ),
+      { results: reversedCoursesA },
+    )
+
+    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+
+    const programElement = await screen.findByTestId("org-program-root")
+    const cards = await within(programElement).findAllByTestId(
+      "enrollment-card-desktop",
+    )
+
+    // Verify courses appear in program.courseIds order, not API response order
+    coursesA.forEach((course, i) => {
+      expect(cards[i]).toHaveTextContent(course.title)
+    })
+  })
+
   test("Shows correct enrollment status", async () => {
     const { orgX, programA, coursesA } = setupProgramsAndCourses()
     const enrollments = [
@@ -132,19 +157,16 @@ describe("OrganizationContent", () => {
       { results: [programB] },
     )
 
-    // Mock the courses API calls for programs in the collection
-    // Use dynamic matching since course IDs are randomly generated
+    // Mock the bulk course API call with first course from each program
+    const firstCourseA = coursesA.find((c) => c.id === programA.courses[0])
+    const firstCourseB = coursesB.find((c) => c.id === programB.courses[0])
+    const firstCourseIds = [programB.courses[0], programA.courses[0]] // B first, then A to match collection order
+
     setMockResponse.get(
       expect.stringContaining(
-        `/api/v2/courses/?id=${programA.courses.join("%2C")}`,
+        `/api/v2/courses/?id=${firstCourseIds.join("%2C")}`,
       ),
-      { results: coursesA },
-    )
-    setMockResponse.get(
-      expect.stringContaining(
-        `/api/v2/courses/?id=${programB.courses.join("%2C")}`,
-      ),
-      { results: coursesB },
+      { results: [firstCourseB, firstCourseA] }, // Response order should match request order
     )
 
     renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
@@ -168,8 +190,47 @@ describe("OrganizationContent", () => {
 
     // Verify the order matches the programCollection.programs array [programB.id, programA.id]
     const programCards = collection.getAllByTestId("enrollment-card-desktop")
-    expect(programCards[0]).toHaveTextContent(coursesB[0].title)
-    expect(programCards[1]).toHaveTextContent(coursesA[0].title)
+    expect(programCards[0]).toHaveTextContent(firstCourseB!.title)
+    expect(programCards[1]).toHaveTextContent(firstCourseA!.title)
+  })
+
+  test("Program collection displays the first course from each program", async () => {
+    const { orgX, programA, programCollection, coursesA } =
+      setupProgramsAndCourses()
+
+    programCollection.programs = [programA.id]
+    setMockResponse.get(urls.programCollections.programCollectionsList(), {
+      results: [programCollection],
+    })
+
+    setMockResponse.get(
+      expect.stringContaining(`/api/v2/programs/?id=${programA.id}`),
+      { results: [programA] },
+    )
+
+    // Mock bulk API call for the first course
+    const firstCourseId = programA.courses[0]
+    const firstCourse = coursesA.find((c) => c.id === firstCourseId)
+    setMockResponse.get(
+      expect.stringContaining(`/api/v2/courses/?id=${firstCourseId}`),
+      { results: [firstCourse] },
+    )
+
+    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+
+    const collection = await screen.findByTestId("org-program-collection-root")
+
+    // Wait for program cards to be rendered
+    const programCards = await waitFor(() => {
+      const programCards = within(collection).getAllByTestId(
+        "enrollment-card-desktop",
+      )
+      expect(programCards.length).toBeGreaterThan(0)
+      return programCards
+    })
+
+    // Should display the first course by program.courseIds order
+    expect(programCards[0]).toHaveTextContent(firstCourse!.title)
   })
 
   test("Does not render a program separately if it is part of a collection", async () => {
@@ -265,34 +326,32 @@ describe("OrganizationContent", () => {
     const { orgX, programA, programB, programCollection, coursesB } =
       setupProgramsAndCourses()
 
+    // Modify programA to have no courses to test "at least one program has courses"
+    const programANoCourses = { ...programA, courses: [] }
+
     // Set up the collection to include both programs
-    programCollection.programs = [programA.id, programB.id]
+    programCollection.programs = [programANoCourses.id, programB.id]
     setMockResponse.get(urls.programCollections.programCollectionsList(), {
       results: [programCollection],
     })
 
     // Mock individual program API calls for the collection
     setMockResponse.get(
-      expect.stringContaining(`/api/v2/programs/?id=${programA.id}`),
-      { results: [programA] },
+      expect.stringContaining(`/api/v2/programs/?id=${programANoCourses.id}`),
+      { results: [programANoCourses] },
     )
     setMockResponse.get(
       expect.stringContaining(`/api/v2/programs/?id=${programB.id}`),
       { results: [programB] },
     )
 
-    // Mock programA to have no courses, programB to have courses
+    // Mock bulk course API call - only programB has courses, so only its first course should be included
+    const firstCourseBId = programB.courses[0]
+    const firstCourseB = coursesB.find((c) => c.id === firstCourseBId)
+
     setMockResponse.get(
-      expect.stringContaining(
-        `/api/v2/courses/?id=${programA.courses.join("%2C")}`,
-      ),
-      { results: [] },
-    )
-    setMockResponse.get(
-      expect.stringContaining(
-        `/api/v2/courses/?id=${programB.courses.join("%2C")}`,
-      ),
-      { results: coursesB },
+      expect.stringContaining(`/api/v2/courses/?id=${firstCourseBId}`),
+      { results: [firstCourseB] },
     )
 
     renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
@@ -307,11 +366,11 @@ describe("OrganizationContent", () => {
     // Should see the collection header
     expect(collection.getByText(programCollection.title)).toBeInTheDocument()
 
-    // Should see programB's courses
+    // Should see programB's course
     await waitFor(() => {
-      expect(collection.getAllByText(coursesB[0].title).length).toBeGreaterThan(
-        0,
-      )
+      expect(
+        collection.getAllByText(firstCourseB!.title).length,
+      ).toBeGreaterThan(0)
     })
   })
 
