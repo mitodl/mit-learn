@@ -35,7 +35,11 @@ from main.utils import now_in_utc
 pytestmark = pytest.mark.django_db
 
 DEFAULT_SETTINGS_XML = b"""<?xml version="1.0" encoding="UTF-8"?>
-    <course>
+    <course identifier="gfef28ec71f16246c57edfeef25b26a54"
+    xmlns="http://canvas.instructure.com/xsd/cccv1p0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://canvas.instructure.com/xsd/cccv1p0
+    https://canvas.instructure.com/xsd/cccv1p0.xsd">
         <title>Test Course Title</title>
         <course_code>TEST-101</course_code>
         <other_field>Other Value</other_field>
@@ -1193,15 +1197,29 @@ def test_syllabus_not_ingested_when_hidden(tmp_path, mocker):
     manifest_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
     <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
       <resources>
-        <resource identifier="RES1" type="webcontent" intendeduse="syllabus" href="web_resources/syllabus.html">
+        <resource identifier="syllabus" type="webcontent" intendeduse="syllabus" href="web_resources/syllabus.html">
           <file href="web_resources/file1.pdf"/>
         </resource>
       </resources>
     </manifest>
     """
+    settings_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <course identifier="gfef28ec71f16246c57edfeef25b26a54"
+    xmlns="http://canvas.instructure.com/xsd/cccv1p0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://canvas.instructure.com/xsd/cccv1p0
+    https://canvas.instructure.com/xsd/cccv1p0.xsd">
+        <title>Test Course Title</title>
+        <course_code>TEST-101</course_code>
+        <other_field>Other Value</other_field>
+        <public_syllabus>false</public_syllabus>
+        <public_syllabus_to_auth>false</public_syllabus_to_auth>
+    </course>
+    """
     zip_path = make_canvas_zip(
         tmp_path,
         manifest_xml=manifest_xml,
+        settings_xml=settings_xml,
         files=[
             ("web_resources/syllabus.html", syllabus_html),
         ],
