@@ -94,7 +94,7 @@ const SharePopover = ({
 }: {
   open: boolean
   title: string
-  anchorEl: HTMLButtonElement | null
+  anchorEl: HTMLDivElement | null
   onClose: () => void
   pageUrl: string
 }) => {

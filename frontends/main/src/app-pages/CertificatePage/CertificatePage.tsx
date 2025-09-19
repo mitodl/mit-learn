@@ -701,7 +701,7 @@ const CertificatePage: React.FC<{
   }, [print])
 
   const [shareOpen, setShareOpen] = useState(false)
-  const shareButtonRef = useRef<HTMLButtonElement>(null)
+  const shareButtonRef = useRef<HTMLDivElement>(null)
 
   if (isCourseLoading || isProgramLoading) {
     return <Page />
