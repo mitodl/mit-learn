@@ -6,9 +6,23 @@ import type {
   CoursePageItem,
   PriceItem,
   Faculty,
+  CoursePageList,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { UniqueEnforcer } from "enforce-unique"
 import { v2Course } from "./courses"
+
+const makeHTMLParagraph = (num: number) => {
+  return Array.from(
+    { length: num },
+    () => `<p>${faker.lorem.paragraph()}</p>`,
+  ).join("\n\n")
+}
+const makeHTMLList = (num: number) => {
+  return `<ul>\n${Array.from(
+    { length: num },
+    () => `  <li>${faker.lorem.sentence()}</li>`,
+  ).join("\n")}\n</ul>`
+}
 
 const featureImage: Factory<FeatureImage> = (override) => {
   return {
@@ -33,7 +47,7 @@ const faculty: Factory<Faculty> = (override) => {
   return {
     feature_image_src: faker.image.urlLoremFlickr({ width: 640, height: 480 }),
     id: faker.number.int({ min: 1, max: 1000 }),
-    instructor_bio_long: faker.lorem.paragraphs(2),
+    instructor_bio_long: makeHTMLParagraph(2),
     instructor_bio_short: faker.lorem.sentences(2),
     instructor_name: faker.person.fullName(),
     instructor_title: faker.person.jobTitle(),
@@ -45,7 +59,7 @@ const uniquePageId = new UniqueEnforcer()
 
 const coursePageItem: PartialFactory<CoursePageItem> = (override) => {
   const defaults: CoursePageItem = {
-    about: faker.lorem.paragraphs(3),
+    about: makeHTMLParagraph(3),
     certificate_page: null,
     course_details: v2Course(),
     description: faker.lorem.sentences(2),
@@ -78,7 +92,7 @@ const coursePageItem: PartialFactory<CoursePageItem> = (override) => {
     min_price: faker.number.int({ min: 0, max: 49 }),
     min_weekly_hours: `${faker.number.int({ min: 1, max: 20 })}`,
     min_weeks: faker.number.int({ min: 1, max: 12 }),
-    prerequisites: faker.lorem.sentences(2),
+    prerequisites: makeHTMLList(2),
     price: [priceItem()],
     title: faker.lorem.words(3),
     topic_list: [
@@ -88,9 +102,17 @@ const coursePageItem: PartialFactory<CoursePageItem> = (override) => {
       },
     ],
     video_url: faker.internet.url(),
-    what_you_learn: faker.lorem.sentences(4),
+    what_you_learn: makeHTMLList(5),
   }
-  return mergeOverrides(defaults, override)
+  return mergeOverrides<CoursePageItem>(defaults, override)
 }
 
-export { coursePageItem }
+const coursePageList: PartialFactory<CoursePageList> = (override) => {
+  const defaults: CoursePageList = {
+    meta: { total_count: 1 },
+    items: [coursePageItem()],
+  }
+  return mergeOverrides<CoursePageList>(defaults, override)
+}
+
+export { coursePageItem, coursePageList }
