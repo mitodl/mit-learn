@@ -8,8 +8,8 @@ import {
   ProgramCertificatesApi,
   UsersApi,
   ProgramEnrollmentsApi,
+  PagesApi,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { PagesApi } from "./v2/api"
 import axios from "axios"
 
 const axiosInstance = axios.create({

@@ -1,6 +1,8 @@
 import { queryOptions } from "@tanstack/react-query"
-import { pagesApi } from "../../clients"
-
+import {
+  // pagesApi,
+  axiosInstance,
+} from "../../clients"
 const pagesKeys = {
   root: ["mitxonline", "pages"],
   coursePageDetail: (readableId: string) => [
@@ -11,13 +13,22 @@ const pagesKeys = {
 }
 
 const pagesQueries = {
-  pagesDetail: (readableId: string) =>
+  courseDetail: (readableId: string) =>
     queryOptions({
       queryKey: pagesKeys.coursePageDetail(readableId),
       queryFn: async () => {
-        return pagesApi
-          .pagesfieldstypecmsCoursePageRetrieve({ readable_id: readableId })
-          .then((res) => res.data)
+        const BASE_PATH =
+          process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL?.replace(/\/+$/, "") ??
+          ""
+
+        const url = `${BASE_PATH}/api/v2/pages/?fields=*&readable_id=${encodeURIComponent(readableId)}&type=cms.CoursePage`
+
+        return axiosInstance.get(url).then((res) => res.data)
+        // TODO: When MITxOnline is published, API client will support readable_id param.
+        // The API supports it now, just not the client.
+        // return pagesApi
+        //   .pagesfieldstypecmsCoursePageRetrieve({ readable_id: readableId })
+        //   .then((res) => res.data)
       },
     }),
 }

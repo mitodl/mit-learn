@@ -405,11 +405,12 @@ const HEADINGS: HeadingData[] = [
 ]
 
 const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
-  const pagesDetail = useQuery(pagesQueries.pagesDetail(readableId))
+  console.log("CoursePage render", readableId)
+  const courseDetail = useQuery(pagesQueries.courseDetail(readableId))
   const courses = useQuery(
     coursesQueries.coursesList({ readable_id: readableId }),
   )
-  const page = pagesDetail.data?.items[0]
+  const page = courseDetail.data?.items[0]
   const course = courses.data?.results?.[0]
   const [aboutExpanded, setAboutExpanded] = React.useState(false)
   const enabled = useFeatureFlagEnabled(FeatureFlags.ProductPageCourse)
@@ -431,7 +432,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
             <TitleBox alignItems="flex-start" gap="4px">
               <OfferedByTag>MITx</OfferedByTag>
               <Stack alignItems="flex-start" gap="16px">
-                <Typography typography={{ xs: "h3", sm: "h2" }}>
+                <Typography component="h1" typography={{ xs: "h3", sm: "h2" }}>
                   {page.title}
                 </Typography>
                 <Typography typography={{ xs: "body2", sm: "body1" }}>
