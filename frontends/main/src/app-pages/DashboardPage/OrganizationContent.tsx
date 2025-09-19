@@ -131,9 +131,9 @@ const ProgramDescription = styled(Typography)({
 // Custom hook to handle multiple program queries and check if any have courses
 const useProgramCollectionCourses = (programIds: number[], orgId: number) => {
   const programQueries = useQueries({
-    queries: programIds.map((programId) => ({
-      ...programsQueries.programsList({ id: programId, org_id: orgId }),
-    })),
+    queries: programIds.map((programId) =>
+      programsQueries.programsList({ id: programId, org_id: orgId }),
+    ),
   })
 
   const isLoading = programQueries.some((query) => query.isLoading)
