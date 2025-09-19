@@ -34,23 +34,64 @@ from main.utils import now_in_utc
 
 pytestmark = pytest.mark.django_db
 
+DEFAULT_SETTINGS_XML = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <course>
+        <title>Test Course Title</title>
+        <course_code>TEST-101</course_code>
+        <other_field>Other Value</other_field>
+    </course>
+"""
+
+DEFAULT_MODULE_XML = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <modules xmlns="http://canvas.instructure.com/xsd/cccv1p0">
+        <module>
+            <title>Module 1</title>
+            <items>
+                <item>
+                    <workflow_state>active</workflow_state>
+                    <title>Item 1</title>
+                    <identifierref>RES1</identifierref>
+                    <content_type>resource</content_type>
+                </item>
+                <item>
+                    <workflow_state>unpublished</workflow_state>
+                    <title>Item 2</title>
+                    <identifierref>RES2</identifierref>
+                    <content_type>resource</content_type>
+                </item>
+            </items>
+        </module>
+    </modules>
+"""
+
+DEFAULT_MANIFEST_XML = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
+        <resources>
+            <resource identifier="RES1" type="webcontent">
+                <file href="file1.html"/>
+            </resource>
+            <resource identifier="RES2" type="webcontent">
+                <file href="file2.html"/>
+            </resource>
+        </resources>
+        <organizations>
+            <organization>
+                <item identifierref="RES1">
+                    <title>Item 1</title>
+                </item>
+                <item identifierref="RES2">
+                    <title>Item 2</title>
+                </item>
+            </organization>
+        </organizations>
+    </manifest>
+"""
+
 
 @pytest.fixture(autouse=True)
 def canvas_platform():
     """Fixture for the canvas platform"""
     return LearningResourcePlatformFactory.create(code=PlatformType.canvas.name)
-
-
-def canvas_zip_with_files(tmp_path: str, files: dict[tuple[str, bytes]]) -> str:
-    """
-    Create a Canvas zip with problem files in the tutorbot folder.
-    `files` is a list of tuples: (filename, content_bytes)
-    """
-    zip_path = tmp_path / "canvas_course_with_problems.zip"
-    with zipfile.ZipFile(zip_path, "w") as zf:
-        for filename, content in files:
-            zf.writestr(filename, content)
-    return zip_path
 
 
 @pytest.fixture
@@ -178,14 +219,25 @@ def test_run_for_canvas_archive_creates_run_if_none_exists(tmp_path, mocker):
     assert run.checksum == "checksum104"
 
 
-def make_canvas_zip_with_module_meta(tmp_path, module_xml, manifest_xml):
+def make_canvas_zip(
+    tmp_path,
+    settings_xml=DEFAULT_SETTINGS_XML,
+    module_xml=DEFAULT_MODULE_XML,
+    manifest_xml=DEFAULT_MANIFEST_XML,
+    files=None,
+):
     """
-    Create a zip file with module_meta.xml and imsmanifest.xml
+    Create a zip file with module_meta.xml, imsmanifest.xml, and additional files.
+    `files` is a list of tuples: (filename, content_bytes)
     """
+    files = files or []
     zip_path = tmp_path / "canvas_course.zip"
     with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr("course_settings/course_settings.xml", settings_xml)
         zf.writestr("course_settings/module_meta.xml", module_xml)
         zf.writestr("imsmanifest.xml", manifest_xml)
+        for filename, content in files:
+            zf.writestr(filename, content)
     return zip_path
 
 
@@ -236,7 +288,9 @@ def test_parse_module_meta_returns_active_and_unpublished(tmp_path):
       </organizations>
     </manifest>
     """
-    zip_path = make_canvas_zip_with_module_meta(tmp_path, module_xml, manifest_xml)
+    zip_path = make_canvas_zip(
+        tmp_path, module_xml=module_xml, manifest_xml=manifest_xml
+    )
     result = parse_module_meta(zip_path)
     assert "active" in result
     assert "unpublished" in result
@@ -281,7 +335,9 @@ def test_parse_module_meta_handles_missing_identifierref(tmp_path):
       </organizations>
     </manifest>
     """
-    zip_path = make_canvas_zip_with_module_meta(tmp_path, module_xml, manifest_xml)
+    zip_path = make_canvas_zip(
+        tmp_path, module_xml=module_xml, manifest_xml=manifest_xml
+    )
     result = parse_module_meta(zip_path)
     assert "active" in result
     assert len(result["active"]) == 0
@@ -385,8 +441,8 @@ def test_transform_canvas_problem_files_pdf_calls_pdf_to_markdown(
     settings.CANVAS_PDF_TRANSCRIPTION_MODEL = "fake-model"
     pdf_filename = "problemset1/problem.pdf"
     pdf_content = b"%PDF-1.4 fake pdf content"
-    zip_path = canvas_zip_with_files(
-        tmp_path, [(f"tutorbot/{pdf_filename}", pdf_content)]
+    zip_path = make_canvas_zip(
+        tmp_path, files=[(f"tutorbot/{pdf_filename}", pdf_content)]
     )
 
     # return a file with pdf extension
@@ -428,8 +484,8 @@ def test_transform_canvas_problem_files_non_pdf_does_not_call_pdf_to_markdown(
     settings.CANVAS_PDF_TRANSCRIPTION_MODEL = "fake-model"
     html_filename = "problemset2/problem.html"
     html_content = b"<html>problem</html>"
-    zip_path = canvas_zip_with_files(
-        tmp_path, [(f"tutorbot/{html_filename}", html_content)]
+    zip_path = make_canvas_zip(
+        tmp_path, files=[(f"tutorbot/{html_filename}", html_content)]
     )
 
     fake_file_data = {
@@ -476,8 +532,8 @@ def test_transform_canvas_content_files_url_assignment(mocker, tmp_path):
         return_value={"active": [], "unpublished": []},
     )
     # Use a real zip file
-    course_zipfile = canvas_zip_with_files(
-        tmp_path, [("folder/file1.html", "fake content")]
+    course_zipfile = make_canvas_zip(
+        tmp_path, files=[("folder/file1.html", "fake content")]
     )
     # Patch published_items to always match
     mocker.patch(
@@ -672,12 +728,12 @@ def test_published_module_and_files_meta_content_ingestion(mocker, tmp_path):
     bulk_unpub = mocker.patch(
         "learning_resources.etl.canvas.bulk_resources_unpublished_actions"
     )
-    zip_path = canvas_zip_with_files(
+    zip_path = make_canvas_zip(
         tmp_path,
-        [
-            ("course_settings/module_meta.xml", module_xml),
+        module_xml=module_xml,
+        manifest_xml=manifest_xml,
+        files=[
             ("course_settings/files_meta.xml", files_xml),
-            ("imsmanifest.xml", manifest_xml),
             ("file1.html", b"<html/>"),
             ("file2html", b"<html/>"),
             ("file3.html", b"<html/>"),
@@ -956,7 +1012,9 @@ def test_embedded_files_from_html(tmp_path, mocker):
       </resources>
     </manifest>
     """
-    zip_path = make_canvas_zip_with_module_meta(tmp_path, module_xml, manifest_xml)
+    zip_path = make_canvas_zip(
+        tmp_path, module_xml=module_xml, manifest_xml=manifest_xml
+    )
     with zipfile.ZipFile(zip_path, "a") as zf:
         zf.writestr("web_resources/file1.pdf", "content of file1")
         zf.writestr("web_resources/file2.html", "content of file2")
@@ -1046,7 +1104,9 @@ def test_get_url_config_assignments_and_pages(mocker, tmp_path):
       </organizations>
     </manifest>
     """
-    zip_path = make_canvas_zip_with_module_meta(tmp_path, module_xml, manifest_xml)
+    zip_path = make_canvas_zip(
+        tmp_path, module_xml=module_xml, manifest_xml=manifest_xml
+    )
     with zipfile.ZipFile(zip_path, "a") as zf:
         zf.writestr("web_resources/file1.html", "content of file1")
         zf.writestr("web_resources/file2.html", "content of file2")
@@ -1079,3 +1139,75 @@ def test_get_url_config_assignments_and_pages(mocker, tmp_path):
     )
     assert results["html page"] == "https://example.com/htmlpage"
     assert results["Item 1"] == "https://example.com/file1"
+
+
+def test_ingest_syllabus(tmp_path, mocker):
+    """
+    Test that if the course has a special "syllabus" file
+    that it is marked as active, it gets ingested.
+    """
+    syllabus_html = """
+    <html>
+    <head><meta name="workflow_state" content="active"/></head>
+        <body>
+            Syllabus
+        </body>
+    </html>
+    """
+
+    manifest_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
+      <resources>
+        <resource identifier="RES1" type="webcontent" intendeduse="syllabus" href="web_resources/syllabus.html">
+          <file href="web_resources/file1.pdf"/>
+        </resource>
+      </resources>
+    </manifest>
+    """
+    zip_path = make_canvas_zip(
+        tmp_path,
+        manifest_xml=manifest_xml,
+        files=[("web_resources/syllabus.html", syllabus_html)],
+    )
+
+    result = parse_web_content(zip_path)
+    assert any(
+        item["path"] == "web_resources/syllabus.html" for item in result["active"]
+    )
+
+
+def test_syllabus_not_ingested_when_hidden(tmp_path, mocker):
+    """
+    Test that if the course has a special "syllabus" file
+    that it is marked as active, it gets ingested.
+    """
+    syllabus_html = """
+    <html>
+    <head><meta name="workflow_state" content="active"/></head>
+        <body>
+            Syllabus
+        </body>
+    </html>
+    """
+
+    manifest_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
+      <resources>
+        <resource identifier="RES1" type="webcontent" intendeduse="syllabus" href="web_resources/syllabus.html">
+          <file href="web_resources/file1.pdf"/>
+        </resource>
+      </resources>
+    </manifest>
+    """
+    zip_path = make_canvas_zip(
+        tmp_path,
+        manifest_xml=manifest_xml,
+        files=[
+            ("web_resources/syllabus.html", syllabus_html),
+        ],
+    )
+
+    result = parse_web_content(zip_path)
+    assert not any(
+        item["path"] == "web_resources/syllabus.html" for item in result["active"]
+    )
