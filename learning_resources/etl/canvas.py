@@ -182,7 +182,10 @@ def parse_canvas_settings(course_archive_path):
     Get course attributes from a Canvas course archive
     """
     with zipfile.ZipFile(course_archive_path, "r") as course_archive:
-        xml_string = course_archive.read("course_settings/course_settings.xml")
+        settings_path = "course_settings/course_settings.xml"
+        if settings_path not in course_archive.namelist():
+            return {}
+        xml_string = course_archive.read(settings_path)
     tree = ElementTree.fromstring(xml_string)
     attributes = {}
     for node in tree.iter():
