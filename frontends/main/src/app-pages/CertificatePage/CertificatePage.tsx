@@ -58,12 +58,16 @@ const Title = styled(Typography)(({ theme }) => ({
   },
 }))
 
-const Buttons = styled.div({
+const Buttons = styled.div(({ theme }) => ({
   display: "flex",
   gap: "12px",
   justifyContent: "center",
-  marginBottom: "50px",
-})
+  width: "fit-content",
+  margin: "0 auto 50px auto",
+  [theme.breakpoints.down("md")]: {
+    margin: "0 auto 32px auto",
+  },
+}))
 
 const Outer = styled.div(({ theme }) => ({
   maxWidth: "1306px",
@@ -641,7 +645,7 @@ export enum CertificateType {
 const CertificatePage: React.FC<{
   certificateType: CertificateType
   uuid: string
-  pageUrl?: string
+  pageUrl: string
 }> = ({ certificateType, uuid, pageUrl }) => {
   const {
     data: courseCertificateData,
@@ -745,7 +749,7 @@ const CertificatePage: React.FC<{
           <strong>{title}</strong> {displayType}
         </Typography>
       </Title>
-      <Buttons>
+      <Buttons ref={shareButtonRef}>
         <Button
           variant="primary"
           startIcon={<RiDownloadLine />}
@@ -757,7 +761,6 @@ const CertificatePage: React.FC<{
           variant="bordered"
           startIcon={<RiShareLine />}
           onClick={() => setShareOpen(true)}
-          ref={shareButtonRef}
         >
           Share
         </Button>
