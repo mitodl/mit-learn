@@ -641,7 +641,8 @@ export enum CertificateType {
 const CertificatePage: React.FC<{
   certificateType: CertificateType
   uuid: string
-}> = ({ certificateType, uuid }) => {
+  pageUrl?: string
+}> = ({ certificateType, uuid, pageUrl }) => {
   const {
     data: courseCertificateData,
     isLoading: isCourseLoading,
@@ -737,6 +738,7 @@ const CertificatePage: React.FC<{
         title={`${title} Certificate - MIT Open Learning`}
         anchorEl={shareButtonRef.current}
         onClose={() => setShareOpen(false)}
+        pageUrl={pageUrl}
       />
       <Title>
         <Typography variant="h3">

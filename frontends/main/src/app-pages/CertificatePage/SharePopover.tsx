@@ -90,11 +90,13 @@ const SharePopover = ({
   title,
   anchorEl,
   onClose,
+  pageUrl,
 }: {
   open: boolean
   title: string
   anchorEl: HTMLButtonElement | null
   onClose: () => void
+  pageUrl: string
 }) => {
   const [copyText, setCopyText] = useState("Copy Link")
 
@@ -105,19 +107,19 @@ const SharePopover = ({
           <Heading variant="body2">Share on social</Heading>
           <ButtonContainer>
             <ShareLink
-              href={`${FACEBOOK_SHARE_BASE_URL}?u=${encodeURIComponent(location.href)}`}
+              href={`${FACEBOOK_SHARE_BASE_URL}?u=${encodeURIComponent(pageUrl)}`}
               target="_blank"
             >
               <RiFacebookFill size={18} />
             </ShareLink>
             <ShareLink
-              href={`${TWITTER_SHARE_BASE_URL}?text=${encodeURIComponent(title)}&url=${encodeURIComponent(location.href)}`}
+              href={`${TWITTER_SHARE_BASE_URL}?text=${encodeURIComponent(title)}&url=${encodeURIComponent(pageUrl)}`}
               target="_blank"
             >
               <RiTwitterXLine size={18} />
             </ShareLink>
             <ShareLink
-              href={`${LINKEDIN_SHARE_BASE_URL}?url=${encodeURIComponent(location.href)}`}
+              href={`${LINKEDIN_SHARE_BASE_URL}?url=${encodeURIComponent(pageUrl)}`}
               target="_blank"
             >
               <RiLinkedinFill size={18} />
@@ -129,7 +131,7 @@ const SharePopover = ({
           <LinkControls>
             <Input
               fullWidth
-              value={location.href}
+              value={pageUrl}
               size="small"
               onClick={(event) => {
                 const input = event.currentTarget.querySelector("input")
@@ -144,7 +146,7 @@ const SharePopover = ({
               startIcon={<RedLinkIcon />}
               aria-label={copyText}
               onClick={() => {
-                navigator.clipboard?.writeText(location.href)
+                navigator.clipboard?.writeText(pageUrl)
                 setCopyText("Copied!")
               }}
             >
