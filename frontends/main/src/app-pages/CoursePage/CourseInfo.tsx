@@ -1,6 +1,6 @@
 import React from "react"
 import { Button, styled, VisuallyHidden } from "@mitodl/smoot-design"
-import { Link, Skeleton, Stack, Typography } from "ol-components"
+import { Dialog, Link, Skeleton, Stack, Typography } from "ol-components"
 import {
   RiCalendarLine,
   RiComputerLine,
@@ -67,94 +67,101 @@ const InfoLabelValue: React.FC<{ label: string; value: React.ReactNode }> = ({
     </span>
   ) : null
 
-type InfoSelector = (
+const getStartDate = (
   course: CourseWithCourseRunsSerializerV2,
-  nextRun: CourseRunV2,
-) => React.ReactNode
+  run: CourseRunV2,
+) => {
+  if (course.availability === "anytime") return "Anytime"
+  if (!run?.start_date) return null
+  return (
+    <NoSSR
+      onSSR={
+        <Skeleton
+          variant="text"
+          sx={{ display: "inline-block" }}
+          width="80px"
+        />
+      }
+    >
+      {formatDate(run.start_date)}
+    </NoSSR>
+  )
+}
+const getEndDate = (run: CourseRunV2) => {
+  if (!run.end_date) return null
+  return (
+    <NoSSR
+      onSSR={
+        <Skeleton
+          variant="text"
+          sx={{ display: "inline-block" }}
+          width="80px"
+        />
+      }
+    >
+      {formatDate(run.end_date)}
+    </NoSSR>
+  )
+}
+const getFormat = (run: CourseRunV2) => {
+  if (run.is_archived || run.is_self_paced) {
+    return {
+      label: "Self-Paced",
+      description:
+        "Flexible learning. Enroll at any time and progress at your own speed. All course materials available immediately. Adaptable due dates and extended timelines. Earn your certificate as soon as you pass the course.",
+      href: "https://mitxonline.zendesk.com/hc/en-us/articles/21994872904475-What-are-Self-Paced-courses-on-MITx-Online",
+    }
+  }
+  return {
+    label: "Instructor-Paced",
+    description:
+      "Guided learning. Follow a set schedule with specific due dates for assignments and exams. Course materials released on a schedule. Earn your certificate shortly after the course ends.",
+    href: "https://mitxonline.zendesk.com/hc/en-us/articles/21994938130075-What-are-Instructor-Paced-courses-on-MITx-Online",
+  }
+}
+const getDuration = (course: CourseWithCourseRunsSerializerV2) => {
+  const duration = course.page.length
+  const effort = course.page.effort
+  if (!duration) return null
+  if (duration && effort) {
+    return `${duration}, ${effort}`
+  }
+  return duration
+}
+const getCertificatePrice = (run: CourseRunV2) => {
+  const product = run.products[0]
+  if (!product || run.is_archived) return null
+  const amount = product.price
+  return Number(amount).toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+  })
+}
 
-const INFO = {
-  starts: (course, run) => {
-    if (course.availability === "anytime") return "Anytime"
-    if (!run?.start_date) return null
-    return (
-      <NoSSR
-        onSSR={
-          <Skeleton
-            variant="text"
-            sx={{ display: "inline-block" }}
-            width="80px"
-          />
-        }
-      >
-        {formatDate(run.start_date)}
-      </NoSSR>
-    )
-  },
-  ends: (_course, run) => {
-    if (!run.end_date) return null
-    return (
-      <NoSSR
-        onSSR={
-          <Skeleton
-            variant="text"
-            sx={{ display: "inline-block" }}
-            width="80px"
-          />
-        }
-      >
-        {formatDate(run.end_date)}
-      </NoSSR>
-    )
-  },
-  format: (_course, run) => {
-    if (run.is_archived || run.is_self_paced) {
-      return "Self-paced"
-    }
-    return "Instructor-paced"
-  },
-  duration: (course) => {
-    const duration = course.page.length
-    const effort = course.page.effort
-    if (!duration) return null
-    if (duration && effort) {
-      return `${duration}, ${effort}`
-    }
-    return duration
-  },
-  certificatePrice: (_course, run) => {
-    const product = run.products[0]
-    if (!product || run.is_archived) return null
-    const amount = product.price
-    return Number(amount).toLocaleString("en-US", {
-      style: "currency",
-      currency: "USD",
-    })
-  },
-  upgradeDealine: (_course, run) => {
-    if (run.is_archived) return null
-    return run.upgrade_deadline ? (
-      <NoSSR
-        onSSR={
-          <Skeleton
-            variant="text"
-            sx={{ display: "inline-block" }}
-            width="80px"
-          />
-        }
-      >
-        {formatDate(run.upgrade_deadline)}
-      </NoSSR>
-    ) : null
-  },
-} satisfies Record<string, InfoSelector>
+const getUpgradeDeadline = (run: CourseRunV2) => {
+  if (run.is_archived) return null
+  return run.upgrade_deadline ? (
+    <NoSSR
+      onSSR={
+        <Skeleton
+          variant="text"
+          sx={{ display: "inline-block" }}
+          width="80px"
+        />
+      }
+    >
+      {formatDate(run.upgrade_deadline)}
+    </NoSSR>
+  ) : null
+}
 
 type InfoRowProps = {
   course: CourseWithCourseRunsSerializerV2
   nextRun: CourseRunV2
 }
 const DatesRow: React.FC<InfoRowProps> = ({ course, nextRun }) => {
-  const starts = INFO.starts(course, nextRun)
-  const ends = INFO.ends(course, nextRun)
+  const starts = getStartDate(course, nextRun)
+  const ends = getEndDate(nextRun)
   if (!starts) return null
   return (
     <InfoRow>
@@ -167,31 +174,53 @@ const DatesRow: React.FC<InfoRowProps> = ({ course, nextRun }) => {
   )
 }
 
-const PacingRow: React.FC<InfoRowProps> = ({ course, nextRun }) => {
-  const format = INFO.format(course, nextRun)
+const PacingRow: React.FC<InfoRowProps> = ({ nextRun }) => {
+  const format = getFormat(nextRun)
+  const [open, setOpen] = React.useState(false)
+
   return (
     <InfoRow>
       <RiComputerLine aria-hidden="true" />
       <InfoRowInner>
-        <InfoLabelValue label="Course Format" value={format} />
+        <InfoLabelValue label="Course Format" value={format.label} />
         <UnderlinedLink
-          href="https://mitxonline.zendesk.com/hc/en-us/articles/21994872904475-What-are-Self-Paced-courses-on-MITx-Online */"
+          href={format.href}
           color="red"
           target="_blank"
           rel="noopener noreferrer"
-          onClick={() => {
-            alert("Link click not yet implemented")
+          onClick={(event) => {
+            event.preventDefault()
+            setOpen(true)
           }}
         >
           What's this?
         </UnderlinedLink>
       </InfoRowInner>
+      <Dialog
+        onClose={() => setOpen(false)}
+        open={open}
+        title={`What are ${format.label} courses?`}
+        aria-labelledby="pacing-dialog-title"
+        actions={null}
+      >
+        <Typography sx={{ marginBottom: "16px" }}>
+          {format.description}
+        </Typography>
+        <UnderlinedLink
+          href={format.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          color="red"
+        >
+          Learn More
+        </UnderlinedLink>
+      </Dialog>
     </InfoRow>
   )
 }
 
 const DurationRow: React.FC<InfoRowProps> = ({ course }) => {
-  const duration = INFO.duration(course)
+  const duration = getDuration(course)
   if (!duration) return null
   return (
     <InfoRow>
@@ -203,8 +232,8 @@ const DurationRow: React.FC<InfoRowProps> = ({ course }) => {
   )
 }
 
-const CertificateBox: React.FC<InfoRowProps> = ({ course, nextRun }) => {
-  const certificatePrice = INFO.certificatePrice(course, nextRun)
+const CertificateBox: React.FC<InfoRowProps> = ({ nextRun }) => {
+  const certificatePrice = getCertificatePrice(nextRun)
 
   const certInfoLink = (
     <UnderlinedLink
@@ -216,7 +245,7 @@ const CertificateBox: React.FC<InfoRowProps> = ({ course, nextRun }) => {
       Learn More
     </UnderlinedLink>
   )
-  const upgradeDeadline = INFO.upgradeDealine(course, nextRun)
+  const upgradeDeadline = getUpgradeDeadline(nextRun)
   return (
     <Stack
       gap="8px"
