@@ -135,7 +135,7 @@ const Dialog: React.FC<DialogProps> = ({
         {message && <Typography variant="body1">{message}</Typography>}
         {children}
       </Content>
-      {actions ? (
+      {actions !== undefined ? (
         actions
       ) : (
         <DialogActions>
