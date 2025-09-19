@@ -251,7 +251,7 @@ def test_parse_module_meta_returns_active_and_unpublished(tmp_path):
     """
     module_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
     <modules xmlns="http://canvas.instructure.com/xsd/cccv1p0">
-      <module>
+      <module identifier="g31fce32d15019702eb75d5664798a877">
         <title>Module 1</title>
         <items>
           <item>
@@ -1129,3 +1129,107 @@ def test_syllabus_not_ingested_when_hidden(tmp_path, mocker):
     assert not any(
         item["path"] == "web_resources/syllabus.html" for item in result["active"]
     )
+
+
+def test_get_url_config_assignments_and_pages(mocker, tmp_path):
+    """
+    Test that _get_url_config correctly maps assignments and pages to URLs using their titles.
+    """
+    hmtl_page_title = "html page"
+
+    url_config = {
+        hmtl_page_title: "https://example.com/htmlpage",
+        "/file1.html": "https://example.com/file1",
+    }
+
+    run = LearningResourceRunFactory.create()
+
+    html_content = f"""
+    <html>
+    <head><meta name="workflow_state" content="active"/><title>{hmtl_page_title}</title></head>
+        <body>
+
+        </body>
+    </html>
+    """
+    module_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <modules xmlns="http://canvas.instructure.com/xsd/cccv1p0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    >
+      <module>
+        <title>Module 1</title>
+        <items>
+          <item>
+            <workflow_state>active</workflow_state>
+            <title>Item 1</title>
+            <hidden>false</hidden>
+             <locked>false</locked>
+            <identifierref>RES1</identifierref>
+            <content_type>resource</content_type>
+          </item>
+        </items>
+      </module>
+    </modules>
+    """
+    manifest_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
+      <resources>
+      <resource identifier="RES1" identifierref="RES1" type="webcontent" href="web_resources/file1.html">
+          <file href="web_resources/file1.html"/>
+        </resource>
+        <resource identifier="RES2" type="webcontent" href="web_resources/file2.html">
+          <file href="web_resources/file2.html"/>
+        </resource>
+        <resource identifier="RES3" type="webcontent" href="web_resources/html_page.html">
+          <file href="web_resources/html_page.html"/>
+        </resource>
+      </resources>
+      <organizations>
+        <organization>
+          <item identifierref="RES1">
+            <title>module 1</title>
+          </item>
+
+        </organization>
+      </organizations>
+    </manifest>
+    """
+    zip_path = make_canvas_zip(
+        tmp_path,
+        module_xml=module_xml,
+        manifest_xml=manifest_xml,
+        files=[
+            ("web_resources/file1.html", "content of file1"),
+            ("web_resources/file2.html", "content of file2"),
+            ("web_resources/html_page.html", html_content),
+        ],
+    )
+
+    mocker.patch(
+        "learning_resources.etl.utils.extract_text_metadata",
+        return_value={"content": "test"},
+    )
+    mocker.patch("learning_resources.etl.canvas.bulk_resources_unpublished_actions")
+    results = list(
+        transform_canvas_content_files(
+            Path(zip_path),
+            run=run,
+            url_config=url_config,
+            overwrite=False,
+        )
+    )
+    results = list(results)
+    list(
+        zip(
+            [result["content_title"] for result in results],
+            [result["url"] for result in results],
+        )
+    )
+    results = dict(
+        zip(
+            [result["content_title"] for result in results],
+            [result["url"] for result in results],
+        )
+    )
+    assert results["html page"] == "https://example.com/htmlpage"
+    assert results["Item 1"] == "https://example.com/file1"

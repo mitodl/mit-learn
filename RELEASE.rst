@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+Version 0.43.1 (Released September 18, 2025)
+--------------
+
+- Fix posthog import (#2518)
+- fix mitxonline etl pagination (#2495)
+- Revert "commit" - pushed to main by mistake (#2517)
+- commit
+- Use posthog bulk export (#2489)
+
 Version 0.43.0 (Released September 16, 2025)
 --------------
 
