@@ -2,7 +2,7 @@ name: CI
 on: [push]
 jobs:
   python-tests:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     services:
       # Label used to access the service container
@@ -90,7 +90,7 @@ jobs:
           file: ./coverage.xml
 
   javascript-tests:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -148,7 +148,7 @@ jobs:
 
   build-nextjs-container:
     needs: javascript-tests
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
@@ -196,7 +196,7 @@ jobs:
             -t mitodl/mit-learn-frontend:$VERSION .
 
   build-storybook:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
@@ -221,7 +221,7 @@ jobs:
       GENERATOR_IGNORE_FILE: ./frontends/api/.openapi-generator-ignore
       GENERATOR_OUTPUT_DIR_CI: ./frontends/api/tmp/generated/v0
       GENERATOR_OUTPUT_DIR_VC: ./frontends/api/src/generated/v0
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -260,7 +260,7 @@ jobs:
       GENERATOR_IGNORE_FILE: ./frontends/api/.openapi-generator-ignore
       GENERATOR_OUTPUT_DIR_CI: ./frontends/api/tmp/generated/v1
       GENERATOR_OUTPUT_DIR_VC: ./frontends/api/src/generated/v1
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
