@@ -18,6 +18,7 @@ describe("CertificatePage", () => {
       <CertificatePage
         certificateType={CertificateType.Course}
         uuid={certificate.uuid}
+        pageUrl={`https://${process.env.NEXT_PUBLIC_ORIGIN}/certificate/course/${certificate.uuid}`}
       />,
     )
 
@@ -80,6 +81,7 @@ describe("CertificatePage", () => {
       <CertificatePage
         certificateType={CertificateType.Program}
         uuid={certificate.uuid}
+        pageUrl={`https://${process.env.NEXT_PUBLIC_ORIGIN}/certificate/program/${certificate.uuid}`}
       />,
     )
 
