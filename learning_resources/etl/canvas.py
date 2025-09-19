@@ -567,13 +567,25 @@ def parse_web_content(course_archive_path: str) -> dict:
     """
 
     publish_status = {"active": [], "unpublished": []}
+    course_settings = parse_canvas_settings(course_archive_path)
 
+    public_syllabus_setting = course_settings.get("public_syllabus", "true").lower()
+    public_syllabus_to_auth_setting = course_settings.get(
+        "public_syllabus_to_auth", "true"
+    ).lower()
+    ingest_syllabus = False
+    if not (
+        public_syllabus_setting == "false"
+        and public_syllabus_to_auth_setting == "false"
+    ):
+        ingest_syllabus = True
     with zipfile.ZipFile(course_archive_path, "r") as course_archive:
         manifest_path = "imsmanifest.xml"
         if manifest_path not in course_archive.namelist():
             return publish_status
         manifest_xml = course_archive.read(manifest_path)
         resource_map = extract_resources_by_identifier(manifest_xml)
+
         for item in resource_map:
             resource_map_item = resource_map[item]
             item_link = resource_map_item.get("href")
@@ -600,8 +612,11 @@ def parse_web_content(course_archive_path: str) -> dict:
                 # Determine if the content is intended for authors or instructors only
                 intended_role = lom_elem.get("intendedEndUserRole", {}).get("value")
                 authors_only = intended_role and intended_role.lower() != "student"
+                intended_use = resource_map_item.get("intendeduse", "")
 
-                if workflow_state in ["active", "published"] and not authors_only:
+                if (workflow_state in ["active", "published"] and not authors_only) or (
+                    ingest_syllabus and intended_use == "syllabus"
+                ):
                     publish_status["active"].append(
                         {
                             "title": title,
@@ -648,7 +663,12 @@ def extract_resources_by_identifierref(manifest_xml: str) -> dict:
             ]
 
             resources_dict[identifierref].append(
-                {"title": title, "files": files, "type": resource.get("type")}
+                {
+                    "title": title,
+                    "files": files,
+                    "type": resource.get("type"),
+                    "intendeduse": resource.get("intendeduse"),
+                }
             )
     return dict(resources_dict)
 
@@ -682,6 +702,7 @@ def extract_resources_by_identifier(manifest_xml: str) -> dict:
             "href": href,
             "files": files,
             "metadata": metadata,
+            "intendeduse": resource.get("intendeduse"),
         }
     return resources_dict
 
