@@ -1108,9 +1108,11 @@ def test_get_url_config_assignments_and_pages(mocker, tmp_path):
       </organizations>
     </manifest>
     """
+
     zip_path = make_canvas_zip(
         tmp_path, module_xml=module_xml, manifest_xml=manifest_xml
     )
+
     with zipfile.ZipFile(zip_path, "a") as zf:
         zf.writestr("web_resources/file1.html", "content of file1")
         zf.writestr("web_resources/file2.html", "content of file2")
