@@ -1568,7 +1568,7 @@ django = ">=3.2"
 
 [[package]]
 name = "django-health-check"
-version = "3.20.1.dev4+gb0500d1"
+version = "3.20.1.dev9+g592f6a8fc"
 description = "Monitor the health of your Django app and its connected services."
 optional = false
 python-versions = ">=3.9"
@@ -1581,14 +1581,14 @@ Django = ">=4.2"
 
 [package.extras]
 docs = ["sphinx"]
-lint = ["ruff (==0.12.3)"]
+lint = ["ruff (==0.13.1)"]
 test = ["boto3", "celery", "django-storages", "pytest", "pytest-cov", "pytest-django", "redis"]
 
 [package.source]
 type = "git"
 url = "https://github.com/revsys/django-health-check"
-reference = "b0500d14c338040984f02ee34ffbe6643b005084"
-resolved_reference = "b0500d14c338040984f02ee34ffbe6643b005084"
+reference = "592f6a8fc2a8481f4f810678461db52bd1b0e3d6"
+resolved_reference = "592f6a8fc2a8481f4f810678461db52bd1b0e3d6"
 
 [[package]]
 name = "django-imagekit"
@@ -9119,4 +9119,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.1"
 python-versions = "~3.12"
-content-hash = "29b3bcb4d3e513deec43a0228f2a29ac2390afa3c0b414bd993ba22bdd58c9c0"
+content-hash = "7c3d41bd435f85637e482e6c1cb9f8db7270a1d90f8f1a5bfd696b49a691a98a"
