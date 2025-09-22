@@ -19,7 +19,7 @@ import Image from "next/image"
 import DOMPurify from "isomorphic-dompurify"
 import type { Faculty } from "@mitodl/mitxonline-api-axios/v2"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
-import { CourseInfo, UnderlinedLink } from "./CourseInfo"
+import { CourseSummary, UnderlinedLink } from "./CourseSummary"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { notFound } from "next/navigation"
@@ -486,7 +486,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
               alt=""
             />
           </SidebarImageWrapper>
-          <CourseInfo course={course} />
+          <CourseSummary course={course} />
         </SidebarCol>
         <MainCol>
           <LinksContainer aria-label="Course Details">

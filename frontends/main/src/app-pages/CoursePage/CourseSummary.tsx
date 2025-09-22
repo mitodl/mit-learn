@@ -315,7 +315,7 @@ const WideButton = styled(Button)({
   width: "100%",
 })
 
-const CourseInfo: React.FC<{
+const CourseSummary: React.FC<{
   course: CourseWithCourseRunsSerializerV2
 }> = ({ course }) => {
   const nextRunId = course.next_run_id
@@ -348,4 +348,4 @@ const CourseInfo: React.FC<{
   )
 }
 
-export { CourseInfo, UnderlinedLink }
+export { CourseSummary, UnderlinedLink }
