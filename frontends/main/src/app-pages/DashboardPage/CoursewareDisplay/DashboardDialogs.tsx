@@ -16,6 +16,11 @@ import {
   useUpdateEnrollment,
 } from "api/mitxonline-hooks/enrollment"
 import { DashboardCourseEnrollment } from "./types"
+import {
+  useMitxOnlineCountries,
+  useMitxOnlineUserMe,
+  useUpdateUserMutation,
+} from "api/mitxonline-hooks/user"
 
 const BoldText = styled.span(({ theme }) => ({
   ...theme.typography.subtitle1,
@@ -182,7 +187,167 @@ const UnenrollDialogInner: React.FC<DashboardDialogProps> = ({
   )
 }
 
+const JustInTimeDialogInner: React.FC<{ href: string }> = ({ href }) => {
+  const { data: mitxOnlineUser } = useMitxOnlineUserMe()
+  const { data: countries } = useMitxOnlineCountries()
+  const updateUserMutation = useUpdateUserMutation()
+  const modal = NiceModal.useModal()
+
+  // Generate year options (minimum age 13, so current year - 13 back to 1900)
+  const currentYear = new Date().getFullYear()
+  const maxYear = currentYear - 13
+  const yearOptions = Array.from(
+    { length: maxYear - 1900 + 1 },
+    (_, i) => maxYear - i,
+  )
+
+  const formik = useFormik({
+    enableReinitialize: true,
+    validateOnChange: false,
+    validateOnBlur: false,
+    initialValues: {
+      country: "",
+      year_of_birth: "",
+    },
+    validate: (values) => {
+      const errors: { country?: string; year_of_birth?: string } = {}
+      if (!values.country) {
+        errors.country = "Country is required"
+      }
+      if (!values.year_of_birth) {
+        errors.year_of_birth = "Year of birth is required"
+      }
+      return errors
+    },
+    onSubmit: async (values) => {
+      await updateUserMutation.mutateAsync({
+        PatchedUserRequest: {
+          user_profile: {
+            year_of_birth: parseInt(values.year_of_birth, 10),
+          },
+          legal_address: {
+            country: values.country,
+            first_name:
+              mitxOnlineUser?.legal_address?.first_name ||
+              mitxOnlineUser?.name?.split(" ")[0] ||
+              "",
+            last_name:
+              mitxOnlineUser?.legal_address?.last_name ||
+              mitxOnlineUser?.name?.split(" ")[1] ||
+              "",
+          },
+        },
+      })
+      if (!updateUserMutation.isError) {
+        modal.hide()
+        if (href) {
+          window.location.href = href
+        }
+      }
+    },
+  })
+
+  return (
+    <FormDialog
+      title="Just a Few More Details"
+      fullWidth
+      onReset={formik.resetForm}
+      onSubmit={formik.handleSubmit}
+      {...muiDialogV5(modal)}
+      actions={
+        <DialogActions>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              modal.hide()
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            type="submit"
+            disabled={!formik.isValid || formik.isSubmitting}
+          >
+            Submit
+            {formik.isSubmitting && (
+              <SpinnerContainer>
+                <LoadingSpinner loading={formik.isSubmitting} size={16} />
+              </SpinnerContainer>
+            )}
+          </Button>
+        </DialogActions>
+      }
+    >
+      <Stack direction="column" gap="24px">
+        <Typography variant="body1">
+          We need a bit more info before you can enroll.
+        </Typography>
+
+        <div>
+          <label htmlFor="country">Country *</label>
+          <select
+            id="country"
+            name="country"
+            value={formik.values.country}
+            onChange={formik.handleChange}
+            style={{
+              width: "100%",
+              padding: "8px",
+              marginTop: "4px",
+              border: "1px solid #ccc",
+              borderRadius: "4px",
+            }}
+          >
+            <option value="">Select a country</option>
+            {countries?.map((country) => (
+              <option key={country.code} value={country.code}>
+                {country.name}
+              </option>
+            ))}
+          </select>
+          {formik.errors.country && (
+            <Typography variant="body2" color="error">
+              {formik.errors.country}
+            </Typography>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="year_of_birth">Year of Birth *</label>
+          <select
+            id="year_of_birth"
+            name="year_of_birth"
+            value={formik.values.year_of_birth}
+            onChange={formik.handleChange}
+            style={{
+              width: "100%",
+              padding: "8px",
+              marginTop: "4px",
+              border: "1px solid #ccc",
+              borderRadius: "4px",
+            }}
+          >
+            <option value="">Select year</option>
+            {yearOptions.map((year) => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
+          </select>
+          {formik.errors.year_of_birth && (
+            <Typography variant="body2" color="error">
+              {formik.errors.year_of_birth}
+            </Typography>
+          )}
+        </div>
+      </Stack>
+    </FormDialog>
+  )
+}
+
 const EmailSettingsDialog = NiceModal.create(EmailSettingsDialogInner)
 const UnenrollDialog = NiceModal.create(UnenrollDialogInner)
+const JustInTimeDialog = NiceModal.create(JustInTimeDialogInner)
 
-export { EmailSettingsDialog, UnenrollDialog }
+export { EmailSettingsDialog, UnenrollDialog, JustInTimeDialog }

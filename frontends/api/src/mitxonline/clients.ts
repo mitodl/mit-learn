@@ -8,6 +8,7 @@ import {
   ProgramCertificatesApi,
   UsersApi,
   ProgramEnrollmentsApi,
+  CountriesApi,
 } from "@mitodl/mitxonline-api-axios/v2"
 import axios from "axios"
 
@@ -24,6 +25,7 @@ const BASE_PATH =
   process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL?.replace(/\/+$/, "") ?? ""
 
 const usersApi = new UsersApi(undefined, BASE_PATH, axiosInstance)
+const countriesApi = new CountriesApi(undefined, BASE_PATH, axiosInstance)
 const b2bApi = new B2bApi(undefined, BASE_PATH, axiosInstance)
 const programsApi = new ProgramsApi(undefined, BASE_PATH, axiosInstance)
 const programCollectionsApi = new ProgramCollectionsApi(
@@ -60,6 +62,7 @@ const programEnrollmentsApi = new ProgramEnrollmentsApi(
 
 export {
   usersApi,
+  countriesApi,
   b2bApi,
   courseRunEnrollmentsApi,
   programEnrollmentsApi,
