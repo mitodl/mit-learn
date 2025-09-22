@@ -1,7 +1,6 @@
 Release Notes
 =============
 
-
 Version 0.44.0 (Released September 22, 2025)
 --------------
 
