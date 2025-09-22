@@ -8,12 +8,16 @@ import {
   expectWindowNavigation,
 } from "@/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
+import {
+  urls as testUrls,
+  factories as testFactories,
+  mockAxiosInstance,
+} from "api/test-utils"
 import { DashboardCard, getDefaultContextMenuItems } from "./DashboardCard"
 import { dashboardCourse } from "./test-utils"
 import { faker } from "@faker-js/faker/locale/en"
 import moment from "moment"
 import { EnrollmentMode, EnrollmentStatus } from "./types"
-import { mockAxiosInstance } from "api/test-utils"
 
 const pastDashboardCourse: typeof dashboardCourse = (...overrides) => {
   return dashboardCourse(
@@ -48,6 +52,14 @@ const futureDashboardCourse: typeof dashboardCourse = (...overrides) => {
     ...overrides,
   )
 }
+
+beforeEach(() => {
+  // Mock user API call
+  const user = testFactories.user.user()
+  const mitxUser = mitxonline.factories.user.user()
+  setMockResponse.get(testUrls.userMe.get(), user)
+  setMockResponse.get(mitxonline.urls.userMe.get(), mitxUser)
+})
 
 describe.each([
   { display: "desktop", testId: "enrollment-card-desktop" },
