@@ -6,6 +6,7 @@ import {
   DialogActions,
   Stack,
   LoadingSpinner,
+  SimpleSelectField,
 } from "ol-components"
 import { Button, Checkbox, Alert } from "@mitodl/smoot-design"
 
@@ -284,63 +285,55 @@ const JustInTimeDialogInner: React.FC<{ href: string }> = ({ href }) => {
           We need a bit more info before you can enroll.
         </Typography>
 
-        <div>
-          <label htmlFor="country">Country *</label>
-          <select
-            id="country"
-            name="country"
-            value={formik.values.country}
-            onChange={formik.handleChange}
-            style={{
-              width: "100%",
-              padding: "8px",
-              marginTop: "4px",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
-            }}
-          >
-            <option value="">Select a country</option>
-            {countries?.map((country) => (
-              <option key={country.code} value={country.code}>
-                {country.name}
-              </option>
-            ))}
-          </select>
-          {formik.errors.country && (
-            <Typography variant="body2" color="error">
-              {formik.errors.country}
-            </Typography>
+        <SimpleSelectField
+          options={[
+            {
+              value: "",
+              label: "Please Select",
+            },
+          ].concat(
+            countries
+              ? countries.map((country) => ({
+                  value: country.code,
+                  label: country.name,
+                }))
+              : [],
           )}
-        </div>
+          name="country"
+          label="Country"
+          value={formik.values.country}
+          onChange={formik.handleChange}
+          fullWidth
+        />
+        {formik.errors.country && (
+          <Typography variant="body2" color="error">
+            {formik.errors.country}
+          </Typography>
+        )}
 
-        <div>
-          <label htmlFor="year_of_birth">Year of Birth *</label>
-          <select
-            id="year_of_birth"
-            name="year_of_birth"
-            value={formik.values.year_of_birth}
-            onChange={formik.handleChange}
-            style={{
-              width: "100%",
-              padding: "8px",
-              marginTop: "4px",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
-            }}
-          >
-            <option value="">Select year</option>
-            {yearOptions.map((year) => (
-              <option key={year} value={year}>
-                {year}
-              </option>
-            ))}
-          </select>
-          {formik.errors.year_of_birth && (
-            <Typography variant="body2" color="error">
-              {formik.errors.year_of_birth}
-            </Typography>
+        <SimpleSelectField
+          options={[
+            {
+              value: "",
+              label: "Please Select",
+            },
+          ].concat(
+            yearOptions.map((year) => ({
+              value: year.toString(),
+              label: year.toString(),
+            })),
           )}
-        </div>
+          name="year_of_birth"
+          label="Year of Birth"
+          value={formik.values.year_of_birth}
+          onChange={formik.handleChange}
+          fullWidth
+        />
+        {formik.errors.year_of_birth && (
+          <Typography variant="body2" color="error">
+            {formik.errors.year_of_birth}
+          </Typography>
+        )}
       </Stack>
     </FormDialog>
   )
