@@ -718,7 +718,7 @@ const CertificatePage: React.FC<{
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
-    a.download = `${title} Certificate - MIT Open Learning.pdf`
+    a.download = `${title} Certificate issued by MIT Open Learning.pdf`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
@@ -739,7 +739,7 @@ const CertificatePage: React.FC<{
     <Page>
       <SharePopover
         open={shareOpen}
-        title={`${title} Certificate - MIT Open Learning`}
+        title={`${title} Certificate issued by MIT Open Learning`}
         anchorEl={shareButtonRef.current}
         onClose={() => setShareOpen(false)}
         pageUrl={pageUrl}

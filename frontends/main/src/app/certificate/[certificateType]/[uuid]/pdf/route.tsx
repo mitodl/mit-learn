@@ -254,7 +254,7 @@ const CertificateDoc = ({
 }) => {
   return (
     <Document
-      title={`${title} Certificate - MIT Open Learning.pdf`}
+      title={`${title} Certificate issued by MIT Open Learning.pdf`}
       author="MIT Open Learning"
       pageLayout="singlePage"
     >
