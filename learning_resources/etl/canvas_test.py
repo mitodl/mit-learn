@@ -1045,7 +1045,6 @@ def test_embedded_files_from_html(tmp_path, mocker):
     assert any(file["source_path"] == "web_resources/html_page.html" for file in files)
 
 
-
 def test_ingest_syllabus(tmp_path, mocker):
     """
     Test that if the course has a special "syllabus" file
@@ -1130,6 +1129,7 @@ def test_syllabus_not_ingested_when_hidden(tmp_path, mocker):
     assert not any(
         item["path"] == "web_resources/syllabus.html" for item in result["active"]
     )
+
 
 def test_get_url_config_assignments_and_pages(mocker, tmp_path):
     """
