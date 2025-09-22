@@ -97,12 +97,12 @@ const course: PartialFactory<CourseWithCourseRunsSerializerV2> = (
       effort: `${faker.number.int({ min: 1, max: 10 })} hours/week`,
       financial_assistance_form_url: faker.internet.url(),
       current_price: faker.number.int({ min: 0, max: 1000 }),
-      instructors: [
-        {
-          name: faker.person.fullName(),
-          bio: faker.lorem.paragraph(),
-        },
-      ],
+      instructors: Array.from({
+        length: faker.number.int({ min: 1, max: 3 }),
+      }).map(() => ({
+        name: faker.person.fullName(),
+        bio: faker.lorem.paragraph(),
+      })),
     },
     programs: null,
     topics: [

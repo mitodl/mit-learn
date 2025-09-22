@@ -119,7 +119,9 @@ const coursePageItem: PartialFactory<CoursePageItem> = (override) => {
     course_details: v2Course(),
     description: faker.lorem.sentences(2),
     effort: `${faker.number.int({ min: 1, max: 10 })} hours per week`,
-    faculty: [faculty(), faculty()],
+    faculty: Array.from({ length: faker.number.int({ min: 1, max: 3 }) }, () =>
+      faculty(),
+    ),
     faculty_section_title: "About the Faculty",
     faq_url: faker.internet.url(),
     feature_image: featureImage(),

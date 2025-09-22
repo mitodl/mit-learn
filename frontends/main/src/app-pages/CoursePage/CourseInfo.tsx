@@ -297,7 +297,7 @@ const PriceRow: React.FC<InfoRowProps> = ({ course, nextRun }) => {
   )
 }
 
-const SidebarSummaryRoot = styled.div(({ theme }) => ({
+const SidebarSummaryRoot = styled.section(({ theme }) => ({
   border: `1px solid ${theme.custom.colors.lightGray2}`,
   backgroundColor: theme.custom.colors.white,
   borderRadius: "0 0 4px 4px",
@@ -321,7 +321,7 @@ const CourseInfo: React.FC<{
   const nextRunId = course.next_run_id
   const nextRun = course.courseruns.find((run) => run.id === nextRunId)
   return (
-    <SidebarSummaryRoot role="region" aria-labelledby="course-summary">
+    <SidebarSummaryRoot aria-labelledby="course-summary">
       <VisuallyHidden>
         <h2 id="course-summary">Course summary</h2>
       </VisuallyHidden>

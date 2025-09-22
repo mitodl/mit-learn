@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { memo, useId } from "react"
 import {
   Container,
   Stack,
@@ -145,7 +145,7 @@ const StyledLink = styled(ButtonLink)(({ theme }) => ({
   },
 }))
 
-const LinksContainer = styled.div(({ theme }) => ({
+const LinksContainer = styled.nav(({ theme }) => ({
   display: "flex",
   flexWrap: "wrap",
   [theme.breakpoints.up("md")]: {
@@ -188,14 +188,21 @@ const SidebarImage = styled(Image)(({ theme }) => ({
   },
 }))
 
-const RawHTML: React.FC<{ html: string }> = ({ html }) => {
-  return (
-    <div
-      className="raw-include"
-      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}
-    />
-  )
-}
+const RawHTML: React.FC<{ html: string }> = memo(
+  // Note: Using 'memo' here makes this behave more like a normal react component.
+  // The underlying HTML elements will remain complemtely unchanged unless the
+  // 'html' prop changes.
+  // Without memo, the elements are replaced one each render.
+  ({ html }) => {
+    return (
+      <div
+        className="raw-include"
+        data-testid="raw"
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}
+      />
+    )
+  },
+)
 
 const AboutSection = styled.section<{ expanded: boolean }>(({ expanded }) => {
   return [
@@ -203,6 +210,15 @@ const AboutSection = styled.section<{ expanded: boolean }>(({ expanded }) => {
       display: "flex",
       flexDirection: "column",
       gap: "16px",
+      /**
+       * Note: browser suppport for ':has' is decent but not universal.
+       * At worst, users will see show more/less link when they shouldn't.
+       */
+      "&:has(.raw-include > *:only-child)": {
+        "& .show-more-less": {
+          display: "none",
+        },
+      },
     },
     !expanded && {
       ".raw-include > *:not(:first-child)": {
@@ -328,11 +344,13 @@ const InstructorDialog: React.FC<{
   open: boolean
   onClose: () => void
 }> = ({ instructor, open, onClose }) => {
+  const titleId = useId()
   return (
     <MuiDialog
       open={open}
       maxWidth="md"
       onClose={onClose}
+      aria-labelledby={titleId}
       slotProps={{
         paper: { sx: { borderRadius: "8px", maxWidth: "770px" } },
       }}
@@ -352,7 +370,12 @@ const InstructorDialog: React.FC<{
         alt=""
       />
       <DialogContent>
-        <Typography component="h2" variant="h4" sx={{ marginBottom: "8px" }}>
+        <Typography
+          component="h2"
+          variant="h4"
+          sx={{ marginBottom: "8px" }}
+          id={titleId}
+        >
           {instructor.instructor_name}
         </Typography>
         <Typography variant="subtitle1" sx={{ marginBottom: "16px" }}>
@@ -405,7 +428,6 @@ const HEADINGS: HeadingData[] = [
 ]
 
 const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
-  console.log("CoursePage render", readableId)
   const courseDetail = useQuery(pagesQueries.courseDetail(readableId))
   const courses = useQuery(
     coursesQueries.coursesList({ readable_id: readableId }),
@@ -418,7 +440,17 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
     return notFound()
   }
   if (!enabled) return
-  if (!page || !course) return
+
+  const doneLoading = courseDetail.isSuccess && courses.isSuccess
+
+  if (!page || !course) {
+    if (doneLoading) {
+      return notFound()
+    } else {
+      return null
+    }
+  }
+
   return (
     <Page>
       <BannerBackground backgroundUrl={backgroundSrcSetCSS(backgroundSteps)}>
@@ -457,7 +489,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
           <CourseInfo course={course} />
         </SidebarCol>
         <MainCol>
-          <LinksContainer>
+          <LinksContainer aria-label="Course Details">
             {HEADINGS.map((heading) => {
               const LinkComponent =
                 heading.variant === "primary" ? ButtonLink : StyledLink
@@ -474,7 +506,10 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
             })}
           </LinksContainer>
           <Stack gap={{ xs: "40px", sm: "56px" }}>
-            <AboutSection expanded={aboutExpanded}>
+            <AboutSection
+              expanded={aboutExpanded}
+              aria-labelledby={HeadingIds.About}
+            >
               <Typography variant="h3" component="h2" id={HeadingIds.About}>
                 About this course
               </Typography>
@@ -483,21 +518,22 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
                 href=""
                 color="red"
                 role="button"
+                className="show-more-less"
                 onClick={(e) => {
                   e.preventDefault()
                   setAboutExpanded((curr) => !curr)
                 }}
               >
-                Show more
+                {aboutExpanded ? "Show less" : "Show more"}
               </UnderlinedLink>
             </AboutSection>
-            <WhatSection>
+            <WhatSection aria-labelledby={HeadingIds.What}>
               <Typography variant="h4" component="h2" id={HeadingIds.What}>
                 What you'll learn
               </Typography>
               <RawHTML html={page.what_you_learn} />
             </WhatSection>
-            <PrerequisitesSection>
+            <PrerequisitesSection aria-labelledby={HeadingIds.Prerequisites}>
               <Typography
                 variant="h4"
                 component="h2"
@@ -507,7 +543,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
               </Typography>
               <RawHTML html={page.prerequisites} />
             </PrerequisitesSection>
-            <InstructorsSection>
+            <InstructorsSection aria-labelledby={HeadingIds.Instructors}>
               <Typography
                 variant="h4"
                 component="h2"
@@ -527,7 +563,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
               </InstructorsList>
             </InstructorsSection>
 
-            <WhoCanTakeSection>
+            <WhoCanTakeSection aria-labelledby={HeadingIds.WhoCanTake}>
               <Typography
                 variant="h4"
                 component="h2"
@@ -550,3 +586,4 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
 }
 
 export default CoursePage
+export { HeadingIds }
