@@ -1,4 +1,4 @@
-import React from "react"
+import React, { HTMLAttributes } from "react"
 import { Button, styled, VisuallyHidden } from "@mitodl/smoot-design"
 import { Dialog, Link, Skeleton, Stack, Typography } from "ol-components"
 import {
@@ -158,28 +158,28 @@ const getUpgradeDeadline = (run: CourseRunV2) => {
 type InfoRowProps = {
   course: CourseWithCourseRunsSerializerV2
   nextRun: CourseRunV2
-}
-const DatesRow: React.FC<InfoRowProps> = ({ course, nextRun }) => {
+} & HTMLAttributes<HTMLDivElement>
+const DatesRow: React.FC<InfoRowProps> = ({ course, nextRun, ...others }) => {
   const starts = getStartDate(course, nextRun)
   const ends = getEndDate(nextRun)
   if (!starts) return null
   return (
-    <InfoRow>
+    <InfoRow {...others}>
       <RiCalendarLine aria-hidden="true" />
       <InfoRowInner>
-        <InfoLabelValue label="Starts" value={starts} />
-        <InfoLabelValue label="Ends" value={ends} />
+        <InfoLabelValue label="Start" value={starts} />
+        <InfoLabelValue label="End" value={ends} />
       </InfoRowInner>
     </InfoRow>
   )
 }
 
-const PacingRow: React.FC<InfoRowProps> = ({ nextRun }) => {
+const FormatRow: React.FC<InfoRowProps> = ({ nextRun, ...others }) => {
   const format = getFormat(nextRun)
   const [open, setOpen] = React.useState(false)
 
   return (
-    <InfoRow>
+    <InfoRow {...others}>
       <RiComputerLine aria-hidden="true" />
       <InfoRowInner>
         <InfoLabelValue label="Course Format" value={format.label} />
@@ -219,11 +219,11 @@ const PacingRow: React.FC<InfoRowProps> = ({ nextRun }) => {
   )
 }
 
-const DurationRow: React.FC<InfoRowProps> = ({ course }) => {
+const DurationRow: React.FC<InfoRowProps> = ({ course, ...others }) => {
   const duration = getDuration(course)
   if (!duration) return null
   return (
-    <InfoRow>
+    <InfoRow {...others}>
       <RiTimeLine aria-hidden="true" />
       <InfoRowInner>
         <InfoLabelValue label="Estimated" value={duration} />
@@ -285,9 +285,9 @@ const CertificateBox: React.FC<InfoRowProps> = ({ nextRun }) => {
   )
 }
 
-const PriceRow: React.FC<InfoRowProps> = ({ course, nextRun }) => {
+const PriceRow: React.FC<InfoRowProps> = ({ course, nextRun, ...others }) => {
   return (
-    <InfoRow>
+    <InfoRow {...others}>
       <RiPriceTag3Line aria-hidden="true" />
       <Stack gap="8px">
         <InfoLabelValue label="Price" value="Free to Learn" />
@@ -315,6 +315,13 @@ const WideButton = styled(Button)({
   width: "100%",
 })
 
+enum TestIds {
+  DatesRow = "dates-row",
+  FormatRow = "format-row",
+  DurationRow = "duration-row",
+  PriceRow = "price-row",
+}
+
 const CourseSummary: React.FC<{
   course: CourseWithCourseRunsSerializerV2
 }> = ({ course }) => {
@@ -337,10 +344,26 @@ const CourseSummary: React.FC<{
             >
               Enroll for free
             </WideButton>
-            <DatesRow course={course} nextRun={nextRun} />
-            <PacingRow course={course} nextRun={nextRun} />
-            <DurationRow course={course} nextRun={nextRun} />
-            <PriceRow course={course} nextRun={nextRun} />
+            <DatesRow
+              course={course}
+              nextRun={nextRun}
+              data-testid={TestIds.DatesRow}
+            />
+            <FormatRow
+              course={course}
+              nextRun={nextRun}
+              data-testid={TestIds.FormatRow}
+            />
+            <DurationRow
+              course={course}
+              nextRun={nextRun}
+              data-testid={TestIds.DurationRow}
+            />
+            <PriceRow
+              course={course}
+              nextRun={nextRun}
+              data-testid={TestIds.PriceRow}
+            />
           </>
         ) : null}
       </Stack>
@@ -348,4 +371,4 @@ const CourseSummary: React.FC<{
   )
 }
 
-export { CourseSummary, UnderlinedLink }
+export { CourseSummary, UnderlinedLink, TestIds }
