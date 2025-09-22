@@ -60,9 +60,11 @@ describe("UserMenu", () => {
   test("Unauthenticated users see the Sign Up / Login link", async () => {
     const isAuthenticated = false
     const initialUrl = "/foo/bar?cat=meow"
-    const expectedUrl = urlConstants.login({
-      pathname: "/foo/bar",
-      searchParams: new URLSearchParams("?cat=meow"),
+    const expectedUrl = urlConstants.auth({
+      loginNext: {
+        pathname: "/foo/bar",
+        searchParams: new URLSearchParams("?cat=meow"),
+      },
     })
     setMockResponse.get(urls.userMe.get(), {
       is_authenticated: isAuthenticated,

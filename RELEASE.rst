@@ -1,6 +1,16 @@
 Release Notes
 =============
 
+
+Version 0.44.0 (Released September 22, 2025)
+--------------
+
+- fix non-lexicographical ordering in org dashboard programs / program collections (#2523)
+- canvas: citation urls for html content (#2521)
+- chore(deps): update redis docker tag to v8 (#2397)
+- Add browser header for podcast extraction (#2514)
+- Fix flaky test (#2519)
+
 Version 0.43.1 (Released September 18, 2025)
 --------------
 
