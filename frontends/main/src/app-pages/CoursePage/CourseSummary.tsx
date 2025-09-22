@@ -175,11 +175,13 @@ const DatesRow: React.FC<InfoRowProps> = ({ course, nextRun, ...others }) => {
 }
 
 type LearnMoreDialogProps = {
+  buttonText: string
   href: string
   description: string
   title: string
 }
 const LearnMoreDialog: React.FC<LearnMoreDialogProps> = ({
+  buttonText,
   href,
   description,
   title,
@@ -191,14 +193,14 @@ const LearnMoreDialog: React.FC<LearnMoreDialogProps> = ({
         target="_blank"
         rel="noopener noreferrer"
         color="red"
-        href={href}
+        href=""
+        role="button"
         onClick={(event) => {
           event.preventDefault()
           setOpen(true)
         }}
       >
-        {" "}
-        Learn more
+        {buttonText}
       </UnderlinedLink>
       <Dialog
         onClose={() => setOpen(false)}
@@ -227,8 +229,9 @@ const FormatRow: React.FC<InfoRowProps> = ({ nextRun, ...others }) => {
     <InfoRow {...others}>
       <RiComputerLine aria-hidden="true" />
       <InfoRowInner>
-        <InfoLabelValue label="Course Format" value={format.label} />
+        <InfoLabelValue label="Course Format" value={format.label} />{" "}
         <LearnMoreDialog
+          buttonText="What's this?"
           href={format.href}
           description={format.description}
           title={`What are ${format.label} courses?`}
@@ -347,6 +350,7 @@ const ArchivedAlert: React.FC = () => {
       This course is no longer active, but you can still access selected
       content.{" "}
       <LearnMoreDialog
+        buttonText="Learn more"
         href="https://mitxonline.zendesk.com/hc/en-us/articles/21995114519067-What-are-Archived-courses-on-MITx-Online-"
         description="Access lectures and readings beyond the official end date. Some course assignments and exams may be unavailable. No support in course discussion forums. Cannot earn a Course Certificate."
         title="What are Archived courses?"
