@@ -36,7 +36,6 @@ from openapi.settings_spectacular import open_spectacular_settings
 
 VERSION = "0.44.0"
 
-
 log = logging.getLogger()
 
 ENVIRONMENT = get_string("MITOL_ENVIRONMENT", "dev")
