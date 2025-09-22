@@ -33,10 +33,7 @@ import {
   SETTINGS,
 } from "@/common/urls"
 import dynamic from "next/dynamic"
-import {
-  useMitxOnlineCurrentUser,
-  MitxOnlineUser,
-} from "api/mitxonline-hooks/user"
+import { useMitxOnlineUserMe, MitxOnlineUser } from "api/mitxonline-hooks/user"
 import { useUserMe } from "api/hooks/user"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -293,7 +290,7 @@ const DashboardPage: React.FC<{
   const { isLoading: isLoadingUser, data: user } = useUserMe()
   const orgsEnabled = useFeatureFlagEnabled(FeatureFlags.OrganizationDashboard)
   const { isLoading: isLoadingMitxOnlineUser, data: mitxOnlineUser } =
-    useMitxOnlineCurrentUser({ enabled: !!orgsEnabled })
+    useMitxOnlineUserMe({ enabled: !!orgsEnabled })
 
   const tabData = useMemo(
     () =>
