@@ -1,5 +1,5 @@
 import React, { HTMLAttributes } from "react"
-import { Button, styled, VisuallyHidden } from "@mitodl/smoot-design"
+import { Alert, Button, styled, VisuallyHidden } from "@mitodl/smoot-design"
 import { Dialog, Link, Skeleton, Stack, Typography } from "ol-components"
 import {
   RiCalendarLine,
@@ -174,40 +174,41 @@ const DatesRow: React.FC<InfoRowProps> = ({ course, nextRun, ...others }) => {
   )
 }
 
-const FormatRow: React.FC<InfoRowProps> = ({ nextRun, ...others }) => {
-  const format = getFormat(nextRun)
+type LearnMoreDialogProps = {
+  href: string
+  description: string
+  title: string
+}
+const LearnMoreDialog: React.FC<LearnMoreDialogProps> = ({
+  href,
+  description,
+  title,
+}) => {
   const [open, setOpen] = React.useState(false)
-
   return (
-    <InfoRow {...others}>
-      <RiComputerLine aria-hidden="true" />
-      <InfoRowInner>
-        <InfoLabelValue label="Course Format" value={format.label} />
-        <UnderlinedLink
-          href={format.href}
-          color="red"
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(event) => {
-            event.preventDefault()
-            setOpen(true)
-          }}
-        >
-          What's this?
-        </UnderlinedLink>
-      </InfoRowInner>
+    <>
+      <UnderlinedLink
+        target="_blank"
+        rel="noopener noreferrer"
+        color="red"
+        href={href}
+        onClick={(event) => {
+          event.preventDefault()
+          setOpen(true)
+        }}
+      >
+        {" "}
+        Learn more
+      </UnderlinedLink>
       <Dialog
         onClose={() => setOpen(false)}
         open={open}
-        title={`What are ${format.label} courses?`}
-        aria-labelledby="pacing-dialog-title"
+        title={title}
         actions={null}
       >
-        <Typography sx={{ marginBottom: "16px" }}>
-          {format.description}
-        </Typography>
+        <Typography sx={{ marginBottom: "16px" }}>{description}</Typography>
         <UnderlinedLink
-          href={format.href}
+          href={href}
           target="_blank"
           rel="noopener noreferrer"
           color="red"
@@ -215,6 +216,24 @@ const FormatRow: React.FC<InfoRowProps> = ({ nextRun, ...others }) => {
           Learn More
         </UnderlinedLink>
       </Dialog>
+    </>
+  )
+}
+
+const FormatRow: React.FC<InfoRowProps> = ({ nextRun, ...others }) => {
+  const format = getFormat(nextRun)
+
+  return (
+    <InfoRow {...others}>
+      <RiComputerLine aria-hidden="true" />
+      <InfoRowInner>
+        <InfoLabelValue label="Course Format" value={format.label} />
+        <LearnMoreDialog
+          href={format.href}
+          description={format.description}
+          title={`What are ${format.label} courses?`}
+        />
+      </InfoRowInner>
     </InfoRow>
   )
 }
@@ -322,6 +341,20 @@ enum TestIds {
   PriceRow = "price-row",
 }
 
+const ArchivedAlert: React.FC = () => {
+  return (
+    <Alert severity="warning">
+      This course is no longer active, but you can still access selected
+      content.{" "}
+      <LearnMoreDialog
+        href="https://mitxonline.zendesk.com/hc/en-us/articles/21995114519067-What-are-Archived-courses-on-MITx-Online-"
+        description="Access lectures and readings beyond the official end date. Some course assignments and exams may be unavailable. No support in course discussion forums. Cannot earn a Course Certificate."
+        title="What are Archived courses?"
+      />
+    </Alert>
+  )
+}
+
 const CourseSummary: React.FC<{
   course: CourseWithCourseRunsSerializerV2
 }> = ({ course }) => {
@@ -342,8 +375,9 @@ const CourseSummary: React.FC<{
               variant="primary"
               size="large"
             >
-              Enroll for free
+              {nextRun.is_archived ? "Access Course Materials" : "Enroll Now"}
             </WideButton>
+            {nextRun.is_archived ? <ArchivedAlert /> : null}
             <DatesRow
               course={course}
               nextRun={nextRun}
@@ -365,7 +399,12 @@ const CourseSummary: React.FC<{
               data-testid={TestIds.PriceRow}
             />
           </>
-        ) : null}
+        ) : (
+          <Alert severity="warning">
+            No sessions of this course are currently open for enrollment. More
+            sessions may be added in the future.
+          </Alert>
+        )}
       </Stack>
     </SidebarSummaryRoot>
   )
