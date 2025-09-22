@@ -4,6 +4,9 @@ from learning_resources.site_scrapers.base_scraper import BaseScraper
 from learning_resources.site_scrapers.mitx_program_page_scraper import (
     MITXProgramPageScraper,
 )
+from learning_resources.site_scrapers.sloan_course_page_scraper import (
+    SloanCoursePageScraper,
+)
 from learning_resources.site_scrapers.utils import scraper_for_site
 
 
@@ -15,7 +18,7 @@ from learning_resources.site_scrapers.utils import scraper_for_site
         ("https://unknownsite.com", BaseScraper),
         (
             "https://executive.mit.edu/course/innovation-executive-academy/a05U1000005l8nFIAQ.html",
-            BaseScraper,
+            SloanCoursePageScraper,
         ),
     ],
 )
