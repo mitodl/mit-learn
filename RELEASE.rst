@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.44.0
+Version 0.44.0 (Released September 22, 2025)
 --------------
 
 - fix non-lexicographical ordering in org dashboard programs / program collections (#2523)
