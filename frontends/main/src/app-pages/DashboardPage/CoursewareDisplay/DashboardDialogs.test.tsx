@@ -21,6 +21,8 @@ const mockedUseFeatureFlagEnabled = jest
 
 describe("DashboardDialogs", () => {
   const setupApis = (includeExpired: boolean = true) => {
+    const mitxOnlineUser = mitxonline.factories.user.user()
+    setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
     const { enrollments, completed, expired, started, notStarted } =
       setupEnrollments(includeExpired)
 
