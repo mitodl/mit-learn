@@ -13,6 +13,10 @@ const userMe = {
   get: () => `${API_BASE_URL}/api/v0/users/me`,
 }
 
+const countries = {
+  list: () => `${API_BASE_URL}/api/v0/countries/`,
+}
+
 const enrollment = {
   enrollmentsList: () => `${API_BASE_URL}/api/v1/enrollments/`,
   courseEnrollment: (id?: number) =>
@@ -82,6 +86,7 @@ export {
   b2b,
   b2bAttach,
   userMe,
+  countries,
   enrollment,
   programs,
   programCollections,
