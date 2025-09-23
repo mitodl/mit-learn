@@ -10,15 +10,17 @@ from defusedxml import ElementTree
 
 from learning_resources.constants import LearningResourceType, PlatformType
 from learning_resources.etl.canvas import (
+    run_for_canvas_archive,
+    transform_canvas_content_files,
+    transform_canvas_problem_files,
+)
+from learning_resources.etl.canvas_utils import (
     _compact_element,
     is_file_published,
     parse_canvas_settings,
     parse_files_meta,
     parse_module_meta,
     parse_web_content,
-    run_for_canvas_archive,
-    transform_canvas_content_files,
-    transform_canvas_problem_files,
 )
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.utils import get_edx_module_id
@@ -120,7 +122,7 @@ def test_run_for_canvas_archive_creates_resource_and_run(tmp_path, mocker):
         return_value={"title": "Test Course", "course_code": "TEST101"},
     )
     mocker.patch(
-        "learning_resources.etl.canvas.parse_context_xml",
+        "learning_resources.etl.canvas_utils.parse_context_xml",
         return_value={"course_id": "123", "canvas_domain": "mit.edu"},
     )
 
@@ -152,7 +154,7 @@ def test_run_for_canvas_archive_creates_run_if_none_exists(tmp_path, mocker):
         return_value={"title": "Test Course", "course_code": "TEST104"},
     )
     mocker.patch(
-        "learning_resources.etl.canvas.parse_context_xml",
+        "learning_resources.etl.canvas_utils.parse_context_xml",
         return_value={"course_id": "123", "canvas_domain": "mit.edu"},
     )
     mocker.patch(
@@ -472,7 +474,7 @@ def test_transform_canvas_content_files_url_assignment(mocker, tmp_path):
         return_value=mock_content_data,
     )
     mocker.patch(
-        "learning_resources.etl.canvas.parse_module_meta",
+        "learning_resources.etl.canvas_utils.parse_module_meta",
         return_value={"active": [], "unpublished": []},
     )
     # Use a real zip file
