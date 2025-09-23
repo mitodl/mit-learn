@@ -16,8 +16,8 @@ import {
   act,
 } from "@/test-utils"
 import type { TestAppOptions } from "@/test-utils"
-import { waitForElementToBeRemoved } from "@testing-library/react"
 import invariant from "tiny-invariant"
+import { waitForElementToBeRemoved } from "@testing-library/react"
 
 const selectFromAutocomplete = async (input: HTMLElement, label: string) => {
   await user.click(input)
@@ -113,7 +113,7 @@ describe("manageListDialogs.upsertLearningPath", () => {
       expect.anything(),
       expect.anything(),
     )
-    await waitForElementToBeRemoved(dialog)
+    expect(dialog).not.toBeInTheDocument()
   })
 
   test("Validates required fields", async () => {
@@ -265,7 +265,7 @@ describe("manageListDialogs.upsertUserList", () => {
       expect.anything(),
       expect.anything(),
     )
-    await waitForElementToBeRemoved(dialog)
+    expect(dialog).not.toBeInTheDocument()
   })
 
   test("Validates required fields", async () => {
@@ -403,7 +403,8 @@ describe("manageListDialogs.destroyLearningPath", () => {
     await user.click(inputs.cancel())
 
     expect(makeRequest).not.toHaveBeenCalled()
-    await waitForElementToBeRemoved(dialog)
+
+    expect(dialog).not.toBeInTheDocument()
   })
 })
 
@@ -442,6 +443,6 @@ describe("manageListDialogs.destroyUserList", () => {
     await user.click(inputs.cancel())
 
     expect(makeRequest).not.toHaveBeenCalled()
-    await waitForElementToBeRemoved(dialog)
+    expect(dialog).not.toBeInTheDocument()
   })
 })
