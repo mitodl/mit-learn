@@ -15,15 +15,9 @@ test("SignupPopover shows link to sign up", async () => {
   const link = within(dialog).getByRole("link")
   invariant(link instanceof HTMLAnchorElement)
   expect(link.href).toMatch(
-    urls.auth({
-      loginNext: {
-        pathname: "/some-path",
-        searchParams: new URLSearchParams("dog=woof"),
-      },
-      signupNext: {
-        pathname: "/some-path",
-        searchParams: new URLSearchParams("dog=woof"),
-      },
+    urls.login({
+      pathname: "/some-path",
+      searchParams: new URLSearchParams("dog=woof"),
     }),
   )
 })
