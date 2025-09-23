@@ -2,8 +2,7 @@ import React from "react"
 import { Popover, Typography, styled } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
 import type { PopoverProps } from "ol-components"
-
-import { useAuthToCurrent } from "@/common/client-utils"
+import { useLoginToCurrent } from "@/common/client-utils"
 
 const StyledPopover = styled(Popover)({
   width: "300px",
@@ -32,7 +31,7 @@ type SignupPopoverProps = Pick<
   "anchorEl" | "onClose" | "placement"
 >
 const SignupPopover: React.FC<SignupPopoverProps> = (props) => {
-  const loginUrl = useAuthToCurrent({ signup: true })
+  const loginUrl = useLoginToCurrent()
 
   return (
     <StyledPopover {...props} open={!!props.anchorEl}>
