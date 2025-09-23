@@ -29,7 +29,7 @@ describe("B2BAttachPage", () => {
       [Permission.Authenticated]: false,
     })
 
-    setMockResponse.get(mitxOnlineUrls.currentUser.get(), null)
+    setMockResponse.get(mitxOnlineUrls.userMe.get(), null)
     setMockResponse.post(b2bUrls.b2bAttach.b2bAttachView("test-code"), [])
 
     renderWithProviders(<B2BAttachPage code="test-code" />, {
@@ -49,7 +49,7 @@ describe("B2BAttachPage", () => {
     })
 
     setMockResponse.get(
-      mitxOnlineUrls.currentUser.get(),
+      mitxOnlineUrls.userMe.get(),
       mitxOnlineFactories.user.user(),
     )
 
@@ -79,7 +79,7 @@ describe("B2BAttachPage", () => {
       [Permission.Authenticated]: true,
     })
 
-    setMockResponse.get(mitxOnlineUrls.currentUser.get(), mitxOnlineUser)
+    setMockResponse.get(mitxOnlineUrls.userMe.get(), mitxOnlineUser)
 
     setMockResponse.post(b2bUrls.b2bAttach.b2bAttachView("test-code"), [])
 

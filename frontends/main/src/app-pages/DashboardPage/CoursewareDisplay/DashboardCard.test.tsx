@@ -5,15 +5,18 @@ import {
   setMockResponse,
   user,
   within,
-  expectWindowNavigation,
 } from "@/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
+import {
+  urls as testUrls,
+  factories as testFactories,
+  mockAxiosInstance,
+} from "api/test-utils"
 import { DashboardCard, getDefaultContextMenuItems } from "./DashboardCard"
 import { dashboardCourse } from "./test-utils"
 import { faker } from "@faker-js/faker/locale/en"
 import moment from "moment"
 import { EnrollmentMode, EnrollmentStatus } from "./types"
-import { mockAxiosInstance } from "api/test-utils"
 
 const pastDashboardCourse: typeof dashboardCourse = (...overrides) => {
   return dashboardCourse(
@@ -48,6 +51,14 @@ const futureDashboardCourse: typeof dashboardCourse = (...overrides) => {
     ...overrides,
   )
 }
+
+beforeEach(() => {
+  // Mock user API call
+  const user = testFactories.user.user()
+  const mitxUser = mitxonline.factories.user.user()
+  setMockResponse.get(testUrls.userMe.get(), user)
+  setMockResponse.get(mitxonline.urls.userMe.get(), mitxUser)
+})
 
 describe.each([
   { display: "desktop", testId: "enrollment-card-desktop" },
@@ -476,19 +487,44 @@ describe.each([
         status: EnrollmentStatus.NotEnrolled,
       },
     })
+
+    // Mock user without country and year_of_birth to trigger JustInTimeDialog
+    const baseUser = mitxonline.factories.user.user()
+    const mitxUserWithoutRequiredFields = {
+      ...baseUser,
+      legal_address: { ...baseUser.legal_address, country: undefined },
+      user_profile: { ...baseUser.user_profile, year_of_birth: undefined },
+    }
+    setMockResponse.get(
+      mitxonline.urls.userMe.get(),
+      mitxUserWithoutRequiredFields,
+    )
+
     setMockResponse.post(
       mitxonline.urls.b2b.courseEnrollment(course.coursewareId ?? undefined),
       { result: "b2b-enroll-success", order: 1 },
     )
+    // Mock countries data needed by JustInTimeDialog
+    setMockResponse.get(mitxonline.urls.countries.list(), [
+      { code: "US", name: "United States" },
+      { code: "CA", name: "Canada" },
+    ])
+
     renderWithProviders(<DashboardCard dashboardResource={course} />)
     const card = getCard()
     const coursewareButton = within(card).getByTestId("courseware-button")
 
-    await expectWindowNavigation(async () => {
-      await user.click(coursewareButton)
-    })
+    // Now the button should show the JustInTimeDialog instead of directly enrolling
+    await user.click(coursewareButton)
 
-    expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+    // Verify the JustInTimeDialog appeared
+    const dialog = await screen.findByRole("dialog", {
+      name: "Just a Few More Details",
+    })
+    expect(dialog).toBeInTheDocument()
+
+    // The enrollment API should NOT be called yet (until dialog is completed)
+    expect(mockAxiosInstance.request).not.toHaveBeenCalledWith(
       expect.objectContaining({
         method: "POST",
         url: mitxonline.urls.b2b.courseEnrollment(

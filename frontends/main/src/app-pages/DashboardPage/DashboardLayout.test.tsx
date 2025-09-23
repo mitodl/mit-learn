@@ -46,7 +46,7 @@ describe("DashboardLayout", () => {
     })
 
     setMockResponse.get(urls.userMe.get(), user)
-    setMockResponse.get(mitxOnlineUrls.currentUser.get(), user)
+    setMockResponse.get(mitxOnlineUrls.userMe.get(), user)
 
     renderWithProviders(
       <DashboardLayout>
