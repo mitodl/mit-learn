@@ -239,14 +239,18 @@ const PrerequisitesSection = styled.section({
 })
 
 const InstructorsSection = styled.section({})
-const InstructorsList = styled.ul({
+const InstructorsList = styled.ul(({ theme }) => ({
   display: "flex",
   flexWrap: "wrap",
-  gap: "16px",
   padding: 0,
   margin: 0,
   marginTop: "24px",
-})
+  gap: "24px",
+  [theme.breakpoints.down("sm")]: {
+    gap: "16px",
+    justifyContent: "center",
+  },
+}))
 const InstructorCardRoot = styled.li(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
@@ -257,7 +261,8 @@ const InstructorCardRoot = styled.li(({ theme }) => ({
   width: "252px",
   minHeight: "272px",
   [theme.breakpoints.down("sm")]: {
-    width: "171px",
+    width: "calc(50% - 8px)",
+    minWidth: "162px",
   },
   ":hover": {
     boxShadow: "0 8px 20px 0 rgba(120, 147, 172, 0.10)",
@@ -275,12 +280,11 @@ const InstructorButton = styled.button(({ theme }) => ({
 }))
 const InstructorImage = styled(Image)(({ theme }) => ({
   height: "140px",
-  width: "220px",
+  width: "100%",
   objectFit: "cover",
   borderRadius: "8px",
   [theme.breakpoints.down("sm")]: {
     height: "155px",
-    width: "140px",
   },
 }))
 const InstructorCard: React.FC<{
