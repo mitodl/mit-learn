@@ -1,9 +1,16 @@
 import React from "react"
 import moment from "moment"
 import { factories, setMockResponse } from "api/test-utils"
-import { screen, renderWithProviders } from "@/test-utils"
+import { screen, renderWithProviders, waitFor } from "@/test-utils"
+import { fireEvent } from "@testing-library/react"
 import CertificatePage, { CertificateType } from "./CertificatePage"
+import SharePopover from "./SharePopover"
 import { urls } from "api/mitxonline-test-utils"
+import {
+  FACEBOOK_SHARE_BASE_URL,
+  TWITTER_SHARE_BASE_URL,
+  LINKEDIN_SHARE_BASE_URL,
+} from "@/common/urls"
 
 describe("CertificatePage", () => {
   it("renders a course certificate", async () => {
@@ -99,5 +106,83 @@ describe("CertificatePage", () => {
     )
 
     await screen.findAllByText(certificate.uuid)
+  })
+})
+
+describe("CertificatePage - SharePopover", () => {
+  const mockProps = {
+    open: true,
+    title: "Test Certificate",
+    anchorEl: document.createElement("div"),
+    onClose: jest.fn(),
+    pageUrl: "https://example.com/certificate/123",
+  }
+
+  const mockWriteText = jest.fn()
+  Object.assign(navigator, {
+    clipboard: {
+      writeText: mockWriteText,
+    },
+  })
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it("renders the SharePopover with correct content", () => {
+    renderWithProviders(<SharePopover {...mockProps} />)
+
+    expect(screen.getByText("Share on social")).toBeInTheDocument()
+    expect(screen.getByText("Share a link")).toBeInTheDocument()
+    expect(screen.getByDisplayValue(mockProps.pageUrl)).toBeInTheDocument()
+    expect(screen.getByText("Copy Link")).toBeInTheDocument()
+  })
+
+  it("renders social media share links with correct URLs", () => {
+    renderWithProviders(<SharePopover {...mockProps} />)
+
+    const facebookHref = `${FACEBOOK_SHARE_BASE_URL}?u=${encodeURIComponent(mockProps.pageUrl)}`
+    const twitterHref = `${TWITTER_SHARE_BASE_URL}?text=${encodeURIComponent(mockProps.title)}&url=${encodeURIComponent(mockProps.pageUrl)}`
+    const linkedinHref = `${LINKEDIN_SHARE_BASE_URL}?url=${encodeURIComponent(mockProps.pageUrl)}`
+
+    const facebookLink = document.querySelector(`a[href="${facebookHref}"]`)
+    const twitterLink = document.querySelector(`a[href="${twitterHref}"]`)
+    const linkedinLink = document.querySelector(`a[href="${linkedinHref}"]`)
+
+    expect(facebookLink).toBeInTheDocument()
+    expect(twitterLink).toBeInTheDocument()
+    expect(linkedinLink).toBeInTheDocument()
+
+    expect(facebookLink).toHaveAttribute("href", facebookHref)
+    expect(twitterLink).toHaveAttribute("href", twitterHref)
+    expect(linkedinLink).toHaveAttribute("href", linkedinHref)
+  })
+
+  it("opens social media links in new tab", () => {
+    renderWithProviders(<SharePopover {...mockProps} />)
+
+    const socialLinks = document.querySelectorAll("a")
+    socialLinks.forEach((link) => {
+      expect(link).toHaveAttribute("target", "_blank")
+    })
+  })
+
+  it("copies link to clipboard when copy button is clicked", async () => {
+    renderWithProviders(<SharePopover {...mockProps} />)
+
+    const copyButton = screen.getByText("Copy Link")
+    fireEvent.click(copyButton)
+
+    expect(mockWriteText).toHaveBeenCalledWith(mockProps.pageUrl)
+    await waitFor(() => {
+      expect(screen.getByText("Copied!")).toBeInTheDocument()
+    })
+  })
+
+  it("does not render when open is false", () => {
+    renderWithProviders(<SharePopover {...mockProps} open={false} />)
+
+    expect(screen.queryByText("Share on social")).not.toBeInTheDocument()
+    expect(screen.queryByText("Share a link")).not.toBeInTheDocument()
   })
 })

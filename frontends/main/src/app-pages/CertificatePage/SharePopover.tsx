@@ -144,7 +144,6 @@ const SharePopover = ({
               edge="circular"
               variant="bordered"
               startIcon={<RedLinkIcon />}
-              aria-label={copyText}
               onClick={() => {
                 navigator.clipboard?.writeText(pageUrl)
                 setCopyText("Copied!")
