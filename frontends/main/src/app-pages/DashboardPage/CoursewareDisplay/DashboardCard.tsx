@@ -168,7 +168,7 @@ const CoursewareButton = styled(
     const createEnrollment = useCreateEnrollment()
     const userCountry = mitxOnlineUser.data?.legal_address?.country
     const userYearOfBirth = mitxOnlineUser.data?.user_profile?.year_of_birth
-    const showJustInTimeModal = !userCountry || !userYearOfBirth
+    const showJustInTimeDialog = !userCountry || !userYearOfBirth
     return (hasStarted && href) || !hasEnrolled ? (
       hasEnrolled && href ? (
         <ButtonLink
@@ -188,7 +188,7 @@ const CoursewareButton = styled(
           className={className}
           disabled={createEnrollment.isPending || !coursewareId}
           onClick={async () => {
-            if (showJustInTimeModal) {
+            if (showJustInTimeDialog) {
               NiceModal.show(JustInTimeDialog, {
                 href: href ?? undefined,
               })
