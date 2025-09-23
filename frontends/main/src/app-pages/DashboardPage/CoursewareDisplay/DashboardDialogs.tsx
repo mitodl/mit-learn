@@ -31,6 +31,10 @@ const SpinnerContainer = styled.div({
   marginLeft: "8px",
 })
 
+const SelectPlaceholder = styled("span")(({ theme }) => ({
+  color: theme.custom.colors.silverGrayDark,
+}))
+
 type DashboardDialogProps = {
   title: string
   enrollment: DashboardCourseEnrollment
@@ -248,6 +252,10 @@ const JustInTimeDialogInner: React.FC<{ href: string }> = ({ href }) => {
     },
   })
 
+  const renderSelectValue = (value: string | string[]) => {
+    return value || <SelectPlaceholder>Please Select</SelectPlaceholder>
+  }
+
   return (
     <FormDialog
       title="Just a Few More Details"
@@ -303,6 +311,7 @@ const JustInTimeDialogInner: React.FC<{ href: string }> = ({ href }) => {
           label="Country"
           value={formik.values.country}
           onChange={formik.handleChange}
+          renderValue={renderSelectValue}
           fullWidth
         />
         {formik.errors.country && (
@@ -327,6 +336,7 @@ const JustInTimeDialogInner: React.FC<{ href: string }> = ({ href }) => {
           label="Year of Birth"
           value={formik.values.year_of_birth}
           onChange={formik.handleChange}
+          renderValue={renderSelectValue}
           fullWidth
         />
         {formik.errors.year_of_birth && (

@@ -58,6 +58,7 @@ type SimpleSelectFieldProps = Pick<
   | "onChange"
   | "name"
   | "className"
+  | "renderValue"
 > & {
   /**
    * The options for the dropdown
