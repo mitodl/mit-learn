@@ -49,10 +49,7 @@ const InfoRowInner: React.FC<{ children?: React.ReactNode }> = ({
 )
 
 const InfoLabel = styled.span(({ theme }) => ({
-  ...theme.typography.subtitle2,
-  [theme.breakpoints.down("sm")]: {
-    ...theme.typography.subtitle3,
-  },
+  fontWeight: theme.typography.fontWeightBold,
 }))
 const InfoValue = styled.span({})
 const InfoLabelValue: React.FC<{ label: string; value: React.ReactNode }> = ({
