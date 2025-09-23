@@ -480,7 +480,7 @@ def _process_content_embeddings(serialized_content):
         split_embeddings = []
         """
         Break up requests according to chunk size to stay under openai limits
-        600,000 tokens per request
+        300,000 tokens per request
         max array size: 2048
         see: https://platform.openai.com/docs/guides/rate-limits
         """
