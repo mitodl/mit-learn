@@ -20,6 +20,71 @@ describe("CourseSummary", () => {
     const summary = screen.getByRole("region", { name: "Course summary" })
     within(summary).getByRole("heading", { name: "Course summary" })
   })
+
+  test.each([
+    { overrides: { next_run_id: null }, expectAlert: true },
+    { overrides: {}, expectAlert: false },
+  ])(
+    "If no run is found, renders an alert (alert=$expectAlert)",
+    ({ overrides, expectAlert }) => {
+      const course = makeCourse(overrides)
+      renderWithProviders(<CourseSummary course={course} />)
+      const summary = screen.getByRole("region", { name: "Course summary" })
+      const alertMessage = within(summary).queryByRole("alert")
+
+      if (expectAlert) {
+        invariant(alertMessage)
+        const alert = alertMessage.closest("[role='alert']")
+        expect(alert).toBeInTheDocument()
+      } else {
+        expect(alertMessage).toBeNull()
+      }
+    },
+  )
+
+  test.each([
+    { overrides: { is_archived: true }, expectAlert: true },
+    { overrides: { is_archived: false }, expectAlert: false },
+  ])(
+    "Renders an alert if run is archived (alert = $expectAlert)",
+    ({ overrides, expectAlert }) => {
+      const run = makeRun(overrides)
+      const course = makeCourse({
+        next_run_id: run.id,
+        courseruns: shuffle([run, makeRun()]),
+      })
+      renderWithProviders(<CourseSummary course={course} />)
+      const summary = screen.getByRole("region", { name: "Course summary" })
+      const alert = within(summary).queryByRole("alert")
+
+      if (expectAlert) {
+        invariant(alert)
+        expect(alert).toHaveTextContent(
+          "This course is no longer active, but you can still access selected content.",
+        )
+      } else {
+        expect(alert).toBeNull()
+      }
+    },
+  )
+
+  test.each([
+    {
+      overrides: { is_archived: true },
+      expectLabel: "Access Course Materials",
+    },
+    { overrides: { is_archived: false }, expectLabel: "Enroll Now" },
+  ])("Renders expected enrollment button", ({ overrides, expectLabel }) => {
+    const run = makeRun(overrides)
+    const course = makeCourse({
+      next_run_id: run.id,
+      courseruns: shuffle([run, makeRun()]),
+    })
+    renderWithProviders(<CourseSummary course={course} />)
+    const summary = screen.getByRole("region", { name: "Course summary" })
+    const button = within(summary).getByRole("button", { name: expectLabel })
+    expect(button).toBeInTheDocument()
+  })
 })
 
 describe("Dates Row", () => {
@@ -118,8 +183,10 @@ describe("Course Format Row", () => {
       const formatRow = within(summary).getByTestId(TestIds.FormatRow)
       expect(formatRow).toHaveTextContent("Course Format: Self-Paced")
 
-      const link = within(formatRow).getByRole("link", { name: "What's this?" })
-      await user.click(link)
+      const button = within(formatRow).getByRole("button", {
+        name: "What's this?",
+      })
+      await user.click(button)
       const dialog = await screen.findByRole("dialog", {
         name: "What are Self-Paced courses?",
       })
@@ -143,11 +210,11 @@ describe("Course Format Row", () => {
     const formatRow = within(summary).getByTestId(TestIds.FormatRow)
     expect(formatRow).toHaveTextContent("Course Format: Instructor-Paced")
 
-    const link = within(formatRow).getByRole("link", {
+    const button = within(formatRow).getByRole("button", {
       name: "What's this?",
     })
 
-    await user.click(link)
+    await user.click(button)
     const dialog = await screen.findByRole("dialog", {
       name: "What are Instructor-Paced courses?",
     })
