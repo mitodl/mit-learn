@@ -5,7 +5,6 @@ import {
   setMockResponse,
   user,
   within,
-  expectWindowNavigation,
 } from "@/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import {
@@ -492,15 +491,27 @@ describe.each([
       mitxonline.urls.b2b.courseEnrollment(course.coursewareId ?? undefined),
       { result: "b2b-enroll-success", order: 1 },
     )
+    // Mock countries data needed by JustInTimeDialog
+    setMockResponse.get(mitxonline.urls.countries.list(), [
+      { code: "US", name: "United States" },
+      { code: "CA", name: "Canada" },
+    ])
+
     renderWithProviders(<DashboardCard dashboardResource={course} />)
     const card = getCard()
     const coursewareButton = within(card).getByTestId("courseware-button")
 
-    await expectWindowNavigation(async () => {
-      await user.click(coursewareButton)
-    })
+    // Now the button should show the JustInTimeDialog instead of directly enrolling
+    await user.click(coursewareButton)
 
-    expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+    // Verify the JustInTimeDialog appeared
+    const dialog = await screen.findByRole("dialog", {
+      name: "Just a Few More Details",
+    })
+    expect(dialog).toBeInTheDocument()
+
+    // The enrollment API should NOT be called yet (until dialog is completed)
+    expect(mockAxiosInstance.request).not.toHaveBeenCalledWith(
       expect.objectContaining({
         method: "POST",
         url: mitxonline.urls.b2b.courseEnrollment(
