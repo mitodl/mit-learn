@@ -485,7 +485,7 @@ def _process_content_embeddings(serialized_content):
         see: https://platform.openai.com/docs/guides/rate-limits
         """
         request_chunk_size = int(
-            600000 / settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
+            300000 / settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
         )
         for i in range(0, len(split_texts), request_chunk_size):
             split_chunk = split_texts[i : i + request_chunk_size]
