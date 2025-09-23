@@ -30,7 +30,9 @@ describe("CourseSummary", () => {
       const course = makeCourse(overrides)
       renderWithProviders(<CourseSummary course={course} />)
       const summary = screen.getByRole("region", { name: "Course summary" })
-      const alertMessage = within(summary).queryByRole("alert")
+      const alertMessage = within(summary).queryByText(
+        /No sessions of this course are currently open for enrollment/,
+      )
 
       if (expectAlert) {
         invariant(alertMessage)
