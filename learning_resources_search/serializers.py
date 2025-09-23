@@ -29,6 +29,7 @@ from learning_resources.constants import (
 )
 from learning_resources.models import (
     ContentFile,
+    Course,
     LearningResource,
     LearningResourceRelationship,
     UserListRelationship,
@@ -131,7 +132,10 @@ def serialize_learning_resource_for_update(
 
     serialized_data = LearningResourceSerializer(instance=learning_resource_obj).data
 
-    if learning_resource_obj.resource_type == LearningResourceType.course.name:
+    if (
+        learning_resource_obj.resource_type == LearningResourceType.course.name
+        and Course.objects.filter(learning_resource=learning_resource_obj).exists()
+    ):
         serialized_data["course"]["course_numbers"] = [
             SearchCourseNumberSerializer(instance=num).data
             for num in learning_resource_obj.course.course_numbers
