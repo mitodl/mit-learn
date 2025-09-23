@@ -487,6 +487,19 @@ describe.each([
         status: EnrollmentStatus.NotEnrolled,
       },
     })
+
+    // Mock user without country and year_of_birth to trigger JustInTimeDialog
+    const baseUser = mitxonline.factories.user.user()
+    const mitxUserWithoutRequiredFields = {
+      ...baseUser,
+      legal_address: { ...baseUser.legal_address, country: undefined },
+      user_profile: { ...baseUser.user_profile, year_of_birth: undefined },
+    }
+    setMockResponse.get(
+      mitxonline.urls.userMe.get(),
+      mitxUserWithoutRequiredFields,
+    )
+
     setMockResponse.post(
       mitxonline.urls.b2b.courseEnrollment(course.coursewareId ?? undefined),
       { result: "b2b-enroll-success", order: 1 },
