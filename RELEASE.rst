@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+Version 0.44.2
+--------------
+
+- Revert "separate login and signup redirects (#2384)" (#2533)
+- Fix scraper for sloan marketing pages (#2528)
+- changing chunk size to fit under openai limits (#2531)
+- Canvas: ingest syllabus if available and visible (#2525)
+- separate login and signup redirects (#2384)
+
 Version 0.44.0 (Released September 22, 2025)
 --------------
 
