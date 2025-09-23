@@ -1,3 +1,3 @@
-import { pagesQueries, getPpagesDetail } from "./queries"
+import { pagesQueries, getPagesDetail } from "./queries"
 
-export { pagesQueries, getPpagesDetail }
+export { pagesQueries, getPagesDetail }

@@ -14,7 +14,7 @@ const pagesKeys = {
   ],
 }
 
-const getPpagesDetail = async (readableId: string) => {
+const getPagesDetail = async (readableId: string) => {
   // TODO: When MITxOnline is published, API client will support readable_id param.
   // The API supports it now, just not the client.
   // return pagesApi
@@ -38,9 +38,9 @@ const pagesQueries = {
     queryOptions({
       queryKey: pagesKeys.coursePageDetail(readableId),
       queryFn: async () => {
-        return getPpagesDetail(readableId).then((res) => res.data)
+        return getPagesDetail(readableId).then((res) => res.data)
       },
     }),
 }
 
-export { pagesQueries, pagesKeys, getPpagesDetail }
+export { pagesQueries, pagesKeys, getPagesDetail }
