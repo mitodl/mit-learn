@@ -16,9 +16,6 @@ export const generateMetadata = async (
 
   try {
     const resp = await getPagesDetail(decodeURIComponent(params.readable_id))
-    // const resp = await pagesApi.pagesfieldstypecmsCoursePageRetrieve({
-    // readable_id: decodeURIComponent(params.readable_id),
-    // })
     if (resp.data.items.length === 0) {
       notFound()
     }
