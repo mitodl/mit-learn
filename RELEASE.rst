@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.44.2
+Version 0.44.2 (Released September 23, 2025)
 --------------
 
 - Revert "separate login and signup redirects (#2384)" (#2533)
