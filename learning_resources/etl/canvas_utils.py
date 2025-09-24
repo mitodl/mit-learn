@@ -500,9 +500,12 @@ def _url_config_item_visible(item_configuration):
     if item_configuration:
         # check if explicitely unpublished
         unpublished = not item_configuration.get("published", True)
+        lock_at = item_configuration.get("lock_at")
+        unlock_at = item_configuration.get("unlock_at")
         return not any(
             [
                 unpublished,
+                is_date_locked(lock_at, unlock_at),
                 item_configuration.get("hidden"),  # file hidden
                 item_configuration.get("locked"),  # file locked
                 item_configuration.get("folder", {}).get(
@@ -520,6 +523,10 @@ def get_published_items(zipfile_path, url_config):
     published_items = {}
     course_settings = parse_canvas_settings(zipfile_path)
     tab_configuration = course_settings.get("tab_configuration", {})
+    """
+    mappings for ids:
+    # https://developerdocs.instructure.com/services/dap/dataset/dataset-additional-notes
+    """
     files_section_is_visible = not tab_configuration.get(11, {}).get("hidden", False)
     all_published_items = (
         parse_module_meta(zipfile_path)["active"]
