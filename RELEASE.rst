@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.45.0
+--------------
+
+- Bump sha.js from 2.4.11 to 2.4.12 (#2537)
+- Course Product Pages (#2522)
+
 Version 0.44.2 (Released September 23, 2025)
 --------------
 
