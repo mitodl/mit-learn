@@ -1,6 +1,33 @@
 Release Notes
 =============
 
+Version 0.44.2 (Released September 23, 2025)
+--------------
+
+- Revert "separate login and signup redirects (#2384)" (#2533)
+- Fix scraper for sloan marketing pages (#2528)
+- changing chunk size to fit under openai limits (#2531)
+- Canvas: ingest syllabus if available and visible (#2525)
+- separate login and signup redirects (#2384)
+
+Version 0.44.0 (Released September 22, 2025)
+--------------
+
+- fix non-lexicographical ordering in org dashboard programs / program collections (#2523)
+- canvas: citation urls for html content (#2521)
+- chore(deps): update redis docker tag to v8 (#2397)
+- Add browser header for podcast extraction (#2514)
+- Fix flaky test (#2519)
+
+Version 0.43.1 (Released September 18, 2025)
+--------------
+
+- Fix posthog import (#2518)
+- fix mitxonline etl pagination (#2495)
+- Revert "commit" - pushed to main by mistake (#2517)
+- commit
+- Use posthog bulk export (#2489)
+
 Version 0.43.0 (Released September 16, 2025)
 --------------
 

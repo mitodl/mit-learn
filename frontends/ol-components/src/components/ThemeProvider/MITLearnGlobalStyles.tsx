@@ -7,6 +7,10 @@ const pageCss = (theme: Theme) => css`
   html {
     font-family: ${theme.typography.body1.fontFamily};
     color: ${theme.typography.body1.color};
+    scroll-padding-top: ${theme.custom.dimensions.headerHeight};
+    ${theme.breakpoints.down("sm")} {
+      scroll-padding-top: ${theme.custom.dimensions.headerHeightSm};
+    }
   }
 
   body {
