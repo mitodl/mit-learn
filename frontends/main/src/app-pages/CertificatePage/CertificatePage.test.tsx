@@ -174,9 +174,7 @@ describe("CertificatePage - SharePopover", () => {
     fireEvent.click(copyButton)
 
     expect(mockWriteText).toHaveBeenCalledWith(mockProps.pageUrl)
-    await waitFor(() => {
-      expect(screen.getByText("Copied!")).toBeInTheDocument()
-    })
+await screen.findByText("Copied!")
   })
 
   it("does not render when open is false", () => {
