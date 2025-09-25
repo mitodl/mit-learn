@@ -261,13 +261,24 @@ def parse_web_content(course_archive_path: str) -> dict:
     """
 
     publish_status = {"active": [], "unpublished": []}
-
+    course_settings = parse_canvas_settings(course_archive_path)
+    public_syllabus_setting = course_settings.get("public_syllabus", "true").lower()
+    public_syllabus_to_auth_setting = course_settings.get(
+        "public_syllabus_to_auth", "true"
+    ).lower()
+    ingest_syllabus = True
+    if (
+        public_syllabus_setting == "false"
+        and public_syllabus_to_auth_setting == "false"
+    ):
+        ingest_syllabus = False
     with zipfile.ZipFile(course_archive_path, "r") as course_archive:
         manifest_path = "imsmanifest.xml"
         if manifest_path not in course_archive.namelist():
             return publish_status
         manifest_xml = course_archive.read(manifest_path)
         resource_map = extract_resources_by_identifier(manifest_xml)
+
         for item in resource_map:
             resource_map_item = resource_map[item]
             item_link = resource_map_item.get("href")
@@ -297,8 +308,12 @@ def parse_web_content(course_archive_path: str) -> dict:
                 # Determine if the content is intended for authors or instructors only
                 intended_role = lom_elem.get("intendedEndUserRole", {}).get("value")
                 authors_only = intended_role and intended_role.lower() != "student"
-
-                if workflow_state in ["active", "published"] and not authors_only:
+                intended_use = resource_map_item.get("intendeduse", "")
+                if (
+                    workflow_state in ["active", "published"]
+                    and not authors_only
+                    and intended_use != "syllabus"
+                ) or (ingest_syllabus and intended_use == "syllabus"):
                     publish_status["active"].append(
                         {
                             "title": title,
@@ -347,7 +362,12 @@ def extract_resources_by_identifierref(manifest_xml: str) -> dict:
             ]
 
             resources_dict[identifierref].append(
-                {"title": title, "files": files, "type": resource.get("type")}
+                {
+                    "title": title,
+                    "files": files,
+                    "type": resource.get("type"),
+                    "intendeduse": resource.get("intendeduse"),
+                }
             )
     return dict(resources_dict)
 
@@ -381,6 +401,7 @@ def extract_resources_by_identifier(manifest_xml: str) -> dict:
             "href": href,
             "files": files,
             "metadata": metadata,
+            "intendeduse": resource.get("intendeduse"),
         }
     return resources_dict
 
@@ -445,7 +466,10 @@ def parse_canvas_settings(course_archive_path):
     Get course attributes from a Canvas course archive
     """
     with zipfile.ZipFile(course_archive_path, "r") as course_archive:
-        xml_string = course_archive.read("course_settings/course_settings.xml")
+        settings_path = "course_settings/course_settings.xml"
+        if settings_path not in course_archive.namelist():
+            return {}
+        xml_string = course_archive.read(settings_path)
     tree = ElementTree.fromstring(xml_string)
     attributes = {}
     for node in tree.iter():

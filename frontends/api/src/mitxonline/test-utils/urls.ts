@@ -47,6 +47,13 @@ const courses = {
     `${API_BASE_URL}/api/v2/courses/${queryify(opts, { explode: false })}`,
 }
 
+const pages = {
+  courseDetail: (readableId: string) =>
+    `${API_BASE_URL}/api/v2/pages/?fields=*&readable_id=${encodeURIComponent(
+      readableId,
+    )}&type=cms.CoursePage`,
+}
+
 const organization = {
   organizationList: (organizationSlug: string) =>
     `${API_BASE_URL}/api/v0/b2b/organizations/${organizationSlug}/`,
@@ -77,6 +84,7 @@ export {
   programs,
   programCollections,
   courses,
+  pages,
   organization,
   programEnrollments,
   contracts,
