@@ -524,7 +524,7 @@ def test_transform_canvas_content_files_url_assignment(mocker, tmp_path):
     """
     run = MagicMock()
     run.id = 1
-    url_config = {"/folder/file1.html": "https://cdn.example.com/file1.html"}
+    url_config = {"/folder/file1.html": {"url": "https://cdn.example.com/file1.html"}}
     # Patch _process_olx_path to yield content_data with source_path
     mock_content_data = [
         {"source_path": "data/folder/file1.html", "key": "file1"},
@@ -1140,8 +1140,8 @@ def test_get_url_config_assignments_and_pages(mocker, tmp_path):
     hmtl_page_title = "html page"
 
     url_config = {
-        hmtl_page_title: "https://example.com/htmlpage",
-        "/file1.html": "https://example.com/file1",
+        hmtl_page_title: {"url": "https://example.com/htmlpage"},
+        "/file1.html": {"url": "https://example.com/file1"},
     }
 
     run = LearningResourceRunFactory.create()
