@@ -1,7 +1,7 @@
 import React from "react"
 import moment from "moment"
 import { factories, setMockResponse } from "api/test-utils"
-import { screen, renderWithProviders, waitFor } from "@/test-utils"
+import { screen, renderWithProviders } from "@/test-utils"
 import { fireEvent } from "@testing-library/react"
 import CertificatePage, { CertificateType } from "./CertificatePage"
 import SharePopover from "./SharePopover"
@@ -174,7 +174,7 @@ describe("CertificatePage - SharePopover", () => {
     fireEvent.click(copyButton)
 
     expect(mockWriteText).toHaveBeenCalledWith(mockProps.pageUrl)
-await screen.findByText("Copied!")
+    await screen.findByText("Copied!")
   })
 
   it("does not render when open is false", () => {
