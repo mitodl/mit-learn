@@ -3,10 +3,10 @@ import { HydrationBoundary } from "@tanstack/react-query"
 import { standardizeMetadata } from "@/common/metadata"
 import { prefetch } from "api/ssr/prefetch"
 import CoursePage from "@/app-pages/ProductPages/CoursePage"
-// import { pagesApi } from "api/mitxonline"
+import { pagesApi } from "api/mitxonline"
 import * as Sentry from "@sentry/nextjs"
 import { notFound } from "next/navigation"
-import { getPagesDetail, pagesQueries } from "api/mitxonline-hooks/pages"
+import { pagesQueries } from "api/mitxonline-hooks/pages"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 
 export const generateMetadata = async (
@@ -15,7 +15,10 @@ export const generateMetadata = async (
   const params = await props.params
 
   try {
-    const resp = await getPagesDetail(decodeURIComponent(params.readable_id))
+    const resp = await pagesApi.pagesfieldstypecmsCoursePageRetrieve({
+      readable_id: decodeURIComponent(params.readable_id),
+    })
+
     if (resp.data.items.length === 0) {
       notFound()
     }

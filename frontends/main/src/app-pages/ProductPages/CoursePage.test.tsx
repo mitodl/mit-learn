@@ -18,6 +18,7 @@ import { notFound } from "next/navigation"
 
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { faker } from "@faker-js/faker/locale/en"
+import invariant from "tiny-invariant"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
@@ -42,6 +43,7 @@ const setupApis = ({
     urls.courses.coursesList({ readable_id: course.readable_id }),
     { results: [course] },
   )
+
   setMockResponse.get(urls.pages.courseDetail(course.readable_id), {
     items: [page],
   })
@@ -120,6 +122,7 @@ describe("CoursePage", () => {
   test("About section has expected content", async () => {
     const course = makeCourse()
     const page = makePage({ course_details: course })
+    invariant(page.about)
     setupApis({ course, page })
     renderWithProviders(<CoursePage readableId={course.readable_id} />)
 
@@ -201,6 +204,7 @@ describe("CoursePage", () => {
   test("What You'll Learn section has expected content", async () => {
     const course = makeCourse()
     const page = makePage({ course_details: course })
+    invariant(page.what_you_learn)
     setupApis({ course, page })
     renderWithProviders(<CoursePage readableId={course.readable_id} />)
 
@@ -213,6 +217,7 @@ describe("CoursePage", () => {
   test("Prerequisites section has expected content", async () => {
     const course = makeCourse()
     const page = makePage({ course_details: course })
+    invariant(page.prerequisites)
     setupApis({ course, page })
     renderWithProviders(<CoursePage readableId={course.readable_id} />)
 

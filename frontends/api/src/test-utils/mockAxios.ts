@@ -8,14 +8,26 @@ type Method = "get" | "post" | "patch" | "delete"
 
 type PartialAxiosResponse = Pick<AxiosResponse, "data" | "status">
 
-const alwaysError = (
-  method: string,
+type RequestMaker = (
+  method: Method,
   url: string,
-  _body?: unknown,
-): Promise<PartialAxiosResponse> => {
+  body?: unknown,
+) => Promise<PartialAxiosResponse>
+
+const alwaysError: RequestMaker = (method, url, _body) => {
   const msg = `No response specified for ${method} ${url}`
   console.error(msg)
   throw new Error(msg)
+}
+
+const standardizeUrl = (url: string) => {
+  if (!url.includes("?")) {
+    return url
+  }
+  const [path, queryString] = url.split("?")
+  const query = new URLSearchParams(queryString)
+  query.sort()
+  return `${path}?${query.toString()}`
 }
 
 /**
@@ -29,17 +41,23 @@ const alwaysError = (
  *  '/some/url/to/thing',
  *   expect.objectContaining({ some: 'value' }) // request body
  * ])
+ *
+ * NOTE: URLs called by this function are first
  * ```
  */
-const makeRequest = jest.fn(alwaysError)
+const makeRequest: RequestMaker = jest.fn(alwaysError)
+const makeSortedRequest: RequestMaker = (method, url, body) =>
+  makeRequest(method, standardizeUrl(url), body)
 
 const mockAxiosInstance = {
-  get: jest.fn((url: string) => makeRequest("get", url, undefined)),
-  post: jest.fn((url: string, body: unknown) => makeRequest("post", url, body)),
-  patch: jest.fn((url: string, body: unknown) =>
-    makeRequest("patch", url, body),
+  get: jest.fn((url: string) => makeSortedRequest("get", url, undefined)),
+  post: jest.fn((url: string, body: unknown) =>
+    makeSortedRequest("post", url, body),
   ),
-  delete: jest.fn((url: string) => makeRequest("delete", url, undefined)),
+  patch: jest.fn((url: string, body: unknown) =>
+    makeSortedRequest("patch", url, body),
+  ),
+  delete: jest.fn((url: string) => makeSortedRequest("delete", url, undefined)),
   request: jest.fn(
     (
       {
@@ -57,7 +75,11 @@ const mockAxiosInstance = {
       // on object shape.
       const deserialized =
         typeof data === "string" ? JSON.parse(data) : undefined
-      return makeRequest(method.toLowerCase(), url, deserialized)
+      return makeSortedRequest(
+        method.toLowerCase() as Method,
+        url,
+        deserialized,
+      )
     },
   ),
   defaults: {}, // OpenAPI Generator accesses this, so it needs to exist
@@ -72,15 +94,6 @@ const expectAnythingOrNil = expect.toBeOneOf([
   expect.toBeNil(),
 ])
 
-const standardizeUrl = <T>(url: T) => {
-  if (!(typeof url === "string")) return url
-  if (!url.includes("?")) return url
-  const [path, queryString] = url.split("?")
-  const query = new URLSearchParams(queryString)
-  query.sort()
-  return `${path}?${query.toString()}`
-}
-
 const mockRequest = <T, U>(
   method: Method,
   url: string,
@@ -88,8 +101,9 @@ const mockRequest = <T, U>(
   responseBody: U | ((req: T) => U) | undefined = undefined,
   code: number,
 ) => {
+  const urlMatcher = typeof url === "string" ? standardizeUrl(url) : url
   when(makeRequest)
-    .calledWith(method, standardizeUrl(url), requestBody)
+    .calledWith(method, urlMatcher, requestBody)
     .mockImplementation(async () => {
       let data
       if (isFunction(responseBody)) {
@@ -158,7 +172,7 @@ const setMockResponse = {
     { code = 200, requestBody }: MockResponseOptions = {},
   ) => mockRequest("patch", url, requestBody, responseBody, code),
   /**
-   * Set mock response for a PATCH request; default response status is 204.
+   * Set mock response for a DELETE request; default response status is 204.
    *
    * If `responseBody` is a Promise, the request will resolve to the value of
    * `responseBody` when `responseBody` resolves.
