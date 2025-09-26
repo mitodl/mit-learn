@@ -1,8 +1,8 @@
 import React from "react"
 import moment from "moment"
 import { factories, setMockResponse } from "api/test-utils"
-import { screen, renderWithProviders } from "@/test-utils"
-import { fireEvent } from "@testing-library/react"
+import { screen, renderWithProviders, user } from "@/test-utils"
+import { fireEvent, getByRole } from "@testing-library/react"
 import CertificatePage, { CertificateType } from "./CertificatePage"
 import SharePopover from "./SharePopover"
 import { urls } from "api/mitxonline-test-utils"
@@ -145,36 +145,27 @@ describe("CertificatePage - SharePopover", () => {
     const twitterHref = `${TWITTER_SHARE_BASE_URL}?text=${encodeURIComponent(mockProps.title)}&url=${encodeURIComponent(mockProps.pageUrl)}`
     const linkedinHref = `${LINKEDIN_SHARE_BASE_URL}?url=${encodeURIComponent(mockProps.pageUrl)}`
 
-    const facebookLink = document.querySelector(`a[href="${facebookHref}"]`)
-    const twitterLink = document.querySelector(`a[href="${twitterHref}"]`)
-    const linkedinLink = document.querySelector(`a[href="${linkedinHref}"]`)
-
-    expect(facebookLink).toBeInTheDocument()
-    expect(twitterLink).toBeInTheDocument()
-    expect(linkedinLink).toBeInTheDocument()
+    const facebookLink = screen.getByRole("link", { name: "Share on Facebook" })
+    const twitterLink = screen.getByRole("link", { name: "Share on Twitter" })
+    const linkedinLink = screen.getByRole("link", { name: "Share on LinkedIn" })
 
     expect(facebookLink).toHaveAttribute("href", facebookHref)
     expect(twitterLink).toHaveAttribute("href", twitterHref)
     expect(linkedinLink).toHaveAttribute("href", linkedinHref)
-  })
 
-  it("opens social media links in new tab", () => {
-    renderWithProviders(<SharePopover {...mockProps} />)
-
-    const socialLinks = document.querySelectorAll("a")
-    socialLinks.forEach((link) => {
-      expect(link).toHaveAttribute("target", "_blank")
-    })
+    expect(facebookLink).toHaveAttribute("target", "_blank")
+    expect(twitterLink).toHaveAttribute("target", "_blank")
+    expect(linkedinLink).toHaveAttribute("target", "_blank")
   })
 
   it("copies link to clipboard when copy button is clicked", async () => {
     renderWithProviders(<SharePopover {...mockProps} />)
 
-    const copyButton = screen.getByText("Copy Link")
-    fireEvent.click(copyButton)
+    const copyButton = screen.getByRole("button", { name: "Copy Link" })
+    await user.click(copyButton)
 
     expect(mockWriteText).toHaveBeenCalledWith(mockProps.pageUrl)
-    await screen.findByText("Copied!")
+    screen.getByRole("button", { name: "Copied!" })
   })
 
   it("does not render when open is false", () => {

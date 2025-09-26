@@ -108,18 +108,21 @@ const SharePopover = ({
           <ButtonContainer>
             <ShareLink
               href={`${FACEBOOK_SHARE_BASE_URL}?u=${encodeURIComponent(pageUrl)}`}
+              aria-label="Share on Facebook"
               target="_blank"
             >
               <RiFacebookFill size={18} />
             </ShareLink>
             <ShareLink
               href={`${TWITTER_SHARE_BASE_URL}?text=${encodeURIComponent(title)}&url=${encodeURIComponent(pageUrl)}`}
+              aria-label="Share on Twitter"
               target="_blank"
             >
               <RiTwitterXLine size={18} />
             </ShareLink>
             <ShareLink
               href={`${LINKEDIN_SHARE_BASE_URL}?url=${encodeURIComponent(pageUrl)}`}
+              aria-label="Share on LinkedIn"
               target="_blank"
             >
               <RiLinkedinFill size={18} />
