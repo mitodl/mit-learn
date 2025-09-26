@@ -1455,6 +1455,15 @@ def test_course_run_problems_endpoint(client, user_role, django_user_model):
         problem_title="Problem Set 1",
         type="problem",
         content="Content for Problem Set 1",
+        file_name="problem1.txt",
+    )
+
+    TutorProblemFileFactory.create(
+        run=course_run,
+        problem_title="Problem Set 1",
+        type="problem",
+        content="Content for Problem Set 1 Part 2",
+        file_name="problem1-b.txt",
     )
 
     TutorProblemFileFactory.create(
@@ -1462,6 +1471,7 @@ def test_course_run_problems_endpoint(client, user_role, django_user_model):
         problem_title="Problem Set 1",
         type="solution",
         content="Content for Problem Set 1 Solution",
+        file_name="solution1.txt",
     )
     TutorProblemFileFactory.create(
         run=course_run, problem_title="Problem Set 2", type="problem"
@@ -1487,6 +1497,19 @@ def test_course_run_problems_endpoint(client, user_role, django_user_model):
         assert detail_resp.json() == {
             "problem_set": "Content for Problem Set 1",
             "solution_set": "Content for Problem Set 1 Solution",
+            "problem_set_files": [
+                {"file_name": "problem1.txt", "content": "Content for Problem Set 1"},
+                {
+                    "file_name": "problem1-b.txt",
+                    "content": "Content for Problem Set 1 Part 2",
+                },
+            ],
+            "solution_set_files": [
+                {
+                    "file_name": "solution1.txt",
+                    "content": "Content for Problem Set 1 Solution",
+                },
+            ],
         }
     elif user_role == "normal":
         assert detail_resp.status_code == 403

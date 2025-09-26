@@ -9,9 +9,10 @@ import {
 import * as commonUrls from "@/common/urls"
 import { Permission } from "api/hooks/user"
 import B2BAttachPage from "./B2BAttachPage"
+import invariant from "tiny-invariant"
 
 // Mock next-nprogress-bar for App Router
-const mockPush = jest.fn()
+const mockPush = jest.fn<void, [string]>()
 jest.mock("next-nprogress-bar", () => ({
   useRouter: () => ({
     push: mockPush,
@@ -37,10 +38,18 @@ describe("B2BAttachPage", () => {
     })
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith(
-        expect.stringMatching(/login.*next=.*skip_onboarding=1/),
-      )
+      expect(mockPush).toHaveBeenCalledOnce()
     })
+
+    const url = new URL(mockPush.mock.calls[0][0])
+    expect(url.searchParams.get("skip_onboarding")).toBe("1")
+    const nextUrl = url.searchParams.get("next")
+    const signupNextUrl = url.searchParams.get("signup_next")
+    invariant(nextUrl)
+    invariant(signupNextUrl)
+    const attachView = commonUrls.b2bAttachView("test-code")
+    expect(new URL(nextUrl).pathname).toBe(attachView)
+    expect(new URL(signupNextUrl).pathname).toBe(attachView)
   })
 
   test("Renders when logged in", async () => {

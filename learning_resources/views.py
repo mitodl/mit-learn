@@ -1439,13 +1439,32 @@ class CourseRunProblemsViewSet(viewsets.ViewSet):
             run_id=run_readable_id, learning_resource__platform=PlatformType.canvas.name
         ).first()
 
-        problem_file = TutorProblemFile.objects.get(
+        problem_files = TutorProblemFile.objects.filter(
             run=run, problem_title=problem_title, type="problem"
         )
-        solution_file = TutorProblemFile.objects.get(
+        solution_files = TutorProblemFile.objects.filter(
             run=run, problem_title=problem_title, type="solution"
         )
 
         return Response(
-            {"problem_set": problem_file.content, "solution_set": solution_file.content}
+            {
+                # problem_set and solution_set will be removed after i make the
+                # required changes to open_learning_ai_tutor
+                "problem_set": problem_files.first().content,
+                "solution_set": solution_files.first().content,
+                "problem_set_files": [
+                    {
+                        "file_name": problem_file.file_name,
+                        "content": problem_file.content,
+                    }
+                    for problem_file in problem_files
+                ],
+                "solution_set_files": [
+                    {
+                        "file_name": solution_file.file_name,
+                        "content": solution_file.content,
+                    }
+                    for solution_file in solution_files
+                ],
+            }
         )

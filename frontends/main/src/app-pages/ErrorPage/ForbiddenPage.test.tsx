@@ -1,6 +1,6 @@
 import React from "react"
 import { renderWithProviders, screen, waitFor } from "../../test-utils"
-import { HOME, login } from "@/common/urls"
+import * as routes from "@/common/urls"
 import ForbiddenPage from "./ForbiddenPage"
 import { setMockResponse, urls, factories } from "api/test-utils"
 import { useUserMe } from "api/hooks/user"
@@ -22,7 +22,7 @@ test("The ForbiddenPage loads with a link that directs to HomePage", async () =>
   setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
   renderWithProviders(<ForbiddenPage />)
   const homeLink = await screen.findByRole("link", { name: "Home" })
-  expect(homeLink).toHaveAttribute("href", HOME)
+  expect(homeLink).toHaveAttribute("href", routes.HOME)
 })
 
 test("Fetches auth data afresh and redirects unauthenticated users to auth", async () => {
@@ -53,9 +53,11 @@ test("Fetches auth data afresh and redirects unauthenticated users to auth", asy
 
   await waitFor(() => {
     expect(mockedRedirect).toHaveBeenCalledWith(
-      login({
-        pathname: "/foo",
-        searchParams: new URLSearchParams({ cat: "meow" }),
+      routes.auth({
+        loginNext: {
+          pathname: "/foo",
+          searchParams: new URLSearchParams({ cat: "meow" }),
+        },
       }),
     )
   })

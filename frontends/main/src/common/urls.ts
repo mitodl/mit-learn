@@ -55,40 +55,6 @@ if (process.env.NODE_ENV !== "production") {
 
 const MITOL_API_BASE_URL = process.env.NEXT_PUBLIC_MITOL_API_BASE_URL
 
-export const LOGIN = `${MITOL_API_BASE_URL}/login`
-export const LOGOUT = `${MITOL_API_BASE_URL}/logout/`
-
-/**
- * Returns the URL to the login page, with a `next` parameter to redirect back
- * to the given pathname + search parameters.
- *
- * NOTES:
- *  1. useLoginToCurrent() is a convenience function that uses the current
- *    pathname and search parameters to generate the next URL.
- *  2. `next` is required to encourage its use. You can explicitly pass `null`
- *    for values to skip them if desired.
- */
-export const login = (next: {
-  pathname: string | null
-  searchParams: URLSearchParams | null
-  hash?: string | null
-}) => {
-  const pathname = next.pathname ?? "/"
-  const searchParams = next.searchParams ?? new URLSearchParams()
-  const hash = next.hash ?? ""
-  /**
-   * To include search parameters in the next URL, we need to encode them.
-   * If we pass `?next=/foo/bar?cat=meow` directly, Django receives two separate
-   * parameters: `next` and `cat`.
-   *
-   * There's no need to encode the path parameter (it might contain slashes,
-   * but those are allowed in search parameters) so let's keep it readable.
-   */
-  const search = searchParams?.toString() ? `?${searchParams.toString()}` : ""
-  const nextHref = `${ORIGIN}${pathname}${encodeURIComponent(search)}${encodeURIComponent(hash as string)}`
-  return `${LOGIN}?next=${nextHref}`
-}
-
 export const DASHBOARD_VIEW = "/dashboard/[tab]"
 const dashboardView = (tab: string) => generatePath(DASHBOARD_VIEW, { tab })
 
@@ -165,6 +131,61 @@ export const SEARCH_PROGRAM = querifiedSearchUrl({
 export const SEARCH_LEARNING_MATERIAL = querifiedSearchUrl({
   resource_category: "learning_material",
 })
+
+export const LOGIN = `${MITOL_API_BASE_URL}/login`
+export const LOGOUT = `${MITOL_API_BASE_URL}/logout/`
+
+type UrlDescriptor = {
+  pathname: string | null
+  searchParams: URLSearchParams | null
+  hash?: string | null
+}
+export type LoginUrlOpts = {
+  /**
+   * URL to redirect to after login.
+   */
+  loginNext: UrlDescriptor
+  /**
+   * URL to redirect to after signup.
+   */
+  signupNext?: UrlDescriptor
+}
+
+const DEFAULT_SIGNUP_NEXT: UrlDescriptor = {
+  pathname: DASHBOARD_HOME,
+  searchParams: null,
+}
+
+/**
+ * Returns the URL to the authentication page (login and signup).
+ *
+ * NOTES:
+ *  1. useAuthToCurrent() is a convenience function that uses the current
+ *    pathname and search parameters to generate the next URL.
+ *  2. `next` is required to encourage its use. You can explicitly pass `null`
+ *    for values to skip them if desired.
+ */
+export const auth = (opts: LoginUrlOpts) => {
+  const { loginNext, signupNext = DEFAULT_SIGNUP_NEXT } = opts
+  const encode = (value: UrlDescriptor) => {
+    const pathname = value.pathname ?? "/"
+    const searchParams = value.searchParams ?? new URLSearchParams()
+    const hash = value.hash ?? ""
+    /**
+     * To include search parameters in the next URL, we need to encode them.
+     * If we pass `?next=/foo/bar?cat=meow` directly, Django receives two separate
+     * parameters: `next` and `cat`.
+     *
+     * There's no need to encode the path parameter (it might contain slashes,
+     * but those are allowed in search parameters) so let's keep it readable.
+     */
+    const search = searchParams?.toString() ? `?${searchParams.toString()}` : ""
+    return `${ORIGIN}${pathname}${encodeURIComponent(search)}${encodeURIComponent(hash)}`
+  }
+  const loginNextHref = encode(loginNext)
+  const signupNextHref = encode(signupNext)
+  return `${LOGIN}?next=${loginNextHref}&signup_next=${signupNextHref}`
+}
 
 export const ECOMMERCE_CART = "/cart/" as const
 

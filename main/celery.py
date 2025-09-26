@@ -17,6 +17,7 @@ app.conf.task_default_queue = "default"
 app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)  # pragma: no cover
 
 app.conf.task_routes = {
+    "vector_search.tasks.generate_embeddings": {"queue": "embeddings"},
     "learning_resources.tasks.get_content_tasks": {"queue": "edx_content"},
     "learning_resources.tasks.get_content_files": {"queue": "edx_content"},
     "learning_resources.tasks.import_all_xpro_files": {"queue": "edx_content"},

@@ -1,6 +1,5 @@
-"use client"
 import { ChannelCounts } from "api/v0"
-import { login } from "./urls"
+import { auth } from "./urls"
 import { redirect, usePathname, useSearchParams } from "next/navigation"
 
 const getSearchParamMap = (urlParams: URLSearchParams) => {
@@ -52,7 +51,13 @@ const getCsrfToken = () => {
   )
 }
 
-const useLoginToCurrent = () => {
+/**
+ * Returns a URL to authentication that redirects to current page after auth.
+ *
+ * By default, new users will be redirected to default signup destination.
+ * If `signup` is true, they will be redirected to the current page.
+ */
+const useAuthToCurrent = ({ signup }: { signup?: boolean } = {}) => {
   /**
    * NOTES:
    *  1. This is reactive; if current URL changes, the result of this hook
@@ -64,21 +69,39 @@ const useLoginToCurrent = () => {
    */
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  return login({ pathname, searchParams })
+  const current = { pathname, searchParams }
+  return auth({
+    loginNext: current,
+    signupNext: signup ? current : undefined,
+  })
 }
 
 /**
- * Redirect user to login route with ?next=<current-url>.
+ * Redirect user to auth. After auth:
+ *  - existing users redirected to their current URL
+ * - new users redirected to the default signup destination, unless `signup` is true.
  */
-const redirectLoginToCurrent = (): never => {
+const redirectAuthToCurrent = ({
+  signup,
+}: {
+  /**
+   * Whether to redirect signup to current; by default, false. New users
+   * will be redirected to the default signup destination.
+   */
+  signup?: boolean
+} = {}): never => {
+  const current = {
+    pathname: window.location.pathname,
+    searchParams: new URLSearchParams(window.location.search),
+  }
   redirect(
     /**
      * Calculating the ?next=<current-url> via window.location is appropriate
      * here since it happens time of redirect call.
      */
-    login({
-      pathname: window.location.pathname,
-      searchParams: new URLSearchParams(window.location.search),
+    auth({
+      loginNext: current,
+      signupNext: signup ? current : undefined,
     }),
   )
 }
@@ -88,6 +111,6 @@ export {
   aggregateProgramCounts,
   aggregateCourseCounts,
   getCsrfToken,
-  useLoginToCurrent,
-  redirectLoginToCurrent,
+  useAuthToCurrent,
+  redirectAuthToCurrent,
 }

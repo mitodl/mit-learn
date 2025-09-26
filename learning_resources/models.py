@@ -918,6 +918,7 @@ class TutorProblemFile(TimestampedModel):
     archive_checksum = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
     source_path = models.CharField(max_length=1024, null=True, blank=True)  # noqa: DJ001
     file_extension = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
+    file_name = models.CharField(max_length=256, null=True, blank=True)  # noqa: DJ001
 
 
 class ContentFile(TimestampedModel):
