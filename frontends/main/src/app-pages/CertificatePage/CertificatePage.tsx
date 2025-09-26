@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useRef, useEffect, useCallback } from "react"
+import React, { useRef, useEffect, useCallback, useState } from "react"
 import { notFound } from "next/navigation"
 import Image from "next/image"
 import { Link, Typography, styled } from "ol-components"
@@ -12,12 +12,13 @@ import OpenLearningLogo from "@/public/images/mit-open-learning-logo.svg"
 import CertificateBadgeDesktop from "@/public/images/certificate-badge-desktop.svg"
 import CertificateBadgeMobile from "@/public/images/certificate-badge-mobile.svg"
 import { formatDate, NoSSR } from "ol-utilities"
-import { RiDownloadLine, RiPrinterLine } from "@remixicon/react"
+import { RiDownloadLine, RiPrinterLine, RiShareLine } from "@remixicon/react"
 import type {
   V2ProgramCertificate,
   V2CourseRunCertificate,
   SignatoryItem,
 } from "@mitodl/mitxonline-api-axios/v2"
+import SharePopover from "./SharePopover"
 
 const Page = styled.div(({ theme }) => ({
   backgroundImage: `url(${backgroundImage.src})`,
@@ -57,12 +58,16 @@ const Title = styled(Typography)(({ theme }) => ({
   },
 }))
 
-const Buttons = styled.div({
+const Buttons = styled.div(({ theme }) => ({
   display: "flex",
   gap: "12px",
   justifyContent: "center",
-  marginBottom: "50px",
-})
+  width: "fit-content",
+  margin: "0 auto 50px auto",
+  [theme.breakpoints.down("md")]: {
+    margin: "0 auto 32px auto",
+  },
+}))
 
 const Outer = styled.div(({ theme }) => ({
   maxWidth: "1306px",
@@ -640,7 +645,8 @@ export enum CertificateType {
 const CertificatePage: React.FC<{
   certificateType: CertificateType
   uuid: string
-}> = ({ certificateType, uuid }) => {
+  pageUrl: string
+}> = ({ certificateType, uuid, pageUrl }) => {
   const {
     data: courseCertificateData,
     isLoading: isCourseLoading,
@@ -694,6 +700,9 @@ const CertificatePage: React.FC<{
     }
   }, [print])
 
+  const [shareOpen, setShareOpen] = useState(false)
+  const shareButtonRef = useRef<HTMLDivElement>(null)
+
   if (isCourseLoading || isProgramLoading) {
     return <Page />
   }
@@ -709,7 +718,7 @@ const CertificatePage: React.FC<{
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
-    a.download = `${title} Certificate - MIT Open Learning.pdf`
+    a.download = `${title} Certificate issued by MIT Open Learning.pdf`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
@@ -728,18 +737,32 @@ const CertificatePage: React.FC<{
 
   return (
     <Page>
+      <SharePopover
+        open={shareOpen}
+        title={`${title} Certificate issued by MIT Open Learning`}
+        anchorEl={shareButtonRef.current}
+        onClose={() => setShareOpen(false)}
+        pageUrl={pageUrl}
+      />
       <Title>
         <Typography variant="h3">
           <strong>{title}</strong> {displayType}
         </Typography>
       </Title>
-      <Buttons>
+      <Buttons ref={shareButtonRef}>
         <Button
           variant="primary"
           startIcon={<RiDownloadLine />}
           onClick={download}
         >
           Download PDF
+        </Button>
+        <Button
+          variant="bordered"
+          startIcon={<RiShareLine />}
+          onClick={() => setShareOpen(true)}
+        >
+          Share
         </Button>
         <Button
           variant="bordered"

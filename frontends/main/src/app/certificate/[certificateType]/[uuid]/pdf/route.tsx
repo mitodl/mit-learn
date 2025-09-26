@@ -2,6 +2,7 @@
 import React from "react"
 import type { AxiosError } from "axios"
 import type { NextRequest } from "next/server"
+import * as Sentry from "@sentry/nextjs"
 import moment from "moment"
 import { courseCertificatesApi, programCertificatesApi } from "api/mitxonline"
 import {
@@ -253,7 +254,7 @@ const CertificateDoc = ({
 }) => {
   return (
     <Document
-      title={`${title} Certificate - MIT Open Learning.pdf`}
+      title={`${title} Certificate issued by MIT Open Learning.pdf`}
       author="MIT Open Learning"
       pageLayout="singlePage"
     >
@@ -570,6 +571,7 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
     if ([400, 404].includes((error as AxiosError).status ?? -1)) {
       return redirect("/not-found")
     }
+    Sentry.captureException(error)
     console.error("Error fetching certificate for PDF generation", {
       certificateType,
       uuid,
