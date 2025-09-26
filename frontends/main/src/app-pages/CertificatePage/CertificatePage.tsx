@@ -102,7 +102,6 @@ const Inner = styled.div(({ theme }) => ({
   "@media screen": {
     [theme.breakpoints.down("lg")]: {
       padding: "40px",
-      // gap: "40px",
     },
     [theme.breakpoints.down("md")]: {
       border: `2px solid ${theme.custom.colors.lightGray2}`,
