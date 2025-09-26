@@ -16,6 +16,7 @@ from learning_resources.etl.canvas import (
 )
 from learning_resources.etl.canvas_utils import (
     _compact_element,
+    get_published_items,
     is_file_published,
     parse_canvas_settings,
     parse_files_meta,
@@ -1235,3 +1236,303 @@ def test_get_url_config_assignments_and_pages(mocker, tmp_path):
     )
     assert results["html page"] == "https://example.com/htmlpage"
     assert results["Item 1"] == "https://example.com/file1"
+
+
+def test_get_published_items_for_unpublshed_file(tmp_path):
+    html_content = """
+    <html>
+    <head><meta name="workflow_state" content="active"/></head>
+        <body>
+            <a href="$IMS-CC-FILEBASE$/file1.pdf">Embedded File 1</a>
+        </body>
+    </html>
+    """
+    module_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <modules xmlns="http://canvas.instructure.com/xsd/cccv1p0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    >
+      <module>
+
+        <title>Module 1</title>
+        <items>
+          <item identifier="RES3">
+            <workflow_state>active</workflow_state>
+            <title>Item 1</title>
+            <hidden>false</hidden>
+             <locked>false</locked>
+            <identifierref>RES3</identifierref>
+            <content_type>resource</content_type>
+          </item>
+        </items>
+      </module>
+    </modules>
+    """
+    manifest_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
+      <resources>
+        <resource identifier="RES1" type="webcontent"  href="web_resources/file1.pdf">
+          <file href="web_resources/file1.pdf"/>
+        </resource>
+        <resource identifier="RES2" type="webcontent" href="web_resources/file2.html">
+          <file href="web_resources/file2.html"/>
+        </resource>
+        <resource identifier="RES3" type="webcontent" href="web_resources/html_page.html">
+          <file href="web_resources/html_page.html"/>
+        </resource>
+      </resources>
+    </manifest>
+    """
+    zip_path = make_canvas_zip(
+        tmp_path,
+        module_xml=module_xml,
+        manifest_xml=manifest_xml,
+        files=[
+            ("web_resources/file1.pdf", "content of file1"),
+            ("web_resources/file2.html", "content of file2"),
+            ("web_resources/html_page.html", html_content),
+        ],
+    )
+    url_config = {
+        "/html_page.html": {
+            "url": "https://cdn.example.com/",
+            "locked": True,
+        },
+    }
+    published = [item.name for item in get_published_items(zip_path, url_config)]
+    url_config = {
+        "/html_page.html": {
+            "url": "https://cdn.example.com/",
+            "hidden": True,
+        },
+    }
+    published.extend([item.name for item in get_published_items(zip_path, url_config)])
+    assert "html_page.html" not in published
+
+
+def test_get_published_items_for_unpublshed_parent_folder(mocker, tmp_path):
+    html_content = """
+    <html>
+    <head><meta name="workflow_state" content="active"/></head>
+        <body>
+            <a href="$IMS-CC-FILEBASE$/file1.pdf">Embedded File 1</a>
+        </body>
+    </html>
+    """
+    module_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <modules xmlns="http://canvas.instructure.com/xsd/cccv1p0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    >
+      <module>
+
+        <title>Module 1</title>
+        <items>
+          <item identifier="RES3">
+            <workflow_state>active</workflow_state>
+            <title>Item 1</title>
+            <hidden>false</hidden>
+             <locked>false</locked>
+            <identifierref>RES3</identifierref>
+            <content_type>resource</content_type>
+          </item>
+        </items>
+      </module>
+    </modules>
+    """
+    manifest_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
+      <resources>
+        <resource identifier="RES1" type="webcontent"  href="web_resources/file1.pdf">
+          <file href="web_resources/file1.pdf"/>
+        </resource>
+        <resource identifier="RES2" type="webcontent" href="web_resources/file2.html">
+          <file href="web_resources/file2.html"/>
+        </resource>
+        <resource identifier="RES3" type="webcontent" href="web_resources/html_page.html">
+          <file href="web_resources/html_page.html"/>
+        </resource>
+      </resources>
+    </manifest>
+    """
+    zip_path = make_canvas_zip(
+        tmp_path,
+        module_xml=module_xml,
+        manifest_xml=manifest_xml,
+        files=[
+            ("web_resources/file1.pdf", "content of file1"),
+            ("web_resources/file2.html", "content of file2"),
+            ("web_resources/html_page.html", html_content),
+        ],
+    )
+
+    url_config = {
+        "/html_page.html": {
+            "url": "https://cdn.example.com/",
+            "published": True,
+            "folder": {
+                "hidden": True,
+            },
+        },
+    }
+    published = [item.name for item in get_published_items(zip_path, url_config)]
+    assert "html_page.html" not in published
+
+
+def test_get_published_items_with_hidden_file_section(mocker, tmp_path):
+    """
+    Test that if the files section in the navbar is hidden,
+    no files are considered published even if they are marked as published
+    """
+    manifest_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
+      <resources>
+        <resource identifier="RES1" type="webcontent"  href="web_resources/file1.pdf">
+          <file href="web_resources/file1.pdf"/>
+        </resource>
+        <resource identifier="RES2" type="webcontent" href="web_resources/file2.html">
+          <file href="web_resources/file2.html"/>
+        </resource>
+        <resource identifier="RES3" type="webcontent" href="web_resources/html_page.html">
+          <file href="web_resources/html_page.html"/>
+        </resource>
+      </resources>
+    </manifest>
+    """
+    files_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+        <fileMeta xmlns="http://canvas.instructure.com/xsd/cccv1p0"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://canvas.instructure.com/xsd/cccv1p0 https://canvas.instructure.com/xsd/cccv1p0.xsd">
+        <files>
+        <file identifier="RES1">
+          <category>uncategorized</category>
+        </file>
+        <file identifier="RES2">
+          <category>uncategorized</category>
+        </file>
+        <file identifier="RES3">
+          <category>uncategorized</category>
+        </file>
+        </files>
+        </fileMeta>
+    """
+    zip_path = make_canvas_zip(
+        tmp_path,
+        manifest_xml=manifest_xml,
+        files=[
+            ("course_settings/files_meta.xml", files_xml),
+            ("web_resources/file1.pdf", "content of file1"),
+            ("web_resources/file2.html", "content of file2"),
+            ("web_resources/html_page.html", ""),
+        ],
+    )
+
+    url_config = {
+        "/html_page.html": {
+            "url": "https://cdn.example.com/",
+            "published": True,
+        },
+        "/file2.html": {
+            "url": "https://cdn.example.com/file2.html",
+            "published": True,
+        },
+        "/file3.html": {
+            "url": "https://cdn.example.com/file2.html",
+            "published": True,
+        },
+    }
+    published = [item.name for item in get_published_items(zip_path, url_config)]
+    assert sorted(published) == sorted(["html_page.html", "file2.html", "file1.pdf"])
+
+    # hide the files section in the navbar
+    settings_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+        <course identifier="gfef28ec71f16246c57edfeef25b26a54"
+        xmlns="http://canvas.instructure.com/xsd/cccv1p0"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://canvas.instructure.com/xsd/cccv1p0
+        https://canvas.instructure.com/xsd/cccv1p0.xsd">
+            <title>Test Course Title</title>
+            <tab_configuration>[{"id":0},{"id":11, "hidden":true}]</tab_configuration>
+            <course_code>TEST-101</course_code>
+            <other_field>Other Value</other_field>
+        </course>
+    """
+
+    zip_path = make_canvas_zip(
+        tmp_path,
+        settings_xml=settings_xml,
+        manifest_xml=manifest_xml,
+        files=[
+            ("course_settings/files_meta.xml", files_xml),
+            ("web_resources/file1.pdf", "content of file1"),
+            ("web_resources/file2.html", "content of file2"),
+            ("web_resources/html_page.html", ""),
+        ],
+    )
+    published = [item.name for item in get_published_items(zip_path, url_config)]
+    assert len(published) == 0
+
+
+def test_get_published_items_for_unpublshed_but_embedded(mocker, tmp_path):
+    html_content = """
+    <html>
+    <head><meta name="workflow_state" content="active"/></head>
+        <body>
+            <a href="$IMS-CC-FILEBASE$/file1.pdf">Embedded File 1</a>
+        </body>
+    </html>
+    """
+    module_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <modules xmlns="http://canvas.instructure.com/xsd/cccv1p0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    >
+      <module>
+
+        <title>Module 1</title>
+        <items>
+          <item identifier="RES3">
+            <workflow_state>active</workflow_state>
+            <title>Item 1</title>
+            <hidden>false</hidden>
+             <locked>false</locked>
+            <identifierref>RES3</identifierref>
+            <content_type>resource</content_type>
+          </item>
+        </items>
+      </module>
+    </modules>
+    """
+    manifest_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
+      <resources>
+        <resource identifier="RES1" type="webcontent"  href="web_resources/file1.pdf">
+          <file href="web_resources/file1.pdf"/>
+        </resource>
+        <resource identifier="RES2" type="webcontent" href="web_resources/file2.html">
+          <file href="web_resources/file2.html"/>
+        </resource>
+        <resource identifier="RES3" type="webcontent" href="web_resources/html_page.html">
+          <file href="web_resources/html_page.html"/>
+        </resource>
+      </resources>
+    </manifest>
+    """
+    zip_path = make_canvas_zip(
+        tmp_path,
+        module_xml=module_xml,
+        manifest_xml=manifest_xml,
+        files=[
+            ("web_resources/file1.pdf", "content of file1"),
+            ("web_resources/file2.html", "content of file2"),
+            ("web_resources/html_page.html", html_content),
+        ],
+    )
+    url_config = {
+        "/file1.pdf": {
+            "url": "https://cdn.example.com/file1.pdf",
+            "locked": True,
+        },
+    }
+    published = get_published_items(zip_path, url_config)
+    assert (
+        published[Path("/src/web_resources/html_page.html")]["embedded_files"][0]
+        == "web_resources/file1.pdf"
+    )
