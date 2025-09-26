@@ -1529,10 +1529,8 @@ def test_get_published_items_for_unpublshed_but_embedded(mocker, tmp_path):
         "/file1.pdf": {
             "url": "https://cdn.example.com/file1.pdf",
             "locked": True,
+            "hidden": True,
         },
     }
     published = get_published_items(zip_path, url_config)
-    assert (
-        published[Path("/src/web_resources/html_page.html")]["embedded_files"][0]
-        == "web_resources/file1.pdf"
-    )
+    assert Path("web_resources/file1.pdf").resolve() in published
