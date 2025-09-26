@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+Version 0.45.1
+--------------
+
+- allow multiple problem files (#2512)
+- Celery task tweaks (#2545)
+- feat: installs granian as a replacement process manager for production / hosted envs. (#2544)
+- security: disable yarn postinstall scripts (#2543)
+- Separate Login and Signup URLs (again) (#2535)
+
 Version 0.45.0 (Released September 24, 2025)
 --------------
 
