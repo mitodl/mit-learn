@@ -338,7 +338,9 @@ def embed_run_content_files(self, run_id):
         celery.group(
             [
                 generate_embeddings.si(ids, CONTENT_FILE_TYPE, overwrite=True)
-                for ids in chunks(content_file_ids)
+                for ids in chunks(
+                    content_file_ids, chunk_size=settings.QDRANT_CHUNK_SIZE
+                )
             ]
         )
     )
@@ -355,6 +357,6 @@ def remove_run_content_files(run_id):
     return celery.group(
         [
             remove_embeddings.si(ids, CONTENT_FILE_TYPE)
-            for ids in chunks(content_file_ids)
+            for ids in chunks(content_file_ids, chunk_size=settings.QDRANT_CHUNK_SIZE)
         ]
     )
