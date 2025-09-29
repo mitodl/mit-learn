@@ -8,6 +8,11 @@ const pagesKeys = {
     "course_detail",
     readableId,
   ],
+  programPageDetail: (readableId: string) => [
+    ...pagesKeys.root,
+    "program_detail",
+    readableId,
+  ],
 }
 
 const pagesQueries = {
@@ -17,6 +22,15 @@ const pagesQueries = {
       queryFn: async () => {
         return pagesApi
           .pagesfieldstypecmsCoursePageRetrieve({ readable_id: readableId })
+          .then((res) => res.data)
+      },
+    }),
+  programsDetail: (readableId: string) =>
+    queryOptions({
+      queryKey: pagesKeys.programPageDetail(readableId),
+      queryFn: async () => {
+        return pagesApi
+          .pagesfieldstypecmsProgramPageRetrieve({ readable_id: readableId })
           .then((res) => res.data)
       },
     }),
