@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.45.1
+Version 0.45.1 (Released September 29, 2025)
 --------------
 
 - allow multiple problem files (#2512)
