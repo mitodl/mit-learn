@@ -1,12 +1,12 @@
 import React from "react"
 import { urls, factories } from "api/mitxonline-test-utils"
 import type {
-  CoursePageItem,
-  CourseWithCourseRunsSerializerV2,
+  V2Program,
+  ProgramPageItem,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { setMockResponse } from "api/test-utils"
 import { renderWithProviders, waitFor, screen, within } from "@/test-utils"
-import CoursePage from "./CoursePage"
+import ProgramPage from "./ProgramPage"
 import { HeadingIds } from "./util"
 import { assertHeadings } from "ol-test-utilities"
 import { notFound } from "next/navigation"
@@ -17,8 +17,8 @@ import invariant from "tiny-invariant"
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
 
-const makeCourse = factories.courses.course
-const makePage = factories.pages.coursePageItem
+const makeProgram = factories.programs.program
+const makePage = factories.pages.programPageItem
 
 const expectRawContent = (el: HTMLElement, htmlString: string) => {
   const raw = within(el).getByTestId("raw")
@@ -27,23 +27,23 @@ const expectRawContent = (el: HTMLElement, htmlString: string) => {
 }
 
 const setupApis = ({
-  course,
+  program,
   page,
 }: {
-  course: CourseWithCourseRunsSerializerV2
-  page: CoursePageItem
+  program: V2Program
+  page: ProgramPageItem
 }) => {
   setMockResponse.get(
-    urls.courses.coursesList({ readable_id: course.readable_id }),
-    { results: [course] },
+    urls.programs.programsList({ readable_id: program.readable_id }),
+    { results: [program] },
   )
 
-  setMockResponse.get(urls.pages.courseDetail(course.readable_id), {
+  setMockResponse.get(urls.pages.programDetail(program.readable_id), {
     items: [page],
   })
 }
 
-describe("CoursePage", () => {
+describe("ProgramPage", () => {
   beforeEach(() => {
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
   })
@@ -53,11 +53,11 @@ describe("CoursePage", () => {
     async (isEnabled) => {
       mockedUseFeatureFlagEnabled.mockReturnValue(isEnabled)
 
-      const course = makeCourse()
-      const page = makePage({ course_details: course })
-      setupApis({ course, page })
-      renderWithProviders(<CoursePage readableId={course.readable_id} />, {
-        url: `/courses/${course.readable_id}/`,
+      const program = makeProgram()
+      const page = makePage({ program_details: program })
+      setupApis({ program, page })
+      renderWithProviders(<ProgramPage readableId={program.readable_id} />, {
+        url: `/programs/${program.readable_id}/`,
       })
 
       if (isEnabled) {
@@ -69,32 +69,32 @@ describe("CoursePage", () => {
   )
 
   test("Page has expected headings", async () => {
-    const course = makeCourse()
-    const page = makePage({ course_details: course })
-    setupApis({ course, page })
-    renderWithProviders(<CoursePage readableId={course.readable_id} />)
+    const program = makeProgram()
+    const page = makePage({ program_details: program })
+    setupApis({ program, page })
+    renderWithProviders(<ProgramPage readableId={program.readable_id} />)
 
     await waitFor(() => {
       assertHeadings([
         { level: 1, name: page.title },
-        { level: 2, name: "Course summary" },
-        { level: 2, name: "About this Course" },
+        { level: 2, name: "Program summary" },
+        { level: 2, name: "About this Program" },
         { level: 2, name: "What you'll learn" },
         { level: 2, name: "Prerequisites" },
         { level: 2, name: "Meet your instructors" },
-        { level: 2, name: "Who can take this Course?" },
+        { level: 2, name: "Who can take this Program?" },
       ])
     })
   })
 
   test("Page Navigation", async () => {
-    const course = makeCourse()
-    const page = makePage({ course_details: course })
-    setupApis({ course, page })
-    renderWithProviders(<CoursePage readableId={course.readable_id} />)
+    const program = makeProgram()
+    const page = makePage({ program_details: program })
+    setupApis({ program, page })
+    renderWithProviders(<ProgramPage readableId={program.readable_id} />)
 
     const nav = await screen.findByRole("navigation", {
-      name: "Course Details",
+      name: "Program Details",
     })
     const links = within(nav).getAllByRole("link")
 
@@ -115,38 +115,24 @@ describe("CoursePage", () => {
 
   // Collasping sections tested in AboutSection.test.tsx
   test("About section has expected content", async () => {
-    const course = makeCourse()
-    const page = makePage({ course_details: course })
+    const program = makeProgram()
+    const page = makePage({ program_details: program })
     invariant(page.about)
-    setupApis({ course, page })
-    renderWithProviders(<CoursePage readableId={course.readable_id} />)
-
+    setupApis({ program, page })
+    renderWithProviders(<ProgramPage readableId={program.readable_id} />)
     const section = await screen.findByRole("region", {
-      name: "About this Course",
+      name: "About this Program",
     })
     expectRawContent(section, page.about)
   })
 
-  test("What You'll Learn section has expected content", async () => {
-    const course = makeCourse()
-    const page = makePage({ course_details: course })
-    invariant(page.what_you_learn)
-    setupApis({ course, page })
-    renderWithProviders(<CoursePage readableId={course.readable_id} />)
-
-    const section = await screen.findByRole("region", {
-      name: "What you'll learn",
-    })
-    expectRawContent(section, page.what_you_learn)
-  })
-
   // Dialog tested in InstructorsSection.test.tsx
   test("Instructors section has expected content", async () => {
-    const course = makeCourse()
-    const page = makePage({ course_details: course })
+    const program = makeProgram()
+    const page = makePage({ program_details: program })
     invariant(page.faculty.length > 0)
-    setupApis({ course, page })
-    renderWithProviders(<CoursePage readableId={course.readable_id} />)
+    setupApis({ program, page })
+    renderWithProviders(<ProgramPage readableId={program.readable_id} />)
 
     const section = await screen.findByRole("region", {
       name: "Meet your instructors",
@@ -155,31 +141,20 @@ describe("CoursePage", () => {
     expect(items.length).toBe(page.faculty.length)
   })
 
-  test("Prerequisites section has expected content", async () => {
-    const course = makeCourse()
-    const page = makePage({ course_details: course })
-    invariant(page.prerequisites)
-    setupApis({ course, page })
-    renderWithProviders(<CoursePage readableId={course.readable_id} />)
-
-    const section = await screen.findByRole("region", { name: "Prerequisites" })
-    expectRawContent(section, page.prerequisites)
-  })
-
   test.each([
     { courses: [], pages: [makePage()] },
-    { courses: [makeCourse()], pages: [] },
+    { courses: [makeProgram()], pages: [] },
     { courses: [], pages: [] },
   ])("Returns 404 if no course found", async ({ courses, pages }) => {
     setMockResponse.get(
-      urls.courses.coursesList({ readable_id: "readable_id" }),
+      urls.programs.programsList({ readable_id: "readable_id" }),
       { results: courses },
     )
-    setMockResponse.get(urls.pages.courseDetail("readable_id"), {
+    setMockResponse.get(urls.pages.programDetail("readable_id"), {
       items: pages,
     })
 
-    renderWithProviders(<CoursePage readableId="readable_id" />)
+    renderWithProviders(<ProgramPage readableId="readable_id" />)
     await waitFor(() => {
       expect(notFound).toHaveBeenCalled()
     })
