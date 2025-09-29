@@ -193,4 +193,10 @@ export const B2B_ATTACH_VIEW = "/attach/[code]"
 export const b2bAttachView = (code: string) =>
   generatePath(B2B_ATTACH_VIEW, { code: code })
 
+export const FACEBOOK_SHARE_BASE_URL =
+  "https://www.facebook.com/sharer/sharer.php"
+export const TWITTER_SHARE_BASE_URL = "https://x.com/share"
+export const LINKEDIN_SHARE_BASE_URL =
+  "https://www.linkedin.com/sharing/share-offsite"
+
 export const COURSE_PAGE_VIEW = "/courses/[readableId]/"
