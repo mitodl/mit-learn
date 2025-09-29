@@ -511,6 +511,9 @@ def canvas_course_url(course_archive_path) -> str:
 
 
 def _url_config_key(item):
+    """
+    Get the key to look up an item from the url_config dictionary
+    """
     if "web_resources" in str(item["path"]):
         return str(item["path"]).split("web_resources")[-1]
     return item.get("title")
@@ -544,6 +547,9 @@ def _url_config_item_visible(item_configuration):
 
 
 def get_published_items(zipfile_path, url_config):
+    """
+    Get all published items from a Canvas course archive
+    """
     published_items = {}
     course_settings = parse_canvas_settings(zipfile_path)
     tab_configuration = course_settings.get("tab_configuration", {})
