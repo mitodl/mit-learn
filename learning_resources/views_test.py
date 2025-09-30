@@ -1495,8 +1495,6 @@ def test_course_run_problems_endpoint(client, user_role, django_user_model):
 
     if user_role in ["admin", "group_tutor_problem_viewer"]:
         assert detail_resp.json() == {
-            "problem_set": "Content for Problem Set 1",
-            "solution_set": "Content for Problem Set 1 Solution",
             "problem_set_files": [
                 {"file_name": "problem1.txt", "content": "Content for Problem Set 1"},
                 {

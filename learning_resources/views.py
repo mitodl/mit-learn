@@ -1448,10 +1448,6 @@ class CourseRunProblemsViewSet(viewsets.ViewSet):
 
         return Response(
             {
-                # problem_set and solution_set will be removed after i make the
-                # required changes to open_learning_ai_tutor
-                "problem_set": problem_files.first().content,
-                "solution_set": solution_files.first().content,
                 "problem_set_files": [
                     {
                         "file_name": problem_file.file_name,
