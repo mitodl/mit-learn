@@ -250,6 +250,11 @@ const WhoCanTake: React.FC<{ productNoun: string }> = ({ productNoun }) => {
       <Typography variant="h4" component="h2" id={HeadingIds.WhoCanTake}>
         Who can take this {productNoun}?
       </Typography>
+      Because of U.S. Office of Foreign Assets Control (OFAC) restrictions and
+      other U.S. federal regulations, learners residing in one or more of the
+      following countries or regions will not be able to register for this
+      course: Iran, Cuba, Syria, North Korea and the Crimea, Donetsk People's
+      Republic and Luhansk People's Republic regions of Ukraine.
     </WhoCanTakeSection>
   )
 }
