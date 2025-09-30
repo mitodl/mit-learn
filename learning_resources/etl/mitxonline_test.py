@@ -30,7 +30,7 @@ from learning_resources.etl.mitxonline import (
     extract_programs,
     parse_certificate_type,
     parse_page_attribute,
-    parse_program_prices,
+    parse_prices,
     transform_courses,
     transform_programs,
     transform_topics,
@@ -172,7 +172,7 @@ def test_mitxonline_transform_programs(
                     "published": bool(
                         program_data.get("page", {}).get("page_url", None) is not None
                     ),
-                    "prices": parse_program_prices(program_data),
+                    "prices": parse_prices(program_data),
                     "image": _transform_image(program_data),
                     "title": program_data["title"],
                     "description": clean_data(
@@ -262,25 +262,7 @@ def test_mitxonline_transform_programs(
                                 course_run_data["is_enrollable"]
                                 and course_data["page"]["live"]
                             ),
-                            "prices": sorted(
-                                [
-                                    {"amount": Decimal(i), "currency": CURRENCY_USD}
-                                    for i in {
-                                        0.00,
-                                        *[
-                                            price
-                                            for price in [
-                                                product.get("price")
-                                                for product in course_run_data.get(
-                                                    "products", []
-                                                )
-                                            ]
-                                            if price is not None
-                                        ],
-                                    }
-                                ],
-                                key=lambda x: x["amount"],
-                            ),
+                            "prices": parse_prices(course_data),
                             "instructors": [
                                 {"full_name": instructor["name"]}
                                 for instructor in parse_page_attribute(
@@ -399,25 +381,7 @@ def test_mitxonline_transform_courses(settings, mock_mitxonline_courses_data):
                     "published": bool(
                         course_run_data["is_enrollable"] and course_data["page"]["live"]
                     ),
-                    "prices": sorted(
-                        [
-                            {"amount": Decimal(i), "currency": CURRENCY_USD}
-                            for i in {
-                                0.00,
-                                *[
-                                    price
-                                    for price in [
-                                        product.get("price")
-                                        for product in course_run_data.get(
-                                            "products", []
-                                        )
-                                    ]
-                                    if price is not None
-                                ],
-                            }
-                        ],
-                        key=lambda x: x["amount"],
-                    ),
+                    "prices": parse_prices(course_data),
                     "instructors": [
                         {"full_name": instructor["name"]}
                         for instructor in parse_page_attribute(
@@ -536,19 +500,18 @@ def test_program_run_start_date_value(  # noqa: PLR0913
 
 
 @pytest.mark.parametrize(
-    ("current_price", "page_price", "expected"),
+    ("min_price", "max_price", "expected"),
     [
-        (0, "100", [0, 100]),
-        (None, "$100 - $1,000", [0, 100, 1000]),
-        (99.99, "$99.99 - $3,000,000", [99.99, 3000000]),
-        (9.99, "$99.99 per course", [9.99, 99.99]),
-        (100, "varies from $29-$129", [100, 29, 129]),
+        (None, 100, [0, 100]),
+        (100, 1000, [0, 100, 1000]),
+        (99.99, 3000, [0.00, 99.99, 3000]),
+        (9.99, None, [0, 9.99]),
     ],
 )
-def test_parse_prices(current_price, page_price, expected):
-    """Test that the prices are correctly parsed from the page data"""
-    program_data = {"current_price": current_price, "page": {"price": page_price}}
-    assert parse_program_prices(program_data) == sorted(
+def test_parse_prices(min_price, max_price, expected):
+    """Test that the prices are correctly parsed from the parent data"""
+    program_data = {"min_price": min_price, "max_price": max_price}
+    assert parse_prices(program_data) == sorted(
         [{"amount": float(price), "currency": CURRENCY_USD} for price in expected],
         key=lambda x: x["amount"],
     )

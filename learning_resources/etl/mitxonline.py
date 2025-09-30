@@ -151,20 +151,25 @@ def extract_courses():
         log.warning("Missing required setting MITX_ONLINE_COURSES_API_URL")
 
     return []
+    
 
-
-def parse_program_prices(program_data: dict) -> list[dict]:
-    """Return a list of unique prices for a program"""
-    prices = [program_data.get("current_price") or 0.00]
-    price_string = parse_page_attribute(program_data, "price")
-    if price_string:
-        prices.extend(
-            [
-                float(price.replace(",", ""))
-                for price in re.findall(r"[\d\.,]+", price_string)
-            ]
+def parse_prices(parent_data: dict) -> list[dict]:
+    """
+    Return a list of unique prices for a course/program.
+    $0.00 (free) is always included for the non-certificate option.
+    Other prices come from the parent course/program's min_price & max_price fields.
+    """
+    free_price_str = "0.00"
+    return [
+        transform_price(price)
+        for price in sorted(
+            {
+                Decimal(free_price_str),
+                Decimal(parent_data.get("min_price") or free_price_str),
+                Decimal(parent_data.get("max_price") or free_price_str)
+            }
         )
-    return [transform_price(Decimal(price)) for price in sorted(set(prices))]
+    ]
 
 
 def parse_departments(departments_data: list[dict or str]) -> list[str]:
@@ -226,22 +231,7 @@ def _transform_run(course_run: dict, course: dict) -> dict:
         ),
         "description": clean_data(parse_page_attribute(course_run, "description")),
         "image": _transform_image(course_run),
-        "prices": [
-            transform_price(price)
-            for price in sorted(
-                {
-                    Decimal("0.00"),
-                    *[
-                        Decimal(price)
-                        for price in [
-                            product.get("price")
-                            for product in course_run.get("products", [])
-                        ]
-                        if price is not None
-                    ],
-                }
-            )
-        ],
+        "prices":parse_prices(course),
         "instructors": [
             {"full_name": instructor["name"]}
             for instructor in parse_page_attribute(course, "instructors", is_list=True)
@@ -418,7 +408,7 @@ def transform_programs(programs: list[dict]) -> list[dict]:
                     "description": clean_data(
                         parse_page_attribute(program, "description")
                     ),
-                    "prices": parse_program_prices(program),
+                    "prices": parse_prices(program),
                     "status": RunStatus.current.value
                     if parse_page_attribute(program, "page_url")
                     else RunStatus.archived.value,
