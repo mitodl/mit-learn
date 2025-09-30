@@ -45,7 +45,7 @@ const standardizeUrl = (url: string) => {
  * NOTE: URLs called by this function are first
  * ```
  */
-const makeRequest: RequestMaker = jest.fn(alwaysError)
+const makeRequest = jest.fn(alwaysError)
 const makeSortedRequest: RequestMaker = (method, url, body) =>
   makeRequest(method, standardizeUrl(url), body)
 
