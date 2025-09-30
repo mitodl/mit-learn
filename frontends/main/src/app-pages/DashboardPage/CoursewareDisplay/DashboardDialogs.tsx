@@ -19,7 +19,6 @@ import {
 import { DashboardCourseEnrollment } from "./types"
 import {
   useMitxOnlineCountries,
-  useMitxOnlineUserMe,
   useUpdateUserMutation,
 } from "api/mitxonline-hooks/user"
 
@@ -193,7 +192,6 @@ const UnenrollDialogInner: React.FC<DashboardDialogProps> = ({
 }
 
 const JustInTimeDialogInner: React.FC<{ href: string }> = ({ href }) => {
-  const { data: mitxOnlineUser } = useMitxOnlineUserMe()
   const { data: countries } = useMitxOnlineCountries()
   const updateUserMutation = useUpdateUserMutation()
   const modal = NiceModal.useModal()
@@ -232,14 +230,6 @@ const JustInTimeDialogInner: React.FC<{ href: string }> = ({ href }) => {
           },
           legal_address: {
             country: values.country,
-            first_name:
-              mitxOnlineUser?.legal_address?.first_name ||
-              mitxOnlineUser?.name?.split(" ")[0] ||
-              "",
-            last_name:
-              mitxOnlineUser?.legal_address?.last_name ||
-              mitxOnlineUser?.name?.split(" ")[1] ||
-              "",
           },
         },
       })
