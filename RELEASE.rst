@@ -1,6 +1,16 @@
 Release Notes
 =============
 
+Version 0.45.2
+--------------
+
+- chore(deps): update nginx docker tag to v1.29.1 (#2549)
+- chore(deps): update actions/checkout action to v5 (#2551)
+- Certificate page design adjustments (#2547)
+- Canvas - resolve visibility of orphaned files (#2548)
+- Certificate social media / URL sharing (#2524)
+- fix(deps): update django-health-check digest to 592f6a8 (#2527)
+
 Version 0.45.1 (Released September 29, 2025)
 --------------
 
