@@ -510,62 +510,71 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
             })}
           </LinksContainer>
           <Stack gap={{ xs: "40px", sm: "56px" }}>
-            <AboutSection
-              expanded={aboutExpanded}
-              aria-labelledby={HeadingIds.About}
-            >
-              <Typography variant="h3" component="h2" id={HeadingIds.About}>
-                About this course
-              </Typography>
-              <RawHTML html={page.about} />
-              <UnderlinedLink
-                href=""
-                color="red"
-                role="button"
-                className="show-more-less"
-                onClick={(e) => {
-                  e.preventDefault()
-                  setAboutExpanded((curr) => !curr)
-                }}
+            {page.about ? (
+              <AboutSection
+                expanded={aboutExpanded}
+                aria-labelledby={HeadingIds.About}
               >
-                {aboutExpanded ? "Show less" : "Show more"}
-              </UnderlinedLink>
-            </AboutSection>
-            <WhatSection aria-labelledby={HeadingIds.What}>
-              <Typography variant="h4" component="h2" id={HeadingIds.What}>
-                What you'll learn
-              </Typography>
-              <RawHTML html={page.what_you_learn} />
-            </WhatSection>
-            <PrerequisitesSection aria-labelledby={HeadingIds.Prerequisites}>
-              <Typography
-                variant="h4"
-                component="h2"
-                id={HeadingIds.Prerequisites}
-              >
-                Prerequisites
-              </Typography>
-              <RawHTML html={page.prerequisites} />
-            </PrerequisitesSection>
-            <InstructorsSection aria-labelledby={HeadingIds.Instructors}>
-              <Typography
-                variant="h4"
-                component="h2"
-                id={HeadingIds.Instructors}
-              >
-                Meet your instructors
-              </Typography>
-              <InstructorsList>
-                {page.faculty.map((instructor) => {
-                  return (
-                    <InstructorCard
-                      key={instructor.id}
-                      instructor={instructor}
-                    />
-                  )
-                })}
-              </InstructorsList>
-            </InstructorsSection>
+                <Typography variant="h3" component="h2" id={HeadingIds.About}>
+                  About this course
+                </Typography>
+                <RawHTML html={page.about} />
+                <UnderlinedLink
+                  href=""
+                  color="red"
+                  role="button"
+                  className="show-more-less"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    setAboutExpanded((curr) => !curr)
+                  }}
+                >
+                  {aboutExpanded ? "Show less" : "Show more"}
+                </UnderlinedLink>
+              </AboutSection>
+            ) : null}
+
+            {page.what_you_learn ? (
+              <WhatSection aria-labelledby={HeadingIds.What}>
+                <Typography variant="h4" component="h2" id={HeadingIds.What}>
+                  What you'll learn
+                </Typography>
+                <RawHTML html={page.what_you_learn} />
+              </WhatSection>
+            ) : null}
+            {page.prerequisites ? (
+              <PrerequisitesSection aria-labelledby={HeadingIds.Prerequisites}>
+                <Typography
+                  variant="h4"
+                  component="h2"
+                  id={HeadingIds.Prerequisites}
+                >
+                  Prerequisites
+                </Typography>
+                <RawHTML html={page.prerequisites} />
+              </PrerequisitesSection>
+            ) : null}
+            {page.faculty.length ? (
+              <InstructorsSection aria-labelledby={HeadingIds.Instructors}>
+                <Typography
+                  variant="h4"
+                  component="h2"
+                  id={HeadingIds.Instructors}
+                >
+                  Meet your instructors
+                </Typography>
+                <InstructorsList>
+                  {page.faculty.map((instructor) => {
+                    return (
+                      <InstructorCard
+                        key={instructor.id}
+                        instructor={instructor}
+                      />
+                    )
+                  })}
+                </InstructorsList>
+              </InstructorsSection>
+            ) : null}
 
             <WhoCanTakeSection aria-labelledby={HeadingIds.WhoCanTake}>
               <Typography

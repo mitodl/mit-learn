@@ -49,9 +49,9 @@ const courses = {
 
 const pages = {
   courseDetail: (readableId: string) =>
-    `${API_BASE_URL}/api/v2/pages/?fields=*&readable_id=${encodeURIComponent(
+    `${API_BASE_URL}/api/v2/pages/?fields=*&type=cms.CoursePage&readable_id=${encodeURIComponent(
       readableId,
-    )}&type=cms.CoursePage`,
+    )}`,
 }
 
 const organization = {

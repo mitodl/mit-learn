@@ -63,6 +63,15 @@ const program: PartialFactory<V2Program> = (overrides = {}) => {
     min_weekly_hours: `${faker.number.int({ min: 1, max: 5 })} hours`,
     max_weekly_hours: `${faker.number.int({ min: 6, max: 10 })} hours`,
     start_date: faker.date.past().toISOString(),
+    max_price: faker.number.int({ min: 50, max: 5000 }),
+    min_price: faker.number.int({ min: 50, max: 5000 }),
+    enrollment_start: faker.helpers.maybe(() =>
+      faker.date.past().toISOString(),
+    ),
+    enrollment_end: faker.helpers.maybe(() =>
+      faker.date.future().toISOString(),
+    ),
+    end_date: faker.helpers.maybe(() => faker.date.future().toISOString()),
   }
 
   return mergeOverrides<V2Program>(defaults, overrides)
