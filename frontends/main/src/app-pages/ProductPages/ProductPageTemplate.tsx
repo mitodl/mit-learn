@@ -46,6 +46,7 @@ const Page = styled.div(({ theme }) => ({
   [theme.breakpoints.down("md")]: {
     paddingBottom: "24px",
   },
+  height: "100%",
 }))
 
 const TopContainer = styled(Container)({
