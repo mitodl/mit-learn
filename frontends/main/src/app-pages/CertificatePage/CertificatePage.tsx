@@ -49,7 +49,6 @@ const Title = styled(Typography)(({ theme }) => ({
     },
   },
   [theme.breakpoints.down("md")]: {
-    textAlign: "left",
     margin: "24px 0",
     span: {
       fontSize: theme.typography.pxToRem(24),
@@ -73,7 +72,7 @@ const Outer = styled.div(({ theme }) => ({
   maxWidth: "1306px",
   minWidth: "1200px",
   border: `4px solid ${theme.custom.colors.silverGray}`,
-  padding: "24px 23px",
+  padding: "24px",
   backgroundColor: theme.custom.colors.white,
   marginTop: "50px",
   margin: "0 auto",
@@ -82,6 +81,12 @@ const Outer = styled.div(({ theme }) => ({
       padding: 0,
       border: "none",
       maxWidth: "unset",
+      minWidth: "unset",
+    },
+    [theme.breakpoints.down("md")]: {
+      padding: 0,
+      border: "none",
+      maxWidth: "460px",
       minWidth: "unset",
     },
   },
@@ -94,15 +99,14 @@ const Outer = styled.div(({ theme }) => ({
 
 const Inner = styled.div(({ theme }) => ({
   border: `1px solid ${theme.custom.colors.silverGrayLight}`,
-  padding: "67px",
+  padding: "64px",
   display: "flex",
   flexDirection: "column",
-  gap: "56px",
+  gap: "64px",
   position: "relative",
   "@media screen": {
     [theme.breakpoints.down("lg")]: {
       padding: "40px",
-      gap: "40px",
     },
     [theme.breakpoints.down("md")]: {
       border: `2px solid ${theme.custom.colors.lightGray2}`,
@@ -315,7 +319,7 @@ const Spacer = styled.div(({ theme }) => ({
 const Signatories = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "row",
-  gap: "16px",
+  gap: "40px",
   width: "100%",
   "@media screen": {
     [theme.breakpoints.down("md")]: {
