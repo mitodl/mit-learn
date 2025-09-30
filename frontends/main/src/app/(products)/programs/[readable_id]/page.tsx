@@ -8,6 +8,7 @@ import * as Sentry from "@sentry/nextjs"
 import { notFound } from "next/navigation"
 import { pagesQueries } from "api/mitxonline-hooks/pages"
 import { programsQueries } from "api/mitxonline-hooks/programs"
+import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
 
 export const generateMetadata = async (
   props: PageProps<"/programs/[readable_id]">,
@@ -23,9 +24,14 @@ export const generateMetadata = async (
       notFound()
     }
     const [program] = resp.data.items
+
+    // Note: feature_image.src is relative to mitxonline root.
+    const image = program.feature_image
+      ? program.program_details.page.feature_image_src
+      : DEFAULT_RESOURCE_IMG
     return standardizeMetadata({
       title: program.title,
-      image: program.program_details.page.feature_image_src,
+      image,
       robots: "noindex, nofollow",
     })
   } catch (error) {

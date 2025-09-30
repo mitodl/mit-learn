@@ -21,6 +21,7 @@ import ProductPageTemplate, {
   WhoCanTake,
 } from "./ProductPageTemplate"
 import { CoursePageItem } from "@mitodl/mitxonline-api-axios/v2"
+import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
 
 type CoursePageProps = {
   readableId: string
@@ -92,13 +93,17 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
 
   const navLinks = getNavLinks(page)
 
+  const imageSrc = page.feature_image
+    ? page.course_details.page.feature_image_src
+    : DEFAULT_RESOURCE_IMG
+
   return (
     <ProductPageTemplate
       offeredBy="MITx"
       currentBreadcrumbLabel="Course"
       title={page.title}
       shortDescription={page.course_details.page.description}
-      imageSrc={page.course_details.page.feature_image_src}
+      imageSrc={imageSrc}
       sidebarSummary={<CourseSummary course={course} />}
       navLinks={navLinks}
     >

@@ -21,6 +21,7 @@ import ProductPageTemplate, {
 } from "./ProductPageTemplate"
 import { ProgramPageItem } from "@mitodl/mitxonline-api-axios/v2"
 import { ProgramSummary } from "./CourseSummary"
+import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
 
 type ProgramPageProps = {
   readableId: string
@@ -96,6 +97,9 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
 
   const navLinks = getNavLinks(page)
 
+  const imageSrc = page.feature_image
+    ? page.program_details.page.feature_image_src
+    : DEFAULT_RESOURCE_IMG
   return (
     <ProductPageTemplate
       offeredBy="MITx"
@@ -107,7 +111,7 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
           html={page.program_details.page.description}
         />
       }
-      imageSrc={page.program_details.page.feature_image_src}
+      imageSrc={imageSrc}
       sidebarSummary={<ProgramSummary />}
       navLinks={navLinks}
     >
