@@ -52,12 +52,12 @@ const Page = styled.div(({ theme }) => ({
 const TopContainer = styled(Container)({
   display: "flex",
   justifyContent: "space-between",
-  gap: "60px",
+  gap: "56px",
 })
 const BottomContainer = styled(Container)(({ theme }) => ({
   display: "flex",
   justifyContent: "space-between",
-  gap: "60px",
+  gap: "56px",
   flexDirection: "row-reverse",
 
   [theme.breakpoints.down("md")]: {
