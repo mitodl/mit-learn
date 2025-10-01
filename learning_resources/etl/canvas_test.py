@@ -461,6 +461,7 @@ def test_transform_canvas_problem_files_pdf_calls_pdf_to_markdown(
         "source_path": f"tutorbot/{pdf_filename}",
         "file_extension": ".pdf",
     }
+
     mocker.patch(
         "learning_resources.etl.canvas.process_olx_path",
         return_value=iter([fake_file_data]),
@@ -1570,7 +1571,7 @@ def test_transform_canvas_problem_files_skips_pdf_to_markdown_if_checksum_exists
     }
 
     mocker.patch(
-        "learning_resources.etl.canvas._process_olx_path",
+        "learning_resources.etl.canvas.process_olx_path",
         return_value=iter([fake_file_data]),
     )
 
