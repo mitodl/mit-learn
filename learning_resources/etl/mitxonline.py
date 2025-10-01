@@ -151,7 +151,7 @@ def extract_courses():
         log.warning("Missing required setting MITX_ONLINE_COURSES_API_URL")
 
     return []
-    
+
 
 def parse_prices(parent_data: dict) -> list[dict]:
     """
@@ -166,7 +166,7 @@ def parse_prices(parent_data: dict) -> list[dict]:
             {
                 Decimal(free_price_str),
                 Decimal(parent_data.get("min_price") or free_price_str),
-                Decimal(parent_data.get("max_price") or free_price_str)
+                Decimal(parent_data.get("max_price") or free_price_str),
             }
         )
     ]
@@ -231,7 +231,7 @@ def _transform_run(course_run: dict, course: dict) -> dict:
         ),
         "description": clean_data(parse_page_attribute(course_run, "description")),
         "image": _transform_image(course_run),
-        "prices":parse_prices(course),
+        "prices": parse_prices(course),
         "instructors": [
             {"full_name": instructor["name"]}
             for instructor in parse_page_attribute(course, "instructors", is_list=True)

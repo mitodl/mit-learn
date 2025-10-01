@@ -150,7 +150,7 @@
         ]
       },
       "min_price": null,
-      "max_price": 456,      
+      "max_price": 456,
       "programs": null,
       "topics": [
         {
@@ -223,7 +223,7 @@
         ]
       },
       "min_price": 123,
-      "max_price": null,      
+      "max_price": null,
       "programs": null,
       "topics": [
         {

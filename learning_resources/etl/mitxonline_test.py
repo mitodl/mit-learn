@@ -4,7 +4,6 @@ import json
 
 # pylint: disable=redefined-outer-name
 from datetime import datetime
-from decimal import Decimal
 from unittest.mock import ANY
 from urllib.parse import parse_qs, urljoin, urlparse
 
