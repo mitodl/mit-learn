@@ -313,7 +313,7 @@ def parse_dates(date_string, hour=12):
 
 
 def documents_from_olx(
-    olx_path: str,
+    olx_path: str, valid_file_types: list[str] = VALID_TEXT_FILE_TYPES
 ) -> Generator[tuple, None, None]:
     """
     Extract text from OLX directory
@@ -329,7 +329,7 @@ def documents_from_olx(
         for filename in files:
             extension_lower = Path(filename).suffix.lower()
 
-            if extension_lower in VALID_TEXT_FILE_TYPES and "draft" not in root:
+            if extension_lower in valid_file_types and "draft" not in root:
                 with Path.open(Path(root, filename), "rb") as f:
                     filebytes = f.read()
 
@@ -529,9 +529,17 @@ def get_video_metadata(olx_path: str, run: LearningResourceRun) -> dict:
     return video_transcript_mapping
 
 
-def _process_olx_path(olx_path: str, run: LearningResourceRun, *, overwrite):
+def process_olx_path(
+    olx_path: str,
+    run: LearningResourceRun,
+    *,
+    overwrite,
+    valid_file_types=VALID_TEXT_FILE_TYPES,
+) -> Generator[dict, None, None]:
     video_srt_metadata = get_video_metadata(olx_path, run)
-    for document, metadata in documents_from_olx(olx_path):
+    for document, metadata in documents_from_olx(
+        olx_path, valid_file_types=valid_file_types
+    ):
         source_path = metadata.get("source_path")
         edx_module_id = get_edx_module_id(source_path, run)
         key = edx_module_id
@@ -611,7 +619,7 @@ def transform_content_files(
     with TemporaryDirectory(prefix=basedir) as inner_tempdir:
         check_call(["tar", "xf", course_tarpath], cwd=inner_tempdir)  # noqa: S603,S607
         olx_path = glob.glob(inner_tempdir + "/*")[0]  # noqa: PTH207
-        yield from _process_olx_path(olx_path, run, overwrite=overwrite)
+        yield from process_olx_path(olx_path, run, overwrite=overwrite)
 
 
 def get_learning_course_bucket_name(etl_source: str) -> str:

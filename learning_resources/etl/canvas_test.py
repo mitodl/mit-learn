@@ -462,7 +462,7 @@ def test_transform_canvas_problem_files_pdf_calls_pdf_to_markdown(
         "file_extension": ".pdf",
     }
     mocker.patch(
-        "learning_resources.etl.canvas._process_olx_path",
+        "learning_resources.etl.canvas.process_olx_path",
         return_value=iter([fake_file_data]),
     )
 
@@ -503,7 +503,7 @@ def test_transform_canvas_problem_files_non_pdf_does_not_call_pdf_to_markdown(
         "file_extension": ".html",
     }
     mocker.patch(
-        "learning_resources.etl.canvas._process_olx_path",
+        "learning_resources.etl.canvas.process_olx_path",
         return_value=iter([fake_file_data]),
     )
 
@@ -526,12 +526,12 @@ def test_transform_canvas_content_files_url_assignment(mocker, tmp_path):
     run = MagicMock()
     run.id = 1
     url_config = {"/folder/file1.html": {"url": "https://cdn.example.com/file1.html"}}
-    # Patch _process_olx_path to yield content_data with source_path
+    # Patch process_olx_path to yield content_data with source_path
     mock_content_data = [
         {"source_path": "data/folder/file1.html", "key": "file1"},
     ]
     mocker.patch(
-        "learning_resources.etl.canvas._process_olx_path",
+        "learning_resources.etl.canvas.process_olx_path",
         return_value=mock_content_data,
     )
     mocker.patch(
