@@ -490,18 +490,18 @@ def test_transform_canvas_problem_files_non_pdf_does_not_call_pdf_to_markdown(
     """
     settings.CANVAS_TUTORBOT_FOLDER = "tutorbot/"
     settings.CANVAS_PDF_TRANSCRIPTION_MODEL = "fake-model"
-    html_filename = "problemset2/problem.html"
-    html_content = b"<html>problem</html>"
+    csv_filename = "problemset2/problem.csv"
+    csv_content = "a,b,c\n1,2,3"
     zip_path = make_canvas_zip(
-        tmp_path, files=[(f"tutorbot/{html_filename}", html_content)]
+        tmp_path, files=[(f"tutorbot/{csv_filename}", csv_content)]
     )
 
     fake_file_data = {
         "run": "run",
-        "content": "original html content",
+        "content": csv_content,
         "archive_checksum": "checksum",
-        "source_path": f"tutorbot/{html_filename}",
-        "file_extension": ".html",
+        "source_path": f"tutorbot/{csv_filename}",
+        "file_extension": ".csv",
     }
     mocker.patch(
         "learning_resources.etl.canvas.process_olx_path",
@@ -515,7 +515,7 @@ def test_transform_canvas_problem_files_non_pdf_does_not_call_pdf_to_markdown(
     results = list(transform_canvas_problem_files(zip_path, run, overwrite=True))
 
     pdf_to_md.assert_not_called()
-    assert results[0]["content"] == "original html content"
+    assert results[0]["content"] == csv_content
     assert results[0]["problem_title"] == "problemset2"
 
 
