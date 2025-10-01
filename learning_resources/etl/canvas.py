@@ -39,6 +39,7 @@ from learning_resources.utils import bulk_resources_unpublished_actions
 from learning_resources_search.constants import (
     CONTENT_FILE_TYPE,
 )
+from main.utils import checksum_for_content
 
 log = logging.getLogger(__name__)
 
@@ -217,7 +218,6 @@ def transform_canvas_problem_files(
             problem_file_data = {
                 key: file_data[key] for key in keys_to_keep if key in file_data
             }
-
             path = file_data["source_path"]
             path = path[len(settings.CANVAS_TUTORBOT_FOLDER) :]
             path_parts = path.split("/", 1)
@@ -239,9 +239,16 @@ def transform_canvas_problem_files(
             else:
                 problem_file_data["type"] = TUTOR_PROBLEM_TYPE
 
+            problem_file_data["checksum"] = checksum_for_content(
+                problem_file_data["content"]
+            )
+
             if (
                 problem_file_data["file_extension"].lower() == ".pdf"
                 and settings.CANVAS_PDF_TRANSCRIPTION_MODEL
+                and not run.problem_files.filter(
+                    checksum=problem_file_data["checksum"]
+                ).exists()
             ):
                 markdown_content = _pdf_to_markdown(
                     Path(olx_path) / Path(problem_file_data["source_path"])
