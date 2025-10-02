@@ -757,6 +757,15 @@ class Course(LearningResourceDetailModel):
         return self.learning_resource.runs
 
 
+class Article(LearningResourceDetailModel):
+    learning_resource = models.OneToOneField(
+        LearningResource,
+        related_name="article",
+        on_delete=models.deletion.CASCADE,
+        primary_key=True,
+    )
+
+
 class ProgramQuerySet(LearningResourceDetailQuerySet):
     """QuerySet for Program"""
 
