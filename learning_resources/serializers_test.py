@@ -665,7 +665,7 @@ def _create_identical_runs_resource():
         delivery=["in_person"],
     )
     learning_resource.resource_prices.set(
-        [LearningResourcePriceFactory.create(amount=Decimal("0.00"), currency="USD")]
+        [LearningResourcePriceFactory.create(amount=Decimal("1.00"), currency="USD")]
     )
     start_date = datetime.datetime.now(tz=datetime.UTC)
     run = LearningResourceRunFactory.create(
@@ -692,7 +692,6 @@ def _create_identical_runs_resource():
             LearningResourcePriceFactory.create(amount=Decimal("1.00"), currency="USD")
         ],
     )
-    run.prices = [Decimal("1.00"), Decimal("2.00")]
     run.save()
     return learning_resource
 
@@ -862,21 +861,32 @@ def test_metadata_display_serializer_all_runs_are_identical():
     assert (
         display_data_serializer.all_runs_are_identical(differing_runs_resource) is False
     )
-    # Test that all_runs_are_identical will return False if there is more than 1 unique currency
+    # Test that all_runs_are_identical will return False if not all runs have same prices
     differing_runs_resource = copy.deepcopy(identical_runs_resource)
-    differing_runs_resource["resource_prices"] = [
-        {"currency": "USD", "amount": Decimal("1.00")},
-        {"currency": "BTC", "amount": Decimal("1.00")},
+    differing_runs_resource["runs"][0]["resource_prices"] = [
+        {"amount": "10.00", "currency": "USD"},
+        {"amount": "20.00", "currency": "BTC"},
+    ]
+    differing_runs_resource["runs"][1]["resource_prices"] = [
+        {"amount": "10.00", "currency": "USD"},
+        {"amount": "21.00", "currency": "BTC"},
     ]
     assert (
         display_data_serializer.all_runs_are_identical(differing_runs_resource) is False
     )
 
-    # Test that all_runs_are_identical will return False if there is more than 1 unique price
+    # Test that all_runs_are_identical will return True if all runs DO have same prices
     differing_runs_resource = copy.deepcopy(identical_runs_resource)
-    differing_runs_resource["runs"][0]["prices"] = [Decimal(i) for i in range(5)]
+    differing_runs_resource["runs"][0]["resource_prices"] = [
+        {"amount": "10.00", "currency": "USD"},
+        {"amount": "20.00", "currency": "BTC"},
+    ]
+    differing_runs_resource["runs"][1]["resource_prices"] = [
+        {"amount": "10.00", "currency": "USD"},
+        {"amount": "20.00", "currency": "BTC"},
+    ]
     assert (
-        display_data_serializer.all_runs_are_identical(differing_runs_resource) is False
+        display_data_serializer.all_runs_are_identical(differing_runs_resource) is True
     )
     """
     Test that all_runs_are_identical will return False if there is more than 1 unique location
