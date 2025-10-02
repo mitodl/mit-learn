@@ -1523,7 +1523,7 @@ def test_course_run_problems_endpoint(client, user_role, django_user_model):
         }
 
 
-def test_resource_list_items_only_shows_published_runs(client, user):
+def test_resource_items_only_shows_published_runs(client, user):
     """Test that ResourceListItemsViewSet only returns published runs for child resources"""
 
     program = LearningResourceFactory.create(
@@ -1533,30 +1533,38 @@ def test_resource_list_items_only_shows_published_runs(client, user):
     course = LearningResourceFactory.create(
         resource_type=LearningResourceType.course.name,
         published=True,
+        create_runs=False,
     )
+    program.resources.set(
+        [course], through_defaults={"relation_type": "program_courses"}
+    )
+
     published_run = LearningResourceRunFactory.create(
-        learning_resource=course,
         published=True,
+        learning_resource=course,
     )
     unpublished_run = LearningResourceRunFactory.create(
         learning_resource=course,
         published=False,
     )
-    LearningResourceRelationship.objects.create(
-        parent=program,
-        child=course,
-        relation_type=LearningResourceRelationTypes.PROGRAM_COURSES.value,
+    course.runs.set(
+        [
+            published_run,
+            unpublished_run,
+        ]
     )
+    assert course.runs.count() == 2
 
     client.force_login(user)
     url = reverse(
-        "lr:v1:learningresources_items-list",
+        "lr:v1:learning_resource_items_api-list",
         kwargs={"learning_resource_id": program.id},
     )
     resp = client.get(url)
 
     results = resp.json()["results"]
-    child_data = results[0]["child"]
+    assert len(results) == 1
+    child_data = results[0]["resource"]
     assert child_data["id"] == course.id
     run_ids = [run["id"] for run in child_data["runs"]]
     assert published_run.id in run_ids
