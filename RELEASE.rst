@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.45.4
+Version 0.45.4 (Released October 02, 2025)
 --------------
 
 - Allow runs with multiple prices to still be considered identical (#2563)
