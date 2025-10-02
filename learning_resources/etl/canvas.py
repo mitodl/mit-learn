@@ -15,6 +15,7 @@ from PIL import Image
 from learning_resources.constants import (
     TUTOR_PROBLEM_TYPE,
     TUTOR_SOLUTION_TYPE,
+    VALID_TUTOR_PROBLEM_FILE_TYPES,
     LearningResourceType,
     PlatformType,
 )
@@ -26,9 +27,9 @@ from learning_resources.etl.canvas_utils import (
 )
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.utils import (
-    _process_olx_path,
     calc_checksum,
     get_edx_module_id,
+    process_olx_path,
 )
 from learning_resources.models import (
     LearningResource,
@@ -162,7 +163,7 @@ def transform_canvas_content_files(
                 else:
                     log.debug("skipping unpublished file %s", member.filename)
 
-            for content_data in _process_olx_path(olx_path, run, overwrite=overwrite):
+            for content_data in process_olx_path(olx_path, run, overwrite=overwrite):
                 url_path = content_data["source_path"].lstrip(
                     content_data["source_path"].split("/")[0]
                 )
@@ -207,7 +208,12 @@ def transform_canvas_problem_files(
             if member.filename.startswith(settings.CANVAS_TUTORBOT_FOLDER):
                 course_archive.extract(member, path=olx_path)
                 log.debug("processing active problem set file %s", member.filename)
-        for file_data in _process_olx_path(olx_path, run, overwrite=overwrite):
+        for file_data in process_olx_path(
+            olx_path,
+            run,
+            overwrite=overwrite,
+            valid_file_types=VALID_TUTOR_PROBLEM_FILE_TYPES,
+        ):
             keys_to_keep = [
                 "run",
                 "content",
