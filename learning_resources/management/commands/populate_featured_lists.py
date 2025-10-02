@@ -31,7 +31,7 @@ class Command(BaseCommand):
             "resource_count",
             nargs="?",
             type=int,
-            default=10,
+            default=12,
             help="Set the number of courses per featured list (default is 10)",
         )
 
@@ -44,7 +44,7 @@ class Command(BaseCommand):
         self.stdout.write("Creating featured list for each featured offeror channel")
 
         start = now_in_utc()
-        resource_count = options.get("resource_count", 10)
+        resource_count = options["resource_count"]
         for offeror in LearningResourceOfferor.objects.all():
             self.stdout.write(f"Creating featured list for {offeror.name} channel")
 
