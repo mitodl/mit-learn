@@ -1521,3 +1521,44 @@ def test_course_run_problems_endpoint(client, user_role, django_user_model):
             "detail": "Authentication credentials were not provided.",
             "error_type": "NotAuthenticated",
         }
+
+
+def test_resource_list_items_only_shows_published_runs(client, user):
+    """Test that ResourceListItemsViewSet only returns published runs for child resources"""
+
+    program = LearningResourceFactory.create(
+        resource_type=LearningResourceType.program.name,
+        published=True,
+    )
+    course = LearningResourceFactory.create(
+        resource_type=LearningResourceType.course.name,
+        published=True,
+    )
+    published_run = LearningResourceRunFactory.create(
+        learning_resource=course,
+        published=True,
+    )
+    unpublished_run = LearningResourceRunFactory.create(
+        learning_resource=course,
+        published=False,
+    )
+    LearningResourceRelationship.objects.create(
+        parent=program,
+        child=course,
+        relation_type=LearningResourceRelationTypes.PROGRAM_COURSES.value,
+    )
+
+    client.force_login(user)
+    url = reverse(
+        "lr:v1:learningresources_items-list",
+        kwargs={"learning_resource_id": program.id},
+    )
+    resp = client.get(url)
+
+    results = resp.json()["results"]
+    child_data = results[0]["child"]
+    assert child_data["id"] == course.id
+    run_ids = [run["id"] for run in child_data["runs"]]
+    assert published_run.id in run_ids
+    assert unpublished_run.id not in run_ids
+    assert len(child_data["runs"]) == 1
