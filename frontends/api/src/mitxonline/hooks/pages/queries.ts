@@ -3,12 +3,12 @@ import { pagesApi } from "../../clients"
 
 const pagesKeys = {
   root: ["mitxonline", "pages"],
-  coursePageDetail: (readableId: string) => [
+  coursePages: (readableId: string) => [
     ...pagesKeys.root,
     "course_detail",
     readableId,
   ],
-  programPageDetail: (readableId: string) => [
+  programPages: (readableId: string) => [
     ...pagesKeys.root,
     "program_detail",
     readableId,
@@ -16,18 +16,18 @@ const pagesKeys = {
 }
 
 const pagesQueries = {
-  courseDetail: (readableId: string) =>
+  coursePages: (readableId: string) =>
     queryOptions({
-      queryKey: pagesKeys.coursePageDetail(readableId),
+      queryKey: pagesKeys.coursePages(readableId),
       queryFn: async () => {
         return pagesApi
           .pagesfieldstypecmsCoursePageRetrieve({ readable_id: readableId })
           .then((res) => res.data)
       },
     }),
-  programsDetail: (readableId: string) =>
+  programPages: (readableId: string) =>
     queryOptions({
-      queryKey: pagesKeys.programPageDetail(readableId),
+      queryKey: pagesKeys.programPages(readableId),
       queryFn: async () => {
         return pagesApi
           .pagesfieldstypecmsProgramPageRetrieve({ readable_id: readableId })

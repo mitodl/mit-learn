@@ -51,7 +51,7 @@ const Page: React.FC<PageProps<"/courses/[readable_id]">> = async (props) => {
    * This approach blocked by wagtail api requiring auth.
    */
   const { dehydratedState } = await prefetch([
-    pagesQueries.courseDetail(readableId),
+    pagesQueries.coursePages(readableId),
     coursesQueries.coursesList({ readable_id: readableId }),
   ])
   return (

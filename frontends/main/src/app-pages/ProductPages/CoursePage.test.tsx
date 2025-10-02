@@ -38,7 +38,7 @@ const setupApis = ({
     { results: [course] },
   )
 
-  setMockResponse.get(urls.pages.courseDetail(course.readable_id), {
+  setMockResponse.get(urls.pages.coursePages(course.readable_id), {
     items: [page],
   })
 }
@@ -175,7 +175,7 @@ describe("CoursePage", () => {
       urls.courses.coursesList({ readable_id: "readable_id" }),
       { results: courses },
     )
-    setMockResponse.get(urls.pages.courseDetail("readable_id"), {
+    setMockResponse.get(urls.pages.coursePages("readable_id"), {
       items: pages,
     })
 

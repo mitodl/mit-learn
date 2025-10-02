@@ -1,5 +1,5 @@
 import React from "react"
-import { UnderlinedLink } from "./CourseSummary"
+import { UnderlinedLink } from "./ProductSummary"
 import { HeadingIds } from "./util"
 import RawHTML from "./RawHTML"
 import { Typography } from "ol-components"

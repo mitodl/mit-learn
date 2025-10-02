@@ -20,7 +20,7 @@ import ProductPageTemplate, {
   WhoCanTake,
 } from "./ProductPageTemplate"
 import { ProgramPageItem } from "@mitodl/mitxonline-api-axios/v2"
-import { ProgramSummary } from "./CourseSummary"
+import { ProgramSummary } from "./ProductSummary"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
 
 type ProgramPageProps = {
@@ -73,11 +73,11 @@ const DescriptionHTML = styled(UnstyledRawHTML)({
 })
 
 const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
-  const programDetail = useQuery(pagesQueries.programsDetail(readableId))
+  const pages = useQuery(pagesQueries.programPages(readableId))
   const programs = useQuery(
     programsQueries.programsList({ readable_id: readableId }),
   )
-  const page = programDetail.data?.items[0]
+  const page = pages.data?.items[0]
   const course = programs.data?.results?.[0]
   const enabled = useFeatureFlagEnabled(FeatureFlags.ProductPageCourse)
   if (enabled === false) {
@@ -85,7 +85,7 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
   }
   if (!enabled) return
 
-  const doneLoading = programDetail.isSuccess && programs.isSuccess
+  const doneLoading = pages.isSuccess && programs.isSuccess
 
   if (!page || !course) {
     if (doneLoading) {

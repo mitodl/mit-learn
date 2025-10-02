@@ -7,7 +7,7 @@ import { pagesQueries } from "api/mitxonline-hooks/pages"
 import { useQuery } from "@tanstack/react-query"
 import { styled } from "@mitodl/smoot-design"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
-import { CourseSummary } from "./CourseSummary"
+import { CourseSummary } from "./ProductSummary"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { notFound } from "next/navigation"
@@ -69,11 +69,11 @@ const getNavLinks = (page: CoursePageItem): HeadingData[] => {
 }
 
 const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
-  const courseDetail = useQuery(pagesQueries.courseDetail(readableId))
+  const pages = useQuery(pagesQueries.coursePages(readableId))
   const courses = useQuery(
     coursesQueries.coursesList({ readable_id: readableId }),
   )
-  const page = courseDetail.data?.items[0]
+  const page = pages.data?.items[0]
   const course = courses.data?.results?.[0]
   const enabled = useFeatureFlagEnabled(FeatureFlags.ProductPageCourse)
   if (enabled === false) {
@@ -81,7 +81,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
   }
   if (!enabled) return
 
-  const doneLoading = courseDetail.isSuccess && courses.isSuccess
+  const doneLoading = pages.isSuccess && courses.isSuccess
 
   if (!page || !course) {
     if (doneLoading) {
