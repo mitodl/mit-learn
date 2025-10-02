@@ -6,7 +6,7 @@ from hmac import compare_digest
 import rapidjson
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Count, F, Q, QuerySet
+from django.db.models import Count, F, Prefetch, Q, QuerySet
 from django.http import Http404, HttpResponse
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
@@ -545,7 +545,29 @@ class ResourceListItemsViewSet(NestedViewSetMixin, viewsets.ReadOnlyModelViewSet
     queryset = (
         LearningResourceRelationship.objects.select_related("child")
         .prefetch_related(
-            "child__runs", "child__runs__instructors", "child__runs__resource_prices"
+            Prefetch(
+                "child__topics",
+                queryset=LearningResourceTopic.objects.for_serialization(),
+            ),
+            Prefetch(
+                "child__offered_by",
+                queryset=LearningResourceOfferor.objects.for_serialization(),
+            ),
+            Prefetch(
+                "child__departments",
+                queryset=LearningResourceDepartment.objects.for_serialization(
+                    prefetch_school=True
+                ).select_related("school"),
+            ),
+            Prefetch(
+                "child__runs",
+                queryset=LearningResourceRun.objects.filter(
+                    published=True
+                ).for_serialization(),
+            ),
+            "child__runs__instructors",
+            "child__runs__resource_prices",
+            "child__topics",
         )
         .filter(child__published=True)
     )
