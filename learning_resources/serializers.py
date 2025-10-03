@@ -348,6 +348,14 @@ class CourseSerializer(serializers.ModelSerializer):
         exclude = ("learning_resource", *COMMON_IGNORED_FIELDS)
 
 
+class ArticleSerializer(serializers.ModelSerializer):
+    """Serializer for the Article model"""
+
+    class Meta:
+        model = models.Article
+        exclude = ("learning_resource", *COMMON_IGNORED_FIELDS)
+
+
 class LearningPathSerializer(serializers.ModelSerializer, ResourceListMixin):
     """Serializer for the LearningPath model"""
 

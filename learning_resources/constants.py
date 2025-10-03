@@ -36,6 +36,7 @@ class LearningResourceType(ExtendedEnum):
     podcast_episode = "Podcast Episode"
     video = "Video"
     video_playlist = "Video Playlist"
+    article = "Article"
 
 
 LEARNING_MATERIAL_RESOURCE_CATEGORY = "learning_material"
@@ -88,6 +89,7 @@ class PlatformType(ExtendedEnum):
     podcast = "Podcast"
     youtube = "YouTube"
     canvas = "Canvas"
+    climate = "MIT Climate"
 
 
 class PrivacyLevel(ExtendedEnum):

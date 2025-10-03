@@ -1,7 +1,10 @@
 """MIT Climate Article ETL"""
 
 import logging
+from datetime import UTC
+from zoneinfo import ZoneInfo
 
+import dateutil
 import requests
 from django.conf import settings
 
@@ -14,14 +17,27 @@ def retrieve_feed(feed_url):
 
 def transform_article(source_url, article_data: dict):
     article_url = f"{source_url}{article_data.get('url')}"
-    full_description = f"""{article_data.get("summary")}
+    summary = article_data.get("summary")
+    full_description = f"""{summary}
 	{article_data.get("footnotes")}
 	{article_data.get("byline")}
 	"""
-    article_data["url"] = article_url
-    article_data["full_description"] = full_description
-    article_data["description"] = article_data.get("summary")
-    return article_data
+    created_on = (
+        dateutil.parser.parse(article_data["created"])
+        .replace(tzinfo=ZoneInfo("US/Eastern"))
+        .astimezone(UTC)
+        if article_data.get("created")
+        else None
+    )
+    return {
+        "title": article_data.get("title"),
+        "readable_id": article_data.get("uuid"),
+        "url": article_url,
+        "description": summary,
+        "full_description": full_description,
+        "published": True,
+        "created_on": created_on,
+    }
 
 
 def extract_articles():
