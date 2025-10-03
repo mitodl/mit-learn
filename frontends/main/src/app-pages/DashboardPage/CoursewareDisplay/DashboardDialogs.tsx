@@ -9,6 +9,7 @@ import {
   SimpleSelectField,
 } from "ol-components"
 import { Button, Checkbox, Alert } from "@mitodl/smoot-design"
+import { useQuery } from "@tanstack/react-query"
 
 import NiceModal, { muiDialogV5 } from "@ebay/nice-modal-react"
 import { useFormik } from "formik"
@@ -18,9 +19,8 @@ import {
 } from "api/mitxonline-hooks/enrollment"
 import { DashboardCourseEnrollment } from "./types"
 import {
-  useMitxOnlineCountries,
+  mitxUserQueries,
   useUpdateUserMutation,
-  useMitxOnlineUserMe,
 } from "api/mitxonline-hooks/user"
 import * as Yup from "yup"
 
@@ -199,9 +199,9 @@ const jitSchema = Yup.object().shape({
 })
 
 const JustInTimeDialogInner: React.FC<{ href: string }> = ({ href }) => {
-  const { data: countries } = useMitxOnlineCountries()
+  const { data: countries } = useQuery(mitxUserQueries.countries())
   const updateUserMutation = useUpdateUserMutation()
-  const user = useMitxOnlineUserMe()
+  const user = useQuery(mitxUserQueries.me())
   const modal = NiceModal.useModal()
 
   // Generate year options (minimum age 13, so current year - 13 back to 1900)
