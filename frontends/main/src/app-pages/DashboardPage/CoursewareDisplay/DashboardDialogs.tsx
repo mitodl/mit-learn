@@ -257,18 +257,13 @@ const JustInTimeDialogInner: React.FC<{ href: string }> = ({ href }) => {
       {...muiDialogV5(modal)}
       actions={
         <DialogActions>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              modal.hide()
-            }}
-          >
+          <Button variant="secondary" onClick={modal.hide}>
             Cancel
           </Button>
           <Button
             variant="primary"
             type="submit"
-            disabled={!formik.isValid || formik.isSubmitting}
+            disabled={formik.isSubmitting}
           >
             Submit
             {formik.isSubmitting && (
@@ -306,6 +301,7 @@ const JustInTimeDialogInner: React.FC<{ href: string }> = ({ href }) => {
           renderValue={renderSelectValue}
           fullWidth
           required
+          error={!!formik.errors.country}
           errorText={formik.errors.country}
         />
         <SimpleSelectField
@@ -327,6 +323,7 @@ const JustInTimeDialogInner: React.FC<{ href: string }> = ({ href }) => {
           renderValue={renderSelectValue}
           fullWidth
           required
+          error={!!formik.errors.year_of_birth}
           errorText={formik.errors.year_of_birth}
         />
       </Stack>

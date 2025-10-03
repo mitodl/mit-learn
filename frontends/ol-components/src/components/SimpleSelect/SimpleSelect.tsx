@@ -51,6 +51,7 @@ type SimpleSelectFieldProps = Pick<
   | "fullWidth"
   | "label"
   | "helpText"
+  | "error"
   | "errorText"
   | "required"
   | "size"
