@@ -55,6 +55,20 @@ init_sentry(
     profiles_sample_rate=SENTRY_PROFILES_SAMPLE_RATE,
 )
 
+# Validate environment configuration on startup
+# Skip validation during testing or when explicitly disabled
+if not get_bool("SKIP_ENV_VALIDATION", False) and "test" not in os.environ.get(
+    "DJANGO_SETTINGS_MODULE", ""
+):
+    try:
+        from main.env_validator import validate_environment_on_startup
+
+        validate_environment_on_startup()
+    except ImportError as e:
+        log.warning(f"Could not import environment validator: {e}")
+    except Exception as e:
+        log.warning(f"Environment validation failed: {e}")
+
 BASE_DIR = os.path.dirname(  # noqa: PTH120
     os.path.dirname(os.path.abspath(__file__))  # noqa: PTH100, PTH120
 )
