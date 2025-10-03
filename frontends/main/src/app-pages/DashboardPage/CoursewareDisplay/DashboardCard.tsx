@@ -188,9 +188,11 @@ const CoursewareButton = styled(
           className={className}
           disabled={createEnrollment.isPending || !coursewareId}
           onClick={async () => {
+            if (!href || !coursewareId) return
             if (showJustInTimeDialog) {
               NiceModal.show(JustInTimeDialog, {
-                href: href ?? undefined,
+                href: href,
+                readableId: coursewareId,
               })
               return
             } else {

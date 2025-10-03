@@ -15,6 +15,7 @@ import { useQuery } from "@tanstack/react-query"
 import NiceModal, { muiDialogV5 } from "@ebay/nice-modal-react"
 import { useFormik } from "formik"
 import {
+  useCreateEnrollment,
   useDestroyEnrollment,
   useUpdateEnrollment,
 } from "api/mitxonline-hooks/enrollment"
@@ -92,6 +93,7 @@ const EmailSettingsDialogInner: React.FC<DashboardDialogProps> = ({
             {updateEnrollment.isPending && (
               <SpinnerContainer>
                 <LoadingSpinner
+                  color="inherit"
                   loading={updateEnrollment.isPending}
                   size={16}
                 />
@@ -173,6 +175,7 @@ const UnenrollDialogInner: React.FC<DashboardDialogProps> = ({
               <SpinnerContainer>
                 <LoadingSpinner
                   loading={destroyEnrollment.isPending}
+                  color="inherit"
                   size={16}
                 />
               </SpinnerContainer>
@@ -199,9 +202,13 @@ const jitSchema = Yup.object().shape({
   year_of_birth: Yup.string().required("Year of birth is required"),
 })
 
-const JustInTimeDialogInner: React.FC<{ href: string }> = ({ href }) => {
+const JustInTimeDialogInner: React.FC<{ href: string; readableId: string }> = ({
+  href,
+  readableId,
+}) => {
   const { data: countries } = useQuery(mitxUserQueries.countries())
-  const updateUserMutation = useUpdateUserMutation()
+  const updateUser = useUpdateUserMutation()
+  const createEnrollment = useCreateEnrollment()
   const user = useQuery(mitxUserQueries.me())
   const modal = NiceModal.useModal()
 
@@ -224,7 +231,7 @@ const JustInTimeDialogInner: React.FC<{ href: string }> = ({ href }) => {
     },
     validationSchema: jitSchema,
     onSubmit: async (values) => {
-      await updateUserMutation.mutateAsync({
+      await updateUser.mutateAsync({
         PatchedUserRequest: {
           user_profile: {
             year_of_birth: parseInt(values.year_of_birth, 10),
@@ -234,12 +241,11 @@ const JustInTimeDialogInner: React.FC<{ href: string }> = ({ href }) => {
           },
         },
       })
-      if (!updateUserMutation.isError) {
-        modal.hide()
-        if (href) {
-          window.location.href = href
-        }
-      }
+      await createEnrollment.mutateAsync({
+        readable_id: readableId,
+      })
+      window.location.href = href
+      modal.hide()
     },
   })
   const countryOptions: SimpleSelectOption[] = [
@@ -251,8 +257,6 @@ const JustInTimeDialogInner: React.FC<{ href: string }> = ({ href }) => {
     { value: "", label: "Please Select", disabled: true },
     ...years.map((year): SimpleSelectOption => ({ value: year, label: year })),
   ]
-  window.formik = formik
-  window.yobOptions = yobOptions
 
   return (
     <FormDialog
@@ -275,7 +279,7 @@ const JustInTimeDialogInner: React.FC<{ href: string }> = ({ href }) => {
             Submit
             {formik.isSubmitting && (
               <SpinnerContainer>
-                <LoadingSpinner loading={formik.isSubmitting} size={16} />
+                <LoadingSpinner color="inherit" loading={true} size={16} />
               </SpinnerContainer>
             )}
           </Button>
