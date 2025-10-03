@@ -20,7 +20,9 @@ import { DashboardCourseEnrollment } from "./types"
 import {
   useMitxOnlineCountries,
   useUpdateUserMutation,
+  useMitxOnlineUserMe,
 } from "api/mitxonline-hooks/user"
+import * as Yup from "yup"
 
 const BoldText = styled.span(({ theme }) => ({
   ...theme.typography.subtitle1,
@@ -191,9 +193,15 @@ const UnenrollDialogInner: React.FC<DashboardDialogProps> = ({
   )
 }
 
+const jitSchema = Yup.object().shape({
+  country: Yup.string().required("Country is required"),
+  year_of_birth: Yup.string().required("Year of birth is required"),
+})
+
 const JustInTimeDialogInner: React.FC<{ href: string }> = ({ href }) => {
   const { data: countries } = useMitxOnlineCountries()
   const updateUserMutation = useUpdateUserMutation()
+  const user = useMitxOnlineUserMe()
   const modal = NiceModal.useModal()
 
   // Generate year options (minimum age 13, so current year - 13 back to 1900)
@@ -204,24 +212,17 @@ const JustInTimeDialogInner: React.FC<{ href: string }> = ({ href }) => {
     (_, i) => maxYear - i,
   )
 
+  const yob = user?.data?.user_profile?.year_of_birth
+
   const formik = useFormik({
     enableReinitialize: true,
     validateOnChange: false,
     validateOnBlur: false,
     initialValues: {
-      country: "",
-      year_of_birth: "",
+      country: user?.data?.legal_address?.country || "",
+      year_of_birth: yob ? yob.toString() : "",
     },
-    validate: (values) => {
-      const errors: { country?: string; year_of_birth?: string } = {}
-      if (!values.country) {
-        errors.country = "Country is required"
-      }
-      if (!values.year_of_birth) {
-        errors.year_of_birth = "Year of birth is required"
-      }
-      return errors
-    },
+    validationSchema: jitSchema,
     onSubmit: async (values) => {
       await updateUserMutation.mutateAsync({
         PatchedUserRequest: {
@@ -248,6 +249,7 @@ const JustInTimeDialogInner: React.FC<{ href: string }> = ({ href }) => {
 
   return (
     <FormDialog
+      noValidate
       title="Just a Few More Details"
       fullWidth
       onReset={formik.resetForm}
@@ -303,13 +305,9 @@ const JustInTimeDialogInner: React.FC<{ href: string }> = ({ href }) => {
           onChange={formik.handleChange}
           renderValue={renderSelectValue}
           fullWidth
+          required
+          errorText={formik.errors.country}
         />
-        {formik.errors.country && (
-          <Typography variant="body2" color="error">
-            {formik.errors.country}
-          </Typography>
-        )}
-
         <SimpleSelectField
           options={[
             {
@@ -328,12 +326,9 @@ const JustInTimeDialogInner: React.FC<{ href: string }> = ({ href }) => {
           onChange={formik.handleChange}
           renderValue={renderSelectValue}
           fullWidth
+          required
+          errorText={formik.errors.year_of_birth}
         />
-        {formik.errors.year_of_birth && (
-          <Typography variant="body2" color="error">
-            {formik.errors.year_of_birth}
-          </Typography>
-        )}
       </Stack>
     </FormDialog>
   )
