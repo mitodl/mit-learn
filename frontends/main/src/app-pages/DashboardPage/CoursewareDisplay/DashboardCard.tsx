@@ -197,12 +197,10 @@ const CoursewareButton = styled(
               return
             } else {
               await createEnrollment.mutateAsync(
-                { readable_id: coursewareId ?? "" },
+                { readable_id: coursewareId },
                 {
                   onSuccess: () => {
-                    if (href) {
-                      window.location.href = href
-                    }
+                    window.location.href = href
                   },
                 },
               )

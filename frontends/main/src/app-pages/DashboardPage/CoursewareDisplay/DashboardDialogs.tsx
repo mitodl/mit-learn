@@ -244,7 +244,7 @@ const JustInTimeDialogInner: React.FC<{ href: string; readableId: string }> = ({
       await createEnrollment.mutateAsync({
         readable_id: readableId,
       })
-      window.location.href = href
+      window.location.assign(href)
       modal.hide()
     },
   })
