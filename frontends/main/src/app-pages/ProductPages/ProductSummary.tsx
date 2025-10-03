@@ -411,4 +411,17 @@ const CourseSummary: React.FC<{
   )
 }
 
-export { CourseSummary, UnderlinedLink, TestIds }
+const ProgramSummary: React.FC = () => {
+  return (
+    <SidebarSummaryRoot aria-labelledby="program-summary">
+      <VisuallyHidden>
+        <h2 id="program-summary">Program summary</h2>
+      </VisuallyHidden>
+      <Stack gap={{ xs: "24px", md: "32px" }}>
+        Program Summary Placeholder
+      </Stack>
+    </SidebarSummaryRoot>
+  )
+}
+
+export { CourseSummary, ProgramSummary, UnderlinedLink, TestIds }

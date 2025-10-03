@@ -6,24 +6,24 @@ import { Stack, Typography } from "ol-components"
 import { pagesQueries } from "api/mitxonline-hooks/pages"
 import { useQuery } from "@tanstack/react-query"
 import { styled } from "@mitodl/smoot-design"
-import { coursesQueries } from "api/mitxonline-hooks/courses"
-import { CourseSummary } from "./ProductSummary"
+import { programsQueries } from "api/mitxonline-hooks/programs"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { notFound } from "next/navigation"
 import { HeadingIds } from "./util"
 import InstructorsSection from "./InstructorsSection"
-import RawHTML from "./RawHTML"
+import RawHTML, { UnstyledRawHTML } from "./RawHTML"
 import AboutSection from "./AboutSection"
 import ProductPageTemplate, {
   HeadingData,
   ProductNavbar,
   WhoCanTake,
 } from "./ProductPageTemplate"
-import { CoursePageItem } from "@mitodl/mitxonline-api-axios/v2"
+import { ProgramPageItem } from "@mitodl/mitxonline-api-axios/v2"
+import { ProgramSummary } from "./ProductSummary"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
 
-type CoursePageProps = {
+type ProgramPageProps = {
   readableId: string
 }
 
@@ -38,7 +38,7 @@ const PrerequisitesSection = styled.section({
   gap: "16px",
 })
 
-const getNavLinks = (page: CoursePageItem): HeadingData[] => {
+const getNavLinks = (page: ProgramPageItem): HeadingData[] => {
   const all = [
     {
       id: HeadingIds.About,
@@ -68,20 +68,24 @@ const getNavLinks = (page: CoursePageItem): HeadingData[] => {
   return all.filter((item) => item.content)
 }
 
-const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
-  const pages = useQuery(pagesQueries.coursePages(readableId))
-  const courses = useQuery(
-    coursesQueries.coursesList({ readable_id: readableId }),
+const DescriptionHTML = styled(UnstyledRawHTML)({
+  p: { margin: 0 },
+})
+
+const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
+  const pages = useQuery(pagesQueries.programPages(readableId))
+  const programs = useQuery(
+    programsQueries.programsList({ readable_id: readableId }),
   )
   const page = pages.data?.items[0]
-  const course = courses.data?.results?.[0]
+  const course = programs.data?.results?.[0]
   const enabled = useFeatureFlagEnabled(FeatureFlags.ProductPageCourse)
   if (enabled === false) {
     return notFound()
   }
   if (!enabled) return
 
-  const doneLoading = pages.isSuccess && courses.isSuccess
+  const doneLoading = pages.isSuccess && programs.isSuccess
 
   if (!page || !course) {
     if (doneLoading) {
@@ -94,23 +98,27 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
   const navLinks = getNavLinks(page)
 
   const imageSrc = page.feature_image
-    ? page.course_details.page.feature_image_src
+    ? page.program_details.page.feature_image_src
     : DEFAULT_RESOURCE_IMG
-
   return (
     <ProductPageTemplate
       offeredBy="MITx"
-      currentBreadcrumbLabel="Course"
+      currentBreadcrumbLabel="Program"
       title={page.title}
-      shortDescription={page.course_details.page.description}
+      shortDescription={
+        <DescriptionHTML
+          Component="span"
+          html={page.program_details.page.description}
+        />
+      }
       imageSrc={imageSrc}
-      sidebarSummary={<CourseSummary course={course} />}
+      sidebarSummary={<ProgramSummary />}
       navLinks={navLinks}
     >
-      <ProductNavbar navLinks={navLinks} productNoun="Course" />
+      <ProductNavbar navLinks={navLinks} productNoun="Program" />
       <Stack gap={{ xs: "40px", sm: "56px" }}>
         {page.about ? (
-          <AboutSection productNoun="Course" aboutHtml={page.about} />
+          <AboutSection productNoun="Program" aboutHtml={page.about} />
         ) : null}
         {page.what_you_learn ? (
           <WhatSection aria-labelledby={HeadingIds.What}>
@@ -131,10 +139,10 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
         {page.faculty.length ? (
           <InstructorsSection instructors={page.faculty} />
         ) : null}
-        <WhoCanTake productNoun="Course" />
+        <WhoCanTake productNoun="Program" />
       </Stack>
     </ProductPageTemplate>
   )
 }
 
-export default CoursePage
+export default ProgramPage

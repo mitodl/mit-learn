@@ -2,7 +2,7 @@ import React from "react"
 import { factories } from "api/mitxonline-test-utils"
 
 import { renderWithProviders, screen, within, user } from "@/test-utils"
-import { CourseSummary, TestIds } from "./CourseSummary"
+import { CourseSummary, TestIds } from "./ProductSummary"
 import { formatDate } from "ol-utilities"
 import invariant from "tiny-invariant"
 import { faker } from "@faker-js/faker/locale/en"
@@ -89,7 +89,7 @@ describe("CourseSummary", () => {
   })
 })
 
-describe("Dates Row", () => {
+describe("Course Dates Row", () => {
   test("Renders expected start/end dates", async () => {
     const run = makeRun()
     const course = makeCourse({
@@ -227,7 +227,7 @@ describe("Course Format Row", () => {
   })
 })
 
-describe("Duration Row", () => {
+describe("Course Duration Row", () => {
   test.each([
     {
       length: "5 weeks",
@@ -257,7 +257,7 @@ describe("Duration Row", () => {
   )
 })
 
-describe("Price Row", () => {
+describe("Course Price Row", () => {
   test.each([
     {
       label: "has no products",
