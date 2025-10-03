@@ -7,6 +7,7 @@ import {
   Stack,
   LoadingSpinner,
   SimpleSelectField,
+  SimpleSelectOption,
 } from "ol-components"
 import { Button, Checkbox, Alert } from "@mitodl/smoot-design"
 import { useQuery } from "@tanstack/react-query"
@@ -207,9 +208,8 @@ const JustInTimeDialogInner: React.FC<{ href: string }> = ({ href }) => {
   // Generate year options (minimum age 13, so current year - 13 back to 1900)
   const currentYear = new Date().getFullYear()
   const maxYear = currentYear - 13
-  const yearOptions = Array.from(
-    { length: maxYear - 1900 + 1 },
-    (_, i) => maxYear - i,
+  const years = Array.from({ length: maxYear - 1900 + 1 }, (_, i) =>
+    (maxYear - i).toString(),
   )
 
   const yob = user?.data?.user_profile?.year_of_birth
@@ -242,10 +242,17 @@ const JustInTimeDialogInner: React.FC<{ href: string }> = ({ href }) => {
       }
     },
   })
-
-  const renderSelectValue = (value: string | string[]) => {
-    return value || <SelectPlaceholder>Please Select</SelectPlaceholder>
-  }
+  const countryOptions: SimpleSelectOption[] = [
+    { value: "", label: "Please Select", disabled: true },
+    ...(countries?.map(({ code, name }) => ({ value: code, label: name })) ??
+      []),
+  ]
+  const yobOptions: SimpleSelectOption[] = [
+    { value: "", label: "Please Select", disabled: true },
+    ...years.map((year): SimpleSelectOption => ({ value: year, label: year })),
+  ]
+  window.formik = formik
+  window.yobOptions = yobOptions
 
   return (
     <FormDialog
@@ -281,48 +288,34 @@ const JustInTimeDialogInner: React.FC<{ href: string }> = ({ href }) => {
         </Typography>
 
         <SimpleSelectField
-          options={[
-            {
-              value: "",
-              label: "Please Select",
-            },
-          ].concat(
-            countries
-              ? countries.map((country) => ({
-                  value: country.code,
-                  label: country.name,
-                }))
-              : [],
-          )}
+          options={countryOptions}
           name="country"
           label="Country"
-          value={formik.values.country}
+          value={countries ? formik.values.country : ""}
           onChange={formik.handleChange}
-          renderValue={renderSelectValue}
           fullWidth
           required
+          renderValue={
+            formik.values.country
+              ? undefined
+              : () => <SelectPlaceholder>Please Select</SelectPlaceholder>
+          }
           error={!!formik.errors.country}
           errorText={formik.errors.country}
         />
         <SimpleSelectField
-          options={[
-            {
-              value: "",
-              label: "Please Select",
-            },
-          ].concat(
-            yearOptions.map((year) => ({
-              value: year.toString(),
-              label: year.toString(),
-            })),
-          )}
+          options={yobOptions}
           name="year_of_birth"
           label="Year of Birth"
           value={formik.values.year_of_birth}
           onChange={formik.handleChange}
-          renderValue={renderSelectValue}
           fullWidth
           required
+          renderValue={
+            formik.values.year_of_birth
+              ? undefined
+              : () => <SelectPlaceholder>Please Select</SelectPlaceholder>
+          }
           error={!!formik.errors.year_of_birth}
           errorText={formik.errors.year_of_birth}
         />
