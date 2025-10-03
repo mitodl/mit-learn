@@ -155,24 +155,25 @@ def update_qdrant_indexes():
     Create or update Qdrant indexes based on mapping in constants
     """
     client = qdrant_client()
-    for index_field in QDRANT_LEARNING_RESOURCE_INDEXES:
-        collection_name = RESOURCES_COLLECTION_NAME
-        collection = client.get_collection(collection_name=collection_name)
-        if index_field not in collection.payload_schema:
-            client.create_payload_index(
-                collection_name=collection_name,
-                field_name=index_field,
-                field_schema=QDRANT_LEARNING_RESOURCE_INDEXES[index_field],
-            )
-    for index_field in QDRANT_CONTENT_FILE_INDEXES:
-        collection_name = CONTENT_FILES_COLLECTION_NAME
-        collection = client.get_collection(collection_name=collection_name)
-        if index_field not in collection.payload_schema:
-            client.create_payload_index(
-                collection_name=collection_name,
-                field_name=index_field,
-                field_schema=QDRANT_CONTENT_FILE_INDEXES[index_field],
-            )
+
+    for index in [
+        (QDRANT_LEARNING_RESOURCE_INDEXES, RESOURCES_COLLECTION_NAME),
+        (QDRANT_CONTENT_FILE_INDEXES, CONTENT_FILES_COLLECTION_NAME),
+    ]:
+        indexes = index[0]
+        collection_name = index[1]
+        for index_field in indexes:
+            collection = client.get_collection(collection_name=collection_name)
+            if (
+                index_field not in collection.payload_schema
+                or indexes[index_field]
+                != collection.payload_schema[index_field].dict()["data_type"]
+            ):
+                client.create_payload_index(
+                    collection_name=collection_name,
+                    field_name=index_field,
+                    field_schema=indexes[index_field],
+                )
 
 
 def vector_point_id(readable_id):
