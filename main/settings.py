@@ -57,9 +57,12 @@ init_sentry(
 
 # Validate environment configuration on startup
 # Skip validation during testing or when explicitly disabled
-if not get_bool("SKIP_ENV_VALIDATION", False) and "test" not in os.environ.get("DJANGO_SETTINGS_MODULE", ""):
+if not get_bool("SKIP_ENV_VALIDATION", False) and "test" not in os.environ.get(
+    "DJANGO_SETTINGS_MODULE", ""
+):
     try:
         from main.env_validator import validate_environment_on_startup
+
         validate_environment_on_startup()
     except ImportError as e:
         log.warning(f"Could not import environment validator: {e}")
@@ -877,4 +880,3 @@ OPENTELEMETRY_ENDPOINT = get_string("OPENTELEMETRY_ENDPOINT", None)
 OPENTELEMETRY_TRACES_BATCH_SIZE = get_int("OPENTELEMETRY_TRACES_BATCH_SIZE", 512)
 OPENTELEMETRY_EXPORT_TIMEOUT_MS = get_int("OPENTELEMETRY_EXPORT_TIMEOUT_MS", 5000)
 CANVAS_TUTORBOT_FOLDER = get_string("CANVAS_TUTORBOT_FOLDER", "web_resources/ai/tutor/")
-

@@ -3,15 +3,15 @@ Environment variable validation utilities for detecting configuration discrepanc
 """
 
 import logging
-import os
-import re
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
+
 def strip_comment(val):
-    return val.split('#', 1)[0].strip()
+    return val.split("#", 1)[0].strip()
+
 
 class EnvValidator:
     """Validates environment variable configurations and reports discrepancies."""
@@ -31,7 +31,7 @@ class EnvValidator:
         self.project_root = project_root
         self.env_dir = project_root / "env"
 
-    def _parse_env_file(self, file_path: Path) -> Dict[str, dict]:
+    def _parse_env_file(self, file_path: Path) -> dict[str, dict]:
         """
         Parse an environment file and return a dictionary of key-value pairs and any noqa-style directives.
 
@@ -47,12 +47,12 @@ class EnvValidator:
             return env_vars
 
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, encoding="utf-8") as f:
                 for line_num, line in enumerate(f, 1):
                     line = line.strip()
 
                     # Skip empty lines and comments
-                    if not line or line.startswith('#'):
+                    if not line or line.startswith("#"):
                         continue
 
                     # Check for noqa-style directive at end of line
@@ -65,21 +65,21 @@ class EnvValidator:
                         line = line[: -len("# suppress-warning")].rstrip()
 
                     # Parse regular env variables
-                    if '=' in line:
-                        key, value = line.split('=', 1)
+                    if "=" in line:
+                        key, value = line.split("=", 1)
                         key = key.strip()
                         value = value.strip()
 
-                        env_vars[key] = {'value': value}
+                        env_vars[key] = {"value": value}
                         if directive:
-                            env_vars[key]['directive'] = directive
+                            env_vars[key]["directive"] = directive
 
         except Exception as e:
             logger.warning(f"Error parsing env file {file_path}: {e}")
 
         return env_vars
 
-    def _get_env_file_pairs(self) -> List[Tuple[str, Path, Path, Path]]:
+    def _get_env_file_pairs(self) -> list[tuple[str, Path, Path, Path]]:
         """
         Get pairs of environment files to compare.
 
@@ -90,8 +90,18 @@ class EnvValidator:
 
         # Define the environment file patterns
         env_patterns = [
-            ("backend", "backend.env", "backend.local.env", "backend.local.example.env"),
-            ("frontend", "frontend.env", "frontend.local.env", "frontend.local.example.env"),
+            (
+                "backend",
+                "backend.env",
+                "backend.local.env",
+                "backend.local.example.env",
+            ),
+            (
+                "frontend",
+                "frontend.env",
+                "frontend.local.env",
+                "frontend.local.example.env",
+            ),
             ("shared", "shared.env", "shared.local.env", "shared.local.example.env"),
         ]
 
@@ -106,7 +116,7 @@ class EnvValidator:
 
         return pairs
 
-    def check_example_overrides(self) -> List[str]:
+    def check_example_overrides(self) -> list[str]:
         """
         Check for settings present in example files but not in base env files.
         This identifies non-standard settings that are overridden in the environment.
@@ -130,8 +140,8 @@ class EnvValidator:
                 if local_path.exists():
                     local_vars = self._parse_env_file(local_path)
                     if var_name in local_vars:
-                        example_value = example_vars[var_name]['value']
-                        local_value = local_vars[var_name]['value']
+                        example_value = example_vars[var_name]["value"]
+                        local_value = local_vars[var_name]["value"]
                         if strip_comment(local_value) == strip_comment(example_value):
                             continue
                         warnings.append(
@@ -142,7 +152,7 @@ class EnvValidator:
                         )
         return warnings
 
-    def check_local_overrides(self) -> List[str]:
+    def check_local_overrides(self) -> list[str]:
         """
         Check for settings in local files that differ from or are absent in base files.
 
@@ -159,8 +169,8 @@ class EnvValidator:
             local_vars = self._parse_env_file(local_path)
 
             for var_name, local_info in local_vars.items():
-                local_value = local_info['value']
-                suppress = local_info.get('directive') == 'suppress-warning'
+                local_value = local_info["value"]
+                suppress = local_info.get("directive") == "suppress-warning"
                 if var_name not in base_vars:
                     if suppress:
                         continue
@@ -170,12 +180,12 @@ class EnvValidator:
                         f"Consider adding a default value to {base_path.name} if this should be a standard setting."
                     )
                 else:
-                    base_value = base_vars[var_name]['value']
+                    base_value = base_vars[var_name]["value"]
                     # Compare values ignoring anything after a "#" symbol
                     if strip_comment(base_value) == strip_comment(local_value):
                         continue  # No warning if values match (ignoring comments)
                     # Suppress warning if base file has # local-required
-                    if base_vars[var_name].get('directive') == 'local-required':
+                    if base_vars[var_name].get("directive") == "local-required":
                         continue
                     warnings.append(
                         f"⚠️  {env_type.upper()}: Variable '{var_name}' is overridden locally. "
@@ -184,7 +194,7 @@ class EnvValidator:
                     )
         return warnings
 
-    def validate_all(self) -> List[str]:
+    def validate_all(self) -> list[str]:
         """
         Run all environment validation checks.
 
@@ -196,7 +206,7 @@ class EnvValidator:
         warnings.extend(self.check_local_overrides())
         return warnings
 
-    def log_warnings(self, warnings: List[str]) -> None:
+    def log_warnings(self, warnings: list[str]) -> None:
         """
         Log warning messages.
 
@@ -204,7 +214,9 @@ class EnvValidator:
             warnings: List of warning messages to log
         """
         if not warnings:
-            logger.info("✅ Environment validation passed - no configuration discrepancies found.")
+            logger.info(
+                "✅ Environment validation passed - no configuration discrepancies found."
+            )
             return
 
         logger.warning("Environment Configuration Warnings:")
