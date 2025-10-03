@@ -152,6 +152,24 @@ describe("JustInTimeDialog", () => {
     }
   }
 
+  const originalLocation = window.location
+
+  beforeAll(() => {
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      enumerable: true,
+      value: { ...originalLocation, assign: jest.fn() },
+    })
+  })
+
+  afterAll(() => {
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      enumerable: true,
+      value: originalLocation,
+    })
+  })
+
   type SetupJitOptions = {
     userOverrides?: PartialDeep<MitxUser>
   }
@@ -346,6 +364,52 @@ describe("JustInTimeDialog", () => {
         method: "PATCH",
         url: mitxonline.urls.userMe.get(),
       }),
+    )
+  })
+
+  test("Submitting just-in-time dialog makes proper API calls", async () => {
+    const { course } = setupJustInTimeTest({
+      userOverrides: { user_profile: { year_of_birth: 1988 } },
+    })
+
+    renderWithProviders(<DashboardCard dashboardResource={course} />)
+    const enrollButtons = await screen.findAllByTestId("courseware-button")
+    await user.click(enrollButtons[0]) // Use the first (desktop) button
+
+    const dialog = await screen.findByRole("dialog", {
+      name: "Just a Few More Details",
+    })
+    const fields = getFields(dialog)
+    await user.click(fields.country)
+
+    const option = screen.getByRole("option", { name: "Canada" })
+    await user.click(option) // Select third option (first is "Please Select")
+
+    invariant(course.coursewareId)
+    const spies = {
+      createEnrollment: jest.fn(),
+      patchUser: jest.fn(),
+    }
+    setMockResponse.patch(mitxonline.urls.userMe.get(), spies.patchUser, {
+      requestBody: {
+        user_profile: { year_of_birth: 1988 },
+        legal_address: { country: "CA" },
+      },
+    })
+    setMockResponse.post(
+      mitxonline.urls.b2b.courseEnrollment(course.coursewareId),
+      spies.createEnrollment,
+    )
+
+    const submitButton = within(dialog).getByRole("button", {
+      name: "Submit",
+    })
+
+    await user.click(submitButton)
+    await expect(spies.patchUser).toHaveBeenCalled()
+    await expect(spies.createEnrollment).toHaveBeenCalled()
+    expect(window.location.assign).toHaveBeenCalledWith(
+      course.run.coursewareUrl,
     )
   })
 })

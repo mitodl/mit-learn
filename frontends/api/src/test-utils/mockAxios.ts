@@ -14,9 +14,13 @@ type RequestMaker = (
   body?: unknown,
 ) => Promise<PartialAxiosResponse>
 
-const alwaysError: RequestMaker = (method, url, _body) => {
+const alwaysError: RequestMaker = (method, url, body) => {
   const msg = `No response specified for ${method} ${url}`
   console.error(msg)
+  if (body) {
+    console.error("and body:")
+    console.error(body)
+  }
   throw new Error(msg)
 }
 
