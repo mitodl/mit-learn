@@ -51,6 +51,7 @@ type SimpleSelectFieldProps = Pick<
   | "fullWidth"
   | "label"
   | "helpText"
+  | "error"
   | "errorText"
   | "required"
   | "size"
@@ -58,6 +59,7 @@ type SimpleSelectFieldProps = Pick<
   | "onChange"
   | "name"
   | "className"
+  | "renderValue"
 > & {
   /**
    * The options for the dropdown
