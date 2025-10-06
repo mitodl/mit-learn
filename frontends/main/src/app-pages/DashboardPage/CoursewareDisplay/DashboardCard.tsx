@@ -169,19 +169,9 @@ const CoursewareButton = styled(
     const userCountry = mitxOnlineUser.data?.legal_address?.country
     const userYearOfBirth = mitxOnlineUser.data?.user_profile?.year_of_birth
     const showJustInTimeDialog = !userCountry || !userYearOfBirth
-    return (hasStarted && href) || !hasEnrolled ? (
-      hasEnrolled && href ? (
-        <ButtonLink
-          size="small"
-          variant="primary"
-          endIcon={<RiArrowRightLine />}
-          href={href}
-          className={className}
-          {...others}
-        >
-          {coursewareText}
-        </ButtonLink>
-      ) : (
+
+    if (!hasEnrolled /* Trigger signup */) {
+      return (
         <Button
           size="small"
           variant="primary"
@@ -216,7 +206,22 @@ const CoursewareButton = styled(
           )}
         </Button>
       )
-    ) : (
+    } else if (hasStarted && href /* Link to course */) {
+      return (
+        <ButtonLink
+          size="small"
+          variant="primary"
+          endIcon={<RiArrowRightLine />}
+          href={href}
+          className={className}
+          {...others}
+        >
+          {coursewareText}
+        </ButtonLink>
+      )
+    }
+    // Disabled
+    return (
       <Button
         size="small"
         variant="primary"
