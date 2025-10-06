@@ -1471,18 +1471,29 @@ class CourseRunProblemsViewSet(viewsets.ViewSet):
         return Response(
             {
                 "problem_set_files": [
-                    {
-                        "file_name": problem_file.file_name,
-                        "content": problem_file.content,
-                    }
+                    problem_set_file_output(problem_file)
                     for problem_file in problem_files
                 ],
                 "solution_set_files": [
-                    {
-                        "file_name": solution_file.file_name,
-                        "content": solution_file.content,
-                    }
+                    problem_set_file_output(solution_file)
                     for solution_file in solution_files
                 ],
             }
         )
+
+
+def problem_set_file_output(problem_set_file):
+    if problem_set_file.file_extension == ".csv":
+        csv_lines = problem_set_file.content.splitlines()
+        return {
+            "file_name": problem_set_file.file_name,
+            "file_extension": ".csv",
+            "truncated_content": "\n".join(csv_lines[0:5]),
+            "number_of_records": len(csv_lines) - 1,
+            "note": "The content of the data file has been truncated to the column headers and first 4 rows.",  # noqa: E501
+        }
+    return {
+        "file_name": problem_set_file.file_name,
+        "content": problem_set_file.content,
+        "file_extension": problem_set_file.file_extension,
+    }

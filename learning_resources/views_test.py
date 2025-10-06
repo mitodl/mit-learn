@@ -1456,14 +1456,16 @@ def test_course_run_problems_endpoint(client, user_role, django_user_model):
         type="problem",
         content="Content for Problem Set 1",
         file_name="problem1.txt",
+        file_extension=".txt",
     )
 
     TutorProblemFileFactory.create(
         run=course_run,
         problem_title="Problem Set 1",
         type="problem",
-        content="Content for Problem Set 1 Part 2",
-        file_name="problem1-b.txt",
+        content="a,b\n1,1\n2,2\n3,3\n4,4\n5,5\n6,6",
+        file_name="problem1-data.csv",
+        file_extension=".csv",
     )
 
     TutorProblemFileFactory.create(
@@ -1472,6 +1474,7 @@ def test_course_run_problems_endpoint(client, user_role, django_user_model):
         type="solution",
         content="Content for Problem Set 1 Solution",
         file_name="solution1.txt",
+        file_extension=".txt",
     )
     TutorProblemFileFactory.create(
         run=course_run, problem_title="Problem Set 2", type="problem"
@@ -1496,16 +1499,24 @@ def test_course_run_problems_endpoint(client, user_role, django_user_model):
     if user_role in ["admin", "group_tutor_problem_viewer"]:
         assert detail_resp.json() == {
             "problem_set_files": [
-                {"file_name": "problem1.txt", "content": "Content for Problem Set 1"},
                 {
-                    "file_name": "problem1-b.txt",
-                    "content": "Content for Problem Set 1 Part 2",
+                    "file_name": "problem1.txt",
+                    "content": "Content for Problem Set 1",
+                    "file_extension": ".txt",
+                },
+                {
+                    "file_name": "problem1-data.csv",
+                    "truncated_content": "a,b\n1,1\n2,2\n3,3\n4,4",
+                    "file_extension": ".csv",
+                    "note": "The content of the data file has been truncated to the column headers and first 4 rows.",
+                    "number_of_records": 6,
                 },
             ],
             "solution_set_files": [
                 {
                     "file_name": "solution1.txt",
                     "content": "Content for Problem Set 1 Solution",
+                    "file_extension": ".txt",
                 },
             ],
         }
