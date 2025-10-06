@@ -3,7 +3,8 @@ from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 import pytest
-from mit_climate import extract_articles, transform_article
+
+from learning_resources.etl.mit_climate import extract_articles, transform_article
 
 
 @pytest.fixture
