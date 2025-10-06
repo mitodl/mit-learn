@@ -87,6 +87,7 @@ class ETLSource(ExtendedEnum):
     oll = "oll"
     ocw = "ocw"
     podcast = "podcast"
+    climate_article = "climate_article"
     see = "see"
     xpro = "xpro"
     youtube = "youtube"
