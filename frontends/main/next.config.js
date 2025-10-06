@@ -38,6 +38,15 @@ const nextConfig = {
       },
     ]
   },
+  async redirects() {
+    return [
+      {
+        source: "/attach/:code",
+        destination: "/enrollmentcode/:code",
+        statusCode: 301,
+      },
+    ]
+  },
 
   async headers() {
     return [
