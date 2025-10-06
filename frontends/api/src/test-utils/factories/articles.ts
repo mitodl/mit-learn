@@ -1,15 +1,15 @@
 import { faker } from "@faker-js/faker/locale/en"
 import { makePaginatedFactory } from "ol-test-utilities"
 import type { Factory } from "ol-test-utilities"
-import type { Article } from "../../generated/v1"
+import type { RichTextArticle } from "../../generated/v1"
 
-const article: Factory<Article> = (overrides = {}) => ({
+const richTextArticle: Factory<RichTextArticle> = (overrides = {}) => ({
   id: faker.number.int(),
   title: faker.lorem.sentence(),
   html: faker.lorem.paragraph(),
   ...overrides,
 })
 
-const articles = makePaginatedFactory(article)
+const richTextArticles = makePaginatedFactory(richTextArticle)
 
-export { article, articles }
+export { richTextArticle, richTextArticles }
