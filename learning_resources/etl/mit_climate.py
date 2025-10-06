@@ -18,10 +18,14 @@ def retrieve_feed(feed_url):
 def transform_article(source_url, article_data: dict):
     article_url = f"{source_url}{article_data.get('url')}"
     summary = article_data.get("summary")
-    full_description = f"""{summary}
-	{article_data.get("footnotes")}
-	{article_data.get("byline")}
-	"""
+    full_description = "\n".join(
+        [
+            summary,
+            article_data.get("footnotes", ""),
+            article_data.get("byline", ""),
+        ]
+    )
+
     created_on = (
         dateutil.parser.parse(article_data["created"])
         .replace(tzinfo=ZoneInfo("US/Eastern"))

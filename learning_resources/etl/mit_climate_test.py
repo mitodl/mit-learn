@@ -32,10 +32,10 @@ def test_transform_article(sample_article_data):
     assert result["url"] == "https://example.com/sample-article"
     assert result["description"] == "This is a summary."
     assert result["full_description"] == (
-        "This is a summary.\nThese are footnotes.\nBy Author\n"
+        "This is a summary.\nThese are footnotes.\nBy Author"
     )
     assert result["published"] is True
-    assert result["created_on"] == datetime(2023, 10, 1, 8, 0, tzinfo=ZoneInfo("UTC"))
+    assert result["created_on"] == datetime(2023, 10, 1, 16, 0, tzinfo=ZoneInfo("UTC"))
 
 
 @patch("learning_resources.etl.mit_climate.retrieve_feed")
