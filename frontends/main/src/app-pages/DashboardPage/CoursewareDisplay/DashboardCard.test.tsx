@@ -7,16 +7,13 @@ import {
   within,
 } from "@/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
-import {
-  urls as testUrls,
-  factories as testFactories,
-  mockAxiosInstance,
-} from "api/test-utils"
+import { mockAxiosInstance } from "api/test-utils"
 import { DashboardCard, getDefaultContextMenuItems } from "./DashboardCard"
 import { dashboardCourse } from "./test-utils"
 import { faker } from "@faker-js/faker/locale/en"
 import moment from "moment"
 import { EnrollmentMode, EnrollmentStatus } from "./types"
+import { cartesianProduct } from "ol-test-utilities"
 
 const pastDashboardCourse: typeof dashboardCourse = (...overrides) => {
   return dashboardCourse(
@@ -52,23 +49,45 @@ const futureDashboardCourse: typeof dashboardCourse = (...overrides) => {
   )
 }
 
-beforeEach(() => {
-  // Mock user API call
-  const user = testFactories.user.user()
+const mitxUser = mitxonline.factories.user.user
+
+const setupUserApis = () => {
   const mitxUser = mitxonline.factories.user.user()
-  setMockResponse.get(testUrls.userMe.get(), user)
   setMockResponse.get(mitxonline.urls.userMe.get(), mitxUser)
-})
+}
 
 describe.each([
   { display: "desktop", testId: "enrollment-card-desktop" },
   { display: "mobile", testId: "enrollment-card-mobile" },
-])("EnrollmentCard $display", ({ testId }) => {
+])("DashboardCard $display", ({ testId }) => {
   const getCard = () => screen.getByTestId(testId)
 
-  test("It shows course title with link to marketing url", () => {
-    const course = dashboardCourse()
-    renderWithProviders(<DashboardCard dashboardResource={course} />)
+  const originalLocation = window.location
+
+  beforeAll(() => {
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      enumerable: true,
+      value: { ...originalLocation, assign: jest.fn() },
+    })
+  })
+
+  afterAll(() => {
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      enumerable: true,
+      value: originalLocation,
+    })
+  })
+
+  test("It shows course title and links to marketingUrl if titleAction is marketing", async () => {
+    setupUserApis()
+    const course = dashboardCourse({
+      marketingUrl: "?some-marketing-url",
+    })
+    renderWithProviders(
+      <DashboardCard titleAction="marketing" dashboardResource={course} />,
+    )
 
     const card = getCard()
 
@@ -78,7 +97,23 @@ describe.each([
     expect(courseLink).toHaveAttribute("href", course.marketingUrl)
   })
 
+  test("It shows course title and links to courseware if titleAction is courseware", async () => {
+    setupUserApis()
+    const course = dashboardCourse()
+    renderWithProviders(
+      <DashboardCard titleAction="courseware" dashboardResource={course} />,
+    )
+
+    const card = getCard()
+
+    const courseLink = within(card).getByRole("link", {
+      name: course.title,
+    })
+    expect(courseLink).toHaveAttribute("href", course.run.coursewareUrl)
+  })
+
   test("Accepts a classname", () => {
+    setupUserApis()
     const course = dashboardCourse()
     const TheComponent = faker.helpers.arrayElement([
       "li",
@@ -88,6 +123,7 @@ describe.each([
     ])
     renderWithProviders(
       <DashboardCard
+        titleAction="marketing"
         Component={TheComponent}
         dashboardResource={course}
         className="some-custom classes"
@@ -123,7 +159,10 @@ describe.each([
   ])(
     "Courseware CTA and is enabled/disabled (enabled=$expected.enabled) based on date (case: $case)",
     ({ course, expected }) => {
-      renderWithProviders(<DashboardCard dashboardResource={course} />)
+      setupUserApis()
+      renderWithProviders(
+        <DashboardCard titleAction="marketing" dashboardResource={course} />,
+      )
       const card = getCard()
       const coursewareCTA = within(card).getByTestId("courseware-button")
 
@@ -154,8 +193,9 @@ describe.each([
   ])(
     "Courseware CTA shows correct label based on courseNoun prop and dates (case $case)",
     ({ course, expected }) => {
+      setupUserApis()
       const { view } = renderWithProviders(
-        <DashboardCard dashboardResource={course} />,
+        <DashboardCard titleAction="marketing" dashboardResource={course} />,
       )
       const card = getCard()
       const coursewareCTA = within(card).getByTestId("courseware-button")
@@ -173,7 +213,11 @@ describe.each([
 
       const courseNoun = faker.word.noun()
       view.rerender(
-        <DashboardCard courseNoun={courseNoun} dashboardResource={course} />,
+        <DashboardCard
+          titleAction="marketing"
+          courseNoun={courseNoun}
+          dashboardResource={course}
+        />,
       )
 
       if (
@@ -221,8 +265,11 @@ describe.each([
   ])(
     "Shows upgrade banner based on run.canUpgrade and not already upgraded (canUpgrade: $overrides.canUpgrade)",
     ({ overrides, expectation }) => {
+      setupUserApis()
       const course = dashboardCourse(overrides)
-      renderWithProviders(<DashboardCard dashboardResource={course} />)
+      renderWithProviders(
+        <DashboardCard titleAction="marketing" dashboardResource={course} />,
+      )
       const card = getCard()
       const upgradeRoot = within(card).queryByTestId("upgrade-root")
 
@@ -236,6 +283,7 @@ describe.each([
   ])(
     "Never shows upgrade banner if `offerUpgrade` is false",
     ({ offerUpgrade, expected }) => {
+      setupUserApis()
       const course = dashboardCourse({
         run: {
           canUpgrade: true,
@@ -247,6 +295,7 @@ describe.each([
 
       renderWithProviders(
         <DashboardCard
+          titleAction="marketing"
           dashboardResource={course}
           offerUpgrade={offerUpgrade}
         />,
@@ -259,6 +308,7 @@ describe.each([
   )
 
   test("Upgrade banner shows correct price and deadline", () => {
+    setupUserApis()
     const certificateUpgradePrice = faker.commerce.price()
     const certificateUpgradeDeadline = moment()
       .startOf("day")
@@ -275,7 +325,9 @@ describe.each([
       enrollment: { mode: EnrollmentMode.Audit },
     })
 
-    renderWithProviders(<DashboardCard dashboardResource={course} />)
+    renderWithProviders(
+      <DashboardCard titleAction="marketing" dashboardResource={course} />,
+    )
     const card = getCard()
     const upgradeRoot = within(card).getByTestId("upgrade-root")
 
@@ -287,13 +339,16 @@ describe.each([
   })
 
   test("Shows number of days until course starts", () => {
+    setupUserApis()
     const startDate = moment()
       .startOf("day")
       .add(5, "days")
       .add(3, "hours")
       .toISOString()
     const enrollment = dashboardCourse({ run: { startDate } })
-    renderWithProviders(<DashboardCard dashboardResource={enrollment} />)
+    renderWithProviders(
+      <DashboardCard titleAction="marketing" dashboardResource={enrollment} />,
+    )
     const card = getCard()
 
     expect(card).toHaveTextContent(/starts in 5 days/i)
@@ -302,6 +357,7 @@ describe.each([
   test.each([{ showNotComplete: true }, { showNotComplete: false }])(
     "Shows incomplete status when showNotComplete is true",
     ({ showNotComplete }) => {
+      setupUserApis()
       const enrollment = faker.helpers.arrayElement([
         { status: EnrollmentStatus.NotEnrolled },
         { status: EnrollmentStatus.Enrolled },
@@ -313,6 +369,7 @@ describe.each([
       }
       const { view } = renderWithProviders(
         <DashboardCard
+          titleAction="marketing"
           dashboardResource={course}
           showNotComplete={showNotComplete}
         />,
@@ -324,6 +381,7 @@ describe.each([
 
       view.rerender(
         <DashboardCard
+          titleAction="marketing"
           dashboardResource={dashboardCourse({
             enrollment: { status: EnrollmentStatus.Completed },
           })}
@@ -354,8 +412,10 @@ describe.each([
   ])(
     "Enrollment indicator shows meaningful text",
     ({ status, expectedLabel, hiddenImage }) => {
+      setupUserApis()
       renderWithProviders(
         <DashboardCard
+          titleAction="marketing"
           dashboardResource={dashboardCourse({ enrollment: { status } })}
         />,
       )
@@ -389,6 +449,7 @@ describe.each([
   ])(
     "getDefaultContextMenuItems returns correct items",
     async ({ contextMenuItems }) => {
+      setupUserApis()
       const course = dashboardCourse()
       course.enrollment = {
         id: faker.number.int(),
@@ -397,6 +458,7 @@ describe.each([
       }
       renderWithProviders(
         <DashboardCard
+          titleAction="marketing"
           dashboardResource={course}
           contextMenuItems={contextMenuItems}
         />,
@@ -431,8 +493,10 @@ describe.each([
   ])(
     "Context menu button is not shown when enrollment status is not Completed or Enrolled",
     ({ status }) => {
+      setupUserApis()
       renderWithProviders(
         <DashboardCard
+          titleAction="marketing"
           dashboardResource={dashboardCourse({ enrollment: { status } })}
         />,
       )
@@ -457,13 +521,16 @@ describe.each([
   ])(
     "CoursewareButton switches to Enroll functionality when enrollment status is not enrolled or undefined",
     ({ status }) => {
+      setupUserApis()
       const course = dashboardCourse()
       course.enrollment = {
         id: faker.number.int(),
         status: status,
         mode: EnrollmentMode.Audit,
       }
-      renderWithProviders(<DashboardCard dashboardResource={course} />)
+      renderWithProviders(
+        <DashboardCard titleAction="marketing" dashboardResource={course} />,
+      )
       const card = getCard()
       const coursewareButton = within(card).getByTestId("courseware-button")
 
@@ -479,58 +546,91 @@ describe.each([
     },
   )
 
-  test("CoursewareButton hits enroll endpoint appropriately", async () => {
-    const course = dashboardCourse({
-      coursewareId: faker.string.uuid(),
-      enrollment: {
-        id: faker.number.int(),
-        status: EnrollmentStatus.NotEnrolled,
-      },
+  const setupEnrollmentApis = (opts: {
+    user: ReturnType<typeof mitxUser>
+    course: ReturnType<typeof dashboardCourse>
+  }) => {
+    setMockResponse.get(mitxonline.urls.userMe.get(), opts.user)
+
+    const enrollmentUrl = mitxonline.urls.b2b.courseEnrollment(
+      opts.course.coursewareId ?? undefined,
+    )
+    setMockResponse.post(enrollmentUrl, {
+      result: "b2b-enroll-success",
+      order: 1,
     })
 
-    // Mock user without country and year_of_birth to trigger JustInTimeDialog
-    const baseUser = mitxonline.factories.user.user()
-    const mitxUserWithoutRequiredFields = {
-      ...baseUser,
-      legal_address: { ...baseUser.legal_address, country: undefined },
-      user_profile: { ...baseUser.user_profile, year_of_birth: undefined },
-    }
-    setMockResponse.get(
-      mitxonline.urls.userMe.get(),
-      mitxUserWithoutRequiredFields,
-    )
-
-    setMockResponse.post(
-      mitxonline.urls.b2b.courseEnrollment(course.coursewareId ?? undefined),
-      { result: "b2b-enroll-success", order: 1 },
-    )
-    // Mock countries data needed by JustInTimeDialog
-    setMockResponse.get(mitxonline.urls.countries.list(), [
+    const countries = [
       { code: "US", name: "United States" },
       { code: "CA", name: "Canada" },
-    ])
+    ]
+    if (opts.user.legal_address?.country) {
+      countries.push({
+        code: opts.user.legal_address.country,
+        name: "User's Country",
+      })
+    }
+    // Mock countries data needed by JustInTimeDialog
+    setMockResponse.get(mitxonline.urls.countries.list(), countries)
+    return { enrollmentUrl }
+  }
 
-    renderWithProviders(<DashboardCard dashboardResource={course} />)
-    const card = getCard()
-    const coursewareButton = within(card).getByTestId("courseware-button")
+  const ENROLLMENT_TRIGGERS = [
+    { trigger: "button" as const },
+    { trigger: "title-link" as const },
+  ]
+  test.each(ENROLLMENT_TRIGGERS)(
+    "Enrollment for complete profile bypasses just-in-time dialog",
+    async ({ trigger }) => {
+      const userData = mitxUser()
+      const course = dashboardCourse({
+        enrollment: { status: EnrollmentStatus.NotEnrolled },
+      })
+      const { enrollmentUrl } = setupEnrollmentApis({ user: userData, course })
+      renderWithProviders(
+        <DashboardCard titleAction="courseware" dashboardResource={course} />,
+      )
+      const card = getCard()
+      const triggerElement =
+        trigger === "button"
+          ? within(card).getByTestId("courseware-button")
+          : within(card).getByRole("link", { name: course.title })
 
-    // Now the button should show the JustInTimeDialog instead of directly enrolling
-    await user.click(coursewareButton)
+      await user.click(triggerElement)
 
-    // Verify the JustInTimeDialog appeared
-    const dialog = await screen.findByRole("dialog", {
-      name: "Just a Few More Details",
-    })
-    expect(dialog).toBeInTheDocument()
+      expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+        expect.objectContaining({ method: "POST", url: enrollmentUrl }),
+      )
+    },
+  )
 
-    // The enrollment API should NOT be called yet (until dialog is completed)
-    expect(mockAxiosInstance.request).not.toHaveBeenCalledWith(
-      expect.objectContaining({
-        method: "POST",
-        url: mitxonline.urls.b2b.courseEnrollment(
-          course.coursewareId ?? undefined,
-        ),
-      }),
-    )
-  })
+  test.each(
+    cartesianProduct(ENROLLMENT_TRIGGERS, [
+      { userData: mitxUser({ legal_address: { country: "" } }) },
+      { userData: mitxUser({ user_profile: { year_of_birth: null } }) },
+    ]),
+  )(
+    "Enrollment for complete profile bypasses just-in-time dialog",
+    async ({ trigger, userData }) => {
+      const course = dashboardCourse({
+        enrollment: { status: EnrollmentStatus.NotEnrolled },
+      })
+      setupEnrollmentApis({ user: userData, course })
+      renderWithProviders(
+        <DashboardCard titleAction="courseware" dashboardResource={course} />,
+      )
+      const card = getCard()
+      const triggerElement =
+        trigger === "button"
+          ? within(card).getByTestId("courseware-button")
+          : within(card).getByRole("link", { name: course.title })
+
+      await user.click(triggerElement)
+
+      await screen.findByRole("dialog", { name: "Just a Few More Details" })
+      expect(mockAxiosInstance.request).not.toHaveBeenCalledWith(
+        expect.objectContaining({ method: "POST" }),
+      )
+    },
+  )
 })

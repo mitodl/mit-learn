@@ -30,10 +30,6 @@ const BoldText = styled.span(({ theme }) => ({
   ...theme.typography.subtitle1,
 }))
 
-const SpinnerContainer = styled.div({
-  marginLeft: "8px",
-})
-
 const SelectPlaceholder = styled("span")(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
 }))
@@ -88,17 +84,13 @@ const EmailSettingsDialogInner: React.FC<DashboardDialogProps> = ({
             variant="primary"
             type="submit"
             disabled={!formik.dirty || updateEnrollment.isPending}
+            endIcon={
+              updateEnrollment.isPending ? (
+                <LoadingSpinner color="inherit" loading={true} size={16} />
+              ) : undefined
+            }
           >
             Save Settings
-            {updateEnrollment.isPending && (
-              <SpinnerContainer>
-                <LoadingSpinner
-                  color="inherit"
-                  loading={updateEnrollment.isPending}
-                  size={16}
-                />
-              </SpinnerContainer>
-            )}
           </Button>
         </DialogActions>
       }
@@ -169,17 +161,13 @@ const UnenrollDialogInner: React.FC<DashboardDialogProps> = ({
             variant="primary"
             type="submit"
             disabled={destroyEnrollment.isPending}
+            endIcon={
+              destroyEnrollment.isPending ? (
+                <LoadingSpinner color="inherit" loading={true} size={16} />
+              ) : undefined
+            }
           >
             Unenroll
-            {destroyEnrollment.isPending && (
-              <SpinnerContainer>
-                <LoadingSpinner
-                  loading={destroyEnrollment.isPending}
-                  color="inherit"
-                  size={16}
-                />
-              </SpinnerContainer>
-            )}
           </Button>
         </DialogActions>
       }
@@ -275,13 +263,13 @@ const JustInTimeDialogInner: React.FC<{ href: string; readableId: string }> = ({
             variant="primary"
             type="submit"
             disabled={formik.isSubmitting}
+            endIcon={
+              formik.isSubmitting ? (
+                <LoadingSpinner color="inherit" loading={true} size={16} />
+              ) : undefined
+            }
           >
             Submit
-            {formik.isSubmitting && (
-              <SpinnerContainer>
-                <LoadingSpinner color="inherit" loading={true} size={16} />
-              </SpinnerContainer>
-            )}
           </Button>
         </DialogActions>
       }

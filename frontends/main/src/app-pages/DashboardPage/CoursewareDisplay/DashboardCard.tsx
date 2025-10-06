@@ -120,6 +120,7 @@ const useOneClickEnroll = () => {
   const userCountry = mitxOnlineUser.data?.legal_address?.country
   const userYearOfBirth = mitxOnlineUser.data?.user_profile?.year_of_birth
   const showJustInTimeDialog = !userCountry || !userYearOfBirth
+
   const mutate = ({
     href,
     coursewareId,

@@ -215,7 +215,9 @@ describe("JustInTimeDialog", () => {
   test("Opens just-in-time dialog when enrolling with incomplete mitxonline user data", async () => {
     const { course } = setupJustInTimeTest()
 
-    renderWithProviders(<DashboardCard dashboardResource={course} />)
+    renderWithProviders(
+      <DashboardCard titleAction="marketing" dashboardResource={course} />,
+    )
 
     const enrollButtons = await screen.findAllByTestId("courseware-button")
     await user.click(enrollButtons[0]) // Use the first (desktop) button
@@ -250,7 +252,9 @@ describe("JustInTimeDialog", () => {
     "Dialog pre-populates with user data if available",
     async ({ userOverrides, expectCountry, expectYob }) => {
       const { course } = setupJustInTimeTest({ userOverrides })
-      renderWithProviders(<DashboardCard dashboardResource={course} />)
+      renderWithProviders(
+        <DashboardCard titleAction="marketing" dashboardResource={course} />,
+      )
       const enrollButtons = await screen.findAllByTestId("courseware-button")
       await user.click(enrollButtons[0]) // Use the first (desktop) button
       const dialog = await screen.findByRole("dialog", {
@@ -265,7 +269,9 @@ describe("JustInTimeDialog", () => {
   test("Validates required fields in just-in-time dialog", async () => {
     const { course } = setupJustInTimeTest()
 
-    renderWithProviders(<DashboardCard dashboardResource={course} />)
+    renderWithProviders(
+      <DashboardCard titleAction="marketing" dashboardResource={course} />,
+    )
 
     const enrollButtons = await screen.findAllByTestId("courseware-button")
     await user.click(enrollButtons[0]) // Use the first (desktop) button
@@ -296,7 +302,9 @@ describe("JustInTimeDialog", () => {
   test("Generates correct year of birth options (minimum age 13)", async () => {
     const { course } = setupJustInTimeTest()
 
-    renderWithProviders(<DashboardCard dashboardResource={course} />)
+    renderWithProviders(
+      <DashboardCard titleAction="marketing" dashboardResource={course} />,
+    )
 
     const enrollButtons = await screen.findAllByTestId("courseware-button")
     await user.click(enrollButtons[0]) // Use the first (desktop) button
@@ -321,7 +329,9 @@ describe("JustInTimeDialog", () => {
   test("Shows expected countries in country dropdown", async () => {
     const { course, countries } = setupJustInTimeTest()
 
-    renderWithProviders(<DashboardCard dashboardResource={course} />)
+    renderWithProviders(
+      <DashboardCard titleAction="marketing" dashboardResource={course} />,
+    )
 
     const enrollButtons = await screen.findAllByTestId("courseware-button")
     await user.click(enrollButtons[0]) // Use the first (desktop) button
@@ -344,7 +354,9 @@ describe("JustInTimeDialog", () => {
   test("Cancels just-in-time dialog without making API calls", async () => {
     const { course } = setupJustInTimeTest()
 
-    renderWithProviders(<DashboardCard dashboardResource={course} />)
+    renderWithProviders(
+      <DashboardCard titleAction="marketing" dashboardResource={course} />,
+    )
 
     const enrollButtons = await screen.findAllByTestId("courseware-button")
     await user.click(enrollButtons[0]) // Use the first (desktop) button
@@ -372,7 +384,9 @@ describe("JustInTimeDialog", () => {
       userOverrides: { user_profile: { year_of_birth: 1988 } },
     })
 
-    renderWithProviders(<DashboardCard dashboardResource={course} />)
+    renderWithProviders(
+      <DashboardCard titleAction="marketing" dashboardResource={course} />,
+    )
     const enrollButtons = await screen.findAllByTestId("courseware-button")
     await user.click(enrollButtons[0]) // Use the first (desktop) button
 
