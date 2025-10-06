@@ -1449,7 +1449,7 @@ components:
   schemas:
     ArticleResource:
       type: object
-      description: Serializer for program resources
+      description: Serializer for Article resources
       properties:
         id:
           type: integer
@@ -1542,6 +1542,7 @@ components:
           type: array
           items:
             type: object
+            title: CourseResourceDeliveryInner
             properties:
               code:
                 enum:
@@ -1567,6 +1568,7 @@ components:
           type: array
           items:
             type: object
+            title: CourseResourceFormatInner
             properties:
               code:
                 enum:
@@ -1582,6 +1584,7 @@ components:
           type: array
           items:
             type: object
+            title: CourseResourcePaceInner
             properties:
               code:
                 enum:
@@ -2363,6 +2366,7 @@ components:
           type: array
           items:
             type: object
+            title: CourseResourceDeliveryInner
             properties:
               code:
                 enum:
@@ -2388,6 +2392,7 @@ components:
           type: array
           items:
             type: object
+            title: CourseResourceFormatInner
             properties:
               code:
                 enum:
@@ -2403,6 +2408,7 @@ components:
           type: array
           items:
             type: object
+            title: CourseResourcePaceInner
             properties:
               code:
                 enum:
@@ -3014,6 +3020,7 @@ components:
           type: array
           items:
             type: object
+            title: CourseResourceDeliveryInner
             properties:
               code:
                 enum:
@@ -3039,6 +3046,7 @@ components:
           type: array
           items:
             type: object
+            title: CourseResourceFormatInner
             properties:
               code:
                 enum:
@@ -3054,6 +3062,7 @@ components:
           type: array
           items:
             type: object
+            title: CourseResourcePaceInner
             properties:
               code:
                 enum:
@@ -3200,8 +3209,8 @@ components:
     LearningResource:
       oneOf:
       - $ref: '#/components/schemas/ProgramResource'
-      - $ref: '#/components/schemas/ArticleResource'
       - $ref: '#/components/schemas/CourseResource'
+      - $ref: '#/components/schemas/ArticleResource'
       - $ref: '#/components/schemas/LearningPathResource'
       - $ref: '#/components/schemas/PodcastResource'
       - $ref: '#/components/schemas/PodcastEpisodeResource'
@@ -3211,8 +3220,8 @@ components:
         propertyName: resource_type
         mapping:
           program: '#/components/schemas/ProgramResource'
-          article: '#/components/schemas/ArticleResource'
           course: '#/components/schemas/CourseResource'
+          article: '#/components/schemas/ArticleResource'
           learning_path: '#/components/schemas/LearningPathResource'
           podcast: '#/components/schemas/PodcastResource'
           podcast_episode: '#/components/schemas/PodcastEpisodeResource'
@@ -3529,6 +3538,7 @@ components:
           type: array
           items:
             type: object
+            title: CourseResourceDeliveryInner
             properties:
               code:
                 enum:
@@ -3546,6 +3556,7 @@ components:
           type: array
           items:
             type: object
+            title: CourseResourceFormatInner
             properties:
               code:
                 enum:
@@ -3561,6 +3572,7 @@ components:
           type: array
           items:
             type: object
+            title: CourseResourcePaceInner
             properties:
               code:
                 enum:
@@ -4341,6 +4353,7 @@ components:
           type: array
           items:
             type: object
+            title: CourseResourceDeliveryInner
             properties:
               code:
                 enum:
@@ -4366,6 +4379,7 @@ components:
           type: array
           items:
             type: object
+            title: CourseResourceFormatInner
             properties:
               code:
                 enum:
@@ -4381,6 +4395,7 @@ components:
           type: array
           items:
             type: object
+            title: CourseResourcePaceInner
             properties:
               code:
                 enum:
@@ -4623,6 +4638,7 @@ components:
           type: array
           items:
             type: object
+            title: CourseResourceDeliveryInner
             properties:
               code:
                 enum:
@@ -4648,6 +4664,7 @@ components:
           type: array
           items:
             type: object
+            title: CourseResourceFormatInner
             properties:
               code:
                 enum:
@@ -4663,6 +4680,7 @@ components:
           type: array
           items:
             type: object
+            title: CourseResourcePaceInner
             properties:
               code:
                 enum:
@@ -5183,6 +5201,7 @@ components:
           type: array
           items:
             type: object
+            title: CourseResourceDeliveryInner
             properties:
               code:
                 enum:
@@ -5208,6 +5227,7 @@ components:
           type: array
           items:
             type: object
+            title: CourseResourceFormatInner
             properties:
               code:
                 enum:
@@ -5223,6 +5243,7 @@ components:
           type: array
           items:
             type: object
+            title: CourseResourcePaceInner
             properties:
               code:
                 enum:
@@ -5903,6 +5924,7 @@ components:
           type: array
           items:
             type: object
+            title: CourseResourceDeliveryInner
             properties:
               code:
                 enum:
@@ -5928,6 +5950,7 @@ components:
           type: array
           items:
             type: object
+            title: CourseResourceFormatInner
             properties:
               code:
                 enum:
@@ -5943,6 +5966,7 @@ components:
           type: array
           items:
             type: object
+            title: CourseResourcePaceInner
             properties:
               code:
                 enum:
@@ -6185,6 +6209,7 @@ components:
           type: array
           items:
             type: object
+            title: CourseResourceDeliveryInner
             properties:
               code:
                 enum:
@@ -6210,6 +6235,7 @@ components:
           type: array
           items:
             type: object
+            title: CourseResourceFormatInner
             properties:
               code:
                 enum:
@@ -6225,6 +6251,7 @@ components:
           type: array
           items:
             type: object
+            title: CourseResourcePaceInner
             properties:
               code:
                 enum:

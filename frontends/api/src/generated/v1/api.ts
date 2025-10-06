@@ -120,7 +120,7 @@ export type AggregationsEnum =
   (typeof AggregationsEnum)[keyof typeof AggregationsEnum]
 
 /**
- * Serializer for program resources
+ * Serializer for Article resources
  * @export
  * @interface ArticleResource
  */
@@ -223,10 +223,10 @@ export interface ArticleResource {
   views: number
   /**
    *
-   * @type {Array<ArticleResourceDeliveryInner>}
+   * @type {Array<CourseResourceDeliveryInner>}
    * @memberof ArticleResource
    */
-  delivery: Array<ArticleResourceDeliveryInner>
+  delivery: Array<CourseResourceDeliveryInner>
   /**
    * Return true if the resource is free/has a free option
    * @type {boolean}
@@ -241,16 +241,16 @@ export interface ArticleResource {
   resource_category: string
   /**
    *
-   * @type {Array<ArticleResourceFormatInner>}
+   * @type {Array<CourseResourceFormatInner>}
    * @memberof ArticleResource
    */
-  format: Array<ArticleResourceFormatInner>
+  format: Array<CourseResourceFormatInner>
   /**
    *
-   * @type {Array<ArticleResourcePaceInner>}
+   * @type {Array<CourseResourcePaceInner>}
    * @memberof ArticleResource
    */
-  pace: Array<ArticleResourcePaceInner>
+  pace: Array<CourseResourcePaceInner>
   /**
    *
    * @type {LearningResourceRelationshipChildField}
@@ -440,93 +440,7 @@ export type ArticleResourceCertificationTypeCodeEnum =
   (typeof ArticleResourceCertificationTypeCodeEnum)[keyof typeof ArticleResourceCertificationTypeCodeEnum]
 
 /**
- *
- * @export
- * @interface ArticleResourceDeliveryInner
- */
-export interface ArticleResourceDeliveryInner {
-  /**
-   *
-   * @type {string}
-   * @memberof ArticleResourceDeliveryInner
-   */
-  code: ArticleResourceDeliveryInnerCodeEnum
-  /**
-   *
-   * @type {string}
-   * @memberof ArticleResourceDeliveryInner
-   */
-  name: string
-}
-
-export const ArticleResourceDeliveryInnerCodeEnum = {
-  Online: "online",
-  Hybrid: "hybrid",
-  InPerson: "in_person",
-  Offline: "offline",
-} as const
-
-export type ArticleResourceDeliveryInnerCodeEnum =
-  (typeof ArticleResourceDeliveryInnerCodeEnum)[keyof typeof ArticleResourceDeliveryInnerCodeEnum]
-
-/**
- *
- * @export
- * @interface ArticleResourceFormatInner
- */
-export interface ArticleResourceFormatInner {
-  /**
-   *
-   * @type {string}
-   * @memberof ArticleResourceFormatInner
-   */
-  code: ArticleResourceFormatInnerCodeEnum
-  /**
-   *
-   * @type {string}
-   * @memberof ArticleResourceFormatInner
-   */
-  name: string
-}
-
-export const ArticleResourceFormatInnerCodeEnum = {
-  Synchronous: "synchronous",
-  Asynchronous: "asynchronous",
-} as const
-
-export type ArticleResourceFormatInnerCodeEnum =
-  (typeof ArticleResourceFormatInnerCodeEnum)[keyof typeof ArticleResourceFormatInnerCodeEnum]
-
-/**
- *
- * @export
- * @interface ArticleResourcePaceInner
- */
-export interface ArticleResourcePaceInner {
-  /**
-   *
-   * @type {string}
-   * @memberof ArticleResourcePaceInner
-   */
-  code: ArticleResourcePaceInnerCodeEnum
-  /**
-   *
-   * @type {string}
-   * @memberof ArticleResourcePaceInner
-   */
-  name: string
-}
-
-export const ArticleResourcePaceInnerCodeEnum = {
-  SelfPaced: "self_paced",
-  InstructorPaced: "instructor_paced",
-} as const
-
-export type ArticleResourcePaceInnerCodeEnum =
-  (typeof ArticleResourcePaceInnerCodeEnum)[keyof typeof ArticleResourcePaceInnerCodeEnum]
-
-/**
- * Serializer for program resources
+ * Serializer for Article resources
  * @export
  * @interface ArticleResourceRequest
  */
@@ -1300,10 +1214,10 @@ export interface CourseResource {
   views: number
   /**
    *
-   * @type {Array<ArticleResourceDeliveryInner>}
+   * @type {Array<CourseResourceDeliveryInner>}
    * @memberof CourseResource
    */
-  delivery: Array<ArticleResourceDeliveryInner>
+  delivery: Array<CourseResourceDeliveryInner>
   /**
    * Return true if the resource is free/has a free option
    * @type {boolean}
@@ -1318,16 +1232,16 @@ export interface CourseResource {
   resource_category: string
   /**
    *
-   * @type {Array<ArticleResourceFormatInner>}
+   * @type {Array<CourseResourceFormatInner>}
    * @memberof CourseResource
    */
-  format: Array<ArticleResourceFormatInner>
+  format: Array<CourseResourceFormatInner>
   /**
    *
-   * @type {Array<ArticleResourcePaceInner>}
+   * @type {Array<CourseResourcePaceInner>}
    * @memberof CourseResource
    */
-  pace: Array<ArticleResourcePaceInner>
+  pace: Array<CourseResourcePaceInner>
   /**
    *
    * @type {LearningResourceRelationshipChildField}
@@ -1491,6 +1405,92 @@ export interface CourseResource {
    */
   require_summaries: boolean
 }
+
+/**
+ *
+ * @export
+ * @interface CourseResourceDeliveryInner
+ */
+export interface CourseResourceDeliveryInner {
+  /**
+   *
+   * @type {string}
+   * @memberof CourseResourceDeliveryInner
+   */
+  code: CourseResourceDeliveryInnerCodeEnum
+  /**
+   *
+   * @type {string}
+   * @memberof CourseResourceDeliveryInner
+   */
+  name: string
+}
+
+export const CourseResourceDeliveryInnerCodeEnum = {
+  Online: "online",
+  Hybrid: "hybrid",
+  InPerson: "in_person",
+  Offline: "offline",
+} as const
+
+export type CourseResourceDeliveryInnerCodeEnum =
+  (typeof CourseResourceDeliveryInnerCodeEnum)[keyof typeof CourseResourceDeliveryInnerCodeEnum]
+
+/**
+ *
+ * @export
+ * @interface CourseResourceFormatInner
+ */
+export interface CourseResourceFormatInner {
+  /**
+   *
+   * @type {string}
+   * @memberof CourseResourceFormatInner
+   */
+  code: CourseResourceFormatInnerCodeEnum
+  /**
+   *
+   * @type {string}
+   * @memberof CourseResourceFormatInner
+   */
+  name: string
+}
+
+export const CourseResourceFormatInnerCodeEnum = {
+  Synchronous: "synchronous",
+  Asynchronous: "asynchronous",
+} as const
+
+export type CourseResourceFormatInnerCodeEnum =
+  (typeof CourseResourceFormatInnerCodeEnum)[keyof typeof CourseResourceFormatInnerCodeEnum]
+
+/**
+ *
+ * @export
+ * @interface CourseResourcePaceInner
+ */
+export interface CourseResourcePaceInner {
+  /**
+   *
+   * @type {string}
+   * @memberof CourseResourcePaceInner
+   */
+  code: CourseResourcePaceInnerCodeEnum
+  /**
+   *
+   * @type {string}
+   * @memberof CourseResourcePaceInner
+   */
+  name: string
+}
+
+export const CourseResourcePaceInnerCodeEnum = {
+  SelfPaced: "self_paced",
+  InstructorPaced: "instructor_paced",
+} as const
+
+export type CourseResourcePaceInnerCodeEnum =
+  (typeof CourseResourcePaceInnerCodeEnum)[keyof typeof CourseResourcePaceInnerCodeEnum]
 
 /**
  * Serializer for course resources
@@ -2074,10 +2074,10 @@ export interface LearningPathResource {
   views: number
   /**
    *
-   * @type {Array<ArticleResourceDeliveryInner>}
+   * @type {Array<CourseResourceDeliveryInner>}
    * @memberof LearningPathResource
    */
-  delivery: Array<ArticleResourceDeliveryInner>
+  delivery: Array<CourseResourceDeliveryInner>
   /**
    * Return true if the resource is free/has a free option
    * @type {boolean}
@@ -2092,16 +2092,16 @@ export interface LearningPathResource {
   resource_category: string
   /**
    *
-   * @type {Array<ArticleResourceFormatInner>}
+   * @type {Array<CourseResourceFormatInner>}
    * @memberof LearningPathResource
    */
-  format: Array<ArticleResourceFormatInner>
+  format: Array<CourseResourceFormatInner>
   /**
    *
-   * @type {Array<ArticleResourcePaceInner>}
+   * @type {Array<CourseResourcePaceInner>}
    * @memberof LearningPathResource
    */
-  pace: Array<ArticleResourcePaceInner>
+  pace: Array<CourseResourcePaceInner>
   /**
    *
    * @type {LearningResourceRelationshipChildField}
@@ -3214,22 +3214,22 @@ export interface LearningResourceRun {
   level: Array<LearningResourceRunLevelInner>
   /**
    *
-   * @type {Array<ArticleResourceDeliveryInner>}
+   * @type {Array<CourseResourceDeliveryInner>}
    * @memberof LearningResourceRun
    */
-  delivery: Array<ArticleResourceDeliveryInner>
+  delivery: Array<CourseResourceDeliveryInner>
   /**
    *
-   * @type {Array<ArticleResourceFormatInner>}
+   * @type {Array<CourseResourceFormatInner>}
    * @memberof LearningResourceRun
    */
-  format: Array<ArticleResourceFormatInner>
+  format: Array<CourseResourceFormatInner>
   /**
    *
-   * @type {Array<ArticleResourcePaceInner>}
+   * @type {Array<CourseResourcePaceInner>}
    * @memberof LearningResourceRun
    */
-  pace: Array<ArticleResourcePaceInner>
+  pace: Array<CourseResourcePaceInner>
   /**
    *
    * @type {Array<LearningResourcePrice>}
@@ -5457,10 +5457,10 @@ export interface PodcastEpisodeResource {
   views: number
   /**
    *
-   * @type {Array<ArticleResourceDeliveryInner>}
+   * @type {Array<CourseResourceDeliveryInner>}
    * @memberof PodcastEpisodeResource
    */
-  delivery: Array<ArticleResourceDeliveryInner>
+  delivery: Array<CourseResourceDeliveryInner>
   /**
    * Return true if the resource is free/has a free option
    * @type {boolean}
@@ -5475,16 +5475,16 @@ export interface PodcastEpisodeResource {
   resource_category: string
   /**
    *
-   * @type {Array<ArticleResourceFormatInner>}
+   * @type {Array<CourseResourceFormatInner>}
    * @memberof PodcastEpisodeResource
    */
-  format: Array<ArticleResourceFormatInner>
+  format: Array<CourseResourceFormatInner>
   /**
    *
-   * @type {Array<ArticleResourcePaceInner>}
+   * @type {Array<CourseResourcePaceInner>}
    * @memberof PodcastEpisodeResource
    */
-  pace: Array<ArticleResourcePaceInner>
+  pace: Array<CourseResourcePaceInner>
   /**
    *
    * @type {LearningResourceRelationshipChildField}
@@ -5947,10 +5947,10 @@ export interface PodcastResource {
   views: number
   /**
    *
-   * @type {Array<ArticleResourceDeliveryInner>}
+   * @type {Array<CourseResourceDeliveryInner>}
    * @memberof PodcastResource
    */
-  delivery: Array<ArticleResourceDeliveryInner>
+  delivery: Array<CourseResourceDeliveryInner>
   /**
    * Return true if the resource is free/has a free option
    * @type {boolean}
@@ -5965,16 +5965,16 @@ export interface PodcastResource {
   resource_category: string
   /**
    *
-   * @type {Array<ArticleResourceFormatInner>}
+   * @type {Array<CourseResourceFormatInner>}
    * @memberof PodcastResource
    */
-  format: Array<ArticleResourceFormatInner>
+  format: Array<CourseResourceFormatInner>
   /**
    *
-   * @type {Array<ArticleResourcePaceInner>}
+   * @type {Array<CourseResourcePaceInner>}
    * @memberof PodcastResource
    */
-  pace: Array<ArticleResourcePaceInner>
+  pace: Array<CourseResourcePaceInner>
   /**
    *
    * @type {LearningResourceRelationshipChildField}
@@ -6669,10 +6669,10 @@ export interface ProgramResource {
   views: number
   /**
    *
-   * @type {Array<ArticleResourceDeliveryInner>}
+   * @type {Array<CourseResourceDeliveryInner>}
    * @memberof ProgramResource
    */
-  delivery: Array<ArticleResourceDeliveryInner>
+  delivery: Array<CourseResourceDeliveryInner>
   /**
    * Return true if the resource is free/has a free option
    * @type {boolean}
@@ -6687,16 +6687,16 @@ export interface ProgramResource {
   resource_category: string
   /**
    *
-   * @type {Array<ArticleResourceFormatInner>}
+   * @type {Array<CourseResourceFormatInner>}
    * @memberof ProgramResource
    */
-  format: Array<ArticleResourceFormatInner>
+  format: Array<CourseResourceFormatInner>
   /**
    *
-   * @type {Array<ArticleResourcePaceInner>}
+   * @type {Array<CourseResourcePaceInner>}
    * @memberof ProgramResource
    */
-  pace: Array<ArticleResourcePaceInner>
+  pace: Array<CourseResourcePaceInner>
   /**
    *
    * @type {LearningResourceRelationshipChildField}
@@ -7761,10 +7761,10 @@ export interface VideoPlaylistResource {
   views: number
   /**
    *
-   * @type {Array<ArticleResourceDeliveryInner>}
+   * @type {Array<CourseResourceDeliveryInner>}
    * @memberof VideoPlaylistResource
    */
-  delivery: Array<ArticleResourceDeliveryInner>
+  delivery: Array<CourseResourceDeliveryInner>
   /**
    * Return true if the resource is free/has a free option
    * @type {boolean}
@@ -7779,16 +7779,16 @@ export interface VideoPlaylistResource {
   resource_category: string
   /**
    *
-   * @type {Array<ArticleResourceFormatInner>}
+   * @type {Array<CourseResourceFormatInner>}
    * @memberof VideoPlaylistResource
    */
-  format: Array<ArticleResourceFormatInner>
+  format: Array<CourseResourceFormatInner>
   /**
    *
-   * @type {Array<ArticleResourcePaceInner>}
+   * @type {Array<CourseResourcePaceInner>}
    * @memberof VideoPlaylistResource
    */
-  pace: Array<ArticleResourcePaceInner>
+  pace: Array<CourseResourcePaceInner>
   /**
    *
    * @type {LearningResourceRelationshipChildField}
@@ -8239,10 +8239,10 @@ export interface VideoResource {
   views: number
   /**
    *
-   * @type {Array<ArticleResourceDeliveryInner>}
+   * @type {Array<CourseResourceDeliveryInner>}
    * @memberof VideoResource
    */
-  delivery: Array<ArticleResourceDeliveryInner>
+  delivery: Array<CourseResourceDeliveryInner>
   /**
    * Return true if the resource is free/has a free option
    * @type {boolean}
@@ -8257,16 +8257,16 @@ export interface VideoResource {
   resource_category: string
   /**
    *
-   * @type {Array<ArticleResourceFormatInner>}
+   * @type {Array<CourseResourceFormatInner>}
    * @memberof VideoResource
    */
-  format: Array<ArticleResourceFormatInner>
+  format: Array<CourseResourceFormatInner>
   /**
    *
-   * @type {Array<ArticleResourcePaceInner>}
+   * @type {Array<CourseResourcePaceInner>}
    * @memberof VideoResource
    */
-  pace: Array<ArticleResourcePaceInner>
+  pace: Array<CourseResourcePaceInner>
   /**
    *
    * @type {LearningResourceRelationshipChildField}

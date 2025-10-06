@@ -243,6 +243,7 @@ class LearningResourceLevelSerializer(serializers.Field):
 @extend_schema_field(
     {
         "type": "object",
+        "title": "CourseResourceDeliveryInner",
         "properties": {
             "code": {"enum": LearningResourceDelivery.names()},
             "name": {"type": "string"},
@@ -258,6 +259,7 @@ class LearningResourceDeliverySerializer(serializers.Field):
 @extend_schema_field(
     {
         "type": "object",
+        "title": "CourseResourceFormatInner",
         "properties": {
             "code": {"enum": Format.names()},
             "name": {"type": "string"},
@@ -273,6 +275,7 @@ class FormatSerializer(serializers.Field):
 @extend_schema_field(
     {
         "type": "object",
+        "title": "CourseResourcePaceInner",
         "properties": {
             "code": {"enum": Pace.names()},
             "name": {"type": "string"},
@@ -997,24 +1000,23 @@ class ProgramResourceSerializer(LearningResourceBaseSerializer):
     program = ProgramSerializer(read_only=True)
 
 
-class ArticleResourceSerializer(LearningResourceBaseSerializer):
-    """Serializer for program resources"""
-
-    resource_type = LearningResourceTypeField(
-        default=constants.LearningResourceType.article.name
-    )
-
-    article = ArticleSerializer(read_only=True)
-
-
 class CourseResourceSerializer(LearningResourceBaseSerializer):
     """Serializer for course resources"""
 
     resource_type = LearningResourceTypeField(
         default=constants.LearningResourceType.course.name
     )
-
     course = CourseSerializer(read_only=True)
+
+
+class ArticleResourceSerializer(LearningResourceBaseSerializer):
+    """Serializer for Article resources"""
+
+    resource_type = LearningResourceTypeField(
+        default=constants.LearningResourceType.article.name
+    )
+
+    article = ArticleSerializer(read_only=True)
 
 
 class LearningPathResourceSerializer(LearningResourceBaseSerializer):
