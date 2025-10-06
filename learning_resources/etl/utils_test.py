@@ -44,7 +44,7 @@ def get_olx_test_docs():
             ],
             cwd=temp,
         )
-        check_call(  # noqa: S603
+        check_call(
             ["tar", "xf", "content-devops-0001.tar.gz"],  # noqa: S607
             cwd=temp,
         )
