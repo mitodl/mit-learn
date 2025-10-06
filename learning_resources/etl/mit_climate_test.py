@@ -38,8 +38,8 @@ def test_transform_article(sample_article_data):
     assert result["created_on"] == datetime(2023, 10, 1, 8, 0, tzinfo=ZoneInfo("UTC"))
 
 
-@patch("mit_climate.retrieve_feed")
-@patch("mit_climate.settings")
+@patch("learning_resources.etl.mit_climate.retrieve_feed")
+@patch("learning_resources.etl.mit_climate.settings")
 def test_extract_articles(mock_settings, mock_retrieve_feed, sample_article_data):
     """
     Test extracting articles from multiple feeds
