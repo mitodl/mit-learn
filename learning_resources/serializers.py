@@ -997,6 +997,16 @@ class ProgramResourceSerializer(LearningResourceBaseSerializer):
     program = ProgramSerializer(read_only=True)
 
 
+class ArticleResourceSerializer(LearningResourceBaseSerializer):
+    """Serializer for program resources"""
+
+    resource_type = LearningResourceTypeField(
+        default=constants.LearningResourceType.article.name
+    )
+
+    article = ArticleSerializer(read_only=True)
+
+
 class CourseResourceSerializer(LearningResourceBaseSerializer):
     """Serializer for course resources"""
 
@@ -1122,6 +1132,7 @@ class LearningResourceSerializer(serializers.Serializer):
             PodcastEpisodeResourceSerializer,
             VideoResourceSerializer,
             VideoPlaylistResourceSerializer,
+            ArticleResourceSerializer,
         )
     }
 
