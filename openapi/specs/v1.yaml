@@ -9369,6 +9369,7 @@ paths:
           - oll
           - ocw
           - podcast
+          - climate_article
           - see
           - xpro
           - youtube
@@ -9383,6 +9384,7 @@ paths:
           * `oll` - oll
           * `ocw` - ocw
           * `podcast` - podcast
+          * `climate_article` - climate_article
           * `see` - see
           * `xpro` - xpro
           * `youtube` - youtube
@@ -9509,6 +9511,388 @@ components:
       required:
       - html
       - title
+    ArticleResource:
+      type: object
+      description: Serializer for program resources
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        topics:
+          type: array
+          items:
+            $ref: '#/components/schemas/LearningResourceTopic'
+        position:
+          type: integer
+          readOnly: true
+          nullable: true
+        offered_by:
+          allOf:
+          - $ref: '#/components/schemas/LearningResourceOfferor'
+          readOnly: true
+          nullable: true
+        platform:
+          allOf:
+          - $ref: '#/components/schemas/LearningResourcePlatform'
+          readOnly: true
+          nullable: true
+        course_feature:
+          type: array
+          items:
+            type: string
+          readOnly: true
+          nullable: true
+        departments:
+          type: array
+          items:
+            $ref: '#/components/schemas/LearningResourceDepartment'
+          readOnly: true
+          nullable: true
+        certification:
+          type: boolean
+          readOnly: true
+        certification_type:
+          type: object
+          properties:
+            code:
+              enum:
+              - micromasters
+              - professional
+              - completion
+              - none
+            name:
+              type: string
+          required:
+          - code
+          - name
+          readOnly: true
+        prices:
+          type: array
+          items:
+            type: string
+            format: decimal
+            pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        resource_prices:
+          type: array
+          items:
+            $ref: '#/components/schemas/LearningResourcePrice'
+          readOnly: true
+        runs:
+          type: array
+          items:
+            $ref: '#/components/schemas/LearningResourceRun'
+          readOnly: true
+          nullable: true
+        image:
+          allOf:
+          - $ref: '#/components/schemas/LearningResourceImage'
+          nullable: true
+          readOnly: true
+        learning_path_parents:
+          type: array
+          items:
+            $ref: '#/components/schemas/MicroLearningPathRelationship'
+          readOnly: true
+        user_list_parents:
+          type: array
+          items:
+            $ref: '#/components/schemas/MicroUserListRelationship'
+          readOnly: true
+        views:
+          type: integer
+          readOnly: true
+        delivery:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                enum:
+                - online
+                - hybrid
+                - in_person
+                - offline
+              name:
+                type: string
+            required:
+            - code
+            - name
+          readOnly: true
+        free:
+          type: boolean
+          description: Return true if the resource is free/has a free option
+          readOnly: true
+        resource_category:
+          type: string
+          description: Return the resource category of the resource
+          readOnly: true
+        format:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                enum:
+                - synchronous
+                - asynchronous
+              name:
+                type: string
+            required:
+            - code
+            - name
+          readOnly: true
+        pace:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                enum:
+                - self_paced
+                - instructor_paced
+              name:
+                type: string
+            required:
+            - code
+            - name
+          readOnly: true
+        children:
+          allOf:
+          - $ref: '#/components/schemas/LearningResourceRelationshipChildField'
+          nullable: true
+          readOnly: true
+        resource_type:
+          allOf:
+          - $ref: '#/components/schemas/ArticleResourceResourceTypeEnum'
+          default: article
+          readOnly: true
+        article:
+          allOf:
+          - $ref: '#/components/schemas/Article'
+          readOnly: true
+        readable_id:
+          type: string
+          maxLength: 512
+        title:
+          type: string
+          maxLength: 256
+        description:
+          type: string
+          nullable: true
+        full_description:
+          type: string
+          nullable: true
+        last_modified:
+          type: string
+          format: date-time
+          nullable: true
+        published:
+          type: boolean
+        languages:
+          type: array
+          items:
+            type: string
+            maxLength: 24
+          nullable: true
+        url:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 2048
+        ocw_topics:
+          type: array
+          items:
+            type: string
+            maxLength: 128
+        professional:
+          type: boolean
+          readOnly: true
+        next_start_date:
+          type: string
+          format: date-time
+          nullable: true
+        availability:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/AvailabilityEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        completeness:
+          type: number
+          format: double
+        license_cc:
+          type: boolean
+        test_mode:
+          type: boolean
+        continuing_ed_credits:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        location:
+          type: string
+          maxLength: 256
+        duration:
+          type: string
+          maxLength: 256
+        min_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        time_commitment:
+          type: string
+          maxLength: 256
+        min_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        require_summaries:
+          type: boolean
+          readOnly: true
+      required:
+      - article
+      - certification
+      - certification_type
+      - children
+      - course_feature
+      - delivery
+      - departments
+      - format
+      - free
+      - id
+      - image
+      - learning_path_parents
+      - offered_by
+      - pace
+      - platform
+      - position
+      - prices
+      - professional
+      - readable_id
+      - require_summaries
+      - resource_category
+      - resource_prices
+      - resource_type
+      - runs
+      - title
+      - user_list_parents
+      - views
+    ArticleResourceRequest:
+      type: object
+      description: Serializer for program resources
+      properties:
+        topics:
+          type: array
+          items:
+            $ref: '#/components/schemas/LearningResourceTopic'
+        readable_id:
+          type: string
+          minLength: 1
+          maxLength: 512
+        title:
+          type: string
+          minLength: 1
+          maxLength: 256
+        description:
+          type: string
+          nullable: true
+        full_description:
+          type: string
+          nullable: true
+        last_modified:
+          type: string
+          format: date-time
+          nullable: true
+        published:
+          type: boolean
+        languages:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 24
+          nullable: true
+        url:
+          type: string
+          format: uri
+          nullable: true
+          minLength: 1
+          maxLength: 2048
+        ocw_topics:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 128
+        next_start_date:
+          type: string
+          format: date-time
+          nullable: true
+        availability:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/AvailabilityEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        completeness:
+          type: number
+          format: double
+        license_cc:
+          type: boolean
+        test_mode:
+          type: boolean
+        continuing_ed_credits:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        location:
+          type: string
+          maxLength: 256
+        duration:
+          type: string
+          maxLength: 256
+        min_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        time_commitment:
+          type: string
+          maxLength: 256
+        min_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+      required:
+      - readable_id
+      - title
+    ArticleResourceResourceTypeEnum:
+      type: string
+      enum:
+      - article
     AvailabilityEnum:
       enum:
       - dated
@@ -10754,6 +11138,7 @@ components:
     LearningResource:
       oneOf:
       - $ref: '#/components/schemas/ProgramResource'
+      - $ref: '#/components/schemas/ArticleResource'
       - $ref: '#/components/schemas/CourseResource'
       - $ref: '#/components/schemas/LearningPathResource'
       - $ref: '#/components/schemas/PodcastResource'
@@ -10764,6 +11149,7 @@ components:
         propertyName: resource_type
         mapping:
           program: '#/components/schemas/ProgramResource'
+          article: '#/components/schemas/ArticleResource'
           course: '#/components/schemas/CourseResource'
           learning_path: '#/components/schemas/LearningPathResource'
           podcast: '#/components/schemas/PodcastResource'
@@ -11329,6 +11715,7 @@ components:
     LearningResourceRequest:
       oneOf:
       - $ref: '#/components/schemas/ProgramResourceRequest'
+      - $ref: '#/components/schemas/ArticleResourceRequest'
       - $ref: '#/components/schemas/CourseResourceRequest'
       - $ref: '#/components/schemas/LearningPathResourceRequest'
       - $ref: '#/components/schemas/PodcastResourceRequest'
@@ -11339,6 +11726,7 @@ components:
         propertyName: resource_type
         mapping:
           program: '#/components/schemas/ProgramResourceRequest'
+          article: '#/components/schemas/ArticleResourceRequest'
           course: '#/components/schemas/CourseResourceRequest'
           learning_path: '#/components/schemas/LearningPathResourceRequest'
           podcast: '#/components/schemas/PodcastResourceRequest'
@@ -14449,6 +14837,7 @@ components:
       - oll
       - ocw
       - podcast
+      - climate_article
       - see
       - xpro
       - youtube
@@ -14462,6 +14851,7 @@ components:
         * `oll` - oll
         * `ocw` - ocw
         * `podcast` - podcast
+        * `climate_article` - climate_article
         * `see` - see
         * `xpro` - xpro
         * `youtube` - youtube
@@ -14474,6 +14864,7 @@ components:
       - oll
       - ocw
       - podcast
+      - climate_article
       - see
       - xpro
       - youtube

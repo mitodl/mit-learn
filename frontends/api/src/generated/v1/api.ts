@@ -164,6 +164,581 @@ export interface ArticleRequest {
   title: string
 }
 /**
+ * Serializer for program resources
+ * @export
+ * @interface ArticleResource
+ */
+export interface ArticleResource {
+  /**
+   *
+   * @type {number}
+   * @memberof ArticleResource
+   */
+  id: number
+  /**
+   *
+   * @type {Array<LearningResourceTopic>}
+   * @memberof ArticleResource
+   */
+  topics?: Array<LearningResourceTopic>
+  /**
+   *
+   * @type {number}
+   * @memberof ArticleResource
+   */
+  position: number | null
+  /**
+   *
+   * @type {LearningResourceOfferor}
+   * @memberof ArticleResource
+   */
+  offered_by: LearningResourceOfferor | null
+  /**
+   *
+   * @type {LearningResourcePlatform}
+   * @memberof ArticleResource
+   */
+  platform: LearningResourcePlatform | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof ArticleResource
+   */
+  course_feature: Array<string> | null
+  /**
+   *
+   * @type {Array<LearningResourceDepartment>}
+   * @memberof ArticleResource
+   */
+  departments: Array<LearningResourceDepartment> | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof ArticleResource
+   */
+  certification: boolean
+  /**
+   *
+   * @type {ArticleResourceCertificationType}
+   * @memberof ArticleResource
+   */
+  certification_type: ArticleResourceCertificationType
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof ArticleResource
+   */
+  prices: Array<string>
+  /**
+   *
+   * @type {Array<LearningResourcePrice>}
+   * @memberof ArticleResource
+   */
+  resource_prices: Array<LearningResourcePrice>
+  /**
+   *
+   * @type {Array<LearningResourceRun>}
+   * @memberof ArticleResource
+   */
+  runs: Array<LearningResourceRun> | null
+  /**
+   *
+   * @type {LearningResourceImage}
+   * @memberof ArticleResource
+   */
+  image: LearningResourceImage | null
+  /**
+   *
+   * @type {Array<MicroLearningPathRelationship>}
+   * @memberof ArticleResource
+   */
+  learning_path_parents: Array<MicroLearningPathRelationship>
+  /**
+   *
+   * @type {Array<MicroUserListRelationship>}
+   * @memberof ArticleResource
+   */
+  user_list_parents: Array<MicroUserListRelationship>
+  /**
+   *
+   * @type {number}
+   * @memberof ArticleResource
+   */
+  views: number
+  /**
+   *
+   * @type {Array<ArticleResourceDeliveryInner>}
+   * @memberof ArticleResource
+   */
+  delivery: Array<ArticleResourceDeliveryInner>
+  /**
+   * Return true if the resource is free/has a free option
+   * @type {boolean}
+   * @memberof ArticleResource
+   */
+  free: boolean
+  /**
+   * Return the resource category of the resource
+   * @type {string}
+   * @memberof ArticleResource
+   */
+  resource_category: string
+  /**
+   *
+   * @type {Array<ArticleResourceFormatInner>}
+   * @memberof ArticleResource
+   */
+  format: Array<ArticleResourceFormatInner>
+  /**
+   *
+   * @type {Array<ArticleResourcePaceInner>}
+   * @memberof ArticleResource
+   */
+  pace: Array<ArticleResourcePaceInner>
+  /**
+   *
+   * @type {LearningResourceRelationshipChildField}
+   * @memberof ArticleResource
+   */
+  children: LearningResourceRelationshipChildField | null
+  /**
+   *
+   * @type {ArticleResourceResourceTypeEnum}
+   * @memberof ArticleResource
+   */
+  resource_type: ArticleResourceResourceTypeEnum
+  /**
+   *
+   * @type {Article}
+   * @memberof ArticleResource
+   */
+  article: Article
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResource
+   */
+  readable_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResource
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResource
+   */
+  description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResource
+   */
+  full_description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResource
+   */
+  last_modified?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof ArticleResource
+   */
+  published?: boolean
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof ArticleResource
+   */
+  languages?: Array<string> | null
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResource
+   */
+  url?: string | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof ArticleResource
+   */
+  ocw_topics?: Array<string>
+  /**
+   *
+   * @type {boolean}
+   * @memberof ArticleResource
+   */
+  professional: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResource
+   */
+  next_start_date?: string | null
+  /**
+   *
+   * @type {AvailabilityEnum}
+   * @memberof ArticleResource
+   */
+  availability?: AvailabilityEnum | null
+  /**
+   *
+   * @type {number}
+   * @memberof ArticleResource
+   */
+  completeness?: number
+  /**
+   *
+   * @type {boolean}
+   * @memberof ArticleResource
+   */
+  license_cc?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof ArticleResource
+   */
+  test_mode?: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResource
+   */
+  continuing_ed_credits?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResource
+   */
+  location?: string
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResource
+   */
+  duration?: string
+  /**
+   *
+   * @type {number}
+   * @memberof ArticleResource
+   */
+  min_weeks?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof ArticleResource
+   */
+  max_weeks?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResource
+   */
+  time_commitment?: string
+  /**
+   *
+   * @type {number}
+   * @memberof ArticleResource
+   */
+  min_weekly_hours?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof ArticleResource
+   */
+  max_weekly_hours?: number | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof ArticleResource
+   */
+  require_summaries: boolean
+}
+
+/**
+ *
+ * @export
+ * @interface ArticleResourceCertificationType
+ */
+export interface ArticleResourceCertificationType {
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResourceCertificationType
+   */
+  code: ArticleResourceCertificationTypeCodeEnum
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResourceCertificationType
+   */
+  name: string
+}
+
+export const ArticleResourceCertificationTypeCodeEnum = {
+  Micromasters: "micromasters",
+  Professional: "professional",
+  Completion: "completion",
+  None: "none",
+} as const
+
+export type ArticleResourceCertificationTypeCodeEnum =
+  (typeof ArticleResourceCertificationTypeCodeEnum)[keyof typeof ArticleResourceCertificationTypeCodeEnum]
+
+/**
+ *
+ * @export
+ * @interface ArticleResourceDeliveryInner
+ */
+export interface ArticleResourceDeliveryInner {
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResourceDeliveryInner
+   */
+  code: ArticleResourceDeliveryInnerCodeEnum
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResourceDeliveryInner
+   */
+  name: string
+}
+
+export const ArticleResourceDeliveryInnerCodeEnum = {
+  Online: "online",
+  Hybrid: "hybrid",
+  InPerson: "in_person",
+  Offline: "offline",
+} as const
+
+export type ArticleResourceDeliveryInnerCodeEnum =
+  (typeof ArticleResourceDeliveryInnerCodeEnum)[keyof typeof ArticleResourceDeliveryInnerCodeEnum]
+
+/**
+ *
+ * @export
+ * @interface ArticleResourceFormatInner
+ */
+export interface ArticleResourceFormatInner {
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResourceFormatInner
+   */
+  code: ArticleResourceFormatInnerCodeEnum
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResourceFormatInner
+   */
+  name: string
+}
+
+export const ArticleResourceFormatInnerCodeEnum = {
+  Synchronous: "synchronous",
+  Asynchronous: "asynchronous",
+} as const
+
+export type ArticleResourceFormatInnerCodeEnum =
+  (typeof ArticleResourceFormatInnerCodeEnum)[keyof typeof ArticleResourceFormatInnerCodeEnum]
+
+/**
+ *
+ * @export
+ * @interface ArticleResourcePaceInner
+ */
+export interface ArticleResourcePaceInner {
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResourcePaceInner
+   */
+  code: ArticleResourcePaceInnerCodeEnum
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResourcePaceInner
+   */
+  name: string
+}
+
+export const ArticleResourcePaceInnerCodeEnum = {
+  SelfPaced: "self_paced",
+  InstructorPaced: "instructor_paced",
+} as const
+
+export type ArticleResourcePaceInnerCodeEnum =
+  (typeof ArticleResourcePaceInnerCodeEnum)[keyof typeof ArticleResourcePaceInnerCodeEnum]
+
+/**
+ * Serializer for program resources
+ * @export
+ * @interface ArticleResourceRequest
+ */
+export interface ArticleResourceRequest {
+  /**
+   *
+   * @type {Array<LearningResourceTopic>}
+   * @memberof ArticleResourceRequest
+   */
+  topics?: Array<LearningResourceTopic>
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResourceRequest
+   */
+  readable_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResourceRequest
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResourceRequest
+   */
+  description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResourceRequest
+   */
+  full_description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResourceRequest
+   */
+  last_modified?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof ArticleResourceRequest
+   */
+  published?: boolean
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof ArticleResourceRequest
+   */
+  languages?: Array<string> | null
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResourceRequest
+   */
+  url?: string | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof ArticleResourceRequest
+   */
+  ocw_topics?: Array<string>
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResourceRequest
+   */
+  next_start_date?: string | null
+  /**
+   *
+   * @type {AvailabilityEnum}
+   * @memberof ArticleResourceRequest
+   */
+  availability?: AvailabilityEnum | null
+  /**
+   *
+   * @type {number}
+   * @memberof ArticleResourceRequest
+   */
+  completeness?: number
+  /**
+   *
+   * @type {boolean}
+   * @memberof ArticleResourceRequest
+   */
+  license_cc?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof ArticleResourceRequest
+   */
+  test_mode?: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResourceRequest
+   */
+  continuing_ed_credits?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResourceRequest
+   */
+  location?: string
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResourceRequest
+   */
+  duration?: string
+  /**
+   *
+   * @type {number}
+   * @memberof ArticleResourceRequest
+   */
+  min_weeks?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof ArticleResourceRequest
+   */
+  max_weeks?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResourceRequest
+   */
+  time_commitment?: string
+  /**
+   *
+   * @type {number}
+   * @memberof ArticleResourceRequest
+   */
+  min_weekly_hours?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof ArticleResourceRequest
+   */
+  max_weekly_hours?: number | null
+}
+
+/**
+ *
+ * @export
+ * @enum {string}
+ */
+
+export const ArticleResourceResourceTypeEnumDescriptions = {
+  article: "",
+} as const
+
+export const ArticleResourceResourceTypeEnum = {
+  Article: "article",
+} as const
+
+export type ArticleResourceResourceTypeEnum =
+  (typeof ArticleResourceResourceTypeEnum)[keyof typeof ArticleResourceResourceTypeEnum]
+
+/**
  * * `dated` - Dated * `anytime` - Anytime
  * @export
  * @enum {string}
@@ -727,10 +1302,10 @@ export interface CourseResource {
   certification: boolean
   /**
    *
-   * @type {CourseResourceCertificationType}
+   * @type {ArticleResourceCertificationType}
    * @memberof CourseResource
    */
-  certification_type: CourseResourceCertificationType
+  certification_type: ArticleResourceCertificationType
   /**
    *
    * @type {Array<string>}
@@ -775,10 +1350,10 @@ export interface CourseResource {
   views: number
   /**
    *
-   * @type {Array<CourseResourceDeliveryInner>}
+   * @type {Array<ArticleResourceDeliveryInner>}
    * @memberof CourseResource
    */
-  delivery: Array<CourseResourceDeliveryInner>
+  delivery: Array<ArticleResourceDeliveryInner>
   /**
    * Return true if the resource is free/has a free option
    * @type {boolean}
@@ -793,16 +1368,16 @@ export interface CourseResource {
   resource_category: string
   /**
    *
-   * @type {Array<CourseResourceFormatInner>}
+   * @type {Array<ArticleResourceFormatInner>}
    * @memberof CourseResource
    */
-  format: Array<CourseResourceFormatInner>
+  format: Array<ArticleResourceFormatInner>
   /**
    *
-   * @type {Array<CourseResourcePaceInner>}
+   * @type {Array<ArticleResourcePaceInner>}
    * @memberof CourseResource
    */
-  pace: Array<CourseResourcePaceInner>
+  pace: Array<ArticleResourcePaceInner>
   /**
    *
    * @type {LearningResourceRelationshipChildField}
@@ -966,122 +1541,6 @@ export interface CourseResource {
    */
   require_summaries: boolean
 }
-
-/**
- *
- * @export
- * @interface CourseResourceCertificationType
- */
-export interface CourseResourceCertificationType {
-  /**
-   *
-   * @type {string}
-   * @memberof CourseResourceCertificationType
-   */
-  code: CourseResourceCertificationTypeCodeEnum
-  /**
-   *
-   * @type {string}
-   * @memberof CourseResourceCertificationType
-   */
-  name: string
-}
-
-export const CourseResourceCertificationTypeCodeEnum = {
-  Micromasters: "micromasters",
-  Professional: "professional",
-  Completion: "completion",
-  None: "none",
-} as const
-
-export type CourseResourceCertificationTypeCodeEnum =
-  (typeof CourseResourceCertificationTypeCodeEnum)[keyof typeof CourseResourceCertificationTypeCodeEnum]
-
-/**
- *
- * @export
- * @interface CourseResourceDeliveryInner
- */
-export interface CourseResourceDeliveryInner {
-  /**
-   *
-   * @type {string}
-   * @memberof CourseResourceDeliveryInner
-   */
-  code: CourseResourceDeliveryInnerCodeEnum
-  /**
-   *
-   * @type {string}
-   * @memberof CourseResourceDeliveryInner
-   */
-  name: string
-}
-
-export const CourseResourceDeliveryInnerCodeEnum = {
-  Online: "online",
-  Hybrid: "hybrid",
-  InPerson: "in_person",
-  Offline: "offline",
-} as const
-
-export type CourseResourceDeliveryInnerCodeEnum =
-  (typeof CourseResourceDeliveryInnerCodeEnum)[keyof typeof CourseResourceDeliveryInnerCodeEnum]
-
-/**
- *
- * @export
- * @interface CourseResourceFormatInner
- */
-export interface CourseResourceFormatInner {
-  /**
-   *
-   * @type {string}
-   * @memberof CourseResourceFormatInner
-   */
-  code: CourseResourceFormatInnerCodeEnum
-  /**
-   *
-   * @type {string}
-   * @memberof CourseResourceFormatInner
-   */
-  name: string
-}
-
-export const CourseResourceFormatInnerCodeEnum = {
-  Synchronous: "synchronous",
-  Asynchronous: "asynchronous",
-} as const
-
-export type CourseResourceFormatInnerCodeEnum =
-  (typeof CourseResourceFormatInnerCodeEnum)[keyof typeof CourseResourceFormatInnerCodeEnum]
-
-/**
- *
- * @export
- * @interface CourseResourcePaceInner
- */
-export interface CourseResourcePaceInner {
-  /**
-   *
-   * @type {string}
-   * @memberof CourseResourcePaceInner
-   */
-  code: CourseResourcePaceInnerCodeEnum
-  /**
-   *
-   * @type {string}
-   * @memberof CourseResourcePaceInner
-   */
-  name: string
-}
-
-export const CourseResourcePaceInnerCodeEnum = {
-  SelfPaced: "self_paced",
-  InstructorPaced: "instructor_paced",
-} as const
-
-export type CourseResourcePaceInnerCodeEnum =
-  (typeof CourseResourcePaceInnerCodeEnum)[keyof typeof CourseResourcePaceInnerCodeEnum]
 
 /**
  * Serializer for course resources
@@ -1617,10 +2076,10 @@ export interface LearningPathResource {
   certification: boolean
   /**
    *
-   * @type {CourseResourceCertificationType}
+   * @type {ArticleResourceCertificationType}
    * @memberof LearningPathResource
    */
-  certification_type: CourseResourceCertificationType
+  certification_type: ArticleResourceCertificationType
   /**
    *
    * @type {Array<string>}
@@ -1665,10 +2124,10 @@ export interface LearningPathResource {
   views: number
   /**
    *
-   * @type {Array<CourseResourceDeliveryInner>}
+   * @type {Array<ArticleResourceDeliveryInner>}
    * @memberof LearningPathResource
    */
-  delivery: Array<CourseResourceDeliveryInner>
+  delivery: Array<ArticleResourceDeliveryInner>
   /**
    * Return true if the resource is free/has a free option
    * @type {boolean}
@@ -1683,16 +2142,16 @@ export interface LearningPathResource {
   resource_category: string
   /**
    *
-   * @type {Array<CourseResourceFormatInner>}
+   * @type {Array<ArticleResourceFormatInner>}
    * @memberof LearningPathResource
    */
-  format: Array<CourseResourceFormatInner>
+  format: Array<ArticleResourceFormatInner>
   /**
    *
-   * @type {Array<CourseResourcePaceInner>}
+   * @type {Array<ArticleResourcePaceInner>}
    * @memberof LearningPathResource
    */
-  pace: Array<CourseResourcePaceInner>
+  pace: Array<ArticleResourcePaceInner>
   /**
    *
    * @type {LearningResourceRelationshipChildField}
@@ -2031,6 +2490,7 @@ export type LearningPathResourceResourceTypeEnum =
  * @export
  */
 export type LearningResource =
+  | ({ resource_type: "article" } & ArticleResource)
   | ({ resource_type: "course" } & CourseResource)
   | ({ resource_type: "learning_path" } & LearningPathResource)
   | ({ resource_type: "podcast" } & PodcastResource)
@@ -2763,6 +3223,7 @@ export interface LearningResourceRelationshipChildField {
  * @export
  */
 export type LearningResourceRequest =
+  | ({ resource_type: "article" } & ArticleResourceRequest)
   | ({ resource_type: "course" } & CourseResourceRequest)
   | ({ resource_type: "learning_path" } & LearningPathResourceRequest)
   | ({ resource_type: "podcast" } & PodcastResourceRequest)
@@ -2803,22 +3264,22 @@ export interface LearningResourceRun {
   level: Array<LearningResourceRunLevelInner>
   /**
    *
-   * @type {Array<CourseResourceDeliveryInner>}
+   * @type {Array<ArticleResourceDeliveryInner>}
    * @memberof LearningResourceRun
    */
-  delivery: Array<CourseResourceDeliveryInner>
+  delivery: Array<ArticleResourceDeliveryInner>
   /**
    *
-   * @type {Array<CourseResourceFormatInner>}
+   * @type {Array<ArticleResourceFormatInner>}
    * @memberof LearningResourceRun
    */
-  format: Array<CourseResourceFormatInner>
+  format: Array<ArticleResourceFormatInner>
   /**
    *
-   * @type {Array<CourseResourcePaceInner>}
+   * @type {Array<ArticleResourcePaceInner>}
    * @memberof LearningResourceRun
    */
-  pace: Array<CourseResourcePaceInner>
+  pace: Array<ArticleResourcePaceInner>
   /**
    *
    * @type {Array<LearningResourcePrice>}
@@ -4998,10 +5459,10 @@ export interface PodcastEpisodeResource {
   certification: boolean
   /**
    *
-   * @type {CourseResourceCertificationType}
+   * @type {ArticleResourceCertificationType}
    * @memberof PodcastEpisodeResource
    */
-  certification_type: CourseResourceCertificationType
+  certification_type: ArticleResourceCertificationType
   /**
    *
    * @type {Array<string>}
@@ -5046,10 +5507,10 @@ export interface PodcastEpisodeResource {
   views: number
   /**
    *
-   * @type {Array<CourseResourceDeliveryInner>}
+   * @type {Array<ArticleResourceDeliveryInner>}
    * @memberof PodcastEpisodeResource
    */
-  delivery: Array<CourseResourceDeliveryInner>
+  delivery: Array<ArticleResourceDeliveryInner>
   /**
    * Return true if the resource is free/has a free option
    * @type {boolean}
@@ -5064,16 +5525,16 @@ export interface PodcastEpisodeResource {
   resource_category: string
   /**
    *
-   * @type {Array<CourseResourceFormatInner>}
+   * @type {Array<ArticleResourceFormatInner>}
    * @memberof PodcastEpisodeResource
    */
-  format: Array<CourseResourceFormatInner>
+  format: Array<ArticleResourceFormatInner>
   /**
    *
-   * @type {Array<CourseResourcePaceInner>}
+   * @type {Array<ArticleResourcePaceInner>}
    * @memberof PodcastEpisodeResource
    */
-  pace: Array<CourseResourcePaceInner>
+  pace: Array<ArticleResourcePaceInner>
   /**
    *
    * @type {LearningResourceRelationshipChildField}
@@ -5488,10 +5949,10 @@ export interface PodcastResource {
   certification: boolean
   /**
    *
-   * @type {CourseResourceCertificationType}
+   * @type {ArticleResourceCertificationType}
    * @memberof PodcastResource
    */
-  certification_type: CourseResourceCertificationType
+  certification_type: ArticleResourceCertificationType
   /**
    *
    * @type {Array<string>}
@@ -5536,10 +5997,10 @@ export interface PodcastResource {
   views: number
   /**
    *
-   * @type {Array<CourseResourceDeliveryInner>}
+   * @type {Array<ArticleResourceDeliveryInner>}
    * @memberof PodcastResource
    */
-  delivery: Array<CourseResourceDeliveryInner>
+  delivery: Array<ArticleResourceDeliveryInner>
   /**
    * Return true if the resource is free/has a free option
    * @type {boolean}
@@ -5554,16 +6015,16 @@ export interface PodcastResource {
   resource_category: string
   /**
    *
-   * @type {Array<CourseResourceFormatInner>}
+   * @type {Array<ArticleResourceFormatInner>}
    * @memberof PodcastResource
    */
-  format: Array<CourseResourceFormatInner>
+  format: Array<ArticleResourceFormatInner>
   /**
    *
-   * @type {Array<CourseResourcePaceInner>}
+   * @type {Array<ArticleResourcePaceInner>}
    * @memberof PodcastResource
    */
-  pace: Array<CourseResourcePaceInner>
+  pace: Array<ArticleResourcePaceInner>
   /**
    *
    * @type {LearningResourceRelationshipChildField}
@@ -6210,10 +6671,10 @@ export interface ProgramResource {
   certification: boolean
   /**
    *
-   * @type {CourseResourceCertificationType}
+   * @type {ArticleResourceCertificationType}
    * @memberof ProgramResource
    */
-  certification_type: CourseResourceCertificationType
+  certification_type: ArticleResourceCertificationType
   /**
    *
    * @type {Array<string>}
@@ -6258,10 +6719,10 @@ export interface ProgramResource {
   views: number
   /**
    *
-   * @type {Array<CourseResourceDeliveryInner>}
+   * @type {Array<ArticleResourceDeliveryInner>}
    * @memberof ProgramResource
    */
-  delivery: Array<CourseResourceDeliveryInner>
+  delivery: Array<ArticleResourceDeliveryInner>
   /**
    * Return true if the resource is free/has a free option
    * @type {boolean}
@@ -6276,16 +6737,16 @@ export interface ProgramResource {
   resource_category: string
   /**
    *
-   * @type {Array<CourseResourceFormatInner>}
+   * @type {Array<ArticleResourceFormatInner>}
    * @memberof ProgramResource
    */
-  format: Array<CourseResourceFormatInner>
+  format: Array<ArticleResourceFormatInner>
   /**
    *
-   * @type {Array<CourseResourcePaceInner>}
+   * @type {Array<ArticleResourcePaceInner>}
    * @memberof ProgramResource
    */
-  pace: Array<CourseResourcePaceInner>
+  pace: Array<ArticleResourcePaceInner>
   /**
    *
    * @type {LearningResourceRelationshipChildField}
@@ -6853,7 +7314,7 @@ export const SortbyEnum = {
 export type SortbyEnum = (typeof SortbyEnum)[keyof typeof SortbyEnum]
 
 /**
- * * `micromasters` - micromasters * `mit_edx` - mit_edx * `mitpe` - mitpe * `mitxonline` - mitxonline * `oll` - oll * `ocw` - ocw * `podcast` - podcast * `see` - see * `xpro` - xpro * `youtube` - youtube * `canvas` - canvas
+ * * `micromasters` - micromasters * `mit_edx` - mit_edx * `mitpe` - mitpe * `mitxonline` - mitxonline * `oll` - oll * `ocw` - ocw * `podcast` - podcast * `climate_article` - climate_article * `see` - see * `xpro` - xpro * `youtube` - youtube * `canvas` - canvas
  * @export
  * @enum {string}
  */
@@ -6866,6 +7327,7 @@ export const SourceEnumDescriptions = {
   oll: "oll",
   ocw: "ocw",
   podcast: "podcast",
+  climate_article: "climate_article",
   see: "see",
   xpro: "xpro",
   youtube: "youtube",
@@ -6901,6 +7363,10 @@ export const SourceEnum = {
    * podcast
    */
   Podcast: "podcast",
+  /**
+   * climate_article
+   */
+  ClimateArticle: "climate_article",
   /**
    * see
    */
@@ -7253,10 +7719,10 @@ export interface VideoPlaylistResource {
   certification: boolean
   /**
    *
-   * @type {CourseResourceCertificationType}
+   * @type {ArticleResourceCertificationType}
    * @memberof VideoPlaylistResource
    */
-  certification_type: CourseResourceCertificationType
+  certification_type: ArticleResourceCertificationType
   /**
    *
    * @type {Array<string>}
@@ -7301,10 +7767,10 @@ export interface VideoPlaylistResource {
   views: number
   /**
    *
-   * @type {Array<CourseResourceDeliveryInner>}
+   * @type {Array<ArticleResourceDeliveryInner>}
    * @memberof VideoPlaylistResource
    */
-  delivery: Array<CourseResourceDeliveryInner>
+  delivery: Array<ArticleResourceDeliveryInner>
   /**
    * Return true if the resource is free/has a free option
    * @type {boolean}
@@ -7319,16 +7785,16 @@ export interface VideoPlaylistResource {
   resource_category: string
   /**
    *
-   * @type {Array<CourseResourceFormatInner>}
+   * @type {Array<ArticleResourceFormatInner>}
    * @memberof VideoPlaylistResource
    */
-  format: Array<CourseResourceFormatInner>
+  format: Array<ArticleResourceFormatInner>
   /**
    *
-   * @type {Array<CourseResourcePaceInner>}
+   * @type {Array<ArticleResourcePaceInner>}
    * @memberof VideoPlaylistResource
    */
-  pace: Array<CourseResourcePaceInner>
+  pace: Array<ArticleResourcePaceInner>
   /**
    *
    * @type {LearningResourceRelationshipChildField}
@@ -7731,10 +8197,10 @@ export interface VideoResource {
   certification: boolean
   /**
    *
-   * @type {CourseResourceCertificationType}
+   * @type {ArticleResourceCertificationType}
    * @memberof VideoResource
    */
-  certification_type: CourseResourceCertificationType
+  certification_type: ArticleResourceCertificationType
   /**
    *
    * @type {Array<string>}
@@ -7779,10 +8245,10 @@ export interface VideoResource {
   views: number
   /**
    *
-   * @type {Array<CourseResourceDeliveryInner>}
+   * @type {Array<ArticleResourceDeliveryInner>}
    * @memberof VideoResource
    */
-  delivery: Array<CourseResourceDeliveryInner>
+  delivery: Array<ArticleResourceDeliveryInner>
   /**
    * Return true if the resource is free/has a free option
    * @type {boolean}
@@ -7797,16 +8263,16 @@ export interface VideoResource {
   resource_category: string
   /**
    *
-   * @type {Array<CourseResourceFormatInner>}
+   * @type {Array<ArticleResourceFormatInner>}
    * @memberof VideoResource
    */
-  format: Array<CourseResourceFormatInner>
+  format: Array<ArticleResourceFormatInner>
   /**
    *
-   * @type {Array<CourseResourcePaceInner>}
+   * @type {Array<ArticleResourcePaceInner>}
    * @memberof VideoResource
    */
-  pace: Array<CourseResourcePaceInner>
+  pace: Array<ArticleResourcePaceInner>
   /**
    *
    * @type {LearningResourceRelationshipChildField}
@@ -29965,7 +30431,7 @@ export const WebhooksApiAxiosParamCreator = function (
   return {
     /**
      * Webhook handler for ContentFile updates
-     * @param {WebhooksContentFilesCreateSourceEnum} source * &#x60;micromasters&#x60; - micromasters * &#x60;mit_edx&#x60; - mit_edx * &#x60;mitpe&#x60; - mitpe * &#x60;mitxonline&#x60; - mitxonline * &#x60;oll&#x60; - oll * &#x60;ocw&#x60; - ocw * &#x60;podcast&#x60; - podcast * &#x60;see&#x60; - see * &#x60;xpro&#x60; - xpro * &#x60;youtube&#x60; - youtube * &#x60;canvas&#x60; - canvas
+     * @param {WebhooksContentFilesCreateSourceEnum} source * &#x60;micromasters&#x60; - micromasters * &#x60;mit_edx&#x60; - mit_edx * &#x60;mitpe&#x60; - mitpe * &#x60;mitxonline&#x60; - mitxonline * &#x60;oll&#x60; - oll * &#x60;ocw&#x60; - ocw * &#x60;podcast&#x60; - podcast * &#x60;climate_article&#x60; - climate_article * &#x60;see&#x60; - see * &#x60;xpro&#x60; - xpro * &#x60;youtube&#x60; - youtube * &#x60;canvas&#x60; - canvas
      * @param {ContentFileWebHookRequestRequest} ContentFileWebHookRequestRequest
      * @param {string} [content_path]
      * @param {string} [course_id]
@@ -30101,7 +30567,7 @@ export const WebhooksApiFp = function (configuration?: Configuration) {
   return {
     /**
      * Webhook handler for ContentFile updates
-     * @param {WebhooksContentFilesCreateSourceEnum} source * &#x60;micromasters&#x60; - micromasters * &#x60;mit_edx&#x60; - mit_edx * &#x60;mitpe&#x60; - mitpe * &#x60;mitxonline&#x60; - mitxonline * &#x60;oll&#x60; - oll * &#x60;ocw&#x60; - ocw * &#x60;podcast&#x60; - podcast * &#x60;see&#x60; - see * &#x60;xpro&#x60; - xpro * &#x60;youtube&#x60; - youtube * &#x60;canvas&#x60; - canvas
+     * @param {WebhooksContentFilesCreateSourceEnum} source * &#x60;micromasters&#x60; - micromasters * &#x60;mit_edx&#x60; - mit_edx * &#x60;mitpe&#x60; - mitpe * &#x60;mitxonline&#x60; - mitxonline * &#x60;oll&#x60; - oll * &#x60;ocw&#x60; - ocw * &#x60;podcast&#x60; - podcast * &#x60;climate_article&#x60; - climate_article * &#x60;see&#x60; - see * &#x60;xpro&#x60; - xpro * &#x60;youtube&#x60; - youtube * &#x60;canvas&#x60; - canvas
      * @param {ContentFileWebHookRequestRequest} ContentFileWebHookRequestRequest
      * @param {string} [content_path]
      * @param {string} [course_id]
@@ -30234,8 +30700,8 @@ export const WebhooksApiFactory = function (
  */
 export interface WebhooksApiWebhooksContentFilesCreateRequest {
   /**
-   * * &#x60;micromasters&#x60; - micromasters * &#x60;mit_edx&#x60; - mit_edx * &#x60;mitpe&#x60; - mitpe * &#x60;mitxonline&#x60; - mitxonline * &#x60;oll&#x60; - oll * &#x60;ocw&#x60; - ocw * &#x60;podcast&#x60; - podcast * &#x60;see&#x60; - see * &#x60;xpro&#x60; - xpro * &#x60;youtube&#x60; - youtube * &#x60;canvas&#x60; - canvas
-   * @type {'micromasters' | 'mit_edx' | 'mitpe' | 'mitxonline' | 'oll' | 'ocw' | 'podcast' | 'see' | 'xpro' | 'youtube' | 'canvas'}
+   * * &#x60;micromasters&#x60; - micromasters * &#x60;mit_edx&#x60; - mit_edx * &#x60;mitpe&#x60; - mitpe * &#x60;mitxonline&#x60; - mitxonline * &#x60;oll&#x60; - oll * &#x60;ocw&#x60; - ocw * &#x60;podcast&#x60; - podcast * &#x60;climate_article&#x60; - climate_article * &#x60;see&#x60; - see * &#x60;xpro&#x60; - xpro * &#x60;youtube&#x60; - youtube * &#x60;canvas&#x60; - canvas
+   * @type {'micromasters' | 'mit_edx' | 'mitpe' | 'mitxonline' | 'oll' | 'ocw' | 'podcast' | 'climate_article' | 'see' | 'xpro' | 'youtube' | 'canvas'}
    * @memberof WebhooksApiWebhooksContentFilesCreate
    */
   readonly source: WebhooksContentFilesCreateSourceEnum
@@ -30336,6 +30802,7 @@ export const WebhooksContentFilesCreateSourceEnum = {
   Oll: "oll",
   Ocw: "ocw",
   Podcast: "podcast",
+  ClimateArticle: "climate_article",
   See: "see",
   Xpro: "xpro",
   Youtube: "youtube",
