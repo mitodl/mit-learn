@@ -67,10 +67,6 @@ const CardRoot = styled.div<{
   },
 ])
 
-const SpinnerContainer = styled.div({
-  marginLeft: "8px",
-})
-
 const TitleLink = styled(Link)(({ theme }) => ({
   [theme.breakpoints.down("md")]: {
     maxWidth: "calc(100% - 16px)",
@@ -118,6 +114,39 @@ const getDefaultContextMenuItems = (
   ]
 }
 
+const useOneClickEnroll = () => {
+  const mitxOnlineUser = useQuery(mitxUserQueries.me())
+  const createEnrollment = useCreateEnrollment()
+  const userCountry = mitxOnlineUser.data?.legal_address?.country
+  const userYearOfBirth = mitxOnlineUser.data?.user_profile?.year_of_birth
+  const showJustInTimeDialog = !userCountry || !userYearOfBirth
+  const mutate = ({
+    href,
+    coursewareId,
+  }: {
+    href: string
+    coursewareId: string
+  }) => {
+    if (showJustInTimeDialog) {
+      NiceModal.show(JustInTimeDialog, {
+        href: href,
+        readableId: coursewareId,
+      })
+      return
+    } else {
+      createEnrollment.mutate(
+        { readable_id: coursewareId },
+        {
+          onSuccess: () => {
+            window.location.assign(href)
+          },
+        },
+      )
+    }
+  }
+  return { mutate, isPending: createEnrollment.isPending }
+}
+
 type CoursewareButtonProps = {
   coursewareId?: string | null
   startDate?: string | null
@@ -162,49 +191,35 @@ const CoursewareButton = styled(
       courseNoun,
       enrollmentStatus,
     })
-    const mitxOnlineUser = useQuery(mitxUserQueries.me())
     const hasStarted = startDate && isInPast(startDate)
     const hasEnrolled =
       enrollmentStatus && enrollmentStatus !== EnrollmentStatus.NotEnrolled
-    const createEnrollment = useCreateEnrollment()
-    const userCountry = mitxOnlineUser.data?.legal_address?.country
-    const userYearOfBirth = mitxOnlineUser.data?.user_profile?.year_of_birth
-    const showJustInTimeDialog = !userCountry || !userYearOfBirth
 
-    if (!hasEnrolled /* Trigger signup */) {
+    const oneClickEnroll = useOneClickEnroll()
+
+    if (!hasEnrolled /* enrollment flow */) {
       return (
         <Button
           size="small"
           variant="primary"
           className={className}
-          disabled={createEnrollment.isPending || !coursewareId}
-          onClick={async () => {
+          disabled={oneClickEnroll.isPending || !coursewareId}
+          onClick={() => {
             if (!href || !coursewareId) return
-            if (showJustInTimeDialog) {
-              NiceModal.show(JustInTimeDialog, {
-                href: href,
-                readableId: coursewareId,
-              })
-              return
-            } else {
-              await createEnrollment.mutateAsync(
-                { readable_id: coursewareId },
-                {
-                  onSuccess: () => {
-                    window.location.href = href
-                  },
-                },
-              )
-            }
+            oneClickEnroll.mutate({ href, coursewareId })
           }}
+          endIcon={
+            oneClickEnroll.isPending ? (
+              <LoadingSpinner
+                color="inherit"
+                loading={oneClickEnroll.isPending}
+                size={16}
+              />
+            ) : undefined
+          }
           {...others}
         >
           {coursewareText}
-          {createEnrollment.isPending && (
-            <SpinnerContainer>
-              <LoadingSpinner loading={createEnrollment.isPending} size={16} />
-            </SpinnerContainer>
-          )}
         </Button>
       )
     } else if (hasStarted && href /* Link to course */) {
@@ -342,6 +357,7 @@ const CourseStartCountdown: React.FC<{
 
 type DashboardCardProps = {
   Component?: React.ElementType
+  titleAction: "marketing" | "courseware"
   dashboardResource: DashboardResource
   showNotComplete?: boolean
   className?: string
@@ -349,7 +365,6 @@ type DashboardCardProps = {
   offerUpgrade?: boolean
   contextMenuItems?: SimpleMenuItem[]
   isLoading?: boolean
-  titleHref?: string | null
   buttonHref?: string | null
 }
 
@@ -362,11 +377,29 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   offerUpgrade = true,
   contextMenuItems = [],
   isLoading = false,
-  titleHref,
   buttonHref,
+  titleAction,
 }) => {
   const course = dashboardResource as DashboardCourse
   const { title, marketingUrl, enrollment, run } = course
+  const oneClickEnroll = useOneClickEnroll()
+
+  const coursewareUrl = run.coursewareUrl
+  const titleHref =
+    titleAction === "marketing" ? marketingUrl : (coursewareUrl ?? marketingUrl)
+  const hasEnrolled =
+    enrollment?.status && enrollment.status !== EnrollmentStatus.NotEnrolled
+  const titleClick: React.MouseEventHandler | undefined =
+    titleAction === "courseware" && coursewareUrl && !hasEnrolled
+      ? (e) => {
+          e.preventDefault()
+          if (!course.coursewareId) return
+          oneClickEnroll.mutate({
+            href: coursewareUrl,
+            coursewareId: course.coursewareId,
+          })
+        }
+      : undefined
 
   const titleSection = isLoading ? (
     <>
@@ -379,7 +412,8 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       <TitleLink
         size="medium"
         color="black"
-        href={titleHref ? titleHref : marketingUrl}
+        href={titleHref}
+        onClick={titleClick}
       >
         {title}
       </TitleLink>
