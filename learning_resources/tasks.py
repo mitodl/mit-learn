@@ -4,7 +4,6 @@ learning_resources tasks
 
 import logging
 from datetime import UTC, datetime
-from typing import Optional
 
 import boto3
 import celery
@@ -345,11 +344,11 @@ def get_ocw_courses(
 def get_ocw_data(  # noqa: PLR0913
     self,
     *,
-    force_overwrite: Optional[bool] = False,
-    course_url_substring: Optional[str] = None,
-    utc_start_timestamp: Optional[datetime] = None,
-    prefix: Optional[str] = None,
-    skip_content_files: Optional[bool] = settings.OCW_SKIP_CONTENT_FILES,
+    force_overwrite: bool | None = False,
+    course_url_substring: str | None = None,
+    utc_start_timestamp: datetime | None = None,
+    prefix: str | None = None,
+    skip_content_files: bool | None = settings.OCW_SKIP_CONTENT_FILES,
 ):
     """
     Task to sync OCW Next course data with database
