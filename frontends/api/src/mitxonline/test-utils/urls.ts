@@ -5,14 +5,16 @@ import type {
   ProgramCollectionsApiProgramCollectionsListRequest,
   ProgramsApiProgramsListV2Request,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { RawAxiosRequestConfig } from "axios"
 import { queryify } from "ol-test-utilities"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL
 
-const currentUser = {
-  get: (opts?: RawAxiosRequestConfig) =>
-    `${API_BASE_URL}/api/v0/users/current_user/${queryify(opts)}`,
+const userMe = {
+  get: () => `${API_BASE_URL}/api/v0/users/me`,
+}
+
+const countries = {
+  list: () => `${API_BASE_URL}/api/v0/countries/`,
 }
 
 const enrollment = {
@@ -83,7 +85,8 @@ const certificates = {
 export {
   b2b,
   b2bAttach,
-  currentUser,
+  userMe,
+  countries,
   enrollment,
   programs,
   programCollections,

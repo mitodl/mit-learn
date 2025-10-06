@@ -244,6 +244,7 @@ const programPageItem: PartialFactory<ProgramPageItem> = (override) => {
           name: faker.person.fullName(),
           title_1: faker.person.jobTitle(),
           title_2: faker.person.jobTitle(),
+          title_3: "",
           organization: "Massachusetts Institute of Technology",
           signature_image: faker.image.urlLoremFlickr({
             width: 200,

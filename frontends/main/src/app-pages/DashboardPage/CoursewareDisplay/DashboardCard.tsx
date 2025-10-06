@@ -25,9 +25,14 @@ import {
 import { calendarDaysUntil, isInPast, NoSSR } from "ol-utilities"
 
 import { EnrollmentStatusIndicator } from "./EnrollmentStatusIndicator"
-import { EmailSettingsDialog, UnenrollDialog } from "./DashboardDialogs"
+import {
+  EmailSettingsDialog,
+  JustInTimeDialog,
+  UnenrollDialog,
+} from "./DashboardDialogs"
 import NiceModal from "@ebay/nice-modal-react"
 import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
+import { useMitxOnlineUserMe } from "api/mitxonline-hooks/user"
 
 const CardRoot = styled.div<{
   screenSize: "desktop" | "mobile"
@@ -156,10 +161,14 @@ const CoursewareButton = styled(
       courseNoun,
       enrollmentStatus,
     })
+    const mitxOnlineUser = useMitxOnlineUserMe()
     const hasStarted = startDate && isInPast(startDate)
     const hasEnrolled =
       enrollmentStatus && enrollmentStatus !== EnrollmentStatus.NotEnrolled
     const createEnrollment = useCreateEnrollment()
+    const userCountry = mitxOnlineUser.data?.legal_address?.country
+    const userYearOfBirth = mitxOnlineUser.data?.user_profile?.year_of_birth
+    const showJustInTimeDialog = !userCountry || !userYearOfBirth
     return (hasStarted && href) || !hasEnrolled ? (
       hasEnrolled && href ? (
         <ButtonLink
@@ -179,16 +188,23 @@ const CoursewareButton = styled(
           className={className}
           disabled={createEnrollment.isPending || !coursewareId}
           onClick={async () => {
-            await createEnrollment.mutateAsync(
-              { readable_id: coursewareId ?? "" },
-              {
-                onSuccess: () => {
-                  if (href) {
+            if (!href || !coursewareId) return
+            if (showJustInTimeDialog) {
+              NiceModal.show(JustInTimeDialog, {
+                href: href,
+                readableId: coursewareId,
+              })
+              return
+            } else {
+              await createEnrollment.mutateAsync(
+                { readable_id: coursewareId },
+                {
+                  onSuccess: () => {
                     window.location.href = href
-                  }
+                  },
                 },
-              },
-            )
+              )
+            }
           }}
           {...others}
         >
