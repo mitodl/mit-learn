@@ -32,7 +32,8 @@ import {
 } from "./DashboardDialogs"
 import NiceModal from "@ebay/nice-modal-react"
 import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
-import { useMitxOnlineUserMe } from "api/mitxonline-hooks/user"
+import { mitxUserQueries } from "api/mitxonline-hooks/user"
+import { useQuery } from "@tanstack/react-query"
 
 const CardRoot = styled.div<{
   screenSize: "desktop" | "mobile"
@@ -161,7 +162,7 @@ const CoursewareButton = styled(
       courseNoun,
       enrollmentStatus,
     })
-    const mitxOnlineUser = useMitxOnlineUserMe()
+    const mitxOnlineUser = useQuery(mitxUserQueries.me())
     const hasStarted = startDate && isInPast(startDate)
     const hasEnrolled =
       enrollmentStatus && enrollmentStatus !== EnrollmentStatus.NotEnrolled
