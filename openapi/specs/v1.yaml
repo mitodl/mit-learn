@@ -29,7 +29,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedArticleList'
+                $ref: '#/components/schemas/PaginatedRichTextArticleList'
           description: ''
     post:
       operationId: articles_create
@@ -41,20 +41,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ArticleRequest'
+              $ref: '#/components/schemas/RichTextArticleRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ArticleRequest'
+              $ref: '#/components/schemas/RichTextArticleRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ArticleRequest'
+              $ref: '#/components/schemas/RichTextArticleRequest'
         required: true
       responses:
         '201':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Article'
+                $ref: '#/components/schemas/RichTextArticle'
           description: ''
   /api/v1/articles/{id}/:
     get:
@@ -75,7 +75,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Article'
+                $ref: '#/components/schemas/RichTextArticle'
           description: ''
     patch:
       operationId: articles_partial_update
@@ -94,19 +94,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedArticleRequest'
+              $ref: '#/components/schemas/PatchedRichTextArticleRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedArticleRequest'
+              $ref: '#/components/schemas/PatchedRichTextArticleRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedArticleRequest'
+              $ref: '#/components/schemas/PatchedRichTextArticleRequest'
       responses:
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Article'
+                $ref: '#/components/schemas/RichTextArticle'
           description: ''
     delete:
       operationId: articles_destroy
@@ -9482,35 +9482,6 @@ components:
       - free
       - delivery
       - resource_category
-    Article:
-      type: object
-      description: Serializer for LearningResourceInstructor model
-      properties:
-        html:
-          type: string
-        id:
-          type: integer
-          readOnly: true
-        title:
-          type: string
-          maxLength: 255
-      required:
-      - html
-      - id
-      - title
-    ArticleRequest:
-      type: object
-      description: Serializer for LearningResourceInstructor model
-      properties:
-        html:
-          type: string
-        title:
-          type: string
-          minLength: 1
-          maxLength: 255
-      required:
-      - html
-      - title
     ArticleResource:
       type: object
       description: Serializer for program resources
@@ -9667,10 +9638,6 @@ components:
           - $ref: '#/components/schemas/ArticleResourceResourceTypeEnum'
           default: article
           readOnly: true
-        article:
-          allOf:
-          - $ref: '#/components/schemas/Article'
-          readOnly: true
         readable_id:
           type: string
           maxLength: 512
@@ -9762,7 +9729,6 @@ components:
           type: boolean
           readOnly: true
       required:
-      - article
       - certification
       - certification_type
       - children
@@ -12277,29 +12243,6 @@ components:
       - MIT xPRO
       - MIT Professional Education
       - MIT Sloan Executive Education
-    PaginatedArticleList:
-      type: object
-      required:
-      - count
-      - results
-      properties:
-        count:
-          type: integer
-          example: 123
-        next:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?offset=400&limit=100
-        previous:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?offset=200&limit=100
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/Article'
     PaginatedContentFileList:
       type: object
       required:
@@ -12691,6 +12634,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProgramResource'
+    PaginatedRichTextArticleList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/RichTextArticle'
     PaginatedUserListList:
       type: object
       required:
@@ -12783,16 +12749,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/VideoResource'
-    PatchedArticleRequest:
-      type: object
-      description: Serializer for LearningResourceInstructor model
-      properties:
-        html:
-          type: string
-        title:
-          type: string
-          minLength: 1
-          maxLength: 255
     PatchedLearningPathRelationshipRequest:
       type: object
       description: Specialized serializer for a LearningPath relationship
@@ -12916,6 +12872,16 @@ components:
           type: integer
         child:
           type: integer
+    PatchedRichTextArticleRequest:
+      type: object
+      description: Serializer for LearningResourceInstructor model
+      properties:
+        html:
+          type: string
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
     PatchedUserListRelationshipRequest:
       type: object
       description: Serializer for UserListRelationship model
@@ -14760,6 +14726,35 @@ components:
       - video
       - video_playlist
       - article
+    RichTextArticle:
+      type: object
+      description: Serializer for LearningResourceInstructor model
+      properties:
+        html:
+          type: string
+        id:
+          type: integer
+          readOnly: true
+        title:
+          type: string
+          maxLength: 255
+      required:
+      - html
+      - id
+      - title
+    RichTextArticleRequest:
+      type: object
+      description: Serializer for LearningResourceInstructor model
+      properties:
+        html:
+          type: string
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+      required:
+      - html
+      - title
     SearchModeEnum:
       enum:
       - best_fields
