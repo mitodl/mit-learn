@@ -1214,6 +1214,7 @@ paths:
             - podcast
             - youtube
             - canvas
+            - climate
             type: string
             description: |-
               * `edx` - edX
@@ -1235,6 +1236,7 @@ paths:
               * `podcast` - Podcast
               * `youtube` - YouTube
               * `canvas` - Canvas
+              * `climate` - MIT Climate
         description: "The platform on which the learning resource is offered     \
           \        \n\n* `edx` - edX\n* `ocw` - MIT OpenCourseWare\n* `oll` - Open\
           \ Learning Library\n* `mitxonline` - MITx Online\n* `bootcamps` - Bootcamps\n\
@@ -1243,7 +1245,7 @@ paths:
           \ Computing\n* `ctl` - Center for Transportation & Logistics\n* `whu` -\
           \ WHU\n* `susskind` - Susskind\n* `globalalumni` - Global Alumni\n* `simplilearn`\
           \ - Simplilearn\n* `emeritus` - Emeritus\n* `podcast` - Podcast\n* `youtube`\
-          \ - YouTube\n* `canvas` - Canvas"
+          \ - YouTube\n* `canvas` - Canvas\n* `climate` - MIT Climate"
       - in: query
         name: professional
         schema:
@@ -1290,6 +1292,7 @@ paths:
             - podcast_episode
             - video
             - video_playlist
+            - article
             type: string
             description: |-
               * `course` - course
@@ -1299,10 +1302,11 @@ paths:
               * `podcast_episode` - podcast episode
               * `video` - video
               * `video_playlist` - video playlist
+              * `article` - article
         description: "The type of learning resource             \n\n* `course` - course\n\
           * `program` - program\n* `learning_path` - learning path\n* `podcast` -\
           \ podcast\n* `podcast_episode` - podcast episode\n* `video` - video\n* `video_playlist`\
-          \ - video playlist"
+          \ - video playlist\n* `article` - article"
       - in: query
         name: topic
         schema:
