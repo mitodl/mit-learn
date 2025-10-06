@@ -512,10 +512,12 @@ class LearningResourceRunFactory(DjangoModelFactory):
         )
     )
     start_date = factory.LazyAttribute(
-        lambda obj: obj.enrollment_start + timedelta(days=15)
+        lambda obj: obj.enrollment_start + timedelta(days=random.randint(15, 20))  # noqa: S311
     )
     end_date = factory.LazyAttribute(
-        lambda obj: obj.start_date + timedelta(days=90) if obj.start_date else None
+        lambda obj: obj.start_date + timedelta(days=random.randint(90, 100))  # noqa: S311
+        if obj.start_date
+        else None
     )
     prices = sorted(
         [
