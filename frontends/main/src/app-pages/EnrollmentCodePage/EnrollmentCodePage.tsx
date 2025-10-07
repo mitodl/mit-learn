@@ -8,7 +8,7 @@ import { userQueries } from "api/hooks/user"
 import { useQuery } from "@tanstack/react-query"
 import { useRouter } from "next-nprogress-bar"
 
-type B2BAttachPageProps = {
+type EnrollmentCodePage = {
   code: string
 }
 
@@ -17,7 +17,7 @@ const InterstitialMessage = styled(Typography)(({ theme }) => ({
   textAlign: "center",
 }))
 
-const B2BAttachPage: React.FC<B2BAttachPageProps> = ({ code }) => {
+const EnrollmentCodePage: React.FC<EnrollmentCodePage> = ({ code }) => {
   const {
     mutate: attach,
     isSuccess,
@@ -79,4 +79,4 @@ const B2BAttachPage: React.FC<B2BAttachPageProps> = ({ code }) => {
   )
 }
 
-export default B2BAttachPage
+export default EnrollmentCodePage
