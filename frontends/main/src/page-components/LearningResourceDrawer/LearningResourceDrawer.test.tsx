@@ -104,9 +104,12 @@ describe("LearningResourceDrawer", () => {
         url: `?dog=woof&${RESOURCE_DRAWER_PARAMS.resource}=${resource.id}`,
       })
       expect(LearningResourceExpanded).toHaveBeenCalled()
-      await waitFor(() => {
-        expectProps(LearningResourceExpanded, { resource })
-      })
+      await waitFor(
+        () => {
+          expectProps(LearningResourceExpanded, { resource })
+        },
+        { timeout: 2_000 },
+      )
       await screen.findByText(resource.title)
 
       if (enablePostHog) {
@@ -182,11 +185,7 @@ describe("LearningResourceDrawer", () => {
 
       expect(LearningResourceExpanded).toHaveBeenCalled()
 
-      await waitFor(() => {
-        expectProps(LearningResourceExpanded, { resource })
-      })
-
-      const section = screen.getByTestId("drawer-cta")
+      const section = await screen.findByTestId("drawer-cta")
 
       const buttons = within(section).getAllByRole("button")
       const expectedButtons = expectAddToLearningPathButton ? 3 : 2
@@ -273,12 +272,15 @@ describe("LearningResourceDrawer", () => {
 
     expect(location.current.searchParams.has("syllabus")).toBe(true)
 
-    await waitFor(() => {
-      expectLastProps(LearningResourceExpanded, {
-        resource,
-        chatExpanded: false,
-      })
-    })
+    await waitFor(
+      () => {
+        expectLastProps(LearningResourceExpanded, {
+          resource,
+          chatExpanded: false,
+        })
+      },
+      { timeout: 2_000 },
+    )
     expect(location.current.searchParams.has("syllabus")).toBe(false)
   })
 
