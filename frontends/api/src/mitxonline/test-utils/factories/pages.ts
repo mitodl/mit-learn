@@ -44,10 +44,11 @@ const priceItem: Factory<PriceItem> = (override) => {
   }
 }
 
+const uniqueFacultyId = new UniqueEnforcer()
 const faculty: Factory<Faculty> = (override) => {
   return {
     feature_image_src: faker.image.urlLoremFlickr({ width: 640, height: 480 }),
-    id: faker.number.int({ min: 1, max: 1000 }),
+    id: uniqueFacultyId.enforce(() => faker.number.int({ min: 1, max: 1000 })),
     instructor_bio_long: makeHTMLParagraph(2),
     instructor_bio_short: faker.lorem.sentences(2),
     instructor_name: faker.person.fullName(),
