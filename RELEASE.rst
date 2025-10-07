@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+Version 0.45.5
+--------------
+
+- truncate csv files in tutor problems api (#2568)
+- csv problem files (#2560)
+- add "just in time" dialog (#2530)
+- Program Page basic layout (#2556)
+- Fix qdrant payload schema type and add mechanism to keep types in sync (#2553)
+
 Version 0.45.4 (Released October 02, 2025)
 --------------
 
