@@ -23,10 +23,11 @@ from learning_resources.models import LearningResource
 from learning_resources.views import FeaturedViewSet
 from learning_resources_search.api import gen_content_file_id
 from learning_resources_search.constants import (
+    COMBINED_INDEX,
     CONTENT_FILE_TYPE,
     COURSE_TYPE,
-    LEARNING_RESOURCE_TYPES,
     PROGRAM_TYPE,
+    LEARNING_RESOURCE_TYPES,
     IndexestoUpdate,
 )
 from learning_resources_search.exceptions import ReindexError, RetryError
@@ -133,42 +134,52 @@ def test_system_exit_retry(mocker):
 
 
 @pytest.mark.parametrize(
-    "indexes",
-    [["course"], ["program"], list(LEARNING_RESOURCE_TYPES)],
+    ("indexes", "model_exists"),
+    [
+        (["course"], False),
+        (["program"], False),
+        (["combined_hybrid"], False),
+        (["combined_hybrid"], True),
+    ],
 )
-def test_start_recreate_index(mocker, mocked_celery, user, indexes):
+def test_start_recreate_index(mocker, mocked_celery, user, indexes, model_exists):  # noqa: PLR0912,PLR0915,C901
     """
     recreate_index should recreate the OpenSearch index and reindex all data with it
     """
     settings.OPENSEARCH_INDEXING_CHUNK_SIZE = 2
     settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE = 2
 
+    model_value = "test_vector_model_id" if model_exists else None
+    mocker.patch(
+        "learning_resources_search.tasks.get_vector_model_id", return_value=model_value
+    )
+
     mock_blocklist = mocker.patch(
         "learning_resources_search.tasks.load_course_blocklist", return_value=[]
     )
 
-    if COURSE_TYPE in indexes:
-        ocw_courses = sorted(
-            CourseFactory.create_batch(4, etl_source=ETLSource.ocw.value),
-            key=lambda course: course.learning_resource_id,
-        )
+    ocw_courses = sorted(
+        CourseFactory.create_batch(4, etl_source=ETLSource.ocw.value),
+        key=lambda course: course.learning_resource_id,
+    )
 
-        for course in ocw_courses:
-            ContentFileFactory.create_batch(
-                3, run=course.learning_resource.runs.first()
-            )
+    for course in ocw_courses:
+        ContentFileFactory.create_batch(3, run=course.learning_resource.runs.first())
 
-        oll_courses = CourseFactory.create_batch(2, etl_source=ETLSource.ocw.value)
+    oll_courses = CourseFactory.create_batch(2, etl_source=ETLSource.ocw.value)
 
-        courses = sorted(
-            list(oll_courses) + list(ocw_courses),
-            key=lambda course: course.learning_resource_id,
-        )
-    else:
-        programs = sorted(
-            ProgramFactory.create_batch(4),
-            key=lambda program: program.learning_resource_id,
-        )
+    courses = sorted(
+        list(oll_courses) + list(ocw_courses),
+        key=lambda course: course.learning_resource_id,
+    )
+
+    programs = sorted(
+        ProgramFactory.create_batch(
+            4,
+            courses=[],
+        ),
+        key=lambda program: program.learning_resource_id,
+    )
 
     index_learning_resources_mock = mocker.patch(
         "learning_resources_search.tasks.index_learning_resources", autospec=True
@@ -195,78 +206,98 @@ def test_start_recreate_index(mocker, mocked_celery, user, indexes):
         "learning_resources_search.tasks.finish_recreate_index", autospec=True
     )
 
-    with pytest.raises(mocked_celery.replace_exception_class):
-        start_recreate_index.delay(indexes, remove_existing_reindexing_tags=False)
-
     finish_recreate_index_dict = {}
 
-    delete_orphaned_indexes_mock.assert_called_once_with(
-        indexes, delete_reindexing_tags=False
-    )
+    if not model_exists and COMBINED_INDEX in indexes:
+        start_recreate_index.delay(indexes, remove_existing_reindexing_tags=False)
+        assert create_backing_index_mock.call_count == 0
+        assert finish_recreate_index_mock.s.call_count == 0
+        assert delete_orphaned_indexes_mock.call_count == 0
+    else:
+        with pytest.raises(mocked_celery.replace_exception_class):
+            start_recreate_index.delay(indexes, remove_existing_reindexing_tags=False)
 
-    for doctype in LEARNING_RESOURCE_TYPES:
-        if doctype in indexes:
-            finish_recreate_index_dict[doctype] = backing_index
-            create_backing_index_mock.assert_any_call(doctype)
+        for doctype in [COURSE_TYPE, PROGRAM_TYPE, COMBINED_INDEX]:
+            if doctype in indexes:
+                finish_recreate_index_dict[doctype] = backing_index
+                create_backing_index_mock.assert_any_call(doctype)
 
-    finish_recreate_index_mock.s.assert_called_once_with(finish_recreate_index_dict)
-    assert mocked_celery.group.call_count == 1
+        finish_recreate_index_mock.s.assert_called_once_with(finish_recreate_index_dict)
 
-    # Celery's 'group' function takes a generator as an argument. In order to make assertions about the items
-    # in that generator, 'list' is being called to force iteration through all of those items.
-    list(mocked_celery.group.call_args[0][0])
-
-    if COURSE_TYPE in indexes:
-        mock_blocklist.assert_called_once()
-        assert index_learning_resources_mock.si.call_count == 3
-        index_learning_resources_mock.si.assert_any_call(
-            [courses[0].learning_resource_id, courses[1].learning_resource_id],
-            COURSE_TYPE,
-            index_types=IndexestoUpdate.reindexing_index.value,
-        )
-        index_learning_resources_mock.si.assert_any_call(
-            [courses[2].learning_resource_id, courses[3].learning_resource_id],
-            COURSE_TYPE,
-            index_types=IndexestoUpdate.reindexing_index.value,
-        )
-        index_learning_resources_mock.si.assert_any_call(
-            [courses[4].learning_resource_id, courses[5].learning_resource_id],
-            COURSE_TYPE,
-            index_types=IndexestoUpdate.reindexing_index.value,
+        delete_orphaned_indexes_mock.assert_called_once_with(
+            indexes, delete_reindexing_tags=False
         )
 
-        for course in ocw_courses:
-            content_file_ids = (
-                course.learning_resource.runs.first()
-                .content_files.order_by("id")
-                .values_list("id", flat=True)
+        assert mocked_celery.group.call_count == 1
+
+        # Celery's 'group' function takes a generator as an argument. In order to make assertions about the items
+        # in that generator, 'list' is being called to force iteration through all of those items.
+        list(mocked_celery.group.call_args[0][0])
+
+        if COURSE_TYPE in indexes:
+            assert index_learning_resources_mock.si.call_count == 3
+
+        if PROGRAM_TYPE in indexes:
+            assert index_learning_resources_mock.si.call_count == 2
+
+        if COMBINED_INDEX in indexes and model_exists:
+            assert index_learning_resources_mock.si.call_count == 5
+
+        if COMBINED_INDEX in indexes and not model_exists:
+            assert index_learning_resources_mock.si.call_count == 0
+
+        if COURSE_TYPE in indexes or (COMBINED_INDEX in indexes and model_exists):
+            mock_blocklist.assert_called_once()
+            index_type = indexes[0]
+            index_learning_resources_mock.si.assert_any_call(
+                [courses[0].learning_resource_id, courses[1].learning_resource_id],
+                index_type,
+                index_types=IndexestoUpdate.reindexing_index.value,
             )
-            index_files_mock.si.assert_any_call(
-                [content_file_ids[0], content_file_ids[1]],
-                course.learning_resource_id,
+            index_learning_resources_mock.si.assert_any_call(
+                [courses[2].learning_resource_id, courses[3].learning_resource_id],
+                index_type,
+                index_types=IndexestoUpdate.reindexing_index.value,
+            )
+            index_learning_resources_mock.si.assert_any_call(
+                [courses[4].learning_resource_id, courses[5].learning_resource_id],
+                index_type,
                 index_types=IndexestoUpdate.reindexing_index.value,
             )
 
-            index_files_mock.si.assert_any_call(
-                [content_file_ids[2]],
-                course.learning_resource_id,
+        if COURSE_TYPE in indexes:
+            for course in ocw_courses:
+                content_file_ids = (
+                    course.learning_resource.runs.first()
+                    .content_files.order_by("id")
+                    .values_list("id", flat=True)
+                )
+                index_files_mock.si.assert_any_call(
+                    [content_file_ids[0], content_file_ids[1]],
+                    course.learning_resource_id,
+                    index_types=IndexestoUpdate.reindexing_index.value,
+                )
+
+                index_files_mock.si.assert_any_call(
+                    [content_file_ids[2]],
+                    course.learning_resource_id,
+                    index_types=IndexestoUpdate.reindexing_index.value,
+                )
+
+        if PROGRAM_TYPE in indexes or (COMBINED_INDEX in indexes and model_exists):
+            index_type = indexes[0]
+            index_learning_resources_mock.si.assert_any_call(
+                [programs[0].learning_resource_id, programs[1].learning_resource_id],
+                index_type,
                 index_types=IndexestoUpdate.reindexing_index.value,
             )
-    if indexes == [PROGRAM_TYPE]:
-        assert index_learning_resources_mock.si.call_count == 2
-        index_learning_resources_mock.si.assert_any_call(
-            [programs[0].learning_resource_id, programs[1].learning_resource_id],
-            PROGRAM_TYPE,
-            index_types=IndexestoUpdate.reindexing_index.value,
-        )
-        index_learning_resources_mock.si.assert_any_call(
-            [programs[2].learning_resource_id, programs[3].learning_resource_id],
-            PROGRAM_TYPE,
-            index_types=IndexestoUpdate.reindexing_index.value,
-        )
-
-    assert mocked_celery.replace.call_count == 1
-    assert mocked_celery.replace.call_args[0][1] == mocked_celery.chain.return_value
+            index_learning_resources_mock.si.assert_any_call(
+                [programs[2].learning_resource_id, programs[3].learning_resource_id],
+                index_type,
+                index_types=IndexestoUpdate.reindexing_index.value,
+            )
+        assert mocked_celery.replace.call_count == 1
+        assert mocked_celery.replace.call_args[0][1] == mocked_celery.chain.return_value
 
 
 @pytest.mark.parametrize(
