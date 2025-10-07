@@ -161,6 +161,14 @@ def get_xpro_data():
 
 
 @app.task
+def get_mit_climate_data():
+    """Execute the MIT Climate ETL pipeline"""
+    articles = pipelines.mit_climate_etl()
+    clear_search_cache()
+    return len(articles)
+
+
+@app.task
 def get_content_files(
     ids: list[int],
     etl_source: str,
