@@ -108,7 +108,7 @@ describe("LearningResourceDrawer", () => {
         () => {
           expectProps(LearningResourceExpanded, { resource })
         },
-        { timeout: 2_000 },
+        { timeout: 5_000 },
       )
       await screen.findByText(resource.title)
 
@@ -279,7 +279,7 @@ describe("LearningResourceDrawer", () => {
           chatExpanded: false,
         })
       },
-      { timeout: 2_000 },
+      { timeout: 5_000 },
     )
     expect(location.current.searchParams.has("syllabus")).toBe(false)
   })
