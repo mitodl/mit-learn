@@ -561,9 +561,9 @@ class ResourceListItemsViewSet(NestedViewSetMixin, viewsets.ReadOnlyModelViewSet
             ),
             Prefetch(
                 "child__runs",
-                queryset=LearningResourceRun.objects.filter(
-                    published=True
-                ).for_serialization(),
+                queryset=LearningResourceRun.objects.filter(published=True)
+                .order_by("start_date", "enrollment_start", "id")
+                .for_serialization(),
             ),
             "child__runs__instructors",
             "child__runs__resource_prices",

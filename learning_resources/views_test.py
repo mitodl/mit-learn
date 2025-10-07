@@ -80,8 +80,14 @@ def test_list_course_endpoint(client, url, params):
 
     resp = client.get(f"{reverse(url)}?{params}")
     assert resp.data.get("count") == 2
-    for idx, course in enumerate(courses):
-        assert resp.data.get("results")[idx]["id"] == course.learning_resource.id
+    for course in resp.data.get("results"):
+        assert course.get("id") in [c.learning_resource.id for c in courses]
+        assert len(course.get("runs")) > 1
+        for i in range(1, len(course.get("runs"))):
+            assert (
+                course.get("runs")[i]["start_date"]
+                >= course.get("runs")[i - 1]["start_date"]
+            )
 
 
 @pytest.mark.parametrize(
@@ -94,6 +100,17 @@ def test_get_course_detail_endpoint(client, url):
     resp = client.get(reverse(url, args=[course.learning_resource.id]))
 
     assert resp.data.get("readable_id") == course.learning_resource.readable_id
+    assert len(resp.data.get("runs")) > 1
+    assert [run["id"] for run in resp.data.get("runs")] == list(
+        course.learning_resource.runs.values_list("id", flat=True).order_by(
+            "start_date"
+        )
+    )
+    for i in range(1, len(resp.data.get("runs"))):
+        assert (
+            resp.data.get("runs")[i]["start_date"]
+            >= resp.data.get("runs")[i - 1]["start_date"]
+        )
 
 
 @pytest.mark.parametrize(
@@ -1550,7 +1567,8 @@ def test_resource_items_only_shows_published_runs(client, user):
         [course], through_defaults={"relation_type": "program_courses"}
     )
 
-    published_run = LearningResourceRunFactory.create(
+    published_runs = LearningResourceRunFactory.create_batch(
+        4,
         published=True,
         learning_resource=course,
     )
@@ -1560,11 +1578,11 @@ def test_resource_items_only_shows_published_runs(client, user):
     )
     course.runs.set(
         [
-            published_run,
+            *published_runs,
             unpublished_run,
         ]
     )
-    assert course.runs.count() == 2
+    assert course.runs.count() == 5
 
     client.force_login(user)
     url = reverse(
@@ -1577,7 +1595,11 @@ def test_resource_items_only_shows_published_runs(client, user):
     assert len(results) == 1
     child_data = results[0]["resource"]
     assert child_data["id"] == course.id
-    run_ids = [run["id"] for run in child_data["runs"]]
-    assert published_run.id in run_ids
-    assert unpublished_run.id not in run_ids
-    assert len(child_data["runs"]) == 1
+    for idx, run in enumerate(child_data["runs"]):
+        assert run["id"] in [run.id for run in published_runs]
+        if idx > 0:
+            assert (
+                child_data["runs"][idx]["start_date"]
+                >= child_data["runs"][idx - 1]["start_date"]
+            )
+    assert len(child_data["runs"]) == 4

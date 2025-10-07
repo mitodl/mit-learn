@@ -362,9 +362,9 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
             "content_tags",
             Prefetch(
                 "runs",
-                queryset=LearningResourceRun.objects.filter(
-                    published=True
-                ).for_serialization(),
+                queryset=LearningResourceRun.objects.filter(published=True)
+                .order_by("start_date", "enrollment_start", "id")
+                .for_serialization(),
             ),
             Prefetch(
                 "parents",
