@@ -80,7 +80,7 @@ def test_sync_edx_course_files(  # noqa: PLR0913
         )
         course.refresh_from_db()
         if published:
-            assert course.next_run in runs
+            assert course.best_run in runs
         keys.extend(
             [f"20220101/{s3_prefix}/{run.run_id}.tar.gz" for run in runs]
             if source != ETLSource.oll.name
@@ -102,7 +102,7 @@ def test_sync_edx_course_files(  # noqa: PLR0913
     assert mock_load_content_files.call_count == (4 if published else 0)
     if published:
         for course in courses:
-            mock_load_content_files.assert_any_call(course.next_run, fake_data)
+            mock_load_content_files.assert_any_call(course.best_run, fake_data)
     mock_log.assert_not_called()
 
 
@@ -113,7 +113,7 @@ def test_sync_edx_course_files_matching_checksum(
 
     run = LearningResourceFactory.create(
         is_course=True, create_runs=True, etl_source=ETLSource.mitxonline.name
-    ).next_run
+    ).best_run
     run.learning_resource.runs.exclude(id=run.id).first()
     run.checksum = "123"
     run.save()
@@ -156,7 +156,7 @@ def test_sync_edx_course_files_invalid_tarfile(
         published=True,
         create_runs=True,
     )
-    run = course.next_run
+    run = course.best_run
     key = f"20220101/courses/{run.run_id}.tar.gz"
     bucket = (
         mock_mitxonline_learning_bucket
@@ -231,7 +231,7 @@ def test_sync_edx_course_files_error(
         published=True,
         create_runs=True,
     )
-    run = course.next_run
+    run = course.best_run
     key = f"20220101/courses/{run.run_id}.tar.gz"
     bucket = (
         mock_mitxonline_learning_bucket

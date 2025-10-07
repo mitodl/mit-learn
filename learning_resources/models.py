@@ -31,7 +31,7 @@ from learning_resources.constants import (
     PrivacyLevel,
 )
 from main.models import TimestampedModel, TimestampedModelQuerySet
-from main.utils import checksum_for_content
+from main.utils import checksum_for_content, now_in_utc
 
 if TYPE_CHECKING:
     from django.contrib.auth import get_user_model
@@ -526,13 +526,38 @@ class LearningResource(TimestampedModel):
         return None
 
     @cached_property
-    def next_run(self) -> Optional["LearningResourceRun"]:
-        """Returns the next run for the learning resource"""
-        return (
-            self.runs.filter(Q(published=True) & Q(start_date__gt=timezone.now()))
-            .order_by("start_date")
+    def best_run(self) -> Optional["LearningResourceRun"]:
+        """Returns the most current/upcoming enrollable run for the learning resource"""
+        published_runs = self.runs.filter(published=True)
+        now = now_in_utc()
+        # Find the most recent run with a currently active enrollment period
+        current_run = (
+            published_runs.filter(
+                (
+                    Q(enrollment_start__lte=now)
+                    | (Q(enrollment_start__isnull=True) & Q(start_date__lte=now))
+                )
+                & (
+                    Q(enrollment_end__gt=now)
+                    | (Q(enrollment_end__isnull=True) & Q(end_date__gt=now))
+                )
+            )
+            .order_by("start_date", "end_date")
             .first()
         )
+        if not current_run:
+            # If no current enrollable run found, find the next upcoming run
+            current_run = (
+                self.runs.filter(Q(published=True) & Q(start_date__gte=timezone.now()))
+                .order_by("start_date")
+                .first()
+            )
+        if not current_run:
+            # If current_run is still null, return the run with the latest start date
+            current_run = (
+                self.runs.filter(Q(published=True)).order_by("-start_date").first()
+            )
+        return current_run
 
     @cached_property
     def views_count(self) -> int:
