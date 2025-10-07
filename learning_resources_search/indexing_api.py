@@ -42,7 +42,7 @@ from main.utils import chunks
 
 log = logging.getLogger(__name__)
 User = get_user_model()
-
+from opensearch_py_ml.ml_commons import MLCommonClient
 
 def clear_featured_rank(rank, clear_all_greater_than):
     """
@@ -628,3 +628,36 @@ def get_existing_reindexing_indexes(obj_types):
                         break
 
     return reindexing_indexes
+
+
+def update_index_settings():
+    settings_body = {
+        "persistent": {
+            "plugins": {
+                "ml_commons": {
+                    "only_run_on_ml_node": "false",
+                    "native_memory_threshold": "99"
+                }
+            }
+        }
+    }
+
+    conn = get_conn()
+    conn.cluster.put_settings(body=settings_body)
+
+def get_ml_client():
+    conn = get_conn()
+    ml_client = MLCommonClient(conn)
+    return ml_client
+
+
+def register_model():
+    ml_client = get_ml_client()
+    model_id = ml_client.register_pretrained_model(
+        model_name="huggingface/sentence-transformers/msmarco-distilbert-base-tas-b",
+        model_version="1.0.3",
+        model_format="TORCH_SCRIPT",
+        deploy_model=True,
+    )
+#In [11]: model_id
+#Out[11]: 'UWxSwJkBGexBUUYnj1tV'
