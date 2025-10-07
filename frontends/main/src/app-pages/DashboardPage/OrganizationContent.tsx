@@ -245,7 +245,7 @@ const OrgProgramCollectionDisplay: React.FC<{
             dashboardResource={course}
             courseNoun="Module"
             offerUpgrade={false}
-            titleHref={course.run?.coursewareUrl}
+            titleAction="courseware"
             buttonHref={course.run?.coursewareUrl}
           />
         ))}
@@ -326,7 +326,7 @@ const OrgProgramDisplay: React.FC<{
             dashboardResource={course}
             courseNoun="Module"
             offerUpgrade={false}
-            titleHref={course.run?.coursewareUrl}
+            titleAction="courseware"
             buttonHref={course.run?.coursewareUrl}
           />
         ))}

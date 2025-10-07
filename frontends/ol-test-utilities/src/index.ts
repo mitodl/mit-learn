@@ -6,6 +6,7 @@ export * from "./assertions"
 export * from "./domQueries/byImageSrc"
 export * from "./domQueries/byTerm"
 export * from "./domQueries/forms"
+export { default as cartesianProduct } from "./cartesianProduct"
 
 /**
  * This is moment-timezone.
