@@ -1,5 +1,6 @@
 """MIT Climate Article ETL"""
 
+import html
 import logging
 import urllib.parse
 from datetime import UTC
@@ -53,7 +54,7 @@ def transform_article(article_data: dict):
         else None
     )
     return {
-        "title": article_data.get("title"),
+        "title": html.unescape(article_data.get("title")),
         "readable_id": article_data.get("uuid"),
         "url": article_url,
         "description": summary,
