@@ -1095,7 +1095,7 @@ def load_article(article_data: dict) -> LearningResource:
         LearningResource: the created or updated article resource
     """
     readable_id = article_data.get("readable_id")
-    topics_data = article_data.get("topics")
+    topics_data = article_data.pop("topics")
 
     image_data = article_data.get("image")
 

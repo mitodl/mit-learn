@@ -76,6 +76,147 @@ ProgramLoaderConfig = namedtuple(  # noqa: PYI024
     ],
 )
 
+MIT_CLIMATE_TOPIC_MAP = {
+    "Climate Modeling": {
+        "topic": "Climate Science",
+        "subtopic": "Science & Math: Earth Science",
+    },
+    "Atmosphere": {
+        "topic": "Climate Science",
+        "subtopic": "Science & Math: Earth Science",
+    },
+    "Weather and Natural Disasters": {
+        "topic": "Adaptation and Resilience",
+        "subtopic": "Science & Math: Earth Science",
+    },
+    "Hurricanes": {
+        "topic": "Adaptation and Resilience",
+        "subtopic": "Science & Math: Earth Science",
+    },
+    "Drought": {
+        "topic": "Adaptation and Resilience",
+        "subtopic": "Science & Math: Earth Science",
+    },
+    "Heatwaves": {
+        "topic": "Adaptation and Resilience",
+        "subtopic": "Science & Math: Earth Science",
+    },
+    "Flooding": {
+        "topic": "Adaptation and Resilience",
+        "subtopic": "Science & Math: Earth Science",
+    },
+    "Wildfires": {
+        "topic": "Adaptation and Resilience",
+        "subtopic": "Science & Math: Earth Science",
+    },
+    "Sea Level Rise": {
+        "topic": "Adaptation and Resilience",
+        "subtopic": "Science & Math: Earth Science",
+    },
+    "Oceans": {"topic": "Ecosystems", "subtopic": "Science & Math: Earth Science"},
+    "Forests": {"topic": "Ecosystems", "subtopic": "Science & Math: Earth Science"},
+    "Biodiversity": {"topic": "Ecosystems", "subtopic": "Science & Math: Biology"},
+    "Arctic and Antarctic": {
+        "topic": "Ecosystems",
+        "subtopic": "Science & Math: Earth Science",
+    },
+    "Food, Water and Agriculture": {
+        "topic": "Adaptation and Resilience",
+        "subtopic": "Science & Math: Earth Science",
+    },
+    "Humanities and Social Science": {
+        "topic": "Adaptation and Resilience",
+        "subtopic": "Social Sciences",
+    },
+    "Climate Justice": {
+        "topic": "Adaptation and Resilience",
+        "subtopic": "Social Sciences",
+    },
+    "Health and Medicine": {
+        "topic": "Adaptation and Resilience",
+        "subtopic": "Health & Medicine: Public Health",
+    },
+    "Cities and Planning": {
+        "topic": "Built Environment",
+        "subtopic": "Social Sciences: Urban Studies",
+    },
+    "Buildings": {
+        "topic": "Built Environment",
+        "subtopic": "Art, Design & Architecture: Architecture",
+    },
+    "Industry and Manufacturing": {
+        "topic": "Sustainable Business",
+        "subtopic": "Engineering: Manufacturing",
+    },
+    "Energy": {"topic": "Energy", "subtopic": "Engineering"},
+    "Renewable Energy": {"topic": "Energy", "subtopic": "Engineering"},
+    "Fossil Fuels": {"topic": "Energy", "subtopic": "Engineering"},
+    "Nuclear and Fusion Energy": {
+        "topic": "Energy",
+        "subtopic": "Engineering: Nuclear Engineering",
+    },
+    "Batteries, Storage and Transmission": {
+        "topic": "Energy",
+        "subtopic": "Engineering",
+    },
+    "Energy Efficiency": {"topic": "Energy", "subtopic": "Engineering"},
+    "Electrification": {
+        "topic": "Energy",
+        "subtopic": "Engineering: Electrical Engineering",
+    },
+    "Transportation": {"topic": "Energy", "subtopic": "Engineering"},
+    "Air Travel": {"topic": "Energy", "subtopic": "Engineering: Aerospace Engineering"},
+    "Cars": {"topic": "Energy", "subtopic": "Engineering"},
+    "Public Transportation": {
+        "topic": "Energy",
+        "subtopic": "Engineering: Civil Engineering",
+    },
+    "Freight": {"topic": "Energy", "subtopic": "Business & Management: Supply Chain"},
+    "Waste": {
+        "topic": "Climate and Energy Policy",
+        "subtopic": "Engineering: Environmental Engineering",
+    },
+    "Government and Politics": {
+        "topic": "Climate and Energy Policy",
+        "subtopic": "Policy and Administration",
+    },
+    "Advocacy and Activism": {
+        "topic": "Climate and Energy Policy",
+        "subtopic": "Policy and Administration",
+    },
+    "International Agreements": {
+        "topic": "Climate and Energy Policy",
+        "subtopic": "Policy and Administration",
+    },
+    "National Security": {
+        "topic": "Climate and Energy Policy",
+        "subtopic": "Policy and Administration",
+    },
+    "Carbon Capture": {"topic": "Energy", "subtopic": "Engineering"},
+    "Geoengineering": {"topic": "Adaptation and Resilience", "subtopic": "Engineering"},
+    "Finance and Economics": {
+        "topic": "Climate and Energy Policy",
+        "subtopic": "Social Sciences: Economics",
+    },
+    "Carbon Pricing": {
+        "topic": "Climate and Energy Policy",
+        "subtopic": "Social Sciences: Economics",
+    },
+    "Education": {
+        "topic": "Adaptation and Resilience",
+        "subtopic": "Education & Teaching",
+    },
+    "Adaptation": {"topic": "Adaptation and Resilience", "subtopic": "Social Sciences"},
+    "Communication and Arts": {
+        "topic": "Adaptation and Resilience",
+        "subtopic": "Humanities",
+    },
+    "Carbon Removal": {
+        "topic": "Climate Science",
+        "subtopic": "Engineering: Environmental Engineering",
+    },
+}
+
 
 class ETLSource(ExtendedEnum):
     """Enum of ETL sources"""
@@ -87,7 +228,7 @@ class ETLSource(ExtendedEnum):
     oll = "oll"
     ocw = "ocw"
     podcast = "podcast"
-    climate_article = "climate_article"
+    mit_climate = "mit_climate"
     see = "see"
     xpro = "xpro"
     youtube = "youtube"
