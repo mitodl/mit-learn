@@ -1,6 +1,18 @@
 Release Notes
 =============
 
+Version 0.45.5
+--------------
+
+- Sort runs by start_date (#2567)
+- rename attach/[code] url to enrollmentcode/[code] (#2570)
+- One-click enrollment via org dashboard card titles (#2569)
+- truncate csv files in tutor problems api (#2568)
+- csv problem files (#2560)
+- add "just in time" dialog (#2530)
+- Program Page basic layout (#2556)
+- Fix qdrant payload schema type and add mechanism to keep types in sync (#2553)
+
 Version 0.45.4 (Released October 02, 2025)
 --------------
 
