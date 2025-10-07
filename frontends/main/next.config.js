@@ -44,7 +44,7 @@ const nextConfig = {
         // can be removed once fastly redirect is in place
         source: "/attach/:code",
         destination: "/enrollmentcode/:code",
-        statusCode: 301,
+        statusCode: 308,
       },
     ]
   },
