@@ -37,12 +37,12 @@
   "devDependencies": {
     "@next/eslint-plugin-next": "^14.2.7",
     "@swc/core": "^1.11.29",
-    "@swc/jest": "^0.2.38",
+    "@swc/jest": "^0.2.39",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
     "@types/css-mediaquery": "^0.1.1",
-    "@types/jest": "^29.5.2",
+    "@types/jest": "^30.0.0",
     "@types/jest-when": "^3.5.2",
     "@types/react-infinite-scroller": "^1.2.3",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
@@ -75,6 +75,6 @@
     "typescript": "^5.4.3"
   },
   "dependencies": {
-    "@jest/environment": "^29.7.0"
+    "@jest/environment": "^30.2.0"
   }
 }
