@@ -195,6 +195,7 @@ paths:
             - xpro
             - mitpe
             - see
+            - climate
             type: string
             description: |-
               * `mitx` - MITx
@@ -203,10 +204,11 @@ paths:
               * `xpro` - MIT xPRO
               * `mitpe` - MIT Professional Education
               * `see` - MIT Sloan Executive Education
+              * `climate` - MIT Climate
         description: "The organization that offers the learning resource         \
           \    \n\n* `mitx` - MITx\n* `ocw` - MIT OpenCourseWare\n* `bootcamps` -\
           \ Bootcamps\n* `xpro` - MIT xPRO\n* `mitpe` - MIT Professional Education\n\
-          * `see` - MIT Sloan Executive Education"
+          * `see` - MIT Sloan Executive Education\n* `climate` - MIT Climate"
       - in: query
         name: offset
         schema:
@@ -368,6 +370,7 @@ paths:
             type: string
             enum:
             - bootcamps
+            - climate
             - mitpe
             - mitx
             - ocw
@@ -382,6 +385,7 @@ paths:
           * `xpro` - MIT xPRO
           * `mitpe` - MIT Professional Education
           * `see` - MIT Sloan Executive Education
+          * `climate` - MIT Climate
         explode: true
         style: form
       - name: offset
@@ -747,6 +751,7 @@ paths:
             type: string
             enum:
             - bootcamps
+            - climate
             - mitpe
             - mitx
             - ocw
@@ -761,6 +766,7 @@ paths:
           * `xpro` - MIT xPRO
           * `mitpe` - MIT Professional Education
           * `see` - MIT Sloan Executive Education
+          * `climate` - MIT Climate
         explode: true
         style: form
       - name: offset
@@ -999,6 +1005,7 @@ paths:
             type: string
             enum:
             - bootcamps
+            - climate
             - mitpe
             - mitx
             - ocw
@@ -1013,6 +1020,7 @@ paths:
           * `xpro` - MIT xPRO
           * `mitpe` - MIT Professional Education
           * `see` - MIT Sloan Executive Education
+          * `climate` - MIT Climate
         explode: true
         style: form
       - name: offset
@@ -1377,6 +1385,7 @@ paths:
             type: string
             enum:
             - bootcamps
+            - climate
             - mitpe
             - mitx
             - ocw
@@ -1391,6 +1400,7 @@ paths:
           * `xpro` - MIT xPRO
           * `mitpe` - MIT Professional Education
           * `see` - MIT Sloan Executive Education
+          * `climate` - MIT Climate
         explode: true
         style: form
       - name: offset
@@ -1787,6 +1797,7 @@ paths:
             type: string
             enum:
             - bootcamps
+            - climate
             - mitpe
             - mitx
             - ocw
@@ -1801,6 +1812,7 @@ paths:
           * `xpro` - MIT xPRO
           * `mitpe` - MIT Professional Education
           * `see` - MIT Sloan Executive Education
+          * `climate` - MIT Climate
         explode: true
         style: form
       - name: offset
@@ -2197,6 +2209,7 @@ paths:
             type: string
             enum:
             - bootcamps
+            - climate
             - mitpe
             - mitx
             - ocw
@@ -2211,6 +2224,7 @@ paths:
           * `xpro` - MIT xPRO
           * `mitpe` - MIT Professional Education
           * `see` - MIT Sloan Executive Education
+          * `climate` - MIT Climate
         explode: true
         style: form
       - name: offset
@@ -2617,6 +2631,7 @@ paths:
             type: string
             enum:
             - bootcamps
+            - climate
             - mitpe
             - mitx
             - ocw
@@ -2631,6 +2646,7 @@ paths:
           * `xpro` - MIT xPRO
           * `mitpe` - MIT Professional Education
           * `see` - MIT Sloan Executive Education
+          * `climate` - MIT Climate
         explode: true
         style: form
       - in: query
@@ -3012,6 +3028,7 @@ paths:
             type: string
             enum:
             - bootcamps
+            - climate
             - mitpe
             - mitx
             - ocw
@@ -3026,6 +3043,7 @@ paths:
           * `xpro` - MIT xPRO
           * `mitpe` - MIT Professional Education
           * `see` - MIT Sloan Executive Education
+          * `climate` - MIT Climate
         explode: true
         style: form
       - in: query
@@ -3239,6 +3257,7 @@ paths:
             type: string
             enum:
             - bootcamps
+            - climate
             - mitpe
             - mitx
             - ocw
@@ -3253,6 +3272,7 @@ paths:
           * `xpro` - MIT xPRO
           * `mitpe` - MIT Professional Education
           * `see` - MIT Sloan Executive Education
+          * `climate` - MIT Climate
         explode: true
         style: form
       - name: offset
@@ -3717,6 +3737,7 @@ paths:
             type: string
             enum:
             - bootcamps
+            - climate
             - mitpe
             - mitx
             - ocw
@@ -3731,6 +3752,7 @@ paths:
           * `xpro` - MIT xPRO
           * `mitpe` - MIT Professional Education
           * `see` - MIT Sloan Executive Education
+          * `climate` - MIT Climate
         explode: true
         style: form
       - name: offset
@@ -4194,6 +4216,7 @@ paths:
             - xpro
             - mitpe
             - see
+            - climate
             type: string
             description: |-
               * `mitx` - MITx
@@ -4202,10 +4225,11 @@ paths:
               * `xpro` - MIT xPRO
               * `mitpe` - MIT Professional Education
               * `see` - MIT Sloan Executive Education
+              * `climate` - MIT Climate
         description: "The organization that offers the learning resource         \
           \    \n\n* `mitx` - MITx\n* `ocw` - MIT OpenCourseWare\n* `bootcamps` -\
           \ Bootcamps\n* `xpro` - MIT xPRO\n* `mitpe` - MIT Professional Education\n\
-          * `see` - MIT Sloan Executive Education"
+          * `see` - MIT Sloan Executive Education\n* `climate` - MIT Climate"
       - in: query
         name: offset
         schema:
@@ -4698,6 +4722,7 @@ paths:
             - xpro
             - mitpe
             - see
+            - climate
             type: string
             description: |-
               * `mitx` - MITx
@@ -4706,10 +4731,11 @@ paths:
               * `xpro` - MIT xPRO
               * `mitpe` - MIT Professional Education
               * `see` - MIT Sloan Executive Education
+              * `climate` - MIT Climate
         description: "The organization that offers the learning resource         \
           \    \n\n* `mitx` - MITx\n* `ocw` - MIT OpenCourseWare\n* `bootcamps` -\
           \ Bootcamps\n* `xpro` - MIT xPRO\n* `mitpe` - MIT Professional Education\n\
-          * `see` - MIT Sloan Executive Education"
+          * `see` - MIT Sloan Executive Education\n* `climate` - MIT Climate"
       - in: query
         name: offset
         schema:
@@ -5227,6 +5253,7 @@ paths:
             - xpro
             - mitpe
             - see
+            - climate
             type: string
             description: |-
               * `mitx` - MITx
@@ -5235,10 +5262,11 @@ paths:
               * `xpro` - MIT xPRO
               * `mitpe` - MIT Professional Education
               * `see` - MIT Sloan Executive Education
+              * `climate` - MIT Climate
         description: "The organization that offers the learning resource         \
           \    \n\n* `mitx` - MITx\n* `ocw` - MIT OpenCourseWare\n* `bootcamps` -\
           \ Bootcamps\n* `xpro` - MIT xPRO\n* `mitpe` - MIT Professional Education\n\
-          * `see` - MIT Sloan Executive Education"
+          * `see` - MIT Sloan Executive Education\n* `climate` - MIT Climate"
       - in: query
         name: offset
         schema:
@@ -5747,6 +5775,7 @@ paths:
             - xpro
             - mitpe
             - see
+            - climate
             type: string
             description: |-
               * `mitx` - MITx
@@ -5755,10 +5784,11 @@ paths:
               * `xpro` - MIT xPRO
               * `mitpe` - MIT Professional Education
               * `see` - MIT Sloan Executive Education
+              * `climate` - MIT Climate
         description: "The organization that offers the learning resource         \
           \    \n\n* `mitx` - MITx\n* `ocw` - MIT OpenCourseWare\n* `bootcamps` -\
           \ Bootcamps\n* `xpro` - MIT xPRO\n* `mitpe` - MIT Professional Education\n\
-          * `see` - MIT Sloan Executive Education"
+          * `see` - MIT Sloan Executive Education\n* `climate` - MIT Climate"
       - in: query
         name: offset
         schema:
@@ -6188,6 +6218,7 @@ paths:
             type: string
             enum:
             - bootcamps
+            - climate
             - mitpe
             - mitx
             - ocw
@@ -6202,6 +6233,7 @@ paths:
           * `xpro` - MIT xPRO
           * `mitpe` - MIT Professional Education
           * `see` - MIT Sloan Executive Education
+          * `climate` - MIT Climate
         explode: true
         style: form
       - name: offset
@@ -6938,6 +6970,7 @@ paths:
             type: string
             enum:
             - bootcamps
+            - climate
             - mitpe
             - mitx
             - ocw
@@ -6952,6 +6985,7 @@ paths:
           * `xpro` - MIT xPRO
           * `mitpe` - MIT Professional Education
           * `see` - MIT Sloan Executive Education
+          * `climate` - MIT Climate
         explode: true
         style: form
       - name: offset
@@ -7348,6 +7382,7 @@ paths:
             type: string
             enum:
             - bootcamps
+            - climate
             - mitpe
             - mitx
             - ocw
@@ -7362,6 +7397,7 @@ paths:
           * `xpro` - MIT xPRO
           * `mitpe` - MIT Professional Education
           * `see` - MIT Sloan Executive Education
+          * `climate` - MIT Climate
         explode: true
         style: form
       - name: offset
@@ -7845,6 +7881,7 @@ paths:
             type: string
             enum:
             - bootcamps
+            - climate
             - mitpe
             - mitx
             - ocw
@@ -7859,6 +7896,7 @@ paths:
           * `xpro` - MIT xPRO
           * `mitpe` - MIT Professional Education
           * `see` - MIT Sloan Executive Education
+          * `climate` - MIT Climate
         explode: true
         style: form
       - name: offset
@@ -8661,6 +8699,7 @@ paths:
             type: string
             enum:
             - bootcamps
+            - climate
             - mitpe
             - mitx
             - ocw
@@ -8675,6 +8714,7 @@ paths:
           * `xpro` - MIT xPRO
           * `mitpe` - MIT Professional Education
           * `see` - MIT Sloan Executive Education
+          * `climate` - MIT Climate
         explode: true
         style: form
       - name: offset
@@ -9137,6 +9177,7 @@ paths:
             type: string
             enum:
             - bootcamps
+            - climate
             - mitpe
             - mitx
             - ocw
@@ -9151,6 +9192,7 @@ paths:
           * `xpro` - MIT xPRO
           * `mitpe` - MIT Professional Education
           * `see` - MIT Sloan Executive Education
+          * `climate` - MIT Climate
         explode: true
         style: form
       - name: offset
@@ -9369,7 +9411,7 @@ paths:
           - oll
           - ocw
           - podcast
-          - climate_article
+          - mit_climate
           - see
           - xpro
           - youtube
@@ -9384,7 +9426,7 @@ paths:
           * `oll` - oll
           * `ocw` - ocw
           * `podcast` - podcast
-          * `climate_article` - climate_article
+          * `mit_climate` - mit_climate
           * `see` - see
           * `xpro` - xpro
           * `youtube` - youtube
@@ -12240,6 +12282,7 @@ components:
       - xpro
       - mitpe
       - see
+      - climate
       type: string
       description: |-
         * `mitx` - MITx
@@ -12248,6 +12291,7 @@ components:
         * `xpro` - MIT xPRO
         * `mitpe` - MIT Professional Education
         * `see` - MIT Sloan Executive Education
+        * `climate` - MIT Climate
       x-enum-descriptions:
       - MITx
       - MIT OpenCourseWare
@@ -12255,6 +12299,7 @@ components:
       - MIT xPRO
       - MIT Professional Education
       - MIT Sloan Executive Education
+      - MIT Climate
     PaginatedContentFileList:
       type: object
       required:
@@ -12973,7 +13018,7 @@ components:
           description: "The organization that offers the learning resource       \
             \      \n\n* `mitx` - MITx\n* `ocw` - MIT OpenCourseWare\n* `bootcamps`\
             \ - Bootcamps\n* `xpro` - MIT xPRO\n* `mitpe` - MIT Professional Education\n\
-            * `see` - MIT Sloan Executive Education"
+            * `see` - MIT Sloan Executive Education\n* `climate` - MIT Climate"
         platform:
           type: array
           items:
@@ -14853,7 +14898,7 @@ components:
       - oll
       - ocw
       - podcast
-      - climate_article
+      - mit_climate
       - see
       - xpro
       - youtube
@@ -14867,7 +14912,7 @@ components:
         * `oll` - oll
         * `ocw` - ocw
         * `podcast` - podcast
-        * `climate_article` - climate_article
+        * `mit_climate` - mit_climate
         * `see` - see
         * `xpro` - xpro
         * `youtube` - youtube
@@ -14880,7 +14925,7 @@ components:
       - oll
       - ocw
       - podcast
-      - climate_article
+      - mit_climate
       - see
       - xpro
       - youtube
