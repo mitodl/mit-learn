@@ -84,8 +84,10 @@ SEE_API_CLIENT_SECRET = get_string("SEE_API_CLIENT_SECRET", None)
 
 
 # MIT Climate API endpoints
-MIT_CLIMATE_EXPLAINERS_API_URL = "https://climate.mit.edu/feeds/explainers"
-ASK_MIT_CLIMATE_API_URL = "https://climate.mit.edu/feeds/ask-mit-climate"
+
+MIT_CLIMATE_BASE_URL = "https://climate.mit.edu"
+MIT_CLIMATE_EXPLAINERS_API_URL = f"{MIT_CLIMATE_BASE_URL}/feeds/explainers"
+ASK_MIT_CLIMATE_API_URL = f"{MIT_CLIMATE_BASE_URL}/feeds/ask-mit-climate"
 
 CSAIL_BASE_URL = get_string("CSAIL_BASE_URL", None)
 SEE_BASE_URL = get_string("SEE_BASE_URL", None)

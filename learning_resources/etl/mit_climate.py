@@ -34,8 +34,8 @@ def retrieve_feed(feed_url):
     return requests.get(feed_url, timeout=settings.REQUESTS_TIMEOUT).json()
 
 
-def transform_article(source_url, article_data: dict):
-    article_url = f"{source_url}{article_data.get('url')}"
+def transform_article(article_data: dict):
+    article_url = f"{settings.MIT_CLIMATE_BASE_URL}{article_data.get('url')}"
     summary = article_data.get("summary")
     full_description = "\n".join(
         [
@@ -73,5 +73,5 @@ def extract_articles():
     articles = []
     for source_url in feed_urls:
         results = retrieve_feed(source_url)
-        articles.extend([transform_article(source_url, article) for article in results])
+        articles.extend([transform_article(article) for article in results])
     return articles
