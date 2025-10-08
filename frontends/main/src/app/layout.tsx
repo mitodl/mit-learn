@@ -35,6 +35,10 @@ export default function RootLayout({
           rel="stylesheet"
           href="https://use.typekit.net/lbk1xay.css"
         ></link>
+        <meta
+          name="application-version"
+          content={process.env.NEXT_PUBLIC_VERSION || "unknown"}
+        />
       </head>
       <body>
         <Providers>
