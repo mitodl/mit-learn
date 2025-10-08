@@ -75,3 +75,25 @@ def test_content_file_delete_webhook_view_canvas_resource_not_found(
     assert response.status_code == 200
     assert mock_log.warning.called
     assert "does not exist" in mock_log.warning.call_args[0][0]
+
+
+@pytest.mark.django_db
+def test_content_file_webhook_view_canvas_success(settings, client, mocker):
+    """
+    Test ContentFileWebhookView processes Canvas create webhook successfully
+    """
+    url = reverse("webhooks:v1:content_file_webhook")
+    mock_ingest = mocker.patch("webhooks.views.ingest_canvas_course.apply_async")
+
+    data = {
+        "source": ETLSource.canvas.name,
+        "content_path": "/path/to/canvas/course.tar.gz",
+    }
+    response = client.post(
+        url,
+        data=json.dumps(data),
+        content_type="application/json",
+        headers={"X-MITLearn-Signature": get_secret(data, settings)},
+    )
+    assert response.status_code == 200
+    mock_ingest.assert_called_once_with(["/path/to/canvas/course.tar.gz", False])
