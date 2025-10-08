@@ -70,20 +70,22 @@ const TitleSection: React.FC<{
 
   return (
     <TitleContainer ref={ref}>
-      <Typography
-        variant="h4"
-        id={titleId}
-        width="100%"
-        color={theme.custom.colors.darkGray2}
-      >
+      <div id={titleId}>
         <Typography
           variant="subtitle2"
           color={theme.custom.colors.silverGrayDark}
         >
           {type}
         </Typography>
-        <span lang={resource?.runs?.[0]?.languages?.[0]}>{title}</span>
-      </Typography>
+        <Typography
+          variant="h4"
+          component="h2"
+          color={theme.custom.colors.darkGray2}
+          lang={resource?.runs?.[0]?.languages?.[0]}
+        >
+          {title}
+        </Typography>
+      </div>
       <CloseButton
         variant="text"
         size="medium"
