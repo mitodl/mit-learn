@@ -57,6 +57,7 @@ from learning_resources.models import (
     LearningResourceRun,
     LearningResourceTopic,
     LearningResourceTopicMapping,
+    TutorProblemFile,
 )
 
 log = logging.getLogger(__name__)
@@ -535,6 +536,7 @@ def process_olx_path(
     *,
     overwrite,
     valid_file_types=VALID_TEXT_FILE_TYPES,
+    is_tutor_problem_file_import=False,
 ) -> Generator[dict, None, None]:
     video_srt_metadata = get_video_metadata(olx_path, run)
     for document, metadata in documents_from_olx(
@@ -546,10 +548,17 @@ def process_olx_path(
         content_type = metadata["content_type"]
         mime_type = metadata.get("mime_type")
         file_extension = metadata.get("file_extension")
-        existing_content = ContentFile.objects.filter(key=key, run=run).first()
+
+        if is_tutor_problem_file_import:
+            existing_record = TutorProblemFile.objects.filter(
+                source_path=source_path, run=run
+            ).first()
+        else:
+            existing_record = ContentFile.objects.filter(key=key, run=run).first()
+
         if (
-            not existing_content
-            or existing_content.archive_checksum != metadata.get("archive_checksum")
+            not existing_record
+            or existing_record.archive_checksum != metadata.get("archive_checksum")
         ) or overwrite:
             if settings.SKIP_TIKA and settings.ENVIRONMENT != "production":
                 content_dict = {
@@ -584,8 +593,10 @@ def process_olx_path(
                 }
         else:
             content_dict = {
-                "content": existing_content.content,
-                "content_title": existing_content.content_title,
+                "content": existing_record.content,
+                "content_title": ""
+                if is_tutor_problem_file_import
+                else existing_record.content_title,
             }
         yield (
             {

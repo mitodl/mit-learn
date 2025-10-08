@@ -213,6 +213,7 @@ def transform_canvas_problem_files(
             run,
             overwrite=overwrite,
             valid_file_types=VALID_TUTOR_PROBLEM_FILE_TYPES,
+            is_tutor_problem_file_import=True,
         ):
             keys_to_keep = [
                 "run",
