@@ -21,7 +21,8 @@ class EnvValidator:
         Initialize the environment validator.
 
         Args:
-            project_root: Root directory of the project. Defaults to parent of current file.
+            project_root: Root directory of the project.
+            If None, defaults to parent of this file's directory.
         """
         if project_root is None:
             project_root = Path(__file__).parent.parent
@@ -33,49 +34,47 @@ class EnvValidator:
 
     def _parse_env_file(self, file_path: Path) -> dict[str, dict]:
         """
-        Parse an environment file and return a dictionary of key-value pairs and any noqa-style directives.
+        Parse an environment file and return a dictionary of key-value pairs
+        and any noqa-style directives.
 
         Args:
             file_path: Path to the environment file
 
         Returns:
-            Dictionary mapping variable names to dicts with 'value' and optional 'directive'.
+            Dictionary mapping variable names to dicts with 'value'
+            and optional 'directive'.
         """
         env_vars = {}
 
         if not file_path.exists():
             return env_vars
 
-        try:
-            with open(file_path, encoding="utf-8") as f:
-                for line_num, line in enumerate(f, 1):
-                    line = line.strip()
+        with Path.open(file_path, encoding="utf-8") as f:
+            for original_line in f:
+                line = original_line.strip()
 
-                    # Skip empty lines and comments
-                    if not line or line.startswith("#"):
-                        continue
+                # Skip empty lines and comments
+                if not line or line.startswith("#"):
+                    continue
 
-                    # Check for noqa-style directive at end of line
-                    directive = None
-                    if line.endswith("# local-required"):
-                        directive = "local-required"
-                        line = line[: -len("# local-required")].rstrip()
-                    elif line.endswith("# suppress-warning"):
-                        directive = "suppress-warning"
-                        line = line[: -len("# suppress-warning")].rstrip()
+                # Check for noqa-style directive at end of line
+                directive = None
+                if line.endswith("# local-required"):
+                    directive = "local-required"
+                    line = line[: -len("# local-required")].rstrip()
+                elif line.endswith("# suppress-warning"):
+                    directive = "suppress-warning"
+                    line = line[: -len("# suppress-warning")].rstrip()
 
-                    # Parse regular env variables
-                    if "=" in line:
-                        key, value = line.split("=", 1)
-                        key = key.strip()
-                        value = value.strip()
+                # Parse regular env variables
+                if "=" in line:
+                    key, value = line.split("=", 1)
+                    key = key.strip()
+                    value = value.strip()
 
-                        env_vars[key] = {"value": value}
-                        if directive:
-                            env_vars[key]["directive"] = directive
-
-        except Exception as e:
-            logger.warning(f"Error parsing env file {file_path}: {e}")
+                    env_vars[key] = {"value": value}
+                    if directive:
+                        env_vars[key]["directive"] = directive
 
         return env_vars
 
@@ -110,7 +109,6 @@ class EnvValidator:
             local_path = self.env_dir / local_name
             example_path = self.env_dir / example_name
 
-            # Include if any of the files exist (we'll check existence in validation methods)
             if base_path.exists() or local_path.exists() or example_path.exists():
                 pairs.append((env_type, base_path, local_path, example_path))
 
@@ -145,9 +143,12 @@ class EnvValidator:
                         if strip_comment(local_value) == strip_comment(example_value):
                             continue
                         warnings.append(
-                            f"⚠️  {env_type.upper()}: Variable '{var_name}' is set in {local_path.name} "
-                            f"but not defined in {base_path.name}. This overrides a non-standard setting "
-                            f"from {example_path.name}. Local value: '{local_value}', "
+                            f"⚠️  {env_type.upper()}: Variable "
+                            f"'{var_name}' is set in {local_path.name} "
+                            f"but not defined in {base_path.name}. "
+                            f"This overrides a non-standard setting "
+                            f"from {example_path.name}. "
+                            f"Local value: '{local_value}', "
                             f"Example value: '{example_value}'"
                         )
         return warnings
@@ -161,7 +162,7 @@ class EnvValidator:
         """
         warnings = []
 
-        for env_type, base_path, local_path, example_path in self._get_env_file_pairs():
+        for env_type, base_path, local_path, _ in self._get_env_file_pairs():
             if not local_path.exists():
                 continue
 
@@ -175,9 +176,12 @@ class EnvValidator:
                     if suppress:
                         continue
                     warnings.append(
-                        f"⚠️  {env_type.upper()}: Variable '{var_name}' is set in {local_path.name} "
-                        f"(value: '{local_value}') but not defined in {base_path.name}. "
-                        f"Consider adding a default value to {base_path.name} if this should be a standard setting."
+                        f"⚠️  {env_type.upper()}: Variable "
+                        f"'{var_name}' is set in {local_path.name} "
+                        f"(value: '{local_value}') but "
+                        f"not defined in {base_path.name}. "
+                        f"Consider adding a default value to "
+                        f"{base_path.name} if this should be a standard setting."
                     )
                 else:
                     base_value = base_vars[var_name]["value"]
@@ -188,8 +192,10 @@ class EnvValidator:
                     if base_vars[var_name].get("directive") == "local-required":
                         continue
                     warnings.append(
-                        f"⚠️  {env_type.upper()}: Variable '{var_name}' is overridden locally. "
-                        f"Base value: '{base_value}', Local value: '{local_value}'. "
+                        f"⚠️  {env_type.upper()}: Variable "
+                        f"'{var_name}' is overridden locally. "
+                        f"Base value: '{base_value}', "
+                        f"Local value: '{local_value}'. "
                         f"Ensure the default in {base_path.name} is appropriate."
                     )
         return warnings
@@ -215,7 +221,8 @@ class EnvValidator:
         """
         if not warnings:
             logger.info(
-                "✅ Environment validation passed - no configuration discrepancies found."
+                "✅ Environment validation passed - "
+                "no configuration discrepancies found."
             )
             return
 
@@ -225,14 +232,15 @@ class EnvValidator:
             logger.warning(warning)
         logger.warning("=" * 60)
         logger.warning(
-            f"Found {len(warnings)} environment configuration issue(s). "
-            "Review your environment files to ensure proper configuration."
+            "Found %s environment configuration issue(s). "
+            "Review your environment files to ensure proper configuration.",
+            len(warnings),
         )
 
 
 def validate_environment_on_startup():
     """
-    Main function to validate environment configuration on startup.
+    Validate environment configuration on startup.
     This can be called from Django settings or management commands.
     """
     validator = EnvValidator()
