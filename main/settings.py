@@ -57,9 +57,7 @@ init_sentry(
 
 # Validate environment configuration on startup
 # Skip validation during testing or when explicitly disabled
-if not get_bool("SKIP_ENV_VALIDATION", default=False) and "test" not in os.environ.get(
-    "DJANGO_SETTINGS_MODULE", ""
-):
+if not get_bool("SKIP_ENV_VALIDATION", default=False):
     try:
         from main.env_validator import validate_environment_on_startup
 
