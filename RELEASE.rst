@@ -1,6 +1,24 @@
 Release Notes
 =============
 
+Version 0.45.6
+--------------
+
+- chore(deps): update codecov/codecov-action action to v5.5.1 (#2580)
+- chore(deps): update nginx docker tag to v1.29.2 (#2579)
+- chore(deps): update actions/setup-python action to v6 (#2577)
+- chore(deps): update actions/setup-node action to v5 (#2576)
+- chore(deps): update redis docker tag to v8.2.2 (#2566)
+- Expose version of frontend (#2575)
+- Sort runs by start_date (#2567)
+- rename attach/[code] url to enrollmentcode/[code] (#2570)
+- One-click enrollment via org dashboard card titles (#2569)
+- truncate csv files in tutor problems api (#2568)
+- csv problem files (#2560)
+- add "just in time" dialog (#2530)
+- Program Page basic layout (#2556)
+- Fix qdrant payload schema type and add mechanism to keep types in sync (#2553)
+
 Version 0.45.4 (Released October 02, 2025)
 --------------
 
