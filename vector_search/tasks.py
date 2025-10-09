@@ -225,8 +225,8 @@ def embed_learning_resources_by_id(self, ids, skip_content_files, overwrite):
             if not skip_content_files and resource_type == COURSE_TYPE:
                 for course in embed_resources.order_by("id"):
                     run = (
-                        course.next_run
-                        if course.next_run
+                        course.best_run
+                        if course.best_run
                         else course.runs.filter(published=True)
                         .order_by("-start_date")
                         .first()
