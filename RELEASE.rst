@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.45.7
+Version 0.45.7 (Released October 09, 2025)
 --------------
 
 - Do not overwrite existing canvas content (#2581)
