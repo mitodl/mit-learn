@@ -13,6 +13,7 @@ import { RiArrowRightLine } from "@remixicon/react"
 import RootTopicIcon from "@/components/RootTopicIcon/RootTopicIcon"
 import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
+import { HomepageHeadingIds } from "./util"
 
 const Section = styled.section`
   background: #fff url("/images/backgrounds/open-bg-texture-with-gradient.svg")
@@ -112,7 +113,11 @@ const BrowseTopicsSection: React.FC = () => {
   return (
     <Section>
       <Container>
-        <Title component="h2" variant="h2">
+        <Title
+          component="h2"
+          variant="h2"
+          id={HomepageHeadingIds.BrowseByTopic}
+        >
           Browse by Topic
         </Title>
         <Topics>

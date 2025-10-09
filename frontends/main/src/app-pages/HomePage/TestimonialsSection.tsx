@@ -16,6 +16,7 @@ import { RiArrowRightLine, RiArrowLeftLine } from "@remixicon/react"
 import Slider from "react-slick"
 import AttestantBlock from "@/page-components/TestimonialDisplay/AttestantBlock"
 import Image from "next/image"
+import { HomepageHeadingIds } from "./util"
 
 const StyledActionButton = styled(ActionButton)(({ theme }) => ({
   backgroundColor: theme.custom.colors.white,
@@ -328,7 +329,11 @@ const TestimonialsSection: React.FC = () => {
   return (
     <Section>
       <HeaderContainer>
-        <Typography component="h2" typography={{ xs: "h3", sm: "h2" }}>
+        <Typography
+          component="h2"
+          typography={{ xs: "h3", sm: "h2" }}
+          id={HomepageHeadingIds.FromOurCommunity}
+        >
           From Our Community
         </Typography>
         <Typography variant="body1">

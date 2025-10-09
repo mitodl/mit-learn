@@ -2,7 +2,7 @@
 
 import React from "react"
 import { Container, styled, theme } from "ol-components"
-import HeroSearch from "@/page-components/HeroSearch/HeroSearch"
+import HeroSearch from "./HeroSearch"
 import BrowseTopicsSection from "./BrowseTopicsSection"
 import NewsEventsSection from "./NewsEventsSection"
 import TestimonialsSection from "./TestimonialsSection"
@@ -10,6 +10,7 @@ import ResourceCarousel from "@/page-components/ResourceCarousel/ResourceCarouse
 import PersonalizeSection from "./PersonalizeSection"
 import * as carousels from "./carousels"
 import dynamic from "next/dynamic"
+import { HomepageHeadingIds } from "./util"
 
 const FullWidthBackground = styled.div({
   background: "linear-gradient(0deg, #FFF 0%, #E9ECEF 100%);",
@@ -52,6 +53,7 @@ const HomePage: React.FC<{ heroImageIndex: number }> = ({ heroImageIndex }) => {
           <section>
             <FeaturedCoursesCarousel
               titleComponent="h2"
+              titleId={HomepageHeadingIds.FeaturedCourses}
               title="Featured Courses"
               config={carousels.FEATURED_RESOURCES_CAROUSEL}
             />

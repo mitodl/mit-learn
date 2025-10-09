@@ -6,6 +6,7 @@ import { useUserMe } from "api/hooks/user"
 import * as urls from "@/common/urls"
 import personalizeImage from "@/public/images/homepage/personalize-image.png"
 import personalizeBgImage from "@/public/images/homepage/personalize-bg.png"
+import { HomepageHeadingIds } from "./util"
 
 const FullWidthBackground = styled.div(({ theme }) => ({
   padding: "80px 0",
@@ -95,7 +96,11 @@ const PersonalizeContent: React.FC = () => {
   return (
     <ControlsContainer>
       <TextContainer>
-        <Typography component="h2" typography={{ xs: "h3", md: "h2" }}>
+        <Typography
+          component="h2"
+          typography={{ xs: "h3", md: "h2" }}
+          id={HomepageHeadingIds.Personalize}
+        >
           {title}
         </Typography>
         <Typography typography={{ xs: "body2", md: "body1" }}>

@@ -178,6 +178,7 @@ type ResourceCarouselProps = {
    */
   titleComponent?: React.ElementType
   titleVariant?: TypographyProps["variant"]
+  titleId?: string
   excludeResourceId?: number
 }
 
@@ -227,6 +228,7 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
   isLoading,
   titleComponent = "h4",
   titleVariant = "h4",
+  titleId,
   excludeResourceId,
 }) => {
   const [tab, setTab] = React.useState("0")
@@ -262,7 +264,11 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
     <MobileOverflow className={className} data-testid="resource-carousel">
       <TabContext value={tab}>
         <HeaderRow>
-          <HeaderText component={titleComponent} variant={titleVariant}>
+          <HeaderText
+            component={titleComponent}
+            variant={titleVariant}
+            id={titleId}
+          >
             {title}
           </HeaderText>
           {config.length === 1 ? buttonsContainerElement : null}

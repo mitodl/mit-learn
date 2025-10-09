@@ -4,6 +4,7 @@ import { Container, Typography, Card, styled } from "ol-components"
 import { CarouselV2 } from "ol-components/CarouselV2"
 import { useVideoShortsList, type VideoShort } from "api/hooks/videoShorts"
 import VideoShortsModal from "./VideoShortsModal"
+import { HomepageHeadingIds } from "./util"
 
 const Section = styled.section(({ theme }) => ({
   padding: "80px 0",
@@ -68,7 +69,11 @@ const VideoShortsSection = () => {
           />
         ) : null}
         <Header>
-          <Typography component="h2" typography={{ xs: "h3", sm: "h2" }}>
+          <Typography
+            component="h2"
+            id={HomepageHeadingIds.VideoShorts}
+            typography={{ xs: "h3", sm: "h2" }}
+          >
             Video Shorts
           </Typography>
           <Typography variant="body1">

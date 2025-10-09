@@ -16,6 +16,7 @@ import type { NewsFeedItem, EventFeedItem } from "api/v0"
 import { LocalDate } from "ol-utilities"
 import { RiArrowRightSLine } from "@remixicon/react"
 import Link from "next/link"
+import { HomepageHeadingIds } from "./util"
 
 const Section = styled.section`
   background: ${theme.custom.colors.white};
@@ -248,7 +249,11 @@ const NewsEventsSection: React.FC = () => {
 
   return (
     <Section>
-      <Title component="h2" variant="h2">
+      <Title
+        component="h2"
+        variant="h2"
+        id={HomepageHeadingIds.StoriesAndEvents}
+      >
         MIT Stories & Events
       </Title>
       <StrapLine>

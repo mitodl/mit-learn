@@ -32,6 +32,7 @@ import {
 import Image from "next/image"
 import { SearchField } from "@/page-components/SearchField/SearchField"
 import { PostHogEvents } from "@/common/constants"
+import { HomepageHeadingIds } from "./util"
 
 type SearchChip = {
   label: string
@@ -230,6 +231,7 @@ const HeroSearch: React.FC<{ imageIndex: number }> = ({ imageIndex }) => {
       <TitleAndControls>
         <Typography
           component="h1"
+          id={HomepageHeadingIds.LearnWithMIT}
           typography={{ xs: "h3", md: "h1" }}
           sx={{ paddingBottom: 1 }}
         >

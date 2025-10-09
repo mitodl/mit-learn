@@ -18,6 +18,7 @@ import invariant from "tiny-invariant"
 import * as routes from "@/common/urls"
 import { assertHeadings } from "ol-test-utilities"
 import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
+import { HomepageHeadingIds } from "./util"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
@@ -343,13 +344,33 @@ test("Headings", async () => {
   renderWithProviders(<HomePage heroImageIndex={1} />)
   await waitFor(() => {
     assertHeadings([
-      { level: 1, name: "Learn with MIT" },
-      { level: 2, name: "Featured Courses" },
-      { level: 2, name: "Continue Your Journey" },
-      { level: 2, name: "Media" },
-      { level: 2, name: "Browse by Topic" },
-      { level: 2, name: "From Our Community" },
-      { level: 2, name: "MIT Stories & Events" },
+      { level: 1, name: "Learn with MIT", id: HomepageHeadingIds.LearnWithMIT },
+      {
+        level: 2,
+        name: "Featured Courses",
+        id: HomepageHeadingIds.FeaturedCourses,
+      },
+      {
+        level: 2,
+        name: "Continue Your Journey",
+        id: HomepageHeadingIds.Personalize,
+      },
+      { level: 2, name: "Media", id: HomepageHeadingIds.Media },
+      {
+        level: 2,
+        name: "Browse by Topic",
+        id: HomepageHeadingIds.BrowseByTopic,
+      },
+      {
+        level: 2,
+        name: "From Our Community",
+        id: HomepageHeadingIds.FromOurCommunity,
+      },
+      {
+        level: 2,
+        name: "MIT Stories & Events",
+        id: HomepageHeadingIds.StoriesAndEvents,
+      },
       { level: 3, name: "Stories" },
       { level: 3, name: "Events" },
       { level: 3, name: "Stories" },

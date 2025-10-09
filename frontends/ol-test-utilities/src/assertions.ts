@@ -12,13 +12,18 @@ type HeadingSpec = {
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   name: any
+  id?: string
 }
 export const assertHeadings = (expected: HeadingSpec[]) => {
   const headings = screen.getAllByRole("heading")
-  const actual = headings.map((heading) => {
+  const actual = headings.map((heading, index) => {
     const level = parseInt(heading.tagName[1], 10)
     const name = computeAccessibleName(heading)
-    return { level, name }
+    const actual: HeadingSpec = { level, name }
+    if (expected[index].id) {
+      actual["id"] = heading.id
+    }
+    return actual
   })
   expect(actual).toEqual(expected)
 }

@@ -5,6 +5,7 @@ import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import ResourceCarousel from "@/page-components/ResourceCarousel/ResourceCarousel"
 import * as carousels from "./carousels"
+import { HomepageHeadingIds } from "./util"
 
 const MediaCarousel = styled(ResourceCarousel)(({ theme }) => ({
   margin: "80px 0",
@@ -28,6 +29,7 @@ const MediaSection = () => {
     <Container component="section">
       <MediaCarousel
         titleComponent="h2"
+        titleId={HomepageHeadingIds.Media}
         title="Media"
         config={carousels.MEDIA_CAROUSEL}
       />
