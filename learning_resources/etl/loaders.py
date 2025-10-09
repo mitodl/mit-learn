@@ -139,8 +139,8 @@ def load_run_dependent_values(
         tuple[datetime.time | None, list[Decimal], str]: date, prices, and availability
     """
     now = now_in_utc()
-    if resource.published:
-        best_run = resource.best_run
+    best_run = resource.best_run
+    if resource.published and best_run:
         resource.next_start_date = max(
             best_run.start_date or best_run.enrollment_start or now, now
         )
@@ -162,7 +162,9 @@ def load_run_dependent_values(
         resource.time_commitment = best_run.time_commitment
         resource.min_weekly_hours = best_run.min_weekly_hours
         resource.max_weekly_hours = best_run.max_weekly_hours
-        resource.save()
+    else:
+        resource.next_start_date = None
+    resource.save()
     return ResourceNextRunConfig(
         next_start_date=resource.next_start_date,
         prices=resource.prices,

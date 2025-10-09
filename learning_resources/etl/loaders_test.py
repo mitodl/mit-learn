@@ -1784,6 +1784,34 @@ def test_load_run_dependent_values(certification):
         assert getattr(result, key) == getattr(course, key) == getattr(run, key)
 
 
+def test_load_run_dependent_values_resets_next_start_date():
+    """Test that next_start_date is reset to None when best_run becomes None"""
+    # Create a published course with an existing next_start_date
+    previous_date = now_in_utc() + timedelta(days=5)
+    course = LearningResourceFactory.create(
+        is_course=True,
+        published=True,
+        next_start_date=previous_date,  # Course previously had a start date
+    )
+
+    # Ensure course has no runs, so best_run will return None
+    course.runs.all().update(published=False)
+    assert course.best_run is None
+
+    # Verify the course initially has a next_start_date
+    assert course.next_start_date == previous_date
+
+    # Call load_run_dependent_values
+    result = load_run_dependent_values(course)
+
+    # Refresh course from database
+    course.refresh_from_db()
+
+    # Verify that next_start_date was reset to None
+    assert result.next_start_date is None
+    assert course.next_start_date is None
+
+
 @pytest.mark.parametrize(
     ("is_scholar_course", "tag_counts", "expected_score"),
     [

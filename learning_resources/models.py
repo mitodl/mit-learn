@@ -531,7 +531,7 @@ class LearningResource(TimestampedModel):
         published_runs = self.runs.filter(published=True)
         now = now_in_utc()
         # Find the most recent run with a currently active enrollment period
-        current_run = (
+        best_lr_run = (
             published_runs.filter(
                 (
                     Q(enrollment_start__lte=now)
@@ -545,19 +545,19 @@ class LearningResource(TimestampedModel):
             .order_by("start_date", "end_date")
             .first()
         )
-        if not current_run:
+        if not best_lr_run:
             # If no current enrollable run found, find the next upcoming run
-            current_run = (
+            best_lr_run = (
                 self.runs.filter(Q(published=True) & Q(start_date__gte=timezone.now()))
                 .order_by("start_date")
                 .first()
             )
-        if not current_run:
+        if not best_lr_run:
             # If current_run is still null, return the run with the latest start date
-            current_run = (
+            best_lr_run = (
                 self.runs.filter(Q(published=True)).order_by("-start_date").first()
             )
-        return current_run
+        return best_lr_run
 
     @cached_property
     def views_count(self) -> int:
