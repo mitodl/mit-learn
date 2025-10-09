@@ -182,7 +182,7 @@ describe("Course Format Row", () => {
       renderWithProviders(<CourseSummary course={course} />)
 
       const summary = screen.getByRole("region", { name: "Course summary" })
-      const formatRow = within(summary).getByTestId(TestIds.FormatRow)
+      const formatRow = within(summary).getByTestId(TestIds.PaceRow)
       expect(formatRow).toHaveTextContent("Course Format: Self-Paced")
 
       const button = within(formatRow).getByRole("button", {
@@ -209,7 +209,7 @@ describe("Course Format Row", () => {
     renderWithProviders(<CourseSummary course={course} />)
 
     const summary = screen.getByRole("region", { name: "Course summary" })
-    const formatRow = within(summary).getByTestId(TestIds.FormatRow)
+    const formatRow = within(summary).getByTestId(TestIds.PaceRow)
     expect(formatRow).toHaveTextContent("Course Format: Instructor-Paced")
 
     const button = within(formatRow).getByRole("button", {

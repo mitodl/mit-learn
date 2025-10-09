@@ -6,12 +6,17 @@ import {
   RiComputerLine,
   RiPriceTag3Line,
   RiTimeLine,
+  RiFileCopy2Line,
+  RiAwardLine,
 } from "@remixicon/react"
-import { formatDate, NoSSR } from "ol-utilities"
+import { formatDate, NoSSR, pluralize } from "ol-utilities"
 import {
   CourseWithCourseRunsSerializerV2,
   CourseRunV2,
+  V2Program,
 } from "@mitodl/mitxonline-api-axios/v2"
+import { getElectiveSubtree, getRequiredSubtree } from "./util"
+import { LearningResource } from "api"
 
 const UnderlinedLink = styled(Link)({
   textDecoration: "underline",
@@ -100,31 +105,7 @@ const getEndDate = (run: CourseRunV2) => {
     </NoSSR>
   )
 }
-const getFormat = (run: CourseRunV2) => {
-  if (run.is_archived || run.is_self_paced) {
-    return {
-      label: "Self-Paced",
-      description:
-        "Flexible learning. Enroll at any time and progress at your own speed. All course materials available immediately. Adaptable due dates and extended timelines. Earn your certificate as soon as you pass the course.",
-      href: "https://mitxonline.zendesk.com/hc/en-us/articles/21994872904475-What-are-Self-Paced-courses-on-MITx-Online",
-    }
-  }
-  return {
-    label: "Instructor-Paced",
-    description:
-      "Guided learning. Follow a set schedule with specific due dates for assignments and exams. Course materials released on a schedule. Earn your certificate shortly after the course ends.",
-    href: "https://mitxonline.zendesk.com/hc/en-us/articles/21994938130075-What-are-Instructor-Paced-courses-on-MITx-Online",
-  }
-}
-const getDuration = (course: CourseWithCourseRunsSerializerV2) => {
-  const duration = course.page.length
-  const effort = course.page.effort
-  if (!duration) return null
-  if (duration && effort) {
-    return `${duration}, ${effort}`
-  }
-  return duration
-}
+
 const getCertificatePrice = (run: CourseRunV2) => {
   const product = run.products[0]
   if (!product || run.is_archived) return null
@@ -152,11 +133,15 @@ const getUpgradeDeadline = (run: CourseRunV2) => {
   ) : null
 }
 
-type InfoRowProps = {
+type CourseInfoRowProps = {
   course: CourseWithCourseRunsSerializerV2
   nextRun: CourseRunV2
 } & HTMLAttributes<HTMLDivElement>
-const DatesRow: React.FC<InfoRowProps> = ({ course, nextRun, ...others }) => {
+const DatesRow: React.FC<CourseInfoRowProps> = ({
+  course,
+  nextRun,
+  ...others
+}) => {
   const starts = getStartDate(course, nextRun)
   const ends = getEndDate(nextRun)
   if (!starts) return null
@@ -219,39 +204,59 @@ const LearnMoreDialog: React.FC<LearnMoreDialogProps> = ({
   )
 }
 
-const FormatRow: React.FC<InfoRowProps> = ({ nextRun, ...others }) => {
-  const format = getFormat(nextRun)
+const PACE_DATA = {
+  instructor_paced: {
+    label: "Instructor-Paced",
+    description:
+      "Guided learning. Follow a set schedule with specific due dates for assignments and exams. Course materials released on a schedule. Earn your certificate shortly after the course ends.",
+    href: "https://mitxonline.zendesk.com/hc/en-us/articles/21994938130075-What-are-Instructor-Paced-courses-on-MITx-Online",
+  },
+  self_paced: {
+    label: "Self-Paced",
+    description:
+      "Flexible learning. Enroll at any time and progress at your own speed. All course materials available immediately. Adaptable due dates and extended timelines. Earn your certificate as soon as you pass the course.",
+    href: "https://mitxonline.zendesk.com/hc/en-us/articles/21994872904475-What-are-Self-Paced-courses-on-MITx-Online",
+  },
+}
+const PaceRow: React.FC<CourseInfoRowProps> = ({ nextRun, ...others }) => {
+  const isSelfPaced = nextRun.is_self_paced || nextRun.is_archived
+  const pace = PACE_DATA[isSelfPaced ? "self_paced" : "instructor_paced"]
 
   return (
     <InfoRow {...others}>
       <RiComputerLine aria-hidden="true" />
       <InfoRowInner>
-        <InfoLabelValue label="Course Format" value={format.label} />{" "}
+        <InfoLabelValue label="Course Format" value={pace.label} />{" "}
         <LearnMoreDialog
           buttonText="What's this?"
-          href={format.href}
-          description={format.description}
-          title={`What are ${format.label} courses?`}
+          href={pace.href}
+          description={pace.description}
+          title={`What are ${pace.label} courses?`}
         />
       </InfoRowInner>
     </InfoRow>
   )
 }
 
-const DurationRow: React.FC<InfoRowProps> = ({ course, ...others }) => {
-  const duration = getDuration(course)
+const CourseDurationRow: React.FC<CourseInfoRowProps> = ({
+  course,
+  ...others
+}) => {
+  const duration = course.page.length ?? ""
+  const effort = course.page.effort ?? ""
   if (!duration) return null
+  const display = [duration, effort].filter(Boolean).join(", ")
   return (
     <InfoRow {...others}>
       <RiTimeLine aria-hidden="true" />
       <InfoRowInner>
-        <InfoLabelValue label="Estimated" value={duration} />
+        <InfoLabelValue label="Estimated" value={display} />
       </InfoRowInner>
     </InfoRow>
   )
 }
 
-const CertificateBox: React.FC<InfoRowProps> = ({ nextRun }) => {
+const CertificateBox: React.FC<CourseInfoRowProps> = ({ nextRun }) => {
   const certificatePrice = getCertificatePrice(nextRun)
 
   const certInfoLink = (
@@ -304,7 +309,11 @@ const CertificateBox: React.FC<InfoRowProps> = ({ nextRun }) => {
   )
 }
 
-const PriceRow: React.FC<InfoRowProps> = ({ course, nextRun, ...others }) => {
+const PriceRow: React.FC<CourseInfoRowProps> = ({
+  course,
+  nextRun,
+  ...others
+}) => {
   return (
     <InfoRow {...others}>
       <RiPriceTag3Line aria-hidden="true" />
@@ -336,9 +345,10 @@ const WideButton = styled(Button)({
 
 enum TestIds {
   DatesRow = "dates-row",
-  FormatRow = "format-row",
+  PaceRow = "pace-row",
   DurationRow = "duration-row",
   PriceRow = "price-row",
+  RequirementsRow = "requirements-row",
 }
 
 const ArchivedAlert: React.FC = () => {
@@ -384,12 +394,12 @@ const CourseSummary: React.FC<{
               nextRun={nextRun}
               data-testid={TestIds.DatesRow}
             />
-            <FormatRow
+            <PaceRow
               course={course}
               nextRun={nextRun}
-              data-testid={TestIds.FormatRow}
+              data-testid={TestIds.PaceRow}
             />
-            <DurationRow
+            <CourseDurationRow
               course={course}
               nextRun={nextRun}
               data-testid={TestIds.DurationRow}
@@ -411,14 +421,155 @@ const CourseSummary: React.FC<{
   )
 }
 
-const ProgramSummary: React.FC = () => {
+const RequirementsRow: React.FC<ProgramInfoRowProps> = ({
+  program,
+  ...others
+}) => {
+  const requiredSubtree = getRequiredSubtree(program)
+  const electiveSubtree = getElectiveSubtree(program)
+  const requiredDisplay = requiredSubtree?.children?.length ? (
+    <InfoRowInner>
+      {`${requiredSubtree.children.length} Required ${pluralize(
+        "Course",
+        requiredSubtree.children.length,
+      )}`}
+      <span>Complete All</span>
+    </InfoRowInner>
+  ) : null
+  const electiveDisplay = electiveSubtree?.children?.length ? (
+    <InfoRowInner>
+      {`${electiveSubtree.children.length} Elective ${pluralize(
+        "Course",
+        electiveSubtree.children.length,
+      )}`}
+      <span>
+        Complete {electiveSubtree.data.operator_value} of{" "}
+        {electiveSubtree.children.length}
+      </span>
+    </InfoRowInner>
+  ) : null
+
+  if (!requiredDisplay && !electiveDisplay) return null
+
+  return (
+    <InfoRow {...others}>
+      <RiFileCopy2Line aria-hidden="true" />
+      <Stack gap="8px" flex={1}>
+        {requiredDisplay}
+        {electiveDisplay}
+      </Stack>
+    </InfoRow>
+  )
+}
+
+type ProgramInfoRowProps = {
+  program: V2Program
+} & HTMLAttributes<HTMLDivElement>
+const ProgramDurationRow: React.FC<ProgramInfoRowProps> = ({
+  program,
+  ...others
+}) => {
+  const duration = program.page.length ?? ""
+  const effort = program.page.effort ?? ""
+  if (!duration) return null
+  const display = [duration, effort].filter(Boolean).join(", ")
+
+  return (
+    <InfoRow {...others}>
+      <RiTimeLine aria-hidden="true" />
+      <InfoRowInner>
+        <InfoLabelValue label="Estimated" value={display} />
+      </InfoRowInner>
+    </InfoRow>
+  )
+}
+
+const ProgramPaceRow: React.FC<
+  { programResource: LearningResource | null } & HTMLAttributes<HTMLDivElement>
+> = ({ programResource, ...others }) => {
+  const paces = (programResource?.pace ?? []).sort((a, _b) =>
+    // Put instructor-paced first if both exist
+    a.code === "instructor_paced" ? -1 : 1,
+  )
+  if (!paces?.length) return null
+  const pace = PACE_DATA[paces[0].code]
+  return (
+    <InfoRow {...others}>
+      <RiComputerLine aria-hidden="true" />
+      <InfoRowInner>
+        <InfoLabelValue label="Program Format" value={pace.label} />{" "}
+        <LearnMoreDialog
+          buttonText="What's this?"
+          href={pace.href}
+          description={pace.description}
+          title={`What are ${pace.label} courses?`}
+        />
+      </InfoRowInner>
+    </InfoRow>
+  )
+}
+
+const ProgramPriceRow = () => {
+  return (
+    <InfoRow>
+      <RiPriceTag3Line aria-hidden="true" />
+      <InfoRowInner>
+        <InfoLabelValue label="Price" value="Free to Learn" />
+      </InfoRowInner>
+    </InfoRow>
+  )
+}
+
+const ProgramCertificateRow: React.FC<ProgramInfoRowProps> = ({
+  program,
+  ...others
+}) => {
+  const min = program.min_price
+  const max = program.max_price
+  if (!min || !max) return null
+  const range = min === max ? `$${min}` : `$${min}\u2013$${max}`
+  return (
+    <InfoRow {...others}>
+      <RiAwardLine aria-hidden="true" />
+      <Stack gap="8px" flex={1}>
+        <InfoLabelValue label="Certificate Track" value={range} />
+        <UnderlinedLink
+          color="red"
+          href="https://mitxonline.zendesk.com/hc/en-us/articles/28158506908699-What-is-the-Certificate-Track-What-are-Course-and-Program-Certificates"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          What is the certificate track?
+        </UnderlinedLink>
+      </Stack>
+    </InfoRow>
+  )
+}
+
+const ProgramSummary: React.FC<{
+  program: V2Program
+  programResource: LearningResource | null
+}> = ({ program, programResource }) => {
   return (
     <SidebarSummaryRoot aria-labelledby="program-summary">
       <VisuallyHidden>
         <h2 id="program-summary">Program summary</h2>
       </VisuallyHidden>
       <Stack gap={{ xs: "24px", md: "32px" }}>
-        Program Summary Placeholder
+        <RequirementsRow
+          program={program}
+          data-testid={TestIds.RequirementsRow}
+        />
+        <ProgramDurationRow
+          program={program}
+          data-testid={TestIds.DurationRow}
+        />
+        <ProgramPaceRow
+          programResource={programResource ?? null}
+          data-testid={TestIds.PaceRow}
+        />
+        <ProgramPriceRow />
+        <ProgramCertificateRow program={program} />
       </Stack>
     </SidebarSummaryRoot>
   )
