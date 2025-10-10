@@ -30,6 +30,7 @@ from learning_resources.factories import (
     LearningResourceFactory,
     LearningResourcePlatformFactory,
     LearningResourceRunFactory,
+    TutorProblemFileFactory,
 )
 from learning_resources.models import LearningResource
 from learning_resources_search.constants import CONTENT_FILE_TYPE
@@ -437,11 +438,14 @@ def test_transform_canvas_content_files_removes_unpublished_content(mocker, tmp_
     bulk_unpub.assert_called_once_with([unpublished_cf.id], CONTENT_FILE_TYPE)
 
 
+@pytest.mark.parametrize("overwrite", [True, False])
+@pytest.mark.parametrize("existing_file", [True, False])
 def test_transform_canvas_problem_files_pdf_calls_pdf_to_markdown(
-    tmp_path, mocker, settings
+    tmp_path, mocker, settings, overwrite, existing_file
 ):
     """
     Test that transform_canvas_problem_files calls _pdf_to_markdown for PDF files.
+    if overwrite is True or there is no existing file. Tikka should not be called
     """
 
     settings.CANVAS_TUTORBOT_FOLDER = "tutorbot/"
@@ -472,22 +476,49 @@ def test_transform_canvas_problem_files_pdf_calls_pdf_to_markdown(
         return_value="markdown content from pdf",
     )
 
+    tika = mocker.patch(
+        "learning_resources.etl.utils.extract_text_metadata",
+    )
+
     run = LearningResourceRunFactory.create()
 
-    results = list(transform_canvas_problem_files(zip_path, run, overwrite=True))
+    if existing_file:
+        TutorProblemFileFactory.create(
+            run=run,
+            type="problem",
+            archive_checksum="checksum",
+            source_path=f"tutorbot/{pdf_filename}",
+            content="existing content",
+            file_name="problem1.pdf",
+        )
 
-    pdf_to_md.assert_called_once()
-    assert results[0]["content"] == "markdown content from pdf"
+    results = list(transform_canvas_problem_files(zip_path, run, overwrite=overwrite))
+
+    if overwrite or not existing_file:
+        pdf_to_md.assert_called_once()
+    else:
+        pdf_to_md.assert_not_called()
+
+    tika.assert_not_called()
+
+    assert (
+        results[0]["content"] == "markdown content from pdf"
+        if overwrite or not existing_file
+        else "existing content"
+    )
     assert results[0]["problem_title"] == "problemset1"
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize("overwrite", [True, False])
+@pytest.mark.parametrize("existing_file", [True, False])
 def test_transform_canvas_problem_files_non_pdf_does_not_call_pdf_to_markdown(
-    tmp_path, mocker, settings
+    tmp_path, mocker, settings, overwrite, existing_file
 ):
     """
-    Test that transform_canvas_problem_files does not call _pdf_to_markdown for
-    non-PDF files.
+    Test that transform_canvas_problem_files does not call _pdf_to_markdown but calles tika for
+    non-PDF files. Niether tika or _pdf_to_markdown should be called if overwrite is false and
+    there is an existing file.
     """
     settings.CANVAS_TUTORBOT_FOLDER = "tutorbot/"
     settings.CANVAS_PDF_TRANSCRIPTION_MODEL = "fake-model"
@@ -512,17 +543,35 @@ def test_transform_canvas_problem_files_non_pdf_does_not_call_pdf_to_markdown(
 
     pdf_to_md = mocker.patch("learning_resources.etl.utils._pdf_to_markdown")
 
-    mocker.patch(
+    tika = mocker.patch(
         "learning_resources.etl.utils.extract_text_metadata",
         return_value={"content": csv_content},
     )
 
     run = LearningResourceRunFactory.create()
 
-    results = list(transform_canvas_problem_files(zip_path, run, overwrite=True))
+    if existing_file:
+        TutorProblemFileFactory.create(
+            run=run,
+            type="problem",
+            archive_checksum="checksum",
+            source_path=f"tutorbot/{csv_filename}",
+            content="existing content",
+            file_name="problem2.csv",
+        )
+
+    results = list(transform_canvas_problem_files(zip_path, run, overwrite=overwrite))
 
     pdf_to_md.assert_not_called()
-    assert results[0]["content"] == csv_content
+    if overwrite or not existing_file:
+        tika.assert_called_once()
+    else:
+        tika.assert_not_called()
+    assert (
+        results[0]["content"] == csv_content
+        if overwrite or not existing_file
+        else "existing content"
+    )
     assert results[0]["problem_title"] == "problemset2"
 
 
