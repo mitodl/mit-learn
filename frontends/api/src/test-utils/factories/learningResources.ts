@@ -23,6 +23,7 @@ import type {
   MicroLearningPathRelationship,
   PaginatedLearningPathRelationshipList,
   PodcastResource,
+  ArticleResource,
   PodcastEpisodeResource,
   ProgramResource,
   VideoPlaylistResource,
@@ -320,6 +321,9 @@ const learningResource: PartialFactory<LearningResource> = (overrides = {}) => {
       return videoPlaylist(overrides)
     case ResourceTypeEnum.Video:
       return video(overrides)
+    case ResourceTypeEnum.Article:
+      return article(overrides)
+
     default:
       throw Error(`Invalid resource type: ${overrides.resource_type}`)
   }
@@ -505,6 +509,20 @@ const podcast: LearningResourceFactory<PodcastResource> = (overrides = {}) => {
 }
 const podcasts = makePaginatedFactory(podcast)
 
+const article: LearningResourceFactory<ArticleResource> = (overrides = {}) => {
+  return mergeOverrides<ArticleResource>(
+    _learningResourceShared(),
+    { resource_type: ResourceTypeEnum.Article },
+    {
+      article: {
+        id: uniqueEnforcerId.enforce(() => faker.number.int()),
+      },
+    },
+    overrides,
+  )
+}
+const articles = makePaginatedFactory(article)
+
 const podcastEpisode: LearningResourceFactory<PodcastEpisodeResource> = (
   overrides = {},
 ): PodcastEpisodeResource => {
@@ -588,6 +606,8 @@ export {
   programs,
   course,
   courses,
+  article,
+  articles,
   podcast,
   podcasts,
   podcastEpisode,
