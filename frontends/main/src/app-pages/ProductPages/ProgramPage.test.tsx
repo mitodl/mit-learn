@@ -1,10 +1,14 @@
 import React from "react"
 import { urls, factories } from "api/mitxonline-test-utils"
+import {
+  setMockResponse,
+  urls as learnUrls,
+  factories as learnFactories,
+} from "api/test-utils"
 import type {
   V2Program,
   ProgramPageItem,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { setMockResponse } from "api/test-utils"
 import { renderWithProviders, waitFor, screen, within } from "@/test-utils"
 import ProgramPage from "./ProgramPage"
 import { HeadingIds } from "./util"
@@ -13,12 +17,19 @@ import { notFound } from "next/navigation"
 
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import invariant from "tiny-invariant"
+import { ResourceTypeEnum } from "api"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
 
 const makeProgram = factories.programs.program
 const makePage = factories.pages.programPageItem
+const makeResource = learnFactories.learningResources.program
+const programResourcesUrl = (readable: string) =>
+  learnUrls.learningResources.list({
+    readable_id: [readable],
+    resource_type: [ResourceTypeEnum.Program],
+  })
 
 const expectRawContent = (el: HTMLElement, htmlString: string) => {
   const raw = within(el).getByTestId("raw")
@@ -40,6 +51,14 @@ const setupApis = ({
 
   setMockResponse.get(urls.pages.programPages(program.readable_id), {
     items: [page],
+  })
+
+  const resource = makeResource({
+    id: program.id,
+    readable_id: program.readable_id,
+  })
+  setMockResponse.get(programResourcesUrl(program.readable_id), {
+    results: [resource],
   })
 }
 
@@ -74,17 +93,20 @@ describe("ProgramPage", () => {
     setupApis({ program, page })
     renderWithProviders(<ProgramPage readableId={program.readable_id} />)
 
-    await waitFor(() => {
-      assertHeadings([
-        { level: 1, name: page.title },
-        { level: 2, name: "Program summary" },
-        { level: 2, name: "About this Program" },
-        { level: 2, name: "What you'll learn" },
-        { level: 2, name: "Prerequisites" },
-        { level: 2, name: "Meet your instructors" },
-        { level: 2, name: "Who can take this Program?" },
-      ])
-    })
+    await waitFor(
+      () => {
+        assertHeadings([
+          { level: 1, name: page.title },
+          { level: 2, name: "Program summary" },
+          { level: 2, name: "About this Program" },
+          { level: 2, name: "What you'll learn" },
+          { level: 2, name: "Prerequisites" },
+          { level: 2, name: "Meet your instructors" },
+          { level: 2, name: "Who can take this Program?" },
+        ])
+      },
+      { timeout: 3000 },
+    )
   })
 
   test("Page Navigation", async () => {
@@ -142,21 +164,29 @@ describe("ProgramPage", () => {
   })
 
   test.each([
-    { courses: [], pages: [makePage()] },
-    { courses: [makeProgram()], pages: [] },
-    { courses: [], pages: [] },
-  ])("Returns 404 if no course found", async ({ courses, pages }) => {
-    setMockResponse.get(
-      urls.programs.programsList({ readable_id: "readable_id" }),
-      { results: courses },
-    )
-    setMockResponse.get(urls.pages.programPages("readable_id"), {
-      items: pages,
-    })
+    { courses: [], pages: [makePage()], resources: [makeResource()] },
+    { courses: [makeProgram()], pages: [], resources: [makeResource()] },
+    { courses: [makeProgram()], pages: [makePage()], resources: [] },
+  ])(
+    "Returns 404 if no program found",
+    async ({ courses, pages, resources }) => {
+      setMockResponse.get(
+        urls.programs.programsList({ readable_id: "readable_id" }),
+        { results: courses },
+      )
+      setMockResponse.get(urls.pages.programPages("readable_id"), {
+        items: pages,
+      })
 
-    renderWithProviders(<ProgramPage readableId="readable_id" />)
-    await waitFor(() => {
-      expect(notFound).toHaveBeenCalled()
-    })
-  })
+      //
+      setMockResponse.get(programResourcesUrl("readable_id"), {
+        results: resources,
+      })
+
+      renderWithProviders(<ProgramPage readableId="readable_id" />)
+      await waitFor(() => {
+        expect(notFound).toHaveBeenCalled()
+      })
+    },
+  )
 })

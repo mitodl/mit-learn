@@ -94,10 +94,11 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
   }
   if (!enabled) return
 
-  const doneLoading = pages.isSuccess && programs.isSuccess
+  const isLoading =
+    pages.isLoading || programs.isLoading || programResources.isLoading
 
-  if (!page || !program) {
-    if (doneLoading) {
+  if (!page || !program || !programResource) {
+    if (!isLoading) {
       return notFound()
     } else {
       return null
