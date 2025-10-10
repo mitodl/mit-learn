@@ -503,7 +503,7 @@ def _parse_program_instructors_topics(program):
     for course in courses:
         topics.extend([{"name": topic.name} for topic in course.topics.all()])
         run = (
-            course.next_run
+            course.best_run
             or course.runs.filter(published=True).order_by("-start_date").first()
         )
         if run:

@@ -249,9 +249,9 @@ def test_embed_learning_resources_by_id(mocker, mocked_celery):
     assert sorted(resource_ids) == sorted(embedded_resource_ids)
 
 
-def test_embedded_content_from_next_run(mocker, mocked_celery):
+def test_embedded_content_from_best_run(mocker, mocked_celery):
     """
-    Content files to embed should come from next course run
+    Content files to embed should come from best course run
     """
 
     mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
@@ -267,10 +267,10 @@ def test_embedded_content_from_next_run(mocker, mocked_celery):
         start_date=datetime.datetime.now(tz=datetime.UTC) + datetime.timedelta(days=2),
     )
 
-    next_run_contentfiles = [
+    best_run_contentfiles = [
         cf.id
         for cf in ContentFileFactory.create_batch(
-            3, run=course.learning_resource.next_run
+            3, run=course.learning_resource.best_run
         )
     ]
     # create contentfiles using the other run
@@ -286,7 +286,7 @@ def test_embedded_content_from_next_run(mocker, mocked_celery):
         )
 
     generate_embeddings_mock.si.assert_called_with(
-        next_run_contentfiles,
+        best_run_contentfiles,
         "content_file",
         True,  # noqa: FBT003
     )

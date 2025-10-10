@@ -45,6 +45,7 @@ from learning_resources.models import (
     Video,
     VideoChannel,
     VideoPlaylist,
+    now_in_utc,
 )
 from learning_resources.utils import (
     add_parent_topics_to_learning_resource,
@@ -137,16 +138,12 @@ def load_run_dependent_values(
     Returns:
         tuple[datetime.time | None, list[Decimal], str]: date, prices, and availability
     """
-    next_upcoming_run = resource.next_run
-    if next_upcoming_run:
-        resource.next_start_date = next_upcoming_run.start_date
-    else:
-        resource.next_start_date = None
-    best_run = (
-        next_upcoming_run
-        or resource.runs.filter(published=True).order_by("-start_date").first()
-    )
-    if best_run:
+    now = now_in_utc()
+    best_run = resource.best_run
+    if resource.published and best_run:
+        resource.next_start_date = max(
+            best_run.start_date or best_run.enrollment_start or now, now
+        )
         resource.availability = best_run.availability
         resource.prices = (
             best_run.prices
@@ -165,6 +162,8 @@ def load_run_dependent_values(
         resource.time_commitment = best_run.time_commitment
         resource.min_weekly_hours = best_run.min_weekly_hours
         resource.max_weekly_hours = best_run.max_weekly_hours
+    else:
+        resource.next_start_date = None
     resource.save()
     return ResourceNextRunConfig(
         next_start_date=resource.next_start_date,
