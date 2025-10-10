@@ -455,20 +455,20 @@ def test_transform_canvas_problem_files_pdf_calls_pdf_to_markdown(
     # return a file with pdf extension
     fake_file_data = {
         "run": "run",
-        "content": "original pdf content",
+        "content_type": "application/pdf",
         "archive_checksum": "checksum",
         "source_path": f"tutorbot/{pdf_filename}",
         "file_extension": ".pdf",
     }
 
     mocker.patch(
-        "learning_resources.etl.canvas.process_olx_path",
-        return_value=iter([fake_file_data]),
+        "learning_resources.etl.utils.documents_from_olx",
+        return_value=iter([[mocker.Mock(), fake_file_data]]),
     )
 
     # Patch _pdf_to_markdown to return a known value
     pdf_to_md = mocker.patch(
-        "learning_resources.etl.canvas._pdf_to_markdown",
+        "learning_resources.etl.utils._pdf_to_markdown",
         return_value="markdown content from pdf",
     )
 
@@ -481,11 +481,13 @@ def test_transform_canvas_problem_files_pdf_calls_pdf_to_markdown(
     assert results[0]["problem_title"] == "problemset1"
 
 
+@pytest.mark.django_db
 def test_transform_canvas_problem_files_non_pdf_does_not_call_pdf_to_markdown(
     tmp_path, mocker, settings
 ):
     """
-    Test that transform_canvas_problem_files does not call _pdf_to_markdown for non-PDF files.
+    Test that transform_canvas_problem_files does not call _pdf_to_markdown for
+    non-PDF files.
     """
     settings.CANVAS_TUTORBOT_FOLDER = "tutorbot/"
     settings.CANVAS_PDF_TRANSCRIPTION_MODEL = "fake-model"
@@ -497,19 +499,25 @@ def test_transform_canvas_problem_files_non_pdf_does_not_call_pdf_to_markdown(
 
     fake_file_data = {
         "run": "run",
-        "content": csv_content,
+        "content_type": "application/csv",
         "archive_checksum": "checksum",
         "source_path": f"tutorbot/{csv_filename}",
         "file_extension": ".csv",
     }
+
     mocker.patch(
-        "learning_resources.etl.utils.process_olx_path",
-        return_value=iter([fake_file_data]),
+        "learning_resources.etl.utils.documents_from_olx",
+        return_value=iter([[mocker.Mock(), fake_file_data]]),
     )
 
-    pdf_to_md = mocker.patch("learning_resources.etl.canvas._pdf_to_markdown")
+    pdf_to_md = mocker.patch("learning_resources.etl.utils._pdf_to_markdown")
 
-    run = mocker.Mock()
+    mocker.patch(
+        "learning_resources.etl.utils.extract_text_metadata",
+        return_value={"content": csv_content},
+    )
+
+    run = LearningResourceRunFactory.create()
 
     results = list(transform_canvas_problem_files(zip_path, run, overwrite=True))
 
