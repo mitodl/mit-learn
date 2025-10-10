@@ -34,7 +34,7 @@ from learning_resources.factories import (
 )
 from learning_resources.models import LearningResource
 from learning_resources_search.constants import CONTENT_FILE_TYPE
-from main.utils import checksum_for_content, now_in_utc
+from main.utils import now_in_utc
 
 pytestmark = pytest.mark.django_db
 
@@ -438,11 +438,14 @@ def test_transform_canvas_content_files_removes_unpublished_content(mocker, tmp_
     bulk_unpub.assert_called_once_with([unpublished_cf.id], CONTENT_FILE_TYPE)
 
 
+@pytest.mark.parametrize("overwrite", [True, False])
+@pytest.mark.parametrize("existing_file", [True, False])
 def test_transform_canvas_problem_files_pdf_calls_pdf_to_markdown(
-    tmp_path, mocker, settings
+    tmp_path, mocker, settings, overwrite, existing_file
 ):
     """
     Test that transform_canvas_problem_files calls _pdf_to_markdown for PDF files.
+    if overwrite is True or there is no existing file. Tikka should not be called
     """
 
     settings.CANVAS_TUTORBOT_FOLDER = "tutorbot/"
@@ -456,37 +459,66 @@ def test_transform_canvas_problem_files_pdf_calls_pdf_to_markdown(
     # return a file with pdf extension
     fake_file_data = {
         "run": "run",
-        "content": "original pdf content",
+        "content_type": "application/pdf",
         "archive_checksum": "checksum",
         "source_path": f"tutorbot/{pdf_filename}",
         "file_extension": ".pdf",
     }
 
     mocker.patch(
-        "learning_resources.etl.canvas.process_olx_path",
-        return_value=iter([fake_file_data]),
+        "learning_resources.etl.utils.documents_from_olx",
+        return_value=iter([[mocker.Mock(), fake_file_data]]),
     )
 
     # Patch _pdf_to_markdown to return a known value
     pdf_to_md = mocker.patch(
-        "learning_resources.etl.canvas._pdf_to_markdown",
+        "learning_resources.etl.utils._pdf_to_markdown",
         return_value="markdown content from pdf",
+    )
+
+    tika = mocker.patch(
+        "learning_resources.etl.utils.extract_text_metadata",
     )
 
     run = LearningResourceRunFactory.create()
 
-    results = list(transform_canvas_problem_files(zip_path, run, overwrite=True))
+    if existing_file:
+        TutorProblemFileFactory.create(
+            run=run,
+            type="problem",
+            archive_checksum="checksum",
+            source_path=f"tutorbot/{pdf_filename}",
+            content="existing content",
+            file_name="problem1.pdf",
+        )
 
-    pdf_to_md.assert_called_once()
-    assert results[0]["content"] == "markdown content from pdf"
+    results = list(transform_canvas_problem_files(zip_path, run, overwrite=overwrite))
+
+    if overwrite or not existing_file:
+        pdf_to_md.assert_called_once()
+    else:
+        pdf_to_md.assert_not_called()
+
+    tika.assert_not_called()
+
+    assert (
+        results[0]["content"] == "markdown content from pdf"
+        if overwrite or not existing_file
+        else "existing content"
+    )
     assert results[0]["problem_title"] == "problemset1"
 
 
+@pytest.mark.django_db
+@pytest.mark.parametrize("overwrite", [True, False])
+@pytest.mark.parametrize("existing_file", [True, False])
 def test_transform_canvas_problem_files_non_pdf_does_not_call_pdf_to_markdown(
-    tmp_path, mocker, settings
+    tmp_path, mocker, settings, overwrite, existing_file
 ):
     """
-    Test that transform_canvas_problem_files does not call _pdf_to_markdown for non-PDF files.
+    Test that transform_canvas_problem_files does not call _pdf_to_markdown but calles tika for
+    non-PDF files. Niether tika or _pdf_to_markdown should be called if overwrite is false and
+    there is an existing file.
     """
     settings.CANVAS_TUTORBOT_FOLDER = "tutorbot/"
     settings.CANVAS_PDF_TRANSCRIPTION_MODEL = "fake-model"
@@ -498,24 +530,48 @@ def test_transform_canvas_problem_files_non_pdf_does_not_call_pdf_to_markdown(
 
     fake_file_data = {
         "run": "run",
-        "content": csv_content,
+        "content_type": "application/csv",
         "archive_checksum": "checksum",
         "source_path": f"tutorbot/{csv_filename}",
         "file_extension": ".csv",
     }
+
     mocker.patch(
-        "learning_resources.etl.canvas.process_olx_path",
-        return_value=iter([fake_file_data]),
+        "learning_resources.etl.utils.documents_from_olx",
+        return_value=iter([[mocker.Mock(), fake_file_data]]),
     )
 
-    pdf_to_md = mocker.patch("learning_resources.etl.canvas._pdf_to_markdown")
+    pdf_to_md = mocker.patch("learning_resources.etl.utils._pdf_to_markdown")
 
-    run = mocker.Mock()
+    tika = mocker.patch(
+        "learning_resources.etl.utils.extract_text_metadata",
+        return_value={"content": csv_content},
+    )
 
-    results = list(transform_canvas_problem_files(zip_path, run, overwrite=True))
+    run = LearningResourceRunFactory.create()
+
+    if existing_file:
+        TutorProblemFileFactory.create(
+            run=run,
+            type="problem",
+            archive_checksum="checksum",
+            source_path=f"tutorbot/{csv_filename}",
+            content="existing content",
+            file_name="problem2.csv",
+        )
+
+    results = list(transform_canvas_problem_files(zip_path, run, overwrite=overwrite))
 
     pdf_to_md.assert_not_called()
-    assert results[0]["content"] == csv_content
+    if overwrite or not existing_file:
+        tika.assert_called_once()
+    else:
+        tika.assert_not_called()
+    assert (
+        results[0]["content"] == csv_content
+        if overwrite or not existing_file
+        else "existing content"
+    )
     assert results[0]["problem_title"] == "problemset2"
 
 
@@ -1535,52 +1591,3 @@ def test_get_published_items_for_unpublshed_but_embedded(mocker, tmp_path):
     }
     published = get_published_items(zip_path, url_config)
     assert Path("web_resources/file1.pdf").resolve() in published
-
-
-def test_transform_canvas_problem_files_skips_pdf_to_markdown_if_checksum_exists(
-    tmp_path, mocker, settings
-):
-    """
-    Test that transform_canvas_problem_files does not call _pdf_to_markdown if the checksum already exists.
-    """
-    settings.CANVAS_TUTORBOT_FOLDER = "tutorbot/"
-    settings.CANVAS_PDF_TRANSCRIPTION_MODEL = "fake-model"
-    pdf_filename = "problemset3/problem.pdf"
-    pdf_content = b"%PDF-1.4 fake pdf content"
-    zip_path = make_canvas_zip(
-        tmp_path, files=[(f"tutorbot/{pdf_filename}", pdf_content)]
-    )
-
-    original_pdf_content = "original pdf content"
-    existing_checksum = checksum_for_content(original_pdf_content)
-
-    mock_run = LearningResourceRunFactory.create()
-    TutorProblemFileFactory.create(
-        run=mock_run,
-        problem_title="Problem Set 1",
-        type="problem",
-        checksum=existing_checksum,
-    )
-
-    fake_file_data = {
-        "run": mock_run,
-        "content": original_pdf_content,
-        "archive_checksum": "checksum",
-        "source_path": f"tutorbot/{pdf_filename}",
-        "file_extension": ".pdf",
-    }
-
-    mocker.patch(
-        "learning_resources.etl.canvas.process_olx_path",
-        return_value=iter([fake_file_data]),
-    )
-
-    pdf_to_md = mocker.patch("learning_resources.etl.canvas._pdf_to_markdown")
-
-    results = list(transform_canvas_problem_files(zip_path, mock_run, overwrite=True))
-
-    pdf_to_md.assert_not_called()
-
-    assert len(results) == 1
-    assert results[0]["content"] == "original pdf content"
-    assert results[0]["source_path"] == f"tutorbot/{pdf_filename}"
