@@ -70,7 +70,6 @@ jobs:
             --volume ${{ github.workspace }}:${{ github.workspace }}:ro \
             -e GITHUB_WORKSPACE=${{ github.workspace }} \
             tufin/oasdiff breaking \
-            --exclude-checks response-body-one-of-added,response-property-one-of-added \
             --fail-on ERR \
             --format githubactions \
             --composed \
