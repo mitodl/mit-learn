@@ -24,8 +24,8 @@ def test_transform_article(sample_article_data):
     """
     Test transforming a single article
     """
-    source_url = "https://example.com"
-    result = transform_article(source_url, sample_article_data)
+
+    result = transform_article(sample_article_data)
 
     assert result["title"] == "Sample Article"
     assert result["readable_id"] == "12345"
