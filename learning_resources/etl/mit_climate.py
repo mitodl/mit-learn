@@ -10,6 +10,7 @@ import dateutil
 import requests
 from django.conf import settings
 
+from learning_resources.constants import OfferedBy
 from learning_resources.etl.constants import MIT_CLIMATE_TOPIC_MAP, ETLSource
 
 log = logging.getLogger()
@@ -37,6 +38,7 @@ def retrieve_feed(feed_url):
 
 def transform_article(article_data: dict):
     article_url = f"{settings.MIT_CLIMATE_BASE_URL}{article_data.get('url')}"
+    image_url = f"{settings.MIT_CLIMATE_BASE_URL}{article_data.get('image_src')}"
     summary = article_data.get("summary")
     full_description = "\n".join(
         [
@@ -57,12 +59,19 @@ def transform_article(article_data: dict):
         "title": html.unescape(article_data.get("title")),
         "readable_id": article_data.get("uuid"),
         "url": article_url,
+        "image": {
+            "url": image_url,
+            "alt": article_data.get("image_alt", ""),
+        },
         "description": summary,
         "topics": topics,
         "full_description": full_description,
         "published": True,
         "created_on": created_on,
         "etl_source": ETLSource.mit_climate.name,
+        "offered_by": {
+            "code": OfferedBy.climate.name,
+        },
     }
 
 

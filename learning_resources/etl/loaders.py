@@ -1096,8 +1096,8 @@ def load_article(article_data: dict) -> LearningResource:
     """
     readable_id = article_data.get("readable_id")
     topics_data = article_data.pop("topics")
-
-    image_data = article_data.get("image")
+    offered_by_data = article_data.pop("offered_by", None)
+    image_url = article_data.pop("image")
 
     with transaction.atomic():
         (
@@ -1114,13 +1114,12 @@ def load_article(article_data: dict) -> LearningResource:
         Article.objects.update_or_create(
             learning_resource=learning_resource,
         )
-        load_image(learning_resource, image_data)
+        load_image(learning_resource, image_url)
         if not topics_data:
             topics_data = similar_topics_action(learning_resource)
         load_topics(learning_resource, topics_data)
-
+        load_offered_by(learning_resource, offered_by_data)
     update_index(learning_resource, created)
-
     return learning_resource
 
 
