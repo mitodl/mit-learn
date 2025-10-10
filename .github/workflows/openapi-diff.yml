@@ -73,6 +73,5 @@ jobs:
             --fail-on ERR \
             --format githubactions \
             --composed \
-             --flatten \
             'base/openapi/specs/*.yaml' \
             'head/openapi/specs/*.yaml'
