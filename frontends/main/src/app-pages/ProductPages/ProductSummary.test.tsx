@@ -1,8 +1,8 @@
 import React from "react"
 import { factories } from "api/mitxonline-test-utils"
-
+import { factories as learnFactories } from "api/test-utils"
 import { renderWithProviders, screen, within, user } from "@/test-utils"
-import { CourseSummary, TestIds } from "./ProductSummary"
+import { CourseSummary, ProgramSummary, TestIds } from "./ProductSummary"
 import { formatDate } from "ol-utilities"
 import invariant from "tiny-invariant"
 import { faker } from "@faker-js/faker/locale/en"
@@ -10,7 +10,9 @@ import { faker } from "@faker-js/faker/locale/en"
 const shuffle = faker.helpers.shuffle
 const makeRun = factories.courses.courseRun
 const makeCourse = factories.courses.course
-const product = factories.courses.product
+const makeProduct = factories.courses.product
+const makeResource = learnFactories.learningResources.program
+const { RequirementTreeBuilder } = factories.requirements
 
 describe("CourseSummary", () => {
   test("renders course summary", async () => {
@@ -265,7 +267,7 @@ describe("Course Price Row", () => {
     },
     {
       label: "is archived",
-      runOverrides: { is_archived: true, products: [product()] },
+      runOverrides: { is_archived: true, products: [makeProduct()] },
     },
   ])("Does not offer certificate if $label", ({ runOverrides }) => {
     const run = makeRun(runOverrides)
@@ -284,7 +286,7 @@ describe("Course Price Row", () => {
   })
 
   test("Offers certificate upgrade if not archived and has product", () => {
-    const run = makeRun({ is_archived: false, products: [product()] })
+    const run = makeRun({ is_archived: false, products: [makeProduct()] })
     const course = makeCourse({
       next_run_id: run.id,
       courseruns: shuffle([run, makeRun()]),
@@ -301,5 +303,199 @@ describe("Course Price Row", () => {
       `Payment deadline: ${formatDate(run.upgrade_deadline)}`,
     )
     expect(priceRow).not.toHaveTextContent("Certificate deadline passed")
+  })
+})
+
+describe("ProgramSummary", () => {
+  test("renders program summary", async () => {
+    const program = factories.programs.program()
+    renderWithProviders(
+      <ProgramSummary program={program} programResource={null} />,
+    )
+
+    const summary = screen.getByRole("region", { name: "Program summary" })
+    within(summary).getByRole("heading", { name: "Program summary" })
+  })
+})
+
+describe("Program RequirementsRow", () => {
+  test("Renders requirements if present", () => {
+    const requirements = new RequirementTreeBuilder()
+    const required = requirements.addOperator({ operator: "all_of" })
+    required.addCourse()
+    required.addCourse()
+    required.addCourse()
+    const electives = requirements.addOperator({
+      operator: "min_number_of",
+      operator_value: "2",
+    })
+    electives.addCourse()
+    electives.addCourse()
+    electives.addCourse()
+    electives.addCourse()
+
+    const program = factories.programs.program({
+      requirements: {
+        courses: {
+          required: required.children?.map((n) => n.id) ?? [],
+          electives: electives.children?.map((n) => n.id) ?? [],
+        },
+        programs: { required: [], electives: [] },
+      },
+      req_tree: [requirements.serialize()],
+    })
+
+    renderWithProviders(
+      <ProgramSummary program={program} programResource={null} />,
+    )
+
+    const summary = screen.getByRole("region", { name: "Program summary" })
+    const reqRow = within(summary).getByTestId(TestIds.RequirementsRow)
+
+    // The text is split more nicely on screen, but via html tags not spaces
+    expect(reqRow).toHaveTextContent("3 Required CoursesComplete All")
+    expect(reqRow).toHaveTextContent("4 Elective CoursesComplete 2 of 4")
+  })
+
+  test("Does not show electives if there are none", () => {
+    const requirements = new RequirementTreeBuilder()
+    const required = requirements.addOperator({ operator: "all_of" })
+    required.addCourse()
+    required.addCourse()
+    required.addCourse()
+
+    const program = factories.programs.program({
+      requirements: {
+        courses: {
+          required: required.children?.map((n) => n.id) ?? [],
+          electives: [],
+        },
+        programs: { required: [], electives: [] },
+      },
+      req_tree: [requirements.serialize()],
+    })
+
+    renderWithProviders(
+      <ProgramSummary program={program} programResource={null} />,
+    )
+
+    const summary = screen.getByRole("region", { name: "Program summary" })
+    const reqRow = within(summary).getByTestId(TestIds.RequirementsRow)
+
+    expect(reqRow).toHaveTextContent("3 Required CoursesComplete All")
+    expect(reqRow).not.toHaveTextContent("Elective")
+  })
+})
+
+describe("Program Duration Row", () => {
+  test.each([
+    {
+      length: "5 weeks",
+      effort: "3-5 hours per week",
+      expected: "5 weeks, 3-5 hours per week",
+    },
+    { length: "6 weeks", effort: null, expected: "6 weeks" },
+    { length: "", expected: null },
+  ])(
+    "Renders expected duration in weeks and effort",
+    ({ length, effort, expected }) => {
+      const program = factories.programs.program({
+        page: { length, effort },
+      })
+
+      renderWithProviders(
+        <ProgramSummary program={program} programResource={null} />,
+      )
+      const summary = screen.getByRole("region", { name: "Program summary" })
+
+      if (!length) {
+        expect(within(summary).queryByTestId(TestIds.DurationRow)).toBeNull()
+      } else {
+        const durationRow = within(summary).getByTestId(TestIds.DurationRow)
+        expect(durationRow).toHaveTextContent(`Estimated: ${expected}`)
+      }
+    },
+  )
+})
+
+describe("Program Pacing Row", () => {
+  const SELF_PACED = { code: "self_paced", name: "Self-Paced" } as const
+  const INSTRUCTOR_PACED = {
+    code: "instructor_paced",
+    name: "Instructor-Paced",
+  } as const
+  test.each([
+    { pace: [SELF_PACED], expected: "Self-Paced" },
+    { pace: [INSTRUCTOR_PACED], expected: "Instructor-Paced" },
+    { pace: [SELF_PACED, INSTRUCTOR_PACED], expected: "Instructor-Paced" },
+  ])("Shows correct pacing information", ({ pace, expected }) => {
+    const program = factories.programs.program()
+    const resource = makeResource({ pace })
+    renderWithProviders(
+      <ProgramSummary program={program} programResource={resource} />,
+    )
+    const summary = screen.getByRole("region", { name: "Program summary" })
+    const paceRow = within(summary).getByTestId(TestIds.PaceRow)
+    expect(paceRow).toHaveTextContent(`Program Format: ${expected}`)
+  })
+
+  test.each([
+    { pace: [SELF_PACED], dialogName: /What are Self-Paced/ },
+    {
+      pace: [INSTRUCTOR_PACED],
+      dialogName: /What are Instructor-Paced/,
+    },
+    {
+      pace: [SELF_PACED, INSTRUCTOR_PACED],
+      dialogName: /What are Instructor-Paced/,
+    },
+  ])("Renders expected dialog", async ({ pace, dialogName }) => {
+    const program = factories.programs.program()
+    const resource = makeResource({ pace })
+    renderWithProviders(
+      <ProgramSummary program={program} programResource={resource} />,
+    )
+    const summary = screen.getByRole("region", { name: "Program summary" })
+    const paceRow = within(summary).getByTestId(TestIds.PaceRow)
+    const button = within(paceRow).getByRole("button", { name: "What's this?" })
+    await user.click(button)
+    const dialog = await screen.findByRole("dialog", {
+      name: dialogName,
+    })
+
+    await user.click(within(dialog).getByRole("button", { name: "Close" }))
+
+    expect(dialog).not.toBeVisible()
+  })
+})
+
+describe("Price & Certificate Row", () => {
+  test("Shows 'Free to Learn'", () => {
+    const program = factories.programs.program()
+    renderWithProviders(
+      <ProgramSummary program={program} programResource={null} />,
+    )
+
+    const summary = screen.getByRole("region", { name: "Program summary" })
+    const priceRow = within(summary).getByTestId(TestIds.PriceRow)
+
+    expect(priceRow).toHaveTextContent("Free to Learn")
+  })
+})
+
+describe("Program Certificate Track Row", () => {
+  test("Renders certificate information", () => {
+    const program = factories.programs.program()
+    renderWithProviders(
+      <ProgramSummary program={program} programResource={null} />,
+    )
+
+    const summary = screen.getByRole("region", { name: "Program summary" })
+    const certRow = within(summary).getByTestId(TestIds.CertificateTrackRow)
+
+    expect(certRow).toHaveTextContent("Certificate Track")
+    expect(certRow).toHaveTextContent(
+      `${program.min_price}\u2013$${program.max_price}`,
+    )
   })
 })
