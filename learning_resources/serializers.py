@@ -129,6 +129,7 @@ class LearningResourceOfferorDetailSerializer(LearningResourceOfferorSerializer)
 @extend_schema_field(
     {
         "type": "object",
+        "title": "CourseResourceCertificationType",
         "properties": {
             "code": {"enum": CertificationType.names()},
             "name": {"type": "string"},

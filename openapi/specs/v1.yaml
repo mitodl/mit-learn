@@ -9566,6 +9566,7 @@ components:
           readOnly: true
         certification_type:
           type: object
+          title: CourseResourceCertificationType
           properties:
             code:
               enum:
@@ -10243,6 +10244,7 @@ components:
           readOnly: true
         certification_type:
           type: object
+          title: CourseResourceCertificationType
           properties:
             code:
               enum:
@@ -10814,6 +10816,7 @@ components:
           readOnly: true
         certification_type:
           type: object
+          title: CourseResourceCertificationType
           properties:
             code:
               enum:
@@ -13429,6 +13432,7 @@ components:
           readOnly: true
         certification_type:
           type: object
+          title: CourseResourceCertificationType
           properties:
             code:
               enum:
@@ -13840,6 +13844,7 @@ components:
           readOnly: true
         certification_type:
           type: object
+          title: CourseResourceCertificationType
           properties:
             code:
               enum:
@@ -14389,6 +14394,7 @@ components:
           readOnly: true
         certification_type:
           type: object
+          title: CourseResourceCertificationType
           properties:
             code:
               enum:
@@ -15145,6 +15151,7 @@ components:
           readOnly: true
         certification_type:
           type: object
+          title: CourseResourceCertificationType
           properties:
             code:
               enum:
@@ -15542,6 +15549,7 @@ components:
           readOnly: true
         certification_type:
           type: object
+          title: CourseResourceCertificationType
           properties:
             code:
               enum:
