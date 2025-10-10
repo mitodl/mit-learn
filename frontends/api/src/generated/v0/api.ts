@@ -95,10 +95,10 @@ export interface ArticleResource {
   certification: boolean
   /**
    *
-   * @type {ArticleResourceCertificationType}
+   * @type {CourseResourceCertificationType}
    * @memberof ArticleResource
    */
-  certification_type: ArticleResourceCertificationType
+  certification_type: CourseResourceCertificationType
   /**
    *
    * @type {Array<string>}
@@ -328,36 +328,6 @@ export interface ArticleResource {
    */
   require_summaries: boolean
 }
-
-/**
- *
- * @export
- * @interface ArticleResourceCertificationType
- */
-export interface ArticleResourceCertificationType {
-  /**
-   *
-   * @type {string}
-   * @memberof ArticleResourceCertificationType
-   */
-  code: ArticleResourceCertificationTypeCodeEnum
-  /**
-   *
-   * @type {string}
-   * @memberof ArticleResourceCertificationType
-   */
-  name: string
-}
-
-export const ArticleResourceCertificationTypeCodeEnum = {
-  Micromasters: "micromasters",
-  Professional: "professional",
-  Completion: "completion",
-  None: "none",
-} as const
-
-export type ArticleResourceCertificationTypeCodeEnum =
-  (typeof ArticleResourceCertificationTypeCodeEnum)[keyof typeof ArticleResourceCertificationTypeCodeEnum]
 
 /**
  *
@@ -1286,10 +1256,10 @@ export interface CourseResource {
   certification: boolean
   /**
    *
-   * @type {ArticleResourceCertificationType}
+   * @type {CourseResourceCertificationType}
    * @memberof CourseResource
    */
-  certification_type: ArticleResourceCertificationType
+  certification_type: CourseResourceCertificationType
   /**
    *
    * @type {Array<string>}
@@ -1525,6 +1495,36 @@ export interface CourseResource {
    */
   require_summaries: boolean
 }
+
+/**
+ *
+ * @export
+ * @interface CourseResourceCertificationType
+ */
+export interface CourseResourceCertificationType {
+  /**
+   *
+   * @type {string}
+   * @memberof CourseResourceCertificationType
+   */
+  code: CourseResourceCertificationTypeCodeEnum
+  /**
+   *
+   * @type {string}
+   * @memberof CourseResourceCertificationType
+   */
+  name: string
+}
+
+export const CourseResourceCertificationTypeCodeEnum = {
+  Micromasters: "micromasters",
+  Professional: "professional",
+  Completion: "completion",
+  None: "none",
+} as const
+
+export type CourseResourceCertificationTypeCodeEnum =
+  (typeof CourseResourceCertificationTypeCodeEnum)[keyof typeof CourseResourceCertificationTypeCodeEnum]
 
 /**
  *
@@ -2301,10 +2301,10 @@ export interface LearningPathResource {
   certification: boolean
   /**
    *
-   * @type {ArticleResourceCertificationType}
+   * @type {CourseResourceCertificationType}
    * @memberof LearningPathResource
    */
-  certification_type: ArticleResourceCertificationType
+  certification_type: CourseResourceCertificationType
   /**
    *
    * @type {Array<string>}
@@ -4058,10 +4058,10 @@ export interface PodcastEpisodeResource {
   certification: boolean
   /**
    *
-   * @type {ArticleResourceCertificationType}
+   * @type {CourseResourceCertificationType}
    * @memberof PodcastEpisodeResource
    */
-  certification_type: ArticleResourceCertificationType
+  certification_type: CourseResourceCertificationType
   /**
    *
    * @type {Array<string>}
@@ -4371,10 +4371,10 @@ export interface PodcastResource {
   certification: boolean
   /**
    *
-   * @type {ArticleResourceCertificationType}
+   * @type {CourseResourceCertificationType}
    * @memberof PodcastResource
    */
-  certification_type: ArticleResourceCertificationType
+  certification_type: CourseResourceCertificationType
   /**
    *
    * @type {Array<string>}
@@ -5086,10 +5086,10 @@ export interface ProgramResource {
   certification: boolean
   /**
    *
-   * @type {ArticleResourceCertificationType}
+   * @type {CourseResourceCertificationType}
    * @memberof ProgramResource
    */
-  certification_type: ArticleResourceCertificationType
+  certification_type: CourseResourceCertificationType
   /**
    *
    * @type {Array<string>}
@@ -6091,10 +6091,10 @@ export interface VideoPlaylistResource {
   certification: boolean
   /**
    *
-   * @type {ArticleResourceCertificationType}
+   * @type {CourseResourceCertificationType}
    * @memberof VideoPlaylistResource
    */
-  certification_type: ArticleResourceCertificationType
+  certification_type: CourseResourceCertificationType
   /**
    *
    * @type {Array<string>}
@@ -6404,10 +6404,10 @@ export interface VideoResource {
   certification: boolean
   /**
    *
-   * @type {ArticleResourceCertificationType}
+   * @type {CourseResourceCertificationType}
    * @memberof VideoResource
    */
-  certification_type: ArticleResourceCertificationType
+  certification_type: CourseResourceCertificationType
   /**
    *
    * @type {Array<string>}
