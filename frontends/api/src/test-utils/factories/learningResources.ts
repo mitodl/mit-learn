@@ -513,11 +513,7 @@ const article: LearningResourceFactory<ArticleResource> = (overrides = {}) => {
   return mergeOverrides<ArticleResource>(
     _learningResourceShared(),
     { resource_type: ResourceTypeEnum.Article },
-    {
-      article: {
-        id: uniqueEnforcerId.enforce(() => faker.number.int()),
-      },
-    },
+    {},
     overrides,
   )
 }

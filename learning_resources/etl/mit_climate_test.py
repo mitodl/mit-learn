@@ -20,7 +20,7 @@ def sample_article_data():
     }
 
 
-def test_transform_article(sample_article_data):
+def test_transform_article(sample_article_data, settings):
     """
     Test transforming a single article
     """
@@ -29,7 +29,7 @@ def test_transform_article(sample_article_data):
 
     assert result["title"] == "Sample Article"
     assert result["readable_id"] == "12345"
-    assert result["url"] == "https://example.com/sample-article"
+    assert result["url"] == f"{settings.MIT_CLIMATE_BASE_URL}/sample-article"
     assert result["description"] == "This is a summary."
     assert result["full_description"] == (
         "This is a summary.\nThese are footnotes.\nBy Author"
