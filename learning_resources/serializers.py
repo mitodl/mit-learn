@@ -504,7 +504,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
 
     def all_runs_are_identical(self, serialized_resource):
         """Check if all runs are identical"""
-        distinct_prices = set()
+        distinct_resource_prices = set()
         distinct_delivery_methods = set()
         resource_delivery = [
             delivery["code"] for delivery in serialized_resource["delivery"]
@@ -512,27 +512,19 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         has_in_person = (
             "in_person" in resource_delivery or "hybrid" in resource_delivery
         )
-        distinct_currencies = {
-            c["currency"] for c in serialized_resource["resource_prices"]
-        }
 
         distinct_locations = set()
         for run in serialized_resource.get("runs", []):
-            prices = run.get("prices", [])
-            if prices:
-                distinct_prices.update(prices)
+            resource_prices = run.get("resource_prices", [])
+            distinct_resource_prices.add(
+                tuple((price["currency"], price["amount"]) for price in resource_prices)
+            )
             distinct_delivery_methods.update(
                 [delivery["code"] for delivery in run.get("delivery", [])]
             )
             if run.get("location"):
                 distinct_locations.add(run["location"])
-        if (
-            serialized_resource.get("free")
-            and serialized_resource["certification"]
-            and len(distinct_prices) != 2  # noqa: PLR2004
-        ):
-            return False
-        if len(distinct_currencies) != 1:
+        if len(distinct_resource_prices) > 1:
             return False
         if len(distinct_delivery_methods) != 1:
             return False

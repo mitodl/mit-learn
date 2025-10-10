@@ -8,7 +8,7 @@ import {
 } from "api/mitxonline-test-utils"
 import * as commonUrls from "@/common/urls"
 import { Permission } from "api/hooks/user"
-import B2BAttachPage from "./B2BAttachPage"
+import EnrollmentCodePage from "./EnrollmentCodePage"
 import invariant from "tiny-invariant"
 
 // Mock next-nprogress-bar for App Router
@@ -19,7 +19,7 @@ jest.mock("next-nprogress-bar", () => ({
   }),
 }))
 
-describe("B2BAttachPage", () => {
+describe("EnrollmentCodePage", () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockPush.mockClear()
@@ -30,10 +30,10 @@ describe("B2BAttachPage", () => {
       [Permission.Authenticated]: false,
     })
 
-    setMockResponse.get(mitxOnlineUrls.currentUser.get(), null)
+    setMockResponse.get(mitxOnlineUrls.userMe.get(), null)
     setMockResponse.post(b2bUrls.b2bAttach.b2bAttachView("test-code"), [])
 
-    renderWithProviders(<B2BAttachPage code="test-code" />, {
+    renderWithProviders(<EnrollmentCodePage code="test-code" />, {
       url: commonUrls.B2B_ATTACH_VIEW,
     })
 
@@ -58,13 +58,13 @@ describe("B2BAttachPage", () => {
     })
 
     setMockResponse.get(
-      mitxOnlineUrls.currentUser.get(),
+      mitxOnlineUrls.userMe.get(),
       mitxOnlineFactories.user.user(),
     )
 
     setMockResponse.post(b2bUrls.b2bAttach.b2bAttachView("test-code"), [])
 
-    renderWithProviders(<B2BAttachPage code="test-code" />, {
+    renderWithProviders(<EnrollmentCodePage code="test-code" />, {
       url: commonUrls.B2B_ATTACH_VIEW,
     })
   })
@@ -88,11 +88,11 @@ describe("B2BAttachPage", () => {
       [Permission.Authenticated]: true,
     })
 
-    setMockResponse.get(mitxOnlineUrls.currentUser.get(), mitxOnlineUser)
+    setMockResponse.get(mitxOnlineUrls.userMe.get(), mitxOnlineUser)
 
     setMockResponse.post(b2bUrls.b2bAttach.b2bAttachView("test-code"), [])
 
-    renderWithProviders(<B2BAttachPage code="test-code" />, {
+    renderWithProviders(<EnrollmentCodePage code="test-code" />, {
       url: commonUrls.B2B_ATTACH_VIEW,
     })
 

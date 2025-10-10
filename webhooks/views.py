@@ -108,7 +108,7 @@ def process_create_content_file_request(data):
     content_path = data.get("content_path")
     if etl_source == ETLSource.canvas.name:
         log.info("Processing Canvas content file: %s", content_path)
-        ingest_canvas_course.apply_async([content_path, True])
+        ingest_canvas_course.apply_async([content_path, False])
 
 
 def process_delete_content_file_request(data):

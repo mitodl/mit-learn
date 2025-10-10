@@ -27,7 +27,7 @@ import {
   OrganizationPage,
   UserProgramEnrollmentDetail,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { useMitxOnlineCurrentUser } from "api/mitxonline-hooks/user"
+import { useMitxOnlineUserMe } from "api/mitxonline-hooks/user"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { RiAwardFill } from "@remixicon/react"
 
@@ -245,7 +245,7 @@ const OrgProgramCollectionDisplay: React.FC<{
             dashboardResource={course}
             courseNoun="Module"
             offerUpgrade={false}
-            titleHref={course.run?.coursewareUrl}
+            titleAction="courseware"
             buttonHref={course.run?.coursewareUrl}
           />
         ))}
@@ -326,7 +326,7 @@ const OrgProgramDisplay: React.FC<{
             dashboardResource={course}
             courseNoun="Module"
             offerUpgrade={false}
-            titleHref={course.run?.coursewareUrl}
+            titleAction="courseware"
             buttonHref={course.run?.coursewareUrl}
           />
         ))}
@@ -433,7 +433,7 @@ const OrganizationContent: React.FC<OrganizationContentProps> = ({
   orgSlug,
 }) => {
   const { isLoading: isLoadingMitxOnlineUser, data: mitxOnlineUser } =
-    useMitxOnlineCurrentUser()
+    useMitxOnlineUserMe()
   const b2bOrganization = mitxOnlineUser?.b2b_organizations.find(
     (org) => org.slug.replace("org-", "") === orgSlug,
   )

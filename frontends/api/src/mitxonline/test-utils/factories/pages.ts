@@ -8,6 +8,7 @@ import type {
   Faculty,
   CoursePageList,
   V2Course,
+  ProgramPageItem,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { UniqueEnforcer } from "enforce-unique"
 
@@ -43,10 +44,11 @@ const priceItem: Factory<PriceItem> = (override) => {
   }
 }
 
+const uniqueFacultyId = new UniqueEnforcer()
 const faculty: Factory<Faculty> = (override) => {
   return {
     feature_image_src: faker.image.urlLoremFlickr({ width: 640, height: 480 }),
-    id: faker.number.int({ min: 1, max: 1000 }),
+    id: uniqueFacultyId.enforce(() => faker.number.int()),
     instructor_bio_long: makeHTMLParagraph(2),
     instructor_bio_short: faker.lorem.sentences(2),
     instructor_name: faker.person.fullName(),
@@ -172,4 +174,189 @@ const coursePageList: PartialFactory<CoursePageList> = (override) => {
   return mergeOverrides<CoursePageList>(defaults, override)
 }
 
-export { coursePageItem, coursePageList }
+const programPageItem: PartialFactory<ProgramPageItem> = (override) => {
+  const defaults: ProgramPageItem = {
+    id: uniquePageId.enforce(() => faker.number.int()),
+    meta: {
+      alias_of: null,
+      detail_url: faker.internet.url(),
+      first_published_at: faker.date.past().toISOString(),
+      html_url: faker.internet.url(),
+      last_published_at: faker.date.recent().toISOString(),
+      live: true,
+      locale: "en-us",
+      search_description: faker.lorem.sentence(),
+      seo_title: faker.lorem.sentence(),
+      show_in_menus: false,
+      slug: faker.lorem.slug(),
+      type: "cms.ProgramPage",
+    },
+    title: faker.lorem.words(3),
+    description: makeHTMLParagraph(1),
+    length: `${faker.number.int({ min: 1, max: 4 })} terms (${faker.number.int({ min: 6, max: 24 })} months)`,
+    effort: `${faker.number.int({ min: 5, max: 20 })} hours per week`,
+    min_weekly_hours: `${faker.number.int({ min: 5, max: 10 })}`,
+    max_weekly_hours: `${faker.number.int({ min: 11, max: 20 })}`,
+    min_weeks: faker.number.int({ min: 24, max: 48 }),
+    max_weeks: faker.number.int({ min: 48, max: 96 }),
+    price: [
+      priceItem({
+        value: {
+          text: `$${faker.number.int({ min: 250, max: 1000 })} - $${faker.number.int({ min: 1000, max: 5000 })} per course`,
+          link: "",
+        },
+      }),
+    ],
+    min_price: faker.number.int({ min: 1000, max: 2500 }),
+    max_price: faker.number.int({ min: 2500, max: 10000 }),
+    prerequisites: makeHTMLParagraph(1),
+    faq_url: faker.internet.url(),
+    about: makeHTMLParagraph(3),
+    what_you_learn: makeHTMLList(5),
+    feature_image: featureImage(),
+    video_url: faker.datatype.boolean() ? faker.internet.url() : null,
+    faculty_section_title: "Meet your instructors",
+    faculty: Array.from({ length: faker.number.int({ min: 2, max: 6 }) }, () =>
+      faculty(),
+    ),
+    certificate_page: {
+      id: faker.number.int({ min: 100, max: 200 }),
+      meta: {
+        alias_of: null,
+        detail_url: faker.internet.url(),
+        first_published_at: faker.date.past().toISOString(),
+        html_url: faker.internet.url(),
+        last_published_at: faker.date.recent().toISOString(),
+        live: true,
+        locale: "en-us",
+        search_description: faker.lorem.sentence(),
+        seo_title: faker.lorem.sentence(),
+        show_in_menus: false,
+        slug: faker.lorem.slug(),
+        type: "cms.CertificatePage",
+      },
+      title: `Certificate For ${faker.lorem.words(3)}`,
+      product_name: faker.lorem.words(3),
+      CEUs: "",
+      overrides: [],
+      signatory_items: Array.from(
+        { length: faker.number.int({ min: 3, max: 5 }) },
+        () => ({
+          name: faker.person.fullName(),
+          title_1: faker.person.jobTitle(),
+          title_2: faker.person.jobTitle(),
+          title_3: "",
+          organization: "Massachusetts Institute of Technology",
+          signature_image: faker.image.urlLoremFlickr({
+            width: 200,
+            height: 100,
+          }),
+        }),
+      ),
+    },
+    program_details: {
+      title: faker.lorem.words(3),
+      readable_id: `program-v1:${faker.lorem.slug()}`,
+      id: faker.number.int({ min: 1, max: 100 }),
+      courses: Array.from(
+        { length: faker.number.int({ min: 3, max: 8 }) },
+        () => faker.number.int({ min: 1, max: 50 }),
+      ),
+      collections: [],
+      requirements: {
+        courses: {
+          required: Array.from(
+            { length: faker.number.int({ min: 2, max: 4 }) },
+            () => faker.number.int({ min: 1, max: 20 }),
+          ),
+          electives: Array.from(
+            { length: faker.number.int({ min: 2, max: 5 }) },
+            () => faker.number.int({ min: 21, max: 50 }),
+          ),
+        },
+        programs: {
+          required: [],
+          electives: [],
+        },
+      },
+      req_tree: [
+        {
+          data: {
+            node_type: "operator",
+            operator: "all_of",
+            operator_value: null,
+            program: faker.lorem.slug(),
+            course: null,
+            title: "Required Courses",
+            elective_flag: false,
+          },
+          id: 1,
+        },
+        {
+          data: {
+            node_type: "operator",
+            operator: "min_number_of",
+            operator_value: "2",
+            program: faker.lorem.slug(),
+            course: null,
+            title: "Elective Courses",
+            elective_flag: true,
+          },
+          id: 2,
+        },
+      ],
+      page: {
+        feature_image_src: faker.image.urlLoremFlickr({
+          width: 1134,
+          height: 675,
+        }),
+        page_url: `/programs/${faker.lorem.slug()}/`,
+        financial_assistance_form_url: faker.internet.url(),
+        description: makeHTMLParagraph(1),
+        live: true,
+        length: `${faker.number.int({ min: 1, max: 4 })} terms (${faker.number.int({ min: 6, max: 24 })} months)`,
+        effort: `${faker.number.int({ min: 5, max: 20 })} hours per week`,
+        price: `$${faker.number.int({ min: 250, max: 1000 })} - $${faker.number.int({ min: 1000, max: 5000 })} per course`,
+      },
+      program_type: faker.helpers.arrayElement([
+        "MicroMasters®",
+        "Professional Certificate",
+        "XSeries",
+      ]),
+      certificate_type: faker.helpers.arrayElement([
+        "MicroMasters Credential",
+        "Professional Certificate",
+        "XSeries Certificate",
+      ]),
+      departments: [
+        {
+          name: faker.company.name(),
+        },
+      ],
+      live: true,
+      topics: Array.from(
+        { length: faker.number.int({ min: 3, max: 7 }) },
+        () => ({
+          name: faker.lorem.word(),
+        }),
+      ),
+      availability: faker.helpers.arrayElement(["anytime", "dated"]),
+      start_date: faker.date.future().toISOString(),
+      end_date: null,
+      enrollment_start: null,
+      enrollment_end: null,
+      required_prerequisites: faker.datatype.boolean(),
+      duration: `${faker.number.int({ min: 1, max: 4 })} terms (${faker.number.int({ min: 6, max: 24 })} months)`,
+      min_weeks: faker.number.int({ min: 24, max: 48 }),
+      max_weeks: faker.number.int({ min: 48, max: 96 }),
+      min_price: faker.number.int({ min: 1000, max: 2500 }),
+      max_price: faker.number.int({ min: 2500, max: 10000 }),
+      time_commitment: `${faker.number.int({ min: 5, max: 20 })} hours per week`,
+      min_weekly_hours: `${faker.number.int({ min: 5, max: 10 })}`,
+      max_weekly_hours: `${faker.number.int({ min: 11, max: 20 })}`,
+    },
+  }
+  return mergeOverrides<ProgramPageItem>(defaults, override)
+}
+
+export { coursePageItem, coursePageList, faculty, programPageItem }

@@ -17,6 +17,7 @@ type LoadingSpinnerProps = {
   loading: boolean
   size?: number | string
   "aria-label"?: string
+  color?: "primary" | "inherit"
 }
 
 const noDelay = { transitionDelay: "0ms" }
@@ -25,11 +26,12 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   loading,
   size,
   "aria-label": label = "Loading",
+  color,
 }) => {
   return (
     <Container>
       <Fade in={loading} style={!loading ? noDelay : undefined} unmountOnExit>
-        <CircularProgress aria-label={label} size={size} />
+        <CircularProgress color={color} aria-label={label} size={size} />
       </Fade>
     </Container>
   )

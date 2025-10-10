@@ -8,6 +8,7 @@ import * as Sentry from "@sentry/nextjs"
 import { notFound } from "next/navigation"
 import { pagesQueries } from "api/mitxonline-hooks/pages"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
+import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
 
 export const generateMetadata = async (
   props: PageProps<"/courses/[readable_id]">,
@@ -23,9 +24,12 @@ export const generateMetadata = async (
       notFound()
     }
     const [course] = resp.data.items
+    const image = course.feature_image
+      ? course.course_details.page.feature_image_src
+      : DEFAULT_RESOURCE_IMG
     return standardizeMetadata({
       title: course.title,
-      image: course.course_details.page.feature_image_src,
+      image,
       robots: "noindex, nofollow",
     })
   } catch (error) {
@@ -47,7 +51,7 @@ const Page: React.FC<PageProps<"/courses/[readable_id]">> = async (props) => {
    * This approach blocked by wagtail api requiring auth.
    */
   const { dehydratedState } = await prefetch([
-    pagesQueries.courseDetail(readableId),
+    pagesQueries.coursePages(readableId),
     coursesQueries.coursesList({ readable_id: readableId }),
   ])
   return (

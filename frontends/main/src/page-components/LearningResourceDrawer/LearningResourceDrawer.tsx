@@ -110,7 +110,7 @@ const DrawerContent: React.FC<{
   ) => {
     return (
       <ResourceCarousel
-        titleComponent="p"
+        titleComponent="h3"
         titleVariant="subtitle1"
         title={title}
         config={[
@@ -132,7 +132,7 @@ const DrawerContent: React.FC<{
   }
   const similarResourcesCarousel = (
     <ResourceCarousel
-      titleComponent="p"
+      titleComponent="h3"
       titleVariant="subtitle1"
       title="Similar Learning Resources"
       config={[
@@ -154,7 +154,7 @@ const DrawerContent: React.FC<{
   const topicCarousels = topics?.map((topic) => (
     <ResourceCarousel
       key={topic.id}
-      titleComponent="p"
+      titleComponent="h3"
       titleVariant="subtitle1"
       title={`Learning Resources in "${topic.name}"`}
       config={TopicCarouselConfig(topic.name)}

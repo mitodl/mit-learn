@@ -3,12 +3,12 @@ import React from "react"
 import { styled, Breadcrumbs, Container, Typography } from "ol-components"
 import * as urls from "@/common/urls"
 import { useB2BAttachMutation } from "api/mitxonline-hooks/organizations"
-import { useMitxOnlineCurrentUser } from "api/mitxonline-hooks/user"
+import { useMitxOnlineUserMe } from "api/mitxonline-hooks/user"
 import { userQueries } from "api/hooks/user"
 import { useQuery } from "@tanstack/react-query"
 import { useRouter } from "next-nprogress-bar"
 
-type B2BAttachPageProps = {
+type EnrollmentCodePage = {
   code: string
 }
 
@@ -17,7 +17,7 @@ const InterstitialMessage = styled(Typography)(({ theme }) => ({
   textAlign: "center",
 }))
 
-const B2BAttachPage: React.FC<B2BAttachPageProps> = ({ code }) => {
+const EnrollmentCodePage: React.FC<EnrollmentCodePage> = ({ code }) => {
   const {
     mutate: attach,
     isSuccess,
@@ -31,7 +31,7 @@ const B2BAttachPage: React.FC<B2BAttachPageProps> = ({ code }) => {
     ...userQueries.me(),
     staleTime: 0,
   })
-  const { data: mitxOnlineUser } = useMitxOnlineCurrentUser()
+  const { data: mitxOnlineUser } = useMitxOnlineUserMe()
 
   React.useEffect(() => {
     attach?.()
@@ -79,4 +79,4 @@ const B2BAttachPage: React.FC<B2BAttachPageProps> = ({ code }) => {
   )
 }
 
-export default B2BAttachPage
+export default EnrollmentCodePage

@@ -122,7 +122,7 @@ const setupProgramsAndCourses = () => {
   const orgX = factories.organizations.organization({ name: "Org X" })
   const mitxOnlineUser = factories.user.user({ b2b_organizations: [orgX] })
   setMockResponse.get(u.urls.userMe.get(), user)
-  setMockResponse.get(urls.currentUser.get(), mitxOnlineUser)
+  setMockResponse.get(urls.userMe.get(), mitxOnlineUser)
   setMockResponse.get(urls.organization.organizationList(""), orgX)
   setMockResponse.get(urls.organization.organizationList(orgX.slug), orgX)
 
@@ -244,7 +244,7 @@ function setupOrgDashboardMocks(
 ) {
   // Basic user and org setup
   setMockResponse.get(u.urls.userMe.get(), user)
-  setMockResponse.get(mitxonline.urls.currentUser.get(), mitxOnlineUser)
+  setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
   setMockResponse.get(
     mitxonline.urls.organization.organizationList(org.slug),
     org,
