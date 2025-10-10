@@ -137,7 +137,7 @@ type CourseInfoRowProps = {
   course: CourseWithCourseRunsSerializerV2
   nextRun: CourseRunV2
 } & HTMLAttributes<HTMLDivElement>
-const DatesRow: React.FC<CourseInfoRowProps> = ({
+const CourseDatesRow: React.FC<CourseInfoRowProps> = ({
   course,
   nextRun,
   ...others
@@ -218,7 +218,10 @@ const PACE_DATA = {
     href: "https://mitxonline.zendesk.com/hc/en-us/articles/21994872904475-What-are-Self-Paced-courses-on-MITx-Online",
   },
 }
-const PaceRow: React.FC<CourseInfoRowProps> = ({ nextRun, ...others }) => {
+const CoursePaceRow: React.FC<CourseInfoRowProps> = ({
+  nextRun,
+  ...others
+}) => {
   const isSelfPaced = nextRun.is_self_paced || nextRun.is_archived
   const pace = PACE_DATA[isSelfPaced ? "self_paced" : "instructor_paced"]
 
@@ -309,7 +312,7 @@ const CertificateBox: React.FC<CourseInfoRowProps> = ({ nextRun }) => {
   )
 }
 
-const PriceRow: React.FC<CourseInfoRowProps> = ({
+const CoursePriceRow: React.FC<CourseInfoRowProps> = ({
   course,
   nextRun,
   ...others
@@ -349,6 +352,7 @@ enum TestIds {
   DurationRow = "duration-row",
   PriceRow = "price-row",
   RequirementsRow = "requirements-row",
+  CertificateTrackRow = "certificate-track-row",
 }
 
 const ArchivedAlert: React.FC = () => {
@@ -389,12 +393,12 @@ const CourseSummary: React.FC<{
               {nextRun.is_archived ? "Access Course Materials" : "Enroll Now"}
             </WideButton>
             {nextRun.is_archived ? <ArchivedAlert /> : null}
-            <DatesRow
+            <CourseDatesRow
               course={course}
               nextRun={nextRun}
               data-testid={TestIds.DatesRow}
             />
-            <PaceRow
+            <CoursePaceRow
               course={course}
               nextRun={nextRun}
               data-testid={TestIds.PaceRow}
@@ -404,7 +408,7 @@ const CourseSummary: React.FC<{
               nextRun={nextRun}
               data-testid={TestIds.DurationRow}
             />
-            <PriceRow
+            <CoursePriceRow
               course={course}
               nextRun={nextRun}
               data-testid={TestIds.PriceRow}
@@ -421,6 +425,10 @@ const CourseSummary: React.FC<{
   )
 }
 
+type ProgramInfoRowProps = {
+  program: V2Program
+} & HTMLAttributes<HTMLDivElement>
+
 const RequirementsRow: React.FC<ProgramInfoRowProps> = ({
   program,
   ...others
@@ -436,6 +444,7 @@ const RequirementsRow: React.FC<ProgramInfoRowProps> = ({
       <span>Complete All</span>
     </InfoRowInner>
   ) : null
+
   const electiveDisplay = electiveSubtree?.children?.length ? (
     <InfoRowInner>
       {`${electiveSubtree.children.length} Elective ${pluralize(
@@ -462,9 +471,6 @@ const RequirementsRow: React.FC<ProgramInfoRowProps> = ({
   )
 }
 
-type ProgramInfoRowProps = {
-  program: V2Program
-} & HTMLAttributes<HTMLDivElement>
 const ProgramDurationRow: React.FC<ProgramInfoRowProps> = ({
   program,
   ...others
@@ -509,9 +515,9 @@ const ProgramPaceRow: React.FC<
   )
 }
 
-const ProgramPriceRow = () => {
+const ProgramPriceRow: React.FC<HTMLAttributes<HTMLDivElement>> = (props) => {
   return (
-    <InfoRow>
+    <InfoRow {...props}>
       <RiPriceTag3Line aria-hidden="true" />
       <InfoRowInner>
         <InfoLabelValue label="Price" value="Free to Learn" />
@@ -568,8 +574,11 @@ const ProgramSummary: React.FC<{
           programResource={programResource ?? null}
           data-testid={TestIds.PaceRow}
         />
-        <ProgramPriceRow />
-        <ProgramCertificateRow program={program} />
+        <ProgramPriceRow data-testid={TestIds.PriceRow} />
+        <ProgramCertificateRow
+          data-testid={TestIds.CertificateTrackRow}
+          program={program}
+        />
       </Stack>
     </SidebarSummaryRoot>
   )
