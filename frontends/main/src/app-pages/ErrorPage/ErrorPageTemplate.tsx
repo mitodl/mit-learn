@@ -81,6 +81,33 @@ const Button = styled(ButtonLink)({
   minWidth: "200px",
 })
 
+export const ErrorContent: React.FC<ErrorPageTemplateProps> = ({
+  title,
+  timSays,
+}) => {
+  return (
+    <ErrorContainer>
+      <ImageContainer>
+        <TimSpeechImage src={timSpeechBubble} alt="" />
+        <TimSays>{timSays || "Oops!"}</TimSays>
+        <TimImage src={timImage} alt="" />
+      </ImageContainer>
+      <Typography
+        component="h1"
+        variant="h3"
+        sx={{ textAlign: "center", margin: "0 30px" }}
+      >
+        {title}
+      </Typography>
+      <Footer>
+        <Button variant="primary" href={HOME} Component="a">
+          Home
+        </Button>
+      </Footer>
+    </ErrorContainer>
+  )
+}
+
 const ErrorPageTemplate: React.FC<ErrorPageTemplateProps> = ({
   title,
   timSays,
@@ -109,25 +136,7 @@ const ErrorPageTemplate: React.FC<ErrorPageTemplateProps> = ({
   }
   return (
     <Page>
-      <ErrorContainer>
-        <ImageContainer>
-          <TimSpeechImage src={timSpeechBubble} alt="" />
-          <TimSays>{timSays || "Oops!"}</TimSays>
-          <TimImage src={timImage} alt="" />
-        </ImageContainer>
-        <Typography
-          component="h1"
-          variant="h3"
-          sx={{ textAlign: "center", margin: "0 30px" }}
-        >
-          {title}
-        </Typography>
-        <Footer>
-          <Button variant="primary" href={HOME} Component="a">
-            Home
-          </Button>
-        </Footer>
-      </ErrorContainer>
+      <ErrorContent title={title} timSays={timSays} />
     </Page>
   )
 }
