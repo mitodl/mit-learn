@@ -46,6 +46,11 @@ export const UNIT_LOGOS: Record<OfferedByEnum, LogoObject> = {
     image: "/images/unit_logos/see.svg",
     aspect: 7.61,
   },
+  [OfferedByEnum.Climate]: {
+    name: "MIT Climate",
+    image: "/images/unit_logos/climate.svg",
+    aspect: 3.32,
+  },
 }
 
 // @ts-expect-error Local openapi client https://www.npmjs.com/package/@mitodl/open-api-axios

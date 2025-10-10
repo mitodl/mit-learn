@@ -6,7 +6,7 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAdminUser
 
 from articles.models import Article
-from articles.serializers import ArticleSerializer
+from articles.serializers import RichTextArticleSerializer
 from main.constants import VALID_HTTP_METHODS
 from main.utils import cache_page_for_all_users, clear_search_cache
 
@@ -34,7 +34,7 @@ class ArticleViewSet(viewsets.ModelViewSet):
     Viewset for Article viewing and editing.
     """
 
-    serializer_class = ArticleSerializer
+    serializer_class = RichTextArticleSerializer
     queryset = Article.objects.all()
     pagination_class = DefaultPagination
 

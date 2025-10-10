@@ -7,6 +7,7 @@ import { formatDate } from "../date/utils"
 const readableResourceTypes: Record<ResourceTypeEnum, string> = {
   [ResourceTypeEnum.Course]: "Course",
   [ResourceTypeEnum.Program]: "Program",
+  [ResourceTypeEnum.Article]: "Article",
   [ResourceTypeEnum.LearningPath]: "Learning Path",
   [ResourceTypeEnum.Podcast]: "Podcast",
   [ResourceTypeEnum.PodcastEpisode]: "Podcast Episode",

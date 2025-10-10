@@ -195,3 +195,13 @@ def mitpe_etl() -> tuple[list[LearningResource], list[LearningResource]]:
             config=ProgramLoaderConfig(prune=True, courses=CourseLoaderConfig()),
         ),
     )
+
+
+def mit_climate_etl() -> list[dict]:
+    """
+    ETL for MIT Climate articles.
+    """
+    from learning_resources.etl.mit_climate import extract_articles
+
+    articles_data = extract_articles()
+    return loaders.load_articles(articles_data)

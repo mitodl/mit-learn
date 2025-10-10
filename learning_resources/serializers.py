@@ -129,6 +129,7 @@ class LearningResourceOfferorDetailSerializer(LearningResourceOfferorSerializer)
 @extend_schema_field(
     {
         "type": "object",
+        "title": "CourseResourceCertificationType",
         "properties": {
             "code": {"enum": CertificationType.names()},
             "name": {"type": "string"},
@@ -243,6 +244,7 @@ class LearningResourceLevelSerializer(serializers.Field):
 @extend_schema_field(
     {
         "type": "object",
+        "title": "CourseResourceDeliveryInner",
         "properties": {
             "code": {"enum": LearningResourceDelivery.names()},
             "name": {"type": "string"},
@@ -258,6 +260,7 @@ class LearningResourceDeliverySerializer(serializers.Field):
 @extend_schema_field(
     {
         "type": "object",
+        "title": "CourseResourceFormatInner",
         "properties": {
             "code": {"enum": Format.names()},
             "name": {"type": "string"},
@@ -273,6 +276,7 @@ class FormatSerializer(serializers.Field):
 @extend_schema_field(
     {
         "type": "object",
+        "title": "CourseResourcePaceInner",
         "properties": {
             "code": {"enum": Pace.names()},
             "name": {"type": "string"},
@@ -345,6 +349,14 @@ class CourseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Course
+        exclude = ("learning_resource", *COMMON_IGNORED_FIELDS)
+
+
+class ArticleSerializer(serializers.ModelSerializer):
+    """Serializer for the Article model"""
+
+    class Meta:
+        model = models.Article
         exclude = ("learning_resource", *COMMON_IGNORED_FIELDS)
 
 
@@ -987,8 +999,17 @@ class CourseResourceSerializer(LearningResourceBaseSerializer):
     resource_type = LearningResourceTypeField(
         default=constants.LearningResourceType.course.name
     )
-
     course = CourseSerializer(read_only=True)
+
+
+class ArticleResourceSerializer(LearningResourceBaseSerializer):
+    """Serializer for Article resources"""
+
+    resource_type = LearningResourceTypeField(
+        default=constants.LearningResourceType.article.name
+    )
+
+    article = ArticleSerializer(read_only=True)
 
 
 class LearningPathResourceSerializer(LearningResourceBaseSerializer):
@@ -1106,6 +1127,7 @@ class LearningResourceSerializer(serializers.Serializer):
             PodcastEpisodeResourceSerializer,
             VideoResourceSerializer,
             VideoPlaylistResourceSerializer,
+            ArticleResourceSerializer,
         )
     }
 

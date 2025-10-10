@@ -782,6 +782,26 @@ class Course(LearningResourceDetailModel):
         return self.learning_resource.runs
 
 
+class ArticleQuerySet(LearningResourceDetailQuerySet):
+    """QuerySet for Article"""
+
+    def for_serialization(self):
+        """Prefetch for serialization"""
+        return self
+
+
+class Article(LearningResourceDetailModel):
+    """Model for representing a article"""
+
+    objects = ArticleQuerySet.as_manager()
+    learning_resource = models.OneToOneField(
+        LearningResource,
+        related_name="article",
+        on_delete=models.deletion.CASCADE,
+        primary_key=True,
+    )
+
+
 class ProgramQuerySet(LearningResourceDetailQuerySet):
     """QuerySet for Program"""
 
