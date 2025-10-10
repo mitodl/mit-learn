@@ -41,11 +41,22 @@ useRouter.mockReturnValue({
   replace: mockReplace,
 })
 
+const mockLocalStorage = {
+  getItem: jest.fn(),
+  setItem: jest.fn(),
+}
+Object.defineProperty(window, "localStorage", {
+  value: mockLocalStorage,
+  writable: true,
+})
+
 describe("OrganizationContent", () => {
   beforeEach(() => {
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
     mockPush.mockClear()
     mockReplace.mockClear()
+    mockLocalStorage.getItem.mockClear()
+    mockLocalStorage.setItem.mockClear()
     setMockResponse.get(urls.enrollment.enrollmentsList(), [])
     setMockResponse.get(urls.programEnrollments.enrollmentsList(), [])
     setMockResponse.get(urls.contracts.contractsList(), [])
@@ -754,7 +765,6 @@ describe("OrganizationContent", () => {
         factories.organizations.organization({}),
       ],
     }
-    console.log("mitxOnlineUser", userWithTwoOrgs)
 
     setMockResponse.get(urls.userMe.get(), userWithTwoOrgs)
 
