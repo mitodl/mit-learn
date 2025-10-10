@@ -444,9 +444,14 @@ const OrganizationContent: React.FC<OrganizationContentProps> = ({
     if (!isLoadingMitxOnlineUser && mitxOnlineUser && !orgSlug) {
       const b2bOrganization = mitxOnlineUser.b2b_organizations[0]
       if (b2bOrganization) {
-        router.replace(
-          `/dashboard/organization/${b2bOrganization.slug.replace("org-", "")}`,
-        )
+        const lastVisited = localStorage.getItem("last-dashboard-org")
+        if (lastVisited) {
+          router.replace(`/dashboard/organization/${lastVisited}`)
+        } else {
+          router.replace(
+            `/dashboard/organization/${b2bOrganization.slug.replace("org-", "")}`,
+          )
+        }
       } else {
         router.replace("/dashboard")
       }
@@ -466,6 +471,8 @@ const OrganizationContent: React.FC<OrganizationContentProps> = ({
   if (!b2bOrganization) {
     return <ErrorContent title="Organization not found" timSays="404" />
   }
+
+  localStorage.setItem("last-dashboard-org", orgSlug)
 
   return <OrganizationContentInternal org={b2bOrganization} />
 }

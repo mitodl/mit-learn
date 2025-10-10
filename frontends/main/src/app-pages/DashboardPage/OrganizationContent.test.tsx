@@ -35,7 +35,6 @@ jest.mock("next-nprogress-bar", () => ({
 const mockPush = jest.fn()
 const mockReplace = jest.fn()
 
-// Get the mocked useRouter
 const { useRouter } = jest.requireMock("next-nprogress-bar")
 useRouter.mockReturnValue({
   push: mockPush,
