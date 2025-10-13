@@ -1,7 +1,6 @@
 """OpenTelemetry initialization and configuration for Learn AI."""
 
 import logging
-from typing import Optional
 
 from django.conf import settings
 from opentelemetry import trace
@@ -21,7 +20,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExport
 log = logging.getLogger(__name__)
 
 
-def configure_opentelemetry() -> Optional[TracerProvider]:
+def configure_opentelemetry() -> TracerProvider | None:
     """
     Configure OpenTelemetry with appropriate instrumentations and exporters.
     Returns the tracer provider if configured, None otherwise.

@@ -18,7 +18,6 @@ from hashlib import md5
 from pathlib import Path
 from subprocess import check_call
 from tempfile import TemporaryDirectory
-from typing import Optional
 
 import boto3
 import rapidjson
@@ -443,7 +442,7 @@ def is_valid_uuid(uuid_string: str) -> bool:
 def get_url_from_module_id(
     module_id: str,
     run: LearningResourceRun,
-    video_srt_metadata: Optional[dict] = None,
+    video_srt_metadata: dict | None = None,
 ) -> str:
     """
     Get the URL for a module based on its ID

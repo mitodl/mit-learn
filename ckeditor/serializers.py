@@ -1,6 +1,5 @@
 import math
 from time import time
-from typing import Optional
 
 import jwt
 from django.conf import settings
@@ -12,7 +11,7 @@ class CKEditorSettingsSerializer(serializers.Serializer):
 
     token = serializers.SerializerMethodField()
 
-    def get_token(self, _value) -> Optional[str]:
+    def get_token(self, _value) -> str | None:
         """Get the JWT token"""
         if settings.CKEDITOR_SECRET_KEY and settings.CKEDITOR_ENVIRONMENT_ID:
             payload = {

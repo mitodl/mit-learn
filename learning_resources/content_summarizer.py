@@ -1,5 +1,5 @@
 import logging
-from typing import Annotated, Optional
+from typing import Annotated
 
 from django.conf import settings
 from django.db import transaction
@@ -67,8 +67,8 @@ class ContentSummarizer:
     def get_unprocessed_content_file_ids(
         self,
         overwrite,
-        learning_resource_ids: Optional[list[int]] = None,
-        content_file_ids: Optional[list[int]] = None,
+        learning_resource_ids: list[int] | None = None,
+        content_file_ids: list[int] | None = None,
     ) -> list[int]:
         """
         Get Ids of unprocessed content files with applied filters.
