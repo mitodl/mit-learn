@@ -21,7 +21,7 @@ const pagesQueries = {
       queryKey: pagesKeys.coursePages(readableId),
       queryFn: async () => {
         return pagesApi
-          .pagesfieldstypecmsCoursePageRetrieve({ readable_id: readableId })
+          .pagesfieldstypecmsCoursepageRetrieve({ readable_id: readableId })
           .then((res) => res.data)
       },
     }),
@@ -30,7 +30,7 @@ const pagesQueries = {
       queryKey: pagesKeys.programPages(readableId),
       queryFn: async () => {
         return pagesApi
-          .pagesfieldstypecmsProgramPageRetrieve({ readable_id: readableId })
+          .pagesfieldstypecmsProgrampageRetrieve({ readable_id: readableId })
           .then((res) => res.data)
       },
     }),
