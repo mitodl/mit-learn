@@ -126,7 +126,7 @@ def test_search_index_plugin_department_rename(overwrite):
 def test_search_index_plugin_offeror_upserted(overwrite):
     """The plugin function should create an offeror channel"""
     offeror = LearningResourceOfferorFactory.create()
-    channel, created = ChannelPlugin().offeror_upserted(offeror, overwrite)
+    channel, _created = ChannelPlugin().offeror_upserted(offeror, overwrite)
     assert channel.unit_detail.unit == offeror
     assert channel.title == offeror.name
     assert channel.channel_type == ChannelType.unit.name

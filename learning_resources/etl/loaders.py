@@ -1053,7 +1053,7 @@ def load_video(video_data: dict) -> LearningResource:
             resource_type=LearningResourceType.video.name,
             defaults=video_data,
         )
-        video, _ = Video.objects.update_or_create(
+        Video.objects.update_or_create(
             learning_resource=learning_resource, defaults=video_fields
         )
         load_image(learning_resource, image_data)
@@ -1113,7 +1113,7 @@ def load_playlist(video_channel: VideoChannel, playlist_data: dict) -> LearningR
             ),
             defaults=playlist_data,
         )
-        playlist, _ = VideoPlaylist.objects.update_or_create(
+        VideoPlaylist.objects.update_or_create(
             learning_resource=playlist_resource,
             defaults={"channel": video_channel},
         )

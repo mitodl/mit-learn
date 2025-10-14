@@ -162,7 +162,7 @@ class ProgramLetterInterceptView(View):
             user_email=request.user.email,
             micromasters_program_id=program_id,
         )
-        letter, created = ProgramLetter.objects.get_or_create(
+        letter, _created = ProgramLetter.objects.get_or_create(
             user=request.user, certificate=certificate
         )
         return HttpResponseRedirect(letter.get_absolute_url())

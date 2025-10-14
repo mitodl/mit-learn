@@ -97,6 +97,7 @@ def get_all_feature_flags(opt_unique_id: str | None = None):
 
 def is_enabled(
     name: str,
+    *,
     default: bool | None = None,
     opt_unique_id: str | None = None,
 ) -> bool:
@@ -148,7 +149,7 @@ def is_enabled(
     )
 
 
-def if_feature_enabled(name: str, default: bool | None = None):
+def if_feature_enabled(name: str, *, default: bool | None = None):
     """
     Wrapper that results in a no-op if the given feature isn't enabled, and otherwise
     runs the wrapped function as normal.
@@ -161,7 +162,7 @@ def if_feature_enabled(name: str, default: bool | None = None):
     def if_feature_enabled_inner(func):
         @wraps(func)
         def wrapped_func(*args, **kwargs):
-            if not is_enabled(name, default):
+            if not is_enabled(name, default=default):
                 # If the given feature name is not enabled, do nothing (no-op).
                 return None
             else:
