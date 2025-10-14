@@ -143,6 +143,8 @@ def clear_and_create_index(*, index_name=None, skip_mapping=False, object_type=N
                 "number_of_replicas": settings.OPENSEARCH_REPLICA_COUNT,
                 "refresh_interval": "60s",
             },
+            "index.knn": True,
+            "default_pipeline": "vector_ingest_pipeline",
             "analysis": {
                 "analyzer": {
                     "trigram": {
@@ -661,3 +663,58 @@ def register_model():
     )
 #In [11]: model_id
 #Out[11]: 'UWxSwJkBGexBUUYnj1tV'
+
+
+def create_ingest_pipeline():
+    conn = get_conn()
+    pipeline ={
+        "description": "An NLP ingest pipeline",
+        "processors": [
+            {
+            "text_embedding": {
+                "model_id": "UWxSwJkBGexBUUYnj1tV",
+                "field_map": {
+                    "description": "description_embedding",
+                    "title": "title_embedding"
+                }
+            }
+            }
+        ]
+    }
+
+    conn.ingest.put_pipeline('vector_ingest_pipeline', pipeline)
+    
+
+
+def create_search_pipeline():
+    conn = get_conn()
+    pipeline = {
+        "description": "Post processor for hybrid search",
+        "phase_results_processors": [
+            {
+            "normalization-processor": {
+                "normalization": {
+                "technique": "min_max"
+                },
+                "combination": {
+                "technique": "arithmetic_mean",
+                "parameters": {
+                    "weights": [
+                    0.7,
+                    0.3
+                    ]
+                }
+                }
+            }
+            }
+        ]
+    }
+
+    conn.transport.perform_request(
+        "PUT",
+        "/_search/pipeline/hybrid_search_pipeline",
+        body=pipeline
+    )
+
+    
+

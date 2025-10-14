@@ -317,6 +317,26 @@ LEARNING_RESOURCE_MAP = {
     "time_commitment": {"type": "keyword"},
     "min_weekly_hours": {"type": "integer"},
     "max_weekly_hours": {"type": "integer"},
+    "title_embedding": {
+        "type": "knn_vector",
+        "dimension": 768,
+        "method": {
+          "engine": "lucene",
+          "space_type": "l2",
+          "name": "hnsw",
+          "parameters": {}
+        }
+    },
+    "description_embedding": {
+        "type": "knn_vector",
+        "dimension": 768,
+        "method": {
+          "engine": "lucene",
+          "space_type": "l2",
+          "name": "hnsw",
+          "parameters": {}
+        }
+    },
 }
 
 
@@ -446,6 +466,8 @@ SOURCE_EXCLUDED_FIELDS = [
     "content",
     "summary",
     "flashcards",
+    "description_embedding",
+    "title_embedding",
 ]
 
 LEARNING_RESOURCE_SEARCH_SORTBY_OPTIONS = {
