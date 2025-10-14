@@ -1,6 +1,6 @@
 import type {
   V2Program,
-  V1ProgramRequirement,
+  V2ProgramRequirement,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { V2ProgramRequirementDataNodeTypeEnum } from "@mitodl/mitxonline-api-axios/v2"
 
@@ -14,7 +14,7 @@ enum HeadingIds {
 
 const getElectiveSubtree = (
   program: V2Program,
-): V1ProgramRequirement | undefined => {
+): V2ProgramRequirement | undefined => {
   return program.req_tree[0]?.children?.find(
     (child) =>
       child.data.node_type === V2ProgramRequirementDataNodeTypeEnum.Operator &&
@@ -23,7 +23,7 @@ const getElectiveSubtree = (
 }
 const getRequiredSubtree = (
   program: V2Program,
-): V1ProgramRequirement | undefined => {
+): V2ProgramRequirement | undefined => {
   return program?.req_tree?.[0]?.children?.find(
     (child) =>
       child.data.node_type === V2ProgramRequirementDataNodeTypeEnum.Operator &&
