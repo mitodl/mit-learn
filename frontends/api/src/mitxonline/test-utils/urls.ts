@@ -51,11 +51,11 @@ const courses = {
 
 const pages = {
   coursePages: (readableId: string) =>
-    `${API_BASE_URL}/api/v2/pages/?fields=*&type=cms.CoursePage&readable_id=${encodeURIComponent(
+    `${API_BASE_URL}/api/v2/pages/?fields=*&type=cms.coursepage&readable_id=${encodeURIComponent(
       readableId,
     )}`,
   programPages: (readableId: string) =>
-    `${API_BASE_URL}/api/v2/pages/?fields=*&type=cms.ProgramPage&readable_id=${encodeURIComponent(
+    `${API_BASE_URL}/api/v2/pages/?fields=*&type=cms.programpage&readable_id=${encodeURIComponent(
       readableId,
     )}`,
 }
