@@ -27,17 +27,17 @@ REQUIRED_SETTINGS = {
 class TestSettings(TestCase):
     """Validate that settings work as expected."""
 
-    def reload_settings(self):
+    def reload_settings(self, module: str = "main.settings"):
         """
         Reload settings module with cleanup to restore it.
 
         Returns:
             dict: dictionary of the newly reloaded settings ``vars``
         """
-        importlib.reload(sys.modules["main.settings"])
+        importlib.reload(sys.modules[module])
         # Restore settings to original settings after test
-        self.addCleanup(importlib.reload, sys.modules["main.settings"])
-        return vars(sys.modules["main.settings"])
+        self.addCleanup(importlib.reload, sys.modules[module])
+        return vars(sys.modules[module])
 
     def test_s3_settings(self):
         """Verify that we enable and configure S3 with a variable"""
@@ -183,4 +183,32 @@ class TestSettings(TestCase):
             assert (
                 settings_vars["DEFAULT_DATABASE_CONFIG"]["DISABLE_SERVER_SIDE_CURSORS"]
                 is False
+            )
+
+    def test_celery_beat_disabled(self):
+        """Test that we can disable celery beat with an env var"""
+        with mock.patch.dict(
+            "os.environ",
+            {
+                **REQUIRED_SETTINGS,
+                "CELERY_BEAT_DISABLED": "True",
+            },
+            clear=True,
+        ):
+            settings_vars = self.reload_settings(module="main.settings_celery")
+            assert settings_vars["CELERY_BEAT_DISABLED"] is True
+            assert settings_vars["CELERY_BEAT_SCHEDULE"] == {}
+
+    def test_celery_beat_enabled(self):
+        """Test celery beat is enabled by default"""
+        with mock.patch.dict(
+            "os.environ",
+            REQUIRED_SETTINGS,  # Don't set CELERY_DISABLE_BEAT - test default
+            clear=True,
+        ):
+            settings_vars = self.reload_settings(module="main.settings_celery")
+            assert settings_vars["CELERY_BEAT_DISABLED"] is False
+            assert (
+                "update_next-start-date-every-1-days"
+                in settings_vars["CELERY_BEAT_SCHEDULE"]
             )
