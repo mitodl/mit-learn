@@ -1,9 +1,8 @@
 "use client"
 
-import React, { useEffect } from "react"
+import React from "react"
 import DOMPurify from "isomorphic-dompurify"
 import Image from "next/image"
-import { useRouter } from "next-nprogress-bar"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useQueries, useQuery } from "@tanstack/react-query"
@@ -429,42 +428,22 @@ const OrganizationContentInternal: React.FC<
 }
 
 type OrganizationContentProps = {
-  orgSlug?: string
+  orgSlug: string
 }
 const OrganizationContent: React.FC<OrganizationContentProps> = ({
   orgSlug,
 }) => {
-  const router = useRouter()
-
   const { isLoading: isLoadingMitxOnlineUser, data: mitxOnlineUser } = useQuery(
     mitxUserQueries.me(),
   )
 
-  useEffect(() => {
-    if (!isLoadingMitxOnlineUser && mitxOnlineUser && !orgSlug) {
-      const b2bOrganization = mitxOnlineUser.b2b_organizations[0]
-      if (b2bOrganization) {
-        const lastVisited = localStorage.getItem("last-dashboard-org")
-        if (lastVisited) {
-          router.replace(`/dashboard/organization/${lastVisited}`)
-        } else {
-          router.replace(
-            `/dashboard/organization/${b2bOrganization.slug.replace("org-", "")}`,
-          )
-        }
-      } else {
-        router.replace("/dashboard")
-      }
-    }
-  }, [isLoadingMitxOnlineUser, mitxOnlineUser, orgSlug, router])
-
-  if (isLoadingMitxOnlineUser || !mitxOnlineUser || !orgSlug) {
+  if (isLoadingMitxOnlineUser) {
     return (
       <Skeleton width="100%" height="100px" style={{ marginBottom: "16px" }} />
     )
   }
 
-  const b2bOrganization = mitxOnlineUser.b2b_organizations.find(
+  const b2bOrganization = mitxOnlineUser?.b2b_organizations.find(
     (org) => org.slug.replace("org-", "") === orgSlug,
   )
 

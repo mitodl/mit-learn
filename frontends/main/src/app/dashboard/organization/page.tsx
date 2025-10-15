@@ -1,8 +1,8 @@
 import React from "react"
-import OrganizationContent from "@/app-pages/DashboardPage/OrganizationContent"
+import OrganizationRedirect from "@/app-pages/DashboardPage/OrganizationRedirect"
 
-const Page: React.FC<PageProps<"/dashboard/organization">> = async () => {
-  return <OrganizationContent />
+const Page: React.FC = async () => {
+  return <OrganizationRedirect />
 }
 
 export default Page

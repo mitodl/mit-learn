@@ -28,35 +28,9 @@ const mockedUseFeatureFlagEnabled = jest
   .mocked(useFeatureFlagEnabled)
   .mockImplementation(() => false)
 
-jest.mock("next-nprogress-bar", () => ({
-  useRouter: jest.fn(),
-}))
-
-const mockPush = jest.fn()
-const mockReplace = jest.fn()
-
-const { useRouter } = jest.requireMock("next-nprogress-bar")
-useRouter.mockReturnValue({
-  push: mockPush,
-  replace: mockReplace,
-})
-
-const mockLocalStorage = {
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-}
-Object.defineProperty(window, "localStorage", {
-  value: mockLocalStorage,
-  writable: true,
-})
-
 describe("OrganizationContent", () => {
   beforeEach(() => {
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
-    mockPush.mockClear()
-    mockReplace.mockClear()
-    mockLocalStorage.getItem.mockClear()
-    mockLocalStorage.setItem.mockClear()
     setMockResponse.get(urls.enrollment.enrollmentsList(), [])
     setMockResponse.get(urls.programEnrollments.enrollmentsList(), [])
     setMockResponse.get(urls.contracts.contractsList(), [])
@@ -753,45 +727,6 @@ describe("OrganizationContent", () => {
       const cardStatus = within(cards[i]).getByTestId("enrollment-status")
       expect(cardStatus).toHaveTextContent("Not Enrolled")
     }
-  })
-
-  test("navigates to user's first organization if no orgSlug is provided", async () => {
-    const { mitxOnlineUser } = setupOrgAndUser()
-
-    const userWithTwoOrgs = {
-      ...mitxOnlineUser,
-      b2b_organizations: [
-        mitxOnlineUser.b2b_organizations[0],
-        factories.organizations.organization({}),
-      ],
-    }
-
-    setMockResponse.get(urls.userMe.get(), userWithTwoOrgs)
-
-    renderWithProviders(<OrganizationContent />)
-
-    await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith(
-        `/dashboard/organization/${mitxOnlineUser.b2b_organizations[0].slug.replace("org-", "")}`,
-      )
-    })
-  })
-
-  test("navigates to dashboard home if no orgSlug is provided and user has no organization", async () => {
-    const { mitxOnlineUser } = setupOrgAndUser()
-
-    const userWithNoOrgs = {
-      ...mitxOnlineUser,
-      b2b_organizations: [],
-    }
-
-    setMockResponse.get(urls.userMe.get(), userWithNoOrgs)
-
-    renderWithProviders(<OrganizationContent />)
-
-    await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith("/dashboard")
-    })
   })
 
   test("shows the not found screen if the organization is not found by orgSlug", async () => {
