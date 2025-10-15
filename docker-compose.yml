@@ -6,11 +6,19 @@ include:
       - env/backend.env
       - env/backend.local.env
 
+# Define the extra_hosts as a reusable anchor
+x-host-access: &host-access
+  extra_hosts:
+    # This allows containers to access services running on a host linux machine
+    # Unnecessary but harmless for mac/windows users
+    - "host.docker.internal:host-gateway"
+
 services:
   web:
     extends:
       file: docker-compose.apps.yml
       service: web
+    <<: *host-access
     env_file:
       - path: env/shared.env
       - path: env/shared.local.env
@@ -26,6 +34,7 @@ services:
     extends:
       file: docker-compose.apps.yml
       service: watch
+    <<: *host-access
     env_file:
       - path: env/shared.env
       - path: env/shared.local.env
@@ -41,6 +50,7 @@ services:
     extends:
       file: docker-compose.apps.yml
       service: celery
+    <<: *host-access
     env_file:
       - path: env/shared.env
       - path: env/shared.local.env

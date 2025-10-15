@@ -1,6 +1,13 @@
 include:
   - docker-compose.opensearch.${OPENSEARCH_CLUSTER_TYPE:-single-node}.yml
 
+# Define the extra_hosts as a reusable anchor
+x-host-access: &host-access
+  extra_hosts:
+    # This allows containers to access services running on a host linux machine
+    # Unnecessary but harmless for mac/windows users
+    - "host.docker.internal:host-gateway"
+
 services:
   db:
     profiles:
@@ -118,6 +125,7 @@ services:
     profiles:
       - apisix
     image: apache/apisix:3.13.0-debian # versions above this drop the local port on redirects
+    <<: *host-access
     environment:
       - CSRF_COOKIE_DOMAIN=${CSRF_COOKIE_DOMAIN:-.odl.local}
       - KEYCLOAK_REALM_NAME=${KEYCLOAK_REALM_NAME:-ol-local}
@@ -129,8 +137,8 @@ services:
       - APISIX_SESSION_SECRET_KEY=${APISIX_SESSION_SECRET_KEY:-something_at_least_16_characters}
       - APISIX_LOGOUT_URL=${APISIX_LOGOUT_URL:-http://open.odl.local:8065/}
       - MITOL_API_DOMAIN=${MITOL_API_DOMAIN:-open.odl.local}
-      - MITX_ONLINE_UPSTREAM=${MITX_ONLINE_UPSTREAM:-mitxonline.odl.local:8013}
-      - MITX_ONLINE_DOMAIN=${MITX_ONLINE_DOMAIN:-mitxonline.odl.local}
+      - MITX_ONLINE_UPSTREAM=${MITX_ONLINE_UPSTREAM:-host.docker.internal:8013}
+      - MITX_ONLINE_DOMAIN=${MITX_ONLINE_DOMAIN:-host.docker.internal}
       - NGINX_PORT=${NGINX_PORT:-8062}
     ports:
       - ${APISIX_PORT}:${APISIX_PORT}
