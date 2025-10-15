@@ -18,6 +18,7 @@ Run through those steps **including the addition of `/etc/hosts` aliases and the
 `createsuperuser` command**.
 
 For `/etc/hosts`, you'll need to add entries for the following domains if you are relying on the sample environment variables:
+
 ```
 api.open.odl.local
 open.odl.local
@@ -52,6 +53,7 @@ The following settings must be configured before running the app:
 
 Before proceeding with any additional setup, you may want to adjust your docker settings to allow more memory to be used by the containers. Many engineers allocate the bulk of their system resources by navigating to Settings -> Resources in Docker Desktop.
 Additionally, the `web` and `celery` services specify `memory_limit` values, which you can adjust using the following environment variables:
+
 ```
 MITOL_CELERY_MEM_LIMIT
 MITOL_WEB_MEM_LIMIT
@@ -59,6 +61,8 @@ MITOL_WEB_MEM_LIMIT
 
 If any resource limits are set too low, you may encounter OOMKilled errors in the logs of those services. The primary way this will manifest is that containers may unexpectedly die during operation resulting in 500 errors or unusual celery task execution.
 Given a container that is unexpectedly down, you can verify that it was OOMKilled by running `docker inspect <container_name> -f '{{json .State.OOMKilled}}'`, or by checking the Docker VM kernel message logs for relevant output.
+
+By default, many scheduled celery tasks run on a frequent basis, daily or even multiple times per day. This could potentially slow down development and testing. You can disable all scheduled celery tasks by adding `CELERY_BEAT_DISABLED=True` to your `backend.local.env` file.
 
 ### Loading Data
 
