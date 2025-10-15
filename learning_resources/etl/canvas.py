@@ -1,16 +1,11 @@
-import base64
 import logging
 import zipfile
 from collections.abc import Generator
 from datetime import datetime
-from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-import pypdfium2 as pdfium
 from django.conf import settings
-from litellm import completion
-from PIL import Image
 
 from learning_resources.constants import (
     TUTOR_PROBLEM_TYPE,
@@ -213,6 +208,7 @@ def transform_canvas_problem_files(
             run,
             overwrite=overwrite,
             valid_file_types=VALID_TUTOR_PROBLEM_FILE_TYPES,
+            is_tutor_problem_file_import=True,
         ):
             keys_to_keep = [
                 "run",
@@ -249,89 +245,4 @@ def transform_canvas_problem_files(
                 problem_file_data["content"]
             )
 
-            if (
-                problem_file_data["file_extension"].lower() == ".pdf"
-                and settings.CANVAS_PDF_TRANSCRIPTION_MODEL
-                and not run.problem_files.filter(
-                    checksum=problem_file_data["checksum"]
-                ).exists()
-            ):
-                markdown_content = _pdf_to_markdown(
-                    Path(olx_path) / Path(problem_file_data["source_path"])
-                )
-                if markdown_content:
-                    problem_file_data["content"] = markdown_content
             yield problem_file_data
-
-
-def pdf_to_base64_images(pdf_path, fmt="JPEG", max_size=2000, quality=85):
-    """
-    Convert a PDF file to a list of base64 encoded images (one per page).
-    Resizes images to reduce file size while keeping good OCR quality.
-
-    Args:
-        pdf_path (str): Path to the PDF file
-        dpi (int): DPI for the output images (default: 200)
-        fmt (str): Output format ('JPEG' or 'PNG') (default: 'JPEG')
-        max_size (int): Maximum width/height in pixels (default: 2000)
-        quality (int): JPEG quality (1-100, default: 85)
-
-    Returns:
-        list: List of base64 encoded strings (one per page)
-    """
-
-    pdf = pdfium.PdfDocument(pdf_path)
-    for page_index in range(len(pdf)):
-        page = pdf.get_page(page_index)
-        image = page.render(scale=2).to_pil()
-        page.close()
-        # Resize the image if it's too large (preserving aspect ratio)
-        if max(image.size) > max_size:
-            image.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
-        buffered = BytesIO()
-        # Save with optimized settings
-        if fmt.upper() == "JPEG":
-            image.save(buffered, format="JPEG", quality=quality, optimize=True)
-        else:  # PNG
-            image.save(buffered, format="PNG", optimize=True)
-        img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
-        yield img_str
-    pdf.close()
-
-
-def _pdf_to_markdown(pdf_path):
-    """
-    Convert a PDF file to markdown using an llm
-    """
-    markdown = ""
-    for im in pdf_to_base64_images(pdf_path):
-        response = completion(
-            api_base=settings.LITELLM_API_BASE,
-            custom_llm_provider=settings.LITELLM_CUSTOM_PROVIDER,
-            model=settings.CANVAS_PDF_TRANSCRIPTION_MODEL,
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": settings.CANVAS_TRANSCRIPTION_PROMPT,
-                        },
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/jpeg;base64,{im}",
-                            },
-                        },
-                    ],
-                }
-            ],
-        )
-        markdown_snippet = (
-            response.json()["choices"][0]["message"]["content"]
-            .removeprefix("```markdown\n")
-            .removesuffix("\n```")
-        )
-
-        markdown += markdown_snippet
-    return markdown
