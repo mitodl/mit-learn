@@ -18,6 +18,7 @@ Run through those steps **including the addition of `/etc/hosts` aliases and the
 `createsuperuser` command**.
 
 For `/etc/hosts`, you'll need to add entries for the following domains if you are relying on the sample environment variables:
+
 ```
 api.open.odl.local
 open.odl.local
@@ -52,6 +53,7 @@ The following settings must be configured before running the app:
 
 Before proceeding with any additional setup, you may want to adjust your docker settings to allow more memory to be used by the containers. Many engineers allocate the bulk of their system resources by navigating to Settings -> Resources in Docker Desktop.
 Additionally, the `web` and `celery` services specify `memory_limit` values, which you can adjust using the following environment variables:
+
 ```
 MITOL_CELERY_MEM_LIMIT
 MITOL_WEB_MEM_LIMIT
@@ -255,6 +257,51 @@ The keys and ID can be found in the Settings section of the project in PostHog t
 Personal API keys only need read permission to Query. When creating a personal API key, choose "Read" under Query for Scopes. The key needs no other permissions (unless you need them for other things). Additionally, if you select either option besides "All-access" under "Organization & project access", make sure you assign the correct project/org to the API key.
 
 Once these are set (and you've restarted the app), you should see events flowing into the PostHog dashboard.
+
+### Connecting with MITxOnline
+
+Set up the [mitxonline](https://github.com/mitodl/mitxonline) as indicated there. _Note: A working OpenEdx installation is not necessary for integration with Learn._
+
+Both MITxOnline and MIT Learn repos have keycloak and apisix containers included in their stacks. In connecting the two projects, we want to use the same Keycloak+Apisix container for both projects. Here we assume that the Learn Keycloak+Apisix will be used.
+
+Then, in Learn, set:
+
+```env
+# MIT Learn, backend.local.env
+MITX_ONLINE_BASE_URL=http://mitxonline.odl.local:8013/
+MITX_ONLINE_COURSES_API_URL=http://host.docker.internal:8013/api/v2/courses/
+MITX_ONLINE_PROGRAMS_API_URL=http://host.docker.internal:8013/api/v2/programs/
+```
+
+```env
+# MIT Learn, frontend.local.env
+## This is the default; it should not be overridden
+NEXT_PUBLIC_MITX_ONLINE_BASE_URL=${MITX_ONLINE_BASE_URL}
+```
+
+and in MITxOnline, set:
+
+> [!TIP]
+> Be sure that COMPOSE_PROFILES is NOT set in your .env file; that way, MITxOnline's keycloak and apisix containers will not be used.
+
+```env
+# MITxOnline, .env
+CSRF_COOKIE_DOMAIN=.odl.local
+CORS_ALLOWED_ORIGINS=http://mitxonline.odl.local:8065, http://learn.odl.local:8062
+CSRF_TRUSTED_ORIGINS=http://mitxonline.odl.local:8065, http://learn.odl.local:8062
+
+# For mitol-django-apigateway
+MITOL_APIGATEWAY_DISABLE_MIDDLEWARE=False
+MITOL_APIGATEWAY_USERINFO_CREATE=True
+MITOL_APIGATEWAY_USERINFO_UPDATE=True
+
+# Keycloak settings, these should match mit-learn
+KEYCLOAK_BASE_URL=http://kc.ol.local:8066
+KEYCLOAK_CLIENT_ID=apisix
+KEYCLOAK_CLIENT_SECRET=HckCZXToXfaetbBx0Fo3xbjnC468oMi4 # pragma: allowlist-secret
+KEYCLOAK_DISCOVERY_URL=http://kc.ol.local:8066/realms/ol-local/.well-known/openid-configuration
+KEYCLOAK_REALM_NAME=ol-local
+```
 
 ## GitHub Pages Storybook
 
