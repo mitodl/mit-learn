@@ -19,14 +19,15 @@ const InterstitialMessage = styled(Typography)(({ theme }) => ({
 
 const OrgRedirect: React.FC<{ orgId: number }> = ({ orgId }) => {
   const { data: mitxOnlineUser } = useMitxOnlineUserMe()
+  const router = useRouter()
   const orgSlug = mitxOnlineUser?.b2b_organizations?.find(
     (org) => org.id === orgId,
   )?.slug
   React.useEffect(() => {
     if (orgSlug) {
-      window.location.href = urls.organizationView(orgSlug.replace("org-", ""))
+      router.push(urls.organizationView(orgSlug.replace("org-", "")))
     }
-  }, [orgSlug])
+  }, [orgSlug, router])
   if (!orgSlug) {
     return (
       <Typography color="error">
@@ -89,7 +90,7 @@ const EnrollmentCodePage: React.FC<EnrollmentCodePage> = ({ code }) => {
       {isPending && (
         <InterstitialMessage>Validating code "{code}"...</InterstitialMessage>
       )}
-      {isSuccess && contracts.data && (
+      {isSuccess && contracts?.data && contracts.data.length > 0 && (
         <OrgRedirect orgId={contracts.data[0].organization} />
       )}
     </Container>
