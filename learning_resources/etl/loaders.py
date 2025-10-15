@@ -1145,6 +1145,14 @@ def load_articles(articles_data: iter) -> list[LearningResource]:
             )
         else:
             article_resources.append(article_resource)
+    unpublished_articles = Article.objects.exclude(
+        learning_resource__id__in=[resource.id for resource in article_resources]
+    )
+    # remove articles that no longer exist
+    bulk_resources_unpublished_actions(
+        unpublished_articles.values_list("learning_resource__id", flat=True),
+        LearningResourceType.article.name,
+    )
     return article_resources
 
 
