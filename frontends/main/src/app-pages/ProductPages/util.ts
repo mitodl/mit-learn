@@ -15,20 +15,30 @@ enum HeadingIds {
 const getElectiveSubtree = (
   program: V2Program,
 ): V2ProgramRequirement | undefined => {
-  return program.req_tree[0]?.children?.find(
-    (child) =>
-      child.data.node_type === V2ProgramRequirementDataNodeTypeEnum.Operator &&
-      child.data.elective_flag,
-  )
+  const find = (
+    nodes: V2ProgramRequirement[],
+  ): V2ProgramRequirement | undefined =>
+    nodes?.find(
+      (child) =>
+        child.data.node_type ===
+          V2ProgramRequirementDataNodeTypeEnum.Operator &&
+        child.data.elective_flag,
+    )
+  return find(program.req_tree) ?? find(program.req_tree[0]?.children || [])
 }
 const getRequiredSubtree = (
   program: V2Program,
 ): V2ProgramRequirement | undefined => {
-  return program?.req_tree?.[0]?.children?.find(
-    (child) =>
-      child.data.node_type === V2ProgramRequirementDataNodeTypeEnum.Operator &&
-      !child.data.elective_flag,
-  )
+  const find = (
+    nodes: V2ProgramRequirement[],
+  ): V2ProgramRequirement | undefined =>
+    nodes?.find(
+      (child) =>
+        child.data.node_type ===
+          V2ProgramRequirementDataNodeTypeEnum.Operator &&
+        !child.data.elective_flag,
+    )
+  return find(program.req_tree) ?? find(program.req_tree[0]?.children || [])
 }
 
 export { HeadingIds, getElectiveSubtree, getRequiredSubtree }
