@@ -18,6 +18,7 @@ import type {
   FeaturedApiFeaturedListRequest as FeaturedListParams,
   LearningResourcesApiLearningResourcesItemsListRequest as ItemsListRequest,
   LearningResourcesSearchResponse,
+  LearningResourcesApiLearningResourcesSummaryListRequest as LearningResourcesSummaryListRequest,
 } from "../../generated/v1"
 import { queryOptions } from "@tanstack/react-query"
 import { hasPosition, randomizeGroups } from "./util"
@@ -44,6 +45,11 @@ const learningResourceKeys = {
   listsRoot: () => [...learningResourceKeys.root, "listsAll"],
   list: (params: LearningResourcesListRequest) => [
     ...learningResourceKeys.listsRoot(),
+    params,
+  ],
+  summaryListRoot: () => [...learningResourceKeys.root, "summaryList"],
+  summaryList: (params: LearningResourcesSummaryListRequest) => [
+    ...learningResourceKeys.summaryListRoot(),
     params,
   ],
   // detail
@@ -149,6 +155,14 @@ const learningResourceQueries = {
           ...res.data,
           results: res.data.results.map(clearListMemberships),
         })),
+    }),
+  summaryList: (params: LearningResourcesSummaryListRequest) =>
+    queryOptions({
+      queryKey: learningResourceKeys.summaryList(params),
+      queryFn: () =>
+        learningResourcesApi
+          .learningResourcesSummaryList(params)
+          .then((res) => res.data),
     }),
   featured: (params: FeaturedListParams = {}) =>
     queryOptions({

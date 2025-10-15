@@ -4,6 +4,7 @@ import axios from "axios"
  * Our axios instance with default baseURL, headers, etc.
  */
 const instance = axios.create({
+  adapter: "fetch",
   xsrfCookieName: process.env.NEXT_PUBLIC_CSRF_COOKIE_NAME,
   xsrfHeaderName: "X-CSRFToken",
   withXSRFToken: true,

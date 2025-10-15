@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next"
-import { learningResourcesApi } from "api/clients"
+import { getServerQueryClient } from "api/ssr/serverQueryClient"
+import { learningResourceQueries } from "api/hooks/learningResources"
 import invariant from "tiny-invariant"
 import { GenerateSitemapResult } from "../types"
 import { dangerouslyDetectProductionBuildPhase } from "../util"
@@ -25,11 +26,12 @@ export async function generateSitemaps(): Promise<GenerateSitemapResult[]> {
    * Early exist here to avoid the useless build-time API calls.
    */
   if (dangerouslyDetectProductionBuildPhase()) return []
-  const { count } = (
-    await learningResourcesApi.learningResourcesSummaryList({
+  const queryClient = getServerQueryClient()
+  const { count } = await queryClient.fetchQuery(
+    learningResourceQueries.summaryList({
       limit: PAGE_SIZE,
-    })
-  ).data
+    }),
+  )
 
   const pages = Math.ceil(count / PAGE_SIZE)
 
@@ -45,11 +47,13 @@ export default async function sitemap({
 }: {
   id: string
 }): Promise<MetadataRoute.Sitemap> {
-  const offset = +id * PAGE_SIZE
-  const { data } = await learningResourcesApi.learningResourcesSummaryList({
-    limit: PAGE_SIZE,
-    offset,
-  })
+  const queryClient = getServerQueryClient()
+  const data = await queryClient.fetchQuery(
+    learningResourceQueries.summaryList({
+      limit: PAGE_SIZE,
+      offset: +id * PAGE_SIZE,
+    }),
+  )
 
   return data.results.map((resource) => ({
     url: `${BASE_URL}/search?resource=${resource.id}`,

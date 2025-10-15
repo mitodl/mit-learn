@@ -1,6 +1,6 @@
 import React from "react"
 import ChannelPage from "@/app-pages/ChannelPage/ChannelPage"
-import { channelsApi } from "api/clients"
+import { getServerQueryClient } from "api/ssr/serverQueryClient"
 import { ChannelTypeEnum, UnitChannel } from "api/v0"
 import {
   FeaturedListOfferedByEnum,
@@ -33,8 +33,10 @@ export async function generateMetadata({
 }: PageProps<"/c/[channelType]/[name]">) {
   const { channelType, name } = await params
 
-  const { data } = await handleNotFound(
-    channelsApi.channelsTypeRetrieve({ channel_type: channelType, name: name }),
+  const queryClient = getServerQueryClient()
+
+  const data = await handleNotFound(
+    queryClient.fetchQuery(channelQueries.detailByType(channelType, name)),
   )
 
   return getMetadataAsync({

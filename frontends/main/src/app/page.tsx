@@ -35,7 +35,7 @@ export async function generateMetadata({
  */
 export const dynamic = "force-dynamic"
 
-const Page: React.FC<PageProps<"/">> = async () => {
+const PageComponent: React.FC<PageProps<"/">> = async (_props) => {
   const { dehydratedState } = await prefetch([
     // Featured Courses carousel "All"
     learningResourceQueries.featured({
@@ -98,4 +98,4 @@ const Page: React.FC<PageProps<"/">> = async () => {
   )
 }
 
-export default Page
+export default PageComponent

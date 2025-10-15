@@ -7415,6 +7415,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"async_hooks@npm:^1.0.0":
+  version: 1.0.0
+  resolution: "async_hooks@npm:1.0.0"
+  checksum: 10/d31a4cb971a980b095cde18879598d1b196b32cb38905d1c2ed0aca7ebc7e040344af52fe2dedba410a1eaf4bc12d63db797b91285048387cac78319a6366901
+  languageName: node
+  linkType: hard
+
 "asynckit@npm:^0.4.0":
   version: 0.4.0
   resolution: "asynckit@npm:0.4.0"
@@ -13852,6 +13859,7 @@ __metadata:
     "@types/react-slick": "npm:^0.23.13"
     "@types/slick-carousel": "npm:^1"
     api: "workspace:*"
+    async_hooks: "npm:^1.0.0"
     classnames: "npm:^2.5.1"
     eslint: "npm:8.57.1"
     eslint-config-next: "npm:^14.2.7"

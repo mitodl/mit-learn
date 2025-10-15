@@ -14,7 +14,7 @@ const handleNotFound = async <T>(promise: Promise<T | never>): Promise<T> => {
   try {
     return await promise
   } catch (error) {
-    if ((error as AxiosError).status === 404) {
+    if ((error as AxiosError).response?.status === 404) {
       return notFound()
     }
     throw error
