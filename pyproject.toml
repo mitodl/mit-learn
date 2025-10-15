@@ -97,7 +97,6 @@ qdrant-client = {extras = ["fastembed"], version = "^1.14.3"}
 redis = "^5.0.0"
 requests = "^2.31.0"
 retry2 = "^0.9.5"
-ruff = "0.12.10"
 selenium = "^4.30.0"
 sentry-sdk = "^2.25.1"
 social-auth-app-django = "^5.2.0"
@@ -134,7 +133,7 @@ pytest-env = "^1.0.0"
 pytest-freezegun = "^0.4.2"
 pytest-mock = "^3.10.0"
 responses = "^0.25.0"
-ruff = "^0.12.0"
+ruff = "0.14.0"
 safety = "^3.0.0"
 semantic-version = "^2.10.0"
 freezegun = "^1.4.0"
@@ -223,6 +222,7 @@ lint.ignore = [
     "N806",
     "N999",
     "PIE804",
+    "PLC0415",
     "RET505",
     "RET506",
     "RET507",

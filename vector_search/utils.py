@@ -1,6 +1,5 @@
 import logging
 import uuid
-from typing import Optional
 
 from django.conf import settings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -340,7 +339,7 @@ def should_generate_resource_embeddings(serialized_document):
 
 
 def should_generate_content_embeddings(
-    serialized_document: dict, point_id: Optional[str] = None
+    serialized_document: dict, point_id: str | None = None
 ) -> bool:
     """
     Determine if we should generate embeddings for a content file

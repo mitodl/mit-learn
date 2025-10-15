@@ -18,6 +18,7 @@ Run through those steps **including the addition of `/etc/hosts` aliases and the
 `createsuperuser` command**.
 
 For `/etc/hosts`, you'll need to add entries for the following domains if you are relying on the sample environment variables:
+
 ```
 api.open.odl.local
 open.odl.local
@@ -52,6 +53,7 @@ The following settings must be configured before running the app:
 
 Before proceeding with any additional setup, you may want to adjust your docker settings to allow more memory to be used by the containers. Many engineers allocate the bulk of their system resources by navigating to Settings -> Resources in Docker Desktop.
 Additionally, the `web` and `celery` services specify `memory_limit` values, which you can adjust using the following environment variables:
+
 ```
 MITOL_CELERY_MEM_LIMIT
 MITOL_WEB_MEM_LIMIT

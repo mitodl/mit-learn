@@ -3,7 +3,6 @@
 import logging
 from collections.abc import Generator
 from datetime import timedelta
-from typing import Optional
 
 import googleapiclient.errors
 import requests
@@ -351,7 +350,7 @@ def validate_channel_configs(channel_configs: dict) -> list[str]:
     return errors
 
 
-def get_youtube_channel_configs(*, channel_ids: Optional[str] = None) -> list[dict]:
+def get_youtube_channel_configs(*, channel_ids: str | None = None) -> list[dict]:
     """
     Fetch youtube channel configs from github
 
@@ -382,7 +381,7 @@ def get_youtube_channel_configs(*, channel_ids: Optional[str] = None) -> list[di
     return channel_configs
 
 
-def extract(*, channel_ids: Optional[str] = None) -> Generator[tuple, None, None]:
+def extract(*, channel_ids: str | None = None) -> Generator[tuple, None, None]:
     """
     Return video data for all videos in channels' playlists
 
@@ -496,8 +495,8 @@ def transform(extracted_channels: iter) -> Generator[dict, None, None]:
 
 def get_youtube_videos_for_transcripts_job(
     *,
-    created_after: Optional[str] = None,
-    created_minutes: Optional[str] = None,
+    created_after: str | None = None,
+    created_minutes: str | None = None,
     overwrite: bool = False,
 ) -> list[LearningResource]:
     """
