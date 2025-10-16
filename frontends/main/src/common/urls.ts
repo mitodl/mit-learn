@@ -49,6 +49,7 @@ export const makeChannelManageWidgetsPath = (
 ) => generatePath(CHANNEL_EDIT_WIDGETS, { channelType, name })
 
 const ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
+invariant(ORIGIN, "NEXT_PUBLIC_ORIGIN must be set")
 if (process.env.NODE_ENV !== "production") {
   invariant(!ORIGIN?.endsWith("/"), "NEXT_PUBLIC_ORIGIN should not end with /")
 }
@@ -136,9 +137,8 @@ export const LOGIN = `${MITOL_API_BASE_URL}/login`
 export const LOGOUT = `${MITOL_API_BASE_URL}/logout/`
 
 type UrlDescriptor = {
-  pathname: string | null
+  pathname: string
   searchParams: URLSearchParams | null
-  hash?: string | null
 }
 export type LoginUrlOpts = {
   /**
@@ -151,11 +151,14 @@ export type LoginUrlOpts = {
   signupNext?: UrlDescriptor
 }
 
-const DEFAULT_SIGNUP_NEXT: UrlDescriptor = {
-  pathname: DASHBOARD_HOME,
-  searchParams: null,
+const stringifyUrlDescriptor = (val: UrlDescriptor) => {
+  const url = new URL(ORIGIN)
+  url.pathname = val.pathname
+  if (val.searchParams) {
+    val.searchParams.forEach((v, k) => url.searchParams.set(k, v))
+  }
+  return url.toString()
 }
-
 /**
  * Returns the URL to the authentication page (login and signup).
  *
@@ -166,25 +169,14 @@ const DEFAULT_SIGNUP_NEXT: UrlDescriptor = {
  *    for values to skip them if desired.
  */
 export const auth = (opts: LoginUrlOpts) => {
-  const { loginNext, signupNext = DEFAULT_SIGNUP_NEXT } = opts
-  const encode = (value: UrlDescriptor) => {
-    const pathname = value.pathname ?? "/"
-    const searchParams = value.searchParams ?? new URLSearchParams()
-    const hash = value.hash ?? ""
-    /**
-     * To include search parameters in the next URL, we need to encode them.
-     * If we pass `?next=/foo/bar?cat=meow` directly, Django receives two separate
-     * parameters: `next` and `cat`.
-     *
-     * There's no need to encode the path parameter (it might contain slashes,
-     * but those are allowed in search parameters) so let's keep it readable.
-     */
-    const search = searchParams?.toString() ? `?${searchParams.toString()}` : ""
-    return `${ORIGIN}${pathname}${encodeURIComponent(search)}${encodeURIComponent(hash)}`
+  const { loginNext, signupNext } = opts
+
+  const url = new URL(LOGIN)
+  url.searchParams.set("next", stringifyUrlDescriptor(loginNext))
+  if (signupNext) {
+    url.searchParams.set("signup_next", stringifyUrlDescriptor(signupNext))
   }
-  const loginNextHref = encode(loginNext)
-  const signupNextHref = encode(signupNext)
-  return `${LOGIN}?next=${loginNextHref}&signup_next=${signupNextHref}`
+  return url.toString()
 }
 
 export const ECOMMERCE_CART = "/cart/" as const

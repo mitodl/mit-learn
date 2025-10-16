@@ -20,10 +20,6 @@ test("SignupPopover shows link to sign up", async () => {
         pathname: "/some-path",
         searchParams: new URLSearchParams("dog=woof"),
       },
-      signupNext: {
-        pathname: "/some-path",
-        searchParams: new URLSearchParams("dog=woof"),
-      },
     }),
   )
 })

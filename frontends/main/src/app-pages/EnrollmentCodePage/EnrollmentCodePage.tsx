@@ -45,11 +45,6 @@ const EnrollmentCodePage: React.FC<EnrollmentCodePage> = ({ code }) => {
           pathname: urls.b2bAttachView(code),
           searchParams: null,
         },
-        // On signup, redirect to the attach page so attachment can occur.
-        signupNext: {
-          pathname: urls.b2bAttachView(code),
-          searchParams: null,
-        },
       })
       const loginUrl = new URL(loginUrlString)
       loginUrl.searchParams.set("skip_onboarding", "1")
