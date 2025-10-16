@@ -29,10 +29,15 @@ export interface TaggedQueryClient extends QueryClient {
  * - Automatic cleanup when the request completes
  * - Isolation between different HTTP requests
  *
+ * This provides a caching layer during each request lifecycle, though Next.js
+ * will also cache API responses made with the native fetch adapter (set on our
+ * Axios instances) in its built-in Data Cache, persisting across requests.
+ *
  * The QueryClientProvider runs (during SSR) in a separate render pass as it's a
- * client component. useQuery hooks therefore use a different QueryClient instance.
- * This is acceptable as we are using the native fetch adapter on the axios client
- * so that Next.js persists responses to its built-in Data Cache.
+ * client component. On the server this does not make API calls and only sets up
+ * the hydration boundary and registers hooks in readiness for the dehydrated
+ * state to be sent to the client.
+ *
  */
 const getServerQueryClient = cache(() => {
   const queryClient = new QueryClient({
