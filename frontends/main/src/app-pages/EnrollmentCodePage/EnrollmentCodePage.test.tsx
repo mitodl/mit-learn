@@ -90,7 +90,14 @@ describe("EnrollmentCodePage", () => {
 
     setMockResponse.get(mitxOnlineUrls.userMe.get(), mitxOnlineUser)
 
-    setMockResponse.post(b2bUrls.b2bAttach.b2bAttachView("test-code"), [])
+    setMockResponse.post(b2bUrls.b2bAttach.b2bAttachView("test-code"), [
+      {
+        id: 1,
+        organization: 1,
+        active: true,
+        contract_end: "2024-12-31T23:59:59Z",
+      },
+    ])
 
     renderWithProviders(<EnrollmentCodePage code="test-code" />, {
       url: commonUrls.B2B_ATTACH_VIEW,

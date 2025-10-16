@@ -17,8 +17,30 @@ const InterstitialMessage = styled(Typography)(({ theme }) => ({
   textAlign: "center",
 }))
 
+const OrgRedirect: React.FC<{ orgId: number }> = ({ orgId }) => {
+  const { data: mitxOnlineUser } = useMitxOnlineUserMe()
+  const router = useRouter()
+  const orgSlug = mitxOnlineUser?.b2b_organizations?.find(
+    (org) => org.id === orgId,
+  )?.slug
+  React.useEffect(() => {
+    if (orgSlug) {
+      router.push(urls.organizationView(orgSlug.replace("org-", "")))
+    }
+  }, [orgSlug, router])
+  if (!orgSlug) {
+    return (
+      <Typography color="error">
+        Error: Could not find organization information.
+      </Typography>
+    )
+  }
+  return <Typography>Redirecting to organization dashboard...</Typography>
+}
+
 const EnrollmentCodePage: React.FC<EnrollmentCodePage> = ({ code }) => {
   const {
+    data: contracts,
     mutate: attach,
     isSuccess,
     isPending,
@@ -31,7 +53,6 @@ const EnrollmentCodePage: React.FC<EnrollmentCodePage> = ({ code }) => {
     ...userQueries.me(),
     staleTime: 0,
   })
-  const { data: mitxOnlineUser } = useMitxOnlineUserMe()
 
   React.useEffect(() => {
     attach?.()
@@ -57,13 +78,7 @@ const EnrollmentCodePage: React.FC<EnrollmentCodePage> = ({ code }) => {
       loginUrl.searchParams.set("skip_onboarding", "1")
       router.push(loginUrl.toString())
     }
-    if (isSuccess) {
-      const org = mitxOnlineUser?.b2b_organizations?.[0]
-      if (org) {
-        router.push(urls.organizationView(org.slug.replace("org-", "")))
-      }
-    }
-  }, [isSuccess, userLoading, user, mitxOnlineUser, code, router])
+  }, [isSuccess, userLoading, user, code, router])
 
   return (
     <Container>
@@ -74,6 +89,9 @@ const EnrollmentCodePage: React.FC<EnrollmentCodePage> = ({ code }) => {
       />
       {isPending && (
         <InterstitialMessage>Validating code "{code}"...</InterstitialMessage>
+      )}
+      {isSuccess && contracts?.data && contracts.data.length > 0 && (
+        <OrgRedirect orgId={contracts.data[0].organization} />
       )}
     </Container>
   )
