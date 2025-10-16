@@ -12,7 +12,6 @@ import {
 } from "@remixicon/react"
 import { useUserMe, User } from "api/hooks/user"
 import MITLogoLink from "@/components/MITLogoLink/MITLogoLink"
-import { useAuthToCurrent } from "@/common/client-utils"
 
 const FlexContainer = styled.div({
   display: "flex",
@@ -124,8 +123,12 @@ type UserMenuProps = {
 
 const UserMenu: React.FC<UserMenuProps> = ({ variant }) => {
   const [visible, setVisible] = useState(false)
-
-  const loginUrl = useAuthToCurrent()
+  const loginUrl = urls.auth({
+    loginNext: {
+      pathname: urls.DASHBOARD_HOME,
+      searchParams: null,
+    },
+  })
 
   const { isLoading, data: user } = useUserMe()
   if (isLoading) {
@@ -138,14 +141,12 @@ const UserMenu: React.FC<UserMenuProps> = ({ variant }) => {
       key: "dashboard",
       allow: !!user?.is_authenticated,
       href: urls.DASHBOARD_HOME,
-      // LinkComponent: Link
     },
     {
       label: "Learning Paths",
       key: "learningpaths",
       allow: !!user?.is_learning_path_editor,
       href: urls.LEARNINGPATH_LISTING,
-      // LinkComponent: Link
     },
     {
       label: "Log Out",

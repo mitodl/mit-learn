@@ -1,11 +1,7 @@
 import React from "react"
 import { renderWithProviders, setMockResponse, waitFor } from "@/test-utils"
-import { urls } from "api/test-utils"
-import {
-  urls as b2bUrls,
-  factories as mitxOnlineFactories,
-  urls as mitxOnlineUrls,
-} from "api/mitxonline-test-utils"
+import { makeRequest, urls } from "api/test-utils"
+import { urls as b2bUrls } from "api/mitxonline-test-utils"
 import * as commonUrls from "@/common/urls"
 import { Permission } from "api/hooks/user"
 import EnrollmentCodePage from "./EnrollmentCodePage"
@@ -30,8 +26,9 @@ describe("EnrollmentCodePage", () => {
       [Permission.Authenticated]: false,
     })
 
-    setMockResponse.get(mitxOnlineUrls.userMe.get(), null)
-    setMockResponse.post(b2bUrls.b2bAttach.b2bAttachView("test-code"), [])
+    setMockResponse.post(b2bUrls.b2bAttach.b2bAttachView("test-code"), [], {
+      code: 403,
+    })
 
     renderWithProviders(<EnrollmentCodePage code="test-code" />, {
       url: commonUrls.B2B_ATTACH_VIEW,
@@ -57,11 +54,6 @@ describe("EnrollmentCodePage", () => {
       [Permission.Authenticated]: true,
     })
 
-    setMockResponse.get(
-      mitxOnlineUrls.userMe.get(),
-      mitxOnlineFactories.user.user(),
-    )
-
     setMockResponse.post(b2bUrls.b2bAttach.b2bAttachView("test-code"), [])
 
     renderWithProviders(<EnrollmentCodePage code="test-code" />, {
@@ -70,36 +62,21 @@ describe("EnrollmentCodePage", () => {
   })
 
   test("Redirects to dashboard on successful attachment", async () => {
-    const orgSlug = "test-org"
-    const mitxOnlineUser = mitxOnlineFactories.user.user({
-      b2b_organizations: [
-        {
-          id: 1,
-          name: "Test Organization",
-          description: "A test organization",
-          logo: "https://example.com/logo.png",
-          slug: `org-${orgSlug}`,
-          contracts: [],
-        },
-      ],
-    })
-
     setMockResponse.get(urls.userMe.get(), {
       [Permission.Authenticated]: true,
     })
 
-    setMockResponse.get(mitxOnlineUrls.userMe.get(), mitxOnlineUser)
-
-    setMockResponse.post(b2bUrls.b2bAttach.b2bAttachView("test-code"), [])
+    const attachUrl = b2bUrls.b2bAttach.b2bAttachView("test-code")
+    setMockResponse.post(attachUrl, [])
 
     renderWithProviders(<EnrollmentCodePage code="test-code" />, {
       url: commonUrls.B2B_ATTACH_VIEW,
     })
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith(
-        commonUrls.organizationView(orgSlug),
-      )
+      expect(makeRequest).toHaveBeenCalledWith("post", attachUrl, undefined)
     })
+
+    expect(mockPush).toHaveBeenCalledWith(commonUrls.DASHBOARD_HOME)
   })
 })
