@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { useEffect } from "react"
 import DOMPurify from "isomorphic-dompurify"
 import Image from "next/image"
 import { useFeatureFlagEnabled } from "posthog-js/react"
@@ -427,6 +427,11 @@ const OrganizationContentInternal: React.FC<
   )
 }
 
+const matchOrganizationBySlug =
+  (orgSlug: string) => (organization: OrganizationPage) => {
+    return organization.slug.replace("org-", "") === orgSlug
+  }
+
 type OrganizationContentProps = {
   orgSlug: string
 }
@@ -437,6 +442,14 @@ const OrganizationContent: React.FC<OrganizationContentProps> = ({
     mitxUserQueries.me(),
   )
 
+  useEffect(() => {
+    if (
+      mitxOnlineUser?.b2b_organizations.find(matchOrganizationBySlug(orgSlug))
+    ) {
+      localStorage.setItem("last-dashboard-org", orgSlug)
+    }
+  }, [mitxOnlineUser, orgSlug])
+
   if (isLoadingMitxOnlineUser) {
     return (
       <Skeleton width="100%" height="100px" style={{ marginBottom: "16px" }} />
@@ -444,14 +457,12 @@ const OrganizationContent: React.FC<OrganizationContentProps> = ({
   }
 
   const b2bOrganization = mitxOnlineUser?.b2b_organizations.find(
-    (org) => org.slug.replace("org-", "") === orgSlug,
+    matchOrganizationBySlug(orgSlug),
   )
 
   if (!b2bOrganization) {
     return <ErrorContent title="Organization not found" timSays="404" />
   }
-
-  localStorage.setItem("last-dashboard-org", orgSlug)
 
   return <OrganizationContentInternal org={b2bOrganization} />
 }

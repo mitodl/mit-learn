@@ -16,18 +16,10 @@ useRouter.mockReturnValue({
   replace: mockReplace,
 })
 
-const mockLocalStorage = {
-  getItem: jest.fn(),
-}
-Object.defineProperty(window, "localStorage", {
-  value: mockLocalStorage,
-  writable: true,
-})
-
 describe("OrganizationRedirect", () => {
   beforeEach(() => {
     mockReplace.mockClear()
-    mockLocalStorage.getItem.mockClear()
+    localStorage.clear()
     setMockResponse.get(urls.enrollment.enrollmentsList(), [])
     setMockResponse.get(urls.programEnrollments.enrollmentsList(), [])
     setMockResponse.get(urls.contracts.contractsList(), [])
@@ -58,7 +50,7 @@ describe("OrganizationRedirect", () => {
   test("navigates to user's last visited organization", async () => {
     const { mitxOnlineUser } = setupOrgAndUser()
     setMockResponse.get(urls.userMe.get(), mitxOnlineUser)
-    mockLocalStorage.getItem.mockReturnValue("last-visited-org")
+    localStorage.setItem("last-dashboard-org", "last-visited-org")
     renderWithProviders(<OrganizationRedirect />)
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith(
