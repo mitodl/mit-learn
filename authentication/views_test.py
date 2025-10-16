@@ -30,7 +30,7 @@ from authentication.views import CustomLoginView, get_redirect_url
         (["allowed-2"], "https://good.com/url-2"),
     ],
 )
-def test_get_redirect_url(mocker, param_names, expected_redirect):
+def test_get_redirect_url(mocker, param_names, expected_redirect, settings):
     """Next url should be respected if host is allowed"""
     GET = {
         "exists-a": "/url-a",
@@ -39,10 +39,7 @@ def test_get_redirect_url(mocker, param_names, expected_redirect):
         "disallowed-a": "https://malicious.com/url-1",
         "allowed-2": "https://good.com/url-2",
     }
-    mocker.patch(
-        "authentication.views.settings.ALLOWED_REDIRECT_HOSTS",
-        ["good.com"],
-    )
+    settings.ALLOWED_REDIRECT_HOSTS = ["good.com"]
 
     mock_request = mocker.MagicMock(GET=GET)
     assert get_redirect_url(mock_request, param_names) == expected_redirect
@@ -131,8 +128,9 @@ def test_next_logout(mocker, client, user, test_params, settings):
 
 @pytest.mark.parametrize("is_authenticated", [True, False])
 @pytest.mark.parametrize("has_next", [True, False])
-def test_custom_logout_view(mocker, client, user, is_authenticated, has_next):
+def test_custom_logout_view(mocker, client, user, is_authenticated, has_next, settings):  # noqa: PLR0913
     """Test logout redirect"""
+    settings.ALLOWED_REDIRECT_HOSTS = ["ocw.mit.edu"]
     next_url = "https://ocw.mit.edu" if has_next else ""
     mock_request = mocker.MagicMock(user=user, META={})
     if is_authenticated:

@@ -2,12 +2,12 @@
 
 import logging
 
+from django.conf import settings
 from django.contrib.auth import logout
 from django.shortcuts import redirect
 from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.views import View
 
-from main import settings
 from main.middleware.apisix_user import ApisixUserMiddleware, decode_apisix_headers
 
 log = logging.getLogger(__name__)
