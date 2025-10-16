@@ -152,15 +152,15 @@ module.exports = {
       },
       {
         selector:
-          "FunctionDeclaration[id.name='generateMetadata'] CallExpression[callee.type='MemberExpression'][callee.object.name=/.*Queries$/][callee.property.name!='queryKey']:not(CallExpression[callee.type='MemberExpression'][callee.object.name='queryClient'][callee.property.name='fetchQuery'] CallExpression)",
+          "FunctionDeclaration[id.name='generateMetadata'] CallExpression[callee.type='MemberExpression'][callee.object.name=/.*Api$/]:not(CallExpression[callee.type='MemberExpression'][callee.object.name='queryClient'][callee.property.name='fetchQuery'] CallExpression)",
         message:
-          "Query calls in generateMetadata must be wrapped in queryClient.fetchQuery() for proper server-side caching.",
+          "Direct API calls in generateMetadata should use getServerQueryClient().fetchQuery(queryOptions) for proper server-side caching.",
       },
       {
         selector:
-          "FunctionDeclaration[id.name='generateMetadata'] CallExpression[callee.type='MemberExpression'][callee.object.name=/.*Api$/]:not(CallExpression[callee.type='MemberExpression'][callee.object.name='queryClient'][callee.property.name='fetchQuery'] CallExpression)",
+          "VariableDeclarator[id.name=/.*Page.*|.*Component.*/] ArrowFunctionExpression CallExpression[callee.type='MemberExpression'][callee.object.name=/.*Api$/]:not(CallExpression[callee.type='MemberExpression'][callee.object.name='queryClient'][callee.property.name='fetchQuery'] CallExpression)",
         message:
-          "Direct API calls in generateMetadata should use queryClient.fetchQuery() for proper server-side caching. Consider using query hooks instead of direct API calls.",
+          "Direct API calls in page components should use getServerQueryClient().fetchQuery(queryOptions) for proper server-side caching.",
       },
     ],
   },

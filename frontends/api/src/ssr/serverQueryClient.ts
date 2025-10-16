@@ -16,9 +16,8 @@ export interface TaggedQueryClient extends QueryClient {
 }
 
 /**
- * Get or create a server-side QueryClient for caching scoped to each request
- * and consistent retry behavior. The server QueryClient should be used
- * for all server-side API calls
+ * Get or create a server-side QueryClient for consistent retry behavior.
+ * The server QueryClient should be used for all server-side API calls.
  *
  * Uses React's cache() to ensure the same QueryClient instance is reused
  * throughout a single HTTP request, enabling:
@@ -30,11 +29,10 @@ export interface TaggedQueryClient extends QueryClient {
  * - Automatic cleanup when the request completes
  * - Isolation between different HTTP requests
  *
- * The QueryClientProvider runs (during SSR) in a separate render pass - it's a
- * client component, so components using useQuery hooks get a different QueryClient instance.
- * This is acceptable Next.js caches native fetch responses (we use this as the adapter on
- * the axios client), though the benefit is that we reuse the retry logic below.
- *
+ * The QueryClientProvider runs (during SSR) in a separate render pass as it's a
+ * client component. useQuery hooks therefore use a different QueryClient instance.
+ * This is acceptable as we are using the native fetch adapter on the axios client
+ * so that Next.js persists responses to its built-in Data Cache.
  */
 const getServerQueryClient = cache(() => {
   const queryClient = new QueryClient({

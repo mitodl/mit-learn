@@ -30,7 +30,7 @@ export async function generateMetadata({
  * suspense boundary. This ostensibly leads to a faster response, since the
  * server can render the rest of the homepage at build time.
  *
- * But... We ache the result on CDN anyway, so it's essentially pre-build for
+ * But... We cache the result on CDN anyway, so it's essentially pre-build for
  * most requests, anyway.
  */
 export const dynamic = "force-dynamic"

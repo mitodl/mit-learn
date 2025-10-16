@@ -2,7 +2,9 @@ import { dehydrate } from "@tanstack/react-query"
 import { getServerQueryClient } from "./serverQueryClient"
 import type { Query } from "@tanstack/react-query"
 
-/* Utility to avoid repetition in server components
+/**
+ * Utility to avoid repetition in server components
+ *
  * Optionally pass the queryClient returned from a previous prefetch
  * where queries are dependent on previous results
  */
@@ -12,8 +14,8 @@ export const prefetch = async (
   /**
    * Unless passed, the SSR QueryClient uses React's cache() for reuse for the duration of the request.
    *
-   * Note: When using request context, the same queryClient instance
-   * will be reused across multiple prefetch calls within the same request.
+   * The QueryClient is garbage collected once the dehydrated state is produced and
+   * sent to the client and the request is complete.
    */
   queryClient = getServerQueryClient(),
 ) => {
