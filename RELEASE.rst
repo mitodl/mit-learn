@@ -1,6 +1,19 @@
 Release Notes
 =============
 
+Version 0.45.8
+--------------
+
+- fix for module attachments (#2598)
+- remove the home item from the usermenu (#2597)
+- Pre-commit ci update config (#2592)
+- fix canvas problem file import (#2584)
+- chore(deps): update actions/upload-pages-artifact action to v4 (#2578)
+- update mitxonline-api-client (#2591)
+- Change "next_run" to "best_run" and refactor how next_start_date is calculated (#2586)
+- Heading elements for resource drawer (#2585)
+- uniqueify instructors (#2587)
+
 Version 0.45.7 (Released October 09, 2025)
 --------------
 
