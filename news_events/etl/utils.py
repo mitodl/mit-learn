@@ -5,7 +5,6 @@ import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from time import mktime, struct_time
-from typing import Optional
 from zoneinfo import ZoneInfo
 
 import dateparser
@@ -22,10 +21,10 @@ log = logging.getLogger(__name__)
 
 @dataclass
 class FormattedTime:
-    hour: Optional[str]
-    minute: Optional[str]
-    ampm: Optional[str]
-    tz: Optional[str]
+    hour: str | None
+    minute: str | None
+    ampm: str | None
+    tz: str | None
 
 
 def get_soup(url: str) -> Soup:

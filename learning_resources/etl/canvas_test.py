@@ -34,7 +34,7 @@ from learning_resources.factories import (
 )
 from learning_resources.models import LearningResource
 from learning_resources_search.constants import CONTENT_FILE_TYPE
-from main.utils import checksum_for_content, now_in_utc
+from main.utils import now_in_utc
 
 pytestmark = pytest.mark.django_db
 
@@ -438,11 +438,14 @@ def test_transform_canvas_content_files_removes_unpublished_content(mocker, tmp_
     bulk_unpub.assert_called_once_with([unpublished_cf.id], CONTENT_FILE_TYPE)
 
 
+@pytest.mark.parametrize("overwrite", [True, False])
+@pytest.mark.parametrize("existing_file", [True, False])
 def test_transform_canvas_problem_files_pdf_calls_pdf_to_markdown(
-    tmp_path, mocker, settings
+    tmp_path, mocker, settings, overwrite, existing_file
 ):
     """
     Test that transform_canvas_problem_files calls _pdf_to_markdown for PDF files.
+    if overwrite is True or there is no existing file. Tikka should not be called
     """
 
     settings.CANVAS_TUTORBOT_FOLDER = "tutorbot/"
@@ -456,37 +459,66 @@ def test_transform_canvas_problem_files_pdf_calls_pdf_to_markdown(
     # return a file with pdf extension
     fake_file_data = {
         "run": "run",
-        "content": "original pdf content",
+        "content_type": "application/pdf",
         "archive_checksum": "checksum",
         "source_path": f"tutorbot/{pdf_filename}",
         "file_extension": ".pdf",
     }
 
     mocker.patch(
-        "learning_resources.etl.canvas.process_olx_path",
-        return_value=iter([fake_file_data]),
+        "learning_resources.etl.utils.documents_from_olx",
+        return_value=iter([[mocker.Mock(), fake_file_data]]),
     )
 
     # Patch _pdf_to_markdown to return a known value
     pdf_to_md = mocker.patch(
-        "learning_resources.etl.canvas._pdf_to_markdown",
+        "learning_resources.etl.utils._pdf_to_markdown",
         return_value="markdown content from pdf",
+    )
+
+    tika = mocker.patch(
+        "learning_resources.etl.utils.extract_text_metadata",
     )
 
     run = LearningResourceRunFactory.create()
 
-    results = list(transform_canvas_problem_files(zip_path, run, overwrite=True))
+    if existing_file:
+        TutorProblemFileFactory.create(
+            run=run,
+            type="problem",
+            archive_checksum="checksum",
+            source_path=f"tutorbot/{pdf_filename}",
+            content="existing content",
+            file_name="problem1.pdf",
+        )
 
-    pdf_to_md.assert_called_once()
-    assert results[0]["content"] == "markdown content from pdf"
+    results = list(transform_canvas_problem_files(zip_path, run, overwrite=overwrite))
+
+    if overwrite or not existing_file:
+        pdf_to_md.assert_called_once()
+    else:
+        pdf_to_md.assert_not_called()
+
+    tika.assert_not_called()
+
+    assert (
+        results[0]["content"] == "markdown content from pdf"
+        if overwrite or not existing_file
+        else "existing content"
+    )
     assert results[0]["problem_title"] == "problemset1"
 
 
+@pytest.mark.django_db
+@pytest.mark.parametrize("overwrite", [True, False])
+@pytest.mark.parametrize("existing_file", [True, False])
 def test_transform_canvas_problem_files_non_pdf_does_not_call_pdf_to_markdown(
-    tmp_path, mocker, settings
+    tmp_path, mocker, settings, overwrite, existing_file
 ):
     """
-    Test that transform_canvas_problem_files does not call _pdf_to_markdown for non-PDF files.
+    Test that transform_canvas_problem_files does not call _pdf_to_markdown but calles tika for
+    non-PDF files. Niether tika or _pdf_to_markdown should be called if overwrite is false and
+    there is an existing file.
     """
     settings.CANVAS_TUTORBOT_FOLDER = "tutorbot/"
     settings.CANVAS_PDF_TRANSCRIPTION_MODEL = "fake-model"
@@ -498,24 +530,48 @@ def test_transform_canvas_problem_files_non_pdf_does_not_call_pdf_to_markdown(
 
     fake_file_data = {
         "run": "run",
-        "content": csv_content,
+        "content_type": "application/csv",
         "archive_checksum": "checksum",
         "source_path": f"tutorbot/{csv_filename}",
         "file_extension": ".csv",
     }
+
     mocker.patch(
-        "learning_resources.etl.canvas.process_olx_path",
-        return_value=iter([fake_file_data]),
+        "learning_resources.etl.utils.documents_from_olx",
+        return_value=iter([[mocker.Mock(), fake_file_data]]),
     )
 
-    pdf_to_md = mocker.patch("learning_resources.etl.canvas._pdf_to_markdown")
+    pdf_to_md = mocker.patch("learning_resources.etl.utils._pdf_to_markdown")
 
-    run = mocker.Mock()
+    tika = mocker.patch(
+        "learning_resources.etl.utils.extract_text_metadata",
+        return_value={"content": csv_content},
+    )
 
-    results = list(transform_canvas_problem_files(zip_path, run, overwrite=True))
+    run = LearningResourceRunFactory.create()
+
+    if existing_file:
+        TutorProblemFileFactory.create(
+            run=run,
+            type="problem",
+            archive_checksum="checksum",
+            source_path=f"tutorbot/{csv_filename}",
+            content="existing content",
+            file_name="problem2.csv",
+        )
+
+    results = list(transform_canvas_problem_files(zip_path, run, overwrite=overwrite))
 
     pdf_to_md.assert_not_called()
-    assert results[0]["content"] == csv_content
+    if overwrite or not existing_file:
+        tika.assert_called_once()
+    else:
+        tika.assert_not_called()
+    assert (
+        results[0]["content"] == csv_content
+        if overwrite or not existing_file
+        else "existing content"
+    )
     assert results[0]["problem_title"] == "problemset2"
 
 
@@ -1439,6 +1495,10 @@ def test_get_published_items_with_hidden_file_section(mocker, tmp_path):
             "url": "https://cdn.example.com/file2.html",
             "published": True,
         },
+        "/visible_attachment_module.txt": {
+            "url": "https://cdn.example.com/visible_attachment_module.txt",
+            "published": True,
+        },
     }
     published = [item.name for item in get_published_items(zip_path, url_config)]
     assert sorted(published) == sorted(["html_page.html", "file2.html", "file1.pdf"])
@@ -1485,30 +1545,56 @@ def test_get_published_items_for_unpublshed_but_embedded(mocker, tmp_path):
     <modules xmlns="http://canvas.instructure.com/xsd/cccv1p0"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     >
-      <module>
+      <module xmlns="http://canvas.instructure.com/xsd/cccv1p0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://canvas.instructure.com/xsd/cccv1p0 https://canvas.instructure.com/xsd/cccv1p0.xsd">
 
         <title>Module 1</title>
+        <workflow_state>active</workflow_state>
         <items>
-          <item identifier="RES3">
-            <workflow_state>active</workflow_state>
-            <title>Item 1</title>
+
+          <item identifier="RES1">
+          <workflow_state>active</workflow_state>
+
+            <title>Item 2</title>
             <hidden>false</hidden>
              <locked>false</locked>
-            <identifierref>RES3</identifierref>
+            <identifierref>RES1</identifierref>
             <content_type>resource</content_type>
           </item>
+
         </items>
       </module>
+      <module xmlns="http://canvas.instructure.com/xsd/cccv1p0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://canvas.instructure.com/xsd/cccv1p0 https://canvas.instructure.com/xsd/cccv1p0.xsd">
+
+        <title>Module 2</title>
+
+        <items>
+
+          <item identifier="RES2">
+            <workflow_state>active</workflow_state>
+            <title>Item 2</title>
+            <hidden>false</hidden>
+             <locked>false</locked>
+            <identifierref>RES2</identifierref>
+            <content_type>resource</content_type>
+          </item>
+
+        </items>
+      </module>
+
+
     </modules>
     """
     manifest_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
-    <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
+    <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1" xmlns:lom="http://ltsc.ieee.org/xsd/imsccv1p1/LOM/resource" xmlns:lomimscc="http://ltsc.ieee.org/xsd/imsccv1p1/LOM/manifest" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1 http://www.imsglobal.org/profile/cc/ccv1p1/ccv1p1_imscp_v1p2_v1p0.xsd http://ltsc.ieee.org/xsd/imsccv1p1/LOM/resource http://www.imsglobal.org/profile/cc/ccv1p1/LOM/ccv1p1_lomresource_v1p0.xsd http://ltsc.ieee.org/xsd/imsccv1p1/LOM/manifest http://www.imsglobal.org/profile/cc/ccv1p1/LOM/ccv1p1_lommanifest_v1p0.xsd">
       <resources>
         <resource identifier="RES1" type="webcontent"  href="web_resources/file1.pdf">
           <file href="web_resources/file1.pdf"/>
         </resource>
-        <resource identifier="RES2" type="webcontent" href="web_resources/file2.html">
+        <item identifierref="RES2" type="attachment" href="web_resources/visible_attachment_module.txt">
           <file href="web_resources/file2.html"/>
+        </item>
+        <resource identifier="RES2" type="attachment" href="web_resources/visible_attachment_module.txt">
+          <file href="web_resources/visible_attachment_module.txt"/>
         </resource>
         <resource identifier="RES3" type="webcontent" href="web_resources/html_page.html">
           <file href="web_resources/html_page.html"/>
@@ -1523,6 +1609,10 @@ def test_get_published_items_for_unpublshed_but_embedded(mocker, tmp_path):
         files=[
             ("web_resources/file1.pdf", "content of file1"),
             ("web_resources/file2.html", "content of file2"),
+            (
+                "web_resources/visible_attachment_module.txt",
+                "content of visible_attachment_module",
+            ),
             ("web_resources/html_page.html", html_content),
         ],
     )
@@ -1537,50 +1627,113 @@ def test_get_published_items_for_unpublshed_but_embedded(mocker, tmp_path):
     assert Path("web_resources/file1.pdf").resolve() in published
 
 
-def test_transform_canvas_problem_files_skips_pdf_to_markdown_if_checksum_exists(
-    tmp_path, mocker, settings
-):
+def test_get_published_items_for_attachment_module(mocker, tmp_path):
     """
-    Test that transform_canvas_problem_files does not call _pdf_to_markdown if the checksum already exists.
+    Test that modules of "file attachment" type are included in published items
     """
-    settings.CANVAS_TUTORBOT_FOLDER = "tutorbot/"
-    settings.CANVAS_PDF_TRANSCRIPTION_MODEL = "fake-model"
-    pdf_filename = "problemset3/problem.pdf"
-    pdf_content = b"%PDF-1.4 fake pdf content"
+    html_content = """
+    <html>
+    <head><meta name="workflow_state" content="active"/></head>
+        <body>
+            <a href="$IMS-CC-FILEBASE$/file1.pdf">Embedded File 1</a>
+        </body>
+    </html>
+    """
+    # hide the files section in the navbar
+    settings_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+        <course identifier="gfef28ec71f16246c57edfeef25b26a54"
+        xmlns="http://canvas.instructure.com/xsd/cccv1p0"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://canvas.instructure.com/xsd/cccv1p0
+        https://canvas.instructure.com/xsd/cccv1p0.xsd">
+            <title>Test Course Title</title>
+            <tab_configuration>[{"id":0},{"id":11, "hidden":true}]</tab_configuration>
+            <course_code>TEST-101</course_code>
+            <other_field>Other Value</other_field>
+        </course>
+    """
+    module_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <modules xmlns="http://canvas.instructure.com/xsd/cccv1p0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    >
+      <module xmlns="http://canvas.instructure.com/xsd/cccv1p0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://canvas.instructure.com/xsd/cccv1p0 https://canvas.instructure.com/xsd/cccv1p0.xsd">
+
+        <title>Module 1</title>
+        <workflow_state>active</workflow_state>
+        <items>
+
+          <item identifier="RES1">
+          <workflow_state>active</workflow_state>
+
+            <title>Item 2</title>
+            <hidden>false</hidden>
+             <locked>false</locked>
+            <identifierref>RES1</identifierref>
+            <content_type>resource</content_type>
+          </item>
+
+        </items>
+      </module>
+      <module xmlns="http://canvas.instructure.com/xsd/cccv1p0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://canvas.instructure.com/xsd/cccv1p0 https://canvas.instructure.com/xsd/cccv1p0.xsd">
+
+        <title>Module 2</title>
+
+        <items>
+
+          <item identifier="RES2">
+            <workflow_state>active</workflow_state>
+            <title>Item 2</title>
+            <hidden>false</hidden>
+             <locked>false</locked>
+            <identifierref>RES2</identifierref>
+            <content_type>resource</content_type>
+          </item>
+
+        </items>
+      </module>
+
+
+    </modules>
+    """
+    manifest_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1" xmlns:lom="http://ltsc.ieee.org/xsd/imsccv1p1/LOM/resource" xmlns:lomimscc="http://ltsc.ieee.org/xsd/imsccv1p1/LOM/manifest" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1 http://www.imsglobal.org/profile/cc/ccv1p1/ccv1p1_imscp_v1p2_v1p0.xsd http://ltsc.ieee.org/xsd/imsccv1p1/LOM/resource http://www.imsglobal.org/profile/cc/ccv1p1/LOM/ccv1p1_lomresource_v1p0.xsd http://ltsc.ieee.org/xsd/imsccv1p1/LOM/manifest http://www.imsglobal.org/profile/cc/ccv1p1/LOM/ccv1p1_lommanifest_v1p0.xsd">
+      <resources>
+        <resource identifier="RES1" type="webcontent"  href="web_resources/file1.pdf">
+          <file href="web_resources/file1.pdf"/>
+        </resource>
+        <item identifierref="RES2" type="attachment" href="web_resources/visible_attachment_module.txt">
+          <file href="web_resources/file2.html"/>
+        </item>
+        <resource identifier="RES2" type="attachment" href="web_resources/visible_attachment_module.txt">
+          <file href="web_resources/visible_attachment_module.txt"/>
+        </resource>
+        <resource identifier="RES3" type="webcontent" href="web_resources/html_page.html">
+          <file href="web_resources/html_page.html"/>
+        </resource>
+      </resources>
+    </manifest>
+    """
     zip_path = make_canvas_zip(
-        tmp_path, files=[(f"tutorbot/{pdf_filename}", pdf_content)]
+        tmp_path,
+        module_xml=module_xml,
+        manifest_xml=manifest_xml,
+        settings_xml=settings_xml,
+        files=[
+            ("web_resources/file1.pdf", "content of file1"),
+            ("web_resources/file2.html", "content of file2"),
+            (
+                "web_resources/visible_attachment_module.txt",
+                "content of visible_attachment_module",
+            ),
+            ("web_resources/html_page.html", html_content),
+        ],
     )
-
-    original_pdf_content = "original pdf content"
-    existing_checksum = checksum_for_content(original_pdf_content)
-
-    mock_run = LearningResourceRunFactory.create()
-    TutorProblemFileFactory.create(
-        run=mock_run,
-        problem_title="Problem Set 1",
-        type="problem",
-        checksum=existing_checksum,
-    )
-
-    fake_file_data = {
-        "run": mock_run,
-        "content": original_pdf_content,
-        "archive_checksum": "checksum",
-        "source_path": f"tutorbot/{pdf_filename}",
-        "file_extension": ".pdf",
+    url_config = {
+        "/file1.pdf": {
+            "url": "https://cdn.example.com/file1.pdf",
+            "locked": True,
+            "hidden": True,
+        },
     }
-
-    mocker.patch(
-        "learning_resources.etl.canvas.process_olx_path",
-        return_value=iter([fake_file_data]),
-    )
-
-    pdf_to_md = mocker.patch("learning_resources.etl.canvas._pdf_to_markdown")
-
-    results = list(transform_canvas_problem_files(zip_path, mock_run, overwrite=True))
-
-    pdf_to_md.assert_not_called()
-
-    assert len(results) == 1
-    assert results[0]["content"] == "original pdf content"
-    assert results[0]["source_path"] == f"tutorbot/{pdf_filename}"
+    published = get_published_items(zip_path, url_config)
+    assert Path("web_resources/visible_attachment_module.txt").resolve() in published

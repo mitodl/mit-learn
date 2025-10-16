@@ -24,6 +24,7 @@ from learning_resources.etl.constants import (
 from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.utils import most_common_topics
 from learning_resources.models import (
+    Article,
     ContentFile,
     Course,
     LearningResource,
@@ -1053,7 +1054,7 @@ def load_video(video_data: dict) -> LearningResource:
             resource_type=LearningResourceType.video.name,
             defaults=video_data,
         )
-        video, _ = Video.objects.update_or_create(
+        Video.objects.update_or_create(
             learning_resource=learning_resource, defaults=video_fields
         )
         load_image(learning_resource, image_data)
@@ -1080,6 +1081,79 @@ def load_videos(videos_data: iter) -> list[LearningResource]:
     """
 
     return [load_video(video_data) for video_data in videos_data]
+
+
+def load_article(article_data: dict) -> LearningResource:
+    """
+    Load a single article into the database
+
+    Args:
+        article_data (dict): the article data
+
+    Returns:
+        LearningResource: the created or updated article resource
+    """
+    readable_id = article_data.get("readable_id")
+    topics_data = article_data.pop("topics")
+    offered_by_data = article_data.pop("offered_by", None)
+    image_url = article_data.pop("image")
+
+    with transaction.atomic():
+        (
+            learning_resource,
+            created,
+        ) = LearningResource.objects.update_or_create(
+            platform=LearningResourcePlatform.objects.get(
+                code=PlatformType.climate.name
+            ),
+            readable_id=readable_id,
+            resource_type=LearningResourceType.article.name,
+            defaults=article_data,
+        )
+        Article.objects.update_or_create(
+            learning_resource=learning_resource,
+        )
+        load_image(learning_resource, image_url)
+        if not topics_data:
+            topics_data = similar_topics_action(learning_resource)
+        load_topics(learning_resource, topics_data)
+        load_offered_by(learning_resource, offered_by_data)
+    update_index(learning_resource, created)
+    return learning_resource
+
+
+def load_articles(articles_data: iter) -> list[LearningResource]:
+    """
+    Load a list of articles into the database
+
+    Args:
+        articles_data (iter of dict): iterable of the article data
+
+    Returns:
+        list of LearningResource:
+            the list of loaded articles
+    """
+
+    article_resources = []
+    for article_data in articles_data:
+        try:
+            article_resource = load_article(article_data)
+        except ExtractException:
+            log.exception(
+                "Error with extracted article: article_id=%s",
+                article_data.get("readable_id"),
+            )
+        else:
+            article_resources.append(article_resource)
+    unpublished_articles = Article.objects.exclude(
+        learning_resource__id__in=[resource.id for resource in article_resources]
+    )
+    # remove articles that no longer exist
+    bulk_resources_unpublished_actions(
+        unpublished_articles.values_list("learning_resource__id", flat=True),
+        LearningResourceType.article.name,
+    )
+    return article_resources
 
 
 def load_playlist(video_channel: VideoChannel, playlist_data: dict) -> LearningResource:
@@ -1113,7 +1187,7 @@ def load_playlist(video_channel: VideoChannel, playlist_data: dict) -> LearningR
             ),
             defaults=playlist_data,
         )
-        playlist, _ = VideoPlaylist.objects.update_or_create(
+        VideoPlaylist.objects.update_or_create(
             learning_resource=playlist_resource,
             defaults={"channel": video_channel},
         )

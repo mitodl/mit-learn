@@ -1,5 +1,6 @@
 """Helper functions for ETL"""
 
+import base64
 import glob
 import json
 import logging
@@ -15,18 +16,21 @@ from collections.abc import Generator
 from datetime import UTC, datetime
 from decimal import Decimal
 from hashlib import md5
+from io import BytesIO
 from pathlib import Path
 from subprocess import check_call
 from tempfile import TemporaryDirectory
-from typing import Optional
 
 import boto3
+import pypdfium2 as pdfium
 import rapidjson
 import requests
 from defusedxml import ElementTree
 from django.conf import settings
 from django.utils.dateparse import parse_duration
 from django.utils.text import slugify
+from litellm import completion
+from PIL import Image
 from pycountry import currencies
 from tika import parser as tika_parser
 
@@ -57,6 +61,7 @@ from learning_resources.models import (
     LearningResourceRun,
     LearningResourceTopic,
     LearningResourceTopicMapping,
+    TutorProblemFile,
 )
 
 log = logging.getLogger(__name__)
@@ -443,7 +448,7 @@ def is_valid_uuid(uuid_string: str) -> bool:
 def get_url_from_module_id(
     module_id: str,
     run: LearningResourceRun,
-    video_srt_metadata: Optional[dict] = None,
+    video_srt_metadata: dict | None = None,
 ) -> str:
     """
     Get the URL for a module based on its ID
@@ -535,6 +540,7 @@ def process_olx_path(
     *,
     overwrite,
     valid_file_types=VALID_TEXT_FILE_TYPES,
+    is_tutor_problem_file_import=False,
 ) -> Generator[dict, None, None]:
     video_srt_metadata = get_video_metadata(olx_path, run)
     for document, metadata in documents_from_olx(
@@ -546,14 +552,31 @@ def process_olx_path(
         content_type = metadata["content_type"]
         mime_type = metadata.get("mime_type")
         file_extension = metadata.get("file_extension")
-        existing_content = ContentFile.objects.filter(key=key, run=run).first()
+
+        if is_tutor_problem_file_import:
+            existing_record = TutorProblemFile.objects.filter(
+                source_path=source_path, run=run
+            ).first()
+        else:
+            existing_record = ContentFile.objects.filter(key=key, run=run).first()
+
         if (
-            not existing_content
-            or existing_content.archive_checksum != metadata.get("archive_checksum")
+            not existing_record
+            or existing_record.archive_checksum != metadata.get("archive_checksum")
         ) or overwrite:
             if settings.SKIP_TIKA and settings.ENVIRONMENT != "production":
                 content_dict = {
                     "content": "",
+                    "content_title": "",
+                }
+            elif (
+                file_extension == ".pdf"
+                and is_tutor_problem_file_import
+                and settings.CANVAS_PDF_TRANSCRIPTION_MODEL
+            ):
+                markdown_content = _pdf_to_markdown(Path(olx_path) / Path(source_path))
+                content_dict = {
+                    "content": markdown_content,
                     "content_title": "",
                 }
             else:
@@ -584,8 +607,10 @@ def process_olx_path(
                 }
         else:
             content_dict = {
-                "content": existing_content.content,
-                "content_title": existing_content.content_title,
+                "content": existing_record.content,
+                "content_title": ""
+                if is_tutor_problem_file_import
+                else existing_record.content_title,
             }
         yield (
             {
@@ -1041,3 +1066,76 @@ def parse_resource_commitment(commitment_str: str) -> CommitmentConfig:
         else:
             log.warning("Invalid commitment: %s", commitment_str)
     return CommitmentConfig(commitment=commitment_str or "")
+
+
+def _pdf_to_markdown(pdf_path):
+    """
+    Convert a PDF file to markdown using an llm
+    """
+    markdown = ""
+    for im in pdf_to_base64_images(pdf_path):
+        response = completion(
+            api_base=settings.LITELLM_API_BASE,
+            custom_llm_provider=settings.LITELLM_CUSTOM_PROVIDER,
+            model=settings.CANVAS_PDF_TRANSCRIPTION_MODEL,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": settings.CANVAS_TRANSCRIPTION_PROMPT,
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{im}",
+                            },
+                        },
+                    ],
+                }
+            ],
+        )
+        markdown_snippet = (
+            response.json()["choices"][0]["message"]["content"]
+            .removeprefix("```markdown\n")
+            .removesuffix("\n```")
+        )
+
+        markdown += markdown_snippet
+    return markdown
+
+
+def pdf_to_base64_images(pdf_path, fmt="JPEG", max_size=2000, quality=85):
+    """
+    Convert a PDF file to a list of base64 encoded images (one per page).
+    Resizes images to reduce file size while keeping good OCR quality.
+
+    Args:
+        pdf_path (str): Path to the PDF file
+        dpi (int): DPI for the output images (default: 200)
+        fmt (str): Output format ('JPEG' or 'PNG') (default: 'JPEG')
+        max_size (int): Maximum width/height in pixels (default: 2000)
+        quality (int): JPEG quality (1-100, default: 85)
+
+    Returns:
+        list: List of base64 encoded strings (one per page)
+    """
+
+    pdf = pdfium.PdfDocument(pdf_path)
+    for page_index in range(len(pdf)):
+        page = pdf.get_page(page_index)
+        image = page.render(scale=2).to_pil()
+        page.close()
+        # Resize the image if it's too large (preserving aspect ratio)
+        if max(image.size) > max_size:
+            image.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+        buffered = BytesIO()
+        # Save with optimized settings
+        if fmt.upper() == "JPEG":
+            image.save(buffered, format="JPEG", quality=quality, optimize=True)
+        else:  # PNG
+            image.save(buffered, format="PNG", optimize=True)
+        img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
+        yield img_str
+    pdf.close()
