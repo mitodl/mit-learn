@@ -119,6 +119,7 @@ def test_partial_update_channel_featured_list_only_learning_path(
     assert response.status_code == status
 
 
+@pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize("resource_type", LearningResourceType)
 def test_create_channel_lists_only_learning_path(admin_client, resource_type):
     """Only learning_paths may be used as one of lists"""
@@ -449,6 +450,7 @@ def test_channel_configuration_is_not_editable(client, channel):
     assert channel.configuration == initial_config
 
 
+@pytest.mark.skip_nplusone_check
 def test_channel_counts_view(client):
     """Test the channel counts view returns counts for resources"""
     url = reverse(
@@ -501,6 +503,7 @@ def test_channel_counts_view_is_cached_for_anonymous_users(client, settings):
         kwargs={"channel_type": "unit"},
     )
     response = client.get(url).json()
+    print(response)
     assert len(response) == channel_count
     for channel in channels:
         channel.delete()

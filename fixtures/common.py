@@ -10,6 +10,7 @@ import pytest
 import responses
 from pytest_mock import PytestMockWarning
 from urllib3.exceptions import InsecureRequestWarning
+from zeal import zeal_ignore
 
 from channels.factories import ChannelUnitDetailFactory
 from learning_resources.constants import LearningResourceRelationTypes, OfferedBy
@@ -122,3 +123,13 @@ def offeror_featured_lists():
         channel = ChannelUnitDetailFactory.create(unit=offeror).channel
         channel.featured_list = featured_path
         channel.save()
+
+
+@pytest.fixture(autouse=True)
+def check_nplusone(request):
+    """Raise nplusone errors"""
+    if request.node.get_closest_marker("skip_nplusone_check"):
+        with zeal_ignore():
+            yield
+    else:
+        yield

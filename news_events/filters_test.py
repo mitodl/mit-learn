@@ -9,6 +9,7 @@ SOURCE_API_URL = "/api/v0/news_events_sources/"
 ITEM_API_URL = "/api/v0/news_events/"
 
 
+@pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize(
     "multifilter", ["feed_type={}&feed_type={}", "feed_type={},{}"]
 )

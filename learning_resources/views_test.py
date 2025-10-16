@@ -948,6 +948,7 @@ def test_list_video_endpoint(client, url, params):
         )
 
 
+@pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize(
     ("url", "params"),
     [

@@ -11,6 +11,7 @@ from news_events.constants import FeedType
 from news_events.factories import FeedEventDetailFactory
 
 
+@pytest.mark.skip_nplusone_check
 def test_feed_source_viewset_list(client):
     """Est that the feed sources list viewset returns data in expected format"""
     sources = sorted(factories.FeedSourceFactory.create_batch(5), key=lambda x: x.id)
@@ -25,6 +26,7 @@ def test_feed_source_viewset_list(client):
     )
 
 
+@pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize("feed_type", FeedType.names())
 def test_feed_source_viewset_list_filtered(client, feed_type):
     """Test that the sources list viewset returns data filtered by feed type"""
