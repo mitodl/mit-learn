@@ -346,6 +346,7 @@ def extract_resources_by_identifierref(manifest_xml: str) -> dict:
     # Find all item elements with identifierref attributes
     for item in root.findall(".//imscp:item[@identifierref]", NAMESPACES):
         identifierref = item.get("identifierref")
+
         title = (
             item.find("imscp:title", NAMESPACES).text
             if item.find("imscp:title", NAMESPACES) is not None
@@ -563,7 +564,6 @@ def get_published_items(zipfile_path, url_config):
         + parse_files_meta(zipfile_path)["active"]
         + parse_web_content(zipfile_path)["active"]
     )
-
     all_embedded_items = []
     for item in all_published_items:
         path = Path(item["path"]).resolve()
@@ -574,6 +574,7 @@ def get_published_items(zipfile_path, url_config):
         if item_visible and (
             str(Path(item["path"]).parent) != "web_resources"
             or files_section_is_visible
+            or item.get("module")
         ):
             published_items[path] = item
         for embedded_file in item.get("embedded_files", []):

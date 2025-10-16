@@ -1495,6 +1495,10 @@ def test_get_published_items_with_hidden_file_section(mocker, tmp_path):
             "url": "https://cdn.example.com/file2.html",
             "published": True,
         },
+        "/visible_attachment_module.txt": {
+            "url": "https://cdn.example.com/visible_attachment_module.txt",
+            "published": True,
+        },
     }
     published = [item.name for item in get_published_items(zip_path, url_config)]
     assert sorted(published) == sorted(["html_page.html", "file2.html", "file1.pdf"])
@@ -1541,30 +1545,56 @@ def test_get_published_items_for_unpublshed_but_embedded(mocker, tmp_path):
     <modules xmlns="http://canvas.instructure.com/xsd/cccv1p0"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     >
-      <module>
+      <module xmlns="http://canvas.instructure.com/xsd/cccv1p0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://canvas.instructure.com/xsd/cccv1p0 https://canvas.instructure.com/xsd/cccv1p0.xsd">
 
         <title>Module 1</title>
+        <workflow_state>active</workflow_state>
         <items>
-          <item identifier="RES3">
-            <workflow_state>active</workflow_state>
-            <title>Item 1</title>
+
+          <item identifier="RES1">
+          <workflow_state>active</workflow_state>
+
+            <title>Item 2</title>
             <hidden>false</hidden>
              <locked>false</locked>
-            <identifierref>RES3</identifierref>
+            <identifierref>RES1</identifierref>
             <content_type>resource</content_type>
           </item>
+
         </items>
       </module>
+      <module xmlns="http://canvas.instructure.com/xsd/cccv1p0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://canvas.instructure.com/xsd/cccv1p0 https://canvas.instructure.com/xsd/cccv1p0.xsd">
+
+        <title>Module 2</title>
+
+        <items>
+
+          <item identifier="RES2">
+            <workflow_state>active</workflow_state>
+            <title>Item 2</title>
+            <hidden>false</hidden>
+             <locked>false</locked>
+            <identifierref>RES2</identifierref>
+            <content_type>resource</content_type>
+          </item>
+
+        </items>
+      </module>
+
+
     </modules>
     """
     manifest_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
-    <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
+    <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1" xmlns:lom="http://ltsc.ieee.org/xsd/imsccv1p1/LOM/resource" xmlns:lomimscc="http://ltsc.ieee.org/xsd/imsccv1p1/LOM/manifest" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1 http://www.imsglobal.org/profile/cc/ccv1p1/ccv1p1_imscp_v1p2_v1p0.xsd http://ltsc.ieee.org/xsd/imsccv1p1/LOM/resource http://www.imsglobal.org/profile/cc/ccv1p1/LOM/ccv1p1_lomresource_v1p0.xsd http://ltsc.ieee.org/xsd/imsccv1p1/LOM/manifest http://www.imsglobal.org/profile/cc/ccv1p1/LOM/ccv1p1_lommanifest_v1p0.xsd">
       <resources>
         <resource identifier="RES1" type="webcontent"  href="web_resources/file1.pdf">
           <file href="web_resources/file1.pdf"/>
         </resource>
-        <resource identifier="RES2" type="webcontent" href="web_resources/file2.html">
+        <item identifierref="RES2" type="attachment" href="web_resources/visible_attachment_module.txt">
           <file href="web_resources/file2.html"/>
+        </item>
+        <resource identifier="RES2" type="attachment" href="web_resources/visible_attachment_module.txt">
+          <file href="web_resources/visible_attachment_module.txt"/>
         </resource>
         <resource identifier="RES3" type="webcontent" href="web_resources/html_page.html">
           <file href="web_resources/html_page.html"/>
@@ -1579,6 +1609,10 @@ def test_get_published_items_for_unpublshed_but_embedded(mocker, tmp_path):
         files=[
             ("web_resources/file1.pdf", "content of file1"),
             ("web_resources/file2.html", "content of file2"),
+            (
+                "web_resources/visible_attachment_module.txt",
+                "content of visible_attachment_module",
+            ),
             ("web_resources/html_page.html", html_content),
         ],
     )
@@ -1591,3 +1625,115 @@ def test_get_published_items_for_unpublshed_but_embedded(mocker, tmp_path):
     }
     published = get_published_items(zip_path, url_config)
     assert Path("web_resources/file1.pdf").resolve() in published
+
+
+def test_get_published_items_for_attachment_module(mocker, tmp_path):
+    """
+    Test that modules of "file attachment" type are included in published items
+    """
+    html_content = """
+    <html>
+    <head><meta name="workflow_state" content="active"/></head>
+        <body>
+            <a href="$IMS-CC-FILEBASE$/file1.pdf">Embedded File 1</a>
+        </body>
+    </html>
+    """
+    # hide the files section in the navbar
+    settings_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+        <course identifier="gfef28ec71f16246c57edfeef25b26a54"
+        xmlns="http://canvas.instructure.com/xsd/cccv1p0"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://canvas.instructure.com/xsd/cccv1p0
+        https://canvas.instructure.com/xsd/cccv1p0.xsd">
+            <title>Test Course Title</title>
+            <tab_configuration>[{"id":0},{"id":11, "hidden":true}]</tab_configuration>
+            <course_code>TEST-101</course_code>
+            <other_field>Other Value</other_field>
+        </course>
+    """
+    module_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <modules xmlns="http://canvas.instructure.com/xsd/cccv1p0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    >
+      <module xmlns="http://canvas.instructure.com/xsd/cccv1p0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://canvas.instructure.com/xsd/cccv1p0 https://canvas.instructure.com/xsd/cccv1p0.xsd">
+
+        <title>Module 1</title>
+        <workflow_state>active</workflow_state>
+        <items>
+
+          <item identifier="RES1">
+          <workflow_state>active</workflow_state>
+
+            <title>Item 2</title>
+            <hidden>false</hidden>
+             <locked>false</locked>
+            <identifierref>RES1</identifierref>
+            <content_type>resource</content_type>
+          </item>
+
+        </items>
+      </module>
+      <module xmlns="http://canvas.instructure.com/xsd/cccv1p0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://canvas.instructure.com/xsd/cccv1p0 https://canvas.instructure.com/xsd/cccv1p0.xsd">
+
+        <title>Module 2</title>
+
+        <items>
+
+          <item identifier="RES2">
+            <workflow_state>active</workflow_state>
+            <title>Item 2</title>
+            <hidden>false</hidden>
+             <locked>false</locked>
+            <identifierref>RES2</identifierref>
+            <content_type>resource</content_type>
+          </item>
+
+        </items>
+      </module>
+
+
+    </modules>
+    """
+    manifest_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1" xmlns:lom="http://ltsc.ieee.org/xsd/imsccv1p1/LOM/resource" xmlns:lomimscc="http://ltsc.ieee.org/xsd/imsccv1p1/LOM/manifest" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1 http://www.imsglobal.org/profile/cc/ccv1p1/ccv1p1_imscp_v1p2_v1p0.xsd http://ltsc.ieee.org/xsd/imsccv1p1/LOM/resource http://www.imsglobal.org/profile/cc/ccv1p1/LOM/ccv1p1_lomresource_v1p0.xsd http://ltsc.ieee.org/xsd/imsccv1p1/LOM/manifest http://www.imsglobal.org/profile/cc/ccv1p1/LOM/ccv1p1_lommanifest_v1p0.xsd">
+      <resources>
+        <resource identifier="RES1" type="webcontent"  href="web_resources/file1.pdf">
+          <file href="web_resources/file1.pdf"/>
+        </resource>
+        <item identifierref="RES2" type="attachment" href="web_resources/visible_attachment_module.txt">
+          <file href="web_resources/file2.html"/>
+        </item>
+        <resource identifier="RES2" type="attachment" href="web_resources/visible_attachment_module.txt">
+          <file href="web_resources/visible_attachment_module.txt"/>
+        </resource>
+        <resource identifier="RES3" type="webcontent" href="web_resources/html_page.html">
+          <file href="web_resources/html_page.html"/>
+        </resource>
+      </resources>
+    </manifest>
+    """
+    zip_path = make_canvas_zip(
+        tmp_path,
+        module_xml=module_xml,
+        manifest_xml=manifest_xml,
+        settings_xml=settings_xml,
+        files=[
+            ("web_resources/file1.pdf", "content of file1"),
+            ("web_resources/file2.html", "content of file2"),
+            (
+                "web_resources/visible_attachment_module.txt",
+                "content of visible_attachment_module",
+            ),
+            ("web_resources/html_page.html", html_content),
+        ],
+    )
+    url_config = {
+        "/file1.pdf": {
+            "url": "https://cdn.example.com/file1.pdf",
+            "locked": True,
+            "hidden": True,
+        },
+    }
+    published = get_published_items(zip_path, url_config)
+    assert Path("web_resources/visible_attachment_module.txt").resolve() in published
