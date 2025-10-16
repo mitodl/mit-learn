@@ -200,6 +200,17 @@ MIDDLEWARE = (
     "django_scim.middleware.SCIMAuthCheckMiddleware",
 )
 
+ZEAL_ENABLE = get_bool("ZEAL_ENABLE", False)  # noqa: FBT003
+
+# enable the zeal nplusone profiler only in debug mode or under pytest
+if ZEAL_ENABLE or ENVIRONMENT == "pytest":
+    INSTALLED_APPS += ("zeal",)
+    # this should be the first middleware so we catch any issues in our own middleware
+    MIDDLEWARE += ("zeal.middleware.zeal_middleware",)
+
+ZEAL_RAISE = False
+ZEAL_ALLOWLIST = []
+
 # CORS
 CORS_ALLOWED_ORIGINS = get_list_of_str("CORS_ALLOWED_ORIGINS", [])
 CORS_ALLOWED_ORIGIN_REGEXES = get_list_of_str("CORS_ALLOWED_ORIGIN_REGEXES", [])
@@ -483,6 +494,7 @@ LOGGING = {
         "opensearch": {"level": OS_LOG_LEVEL},
         "nplusone": {"handlers": ["console"], "level": "ERROR"},
         "boto3": {"handlers": ["console"], "level": "ERROR"},
+        "zeal": {"handlers": ["console"], "level": "ERROR"},
     },
     "root": {"handlers": ["console"], "level": LOG_LEVEL},
 }
