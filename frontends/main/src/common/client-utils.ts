@@ -65,7 +65,7 @@ const useAuthToCurrent = () => {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const current = { pathname, searchParams }
-  return auth({ loginNext: current })
+  return auth({ next: current })
 }
 
 /**
@@ -78,7 +78,7 @@ const redirectAuthToCurrent = (): never => {
      * here since it happens time of redirect call.
      */
     auth({
-      loginNext: {
+      next: {
         pathname: window.location.pathname,
         searchParams: new URLSearchParams(window.location.search),
       },

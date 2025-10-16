@@ -41,7 +41,7 @@ const EnrollmentCodePage: React.FC<EnrollmentCodePage> = ({ code }) => {
     }
     if (!user?.is_authenticated) {
       const loginUrlString = urls.auth({
-        loginNext: {
+        next: {
           pathname: urls.b2bAttachView(code),
           searchParams: null,
         },

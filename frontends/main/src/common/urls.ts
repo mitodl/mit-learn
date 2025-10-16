@@ -142,11 +142,11 @@ type UrlDescriptor = {
 }
 export type LoginUrlOpts = {
   /**
-   * URL to redirect to after login.
+   * URL to redirect to after login + signup.
    */
-  loginNext: UrlDescriptor
+  next: UrlDescriptor
   /**
-   * URL to redirect to after signup.
+   * URL to redirect to after signup, overriding `next` for signup if provided.
    */
   signupNext?: UrlDescriptor
 }
@@ -169,7 +169,7 @@ const stringifyUrlDescriptor = (val: UrlDescriptor) => {
  *    for values to skip them if desired.
  */
 export const auth = (opts: LoginUrlOpts) => {
-  const { loginNext, signupNext } = opts
+  const { next: loginNext, signupNext } = opts
 
   const url = new URL(LOGIN)
   url.searchParams.set("next", stringifyUrlDescriptor(loginNext))

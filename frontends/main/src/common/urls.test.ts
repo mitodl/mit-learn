@@ -48,6 +48,6 @@ test.each([
 ])(
   "login encodes the next parameter appropriately",
   ({ loginNext, signupNext, expected }) => {
-    expect(auth({ loginNext, signupNext })).toBe(expected)
+    expect(auth({ next: loginNext, signupNext })).toBe(expected)
   },
 )

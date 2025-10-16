@@ -61,7 +61,7 @@ describe("UserMenu", () => {
     const isAuthenticated = false
     const initialUrl = "/foo/bar?cat=meow"
     const expectedUrl = urlConstants.auth({
-      loginNext: {
+      next: {
         pathname: urlConstants.DASHBOARD_HOME,
         searchParams: null,
       },

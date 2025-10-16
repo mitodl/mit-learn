@@ -124,7 +124,7 @@ type UserMenuProps = {
 const UserMenu: React.FC<UserMenuProps> = ({ variant }) => {
   const [visible, setVisible] = useState(false)
   const loginUrl = urls.auth({
-    loginNext: {
+    next: {
       pathname: urls.DASHBOARD_HOME,
       searchParams: null,
     },

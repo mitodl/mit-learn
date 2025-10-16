@@ -16,7 +16,7 @@ test("SignupPopover shows link to sign up", async () => {
   invariant(link instanceof HTMLAnchorElement)
   expect(link.href).toMatch(
     urls.auth({
-      loginNext: {
+      next: {
         pathname: "/some-path",
         searchParams: new URLSearchParams("dog=woof"),
       },
