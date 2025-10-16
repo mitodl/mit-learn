@@ -845,6 +845,24 @@ class PodcastFactory(DjangoModelFactory):
         skip_postgeneration_save = True
 
 
+class ArticleFactory(DjangoModelFactory):
+    """Factory for Videos"""
+
+    learning_resource = factory.SubFactory(
+        LearningResourceFactory,
+        platform=factory.SubFactory(
+            LearningResourcePlatformFactory, code=PlatformType.climate.name
+        ),
+    )
+
+    class Meta:
+        model = models.Article
+        skip_postgeneration_save = True
+
+    class Params:
+        is_unpublished = factory.Trait(learning_resource__published=False)
+
+
 class VideoFactory(DjangoModelFactory):
     """Factory for Videos"""
 

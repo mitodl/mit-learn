@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { articlesApi } from "../../clients"
 import type {
   ArticlesApiArticlesListRequest as ArticleListRequest,
-  Article,
+  RichTextArticle as Article,
 } from "../../generated/v1"
 import { articleQueries, articleKeys } from "./queries"
 
@@ -32,7 +32,7 @@ const useArticleCreate = () => {
   return useMutation({
     mutationFn: (data: Omit<Article, "id">) =>
       articlesApi
-        .articlesCreate({ ArticleRequest: data })
+        .articlesCreate({ RichTextArticleRequest: data })
         .then((response) => response.data),
     onSuccess: () => {
       client.invalidateQueries({ queryKey: articleKeys.listRoot() })
@@ -55,7 +55,7 @@ const useArticlePartialUpdate = () => {
       articlesApi
         .articlesPartialUpdate({
           id,
-          PatchedArticleRequest: data,
+          PatchedRichTextArticleRequest: data,
         })
         .then((response) => response.data),
     onSuccess: (_data) => {
