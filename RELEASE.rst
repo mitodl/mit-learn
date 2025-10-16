@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.45.8
+Version 0.45.8 (Released October 16, 2025)
 --------------
 
 - fix for module attachments (#2598)
