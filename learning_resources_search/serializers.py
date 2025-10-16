@@ -132,12 +132,8 @@ def serialize_learning_resource_for_update(
 
     serialized_data = LearningResourceSerializer(instance=learning_resource_obj).data
 
-    if not serialized_data["description"]:
-        serialized_data["description"] = ""
-
-    for run in serialized_data.get("runs", []):
-        if not run["description"]:
-            run["description"] = ""
+    if not serialized_data.get("description"):
+        serialized_data["description"] = None
 
     if (
         learning_resource_obj.resource_type == LearningResourceType.course.name

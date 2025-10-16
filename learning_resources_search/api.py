@@ -627,11 +627,33 @@ def add_text_query_to_search(search, text, search_params, query_type_query):
             "params": params,
         }
 
-        search = search.query(script_query)
+        text_query  = script_query
     else:
-        search = search.query("bool", must=[text_query], filter=query_type_query)
+        text_query = {"bool": {"must": [text_query], "filter": query_type_query}}
+
+    vector_query = {
+          "neural": {
+            "description_embedding": {
+              "query_text": text,
+              "model_id": "UWxSwJkBGexBUUYnj1tV",
+              "k": 5
+            }
+          }
+        }
+    
+    search = search.extra(query={
+        "hybrid": {
+            "queries": [
+                text_query,
+                vector_query
+            ],  
+        }
+    })
+    
 
     return search
+
+
 
 
 def construct_search(search_params):
@@ -739,6 +761,7 @@ def execute_learn_search(search_params):
                 settings.DEFAULT_SEARCH_MAX_INCOMPLETENESS_PENALTY
             )
     search = construct_search(search_params)
+    search = search.params(search_pipeline="hybrid_search_pipeline")
     return search.execute().to_dict()
 
 
