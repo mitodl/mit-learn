@@ -686,6 +686,11 @@ topics:
   - children:
       - children: []
         icon: RiLightbulbFlashLine
+        id: 94eccea1-f581-4305-a4ca-9270ba0bed87
+        mappings: {}
+        name: Ecosystems
+      - children: []
+        icon: RiLightbulbFlashLine
         id: 26fb26b7-326e-4d8e-87c9-3eaf775e9ef4
         mappings:
           mitx:
