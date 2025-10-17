@@ -56,7 +56,7 @@ const dashboardCourse: PartialFactory<DashboardCourse> = (...overrides) => {
 const setupEnrollments = (includeExpired: boolean) => {
   const completed = [
     makeCourseEnrollment({
-      b2bContractId: null, // Personal enrollment, not B2B
+      b2b_contract_id: null, // Personal enrollment, not B2B
       run: { title: "C Course Ended" },
       grades: [makeGrade({ passed: true })],
     }),
@@ -64,14 +64,14 @@ const setupEnrollments = (includeExpired: boolean) => {
   const expired = includeExpired
     ? [
         makeCourseEnrollment({
-          b2bContractId: null, // Personal enrollment, not B2B
+          b2b_contract_id: null, // Personal enrollment, not B2B
           run: {
             title: "A Course Ended",
             end_date: faker.date.past().toISOString(),
           },
         }),
         makeCourseEnrollment({
-          b2bContractId: null, // Personal enrollment, not B2B
+          b2b_contract_id: null, // Personal enrollment, not B2B
           run: {
             title: "B Course Ended",
             end_date: faker.date.past().toISOString(),
@@ -81,14 +81,14 @@ const setupEnrollments = (includeExpired: boolean) => {
     : []
   const started = [
     makeCourseEnrollment({
-      b2bContractId: null, // Personal enrollment, not B2B
+      b2b_contract_id: null, // Personal enrollment, not B2B
       run: {
         title: "A Course Started",
         start_date: faker.date.past().toISOString(),
       },
     }),
     makeCourseEnrollment({
-      b2bContractId: null, // Personal enrollment, not B2B
+      b2b_contract_id: null, // Personal enrollment, not B2B
       run: {
         title: "B Course Started",
         start_date: faker.date.past().toISOString(),
@@ -97,13 +97,13 @@ const setupEnrollments = (includeExpired: boolean) => {
   ]
   const notStarted = [
     makeCourseEnrollment({
-      b2bContractId: null, // Personal enrollment, not B2B
+      b2b_contract_id: null, // Personal enrollment, not B2B
       run: {
         start_date: moment().add(1, "day").toISOString(), // Sooner first
       },
     }),
     makeCourseEnrollment({
-      b2bContractId: null, // Personal enrollment, not B2B
+      b2b_contract_id: null, // Personal enrollment, not B2B
       run: {
         start_date: moment().add(5, "day").toISOString(), // Later second
       },
