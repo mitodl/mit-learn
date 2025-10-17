@@ -33,17 +33,26 @@ export async function generateMetadata({
 }: PageProps<"/c/[channelType]/[name]">) {
   const { channelType, name } = await params
 
-  const queryClient = getServerQueryClient()
+  try {
+    const queryClient = getServerQueryClient()
 
-  const data = await handleNotFound(
-    queryClient.fetchQuery(channelQueries.detailByType(channelType, name)),
-  )
+    const data = await handleNotFound(
+      queryClient.fetchQuery(channelQueries.detailByType(channelType, name)),
+    )
 
-  return getMetadataAsync({
-    searchParams,
-    title: data.title,
-    description: data.public_description,
-  })
+    return getMetadataAsync({
+      searchParams,
+      title: data.title,
+      description: data.public_description,
+    })
+  } catch (error) {
+    console.error("Failed to generate metadata for channel page:", error)
+    return getMetadataAsync({
+      searchParams,
+      title: `${channelType} - ${name}`,
+      description: `Learn more about ${name}`,
+    })
+  }
 }
 
 const Page: React.FC<PageProps<"/c/[channelType]/[name]">> = async ({
@@ -84,6 +93,7 @@ const Page: React.FC<PageProps<"/c/[channelType]/[name]">> = async ({
         }),
         [],
       ) ?? {}
+  // console.log("offerors", JSON.stringify(offerors, null, 2))
 
   const constantSearchParams = getConstantSearchParams(channel?.search_filter)
 
@@ -93,6 +103,7 @@ const Page: React.FC<PageProps<"/c/[channelType]/[name]">> = async ({
     constantSearchParams,
     null,
   )
+  // console.log("facetNames", JSON.stringify(facetNames, null, 2))
 
   const searchRequest = getSearchParams({
     // @ts-expect-error Local openapi client https://www.npmjs.com/package/@mitodl/open-api-axios
@@ -107,6 +118,7 @@ const Page: React.FC<PageProps<"/c/[channelType]/[name]">> = async ({
     [learningResourceQueries.search(searchRequest as LRSearchRequest)],
     queryClient,
   )
+
   return (
     <HydrationBoundary state={dehydratedState}>
       <ChannelPage />

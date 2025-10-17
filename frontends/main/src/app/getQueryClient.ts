@@ -38,6 +38,7 @@ const makeQueryClient = (): QueryClient => {
         },
 
         retry: (failureCount, error) => {
+          console.log("retry", { failureCount, error })
           const status = (error as MaybeHasStatusAndDetail)?.response?.status
           const isNetworkError = status === undefined || status === 0
 
