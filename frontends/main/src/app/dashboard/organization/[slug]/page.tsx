@@ -6,8 +6,8 @@ const Page: React.FC<PageProps<"/dashboard/organization/[slug]">> = async ({
   params,
 }) => {
   const resolved = await params
-  invariant(resolved?.slug, "slug is required")
-  return <OrganizationContent orgSlug={resolved?.slug} />
+  invariant(resolved.slug, "slug is required")
+  return <OrganizationContent orgSlug={resolved.slug} />
 }
 
 export default Page
