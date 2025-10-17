@@ -503,7 +503,6 @@ def test_channel_counts_view_is_cached_for_anonymous_users(client, settings):
         kwargs={"channel_type": "unit"},
     )
     response = client.get(url).json()
-    print(response)
     assert len(response) == channel_count
     for channel in channels:
         channel.delete()
