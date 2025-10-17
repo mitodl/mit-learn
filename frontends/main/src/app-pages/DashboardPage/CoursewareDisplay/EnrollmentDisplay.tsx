@@ -91,20 +91,22 @@ const sortEnrollments = (resources: DashboardCourse[]) => {
   const started: DashboardCourse[] = []
   const notStarted: DashboardCourse[] = []
   resources.forEach((resource) => {
-    if (resource.enrollment?.status === EnrollmentStatus.Completed) {
-      completed.push(resource)
-    } else if (
-      resource.run.endDate &&
-      new Date(resource.run.endDate) < new Date()
-    ) {
-      expired.push(resource)
-    } else if (
-      resource.run.startDate &&
-      new Date(resource.run.startDate) < new Date()
-    ) {
-      started.push(resource)
-    } else {
-      notStarted.push(resource)
+    if (!resource.enrollment?.b2b_contract_id) {
+      if (resource.enrollment?.status === EnrollmentStatus.Completed) {
+        completed.push(resource)
+      } else if (
+        resource.run.endDate &&
+        new Date(resource.run.endDate) < new Date()
+      ) {
+        expired.push(resource)
+      } else if (
+        resource.run.startDate &&
+        new Date(resource.run.startDate) < new Date()
+      ) {
+        started.push(resource)
+      } else {
+        notStarted.push(resource)
+      }
     }
   })
 

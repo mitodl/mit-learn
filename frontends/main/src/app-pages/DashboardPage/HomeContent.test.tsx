@@ -211,9 +211,13 @@ describe("HomeContent", () => {
       mockedUseFeatureFlagEnabled.mockReturnValue(enrollmentsEnabled)
 
       if (enrollmentsEnabled) {
-        const enrollments = mitxonline.factories.enrollment.courseEnrollments(3)
+        const enrollments = Array.from({ length: 3 }, () =>
+          mitxonline.factories.enrollment.courseEnrollment({
+            b2b_contract_id: null, // Personal enrollment, not B2B
+          }),
+        )
         setMockResponse.get(
-          mitxonline.urls.enrollment.courseEnrollment(),
+          mitxonline.urls.enrollment.enrollmentsListV2(),
           enrollments,
         )
       }

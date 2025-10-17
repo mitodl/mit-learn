@@ -1,12 +1,15 @@
 import { factories, factories as mitx } from "api/mitxonline-test-utils"
 import { DashboardResourceType, EnrollmentStatus } from "./types"
 import type { DashboardResource } from "./types"
+
 import {
   organizationCoursesWithContracts,
   mitxonlineProgram,
   sortDashboardCourses,
   userEnrollmentsToDashboardCourses,
   createOrgUnenrolledCourse,
+  transformEnrollmentToDashboard,
+  filterEnrollmentsByOrganization,
 } from "./transform"
 import {
   createCoursesWithContractRuns,
@@ -55,9 +58,19 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
         },
         enrollment: {
           id: apiData.id,
+          b2b_contract_id: apiData.b2b_contract_id,
+          b2b_organization_id: apiData.b2b_organization_id,
           status: enrollmentStatus,
           mode: apiData.enrollment_mode,
           receiveEmails: apiData.edx_emails_subscription,
+          certificate: {
+            uuid: apiData.certificate?.uuid ?? "",
+            link:
+              apiData.certificate?.link?.replace(
+                /\/certificate\/([^/]+)\/$/,
+                "/certificate/course/$1/",
+              ) ?? "",
+          },
         },
       } satisfies DashboardResource)
     },
@@ -98,7 +111,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
 
     const transformedCourses = organizationCoursesWithContracts({
       courses: coursesA,
-      enrollments,
+      enrollments: enrollments,
     })
     const sortedCourses = sortDashboardCourses(
       mitxonlineProgram(programA),
@@ -201,7 +214,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
     const transformedCourses = organizationCoursesWithContracts({
       courses,
       contracts,
-      enrollments,
+      enrollments: enrollments,
     })
 
     // Should have enrollments for courses with contract-matching runs
@@ -324,25 +337,30 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
           link: "/certificate/abc123/",
         },
       })
+      const enrollmentWithCertV2 = enrollmentWithCert
 
       const transformed = userEnrollmentsToDashboardCourses([
-        enrollmentWithCert,
+        enrollmentWithCertV2,
       ])
 
       expect(transformed[0].run.certificate).toEqual({
         uuid: "test-uuid-123",
         link: "/certificate/course/abc123/",
       })
-      expect(transformed[0].enrollment?.certificate).toBeUndefined() // Certificate should only be in run
+      expect(transformed[0].enrollment?.certificate).toEqual({
+        uuid: "test-uuid-123",
+        link: "/certificate/course/abc123/",
+      })
     })
 
     test("handles missing certificate gracefully", () => {
       const enrollmentWithoutCert = mitx.enrollment.courseEnrollment({
         certificate: null,
       })
+      const enrollmentWithoutCertV2 = enrollmentWithoutCert
 
       const transformed = userEnrollmentsToDashboardCourses([
-        enrollmentWithoutCert,
+        enrollmentWithoutCertV2,
       ])
 
       expect(transformed[0].run.certificate).toEqual({
@@ -450,6 +468,8 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
                 uuid: "org-cert-uuid",
                 link: "/certificate/org123/",
               },
+              b2b_contract_id: contractIds[0],
+              b2b_organization_id: orgId,
             }),
           ),
       )
@@ -457,7 +477,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
       const transformedCourses = organizationCoursesWithContracts({
         courses,
         contracts,
-        enrollments,
+        enrollments: enrollments,
       })
 
       const courseWithEnrollment = transformedCourses.find(
@@ -496,6 +516,8 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
                 title: run.title,
               },
               certificate: null,
+              b2b_contract_id: contractIds[0],
+              b2b_organization_id: orgId,
             }),
           ),
       )
@@ -503,7 +525,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
       const transformedCourses = organizationCoursesWithContracts({
         courses,
         contracts,
-        enrollments,
+        enrollments: enrollments,
       })
 
       const courseWithEnrollment = transformedCourses.find(
@@ -517,6 +539,129 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
         uuid: "",
         link: "",
       })
+    })
+  })
+
+  describe("transformEnrollmentToDashboard", () => {
+    test("transforms CourseRunEnrollmentRequestV2 to DashboardCourseEnrollment", () => {
+      const enrollment = mitx.enrollment.courseEnrollment({
+        grades: [mitx.enrollment.grade({ passed: true })],
+        enrollment_mode: "verified",
+        edx_emails_subscription: true,
+        certificate: {
+          uuid: "test-cert-uuid",
+          link: "/certificate/test123/",
+        },
+      })
+
+      const result = transformEnrollmentToDashboard(enrollment)
+
+      expect(result).toEqual({
+        id: enrollment.id,
+        b2b_contract_id: enrollment.b2b_contract_id,
+        b2b_organization_id: enrollment.b2b_organization_id,
+        status: EnrollmentStatus.Completed,
+        mode: enrollment.enrollment_mode,
+        receiveEmails: enrollment.edx_emails_subscription,
+        certificate: {
+          uuid: "test-cert-uuid",
+          link: "/certificate/course/test123/",
+        },
+      })
+    })
+
+    test("handles enrollment without certificate", () => {
+      const enrollment = mitx.enrollment.courseEnrollment({
+        certificate: null,
+        grades: [],
+      })
+
+      const result = transformEnrollmentToDashboard(enrollment)
+
+      expect(result.certificate).toEqual({
+        uuid: "",
+        link: "",
+      })
+      expect(result.status).toBe(EnrollmentStatus.Enrolled)
+    })
+
+    test("transforms certificate link pattern correctly", () => {
+      const enrollment = mitx.enrollment.courseEnrollment({
+        certificate: {
+          uuid: "cert-uuid",
+          link: "/certificate/abc123/",
+        },
+      })
+
+      const result = transformEnrollmentToDashboard(enrollment)
+
+      expect(result.certificate?.link).toBe("/certificate/course/abc123/")
+    })
+  })
+
+  describe("filterEnrollmentsByOrganization", () => {
+    test("filters enrollments by organization ID", () => {
+      const orgId1 = 123
+      const orgId2 = 456
+
+      const enrollments = [
+        {
+          ...mitx.enrollment.courseEnrollment(),
+          b2b_contract_id: 1,
+          b2b_organization_id: orgId1,
+        },
+        {
+          ...mitx.enrollment.courseEnrollment(),
+          b2b_contract_id: 2,
+          b2b_organization_id: orgId2,
+        },
+        {
+          ...mitx.enrollment.courseEnrollment(),
+          b2b_contract_id: 3,
+          b2b_organization_id: orgId1,
+        },
+        mitx.enrollment.courseEnrollment(), // No org ID
+      ]
+
+      const filtered = filterEnrollmentsByOrganization(enrollments, orgId1)
+
+      expect(filtered).toHaveLength(2)
+      expect(filtered.every((e) => e.b2b_organization_id === orgId1)).toBe(true)
+    })
+
+    test("returns empty array when no enrollments match organization", () => {
+      const enrollments = [
+        {
+          ...mitx.enrollment.courseEnrollment(),
+          b2b_contract_id: 1,
+          b2b_organization_id: 123,
+        },
+        {
+          ...mitx.enrollment.courseEnrollment(),
+          b2b_contract_id: 2,
+          b2b_organization_id: 456,
+        },
+      ]
+
+      const filtered = filterEnrollmentsByOrganization(enrollments, 999)
+
+      expect(filtered).toHaveLength(0)
+    })
+
+    test("handles enrollments with null organization IDs", () => {
+      const enrollments = [
+        mitx.enrollment.courseEnrollment(),
+        {
+          ...mitx.enrollment.courseEnrollment(),
+          b2b_contract_id: 1,
+          b2b_organization_id: 123,
+        },
+      ]
+
+      const filtered = filterEnrollmentsByOrganization(enrollments, 123)
+
+      expect(filtered).toHaveLength(1)
+      expect(filtered[0].b2b_organization_id).toBe(123)
     })
   })
 })
