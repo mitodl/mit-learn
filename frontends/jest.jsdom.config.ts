@@ -16,6 +16,7 @@ const config: Config.InitialOptions &
     "\\.(css|scss)$": "ol-test-utilities/filemocks/filemock.js",
   },
   rootDir: "./src",
+  transformIgnorePatterns: ["node_modules/(?!@faker-js).+"],
 }
 
 export default config

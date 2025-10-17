@@ -47,7 +47,7 @@ const priceItem: Factory<PriceItem> = (override) => {
 const uniqueFacultyId = new UniqueEnforcer()
 const faculty: Factory<Faculty> = (override) => {
   return {
-    feature_image_src: faker.image.urlLoremFlickr({ width: 640, height: 480 }),
+    feature_image_src: faker.image.url({ width: 640, height: 480 }),
     id: uniqueFacultyId.enforce(() => faker.number.int()),
     instructor_bio_long: makeHTMLParagraph(2),
     instructor_bio_short: faker.lorem.sentences(2),
@@ -247,7 +247,7 @@ const programPageItem: PartialFactory<ProgramPageItem> = (override) => {
           title_2: faker.person.jobTitle(),
           title_3: "",
           organization: "Massachusetts Institute of Technology",
-          signature_image: faker.image.urlLoremFlickr({
+          signature_image: faker.image.url({
             width: 200,
             height: 100,
           }),
@@ -306,7 +306,7 @@ const programPageItem: PartialFactory<ProgramPageItem> = (override) => {
         },
       ],
       page: {
-        feature_image_src: faker.image.urlLoremFlickr({
+        feature_image_src: faker.image.url({
           width: 1134,
           height: 675,
         }),

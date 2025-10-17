@@ -7,6 +7,7 @@ const config: Config.InitialOptions = {
     ...baseConfig.setupFilesAfterEnv,
     "./test-utils/setupJest.tsx",
   ],
+  transformIgnorePatterns: ["node_modules/(?!@faker-js).+"],
   moduleNameMapper: {
     ...baseConfig.moduleNameMapper,
     "^@/(.*)$": path.resolve(__dirname, "src/$1"),

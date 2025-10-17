@@ -10,6 +10,7 @@ const projectsConfig: Config.InitialOptions = {
   collectCoverage: true,
   coverageDirectory: "coverage",
   projects: ["<rootDir>/*/jest.config.ts"],
+  transformIgnorePatterns: ["node_modules/(?!@faker-js).+"],
   watchPlugins: [
     "jest-watch-typeahead/filename",
     "jest-watch-typeahead/testname",
