@@ -5,7 +5,6 @@ import logging
 from urllib.parse import urljoin
 
 from django.contrib.auth import logout
-from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.utils.text import slugify
@@ -167,9 +166,6 @@ def lti_login(
     """
 
     return lti_preflight_request(request)
-    return HttpResponse(
-        f"LTI_Login GET endpoint - successfully imported lti_consumer and logged in as user {request.user}. Is Superuser {request.user.is_superuser}"
-    )
 
 
 @csrf_exempt
@@ -182,9 +178,6 @@ def lti_auth(
     Perform LTI negotiation and redirect to notebook URL
     """
     return lti_launch_endpoint(request)
-    return HttpResponse(
-        f"LTI_Login POST endpoint - successfully imported lti_consumer and logged in as user {request.user}. Is Superuser {request.user.is_superuser}"
-    )
 
 
 def _get_lti1p3_consumer():
