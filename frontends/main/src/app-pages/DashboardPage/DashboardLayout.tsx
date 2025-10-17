@@ -75,8 +75,8 @@ const Background = styled.div(({ theme }) => ({
 }))
 
 const PageContainer = styled(Container)({
-  marginTop: "40px",
-  marginBottom: "80px",
+  paddingTop: "40px",
+  paddingBottom: "80px",
 })
 
 const DashboardGrid = styled.div(({ theme }) => ({
