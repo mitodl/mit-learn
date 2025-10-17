@@ -213,7 +213,7 @@ describe("HomeContent", () => {
       if (enrollmentsEnabled) {
         const enrollments = Array.from({ length: 3 }, () =>
           mitxonline.factories.enrollment.courseEnrollment({
-            b2bContractId: null, // Personal enrollment, not B2B
+            b2b_contract_id: null, // Personal enrollment, not B2B
           }),
         )
         setMockResponse.get(
