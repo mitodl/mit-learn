@@ -79,8 +79,8 @@ const transformEnrollmentToDashboard = (
 ): DashboardCourseEnrollment => {
   return {
     id: raw.id,
-    b2b_contract_id: raw.b2bContractId,
-    b2b_organization_id: raw.b2bOrganizationId,
+    b2b_contract_id: raw.b2b_contract_id,
+    b2b_organization_id: raw.b2b_organization_id,
     status:
       raw.grades.length > 0 && raw.grades[0]?.passed
         ? EnrollmentStatus.Completed
@@ -103,7 +103,7 @@ const filterEnrollmentsByOrganization = (
   organizationId: number,
 ): CourseRunEnrollmentRequestV2[] => {
   return enrollments.filter(
-    (enrollment) => enrollment.b2bOrganizationId === organizationId,
+    (enrollment) => enrollment.b2b_organization_id === organizationId,
   )
 }
 

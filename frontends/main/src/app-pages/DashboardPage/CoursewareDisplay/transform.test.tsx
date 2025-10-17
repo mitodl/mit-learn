@@ -58,8 +58,8 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
         },
         enrollment: {
           id: apiData.id,
-          b2b_contract_id: apiData.b2bContractId,
-          b2b_organization_id: apiData.b2bOrganizationId,
+          b2b_contract_id: apiData.b2b_contract_id,
+          b2b_organization_id: apiData.b2b_organization_id,
           status: enrollmentStatus,
           mode: apiData.enrollment_mode,
           receiveEmails: apiData.edx_emails_subscription,
@@ -468,8 +468,8 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
                 uuid: "org-cert-uuid",
                 link: "/certificate/org123/",
               },
-              b2bContractId: contractIds[0],
-              b2bOrganizationId: orgId,
+              b2b_contract_id: contractIds[0],
+              b2b_organization_id: orgId,
             }),
           ),
       )
@@ -516,8 +516,8 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
                 title: run.title,
               },
               certificate: null,
-              b2bContractId: contractIds[0],
-              b2bOrganizationId: orgId,
+              b2b_contract_id: contractIds[0],
+              b2b_organization_id: orgId,
             }),
           ),
       )
@@ -558,8 +558,8 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
 
       expect(result).toEqual({
         id: enrollment.id,
-        b2b_contract_id: enrollment.b2bContractId,
-        b2b_organization_id: enrollment.b2bOrganizationId,
+        b2b_contract_id: enrollment.b2b_contract_id,
+        b2b_organization_id: enrollment.b2b_organization_id,
         status: EnrollmentStatus.Completed,
         mode: enrollment.enrollment_mode,
         receiveEmails: enrollment.edx_emails_subscription,
@@ -626,7 +626,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
       const filtered = filterEnrollmentsByOrganization(enrollments, orgId1)
 
       expect(filtered).toHaveLength(2)
-      expect(filtered.every((e) => e.b2bOrganizationId === orgId1)).toBe(true)
+      expect(filtered.every((e) => e.b2b_organization_id === orgId1)).toBe(true)
     })
 
     test("returns empty array when no enrollments match organization", () => {
@@ -661,7 +661,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
       const filtered = filterEnrollmentsByOrganization(enrollments, 123)
 
       expect(filtered).toHaveLength(1)
-      expect(filtered[0].b2bOrganizationId).toBe(123)
+      expect(filtered[0].b2b_organization_id).toBe(123)
     })
   })
 })

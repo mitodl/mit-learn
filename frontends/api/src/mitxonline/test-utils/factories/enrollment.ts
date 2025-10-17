@@ -37,8 +37,8 @@ const courseEnrollment: PartialFactory<CourseRunEnrollmentRequestV2> = (
 
   const defaults: CourseRunEnrollmentRequestV2 = {
     id: uniqueEnrollmentId.enforce(() => faker.number.int()),
-    b2b_contract_id: faker.number.int(),
-    b2b_organization_id: faker.number.int(),
+    b2b_contract_id: null, // Default to personal enrollment (not B2B)
+    b2b_organization_id: null, // Default to personal enrollment (not B2B)
     certificate: {
       uuid: faker.string.uuid(),
       link: faker.internet.url(),
