@@ -2,10 +2,11 @@ import {
   canonicalResourceDrawerUrl,
   RESOURCE_DRAWER_PARAMS,
 } from "@/common/urls"
-import { learningResourcesApi } from "api/clients"
 import type { Metadata } from "next"
 import * as Sentry from "@sentry/nextjs"
 import handleNotFound from "./handleNotFound"
+import { learningResourceQueries } from "api/hooks/learningResources"
+import { getServerQueryClient } from "api/ssr/serverQueryClient"
 
 const DEFAULT_OG_IMAGE = "/images/learn-og-image.jpg"
 
@@ -42,10 +43,11 @@ export const getMetadataAsync = async ({
   const alts = alternates ?? {}
   if (learningResourceId) {
     try {
-      const { data } = await handleNotFound(
-        learningResourcesApi.learningResourcesRetrieve({
-          id: learningResourceId,
-        }),
+      const queryClient = getServerQueryClient()
+      const data = await handleNotFound(
+        queryClient.fetchQuery(
+          learningResourceQueries.detail(learningResourceId),
+        ),
       )
 
       title = data?.title

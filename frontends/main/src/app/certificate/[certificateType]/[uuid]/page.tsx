@@ -7,8 +7,8 @@ import { HydrationBoundary } from "@tanstack/react-query"
 import { isInEnum } from "@/common/utils"
 import { notFound } from "next/navigation"
 import { standardizeMetadata } from "@/common/metadata"
-import { courseCertificatesApi, programCertificatesApi } from "api/mitxonline"
 import * as Sentry from "@sentry/nextjs"
+import { getServerQueryClient } from "api/ssr/serverQueryClient"
 
 const { NEXT_PUBLIC_ORIGIN } = process.env
 
@@ -24,11 +24,15 @@ export async function generateMetadata({
 
   let title, displayType, userName
 
+  const queryClient = getServerQueryClient()
+
   try {
     if (certificateType === CertificateType.Course) {
-      const { data } = await courseCertificatesApi.courseCertificatesRetrieve({
-        cert_uuid: uuid,
-      })
+      const data = await queryClient.fetchQuery(
+        certificateQueries.courseCertificatesRetrieve({
+          cert_uuid: uuid,
+        }),
+      )
 
       title = data.course_run.course.title
 
@@ -36,10 +40,10 @@ export async function generateMetadata({
 
       userName = data?.user?.name
     } else {
-      const { data } = await programCertificatesApi.programCertificatesRetrieve(
-        {
+      const data = await queryClient.fetchQuery(
+        certificateQueries.programCertificatesRetrieve({
           cert_uuid: uuid,
-        },
+        }),
       )
 
       title = data.program.title

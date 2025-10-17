@@ -8,6 +8,14 @@ import Script from "next/script"
 
 import "./GlobalStyles"
 
+/*
+ * Instruct Next.js to use the built-in Data Cache for responses
+ * on all routes.
+ *
+ * Defaults the fetch cache option to 'force-cache' where not provided.
+ */
+export const fetchCache = "default-cache"
+
 const { NEXT_PUBLIC_ORIGIN } = process.env
 
 /**
