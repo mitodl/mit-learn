@@ -54,54 +54,34 @@ const getCsrfToken = () => {
 /**
  * Returns a URL to authentication that redirects to current page after auth.
  *
- * By default, new users will be redirected to default signup destination.
- * If `signup` is true, they will be redirected to the current page.
+ * NOTES:
+ *  1. This is reactive; if current URL changes, the result of this hook
+ *     will update and trigger re-renders. This makes it suitable for use as
+ *     an href.
+ *  2. However, the use of search params / pathname hooks may require Suspense
+ *     or NextJS's dynamic rendering.
  */
-const useAuthToCurrent = ({ signup }: { signup?: boolean } = {}) => {
-  /**
-   * NOTES:
-   *  1. This is reactive; if current URL changes, the result of this hook
-   *     will update and trigger re-renders. This makes it suitable for use as
-   *     an href.
-   *  2. However, the use of search params / pathname hooks may require Suspense
-   *     or NextJS's dynamic rendering.
-   *
-   */
+const useAuthToCurrent = () => {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const current = { pathname, searchParams }
-  return auth({
-    loginNext: current,
-    signupNext: signup ? current : undefined,
-  })
+  return auth({ loginNext: current })
 }
 
 /**
- * Redirect user to auth. After auth:
- *  - existing users redirected to their current URL
- * - new users redirected to the default signup destination, unless `signup` is true.
+ * Redirect user to auth. After auth, users come back to current page.
  */
-const redirectAuthToCurrent = ({
-  signup,
-}: {
-  /**
-   * Whether to redirect signup to current; by default, false. New users
-   * will be redirected to the default signup destination.
-   */
-  signup?: boolean
-} = {}): never => {
-  const current = {
-    pathname: window.location.pathname,
-    searchParams: new URLSearchParams(window.location.search),
-  }
+const redirectAuthToCurrent = (): never => {
   redirect(
     /**
      * Calculating the ?next=<current-url> via window.location is appropriate
      * here since it happens time of redirect call.
      */
     auth({
-      loginNext: current,
-      signupNext: signup ? current : undefined,
+      loginNext: {
+        pathname: window.location.pathname,
+        searchParams: new URLSearchParams(window.location.search),
+      },
     }),
   )
 }

@@ -3,7 +3,6 @@ import React from "react"
 import { styled, Breadcrumbs, Container, Typography } from "ol-components"
 import * as urls from "@/common/urls"
 import { useB2BAttachMutation } from "api/mitxonline-hooks/organizations"
-import { useMitxOnlineUserMe } from "api/mitxonline-hooks/user"
 import { userQueries } from "api/hooks/user"
 import { useQuery } from "@tanstack/react-query"
 import { useRouter } from "next-nprogress-bar"
@@ -31,7 +30,6 @@ const EnrollmentCodePage: React.FC<EnrollmentCodePage> = ({ code }) => {
     ...userQueries.me(),
     staleTime: 0,
   })
-  const { data: mitxOnlineUser } = useMitxOnlineUserMe()
 
   React.useEffect(() => {
     attach?.()
@@ -47,23 +45,18 @@ const EnrollmentCodePage: React.FC<EnrollmentCodePage> = ({ code }) => {
           pathname: urls.b2bAttachView(code),
           searchParams: null,
         },
-        // On signup, redirect to the attach page so attachment can occur.
-        signupNext: {
-          pathname: urls.b2bAttachView(code),
-          searchParams: null,
-        },
       })
       const loginUrl = new URL(loginUrlString)
       loginUrl.searchParams.set("skip_onboarding", "1")
       router.push(loginUrl.toString())
     }
+  }, [userLoading, user, code, router])
+
+  React.useEffect(() => {
     if (isSuccess) {
-      const org = mitxOnlineUser?.b2b_organizations?.[0]
-      if (org) {
-        router.push(urls.organizationView(org.slug.replace("org-", "")))
-      }
+      router.push(urls.DASHBOARD_HOME)
     }
-  }, [isSuccess, userLoading, user, mitxOnlineUser, code, router])
+  }, [isSuccess, router])
 
   return (
     <Container>
