@@ -23,7 +23,7 @@ import {
 import graduateLogo from "@/public/images/dashboard/graduate.png"
 import {
   ContractPage,
-  CourseRunEnrollment,
+  CourseRunEnrollmentRequestV2,
   OrganizationPage,
   UserProgramEnrollmentDetail,
 } from "@mitodl/mitxonline-api-axios/v2"
@@ -165,7 +165,7 @@ const useProgramCollectionCourses = (programIds: number[], orgId: number) => {
 const OrgProgramCollectionDisplay: React.FC<{
   collection: DashboardProgramCollection
   contracts?: ContractPage[]
-  enrollments?: CourseRunEnrollment[]
+  enrollments?: CourseRunEnrollmentRequestV2[]
   orgId: number
 }> = ({ collection, contracts, enrollments, orgId }) => {
   const sanitizedDescription = DOMPurify.sanitize(collection.description ?? "")
@@ -257,7 +257,7 @@ const OrgProgramCollectionDisplay: React.FC<{
 const OrgProgramDisplay: React.FC<{
   program: DashboardProgram
   contracts?: ContractPage[]
-  courseRunEnrollments?: CourseRunEnrollment[]
+  courseRunEnrollments?: CourseRunEnrollmentRequestV2[]
   programEnrollments?: UserProgramEnrollmentDetail[]
   programLoading: boolean
   orgId: number

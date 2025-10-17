@@ -32,6 +32,7 @@ describe("OrganizationContent", () => {
   beforeEach(() => {
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(urls.enrollment.enrollmentsList(), [])
+    setMockResponse.get(urls.enrollment.enrollmentsListV2(), [])
     setMockResponse.get(urls.programEnrollments.enrollmentsList(), [])
     setMockResponse.get(urls.contracts.contractsList(), [])
   })
@@ -105,6 +106,7 @@ describe("OrganizationContent", () => {
     ]
     // Override the default empty enrollments for this test
     setMockResponse.get(urls.enrollment.enrollmentsList(), enrollments)
+    setMockResponse.get(urls.enrollment.enrollmentsListV2(), enrollments)
 
     renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
 
@@ -447,6 +449,7 @@ describe("OrganizationContent", () => {
 
     // Override enrollments for this test
     setMockResponse.get(urls.enrollment.enrollmentsList(), enrollments)
+    setMockResponse.get(urls.enrollment.enrollmentsListV2(), enrollments)
 
     renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
 

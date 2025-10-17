@@ -3,6 +3,7 @@ import { mergeOverrides } from "ol-test-utilities"
 import type { PartialFactory } from "ol-test-utilities"
 import type {
   CourseRunEnrollment,
+  CourseRunEnrollmentRequestV2,
   CourseRunGrade,
   UserProgramEnrollmentDetail,
 } from "@mitodl/mitxonline-api-axios/v2"
@@ -28,14 +29,16 @@ const grade: PartialFactory<CourseRunGrade> = (overrides = {}) => {
   return mergeOverrides<CourseRunGrade>(defaults, overrides)
 }
 
-const courseEnrollment: PartialFactory<CourseRunEnrollment> = (
+const courseEnrollment: PartialFactory<CourseRunEnrollmentRequestV2> = (
   overrides = {},
 ) => {
   const title =
     overrides.run?.title ?? overrides.run?.course?.title ?? faker.word.words(3)
 
-  const defaults: CourseRunEnrollment = {
+  const defaults: CourseRunEnrollmentRequestV2 = {
     id: uniqueEnrollmentId.enforce(() => faker.number.int()),
+    b2bContractId: faker.number.int(),
+    b2bOrganizationId: faker.number.int(),
     certificate: {
       uuid: faker.string.uuid(),
       link: faker.internet.url(),
@@ -95,10 +98,52 @@ const courseEnrollment: PartialFactory<CourseRunEnrollment> = (
           ],
         },
         programs: null,
+        topics: faker.helpers.multiple(
+          () => ({ name: faker.lorem.word(), id: faker.number.int() }),
+          { count: { min: 0, max: 5 } },
+        ),
+        certificate_type: faker.helpers.arrayElement([
+          "completion",
+          "verified",
+          "professional",
+          "micromasters",
+        ]),
+        required_prerequisites: faker.datatype.boolean(),
+        duration: `${faker.number.int({ min: 4, max: 16 })} weeks`,
+        min_weeks: faker.number.int({ min: 4, max: 8 }),
+        max_weeks: faker.number.int({ min: 12, max: 20 }),
+        min_price: faker.number.int({ min: 0, max: 500 }),
+        max_price: faker.number.int({ min: 500, max: 2000 }),
+        time_commitment: `${faker.number.int({ min: 2, max: 15 })} hours per week`,
+        availability: faker.helpers.arrayElement([
+          "current",
+          "starting_soon",
+          "upcoming",
+          "archived",
+        ]),
+        min_weekly_hours: faker.number.int({ min: 2, max: 5 }).toString(),
+        max_weekly_hours: faker.number.int({ min: 8, max: 15 }).toString(),
+        include_in_learn_catalog: faker.datatype.boolean({ probability: 0.8 }),
+        ingest_content_files_for_ai: faker.datatype.boolean({
+          probability: 0.3,
+        }),
       },
     },
   }
-  return mergeOverrides<CourseRunEnrollment>(defaults, overrides)
+  return mergeOverrides<CourseRunEnrollmentRequestV2>(defaults, overrides)
+}
+
+// Type-safe conversion from V2 to V1 enrollment for compatibility
+const convertV2ToV1Enrollment = (
+  v2Enrollment: CourseRunEnrollmentRequestV2,
+): CourseRunEnrollment => {
+  // Remove V2-specific fields and return V1 compatible object
+  const {
+    b2bContractId: b2bContractId,
+    b2bOrganizationId: b2bOrganizationId,
+    ...v1Compatible
+  } = v2Enrollment
+  return v1Compatible as CourseRunEnrollment
 }
 
 const programEnrollment: PartialFactory<UserProgramEnrollmentDetail> = (
@@ -143,13 +188,13 @@ const programEnrollment: PartialFactory<UserProgramEnrollmentDetail> = (
       ],
       live: faker.datatype.boolean(),
     },
-    enrollments: [courseEnrollment()],
+    enrollments: [convertV2ToV1Enrollment(courseEnrollment())],
   }
   return mergeOverrides<UserProgramEnrollmentDetail>(defaults, overrides)
 }
 
 // Not paginated
-const courseEnrollments = (count: number): CourseRunEnrollment[] => {
+const courseEnrollments = (count: number): CourseRunEnrollmentRequestV2[] => {
   return new Array(count).fill(null).map(() => courseEnrollment())
 }
 

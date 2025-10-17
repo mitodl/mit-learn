@@ -54,7 +54,8 @@ type DashboardCourse = {
 }
 type DashboardCourseEnrollment = {
   id: number
-  b2b_contract?: number | null | undefined
+  b2b_contract_id?: number | null | undefined
+  b2b_organization_id?: number | null | undefined
   status: EnrollmentStatus
   mode: EnrollmentMode
   receiveEmails?: boolean
