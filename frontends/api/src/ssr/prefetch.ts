@@ -18,36 +18,11 @@ export const prefetch = async (
    */
   queryClient = getServerQueryClient(),
 ) => {
-  try {
-    await Promise.all(
-      queries.filter(Boolean).map(async (query) => {
-        try {
-          return await queryClient.prefetchQuery(query as Query)
-        } catch (error) {
-          console.error(
-            "Prefetch error for query:",
-            (query as Query)?.queryKey,
-            error,
-          )
-
-          // Remove the query from cache entirely to prevent serialization issues
-          // The client will refetch it
-          const cache = queryClient.getQueryCache()
-          const existingQuery = cache.find({
-            queryKey: (query as Query).queryKey,
-          })
-          if (existingQuery) {
-            cache.remove(existingQuery)
-          }
-
-          // Don't rethrow - let other queries succeed
-          return null
-        }
-      }),
-    )
-  } catch (error) {
-    console.error("prefetch error", error)
-  }
+  await Promise.all(
+    queries.filter(Boolean).map(async (query) => {
+      return await queryClient.prefetchQuery(query as Query)
+    }),
+  )
 
   // Clear any failed queries that might contain non-serializable error objects
   const cache = queryClient.getQueryCache()
