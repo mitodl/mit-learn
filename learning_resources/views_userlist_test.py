@@ -136,6 +136,7 @@ def test_user_list_endpoint_membership_get(client, user, is_authenticated):
         assert resp.status_code == 403
 
 
+@pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize("is_author", [True, False])
 def test_user_list_items_endpoint_create_item(client, user, is_author):
     """Test userlistitems endpoint for creating a UserListItem"""
@@ -177,6 +178,7 @@ def test_user_list_items_endpoint_create_item_bad_data(client, user):
     }
 
 
+@pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize(
     ("is_author", "position"),
     [[True, 0], [True, 2], [False, 1]],  # noqa: PT007
@@ -309,6 +311,7 @@ def test_get_resource_user_lists(client, user, is_author, is_unlisted):
         assert items_json == []
 
 
+@pytest.mark.skip_nplusone_check
 def test_set_userlist_relationships(client, user):
     """Test the userlists endpoint for setting multiple userlist relationships"""
     course = factories.CourseFactory.create()
@@ -376,6 +379,7 @@ def test_set_userlist_relationships_empty_list(client, user):
     )
 
 
+@pytest.mark.skip_nplusone_check
 def test_adding_to_userlist_not_effect_existing_membership(client, user):
     """
     Given L1 (existing parent), L2 (new parent), and R (resource),

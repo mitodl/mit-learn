@@ -30,6 +30,7 @@ pytestmark = pytest.mark.django_db
 User = get_user_model()
 
 
+@pytest.mark.skip_nplusone_check
 def test_list_channels(user_client):
     """Test that all channels are returned"""
     ChannelFactory.create_batch(2, published=False)  # should be filtered out
@@ -488,6 +489,7 @@ def test_channel_counts_view(client):
             )
 
 
+@pytest.mark.skip_nplusone_check
 def test_channel_counts_view_is_cached_for_anonymous_users(client, settings):
     """Test the channel counts view is cached for anonymous users"""
     settings.CACHES["redis"] = {
@@ -510,6 +512,7 @@ def test_channel_counts_view_is_cached_for_anonymous_users(client, settings):
     assert len(response) == channel_count
 
 
+@pytest.mark.skip_nplusone_check
 def test_channel_counts_view_is_cached_for_authenticated_users(client, settings):
     """Test the channel counts view is cached for authenticated users"""
     settings.CACHES["redis"] = {

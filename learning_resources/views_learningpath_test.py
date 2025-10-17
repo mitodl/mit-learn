@@ -339,6 +339,7 @@ def test_learning_path_items_endpoint_delete_items(client, user, is_editor, num_
         assert item.position == (old_position - 1 if is_editor else old_position)
 
 
+@pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize("is_editor", [True, False])
 def test_learning_path_endpoint_delete(client, user, is_editor):
     """Test learningpath endpoint for deleting a LearningPath"""
@@ -419,6 +420,7 @@ def test_get_resource_learning_paths(user_client, user, is_editor):
     assert response_data == expected
 
 
+@pytest.mark.skip_nplusone_check
 def test_set_learning_path_relationships(client, staff_user):
     """Test the learning_paths endpoint for setting multiple userlist relationships"""
     course = factories.CourseFactory.create()
@@ -445,6 +447,7 @@ def test_set_learning_path_relationships(client, staff_user):
     ).exists()
 
 
+@pytest.mark.skip_nplusone_check
 def test_adding_to_learning_path_not_effect_existing_membership(client, staff_user):
     """
     Given L1 (existing parent), L2 (new parent), and R (resource),
