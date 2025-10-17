@@ -37,8 +37,8 @@ const courseEnrollment: PartialFactory<CourseRunEnrollmentRequestV2> = (
 
   const defaults: CourseRunEnrollmentRequestV2 = {
     id: uniqueEnrollmentId.enforce(() => faker.number.int()),
-    b2bContractId: faker.number.int(),
-    b2bOrganizationId: faker.number.int(),
+    b2b_contract_id: faker.number.int(),
+    b2b_organization_id: faker.number.int(),
     certificate: {
       uuid: faker.string.uuid(),
       link: faker.internet.url(),
@@ -139,8 +139,8 @@ const convertV2ToV1Enrollment = (
 ): CourseRunEnrollment => {
   // Remove V2-specific fields and return V1 compatible object
   const {
-    b2bContractId: b2bContractId,
-    b2bOrganizationId: b2bOrganizationId,
+    b2b_contract_id: b2bContractId,
+    b2b_organization_id: b2bOrganizationId,
     ...v1Compatible
   } = v2Enrollment
   return v1Compatible as CourseRunEnrollment
