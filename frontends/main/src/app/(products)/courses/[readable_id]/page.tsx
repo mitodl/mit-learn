@@ -16,7 +16,7 @@ export const generateMetadata = async (
   const params = await props.params
 
   try {
-    const resp = await pagesApi.pagesfieldstypecmsCoursePageRetrieve({
+    const resp = await pagesApi.pagesfieldstypecmsCoursepageRetrieve({
       readable_id: decodeURIComponent(params.readable_id),
     })
 

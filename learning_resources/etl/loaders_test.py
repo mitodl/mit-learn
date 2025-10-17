@@ -55,6 +55,7 @@ from learning_resources.etl.loaders import (
 )
 from learning_resources.etl.xpro import _parse_datetime
 from learning_resources.factories import (
+    ArticleFactory,
     ContentFileFactory,
     CourseFactory,
     LearningResourceContentTagFactory,
@@ -106,6 +107,12 @@ non_transformable_attributes = (
 def youtube_video_platform():
     """Fixture for a youtube video platform"""
     return LearningResourcePlatformFactory.create(code=PlatformType.youtube.name)
+
+
+@pytest.fixture(autouse=True)
+def climate_platform():
+    """Fixture for a youtube video platform"""
+    return LearningResourcePlatformFactory.create(code=PlatformType.climate.name)
 
 
 @pytest.fixture(autouse=True)
@@ -1894,3 +1901,40 @@ def test_course_with_unpublished_force_ingest_is_test_mode():
     assert course.require_summaries is True
     assert course.test_mode is True
     assert course.published is False
+
+
+@pytest.mark.django_db
+def test_load_articles(mocker, climate_platform):
+    articles_data = [
+        {
+            "title": "test",
+            "readable_id": "test-article",
+            "url": "",
+            "description": "summary",
+            "topics": [],
+            "full_description": "",
+            "image": {"url": "http://test.com"},
+            "published": True,
+            "etl_source": ETLSource.mit_climate.name,
+            "offered_by": {
+                "code": OfferedBy.climate.name,
+            },
+        }
+    ]
+    unpublished_article = ArticleFactory.create()
+    mock_bulk_unpublish = mocker.patch(
+        "learning_resources.etl.loaders.bulk_resources_unpublished_actions",
+        autospec=True,
+    )
+    result = loaders.load_articles(articles_data)
+
+    assert result[0].title == articles_data[0]["title"]
+
+    # Ensure unpublished articles are handled
+    assert (
+        mock_bulk_unpublish.mock_calls[0].args[0][0]
+        == unpublished_article.learning_resource.id
+    )
+    assert (
+        mock_bulk_unpublish.mock_calls[0].args[1] == LearningResourceType.article.name
+    )
