@@ -33,7 +33,7 @@ django-cache-memoize = "^0.2.0"
 django-cors-headers = "^4.0.0"
 django-filter = "^2.4.0"
 django-guardian = "^3.0.0"
-django-health-check = { git = "https://github.com/revsys/django-health-check", rev="592f6a8fc2a8481f4f810678461db52bd1b0e3d6" }  # pragma: allowlist secret
+django-health-check = { git = "https://github.com/revsys/django-health-check", rev="53f9bdc3a7acc8a577319987fef0bd3040eef4b4" }  # pragma: allowlist secret
 
 
 django-imagekit = "^5.0.0"
