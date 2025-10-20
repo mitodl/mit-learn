@@ -1,14 +1,9 @@
 import { cache } from "react"
 import { QueryClient } from "@tanstack/react-query"
+import { AxiosError } from "axios"
 
 const MAX_RETRIES = 3
 const NO_RETRY_CODES = [400, 401, 403, 404, 405, 409, 422]
-
-type MaybeHasStatus = {
-  response?: {
-    status?: number
-  }
-}
 
 export interface TaggedQueryClient extends QueryClient {
   __requestId?: string
@@ -29,15 +24,10 @@ export interface TaggedQueryClient extends QueryClient {
  * - Automatic cleanup when the request completes
  * - Isolation between different HTTP requests
  *
- * This provides a caching layer during each request lifecycle, though Next.js
- * will also cache API responses made with the native fetch adapter (set on our
- * Axios instances) in its built-in Data Cache, persisting across requests.
- *
  * The QueryClientProvider runs (during SSR) in a separate render pass as it's a
- * client component. On the server this does not make API calls and only sets up
- * the hydration boundary and registers hooks in readiness for the dehydrated
- * state to be sent to the client.
- *
+ * client component and so the instance is not reused. On the server this does not
+ * make API calls and only sets up the hydration boundary and registers hooks in
+ * readiness for the dehydrated state to be sent to the client.
  */
 const getServerQueryClient = cache(() => {
   const queryClient = new QueryClient({
@@ -52,7 +42,19 @@ const getServerQueryClient = cache(() => {
          * Includes status undefined as we want to retry on network errors
          */
         retry: (failureCount, error) => {
-          const status = (error as MaybeHasStatus)?.response?.status
+          const axiosError = error as AxiosError
+          console.info("Retrying failed request", {
+            failureCount,
+            error: {
+              message: axiosError.message,
+              name: axiosError.name,
+              status: axiosError?.status,
+              code: axiosError.code,
+              method: axiosError.request?.method,
+              url: axiosError.request?.url,
+            },
+          })
+          const status = (error as AxiosError)?.response?.status
           const isNetworkError = status === undefined || status === 0
 
           if (isNetworkError || !NO_RETRY_CODES.includes(status)) {
