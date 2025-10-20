@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { useEffect } from "react"
 import DOMPurify from "isomorphic-dompurify"
 import Image from "next/image"
 import { useFeatureFlagEnabled } from "posthog-js/react"
@@ -27,9 +27,10 @@ import {
   OrganizationPage,
   UserProgramEnrollmentDetail,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { useMitxOnlineUserMe } from "api/mitxonline-hooks/user"
+import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { RiAwardFill } from "@remixicon/react"
+import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 
 const HeaderRoot = styled.div({
   display: "flex",
@@ -426,24 +427,44 @@ const OrganizationContentInternal: React.FC<
   )
 }
 
+const matchOrganizationBySlug =
+  (orgSlug: string) => (organization: OrganizationPage) => {
+    return organization.slug.replace("org-", "") === orgSlug
+  }
+
 type OrganizationContentProps = {
   orgSlug: string
 }
 const OrganizationContent: React.FC<OrganizationContentProps> = ({
   orgSlug,
 }) => {
-  const { isLoading: isLoadingMitxOnlineUser, data: mitxOnlineUser } =
-    useMitxOnlineUserMe()
+  const { isLoading: isLoadingMitxOnlineUser, data: mitxOnlineUser } = useQuery(
+    mitxUserQueries.me(),
+  )
+
+  useEffect(() => {
+    if (
+      mitxOnlineUser?.b2b_organizations.find(matchOrganizationBySlug(orgSlug))
+    ) {
+      localStorage.setItem("last-dashboard-org", orgSlug)
+    }
+  }, [mitxOnlineUser, orgSlug])
+
+  if (isLoadingMitxOnlineUser) {
+    return (
+      <Skeleton width="100%" height="100px" style={{ marginBottom: "16px" }} />
+    )
+  }
+
   const b2bOrganization = mitxOnlineUser?.b2b_organizations.find(
-    (org) => org.slug.replace("org-", "") === orgSlug,
+    matchOrganizationBySlug(orgSlug),
   )
-  const skeleton = (
-    <Skeleton width="100%" height="100px" style={{ marginBottom: "16px" }} />
-  )
-  if (isLoadingMitxOnlineUser || isLoadingMitxOnlineUser) return skeleton
-  return b2bOrganization ? (
-    <OrganizationContentInternal org={b2bOrganization} />
-  ) : null
+
+  if (!b2bOrganization) {
+    return <ErrorContent title="Organization not found" timSays="404" />
+  }
+
+  return <OrganizationContentInternal org={b2bOrganization} />
 }
 
 export default OrganizationContent

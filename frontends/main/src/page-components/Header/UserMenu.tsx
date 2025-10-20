@@ -134,12 +134,6 @@ const UserMenu: React.FC<UserMenuProps> = ({ variant }) => {
 
   const items: UserMenuItem[] = [
     {
-      label: "Home",
-      key: "home",
-      allow: true,
-      href: urls.HOME,
-    },
-    {
       label: "Dashboard",
       key: "dashboard",
       allow: !!user?.is_authenticated,

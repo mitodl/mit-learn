@@ -40,6 +40,23 @@
   {
     "model": "learning_resources.LearningResourceOfferor",
     "fields": {
+      "name": "MIT Climate Portal",
+      "code": "climate",
+      "professional": false,
+      "offerings": ["Learning Materials"],
+      "audience": ["Everyone"],
+      "formats": ["Online", "Downloadable"],
+      "fee": ["Free"],
+      "certifications": ["No Certificates"],
+      "content_types": ["Academic"],
+      "more_information": "https://climate.mit.edu",
+      "created_on": "2023-08-08T14:27:25.128989+00:00",
+      "updated_on": "2023-08-08T14:27:25.128989+00:00"
+    }
+  },
+  {
+    "model": "learning_resources.LearningResourceOfferor",
+    "fields": {
       "name": "Bootcamps",
       "code": "bootcamps",
       "professional": true,

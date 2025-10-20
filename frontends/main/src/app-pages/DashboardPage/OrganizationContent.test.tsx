@@ -728,4 +728,14 @@ describe("OrganizationContent", () => {
       expect(cardStatus).toHaveTextContent("Not Enrolled")
     }
   })
+
+  test("shows the not found screen if the organization is not found by orgSlug", async () => {
+    const { mitxOnlineUser } = setupOrgAndUser()
+
+    setMockResponse.get(urls.userMe.get(), mitxOnlineUser)
+
+    renderWithProviders(<OrganizationContent orgSlug="not-found" />)
+
+    await screen.findByRole("heading", { name: "Organization not found" })
+  })
 })

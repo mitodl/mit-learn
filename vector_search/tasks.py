@@ -13,6 +13,7 @@ from learning_resources.models import (
 )
 from learning_resources.utils import load_course_blocklist
 from learning_resources_search.constants import (
+    ARTICLE_TYPE,
     CONTENT_FILE_TYPE,
     COURSE_TYPE,
     LEARNING_PATH_TYPE,
@@ -167,6 +168,7 @@ def start_embed_resources(self, indexes, skip_content_files, overwrite):
             LEARNING_PATH_TYPE,
             VIDEO_TYPE,
             VIDEO_PLAYLIST_TYPE,
+            ARTICLE_TYPE,
         ]:
             if resource_type in indexes:
                 for ids in chunks(
