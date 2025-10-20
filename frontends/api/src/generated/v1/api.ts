@@ -120,6 +120,50 @@ export type AggregationsEnum =
   (typeof AggregationsEnum)[keyof typeof AggregationsEnum]
 
 /**
+ * Serializer for LearningResourceInstructor model
+ * @export
+ * @interface Article
+ */
+export interface Article {
+  /**
+   *
+   * @type {string}
+   * @memberof Article
+   */
+  html: string
+  /**
+   *
+   * @type {number}
+   * @memberof Article
+   */
+  id: number
+  /**
+   *
+   * @type {string}
+   * @memberof Article
+   */
+  title: string
+}
+/**
+ * Serializer for LearningResourceInstructor model
+ * @export
+ * @interface ArticleRequest
+ */
+export interface ArticleRequest {
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleRequest
+   */
+  html: string
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleRequest
+   */
+  title: string
+}
+/**
  * Serializer for Article resources
  * @export
  * @interface ArticleResource
@@ -263,6 +307,12 @@ export interface ArticleResource {
    * @memberof ArticleResource
    */
   resource_type: ArticleResourceResourceTypeEnum
+  /**
+   *
+   * @type {Article}
+   * @memberof ArticleResource
+   */
+  article: Article
   /**
    *
    * @type {string}
@@ -3876,6 +3926,37 @@ export type OfferedByEnum = (typeof OfferedByEnum)[keyof typeof OfferedByEnum]
 /**
  *
  * @export
+ * @interface PaginatedArticleList
+ */
+export interface PaginatedArticleList {
+  /**
+   *
+   * @type {number}
+   * @memberof PaginatedArticleList
+   */
+  count: number
+  /**
+   *
+   * @type {string}
+   * @memberof PaginatedArticleList
+   */
+  next?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof PaginatedArticleList
+   */
+  previous?: string | null
+  /**
+   *
+   * @type {Array<Article>}
+   * @memberof PaginatedArticleList
+   */
+  results: Array<Article>
+}
+/**
+ *
+ * @export
  * @interface PaginatedContentFileList
  */
 export interface PaginatedContentFileList {
@@ -4403,37 +4484,6 @@ export interface PaginatedProgramResourceList {
 /**
  *
  * @export
- * @interface PaginatedRichTextArticleList
- */
-export interface PaginatedRichTextArticleList {
-  /**
-   *
-   * @type {number}
-   * @memberof PaginatedRichTextArticleList
-   */
-  count: number
-  /**
-   *
-   * @type {string}
-   * @memberof PaginatedRichTextArticleList
-   */
-  next?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof PaginatedRichTextArticleList
-   */
-  previous?: string | null
-  /**
-   *
-   * @type {Array<RichTextArticle>}
-   * @memberof PaginatedRichTextArticleList
-   */
-  results: Array<RichTextArticle>
-}
-/**
- *
- * @export
  * @interface PaginatedUserListList
  */
 export interface PaginatedUserListList {
@@ -4554,6 +4604,25 @@ export interface PaginatedVideoResourceList {
    * @memberof PaginatedVideoResourceList
    */
   results: Array<VideoResource>
+}
+/**
+ * Serializer for LearningResourceInstructor model
+ * @export
+ * @interface PatchedArticleRequest
+ */
+export interface PatchedArticleRequest {
+  /**
+   *
+   * @type {string}
+   * @memberof PatchedArticleRequest
+   */
+  html?: string
+  /**
+   *
+   * @type {string}
+   * @memberof PatchedArticleRequest
+   */
+  title?: string
 }
 /**
  * Specialized serializer for a LearningPath relationship
@@ -4764,25 +4833,6 @@ export interface PatchedLearningResourceRelationshipRequest {
   child?: number
 }
 
-/**
- * Serializer for LearningResourceInstructor model
- * @export
- * @interface PatchedRichTextArticleRequest
- */
-export interface PatchedRichTextArticleRequest {
-  /**
-   *
-   * @type {string}
-   * @memberof PatchedRichTextArticleRequest
-   */
-  html?: string
-  /**
-   *
-   * @type {string}
-   * @memberof PatchedRichTextArticleRequest
-   */
-  title?: string
-}
 /**
  * Serializer for UserListRelationship model
  * @export
@@ -7150,50 +7200,6 @@ export type ResourceTypeEnum =
   (typeof ResourceTypeEnum)[keyof typeof ResourceTypeEnum]
 
 /**
- * Serializer for LearningResourceInstructor model
- * @export
- * @interface RichTextArticle
- */
-export interface RichTextArticle {
-  /**
-   *
-   * @type {string}
-   * @memberof RichTextArticle
-   */
-  html: string
-  /**
-   *
-   * @type {number}
-   * @memberof RichTextArticle
-   */
-  id: number
-  /**
-   *
-   * @type {string}
-   * @memberof RichTextArticle
-   */
-  title: string
-}
-/**
- * Serializer for LearningResourceInstructor model
- * @export
- * @interface RichTextArticleRequest
- */
-export interface RichTextArticleRequest {
-  /**
-   *
-   * @type {string}
-   * @memberof RichTextArticleRequest
-   */
-  html: string
-  /**
-   *
-   * @type {string}
-   * @memberof RichTextArticleRequest
-   */
-  title: string
-}
-/**
  * * `best_fields` - best_fields * `most_fields` - most_fields * `phrase` - phrase  * `best_fields` - best_fields * `most_fields` - most_fields * `phrase` - phrase
  * @export
  * @enum {string}
@@ -8642,20 +8648,16 @@ export const ArticlesApiAxiosParamCreator = function (
     /**
      * Create a new article
      * @summary Create
-     * @param {RichTextArticleRequest} RichTextArticleRequest
+     * @param {ArticleRequest} ArticleRequest
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     articlesCreate: async (
-      RichTextArticleRequest: RichTextArticleRequest,
+      ArticleRequest: ArticleRequest,
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
-      // verify required parameter 'RichTextArticleRequest' is not null or undefined
-      assertParamExists(
-        "articlesCreate",
-        "RichTextArticleRequest",
-        RichTextArticleRequest,
-      )
+      // verify required parameter 'ArticleRequest' is not null or undefined
+      assertParamExists("articlesCreate", "ArticleRequest", ArticleRequest)
       const localVarPath = `/api/v1/articles/`
       // use dummy base URL string because the URL constructor only accepts absolute URLs.
       const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
@@ -8683,7 +8685,7 @@ export const ArticlesApiAxiosParamCreator = function (
         ...options.headers,
       }
       localVarRequestOptions.data = serializeDataIfNeeded(
-        RichTextArticleRequest,
+        ArticleRequest,
         localVarRequestOptions,
         configuration,
       )
@@ -8794,13 +8796,13 @@ export const ArticlesApiAxiosParamCreator = function (
      * Update an article
      * @summary Update
      * @param {number} id A unique integer value identifying this article.
-     * @param {PatchedRichTextArticleRequest} [PatchedRichTextArticleRequest]
+     * @param {PatchedArticleRequest} [PatchedArticleRequest]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     articlesPartialUpdate: async (
       id: number,
-      PatchedRichTextArticleRequest?: PatchedRichTextArticleRequest,
+      PatchedArticleRequest?: PatchedArticleRequest,
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
       // verify required parameter 'id' is not null or undefined
@@ -8835,7 +8837,7 @@ export const ArticlesApiAxiosParamCreator = function (
         ...options.headers,
       }
       localVarRequestOptions.data = serializeDataIfNeeded(
-        PatchedRichTextArticleRequest,
+        PatchedArticleRequest,
         localVarRequestOptions,
         configuration,
       )
@@ -8904,21 +8906,18 @@ export const ArticlesApiFp = function (configuration?: Configuration) {
     /**
      * Create a new article
      * @summary Create
-     * @param {RichTextArticleRequest} RichTextArticleRequest
+     * @param {ArticleRequest} ArticleRequest
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     async articlesCreate(
-      RichTextArticleRequest: RichTextArticleRequest,
+      ArticleRequest: ArticleRequest,
       options?: RawAxiosRequestConfig,
     ): Promise<
-      (
-        axios?: AxiosInstance,
-        basePath?: string,
-      ) => AxiosPromise<RichTextArticle>
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<Article>
     > {
       const localVarAxiosArgs = await localVarAxiosParamCreator.articlesCreate(
-        RichTextArticleRequest,
+        ArticleRequest,
         options,
       )
       const index = configuration?.serverIndex ?? 0
@@ -8976,7 +8975,7 @@ export const ArticlesApiFp = function (configuration?: Configuration) {
       (
         axios?: AxiosInstance,
         basePath?: string,
-      ) => AxiosPromise<PaginatedRichTextArticleList>
+      ) => AxiosPromise<PaginatedArticleList>
     > {
       const localVarAxiosArgs = await localVarAxiosParamCreator.articlesList(
         limit,
@@ -8998,24 +8997,21 @@ export const ArticlesApiFp = function (configuration?: Configuration) {
      * Update an article
      * @summary Update
      * @param {number} id A unique integer value identifying this article.
-     * @param {PatchedRichTextArticleRequest} [PatchedRichTextArticleRequest]
+     * @param {PatchedArticleRequest} [PatchedArticleRequest]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     async articlesPartialUpdate(
       id: number,
-      PatchedRichTextArticleRequest?: PatchedRichTextArticleRequest,
+      PatchedArticleRequest?: PatchedArticleRequest,
       options?: RawAxiosRequestConfig,
     ): Promise<
-      (
-        axios?: AxiosInstance,
-        basePath?: string,
-      ) => AxiosPromise<RichTextArticle>
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<Article>
     > {
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.articlesPartialUpdate(
           id,
-          PatchedRichTextArticleRequest,
+          PatchedArticleRequest,
           options,
         )
       const index = configuration?.serverIndex ?? 0
@@ -9040,10 +9036,7 @@ export const ArticlesApiFp = function (configuration?: Configuration) {
       id: number,
       options?: RawAxiosRequestConfig,
     ): Promise<
-      (
-        axios?: AxiosInstance,
-        basePath?: string,
-      ) => AxiosPromise<RichTextArticle>
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<Article>
     > {
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.articlesRetrieve(id, options)
@@ -9082,9 +9075,9 @@ export const ArticlesApiFactory = function (
     articlesCreate(
       requestParameters: ArticlesApiArticlesCreateRequest,
       options?: RawAxiosRequestConfig,
-    ): AxiosPromise<RichTextArticle> {
+    ): AxiosPromise<Article> {
       return localVarFp
-        .articlesCreate(requestParameters.RichTextArticleRequest, options)
+        .articlesCreate(requestParameters.ArticleRequest, options)
         .then((request) => request(axios, basePath))
     },
     /**
@@ -9112,7 +9105,7 @@ export const ArticlesApiFactory = function (
     articlesList(
       requestParameters: ArticlesApiArticlesListRequest = {},
       options?: RawAxiosRequestConfig,
-    ): AxiosPromise<PaginatedRichTextArticleList> {
+    ): AxiosPromise<PaginatedArticleList> {
       return localVarFp
         .articlesList(
           requestParameters.limit,
@@ -9131,11 +9124,11 @@ export const ArticlesApiFactory = function (
     articlesPartialUpdate(
       requestParameters: ArticlesApiArticlesPartialUpdateRequest,
       options?: RawAxiosRequestConfig,
-    ): AxiosPromise<RichTextArticle> {
+    ): AxiosPromise<Article> {
       return localVarFp
         .articlesPartialUpdate(
           requestParameters.id,
-          requestParameters.PatchedRichTextArticleRequest,
+          requestParameters.PatchedArticleRequest,
           options,
         )
         .then((request) => request(axios, basePath))
@@ -9150,7 +9143,7 @@ export const ArticlesApiFactory = function (
     articlesRetrieve(
       requestParameters: ArticlesApiArticlesRetrieveRequest,
       options?: RawAxiosRequestConfig,
-    ): AxiosPromise<RichTextArticle> {
+    ): AxiosPromise<Article> {
       return localVarFp
         .articlesRetrieve(requestParameters.id, options)
         .then((request) => request(axios, basePath))
@@ -9166,10 +9159,10 @@ export const ArticlesApiFactory = function (
 export interface ArticlesApiArticlesCreateRequest {
   /**
    *
-   * @type {RichTextArticleRequest}
+   * @type {ArticleRequest}
    * @memberof ArticlesApiArticlesCreate
    */
-  readonly RichTextArticleRequest: RichTextArticleRequest
+  readonly ArticleRequest: ArticleRequest
 }
 
 /**
@@ -9222,10 +9215,10 @@ export interface ArticlesApiArticlesPartialUpdateRequest {
 
   /**
    *
-   * @type {PatchedRichTextArticleRequest}
+   * @type {PatchedArticleRequest}
    * @memberof ArticlesApiArticlesPartialUpdate
    */
-  readonly PatchedRichTextArticleRequest?: PatchedRichTextArticleRequest
+  readonly PatchedArticleRequest?: PatchedArticleRequest
 }
 
 /**
@@ -9262,7 +9255,7 @@ export class ArticlesApi extends BaseAPI {
     options?: RawAxiosRequestConfig,
   ) {
     return ArticlesApiFp(this.configuration)
-      .articlesCreate(requestParameters.RichTextArticleRequest, options)
+      .articlesCreate(requestParameters.ArticleRequest, options)
       .then((request) => request(this.axios, this.basePath))
   }
 
@@ -9315,7 +9308,7 @@ export class ArticlesApi extends BaseAPI {
     return ArticlesApiFp(this.configuration)
       .articlesPartialUpdate(
         requestParameters.id,
-        requestParameters.PatchedRichTextArticleRequest,
+        requestParameters.PatchedArticleRequest,
         options,
       )
       .then((request) => request(this.axios, this.basePath))

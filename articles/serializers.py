@@ -1,4 +1,4 @@
-from drf_spectacular.utils import extend_schema_field
+from drf_spectacular.utils import extend_schema_field, extend_schema_serializer
 from rest_framework import serializers
 
 from articles import models
@@ -15,6 +15,7 @@ class SanitizedHtmlField(serializers.Field):
         return clean_html(data)
 
 
+@extend_schema_serializer(component_name="Article")
 class RichTextArticleSerializer(serializers.ModelSerializer):
     """
     Serializer for LearningResourceInstructor model
