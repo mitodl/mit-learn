@@ -61,9 +61,9 @@ describe("UserMenu", () => {
     const isAuthenticated = false
     const initialUrl = "/foo/bar?cat=meow"
     const expectedUrl = urlConstants.auth({
-      loginNext: {
-        pathname: "/foo/bar",
-        searchParams: new URLSearchParams("?cat=meow"),
+      next: {
+        pathname: urlConstants.DASHBOARD_HOME,
+        searchParams: null,
       },
     })
     setMockResponse.get(urls.userMe.get(), {

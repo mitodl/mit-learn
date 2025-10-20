@@ -2,6 +2,7 @@
 
 import json
 from base64 import b64encode
+from typing import NamedTuple
 from unittest.mock import MagicMock
 from urllib.parse import urljoin
 
@@ -29,7 +30,7 @@ from authentication.views import CustomLoginView, get_redirect_url
         (["allowed-2"], "https://good.com/url-2"),
     ],
 )
-def test_get_redirect_url(mocker, param_names, expected_redirect):
+def test_get_redirect_url(mocker, param_names, expected_redirect, settings):
     """Next url should be respected if host is allowed"""
     GET = {
         "exists-a": "/url-a",
@@ -38,10 +39,7 @@ def test_get_redirect_url(mocker, param_names, expected_redirect):
         "disallowed-a": "https://malicious.com/url-1",
         "allowed-2": "https://good.com/url-2",
     }
-    mocker.patch(
-        "authentication.views.settings.ALLOWED_REDIRECT_HOSTS",
-        ["good.com"],
-    )
+    settings.ALLOWED_REDIRECT_HOSTS = ["good.com"]
 
     mock_request = mocker.MagicMock(GET=GET)
     assert get_redirect_url(mock_request, param_names) == expected_redirect
@@ -50,6 +48,7 @@ def test_get_redirect_url(mocker, param_names, expected_redirect):
 @pytest.mark.parametrize(
     "test_params",
     [
+        # has_apisix_header, next_url
         (True, "/search"),
         (True, None),
         (False, "/search"),
@@ -129,8 +128,9 @@ def test_next_logout(mocker, client, user, test_params, settings):
 
 @pytest.mark.parametrize("is_authenticated", [True, False])
 @pytest.mark.parametrize("has_next", [True, False])
-def test_custom_logout_view(mocker, client, user, is_authenticated, has_next):
+def test_custom_logout_view(mocker, client, user, is_authenticated, has_next, settings):  # noqa: PLR0913
     """Test logout redirect"""
+    settings.ALLOWED_REDIRECT_HOSTS = ["ocw.mit.edu"]
     next_url = "https://ocw.mit.edu" if has_next else ""
     mock_request = mocker.MagicMock(user=user, META={})
     if is_authenticated:
@@ -245,23 +245,43 @@ def test_custom_login_view_first_time_login_sets_has_logged_in(mocker):
     mock_profile.save.assert_called_once()
 
 
+class LoginOrgUserRedirectParams(NamedTuple):
+    """Parameters for testing org user login redirect behavior"""
+
+    has_logged_in: bool
+    login_url: str
+    expected_redirect: str
+
+
 @pytest.mark.parametrize(
-    "test_case",
+    "params",
     [
-        (
-            False,
-            "/dashboard/organization/test-organization",
-        ),  # First-time login → org dashboard
-        (
-            True,
-            "/app",
-        ),  # Subsequent login → normal app
+        LoginOrgUserRedirectParams(
+            has_logged_in=False,
+            login_url="/login/?next=/dashboard",
+            expected_redirect="/dashboard",
+        ),
+        LoginOrgUserRedirectParams(
+            has_logged_in=False,
+            login_url="/login/?next=/dashboard&signup_next=/somewhere-else",
+            expected_redirect="/somewhere-else",
+        ),
+        LoginOrgUserRedirectParams(
+            has_logged_in=True,
+            login_url="/login/?next=/dashboard&signup_next=/somewhere-else",
+            expected_redirect="/dashboard",
+        ),
     ],
 )
-def test_login_org_user_redirect(mocker, client, user, test_case, settings):
+def test_login_org_user_redirect(
+    mocker,
+    client,
+    user,
+    params,
+    settings,
+):
     """Test organization user redirect behavior - org users skip onboarding regardless of login history"""
-    # Unpack test case
-    has_logged_in, expected_url = test_case
+    has_logged_in, login_url, expected_redirect = params
 
     # Set up user profile based on test scenario
     user.profile.has_logged_in = has_logged_in
@@ -284,15 +304,18 @@ def test_login_org_user_redirect(mocker, client, user, test_case, settings):
     )
     client.force_login(user)
     response = client.get(
-        "/login/",
+        login_url,
         follow=False,
         HTTP_X_USERINFO=header_str,
     )
     assert response.status_code == 302
     # Handle environment differences - in some envs it returns full URL, in others just path
-    expected_full_url = urljoin(settings.APP_BASE_URL, expected_url)
-    assert response.url in [expected_url, expected_full_url]
+    expected_full_redirect = urljoin(settings.APP_BASE_URL, expected_redirect)
+    assert response.url in [expected_redirect, expected_full_redirect]
 
     # Verify that org users are never sent to onboarding
     # (onboarding URL would contain settings.MITOL_NEW_USER_LOGIN_URL)
     assert settings.MITOL_NEW_USER_LOGIN_URL not in response.url
+
+    user.profile.refresh_from_db()
+    assert user.profile.has_logged_in is True

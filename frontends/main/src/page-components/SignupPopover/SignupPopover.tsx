@@ -32,7 +32,7 @@ type SignupPopoverProps = Pick<
   "anchorEl" | "onClose" | "placement"
 >
 const SignupPopover: React.FC<SignupPopoverProps> = (props) => {
-  const loginUrl = useAuthToCurrent({ signup: true })
+  const loginUrl = useAuthToCurrent()
 
   return (
     <StyledPopover {...props} open={!!props.anchorEl}>

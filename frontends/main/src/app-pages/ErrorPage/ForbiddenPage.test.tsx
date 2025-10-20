@@ -54,7 +54,7 @@ test("Fetches auth data afresh and redirects unauthenticated users to auth", asy
   await waitFor(() => {
     expect(mockedRedirect).toHaveBeenCalledWith(
       routes.auth({
-        loginNext: {
+        next: {
           pathname: "/foo",
           searchParams: new URLSearchParams({ cat: "meow" }),
         },
