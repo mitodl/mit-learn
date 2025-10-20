@@ -17,11 +17,7 @@ const InterstitialMessage = styled(Typography)(({ theme }) => ({
 }))
 
 const EnrollmentCodePage: React.FC<EnrollmentCodePage> = ({ code }) => {
-  const {
-    mutate: attach,
-    isSuccess,
-    isPending,
-  } = useB2BAttachMutation({
+  const enrollment = useB2BAttachMutation({
     enrollment_code: code,
   })
   const router = useRouter()
@@ -31,9 +27,12 @@ const EnrollmentCodePage: React.FC<EnrollmentCodePage> = ({ code }) => {
     staleTime: 0,
   })
 
+  const enrollAsync = enrollment.mutateAsync
   React.useEffect(() => {
-    attach?.()
-  }, [attach])
+    if (user?.is_authenticated) {
+      enrollAsync().then(() => router.push(urls.DASHBOARD_HOME))
+    }
+  }, [user?.is_authenticated, enrollAsync, router])
 
   React.useEffect(() => {
     if (userLoading) {
@@ -52,12 +51,6 @@ const EnrollmentCodePage: React.FC<EnrollmentCodePage> = ({ code }) => {
     }
   }, [userLoading, user, code, router])
 
-  React.useEffect(() => {
-    if (isSuccess) {
-      router.push(urls.DASHBOARD_HOME)
-    }
-  }, [isSuccess, router])
-
   return (
     <Container>
       <Breadcrumbs
@@ -65,7 +58,7 @@ const EnrollmentCodePage: React.FC<EnrollmentCodePage> = ({ code }) => {
         ancestors={[{ href: urls.HOME, label: "Home" }]}
         current="Use Enrollment Code"
       />
-      {isPending && (
+      {enrollment.isPending && (
         <InterstitialMessage>Validating code "{code}"...</InterstitialMessage>
       )}
     </Container>
