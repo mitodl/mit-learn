@@ -171,6 +171,7 @@ const TabContainer = styled.div(({ theme }) => ({
   flex: "1 0 0",
   alignItems: "center",
   justifyContent: "flex-start",
+  textAlign: "left",
   padding: "16px 20px",
   gap: "8px",
   width: "300px",
