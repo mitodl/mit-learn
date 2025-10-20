@@ -5,8 +5,8 @@
  * (error.tsx is the fallback error page for UI within page content.)
  *
  * Notes:
- *  - does NOT use root layout (since error occured there!)
- *  - therefore, must definie its own HTML tags and providers
+ *  - does NOT use root layout (since error occurred there!)
+ *  - therefore, must define its own HTML tags and providers
  *    Must define its own HTML tag
  *  - NOT used in development mode
  *
@@ -19,8 +19,10 @@ import { ThemeProvider, MITLearnGlobalStyles } from "ol-components"
 
 export default function GlobalError({ error }: { error: Error }) {
   useEffect(() => {
+    console.error("Error encountered in global error boundary:", error)
     Sentry.captureException(error)
   }, [error])
+
   return (
     <html lang="en">
       <body>

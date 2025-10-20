@@ -162,6 +162,12 @@ module.exports = {
         message:
           "Direct API calls in page components should use getServerQueryClient().fetchQuery(queryOptions) for proper server-side caching.",
       },
+      {
+        selector:
+          "FunctionDeclaration[id.name='generateMetadata'] > BlockStatement > ReturnStatement[argument.type!='CallExpression'], FunctionDeclaration[id.name='generateMetadata'] > BlockStatement > ReturnStatement[argument.callee.name!='safeGenerateMetadata']",
+        message:
+          "generateMetadata functions must return safeGenerateMetadata() to ensure proper error handling and fallback metadata.",
+      },
     ],
   },
   overrides: [
