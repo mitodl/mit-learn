@@ -16,7 +16,7 @@ const MAX_RETRIES = 3
 const THROW_ERROR_CODES = [400, 401, 403]
 const NO_RETRY_CODES = [400, 401, 403, 404, 405, 409, 422]
 
-const makeQueryClient = (): QueryClient => {
+const makeBrowserQueryClient = (): QueryClient => {
   return new QueryClient({
     defaultOptions: {
       queries: {
@@ -38,7 +38,6 @@ const makeQueryClient = (): QueryClient => {
         },
 
         retry: (failureCount, error) => {
-          console.log("retry", { failureCount, error })
           const status = (error as MaybeHasStatusAndDetail)?.response?.status
           const isNetworkError = status === undefined || status === 0
 
@@ -54,16 +53,6 @@ const makeQueryClient = (): QueryClient => {
           }
           return false
         },
-
-        /**
-         * By default, React Query gradually applies a backoff delay, though it is
-         * preferable that we do not significantly delay initial page renders on
-         * the server and instead allow the request to fail quickly so it can be
-         * subsequently fetched on the client. Note that we aim to prefetch any API
-         * content needed to render the page, so we don't generally expect the retry
-         * rules above to be in use on the server.
-         */
-        retryDelay: isServer ? 1000 : undefined,
       },
     },
   })
@@ -80,7 +69,7 @@ function getQueryClient() {
     // suspends during the initial render. This may not be needed if we
     // have a suspense boundary BELOW the creation of the query client
     if (!browserQueryClient) {
-      browserQueryClient = makeQueryClient()
+      browserQueryClient = makeBrowserQueryClient()
     }
     return browserQueryClient
   }
@@ -138,5 +127,5 @@ focusManager.setEventListener((setFocused) => {
   }
 })
 
-export { makeQueryClient, getQueryClient }
+export { makeBrowserQueryClient, getQueryClient }
 export type { MaybeHasStatusAndDetail }

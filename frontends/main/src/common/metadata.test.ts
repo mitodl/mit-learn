@@ -34,10 +34,7 @@ describe("safeGenerateMetadata", () => {
     await safeGenerateMetadata(fn, mockFallback)
 
     expect(nextNavigationMocks.notFound).toHaveBeenCalled()
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      "Metadata generation failed:",
-      error,
-    )
+    expect(consoleErrorSpy).not.toHaveBeenCalled()
   })
 
   test("Should return result on success", async () => {
@@ -59,7 +56,7 @@ describe("safeGenerateMetadata", () => {
     expect(result).toEqual(mockFallback)
     expect(nextNavigationMocks.notFound).not.toHaveBeenCalled()
     expect(consoleErrorSpy).toHaveBeenCalledWith(
-      "Metadata generation failed:",
+      "Error fetching page metadata",
       error,
     )
   })
@@ -75,7 +72,7 @@ describe("safeGenerateMetadata", () => {
     expect(fallbackFn).toHaveBeenCalled()
     expect(nextNavigationMocks.notFound).not.toHaveBeenCalled()
     expect(consoleErrorSpy).toHaveBeenCalledWith(
-      "Metadata generation failed:",
+      "Error fetching page metadata",
       error,
     )
   })
