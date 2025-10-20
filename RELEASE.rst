@@ -1,6 +1,143 @@
 Release Notes
 =============
 
+Version 0.45.8 (Released October 16, 2025)
+--------------
+
+- fix for module attachments (#2598)
+- remove the home item from the usermenu (#2597)
+- Pre-commit ci update config (#2592)
+- fix canvas problem file import (#2584)
+- chore(deps): update actions/upload-pages-artifact action to v4 (#2578)
+- update mitxonline-api-client (#2591)
+- Change "next_run" to "best_run" and refactor how next_start_date is calculated (#2586)
+- Heading elements for resource drawer (#2585)
+- uniqueify instructors (#2587)
+
+Version 0.45.7 (Released October 09, 2025)
+--------------
+
+- Do not overwrite existing canvas content (#2581)
+- chore(deps): update codecov/codecov-action action to v5.5.1 (#2580)
+- chore(deps): update nginx docker tag to v1.29.2 (#2579)
+- chore(deps): update actions/setup-python action to v6 (#2577)
+- chore(deps): update actions/setup-node action to v5 (#2576)
+- chore(deps): update redis docker tag to v8.2.2 (#2566)
+- Expose version of frontend (#2575)
+- Sort runs by start_date (#2567)
+- rename attach/[code] url to enrollmentcode/[code] (#2570)
+- One-click enrollment via org dashboard card titles (#2569)
+- truncate csv files in tutor problems api (#2568)
+- csv problem files (#2560)
+- add "just in time" dialog (#2530)
+- Program Page basic layout (#2556)
+- Fix qdrant payload schema type and add mechanism to keep types in sync (#2553)
+
+Version 0.45.4 (Released October 02, 2025)
+--------------
+
+- Allow runs with multiple prices to still be considered identical (#2563)
+- Only show published runs of courses in /items/ endpoint (#2562)
+- Fix featured list channel sorting (#2559)
+- remove old canvas problem fields (#2552)
+- Canvas -  skip TutorProblemFile OCR if content is the same (#2557)
+- Refactor price assignment for mitxonline (#2550)
+- Update MITxOnline API Client (#2554)
+- chore(deps): update nginx docker tag to v1.29.1 (#2549)
+- chore(deps): update actions/checkout action to v5 (#2551)
+- Certificate page design adjustments (#2547)
+- Canvas - resolve visibility of orphaned files (#2548)
+- Certificate social media / URL sharing (#2524)
+- fix(deps): update django-health-check digest to 592f6a8 (#2527)
+
+Version 0.45.1 (Released September 29, 2025)
+--------------
+
+- allow multiple problem files (#2512)
+- Celery task tweaks (#2545)
+- feat: installs granian as a replacement process manager for production / hosted envs. (#2544)
+- security: disable yarn postinstall scripts (#2543)
+- Separate Login and Signup URLs (again) (#2535)
+
+Version 0.45.0 (Released September 24, 2025)
+--------------
+
+- Bump sha.js from 2.4.11 to 2.4.12 (#2537)
+- Course Product Pages (#2522)
+
+Version 0.44.2 (Released September 23, 2025)
+--------------
+
+- Revert "separate login and signup redirects (#2384)" (#2533)
+- Fix scraper for sloan marketing pages (#2528)
+- changing chunk size to fit under openai limits (#2531)
+- Canvas: ingest syllabus if available and visible (#2525)
+- separate login and signup redirects (#2384)
+
+Version 0.44.0 (Released September 22, 2025)
+--------------
+
+- fix non-lexicographical ordering in org dashboard programs / program collections (#2523)
+- canvas: citation urls for html content (#2521)
+- chore(deps): update redis docker tag to v8 (#2397)
+- Add browser header for podcast extraction (#2514)
+- Fix flaky test (#2519)
+
+Version 0.43.1 (Released September 18, 2025)
+--------------
+
+- Fix posthog import (#2518)
+- fix mitxonline etl pagination (#2495)
+- Revert "commit" - pushed to main by mistake (#2517)
+- commit
+- Use posthog bulk export (#2489)
+
+Version 0.43.0 (Released September 16, 2025)
+--------------
+
+- Exception in remove_duplicate_resources task (#2499)
+- fix course run certificate link in org dashboard (#2513)
+
+Version 0.42.6 (Released September 16, 2025)
+--------------
+
+- canvas: ingest files referenced in content (#2509)
+- Generate Certificate PDFs for print and download (#2503)
+- remove priority ordering from org dashboard programs (#2510)
+
+Version 0.42.5 (Released September 15, 2025)
+--------------
+
+- redirect attach to org dashboard (#2498)
+- Update NextJS for better typed routes and route params (#2500)
+- Add CDN instruction to serve stale content if origin error (#2505)
+- Implement memory usage fixes for LearningResource admin pages (#2497)
+
+Version 0.42.3 (Released September 10, 2025)
+--------------
+
+- ingest canvas html content (#2502)
+- Fix userlist stale data (#2501)
+- redirect org users to org dashboard (#2482)
+- Set page size to 30 for the course query for programs in the org dash (#2494)
+- Update dependency Django to v4.2.24 (#2496)
+- adding fix for flaky test (#2491)
+- Toggle NextJS image optimization with an env var (#2385)
+- Stop running Sloan news/event tasks (#2493)
+- Update actions/checkout digest to 08eba0b (#2454)
+
+Version 0.42.2 (Released September 08, 2025)
+--------------
+
+- moving replacement of spaces to get_edx_module_id method (#2484)
+- Qdrant collection and parameter updates (#2481)
+- track first login on profile (#2488)
+- Fix popularity (#2473)
+- remove unpublished resources with duplicate readable_ids (#2478)
+- refactor mutations to accept args on mutation function itself rather than on instantiation, then on success of the create enrollment hook redirect to the courseware url (#2480)
+- Fix flaky test (#2477)
+- Fix for absolute certificate signature URLs (#2479)
+
 Version 0.42.0 (Released August 29, 2025)
 --------------
 

@@ -28,7 +28,7 @@ class Command(TestResourceConfigurationMixin, BaseCommand):
         """Run Populate mitxonline courses"""
         if options["delete"]:
             self.stdout.write(
-                "Deleting all existing xPro courses from database and opensearch"
+                "Deleting all existing MITxOnline courses from database and opensearch"
             )
             for learning_resource in LearningResource.objects.filter(
                 etl_source=ETLSource.mitxonline.value

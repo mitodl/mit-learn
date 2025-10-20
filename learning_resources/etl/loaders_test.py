@@ -9,7 +9,6 @@ from types import SimpleNamespace
 
 import pytest
 from django.forms.models import model_to_dict
-from django.utils import timezone
 
 from learning_resources.constants import (
     CURRENCY_USD,
@@ -56,6 +55,7 @@ from learning_resources.etl.loaders import (
 )
 from learning_resources.etl.xpro import _parse_datetime
 from learning_resources.factories import (
+    ArticleFactory,
     ContentFileFactory,
     CourseFactory,
     LearningResourceContentTagFactory,
@@ -107,6 +107,12 @@ non_transformable_attributes = (
 def youtube_video_platform():
     """Fixture for a youtube video platform"""
     return LearningResourcePlatformFactory.create(code=PlatformType.youtube.name)
+
+
+@pytest.fixture(autouse=True)
+def climate_platform():
+    """Fixture for a youtube video platform"""
+    return LearningResourcePlatformFactory.create(code=PlatformType.climate.name)
 
 
 @pytest.fixture(autouse=True)
@@ -364,11 +370,11 @@ def test_load_program_bad_platform(mocker):
 @pytest.mark.parametrize("course_exists", [True, False])
 @pytest.mark.parametrize("is_published", [True, False])
 @pytest.mark.parametrize("is_run_published", [True, False])
-@pytest.mark.parametrize("blocklisted", [True, False])
+@pytest.mark.parametrize("blocklisted", [False, True])
 @pytest.mark.parametrize("delivery", [LearningResourceDelivery.hybrid.name, None])
 @pytest.mark.parametrize("has_upcoming_run", [True, False])
 @pytest.mark.parametrize("has_departments", [True, False])
-def test_load_course(  # noqa: PLR0913,PLR0912,PLR0915
+def test_load_course(  # noqa: PLR0913,PLR0912,PLR0915, C901
     mock_upsert_tasks,
     course_exists,
     is_published,
@@ -391,30 +397,45 @@ def test_load_course(  # noqa: PLR0913,PLR0912,PLR0915
 
     learning_resource.published = is_published
 
-    start_date = (
-        timezone.now() + timedelta(10)
-        if has_upcoming_run
-        else timezone.now() - timedelta(1)
-    )
-    old_start_date = timezone.now() - timedelta(365)
+    now = now_in_utc()
+    start_date = now + timedelta(10) if has_upcoming_run else now - timedelta(10)
+    end_date = start_date + timedelta(30)
+    old_start_date = now - timedelta(365)
+    old_end_date = old_start_date + timedelta(30)
 
     if course_exists:
         run = LearningResourceRunFactory.create(
-            learning_resource=learning_resource, published=True, start_date=start_date
+            learning_resource=learning_resource,
+            published=True,
+            enrollment_start=start_date - timedelta(30),
+            start_date=start_date,
+            end_date=end_date,
+            enrollment_end=end_date - timedelta(30),
         )
         old_run = LearningResourceRunFactory.create(
             learning_resource=learning_resource,
             published=True,
             start_date=old_start_date,
+            end_date=old_end_date,
+            enrollment_start=old_start_date - timedelta(30),
+            enrollment_end=old_end_date - timedelta(30),
         )
-        learning_resource.runs.set([run])
+        learning_resource.runs.set([run, old_run])
         learning_resource.save()
     else:
-        run = LearningResourceRunFactory.build(start_date=start_date)
+        run = LearningResourceRunFactory.build(
+            start_date=start_date,
+            end_date=end_date,
+            enrollment_start=start_date - timedelta(30),
+            enrollment_end=end_date - timedelta(30),
+        )
         old_run = LearningResourceRunFactory.build(
             learning_resource=learning_resource,
             published=True,
             start_date=old_start_date,
+            end_date=old_end_date,
+            enrollment_start=old_start_date - timedelta(30),
+            enrollment_end=old_end_date - timedelta(30),
         )
     assert Course.objects.count() == (1 if course_exists else 0)
     if has_departments:
@@ -451,7 +472,7 @@ def test_load_course(  # noqa: PLR0913,PLR0912,PLR0915
             {
                 "run_id": run.run_id,
                 "enrollment_start": run.enrollment_start,
-                "start_date": start_date,
+                "start_date": run.start_date,
                 "end_date": run.end_date,
                 "prices": [
                     {"amount": Decimal("0.00"), "currency": CURRENCY_USD},
@@ -468,10 +489,11 @@ def test_load_course(  # noqa: PLR0913,PLR0912,PLR0915
     result = load_course(props, blocklist, [], config=CourseLoaderConfig(prune=True))
     assert result.professional is True
 
-    expected_next_start_date = (
-        start_date if has_upcoming_run and is_run_published else None
-    )
-    assert result.next_start_date == expected_next_start_date
+    if is_published and is_run_published and not blocklisted:
+        if has_upcoming_run:
+            assert result.next_start_date == start_date
+        else:
+            assert result.next_start_date.date() == now.date()
     assert result.prices == (
         [Decimal("0.00"), Decimal("49.00")]
         if is_run_published and result.certification
@@ -1769,6 +1791,34 @@ def test_load_run_dependent_values(certification):
         assert getattr(result, key) == getattr(course, key) == getattr(run, key)
 
 
+def test_load_run_dependent_values_resets_next_start_date():
+    """Test that next_start_date is reset to None when best_run becomes None"""
+    # Create a published course with an existing next_start_date
+    previous_date = now_in_utc() + timedelta(days=5)
+    course = LearningResourceFactory.create(
+        is_course=True,
+        published=True,
+        next_start_date=previous_date,  # Course previously had a start date
+    )
+
+    # Ensure course has no runs, so best_run will return None
+    course.runs.all().update(published=False)
+    assert course.best_run is None
+
+    # Verify the course initially has a next_start_date
+    assert course.next_start_date == previous_date
+
+    # Call load_run_dependent_values
+    result = load_run_dependent_values(course)
+
+    # Refresh course from database
+    course.refresh_from_db()
+
+    # Verify that next_start_date was reset to None
+    assert result.next_start_date is None
+    assert course.next_start_date is None
+
+
 @pytest.mark.parametrize(
     ("is_scholar_course", "tag_counts", "expected_score"),
     [
@@ -1851,3 +1901,40 @@ def test_course_with_unpublished_force_ingest_is_test_mode():
     assert course.require_summaries is True
     assert course.test_mode is True
     assert course.published is False
+
+
+@pytest.mark.django_db
+def test_load_articles(mocker, climate_platform):
+    articles_data = [
+        {
+            "title": "test",
+            "readable_id": "test-article",
+            "url": "",
+            "description": "summary",
+            "topics": [],
+            "full_description": "",
+            "image": {"url": "http://test.com"},
+            "published": True,
+            "etl_source": ETLSource.mit_climate.name,
+            "offered_by": {
+                "code": OfferedBy.climate.name,
+            },
+        }
+    ]
+    unpublished_article = ArticleFactory.create()
+    mock_bulk_unpublish = mocker.patch(
+        "learning_resources.etl.loaders.bulk_resources_unpublished_actions",
+        autospec=True,
+    )
+    result = loaders.load_articles(articles_data)
+
+    assert result[0].title == articles_data[0]["title"]
+
+    # Ensure unpublished articles are handled
+    assert (
+        mock_bulk_unpublish.mock_calls[0].args[0][0]
+        == unpublished_article.learning_resource.id
+    )
+    assert (
+        mock_bulk_unpublish.mock_calls[0].args[1] == LearningResourceType.article.name
+    )

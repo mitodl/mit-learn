@@ -512,10 +512,12 @@ class LearningResourceRunFactory(DjangoModelFactory):
         )
     )
     start_date = factory.LazyAttribute(
-        lambda obj: obj.enrollment_start + timedelta(days=15)
+        lambda obj: obj.enrollment_start + timedelta(days=random.randint(15, 20))  # noqa: S311
     )
     end_date = factory.LazyAttribute(
-        lambda obj: obj.start_date + timedelta(days=90) if obj.start_date else None
+        lambda obj: obj.start_date + timedelta(days=random.randint(90, 100))  # noqa: S311
+        if obj.start_date
+        else None
     )
     prices = sorted(
         [
@@ -843,6 +845,24 @@ class PodcastFactory(DjangoModelFactory):
         skip_postgeneration_save = True
 
 
+class ArticleFactory(DjangoModelFactory):
+    """Factory for Videos"""
+
+    learning_resource = factory.SubFactory(
+        LearningResourceFactory,
+        platform=factory.SubFactory(
+            LearningResourcePlatformFactory, code=PlatformType.climate.name
+        ),
+    )
+
+    class Meta:
+        model = models.Article
+        skip_postgeneration_save = True
+
+    class Params:
+        is_unpublished = factory.Trait(learning_resource__published=False)
+
+
 class VideoFactory(DjangoModelFactory):
     """Factory for Videos"""
 
@@ -886,6 +906,7 @@ class TutorProblemFileFactory(DjangoModelFactory):
     type = FuzzyChoice("problem", "solution")
     content = factory.Faker("text")
     source_path = factory.Faker("file_path", extension="txt")
+    file_name = factory.LazyAttribute(lambda o: o.source_path.split("/")[-1])
 
     @classmethod
     def _create(cls, model_class, *args, **kwargs):

@@ -1,8 +1,10 @@
 import { mergeOverrides, makePaginatedFactory } from "ol-test-utilities"
-import type { PartialFactory } from "ol-test-utilities"
+import type { Factory, PartialFactory } from "ol-test-utilities"
 import type {
   CourseWithCourseRunsSerializerV2,
+  CourseRunV2,
   V1CourseWithCourseRuns,
+  ProductFlexibilePrice,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { faker } from "@faker-js/faker/locale/en"
 import { UniqueEnforcer } from "enforce-unique"
@@ -75,14 +77,57 @@ const v1Course: PartialFactory<V1CourseWithCourseRuns> = (overrides = {}) => {
   return mergeOverrides<V1CourseWithCourseRuns>(defaults, overrides)
 }
 
+const product: Factory<ProductFlexibilePrice> = (overrides = {}) => {
+  const defaults: ProductFlexibilePrice = {
+    id: faker.number.int(),
+    price: faker.commerce.price(),
+    description: faker.lorem.sentence(),
+    is_active: faker.datatype.boolean(),
+    product_flexible_price: null,
+  }
+  return { ...defaults, ...overrides }
+}
+
+const courseRun: PartialFactory<CourseRunV2> = (overrides = {}) => {
+  const defaults: CourseRunV2 = {
+    id: uniqueCourseRunId.enforce(() => faker.number.int()),
+    title: faker.lorem.words(3),
+    start_date: faker.date.future().toISOString(),
+    end_date: faker.date.future().toISOString(),
+    enrollment_start: faker.date.past().toISOString(),
+    enrollment_end: faker.date.future().toISOString(),
+    courseware_url: faker.internet.url(),
+    courseware_id: faker.string.uuid(),
+    certificate_available_date: faker.date.future().toISOString(),
+    upgrade_deadline: faker.date.future().toISOString(),
+    is_upgradable: faker.datatype.boolean(),
+    is_enrollable: faker.datatype.boolean(),
+    is_archived: faker.datatype.boolean(),
+    is_self_paced: faker.datatype.boolean(),
+    run_tag: faker.lorem.word(),
+    live: faker.datatype.boolean(),
+    course_number: faker.lorem.word(),
+    products: [product()],
+    approved_flexible_price_exists: faker.datatype.boolean(),
+  }
+
+  return mergeOverrides<CourseRunV2>(defaults, overrides)
+}
+
 const course: PartialFactory<CourseWithCourseRunsSerializerV2> = (
   overrides = {},
 ) => {
+  const runs =
+    overrides.courseruns ??
+    Array.from({ length: faker.number.int({ min: 1, max: 3 }) }).map(() =>
+      courseRun(),
+    )
+  const nextRunId = overrides.next_run_id ?? faker.helpers.arrayElement(runs).id
   const defaults: CourseWithCourseRunsSerializerV2 = {
     id: uniqueCourseId.enforce(() => faker.number.int()),
     title: faker.lorem.words(3),
     readable_id: faker.lorem.slug(),
-    next_run_id: faker.number.int(),
+    next_run_id: nextRunId,
     departments: [
       {
         name: faker.company.name(),
@@ -97,12 +142,12 @@ const course: PartialFactory<CourseWithCourseRunsSerializerV2> = (
       effort: `${faker.number.int({ min: 1, max: 10 })} hours/week`,
       financial_assistance_form_url: faker.internet.url(),
       current_price: faker.number.int({ min: 0, max: 1000 }),
-      instructors: [
-        {
-          name: faker.person.fullName(),
-          bio: faker.lorem.paragraph(),
-        },
-      ],
+      instructors: Array.from({
+        length: faker.number.int({ min: 1, max: 3 }),
+      }).map(() => ({
+        name: faker.person.fullName(),
+        bio: faker.lorem.paragraph(),
+      })),
     },
     programs: null,
     topics: [
@@ -119,37 +164,7 @@ const course: PartialFactory<CourseWithCourseRunsSerializerV2> = (
     availability: faker.helpers.arrayElement(["anytime", "dated"]),
     min_weekly_hours: `${faker.number.int({ min: 1, max: 5 })} hours`,
     max_weekly_hours: `${faker.number.int({ min: 6, max: 10 })} hours`,
-    courseruns: [
-      {
-        id: uniqueCourseRunId.enforce(() => faker.number.int()),
-        title: faker.lorem.words(3),
-        start_date: faker.date.future().toISOString(),
-        end_date: faker.date.future().toISOString(),
-        enrollment_start: faker.date.past().toISOString(),
-        enrollment_end: faker.date.future().toISOString(),
-        courseware_url: faker.internet.url(),
-        courseware_id: faker.string.uuid(),
-        certificate_available_date: faker.date.future().toISOString(),
-        upgrade_deadline: faker.date.future().toISOString(),
-        is_upgradable: faker.datatype.boolean(),
-        is_enrollable: faker.datatype.boolean(),
-        is_archived: faker.datatype.boolean(),
-        is_self_paced: faker.datatype.boolean(),
-        run_tag: faker.lorem.word(),
-        live: faker.datatype.boolean(),
-        course_number: faker.lorem.word(),
-        products: [
-          {
-            id: faker.number.int(),
-            price: faker.commerce.price(),
-            description: faker.lorem.sentence(),
-            is_active: faker.datatype.boolean(),
-            product_flexible_price: null,
-          },
-        ],
-        approved_flexible_price_exists: faker.datatype.boolean(),
-      },
-    ],
+    courseruns: runs,
     min_price: faker.number.int({ min: 0, max: 1000 }),
     max_price: faker.number.int({ min: 1000, max: 2000 }),
     include_in_learn_catalog: faker.datatype.boolean(),
@@ -162,4 +177,4 @@ const course: PartialFactory<CourseWithCourseRunsSerializerV2> = (
 const v1Courses = makePaginatedFactory(v1Course)
 const courses = makePaginatedFactory(course)
 
-export { v1Course, v1Courses, course, courses }
+export { v1Course, v1Courses, course, courses, courseRun, product }

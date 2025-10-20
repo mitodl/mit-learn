@@ -45,7 +45,14 @@ const Transition = React.forwardRef(
     },
     ref: React.Ref<unknown>,
   ) => {
-    return <Slide direction="down" ref={ref} {...props} timeout={400} />
+    return (
+      <Slide
+        direction="down"
+        ref={ref}
+        {...props}
+        timeout={process.env.NODE_ENV === "test" ? 0 : 400}
+      />
+    )
   },
 )
 
@@ -135,7 +142,7 @@ const Dialog: React.FC<DialogProps> = ({
         {message && <Typography variant="body1">{message}</Typography>}
         {children}
       </Content>
-      {actions ? (
+      {actions !== undefined ? (
         actions
       ) : (
         <DialogActions>

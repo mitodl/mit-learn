@@ -1,14 +1,17 @@
 import React from "react"
 import { UserListDetailsContent } from "@/app-pages/DashboardPage/UserListDetailsContent"
-import { PageParams } from "@/app/types"
-import invariant from "tiny-invariant"
+import { notFound } from "next/navigation"
 
-const Page: React.FC<PageParams<object, { id: number }>> = async ({
+const Page: React.FC<PageProps<"/dashboard/my-lists/[id]">> = async ({
   params,
 }) => {
   const resolved = await params
-  invariant(resolved?.id, "id is required")
-  return <UserListDetailsContent userListId={resolved.id} />
+  const id = Number(resolved.id)
+  if (Number.isNaN(id)) {
+    notFound()
+  }
+
+  return <UserListDetailsContent userListId={id} />
 }
 
 export default Page

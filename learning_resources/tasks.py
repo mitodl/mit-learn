@@ -4,7 +4,6 @@ learning_resources tasks
 
 import logging
 from datetime import UTC, datetime
-from typing import Optional
 
 import boto3
 import celery
@@ -60,10 +59,12 @@ def remove_duplicate_resources(self):
             readable_id=duplicate["readable_id"],
             published=False,
         ).values_list("id", flat=True)
-        published_resources = LearningResource.objects.filter(
-            readable_id=duplicate["readable_id"],
-            published=False,
-        ).values_list("id", flat=True)
+        published_resources = list(
+            LearningResource.objects.filter(
+                readable_id=duplicate["readable_id"],
+                published=True,
+            ).values_list("id", flat=True)
+        )
         # keep the most recently created resource, delete the rest
         LearningResource.objects.filter(id__in=unpublished_resources).delete()
         embed_tasks.append(
@@ -159,6 +160,14 @@ def get_xpro_data():
 
 
 @app.task
+def get_mit_climate_data():
+    """Execute the MIT Climate ETL pipeline"""
+    articles = pipelines.mit_climate_etl()
+    clear_search_cache()
+    return len(articles)
+
+
+@app.task
 def get_content_files(
     ids: list[int],
     etl_source: str,
@@ -205,9 +214,13 @@ def get_content_tasks(  # noqa: PLR0913
     )
 
     if learning_resource_ids:
-        learning_resources = LearningResource.objects.filter(
-            id__in=learning_resource_ids, etl_source=etl_source
-        ).values_list("id", flat=True)
+        learning_resources = (
+            LearningResource.objects.filter(
+                id__in=learning_resource_ids, etl_source=etl_source
+            )
+            .order_by("-id")
+            .values_list("id", flat=True)
+        )
     else:
         learning_resources = (
             LearningResource.objects.filter(Q(published=True) | Q(test_mode=True))
@@ -339,11 +352,11 @@ def get_ocw_courses(
 def get_ocw_data(  # noqa: PLR0913
     self,
     *,
-    force_overwrite: Optional[bool] = False,
-    course_url_substring: Optional[str] = None,
-    utc_start_timestamp: Optional[datetime] = None,
-    prefix: Optional[str] = None,
-    skip_content_files: Optional[bool] = settings.OCW_SKIP_CONTENT_FILES,
+    force_overwrite: bool | None = False,
+    course_url_substring: str | None = None,
+    utc_start_timestamp: datetime | None = None,
+    prefix: str | None = None,
+    skip_content_files: bool | None = settings.OCW_SKIP_CONTENT_FILES,
 ):
     """
     Task to sync OCW Next course data with database

@@ -11,7 +11,7 @@ import {
   theme,
 } from "ol-components"
 import { useQuery } from "@tanstack/react-query"
-import { mitxonlineEnrollmentsToDashboardCourses } from "./transform"
+import { userEnrollmentsToDashboardCourses } from "./transform"
 import { DashboardCard } from "./DashboardCard"
 import { DashboardCourse, EnrollmentStatus } from "./types"
 import { MaybeHasStatusAndDetail } from "@/app/getQueryClient"
@@ -139,6 +139,7 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
       <EnrollmentsList itemSpacing={"16px"}>
         {shownEnrollments.map((course) => (
           <DashboardCardStyled
+            titleAction="marketing"
             key={course.key}
             Component="li"
             dashboardResource={course}
@@ -153,6 +154,7 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
             <HiddenEnrollmentsList itemSpacing={"16px"}>
               {hiddenEnrollments.map((course) => (
                 <DashboardCardStyled
+                  titleAction="marketing"
                   key={course.key}
                   Component="li"
                   dashboardResource={course}
@@ -176,7 +178,7 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
 const EnrollmentDisplay = () => {
   const { data: enrolledCourses, isLoading } = useQuery({
     ...enrollmentQueries.courseRunEnrollmentsList(),
-    select: mitxonlineEnrollmentsToDashboardCourses,
+    select: userEnrollmentsToDashboardCourses,
     throwOnError: (error) => {
       const err = error as MaybeHasStatusAndDetail
       const status = err?.response?.status

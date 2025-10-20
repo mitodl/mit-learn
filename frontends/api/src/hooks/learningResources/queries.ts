@@ -20,6 +20,7 @@ import type {
   LearningResourcesSearchResponse,
 } from "../../generated/v1"
 import { queryOptions } from "@tanstack/react-query"
+import { hasPosition, randomizeGroups } from "./util"
 
 /* List memberships were previously determined in the learningResourcesApi
  * from user_list_parents and learning_path_parents on each resource.
@@ -36,35 +37,6 @@ export const clearListMemberships = (
   user_list_parents: [],
   learning_path_parents: [],
 })
-
-const shuffle = ([...arr]) => {
-  let m = arr.length
-  while (m) {
-    const i = Math.floor(Math.random() * m--)
-    ;[arr[m], arr[i]] = [arr[i], arr[m]]
-  }
-  return arr
-}
-
-const randomizeResults = ([...results]) => {
-  const resultsByPosition: {
-    [position: string]: (LearningResource & { position?: string })[] | undefined
-  } = {}
-  const randomizedResults: LearningResource[] = []
-  results.forEach((result) => {
-    if (!resultsByPosition[result?.position]) {
-      resultsByPosition[result?.position] = []
-    }
-    resultsByPosition[result?.position ?? ""]?.push(result)
-  })
-  Object.keys(resultsByPosition)
-    .sort()
-    .forEach((position) => {
-      const shuffled = shuffle(resultsByPosition[position] ?? [])
-      randomizedResults.push(...shuffled)
-    })
-  return randomizedResults
-}
 
 const learningResourceKeys = {
   root: ["learning_resources"],
@@ -183,11 +155,17 @@ const learningResourceQueries = {
       queryKey: learningResourceKeys.featured(params),
       queryFn: () =>
         featuredApi.featuredList(params).then((res) => {
+          const results = res.data.results
+          const withPosition = results.filter(hasPosition)
+          if (withPosition.length !== results.length) {
+            // Should not happen. The featured API always sets position.
+            console.warn(
+              "Some featured results are missing position information.",
+            )
+          }
           return {
             ...res.data,
-            results: randomizeResults(
-              res.data.results.map(clearListMemberships),
-            ),
+            results: randomizeGroups(withPosition),
           }
         }),
     }),

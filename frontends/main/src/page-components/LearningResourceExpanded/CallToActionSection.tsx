@@ -30,6 +30,11 @@ import type { User } from "api/hooks/user"
 import { PostHogEvents } from "@/common/constants"
 import VideoFrame from "./VideoFrame"
 import { kebabCase } from "lodash"
+import {
+  FACEBOOK_SHARE_BASE_URL,
+  TWITTER_SHARE_BASE_URL,
+  LINKEDIN_SHARE_BASE_URL,
+} from "@/common/urls"
 
 const showChatClass = "show-chat"
 const showChatSelector = `.${showChatClass} &`
@@ -236,10 +241,12 @@ const getCallToActionText = (resource: LearningResource): string => {
   const accessCourseMaterials = "Access Course Materials"
   const watchOnYouTube = "Watch on YouTube"
   const listenToPodcast = "Listen to Podcast"
+  const viewArticle = "View Article"
   const learnMore = "Learn More"
   const callsToAction = {
     [ResourceTypeEnum.Course]: learnMore,
     [ResourceTypeEnum.Program]: learnMore,
+    [ResourceTypeEnum.Article]: viewArticle,
     [ResourceTypeEnum.LearningPath]: learnMore,
     [ResourceTypeEnum.Video]: watchOnYouTube,
     [ResourceTypeEnum.VideoPlaylist]: watchOnYouTube,
@@ -328,9 +335,6 @@ const CallToActionSection = ({
   const bookmarkLabel = "Bookmark"
   const shareLabel = "Share"
   const socialIconSize = 18
-  const facebookShareBaseUrl = "https://www.facebook.com/sharer/sharer.php"
-  const twitterShareBaseUrl = "https://x.com/share"
-  const linkedInShareBaseUrl = "https://www.linkedin.com/sharing/share-offsite"
 
   return (
     <CallToAction data-testid="drawer-cta">
@@ -411,19 +415,19 @@ const CallToActionSection = ({
             />
             <ShareButtonContainer>
               <ShareLink
-                href={`${facebookShareBaseUrl}?u=${encodeURIComponent(shareUrl)}`}
+                href={`${FACEBOOK_SHARE_BASE_URL}?u=${encodeURIComponent(shareUrl)}`}
                 target="_blank"
               >
                 <RiFacebookFill size={socialIconSize} />
               </ShareLink>
               <ShareLink
-                href={`${twitterShareBaseUrl}?text=${encodeURIComponent(resource.title)}&url=${encodeURIComponent(shareUrl)}`}
+                href={`${TWITTER_SHARE_BASE_URL}?text=${encodeURIComponent(resource.title)}&url=${encodeURIComponent(shareUrl)}`}
                 target="_blank"
               >
                 <RiTwitterXLine size={socialIconSize} />
               </ShareLink>
               <ShareLink
-                href={`${linkedInShareBaseUrl}?url=${encodeURIComponent(shareUrl)}`}
+                href={`${LINKEDIN_SHARE_BASE_URL}?url=${encodeURIComponent(shareUrl)}`}
                 target="_blank"
               >
                 <RiLinkedinFill size={socialIconSize} />

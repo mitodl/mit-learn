@@ -1,6 +1,5 @@
 """Testing utils"""
 
-import abc
 import json
 import traceback
 from contextlib import contextmanager
@@ -13,16 +12,16 @@ from rest_framework.renderers import JSONRenderer
 
 def any_instance_of(*classes):
     """
-    Returns a type that evaluates __eq__ in isinstance terms
+    Return a type that evaluates __eq__ in isinstance terms
 
     Args:
         classes (list of types): variable list of types to ensure equality against
 
     Returns:
         AnyInstanceOf: dynamic class type with the desired equality
-    """  # noqa: D401
+    """
 
-    class AnyInstanceOf(abc.ABC):  # noqa: B024
+    class AnyInstanceOf:
         """Dynamic class type for __eq__ in terms of isinstance"""
 
         def __init__(self, classes):
@@ -31,14 +30,16 @@ def any_instance_of(*classes):
         def __eq__(self, other):
             return isinstance(other, self.classes)
 
+        def __hash__(self):  # pragma: no cover
+            msg = "AnyInstanceOf cannot be hashed"
+            raise TypeError(msg)
+
         def __str__(self):  # pragma: no cover
             return f"AnyInstanceOf({', '.join([str(c) for c in self.classes])})"
 
         def __repr__(self):  # pragma: no cover
             return str(self)
 
-    for c in classes:
-        AnyInstanceOf.register(c)
     return AnyInstanceOf(classes)
 
 

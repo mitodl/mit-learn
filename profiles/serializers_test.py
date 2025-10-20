@@ -350,7 +350,7 @@ class TestUserWebsiteSerializer:
         user_website_data = {"username": user.username, "url": "facebook.com/2"}
         serializer = UserWebsiteSerializer(data=user_website_data)
         with pytest.raises(  # noqa: PT012
-            ValidationError, match="A website of this type has already been saved."
+            ValidationError, match="A website of this type has already been saved\\."
         ):
             serializer.is_valid(raise_exception=True)
             serializer.save()

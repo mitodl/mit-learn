@@ -555,7 +555,7 @@ def test_index_content_files_serialization(mocker, index_types):
         [cfile.id for cfile in content_files], run.learning_resource.id, index_types
     )
     # list() forces an eval here, which we need for django_assert_num_queries()
-    documents, ctype = mock_index_items.call_args.args
+    documents, _ctype = mock_index_items.call_args.args
     documents = list(mock_index_items.call_args.args[0])
 
     for expected_doc in expected_documents:

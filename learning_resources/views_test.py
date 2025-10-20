@@ -80,8 +80,14 @@ def test_list_course_endpoint(client, url, params):
 
     resp = client.get(f"{reverse(url)}?{params}")
     assert resp.data.get("count") == 2
-    for idx, course in enumerate(courses):
-        assert resp.data.get("results")[idx]["id"] == course.learning_resource.id
+    for course in resp.data.get("results"):
+        assert course.get("id") in [c.learning_resource.id for c in courses]
+        assert len(course.get("runs")) > 1
+        for i in range(1, len(course.get("runs"))):
+            assert (
+                course.get("runs")[i]["start_date"]
+                >= course.get("runs")[i - 1]["start_date"]
+            )
 
 
 @pytest.mark.parametrize(
@@ -94,6 +100,17 @@ def test_get_course_detail_endpoint(client, url):
     resp = client.get(reverse(url, args=[course.learning_resource.id]))
 
     assert resp.data.get("readable_id") == course.learning_resource.readable_id
+    assert len(resp.data.get("runs")) > 1
+    assert [run["id"] for run in resp.data.get("runs")] == list(
+        course.learning_resource.runs.values_list("id", flat=True).order_by(
+            "start_date"
+        )
+    )
+    for i in range(1, len(resp.data.get("runs"))):
+        assert (
+            resp.data.get("runs")[i]["start_date"]
+            >= resp.data.get("runs")[i - 1]["start_date"]
+        )
 
 
 @pytest.mark.parametrize(
@@ -175,7 +192,7 @@ def test_program_detail_endpoint(client, django_assert_num_queries, url):
     """Test program endpoint"""
     program = ProgramFactory.create()
     assert program.learning_resource.children.count() > 0
-    with django_assert_num_queries(19):  # should be same # regardless of child count
+    with django_assert_num_queries(20):  # should be same # regardless of child count
         resp = client.get(reverse(url, args=[program.learning_resource.id]))
     assert resp.data.get("title") == program.learning_resource.title
     assert resp.data.get("resource_type") == LearningResourceType.program.name
@@ -220,7 +237,7 @@ def test_no_excess_queries(rf, user, mocker, django_assert_num_queries, course_c
     request = rf.get("/")
     request.user = user
 
-    with django_assert_num_queries(21):
+    with django_assert_num_queries(22):
         view = CourseViewSet(request=request)
         results = view.get_queryset().all()
         assert len(results) == course_count
@@ -1059,7 +1076,7 @@ def test_featured_view(client, offeror_featured_lists):
     """The featured api endpoint should return resources in expected order"""
     url = reverse("lr:v1:featured_api-list")
     resp_1 = client.get(f"{url}?limit=12")
-    assert resp_1.data.get("count") == 18
+    assert resp_1.data.get("count") == 21
     assert len(resp_1.data.get("results")) == 12
 
     # Second request should return same resources in different order
@@ -1071,7 +1088,7 @@ def test_featured_view(client, offeror_featured_lists):
     for resp in [resp_1, resp_2]:
         # Should get 1st resource from every featured list, then 2nd, etc.
         for idx, resource in enumerate(resp.data.get("results")):
-            position = int(idx / 6)  # 6 offerors: 0,0,0,0,0,0,1,1,1,1,1,1
+            position = int(idx / 7)  # 6 offerors: 0,0,0,0,0,0,1,1,1,1,1,1
             offeror = LearningResourceOfferor.objects.get(
                 code=resource["offered_by"]["code"]
             )
@@ -1455,6 +1472,17 @@ def test_course_run_problems_endpoint(client, user_role, django_user_model):
         problem_title="Problem Set 1",
         type="problem",
         content="Content for Problem Set 1",
+        file_name="problem1.txt",
+        file_extension=".txt",
+    )
+
+    TutorProblemFileFactory.create(
+        run=course_run,
+        problem_title="Problem Set 1",
+        type="problem",
+        content="a,b\n1,1\n2,2\n3,3\n4,4\n5,5\n6,6",
+        file_name="problem1-data.csv",
+        file_extension=".csv",
     )
 
     TutorProblemFileFactory.create(
@@ -1462,6 +1490,8 @@ def test_course_run_problems_endpoint(client, user_role, django_user_model):
         problem_title="Problem Set 1",
         type="solution",
         content="Content for Problem Set 1 Solution",
+        file_name="solution1.txt",
+        file_extension=".txt",
     )
     TutorProblemFileFactory.create(
         run=course_run, problem_title="Problem Set 2", type="problem"
@@ -1485,8 +1515,27 @@ def test_course_run_problems_endpoint(client, user_role, django_user_model):
 
     if user_role in ["admin", "group_tutor_problem_viewer"]:
         assert detail_resp.json() == {
-            "problem_set": "Content for Problem Set 1",
-            "solution_set": "Content for Problem Set 1 Solution",
+            "problem_set_files": [
+                {
+                    "file_name": "problem1.txt",
+                    "content": "Content for Problem Set 1",
+                    "file_extension": ".txt",
+                },
+                {
+                    "file_name": "problem1-data.csv",
+                    "truncated_content": "a,b\n1,1\n2,2\n3,3\n4,4",
+                    "file_extension": ".csv",
+                    "note": "The content of the data file has been truncated to the column headers and first 4 rows.",
+                    "number_of_records": 6,
+                },
+            ],
+            "solution_set_files": [
+                {
+                    "file_name": "solution1.txt",
+                    "content": "Content for Problem Set 1 Solution",
+                    "file_extension": ".txt",
+                },
+            ],
         }
     elif user_role == "normal":
         assert detail_resp.status_code == 403
@@ -1500,3 +1549,57 @@ def test_course_run_problems_endpoint(client, user_role, django_user_model):
             "detail": "Authentication credentials were not provided.",
             "error_type": "NotAuthenticated",
         }
+
+
+def test_resource_items_only_shows_published_runs(client, user):
+    """Test that ResourceListItemsViewSet only returns published runs for child resources"""
+
+    program = LearningResourceFactory.create(
+        resource_type=LearningResourceType.program.name,
+        published=True,
+    )
+    course = LearningResourceFactory.create(
+        resource_type=LearningResourceType.course.name,
+        published=True,
+        create_runs=False,
+    )
+    program.resources.set(
+        [course], through_defaults={"relation_type": "program_courses"}
+    )
+
+    published_runs = LearningResourceRunFactory.create_batch(
+        4,
+        published=True,
+        learning_resource=course,
+    )
+    unpublished_run = LearningResourceRunFactory.create(
+        learning_resource=course,
+        published=False,
+    )
+    course.runs.set(
+        [
+            *published_runs,
+            unpublished_run,
+        ]
+    )
+    assert course.runs.count() == 5
+
+    client.force_login(user)
+    url = reverse(
+        "lr:v1:learning_resource_items_api-list",
+        kwargs={"learning_resource_id": program.id},
+    )
+    resp = client.get(url)
+
+    results = resp.json()["results"]
+    assert len(results) == 1
+    child_data = results[0]["resource"]
+    assert child_data["id"] == course.id
+    for idx, run in enumerate(child_data["runs"]):
+        assert run["id"] in [run.id for run in published_runs]
+        if idx > 0:
+            assert (
+                child_data["runs"][idx]["start_date"]
+                >= child_data["runs"][idx - 1]["start_date"]
+            )
+    assert len(child_data["runs"]) == 4

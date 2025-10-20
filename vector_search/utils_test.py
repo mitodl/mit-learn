@@ -23,7 +23,9 @@ from learning_resources_search.serializers import (
 from main.utils import checksum_for_content
 from vector_search.constants import (
     CONTENT_FILES_COLLECTION_NAME,
+    QDRANT_CONTENT_FILE_INDEXES,
     QDRANT_CONTENT_FILE_PARAM_MAP,
+    QDRANT_LEARNING_RESOURCE_INDEXES,
     QDRANT_RESOURCE_PARAM_MAP,
     RESOURCES_COLLECTION_NAME,
 )
@@ -39,6 +41,7 @@ from vector_search.utils import (
     should_generate_resource_embeddings,
     update_content_file_payload,
     update_learning_resource_payload,
+    update_qdrant_indexes,
     vector_point_id,
     vector_search,
 )
@@ -851,3 +854,64 @@ def test_embed_learning_resources_contentfile_summarization_filter(mocker):
 
     # Assert that the summarizer was called with the correct content file IDs
     assert sorted(mock_content_summarizer.mock_calls[0].args[0]) == sorted(cf_ids)
+
+
+@pytest.mark.django_db
+def test_update_qdrant_indexes_adds_missing_index(mocker):
+    """
+    Test that update_qdrant_indexes adds an index if it doesn't already exist
+    """
+    mock_client = mocker.patch("vector_search.utils.qdrant_client").return_value
+    mock_client.get_collection.return_value.payload_schema = {}
+
+    update_qdrant_indexes()
+
+    # Ensure create_payload_index is called for missing indexes
+    expected_calls = [
+        mocker.call(
+            collection_name=RESOURCES_COLLECTION_NAME,
+            field_name=index_field,
+            field_schema=QDRANT_LEARNING_RESOURCE_INDEXES[index_field],
+        )
+        for index_field in QDRANT_LEARNING_RESOURCE_INDEXES
+    ] + [
+        mocker.call(
+            collection_name=CONTENT_FILES_COLLECTION_NAME,
+            field_name=index_field,
+            field_schema=QDRANT_CONTENT_FILE_INDEXES[index_field],
+        )
+        for index_field in QDRANT_CONTENT_FILE_INDEXES
+    ]
+    mock_client.create_payload_index.assert_has_calls(expected_calls, any_order=True)
+
+
+@pytest.mark.django_db
+def test_update_qdrant_indexes_updates_mismatched_field_type(mocker):
+    """
+    Test that update_qdrant_indexes updates the index if the field types mismatch
+    """
+    mock_client = mocker.patch("vector_search.utils.qdrant_client").return_value
+    mock_client.get_collection.return_value.payload_schema = {
+        index_field: mocker.MagicMock(data_type="wrong_type")
+        for index_field in QDRANT_LEARNING_RESOURCE_INDEXES
+    }
+
+    update_qdrant_indexes()
+
+    # Ensure create_payload_index is called for mismatched field types
+    expected_calls = [
+        mocker.call(
+            collection_name=RESOURCES_COLLECTION_NAME,
+            field_name=index_field,
+            field_schema=QDRANT_LEARNING_RESOURCE_INDEXES[index_field],
+        )
+        for index_field in QDRANT_LEARNING_RESOURCE_INDEXES
+    ] + [
+        mocker.call(
+            collection_name=CONTENT_FILES_COLLECTION_NAME,
+            field_name=index_field,
+            field_schema=QDRANT_CONTENT_FILE_INDEXES[index_field],
+        )
+        for index_field in QDRANT_CONTENT_FILE_INDEXES
+    ]
+    mock_client.create_payload_index.assert_has_calls(expected_calls, any_order=True)

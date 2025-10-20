@@ -75,6 +75,7 @@ describe("HomeContent", () => {
       },
     })
     invariant(user.profile)
+    const mitxOnlineUser = mitxonline.factories.user.user()
 
     invariant(user.profile)
     const courses = factories.learningResources.courses
@@ -93,6 +94,7 @@ describe("HomeContent", () => {
     }
 
     setMockResponse.get(urls.userMe.get(), user)
+    setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
     setMockResponse.get(urls.profileMe.get(), user.profile)
 
     // Set Top Picks Response

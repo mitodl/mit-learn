@@ -6,7 +6,7 @@ from hmac import compare_digest
 import rapidjson
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Count, F, Q, QuerySet
+from django.db.models import Count, F, Prefetch, Q, QuerySet
 from django.http import Http404, HttpResponse
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
@@ -545,7 +545,29 @@ class ResourceListItemsViewSet(NestedViewSetMixin, viewsets.ReadOnlyModelViewSet
     queryset = (
         LearningResourceRelationship.objects.select_related("child")
         .prefetch_related(
-            "child__runs", "child__runs__instructors", "child__runs__resource_prices"
+            Prefetch(
+                "child__topics",
+                queryset=LearningResourceTopic.objects.for_serialization(),
+            ),
+            Prefetch(
+                "child__offered_by",
+                queryset=LearningResourceOfferor.objects.for_serialization(),
+            ),
+            Prefetch(
+                "child__departments",
+                queryset=LearningResourceDepartment.objects.for_serialization(
+                    prefetch_school=True
+                ).select_related("school"),
+            ),
+            Prefetch(
+                "child__runs",
+                queryset=LearningResourceRun.objects.filter(published=True)
+                .order_by("start_date", "enrollment_start", "id")
+                .for_serialization(),
+            ),
+            "child__runs__instructors",
+            "child__runs__resource_prices",
+            "child__topics",
         )
         .filter(child__published=True)
     )
@@ -1439,13 +1461,39 @@ class CourseRunProblemsViewSet(viewsets.ViewSet):
             run_id=run_readable_id, learning_resource__platform=PlatformType.canvas.name
         ).first()
 
-        problem_file = TutorProblemFile.objects.get(
+        problem_files = TutorProblemFile.objects.filter(
             run=run, problem_title=problem_title, type="problem"
         )
-        solution_file = TutorProblemFile.objects.get(
+        solution_files = TutorProblemFile.objects.filter(
             run=run, problem_title=problem_title, type="solution"
         )
 
         return Response(
-            {"problem_set": problem_file.content, "solution_set": solution_file.content}
+            {
+                "problem_set_files": [
+                    problem_set_file_output(problem_file)
+                    for problem_file in problem_files
+                ],
+                "solution_set_files": [
+                    problem_set_file_output(solution_file)
+                    for solution_file in solution_files
+                ],
+            }
         )
+
+
+def problem_set_file_output(problem_set_file):
+    if problem_set_file.file_extension == ".csv":
+        csv_lines = problem_set_file.content.splitlines()
+        return {
+            "file_name": problem_set_file.file_name,
+            "file_extension": ".csv",
+            "truncated_content": "\n".join(csv_lines[0:5]),
+            "number_of_records": len(csv_lines) - 1,
+            "note": "The content of the data file has been truncated to the column headers and first 4 rows.",  # noqa: E501
+        }
+    return {
+        "file_name": problem_set_file.file_name,
+        "content": problem_set_file.content,
+        "file_extension": problem_set_file.file_extension,
+    }

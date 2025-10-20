@@ -69,10 +69,10 @@ const VideoShortsSection = () => {
         ) : null}
         <Header>
           <Typography component="h2" typography={{ xs: "h3", sm: "h2" }}>
-            Video Shorts
+            MIT Learning Moments
           </Typography>
           <Typography variant="body1">
-            Start your learning journey with our short-form educational videos
+            Learn something new in less than 60 seconds.
           </Typography>
         </Header>
         <StyledCarouselV2>

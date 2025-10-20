@@ -12,7 +12,7 @@ import {
 } from "@remixicon/react"
 import { useUserMe, User } from "api/hooks/user"
 import MITLogoLink from "@/components/MITLogoLink/MITLogoLink"
-import { useLoginToCurrent } from "@/common/utils"
+import { useAuthToCurrent } from "@/common/client-utils"
 
 const FlexContainer = styled.div({
   display: "flex",
@@ -125,7 +125,7 @@ type UserMenuProps = {
 const UserMenu: React.FC<UserMenuProps> = ({ variant }) => {
   const [visible, setVisible] = useState(false)
 
-  const loginUrl = useLoginToCurrent()
+  const loginUrl = useAuthToCurrent()
 
   const { isLoading, data: user } = useUserMe()
   if (isLoading) {
@@ -133,12 +133,6 @@ const UserMenu: React.FC<UserMenuProps> = ({ variant }) => {
   }
 
   const items: UserMenuItem[] = [
-    {
-      label: "Home",
-      key: "home",
-      allow: true,
-      href: urls.HOME,
-    },
     {
       label: "Dashboard",
       key: "dashboard",

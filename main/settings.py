@@ -34,7 +34,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.42.0"
+VERSION = "0.45.8"
 
 log = logging.getLogger()
 
@@ -356,6 +356,7 @@ APISIX_USERDATA_MAP = {
         "first_name": "given_name",
         "last_name": "family_name",
         "name": "name",
+        "organizations": "organization",
     },
     "profiles.Profile": {
         "name": "name",
@@ -746,6 +747,8 @@ POSTHOG_PROJECT_ID = get_int(
     name="POSTHOG_PROJECT_ID",
     default=None,
 )
+POSTHOG_EVENT_S3_BUCKET = get_string(name="POSTHOG_EVENT_S3_BUCKET", default="None")
+POSTHOG_EVENT_S3_PREFIX = get_string(name="POSTHOG_EVENT_S3_PREFIX", default="None")
 
 # Search defaults settings - adjustable throught the admin ui
 DEFAULT_SEARCH_MODE = get_string(name="DEFAULT_SEARCH_MODE", default="phrase")

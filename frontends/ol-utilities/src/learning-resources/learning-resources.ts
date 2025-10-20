@@ -7,6 +7,7 @@ import { formatDate } from "../date/utils"
 const readableResourceTypes: Record<ResourceTypeEnum, string> = {
   [ResourceTypeEnum.Course]: "Course",
   [ResourceTypeEnum.Program]: "Program",
+  [ResourceTypeEnum.Article]: "Article",
   [ResourceTypeEnum.LearningPath]: "Learning Path",
   [ResourceTypeEnum.Podcast]: "Podcast",
   [ResourceTypeEnum.PodcastEpisode]: "Podcast Episode",
@@ -129,16 +130,15 @@ const allRunsAreIdentical = (resource: LearningResource) => {
   if (resource.runs.length <= 1) {
     return true
   }
-  const amounts = new Set<number>()
-  const currencies = new Set<string>()
+  const prices = new Set<string>()
   const deliveryMethods = new Set<string>()
   const locations = new Set<string>()
   for (const run of resource.runs) {
     if (run.resource_prices) {
-      run.resource_prices.forEach((price) => {
-        amounts.add(Number(price.amount))
-        currencies.add(price.currency)
-      })
+      const serialized = run.resource_prices
+        .map((price) => `${Number(price.amount).toFixed(2)}-${price.currency}`)
+        .join(":::")
+      prices.add(serialized)
     }
     if (run.delivery) {
       for (const dm of run.delivery) {
@@ -149,13 +149,11 @@ const allRunsAreIdentical = (resource: LearningResource) => {
       locations.add(run.location)
     }
   }
-  const expectedPrices = resource.free && resource.certification ? 2 : 1
   const hasInPerson = [...deliveryMethods].some(
     (dm) => dm === DeliveryEnum.InPerson,
   )
   return (
-    amounts.size === expectedPrices &&
-    currencies.size === 1 &&
+    prices.size <= 1 &&
     deliveryMethods.size === 1 &&
     (hasInPerson ? locations.size === 1 : locations.size === 0)
   )

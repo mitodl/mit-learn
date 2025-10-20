@@ -179,6 +179,84 @@ describe("allRunsAreIdentical", () => {
     expect(allRunsAreIdentical(resource)).toBe(true)
   })
 
+  test.each([
+    {
+      runPrices: [
+        [
+          { amount: "0", currency: "USD" },
+          { amount: "50", currency: "USD" },
+          { amount: "100", currency: "USD" },
+        ],
+        [
+          { amount: "0", currency: "USD" },
+          { amount: "50.00", currency: "USD" },
+          { amount: "100", currency: "USD" },
+        ],
+      ],
+      case: "2 runs, 3 prices each, all the same",
+      expected: true,
+    },
+    {
+      runPrices: [
+        [
+          { amount: "0", currency: "USD" },
+          { amount: "100", currency: "USD" },
+        ],
+        [
+          { amount: "0", currency: "USD" },
+          { amount: "50.00", currency: "USD" },
+          { amount: "100", currency: "USD" },
+        ],
+      ],
+      case: "2 runs, 2 vs 3 prices",
+      expected: false,
+    },
+    {
+      runPrices: [
+        [
+          { amount: "0", currency: "USD" },
+          { amount: "50.00", currency: "USD" },
+          { amount: "150", currency: "USD" },
+        ],
+        [
+          { amount: "0", currency: "USD" },
+          { amount: "50.00", currency: "USD" },
+          { amount: "100", currency: "USD" },
+        ],
+      ],
+      case: "2 runs, 3 prices each, some not all same",
+      expected: false,
+    },
+  ])(
+    "returns $expected if multiple runs ($case)",
+    ({ expected, runPrices: [prices1, prices2] }) => {
+      const resource = factories.learningResources.resource({
+        free: true,
+        certification: true,
+      })
+      const delivery = [
+        {
+          code: CourseResourceDeliveryInnerCodeEnum.InPerson,
+          name: "In person",
+        },
+      ]
+      const location = "New York"
+      resource.runs = [
+        makeRun({
+          resource_prices: prices1,
+          delivery: delivery,
+          location: location,
+        }),
+        makeRun({
+          resource_prices: prices2,
+          delivery: delivery,
+          location: location,
+        }),
+      ]
+      expect(allRunsAreIdentical(resource)).toBe(expected)
+    },
+  )
+
   test("returns false if delivery methods differ", () => {
     const resource = factories.learningResources.resource()
     const prices = [{ amount: "100", currency: "USD" }]

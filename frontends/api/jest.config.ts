@@ -7,6 +7,7 @@ const config: Config.InitialOptions = {
     ...baseConfig.setupFilesAfterEnv,
     "./test-utils/setupJest.ts",
   ],
+  transformIgnorePatterns: ["node_modules/(?!@faker-js).+"],
 }
 
 export default config

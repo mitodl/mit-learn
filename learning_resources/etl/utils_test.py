@@ -44,7 +44,7 @@ def get_olx_test_docs():
             ],
             cwd=temp,
         )
-        check_call(  # noqa: S603
+        check_call(
             ["tar", "xf", "content-devops-0001.tar.gz"],  # noqa: S607
             cwd=temp,
         )
@@ -224,7 +224,7 @@ def test_transform_content_files(  # noqa: PLR0913
         "learning_resources.etl.utils.extract_text_metadata", return_value=tika_output
     )
 
-    # Mock the new functions called by _process_olx_path
+    # Mock the new functions called by process_olx_path
     video_metadata = {"test": "video"}
     test_url = "https://example.com/test"
 

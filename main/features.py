@@ -5,7 +5,6 @@ import json
 import logging
 from enum import StrEnum
 from functools import wraps
-from typing import Optional
 
 import posthog
 from django.conf import settings
@@ -76,7 +75,7 @@ def generate_cache_key(key: str, unique_id: str, person_properties: dict) -> str
     )
 
 
-def get_all_feature_flags(opt_unique_id: Optional[str] = None):
+def get_all_feature_flags(opt_unique_id: str | None = None):
     """
     Get the set of all feature flags
     """
@@ -98,8 +97,9 @@ def get_all_feature_flags(opt_unique_id: Optional[str] = None):
 
 def is_enabled(
     name: str,
-    default: Optional[bool] = None,
-    opt_unique_id: Optional[str] = None,
+    *,
+    default: bool | None = None,
+    opt_unique_id: str | None = None,
 ) -> bool:
     """
     Return True if the feature flag is enabled
@@ -149,7 +149,7 @@ def is_enabled(
     )
 
 
-def if_feature_enabled(name: str, default: Optional[bool] = None):
+def if_feature_enabled(name: str, *, default: bool | None = None):
     """
     Wrapper that results in a no-op if the given feature isn't enabled, and otherwise
     runs the wrapped function as normal.
@@ -162,7 +162,7 @@ def if_feature_enabled(name: str, default: Optional[bool] = None):
     def if_feature_enabled_inner(func):
         @wraps(func)
         def wrapped_func(*args, **kwargs):
-            if not is_enabled(name, default):
+            if not is_enabled(name, default=default):
                 # If the given feature name is not enabled, do nothing (no-op).
                 return None
             else:

@@ -122,7 +122,7 @@ const setupProgramsAndCourses = () => {
   const orgX = factories.organizations.organization({ name: "Org X" })
   const mitxOnlineUser = factories.user.user({ b2b_organizations: [orgX] })
   setMockResponse.get(u.urls.userMe.get(), user)
-  setMockResponse.get(urls.currentUser.get(), mitxOnlineUser)
+  setMockResponse.get(urls.userMe.get(), mitxOnlineUser)
   setMockResponse.get(urls.organization.organizationList(""), orgX)
   setMockResponse.get(urls.organization.organizationList(orgX.slug), orgX)
 
@@ -154,13 +154,21 @@ const setupProgramsAndCourses = () => {
     { results: [programB] },
   )
   setMockResponse.get(
-    urls.courses.coursesList({ id: programA.courses, org_id: orgX.id }),
+    urls.courses.coursesList({
+      id: programA.courses,
+      org_id: orgX.id,
+      page_size: 30,
+    }),
     {
       results: coursesA.results,
     },
   )
   setMockResponse.get(
-    urls.courses.coursesList({ id: programB.courses, org_id: orgX.id }),
+    urls.courses.coursesList({
+      id: programB.courses,
+      org_id: orgX.id,
+      page_size: 30,
+    }),
     {
       results: coursesB.results,
     },
@@ -236,7 +244,7 @@ function setupOrgDashboardMocks(
 ) {
   // Basic user and org setup
   setMockResponse.get(u.urls.userMe.get(), user)
-  setMockResponse.get(mitxonline.urls.currentUser.get(), mitxOnlineUser)
+  setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
   setMockResponse.get(
     mitxonline.urls.organization.organizationList(org.slug),
     org,
@@ -262,6 +270,7 @@ function setupOrgDashboardMocks(
       mitxonline.urls.courses.coursesList({
         id: program.courses,
         org_id: org.id,
+        page_size: 30,
       }),
       { results: courses },
     )

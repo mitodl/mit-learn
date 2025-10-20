@@ -19,7 +19,10 @@ import { useLearningResourceTopics } from "api/hooks/learningResources"
 import { LearningResourceTopic } from "api"
 import RootTopicIcon from "@/components/RootTopicIcon/RootTopicIcon"
 import { HOME } from "@/common/urls"
-import { aggregateProgramCounts, aggregateCourseCounts } from "@/common/utils"
+import {
+  aggregateProgramCounts,
+  aggregateCourseCounts,
+} from "@/common/client-utils"
 import { useChannelCounts } from "api/hooks/channels"
 import backgroundSteps from "@/public/images/backgrounds/background_steps.jpg"
 import { usePostHog } from "posthog-js/react"

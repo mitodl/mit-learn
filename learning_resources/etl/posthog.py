@@ -1,48 +1,20 @@
 """PostHog ETL"""
 
 import dataclasses
+import io
 import json
 import logging
 from collections.abc import Generator
 from datetime import UTC, datetime
-from http import HTTPStatus
-from typing import Optional
-from urllib.parse import urljoin
 
-import requests
+import boto3
+import pandas as pd
 from django.conf import settings
 
-from learning_resources.exceptions import PostHogAuthenticationError, PostHogQueryError
 from learning_resources.models import LearningResource, LearningResourceViewEvent
 from learning_resources.utils import resource_upserted_actions
 
 log = logging.getLogger(__name__)
-
-
-@dataclasses.dataclass
-class PostHogEvent:
-    """
-    Represents the raw event data returned by a HogQL query.
-
-    This isn't specific to the lrd_view event. There are some elemnts to this
-    that start with a $, so here they're prefixed with "dollar_". Many of these
-    are optional so we can query just for the most salient columns later.
-    """
-
-    uuid: str
-    event: str
-    properties: str
-    timestamp: datetime
-    distinct_id: Optional[str] = None
-    elements_chain: Optional[str] = None
-    created_at: Optional[datetime] = None
-    dollar_session_id: Optional[str] = None
-    dollar_window_id: Optional[str] = None
-    dollar_group_0: Optional[str] = None
-    dollar_group_1: Optional[str] = None
-    dollar_group_2: Optional[str] = None
-    dollar_group_3: Optional[str] = None
-    dollar_group_4: Optional[str] = None
 
 
 @dataclasses.dataclass
@@ -54,85 +26,11 @@ class PostHogLearningResourceViewEvent:
     the lrd_view specific properties.
     """
 
-    resourceType: str  # noqa: N815
-    platformCode: str  # noqa: N815
-    resourceId: int  # noqa: N815
-    readableId: str  # noqa: N815
+    resource_id: int
     event_date: datetime
 
 
-class PostHogApiAuth(requests.auth.AuthBase):
-    """Implements Bearer authentication for the PostHog private API"""
-
-    def __init__(self, token):
-        """Store the passed-in token."""
-
-        self.token = token
-
-    def __call__(self, request):
-        """Add the bearer token to the headers."""
-
-        request.headers["Authorization"] = f"Bearer {self.token}"
-        return request
-
-
-def posthog_run_query(query: str) -> dict:
-    """
-    Run a HogQL query agains the PostHog private API.
-
-    A personal API key is required for this to work. The project key is not
-    sufficient.
-
-    This will format the payload for you - just specify the actual HogQL query
-    here.
-
-    Args:
-    - query (str): the HogQL query to run
-    Returns:
-    - dict, the de-JSONified data from PostHog
-    """
-
-    ph_api_key = settings.POSTHOG_PERSONAL_API_KEY or None
-    ph_root_endpoint = settings.POSTHOG_API_HOST or None
-    ph_project_id = settings.POSTHOG_PROJECT_ID or None
-
-    if ph_api_key is None:
-        error = "No PostHog personal API key configured."
-        raise AttributeError(error)
-
-    if ph_root_endpoint is None:
-        error = "No PostHog API endpoint configured."
-        raise AttributeError(error)
-
-    if ph_project_id is None:
-        error = "No PostHog project ID."
-        raise AttributeError(error)
-
-    ph_query_endpoint = urljoin(ph_root_endpoint, f"api/projects/{ph_project_id}/query")
-
-    query_body = {"query": {"kind": "HogQLQuery", "query": query}}
-
-    query_result = requests.post(
-        ph_query_endpoint,
-        json=query_body,
-        auth=PostHogApiAuth(ph_api_key),
-        timeout=1500,
-    )
-
-    if query_result.status_code >= HTTPStatus.BAD_REQUEST.value:
-        log.error("PostHog query API returned an error: %s", query_result.status_code)
-
-        error_result = query_result.json()
-
-        if "type" in error_result and error_result["type"] == "authentication_error":
-            raise PostHogAuthenticationError(error_result)
-
-        raise PostHogQueryError(error_result)
-
-    return query_result.json()
-
-
-def posthog_extract_lrd_view_events() -> Generator[PostHogEvent, None, None]:
+def posthog_extract_lrd_view_events() -> Generator[dict, None, None]:
     """
     Retrieve lrd_view events from the PostHog Query API.
 
@@ -152,45 +50,25 @@ def posthog_extract_lrd_view_events() -> Generator[PostHogEvent, None, None]:
 
     last_event = LearningResourceViewEvent.objects.order_by("-event_date").first()
 
-    if last_event:
-        last_event_day = (
-            last_event.event_date.astimezone(UTC).replace(tzinfo=None).isoformat()
-        )
+    last_event_time = last_event.event_date.astimezone(UTC) if last_event else None
 
-        query = (
-            "select uuid, event, properties, timestamp from events where "  # noqa: S608
-            f"timestamp > '{last_event_day}'"
-        )
-    else:
-        query = "select uuid, event, properties, timestamp from events"
+    s3 = boto3.resource(
+        "s3",
+        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+    )
+    posthog_events_bucket = s3.Bucket(settings.POSTHOG_EVENT_S3_BUCKET)
 
-    int_query = "{} limit {} offset {}"
+    for obj in posthog_events_bucket.objects.filter(
+        Prefix=settings.POSTHOG_EVENT_S3_PREFIX
+    ):
+        if last_event_time is None or obj.last_modified > last_event_time:
+            s3_object = s3.Object(settings.POSTHOG_EVENT_S3_BUCKET, obj.key)
+            parquet_data = io.BytesIO(s3_object.get()["Body"].read())
 
-    limit = 100
-    offset = 0
-    has_next_page = True
-
-    def _run_query() -> dict:
-        return posthog_run_query(int_query.format(query, limit, offset))
-
-    results = _run_query()
-
-    cols = results["columns"]
-
-    while has_next_page:
-        for result in results["results"]:
-            formatted_result = {}
-
-            for i, column in enumerate(cols):
-                formatted_result[column.replace("$", "dollar_")] = result[i]
-
-            yield PostHogEvent(**formatted_result)
-
-        if len(results["results"]) == limit:
-            offset += limit
-            results = _run_query()
-        else:
-            has_next_page = False
+            df = pd.read_parquet(parquet_data)
+            for _, row in list(df.iterrows()):
+                yield row.to_dict()
 
 
 def posthog_transform_lrd_view_events(
@@ -205,16 +83,18 @@ def posthog_transform_lrd_view_events(
     Generator that yields PostHogLearningResourceViewEvent
     """
 
-    for result in events:
-        props = json.loads(result.properties)
+    for event in events:
+        properties = event.get("properties", "{}")
+        properties = json.loads(properties)
+        resource = properties.get("resource", {})
 
-        yield PostHogLearningResourceViewEvent(
-            resourceType=props.get("resourceType", ""),
-            platformCode=props.get("platformCode", ""),
-            resourceId=props.get("resourceId", ""),
-            readableId=props.get("readableId", ""),
-            event_date=result.timestamp,
-        )
+        # The PostHog data files contain other kinds of events, for example llm calls.
+        # We only want to the resource views
+        if resource:
+            yield PostHogLearningResourceViewEvent(
+                resource_id=resource.get("id"),
+                event_date=event.get("timestamp"),
+            )
 
 
 def load_posthog_lrd_view_event(
@@ -230,24 +110,24 @@ def load_posthog_lrd_view_event(
     """
 
     try:
-        learning_resource = LearningResource.objects.filter(pk=event.resourceId).get()
+        learning_resource = LearningResource.objects.filter(pk=event.resource_id).get()
     except LearningResource.DoesNotExist:
         skip_warning = (
-            f"WARNING: skipping event for resource ID {event.resourceId}"
+            f"WARNING: skipping event for resource ID {event.resource_id}"
             " - resource not found"
         )
         log.warning(skip_warning)
         return None
     except LearningResource.MultipleObjectsReturned:
         skip_warning = (
-            f"WARNING: skipping event for resource ID {event.resourceId}"
+            f"WARNING: skipping event for resource ID {event.resource_id}"
             " - multiple objects returned"
         )
         log.warning(skip_warning)
         return None
     except ValueError:
         skip_warning = (
-            f"WARNING: skipping event for resource ID {event.resourceId} - invalid ID"
+            f"WARNING: skipping event for resource ID {event.resource_id} - invalid ID"
         )
         log.warning(skip_warning)
         return None

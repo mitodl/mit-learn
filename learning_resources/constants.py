@@ -36,6 +36,7 @@ class LearningResourceType(ExtendedEnum):
     podcast_episode = "Podcast Episode"
     video = "Video"
     video_playlist = "Video Playlist"
+    article = "Article"
 
 
 LEARNING_MATERIAL_RESOURCE_CATEGORY = "learning_material"
@@ -61,6 +62,7 @@ class OfferedBy(ExtendedEnum):
     xpro = "MIT xPRO"
     mitpe = "MIT Professional Education"
     see = "MIT Sloan Executive Education"
+    climate = "MIT Climate"
 
 
 class PlatformType(ExtendedEnum):
@@ -88,6 +90,7 @@ class PlatformType(ExtendedEnum):
     podcast = "Podcast"
     youtube = "YouTube"
     canvas = "Canvas"
+    climate = "MIT Climate"
 
 
 class PrivacyLevel(ExtendedEnum):
@@ -158,6 +161,8 @@ VALID_TEXT_FILE_TYPES = [
     ".xml",
 ]
 
+VALID_TUTOR_PROBLEM_FILE_TYPES = [*VALID_TEXT_FILE_TYPES, ".csv"]
+
 VALID_ALL_FILE_TYPES = list(
     zip(
         [*VALID_FILE_TYPES, *VALID_TEXT_FILE_TYPES],
@@ -181,7 +186,9 @@ VALID_COURSE_CONTENT_CHOICES = list(
     zip(VALID_COURSE_CONTENT_TYPES, VALID_COURSE_CONTENT_TYPES)
 )
 
-VALID_TUTOR_PROBLEM_TYPES = ["problem", "solution"]
+TUTOR_PROBLEM_TYPE = "problem"
+TUTOR_SOLUTION_TYPE = "solution"
+VALID_TUTOR_PROBLEM_TYPES = [TUTOR_PROBLEM_TYPE, TUTOR_SOLUTION_TYPE]
 VALID_TUTOR_PROBLEM_TYPE_CHOICES = list(
     zip(VALID_TUTOR_PROBLEM_TYPES, VALID_TUTOR_PROBLEM_TYPES)
 )

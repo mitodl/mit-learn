@@ -923,7 +923,11 @@ def _qdrant_similar_results(doc, num_resources):
         list of dict:
             list of serialized resources
     """
-    from vector_search.utils import dense_encoder, qdrant_client, vector_point_id
+    from vector_search.utils import (
+        dense_encoder,
+        qdrant_client,
+        vector_point_id,
+    )
 
     encoder = dense_encoder()
     client = qdrant_client()

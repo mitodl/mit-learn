@@ -1,11 +1,12 @@
 import { factories, factories as mitx } from "api/mitxonline-test-utils"
-import * as transform from "./transform"
 import { DashboardResourceType, EnrollmentStatus } from "./types"
 import type { DashboardResource } from "./types"
 import {
-  mitxonlineOrgCourses,
+  organizationCoursesWithContracts,
   mitxonlineProgram,
   sortDashboardCourses,
+  userEnrollmentsToDashboardCourses,
+  createOrgUnenrolledCourse,
 } from "./transform"
 import {
   createCoursesWithContractRuns,
@@ -32,9 +33,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
       const apiData = mitx.enrollment.courseEnrollment({
         grades,
       })
-      const transformed = transform.mitxonlineEnrollmentsToDashboardCourses([
-        apiData,
-      ])
+      const transformed = userEnrollmentsToDashboardCourses([apiData])
       expect(transformed).toHaveLength(1)
       expect(transformed[0]).toEqual({
         key: `mitxonline-course-${apiData.run.course.id}-${apiData.run.id}`,
@@ -70,9 +69,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
       // @ts-expect-error not fully implementing product objects
       run: { products: [{ price: "10" }, { price: "20" }] },
     })
-    const transformed = transform.mitxonlineEnrollmentsToDashboardCourses([
-      apiData,
-    ])
+    const transformed = userEnrollmentsToDashboardCourses([apiData])
     expect(transformed).toHaveLength(1)
     expect(transformed[0].run.certificateUpgradePrice).toEqual("10")
   })
@@ -99,7 +96,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
       }),
     ]
 
-    const transformedCourses = mitxonlineOrgCourses({
+    const transformedCourses = organizationCoursesWithContracts({
       courses: coursesA,
       enrollments,
     })
@@ -138,7 +135,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
     const contractIds = contracts.map((c) => c.id)
     const courses = createCoursesWithContractRuns(contracts)
 
-    const transformedCourses = transform.mitxonlineOrgCourses({
+    const transformedCourses = organizationCoursesWithContracts({
       courses,
       contracts,
       enrollments: [],
@@ -178,7 +175,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
         })),
       }))
 
-    const transformedCourses = transform.mitxonlineOrgCourses({
+    const transformedCourses = organizationCoursesWithContracts({
       courses,
       contracts,
       enrollments: [],
@@ -201,7 +198,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
     const courses = createCoursesWithContractRuns(contracts)
     const enrollments = createEnrollmentsForContractRuns(courses, contractIds)
 
-    const transformedCourses = transform.mitxonlineOrgCourses({
+    const transformedCourses = organizationCoursesWithContracts({
       courses,
       contracts,
       enrollments,
@@ -248,7 +245,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
 
     const allEnrollments = [...contractEnrollments, ...nonContractEnrollments]
 
-    const transformedCourses = transform.mitxonlineOrgCourses({
+    const transformedCourses = organizationCoursesWithContracts({
       courses,
       contracts,
       enrollments: allEnrollments,
@@ -278,10 +275,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
     const courses = createCoursesWithContractRuns(contracts)
 
     courses.forEach((course) => {
-      const transformedCourse = transform.mitxonlineOrgUnenrolledCourse(
-        course,
-        contracts,
-      )
+      const transformedCourse = createOrgUnenrolledCourse(course, contracts)
 
       // Should select the run with matching contract
       const expectedRun = course.courseruns.find(
@@ -308,10 +302,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
       ],
     })
 
-    const transformedCourse = transform.mitxonlineOrgUnenrolledCourse(
-      course,
-      contracts,
-    )
+    const transformedCourse = createOrgUnenrolledCourse(course, contracts)
 
     // Should still return a valid course object
     expect(transformedCourse.title).toBe(course.title)
@@ -323,5 +314,209 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
     expect(transformedCourse.run.coursewareUrl).toBeUndefined()
     expect(transformedCourse.coursewareId).toBeNull()
     expect(transformedCourse.run.canUpgrade).toBe(false) // !!undefined is false
+  })
+
+  describe("userEnrollmentsToDashboardCourses", () => {
+    test("includes certificate with transformed link", () => {
+      const enrollmentWithCert = mitx.enrollment.courseEnrollment({
+        certificate: {
+          uuid: "test-uuid-123",
+          link: "/certificate/abc123/",
+        },
+      })
+
+      const transformed = userEnrollmentsToDashboardCourses([
+        enrollmentWithCert,
+      ])
+
+      expect(transformed[0].run.certificate).toEqual({
+        uuid: "test-uuid-123",
+        link: "/certificate/course/abc123/",
+      })
+      expect(transformed[0].enrollment?.certificate).toBeUndefined() // Certificate should only be in run
+    })
+
+    test("handles missing certificate gracefully", () => {
+      const enrollmentWithoutCert = mitx.enrollment.courseEnrollment({
+        certificate: null,
+      })
+
+      const transformed = userEnrollmentsToDashboardCourses([
+        enrollmentWithoutCert,
+      ])
+
+      expect(transformed[0].run.certificate).toEqual({
+        uuid: "",
+        link: "",
+      })
+    })
+
+    test("transforms certificate link format correctly", () => {
+      const testCases = [
+        {
+          input: "/certificate/abc123/",
+          expected: "/certificate/course/abc123/",
+        },
+        {
+          input: "/certificate/xyz789/",
+          expected: "/certificate/course/xyz789/",
+        },
+        {
+          input: "https://example.com/certificate/def456/",
+          expected: "https://example.com/certificate/course/def456/",
+        },
+        {
+          input: "/some/other/path",
+          expected: "/some/other/path", // No change if pattern doesn't match
+        },
+      ]
+
+      testCases.forEach(({ input, expected }) => {
+        const apiData = mitx.enrollment.courseEnrollment({
+          certificate: {
+            uuid: "test-uuid",
+            link: input,
+          },
+        })
+
+        const transformed = userEnrollmentsToDashboardCourses([apiData])
+
+        expect(transformed[0].run.certificate?.link).toBe(expected)
+      })
+    })
+
+    test("certificate link transformation handles various URL formats", () => {
+      const testCases = [
+        {
+          input: "/certificate/abc123/",
+          expected: "/certificate/course/abc123/",
+          description: "standard format",
+        },
+        {
+          input: "/certificate/xyz789/",
+          expected: "/certificate/course/xyz789/",
+          description: "different certificate ID",
+        },
+        {
+          input: "/some/other/path",
+          expected: "/some/other/path",
+          description: "non-matching format should remain unchanged",
+        },
+        {
+          input: "",
+          expected: "",
+          description: "empty string",
+        },
+      ]
+
+      testCases.forEach(({ input, expected }) => {
+        const enrollment = mitx.enrollment.courseEnrollment({
+          certificate: {
+            uuid: "test-uuid",
+            link: input,
+          },
+        })
+
+        const transformed = userEnrollmentsToDashboardCourses([enrollment])
+        expect(transformed[0].run.certificate?.link).toBe(expected)
+      })
+    })
+  })
+
+  describe("organizationCoursesWithContracts", () => {
+    test("includes certificate data from org enrollment", () => {
+      const orgId = faker.number.int()
+      const contracts = createTestContracts(orgId, 1)
+      const contractIds = contracts.map((c) => c.id)
+      const courses = createCoursesWithContractRuns(contracts)
+
+      // Create enrollments manually with certificate data
+      const enrollments = courses.flatMap((course) =>
+        course.courseruns
+          .filter(
+            (run) => run.b2b_contract && contractIds.includes(run.b2b_contract),
+          )
+          .map((run) =>
+            factories.enrollment.courseEnrollment({
+              run: {
+                id: run.id,
+                course: {
+                  id: course.id,
+                  title: course.title,
+                },
+                title: run.title,
+              },
+              certificate: {
+                uuid: "org-cert-uuid",
+                link: "/certificate/org123/",
+              },
+            }),
+          ),
+      )
+
+      const transformedCourses = organizationCoursesWithContracts({
+        courses,
+        contracts,
+        enrollments,
+      })
+
+      const courseWithEnrollment = transformedCourses.find(
+        (course) => course.enrollment,
+      )
+      expect(courseWithEnrollment?.enrollment?.certificate).toEqual({
+        uuid: "org-cert-uuid",
+        link: "/certificate/course/org123/",
+      })
+      expect(courseWithEnrollment?.run.certificate).toEqual({
+        uuid: "org-cert-uuid",
+        link: "/certificate/course/org123/",
+      })
+    })
+
+    test("organizationCoursesWithContracts handles enrollment without certificate", () => {
+      const orgId = faker.number.int()
+      const contracts = createTestContracts(orgId, 1)
+      const contractIds = contracts.map((c) => c.id)
+      const courses = createCoursesWithContractRuns(contracts)
+
+      // Create enrollments manually without certificate data
+      const enrollments = courses.flatMap((course) =>
+        course.courseruns
+          .filter(
+            (run) => run.b2b_contract && contractIds.includes(run.b2b_contract),
+          )
+          .map((run) =>
+            factories.enrollment.courseEnrollment({
+              run: {
+                id: run.id,
+                course: {
+                  id: course.id,
+                  title: course.title,
+                },
+                title: run.title,
+              },
+              certificate: null,
+            }),
+          ),
+      )
+
+      const transformedCourses = organizationCoursesWithContracts({
+        courses,
+        contracts,
+        enrollments,
+      })
+
+      const courseWithEnrollment = transformedCourses.find(
+        (course) => course.enrollment,
+      )
+      expect(courseWithEnrollment?.enrollment?.certificate).toEqual({
+        uuid: "",
+        link: "",
+      })
+      expect(courseWithEnrollment?.run.certificate).toEqual({
+        uuid: "",
+        link: "",
+      })
+    })
   })
 })

@@ -1,7 +1,7 @@
 "use client"
 
-import React from "react"
-import DOMPurify from "dompurify"
+import React, { useEffect } from "react"
+import DOMPurify from "isomorphic-dompurify"
 import Image from "next/image"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -27,9 +27,10 @@ import {
   OrganizationPage,
   UserProgramEnrollmentDetail,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { useMitxOnlineCurrentUser } from "api/mitxonline-hooks/user"
+import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { RiAwardFill } from "@remixicon/react"
+import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 
 const HeaderRoot = styled.div({
   display: "flex",
@@ -131,13 +132,9 @@ const ProgramDescription = styled(Typography)({
 // Custom hook to handle multiple program queries and check if any have courses
 const useProgramCollectionCourses = (programIds: number[], orgId: number) => {
   const programQueries = useQueries({
-    queries: programIds.map((programId) => ({
-      ...programsQueries.programsList({ id: programId, org_id: orgId }),
-      queryKey: [
-        ...programsQueries.programsList({ id: programId, org_id: orgId })
-          .queryKey,
-      ],
-    })),
+    queries: programIds.map((programId) =>
+      programsQueries.programsList({ id: programId, org_id: orgId }),
+    ),
   })
 
   const isLoading = programQueries.some((query) => query.isLoading)
@@ -175,6 +172,25 @@ const OrgProgramCollectionDisplay: React.FC<{
   const sanitizedDescription = DOMPurify.sanitize(collection.description ?? "")
   const { isLoading, programsWithCourses, hasAnyCourses } =
     useProgramCollectionCourses(collection.programIds, orgId)
+  const firstCourseIds = programsWithCourses
+    .map((p) => p?.program.courseIds[0])
+    .filter((id): id is number => id !== undefined)
+  const courses = useQuery({
+    ...coursesQueries.coursesList({
+      id: firstCourseIds,
+      org_id: orgId,
+    }),
+    enabled: firstCourseIds.length > 0,
+  })
+  const rawCourses =
+    courses.data?.results.sort((a, b) => {
+      return firstCourseIds.indexOf(a.id) - firstCourseIds.indexOf(b.id)
+    }) ?? []
+  const transformedCourses = transform.organizationCoursesWithContracts({
+    courses: rawCourses,
+    contracts: contracts ?? [],
+    enrollments: enrollments ?? [],
+  })
 
   const header = (
     <ProgramHeader>
@@ -214,17 +230,26 @@ const OrgProgramCollectionDisplay: React.FC<{
     <ProgramRoot data-testid="org-program-collection-root">
       {header}
       <PlainList>
-        {programsWithCourses.map((item) =>
-          item ? (
-            <ProgramCollectionItem
-              key={item.programId}
-              program={item.program}
-              contracts={contracts}
-              enrollments={enrollments}
-              orgId={orgId}
+        {courses.isLoading &&
+          programsWithCourses.map((item) => (
+            <Skeleton
+              key={item?.programId}
+              width="100%"
+              height="65px"
+              style={{ marginBottom: "16px" }}
             />
-          ) : null,
-        )}
+          ))}
+        {transformedCourses.map((course) => (
+          <DashboardCardStyled
+            Component="li"
+            key={course.key}
+            dashboardResource={course}
+            courseNoun="Module"
+            offerUpgrade={false}
+            titleAction="courseware"
+            buttonHref={course.run?.coursewareUrl}
+          />
+        ))}
       </PlainList>
     </ProgramRoot>
   )
@@ -250,14 +275,22 @@ const OrgProgramDisplay: React.FC<{
   )
   const hasValidCertificate = !!programEnrollment?.certificate
   const courses = useQuery(
-    coursesQueries.coursesList({ id: program.courseIds, org_id: orgId }),
+    coursesQueries.coursesList({
+      id: program.courseIds,
+      org_id: orgId,
+      page_size: 30,
+    }),
   )
   const skeleton = (
     <Skeleton width="100%" height="65px" style={{ marginBottom: "16px" }} />
   )
   if (programLoading || courses.isLoading) return skeleton
-  const transformedCourses = transform.mitxonlineOrgCourses({
-    courses: courses.data?.results ?? [],
+  const rawCourses =
+    courses.data?.results.sort((a, b) => {
+      return program.courseIds.indexOf(a.id) - program.courseIds.indexOf(b.id)
+    }) ?? []
+  const transformedCourses = transform.organizationCoursesWithContracts({
+    courses: rawCourses,
     contracts: contracts ?? [],
     enrollments: courseRunEnrollments ?? [],
   })
@@ -287,74 +320,19 @@ const OrgProgramDisplay: React.FC<{
         )}
       </ProgramHeader>
       <PlainList>
-        {transform
-          .sortDashboardCourses(program, transformedCourses)
-          .map((course) => (
-            <DashboardCardStyled
-              Component="li"
-              key={course.key}
-              dashboardResource={course}
-              courseNoun="Module"
-              offerUpgrade={false}
-              titleHref={course.run?.coursewareUrl}
-              buttonHref={course.run?.coursewareUrl}
-            />
-          ))}
+        {transformedCourses.map((course) => (
+          <DashboardCardStyled
+            Component="li"
+            key={course.key}
+            dashboardResource={course}
+            courseNoun="Module"
+            offerUpgrade={false}
+            titleAction="courseware"
+            buttonHref={course.run?.coursewareUrl}
+          />
+        ))}
       </PlainList>
     </ProgramRoot>
-  )
-}
-
-const ProgramCollectionItem: React.FC<{
-  program: DashboardProgram
-  contracts?: ContractPage[]
-  enrollments?: CourseRunEnrollment[]
-  orgId: number
-}> = ({ program, contracts, enrollments, orgId }) => {
-  return (
-    <ProgramCard
-      program={program}
-      contracts={contracts}
-      enrollments={enrollments}
-      orgId={orgId}
-    />
-  )
-}
-
-const ProgramCard: React.FC<{
-  program: DashboardProgram
-  contracts?: ContractPage[]
-  enrollments?: CourseRunEnrollment[]
-  orgId: number
-}> = ({ program, contracts, enrollments, orgId }) => {
-  const courses = useQuery(
-    coursesQueries.coursesList({
-      id: program.courseIds,
-      org_id: orgId,
-    }),
-  )
-  const skeleton = (
-    <Skeleton width="100%" height="65px" style={{ marginBottom: "16px" }} />
-  )
-  if (courses.isLoading) return skeleton
-  const transformedCourses = transform.mitxonlineOrgCourses({
-    courses: courses.data?.results ?? [],
-    contracts: contracts ?? [],
-    enrollments: enrollments ?? [],
-  })
-  if (courses.isLoading || !transformedCourses.length) return skeleton
-  // For now we assume the first course is the main one for the program.
-  const course = transformedCourses[0]
-  return (
-    <DashboardCard
-      Component="li"
-      key={program.key}
-      dashboardResource={course}
-      courseNoun={"Module"}
-      offerUpgrade={false}
-      titleHref={course.run.coursewareUrl ?? ""}
-      buttonHref={course.run.coursewareUrl ?? ""}
-    />
   )
 }
 
@@ -449,24 +427,44 @@ const OrganizationContentInternal: React.FC<
   )
 }
 
+const matchOrganizationBySlug =
+  (orgSlug: string) => (organization: OrganizationPage) => {
+    return organization.slug.replace("org-", "") === orgSlug
+  }
+
 type OrganizationContentProps = {
   orgSlug: string
 }
 const OrganizationContent: React.FC<OrganizationContentProps> = ({
   orgSlug,
 }) => {
-  const { isLoading: isLoadingMitxOnlineUser, data: mitxOnlineUser } =
-    useMitxOnlineCurrentUser()
+  const { isLoading: isLoadingMitxOnlineUser, data: mitxOnlineUser } = useQuery(
+    mitxUserQueries.me(),
+  )
+
+  useEffect(() => {
+    if (
+      mitxOnlineUser?.b2b_organizations.find(matchOrganizationBySlug(orgSlug))
+    ) {
+      localStorage.setItem("last-dashboard-org", orgSlug)
+    }
+  }, [mitxOnlineUser, orgSlug])
+
+  if (isLoadingMitxOnlineUser) {
+    return (
+      <Skeleton width="100%" height="100px" style={{ marginBottom: "16px" }} />
+    )
+  }
+
   const b2bOrganization = mitxOnlineUser?.b2b_organizations.find(
-    (org) => org.slug.replace("org-", "") === orgSlug,
+    matchOrganizationBySlug(orgSlug),
   )
-  const skeleton = (
-    <Skeleton width="100%" height="100px" style={{ marginBottom: "16px" }} />
-  )
-  if (isLoadingMitxOnlineUser || isLoadingMitxOnlineUser) return skeleton
-  return b2bOrganization ? (
-    <OrganizationContentInternal org={b2bOrganization} />
-  ) : null
+
+  if (!b2bOrganization) {
+    return <ErrorContent title="Organization not found" timSays="404" />
+  }
+
+  return <OrganizationContentInternal org={b2bOrganization} />
 }
 
 export default OrganizationContent

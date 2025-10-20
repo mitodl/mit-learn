@@ -48,6 +48,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "learning_resources.tasks.get_micromasters_data",
         "schedule": crontab(minute=0, hour=5),  # 1:00am EST
     },
+    "update-mit-climate-articles-every-1-days": {
+        "task": "learning_resources.tasks.get_mit_climate_data",
+        "schedule": crontab(minute=30, hour=5),  # 1:30am EST
+    },
     "update-mitxonline-courses-every-1-days": {
         "task": "learning_resources.tasks.get_mitxonline_data",
         "schedule": crontab(minute=0, hour=5),  # 1:00am EST
@@ -60,9 +64,7 @@ CELERY_BEAT_SCHEDULE = {
     },
     "update-podcasts": {
         "task": "learning_resources.tasks.get_podcast_data",
-        "schedule": get_int(
-            "PODCAST_FETCH_SCHEDULE_SECONDS", 60 * 60 * 2
-        ),  # default is every 2 hours
+        "schedule": crontab(minute=0, hour="6,23"),  # 2am and 7pm EST
     },
     "update-professional-ed-resources-every-1-days": {
         "task": "learning_resources.tasks.get_mitpe_data",
@@ -80,9 +82,7 @@ CELERY_BEAT_SCHEDULE = {
     },
     "update-youtube-videos": {
         "task": "learning_resources.tasks.get_youtube_data",
-        "schedule": get_int(
-            "YOUTUBE_FETCH_SCHEDULE_SECONDS", 60 * 30
-        ),  # default is every 30 minutes
+        "schedule": crontab(minute=30, hour=8),  # 4:30am EST
     },
     "update-youtube-transcripts": {
         "task": "learning_resources.tasks.get_youtube_transcripts",

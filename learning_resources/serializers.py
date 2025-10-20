@@ -129,6 +129,7 @@ class LearningResourceOfferorDetailSerializer(LearningResourceOfferorSerializer)
 @extend_schema_field(
     {
         "type": "object",
+        "title": "CourseResourceCertificationType",
         "properties": {
             "code": {"enum": CertificationType.names()},
             "name": {"type": "string"},
@@ -243,6 +244,7 @@ class LearningResourceLevelSerializer(serializers.Field):
 @extend_schema_field(
     {
         "type": "object",
+        "title": "CourseResourceDeliveryInner",
         "properties": {
             "code": {"enum": LearningResourceDelivery.names()},
             "name": {"type": "string"},
@@ -258,6 +260,7 @@ class LearningResourceDeliverySerializer(serializers.Field):
 @extend_schema_field(
     {
         "type": "object",
+        "title": "CourseResourceFormatInner",
         "properties": {
             "code": {"enum": Format.names()},
             "name": {"type": "string"},
@@ -273,6 +276,7 @@ class FormatSerializer(serializers.Field):
 @extend_schema_field(
     {
         "type": "object",
+        "title": "CourseResourcePaceInner",
         "properties": {
             "code": {"enum": Pace.names()},
             "name": {"type": "string"},
@@ -345,6 +349,14 @@ class CourseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Course
+        exclude = ("learning_resource", *COMMON_IGNORED_FIELDS)
+
+
+class ArticleSerializer(serializers.ModelSerializer):
+    """Serializer for the Article model"""
+
+    class Meta:
+        model = models.Article
         exclude = ("learning_resource", *COMMON_IGNORED_FIELDS)
 
 
@@ -492,7 +504,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
 
     def all_runs_are_identical(self, serialized_resource):
         """Check if all runs are identical"""
-        distinct_prices = set()
+        distinct_resource_prices = set()
         distinct_delivery_methods = set()
         resource_delivery = [
             delivery["code"] for delivery in serialized_resource["delivery"]
@@ -500,27 +512,19 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         has_in_person = (
             "in_person" in resource_delivery or "hybrid" in resource_delivery
         )
-        distinct_currencies = {
-            c["currency"] for c in serialized_resource["resource_prices"]
-        }
 
         distinct_locations = set()
         for run in serialized_resource.get("runs", []):
-            prices = run.get("prices", [])
-            if prices:
-                distinct_prices.update(prices)
+            resource_prices = run.get("resource_prices", [])
+            distinct_resource_prices.add(
+                tuple((price["currency"], price["amount"]) for price in resource_prices)
+            )
             distinct_delivery_methods.update(
                 [delivery["code"] for delivery in run.get("delivery", [])]
             )
             if run.get("location"):
                 distinct_locations.add(run["location"])
-        if (
-            serialized_resource.get("free")
-            and serialized_resource["certification"]
-            and len(distinct_prices) != 2  # noqa: PLR2004
-        ):
-            return False
-        if len(distinct_currencies) != 1:
+        if len(distinct_resource_prices) > 1:
             return False
         if len(distinct_delivery_methods) != 1:
             return False
@@ -995,8 +999,17 @@ class CourseResourceSerializer(LearningResourceBaseSerializer):
     resource_type = LearningResourceTypeField(
         default=constants.LearningResourceType.course.name
     )
-
     course = CourseSerializer(read_only=True)
+
+
+class ArticleResourceSerializer(LearningResourceBaseSerializer):
+    """Serializer for Article resources"""
+
+    resource_type = LearningResourceTypeField(
+        default=constants.LearningResourceType.article.name
+    )
+
+    article = ArticleSerializer(read_only=True)
 
 
 class LearningPathResourceSerializer(LearningResourceBaseSerializer):
@@ -1114,6 +1127,7 @@ class LearningResourceSerializer(serializers.Serializer):
             PodcastEpisodeResourceSerializer,
             VideoResourceSerializer,
             VideoPlaylistResourceSerializer,
+            ArticleResourceSerializer,
         )
     }
 

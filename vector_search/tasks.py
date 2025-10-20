@@ -13,6 +13,7 @@ from learning_resources.models import (
 )
 from learning_resources.utils import load_course_blocklist
 from learning_resources_search.constants import (
+    ARTICLE_TYPE,
     CONTENT_FILE_TYPE,
     COURSE_TYPE,
     LEARNING_PATH_TYPE,
@@ -135,8 +136,8 @@ def start_embed_resources(self, indexes, skip_content_files, overwrite):
                     .order_by("id")
                 ):
                     run = (
-                        course.next_run
-                        if course.next_run
+                        course.best_run
+                        if course.best_run
                         else course.runs.filter(published=True)
                         .order_by("-start_date")
                         .first()
@@ -167,6 +168,7 @@ def start_embed_resources(self, indexes, skip_content_files, overwrite):
             LEARNING_PATH_TYPE,
             VIDEO_TYPE,
             VIDEO_PLAYLIST_TYPE,
+            ARTICLE_TYPE,
         ]:
             if resource_type in indexes:
                 for ids in chunks(
@@ -225,8 +227,8 @@ def embed_learning_resources_by_id(self, ids, skip_content_files, overwrite):
             if not skip_content_files and resource_type == COURSE_TYPE:
                 for course in embed_resources.order_by("id"):
                     run = (
-                        course.next_run
-                        if course.next_run
+                        course.best_run
+                        if course.best_run
                         else course.runs.filter(published=True)
                         .order_by("-start_date")
                         .first()
@@ -338,7 +340,9 @@ def embed_run_content_files(self, run_id):
         celery.group(
             [
                 generate_embeddings.si(ids, CONTENT_FILE_TYPE, overwrite=True)
-                for ids in chunks(content_file_ids)
+                for ids in chunks(
+                    content_file_ids, chunk_size=settings.QDRANT_CHUNK_SIZE
+                )
             ]
         )
     )
@@ -355,6 +359,6 @@ def remove_run_content_files(run_id):
     return celery.group(
         [
             remove_embeddings.si(ids, CONTENT_FILE_TYPE)
-            for ids in chunks(content_file_ids)
+            for ids in chunks(content_file_ids, chunk_size=settings.QDRANT_CHUNK_SIZE)
         ]
     )

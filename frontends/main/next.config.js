@@ -38,6 +38,16 @@ const nextConfig = {
       },
     ]
   },
+  async redirects() {
+    return [
+      {
+        // can be removed once fastly redirect is in place
+        source: "/attach/:code",
+        destination: "/enrollmentcode/:code",
+        permanent: true,
+      },
+    ]
+  },
 
   async headers() {
     return [
@@ -46,7 +56,8 @@ const nextConfig = {
         headers: [
           {
             key: "Cache-Control",
-            value: "s-maxage=1800",
+            value:
+              "s-maxage=1800, stale-if-error=86400, stale-while-revalidate=86400",
           },
         ],
       },
@@ -62,7 +73,8 @@ const nextConfig = {
         headers: [
           {
             key: "Cache-Control",
-            value: "s-maxage=1800",
+            value:
+              "s-maxage=1800, stale-if-error=86400, stale-while-revalidate=86400",
           },
         ],
       },
@@ -100,6 +112,7 @@ const nextConfig = {
         hostname: "**",
       },
     ],
+    qualities: [25, 50, 75, 100],
   },
 
   env: {

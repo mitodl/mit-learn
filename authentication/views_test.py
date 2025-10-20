@@ -3,35 +3,62 @@
 import json
 from base64 import b64encode
 from unittest.mock import MagicMock
+from urllib.parse import urljoin
 
 import pytest
-from django.conf import settings
 from django.test import RequestFactory
 from django.urls import reverse
+from django.utils.http import urlencode
 
 from authentication.views import CustomLoginView, get_redirect_url
 
 
 @pytest.mark.parametrize(
-    ("next_url", "allowed"),
+    ("param_names", "expected_redirect"),
     [
-        ("/app", True),
-        ("http://open.odl.local:8062/search", True),
-        ("http://open.odl.local:8069/search", False),
-        ("https://ocw.mit.edu", True),
-        ("https://fake.fake.edu", False),
+        (["exists-a"], "/url-a"),
+        (["exists-b"], "/url-b"),
+        (["exists-a", "exists-b"], "/url-a"),
+        (["exists-b", "exists-a"], "/url-b"),
+        (["not-exists-x", "exists-a"], "/url-a"),
+        (["not-exists-x", "not-exists-y"], "/app"),
+        # With disallowed hosts in the params
+        (["disallowed-1"], "/app"),
+        (["not-exists-x", "disallowed-1"], "/app"),
+        (["disallowed-1", "exists-a"], "/url-a"),
+        (["allowed-2"], "https://good.com/url-2"),
     ],
 )
-def test_custom_login(mocker, next_url, allowed):
+def test_get_redirect_url(mocker, param_names, expected_redirect):
     """Next url should be respected if host is allowed"""
-    mock_request = mocker.MagicMock(GET={"next": next_url})
-    assert get_redirect_url(mock_request) == (next_url if allowed else "/app")
+    GET = {
+        "exists-a": "/url-a",
+        "exists-b": "/url-b",
+        "exists-c": "/url-c",
+        "disallowed-a": "https://malicious.com/url-1",
+        "allowed-2": "https://good.com/url-2",
+    }
+    mocker.patch(
+        "authentication.views.settings.ALLOWED_REDIRECT_HOSTS",
+        ["good.com"],
+    )
+
+    mock_request = mocker.MagicMock(GET=GET)
+    assert get_redirect_url(mock_request, param_names) == expected_redirect
 
 
-@pytest.mark.parametrize("has_apisix_header", [True, False])
-@pytest.mark.parametrize("next_url", ["/search", None])
-def test_logout(mocker, next_url, client, user, has_apisix_header):
+@pytest.mark.parametrize(
+    "test_params",
+    [
+        (True, "/search"),
+        (True, None),
+        (False, "/search"),
+        (False, None),
+    ],
+)
+def test_logout(mocker, client, user, test_params, settings):
     """User should be properly redirected and logged out"""
+    has_apisix_header, next_url = test_params
     header_str = b64encode(
         json.dumps(
             {
@@ -55,10 +82,10 @@ def test_logout(mocker, next_url, client, user, has_apisix_header):
     mock_logout.assert_called_once()
 
 
-@pytest.mark.parametrize("is_authenticated", [True])
-@pytest.mark.parametrize("has_next", [False])
-def test_next_logout(mocker, client, user, is_authenticated, has_next):
+@pytest.mark.parametrize("test_params", [(True, False)])
+def test_next_logout(mocker, client, user, test_params, settings):
     """Test logout redirect cache assignment"""
+    is_authenticated, has_next = test_params
     next_url = "https://ocw.mit.edu"
     mock_request = mocker.MagicMock(
         GET={"next": next_url if has_next else None},
@@ -113,92 +140,100 @@ def test_custom_logout_view(mocker, client, user, is_authenticated, has_next):
     assert resp.url == (next_url if has_next else "/app")
 
 
-def test_custom_login_view_authenticated_user_with_onboarding(mocker):
+@pytest.mark.parametrize(
+    (
+        "req_data",
+        "expected_redirect",
+    ),
+    [
+        (
+            {"next": "/irrelevant", "signup_next": "/this?after=signup"},
+            "/this?after=signup",
+        ),
+        (
+            {"next": "/redirect?here=ok"},  # falls back to next
+            "/redirect?here=ok",
+        ),
+    ],
+)
+@pytest.mark.parametrize(
+    ("skip_onboarding", "expect_onboarding"),
+    [
+        (None, True),  # default behavior is to do onboarding
+        ("0", True),  # explicit skip_onboarding=0 means do onboarding
+        ("1", False),  # explicit skip_onboarding=1 means skip onboarding
+    ],
+)
+def test_custom_login_view_authenticated_user_needs_onboarding(
+    mocker, req_data, expected_redirect, skip_onboarding, expect_onboarding
+):
     """Test CustomLoginView for an authenticated user with incomplete onboarding"""
     factory = RequestFactory()
-    request = factory.get(reverse("login"), {"next": "/dashboard"})
+    if skip_onboarding is not None:
+        req_data["skip_onboarding"] = skip_onboarding
+    request = factory.get(reverse("login"), req_data)
+
     request.user = MagicMock(is_anonymous=False)
-    request.user.profile = MagicMock(completed_onboarding=False)
-    mocker.patch("authentication.views.get_redirect_url", return_value="/dashboard")
-    mocker.patch(
-        "authentication.views.urlencode", return_value="next=/search?resource=184"
-    )
+    request.user.profile = MagicMock(has_logged_in=False)
     mocker.patch(
         "authentication.views.settings.MITOL_NEW_USER_LOGIN_URL", "/onboarding"
     )
+    mocker.patch("authentication.views.decode_apisix_headers", return_value={})
 
     response = CustomLoginView().get(request)
 
     assert response.status_code == 302
-    assert response.url == "/onboarding?next=/search?resource=184"
+
+    if expect_onboarding:
+        assert response.url == f"/onboarding?{urlencode({'next': expected_redirect})}"
+    else:
+        assert response.url == expected_redirect
 
 
-def test_custom_login_view_authenticated_user_skip_onboarding(mocker):
-    """Test skip_onboarding flag skips redirect to onboarding and sets completed_onboarding"""
+def test_custom_login_view_authenticated_user_who_has_logged_in_before(mocker):
+    """Test that user who has logged in before is redirected to next url"""
     factory = RequestFactory()
     request = factory.get(
-        reverse("login"), {"next": "/dashboard", "skip_onboarding": "1"}
+        reverse("login"),
+        {"next": "/should-be-redirect?foo", "signup_next": "/irrelevant"},
     )
     request.user = MagicMock(is_anonymous=False)
-    request.user.profile = MagicMock(completed_onboarding=False)
-    mocker.patch("authentication.views.get_redirect_url", return_value="/dashboard")
-
-    response = CustomLoginView().get(request)
-    request.user.profile.refresh_from_db()
-    # user should not be marked as completed onboarding
-    assert request.user.profile.completed_onboarding is False
-
-    assert response.status_code == 302
-    assert response.url == "/dashboard"
-
-
-def test_custom_login_view_authenticated_user_with_completed_onboarding(mocker):
-    """Test test that user who has completed onboarding is redirected to next url"""
-    factory = RequestFactory()
-    request = factory.get(reverse("login"), {"next": "/dashboard"})
-    request.user = MagicMock(is_anonymous=False)
-    request.user.profile = MagicMock(completed_onboarding=True)
-    mocker.patch("authentication.views.get_redirect_url", return_value="/dashboard")
+    request.user.profile = MagicMock(has_logged_in=True)
 
     response = CustomLoginView().get(request)
 
     assert response.status_code == 302
-    assert response.url == "/dashboard"
+    assert response.url == "/should-be-redirect?foo"
 
 
 def test_custom_login_view_anonymous_user(mocker):
     """Test redirect for anonymous user"""
     factory = RequestFactory()
-    request = factory.get(reverse("login"), {"next": "/dashboard"})
+    request = factory.get(
+        reverse("login"), {"next": "/some-url", "signup_next": "/irrelevant"}
+    )
     request.user = MagicMock(is_anonymous=True)
-    mocker.patch("authentication.views.get_redirect_url", return_value="/dashboard")
 
     response = CustomLoginView().get(request)
 
     assert response.status_code == 302
-    assert response.url == "/dashboard"
+    assert response.url == "/some-url"
 
 
 def test_custom_login_view_first_time_login_sets_has_logged_in(mocker):
-    """Test that has_logged_in flag is set to True for first-time login"""
+    """Test that has_logged_in flag is set to True for first-time login with skip_onboarding"""
     factory = RequestFactory()
-    request = factory.get("/login/", {"next": "/dashboard"})
+    request = factory.get("/login/", {"next": "/dashboard", "skip_onboarding": "1"})
 
     # Create a mock user with a profile that has has_logged_in=False
     mock_profile = MagicMock()
     mock_profile.has_logged_in = False
-    mock_profile.completed_onboarding = True  # Avoid onboarding redirect
 
     mock_user = MagicMock()
     mock_user.is_anonymous = False
     mock_user.profile = mock_profile
 
     request.user = mock_user
-
-    # Mock the redirect function to avoid URL resolution
-    mock_redirect = mocker.patch("authentication.views.redirect")
-    mock_redirect.return_value = MagicMock(status_code=302, url="/dashboard")
-    mocker.patch("authentication.views.get_redirect_url", return_value="/dashboard")
 
     response = CustomLoginView().get(request)
 
@@ -209,5 +244,55 @@ def test_custom_login_view_first_time_login_sets_has_logged_in(mocker):
     assert mock_profile.has_logged_in is True
     mock_profile.save.assert_called_once()
 
-    # Verify redirect was called with the correct URL
-    mock_redirect.assert_called_once_with("/dashboard")
+
+@pytest.mark.parametrize(
+    "test_case",
+    [
+        (
+            False,
+            "/dashboard/organization/test-organization",
+        ),  # First-time login → org dashboard
+        (
+            True,
+            "/app",
+        ),  # Subsequent login → normal app
+    ],
+)
+def test_login_org_user_redirect(mocker, client, user, test_case, settings):
+    """Test organization user redirect behavior - org users skip onboarding regardless of login history"""
+    # Unpack test case
+    has_logged_in, expected_url = test_case
+
+    # Set up user profile based on test scenario
+    user.profile.has_logged_in = has_logged_in
+    user.profile.save()
+
+    header_str = b64encode(
+        json.dumps(
+            {
+                "preferred_username": user.username,
+                "email": user.email,
+                "sub": user.global_id,
+                "organization": {
+                    "Test Organization": {
+                        "role": "member",
+                        "id": "org-123",
+                    }
+                },
+            }
+        ).encode()
+    )
+    client.force_login(user)
+    response = client.get(
+        "/login/",
+        follow=False,
+        HTTP_X_USERINFO=header_str,
+    )
+    assert response.status_code == 302
+    # Handle environment differences - in some envs it returns full URL, in others just path
+    expected_full_url = urljoin(settings.APP_BASE_URL, expected_url)
+    assert response.url in [expected_url, expected_full_url]
+
+    # Verify that org users are never sent to onboarding
+    # (onboarding URL would contain settings.MITOL_NEW_USER_LOGIN_URL)
+    assert settings.MITOL_NEW_USER_LOGIN_URL not in response.url

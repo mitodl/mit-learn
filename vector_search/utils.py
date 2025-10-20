@@ -1,6 +1,5 @@
 import logging
 import uuid
-from typing import Optional
 
 from django.conf import settings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -155,24 +154,25 @@ def update_qdrant_indexes():
     Create or update Qdrant indexes based on mapping in constants
     """
     client = qdrant_client()
-    for index_field in QDRANT_LEARNING_RESOURCE_INDEXES:
-        collection_name = RESOURCES_COLLECTION_NAME
-        collection = client.get_collection(collection_name=collection_name)
-        if index_field not in collection.payload_schema:
-            client.create_payload_index(
-                collection_name=collection_name,
-                field_name=index_field,
-                field_schema=QDRANT_LEARNING_RESOURCE_INDEXES[index_field],
-            )
-    for index_field in QDRANT_CONTENT_FILE_INDEXES:
-        collection_name = CONTENT_FILES_COLLECTION_NAME
-        collection = client.get_collection(collection_name=collection_name)
-        if index_field not in collection.payload_schema:
-            client.create_payload_index(
-                collection_name=collection_name,
-                field_name=index_field,
-                field_schema=QDRANT_CONTENT_FILE_INDEXES[index_field],
-            )
+
+    for index in [
+        (QDRANT_LEARNING_RESOURCE_INDEXES, RESOURCES_COLLECTION_NAME),
+        (QDRANT_CONTENT_FILE_INDEXES, CONTENT_FILES_COLLECTION_NAME),
+    ]:
+        indexes = index[0]
+        collection_name = index[1]
+        for index_field in indexes:
+            collection = client.get_collection(collection_name=collection_name)
+            if (
+                index_field not in collection.payload_schema
+                or indexes[index_field]
+                != collection.payload_schema[index_field].dict()["data_type"]
+            ):
+                client.create_payload_index(
+                    collection_name=collection_name,
+                    field_name=index_field,
+                    field_schema=indexes[index_field],
+                )
 
 
 def vector_point_id(readable_id):
@@ -339,7 +339,7 @@ def should_generate_resource_embeddings(serialized_document):
 
 
 def should_generate_content_embeddings(
-    serialized_document: dict, point_id: Optional[str] = None
+    serialized_document: dict, point_id: str | None = None
 ) -> bool:
     """
     Determine if we should generate embeddings for a content file
@@ -480,12 +480,12 @@ def _process_content_embeddings(serialized_content):
         split_embeddings = []
         """
         Break up requests according to chunk size to stay under openai limits
-        600,000 tokens per request
+        300,000 tokens per request
         max array size: 2048
         see: https://platform.openai.com/docs/guides/rate-limits
         """
         request_chunk_size = int(
-            600000 / settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
+            300000 / settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
         )
         for i in range(0, len(split_texts), request_chunk_size):
             split_chunk = split_texts[i : i + request_chunk_size]

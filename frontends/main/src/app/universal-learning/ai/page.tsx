@@ -7,7 +7,7 @@ export const metadata: Metadata = standardizeMetadata({
   title: "Universal AI",
 })
 
-const Page: React.FC = () => {
+const Page: React.FC<PageProps<"/universal-learning/ai">> = () => {
   return <UAILandingPage />
 }
 

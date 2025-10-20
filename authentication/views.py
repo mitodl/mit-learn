@@ -1,37 +1,40 @@
 """Authentication views"""
 
 import logging
+from urllib.parse import urljoin
 
 from django.contrib.auth import logout
 from django.shortcuts import redirect
 from django.utils.http import url_has_allowed_host_and_scheme, urlencode
+from django.utils.text import slugify
 from django.views import View
 
 from main import settings
-from main.middleware.apisix_user import ApisixUserMiddleware
+from main.middleware.apisix_user import ApisixUserMiddleware, decode_apisix_headers
 
 log = logging.getLogger(__name__)
 
 
-def get_redirect_url(request):
+def get_redirect_url(request, param_names):
     """
     Get the redirect URL from the request.
 
     Args:
         request: Django request object
+        param_names: Names of the GET parameter or cookie to look for the redirect URL;
+            first match will be used.
 
     Returns:
         str: Redirect URL
     """
-    next_url = request.GET.get("next") or request.COOKIES.get("next")
-    return (
-        next_url
-        if next_url
-        and url_has_allowed_host_and_scheme(
+    for param_name in param_names:
+        next_url = request.GET.get(param_name) or request.COOKIES.get(param_name)
+        if next_url and url_has_allowed_host_and_scheme(
             next_url, allowed_hosts=settings.ALLOWED_REDIRECT_HOSTS
-        )
-        else "/app"
-    )
+        ):
+            return next_url
+
+    return "/app"
 
 
 class CustomLogoutView(View):
@@ -49,7 +52,7 @@ class CustomLogoutView(View):
         GET endpoint reached after logging a user out from Keycloak
         """
         user = getattr(request, "user", None)
-        user_redirect_url = get_redirect_url(request)
+        user_redirect_url = get_redirect_url(request, ["next"])
         if user and user.is_authenticated:
             logout(request)
         if request.META.get(ApisixUserMiddleware.header):
@@ -64,6 +67,8 @@ class CustomLoginView(View):
     Redirect the user to the appropriate url after login
     """
 
+    header = "HTTP_X_USERINFO"
+
     def get(
         self,
         request,
@@ -73,18 +78,45 @@ class CustomLoginView(View):
         """
         GET endpoint for logging a user in.
         """
-        redirect_url = get_redirect_url(request)
+        redirect_url = get_redirect_url(request, ["next"])
+        signup_redirect_url = get_redirect_url(request, ["signup_next", "next"])
         if not request.user.is_anonymous:
             profile = request.user.profile
+
+            apisix_header = decode_apisix_headers(request, self.header)
+
+            # Check if user belongs to any organizations
+            user_organizations = (
+                apisix_header.get("organizations", {}) if apisix_header else {}
+            )
+
+            if user_organizations:
+                # First-time login for org user: redirect to org dashboard
+                if not profile.has_logged_in:
+                    first_org_name = next(iter(user_organizations.keys()))
+                    org_slug = slugify(first_org_name)
+
+                    log.info(
+                        "User %s belongs to organization: %s (slug: %s)",
+                        request.user.email,
+                        first_org_name,
+                        org_slug,
+                    )
+
+                    redirect_url = urljoin(
+                        settings.APP_BASE_URL, f"/dashboard/organization/{org_slug}"
+                    )
+            # first-time non-org users
+            elif not profile.has_logged_in:
+                if request.GET.get("skip_onboarding", "0") == "0":
+                    params = urlencode({"next": signup_redirect_url})
+                    redirect_url = f"{settings.MITOL_NEW_USER_LOGIN_URL}?{params}"
+                    profile.save()
+                else:
+                    redirect_url = signup_redirect_url
+
             if not profile.has_logged_in:
                 profile.has_logged_in = True
                 profile.save()
-            if (
-                not profile.completed_onboarding
-                and request.GET.get("skip_onboarding", "0") == "0"
-            ):
-                params = urlencode({"next": redirect_url})
-                redirect_url = f"{settings.MITOL_NEW_USER_LOGIN_URL}?{params}"
-                profile.completed_onboarding = True
-                profile.save()
+
         return redirect(redirect_url)

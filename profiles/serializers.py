@@ -388,7 +388,7 @@ class ProgramCertificateSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
 
         user = User.objects.get(email=instance.user_email)
-        letter, created = ProgramLetter.objects.get_or_create(
+        letter, _created = ProgramLetter.objects.get_or_create(
             user=user, certificate=instance
         )
         letter_url = letter.get_absolute_url()

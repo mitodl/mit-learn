@@ -15,7 +15,7 @@ class SanitizedHtmlField(serializers.Field):
         return clean_html(data)
 
 
-class ArticleSerializer(serializers.ModelSerializer):
+class RichTextArticleSerializer(serializers.ModelSerializer):
     """
     Serializer for LearningResourceInstructor model
     """
