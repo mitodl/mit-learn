@@ -2952,9 +2952,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/course-search-utils@npm:3.3.2":
-  version: 3.3.2
-  resolution: "@mitodl/course-search-utils@npm:3.3.2"
+"@mitodl/course-search-utils@npm:^3.4.1":
+  version: 3.4.1
+  resolution: "@mitodl/course-search-utils@npm:3.4.1"
   dependencies:
     "@mitodl/open-api-axios": "npm:2024.9.16"
     "@remixicon/react": "npm:^4.2.0"
@@ -2974,7 +2974,7 @@ __metadata:
       optional: true
     react-router:
       optional: true
-  checksum: 10/664a99188bfe29271d986b7a3175457949a9cfe9eec7abf407a00653e56951cb3a86b67e3175c0246dd7652f59ad85ec817a929454164d369f44c98afbcd826b
+  checksum: 10/cccb99931ef96b25d788f26d9bb6b12f61e735a550127cb2eb0dd14fb8210f303c36c50d7a8af2ccb546aa82bb3051c5242fa55fb494fc17c98e1147b6c99063
   languageName: node
   linkType: hard
 
@@ -11040,9 +11040,9 @@ __metadata:
   linkType: hard
 
 "fuse.js@npm:^7.0.0":
-  version: 7.0.0
-  resolution: "fuse.js@npm:7.0.0"
-  checksum: 10/d75d35f2d61afa85b8248f9cbfc7d4df29ae47ea574a15ad5c3c2a41930c5ed78668346295508b59ec4929fcb1a5cd6d9a8c649b5a3bc8b18e515f4e4cb9809d
+  version: 7.1.0
+  resolution: "fuse.js@npm:7.1.0"
+  checksum: 10/9f9105e54372897a46cb3e04074f0db5bd0a428320d4618276a57e6142d7502235a556f05cf87aa3c5d6d9c6fdfa06b901b78379c48aa0951672ccbc4a1bfe70
   languageName: node
   linkType: hard
 
@@ -13833,7 +13833,7 @@ __metadata:
     "@emotion/cache": "npm:^11.13.1"
     "@emotion/styled": "npm:^11.11.0"
     "@faker-js/faker": "npm:^10.0.0"
-    "@mitodl/course-search-utils": "npm:3.3.2"
+    "@mitodl/course-search-utils": "npm:^3.4.1"
     "@mitodl/mitxonline-api-axios": "npm:^2025.10.14"
     "@mitodl/smoot-design": "npm:^6.17.1"
     "@next/bundle-analyzer": "npm:^14.2.15"
