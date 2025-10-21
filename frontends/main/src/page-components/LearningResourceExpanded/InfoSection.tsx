@@ -31,6 +31,7 @@ import {
   getLearningResourcePrices,
   showStartAnytime,
   NoSSR,
+  formatDate,
 } from "ol-utilities"
 import { theme, Link } from "ol-components"
 import DifferingRunsTable from "./DifferingRunsTable"
@@ -188,6 +189,13 @@ const RunDates: React.FC<{ resource: LearningResource }> = ({ resource }) => {
     })
     .map((run) => formatRunDate(run, showStartAnytime(resource)))
     .filter((date) => date !== null)
+  if (!sortedDates || sortedDates.length === 0) {
+    return null
+  }
+  const nextStartDate = resource.next_start_date
+    ? formatDate(resource.next_start_date, "MMMM DD, YYYY")
+    : null
+  sortedDates[0] = nextStartDate ?? sortedDates[0]
   const totalDates = sortedDates?.length || 0
   const showMore = totalDates > 2
   if (showMore) {
@@ -247,6 +255,17 @@ const RunDates: React.FC<{ resource: LearningResource }> = ({ resource }) => {
     })
     return <span data-testid="drawer-run-dates">{runDates}</span>
   }
+  // return (
+  //   <span data-testid="drawer-run-dates">
+  //     <NoWrap key={`start-date`}>
+  //       <InfoItemValue
+  //         label={resource.next_start_date ?? "TBA"}
+  //         index={1}
+  //         total={1}
+  //       />
+  //     </NoWrap>
+  //   </span>
+  // )
 }
 
 const shouldShowFormat = (resource: LearningResource) => {
