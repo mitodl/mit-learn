@@ -597,7 +597,7 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
                     chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
                 )
             ]
-
+            
             for course in (
                 Course.objects.filter(learning_resource__published=True)
                 .filter(learning_resource__etl_source__in=RESOURCE_FILE_ETL_SOURCES)
@@ -621,9 +621,9 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
                         chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
                     )
                 ]
-
+        
         for resource_type in [
-            PROGRAM_TYPE,
+            PROGRAM_TYPE, 
             PODCAST_TYPE,
             PODCAST_EPISODE_TYPE,
             LEARNING_PATH_TYPE,

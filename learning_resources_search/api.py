@@ -150,7 +150,7 @@ def wrap_text_clause(text_query, min_score=None):
     Returns:
         dict: dictionary with the opensearch text clause
     """
-    if min_score and text_query:
+    if False and min_score and text_query:
         text_bool_clause = [
             {"function_score": {"query": {"bool": text_query}, "min_score": min_score}}
         ]
@@ -586,7 +586,7 @@ def add_text_query_to_search(search, text, search_params, query_type_query):
         search_params.get("max_incompleteness_penalty", 0) / 100
     )
 
-    if yearly_decay_percent or max_incompleteness_penalty:
+    if False: #yearly_decay_percent or max_incompleteness_penalty:
         script_query = {
             "script_score": {
                 "query": {"bool": {"must": [text_query], "filter": query_type_query}}
@@ -627,20 +627,31 @@ def add_text_query_to_search(search, text, search_params, query_type_query):
     else:
         text_query = {"bool": {"must": [text_query], "filter": query_type_query}}
 
-    vector_query = {
+    vector_query_description = {
         "neural": {
             "description_embedding": {
                 "query_text": text,
-                "model_id": "UWxSwJkBGexBUUYnj1tV",
+                "model_id": "oxD38pkBhP9LJzcD5fWE",
                 "k": 5,
-            }
+            },
+        
+        }
+    }
+
+    vector_query_title = {
+        "neural": {
+            "title_embedding": {
+                "query_text": text,
+                "model_id": "oxD38pkBhP9LJzcD5fWE",
+                "k": 5,
+            },
         }
     }
 
     search = search.extra(
         query={
             "hybrid": {
-                "queries": [text_query, vector_query],
+                "queries": [text_query, vector_query_description, vector_query_title],
             }
         }
     )
@@ -676,7 +687,7 @@ def construct_search(search_params):
     search = Search(index=",".join(indexes))
 
     search = search.source(fields={"excludes": SOURCE_EXCLUDED_FIELDS})
-    search = search.params(search_type="dfs_query_then_fetch")
+    #search = search.params(search_type="dfs_query_then_fetch")
     if search_params.get("offset"):
         search = search.extra(from_=search_params.get("offset"))
 
@@ -704,8 +715,6 @@ def construct_search(search_params):
             query_type_query,
         )
 
-        suggest = generate_suggest_clause(text)
-        search = search.extra(suggest=suggest)
     else:
         search = search.query(query_type_query)
 
@@ -753,7 +762,31 @@ def execute_learn_search(search_params):
                 settings.DEFAULT_SEARCH_MAX_INCOMPLETENESS_PENALTY
             )
     search = construct_search(search_params)
-    search = search.params(search_pipeline="hybrid_search_pipeline")
+    
+    search = search.extra(search_pipeline={
+        "description": "Post processor for hybrid search",
+        "phase_results_processors": [
+            {
+            "normalization-processor": {
+                "normalization": {
+                "technique": "min_max"
+                },
+                "combination": {
+                "technique": "arithmetic_mean",
+                "parameters": {
+                    "weights": [
+                    0.7,
+                    0.15,
+                    0.15
+                    ]
+                }
+                }
+            }
+            }
+        ]
+    })
+    
+    print(search.to_dict())
     return search.execute().to_dict()
 
 
