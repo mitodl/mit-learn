@@ -28,6 +28,7 @@ from vector_search.constants import (
     QDRANT_CONTENT_FILE_PARAM_MAP,
     QDRANT_LEARNING_RESOURCE_INDEXES,
     QDRANT_RESOURCE_PARAM_MAP,
+    QDRANT_TOPIC_INDEXES,
     RESOURCES_COLLECTION_NAME,
     TOPICS_COLLECTION_NAME,
 )
@@ -139,6 +140,7 @@ def update_qdrant_indexes():
     for index in [
         (QDRANT_LEARNING_RESOURCE_INDEXES, RESOURCES_COLLECTION_NAME),
         (QDRANT_CONTENT_FILE_INDEXES, CONTENT_FILES_COLLECTION_NAME),
+        (QDRANT_TOPIC_INDEXES, TOPICS_COLLECTION_NAME),
     ]:
         indexes = index[0]
         collection_name = index[1]

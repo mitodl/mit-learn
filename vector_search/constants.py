@@ -44,6 +44,10 @@ QDRANT_RESOURCE_PARAM_MAP = {
 }
 
 
+QDRANT_TOPIC_PARAM_MAP = {
+    "name": "name",
+}
+
 QDRANT_LEARNING_RESOURCE_INDEXES = {
     "readable_id": models.PayloadSchemaType.KEYWORD,
     "resource_type": models.PayloadSchemaType.KEYWORD,
@@ -82,4 +86,8 @@ QDRANT_CONTENT_FILE_INDEXES = {
     "content_type": models.PayloadSchemaType.KEYWORD,
     "edx_block_id": models.PayloadSchemaType.KEYWORD,
     "url": models.PayloadSchemaType.KEYWORD,
+}
+
+QDRANT_TOPIC_INDEXES = {
+    "name": models.PayloadSchemaType.KEYWORD,
 }
