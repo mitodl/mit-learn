@@ -16,7 +16,7 @@ docker compose run --no-deps --rm web \
 # Generate API Client
 ##################################################
 
-GENERATOR_VERSION=v7.2.0
+GENERATOR_VERSION=v7.15.0
 
 docker run --rm -v "${PWD}:/local" -w /local openapitools/openapi-generator-cli:${GENERATOR_VERSION} \
 	generate -c scripts/openapi-configs/typescript-axios-v0.yaml

@@ -1,4 +1,4 @@
-generatorName: typescript-axios
+generatorName: typescript-fetch
 outputDir: frontends/api/src/generated/v0
 inputSpec: openapi/specs/v0.yaml
 ignoreFileOverride: frontends/api/.openapi-generator-ignore
