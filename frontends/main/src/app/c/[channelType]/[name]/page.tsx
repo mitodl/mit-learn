@@ -1,5 +1,4 @@
 import React from "react"
-// import type { AxiosError } from "axios"
 import ChannelPage from "@/app-pages/ChannelPage/ChannelPage"
 import { getServerQueryClient } from "api/ssr/serverQueryClient"
 import { ChannelTypeEnum, UnitChannel } from "api/v0"
