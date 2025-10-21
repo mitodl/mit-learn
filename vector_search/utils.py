@@ -83,19 +83,25 @@ def create_qdrant_collections(force_recreate):
         force_recreate (bool): Whether to recreate the collections
         even if they already exist
     """
+
+    collections = [RESOURCES_COLLECTION_NAME, CONTENT_FILES_COLLECTION_NAME]
+    for collection_name in collections:
+        create_qdrant_collection(collection_name, force_recreate)
+
+    update_qdrant_indexes()
+
+
+def create_qdrant_collection(collection_name, force_recreate):
+    """
+    Create or recreate a QDrant collection
+    """
     client = qdrant_client()
-    resources_collection_name = RESOURCES_COLLECTION_NAME
-    content_files_collection_name = CONTENT_FILES_COLLECTION_NAME
     encoder = dense_encoder()
     # True if either of the collections were recreated
-
-    if (
-        not client.collection_exists(collection_name=resources_collection_name)
-        or force_recreate
-    ):
-        client.delete_collection(resources_collection_name)
+    if not client.collection_exists(collection_name=collection_name) or force_recreate:
+        client.delete_collection(collection_name)
         client.recreate_collection(
-            collection_name=resources_collection_name,
+            collection_name=collection_name,
             on_disk_payload=True,
             vectors_config={
                 encoder.model_short_name(): models.VectorParams(
@@ -117,36 +123,6 @@ def create_qdrant_collections(force_recreate):
                 ),
             ),
         )
-
-    if (
-        not client.collection_exists(collection_name=content_files_collection_name)
-        or force_recreate
-    ):
-        client.delete_collection(content_files_collection_name)
-        client.recreate_collection(
-            collection_name=content_files_collection_name,
-            on_disk_payload=True,
-            vectors_config={
-                encoder.model_short_name(): models.VectorParams(
-                    size=encoder.dim(), distance=models.Distance.COSINE
-                ),
-            },
-            replication_factor=2,
-            shard_number=6,
-            strict_mode_config=models.StrictModeConfig(
-                enabled=True,
-                unindexed_filtering_retrieve=False,
-                unindexed_filtering_update=False,
-            ),
-            sparse_vectors_config=client.get_fastembed_sparse_vector_params(),
-            optimizers_config=models.OptimizersConfigDiff(default_segment_number=2),
-            quantization_config=models.BinaryQuantization(
-                binary=models.BinaryQuantizationConfig(
-                    always_ram=True,
-                ),
-            ),
-        )
-    update_qdrant_indexes()
 
 
 def update_qdrant_indexes():
