@@ -255,17 +255,6 @@ const RunDates: React.FC<{ resource: LearningResource }> = ({ resource }) => {
     })
     return <span data-testid="drawer-run-dates">{runDates}</span>
   }
-  // return (
-  //   <span data-testid="drawer-run-dates">
-  //     <NoWrap key={`start-date`}>
-  //       <InfoItemValue
-  //         label={resource.next_start_date ?? "TBA"}
-  //         index={1}
-  //         total={1}
-  //       />
-  //     </NoWrap>
-  //   </span>
-  // )
 }
 
 const shouldShowFormat = (resource: LearningResource) => {
