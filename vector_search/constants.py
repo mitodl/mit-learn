@@ -3,6 +3,7 @@ from qdrant_client import models
 
 RESOURCES_COLLECTION_NAME = f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources"
 CONTENT_FILES_COLLECTION_NAME = f"{settings.QDRANT_BASE_COLLECTION_NAME}.content_files"
+TOPICS_COLLECTION_NAME = f"{settings.QDRANT_BASE_COLLECTION_NAME}.topics"
 
 QDRANT_CONTENT_FILE_PARAM_MAP = {
     "key": "key",

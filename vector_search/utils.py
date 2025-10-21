@@ -29,6 +29,7 @@ from vector_search.constants import (
     QDRANT_LEARNING_RESOURCE_INDEXES,
     QDRANT_RESOURCE_PARAM_MAP,
     RESOURCES_COLLECTION_NAME,
+    TOPICS_COLLECTION_NAME,
 )
 from vector_search.encoders.utils import dense_encoder
 
@@ -84,7 +85,11 @@ def create_qdrant_collections(force_recreate):
         even if they already exist
     """
 
-    collections = [RESOURCES_COLLECTION_NAME, CONTENT_FILES_COLLECTION_NAME]
+    collections = [
+        RESOURCES_COLLECTION_NAME,
+        CONTENT_FILES_COLLECTION_NAME,
+        TOPICS_COLLECTION_NAME,
+    ]
     for collection_name in collections:
         create_qdrant_collection(collection_name, force_recreate)
 
