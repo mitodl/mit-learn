@@ -132,7 +132,7 @@ def serialize_learning_resource_for_update(
 
     serialized_data = LearningResourceSerializer(instance=learning_resource_obj).data
 
-    if not serialized_data.get("description"):
+    if not (serialized_data.get("description") or "").strip():
         serialized_data["description"] = None
 
     if (
