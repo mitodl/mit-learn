@@ -1,6 +1,26 @@
 Release Notes
 =============
 
+Version 0.46.0
+--------------
+
+- bump course search utils (#2615)
+- use v2 enrollments, hide org enrollments in my learning (#2604)
+- Redirect to dashboard home after login, usually (#2600)
+- left align dashboard tab titles (#2612)
+- Padding to fix background position (#2603)
+- adding ecosystems subtopic (#2602)
+- chore(deps): update dependency ruff to v0.14.1 (#2607)
+- chore(deps): update yarn to v4.10.3 (#2609)
+- chore(deps): update node.js to v22.20.0 (#2608)
+- fix(deps): update dependency @faker-js/faker to v10 (#2470)
+- [pre-commit.ci] pre-commit autoupdate (#2315)
+- Organization landing route (#2588)
+- Video section text change (#2601)
+- fix(deps): update dependency django to v4.2.25 [security] (#2561)
+- MIT CLimate Portal ETL (#2589)
+- fix(deps): update dependency django-oauth-toolkit to v3 (#1816)
+
 Version 0.45.8 (Released October 16, 2025)
 --------------
 
