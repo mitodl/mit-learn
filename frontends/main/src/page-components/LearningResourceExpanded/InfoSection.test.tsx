@@ -115,6 +115,35 @@ describe("Learning resource info section start date", () => {
     within(section).getByText(runDate)
   })
 
+  test("Uses next_start_date when available", () => {
+    const course = {
+      ...courses.free.dated,
+      next_start_date: "2024-03-15T00:00:00Z",
+    }
+    renderWithTheme(<InfoSection resource={course} />)
+
+    const section = screen.getByTestId("drawer-info-items")
+    within(section).getByText("Starts:")
+    within(section).getByText("March 15, 2024")
+  })
+
+  test("Falls back to run date when next_start_date is null", () => {
+    const course = {
+      ...courses.free.dated,
+      next_start_date: null,
+    }
+    const run = course.runs?.[0]
+    invariant(run)
+    const runDate = formatRunDate(run, false)
+    invariant(runDate)
+    renderWithTheme(<InfoSection resource={course} />)
+
+    const section = screen.getByTestId("drawer-info-items")
+    within(section).getByText("Starts:")
+    within(section).getByText(runDate)
+    expect(within(section).queryByText("March 15, 2024")).toBeNull()
+  })
+
   test("As taught in date(s)", () => {
     const course = courses.free.anytime
     const run = course.runs?.[0]
@@ -143,6 +172,31 @@ describe("Learning resource info section start date", () => {
       .slice(0, 2)
       .join(SEPARATOR)}Show more`
     invariant(expectedDateText)
+    renderWithTheme(<InfoSection resource={course} />)
+
+    const section = screen.getByTestId("drawer-info-items")
+    within(section).getAllByText((_content, node) => {
+      return node?.textContent === expectedDateText || false
+    })
+  })
+
+  test("Multiple run dates with next_start_date uses next_start_date as first date", () => {
+    const course = {
+      ...courses.multipleRuns.sameData,
+      next_start_date: "2024-01-15T00:00:00Z",
+    }
+    const sortedDates = course.runs
+      ?.sort((a, b) => {
+        if (a?.start_date && b?.start_date) {
+          return Date.parse(a.start_date) - Date.parse(b.start_date)
+        }
+        return 0
+      })
+      .map((run) => formatRunDate(run, false))
+      .filter((date) => date !== null)
+
+    // First date should be next_start_date, second should be original second date
+    const expectedDateText = `January 15, 2024${SEPARATOR}${sortedDates?.[1]}Show more`
     renderWithTheme(<InfoSection resource={course} />)
 
     const section = screen.getByTestId("drawer-info-items")
