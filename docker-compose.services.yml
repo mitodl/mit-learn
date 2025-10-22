@@ -136,7 +136,7 @@ services:
       - APISIX_PORT=${APISIX_PORT:-8065}
       - APISIX_SESSION_SECRET_KEY=${APISIX_SESSION_SECRET_KEY:-something_at_least_16_characters}
       - APISIX_LOGOUT_URL=${APISIX_LOGOUT_URL:-http://open.odl.local:8065/}
-      - MITOL_API_DOMAIN=${MITOL_API_DOMAIN:-open.odl.local}
+      - MITOL_API_DOMAIN=${MITOL_API_DOMAIN:-api.open.odl.local}
       - MITX_ONLINE_UPSTREAM=${MITX_ONLINE_UPSTREAM:-host.docker.internal:8013}
       - MITX_ONLINE_DOMAIN=${MITX_ONLINE_DOMAIN:-host.docker.internal}
       - NGINX_PORT=${NGINX_PORT:-8062}
