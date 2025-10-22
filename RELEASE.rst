@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.46.0
+Version 0.46.0 (Released October 22, 2025)
 --------------
 
 - bump course search utils (#2615)
