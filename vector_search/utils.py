@@ -7,7 +7,11 @@ from langchain_experimental.text_splitter import SemanticChunker
 from qdrant_client import QdrantClient, models
 
 from learning_resources.content_summarizer import ContentSummarizer
-from learning_resources.models import ContentFile, LearningResource
+from learning_resources.models import (
+    ContentFile,
+    LearningResource,
+    LearningResourceTopic,
+)
 from learning_resources.serializers import (
     ContentFileSerializer,
     LearningResourceMetadataDisplaySerializer,
@@ -29,6 +33,7 @@ from vector_search.constants import (
     QDRANT_LEARNING_RESOURCE_INDEXES,
     QDRANT_RESOURCE_PARAM_MAP,
     QDRANT_TOPIC_INDEXES,
+    QDRANT_TOPICS_PARAM_MAP,
     RESOURCES_COLLECTION_NAME,
     TOPICS_COLLECTION_NAME,
 )
@@ -169,6 +174,60 @@ def vector_point_id(readable_id):
             A unique id (UUID5) for the learning resource
     """
     return str(uuid.uuid5(uuid.NAMESPACE_DNS, readable_id))
+
+
+def embed_topics():
+    """
+    Embed and store new (sub)topics and remove non-existent ones from Qdrant
+    """
+    client = qdrant_client()
+    create_qdrant_collections(force_recreate=False)
+    indexed_count = client.count(collection_name=TOPICS_COLLECTION_NAME).count
+
+    topic_names = set(
+        LearningResourceTopic.objects.filter(parent__isnull=False).values_list(
+            "name", flat=True
+        )
+    )
+
+    if indexed_count > 0:
+        existing = vector_search(
+            query_string="",
+            params={},
+            search_collection=TOPICS_COLLECTION_NAME,
+            limit=indexed_count,
+        )
+        indexed_topic_names = {hit["name"] for hit in existing["hits"]}
+    else:
+        indexed_topic_names = set()
+
+    new_topics = topic_names - indexed_topic_names
+    remove_topics = indexed_topic_names - topic_names
+    for remove_topic in remove_topics:
+        remove_points_matching_params(
+            {"name": remove_topic}, collection_name=TOPICS_COLLECTION_NAME
+        )
+
+    docs = []
+    metadata = []
+    ids = []
+
+    filtered_topics = LearningResourceTopic.objects.filter(name__in=new_topics)
+
+    for topic in filtered_topics:
+        docs.append(topic.name)
+        metadata.append(
+            {
+                "name": topic.name,
+            }
+        )
+        ids.append(str(topic.topic_uuid))
+    if len(docs) > 0:
+        encoder = dense_encoder()
+        embeddings = encoder.embed_documents(docs)
+        vector_name = encoder.model_short_name()
+        points = points_generator(ids, metadata, embeddings, vector_name)
+        client.upload_points(TOPICS_COLLECTION_NAME, points=points, wait=False)
 
 
 def _chunk_documents(encoder, texts, metadatas):
@@ -740,6 +799,8 @@ def qdrant_query_conditions(params, collection_name=RESOURCES_COLLECTION_NAME):
     conditions = []
     if collection_name == RESOURCES_COLLECTION_NAME:
         QDRANT_PARAM_MAP = QDRANT_RESOURCE_PARAM_MAP
+    elif collection_name == TOPICS_COLLECTION_NAME:
+        QDRANT_PARAM_MAP = QDRANT_TOPICS_PARAM_MAP
     else:
         QDRANT_PARAM_MAP = QDRANT_CONTENT_FILE_PARAM_MAP
     if not params:

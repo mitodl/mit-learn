@@ -44,7 +44,7 @@ QDRANT_RESOURCE_PARAM_MAP = {
 }
 
 
-QDRANT_TOPIC_PARAM_MAP = {
+QDRANT_TOPICS_PARAM_MAP = {
     "name": "name",
 }
 
