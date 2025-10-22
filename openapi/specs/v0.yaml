@@ -4038,7 +4038,7 @@ components:
           maxLength: 1024
         email_optin:
           type: boolean
-          writeOnly: true
+          nullable: true
         toc_optin:
           type: boolean
           writeOnly: true
@@ -4901,6 +4901,9 @@ components:
           type: string
           description: Custom getter for medium profile image
           readOnly: true
+        email_optin:
+          type: boolean
+          nullable: true
         bio:
           type: string
           nullable: true
@@ -4975,7 +4978,7 @@ components:
           maxLength: 1024
         email_optin:
           type: boolean
-          writeOnly: true
+          nullable: true
         toc_optin:
           type: boolean
           writeOnly: true

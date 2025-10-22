@@ -3646,7 +3646,7 @@ export interface PatchedProfileRequest {
    * @type {boolean}
    * @memberof PatchedProfileRequest
    */
-  email_optin?: boolean
+  email_optin?: boolean | null
   /**
    *
    * @type {boolean}
@@ -4728,6 +4728,12 @@ export interface Profile {
   profile_image_medium: string
   /**
    *
+   * @type {boolean}
+   * @memberof Profile
+   */
+  email_optin?: boolean | null
+  /**
+   *
    * @type {string}
    * @memberof Profile
    */
@@ -4822,7 +4828,7 @@ export interface ProfileRequest {
    * @type {boolean}
    * @memberof ProfileRequest
    */
-  email_optin?: boolean
+  email_optin?: boolean | null
   /**
    *
    * @type {boolean}

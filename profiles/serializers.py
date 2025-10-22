@@ -83,7 +83,6 @@ class ProfileSerializer(serializers.ModelSerializer):
     """Serializer for Profile"""
 
     name = serializers.SerializerMethodField(read_only=True)
-    email_optin = serializers.BooleanField(write_only=True, required=False)
     toc_optin = serializers.BooleanField(write_only=True, required=False)
     username = serializers.SerializerMethodField(read_only=True)
     profile_image_medium = serializers.SerializerMethodField(read_only=True)
