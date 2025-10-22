@@ -272,8 +272,8 @@ Set up the [mitxonline](https://github.com/mitodl/mitxonline) as indicated there
 ```env
 # MITxOnline, .env
 CSRF_COOKIE_DOMAIN=.odl.local
-CORS_ALLOWED_ORIGINS=http://mitxonline.odl.local:8065, http://learn.odl.local:8062
-CSRF_TRUSTED_ORIGINS=http://mitxonline.odl.local:8065, http://learn.odl.local:8062
+CORS_ALLOWED_ORIGINS=http://mitxonline.odl.local:8065, http://open.odl.local:8062
+CSRF_TRUSTED_ORIGINS=http://mitxonline.odl.local:8065, http://open.odl.local:8062
 
 # For mitol-django-apigateway
 MITOL_APIGATEWAY_DISABLE_MIDDLEWARE=False
