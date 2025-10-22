@@ -303,6 +303,7 @@ const createTestContracts = (
     name: faker.company.name(),
     organization: orgId,
     slug: faker.lorem.slug(),
+    membership_type: faker.helpers.arrayElement(["managed", "unmanaged"]),
   }))
 }
 
