@@ -19,6 +19,7 @@ import { PlainList, Skeleton, Stack, styled, Typography } from "ol-components"
 import {
   DashboardProgram,
   DashboardProgramCollection,
+  DashboardProgramCollectionProgram,
 } from "./CoursewareDisplay/types"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
 import {
@@ -130,24 +131,29 @@ const ProgramDescription = styled(Typography)({
 })
 
 // Custom hook to handle multiple program queries and check if any have courses
-const useProgramCollectionCourses = (programIds: number[], orgId: number) => {
+const useProgramCollectionCourses = (
+  programs: DashboardProgramCollectionProgram[],
+  orgId: number,
+) => {
   const programQueries = useQueries({
-    queries: programIds.map((programId) =>
-      programsQueries.programsList({ id: programId, org_id: orgId }),
-    ),
+    queries: programs
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+      .map((program) =>
+        programsQueries.programsList({ id: program.id, org_id: orgId }),
+      ),
   })
 
   const isLoading = programQueries.some((query) => query.isLoading)
 
   const programsWithCourses = programQueries
-    .map((query, index) => {
+    .map((query) => {
       if (!query.data?.results?.length) {
         return null
       }
       const program = query.data.results[0]
       const transformedProgram = transform.mitxonlineProgram(program)
       return {
-        programId: programIds[index],
+        programId: query.data.results[0].id,
         program: transformedProgram,
         hasCourses: program.courses && program.courses.length > 0,
       }
@@ -171,7 +177,7 @@ const OrgProgramCollectionDisplay: React.FC<{
 }> = ({ collection, contracts, enrollments, orgId }) => {
   const sanitizedDescription = DOMPurify.sanitize(collection.description ?? "")
   const { isLoading, programsWithCourses, hasAnyCourses } =
-    useProgramCollectionCourses(collection.programIds, orgId)
+    useProgramCollectionCourses(collection.programs, orgId)
   const firstCourseIds = programsWithCourses
     .map((p) => p?.program.courseIds[0])
     .filter((id): id is number => id !== undefined)

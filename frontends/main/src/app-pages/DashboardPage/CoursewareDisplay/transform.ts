@@ -270,7 +270,7 @@ const mitxonlineProgramCollection = (
     type: DashboardResourceType.ProgramCollection,
     title: raw.title,
     description: raw.description ?? null,
-    programIds: raw.programs,
+    programs: raw.programs,
   }
 }
 

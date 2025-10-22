@@ -81,7 +81,13 @@ type DashboardProgramCollection = {
   type: typeof DashboardResourceType.ProgramCollection
   title: string
   description?: string | null
-  programIds: number[]
+  programs: DashboardProgramCollectionProgram[]
+}
+
+type DashboardProgramCollectionProgram = {
+  id?: number
+  title?: string
+  order?: number
 }
 
 type DashboardResource =
@@ -97,4 +103,5 @@ export type {
   DashboardCourseEnrollment,
   DashboardProgram,
   DashboardProgramCollection,
+  DashboardProgramCollectionProgram,
 }
