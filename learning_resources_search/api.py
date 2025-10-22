@@ -632,7 +632,7 @@ def add_text_query_to_search(search, text, search_params, query_type_query):
             "description_embedding": {
                 "query_text": text,
                 "model_id": "oxD38pkBhP9LJzcD5fWE",
-                "k": 5,
+                "min_score": 0.015,
             },
         
         }
@@ -643,7 +643,7 @@ def add_text_query_to_search(search, text, search_params, query_type_query):
             "title_embedding": {
                 "query_text": text,
                 "model_id": "oxD38pkBhP9LJzcD5fWE",
-                "k": 5,
+                "min_score": 0.015,
             },
         }
     }
@@ -651,7 +651,7 @@ def add_text_query_to_search(search, text, search_params, query_type_query):
     search = search.extra(
         query={
             "hybrid": {
-                "queries": [text_query, vector_query_description, vector_query_title],
+                "queries": [text_query,vector_query_description, vector_query_title],
             }
         }
     )
@@ -775,9 +775,9 @@ def execute_learn_search(search_params):
                 "technique": "arithmetic_mean",
                 "parameters": {
                     "weights": [
-                    0.7,
-                    0.15,
-                    0.15
+                    0.6,
+                    0.2,
+                    0.2
                     ]
                 }
                 }
