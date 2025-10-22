@@ -167,7 +167,7 @@ describe("Learning Resource List Card", () => {
 
     setup({ resource })
 
-    screen.getByText("Certificate")
+    expect(screen.getAllByText("Certificate").length).toEqual(2)
   })
 
   test("Displays certificate type", () => {
@@ -247,7 +247,7 @@ describe("Learning Resource List Card", () => {
         ],
       })
       setup({ resource })
-      screen.getByText("Certificate")
+      expect(screen.getAllByText("Certificate").length).toEqual(2)
       screen.getByText(": $49")
       screen.getByText("Free")
     })
@@ -263,7 +263,7 @@ describe("Learning Resource List Card", () => {
         ],
       })
       setup({ resource })
-      screen.getByText("Certificate")
+      expect(screen.getAllByText("Certificate").length).toEqual(2)
       screen.getByText(": $49 – $99")
       screen.getByText("Free")
     })

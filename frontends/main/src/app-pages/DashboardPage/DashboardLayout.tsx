@@ -98,7 +98,8 @@ const DashboardGridItem = styled.div({
 })
 
 const ProfileSidebar = styled(Card)({
-  position: "fixed",
+  position: "sticky",
+  top: "112px",
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-start",
