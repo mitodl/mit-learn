@@ -167,24 +167,21 @@ CELERY_BEAT_SCHEDULE = (
             "task": "learning_resources.tasks.remove_duplicate_resources",
             "schedule": crontab(minute=0, hour=9),  # 5:00am EST
         },
+        "daily_embed_new_learning_resources": {
+            "task": "vector_search.tasks.embed_new_learning_resources",
+            "schedule": get_int(
+                "EMBED_NEW_RESOURCES_SCHEDULE_SECONDS", 60 * EMBEDDING_SCHEDULE_MINUTES
+            ),  # default is every 30 minutes
+        },
+        "daily_embed_new_content_files": {
+            "task": "vector_search.tasks.embed_new_content_files",
+            "schedule": get_int(
+                "EMBED_NEW_CONTENT_FILES_SCHEDULE_SECONDS",
+                60 * EMBEDDING_SCHEDULE_MINUTES,
+            ),  # default is every 30 minutes
+        },
     }
 )
-
-
-if not DEV_ENV:
-    CELERY_BEAT_SCHEDULE["daily_embed_new_learning_resources"] = {
-        "task": "vector_search.tasks.embed_new_learning_resources",
-        "schedule": get_int(
-            "EMBED_NEW_RESOURCES_SCHEDULE_SECONDS", 60 * EMBEDDING_SCHEDULE_MINUTES
-        ),  # default is every 30 minutes
-    }
-    CELERY_BEAT_SCHEDULE["daily_embed_new_content_files"] = {
-        "task": "vector_search.tasks.embed_new_content_files",
-        "schedule": get_int(
-            "EMBED_NEW_CONTENT_FILES_SCHEDULE_SECONDS", 60 * EMBEDDING_SCHEDULE_MINUTES
-        ),  # default is every 30 minutes
-    }
-
 
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
