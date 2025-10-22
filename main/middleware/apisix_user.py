@@ -153,7 +153,6 @@ class ApisixUserMiddleware(RemoteUserMiddleware):
         if settings.DISABLE_APISIX_USER_MIDDLEWARE:
             return super().process_request(request)
         apisix_user = None
-        next_param = request.GET.get("next", None) if request.GET else None
         if request.META.get(self.header):
             new_header = decode_apisix_headers(
                 request, self.header, model=settings.AUTH_USER_MODEL
@@ -192,7 +191,4 @@ class ApisixUserMiddleware(RemoteUserMiddleware):
             log.debug("Forcing user logout because no APISIX user was found")
             logout(request)
 
-        response = self.get_response(request)
-        if next_param:
-            response.set_cookie("next", next_param, max_age=30, secure=False)
-        return response
+        return self.get_response(request)

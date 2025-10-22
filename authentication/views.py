@@ -26,7 +26,7 @@ def get_redirect_url(request, param_names):
         str: Redirect URL
     """
     for param_name in param_names:
-        next_url = request.GET.get(param_name) or request.COOKIES.get(param_name)
+        next_url = request.GET.get(param_name)
         if next_url and url_has_allowed_host_and_scheme(
             next_url, allowed_hosts=settings.ALLOWED_REDIRECT_HOSTS
         ):
