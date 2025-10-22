@@ -239,7 +239,7 @@ const OrgProgramCollectionDisplay: React.FC<{
         {courses.isLoading &&
           programsWithCourses.map((item) => (
             <Skeleton
-              key={item?.programId}
+              key={`${collection.id}-${item?.programId}-${Math.random()}`}
               width="100%"
               height="65px"
               style={{ marginBottom: "16px" }}
