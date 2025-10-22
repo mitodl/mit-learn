@@ -130,6 +130,12 @@ const ProgramDescription = styled(Typography)({
   },
 })
 
+const ProgramCollectionsList = styled(PlainList)({
+  display: "flex",
+  flexDirection: "column",
+  gap: "40px",
+})
+
 // Custom hook to handle multiple program queries and check if any have courses
 const useProgramCollectionCourses = (
   programs: DashboardProgramCollectionProgram[],
@@ -406,7 +412,7 @@ const OrganizationContentInternal: React.FC<
       {programCollections.isLoading ? (
         skeleton
       ) : (
-        <PlainList>
+        <ProgramCollectionsList>
           {programCollections.data?.results.map((collection) => {
             const transformedCollection =
               transform.mitxonlineProgramCollection(collection)
@@ -420,7 +426,7 @@ const OrganizationContentInternal: React.FC<
               />
             )
           })}
-        </PlainList>
+        </ProgramCollectionsList>
       )}
       {programs.data?.results.length === 0 && (
         <HeaderRoot>
