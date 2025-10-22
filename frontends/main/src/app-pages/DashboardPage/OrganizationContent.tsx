@@ -237,9 +237,9 @@ const OrgProgramCollectionDisplay: React.FC<{
       {header}
       <PlainList>
         {courses.isLoading &&
-          programsWithCourses.map((item) => (
+          programsWithCourses.map((item, index) => (
             <Skeleton
-              key={`${collection.id}-${item?.programId}-${Math.random()}`}
+              key={`${collection.id}-${item?.programId}-${index}`}
               width="100%"
               height="65px"
               style={{ marginBottom: "16px" }}
