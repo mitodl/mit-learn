@@ -262,29 +262,12 @@ Once these are set (and you've restarted the app), you should see events flowing
 
 ### Connecting with MITxOnline
 
-Set up the [mitxonline](https://github.com/mitodl/mitxonline) as indicated there. _Note: A working OpenEdx installation is not necessary for integration with Learn._
-
-Both MITxOnline and MIT Learn repos have keycloak and apisix containers included in their stacks. In connecting the two projects, we want to use the same Keycloak+Apisix container for both projects. Here we assume that the Learn Keycloak+Apisix will be used.
-
-Then, in Learn, set:
-
-```env
-# MIT Learn, backend.local.env
-MITX_ONLINE_BASE_URL=http://mitxonline.odl.local:8013/
-MITX_ONLINE_COURSES_API_URL=http://host.docker.internal:8013/api/v2/courses/
-MITX_ONLINE_PROGRAMS_API_URL=http://host.docker.internal:8013/api/v2/programs/
-```
-
-```env
-# MIT Learn, frontend.local.env
-## This is the default; it should not be overridden
-NEXT_PUBLIC_MITX_ONLINE_BASE_URL=${MITX_ONLINE_BASE_URL}
-```
-
-and in MITxOnline, set:
+Both MITxOnline and MIT Learn repos have keycloak and apisix containers included in their stacks. In connecting the two projects, we want to use the same Keycloak+Apisix container for both projects. Here we assume that the Learn Keycloak+Apisix will be used. There are some caveats to this setup:
 
 > [!TIP]
-> Be sure that COMPOSE_PROFILES is NOT set in your .env file; that way, MITxOnline's keycloak and apisix containers will not be used.
+> You cannot login from the MITxOnline frontend; Logging in via the Learn frontend will authenticate you with the MITxOnline backend.
+
+Set up the [mitxonline](https://github.com/mitodl/mitxonline) as indicated there, **using the environment variables below**. ( _Note: A working OpenEdx installation is not necessary for integration with Learn._)
 
 ```env
 # MITxOnline, .env
@@ -303,6 +286,15 @@ KEYCLOAK_CLIENT_ID=apisix
 KEYCLOAK_CLIENT_SECRET=HckCZXToXfaetbBx0Fo3xbjnC468oMi4 # pragma: allowlist-secret
 KEYCLOAK_DISCOVERY_URL=http://kc.ol.local:8066/realms/ol-local/.well-known/openid-configuration
 KEYCLOAK_REALM_NAME=ol-local
+```
+
+Then, in Learn, set:
+
+```env
+# MIT Learn, backend.local.env
+MITX_ONLINE_BASE_URL=http://mitxonline.odl.local:8013/
+MITX_ONLINE_COURSES_API_URL=http://mitxonline.odl.local:8013/api/v2/courses/
+MITX_ONLINE_PROGRAMS_API_URL=http://mitxonline.odl.local:8013/api/v2/programs/
 ```
 
 ## GitHub Pages Storybook
