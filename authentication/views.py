@@ -1,10 +1,11 @@
-# ruff: noqa: ARG001, F821, E501, TD002, TD003, FIX002, ERA001, SIM115, PTH123, T201, D401
+# ruff: noqa: ARG001, E501, TD002, TD003, FIX002, ERA001, SIM115, PTH123, D401
 """Authentication views"""
 
 import logging
 from urllib.parse import urljoin
 
 from django.contrib.auth import logout
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.utils.text import slugify
@@ -130,15 +131,20 @@ class CustomLoginView(View):
 # client_id = 'learn-jupyter-notebooks'
 # deployment_id = '0cb94445-2066-4295-9c03-4bfdc1d8aacb'
 
-lti_oidc_url = "https://saltire.lti.app/tool"
-lti_launch_url = "https://saltire.lti.app/tool"
-redirect_uris = [lti_launch_url]
+# lti_oidc_url = "http://127.0.0.1:8000"
+# lti_launch_url = "http://127.0.0.1:8000"
+
+lti_oidc_url = "http://127.0.0.1:8000/hub/lti13/oauth_login"
+# The launch URL includes the next param, but all other bits of state are passed via launch request claims
+lti_launch_url = (
+    "http://127.0.0.1:8000/hub/lti13/oauth_callback?next=/hub/spawn/test-user-id"
+)
+redirect_uris = ["http://127.0.0.1:8000/hub/lti13/oauth_callback", lti_launch_url]
 client_id = "learn-jupyter-notebooks"
 deployment_id = "cb5fd9ae5c92eddbc5054e27fa010c5478d2f7c3"
 platform_private_key_id = "JZOHScC4BQ"
 platform_public_key = open("platform_id_rsa.pub").read()
 platform_private_key = open("platform_id_rsa").read()
-print(platform_public_key)
 rsa_key = platform_private_key
 rsa_key_id = platform_private_key_id
 iss = "http://api.open.odl.local"
@@ -209,6 +215,7 @@ def public_keyset(request):
 
     This endpoint must be configured in the tool.
     """
+
     return JsonResponse(
         _get_lti1p3_consumer().get_public_keyset(), content_type="application/json"
     )
@@ -232,10 +239,14 @@ def lti_preflight_request(request):
         config_id=client_id,
         resource_link_id="link_id",
     )
+
     # This template should render a simple redirection to the URL
     # provided by the context through the `oidc_url` key above.
     # This can also be a redirect.
-    return redirect(lti_consumer.prepare_preflight_url(launch_data))
+    url = lti_consumer.prepare_preflight_url(launch_data) + urlencode(
+        {"next": "http://127.0.0.1:8000/user/test-user-id/"}
+    )
+    return redirect(url)
 
 
 def lti_launch_endpoint(request):
@@ -258,11 +269,20 @@ def lti_launch_endpoint(request):
     # TODO: Not sure what this is used for but it's required. Look it up later
     lti_consumer.set_resource_link_claim("link_id")
 
+    # We can add any custom parameters we want to the launch request here.
+    lti_consumer.set_custom_parameters(
+        {
+            "image": "quay.io/jupyter/minimal-notebook",
+            "course_name": "Cool Test Course Name",
+        }
+    )
+
+    payload = request.POST if request.method == "POST" else request.GET
     context.update(
         {
-            "preflight_response": dict(request.POST),
+            "preflight_response": dict(payload),
             "launch_request": lti_consumer.generate_launch_request(
-                preflight_response=request.POST
+                preflight_response=payload
             ),
         }
     )
