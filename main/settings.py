@@ -55,6 +55,17 @@ init_sentry(
     profiles_sample_rate=SENTRY_PROFILES_SAMPLE_RATE,
 )
 
+# Validate environment configuration on startup
+# Skip validation during testing or when explicitly disabled
+if not get_bool("SKIP_ENV_VALIDATION", default=False):
+    try:
+        from main.env_validator import validate_environment_on_startup
+
+        validate_environment_on_startup()
+    except Exception as e:  # noqa: BLE001
+        # We don't want to block if validation fails.
+        log.warning("Environment validation failed: %s", e)
+
 BASE_DIR = os.path.dirname(  # noqa: PTH120
     os.path.dirname(os.path.abspath(__file__))  # noqa: PTH100, PTH120
 )
