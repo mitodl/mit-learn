@@ -152,18 +152,6 @@ module.exports = {
       },
       {
         selector:
-          "FunctionDeclaration[id.name='generateMetadata'] CallExpression[callee.type='MemberExpression'][callee.object.name=/.*Api$/]:not(CallExpression[callee.type='MemberExpression'][callee.object.name='queryClient'][callee.property.name='fetchQuery'] CallExpression)",
-        message:
-          "Direct API calls in generateMetadata should use getServerQueryClient().fetchQuery(queryOptions) for proper server-side caching.",
-      },
-      {
-        selector:
-          "VariableDeclarator[id.name=/.*Page.*|.*Component.*/] ArrowFunctionExpression CallExpression[callee.type='MemberExpression'][callee.object.name=/.*Api$/]:not(CallExpression[callee.type='MemberExpression'][callee.object.name='queryClient'][callee.property.name='fetchQuery'] CallExpression)",
-        message:
-          "Direct API calls in page components should use getServerQueryClient().fetchQuery(queryOptions) for proper server-side caching.",
-      },
-      {
-        selector:
           "FunctionDeclaration[id.name='generateMetadata'] > BlockStatement > ReturnStatement[argument.type!='CallExpression'], FunctionDeclaration[id.name='generateMetadata'] > BlockStatement > ReturnStatement[argument.callee.name!='safeGenerateMetadata']",
         message:
           "generateMetadata functions must return safeGenerateMetadata() to ensure proper error handling and fallback metadata.",

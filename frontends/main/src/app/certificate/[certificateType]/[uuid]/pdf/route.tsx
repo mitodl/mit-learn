@@ -4,7 +4,8 @@ import type { AxiosError } from "axios"
 import type { NextRequest } from "next/server"
 import * as Sentry from "@sentry/nextjs"
 import moment from "moment"
-import { courseCertificatesApi, programCertificatesApi } from "api/mitxonline"
+import { getServerQueryClient } from "api/ssr/serverQueryClient"
+import { certificateQueries } from "api/mitxonline-hooks/certificates"
 import {
   V2CourseRunCertificate,
   V2ProgramCertificate,
@@ -551,21 +552,26 @@ type RouteContext = {
 export async function GET(req: NextRequest, ctx: RouteContext) {
   const { certificateType, uuid } = await ctx.params
 
+  const queryClient = getServerQueryClient()
+
   let pdfDoc
 
   try {
     if (certificateType === CertificateType.Course) {
-      const certificate =
-        await courseCertificatesApi.courseCertificatesRetrieve({
+      const certificate = await queryClient.fetchQuery(
+        certificateQueries.courseCertificatesRetrieve({
           cert_uuid: uuid,
-        })
-      pdfDoc = pdf(<CourseCertificate certificate={certificate.data} />)
+        }),
+      )
+
+      pdfDoc = pdf(<CourseCertificate certificate={certificate} />)
     } else {
-      const certificate =
-        await programCertificatesApi.programCertificatesRetrieve({
+      const certificate = await queryClient.fetchQuery(
+        certificateQueries.programCertificatesRetrieve({
           cert_uuid: uuid,
-        })
-      pdfDoc = pdf(<ProgramCertificate certificate={certificate.data} />)
+        }),
+      )
+      pdfDoc = pdf(<ProgramCertificate certificate={certificate} />)
     }
   } catch (error) {
     if ([400, 404].includes((error as AxiosError).status ?? -1)) {
