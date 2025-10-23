@@ -74,8 +74,10 @@ const Background = styled.div(({ theme }) => ({
   },
 }))
 
+const PADDING_TOP = 40
+
 const PageContainer = styled(Container)({
-  paddingTop: "40px",
+  paddingTop: PADDING_TOP,
   paddingBottom: "80px",
 })
 
@@ -97,16 +99,16 @@ const DashboardGridItem = styled.div({
   },
 })
 
-const ProfileSidebar = styled(Card)({
+const ProfileSidebar = styled(Card)(({ theme }) => ({
   position: "sticky",
-  top: "112px",
+  top: `${theme.custom.dimensions.headerHeight + PADDING_TOP}px`,
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-start",
   width: "300px",
   boxShadow: "-4px 4px 0px 0px #A31F34",
   transform: "translateX(4px)", // keep solid shadow from bleeding into page margins
-})
+}))
 
 const ProfilePhotoContainer = styled.div(({ theme }) => ({
   display: "flex",

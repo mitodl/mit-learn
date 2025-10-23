@@ -39,6 +39,7 @@ import {
   ResourceTypeEnum,
   LearningResourceRunLevelInnerCodeEnum,
   PlatformEnum,
+  CourseResourceCertificationTypeCodeEnum,
 } from "api"
 
 const uniqueEnforcerId = new UniqueEnforcer()
@@ -343,6 +344,9 @@ const learningResourceSummary: LearningResourceFactory<
 const learningResourceSummaries = makePaginatedFactory(learningResourceSummary)
 
 const program: PartialFactory<ProgramResource> = (overrides = {}) => {
+  const certificationCode = faker.helpers.enumValue(
+    CourseResourceCertificationTypeCodeEnum,
+  )
   return mergeOverrides<ProgramResource>(
     _learningResourceShared(),
     { resource_type: ResourceTypeEnum.Program },
@@ -353,6 +357,18 @@ const program: PartialFactory<ProgramResource> = (overrides = {}) => {
       program: {
         course_count: faker.number.int({ min: 0, max: 8 }),
       },
+      certification_type: {
+        code: certificationCode,
+        name: {
+          [CourseResourceCertificationTypeCodeEnum.Professional]:
+            "Professional Certificate",
+          [CourseResourceCertificationTypeCodeEnum.Micromasters]:
+            "MicroMasters Credential",
+          [CourseResourceCertificationTypeCodeEnum.Completion]:
+            "Certificate of Completion",
+          [CourseResourceCertificationTypeCodeEnum.None]: "No Certificate",
+        }[certificationCode],
+      },
     },
     overrides,
   )
@@ -360,6 +376,9 @@ const program: PartialFactory<ProgramResource> = (overrides = {}) => {
 const programs = makePaginatedFactory(program)
 
 const course: LearningResourceFactory<CourseResource> = (overrides = {}) => {
+  const certificationCode = faker.helpers.enumValue(
+    CourseResourceCertificationTypeCodeEnum,
+  )
   return mergeOverrides<CourseResource>(
     _learningResourceShared(),
     { resource_type: ResourceTypeEnum.Course },
@@ -368,6 +387,18 @@ const course: LearningResourceFactory<CourseResource> = (overrides = {}) => {
       platform: learningResourcePlatform(),
       runs: repeat(learningResourceRun, { min: 1, max: 5 }),
       certification: faker.datatype.boolean(),
+      certification_type: {
+        code: certificationCode,
+        name: {
+          [CourseResourceCertificationTypeCodeEnum.Professional]:
+            "Professional Certificate",
+          [CourseResourceCertificationTypeCodeEnum.Micromasters]:
+            "MicroMasters Credential",
+          [CourseResourceCertificationTypeCodeEnum.Completion]:
+            "Certificate of Completion",
+          [CourseResourceCertificationTypeCodeEnum.None]: "No Certificate",
+        }[certificationCode],
+      },
       course: {
         course_numbers:
           maybe(() => repeat(learningResourceCourseNumber)) ?? null,
