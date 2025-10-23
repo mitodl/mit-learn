@@ -26,6 +26,9 @@ BOTH_INDEXES = "all_indexes"
 LEARNING_RESOURCE = "learning_resource"
 
 
+HYBRID_INDEX_TYPE = "hybrid_prototype_index"
+HYBRID_CONTENT_FILES_TYPE = "hybrid_content_files"
+
 class IndexestoUpdate(Enum):
     """
     Enum for index to update
@@ -45,6 +48,7 @@ LEARNING_RESOURCE_TYPES = (
     VIDEO_PLAYLIST_TYPE,
     ARTICLE_TYPE,
 )
+
 
 BASE_INDEXES = (PERCOLATE_INDEX_TYPE,)
 

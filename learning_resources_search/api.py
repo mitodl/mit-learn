@@ -590,7 +590,7 @@ def add_text_query_to_search(search, text, search_params, query_type_query):
         search_params.get("max_incompleteness_penalty", 0) / 100
     )
 
-    if False: #yearly_decay_percent or max_incompleteness_penalty:
+    if False:  # yearly_decay_percent or max_incompleteness_penalty:
         script_query = {
             "script_score": {
                 "query": {"bool": {"must": [text_query], "filter": query_type_query}}
@@ -638,7 +638,6 @@ def add_text_query_to_search(search, text, search_params, query_type_query):
                 "model_id": "oxD38pkBhP9LJzcD5fWE",
                 "min_score": 0.015,
             },
-        
         }
     }
 
@@ -655,7 +654,7 @@ def add_text_query_to_search(search, text, search_params, query_type_query):
     search = search.extra(
         query={
             "hybrid": {
-                "queries": [text_query,vector_query_description, vector_query_title],
+                "queries": [text_query, vector_query_description, vector_query_title],
             }
         }
     )
@@ -691,7 +690,7 @@ def construct_search(search_params):
     search = Search(index=",".join(indexes))
 
     search = search.source(fields={"excludes": SOURCE_EXCLUDED_FIELDS})
-    #search = search.params(search_type="dfs_query_then_fetch")
+    # search = search.params(search_type="dfs_query_then_fetch")
     if search_params.get("offset"):
         search = search.extra(from_=search_params.get("offset"))
 
@@ -766,30 +765,24 @@ def execute_learn_search(search_params):
                 settings.DEFAULT_SEARCH_MAX_INCOMPLETENESS_PENALTY
             )
     search = construct_search(search_params)
-    
-    search = search.extra(search_pipeline={
-        "description": "Post processor for hybrid search",
-        "phase_results_processors": [
-            {
-            "normalization-processor": {
-                "normalization": {
-                "technique": "min_max"
-                },
-                "combination": {
-                "technique": "arithmetic_mean",
-                "parameters": {
-                    "weights": [
-                    0.6,
-                    0.2,
-                    0.2
-                    ]
+
+    search = search.extra(
+        search_pipeline={
+            "description": "Post processor for hybrid search",
+            "phase_results_processors": [
+                {
+                    "normalization-processor": {
+                        "normalization": {"technique": "min_max"},
+                        "combination": {
+                            "technique": "arithmetic_mean",
+                            "parameters": {"weights": [0.6, 0.2, 0.2]},
+                        },
+                    }
                 }
-                }
-            }
-            }
-        ]
-    })
-    
+            ],
+        }
+    )
+
     print(search.to_dict())
     return search.execute().to_dict()
 
