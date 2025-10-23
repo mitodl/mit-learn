@@ -1199,6 +1199,7 @@ def test_similar_resources_endpoint_only_returns_published(mocker, client):
     assert len(response_ids) == 1
 
 
+@pytest.mark.skip_nplusone_check
 def test_similar_resources_endpoint_ignores_opensearch_published(mocker, client):
     """Test similar learning_resources ignores the published attribute from opensearch"""
     from learning_resources.models import LearningResource
