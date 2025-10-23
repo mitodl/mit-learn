@@ -34,7 +34,6 @@ type MetadataAsyncProps = {
  */
 export async function safeGenerateMetadata(
   fn: () => Promise<Metadata>,
-  fallback?: Metadata | (() => Promise<Metadata>),
 ): Promise<Metadata> {
   try {
     return await fn()
@@ -44,11 +43,7 @@ export async function safeGenerateMetadata(
     }
     console.error("Error fetching page metadata", error)
     Sentry.captureException(error)
-    return fallback
-      ? typeof fallback === "function"
-        ? await fallback()
-        : fallback
-      : await getMetadataAsync({})
+    return await standardizeMetadata()
   }
 }
 
@@ -111,7 +106,7 @@ export const standardizeMetadata = ({
   imageAlt,
   social = true,
   ...otherMeta
-}: MetadataProps): Metadata => {
+}: MetadataProps = {}): Metadata => {
   title = `${title} | ${process.env.NEXT_PUBLIC_SITE_NAME}`
   const socialMetadata = social
     ? {
