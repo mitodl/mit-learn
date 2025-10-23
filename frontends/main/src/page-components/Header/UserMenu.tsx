@@ -145,8 +145,6 @@ const UserMenu: React.FC<UserMenuProps> = ({ variant }) => {
     return null
   }
 
-  console.log("pathname", pathname)
-
   const items: UserMenuItem[] = [
     {
       label: "Dashboard",
