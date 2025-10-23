@@ -834,7 +834,7 @@ def get_similar_topics_qdrant(value_doc: dict, num_topics: int) -> list[str]:
     from vector_search.encoders.utils import dense_encoder
 
     """
-    Get a list of similar topics based on text values
+    Get a list of similar topics based on vector similarity
 
     Args:
         value_doc (dict):
@@ -847,11 +847,10 @@ def get_similar_topics_qdrant(value_doc: dict, num_topics: int) -> list[str]:
     """
     encoder = dense_encoder()
 
-    embedding_context = f"""
-            {value_doc.get("title", "")}
-            {value_doc.get("description", "")}
-            {value_doc.get("full_description", "")}
-    """
+    embedding_context = "\n".join(
+        [value_doc[key] for key in value_doc if value_doc[key] is not None]
+    )
+
     embeddings = encoder.embed(embedding_context)
     return [
         hit["name"]
