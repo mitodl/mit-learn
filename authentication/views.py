@@ -1,10 +1,12 @@
-# ruff: noqa: ARG001, E501, TD002, TD003, FIX002, ERA001, SIM115, PTH123, D401
+# ruff: noqa: ARG001, E501, TD002, TD003, FIX002, ERA001, SIM115, PTH123, D401, T201, RET503
 """Authentication views"""
 
 import logging
 from urllib.parse import urljoin
 
 from django.contrib.auth import logout
+from django.core.cache import caches
+from django.core.exceptions import PermissionDenied
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme, urlencode
@@ -170,8 +172,25 @@ def lti_login(
     """
     Render form taking relevant bits of info to start LTI negotiation
     """
-
-    return lti_preflight_request(request)
+    if request.method == "GET":
+        # Render form for LTI preflight with image and course_name fields
+        return render(request, "lti_preflight_form.html")
+    elif request.method == "POST":
+        if request.user.is_authenticated:
+            cache = caches["redis"]
+            cache.set(
+                f"{request.user.global_id}:lti_image",
+                request.POST.get("image"),
+                timeout=30,
+            )
+            cache.set(
+                f"{request.user.global_id}:lti_course_name",
+                request.POST.get("course_name"),
+                timeout=30,
+            )
+        else:
+            raise PermissionDenied
+        return lti_preflight_request(request)
 
 
 @csrf_exempt
@@ -270,12 +289,21 @@ def lti_launch_endpoint(request):
     lti_consumer.set_resource_link_claim("link_id")
 
     # We can add any custom parameters we want to the launch request here.
-    lti_consumer.set_custom_parameters(
-        {
-            "image": "quay.io/jupyter/minimal-notebook",
-            "course_name": "Cool Test Course Name",
-        }
-    )
+    if request.user.is_authenticated:
+        cache = caches["redis"]
+        image = cache.get(f"{request.user.global_id}:lti_image")
+        course = cache.get(f"{request.user.global_id}:lti_course_name")
+        if image and course:
+            lti_consumer.set_custom_parameters(
+                {
+                    "image": image,
+                    "course_name": course,
+                }
+            )
+        else:
+            print("No cached information found for current user")
+    else:
+        print("No authenticated user found")
 
     payload = request.POST if request.method == "POST" else request.GET
     context.update(
