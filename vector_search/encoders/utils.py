@@ -1,7 +1,10 @@
+from functools import cache
+
 from django.conf import settings
 from django.utils.module_loading import import_string
 
 
+@cache
 def dense_encoder():
     """
     Return the dense encoder based on settings

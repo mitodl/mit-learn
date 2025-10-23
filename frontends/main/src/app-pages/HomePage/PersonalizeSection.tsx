@@ -77,7 +77,7 @@ const AUTH_TEXT_DATA = {
     linkProps: {
       children: "Sign Up for Free",
       href: urls.auth({
-        loginNext: { pathname: urls.DASHBOARD_HOME, searchParams: null },
+        next: { pathname: urls.DASHBOARD_HOME, searchParams: null },
       }),
     },
   },

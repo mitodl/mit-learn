@@ -1,15 +1,13 @@
 """Authentication views"""
 
 import logging
-from urllib.parse import urljoin
 
+from django.conf import settings
 from django.contrib.auth import logout
 from django.shortcuts import redirect
 from django.utils.http import url_has_allowed_host_and_scheme, urlencode
-from django.utils.text import slugify
 from django.views import View
 
-from main import settings
 from main.middleware.apisix_user import ApisixUserMiddleware, decode_apisix_headers
 
 log = logging.getLogger(__name__)
@@ -28,7 +26,7 @@ def get_redirect_url(request, param_names):
         str: Redirect URL
     """
     for param_name in param_names:
-        next_url = request.GET.get(param_name) or request.COOKIES.get(param_name)
+        next_url = request.GET.get(param_name)
         if next_url and url_has_allowed_host_and_scheme(
             next_url, allowed_hosts=settings.ALLOWED_REDIRECT_HOSTS
         ):
@@ -80,6 +78,7 @@ class CustomLoginView(View):
         """
         redirect_url = get_redirect_url(request, ["next"])
         signup_redirect_url = get_redirect_url(request, ["signup_next", "next"])
+        should_skip_onboarding = request.GET.get("skip_onboarding", "0") != "0"
         if not request.user.is_anonymous:
             profile = request.user.profile
 
@@ -91,31 +90,16 @@ class CustomLoginView(View):
             )
 
             if user_organizations:
-                # First-time login for org user: redirect to org dashboard
-                if not profile.has_logged_in:
-                    first_org_name = next(iter(user_organizations.keys()))
-                    org_slug = slugify(first_org_name)
+                should_skip_onboarding = True
 
-                    log.info(
-                        "User %s belongs to organization: %s (slug: %s)",
-                        request.user.email,
-                        first_org_name,
-                        org_slug,
-                    )
-
-                    redirect_url = urljoin(
-                        settings.APP_BASE_URL, f"/dashboard/organization/{org_slug}"
-                    )
-            # first-time non-org users
-            elif not profile.has_logged_in:
-                if request.GET.get("skip_onboarding", "0") == "0":
+            if not profile.has_logged_in:
+                if should_skip_onboarding:
+                    redirect_url = signup_redirect_url
+                else:
                     params = urlencode({"next": signup_redirect_url})
                     redirect_url = f"{settings.MITOL_NEW_USER_LOGIN_URL}?{params}"
                     profile.save()
-                else:
-                    redirect_url = signup_redirect_url
 
-            if not profile.has_logged_in:
                 profile.has_logged_in = True
                 profile.save()
 

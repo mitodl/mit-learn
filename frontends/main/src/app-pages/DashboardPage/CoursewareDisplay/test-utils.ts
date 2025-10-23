@@ -13,7 +13,7 @@ import { setMockResponse } from "../../../test-utils"
 import moment from "moment"
 import {
   ContractPage,
-  CourseRunEnrollment,
+  CourseRunEnrollmentRequestV2,
   CourseWithCourseRunsSerializerV2,
   IntegrationTypeEnum,
   OrganizationPage,
@@ -56,6 +56,7 @@ const dashboardCourse: PartialFactory<DashboardCourse> = (...overrides) => {
 const setupEnrollments = (includeExpired: boolean) => {
   const completed = [
     makeCourseEnrollment({
+      b2b_contract_id: null, // Personal enrollment, not B2B
       run: { title: "C Course Ended" },
       grades: [makeGrade({ passed: true })],
     }),
@@ -63,12 +64,14 @@ const setupEnrollments = (includeExpired: boolean) => {
   const expired = includeExpired
     ? [
         makeCourseEnrollment({
+          b2b_contract_id: null, // Personal enrollment, not B2B
           run: {
             title: "A Course Ended",
             end_date: faker.date.past().toISOString(),
           },
         }),
         makeCourseEnrollment({
+          b2b_contract_id: null, // Personal enrollment, not B2B
           run: {
             title: "B Course Ended",
             end_date: faker.date.past().toISOString(),
@@ -78,12 +81,14 @@ const setupEnrollments = (includeExpired: boolean) => {
     : []
   const started = [
     makeCourseEnrollment({
+      b2b_contract_id: null, // Personal enrollment, not B2B
       run: {
         title: "A Course Started",
         start_date: faker.date.past().toISOString(),
       },
     }),
     makeCourseEnrollment({
+      b2b_contract_id: null, // Personal enrollment, not B2B
       run: {
         title: "B Course Started",
         start_date: faker.date.past().toISOString(),
@@ -92,11 +97,13 @@ const setupEnrollments = (includeExpired: boolean) => {
   ]
   const notStarted = [
     makeCourseEnrollment({
+      b2b_contract_id: null, // Personal enrollment, not B2B
       run: {
         start_date: moment().add(1, "day").toISOString(), // Sooner first
       },
     }),
     makeCourseEnrollment({
+      b2b_contract_id: null, // Personal enrollment, not B2B
       run: {
         start_date: moment().add(5, "day").toISOString(), // Later second
       },
@@ -192,14 +199,14 @@ const setupProgramsAndCourses = () => {
 const createEnrollmentsForContractRuns = (
   courses: CourseWithCourseRunsSerializerV2[],
   contractIds: number[],
-): CourseRunEnrollment[] => {
+): CourseRunEnrollmentRequestV2[] => {
   return courses.flatMap((course) =>
     course.courseruns
       .filter(
         (run) => run.b2b_contract && contractIds.includes(run.b2b_contract),
       )
-      .map((run) =>
-        factories.enrollment.courseEnrollment({
+      .map((run) => ({
+        ...factories.enrollment.courseEnrollment({
           run: {
             id: run.id,
             course: {
@@ -209,7 +216,9 @@ const createEnrollmentsForContractRuns = (
             title: run.title,
           },
         }),
-      ),
+        b2b_contract_id: run.b2b_contract ?? null,
+        b2b_organization_id: null, // Will be set by individual tests as needed
+      })),
   )
 }
 
@@ -294,6 +303,7 @@ const createTestContracts = (
     name: faker.company.name(),
     organization: orgId,
     slug: faker.lorem.slug(),
+    membership_type: faker.helpers.arrayElement(["managed", "unmanaged"]),
   }))
 }
 

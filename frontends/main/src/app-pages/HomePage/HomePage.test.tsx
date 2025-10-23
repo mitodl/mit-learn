@@ -296,7 +296,7 @@ describe("Home Page personalize section", () => {
     expect(link).toHaveAttribute(
       "href",
       routes.auth({
-        loginNext: {
+        next: {
           pathname: routes.DASHBOARD_HOME,
           searchParams: null,
         },

@@ -2952,9 +2952,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/course-search-utils@npm:3.3.2":
-  version: 3.3.2
-  resolution: "@mitodl/course-search-utils@npm:3.3.2"
+"@mitodl/course-search-utils@npm:^3.4.1":
+  version: 3.4.1
+  resolution: "@mitodl/course-search-utils@npm:3.4.1"
   dependencies:
     "@mitodl/open-api-axios": "npm:2024.9.16"
     "@remixicon/react": "npm:^4.2.0"
@@ -2974,17 +2974,17 @@ __metadata:
       optional: true
     react-router:
       optional: true
-  checksum: 10/664a99188bfe29271d986b7a3175457949a9cfe9eec7abf407a00653e56951cb3a86b67e3175c0246dd7652f59ad85ec817a929454164d369f44c98afbcd826b
+  checksum: 10/cccb99931ef96b25d788f26d9bb6b12f61e735a550127cb2eb0dd14fb8210f303c36c50d7a8af2ccb546aa82bb3051c5242fa55fb494fc17c98e1147b6c99063
   languageName: node
   linkType: hard
 
-"@mitodl/mitxonline-api-axios@npm:^2025.10.14":
-  version: 2025.10.14
-  resolution: "@mitodl/mitxonline-api-axios@npm:2025.10.14"
+"@mitodl/mitxonline-api-axios@npm:^2025.10.21":
+  version: 2025.10.21
+  resolution: "@mitodl/mitxonline-api-axios@npm:2025.10.21"
   dependencies:
     "@types/node": "npm:^20.11.19"
     axios: "npm:^1.6.5"
-  checksum: 10/c945c2330ba5e4de96e292f9f292eeee580f3953d7cfdbf7833520969f06266f8988977f1a68a877bfca9edd0892665ff304947775af61ba364edbdc55d7d0e3
+  checksum: 10/2285ecfb20946dabd8efcce5a0614c5370c2d7759e01417d799acab25d0e5964bdc7a5789989e075e23e180cc039ccfca4a0c03ee97904b7e2e1fafed193f448
   languageName: node
   linkType: hard
 
@@ -7166,7 +7166,7 @@ __metadata:
   resolution: "api@workspace:frontends/api"
   dependencies:
     "@faker-js/faker": "npm:^10.0.0"
-    "@mitodl/mitxonline-api-axios": "npm:^2025.10.14"
+    "@mitodl/mitxonline-api-axios": "npm:^2025.10.21"
     "@tanstack/react-query": "npm:^5.66.0"
     "@testing-library/react": "npm:^16.3.0"
     axios: "npm:^1.12.2"
@@ -13840,8 +13840,8 @@ __metadata:
     "@emotion/cache": "npm:^11.13.1"
     "@emotion/styled": "npm:^11.11.0"
     "@faker-js/faker": "npm:^10.0.0"
-    "@mitodl/course-search-utils": "npm:3.3.2"
-    "@mitodl/mitxonline-api-axios": "npm:^2025.10.14"
+    "@mitodl/course-search-utils": "npm:^3.4.1"
+    "@mitodl/mitxonline-api-axios": "npm:^2025.10.21"
     "@mitodl/smoot-design": "npm:^6.17.1"
     "@next/bundle-analyzer": "npm:^14.2.15"
     "@react-pdf/renderer": "npm:^4.3.0"

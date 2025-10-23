@@ -6,7 +6,7 @@
 
 import {
   ContractPage,
-  CourseRunEnrollment,
+  CourseRunEnrollmentRequestV2,
   CourseWithCourseRunsSerializerV2,
   V2Program,
   V2ProgramCollection,
@@ -74,12 +74,47 @@ const mitxonlineCourse = (
   return transformedCourse
 }
 
+const transformEnrollmentToDashboard = (
+  raw: CourseRunEnrollmentRequestV2,
+): DashboardCourseEnrollment => {
+  return {
+    id: raw.id,
+    b2b_contract_id: raw.b2b_contract_id,
+    b2b_organization_id: raw.b2b_organization_id,
+    status:
+      raw.grades.length > 0 && raw.grades[0]?.passed
+        ? EnrollmentStatus.Completed
+        : EnrollmentStatus.Enrolled,
+    mode: raw.enrollment_mode,
+    receiveEmails: raw.edx_emails_subscription ?? true,
+    certificate: {
+      uuid: raw.certificate?.uuid ?? "",
+      link:
+        raw.certificate?.link?.replace(
+          CERTIFICATE_LINK_PATTERN,
+          "/certificate/course/$1/",
+        ) ?? "",
+    },
+  }
+}
+
+const filterEnrollmentsByOrganization = (
+  enrollments: CourseRunEnrollmentRequestV2[],
+  organizationId: number,
+): CourseRunEnrollmentRequestV2[] => {
+  return enrollments.filter(
+    (enrollment) => enrollment.b2b_organization_id === organizationId,
+  )
+}
+
 const userEnrollmentsToDashboardCourses = (
-  data: CourseRunEnrollment[],
+  data: CourseRunEnrollmentRequestV2[],
 ): DashboardCourse[] => {
   return data.map((enrollment) => {
     const course = enrollment.run.course
     const run = enrollment.run
+    const dashboardEnrollment = transformEnrollmentToDashboard(enrollment)
+
     return {
       key: getKey({
         source: sources.mitxonline,
@@ -98,24 +133,9 @@ const userEnrollmentsToDashboardCourses = (
         certificateUpgradePrice: run?.products[0]?.price,
         canUpgrade: run?.is_upgradable,
         coursewareUrl: run?.courseware_url,
-        certificate: {
-          uuid: enrollment.certificate?.uuid ?? "",
-          link:
-            enrollment.certificate?.link?.replace(
-              CERTIFICATE_LINK_PATTERN,
-              "/certificate/course/$1/",
-            ) ?? "",
-        },
+        certificate: dashboardEnrollment.certificate,
       },
-      enrollment: {
-        id: enrollment.id,
-        mode: enrollment.enrollment_mode,
-        status:
-          enrollment.grades.length > 0 && enrollment.grades[0]?.passed
-            ? EnrollmentStatus.Completed
-            : EnrollmentStatus.Enrolled,
-        receiveEmails: enrollment.edx_emails_subscription ?? true,
-      },
+      enrollment: dashboardEnrollment,
     }
   })
 }
@@ -134,38 +154,9 @@ const mitxonlineOrgContract = (raw: ContractPage): DashboardContract => {
   }
 }
 
-const enrollmentToOrgDashboardEnrollment = (
-  raw: CourseRunEnrollment,
-  course: CourseWithCourseRunsSerializerV2,
-): DashboardCourseEnrollment => {
-  const run = course.courseruns.find((run) => run.id === raw.run.id)
-  return {
-    id: raw.id,
-    b2b_contract: run?.b2b_contract,
-    status:
-      raw.grades.length > 0 && raw.grades[0]?.passed
-        ? EnrollmentStatus.Completed
-        : EnrollmentStatus.Enrolled,
-    mode: raw.enrollment_mode,
-    receiveEmails: raw.edx_emails_subscription ?? true,
-    certificate: {
-      uuid: raw.certificate?.uuid ?? "",
-      link:
-        raw.certificate?.link?.replace(
-          CERTIFICATE_LINK_PATTERN,
-          "/certificate/course/$1/",
-        ) ?? "",
-    },
-  }
-}
-
 const enrollmentsToOrgDashboardEnrollments = (
-  data: CourseRunEnrollment[],
-  course: CourseWithCourseRunsSerializerV2,
-): DashboardCourseEnrollment[] =>
-  data.map((enrollment) =>
-    enrollmentToOrgDashboardEnrollment(enrollment, course),
-  )
+  data: CourseRunEnrollmentRequestV2[],
+): DashboardCourseEnrollment[] => data.map(transformEnrollmentToDashboard)
 
 const createOrgUnenrolledCourse = (
   course: CourseWithCourseRunsSerializerV2,
@@ -200,7 +191,7 @@ const createOrgUnenrolledCourse = (
 const organizationCoursesWithContracts = (raw: {
   courses: CourseWithCourseRunsSerializerV2[]
   contracts?: ContractPage[] // Make optional
-  enrollments: CourseRunEnrollment[]
+  enrollments: CourseRunEnrollmentRequestV2[]
 }): DashboardCourse[] => {
   const enrollmentsByCourseId = groupBy(
     raw.enrollments,
@@ -214,14 +205,12 @@ const organizationCoursesWithContracts = (raw: {
     const enrollments = enrollmentsByCourseId[course.id]
 
     if (enrollments?.length > 0) {
-      const transformedEnrollments = enrollmentsToOrgDashboardEnrollments(
-        enrollments,
-        course,
-      )
+      const transformedEnrollments =
+        enrollmentsToOrgDashboardEnrollments(enrollments)
       if (raw.contracts && raw.contracts.length > 0) {
         // Filter enrollments to only include those with valid contracts
         const validEnrollments = transformedEnrollments.filter((enrollment) => {
-          const courseRunContractId = enrollment.b2b_contract
+          const courseRunContractId = enrollment.b2b_contract_id
           return (
             courseRunContractId && contractIds.includes(courseRunContractId)
           )
@@ -244,7 +233,7 @@ const organizationCoursesWithContracts = (raw: {
         if (matchingEnrollment) {
           return mitxonlineCourse(
             course,
-            enrollmentToOrgDashboardEnrollment(matchingEnrollment, course),
+            transformEnrollmentToDashboard(matchingEnrollment),
           )
         }
       }
@@ -281,7 +270,7 @@ const mitxonlineProgramCollection = (
     type: DashboardResourceType.ProgramCollection,
     title: raw.title,
     description: raw.description ?? null,
-    programIds: raw.programs,
+    programs: raw.programs,
   }
 }
 
@@ -303,6 +292,7 @@ const sortDashboardCourses = (
 export {
   mitxonlineCourse,
   userEnrollmentsToDashboardCourses,
+  transformEnrollmentToDashboard,
   mitxonlineOrgContract,
   enrollmentsToOrgDashboardEnrollments,
   organizationCoursesWithContracts,
@@ -310,4 +300,5 @@ export {
   mitxonlineProgram,
   mitxonlineProgramCollection,
   sortDashboardCourses,
+  filterEnrollmentsByOrganization,
 }

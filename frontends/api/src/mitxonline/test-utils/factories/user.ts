@@ -4,7 +4,7 @@ import type {
   User,
   LegalAddress,
   UserProfile,
-  UserOrganization,
+  OrganizationPage,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { UniqueEnforcer } from "enforce-unique"
 
@@ -46,7 +46,7 @@ const userProfile = (): UserProfile => ({
   type_is_other: faker.datatype.boolean(),
 })
 
-const userOrganization = (): UserOrganization => ({
+const userOrganization = (): OrganizationPage => ({
   id: faker.number.int(),
   name: faker.company.name(),
   description: faker.company.catchPhrase(),

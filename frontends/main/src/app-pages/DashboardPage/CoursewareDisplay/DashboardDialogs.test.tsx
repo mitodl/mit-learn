@@ -37,7 +37,7 @@ describe("DashboardDialogs", () => {
 
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(
-      mitxonline.urls.enrollment.courseEnrollment(),
+      mitxonline.urls.enrollment.enrollmentsListV2(),
       enrollments,
     )
 
