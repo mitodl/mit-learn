@@ -30,6 +30,7 @@ pytestmark = pytest.mark.django_db
 User = get_user_model()
 
 
+@pytest.mark.skip_nplusone_check
 def test_list_channels(user_client):
     """Test that all channels are returned"""
     ChannelFactory.create_batch(2, published=False)  # should be filtered out
@@ -119,6 +120,7 @@ def test_partial_update_channel_featured_list_only_learning_path(
     assert response.status_code == status
 
 
+@pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize("resource_type", LearningResourceType)
 def test_create_channel_lists_only_learning_path(admin_client, resource_type):
     """Only learning_paths may be used as one of lists"""
@@ -449,6 +451,7 @@ def test_channel_configuration_is_not_editable(client, channel):
     assert channel.configuration == initial_config
 
 
+@pytest.mark.skip_nplusone_check
 def test_channel_counts_view(client):
     """Test the channel counts view returns counts for resources"""
     url = reverse(
@@ -486,6 +489,7 @@ def test_channel_counts_view(client):
             )
 
 
+@pytest.mark.skip_nplusone_check
 def test_channel_counts_view_is_cached_for_anonymous_users(client, settings):
     """Test the channel counts view is cached for anonymous users"""
     settings.CACHES["redis"] = {
@@ -508,6 +512,7 @@ def test_channel_counts_view_is_cached_for_anonymous_users(client, settings):
     assert len(response) == channel_count
 
 
+@pytest.mark.skip_nplusone_check
 def test_channel_counts_view_is_cached_for_authenticated_users(client, settings):
     """Test the channel counts view is cached for authenticated users"""
     settings.CACHES["redis"] = {

@@ -32,6 +32,7 @@ def mock_opensearch(mocker):
     )
 
 
+@pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize("is_public", [True, False])
 @pytest.mark.parametrize("is_editor", [True, False])
 @pytest.mark.parametrize("has_image", [True, False])
@@ -135,6 +136,7 @@ def test_learning_path_endpoint_create(  # pylint: disable=too-many-arguments  #
         assert resp.data.get("description") == resp.data.get("description")
 
 
+@pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize("is_public", [True, False])
 @pytest.mark.parametrize("is_editor", [True, False])
 @pytest.mark.parametrize("update_topics", [True, False])
@@ -175,6 +177,7 @@ def test_learning_path_endpoint_patch(client, update_topics, is_public, is_edito
         )
 
 
+@pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize("is_editor", [True, False])
 def test_learning_path_items_endpoint_create_item(client, user, is_editor):
     """Test lr_learningpathitems_api endpoint for creating a LearningPath item"""
@@ -232,6 +235,7 @@ def test_learning_path_items_endpoint_create_item_bad_data(client, user):
     }
 
 
+@pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize(
     ("is_editor", "position"),
     [[True, 0], [True, 2], [False, 1]],  # noqa: PT007
@@ -301,6 +305,7 @@ def test_learning_path_items_endpoint_update_items_wrong_list(client, user):
     assert resp.status_code == 404
 
 
+@pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize("num_items", [2, 3])
 @pytest.mark.parametrize("is_editor", [True, False])
 def test_learning_path_items_endpoint_delete_items(client, user, is_editor, num_items):
@@ -334,6 +339,7 @@ def test_learning_path_items_endpoint_delete_items(client, user, is_editor, num_
         assert item.position == (old_position - 1 if is_editor else old_position)
 
 
+@pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize("is_editor", [True, False])
 def test_learning_path_endpoint_delete(client, user, is_editor):
     """Test learningpath endpoint for deleting a LearningPath"""
@@ -414,6 +420,7 @@ def test_get_resource_learning_paths(user_client, user, is_editor):
     assert response_data == expected
 
 
+@pytest.mark.skip_nplusone_check
 def test_set_learning_path_relationships(client, staff_user):
     """Test the learning_paths endpoint for setting multiple userlist relationships"""
     course = factories.CourseFactory.create()
@@ -440,6 +447,7 @@ def test_set_learning_path_relationships(client, staff_user):
     ).exists()
 
 
+@pytest.mark.skip_nplusone_check
 def test_adding_to_learning_path_not_effect_existing_membership(client, staff_user):
     """
     Given L1 (existing parent), L2 (new parent), and R (resource),

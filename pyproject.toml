@@ -114,6 +114,7 @@ wrapt = "^1.14.1"
 youtube-transcript-api = "^1.0.0"
 pypdfium2 = "^4.30.0"
 pyarrow = "^21.0.0"
+django-zeal = "^2.0.4"
 
 
 
