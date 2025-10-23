@@ -26,7 +26,7 @@ type MetadataAsyncProps = {
  * which is heavy handed for metadata generation errors.
  *
  * Axios error cannot be serialized as they contain function values and circular references.
- * These result in "Functions cannot be passed directly to Client Components" errors.
+ * These result in "Functions cannot be passed directly to Client Components" errors (in production build).
  *
  * Instead, we catch the error and return the fallback of default metadata.
  *
