@@ -801,7 +801,7 @@ QDRANT_SPARSE_MODEL = get_string(
 
 QDRANT_CHUNK_SIZE = get_int(
     name="QDRANT_CHUNK_SIZE",
-    default=100,
+    default=10,
 )
 
 QDRANT_ENCODER = get_string(
