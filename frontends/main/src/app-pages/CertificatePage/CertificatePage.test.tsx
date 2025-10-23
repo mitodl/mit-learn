@@ -45,6 +45,9 @@ describe("CertificatePage", () => {
       certificate.certificate_page.signatory_items[0].title_2,
     )
     await screen.findAllByText(
+      certificate.certificate_page.signatory_items[0].title_3,
+    )
+    await screen.findAllByText(
       certificate.certificate_page.signatory_items[0].organization,
     )
     await screen.findAllByText(
