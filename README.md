@@ -288,11 +288,13 @@ KEYCLOAK_DISCOVERY_URL=http://kc.ol.local:8066/realms/ol-local/.well-known/openi
 KEYCLOAK_REALM_NAME=ol-local
 ```
 
-Then, in Learn, set:
+Then, in Learn, set these values:
 
 ```env
+# MIT Learn, shared.local.env (ensure not overwritten in backend/frontend env)
+MITX_ONLINE_BASE_URL=http://api.open.odl.local:8065/mitxonline
+
 # MIT Learn, backend.local.env
-MITX_ONLINE_BASE_URL=http://mitxonline.odl.local:8013/
 MITX_ONLINE_COURSES_API_URL=http://mitxonline.odl.local:8013/api/v2/courses/
 MITX_ONLINE_PROGRAMS_API_URL=http://mitxonline.odl.local:8013/api/v2/programs/
 ```
