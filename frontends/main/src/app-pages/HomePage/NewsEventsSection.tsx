@@ -110,7 +110,6 @@ const EventCard = styled(Card)`
   gap: 16px;
   flex: 1 0 0;
   align-self: stretch;
-  justify-content: space-between;
   overflow: visible;
   padding: 16px;
 `
@@ -142,7 +141,8 @@ const EventMonth = styled.p`
   ${{ ...theme.typography.subtitle3 }}
 `
 
-const EventTitle = styled.p`
+const EventTitle = styled(Link)`
+  flex-grow: 1;
   color: ${theme.custom.colors.darkGray2};
   ${{ ...theme.typography.subtitle1 }}
   margin: 0;
@@ -238,9 +238,9 @@ const NewsEventsSection: React.FC = () => {
             />
           </EventMonth>
         </EventDate>
-        <Link href={item.url} data-card-link>
-          <EventTitle>{item.title}</EventTitle>
-        </Link>
+        <EventTitle href={item.url} data-card-link>
+          {item.title}
+        </EventTitle>
         <Chevron />
       </Card.Content>
     </EventCard>

@@ -437,6 +437,16 @@ const CertificateDoc = ({
                       {signatory.title_2}
                     </Text>
                   )}
+                  {signatory.title_3 && (
+                    <Text
+                      style={{
+                        ...typography.body1,
+                        color: colors.silverGrayDark,
+                      }}
+                    >
+                      {signatory.title_3}
+                    </Text>
+                  )}
                   {signatory.organization && (
                     <Text
                       style={{

@@ -18,6 +18,12 @@ app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)  # pragma: no cover
 
 app.conf.task_routes = {
     "vector_search.tasks.generate_embeddings": {"queue": "embeddings"},
+    "vector_search.tasks.embed_run_content_files": {"queue": "embeddings"},
+    "vector_search.tasks.remove_run_content_files": {"queue": "embeddings"},
+    "vector_search.tasks.remove_embeddings": {"queue": "embeddings"},
+    "vector_search.tasks.embed_learning_resources_by_id": {"queue": "embeddings"},
+    "vector_search.tasks.embed_new_learning_resources": {"queue": "embeddings"},
+    "vector_search.tasks.embed_new_content_files": {"queue": "embeddings"},
     "learning_resources.tasks.get_content_tasks": {"queue": "edx_content"},
     "learning_resources.tasks.get_content_files": {"queue": "edx_content"},
     "learning_resources.tasks.import_all_xpro_files": {"queue": "edx_content"},
