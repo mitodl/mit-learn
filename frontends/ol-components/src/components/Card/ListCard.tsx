@@ -22,6 +22,7 @@ export const Body = styled.div`
   margin: 24px;
   ${theme.breakpoints.down("md")} {
     margin: 12px;
+    min-width: 190px;
   }
 
   display: flex;

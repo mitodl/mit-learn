@@ -167,7 +167,7 @@ describe("Learning Resource List Card", () => {
 
     setup({ resource })
 
-    screen.getByText("Certificate")
+    expect(screen.getAllByText("Certificate").length).toEqual(2)
   })
 
   test("Displays certificate type", () => {
@@ -239,6 +239,7 @@ describe("Learning Resource List Card", () => {
 
     test('Free course with paid certificate option displays the certificate price and "Free"', () => {
       const resource = factories.learningResources.resource({
+        resource_type: ResourceTypeEnum.Course,
         certification: true,
         free: true,
         resource_prices: [
@@ -248,12 +249,14 @@ describe("Learning Resource List Card", () => {
       })
       setup({ resource })
       screen.getByText("Certificate")
+      screen.getByText(resource.certification_type.name)
       screen.getByText(": $49")
       screen.getByText("Free")
     })
 
     test('Free course with paid certificate option range displays the certificate price range and "Free". Prices are sorted correctly', () => {
       const resource = factories.learningResources.resource({
+        resource_type: ResourceTypeEnum.Program,
         certification: true,
         free: true,
         resource_prices: [
@@ -263,7 +266,10 @@ describe("Learning Resource List Card", () => {
         ],
       })
       setup({ resource })
+
       screen.getByText("Certificate")
+      screen.getByText(resource.certification_type.name)
+
       screen.getByText(": $49 – $99")
       screen.getByText("Free")
     })
