@@ -314,7 +314,7 @@ const DashboardPage: React.FC<{
   const orgsEnabled = useFeatureFlagEnabled(FeatureFlags.OrganizationDashboard)
   const { data: mitxOnlineUser, isLoading: isLoadingMitxOnlineUser } = useQuery(
     {
-      ...mitxUserQueries.me({}),
+      ...mitxUserQueries.me(),
     },
   )
   const { data: contracts, isLoading: isLoadingContracts } = useQuery(
