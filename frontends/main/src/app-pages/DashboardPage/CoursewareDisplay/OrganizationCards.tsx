@@ -115,10 +115,10 @@ const OrganizationContracts: React.FC<OrganizationContractsProps> = ({
         ? orgContracts?.map((contract) => (
             <ContractCardInner key={contract.id}>
               <CardRootStyled theme={theme} screenSize="mobile">
-                {cardContent(contract.name, orgSlug)}
+                {cardContent(contract.name, org.slug)}
               </CardRootStyled>
               <CardRootStyled theme={theme} screenSize="desktop">
-                {cardContent(contract.name, orgSlug)}
+                {cardContent(contract.name, org.slug)}
               </CardRootStyled>
             </ContractCardInner>
           ))
