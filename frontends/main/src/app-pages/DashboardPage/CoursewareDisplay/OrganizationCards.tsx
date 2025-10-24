@@ -8,6 +8,7 @@ import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { contractQueries } from "api/mitxonline-hooks/contracts"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { organizationView } from "@/common/urls"
+import { OrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
 
 const Wrapper = styled.div(({ theme }) => ({
   display: "flex",
@@ -67,24 +68,18 @@ const ContractCardContent = styled(Stack)({
   width: "100%",
 })
 
-interface ProgramDisplayProps {
-  orgId: number
-  orgName: string
-  orgLogo: string
-  orgSlug: string
+interface OrganizationContractsProps {
+  org: OrganizationPage
 }
 
-const OrganizationContracts: React.FC<ProgramDisplayProps> = ({
-  orgId,
-  orgName,
-  orgLogo,
-  orgSlug,
+const OrganizationContracts: React.FC<OrganizationContractsProps> = ({
+  org,
 }) => {
   const { data: contracts, isLoading } = useQuery(
     contractQueries.contractsList(),
   )
   const orgContracts = contracts?.filter(
-    (contract) => contract.organization === orgId,
+    (contract) => contract.organization === org.id,
   )
   const cardContent = (contractName: string, orgSlug: string) => (
     <ContractCardContent direction="row">
@@ -99,10 +94,10 @@ const OrganizationContracts: React.FC<ProgramDisplayProps> = ({
   )
   return (
     <ContractCard>
-      <Title key={orgId}>
+      <Title key={org.id}>
         <ImageContainer>
           <Image
-            src={orgLogo ?? graduateLogo}
+            src={org.logo ?? graduateLogo}
             alt=""
             fill
             style={{ objectFit: "contain" }}
@@ -111,7 +106,7 @@ const OrganizationContracts: React.FC<ProgramDisplayProps> = ({
         <Typography variant="body2">
           {"As a member of "}
           <Typography variant="subtitle2" component="span">
-            {orgName}
+            {org.name}
           </Typography>
           {" you have access to:"}
         </Typography>
@@ -141,13 +136,7 @@ const OrganizationCards = () => {
       mitxOnlineUser.data.b2b_organizations.length > 0 ? (
         <Wrapper>
           {mitxOnlineUser.data.b2b_organizations.map((org) => (
-            <OrganizationContracts
-              key={org.id}
-              orgId={org.id}
-              orgName={org.name}
-              orgLogo={org.logo}
-              orgSlug={org.slug}
-            />
+            <OrganizationContracts key={org.id} org={org} />
           ))}
         </Wrapper>
       ) : null}
