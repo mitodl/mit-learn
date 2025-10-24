@@ -29,11 +29,6 @@ const Wrapper = styled.div(({ theme }) => ({
   },
 }))
 
-const CardRootStyled = styled(DashboardCardRoot)({
-  borderRadius: "8px",
-  boxShadow: "0px 1px 6px 0px rgba(3, 21, 45, 0.05)",
-})
-
 const ContractCard = styled.div({
   display: "flex",
   flexDirection: "column",
@@ -41,8 +36,25 @@ const ContractCard = styled.div({
   gap: "16px",
 })
 
-const ContractCardInner = styled.div({
+const CardRootStyled = styled(DashboardCardRoot)({
+  display: "flex",
+  flexDirection: "column",
+  padding: 0,
+  gap: 0,
   width: "100%",
+  borderRadius: "8px",
+  boxShadow: "0px 1px 6px 0px rgba(3, 21, 45, 0.05)",
+})
+
+const CardContent = styled(Stack)({
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  padding: "16px",
+  width: "100%",
+  ":not(:last-child)": {
+    borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
+  },
 })
 
 const ImageContainer = styled.div({
@@ -62,12 +74,6 @@ const Title = styled.div(({ theme }) => ({
   },
 }))
 
-const ContractCardContent = styled(Stack)({
-  justifyContent: "space-between",
-  alignItems: "center",
-  width: "100%",
-})
-
 interface OrganizationContractsProps {
   org: OrganizationPage
 }
@@ -81,17 +87,20 @@ const OrganizationContracts: React.FC<OrganizationContractsProps> = ({
   const orgContracts = contracts?.filter(
     (contract) => contract.organization === org.id,
   )
-  const cardContent = (contractName: string, orgSlug: string) => (
-    <ContractCardContent direction="row">
-      <Typography variant="subtitle2">{contractName}</Typography>
-      <ButtonLink
-        size="small"
-        href={organizationView(orgSlug.replace("org-", ""))}
-      >
-        Continue
-      </ButtonLink>
-    </ContractCardContent>
-  )
+  const contractContent =
+    contracts?.length && !isLoading
+      ? orgContracts?.map((contract) => (
+          <CardContent key={contract.id} direction="row">
+            <Typography variant="subtitle2">{contract.name}</Typography>
+            <ButtonLink
+              size="small"
+              href={organizationView(org.slug.replace("org-", ""))}
+            >
+              Continue
+            </ButtonLink>
+          </CardContent>
+        ))
+      : null
   return (
     <ContractCard>
       <Title key={org.id}>
@@ -111,18 +120,8 @@ const OrganizationContracts: React.FC<OrganizationContractsProps> = ({
           {" you have access to:"}
         </Typography>
       </Title>
-      {contracts?.length && !isLoading
-        ? orgContracts?.map((contract) => (
-            <ContractCardInner key={contract.id}>
-              <CardRootStyled theme={theme} screenSize="mobile">
-                {cardContent(contract.name, org.slug)}
-              </CardRootStyled>
-              <CardRootStyled theme={theme} screenSize="desktop">
-                {cardContent(contract.name, org.slug)}
-              </CardRootStyled>
-            </ContractCardInner>
-          ))
-        : null}
+      <CardRootStyled screenSize="mobile">{contractContent}</CardRootStyled>
+      <CardRootStyled screenSize="desktop">{contractContent}</CardRootStyled>
     </ContractCard>
   )
 }
