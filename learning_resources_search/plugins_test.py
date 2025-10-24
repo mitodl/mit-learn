@@ -135,12 +135,11 @@ def test_resource_similar_topics(mocker, settings):
     topics = SearchIndexPlugin().resource_similar_topics(resource)
     assert topics == [{"name": topic} for topic in expected_topics]
     mock_similar_topics.assert_called_once_with(
+        resource,
         {
             "title": resource.title,
             "description": resource.description,
             "full_description": resource.full_description,
         },
         settings.OPEN_VIDEO_MAX_TOPICS,
-        settings.OPEN_VIDEO_MIN_TERM_FREQ,
-        settings.OPEN_VIDEO_MIN_DOC_FREQ,
     )
