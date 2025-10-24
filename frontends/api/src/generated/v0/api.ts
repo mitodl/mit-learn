@@ -3532,6 +3532,37 @@ export interface PaginatedFeedSourceList {
   results: Array<FeedSource>
 }
 /**
+ *
+ * @export
+ * @interface PaginatedVideoShortList
+ */
+export interface PaginatedVideoShortList {
+  /**
+   *
+   * @type {number}
+   * @memberof PaginatedVideoShortList
+   */
+  count: number
+  /**
+   *
+   * @type {string}
+   * @memberof PaginatedVideoShortList
+   */
+  next?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof PaginatedVideoShortList
+   */
+  previous?: string | null
+  /**
+   *
+   * @type {Array<VideoShort>}
+   * @memberof PaginatedVideoShortList
+   */
+  results: Array<VideoShort>
+}
+/**
  * Similar to ChannelCreateSerializer, with read-only name
  * @export
  * @interface PatchedChannelWriteRequest
@@ -6667,6 +6698,73 @@ export const VideoResourceResourceTypeEnum = {
 export type VideoResourceResourceTypeEnum =
   (typeof VideoResourceResourceTypeEnum)[keyof typeof VideoResourceResourceTypeEnum]
 
+/**
+ * ModelSerializer for VideoShort model
+ * @export
+ * @interface VideoShort
+ */
+export interface VideoShort {
+  /**
+   *
+   * @type {string}
+   * @memberof VideoShort
+   */
+  youtube_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof VideoShort
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof VideoShort
+   */
+  description?: string
+  /**
+   *
+   * @type {string}
+   * @memberof VideoShort
+   */
+  published_at: string
+  /**
+   *
+   * @type {string}
+   * @memberof VideoShort
+   */
+  thumbnail_url: string
+  /**
+   *
+   * @type {number}
+   * @memberof VideoShort
+   */
+  thumbnail_height: number
+  /**
+   *
+   * @type {number}
+   * @memberof VideoShort
+   */
+  thumbnail_width: number
+  /**
+   *
+   * @type {string}
+   * @memberof VideoShort
+   */
+  video_url: string
+  /**
+   *
+   * @type {string}
+   * @memberof VideoShort
+   */
+  created_on: string
+  /**
+   *
+   * @type {string}
+   * @memberof VideoShort
+   */
+  updated_on: string
+}
 /**
  * WidgetInstance serializer
  * @export
@@ -12448,6 +12546,306 @@ export const VectorLearningResourcesSearchRetrieveResourceTypeEnum = {
 } as const
 export type VectorLearningResourcesSearchRetrieveResourceTypeEnum =
   (typeof VectorLearningResourcesSearchRetrieveResourceTypeEnum)[keyof typeof VectorLearningResourcesSearchRetrieveResourceTypeEnum]
+
+/**
+ * VideoShortsApi - axios parameter creator
+ * @export
+ */
+export const VideoShortsApiAxiosParamCreator = function (
+  configuration?: Configuration,
+) {
+  return {
+    /**
+     * Get a paginated list of video shorts.
+     * @param {number} [limit] Number of results to return per page.
+     * @param {number} [offset] The initial index from which to return the results.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    videoShortsList: async (
+      limit?: number,
+      offset?: number,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      const localVarPath = `/api/v0/video_shorts/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      if (limit !== undefined) {
+        localVarQueryParameter["limit"] = limit
+      }
+
+      if (offset !== undefined) {
+        localVarQueryParameter["offset"] = offset
+      }
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
+     * Retrieve a single video short.
+     * @param {string} youtube_id A unique value identifying this video short.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    videoShortsRetrieve: async (
+      youtube_id: string,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'youtube_id' is not null or undefined
+      assertParamExists("videoShortsRetrieve", "youtube_id", youtube_id)
+      const localVarPath = `/api/v0/video_shorts/{youtube_id}/`.replace(
+        `{${"youtube_id"}}`,
+        encodeURIComponent(String(youtube_id)),
+      )
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+  }
+}
+
+/**
+ * VideoShortsApi - functional programming interface
+ * @export
+ */
+export const VideoShortsApiFp = function (configuration?: Configuration) {
+  const localVarAxiosParamCreator =
+    VideoShortsApiAxiosParamCreator(configuration)
+  return {
+    /**
+     * Get a paginated list of video shorts.
+     * @param {number} [limit] Number of results to return per page.
+     * @param {number} [offset] The initial index from which to return the results.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async videoShortsList(
+      limit?: number,
+      offset?: number,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<PaginatedVideoShortList>
+    > {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.videoShortsList(
+        limit,
+        offset,
+        options,
+      )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["VideoShortsApi.videoShortsList"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
+     * Retrieve a single video short.
+     * @param {string} youtube_id A unique value identifying this video short.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async videoShortsRetrieve(
+      youtube_id: string,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<VideoShort>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.videoShortsRetrieve(youtube_id, options)
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["VideoShortsApi.videoShortsRetrieve"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+  }
+}
+
+/**
+ * VideoShortsApi - factory interface
+ * @export
+ */
+export const VideoShortsApiFactory = function (
+  configuration?: Configuration,
+  basePath?: string,
+  axios?: AxiosInstance,
+) {
+  const localVarFp = VideoShortsApiFp(configuration)
+  return {
+    /**
+     * Get a paginated list of video shorts.
+     * @param {VideoShortsApiVideoShortsListRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    videoShortsList(
+      requestParameters: VideoShortsApiVideoShortsListRequest = {},
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<PaginatedVideoShortList> {
+      return localVarFp
+        .videoShortsList(
+          requestParameters.limit,
+          requestParameters.offset,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * Retrieve a single video short.
+     * @param {VideoShortsApiVideoShortsRetrieveRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    videoShortsRetrieve(
+      requestParameters: VideoShortsApiVideoShortsRetrieveRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<VideoShort> {
+      return localVarFp
+        .videoShortsRetrieve(requestParameters.youtube_id, options)
+        .then((request) => request(axios, basePath))
+    },
+  }
+}
+
+/**
+ * Request parameters for videoShortsList operation in VideoShortsApi.
+ * @export
+ * @interface VideoShortsApiVideoShortsListRequest
+ */
+export interface VideoShortsApiVideoShortsListRequest {
+  /**
+   * Number of results to return per page.
+   * @type {number}
+   * @memberof VideoShortsApiVideoShortsList
+   */
+  readonly limit?: number
+
+  /**
+   * The initial index from which to return the results.
+   * @type {number}
+   * @memberof VideoShortsApiVideoShortsList
+   */
+  readonly offset?: number
+}
+
+/**
+ * Request parameters for videoShortsRetrieve operation in VideoShortsApi.
+ * @export
+ * @interface VideoShortsApiVideoShortsRetrieveRequest
+ */
+export interface VideoShortsApiVideoShortsRetrieveRequest {
+  /**
+   * A unique value identifying this video short.
+   * @type {string}
+   * @memberof VideoShortsApiVideoShortsRetrieve
+   */
+  readonly youtube_id: string
+}
+
+/**
+ * VideoShortsApi - object-oriented interface
+ * @export
+ * @class VideoShortsApi
+ * @extends {BaseAPI}
+ */
+export class VideoShortsApi extends BaseAPI {
+  /**
+   * Get a paginated list of video shorts.
+   * @param {VideoShortsApiVideoShortsListRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof VideoShortsApi
+   */
+  public videoShortsList(
+    requestParameters: VideoShortsApiVideoShortsListRequest = {},
+    options?: RawAxiosRequestConfig,
+  ) {
+    return VideoShortsApiFp(this.configuration)
+      .videoShortsList(
+        requestParameters.limit,
+        requestParameters.offset,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
+
+  /**
+   * Retrieve a single video short.
+   * @param {VideoShortsApiVideoShortsRetrieveRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof VideoShortsApi
+   */
+  public videoShortsRetrieve(
+    requestParameters: VideoShortsApiVideoShortsRetrieveRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return VideoShortsApiFp(this.configuration)
+      .videoShortsRetrieve(requestParameters.youtube_id, options)
+      .then((request) => request(this.axios, this.basePath))
+  }
+}
 
 /**
  * WebsitesApi - axios parameter creator
