@@ -176,7 +176,7 @@ def lti_login(
         # Render form for LTI preflight with image and course_name fields
         return render(request, "lti_preflight_form.html")
     elif request.method == "POST":
-        if request.user.is_authenticated:
+        if request.user and request.user.is_authenticated:
             cache = caches["redis"]
             cache.set(
                 f"{request.user.global_id}:lti_image",
@@ -247,14 +247,15 @@ def lti_preflight_request(request):
 
     The platform needs to know the tool OIDC endpoint.
     """
+    # TODO: This doesn't work w/ anonymous users as they don't have a global_id. Shouldn't happen in practice, so just bail
+    user = request.user
+    if user and not user.is_authenticated:
+        raise PermissionDenied
     lti_consumer = _get_lti1p3_consumer()
     # AFAICT, config_id and resource_link_id are pretty much used to get stuff out of cache later
     launch_data = Lti1p3LaunchData(
-        # TODO: This doesn't work w/ anonymous users as they don't have a global_id. Shouldn't happen in practice, so just bail
-        # user_id=request.user.global_id,
-        # user_role="admin" if request.user.is_superuser else "student",
-        user_id="test-user-id",
-        user_role="staff",
+        user_id=user.global_id,
+        user_role="admin" if user.is_superuser else "student",
         config_id=client_id,
         resource_link_id="link_id",
     )
@@ -274,36 +275,34 @@ def lti_launch_endpoint(request):
     """
     lti_consumer = _get_lti1p3_consumer()
     context = {}
+    user = request.user
+    if user and not user.is_authenticated:
+        raise PermissionDenied
 
     # Required user claim data
-    # TODO: For some reason (CORS?) we're dropping our session after the redirect from the OIDC initiation endpoint.
     # This will need to be solved.
     lti_consumer.set_user_data(
-        # user_id=request.user.global_id,
+        user_id=user.global_id,
         # Pass django user role to library
-        # role="admin" if request.user.is_superuser else "student",
-        user_id="test-user-id",
-        role="staff",
+        role="admin" if user.is_superuser else "student",
     )
-    # TODO: Not sure what this is used for but it's required. Look it up later
+    # TODO: Not sure what this is used for but it's required.
+    # It doesn't seem to affect the basic test, but we should adjust it later
     lti_consumer.set_resource_link_claim("link_id")
 
     # We can add any custom parameters we want to the launch request here.
-    if request.user.is_authenticated:
-        cache = caches["redis"]
-        image = cache.get(f"{request.user.global_id}:lti_image")
-        course = cache.get(f"{request.user.global_id}:lti_course_name")
-        if image and course:
-            lti_consumer.set_custom_parameters(
-                {
-                    "image": image,
-                    "course_name": course,
-                }
-            )
-        else:
-            print("No cached information found for current user")
+    cache = caches["redis"]
+    image = cache.get(f"{user.global_id}:lti_image")
+    course = cache.get(f"{request.user.global_id}:lti_course_name")
+    if image and course:
+        lti_consumer.set_custom_parameters(
+            {
+                "image": image,
+                "course_name": course,
+            }
+        )
     else:
-        print("No authenticated user found")
+        print("No cached information found for current user")
 
     payload = request.POST if request.method == "POST" else request.GET
     context.update(
