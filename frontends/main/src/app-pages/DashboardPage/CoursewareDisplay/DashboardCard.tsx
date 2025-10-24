@@ -540,4 +540,8 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   )
 }
 
-export { DashboardCard, getDefaultContextMenuItems }
+export {
+  DashboardCard,
+  CardRoot as DashboardCardRoot,
+  getDefaultContextMenuItems,
+}

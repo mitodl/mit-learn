@@ -30,6 +30,7 @@ const Wrapper = styled.div(({ theme }) => ({
     padding: "0",
   },
 }))
+
 const DashboardCardStyled = styled(DashboardCard)({
   borderRadius: "8px",
   boxShadow: "0px 1px 6px 0px rgba(3, 21, 45, 0.05)",

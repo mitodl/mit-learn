@@ -208,7 +208,14 @@ describe("HomeContent", () => {
     "Shows enrollments if and only if feature flag is enabled",
     async ({ enrollmentsEnabled }) => {
       setupAPIs()
-      mockedUseFeatureFlagEnabled.mockReturnValue(enrollmentsEnabled)
+      mockedUseFeatureFlagEnabled.mockImplementation((flag) => {
+        if (flag === "enrollment-dashboard") return enrollmentsEnabled
+        if (flag === "mitlearn-organization-dashboard") return false // Disable org cards to avoid image issues
+        return false
+      })
+
+      // Mock empty contracts and organizations to avoid org cards rendering
+      setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
 
       if (enrollmentsEnabled) {
         const enrollments = Array.from({ length: 3 }, () =>
