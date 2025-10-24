@@ -22,12 +22,12 @@ PERCOLATE_INDEX_TYPE = "percolator"
 CURRENT_INDEX = "current_index"
 REINDEXING_INDEX = "reindexing_index"
 BOTH_INDEXES = "all_indexes"
+COMBINED_INDEX = "combined_index"
 
 LEARNING_RESOURCE = "learning_resource"
 
 
-HYBRID_INDEX_TYPE = "hybrid_prototype_index"
-HYBRID_CONTENT_FILES_TYPE = "hybrid_content_files"
+HYBRID_INDEX_TYPE = "hybrid_prototype"
 
 class IndexestoUpdate(Enum):
     """
