@@ -1,7 +1,7 @@
 import React from "react"
 import type { Metadata } from "next"
 import HomePage from "@/app-pages/HomePage/HomePage"
-import { getMetadataAsync } from "@/common/metadata"
+import { getMetadataAsync, safeGenerateMetadata } from "@/common/metadata"
 import { HydrationBoundary } from "@tanstack/react-query"
 import {
   learningResourceQueries,
@@ -17,9 +17,11 @@ import { prefetch } from "api/ssr/prefetch"
 export async function generateMetadata({
   searchParams,
 }: PageProps<"/">): Promise<Metadata> {
-  return await getMetadataAsync({
-    title: "Learn with MIT",
-    searchParams,
+  return safeGenerateMetadata(async () => {
+    return await getMetadataAsync({
+      title: "Learn with MIT",
+      searchParams,
+    })
   })
 }
 
@@ -30,12 +32,12 @@ export async function generateMetadata({
  * suspense boundary. This ostensibly leads to a faster response, since the
  * server can render the rest of the homepage at build time.
  *
- * But... We ache the result on CDN anyway, so it's essentially pre-build for
+ * But... We cache the result on CDN anyway, so it's essentially pre-build for
  * most requests, anyway.
  */
 export const dynamic = "force-dynamic"
 
-const Page: React.FC<PageProps<"/">> = async () => {
+const PageComponent: React.FC<PageProps<"/">> = async (_props) => {
   const { dehydratedState } = await prefetch([
     // Featured Courses carousel "All"
     learningResourceQueries.featured({
@@ -98,4 +100,4 @@ const Page: React.FC<PageProps<"/">> = async () => {
   )
 }
 
-export default Page
+export default PageComponent

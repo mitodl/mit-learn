@@ -2,10 +2,12 @@ import {
   canonicalResourceDrawerUrl,
   RESOURCE_DRAWER_PARAMS,
 } from "@/common/urls"
-import { learningResourcesApi } from "api/clients"
+import type { AxiosError } from "axios"
 import type { Metadata } from "next"
 import * as Sentry from "@sentry/nextjs"
-import handleNotFound from "./handleNotFound"
+import { learningResourceQueries } from "api/hooks/learningResources"
+import { getServerQueryClient } from "api/ssr/serverQueryClient"
+import { notFound } from "next/navigation"
 
 const DEFAULT_OG_IMAGE = "/images/learn-og-image.jpg"
 
@@ -17,6 +19,33 @@ type MetadataAsyncProps = {
   searchParams?: Promise<{ [key: string]: string | string[] | undefined }>
   social?: boolean
 } & Metadata
+
+/**
+ * Wraps the metadata generation function in a try/catch block. Uncaught or
+ * rethrown errors in generateMetadata result in showing the fallback error page,
+ * which is heavy handed for metadata generation errors.
+ *
+ * Axios error cannot be serialized as they contain function values and circular references.
+ * These result in "Functions cannot be passed directly to Client Components" errors (in production build).
+ *
+ * Instead, we catch the error and return the fallback of default metadata.
+ *
+ * If the error is a 404, we show the not found page.
+ */
+export async function safeGenerateMetadata(
+  fn: () => Promise<Metadata>,
+): Promise<Metadata> {
+  try {
+    return await fn()
+  } catch (error: unknown) {
+    if ((error as AxiosError)?.response?.status === 404) {
+      return notFound()
+    }
+    console.error("Error fetching page metadata", error)
+    Sentry.captureException(error)
+    return await standardizeMetadata()
+  }
+}
 
 /*
  * Fetch metadata for the current page.
@@ -40,27 +69,17 @@ export const getMetadataAsync = async ({
     ? Number(learningResourceIds[0])
     : Number(learningResourceIds)
   const alts = alternates ?? {}
-  if (learningResourceId) {
-    try {
-      const { data } = await handleNotFound(
-        learningResourcesApi.learningResourcesRetrieve({
-          id: learningResourceId,
-        }),
-      )
 
-      title = data?.title
-      description = data?.description?.replace(/<\/[^>]+(>|$)/g, "") ?? ""
-      image = data?.image?.url || image
-      imageAlt = image === data?.image?.url ? imageAlt : data?.image?.alt || ""
-      alts.canonical = canonicalResourceDrawerUrl(learningResourceId)
-    } catch (error) {
-      Sentry.captureException(error)
-      console.error(
-        "Error fetching learning resource for page metadata",
-        learningResourceId,
-        error,
-      )
-    }
+  if (learningResourceId) {
+    const queryClient = getServerQueryClient()
+    const data = await queryClient.fetchQuery(
+      learningResourceQueries.detail(learningResourceId),
+    )
+    title = data?.title
+    description = data?.description?.replace(/<\/[^>]+(>|$)/g, "") ?? ""
+    image = data?.image?.url || image
+    imageAlt = image === data?.image?.url ? imageAlt : data?.image?.alt || ""
+    alts.canonical = canonicalResourceDrawerUrl(learningResourceId)
   }
 
   return standardizeMetadata({
@@ -87,7 +106,7 @@ export const standardizeMetadata = ({
   imageAlt,
   social = true,
   ...otherMeta
-}: MetadataProps): Metadata => {
+}: MetadataProps = {}): Metadata => {
   title = `${title} | ${process.env.NEXT_PUBLIC_SITE_NAME}`
   const socialMetadata = social
     ? {

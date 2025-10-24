@@ -5,7 +5,6 @@
   "sideEffects": false,
   "exports": {
     ".": "./src/generated/v1/api.ts",
-    "./clients": "./src/clients.ts",
     "./v0": "./src/generated/v0/api.ts",
     "./v1": "./src/generated/v1/api.ts",
     "./hooks/*": "./src/hooks/*/index.ts",
@@ -13,7 +12,6 @@
     "./ssr/*": "./src/ssr/*.ts",
     "./test-utils/factories": "./src/test-utils/factories/index.ts",
     "./test-utils": "./src/test-utils/index.ts",
-    "./mitxonline": "./src/mitxonline/index.ts",
     "./mitxonline-hooks/*": "./src/mitxonline/hooks/*/index.ts",
     "./mitxonline-test-utils": "./src/mitxonline/test-utils/index.ts"
   },

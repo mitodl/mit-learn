@@ -6,9 +6,8 @@ import { certificateQueries } from "api/mitxonline-hooks/certificates"
 import { HydrationBoundary } from "@tanstack/react-query"
 import { isInEnum } from "@/common/utils"
 import { notFound } from "next/navigation"
-import { standardizeMetadata } from "@/common/metadata"
-import { courseCertificatesApi, programCertificatesApi } from "api/mitxonline"
-import * as Sentry from "@sentry/nextjs"
+import { safeGenerateMetadata, standardizeMetadata } from "@/common/metadata"
+import { getServerQueryClient } from "api/ssr/serverQueryClient"
 
 const { NEXT_PUBLIC_ORIGIN } = process.env
 
@@ -22,13 +21,17 @@ export async function generateMetadata({
 }: PageProps<"/certificate/[certificateType]/[uuid]">): Promise<Metadata> {
   const { certificateType, uuid } = await params
 
-  let title, displayType, userName
+  return safeGenerateMetadata(async () => {
+    let title, displayType, userName
 
-  try {
+    const queryClient = getServerQueryClient()
+
     if (certificateType === CertificateType.Course) {
-      const { data } = await courseCertificatesApi.courseCertificatesRetrieve({
-        cert_uuid: uuid,
-      })
+      const data = await queryClient.fetchQuery(
+        certificateQueries.courseCertificatesRetrieve({
+          cert_uuid: uuid,
+        }),
+      )
 
       title = data.course_run.course.title
 
@@ -36,10 +39,10 @@ export async function generateMetadata({
 
       userName = data?.user?.name
     } else {
-      const { data } = await programCertificatesApi.programCertificatesRetrieve(
-        {
+      const data = await queryClient.fetchQuery(
+        certificateQueries.programCertificatesRetrieve({
           cert_uuid: uuid,
-        },
+        }),
       )
 
       title = data.program.title
@@ -48,19 +51,11 @@ export async function generateMetadata({
 
       userName = data.user.name
     }
-  } catch (error) {
-    Sentry.captureException(error)
-    console.error("Error fetching certificate for metadata", {
-      certificateType,
-      uuid,
-      error,
-    })
-    return standardizeMetadata({})
-  }
 
-  return standardizeMetadata({
-    title: `${userName}'s ${displayType}`,
-    description: `${userName} has successfully completed the Universal Artificial Intelligence ${displayType}: ${title}`,
+    return standardizeMetadata({
+      title: `${userName}'s ${displayType}`,
+      description: `${userName} has successfully completed the Universal Artificial Intelligence ${displayType}: ${title}`,
+    })
   })
 }
 
