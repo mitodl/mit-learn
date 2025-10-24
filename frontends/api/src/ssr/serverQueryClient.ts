@@ -5,11 +5,6 @@ import { AxiosError } from "axios"
 const MAX_RETRIES = 3
 const NO_RETRY_CODES = [400, 401, 403, 404, 405, 409, 422]
 
-export interface TaggedQueryClient extends QueryClient {
-  __requestId?: string
-  __createdAt?: number
-}
-
 /**
  * Get or create a server-side QueryClient for consistent retry behavior.
  * The server QueryClient should be used for all server-side API calls.
@@ -73,10 +68,7 @@ const getServerQueryClient = cache(() => {
         retryDelay: 1000,
       },
     },
-  }) as TaggedQueryClient
-
-  queryClient.__requestId = Math.random().toString(36).substring(2, 12)
-  queryClient.__createdAt = Date.now()
+  })
 
   return queryClient
 })
