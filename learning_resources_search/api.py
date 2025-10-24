@@ -858,6 +858,7 @@ def get_similar_topics_qdrant(value_doc: dict, num_topics: int) -> list[str]:
             input_query=embeddings,
             num_resources=num_topics,
             collection_name=TOPICS_COLLECTION_NAME,
+            score_threshold=0.2,
         )
     ]
 
@@ -942,7 +943,10 @@ def get_similar_resources(
 
 
 def _qdrant_similar_results(
-    input_query, num_resources=6, collection_name=RESOURCES_COLLECTION_NAME
+    input_query,
+    num_resources=6,
+    collection_name=RESOURCES_COLLECTION_NAME,
+    score_threshold=0,
 ):
     """
     Get similar resources from qdrant
@@ -971,6 +975,7 @@ def _qdrant_similar_results(
             query=input_query,
             limit=num_resources,
             using=encoder.model_short_name(),
+            score_threshold=score_threshold,
         ).points
     ]
 
