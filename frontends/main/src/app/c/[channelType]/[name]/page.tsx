@@ -74,10 +74,8 @@ const Page: React.FC<PageProps<"/c/[channelType]/[name]">> = async ({
     )
   } catch (error) {
     console.error("Error fetching channel", error)
-    if (error instanceof AxiosError) {
-      if (error.status === 404) {
-        notFound()
-      }
+    if (error instanceof AxiosError && error.status === 404) {
+      notFound()
     }
     throw error
   }
