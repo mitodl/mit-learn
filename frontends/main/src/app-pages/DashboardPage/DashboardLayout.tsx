@@ -235,7 +235,7 @@ type TabData = {
   value: string
   href: string
   label: {
-    mobile: string
+    mobile: string | React.ReactNode
     desktop: React.ReactNode
   }
 }
