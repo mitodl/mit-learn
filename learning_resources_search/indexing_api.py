@@ -662,8 +662,7 @@ def register_model():
         deploy_model=True,
     )
 #In [11]: model_id
-#Out[49]: 'oxD38pkBhP9LJzcD5fWE'
-#Out[11]: 'UWxSwJkBGexBUUYnj1tV'
+#Out[49]: 'PQBFF5oBDk6_T5cL_Izk'
 
 
 def create_ingest_pipeline():
@@ -673,7 +672,7 @@ def create_ingest_pipeline():
         "processors": [
             {
             "text_embedding": {
-                "model_id": "oxD38pkBhP9LJzcD5fWE",
+                "model_id": "PQBFF5oBDk6_T5cL_Izk",
                 "field_map": {
                     "description": "description_embedding",
                     "title": "title_embedding"

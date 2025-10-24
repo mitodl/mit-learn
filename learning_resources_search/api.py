@@ -631,7 +631,7 @@ def add_text_query_to_search(search, text, search_params, query_type_query):
         "neural": {
             "description_embedding": {
                 "query_text": text,
-                "model_id": "oxD38pkBhP9LJzcD5fWE",
+                "model_id": "PQBFF5oBDk6_T5cL_Izk",
                 "min_score": 0.015,
             },
         }
@@ -641,7 +641,7 @@ def add_text_query_to_search(search, text, search_params, query_type_query):
         "neural": {
             "title_embedding": {
                 "query_text": text,
-                "model_id": "oxD38pkBhP9LJzcD5fWE",
+                "model_id": "PQBFF5oBDk6_T5cL_Izk",
                 "min_score": 0.015,
             },
         }
@@ -650,11 +650,12 @@ def add_text_query_to_search(search, text, search_params, query_type_query):
     search = search.extra(
         query={
             "hybrid": {
+                "pagination_depth":10,  
                 "queries": [text_query, vector_query_description, vector_query_title],
             }
         }
     )
-
+    
     return search
 
 
