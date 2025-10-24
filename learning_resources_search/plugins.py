@@ -126,6 +126,7 @@ class SearchIndexPlugin:
         }
 
         topic_names = get_similar_topics_qdrant(
+            resource,
             text_doc,
             settings.OPEN_VIDEO_MAX_TOPICS,
         )

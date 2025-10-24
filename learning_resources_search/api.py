@@ -35,7 +35,10 @@ from learning_resources_search.utils import (
     adjust_search_for_percolator,
     document_percolated_actions,
 )
-from vector_search.constants import RESOURCES_COLLECTION_NAME, TOPICS_COLLECTION_NAME
+from vector_search.constants import (
+    RESOURCES_COLLECTION_NAME,
+    TOPICS_COLLECTION_NAME,
+)
 
 log = logging.getLogger(__name__)
 
@@ -830,8 +833,11 @@ def user_subscribed_to_query(
     )
 
 
-def get_similar_topics_qdrant(value_doc: dict, num_topics: int) -> list[str]:
+def get_similar_topics_qdrant(
+    resource: LearningResource, value_doc: dict, num_topics: int
+) -> list[str]:
     from vector_search.encoders.utils import dense_encoder
+    from vector_search.utils import qdrant_client, vector_point_id
 
     """
     Get a list of similar topics based on vector similarity
@@ -846,12 +852,22 @@ def get_similar_topics_qdrant(value_doc: dict, num_topics: int) -> list[str]:
             list of topic values
     """
     encoder = dense_encoder()
+    client = qdrant_client()
+
+    response = client.retrieve(
+        collection_name=RESOURCES_COLLECTION_NAME,
+        ids=[vector_point_id(resource.readable_id)],
+        with_vectors=True,
+    )
 
     embedding_context = "\n".join(
         [value_doc[key] for key in value_doc if value_doc[key] is not None]
     )
+    if response and len(response) > 0:
+        embeddings = response[0].vector.get(encoder.model_short_name())
+    else:
+        embeddings = encoder.embed(embedding_context)
 
-    embeddings = encoder.embed(embedding_context)
     return [
         hit["name"]
         for hit in _qdrant_similar_results(

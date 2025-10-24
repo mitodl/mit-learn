@@ -32,7 +32,11 @@ from main.utils import (
     chunks,
     now_in_utc,
 )
-from vector_search.utils import embed_learning_resources, remove_qdrant_records
+from vector_search.utils import (
+    embed_learning_resources,
+    embed_topics,
+    remove_qdrant_records,
+)
 
 log = logging.getLogger(__name__)
 
@@ -362,3 +366,11 @@ def remove_run_content_files(run_id):
             for ids in chunks(content_file_ids, chunk_size=settings.QDRANT_CHUNK_SIZE)
         ]
     )
+
+
+@app.task
+def sync_topics():
+    """
+    Sync topics collection embeddings to Qdrant
+    """
+    embed_topics()
