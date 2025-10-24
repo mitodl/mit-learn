@@ -1,5 +1,6 @@
 import { faker } from "@faker-js/faker/locale/en"
 import type { ContractPage } from "@mitodl/mitxonline-api-axios/v2"
+import { makePaginatedFactory } from "ol-test-utilities"
 
 const contract = (overrides: Partial<ContractPage> = {}): ContractPage => ({
   id: faker.number.int(),
@@ -15,13 +16,6 @@ const contract = (overrides: Partial<ContractPage> = {}): ContractPage => ({
   ...overrides,
 })
 
-const contracts = (
-  options: { count?: number } = {},
-): { results: ContractPage[] } => {
-  const { count = 3 } = options
-  return {
-    results: Array.from({ length: count }, () => contract()),
-  }
-}
+const contracts = makePaginatedFactory(contract)
 
 export { contract, contracts }
