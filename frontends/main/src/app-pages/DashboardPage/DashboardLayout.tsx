@@ -219,7 +219,7 @@ const TabLabels = {
 
 const DesktopTabLabel: React.FC<{
   icon: React.ReactNode
-  text?: string
+  text?: string | React.ReactNode
 }> = ({ text, icon }) => {
   return (
     <TabContainer>
@@ -252,7 +252,14 @@ const getTabData = (
           )
           const contract =
             orgContracts && orgContracts.length > 0 ? orgContracts[0] : null
-          const label = `${org.name} - ${contract?.name}`
+          const label = (
+            <>
+              <Typography variant="subtitle2" component="span">
+                {org.name}
+              </Typography>
+              {` - ${contract?.name}`}
+            </>
+          )
           return {
             value: organizationView(org.slug.replace("org-", "")),
             href: organizationView(org.slug.replace("org-", "")),
