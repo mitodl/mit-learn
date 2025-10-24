@@ -1,7 +1,6 @@
 from rest_framework import serializers
 
 from learning_resources.etl.constants import ETLSource
-from video_shorts.serializers import YouTubeMetadataSerializer
 
 
 class ContentFileWebHookRequestSerializer(serializers.Serializer):
@@ -21,7 +20,7 @@ class VideoShortWebhookRequestSerializer(serializers.Serializer):
     """
 
     video_id = serializers.CharField()
-    youtube_metadata = YouTubeMetadataSerializer()
+    youtube_metadata = serializers.DictField()
     source = serializers.CharField(required=False, allow_blank=True)
 
 

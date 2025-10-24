@@ -3,6 +3,7 @@
 import json
 
 import pytest
+from rest_framework.exceptions import ValidationError
 
 from video_shorts.api import upsert_video_short, walk_video_shorts_from_s3
 from video_shorts.models import VideoShort
@@ -12,15 +13,10 @@ pytestmark = [pytest.mark.django_db]
 
 def test_upsert_video_short_creates_new(settings, sample_youtube_metadata):
     """Test process_video_short creates a new VideoShort"""
-    from video_shorts.serializers import YouTubeMetadataSerializer
 
     settings.VIDEO_SHORTS_S3_PREFIX = "youtube_shorts"
 
-    # Validate the data first, as done in production code
-    serializer = YouTubeMetadataSerializer(data=sample_youtube_metadata)
-    serializer.is_valid(raise_exception=True)
-
-    video_short = upsert_video_short(serializer.validated_data)
+    video_short = upsert_video_short(sample_youtube_metadata)
 
     assert video_short.youtube_id == "k_AA4_fQIHc"
     assert video_short.title == "How far away is space?"
@@ -31,24 +27,17 @@ def test_upsert_video_short_updates_existing(settings, sample_youtube_metadata):
     """Test process_video_short updates existing VideoShort"""
     import copy
 
-    from video_shorts.serializers import YouTubeMetadataSerializer
-
     settings.VIDEO_SHORTS_S3_PREFIX = "youtube_shorts"
 
     # Create initial version
-    serializer = YouTubeMetadataSerializer(data=sample_youtube_metadata)
-    serializer.is_valid(raise_exception=True)
-    first_short = upsert_video_short(serializer.validated_data)
+    first_short = upsert_video_short(sample_youtube_metadata)
     assert VideoShort.objects.count() == 1
     original_created_on = first_short.created_on
 
-    # Update with modified data (use deepcopy to avoid mutating the fixture)
     updated_metadata = copy.deepcopy(sample_youtube_metadata)
     updated_metadata["snippet"]["title"] = "Updated Title"
-    serializer = YouTubeMetadataSerializer(data=updated_metadata)
-    serializer.is_valid(raise_exception=True)
 
-    updated_short = upsert_video_short(serializer.validated_data)
+    updated_short = upsert_video_short(updated_metadata)
 
     assert VideoShort.objects.count() == 1  # Still only one
     assert updated_short.youtube_id == first_short.youtube_id
@@ -62,10 +51,12 @@ def test_process_video_short_invalid_metadata_raises(settings):
 
     invalid_data = {
         "id": "test_id",
+        "youtube_metadata": {},
+        "source": "youtube_shorts",
         # Missing required fields like 'snippet'
     }
 
-    with pytest.raises(KeyError):
+    with pytest.raises(ValidationError):
         upsert_video_short(invalid_data)
 
 

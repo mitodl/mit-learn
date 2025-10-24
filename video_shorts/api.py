@@ -8,7 +8,7 @@ import boto3
 from django.conf import settings
 
 from video_shorts.models import VideoShort
-from video_shorts.serializers import VideoShortSerializer, YouTubeMetadataSerializer
+from video_shorts.serializers import YouTubeMetadataSerializer
 
 log = logging.getLogger(__name__)
 
@@ -37,25 +37,21 @@ def walk_video_shorts_from_s3(
 
     for short in json_objects[:limit]:
         try:
-            metadata = bucket.Object(short.key).get()
-            serializer = YouTubeMetadataSerializer(
-                data=json.loads(metadata["Body"].read().decode("utf-8"))
-            )
-            serializer.is_valid(raise_exception=True)
-            video_short = upsert_video_short(serializer.validated_data)
+            s3_object = bucket.Object(short.key).get()
+            metadata = json.loads(s3_object["Body"].read().decode("utf-8"))
+            video_short = upsert_video_short(metadata)
             yield video_short
         except Exception:
             log.exception("Error processing %s", short.key)
             continue
 
 
-def upsert_video_short(youtube_data: dict) -> VideoShort:
+def upsert_video_short(data: dict) -> VideoShort:
     """Process a video short based on Youtube metadata"""
-    youtube_id = youtube_data.get("id")
+    youtube_id = data.get("id")
     existing_video_short = VideoShort.objects.filter(youtube_id=youtube_id).first()
-    video_short_serializer = VideoShortSerializer.transform_youtube_data(
-        youtube_data,
-        video_short=existing_video_short,
+    video_short_serializer = YouTubeMetadataSerializer(
+        data=data, instance=existing_video_short
     )
     video_short_serializer.is_valid(raise_exception=True)
     return video_short_serializer.save()
