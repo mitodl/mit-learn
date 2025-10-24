@@ -8619,10 +8619,10 @@ export interface VideoShortWebhookRequestRequest {
   video_id: string
   /**
    *
-   * @type {YouTubeMetadataRequest}
+   * @type {{ [key: string]: any; }}
    * @memberof VideoShortWebhookRequestRequest
    */
-  youtube_metadata: YouTubeMetadataRequest
+  youtube_metadata: { [key: string]: any }
   /**
    *
    * @type {string}
@@ -8654,227 +8654,6 @@ export interface WebhookResponse {
    * @memberof WebhookResponse
    */
   error?: string
-}
-/**
- * Serializer for video content details
- * @export
- * @interface YouTubeContentDetailsRequest
- */
-export interface YouTubeContentDetailsRequest {
-  /**
-   *
-   * @type {string}
-   * @memberof YouTubeContentDetailsRequest
-   */
-  duration: string
-  /**
-   *
-   * @type {string}
-   * @memberof YouTubeContentDetailsRequest
-   */
-  dimension: string
-  /**
-   *
-   * @type {string}
-   * @memberof YouTubeContentDetailsRequest
-   */
-  definition: string
-  /**
-   *
-   * @type {string}
-   * @memberof YouTubeContentDetailsRequest
-   */
-  caption: string
-  /**
-   *
-   * @type {boolean}
-   * @memberof YouTubeContentDetailsRequest
-   */
-  licensed_content: boolean
-  /**
-   *
-   * @type {{ [key: string]: any; }}
-   * @memberof YouTubeContentDetailsRequest
-   */
-  content_rating: { [key: string]: any }
-  /**
-   *
-   * @type {string}
-   * @memberof YouTubeContentDetailsRequest
-   */
-  projection: string
-}
-/**
- * Serializer for Youtube API metadata for a single video.
- * @export
- * @interface YouTubeMetadataRequest
- */
-export interface YouTubeMetadataRequest {
-  /**
-   *
-   * @type {string}
-   * @memberof YouTubeMetadataRequest
-   */
-  kind: string
-  /**
-   *
-   * @type {string}
-   * @memberof YouTubeMetadataRequest
-   */
-  etag: string
-  /**
-   *
-   * @type {string}
-   * @memberof YouTubeMetadataRequest
-   */
-  id: string
-  /**
-   *
-   * @type {YouTubeSnippetRequest}
-   * @memberof YouTubeMetadataRequest
-   */
-  snippet: YouTubeSnippetRequest
-  /**
-   *
-   * @type {YouTubeContentDetailsRequest}
-   * @memberof YouTubeMetadataRequest
-   */
-  content_details?: YouTubeContentDetailsRequest
-}
-/**
- * Serializer for video snippet data
- * @export
- * @interface YouTubeSnippetRequest
- */
-export interface YouTubeSnippetRequest {
-  /**
-   *
-   * @type {string}
-   * @memberof YouTubeSnippetRequest
-   */
-  published_at: string
-  /**
-   *
-   * @type {string}
-   * @memberof YouTubeSnippetRequest
-   */
-  channel_id?: string
-  /**
-   *
-   * @type {string}
-   * @memberof YouTubeSnippetRequest
-   */
-  title: string
-  /**
-   *
-   * @type {string}
-   * @memberof YouTubeSnippetRequest
-   */
-  description?: string
-  /**
-   *
-   * @type {YouTubeThumbnailsRequest}
-   * @memberof YouTubeSnippetRequest
-   */
-  thumbnails: YouTubeThumbnailsRequest
-  /**
-   *
-   * @type {string}
-   * @memberof YouTubeSnippetRequest
-   */
-  channel_title?: string
-  /**
-   *
-   * @type {string}
-   * @memberof YouTubeSnippetRequest
-   */
-  category_id?: string
-  /**
-   *
-   * @type {string}
-   * @memberof YouTubeSnippetRequest
-   */
-  live_broadcast_content?: string
-  /**
-   *
-   * @type {string}
-   * @memberof YouTubeSnippetRequest
-   */
-  default_language?: string
-  /**
-   *
-   * @type {string}
-   * @memberof YouTubeSnippetRequest
-   */
-  default_audio_language?: string
-  /**
-   *
-   * @type {{ [key: string]: any; }}
-   * @memberof YouTubeSnippetRequest
-   */
-  localized?: { [key: string]: any }
-}
-/**
- * Serializer for individual thumbnail data
- * @export
- * @interface YouTubeThumbnailRequest
- */
-export interface YouTubeThumbnailRequest {
-  /**
-   *
-   * @type {string}
-   * @memberof YouTubeThumbnailRequest
-   */
-  url: string
-  /**
-   *
-   * @type {number}
-   * @memberof YouTubeThumbnailRequest
-   */
-  width: number
-  /**
-   *
-   * @type {number}
-   * @memberof YouTubeThumbnailRequest
-   */
-  height: number
-}
-/**
- * Serializer for thumbnails object containing multiple resolutions
- * @export
- * @interface YouTubeThumbnailsRequest
- */
-export interface YouTubeThumbnailsRequest {
-  /**
-   *
-   * @type {YouTubeThumbnailRequest}
-   * @memberof YouTubeThumbnailsRequest
-   */
-  default?: YouTubeThumbnailRequest
-  /**
-   *
-   * @type {YouTubeThumbnailRequest}
-   * @memberof YouTubeThumbnailsRequest
-   */
-  medium?: YouTubeThumbnailRequest
-  /**
-   *
-   * @type {YouTubeThumbnailRequest}
-   * @memberof YouTubeThumbnailsRequest
-   */
-  high?: YouTubeThumbnailRequest
-  /**
-   *
-   * @type {YouTubeThumbnailRequest}
-   * @memberof YouTubeThumbnailsRequest
-   */
-  standard?: YouTubeThumbnailRequest
-  /**
-   *
-   * @type {YouTubeThumbnailRequest}
-   * @memberof YouTubeThumbnailsRequest
-   */
-  maxres?: YouTubeThumbnailRequest
 }
 
 /**
@@ -30837,7 +30616,7 @@ export const WebhooksApiAxiosParamCreator = function (
     /**
      * Webhook handler for VideoShort updates
      * @param {string} video_id
-     * @param {YouTubeMetadataRequest} youtube_metadata
+     * @param {{ [key: string]: any; }} youtube_metadata
      * @param {VideoShortWebhookRequestRequest} VideoShortWebhookRequestRequest
      * @param {string} [source]
      * @param {*} [options] Override http request option.
@@ -30845,7 +30624,7 @@ export const WebhooksApiAxiosParamCreator = function (
      */
     webhooksVideoShortsCreate: async (
       video_id: string,
-      youtube_metadata: YouTubeMetadataRequest,
+      youtube_metadata: { [key: string]: any },
       VideoShortWebhookRequestRequest: VideoShortWebhookRequestRequest,
       source?: string,
       options: RawAxiosRequestConfig = {},
@@ -31002,7 +30781,7 @@ export const WebhooksApiFp = function (configuration?: Configuration) {
     /**
      * Webhook handler for VideoShort updates
      * @param {string} video_id
-     * @param {YouTubeMetadataRequest} youtube_metadata
+     * @param {{ [key: string]: any; }} youtube_metadata
      * @param {VideoShortWebhookRequestRequest} VideoShortWebhookRequestRequest
      * @param {string} [source]
      * @param {*} [options] Override http request option.
@@ -31010,7 +30789,7 @@ export const WebhooksApiFp = function (configuration?: Configuration) {
      */
     async webhooksVideoShortsCreate(
       video_id: string,
-      youtube_metadata: YouTubeMetadataRequest,
+      youtube_metadata: { [key: string]: any },
       VideoShortWebhookRequestRequest: VideoShortWebhookRequestRequest,
       source?: string,
       options?: RawAxiosRequestConfig,
@@ -31178,10 +30957,10 @@ export interface WebhooksApiWebhooksVideoShortsCreateRequest {
 
   /**
    *
-   * @type {YouTubeMetadataRequest}
+   * @type {{ [key: string]: any; }}
    * @memberof WebhooksApiWebhooksVideoShortsCreate
    */
-  readonly youtube_metadata: YouTubeMetadataRequest
+  readonly youtube_metadata: { [key: string]: any }
 
   /**
    *
