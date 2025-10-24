@@ -992,7 +992,7 @@ def get_similar_resources_qdrant(value_doc: dict, num_resources: int):
     from vector_search.utils import vector_point_id
 
     hits = _qdrant_similar_results(
-        input_query=vector_point_id(value_doc["resource_readable_id"]),
+        input_query=vector_point_id(value_doc["readable_id"]),
         num_resources=num_resources,
     )
     return (
