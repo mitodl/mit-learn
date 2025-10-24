@@ -11,7 +11,10 @@ from learning_resources.models import LearningResource
 
 
 def get_secret(data, settings):
-    payload = bytes(json.dumps(data), "utf-8")
+    if isinstance(data, str):
+        payload = data.encode("utf-8")
+    else:
+        payload = json.dumps(data).encode("utf-8")
     return hmac.new(
         settings.WEBHOOK_SECRET.encode(), payload, hashlib.sha256
     ).hexdigest()
@@ -112,11 +115,6 @@ def test_video_short_webhook_view_creates_new(
     url = reverse("webhooks:v1:video_short_webhook")
     data = {
         "video_id": "k_AA4_fQIHc",
-        "s3_paths": {
-            "content": "youtube_shorts/k_AA4_fQIHc/k_AA4_fQIHc.mp4",
-            "thumbnail": "youtube_shorts/k_AA4_fQIHc/k_AA4_fQIHc.jpg",
-            "metadata": "youtube_shorts/k_AA4_fQIHc/k_AA4_fQIHc.json",
-        },
         "youtube_metadata": sample_youtube_metadata,
         "source": "youtube_shorts",
     }
@@ -163,11 +161,6 @@ def test_video_short_webhook_view_updates_existing(
 
     data = {
         "video_id": "k_AA4_fQIHc",
-        "s3_paths": {
-            "content": "youtube_shorts/k_AA4_fQIHc/k_AA4_fQIHc.mp4",
-            "thumbnail": "youtube_shorts/k_AA4_fQIHc/k_AA4_fQIHc.jpg",
-            "metadata": "youtube_shorts/k_AA4_fQIHc/k_AA4_fQIHc.json",
-        },
         "youtube_metadata": updated_metadata,
         "source": "youtube_shorts",
     }
@@ -193,11 +186,12 @@ def test_video_short_webhook_view_updates_existing(
 def test_video_short_webhook_view_invalid_json(settings, client):
     """Test VideoShortWebhookView handles invalid JSON"""
     url = reverse("webhooks:v1:video_short_webhook")
-
+    invalid_data = "invalid json{"
     response = client.post(
         url,
-        data="invalid json{",
+        data=invalid_data,
         content_type="application/json",
+        headers={"X-MITLearn-Signature": get_secret(invalid_data, settings)},
     )
 
     assert response.status_code == 400
@@ -222,8 +216,7 @@ def test_video_short_webhook_view_missing_required_fields(settings, client):
         headers={"X-MITLearn-Signature": get_secret(data, settings)},
     )
 
-    # BadRequest exception returns as 405
-    assert response.status_code in [400, 405]
+    assert response.status_code == 400
 
 
 @pytest.mark.django_db

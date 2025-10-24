@@ -9,6 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import generics
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from learning_resources.etl.constants import ETLSource
@@ -126,10 +127,7 @@ class VideoShortWebhookView(BaseWebhookView):
         body = request.body
         log.error("Webhook body: %s", body)
         serializer = VideoShortWebhookRequestSerializer(data=json.loads(request.body))
-        if not serializer.is_valid():
-            log.error("Invalid webhook data: %s", serializer.errors)
-            msg = "Invalid data"
-            raise BadRequest(msg)
+        serializer.is_valid(raise_exception=True)
         return serializer.validated_data
 
     def post(self, request):
@@ -141,9 +139,8 @@ class VideoShortWebhookView(BaseWebhookView):
             return self.success()
         except json.JSONDecodeError:
             return HttpResponseBadRequest("Invalid JSON format")
-        except BadRequest:
-            log.exception("Bad request")
-            return HttpResponseBadRequest("Invalid request data")
+        except ValidationError:
+            raise
 
 
 class ContentFileDeleteWebhookView(ContentFileWebhookView):
