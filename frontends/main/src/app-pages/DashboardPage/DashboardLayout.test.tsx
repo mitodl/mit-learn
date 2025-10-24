@@ -102,7 +102,7 @@ describe("DashboardLayout", () => {
     ]
     const expectedMobileLabels = [
       "Home",
-      ...organizations.map((org) => org.name),
+      ...organizations.map((org) => `${org.name} - ${contracts[0].name}`),
       "My Lists",
       "Profile",
       "Settings",

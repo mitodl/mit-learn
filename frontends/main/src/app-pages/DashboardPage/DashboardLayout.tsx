@@ -252,16 +252,14 @@ const getTabData = (
           )
           const contract =
             orgContracts && orgContracts.length > 0 ? orgContracts[0] : null
+          const label = `${org.name} - ${contract?.name}`
           return {
             value: organizationView(org.slug.replace("org-", "")),
             href: organizationView(org.slug.replace("org-", "")),
             label: {
-              mobile: org.name,
+              mobile: <>{label}</>,
               desktop: (
-                <DesktopTabLabel
-                  icon={<RiBuilding2Line />}
-                  text={`${org.name} - ${contract?.name}`}
-                />
+                <DesktopTabLabel icon={<RiBuilding2Line />} text={label} />
               ),
             },
           }
