@@ -257,7 +257,7 @@ const getTabData = (
             value: organizationView(org.slug.replace("org-", "")),
             href: organizationView(org.slug.replace("org-", "")),
             label: {
-              mobile: <>{label}</>,
+              mobile: label,
               desktop: (
                 <DesktopTabLabel icon={<RiBuilding2Line />} text={label} />
               ),
