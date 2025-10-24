@@ -371,6 +371,6 @@ def remove_run_content_files(run_id):
 @app.task
 def sync_topics():
     """
-    Sync topics collection embeddings to Qdrant
+    Sync topics to the Qdrant collection
     """
     embed_topics()
