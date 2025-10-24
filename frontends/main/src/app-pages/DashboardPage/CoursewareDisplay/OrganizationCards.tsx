@@ -51,6 +51,9 @@ const CardRootStyled = styled(DashboardCardRoot)({
   width: "100%",
   borderRadius: "8px",
   boxShadow: "0px 1px 6px 0px rgba(3, 21, 45, 0.05)",
+  [theme.breakpoints.down("md")]: {
+    borderRadius: "8px !important",
+  },
 })
 
 const CardContent = styled(Stack)({
