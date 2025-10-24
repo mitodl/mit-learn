@@ -1465,9 +1465,14 @@ def test_load_video(mocker, video_exists, is_published, pass_topics):
         assert getattr(result, key) == value, f"Property {key} should equal {value}"
 
 
-def test_load_videos():
+def test_load_videos(mocker):
     """Verify that load_videos loads a list of videos"""
     assert Video.objects.count() == 0
+
+    mocker.patch(
+        "learning_resources_search.plugins.get_similar_topics_qdrant",
+        return_value=["topic1", "topic2"],
+    )
     video_resources = [video.learning_resource for video in VideoFactory.build_batch(5)]
     videos_data = [
         {
@@ -1493,6 +1498,10 @@ def test_load_playlist(mocker, playlist_exists):
         LearningResourceTopicFactory.create(name=topic["name"])
         for topic in expected_topics
     ]
+    mocker.patch(
+        "learning_resources_search.plugins.get_similar_topics_qdrant",
+        return_value=["topic1", "topic2"],
+    )
     mock_most_common_topics = mocker.patch(
         "learning_resources.etl.loaders.most_common_topics",
         return_value=expected_topics,
@@ -1905,6 +1914,10 @@ def test_course_with_unpublished_force_ingest_is_test_mode():
 
 @pytest.mark.django_db
 def test_load_articles(mocker, climate_platform):
+    mocker.patch(
+        "learning_resources_search.plugins.get_similar_topics_qdrant",
+        return_value=["topic1", "topic2"],
+    )
     articles_data = [
         {
             "title": "test",

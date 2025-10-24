@@ -128,7 +128,7 @@ def test_resource_similar_topics(mocker, settings):
     """The plugin function should return expected topics for a resource"""
     expected_topics = ["topic1", "topic2"]
     mock_similar_topics = mocker.patch(
-        "learning_resources_search.plugins.get_similar_topics",
+        "learning_resources_search.plugins.get_similar_topics_qdrant",
         return_value=expected_topics,
     )
     resource = LearningResourceFactory.create()
