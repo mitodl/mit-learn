@@ -13860,6 +13860,7 @@ __metadata:
     "@types/slick-carousel": "npm:^1"
     api: "workspace:*"
     async_hooks: "npm:^1.0.0"
+    axios: "npm:^1.12.2"
     classnames: "npm:^2.5.1"
     eslint: "npm:8.57.1"
     eslint-config-next: "npm:^14.2.7"

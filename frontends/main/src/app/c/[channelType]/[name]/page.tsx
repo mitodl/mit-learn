@@ -1,16 +1,15 @@
 import React from "react"
+import { AxiosError } from "axios"
 import ChannelPage from "@/app-pages/ChannelPage/ChannelPage"
 import { getServerQueryClient } from "api/ssr/serverQueryClient"
-import { ChannelTypeEnum, UnitChannel } from "api/v0"
+import { ChannelTypeEnum } from "api/v0"
 import {
   FeaturedListOfferedByEnum,
   LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LRSearchRequest,
-  PaginatedLearningResourceOfferorDetailList,
   LearningResourceOfferorDetail,
 } from "api"
 import { getMetadataAsync, safeGenerateMetadata } from "@/common/metadata"
-import { HydrationBoundary } from "@tanstack/react-query"
-import { prefetch } from "api/ssr/prefetch"
+import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
 import {
   learningResourceQueries,
   offerorQueries,
@@ -58,33 +57,39 @@ const Page: React.FC<PageProps<"/c/[channelType]/[name]">> = async ({
 
   const search = await searchParams
 
-  const { queryClient } = await prefetch([
-    offerorQueries.list({}),
-    channelType === ChannelTypeEnum.Unit &&
-      learningResourceQueries.featured({
-        limit: 12,
-        offered_by: [name as FeaturedListOfferedByEnum],
-      }),
-    channelType === ChannelTypeEnum.Unit &&
-      testimonialsQueries.list({ offerors: [name] }),
-    channelQueries.detailByType(channelType, name),
-  ])
+  const queryClient = getServerQueryClient()
 
-  const channel = queryClient.getQueryData<UnitChannel>(
-    channelQueries.detailByType(channelType, name).queryKey,
+  queryClient.prefetchQuery(
+    learningResourceQueries.featured({
+      limit: 12,
+      offered_by: [name as FeaturedListOfferedByEnum],
+    }),
   )
+  queryClient.prefetchQuery(testimonialsQueries.list({ offerors: [name] }))
+
+  let channel
+  try {
+    channel = await queryClient.fetchQuery(
+      channelQueries.detailByType(channelType, name),
+    )
+  } catch (error) {
+    console.error("Error fetching channel", error)
+    if (error instanceof AxiosError) {
+      if (error.status === 404) {
+        notFound()
+      }
+    }
+    throw error
+  }
+
   const offerors =
-    queryClient
-      .getQueryData<PaginatedLearningResourceOfferorDetailList>(
-        offerorQueries.list({}).queryKey,
-      )
-      ?.results.reduce(
-        (memo, offeror) => ({
-          ...memo,
-          [offeror.code]: offeror,
-        }),
-        [],
-      ) ?? {}
+    (await queryClient.fetchQuery(offerorQueries.list({})))?.results.reduce(
+      (memo, offeror) => ({
+        ...memo,
+        [offeror.code]: offeror,
+      }),
+      [],
+    ) ?? {}
 
   const constantSearchParams = getConstantSearchParams(channel?.search_filter)
 
@@ -104,13 +109,12 @@ const Page: React.FC<PageProps<"/c/[channelType]/[name]">> = async ({
     page: Number(search.page ?? 1),
   })
 
-  const { dehydratedState } = await prefetch(
-    [learningResourceQueries.search(searchRequest as LRSearchRequest)],
-    queryClient,
+  queryClient.prefetchQuery(
+    learningResourceQueries.search(searchRequest as LRSearchRequest),
   )
 
   return (
-    <HydrationBoundary state={dehydratedState}>
+    <HydrationBoundary state={dehydrate(queryClient)}>
       <ChannelPage />
     </HydrationBoundary>
   )
