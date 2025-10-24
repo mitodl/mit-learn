@@ -46,11 +46,10 @@ class RequirementTreeBuilder implements V2ProgramRequirement {
   constructor({ id, data }: NodeConstructorOpts = {}) {
     this.id = id ?? uniqueNodeId.enforce(faker.number.int)
     this.data = {
-      // @ts-expect-error OpenAPI spec is incorret
+      // @ts-expect-error Root node is not actually exposed in the API
       node_type: "program_root",
       course: null,
       required_program: null,
-      // @ts-expect-error OpenAPI spec is incorret
       program: uniqueProgramId.enforce(faker.number.int),
       title: null,
       operator: null,
@@ -74,7 +73,6 @@ class RequirementTreeBuilder implements V2ProgramRequirement {
   }: Pick<Partial<V2ProgramRequirement["data"]>, "course"> = {}) {
     const data: V2ProgramRequirementData = {
       node_type: V2ProgramRequirementDataNodeTypeEnum.Course,
-      // @ts-expect-error OpenAPI spec is incorret
       course: course ?? uniqueProgramId.enforce(faker.number.int),
       program: this.#root.data.program,
       required_program: null,
@@ -104,7 +102,6 @@ class RequirementTreeBuilder implements V2ProgramRequirement {
       ...opts,
       node_type: V2ProgramRequirementDataNodeTypeEnum.Operator,
       course: null,
-      // @ts-expect-error OpenAPI spec is incorret
       required_program: null,
       program: this.#root.data.program,
       title: null,
@@ -118,7 +115,6 @@ class RequirementTreeBuilder implements V2ProgramRequirement {
   addProgram(opts: { program?: number; title?: string } = {}) {
     const programId = opts.program ?? uniqueProgramId.enforce(faker.number.int)
     const data: V2ProgramRequirementData = {
-      // @ts-expect-error OpenAPI spec is incorret
       node_type: "program",
       course: null,
       program: this.#root.data.program,
