@@ -44,6 +44,13 @@ const ContractCardInner = styled.div({
   width: "100%",
 })
 
+const ImageContainer = styled.div({
+  position: "relative",
+  width: "32px",
+  height: "32px",
+  flexShrink: 0,
+})
+
 const Title = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
@@ -93,7 +100,14 @@ const OrganizationContracts: React.FC<ProgramDisplayProps> = ({
   return (
     <ContractCard>
       <Title key={orgId}>
-        <Image height={32} src={orgLogo ?? graduateLogo} alt="" />
+        <ImageContainer>
+          <Image
+            src={orgLogo ?? graduateLogo}
+            alt=""
+            fill
+            style={{ objectFit: "contain" }}
+          />
+        </ImageContainer>
         <Typography variant="body2">
           {"As a member of "}
           <Typography variant="subtitle2" component="span">
