@@ -17,9 +17,12 @@ from learning_resources.tasks import ingest_canvas_course
 from learning_resources.utils import (
     resource_delete_actions,
 )
+from main.utils import clear_search_cache
+from video_shorts.api import upsert_video_short
 from webhooks.decorators import require_signature
 from webhooks.serializers import (
     ContentFileWebHookRequestSerializer,
+    VideoShortWebhookRequestSerializer,
     WebhookResponseSerializer,
 )
 
@@ -84,6 +87,63 @@ class ContentFileWebhookView(BaseWebhookView):
             return self.success()
         except json.JSONDecodeError:
             return HttpResponseBadRequest("Invalid JSON format")
+
+
+@extend_schema_view(
+    post=extend_schema(
+        parameters=[VideoShortWebhookRequestSerializer()],
+        responses=WebhookResponseSerializer(),
+    ),
+)
+class VideoShortWebhookView(BaseWebhookView):
+    """
+    Webhook handler for VideoShort updates
+    """
+
+    permission_classes = []
+    authentication_classes = []
+    serializer_class = VideoShortWebhookRequestSerializer
+
+    def success(self, extra_data=None):
+        """
+        Return a success response with optional extra data
+        """
+        if not extra_data:
+            extra_data = {}
+        response = WebhookResponseSerializer(
+            data={"status": "success", "message": "Webhook received", **extra_data}
+        )
+        if response.is_valid():
+            return Response(response.data)
+        else:
+            log.error("Invalid response data: %s", response.errors)
+            return HttpResponseBadRequest("Invalid response data")
+
+    def get_data(self, request):
+        """
+        Get data from the serializer
+        """
+        body = request.body
+        log.error("Webhook body: %s", body)
+        serializer = VideoShortWebhookRequestSerializer(data=json.loads(request.body))
+        if not serializer.is_valid():
+            log.error("Invalid webhook data: %s", serializer.errors)
+            msg = "Invalid data"
+            raise BadRequest(msg)
+        return serializer.validated_data
+
+    def post(self, request):
+        try:
+            data = self.get_data(request)
+            youtube_data = data.get("youtube_metadata")
+            upsert_video_short(youtube_data)
+            clear_search_cache()
+            return self.success()
+        except json.JSONDecodeError:
+            return HttpResponseBadRequest("Invalid JSON format")
+        except BadRequest:
+            log.exception("Bad request")
+            return HttpResponseBadRequest("Invalid request data")
 
 
 class ContentFileDeleteWebhookView(ContentFileWebhookView):

@@ -134,6 +134,7 @@ INSTALLED_APPS = (
     "testimonials",
     "data_fixtures",
     "vector_search",
+    "video_shorts",
     "mitol.scim.apps.ScimApp",
     "health_check",
     "health_check.cache",
@@ -866,3 +867,8 @@ OPENTELEMETRY_ENDPOINT = get_string("OPENTELEMETRY_ENDPOINT", None)
 OPENTELEMETRY_TRACES_BATCH_SIZE = get_int("OPENTELEMETRY_TRACES_BATCH_SIZE", 512)
 OPENTELEMETRY_EXPORT_TIMEOUT_MS = get_int("OPENTELEMETRY_EXPORT_TIMEOUT_MS", 5000)
 CANVAS_TUTORBOT_FOLDER = get_string("CANVAS_TUTORBOT_FOLDER", "web_resources/ai/tutor/")
+
+
+# Video Shorts settings
+VIDEO_SHORTS_S3_PREFIX = get_string("VIDEO_SHORTS_S3_PREFIX", "shorts/")
+VIDEO_SHORTS_COUNT = get_int("VIDEO_SHORTS_COUNT", 12)

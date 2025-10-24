@@ -1,0 +1,197 @@
+"""Tests for video_shorts API functions"""
+
+import json
+
+import pytest
+
+from video_shorts.api import upsert_video_short, walk_video_shorts_from_s3
+from video_shorts.models import VideoShort
+
+pytestmark = [pytest.mark.django_db]
+
+
+def test_upsert_video_short_creates_new(settings, sample_youtube_metadata):
+    """Test process_video_short creates a new VideoShort"""
+    from video_shorts.serializers import YouTubeMetadataSerializer
+
+    settings.VIDEO_SHORTS_S3_PREFIX = "youtube_shorts"
+
+    # Validate the data first, as done in production code
+    serializer = YouTubeMetadataSerializer(data=sample_youtube_metadata)
+    serializer.is_valid(raise_exception=True)
+
+    video_short = upsert_video_short(serializer.validated_data)
+
+    assert video_short.youtube_id == "k_AA4_fQIHc"
+    assert video_short.title == "How far away is space?"
+    assert VideoShort.objects.count() == 1
+
+
+def test_upsert_video_short_updates_existing(settings, sample_youtube_metadata):
+    """Test process_video_short updates existing VideoShort"""
+    import copy
+
+    from video_shorts.serializers import YouTubeMetadataSerializer
+
+    settings.VIDEO_SHORTS_S3_PREFIX = "youtube_shorts"
+
+    # Create initial version
+    serializer = YouTubeMetadataSerializer(data=sample_youtube_metadata)
+    serializer.is_valid(raise_exception=True)
+    first_short = upsert_video_short(serializer.validated_data)
+    assert VideoShort.objects.count() == 1
+    original_created_on = first_short.created_on
+
+    # Update with modified data (use deepcopy to avoid mutating the fixture)
+    updated_metadata = copy.deepcopy(sample_youtube_metadata)
+    updated_metadata["snippet"]["title"] = "Updated Title"
+    serializer = YouTubeMetadataSerializer(data=updated_metadata)
+    serializer.is_valid(raise_exception=True)
+
+    updated_short = upsert_video_short(serializer.validated_data)
+
+    assert VideoShort.objects.count() == 1  # Still only one
+    assert updated_short.youtube_id == first_short.youtube_id
+    assert updated_short.title == "Updated Title"
+    assert updated_short.created_on == original_created_on  # Not changed
+
+
+def test_process_video_short_invalid_metadata_raises(settings):
+    """Test process_video_short raises ValidationError for invalid data"""
+    settings.VIDEO_SHORTS_S3_PREFIX = "youtube_shorts"
+
+    invalid_data = {
+        "id": "test_id",
+        # Missing required fields like 'snippet'
+    }
+
+    with pytest.raises(KeyError):
+        upsert_video_short(invalid_data)
+
+
+def test_walk_video_shorts_from_s3(mock_s3_bucket, settings, sample_youtube_metadata):
+    """Test walk_video_shorts_from_s3 processes S3 objects"""
+    settings.VIDEO_SHORTS_S3_PREFIX = "youtube_shorts_test"
+    settings.VIDEO_SHORTS_COUNT = 3
+
+    # Upload test files with different timestamps
+    metadata_json = json.dumps(sample_youtube_metadata)
+    for i in range(2):
+        mock_s3_bucket.put_object(
+            Key=f"youtube_shorts_test/video{i}/video{i}.json",
+            Body=metadata_json.encode("utf-8"),
+        )
+    mock_s3_bucket.put_object(
+        Key="youtube_shorts_test/video3/video3.mp4",  # Not a .json file
+        Body=b"fake video data",
+    )
+
+    # Execute
+    shorts = list(walk_video_shorts_from_s3())
+
+    # Should have processed 2 .json files
+    assert len(shorts) == 2
+    assert all(isinstance(short, VideoShort) for short in shorts)
+
+
+def test_walk_video_shorts_from_s3_respects_count_limit(
+    mock_s3_bucket, settings, sample_youtube_metadata
+):
+    """Test walk_video_shorts_from_s3 respects VIDEO_SHORTS_COUNT setting"""
+    settings.VIDEO_SHORTS_COUNT = 2  # Limit to 2
+
+    # Upload 5 JSON files
+    metadata_json = json.dumps(sample_youtube_metadata)
+    for i in range(5):
+        mock_s3_bucket.put_object(
+            Key=f"youtube_shorts/video{i}/video{i}.json",
+            Body=metadata_json.encode("utf-8"),
+        )
+
+    # Execute
+    shorts = list(walk_video_shorts_from_s3())
+
+    # Should stop at the limit
+    assert len(shorts) == 2
+
+
+def test_walk_video_shorts_from_s3_orders_by_last_modified(
+    mock_s3_bucket, sample_youtube_metadata
+):
+    """Test walk_video_shorts_from_s3 processes newest files first"""
+    import copy
+    import time
+
+    # Upload older file first
+    older_metadata = copy.deepcopy(sample_youtube_metadata)
+    older_metadata["id"] = "old_video"
+    mock_s3_bucket.put_object(
+        Key="youtube_shorts/old/old.json",
+        Body=json.dumps(older_metadata).encode("utf-8"),
+    )
+
+    # Small delay to ensure different timestamps
+    time.sleep(0.1)
+
+    # Upload newer file
+    newer_metadata = copy.deepcopy(sample_youtube_metadata)
+    newer_metadata["id"] = "new_video"
+    mock_s3_bucket.put_object(
+        Key="youtube_shorts/new/new.json",
+        Body=json.dumps(newer_metadata).encode("utf-8"),
+    )
+
+    # Execute
+    shorts = list(walk_video_shorts_from_s3())
+
+    # Newer file should be processed first
+    assert shorts[0].youtube_id == "new_video"
+    assert shorts[1].youtube_id == "old_video"
+
+
+def test_walk_video_shorts_from_s3_handles_errors_gracefully(
+    mock_s3_bucket, sample_youtube_metadata
+):
+    """Test walk_video_shorts_from_s3 continues on error"""
+    # Upload good file with valid metadata
+    mock_s3_bucket.put_object(
+        Key="youtube_shorts/good/good.json",
+        Body=json.dumps(sample_youtube_metadata).encode("utf-8"),
+    )
+
+    # Upload bad file with invalid JSON that will cause an error
+    mock_s3_bucket.put_object(
+        Key="youtube_shorts/bad/bad.json",
+        Body=b"invalid json{",
+    )
+
+    # Execute - should not raise
+    shorts = list(walk_video_shorts_from_s3())
+
+    # Should have processed only the good one
+    assert len(shorts) == 1
+
+
+def test_walk_video_shorts_from_s3_filters_non_json_files(
+    mock_s3_bucket, sample_youtube_metadata
+):
+    """Test walk_video_shorts_from_s3 only processes .json files"""
+    # Upload files of different types
+    mock_s3_bucket.put_object(
+        Key="youtube_shorts/video/video.json",
+        Body=json.dumps(sample_youtube_metadata).encode("utf-8"),
+    )
+    mock_s3_bucket.put_object(
+        Key="youtube_shorts/video/video.mp4",
+        Body=b"fake video data",
+    )
+    mock_s3_bucket.put_object(
+        Key="youtube_shorts/video/video.jpg",
+        Body=b"fake image data",
+    )
+
+    # Execute
+    shorts = list(walk_video_shorts_from_s3())
+
+    # Should only process the .json file
+    assert len(shorts) == 1
