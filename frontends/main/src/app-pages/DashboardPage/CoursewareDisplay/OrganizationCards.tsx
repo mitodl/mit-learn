@@ -21,11 +21,12 @@ const Wrapper = styled.div(({ theme }) => ({
   boxShadow: "0px 4px 8px 0px rgba(19, 20, 21, 0.08)",
   borderRadius: "8px",
   [theme.breakpoints.down("md")]: {
-    border: `1px solid ${theme.custom.colors.lightGray2}`,
-    backgroundColor: "rgba(243, 244, 248, 0.60);", // TODO: use theme color
-    marginTop: "16px",
-    padding: "0",
-    gap: "8px",
+    backgroundColor: "transparent",
+    padding: 0,
+    border: "none",
+    borderRadius: "0",
+    boxShadow: "none",
+    gap: "24px",
   },
 }))
 
@@ -34,13 +35,19 @@ const ContractCard = styled.div({
   flexDirection: "column",
   alignItems: "flex-start",
   gap: "16px",
+  [theme.breakpoints.down("md")]: {
+    boxShadow: "0px 4px 8px 0px rgba(19, 20, 21, 0.08)",
+    border: `1px solid ${theme.custom.colors.lightGray2}`,
+    borderBottom: `1px solid ${theme.custom.colors.red}`,
+    borderRadius: "8px !important",
+  },
 })
 
 const CardRootStyled = styled(DashboardCardRoot)({
   display: "flex",
   flexDirection: "column",
   padding: 0,
-  gap: 0,
+  gap: "0px !important",
   width: "100%",
   borderRadius: "8px",
   boxShadow: "0px 1px 6px 0px rgba(3, 21, 45, 0.05)",
@@ -52,7 +59,7 @@ const CardContent = styled(Stack)({
   alignItems: "center",
   padding: "16px",
   width: "100%",
-  ":not(:last-child)": {
+  "&:not(:last-child)": {
     borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
   },
 })
