@@ -1121,6 +1121,7 @@ def test_featured_view_filter(client, offeror_featured_lists, parameter):
                 assert run["resource_prices"] == []
 
 
+@pytest.mark.skip_nplusone_check
 def test_similar_resources_endpoint_does_not_return_self(mocker, client):
     """Test similar learning_resources endpoint does not return initial resource"""
     from learning_resources.models import LearningResource
@@ -1156,6 +1157,7 @@ def test_similar_resources_endpoint_does_not_return_self(mocker, client):
     assert similar_for not in response_ids
 
 
+@pytest.mark.skip_nplusone_check
 def test_similar_resources_endpoint_only_returns_published(mocker, client):
     """Test similar learning_resources endpoint only returns published items"""
     from learning_resources.models import LearningResource
@@ -1199,6 +1201,7 @@ def test_similar_resources_endpoint_only_returns_published(mocker, client):
     assert len(response_ids) == 1
 
 
+@pytest.mark.skip_nplusone_check
 def test_similar_resources_endpoint_ignores_opensearch_published(mocker, client):
     """Test similar learning_resources ignores the published attribute from opensearch"""
     from learning_resources.models import LearningResource
@@ -1271,6 +1274,7 @@ def test_vector_similar_resources_endpoint_does_not_return_self(mocker, client):
     assert similar_for not in response_ids
 
 
+@pytest.mark.skip_nplusone_check
 def test_vector_similar_resources_endpoint_only_returns_published(mocker, client):
     """Test vector based similar resources endpoint only returns published items"""
     from learning_resources.models import LearningResource
