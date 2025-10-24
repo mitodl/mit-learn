@@ -133,17 +133,14 @@ const OrganizationContracts: React.FC<ProgramDisplayProps> = ({
 }
 
 const OrganizationCards = () => {
-  const { data: mitxOnlineUser, isLoading } = useQuery({
-    ...mitxUserQueries.me(),
-  })
+  const mitxOnlineUser = useQuery(mitxUserQueries.me())
 
   return (
     <>
-      {mitxOnlineUser &&
-      mitxOnlineUser.b2b_organizations.length > 0 &&
-      !isLoading ? (
+      {mitxOnlineUser.data &&
+      mitxOnlineUser.data.b2b_organizations.length > 0 ? (
         <Wrapper>
-          {mitxOnlineUser.b2b_organizations.map((org) => (
+          {mitxOnlineUser.data.b2b_organizations.map((org) => (
             <OrganizationContracts
               key={org.id}
               orgId={org.id}
