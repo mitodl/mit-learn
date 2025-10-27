@@ -167,7 +167,7 @@ export { Link, linkStyles } from "./components/Link/Link"
 export type { LinkProps } from "./components/Link/Link"
 
 export { pxToRem } from "./components/ThemeProvider/typography"
-export { MITLearnGlobalStyles } from "./components/ThemeProvider/MITLearnGlobalStyles"
+export * from "./components/ThemeProvider/MITLearnGlobalStyles"
 
 export { AppRouterCacheProvider as NextJsAppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter"
 
