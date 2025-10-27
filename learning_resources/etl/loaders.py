@@ -166,8 +166,6 @@ def load_run_dependent_values(
     else:
         resource.next_start_date = None
     resource.save()
-    if resource.published:
-        resource_upserted_actions(resource, percolate=False)
     return ResourceNextRunConfig(
         next_start_date=resource.next_start_date,
         prices=resource.prices,

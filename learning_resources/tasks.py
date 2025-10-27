@@ -33,6 +33,7 @@ from learning_resources.utils import (
     html_to_markdown,
     load_course_blocklist,
     resource_unpublished_actions,
+    resource_upserted_actions,
 )
 from learning_resources_search.constants import COURSE_TYPE
 from learning_resources_search.exceptions import RetryError
@@ -79,6 +80,8 @@ def update_next_start_date_and_prices():
     resources = LearningResource.objects.filter(next_start_date__lt=timezone.now())
     for resource in resources:
         load_run_dependent_values(resource)
+        if resource.published:
+            resource_upserted_actions(resource, percolate=False)
     clear_search_cache()
     return len(resources)
 

@@ -1733,11 +1733,8 @@ def test_load_course_percolation(
 
 
 @pytest.mark.parametrize("certification", [True, False])
-def test_load_run_dependent_values(mocker, certification):
+def test_load_run_dependent_values(certification):
     """Prices and availability should be correctly assigned based on run data"""
-    mock_upsert = mocker.patch(
-        "learning_resources.etl.loaders.resource_upserted_actions"
-    )
     course = LearningResourceFactory.create(
         is_course=True, certification=certification, runs=[]
     )
@@ -1774,7 +1771,6 @@ def test_load_run_dependent_values(mocker, certification):
         max_weekly_hours=19,
     )
     result = load_run_dependent_values(course)
-    mock_upsert.assert_called_once_with(course, percolate=False)
     assert result.next_start_date == course.next_start_date == closest_date
     assert result.prices == course.prices == ([] if not certification else run.prices)
     assert (
