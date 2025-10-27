@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.47.3
+--------------
+
+- upgrade sharp (#2642)
+- dashboard home org cards (#2630)
+
 Version 0.47.1 (Released October 27, 2025)
 --------------
 
