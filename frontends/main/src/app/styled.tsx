@@ -13,7 +13,7 @@ export const PageWrapper = styled.div(({ theme }) => ({
   flexDirection: "column",
   height: "calc(100vh - 72px)",
   marginTop: "72px",
-  [theme.breakpoints.down("sm")]: {
+  [theme.breakpoints.down("md")]: {
     marginTop: "60px",
     height: "calc(100vh - 60px)",
   },
