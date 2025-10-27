@@ -6,7 +6,10 @@ import Link from "next/link"
 import React, { ReactElement } from "react"
 import { RiCloseLargeLine } from "@remixicon/react"
 import { ActionButton } from "@mitodl/smoot-design"
-import { HEADER_HEIGHT, HEADER_HEIGHT_MD } from "ol-components"
+import {
+  HEADER_HEIGHT,
+  HEADER_HEIGHT_MD,
+} from "../ThemeProvider/MITLearnGlobalStyles"
 
 const DrawerContent = styled.div(({ theme }) => ({
   paddingTop: HEADER_HEIGHT,
