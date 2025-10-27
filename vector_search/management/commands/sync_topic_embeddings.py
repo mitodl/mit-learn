@@ -1,4 +1,4 @@
-"""Management command to index content"""
+"""Management command to update or create the topics collection in Qdrant"""
 
 from django.core.management.base import BaseCommand, CommandError
 
@@ -7,7 +7,7 @@ from vector_search.tasks import sync_topics
 
 
 class Command(BaseCommand):
-    """Generates embeddings in Qdrant"""
+    """Syncs embeddings for topics in Qdrant"""
 
     help = "update or create the topics collection in Qdrant"
 
