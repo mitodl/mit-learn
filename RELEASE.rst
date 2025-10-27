@@ -1,6 +1,26 @@
 Release Notes
 =============
 
+Version 0.47.0
+--------------
+
+- Fix python unit test (#2629)
+- Program Summary (#2590)
+- add mitxonline networking directions (#2594)
+- Fixes flaky test by fixing resource type (#2628)
+- fix(deps): update django-health-check digest to 53f9bdc (#2606)
+- adding more embedding related tasks to embedding queue (#2622)
+- [pre-commit.ci] pre-commit autoupdate (#2613)
+- Hardcoded versions for apisix, keycloak, postgres (#2626)
+- Render signatory third titles (#2616)
+- Logo and button link to dashboard (#2620)
+- Layout fixes (#2623)
+- Add zeal to pytest (#2605)
+- fix program collections in org dashboards (#2625)
+- Remove usage of 'next' url cookie (#2621)
+- Disable all scheduled tasks with a setting (#2595)
+- caching result of dense_encoder method (#2610)
+
 Version 0.46.0 (Released October 22, 2025)
 --------------
 
