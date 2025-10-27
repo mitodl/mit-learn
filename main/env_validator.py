@@ -4,7 +4,6 @@ Environment variable validation utilities for detecting configuration discrepanc
 
 import logging
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +41,7 @@ warning. This indicates that we are likely missing a required local-specific set
 class EnvValidator:
     """Validates environment variable configurations and reports discrepancies."""
 
-    def __init__(self, project_root: Optional[str] = None):
+    def __init__(self, project_root: str | None = None):
         """
         Initialize the environment validator.
 
