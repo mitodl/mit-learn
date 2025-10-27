@@ -100,7 +100,7 @@ const DashboardGridItem = styled.div({
   },
 })
 
-const ProfileSidebar = styled(Card)(({ theme }) => ({
+const ProfileSidebar = styled(Card)({
   position: "sticky",
   top: `${HEADER_HEIGHT + PADDING_TOP}px`,
   display: "flex",
@@ -109,7 +109,7 @@ const ProfileSidebar = styled(Card)(({ theme }) => ({
   width: "300px",
   boxShadow: "-4px 4px 0px 0px #A31F34",
   transform: "translateX(4px)", // keep solid shadow from bleeding into page margins
-}))
+})
 
 const ProfilePhotoContainer = styled.div(({ theme }) => ({
   display: "flex",
