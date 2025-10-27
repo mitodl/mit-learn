@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+Version 0.47.2
+--------------
+
+- dashboard home org cards (#2630)
+
 Version 0.47.1 (Released October 27, 2025)
 --------------
 
