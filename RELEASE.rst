@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.47.1
+Version 0.47.1 (Released October 27, 2025)
 --------------
 
 - Fixes top margin at <md breakpoint (#2636)
