@@ -10,9 +10,9 @@ const pageCss = (theme: Theme) => css`
   html {
     font-family: ${theme.typography.body1.fontFamily};
     color: ${theme.typography.body1.color};
-    scroll-padding-top: ${HEADER_HEIGHT};
+    scroll-padding-top: ${HEADER_HEIGHT}px;
     ${theme.breakpoints.down("md")} {
-      scroll-padding-top: ${HEADER_HEIGHT_MD};
+      scroll-padding-top: ${HEADER_HEIGHT_MD}px;
     }
   }
 
