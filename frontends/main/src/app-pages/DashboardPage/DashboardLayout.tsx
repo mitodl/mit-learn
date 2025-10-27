@@ -19,6 +19,7 @@ import {
   TabList,
   Typography,
   styled,
+  HEADER_HEIGHT,
 } from "ol-components"
 import { TabButtonLink, TabButtonList } from "@mitodl/smoot-design"
 import Link from "next/link"
@@ -101,7 +102,7 @@ const DashboardGridItem = styled.div({
 
 const ProfileSidebar = styled(Card)(({ theme }) => ({
   position: "sticky",
-  top: `${theme.custom.dimensions.headerHeight + PADDING_TOP}px`,
+  top: `${HEADER_HEIGHT + PADDING_TOP}px`,
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-start",
