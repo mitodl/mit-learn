@@ -13,6 +13,32 @@ def strip_comment(val):
     return val.split("#", 1)[0].strip()
 
 
+"""
+This attempts to enforce the following rules around env files:
+- Base env files (i.e. backend.env) will contain default settings
+that are safe for all development environments
+- Local env files (i.e. backend.local.env) may contain overrides and
+settings which cannot have a sensible default (i.e. developer-specific API keys).
+It should contain everything in the example file as well
+as anything intentionally overridden
+- Example env files list only settings which cannot have a sensible default.
+It should contain the minimum required set of settings values
+necessary to get the application running.
+
+
+Behavior we want to validate:
+1) If a setting is in the example file or local file, but
+not the base file it might be missing a default and we emit a warning.
+1a) If a setting is in the example file or local file but not the
+base because there's no sensible default (i.e. values are specific to a user or local)
+we allow a "# local-required" comment on example file to suppress the warning
+2) If a setting is in the local file and the base file, but the values
+differ we emit a warning. This is to keep users from accidentally overriding defaults
+3) If a setting is in the example file but not the local file, we emit a
+warning. This indicates that we are likely missing a required local-specific setting
+"""
+
+
 class EnvValidator:
     """Validates environment variable configurations and reports discrepancies."""
 
