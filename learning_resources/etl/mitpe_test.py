@@ -241,7 +241,7 @@ def test_transform(mock_fetch_data, mitpe_offeror_and_topics):
 
 
 @pytest.mark.django_db
-def test_transform__course_no_run_ids(mock_fetch_data):
+def test_transform__course_no_run_ids(mock_fetch_data, mitpe_offeror_and_topics):
     """Resources with no run IDs should not be published"""
     extracted = mitpe.extract()
     assert len(extracted) == 3
