@@ -13,7 +13,7 @@ const DrawerContent = styled.div(({ theme }) => ({
   height: "100%",
   background: theme.custom.colors.white,
   borderRight: `1px solid ${theme.custom.colors.lightGray2}`,
-  [theme.breakpoints.down("sm")]: {
+  [theme.breakpoints.down("md")]: {
     paddingTop: theme.custom.dimensions.headerHeightSm,
   },
 }))
