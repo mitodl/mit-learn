@@ -5,7 +5,6 @@ import { Stack, Typography, styled, theme } from "ol-components"
 import { useQuery } from "@tanstack/react-query"
 import { DashboardCardRoot } from "./DashboardCard"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
-import { contractQueries } from "api/mitxonline-hooks/contracts"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { organizationView } from "@/common/urls"
 import { OrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
@@ -91,26 +90,19 @@ interface OrganizationContractsProps {
 const OrganizationContracts: React.FC<OrganizationContractsProps> = ({
   org,
 }) => {
-  const { data: contracts, isLoading } = useQuery(
-    contractQueries.contractsList(),
-  )
-  const orgContracts = contracts?.filter(
-    (contract) => contract.organization === org.id,
-  )
-  const contractContent =
-    contracts?.length && !isLoading
-      ? orgContracts?.map((contract) => (
-          <CardContent key={contract.id} direction="row">
-            <Typography variant="subtitle2">{contract.name}</Typography>
-            <ButtonLink
-              size="small"
-              href={organizationView(org.slug.replace("org-", ""))}
-            >
-              Continue
-            </ButtonLink>
-          </CardContent>
-        ))
-      : null
+  const contractContent = org.contracts?.length
+    ? org.contracts?.map((contract) => (
+        <CardContent key={contract.id} direction="row">
+          <Typography variant="subtitle2">{contract.name}</Typography>
+          <ButtonLink
+            size="small"
+            href={organizationView(org.slug.replace("org-", ""))}
+          >
+            Continue
+          </ButtonLink>
+        </CardContent>
+      ))
+    : null
   return (
     <ContractCard>
       <Title key={org.id}>

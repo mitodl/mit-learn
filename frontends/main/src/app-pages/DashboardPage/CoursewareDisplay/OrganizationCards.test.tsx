@@ -6,10 +6,7 @@ import {
   urls as mitxOnlineUrls,
 } from "api/mitxonline-test-utils"
 import { OrganizationCards } from "./OrganizationCards"
-import type {
-  OrganizationPage,
-  ContractPage,
-} from "@mitodl/mitxonline-api-axios/v2"
+import type { OrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 
 jest.mock("posthog-js/react")
@@ -22,53 +19,38 @@ describe("OrganizationCards", () => {
 
   type SetupOptions = {
     organizations?: OrganizationPage[]
-    contracts?: ContractPage[]
     isUserLoading?: boolean
   }
 
-  const createOrganizations = (count: number): OrganizationPage[] => {
+  const createOrganizations = (
+    count: number,
+    withContracts: boolean = true,
+  ): OrganizationPage[] => {
     return Array.from({ length: count }, (_, i) => ({
       id: i + 1,
       name: `Test Organization ${i + 1}`,
       description: `Description for org ${i + 1}`,
       logo: `https://example.com/logo${i + 1}.png`,
       slug: `org-test-${i + 1}`,
-      contracts: [],
+      contracts: withContracts
+        ? [
+            mitxOnlineFactories.contracts.contract({
+              id: i + 1,
+              name: `Contract ${i + 1}`,
+              organization: i + 1,
+            }),
+          ]
+        : [],
     }))
   }
 
-  const createContracts = (
-    count: number,
-    customContracts: Partial<ContractPage>[] = [],
-  ): ContractPage[] => {
-    const contracts = Array.from({ length: count }, (_, i) =>
-      mitxOnlineFactories.contracts.contract({
-        id: i + 1,
-        name: `Contract ${i + 1}`,
-        organization: 1, // Default to org 1
-      }),
-    )
-
-    // Apply custom overrides
-    customContracts.forEach((override, index) => {
-      if (contracts[index]) {
-        Object.assign(contracts[index], override)
-      }
-    })
-
-    return contracts
-  }
-
-  const setup = ({ organizations = [], contracts = [] }: SetupOptions = {}) => {
+  const setup = ({ organizations = [] }: SetupOptions = {}) => {
     const mitxOnlineUser = mitxOnlineFactories.user.user({
       b2b_organizations: organizations,
     })
 
     // Mock user API response
     setMockResponse.get(mitxOnlineUrls.userMe.get(), mitxOnlineUser)
-
-    // Mock contracts API response - contracts endpoint returns array directly
-    setMockResponse.get(mitxOnlineUrls.contracts.contractsList(), contracts)
 
     return renderWithProviders(<OrganizationCards />)
   }
@@ -85,12 +67,8 @@ describe("OrganizationCards", () => {
 
   it("renders organization cards when user has B2B organizations and contracts", async () => {
     const organizations = createOrganizations(2)
-    const contracts = createContracts(2, [
-      { organization: 1 },
-      { organization: 2 },
-    ])
 
-    setup({ organizations, contracts })
+    setup({ organizations })
 
     for (const org of organizations) {
       const elements = await screen.findAllByText((content, element) => {
@@ -110,16 +88,15 @@ describe("OrganizationCards", () => {
       description: "Test Description",
       logo: "https://example.com/logo1.png",
       slug: "org-test",
-      contracts: [],
+      contracts: [
+        mitxOnlineFactories.contracts.contract({
+          id: 1,
+          organization: 1,
+          name: "Contract 1",
+        }),
+      ],
     }
-    const contracts = [
-      mitxOnlineFactories.contracts.contract({
-        id: 1,
-        organization: organization.id,
-        name: "Contract 1",
-      }),
-    ]
-    setup({ organizations: [organization], contracts })
+    setup({ organizations: [organization] })
 
     const image = await screen.findByAltText("")
     expect(image).toBeInTheDocument()
@@ -138,22 +115,26 @@ describe("OrganizationCards", () => {
         description: "Test description",
         logo: "https://example.com/logo.png",
         slug: "org-test-org",
-        contracts: [],
+        contracts: [
+          mitxOnlineFactories.contracts.contract({
+            id: 1,
+            name: "Contract 1",
+            organization: 1,
+          }),
+          mitxOnlineFactories.contracts.contract({
+            id: 2,
+            name: "Contract 2",
+            organization: 1,
+          }),
+        ],
       }
 
-      const contracts = createContracts(3, [
-        { id: 1, name: "Contract 1", organization: 1 },
-        { id: 2, name: "Contract 2", organization: 1 },
-        { id: 3, name: "Contract 3", organization: 2 }, // Different org
-      ])
+      setup({ organizations: [organization] })
 
-      setup({ organizations: [organization], contracts })
-
-      // Should only show contracts for the organization (contracts 1 and 2)
+      // Should show all contracts for the organization
       // Each contract appears twice (mobile + desktop)
       expect(await screen.findAllByText("Contract 1")).toHaveLength(2)
       expect(screen.getAllByText("Contract 2")).toHaveLength(2)
-      expect(screen.queryByText("Contract 3")).not.toBeInTheDocument()
     })
 
     it("renders Continue buttons with correct organization URLs", async () => {
@@ -163,15 +144,21 @@ describe("OrganizationCards", () => {
         description: "Test description",
         logo: "https://example.com/logo.png",
         slug: "org-test-org",
-        contracts: [],
+        contracts: [
+          mitxOnlineFactories.contracts.contract({
+            id: 1,
+            name: "Contract 1",
+            organization: 1,
+          }),
+          mitxOnlineFactories.contracts.contract({
+            id: 2,
+            name: "Contract 2",
+            organization: 1,
+          }),
+        ],
       }
 
-      const contracts = createContracts(2, [
-        { id: 1, name: "Contract 1", organization: 1 },
-        { id: 2, name: "Contract 2", organization: 1 },
-      ])
-
-      setup({ organizations: [organization], contracts })
+      setup({ organizations: [organization] })
 
       const continueButtons = await screen.findAllByRole("link", {
         name: "Continue",
@@ -193,14 +180,16 @@ describe("OrganizationCards", () => {
         description: "Test description",
         logo: "https://example.com/logo.png",
         slug: "org-test-org",
-        contracts: [],
+        contracts: [
+          mitxOnlineFactories.contracts.contract({
+            id: 1,
+            name: "Contract 1",
+            organization: 1,
+          }),
+        ],
       }
 
-      const contracts = createContracts(1, [
-        { id: 1, name: "Contract 1", organization: 1 },
-      ])
-
-      setup({ organizations: [organization], contracts })
+      setup({ organizations: [organization] })
 
       // Each contract should render twice (mobile + desktop)
       const contractTexts = await screen.findAllByText("Contract 1")
@@ -216,15 +205,10 @@ describe("OrganizationCards", () => {
         description: "Test description",
         logo: "https://example.com/logo.png",
         slug: "org-test-org",
-        contracts: [],
+        contracts: [], // No contracts for this organization
       }
 
-      // No contracts for this organization
-      const contracts = createContracts(1, [
-        { id: 1, name: "Other Org Contract", organization: 999 },
-      ])
-
-      setup({ organizations: [organization], contracts })
+      setup({ organizations: [organization] })
 
       const elements = await screen.findAllByText((content, element) => {
         return (
@@ -249,7 +233,18 @@ describe("OrganizationCards", () => {
         description: "Test description",
         logo: "https://example.com/logo1.png",
         slug: "org-one",
-        contracts: [],
+        contracts: [
+          mitxOnlineFactories.contracts.contract({
+            id: 1,
+            name: "Org1 Contract 1",
+            organization: 1,
+          }),
+          mitxOnlineFactories.contracts.contract({
+            id: 2,
+            name: "Org1 Contract 2",
+            organization: 1,
+          }),
+        ],
       }
       const org2: OrganizationPage = {
         id: 2,
@@ -257,16 +252,16 @@ describe("OrganizationCards", () => {
         description: "Test description",
         logo: "https://example.com/logo2.png",
         slug: "org-two",
-        contracts: [],
+        contracts: [
+          mitxOnlineFactories.contracts.contract({
+            id: 3,
+            name: "Org2 Contract 1",
+            organization: 2,
+          }),
+        ],
       }
 
-      const contracts = createContracts(3, [
-        { id: 1, name: "Org1 Contract 1", organization: 1 },
-        { id: 2, name: "Org1 Contract 2", organization: 1 },
-        { id: 3, name: "Org2 Contract 1", organization: 2 },
-      ])
-
-      setup({ organizations: [org1, org2], contracts })
+      setup({ organizations: [org1, org2] })
 
       // Check organization headers
       const org1Elements = await screen.findAllByText((content, element) => {
@@ -317,10 +312,15 @@ describe("OrganizationCards", () => {
         name: "Test Organization",
         logo: undefined,
         slug: "org-test-org",
+        contracts: [
+          mitxOnlineFactories.contracts.contract({
+            id: 1,
+            organization: 1,
+          }),
+        ],
       })
-      const contracts = createContracts(1, [{ organization: 1 }])
 
-      setup({ organizations: [organization], contracts })
+      setup({ organizations: [organization] })
 
       const elements = await screen.findAllByText((content, element) => {
         return (
@@ -341,14 +341,16 @@ describe("OrganizationCards", () => {
         description: "Test description",
         logo: "https://example.com/logo.png",
         slug: "org-my-company",
-        contracts: [],
+        contracts: [
+          mitxOnlineFactories.contracts.contract({
+            id: 1,
+            name: "Test Contract",
+            organization: 1,
+          }),
+        ],
       }
 
-      const contracts = createContracts(1, [
-        { id: 1, name: "Test Contract", organization: 1 },
-      ])
-
-      setup({ organizations: [organization], contracts })
+      setup({ organizations: [organization] })
 
       const continueButtons = await screen.findAllByRole("link", {
         name: "Continue",
@@ -366,14 +368,16 @@ describe("OrganizationCards", () => {
         description: "Test description",
         logo: "https://example.com/logo.png",
         slug: "my-company", // No 'org-' prefix
-        contracts: [],
+        contracts: [
+          mitxOnlineFactories.contracts.contract({
+            id: 1,
+            name: "Test Contract",
+            organization: 1,
+          }),
+        ],
       }
 
-      const contracts = createContracts(1, [
-        { id: 1, name: "Test Contract", organization: 1 },
-      ])
-
-      setup({ organizations: [organization], contracts })
+      setup({ organizations: [organization] })
 
       const continueButtons = await screen.findAllByRole("link", {
         name: "Continue",
@@ -391,15 +395,10 @@ describe("OrganizationCards", () => {
         description: "Test description",
         logo: "https://example.com/logo.png",
         slug: "org-test-org",
-        contracts: [],
+        contracts: [], // No contracts for this organization
       }
 
-      const contracts = createContracts(2, [
-        { id: 1, name: "Other Org Contract 1", organization: 999 },
-        { id: 2, name: "Other Org Contract 2", organization: 888 },
-      ])
-
-      setup({ organizations: [organization], contracts })
+      setup({ organizations: [organization] })
 
       const elements = await screen.findAllByText((content, element) => {
         return (
