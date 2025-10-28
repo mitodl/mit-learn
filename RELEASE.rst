@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.47.7
+Version 0.47.7 (Released October 28, 2025)
 --------------
 
 - remove org dashboard feature flag (#2654)
