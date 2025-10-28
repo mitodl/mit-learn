@@ -19,8 +19,6 @@ export const backgroundSrcSetCSS = (image: ImageProps["src"]) => {
     src: image,
   })
 
-  console.log(props)
-
   if (!NEXT_PUBLIC_OPTIMIZE_IMAGES || !props.srcSet) {
     return `url("${props.src}")`
   }
