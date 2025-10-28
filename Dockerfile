@@ -1,6 +1,6 @@
 # hadolint global ignore=SC2046,DL3002,DL3008,DL3025,DL3042,DL4006
 
-FROM python:3.12-slim AS base
+FROM python:3.14-slim AS base
 LABEL maintainer "ODL DevOps <mitx-devops@mit.edu>"
 
 # Add package files, install updated node and pip
