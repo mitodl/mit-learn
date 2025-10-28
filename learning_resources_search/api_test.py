@@ -1,6 +1,6 @@
 """Search API function tests"""
 
-from unittest.mock import Mock
+from unittest.mock import MagicMock, Mock
 
 import pytest
 from freezegun import freeze_time
@@ -21,6 +21,7 @@ from learning_resources_search.api import (
     generate_sort_clause,
     generate_suggest_clause,
     get_similar_topics,
+    get_similar_topics_qdrant,
     percolate_matches_for_document,
     relevant_indexes,
 )
@@ -3266,3 +3267,39 @@ def test_dev_mode(dev_mode):
         assert construct_search(search_params).to_dict().get("explain")
     else:
         assert construct_search(search_params).to_dict().get("explain") is None
+
+
+@pytest.mark.django_db
+def test_get_similar_topics_qdrant_uses_cached_embedding(mocker):
+    """
+    Test that get_similar_topics_qdrant uses a cached embedding when available
+    """
+    resource = MagicMock()
+    resource.readable_id = "test-resource"
+    value_doc = {"title": "Test Title", "description": "Test Description"}
+    num_topics = 3
+
+    mock_encoder = mocker.patch("vector_search.encoders.utils.dense_encoder")
+    encoder_instance = mock_encoder.return_value
+    encoder_instance.model_short_name.return_value = "test-model"
+    encoder_instance.embed.return_value = [0.1, 0.2, 0.3]
+
+    mock_client = mocker.patch("vector_search.utils.qdrant_client")
+    client_instance = mock_client.return_value
+
+    # Simulate a cached embedding in the response
+    client_instance.retrieve.return_value = [
+        MagicMock(vector={"test-model": [0.9, 0.8, 0.7]})
+    ]
+
+    mocker.patch(
+        "learning_resources_search.api._qdrant_similar_results",
+        return_value=[{"name": "topic1"}, {"name": "topic2"}],
+    )
+
+    result = get_similar_topics_qdrant(resource, value_doc, num_topics)
+
+    # Assert that embed was NOT called (cached embedding used)
+    encoder_instance.embed.assert_not_called()
+    # Assert that the result is as expected
+    assert result == ["topic1", "topic2"]
