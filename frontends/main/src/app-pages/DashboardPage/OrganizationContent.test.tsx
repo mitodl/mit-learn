@@ -3,7 +3,6 @@ import { renderWithProviders, screen, within, waitFor } from "@/test-utils"
 import OrganizationContent from "./OrganizationContent"
 import { setMockResponse } from "api/test-utils"
 import { urls, factories } from "api/mitxonline-test-utils"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import {
   organizationCoursesWithContracts,
   mitxonlineProgram,
@@ -23,14 +22,8 @@ import { faker } from "@faker-js/faker/locale/en"
 const makeCourseEnrollment = factories.enrollment.courseEnrollment
 const makeGrade = factories.enrollment.grade
 
-jest.mock("posthog-js/react")
-const mockedUseFeatureFlagEnabled = jest
-  .mocked(useFeatureFlagEnabled)
-  .mockImplementation(() => false)
-
 describe("OrganizationContent", () => {
   beforeEach(() => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(urls.enrollment.enrollmentsList(), [])
     setMockResponse.get(urls.enrollment.enrollmentsListV2(), [])
     setMockResponse.get(urls.programEnrollments.enrollmentsList(), [])
