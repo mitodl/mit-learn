@@ -29,6 +29,7 @@ from learning_resources_search.constants import (
     SEARCH_FILTERS,
     SOURCE_EXCLUDED_FIELDS,
     TOPICS_QUERY_FIELDS,
+    COMBINED_INDEX
 )
 from learning_resources_search.models import PercolateQuery
 from learning_resources_search.utils import (
@@ -66,7 +67,7 @@ def gen_content_file_id(content_file_id):
     return f"cf_{content_file_id}"
 
 
-def relevant_indexes(resource_types, aggregations, endpoint):
+def relevant_indexes(resource_types, aggregations, endpoint, use_hybrid_search=False):
     """
     Return list of relevent index type for the query
 
@@ -74,6 +75,7 @@ def relevant_indexes(resource_types, aggregations, endpoint):
         resource_types (list): the resource type parameter for the search
         aggregations (list): the aggregations parameter for the search
         endpoint (string): the endpoint: learning_resource or content_file
+        use_hybrid_search (bool): whether to use hybrid search
 
     Returns:
         Array(string): array of index names
@@ -81,6 +83,8 @@ def relevant_indexes(resource_types, aggregations, endpoint):
     """
     if endpoint == CONTENT_FILE_TYPE:
         return [get_default_alias_name(COURSE_TYPE)]
+    elif use_hybrid_search:
+        return [get_default_alias_name(COMBINED_INDEX)]
 
     if aggregations and "resource_type" in aggregations:
         return map(get_default_alias_name, LEARNING_RESOURCE_TYPES)
@@ -143,7 +147,7 @@ def generate_sort_clause(search_params):
         return sort
 
 
-def wrap_text_clause(text_query, min_score=None):
+def wrap_text_clause(text_query, min_score=None, use_hybrid_search=False):
     """
     Wrap the text subqueries in a bool query
     Shared by generate_content_file_text_clause and
@@ -151,10 +155,12 @@ def wrap_text_clause(text_query, min_score=None):
 
     Args:
         text_query (dict): dictionary with the opensearch text clauses
+        min_score (float): minimum score for function score query
+        use_hybrid_search (bool): whether to use hybrid search  
     Returns:
         dict: dictionary with the opensearch text clause
     """
-    if False and min_score and text_query:
+    if not use_hybrid_search and min_score and text_query:
         text_bool_clause = [
             {"function_score": {"query": {"bool": text_query}, "min_score": min_score}}
         ]
@@ -211,7 +217,7 @@ def generate_content_file_text_clause(text):
 
 
 def generate_learning_resources_text_clause(
-    text, search_mode, slop, content_file_score_weight, min_score
+    text, search_mode, slop, content_file_score_weight, min_score, use_hybrid_search
 ):
     """
     Return text clause for the query
@@ -335,7 +341,7 @@ def generate_learning_resources_text_clause(
     else:
         text_query = {}
 
-    return wrap_text_clause(text_query, min_score)
+    return wrap_text_clause(text_query, min_score, use_hybrid_search)
 
 
 def generate_filter_clause(
@@ -573,7 +579,7 @@ def percolate_matches_for_document(document_id):
     return percolated_queries
 
 
-def add_text_query_to_search(search, text, search_params, query_type_query):
+def add_text_query_to_search(search, text, search_params, query_type_query, use_hybrid_search):
     if search_params.get("endpoint") == CONTENT_FILE_TYPE:
         text_query = generate_content_file_text_clause(text)
     else:
@@ -583,6 +589,7 @@ def add_text_query_to_search(search, text, search_params, query_type_query):
             search_params.get("slop"),
             search_params.get("content_file_score_weight"),
             search_params.get("min_score"),
+            use_hybrid_search
         )
 
     yearly_decay_percent = search_params.get("yearly_decay_percent")
@@ -590,7 +597,7 @@ def add_text_query_to_search(search, text, search_params, query_type_query):
         search_params.get("max_incompleteness_penalty", 0) / 100
     )
 
-    if False:  # yearly_decay_percent or max_incompleteness_penalty:
+    if not use_hybrid_search and(yearly_decay_percent or max_incompleteness_penalty):
         script_query = {
             "script_score": {
                 "query": {"bool": {"must": [text_query], "filter": query_type_query}}
@@ -631,35 +638,38 @@ def add_text_query_to_search(search, text, search_params, query_type_query):
     else:
         text_query = {"bool": {"must": [text_query], "filter": query_type_query}}
 
-    vector_query_description = {
-        "neural": {
-            "description_embedding": {
-                "query_text": text,
-                "model_id": "PQBFF5oBDk6_T5cL_Izk",
-                "min_score": 0.015,
-            },
-        }
-    }
-
-    vector_query_title = {
-        "neural": {
-            "title_embedding": {
-                "query_text": text,
-                "model_id": "PQBFF5oBDk6_T5cL_Izk",
-                "min_score": 0.015,
-            },
-        }
-    }
-
-    search = search.extra(
-        query={
-            "hybrid": {
-                "pagination_depth":10,  
-                "queries": [text_query, vector_query_description, vector_query_title],
+    if use_hybrid_search:
+        vector_query_description = {
+            "neural": {
+                "description_embedding": {
+                    "query_text": text,
+                    "model_id": "PQBFF5oBDk6_T5cL_Izk",
+                    "min_score": 0.015,
+                },
             }
         }
-    )
-    
+
+        vector_query_title = {
+            "neural": {
+                "title_embedding": {
+                    "query_text": text,
+                    "model_id": "PQBFF5oBDk6_T5cL_Izk",
+                    "min_score": 0.015,
+                },
+            }
+        }
+
+        search = search.extra(
+            query={
+                "hybrid": {
+                    "pagination_depth": 10,
+                    "queries": [text_query, vector_query_description, vector_query_title],
+                }
+            }
+        )
+    else:
+        search = search.query(text_query)
+
     return search
 
 
@@ -681,17 +691,21 @@ def construct_search(search_params):
         and search_params.get("endpoint") != CONTENT_FILE_TYPE
     ):
         search_params["resource_type"] = list(LEARNING_RESOURCE_TYPES)
+    
+    use_hybrid_search = search_params.get("use_hybrid_search", False)
 
     indexes = relevant_indexes(
         search_params.get("resource_type"),
         search_params.get("aggregations"),
         search_params.get("endpoint"),
+        use_hybrid_search,
     )
 
     search = Search(index=",".join(indexes))
 
     search = search.source(fields={"excludes": SOURCE_EXCLUDED_FIELDS})
-    # search = search.params(search_type="dfs_query_then_fetch")
+    if not search_params.get("use_hybrid_search"):
+        search = search.params(search_type="dfs_query_then_fetch")
     if search_params.get("offset"):
         search = search.extra(from_=search_params.get("offset"))
 
@@ -717,6 +731,7 @@ def construct_search(search_params):
             text,
             search_params,
             query_type_query,
+            use_hybrid_search
         )
 
     else:
@@ -750,6 +765,7 @@ def execute_learn_search(search_params):
     Returns:
         dict: The opensearch response dict
     """
+    print(search_params)
     if search_params.get("endpoint") != CONTENT_FILE_TYPE:
         if search_params.get("yearly_decay_percent") is None:
             search_params["yearly_decay_percent"] = (
@@ -767,22 +783,23 @@ def execute_learn_search(search_params):
             )
     search = construct_search(search_params)
 
-    search = search.extra(
-        search_pipeline={
-            "description": "Post processor for hybrid search",
-            "phase_results_processors": [
-                {
-                    "normalization-processor": {
-                        "normalization": {"technique": "min_max"},
-                        "combination": {
-                            "technique": "arithmetic_mean",
-                            "parameters": {"weights": [0.6, 0.2, 0.2]},
-                        },
+    if search_params.get('use_hybrid_search'):
+        search = search.extra(
+            search_pipeline={
+                "description": "Post processor for hybrid search",
+                "phase_results_processors": [
+                    {
+                        "normalization-processor": {
+                            "normalization": {"technique": "min_max"},
+                            "combination": {
+                                "technique": "arithmetic_mean",
+                                "parameters": {"weights": [0.6, 0.2, 0.2]},
+                            },
+                        }
                     }
-                }
-            ],
-        }
-    )
+                ],
+            }
+        )
 
     print(search.to_dict())
     return search.execute().to_dict()

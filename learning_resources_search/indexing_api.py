@@ -27,6 +27,7 @@ from learning_resources_search.constants import (
     MAPPING,
     PERCOLATE_INDEX_TYPE,
     SYNONYMS,
+    COMBINED_INDEX,
     IndexestoUpdate,
 )
 from learning_resources_search.exceptions import ReindexError
@@ -43,6 +44,7 @@ from main.utils import chunks
 log = logging.getLogger(__name__)
 User = get_user_model()
 from opensearch_py_ml.ml_commons import MLCommonClient
+
 
 def clear_featured_rank(rank, clear_all_greater_than):
     """
@@ -143,8 +145,6 @@ def clear_and_create_index(*, index_name=None, skip_mapping=False, object_type=N
                 "number_of_replicas": settings.OPENSEARCH_REPLICA_COUNT,
                 "refresh_interval": "60s",
             },
-            "index.knn": True,
-            "default_pipeline": "vector_ingest_pipeline",
             "analysis": {
                 "analyzer": {
                     "trigram": {
@@ -186,6 +186,10 @@ def clear_and_create_index(*, index_name=None, skip_mapping=False, object_type=N
             },
         }
     }
+
+    if object_type == COMBINED_INDEX:
+        index_create_data["settings"]["index.knn"] = True
+        index_create_data["settings"]["default_pipeline"] = "vector_ingest_pipeline"
     if not skip_mapping:
         index_create_data["mappings"] = {"properties": MAPPING[object_type]}
     # from https://www.elastic.co/guide/en/elasticsearch/guide/current/asciifolding-token-filter.html
@@ -308,35 +312,35 @@ def index_items(documents, object_type, index_types, **kwargs):
                     raise ReindexError(msg)
 
 
-def index_learning_resources(ids, resource_type, index_types):
+def index_learning_resources(ids, base_index_name, index_types):
     """
     Index a list of learning resources by id
 
     Args:
         ids(list of int): List of learning resource id's
-        resource_type: The resource type of the resources
+        base_index_name: The resource type of the resources
         index_types (string): one of the values IndexestoUpdate. Whether the default
             index, the reindexing index or both need to be updated
 
     """
-    index_items(serialize_bulk_learning_resources(ids), resource_type, index_types)
+    index_items(serialize_bulk_learning_resources(ids), base_index_name, index_types)
 
 
-def deindex_learning_resources(ids, resource_type):
+def deindex_learning_resources(ids, base_index_name):
     """
     Deindex a list of learning resources by id
 
     Args:
         ids(list of int): List of learning resource ids
-        resource_type: resource type
+        base_index_name: The name of the index to deindex from
     """
     deindex_items(
         serialize_bulk_learning_resources_for_deletion(ids),
-        resource_type,
+        base_index_name,
         index_types=IndexestoUpdate.all_indexes.value,
     )
 
-    if resource_type == COURSE_TYPE:
+    if base_index_name == COURSE_TYPE:
         for run_id in LearningResourceRun.objects.filter(
             learning_resource_id__in=ids
         ).values_list("id", flat=True):
@@ -638,7 +642,7 @@ def update_index_settings():
             "plugins": {
                 "ml_commons": {
                     "only_run_on_ml_node": "false",
-                    "native_memory_threshold": "99"
+                    "native_memory_threshold": "99",
                 }
             }
         }
@@ -646,6 +650,7 @@ def update_index_settings():
 
     conn = get_conn()
     conn.cluster.put_settings(body=settings_body)
+
 
 def get_ml_client():
     conn = get_conn()
@@ -661,29 +666,30 @@ def register_model():
         model_format="TORCH_SCRIPT",
         deploy_model=True,
     )
-#In [11]: model_id
-#Out[49]: 'PQBFF5oBDk6_T5cL_Izk'
+
+
+# In [11]: model_id
+# Out[49]: 'PQBFF5oBDk6_T5cL_Izk'
 
 
 def create_ingest_pipeline():
     conn = get_conn()
-    pipeline ={
+    pipeline = {
         "description": "An NLP ingest pipeline",
         "processors": [
             {
-            "text_embedding": {
-                "model_id": "PQBFF5oBDk6_T5cL_Izk",
-                "field_map": {
-                    "description": "description_embedding",
-                    "title": "title_embedding"
+                "text_embedding": {
+                    "model_id": "PQBFF5oBDk6_T5cL_Izk",
+                    "field_map": {
+                        "description": "description_embedding",
+                        "title": "title_embedding",
+                    },
                 }
             }
-            }
-        ]
+        ],
     }
 
-    conn.ingest.put_pipeline('vector_ingest_pipeline', pipeline)
-    
+    conn.ingest.put_pipeline("vector_ingest_pipeline", pipeline)
 
 
 def create_search_pipeline():
@@ -692,29 +698,17 @@ def create_search_pipeline():
         "description": "Post processor for hybrid search",
         "phase_results_processors": [
             {
-            "normalization-processor": {
-                "normalization": {
-                "technique": "min_max"
-                },
-                "combination": {
-                "technique": "arithmetic_mean",
-                "parameters": {
-                    "weights": [
-                    0.7,
-                    0.3
-                    ]
-                }
+                "normalization-processor": {
+                    "normalization": {"technique": "min_max"},
+                    "combination": {
+                        "technique": "arithmetic_mean",
+                        "parameters": {"weights": [0.7, 0.3]},
+                    },
                 }
             }
-            }
-        ]
+        ],
     }
 
     conn.transport.perform_request(
-        "PUT",
-        "/_search/pipeline/hybrid_search_pipeline",
-        body=pipeline
+        "PUT", "/_search/pipeline/hybrid_search_pipeline", body=pipeline
     )
-
-    
-

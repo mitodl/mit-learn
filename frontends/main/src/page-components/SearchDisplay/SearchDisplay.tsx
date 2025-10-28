@@ -639,6 +639,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     min_score: number
     max_incompleteness_penalty: number
     content_file_score_weight: number
+    use_hybrid_search: string
   }
 
   const AdminOptions = (

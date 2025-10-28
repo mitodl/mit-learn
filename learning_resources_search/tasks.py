@@ -45,6 +45,7 @@ from learning_resources_search.constants import (
     SEARCH_CONN_EXCEPTIONS,
     VIDEO_PLAYLIST_TYPE,
     VIDEO_TYPE,
+    COMBINED_INDEX,
     IndexestoUpdate,
 )
 from learning_resources_search.exceptions import ReindexError, RetryError
@@ -288,7 +289,7 @@ def send_subscription_emails(self, subscription_type, period="daily"):
     retry_backoff=True,
     rate_limit="600/m",
 )
-def index_learning_resources(ids, resource_type, index_types):
+def index_learning_resources(ids, index_name, index_types):
     """
     Index courses
 
@@ -301,7 +302,7 @@ def index_learning_resources(ids, resource_type, index_types):
     """
     try:
         with wrap_retry_exception(*SEARCH_CONN_EXCEPTIONS):
-            api.index_learning_resources(ids, resource_type, index_types)
+            api.index_learning_resources(ids, index_name, index_types)
     except (RetryError, Ignore):
         raise
     except SystemExit as err:
@@ -621,7 +622,23 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
                         chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
                     )
                 ]
-        
+
+        if COMBINED_INDEX in indexes:
+            index_tasks = index_tasks + [index_learning_resources.si(
+                ids,
+                COMBINED_INDEX,
+                index_types=IndexestoUpdate.reindexing_index.value,
+            )
+            for ids in chunks(
+                        LearningResource.objects.filter(
+                            published=True
+                        )
+                        .order_by("id")
+                        .values_list("id", flat=True),
+                        chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
+            )
+            ]
+
         for resource_type in [
             PROGRAM_TYPE, 
             PODCAST_TYPE,

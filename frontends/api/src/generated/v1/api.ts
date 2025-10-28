@@ -5059,6 +5059,12 @@ export interface PercolateQuerySubscriptionRequestRequest {
    */
   content_file_score_weight?: number | null
   /**
+   * If true, use hybrid search combining vector and keyword search
+   * @type {boolean}
+   * @memberof PercolateQuerySubscriptionRequestRequest
+   */
+  use_hybrid_search?: boolean | null
+  /**
    *
    * @type {SourceTypeEnum}
    * @memberof PercolateQuerySubscriptionRequestRequest
@@ -17463,6 +17469,7 @@ export const LearningResourcesSearchApiAxiosParamCreator = function (
      * @param {number | null} [slop] Allowed distance for phrase search
      * @param {LearningResourcesSearchRetrieveSortbyEnum} [sortby] If the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;featured&#x60; - Featured * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
+     * @param {boolean | null} [use_hybrid_search] If true, use hybrid search combining vector and keyword search
      * @param {number | null} [yearly_decay_percent] Relevance score penalty percent per year for for resources without upcoming runs. Only affects results if there is a search term.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -17494,6 +17501,7 @@ export const LearningResourcesSearchApiAxiosParamCreator = function (
       slop?: number | null,
       sortby?: LearningResourcesSearchRetrieveSortbyEnum,
       topic?: Array<string>,
+      use_hybrid_search?: boolean | null,
       yearly_decay_percent?: number | null,
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
@@ -17619,6 +17627,10 @@ export const LearningResourcesSearchApiAxiosParamCreator = function (
         localVarQueryParameter["topic"] = topic
       }
 
+      if (use_hybrid_search !== undefined) {
+        localVarQueryParameter["use_hybrid_search"] = use_hybrid_search
+      }
+
       if (yearly_decay_percent !== undefined) {
         localVarQueryParameter["yearly_decay_percent"] = yearly_decay_percent
       }
@@ -17679,6 +17691,7 @@ export const LearningResourcesSearchApiFp = function (
      * @param {number | null} [slop] Allowed distance for phrase search
      * @param {LearningResourcesSearchRetrieveSortbyEnum} [sortby] If the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;featured&#x60; - Featured * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
+     * @param {boolean | null} [use_hybrid_search] If true, use hybrid search combining vector and keyword search
      * @param {number | null} [yearly_decay_percent] Relevance score penalty percent per year for for resources without upcoming runs. Only affects results if there is a search term.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -17710,6 +17723,7 @@ export const LearningResourcesSearchApiFp = function (
       slop?: number | null,
       sortby?: LearningResourcesSearchRetrieveSortbyEnum,
       topic?: Array<string>,
+      use_hybrid_search?: boolean | null,
       yearly_decay_percent?: number | null,
       options?: RawAxiosRequestConfig,
     ): Promise<
@@ -17746,6 +17760,7 @@ export const LearningResourcesSearchApiFp = function (
           slop,
           sortby,
           topic,
+          use_hybrid_search,
           yearly_decay_percent,
           options,
         )
@@ -17815,6 +17830,7 @@ export const LearningResourcesSearchApiFactory = function (
           requestParameters.slop,
           requestParameters.sortby,
           requestParameters.topic,
+          requestParameters.use_hybrid_search,
           requestParameters.yearly_decay_percent,
           options,
         )
@@ -18012,6 +18028,13 @@ export interface LearningResourcesSearchApiLearningResourcesSearchRetrieveReques
   readonly topic?: Array<string>
 
   /**
+   * If true, use hybrid search combining vector and keyword search
+   * @type {boolean}
+   * @memberof LearningResourcesSearchApiLearningResourcesSearchRetrieve
+   */
+  readonly use_hybrid_search?: boolean | null
+
+  /**
    * Relevance score penalty percent per year for for resources without upcoming runs. Only affects results if there is a search term.
    * @type {number}
    * @memberof LearningResourcesSearchApiLearningResourcesSearchRetrieve
@@ -18066,6 +18089,7 @@ export class LearningResourcesSearchApi extends BaseAPI {
         requestParameters.slop,
         requestParameters.sortby,
         requestParameters.topic,
+        requestParameters.use_hybrid_search,
         requestParameters.yearly_decay_percent,
         options,
       )
@@ -18310,6 +18334,7 @@ export const LearningResourcesUserSubscriptionApiAxiosParamCreator = function (
      * @param {LearningResourcesUserSubscriptionCheckListSortbyEnum} [sortby] If the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;featured&#x60; - Featured * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {LearningResourcesUserSubscriptionCheckListSourceTypeEnum} [source_type] The subscription type  * &#x60;search_subscription_type&#x60; - search_subscription_type * &#x60;channel_subscription_type&#x60; - channel_subscription_type
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
+     * @param {boolean | null} [use_hybrid_search] If true, use hybrid search combining vector and keyword search
      * @param {number | null} [yearly_decay_percent] Relevance score penalty percent per year for for resources without upcoming runs. Only affects results if there is a search term.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -18342,6 +18367,7 @@ export const LearningResourcesUserSubscriptionApiAxiosParamCreator = function (
       sortby?: LearningResourcesUserSubscriptionCheckListSortbyEnum,
       source_type?: LearningResourcesUserSubscriptionCheckListSourceTypeEnum,
       topic?: Array<string>,
+      use_hybrid_search?: boolean | null,
       yearly_decay_percent?: number | null,
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
@@ -18471,6 +18497,10 @@ export const LearningResourcesUserSubscriptionApiAxiosParamCreator = function (
         localVarQueryParameter["topic"] = topic
       }
 
+      if (use_hybrid_search !== undefined) {
+        localVarQueryParameter["use_hybrid_search"] = use_hybrid_search
+      }
+
       if (yearly_decay_percent !== undefined) {
         localVarQueryParameter["yearly_decay_percent"] = yearly_decay_percent
       }
@@ -18518,6 +18548,7 @@ export const LearningResourcesUserSubscriptionApiAxiosParamCreator = function (
      * @param {number | null} [slop] Allowed distance for phrase search
      * @param {LearningResourcesUserSubscriptionListSortbyEnum} [sortby] If the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;featured&#x60; - Featured * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
+     * @param {boolean | null} [use_hybrid_search] If true, use hybrid search combining vector and keyword search
      * @param {number | null} [yearly_decay_percent] Relevance score penalty percent per year for for resources without upcoming runs. Only affects results if there is a search term.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -18549,6 +18580,7 @@ export const LearningResourcesUserSubscriptionApiAxiosParamCreator = function (
       slop?: number | null,
       sortby?: LearningResourcesUserSubscriptionListSortbyEnum,
       topic?: Array<string>,
+      use_hybrid_search?: boolean | null,
       yearly_decay_percent?: number | null,
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
@@ -18674,6 +18706,10 @@ export const LearningResourcesUserSubscriptionApiAxiosParamCreator = function (
         localVarQueryParameter["topic"] = topic
       }
 
+      if (use_hybrid_search !== undefined) {
+        localVarQueryParameter["use_hybrid_search"] = use_hybrid_search
+      }
+
       if (yearly_decay_percent !== undefined) {
         localVarQueryParameter["yearly_decay_percent"] = yearly_decay_percent
       }
@@ -18722,6 +18758,7 @@ export const LearningResourcesUserSubscriptionApiAxiosParamCreator = function (
      * @param {LearningResourcesUserSubscriptionSubscribeCreateSortbyEnum} [sortby] If the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;featured&#x60; - Featured * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {LearningResourcesUserSubscriptionSubscribeCreateSourceTypeEnum} [source_type] The subscription type  * &#x60;search_subscription_type&#x60; - search_subscription_type * &#x60;channel_subscription_type&#x60; - channel_subscription_type
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
+     * @param {boolean | null} [use_hybrid_search] If true, use hybrid search combining vector and keyword search
      * @param {number | null} [yearly_decay_percent] Relevance score penalty percent per year for for resources without upcoming runs. Only affects results if there is a search term.
      * @param {PercolateQuerySubscriptionRequestRequest} [PercolateQuerySubscriptionRequestRequest]
      * @param {*} [options] Override http request option.
@@ -18755,6 +18792,7 @@ export const LearningResourcesUserSubscriptionApiAxiosParamCreator = function (
       sortby?: LearningResourcesUserSubscriptionSubscribeCreateSortbyEnum,
       source_type?: LearningResourcesUserSubscriptionSubscribeCreateSourceTypeEnum,
       topic?: Array<string>,
+      use_hybrid_search?: boolean | null,
       yearly_decay_percent?: number | null,
       PercolateQuerySubscriptionRequestRequest?: PercolateQuerySubscriptionRequestRequest,
       options: RawAxiosRequestConfig = {},
@@ -18885,6 +18923,10 @@ export const LearningResourcesUserSubscriptionApiAxiosParamCreator = function (
         localVarQueryParameter["topic"] = topic
       }
 
+      if (use_hybrid_search !== undefined) {
+        localVarQueryParameter["use_hybrid_search"] = use_hybrid_search
+      }
+
       if (yearly_decay_percent !== undefined) {
         localVarQueryParameter["yearly_decay_percent"] = yearly_decay_percent
       }
@@ -19004,6 +19046,7 @@ export const LearningResourcesUserSubscriptionApiFp = function (
      * @param {LearningResourcesUserSubscriptionCheckListSortbyEnum} [sortby] If the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;featured&#x60; - Featured * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {LearningResourcesUserSubscriptionCheckListSourceTypeEnum} [source_type] The subscription type  * &#x60;search_subscription_type&#x60; - search_subscription_type * &#x60;channel_subscription_type&#x60; - channel_subscription_type
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
+     * @param {boolean | null} [use_hybrid_search] If true, use hybrid search combining vector and keyword search
      * @param {number | null} [yearly_decay_percent] Relevance score penalty percent per year for for resources without upcoming runs. Only affects results if there is a search term.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -19036,6 +19079,7 @@ export const LearningResourcesUserSubscriptionApiFp = function (
       sortby?: LearningResourcesUserSubscriptionCheckListSortbyEnum,
       source_type?: LearningResourcesUserSubscriptionCheckListSourceTypeEnum,
       topic?: Array<string>,
+      use_hybrid_search?: boolean | null,
       yearly_decay_percent?: number | null,
       options?: RawAxiosRequestConfig,
     ): Promise<
@@ -19073,6 +19117,7 @@ export const LearningResourcesUserSubscriptionApiFp = function (
           sortby,
           source_type,
           topic,
+          use_hybrid_search,
           yearly_decay_percent,
           options,
         )
@@ -19118,6 +19163,7 @@ export const LearningResourcesUserSubscriptionApiFp = function (
      * @param {number | null} [slop] Allowed distance for phrase search
      * @param {LearningResourcesUserSubscriptionListSortbyEnum} [sortby] If the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;featured&#x60; - Featured * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
+     * @param {boolean | null} [use_hybrid_search] If true, use hybrid search combining vector and keyword search
      * @param {number | null} [yearly_decay_percent] Relevance score penalty percent per year for for resources without upcoming runs. Only affects results if there is a search term.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -19149,6 +19195,7 @@ export const LearningResourcesUserSubscriptionApiFp = function (
       slop?: number | null,
       sortby?: LearningResourcesUserSubscriptionListSortbyEnum,
       topic?: Array<string>,
+      use_hybrid_search?: boolean | null,
       yearly_decay_percent?: number | null,
       options?: RawAxiosRequestConfig,
     ): Promise<
@@ -19185,6 +19232,7 @@ export const LearningResourcesUserSubscriptionApiFp = function (
           slop,
           sortby,
           topic,
+          use_hybrid_search,
           yearly_decay_percent,
           options,
         )
@@ -19231,6 +19279,7 @@ export const LearningResourcesUserSubscriptionApiFp = function (
      * @param {LearningResourcesUserSubscriptionSubscribeCreateSortbyEnum} [sortby] If the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;featured&#x60; - Featured * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {LearningResourcesUserSubscriptionSubscribeCreateSourceTypeEnum} [source_type] The subscription type  * &#x60;search_subscription_type&#x60; - search_subscription_type * &#x60;channel_subscription_type&#x60; - channel_subscription_type
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
+     * @param {boolean | null} [use_hybrid_search] If true, use hybrid search combining vector and keyword search
      * @param {number | null} [yearly_decay_percent] Relevance score penalty percent per year for for resources without upcoming runs. Only affects results if there is a search term.
      * @param {PercolateQuerySubscriptionRequestRequest} [PercolateQuerySubscriptionRequestRequest]
      * @param {*} [options] Override http request option.
@@ -19264,6 +19313,7 @@ export const LearningResourcesUserSubscriptionApiFp = function (
       sortby?: LearningResourcesUserSubscriptionSubscribeCreateSortbyEnum,
       source_type?: LearningResourcesUserSubscriptionSubscribeCreateSourceTypeEnum,
       topic?: Array<string>,
+      use_hybrid_search?: boolean | null,
       yearly_decay_percent?: number | null,
       PercolateQuerySubscriptionRequestRequest?: PercolateQuerySubscriptionRequestRequest,
       options?: RawAxiosRequestConfig,
@@ -19299,6 +19349,7 @@ export const LearningResourcesUserSubscriptionApiFp = function (
           sortby,
           source_type,
           topic,
+          use_hybrid_search,
           yearly_decay_percent,
           PercolateQuerySubscriptionRequestRequest,
           options,
@@ -19401,6 +19452,7 @@ export const LearningResourcesUserSubscriptionApiFactory = function (
           requestParameters.sortby,
           requestParameters.source_type,
           requestParameters.topic,
+          requestParameters.use_hybrid_search,
           requestParameters.yearly_decay_percent,
           options,
         )
@@ -19445,6 +19497,7 @@ export const LearningResourcesUserSubscriptionApiFactory = function (
           requestParameters.slop,
           requestParameters.sortby,
           requestParameters.topic,
+          requestParameters.use_hybrid_search,
           requestParameters.yearly_decay_percent,
           options,
         )
@@ -19490,6 +19543,7 @@ export const LearningResourcesUserSubscriptionApiFactory = function (
           requestParameters.sortby,
           requestParameters.source_type,
           requestParameters.topic,
+          requestParameters.use_hybrid_search,
           requestParameters.yearly_decay_percent,
           requestParameters.PercolateQuerySubscriptionRequestRequest,
           options,
@@ -19713,6 +19767,13 @@ export interface LearningResourcesUserSubscriptionApiLearningResourcesUserSubscr
   readonly topic?: Array<string>
 
   /**
+   * If true, use hybrid search combining vector and keyword search
+   * @type {boolean}
+   * @memberof LearningResourcesUserSubscriptionApiLearningResourcesUserSubscriptionCheckList
+   */
+  readonly use_hybrid_search?: boolean | null
+
+  /**
    * Relevance score penalty percent per year for for resources without upcoming runs. Only affects results if there is a search term.
    * @type {number}
    * @memberof LearningResourcesUserSubscriptionApiLearningResourcesUserSubscriptionCheckList
@@ -19907,6 +19968,13 @@ export interface LearningResourcesUserSubscriptionApiLearningResourcesUserSubscr
    * @memberof LearningResourcesUserSubscriptionApiLearningResourcesUserSubscriptionList
    */
   readonly topic?: Array<string>
+
+  /**
+   * If true, use hybrid search combining vector and keyword search
+   * @type {boolean}
+   * @memberof LearningResourcesUserSubscriptionApiLearningResourcesUserSubscriptionList
+   */
+  readonly use_hybrid_search?: boolean | null
 
   /**
    * Relevance score penalty percent per year for for resources without upcoming runs. Only affects results if there is a search term.
@@ -20112,6 +20180,13 @@ export interface LearningResourcesUserSubscriptionApiLearningResourcesUserSubscr
   readonly topic?: Array<string>
 
   /**
+   * If true, use hybrid search combining vector and keyword search
+   * @type {boolean}
+   * @memberof LearningResourcesUserSubscriptionApiLearningResourcesUserSubscriptionSubscribeCreate
+   */
+  readonly use_hybrid_search?: boolean | null
+
+  /**
    * Relevance score penalty percent per year for for resources without upcoming runs. Only affects results if there is a search term.
    * @type {number}
    * @memberof LearningResourcesUserSubscriptionApiLearningResourcesUserSubscriptionSubscribeCreate
@@ -20188,6 +20263,7 @@ export class LearningResourcesUserSubscriptionApi extends BaseAPI {
         requestParameters.sortby,
         requestParameters.source_type,
         requestParameters.topic,
+        requestParameters.use_hybrid_search,
         requestParameters.yearly_decay_percent,
         options,
       )
@@ -20234,6 +20310,7 @@ export class LearningResourcesUserSubscriptionApi extends BaseAPI {
         requestParameters.slop,
         requestParameters.sortby,
         requestParameters.topic,
+        requestParameters.use_hybrid_search,
         requestParameters.yearly_decay_percent,
         options,
       )
@@ -20281,6 +20358,7 @@ export class LearningResourcesUserSubscriptionApi extends BaseAPI {
         requestParameters.sortby,
         requestParameters.source_type,
         requestParameters.topic,
+        requestParameters.use_hybrid_search,
         requestParameters.yearly_decay_percent,
         requestParameters.PercolateQuerySubscriptionRequestRequest,
         options,

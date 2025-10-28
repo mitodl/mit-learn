@@ -473,6 +473,12 @@ class LearningResourcesSearchRequestSerializer(SearchRequestSerializer):
             " 0 means content files are ignored"
         ),
     )
+    use_hybrid_search = serializers.BooleanField(
+        required=False,
+        allow_null=True,
+        default=False,
+        help_text="If true, use hybrid search combining vector and keyword search",
+    )
 
 
 class ContentFileSearchRequestSerializer(SearchRequestSerializer):
