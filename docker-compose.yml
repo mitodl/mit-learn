@@ -6,11 +6,17 @@ include:
       - env/backend.env
       - env/backend.local.env
 
+# Define the extra_hosts as a reusable anchor
+x-extra-hosts: &default-extra-hosts
+  extra_hosts:
+    - "mitxonline.odl.local:host-gateway"
+
 services:
   web:
     extends:
       file: docker-compose.apps.yml
       service: web
+    <<: *default-extra-hosts
     env_file:
       - path: env/shared.env
       - path: env/shared.local.env
@@ -26,6 +32,10 @@ services:
     extends:
       file: docker-compose.apps.yml
       service: watch
+    extra_hosts:
+      # Both the browser and NextJS server (containerized) make requests to
+      # api.open.odl.local, forward those to host
+      - "api.open.odl.local:host-gateway"
     env_file:
       - path: env/shared.env
       - path: env/shared.local.env
@@ -41,6 +51,7 @@ services:
     extends:
       file: docker-compose.apps.yml
       service: celery
+    <<: *default-extra-hosts
     env_file:
       - path: env/shared.env
       - path: env/shared.local.env

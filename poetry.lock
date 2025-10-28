@@ -1568,7 +1568,7 @@ django = ">=3.2"
 
 [[package]]
 name = "django-health-check"
-version = "3.20.1.dev9+g592f6a8fc"
+version = "3.20.1.dev10+g53f9bdc3a"
 description = "Monitor the health of your Django app and its connected services."
 optional = false
 python-versions = ">=3.9"
@@ -1581,14 +1581,14 @@ Django = ">=4.2"
 
 [package.extras]
 docs = ["sphinx"]
-lint = ["ruff (==0.13.1)"]
+lint = ["ruff (==0.14.0)"]
 test = ["boto3", "celery", "django-storages", "pytest", "pytest-cov", "pytest-django", "redis"]
 
 [package.source]
 type = "git"
 url = "https://github.com/revsys/django-health-check"
-reference = "592f6a8fc2a8481f4f810678461db52bd1b0e3d6"
-resolved_reference = "592f6a8fc2a8481f4f810678461db52bd1b0e3d6"
+reference = "53f9bdc3a7acc8a577319987fef0bd3040eef4b4"
+resolved_reference = "53f9bdc3a7acc8a577319987fef0bd3040eef4b4"
 
 [[package]]
 name = "django-imagekit"
@@ -1782,6 +1782,18 @@ groups = ["main"]
 files = [
     {file = "django-webpack-loader-3.1.1.tar.gz", hash = "sha256:f11b79700d1bfc1299131bdf4ba479c1ec200f83a1400e1a2feb5c2ba7b6f8c4"},
     {file = "django_webpack_loader-3.1.1-py2.py3-none-any.whl", hash = "sha256:15c05cb685b113c5e6f947efa8ee3888a03c2969a2dd0da4c7610b3e695f67ba"},
+]
+
+[[package]]
+name = "django-zeal"
+version = "2.0.4"
+description = "Detect N+1s in your Django app"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "django_zeal-2.0.4-py3-none-any.whl", hash = "sha256:c37b0a7d203572d8eb8462a601f19dedfdf82324a25c7eb7273afdc52fc519fa"},
+    {file = "django_zeal-2.0.4.tar.gz", hash = "sha256:934cd3968c1ede3f3ec5314c4da285ef4796f4b6de1f95870c5999370280e17e"},
 ]
 
 [[package]]
@@ -9243,4 +9255,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.1"
 python-versions = "~3.12"
-content-hash = "e12fa65a8bb0e0fce970adf4f007880d4c9d61be763510a5e477be41385288d7"
+content-hash = "3375bf2da141502912a53f6ded4b5673b3de08e29ad16534e795f3b9dbb8e20d"

@@ -3,13 +3,16 @@
 import React from "react"
 import { css, Global, Theme } from "@emotion/react"
 
+export const HEADER_HEIGHT = 72
+export const HEADER_HEIGHT_MD = 60
+
 const pageCss = (theme: Theme) => css`
   html {
     font-family: ${theme.typography.body1.fontFamily};
     color: ${theme.typography.body1.color};
-    scroll-padding-top: ${theme.custom.dimensions.headerHeight};
-    ${theme.breakpoints.down("sm")} {
-      scroll-padding-top: ${theme.custom.dimensions.headerHeightSm};
+    scroll-padding-top: ${HEADER_HEIGHT}px;
+    ${theme.breakpoints.down("md")} {
+      scroll-padding-top: ${HEADER_HEIGHT_MD}px;
     }
   }
 

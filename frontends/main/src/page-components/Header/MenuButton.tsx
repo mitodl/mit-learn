@@ -12,7 +12,7 @@ const MenuButtonText = styled.div(({ theme }) => ({
   alignSelf: "center",
   paddingLeft: "16px",
   textTransform: "none",
-  [theme.breakpoints.down("sm")]: {
+  [theme.breakpoints.down("md")]: {
     display: "none",
   },
   ...theme.typography.subtitle2,
@@ -41,7 +41,7 @@ const StyledMenuButton = styled.button(({ theme }) => ({
   svg: {
     color: theme.custom.colors.white,
   },
-  [theme.breakpoints.down("sm")]: {
+  [theme.breakpoints.down("md")]: {
     padding: "4px 0",
   },
 }))

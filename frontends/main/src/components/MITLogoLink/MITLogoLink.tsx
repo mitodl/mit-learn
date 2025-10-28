@@ -7,7 +7,7 @@ import learnLogo from "@/public/images/mit-learn-logo.svg"
 import { styled } from "ol-components"
 
 interface Props {
-  logo: "mit_white" | "mit_black" | "learn"
+  logo: "mit_white" | "mit_black" | "learn" | "learn_authenticated"
   className?: string
 }
 
@@ -27,6 +27,10 @@ const linkProps = {
     href: "/",
     title: "MIT Learn Homepage",
   },
+  learn_authenticated: {
+    href: "/dashboard",
+    title: "Your MIT Learning Journey",
+  },
   mit_black: {
     href: "https://mit.edu/",
     title: "MIT Homepage",
@@ -40,6 +44,9 @@ const linkProps = {
 }
 const imageProps = {
   learn: {
+    src: learnLogo,
+  },
+  learn_authenticated: {
     src: learnLogo,
   },
   mit_black: {

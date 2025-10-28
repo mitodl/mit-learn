@@ -85,7 +85,13 @@ const programCollection: PartialFactory<V2ProgramCollection> = (
   const defaults: V2ProgramCollection = {
     id: uniqueProgramId.enforce(() => faker.number.int()),
     description: faker.lorem.paragraph(),
-    programs: programs({ count: 2 }).results.map((p) => p.id),
+    programs: programs({ count: 2 }).results.map((p, i) => {
+      return {
+        id: p.id,
+        title: p.title,
+        order: i + 1,
+      }
+    }),
     title: faker.lorem.words(3),
     created_on: faker.date.past().toISOString(),
     updated_on: faker.date.recent().toISOString(),

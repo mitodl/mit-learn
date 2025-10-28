@@ -17,6 +17,7 @@ import { EnrollmentDisplay } from "./CoursewareDisplay/EnrollmentDisplay"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useUserMe } from "api/hooks/user"
+import { OrganizationCards } from "./CoursewareDisplay/OrganizationCards"
 
 const SubTitleText = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
@@ -69,6 +70,7 @@ const HomeContent: React.FC = () => {
   const { isLoading: isLoadingProfile, data: user } = useUserMe()
   const topics = user?.profile?.preference_search_filters.topic
   const certification = user?.profile?.preference_search_filters.certification
+  const showOrgs = useFeatureFlagEnabled(FeatureFlags.OrganizationDashboard)
   const showEnrollments = useFeatureFlagEnabled(
     FeatureFlags.EnrollmentDashboard,
   )
@@ -87,6 +89,7 @@ const HomeContent: React.FC = () => {
           </ButtonLink>
         </HomeHeaderRight>
       </HomeHeader>
+      {showOrgs ? <OrganizationCards /> : null}
       {showEnrollments ? <EnrollmentDisplay /> : null}
       <Suspense>
         <StyledResourceCarousel

@@ -1,6 +1,6 @@
 "use client"
 
-import { styled } from "ol-components"
+import { styled, HEADER_HEIGHT, HEADER_HEIGHT_MD } from "ol-components"
 
 /*
  * Use in server components gives:
@@ -11,11 +11,11 @@ import { styled } from "ol-components"
 export const PageWrapper = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  height: "calc(100vh - 72px)",
-  marginTop: "72px",
-  [theme.breakpoints.down("sm")]: {
-    marginTop: "60px",
-    height: "calc(100vh - 60px)",
+  height: `calc(100vh - ${HEADER_HEIGHT}px)`,
+  marginTop: HEADER_HEIGHT,
+  [theme.breakpoints.down("md")]: {
+    marginTop: HEADER_HEIGHT_MD,
+    height: `calc(100vh - ${HEADER_HEIGHT_MD}px)`,
   },
 }))
 

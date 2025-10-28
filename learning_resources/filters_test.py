@@ -534,6 +534,7 @@ def test_learning_resource_filter_delivery(mock_courses, client):
     )
 
 
+@pytest.mark.skip_nplusone_check
 def test_content_file_filter_run_id(mock_content_files, client):
     """Test that the run_id filter works for contentfiles"""
 
@@ -553,6 +554,7 @@ def test_content_file_filter_run_id(mock_content_files, client):
     )
 
 
+@pytest.mark.skip_nplusone_check
 def test_content_file_filter_resource_id(mock_content_files, client):
     """Test that the resource_id filter works for contentfiles"""
 
@@ -575,6 +577,7 @@ def test_content_file_filter_resource_id(mock_content_files, client):
     )
 
 
+@pytest.mark.skip_nplusone_check
 def test_content_file_filter_edx_module_id(mock_content_files, client):
     """Test that the resource_id filter works for contentfiles"""
     assert mock_content_files[0].edx_module_id is None
@@ -597,6 +600,7 @@ def test_content_file_filter_edx_module_id(mock_content_files, client):
     ]
 
 
+@pytest.mark.skip_nplusone_check
 def test_content_file_filter_platform(mock_content_files, client):
     """Test that the platform filter works"""
 
@@ -614,6 +618,7 @@ def test_content_file_filter_platform(mock_content_files, client):
     )
 
 
+@pytest.mark.skip_nplusone_check
 def test_content_file_filter_offered_by(mock_content_files, client):
     """Test that the offered_by filter works for contentfiles"""
 
@@ -631,6 +636,7 @@ def test_content_file_filter_offered_by(mock_content_files, client):
     )
 
 
+@pytest.mark.skip_nplusone_check
 def test_learning_resource_filter_content_feature_type(client):
     """Test that the resource_content_tag filter works"""
 
