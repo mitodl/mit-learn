@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.47.5 (Released October 28, 2025)
+--------------
+
+- make contract card titles link to org page (#2648)
+- Update search index after updating next_start_date (#2639)
+- Video shorts webhook and api (#2631)
+
 Version 0.47.4 (Released October 28, 2025)
 --------------
 
