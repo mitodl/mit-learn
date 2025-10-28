@@ -40,7 +40,7 @@ const getSearchParams = ({
     max_incompleteness_penalty: searchParams.get("max_incompleteness_penalty"),
     content_file_score_weight: searchParams.get("content_file_score_weight"),
     resource_category: resourceCategory ? [resourceCategory] : null,
-    use_hybrid_search:  searchParams.get("use_hybrid_search"),
+    use_hybrid_search: searchParams.get("use_hybrid_search"),
     aggregations: [...(facetNames || []), "resource_category"],
     ...requestParams,
     offset: (Number(page) - 1) * pageSize,

@@ -35,6 +35,7 @@ from learning_resources_search.api import (
     percolate_matches_for_document,
 )
 from learning_resources_search.constants import (
+    COMBINED_INDEX,
     CONTENT_FILE_TYPE,
     COURSE_TYPE,
     LEARNING_PATH_TYPE,
@@ -45,7 +46,6 @@ from learning_resources_search.constants import (
     SEARCH_CONN_EXCEPTIONS,
     VIDEO_PLAYLIST_TYPE,
     VIDEO_TYPE,
-    COMBINED_INDEX,
     IndexestoUpdate,
 )
 from learning_resources_search.exceptions import ReindexError, RetryError
@@ -598,7 +598,7 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
                     chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
                 )
             ]
-            
+
             for course in (
                 Course.objects.filter(learning_resource__published=True)
                 .filter(learning_resource__etl_source__in=RESOURCE_FILE_ETL_SOURCES)
@@ -624,23 +624,22 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
                 ]
 
         if COMBINED_INDEX in indexes:
-            index_tasks = index_tasks + [index_learning_resources.si(
-                ids,
-                COMBINED_INDEX,
-                index_types=IndexestoUpdate.reindexing_index.value,
-            )
-            for ids in chunks(
-                        LearningResource.objects.filter(
-                            published=True
-                        )
-                        .order_by("id")
-                        .values_list("id", flat=True),
-                        chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
-            )
+            index_tasks = index_tasks + [
+                index_learning_resources.si(
+                    ids,
+                    COMBINED_INDEX,
+                    index_types=IndexestoUpdate.reindexing_index.value,
+                )
+                for ids in chunks(
+                    LearningResource.objects.filter(published=True)
+                    .order_by("id")
+                    .values_list("id", flat=True),
+                    chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
+                )
             ]
 
         for resource_type in [
-            PROGRAM_TYPE, 
+            PROGRAM_TYPE,
             PODCAST_TYPE,
             PODCAST_EPISODE_TYPE,
             LEARNING_PATH_TYPE,

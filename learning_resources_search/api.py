@@ -15,6 +15,7 @@ from learning_resources_search.connection import (
     get_default_alias_name,
 )
 from learning_resources_search.constants import (
+    COMBINED_INDEX,
     CONTENT_FILE_TYPE,
     COURSE_QUERY_FIELDS,
     COURSE_TYPE,
@@ -29,7 +30,6 @@ from learning_resources_search.constants import (
     SEARCH_FILTERS,
     SOURCE_EXCLUDED_FIELDS,
     TOPICS_QUERY_FIELDS,
-    COMBINED_INDEX
 )
 from learning_resources_search.models import PercolateQuery
 from learning_resources_search.utils import (
@@ -156,7 +156,7 @@ def wrap_text_clause(text_query, min_score=None, use_hybrid_search=False):
     Args:
         text_query (dict): dictionary with the opensearch text clauses
         min_score (float): minimum score for function score query
-        use_hybrid_search (bool): whether to use hybrid search  
+        use_hybrid_search (bool): whether to use hybrid search
     Returns:
         dict: dictionary with the opensearch text clause
     """
@@ -579,7 +579,9 @@ def percolate_matches_for_document(document_id):
     return percolated_queries
 
 
-def add_text_query_to_search(search, text, search_params, query_type_query, use_hybrid_search):
+def add_text_query_to_search(
+    search, text, search_params, query_type_query, use_hybrid_search
+):
     if search_params.get("endpoint") == CONTENT_FILE_TYPE:
         text_query = generate_content_file_text_clause(text)
     else:
@@ -589,7 +591,7 @@ def add_text_query_to_search(search, text, search_params, query_type_query, use_
             search_params.get("slop"),
             search_params.get("content_file_score_weight"),
             search_params.get("min_score"),
-            use_hybrid_search
+            use_hybrid_search,
         )
 
     yearly_decay_percent = search_params.get("yearly_decay_percent")
@@ -597,7 +599,7 @@ def add_text_query_to_search(search, text, search_params, query_type_query, use_
         search_params.get("max_incompleteness_penalty", 0) / 100
     )
 
-    if not use_hybrid_search and(yearly_decay_percent or max_incompleteness_penalty):
+    if not use_hybrid_search and (yearly_decay_percent or max_incompleteness_penalty):
         script_query = {
             "script_score": {
                 "query": {"bool": {"must": [text_query], "filter": query_type_query}}
@@ -663,7 +665,11 @@ def add_text_query_to_search(search, text, search_params, query_type_query, use_
             query={
                 "hybrid": {
                     "pagination_depth": 10,
-                    "queries": [text_query, vector_query_description, vector_query_title],
+                    "queries": [
+                        text_query,
+                        vector_query_description,
+                        vector_query_title,
+                    ],
                 }
             }
         )
@@ -691,7 +697,7 @@ def construct_search(search_params):
         and search_params.get("endpoint") != CONTENT_FILE_TYPE
     ):
         search_params["resource_type"] = list(LEARNING_RESOURCE_TYPES)
-    
+
     use_hybrid_search = search_params.get("use_hybrid_search", False)
 
     indexes = relevant_indexes(
@@ -727,11 +733,7 @@ def construct_search(search_params):
         text = re.sub("[\u201c\u201d]", '"', search_params.get("q"))
 
         search = add_text_query_to_search(
-            search,
-            text,
-            search_params,
-            query_type_query,
-            use_hybrid_search
+            search, text, search_params, query_type_query, use_hybrid_search
         )
 
     else:
@@ -783,7 +785,7 @@ def execute_learn_search(search_params):
             )
     search = construct_search(search_params)
 
-    if search_params.get('use_hybrid_search'):
+    if search_params.get("use_hybrid_search"):
         search = search.extra(
             search_pipeline={
                 "description": "Post processor for hybrid search",

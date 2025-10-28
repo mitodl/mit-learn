@@ -27,8 +27,6 @@ COMBINED_INDEX = "combined_hybrid"
 LEARNING_RESOURCE = "learning_resource"
 
 
-
-
 class IndexestoUpdate(Enum):
     """
     Enum for index to update
@@ -324,7 +322,7 @@ LEARNING_RESOURCE_MAP = {
 }
 
 EMBEDDING_FIELDS = {
-     "title_embedding": {
+    "title_embedding": {
         "type": "knn_vector",
         "dimension": 768,
         "method": {

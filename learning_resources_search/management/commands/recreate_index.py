@@ -26,9 +26,11 @@ class Command(BaseCommand):
         )
 
         parser.add_argument(
-            "--combined", dest=COMBINED_INDEX, action="store_true", help="Recreate combined index for hybrid search"
+            "--combined",
+            dest=COMBINED_INDEX,
+            action="store_true",
+            help="Recreate combined index for hybrid search",
         )
-
 
         for object_type in sorted(ALL_INDEX_TYPES):
             if object_type != COMBINED_INDEX:
@@ -37,7 +39,7 @@ class Command(BaseCommand):
                     dest=object_type,
                     action="store_true",
                     help=f"Recreate the {object_type} index",
-            )
+                )
         super().add_arguments(parser)
 
     def handle(self, *args, **options):  # noqa: ARG002

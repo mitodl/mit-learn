@@ -23,11 +23,11 @@ from learning_resources_search.connection import (
 from learning_resources_search.constants import (
     ALIAS_ALL_INDICES,
     ALL_INDEX_TYPES,
+    COMBINED_INDEX,
     COURSE_TYPE,
     MAPPING,
     PERCOLATE_INDEX_TYPE,
     SYNONYMS,
-    COMBINED_INDEX,
     IndexestoUpdate,
 )
 from learning_resources_search.exceptions import ReindexError
