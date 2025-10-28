@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.47.6
+--------------
+
+- Fix a BannerPage background issue (#2651)
+- Don't publish Professional Ed resources with blank run ids (#2637)
+
 Version 0.47.5 (Released October 28, 2025)
 --------------
 
