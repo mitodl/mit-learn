@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+Version 0.47.7
+--------------
+
+- remove org dashboard feature flag (#2654)
+- Avoid double slashes in paths (#2652)
+- use next_start_date when available in learning resource drawer (#2619)
+- Fix a BannerPage background issue (#2651)
+- Don't publish Professional Ed resources with blank run ids (#2637)
+
 Version 0.47.5 (Released October 28, 2025)
 --------------
 
