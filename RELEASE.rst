@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.47.5
+Version 0.47.5 (Released October 28, 2025)
 --------------
 
 - make contract card titles link to org page (#2648)
