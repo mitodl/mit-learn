@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.47.4
+Version 0.47.4 (Released October 28, 2025)
 --------------
 
 - do not optimize in background images if optimize is off (#2644)
