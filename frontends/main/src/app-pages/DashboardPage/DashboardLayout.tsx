@@ -36,8 +36,6 @@ import {
 import dynamic from "next/dynamic"
 import { MitxOnlineUser, mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useUserMe } from "api/hooks/user"
-import { useFeatureFlagEnabled } from "posthog-js/react"
-import { FeatureFlags } from "@/common/feature_flags"
 import { contractQueries } from "api/mitxonline-hooks/contracts"
 import { useQuery } from "@tanstack/react-query"
 import { ContractPage } from "@mitodl/mitxonline-api-axios/v2"
@@ -241,12 +239,11 @@ type TabData = {
   }
 }
 const getTabData = (
-  orgsEnabled: boolean = false,
   user?: MitxOnlineUser,
   contracts?: ContractPage[],
 ): TabData[] => {
   const orgTabs =
-    orgsEnabled && user && contracts
+    user && contracts
       ? user?.b2b_organizations.map((org) => {
           const orgContracts = contracts?.filter(
             (contract) => contract.organization === org.id,
@@ -317,7 +314,6 @@ const DashboardPage: React.FC<{
 }> = ({ children }) => {
   const pathname = usePathname()
   const { isLoading: isLoadingUser, data: user } = useUserMe()
-  const orgsEnabled = useFeatureFlagEnabled(FeatureFlags.OrganizationDashboard)
   const { data: mitxOnlineUser, isLoading: isLoadingMitxOnlineUser } = useQuery(
     {
       ...mitxUserQueries.me(),
@@ -330,15 +326,9 @@ const DashboardPage: React.FC<{
   const tabData = useMemo(
     () =>
       isLoadingMitxOnlineUser || isLoadingContracts
-        ? getTabData(orgsEnabled)
-        : getTabData(orgsEnabled, mitxOnlineUser, contracts),
-    [
-      isLoadingMitxOnlineUser,
-      isLoadingContracts,
-      orgsEnabled,
-      mitxOnlineUser,
-      contracts,
-    ],
+        ? getTabData()
+        : getTabData(mitxOnlineUser, contracts),
+    [isLoadingMitxOnlineUser, isLoadingContracts, mitxOnlineUser, contracts],
   )
 
   const tabValue = useMemo(() => {
