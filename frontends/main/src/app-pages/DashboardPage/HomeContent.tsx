@@ -70,7 +70,6 @@ const HomeContent: React.FC = () => {
   const { isLoading: isLoadingProfile, data: user } = useUserMe()
   const topics = user?.profile?.preference_search_filters.topic
   const certification = user?.profile?.preference_search_filters.certification
-  const showOrgs = useFeatureFlagEnabled(FeatureFlags.OrganizationDashboard)
   const showEnrollments = useFeatureFlagEnabled(
     FeatureFlags.EnrollmentDashboard,
   )
@@ -89,7 +88,7 @@ const HomeContent: React.FC = () => {
           </ButtonLink>
         </HomeHeaderRight>
       </HomeHeader>
-      {showOrgs ? <OrganizationCards /> : null}
+      <OrganizationCards />
       {showEnrollments ? <EnrollmentDisplay /> : null}
       <Suspense>
         <StyledResourceCarousel

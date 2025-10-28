@@ -210,7 +210,6 @@ describe("HomeContent", () => {
       setupAPIs()
       mockedUseFeatureFlagEnabled.mockImplementation((flag) => {
         if (flag === "enrollment-dashboard") return enrollmentsEnabled
-        if (flag === "mitlearn-organization-dashboard") return false // Disable org cards to avoid image issues
         return false
       })
 

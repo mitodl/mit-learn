@@ -3,8 +3,6 @@
 import React, { useEffect } from "react"
 import DOMPurify from "isomorphic-dompurify"
 import Image from "next/image"
-import { useFeatureFlagEnabled } from "posthog-js/react"
-import { FeatureFlags } from "@/common/feature_flags"
 import { useQueries, useQuery } from "@tanstack/react-query"
 import {
   programsQueries,
@@ -360,9 +358,6 @@ type OrganizationContentInternalProps = {
 const OrganizationContentInternal: React.FC<
   OrganizationContentInternalProps
 > = ({ org }) => {
-  const isOrgDashboardEnabled = useFeatureFlagEnabled(
-    FeatureFlags.OrganizationDashboard,
-  )
   const orgId = org.id
   const contracts = useQuery(contractQueries.contractsList())
   const orgContracts = contracts.data?.filter(
@@ -378,8 +373,6 @@ const OrganizationContentInternal: React.FC<
   const programCollections = useQuery(
     programCollectionQueries.programCollectionsList({}),
   )
-
-  if (!isOrgDashboardEnabled) return null
 
   const transformedPrograms = programs.data?.results
     .filter((program) => program.collections.length === 0)
