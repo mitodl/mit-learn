@@ -55,10 +55,6 @@ describe("OrganizationCards", () => {
     return renderWithProviders(<OrganizationCards />)
   }
 
-  afterEach(() => {
-    jest.clearAllMocks()
-  })
-
   it("renders nothing when user has no B2B organizations", () => {
     setup({ organizations: [] })
 
@@ -133,8 +129,12 @@ describe("OrganizationCards", () => {
 
       // Should show all contracts for the organization
       // Each contract appears twice (mobile + desktop)
-      expect(await screen.findAllByText("Contract 1")).toHaveLength(2)
-      expect(screen.getAllByText("Contract 2")).toHaveLength(2)
+      expect(
+        await screen.findAllByRole("link", { name: "Contract 1" }),
+      ).toHaveLength(2)
+      expect(screen.getAllByRole("link", { name: "Contract 2" })).toHaveLength(
+        2,
+      )
     })
 
     it("renders Continue buttons with correct organization URLs", async () => {

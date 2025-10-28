@@ -1,7 +1,7 @@
 import React from "react"
 import Image from "next/image"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
-import { Stack, Typography, styled, theme } from "ol-components"
+import { Stack, Typography, styled, theme, Link } from "ol-components"
 import { useQuery } from "@tanstack/react-query"
 import { DashboardCardRoot } from "./DashboardCard"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
@@ -55,12 +55,17 @@ const CardRootStyled = styled(DashboardCardRoot)({
   },
 })
 
+const TitleLink = styled(Link)({
+  width: "100%",
+})
+
 const CardContent = styled(Stack)({
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
   padding: "16px",
   width: "100%",
+  gap: "16px",
   "&:not(:last-child)": {
     borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
   },
@@ -90,19 +95,20 @@ interface OrganizationContractsProps {
 const OrganizationContracts: React.FC<OrganizationContractsProps> = ({
   org,
 }) => {
-  const contractContent = org.contracts?.length
-    ? org.contracts?.map((contract) => (
+  const contractContent =
+    org.contracts?.map((contract) => {
+      const href = organizationView(org.slug.replace("org-", ""))
+      return (
         <CardContent key={contract.id} direction="row">
-          <Typography variant="subtitle2">{contract.name}</Typography>
-          <ButtonLink
-            size="small"
-            href={organizationView(org.slug.replace("org-", ""))}
-          >
+          <TitleLink size="medium" color="black" href={href}>
+            {contract.name}
+          </TitleLink>
+          <ButtonLink size="small" href={href}>
             Continue
           </ButtonLink>
         </CardContent>
-      ))
-    : null
+      )
+    }) ?? null
   return (
     <ContractCard>
       <Title key={org.id}>
