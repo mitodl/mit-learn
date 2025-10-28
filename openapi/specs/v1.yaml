@@ -9478,6 +9478,48 @@ paths:
               schema:
                 $ref: '#/components/schemas/ContentFileWebHookRequest'
           description: ''
+  /api/v1/webhooks/video_shorts/:
+    post:
+      operationId: webhooks_video_shorts_create
+      description: Webhook handler for VideoShort updates
+      parameters:
+      - in: query
+        name: source
+        schema:
+          type: string
+      - in: query
+        name: video_id
+        schema:
+          type: string
+          minLength: 1
+        required: true
+      - in: query
+        name: youtube_metadata
+        schema:
+          type: object
+          additionalProperties: {}
+        required: true
+      tags:
+      - webhooks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VideoShortWebhookRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VideoShortWebhookRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VideoShortWebhookRequestRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookResponse'
+          description: ''
 components:
   schemas:
     AggregationsEnum:
@@ -15900,6 +15942,21 @@ components:
       type: string
       enum:
       - video
+    VideoShortWebhookRequestRequest:
+      type: object
+      description: Serializer for Video Short webhook requests.
+      properties:
+        video_id:
+          type: string
+          minLength: 1
+        youtube_metadata:
+          type: object
+          additionalProperties: {}
+        source:
+          type: string
+      required:
+      - video_id
+      - youtube_metadata
     WebhookResponse:
       type: object
       description: Serializer for webhook responses.
