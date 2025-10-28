@@ -1,0 +1,286 @@
+.ck-content .image {
+  display: inline-block;
+  margin: 1em 0;
+  max-width: 100%;
+}
+
+.ck-content .image.image-style-align-left {
+  float: left;
+  margin-right: 1.5em;
+  margin-top: 0.5em;
+}
+
+.ck-content .image.image-style-align-right {
+  float: right;
+  margin-left: 1.5em;
+  margin-top: 0.5em;
+}
+
+.ck-content .image.image-style-align-center {
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+}
+
+/* make sure the wrapper displays inline-block so text can wrap */
+.ck-content .ck-media__wrapper {
+  display: inline-block;
+  vertical-align: top;
+  margin: 0.5em;
+  resize: both; /* native resizing via browser */
+  overflow: auto;
+  min-width: 120px;
+  min-height: 90px;
+  box-sizing: border-box;
+  border: 1px dashed transparent; /* will be visible when selected */
+  position: relative;
+}
+
+/* show a visible outline when selected (for UX) */
+.ck-content .ck-media__wrapper.is-selected {
+  border-color: #4d90fe;
+  box-shadow: 0 0 0 1px rgb(77 144 254 / 15%);
+}
+
+/* convenience helper class to make the media fill content width */
+.ck-content .ck-media__wrapper.full-width {
+  width: 100% !important;
+  max-width: 100%;
+  display: block;
+}
+
+/* iframe styling */
+.ck-content .ck-media__wrapper iframe {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border: 0;
+}
+
+/* optional: show manual resize handle so users know they can drag */
+.ck-content .ck-media__wrapper::after {
+  content: "";
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  width: 12px;
+  height: 12px;
+  background: transparent;
+  border-right: 2px solid rgb(0 0 0 / 35%);
+  border-bottom: 2px solid rgb(0 0 0 / 35%);
+  pointer-events: none;
+}
+
+/* Allow floating video left/right */
+.ck-content .ck-media__wrapper.align-left {
+  float: left;
+  margin-right: 1em;
+  margin-bottom: 0.5em;
+  max-width: 50%;
+}
+
+.ck-content .ck-media__wrapper.align-right {
+  float: right;
+  margin-left: 1em;
+  margin-bottom: 0.5em;
+  max-width: 50%;
+}
+
+.ck-content .ck-media__wrapper.align-center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  float: none;
+}
+
+/* styles.css */
+
+.ck-content figure.media.align-left {
+  float: left;
+  margin-right: 1em;
+  margin-left: 0;
+}
+
+.ck-content figure.media.align-right {
+  float: right;
+  margin-left: 1em;
+  margin-right: 0;
+}
+
+.ck-content figure.media.align-center {
+  display: block;
+  margin: 0 auto;
+  float: none;
+}
+
+/* Clear floats to prevent layout issues below */
+
+/* Optional: responsive iframe scaling */
+
+.ck-content figure.media {
+  display: block;
+  max-width: 100% !important; /* allow full resizing */
+  width: auto;
+  position: relative;
+  overflow: visible;
+  z-index: 1;
+}
+
+.ck-content figure.media iframe {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+}
+
+.ck-content figure.image.align-left {
+  float: left;
+  margin-right: 1em;
+}
+
+.ck-content figure.image.align-right {
+  float: right;
+  margin-left: 1em;
+}
+
+.ck-content figure.image.align-center {
+  display: block;
+  margin: 0 auto;
+  float: none;
+}
+
+.ck-content .media {
+  position: relative;
+  display: block;
+  max-width: 100%;
+  clear: both;
+  margin: 1em 0;
+}
+
+.ck-content .media.align-left {
+  float: left;
+  margin-right: 1em;
+  clear: none;
+}
+
+.ck-content .media.align-right {
+  float: right;
+  margin-left: 1em;
+  width: 50%;
+}
+
+.ck-content .media.align-center {
+  margin: 0 auto;
+  float: none;
+}
+
+/* ✅ Make inner iframe respect the figure width */
+.ck-content .media .ck-media__wrapper {
+  position: relative;
+  width: 100%;
+  height: 0;
+  padding-bottom: 5.25%; /* 16:9 aspect ratio */
+  overflow: hidden;
+}
+
+/* Ensure iframe stays contained and resizes correctly */
+.ck-content figure.media .ck-media__wrapper {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Fix cursor placement issue below oversized media */
+.ck-content figure.media::after {
+  content: "";
+  display: block;
+  clear: both;
+}
+
+.ck-content .media .ck-media__wrapper iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* ✅ Ensure caret positioning below media works */
+.ck-content::after {
+  content: "";
+  display: block;
+  clear: both;
+}
+
+.ck-content .align-center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+.ck-content .align-left {
+  float: left;
+  margin-right: 1rem;
+}
+
+.ck-content .align-right {
+  float: right;
+  margin-left: 1rem;
+}
+
+.ck-content .course-card {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: center;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 20px auto; /* ✅ centers the card horizontally */
+  background: #fafafa;
+  max-width: 100%;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 5%);
+}
+
+.ck-content .course-card img {
+  width: 50%;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  object-fit: cover;
+  padding-right: 10px;
+}
+
+.ck-content .course-card .course-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.ck-content .course-card .course-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 4px 0;
+  text-align: left; /* ✅ center text */
+}
+
+.ck-content .course-card .course-description {
+  font-size: 0.9rem;
+  color: #555;
+  text-align: left;
+}
+
+.course-list-container {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: background-color 0.2s;
+  outline: none;
+}
