@@ -1,5 +1,7 @@
 """Serializers for video shorts"""
 
+from urllib.parse import urljoin
+
 from django.conf import settings
 from rest_framework import serializers
 
@@ -46,7 +48,7 @@ class YouTubeMetadataSerializer(VideoShortSerializer):
         )
 
         # Use relative URLs so they work regardless of domain
-        base_path = f"/{settings.VIDEO_SHORTS_S3_PREFIX}/{youtube_id}/"
+        base_path = urljoin(f"/{settings.VIDEO_SHORTS_S3_PREFIX}/", f"{youtube_id}/")
         transformed_data = {
             "youtube_id": youtube_id,
             "title": snippet.get("title"),

@@ -20,12 +20,12 @@ class VideoShortFactory(DjangoModelFactory):
         datetime.now(tz=UTC),
     )
     thumbnail_url = factory.LazyAttribute(
-        lambda obj: f"https://example.com/thumbnails/{obj.youtube_id}.jpg"
+        lambda obj: f"shorts/{obj.youtube_id}/{obj.youtube_id}.jpg"
     )
     thumbnail_height = FuzzyInteger(360, 720)
     thumbnail_width = FuzzyInteger(480, 1280)
     video_url = factory.LazyAttribute(
-        lambda obj: f"https://example.com/videos/{obj.youtube_id}.mp4"
+        lambda obj: f"shorts/{obj.youtube_id}/{obj.youtube_id}.mp4"
     )
 
     class Meta:

@@ -22,10 +22,10 @@ def test_video_short_serializer_read():
         title="Test Video",
         description="Test description",
         published_at=datetime(2024, 1, 15, 12, 0, 0, tzinfo=UTC),
-        thumbnail_url="https://example.com/thumb.jpg",
+        thumbnail_url="/shorts/test_123/test_123.jpg",
         thumbnail_height=360,
         thumbnail_width=480,
-        video_url="https://example.com/video.mp4",
+        video_url="/shorts/test_123/test_123.mp4",
     )
 
     serializer = VideoShortSerializer(video_short)
@@ -41,10 +41,10 @@ def test_video_short_serializer_read():
             "title": "Test Video",
             "description": "Test description",
             "published_at": "2024-01-15T12:00:00Z",
-            "thumbnail_url": "https://example.com/thumb.jpg",
+            "thumbnail_url": "/shorts/test_123/test_123.jpg",
             "thumbnail_height": 360,
             "thumbnail_width": 480,
-            "video_url": "https://example.com/video.mp4",
+            "video_url": "/shorts/test_123/test_123.mp4",
         },
     )
 
@@ -56,10 +56,10 @@ def test_video_short_serializer_create():
         "title": "Created Video",
         "description": "Created description",
         "published_at": "2024-01-15T12:00:00Z",
-        "thumbnail_url": "https://example.com/created_thumb.jpg",
+        "thumbnail_url": "/shorts/create_test/create_test.jpg",
         "thumbnail_height": 720,
         "thumbnail_width": 1280,
-        "video_url": "https://example.com/created_video.mp4",
+        "video_url": "/shorts/create_test/create_test.mp4",
     }
 
     serializer = VideoShortSerializer(data=data)
@@ -120,9 +120,12 @@ def test_video_short_serializer_update():
     assert_json_equal(result_data, data)
 
 
-def test_youtube_metadata_serializer(settings, sample_youtube_metadata):
+@pytest.mark.parametrize(
+    "prefix", ["youtube_shorts/", "youtube_shorts", "youtube_shorts//"]
+)
+def test_youtube_metadata_serializer(settings, sample_youtube_metadata, prefix):
     """Test YouTubeMetadataSerializer transforms YouTube API data correctly"""
-    settings.VIDEO_SHORTS_S3_PREFIX = "youtube_shorts"
+    settings.VIDEO_SHORTS_S3_PREFIX = prefix
 
     serializer = YouTubeMetadataSerializer(data=sample_youtube_metadata)
     assert serializer.is_valid()
