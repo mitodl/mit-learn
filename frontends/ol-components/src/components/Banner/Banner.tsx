@@ -11,9 +11,19 @@ const SubHeader = styled(Typography)({
 })
 
 type BannerBackgroundProps = {
+  /**
+   * Background image src, url(...), or image-set(...).
+   */
   backgroundUrl?: string
   backgroundSize?: string
   backgroundDim?: number
+}
+
+const standardizeBackgroundUrl = (url: string) => {
+  if (url.startsWith("url(") || url.startsWith("image-set(")) {
+    return url
+  }
+  return url.startsWith("image-set(") ? url : `url('${url}')`
 }
 
 /**
@@ -26,9 +36,7 @@ const BannerBackground = styled.div<BannerBackgroundProps>(
     backgroundSize = "cover",
     backgroundDim = 0,
   }) => {
-    const backgroundUrlFn = backgroundUrl.startsWith("image-set(")
-      ? backgroundUrl
-      : `url('${backgroundUrl}')`
+    const backgroundUrlFn = standardizeBackgroundUrl(backgroundUrl)
 
     return {
       backgroundAttachment: "fixed",
