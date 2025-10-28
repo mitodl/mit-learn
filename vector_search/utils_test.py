@@ -1,4 +1,5 @@
 from decimal import Decimal
+from unittest.mock import MagicMock
 
 import pytest
 from django.conf import settings
@@ -10,6 +11,7 @@ from learning_resources.factories import (
     LearningResourceFactory,
     LearningResourcePriceFactory,
     LearningResourceRunFactory,
+    LearningResourceTopicFactory,
 )
 from learning_resources.models import LearningResource
 from learning_resources.serializers import LearningResourceMetadataDisplaySerializer
@@ -35,6 +37,7 @@ from vector_search.utils import (
     _embed_course_metadata_as_contentfile,
     create_qdrant_collections,
     embed_learning_resources,
+    embed_topics,
     filter_existing_qdrant_points,
     qdrant_query_conditions,
     should_generate_content_embeddings,
@@ -915,3 +918,64 @@ def test_update_qdrant_indexes_updates_mismatched_field_type(mocker):
         for index_field in QDRANT_CONTENT_FILE_INDEXES
     ]
     mock_client.create_payload_index.assert_has_calls(expected_calls, any_order=True)
+
+
+def test_embed_topics_no_new_topics(mocker):
+    """
+    Test embed_topics when there are no new topics to embed
+    """
+    mock_client = MagicMock()
+    mock_qdrant_client = mocker.patch("vector_search.utils.qdrant_client")
+    mock_qdrant_client.return_value = mock_client
+    mock_client.count.return_value.count = 1
+    mock_vector_search = mocker.patch("vector_search.utils.vector_search")
+    mock_vector_search.return_value = {"hits": [{"name": "topic1"}]}
+    LearningResourceTopicFactory.create(name="topic1", parent=None)
+    mock_remove_points_matching_params = mocker.patch(
+        "vector_search.utils.remove_points_matching_params"
+    )
+    embed_topics()
+    mock_remove_points_matching_params.assert_not_called()
+    mock_client.upload_points.assert_not_called()
+
+
+def test_embed_topics_new_topics(mocker):
+    """
+    Test embed_topics when there are new topics
+    """
+    mock_client = MagicMock()
+    mock_qdrant_client = mocker.patch("vector_search.utils.qdrant_client")
+    mock_qdrant_client.return_value = mock_client
+    mock_client.count.return_value.count = 1
+    mock_vector_search = mocker.patch("vector_search.utils.vector_search")
+    mock_vector_search.return_value = {"hits": [{"name": "topic1"}]}
+    LearningResourceTopicFactory.create(name="topic1", parent=None)
+    LearningResourceTopicFactory.create(name="topic2", parent=None)
+    LearningResourceTopicFactory.create(name="topic3", parent=None)
+    mocker.patch("vector_search.utils.remove_points_matching_params")
+    embed_topics()
+    mock_client.upload_points.assert_called_once()
+    assert len(list(mock_client.upload_points.mock_calls[0][2]["points"])) == 2
+
+
+def test_embed_topics_remove_topics(mocker):
+    """
+    Test embed_topics when there are topics to remove
+    """
+    mock_client = MagicMock()
+    mock_qdrant_client = mocker.patch("vector_search.utils.qdrant_client")
+    mock_qdrant_client.return_value = mock_client
+    mock_client.count.return_value.count = 1
+    mock_vector_search = mocker.patch("vector_search.utils.vector_search")
+    mock_vector_search.return_value = {"hits": [{"name": "remove-topic"}]}
+
+    LearningResourceTopicFactory.create(name="topic2", parent=None)
+    LearningResourceTopicFactory.create(name="topic3", parent=None)
+    mock_remove_points_matching_params = mocker.patch(
+        "vector_search.utils.remove_points_matching_params"
+    )
+    embed_topics()
+    mock_remove_points_matching_params.assert_called_once()
+    assert (
+        mock_remove_points_matching_params.mock_calls[0][1][0]["name"] == "remove-topic"
+    )
