@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.47.4
+--------------
+
+- do not optimize in background images if optimize is off (#2644)
+- upgrade sharp (#2642)
+- dashboard home org cards (#2630)
+
 Version 0.47.1 (Released October 27, 2025)
 --------------
 
