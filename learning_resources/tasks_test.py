@@ -475,17 +475,26 @@ def test_get_youtube_transcripts(mocker):
     )
 
 
-def test_update_next_start_date(mocker):
+@pytest.mark.parametrize("published", [True, False])
+def test_update_next_start_date(mocker, published):
     learning_resource = LearningResourceFactory.create(
-        next_start_date=(timezone.now() - timedelta(10))
+        next_start_date=(timezone.now() - timedelta(10)),
+        published=published,
     )
     LearningResourceFactory.create(next_start_date=(timezone.now() + timedelta(1)))
 
     mock_load_next_start_date = mocker.patch(
         "learning_resources.tasks.load_run_dependent_values"
     )
+    mock_upsert_index = mocker.patch(
+        "learning_resources.tasks.resource_upserted_actions"
+    )
     update_next_start_date_and_prices()
     mock_load_next_start_date.assert_called_once_with(learning_resource)
+    if published:
+        mock_upsert_index.assert_called_once_with(learning_resource, percolate=False)
+    else:
+        mock_upsert_index.assert_not_called()
 
 
 @pytest.mark.parametrize(
