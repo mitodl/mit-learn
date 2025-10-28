@@ -2,6 +2,7 @@ import logging
 import uuid
 
 from django.conf import settings
+from django.db.models import Q
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_experimental.text_splitter import SemanticChunker
 from qdrant_client import QdrantClient, models
@@ -185,9 +186,9 @@ def embed_topics():
     indexed_count = client.count(collection_name=TOPICS_COLLECTION_NAME).count
 
     topic_names = set(
-        LearningResourceTopic.objects.filter(parent__isnull=False).values_list(
-            "name", flat=True
-        )
+        LearningResourceTopic.objects.filter(
+            Q(parent=None) | Q(parent__isnull=False)
+        ).values_list("name", flat=True)
     )
 
     if indexed_count > 0:
