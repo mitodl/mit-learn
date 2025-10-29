@@ -37,6 +37,9 @@ differ we emit a warning. This is to keep users from accidentally overriding def
 warning. This indicates that we are likely missing a required local-specific setting
 """
 
+# NB: This runs way too frequently (i.e. in tests). Need to figure out how to
+# Run only on interactive startup
+
 
 class EnvValidator:
     """Validates environment variable configurations and reports discrepancies."""
@@ -103,7 +106,7 @@ class EnvValidator:
 
         return env_vars
 
-    def _get_env_file_pairs(self) -> list[tuple[str, Path, Path, Path]]:
+    def get_env_file_pairs(self) -> list[tuple[str, Path, Path, Path]]:
         """
         Get pairs of environment files to compare.
 
@@ -149,7 +152,7 @@ class EnvValidator:
         """
         warnings = []
 
-        for env_type, base_path, local_path, example_path in self._get_env_file_pairs():
+        for env_type, base_path, local_path, example_path in self.get_env_file_pairs():
             if not example_path.exists():
                 continue
 
@@ -187,7 +190,7 @@ class EnvValidator:
         """
         warnings = []
 
-        for env_type, base_path, local_path, _ in self._get_env_file_pairs():
+        for env_type, base_path, local_path, _ in self.get_env_file_pairs():
             if not local_path.exists():
                 continue
 
