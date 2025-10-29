@@ -131,6 +131,14 @@ def mock_duplicates(mocker):
     )
 
 
+@pytest.fixture
+def mock_get_similar_topics_qdrant(mocker):
+    mocker.patch(
+        "learning_resources_search.plugins.get_similar_topics_qdrant",
+        return_value=["topic1", "topic2"],
+    )
+
+
 @pytest.fixture(autouse=True)
 def mock_upsert_tasks(mocker):
     """Mock out the upsert task helpers"""
@@ -1465,14 +1473,10 @@ def test_load_video(mocker, video_exists, is_published, pass_topics):
         assert getattr(result, key) == value, f"Property {key} should equal {value}"
 
 
-def test_load_videos(mocker):
+def test_load_videos(mocker, mock_get_similar_topics_qdrant):
     """Verify that load_videos loads a list of videos"""
     assert Video.objects.count() == 0
 
-    mocker.patch(
-        "learning_resources_search.plugins.get_similar_topics_qdrant",
-        return_value=["topic1", "topic2"],
-    )
     video_resources = [video.learning_resource for video in VideoFactory.build_batch(5)]
     videos_data = [
         {
@@ -1491,17 +1495,14 @@ def test_load_videos(mocker):
 
 
 @pytest.mark.parametrize("playlist_exists", [True, False])
-def test_load_playlist(mocker, playlist_exists):
+def test_load_playlist(mocker, playlist_exists, mock_get_similar_topics_qdrant):
     """Test load_playlist"""
     expected_topics = [{"name": "Biology"}, {"name": "Physics"}]
     [
         LearningResourceTopicFactory.create(name=topic["name"])
         for topic in expected_topics
     ]
-    mocker.patch(
-        "learning_resources_search.plugins.get_similar_topics_qdrant",
-        return_value=["topic1", "topic2"],
-    )
+
     mock_most_common_topics = mocker.patch(
         "learning_resources.etl.loaders.most_common_topics",
         return_value=expected_topics,
@@ -1913,11 +1914,7 @@ def test_course_with_unpublished_force_ingest_is_test_mode():
 
 
 @pytest.mark.django_db
-def test_load_articles(mocker, climate_platform):
-    mocker.patch(
-        "learning_resources_search.plugins.get_similar_topics_qdrant",
-        return_value=["topic1", "topic2"],
-    )
+def test_load_articles(mocker, climate_platform, mock_get_similar_topics_qdrant):
     articles_data = [
         {
             "title": "test",

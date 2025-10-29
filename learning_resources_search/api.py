@@ -39,6 +39,7 @@ from vector_search.constants import (
     RESOURCES_COLLECTION_NAME,
     TOPICS_COLLECTION_NAME,
 )
+from vector_search.encoders.utils import dense_encoder
 
 log = logging.getLogger(__name__)
 
@@ -836,7 +837,6 @@ def user_subscribed_to_query(
 def get_similar_topics_qdrant(
     resource: LearningResource, value_doc: dict, num_topics: int
 ) -> list[str]:
-    from vector_search.encoders.utils import dense_encoder
     from vector_search.utils import qdrant_client, vector_point_id
 
     """
@@ -978,7 +978,6 @@ def _qdrant_similar_results(
             list of serialized resources
     """
     from vector_search.utils import (
-        dense_encoder,
         qdrant_client,
     )
 
