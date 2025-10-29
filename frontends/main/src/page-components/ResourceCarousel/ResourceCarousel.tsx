@@ -316,7 +316,6 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
               headingElements.indexOf(titleComponent) + 2,
               6,
             )
-            console.log("headingLevel", titleComponent, headingLevel)
             return (
               <CarouselV2 arrowsContainer={ref}>
                 {isLoading || childrenLoading
