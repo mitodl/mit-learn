@@ -1,19 +1,28 @@
-import type { Editor, Writer, Plugin } from "ckeditor5"
+import type {
+  Editor,
+  Writer,
+  Plugin,
+  DowncastConversionApi,
+  DowncastDispatcher,
+} from "ckeditor5"
+import type { Element as ModelElement } from "@ckeditor/ckeditor5-engine"
+
+function isModelElement(item: unknown): item is ModelElement {
+  return (
+    typeof item === "object" &&
+    item !== null &&
+    "name" in item &&
+    typeof (item as { name: unknown }).name === "string"
+  )
+}
 
 type Alignment = "left" | "center" | "right"
 
-/**
- * ✅ Minimal and type-safe representation of a Plugin class constructor.
- * Matches CKEditor's expectations, avoids leaking internal types.
- */
 type SafePluginConstructor = {
   new (editor: Editor): Plugin
   requires?: unknown[]
 }
 
-/**
- * Factory that creates a CKEditor plugin allowing media alignment & width control.
- */
 export function createMediaFloatPlugin(
   CKEditorModules: typeof import("ckeditor5"),
 ): SafePluginConstructor {
@@ -29,13 +38,23 @@ export function createMediaFloatPlugin(
 
     override refresh(): void {
       const element = this.editor.model.document.selection.getSelectedElement()
-      this.isEnabled = !!element && element.name === "media"
-      this.value = element?.getAttribute("alignment") === this.alignment
+      const valid =
+        element && (element.name === "media" || element.name === "mediaEmbed")
+      this.isEnabled = !!valid
+      this.value =
+        valid && element?.getAttribute("alignment") === this.alignment
     }
 
     override execute(): void {
-      const element = this.editor.model.document.selection.getSelectedElement()
-      if (!element || element.name !== "media") return
+      const selection = this.editor.model.document.selection
+      const element =
+        selection.getSelectedElement() || selection.getFirstPosition()?.parent
+
+      const name = element?.name
+      if (!name || !["media", "mediaEmbed"].includes(name)) {
+        console.warn("Not a media element, skipping")
+        return
+      }
 
       this.editor.model.change((writer: Writer) => {
         const current = element.getAttribute("alignment") as Alignment | null
@@ -60,55 +79,61 @@ export function createMediaFloatPlugin(
         allowAttributes: ["alignment", "width"],
       })
 
-      // ✅ Downcast: alignment → CSS class
-      editor.conversion.for("downcast").attributeToAttribute({
-        model: { name: "media", key: "alignment" },
-        view: (value: string) => {
-          const classes: Record<Alignment, string> = {
-            left: "align-left",
-            center: "align-center",
-            right: "align-right",
-          }
-          return { key: "class", value: classes[value as Alignment] }
-        },
-      })
+      // ✅ Typed downcast event handler
+      for (const modelName of ["media", "mediaEmbed"]) {
+        editor.conversion
+          .for("downcast")
+          .add((dispatcher: DowncastDispatcher) => {
+            dispatcher.on(
+              "attribute:alignment",
+              (
+                _evt: unknown,
+                data: {
+                  item: unknown
+                  attributeKey: string
+                  attributeNewValue: string | null
+                  attributeOldValue: string | null
+                },
+                conversionApi: DowncastConversionApi,
+              ) => {
+                const { writer, mapper } = conversionApi
+                const { item, attributeNewValue } = data
 
-      // ✅ Downcast: width → style
-      editor.conversion.for("downcast").attributeToAttribute({
-        model: { name: "media", key: "width" },
-        view: (value: string) => ({ key: "style", value: `width:${value};` }),
-      })
+                // ✅ Use type guard instead of `any`
+                if (!isModelElement(item)) return
+                if (item.name !== modelName) return
 
-      // ✅ Downcast: alignment → figure class for <mediaEmbed>
-      editor.conversion.for("downcast").attributeToAttribute({
-        model: { name: "mediaEmbed", key: "alignment" },
-        view: (value: string) => {
-          const align = value as Alignment
-          if (align === "center") {
-            // Instead of just a class, apply an inline style for centering
-            return {
-              key: "style",
-              value: `
-                  display: flex;
-                  justify-content: center;
-                  align-items: center;
-                  margin: 0 auto;
-                  width: 100%;
-                  height: auto;
-                `.replace(/\s+/g, " "), // compact
-            }
-          }
+                const viewElement = mapper.toViewElement(item)
+                if (!viewElement) return
 
-          const classes: Record<Exclude<Alignment, "center">, string> = {
-            left: "align-left",
-            right: "align-right",
-          }
+                writer.removeClass(
+                  ["align-left", "align-right", "align-center"],
+                  viewElement,
+                )
 
-          return { key: "class", value: classes[align] }
-        },
-      })
+                if (attributeNewValue) {
+                  const classMap = {
+                    left: "align-left",
+                    center: "align-center",
+                    right: "align-right",
+                  } as const
 
-      // ✅ Register commands + toolbar buttons
+                  const newClass =
+                    classMap[attributeNewValue as keyof typeof classMap]
+                  if (newClass) {
+                    writer.addClass(newClass, viewElement)
+                    console.log(
+                      `✅ Applied alignment class: ${newClass} for ${modelName}`,
+                    )
+                  }
+                }
+              },
+              { priority: "low" },
+            )
+          })
+      }
+
+      // ✅ Register alignment commands
       const alignments: Alignment[] = ["left", "center", "right"]
       for (const align of alignments) {
         const name = `mediaAlign${align[0].toUpperCase()}${align.slice(1)}`
@@ -122,17 +147,13 @@ export function createMediaFloatPlugin(
             withText: true,
             tooltip: true,
           })
-
-          // Reactive state bindings
           view.bind("isOn").to(command, "value", (value: unknown) => !!value)
           view.bind("isEnabled").to(command, "isEnabled")
-
           view.on("execute", () => editor.execute(name))
           return view
         })
       }
 
-      // ✅ Ensure defaults
       editor.model.document.on("change:data", () => {
         const element = editor.model.document.selection.getSelectedElement()
         if (!element || element.name !== "media") return
@@ -146,6 +167,5 @@ export function createMediaFloatPlugin(
     }
   }
 
-  // ✅ Type-correct return
   return MediaFloatPlugin as unknown as SafePluginConstructor
 }

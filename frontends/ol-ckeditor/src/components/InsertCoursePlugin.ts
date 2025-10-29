@@ -29,9 +29,17 @@ export function createInsertCoursePlugin(
           description: course.description,
         })
 
-        editor.model.insertContent(courseElement)
+        // 🟢 Insert course at the end of the document instead of replacing selection
+        const root = editor.model.document.getRoot()
+        if (!root) {
+          console.warn("Editor model root not available yet.")
+          return
+        }
+        const endPosition = writer.createPositionAt(root, "end")
 
-        // Add a paragraph after to prevent selection errors
+        editor.model.insertContent(courseElement, endPosition)
+
+        // 🟢 Add a paragraph after to allow user to keep typing
         const paragraph = writer.createElement("paragraph")
         editor.model.insertContent(
           paragraph,

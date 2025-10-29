@@ -4,30 +4,12 @@ import React, { useState, useEffect, useMemo } from "react"
 import dynamic from "next/dynamic"
 import { type EditorConfig } from "ckeditor5"
 import type { Editor } from "@ckeditor/ckeditor5-core"
-
-import { Dialog, Typography } from "ol-components"
-import { Course } from "./types"
+import { Dialog, Typography, SearchInput, LoadingSpinner } from "ol-components"
+import { useLearningResourcesSearch } from "api/hooks/learningResources"
+import type { Course } from "./types"
 
 import "ckeditor5/ckeditor5.css"
 import "./styles.css"
-
-const mockCourses = [
-  {
-    id: "1",
-    title: "React for Beginners",
-    image:
-      "https://35904.cdn.cke-cs.com/A8zpYq0deQ8s5ZchTmUI/images/5025b810afce449ed73f6c18c929040073a27f14dd6ba674.webp",
-    description:
-      'Free open source text" can refer to many programs, including text editors like Notepad++ and LibreOffice Writer, text-to-speech models like Mozilla TTS and eSpeak, and speech-to-text models such as Whisper and DeepSpeech. The best choice depends on the specific need, such as writing, editing code, or converting speech to tex',
-  },
-  {
-    id: "2",
-    title: "Next.js Advanced",
-    image:
-      "https://35904.cdn.cke-cs.com/A8zpYq0deQ8s5ZchTmUI/images/5025b810afce449ed73f6c18c929040073a27f14dd6ba674.webp",
-    description: "Master SSR and routing.",
-  },
-]
 
 const CKEditor = dynamic(
   async () => (await import("@ckeditor/ckeditor5-react")).CKEditor,
@@ -47,13 +29,24 @@ export const CKEditorClient: React.FC<CKEditorClientProps> = ({
   uploadUrl,
   getCKEditorTokenFetchUrl,
 }) => {
+  // --- Core editor and modal states
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [EditorModules, setEditorModules] = useState<any>(null)
   const [data, setData] = useState(value || "")
   const [open, setOpen] = useState(false)
 
-  // store selected course info (for Dialog content)
-  const [selectedCourse] = useState<Course | null>(null)
+  const [query, setQuery] = useState("")
+  const [debouncedQuery, setDebouncedQuery] = useState("")
+
+  useEffect(() => {
+    const timeout = setTimeout(() => setDebouncedQuery(query), 400)
+    return () => clearTimeout(timeout)
+  }, [query])
+
+  const { data: coursesData, isLoading } = useLearningResourcesSearch(
+    { q: debouncedQuery },
+    { keepPreviousData: true },
+  )
 
   useEffect(() => {
     const handler = (e: CustomEvent) => {
@@ -66,13 +59,12 @@ export const CKEditorClient: React.FC<CKEditorClientProps> = ({
   }, [])
 
   const handleCourseSelect = (course: Course) => {
-    if (!EditorModules) {
-      console.warn("Editor instance not ready")
-      setOpen(false)
-      return
-    }
+    if (!EditorModules) return
     setOpen(false)
-    EditorModules.execute("insertCourse", course)
+    EditorModules.execute("insertCourse", {
+      ...course,
+      image: course.image || "",
+    })
     EditorModules.editing.view.focus()
   }
 
@@ -106,7 +98,6 @@ export const CKEditorClient: React.FC<CKEditorClientProps> = ({
         Underline,
         Strikethrough,
         Alignment,
-
         CodeBlock,
         FontSize,
         FontColor,
@@ -161,11 +152,10 @@ export const CKEditorClient: React.FC<CKEditorClientProps> = ({
         ImageStyleEditing,
         ImageStyleUI,
         MediaEmbed,
-        Widget, // ✅ ensure this line exists
+        Widget,
         MediaFloatPlugin,
         DefaultImageStylePlugin,
         InsertCoursePlugin,
-        // also expose the original modules object if you want:
         _CKEditorModules: CKEditorModules,
       })
     })()
@@ -185,23 +175,32 @@ export const CKEditorClient: React.FC<CKEditorClientProps> = ({
         EditorModules.List,
         EditorModules.BlockQuote,
         EditorModules.Autoformat,
-        // 👇 Image-related plugins (all required for resizing + styling)
+        EditorModules.Underline,
+        EditorModules.Strikethrough,
+        EditorModules.Alignment,
+        EditorModules.CodeBlock,
+        EditorModules.FontSize,
+        EditorModules.FontColor,
+        EditorModules.FontBackgroundColor,
+        EditorModules.Undo,
+        EditorModules.Table,
+        EditorModules.TableToolbar,
         EditorModules.Image,
         EditorModules.ImageToolbar,
         EditorModules.ImageUpload,
         EditorModules.EasyImage,
+        EditorModules.CloudServices,
         EditorModules.ImageResize,
         EditorModules.ImageResizeEditing,
         EditorModules.ImageResizeHandles,
         EditorModules.ImageStyle,
         EditorModules.ImageStyleEditing,
         EditorModules.ImageStyleUI,
-        EditorModules.CloudServices,
         EditorModules.MediaEmbed,
-        EditorModules.Widget, // ✅ add Widget here
-        EditorModules.MediaFloatPlugin, // ✅ your plugin now safe
-        EditorModules.DefaultImageStylePlugin, // ✅ your plugin now safe
-        EditorModules.InsertCoursePlugin, // ✅ your plugin now safe
+        EditorModules.Widget,
+        EditorModules.MediaFloatPlugin,
+        EditorModules.DefaultImageStylePlugin,
+        EditorModules.InsertCoursePlugin,
       ],
       toolbar: {
         items: [
@@ -216,7 +215,7 @@ export const CKEditorClient: React.FC<CKEditorClientProps> = ({
           "numberedList",
           "strikethrough",
           "|",
-          "alignment", // text alignment
+          "alignment",
           "|",
           "blockQuote",
           "|",
@@ -235,7 +234,7 @@ export const CKEditorClient: React.FC<CKEditorClientProps> = ({
           "undo",
           "redo",
           "|",
-          "insertCourse", // 👈 our custom button
+          "insertCourse",
           "|",
         ],
       },
@@ -287,12 +286,12 @@ export const CKEditorClient: React.FC<CKEditorClientProps> = ({
           editor={EditorModules.ClassicEditor}
           data={data}
           config={editorConfig}
-          onReady={(editor) => {
+          onReady={(editor) =>
             setEditorModules((prev: Editor) => ({
               ...prev,
               _activeEditor: editor,
             }))
-          }}
+          }
           onChange={(_, editor) => {
             const html = editor.getData()
             setData(html)
@@ -304,73 +303,90 @@ export const CKEditorClient: React.FC<CKEditorClientProps> = ({
         onClose={() => setOpen(false)}
         open={open}
         title="Select a Course"
-        actions={null}
       >
-        {!selectedCourse ? (
-          <>
-            <Typography sx={{ marginBottom: "16px" }}>
-              Choose a course to insert into the editor:
-            </Typography>
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          <SearchInput
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onClear={() => setQuery("")}
+            onSubmit={(e) => setDebouncedQuery(e.target.value)} // triggers search
+            placeholder="Search for courses..."
+            fullWidth
+          />
+
+          {isLoading ? (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                padding: "20px 0",
+              }}
+            >
+              <LoadingSpinner color="inherit" loading={isLoading} size={16} />
+            </div>
+          ) : (
             <div
               style={{
                 display: "flex",
                 flexDirection: "column",
-                gap: "16px",
+                gap: "12px",
                 maxHeight: "400px",
                 overflowY: "auto",
               }}
             >
-              {mockCourses.map((course) => (
-                <div
-                  key={course.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => handleCourseSelect(course)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault()
-                      handleCourseSelect(course)
-                    }
-                  }}
-                  className="course-list-container"
-                  onFocus={(e) =>
-                    (e.currentTarget.style.boxShadow = "0 0 0 2px #007aff33")
+              {coursesData?.results?.length ? (
+                coursesData.results.map((resource) => {
+                  const course: Course = {
+                    id: resource.id,
+                    title: resource.title,
+                    description: resource.description || "",
+                    image: resource.image?.url || "",
                   }
-                  onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.background = "#fafafa")
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.background = "white")
-                  }
-                >
-                  <img
-                    src={course.image}
-                    alt={course.title}
-                    style={{
-                      width: "80px",
-                      height: "60px",
-                      objectFit: "cover",
-                      borderRadius: "6px",
-                    }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <Typography variant="subtitle1">{course.title}</Typography>
-                    <Typography variant="body2" sx={{ color: "#555" }}>
-                      {course.description}
-                    </Typography>
-                  </div>
-                </div>
-              ))}
+
+                  return (
+                    <div
+                      key={course.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handleCourseSelect(course)}
+                      className="course-list-container"
+                      onKeyDown={(e) =>
+                        ["Enter", " "].includes(e.key) &&
+                        handleCourseSelect(course)
+                      }
+                    >
+                      <img
+                        src={course.image}
+                        alt={course.title}
+                        style={{
+                          width: "80px",
+                          height: "60px",
+                          objectFit: "cover",
+                          borderRadius: "6px",
+                        }}
+                      />
+                      <div style={{ flex: 1, marginLeft: "12px" }}>
+                        <Typography variant="subtitle2">
+                          {course.title}
+                        </Typography>
+                        {course.short_description && (
+                          <Typography
+                            variant="body2"
+                            sx={{ color: "gray", fontSize: "0.85rem" }}
+                          >
+                            {course.short_description.slice(0, 80)}…
+                          </Typography>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })
+              ) : (
+                <Typography>No courses found.</Typography>
+              )}
             </div>
-          </>
-        ) : (
-          <>
-            <Typography sx={{ marginBottom: "16px" }}>
-              {selectedCourse.description}
-            </Typography>
-          </>
-        )}
+          )}
+        </div>
       </Dialog>
     </>
   )

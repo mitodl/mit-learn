@@ -5,8 +5,9 @@ export type SafePluginConstructor = {
 }
 
 export interface Course {
-  id: string
+  id: string | number
   title: string
-  image: string
-  description: string
+  short_description?: string
+  description?: string
+  image?: string
 }
