@@ -158,7 +158,12 @@ const ListCardCondensed: Card = ({
       )}
       <Body>
         <Info>{info}</Info>
-        <Title data-card-link={!!title.href} href={title.href}>
+        <Title
+          data-card-link={!!title.href}
+          href={title.href}
+          role={title.role}
+          aria-level={title["aria-level"]}
+        >
           <TruncateText lineClamp={4} lang={title.lang}>
             {title.children}
           </TruncateText>

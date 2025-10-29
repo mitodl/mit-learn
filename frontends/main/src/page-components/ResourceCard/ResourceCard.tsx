@@ -75,6 +75,7 @@ type ResourceCardProps = Omit<
 > & {
   condensed?: boolean
   list?: boolean
+  headingLevel?: number
 }
 
 /**

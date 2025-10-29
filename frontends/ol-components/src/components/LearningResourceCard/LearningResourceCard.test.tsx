@@ -51,7 +51,7 @@ describe("Learning Resource Card", () => {
     setup({ resource })
 
     const title = screen.getByText(resource.title)
-    expect(title).toHaveAttribute("lang", "en-us")
+    expect(title.parentElement).toHaveAttribute("lang", "en-us")
   })
 
   test("Displays run start date", () => {
@@ -121,10 +121,12 @@ describe("Learning Resource Card", () => {
 
     setup({ resource, href: "/path/to/thing" })
 
-    const link = screen.getByRole<HTMLAnchorElement>("link", {
+    const titleHeading = screen.getByRole<HTMLAnchorElement>("heading", {
       name: resource.title,
     })
-    expect(new URL(link.href).pathname).toBe("/path/to/thing")
+    expect(
+      new URL((titleHeading.parentElement as HTMLAnchorElement).href).pathname,
+    ).toBe("/path/to/thing")
   })
 
   test("Click action buttons", async () => {

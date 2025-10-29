@@ -209,6 +209,15 @@ const getTabQuery = (tab: TabConfig): CarouselQuery => {
   }
 }
 
+const headingElements: React.ElementType[] = [
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+]
+
 /**
  * A tabbed carousel that fetches resources based on the configuration provided.
  *  - each TabConfig generates a tab + tabpanel that pulls data from an API based
@@ -302,28 +311,37 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
             >[]
           }
         >
-          {({ resources, childrenLoading, tabConfig }) => (
-            <CarouselV2 arrowsContainer={ref}>
-              {isLoading || childrenLoading
-                ? Array.from({ length: 6 }).map((_, index) => (
-                    <ResourceCard
-                      isLoading
-                      key={index}
-                      resource={null}
-                      {...tabConfig.cardProps}
-                    />
-                  ))
-                : resources
-                    .filter((resource) => resource.id !== excludeResourceId)
-                    .map((resource) => (
+          {({ resources, childrenLoading, tabConfig }) => {
+            const headingLevel = Math.min(
+              headingElements.indexOf(titleComponent) + 2,
+              6,
+            )
+            console.log("headingLevel", titleComponent, headingLevel)
+            return (
+              <CarouselV2 arrowsContainer={ref}>
+                {isLoading || childrenLoading
+                  ? Array.from({ length: 6 }).map((_, index) => (
                       <ResourceCard
-                        key={resource.id}
-                        resource={resource}
+                        isLoading
+                        key={index}
+                        resource={null}
+                        headingLevel={headingLevel}
                         {...tabConfig.cardProps}
                       />
-                    ))}
-            </CarouselV2>
-          )}
+                    ))
+                  : resources
+                      .filter((resource) => resource.id !== excludeResourceId)
+                      .map((resource) => (
+                        <ResourceCard
+                          key={resource.id}
+                          resource={resource}
+                          headingLevel={headingLevel}
+                          {...tabConfig.cardProps}
+                        />
+                      ))}
+              </CarouselV2>
+            )
+          }}
         </PanelChildren>
       </TabContext>
     </MobileOverflow>
