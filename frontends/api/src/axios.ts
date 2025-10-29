@@ -11,4 +11,19 @@ const instance = axios.create({
     process.env.NEXT_PUBLIC_MITOL_AXIOS_WITH_CREDENTIALS === "true",
 })
 
+// Add request interceptor to log all API requests
+instance.interceptors.request.use(
+  (config) => {
+    console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`, {
+      params: config.params,
+      data: config.data,
+    })
+    return config
+  },
+  (error) => {
+    console.error("[API Request Error]", error)
+    return Promise.reject(error)
+  },
+)
+
 export default instance

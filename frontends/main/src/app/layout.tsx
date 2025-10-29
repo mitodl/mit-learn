@@ -32,6 +32,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  console.log("Rendering root layout")
   return (
     <html lang="en">
       <head>
