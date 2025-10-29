@@ -35,7 +35,11 @@ from learning_resources_search.utils import (
     adjust_search_for_percolator,
     document_percolated_actions,
 )
-from vector_search.constants import RESOURCES_COLLECTION_NAME
+from vector_search.constants import (
+    RESOURCES_COLLECTION_NAME,
+    TOPICS_COLLECTION_NAME,
+)
+from vector_search.encoders.utils import dense_encoder
 
 log = logging.getLogger(__name__)
 
@@ -830,6 +834,51 @@ def user_subscribed_to_query(
     )
 
 
+def get_similar_topics_qdrant(
+    resource: LearningResource, value_doc: dict, num_topics: int
+) -> list[str]:
+    from vector_search.utils import qdrant_client, vector_point_id
+
+    """
+    Get a list of similar topics based on vector similarity
+
+    Args:
+        value_doc (dict):
+            a document representing the data fields we want to search with
+        num_topics (int):
+            number of topics to return
+    Returns:
+        list of str:
+            list of topic values
+    """
+    encoder = dense_encoder()
+    client = qdrant_client()
+
+    response = client.retrieve(
+        collection_name=RESOURCES_COLLECTION_NAME,
+        ids=[vector_point_id(resource.readable_id)],
+        with_vectors=True,
+    )
+
+    embedding_context = "\n".join(
+        [value_doc[key] for key in value_doc if value_doc[key] is not None]
+    )
+    if response and len(response) > 0:
+        embeddings = response[0].vector.get(encoder.model_short_name())
+    else:
+        embeddings = encoder.embed(embedding_context)
+
+    return [
+        hit["name"]
+        for hit in _qdrant_similar_results(
+            input_query=embeddings,
+            num_resources=num_topics,
+            collection_name=TOPICS_COLLECTION_NAME,
+            score_threshold=0.2,
+        )
+    ]
+
+
 def get_similar_topics(
     value_doc: dict, num_topics: int, min_term_freq: int, min_doc_freq: int
 ) -> list[str]:
@@ -909,7 +958,12 @@ def get_similar_resources(
     )
 
 
-def _qdrant_similar_results(doc, num_resources):
+def _qdrant_similar_results(
+    input_query,
+    num_resources=6,
+    collection_name=RESOURCES_COLLECTION_NAME,
+    score_threshold=0,
+):
     """
     Get similar resources from qdrant
 
@@ -924,9 +978,7 @@ def _qdrant_similar_results(doc, num_resources):
             list of serialized resources
     """
     from vector_search.utils import (
-        dense_encoder,
         qdrant_client,
-        vector_point_id,
     )
 
     encoder = dense_encoder()
@@ -934,10 +986,11 @@ def _qdrant_similar_results(doc, num_resources):
     return [
         hit.payload
         for hit in client.query_points(
-            collection_name=RESOURCES_COLLECTION_NAME,
-            query=vector_point_id(doc["readable_id"]),
+            collection_name=collection_name,
+            query=input_query,
             limit=num_resources,
             using=encoder.model_short_name(),
+            score_threshold=score_threshold,
         ).points
     ]
 
@@ -956,7 +1009,12 @@ def get_similar_resources_qdrant(value_doc: dict, num_resources: int):
         list of str:
             list of learning resources
     """
-    hits = _qdrant_similar_results(value_doc, num_resources)
+    from vector_search.utils import vector_point_id
+
+    hits = _qdrant_similar_results(
+        input_query=vector_point_id(value_doc["readable_id"]),
+        num_resources=num_resources,
+    )
     return (
         LearningResource.objects.for_search_serialization()
         .filter(

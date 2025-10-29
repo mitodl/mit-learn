@@ -2,12 +2,17 @@ import logging
 import uuid
 
 from django.conf import settings
+from django.db.models import Q
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_experimental.text_splitter import SemanticChunker
 from qdrant_client import QdrantClient, models
 
 from learning_resources.content_summarizer import ContentSummarizer
-from learning_resources.models import ContentFile, LearningResource
+from learning_resources.models import (
+    ContentFile,
+    LearningResource,
+    LearningResourceTopic,
+)
 from learning_resources.serializers import (
     ContentFileSerializer,
     LearningResourceMetadataDisplaySerializer,
@@ -28,7 +33,10 @@ from vector_search.constants import (
     QDRANT_CONTENT_FILE_PARAM_MAP,
     QDRANT_LEARNING_RESOURCE_INDEXES,
     QDRANT_RESOURCE_PARAM_MAP,
+    QDRANT_TOPIC_INDEXES,
+    QDRANT_TOPICS_PARAM_MAP,
     RESOURCES_COLLECTION_NAME,
+    TOPICS_COLLECTION_NAME,
 )
 from vector_search.encoders.utils import dense_encoder
 
@@ -83,19 +91,29 @@ def create_qdrant_collections(force_recreate):
         force_recreate (bool): Whether to recreate the collections
         even if they already exist
     """
+
+    collections = [
+        RESOURCES_COLLECTION_NAME,
+        CONTENT_FILES_COLLECTION_NAME,
+        TOPICS_COLLECTION_NAME,
+    ]
+    for collection_name in collections:
+        create_qdrant_collection(collection_name, force_recreate)
+
+    update_qdrant_indexes()
+
+
+def create_qdrant_collection(collection_name, force_recreate):
+    """
+    Create or recreate a QDrant collection
+    """
     client = qdrant_client()
-    resources_collection_name = RESOURCES_COLLECTION_NAME
-    content_files_collection_name = CONTENT_FILES_COLLECTION_NAME
     encoder = dense_encoder()
     # True if either of the collections were recreated
-
-    if (
-        not client.collection_exists(collection_name=resources_collection_name)
-        or force_recreate
-    ):
-        client.delete_collection(resources_collection_name)
+    if not client.collection_exists(collection_name=collection_name) or force_recreate:
+        client.delete_collection(collection_name)
         client.recreate_collection(
-            collection_name=resources_collection_name,
+            collection_name=collection_name,
             on_disk_payload=True,
             vectors_config={
                 encoder.model_short_name(): models.VectorParams(
@@ -117,36 +135,6 @@ def create_qdrant_collections(force_recreate):
                 ),
             ),
         )
-
-    if (
-        not client.collection_exists(collection_name=content_files_collection_name)
-        or force_recreate
-    ):
-        client.delete_collection(content_files_collection_name)
-        client.recreate_collection(
-            collection_name=content_files_collection_name,
-            on_disk_payload=True,
-            vectors_config={
-                encoder.model_short_name(): models.VectorParams(
-                    size=encoder.dim(), distance=models.Distance.COSINE
-                ),
-            },
-            replication_factor=2,
-            shard_number=6,
-            strict_mode_config=models.StrictModeConfig(
-                enabled=True,
-                unindexed_filtering_retrieve=False,
-                unindexed_filtering_update=False,
-            ),
-            sparse_vectors_config=client.get_fastembed_sparse_vector_params(),
-            optimizers_config=models.OptimizersConfigDiff(default_segment_number=2),
-            quantization_config=models.BinaryQuantization(
-                binary=models.BinaryQuantizationConfig(
-                    always_ram=True,
-                ),
-            ),
-        )
-    update_qdrant_indexes()
 
 
 def update_qdrant_indexes():
@@ -158,6 +146,7 @@ def update_qdrant_indexes():
     for index in [
         (QDRANT_LEARNING_RESOURCE_INDEXES, RESOURCES_COLLECTION_NAME),
         (QDRANT_CONTENT_FILE_INDEXES, CONTENT_FILES_COLLECTION_NAME),
+        (QDRANT_TOPIC_INDEXES, TOPICS_COLLECTION_NAME),
     ]:
         indexes = index[0]
         collection_name = index[1]
@@ -186,6 +175,60 @@ def vector_point_id(readable_id):
             A unique id (UUID5) for the learning resource
     """
     return str(uuid.uuid5(uuid.NAMESPACE_DNS, readable_id))
+
+
+def embed_topics():
+    """
+    Embed and store new (sub)topics and remove non-existent ones from Qdrant
+    """
+    client = qdrant_client()
+    create_qdrant_collections(force_recreate=False)
+    indexed_count = client.count(collection_name=TOPICS_COLLECTION_NAME).count
+
+    topic_names = set(
+        LearningResourceTopic.objects.filter(
+            Q(parent=None) | Q(parent__isnull=False)
+        ).values_list("name", flat=True)
+    )
+
+    if indexed_count > 0:
+        existing = vector_search(
+            query_string="",
+            params={},
+            search_collection=TOPICS_COLLECTION_NAME,
+            limit=indexed_count,
+        )
+        indexed_topic_names = {hit["name"] for hit in existing["hits"]}
+    else:
+        indexed_topic_names = set()
+
+    new_topics = topic_names - indexed_topic_names
+    remove_topics = indexed_topic_names - topic_names
+    for remove_topic in remove_topics:
+        remove_points_matching_params(
+            {"name": remove_topic}, collection_name=TOPICS_COLLECTION_NAME
+        )
+
+    docs = []
+    metadata = []
+    ids = []
+
+    filtered_topics = LearningResourceTopic.objects.filter(name__in=new_topics)
+
+    for topic in filtered_topics:
+        docs.append(topic.name)
+        metadata.append(
+            {
+                "name": topic.name,
+            }
+        )
+        ids.append(str(topic.topic_uuid))
+    if len(docs) > 0:
+        encoder = dense_encoder()
+        embeddings = encoder.embed_documents(docs)
+        vector_name = encoder.model_short_name()
+        points = points_generator(ids, metadata, embeddings, vector_name)
+        client.upload_points(TOPICS_COLLECTION_NAME, points=points, wait=False)
 
 
 def _chunk_documents(encoder, texts, metadatas):
@@ -757,6 +800,8 @@ def qdrant_query_conditions(params, collection_name=RESOURCES_COLLECTION_NAME):
     conditions = []
     if collection_name == RESOURCES_COLLECTION_NAME:
         QDRANT_PARAM_MAP = QDRANT_RESOURCE_PARAM_MAP
+    elif collection_name == TOPICS_COLLECTION_NAME:
+        QDRANT_PARAM_MAP = QDRANT_TOPICS_PARAM_MAP
     else:
         QDRANT_PARAM_MAP = QDRANT_CONTENT_FILE_PARAM_MAP
     if not params:
