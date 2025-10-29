@@ -121,7 +121,7 @@ describe("Learning Resource Card", () => {
 
     setup({ resource, href: "/path/to/thing" })
 
-    const titleHeading = screen.getByRole<HTMLAnchorElement>("heading", {
+    const titleHeading = screen.getByRole("heading", {
       name: resource.title,
     })
     expect(
@@ -215,5 +215,16 @@ describe("Learning Resource Card", () => {
     const imageEl = getByImageSrc(view.container, expected.src)
 
     expect(imageEl).toHaveAttribute("alt", expected.alt)
+  })
+
+  test("Resource cards have headingLevel set for screen reader navigation", async () => {
+    const resource = factories.learningResources.resource({})
+
+    setup({ resource, headingLevel: 2 })
+
+    const titleHeading = screen.getByRole("heading", {
+      name: resource.title,
+    })
+    expect(titleHeading.getAttribute("aria-level")).toBe("2")
   })
 })
