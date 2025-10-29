@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+Version 0.47.8
+--------------
+
+- upgrade course-search-utils (#2656)
+- Vector based topics tagging for videos (#2649)
+- Update dependency ruff to v0.14.2 (#2632)
+- Update Node.js to v22.21.0 (#2634)
+
 Version 0.47.7 (Released October 28, 2025)
 --------------
 
