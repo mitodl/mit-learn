@@ -32,7 +32,16 @@ from main.utils import (
     chunks,
     now_in_utc,
 )
-from vector_search.utils import embed_learning_resources, remove_qdrant_records
+from vector_search.constants import (
+    CONTENT_FILES_COLLECTION_NAME,
+    RESOURCES_COLLECTION_NAME,
+)
+from vector_search.utils import (
+    embed_learning_resources,
+    filter_existing_qdrant_points_by_ids,
+    remove_qdrant_records,
+    vector_point_id,
+)
 
 log = logging.getLogger(__name__)
 
@@ -362,3 +371,83 @@ def remove_run_content_files(run_id):
             for ids in chunks(content_file_ids, chunk_size=settings.QDRANT_CHUNK_SIZE)
         ]
     )
+
+
+@app.task
+def embeddings_healthcheck():
+    remaining_content_files = []
+    remaining_resources = []
+    content_file_point_ids = {}
+    resource_point_ids = {}
+    for lr in LearningResource.objects.filter(Q(published=True) | Q(test_mode=True)):
+        run = (
+            lr.best_run
+            if lr.best_run
+            else lr.runs.filter(published=True).order_by("-start_date").first()
+        )
+        point_id = vector_point_id(lr.readable_id)
+        resource_point_ids[point_id] = {"resource_id": lr.readable_id, "id": lr.id}
+        if run:
+            for cf in run.content_files.all():
+                if cf and cf.content:
+                    point_id = vector_point_id(
+                        f"{lr.readable_id}.{run.run_id}.{cf.key}.0"
+                    )
+                    content_file_point_ids[point_id] = {"key": cf.key, "id": cf.id}
+
+    for batch in chunks(
+        LearningResource.objects.filter(published=True).values_list(
+            "readable_id", flat=True
+        ),
+        chunk_size=200,
+    ):
+        remaining_resources.extend(
+            filter_existing_qdrant_points_by_ids(
+                [vector_point_id(pid) for pid in batch],
+                collection_name=RESOURCES_COLLECTION_NAME,
+            )
+        )
+    for batch in chunks(content_file_point_ids.keys(), chunk_size=200):
+        remaining_content_files.extend(
+            filter_existing_qdrant_points_by_ids(
+                batch, collection_name=CONTENT_FILES_COLLECTION_NAME
+            )
+        )
+    """
+    remaining_content_file_ids = [
+        content_file_point_ids[p]["id"] for p in remaining_content_files
+    ]
+
+    remaining_resource_ids = [resource_point_ids[p]["id"] for p in remaining_resources]
+    """
+
+    log.info("remaining content files - %d", len(remaining_content_files))
+    log.info("remaining learning resources - %d", len(remaining_resources))
+
+    """
+
+
+    log.info(
+        "remaining contentfiles - %d",
+        ContentFile.objects.filter(
+            run__learning_resource__readable_id__in=remaining
+        ).count(),
+    )
+    log.info(
+        "percent complete (by resource) - %f",
+        ((len(readable_ids) - len(remaining)) / len(readable_ids)) * 100,
+    )
+    log.info(
+        "percent complete (by contentfile) - %f",
+        (
+            (
+                ContentFile.objects.all().count()
+                - ContentFile.objects.filter(
+                    run__learning_resource__id__in=remaining
+                ).count()
+            )
+            / ContentFile.objects.all().count()
+        )
+        * 100,
+    )
+    """
