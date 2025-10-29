@@ -21,6 +21,7 @@ export const metadata = {
 
 const Error = ({ error }: { error: Error }) => {
   useEffect(() => {
+    console.error("Error encountered in React error boundary:", error)
     Sentry.captureException(error)
   }, [error])
 

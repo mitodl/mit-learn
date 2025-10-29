@@ -68,6 +68,11 @@ module.exports = {
           message:
             "The LearningResourceDrawer should be lazy loaded with dynamic import.",
         },
+        {
+          group: ["api/clients"],
+          message:
+            "Direct import from 'api/clients' is not allowed. Use React Query hooks from 'api/hooks/*' instead for caching and error handling. In server components, use getServerQueryClient().fetchQuery(), passing the queryOptions.",
+        },
       ],
     }),
     // This rule is disabled in the default a11y config, but unclear why.
@@ -144,6 +149,12 @@ module.exports = {
           "Property[key.name=fontFamily][value.raw=/Neue Haas/], TemplateElement[value.raw=/Neue Haas/]",
         message:
           "Do not specify `fontFamily` manually. Prefer spreading `theme.typography.subtitle1` or similar. If using neue-haas-grotesk-text, this is ThemeProvider's default fontFamily.",
+      },
+      {
+        selector:
+          "FunctionDeclaration[id.name='generateMetadata'] > BlockStatement > ReturnStatement[argument.type!='CallExpression'], FunctionDeclaration[id.name='generateMetadata'] > BlockStatement > ReturnStatement[argument.callee.name!='safeGenerateMetadata']",
+        message:
+          "generateMetadata functions must return safeGenerateMetadata() to ensure proper error handling and fallback metadata.",
       },
     ],
   },
