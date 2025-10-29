@@ -3169,11 +3169,11 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/course-search-utils@npm:^3.4.1":
-  version: 3.4.1
-  resolution: "@mitodl/course-search-utils@npm:3.4.1"
+"@mitodl/course-search-utils@npm:^3.5.0":
+  version: 3.5.0
+  resolution: "@mitodl/course-search-utils@npm:3.5.0"
   dependencies:
-    "@mitodl/open-api-axios": "npm:2024.9.16"
+    "@mitodl/mit-learn-api-axios": "npm:2025.10.28"
     "@remixicon/react": "npm:^4.2.0"
     axios: "npm:^1.6.7"
     fuse.js: "npm:^7.0.0"
@@ -3191,7 +3191,17 @@ __metadata:
       optional: true
     react-router:
       optional: true
-  checksum: 10/cccb99931ef96b25d788f26d9bb6b12f61e735a550127cb2eb0dd14fb8210f303c36c50d7a8af2ccb546aa82bb3051c5242fa55fb494fc17c98e1147b6c99063
+  checksum: 10/f7b31dc385bc9220b54ec580f21c9a7c90c5a4e69ee86617642f8934bdd79bfd1f2bac4dfdbeadd7edf71c768e67fd5b3af0cd526fdaaacbcfb13eec9a4f7afb
+  languageName: node
+  linkType: hard
+
+"@mitodl/mit-learn-api-axios@npm:2025.10.28":
+  version: 2025.10.28
+  resolution: "@mitodl/mit-learn-api-axios@npm:2025.10.28"
+  dependencies:
+    "@types/node": "npm:^22.0.0"
+    axios: "npm:^1.6.5"
+  checksum: 10/0832d24ab89078c315dc01ce40a3350752dee76a1a26649807c846858365e13834dc2ba76c8f4324667f5982690675445ad7c1b44e9d847bccfd7290b29df9b6
   languageName: node
   linkType: hard
 
@@ -3202,16 +3212,6 @@ __metadata:
     "@types/node": "npm:^20.11.19"
     axios: "npm:^1.6.5"
   checksum: 10/2285ecfb20946dabd8efcce5a0614c5370c2d7759e01417d799acab25d0e5964bdc7a5789989e075e23e180cc039ccfca4a0c03ee97904b7e2e1fafed193f448
-  languageName: node
-  linkType: hard
-
-"@mitodl/open-api-axios@npm:2024.9.16":
-  version: 2024.9.16
-  resolution: "@mitodl/open-api-axios@npm:2024.9.16"
-  dependencies:
-    "@types/node": "npm:^20.11.19"
-    axios: "npm:^1.6.5"
-  checksum: 10/ff40f62d087e3168e1d9ba0887cc41d3db4d2eb868e43317feb18510cf1f7d9b535d32acd478b9dd1bacfee8ea7e4967d2ed84499f5bf431317c614555f19416
   languageName: node
   linkType: hard
 
@@ -14058,7 +14058,7 @@ __metadata:
     "@emotion/cache": "npm:^11.13.1"
     "@emotion/styled": "npm:^11.11.0"
     "@faker-js/faker": "npm:^10.0.0"
-    "@mitodl/course-search-utils": "npm:^3.4.1"
+    "@mitodl/course-search-utils": "npm:^3.5.0"
     "@mitodl/mitxonline-api-axios": "npm:^2025.10.21"
     "@mitodl/smoot-design": "npm:^6.17.1"
     "@next/bundle-analyzer": "npm:^14.2.15"
