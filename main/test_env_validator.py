@@ -45,15 +45,18 @@ class TestEnvValidator:
         }
         with tempfile.TemporaryDirectory() as tmpdir:
             file_paths = self.setup_env(files, tmpdir)
-            validator = EnvValidator(
-                base_env_path=file_paths["backend.env"],
-                local_env_path=file_paths["backend.local.env"],
-                example_env_path=file_paths["backend.local.example.env"],
-            )
+            env_file_pairs = [
+                (
+                    "backend",
+                    file_paths["backend.env"],
+                    file_paths["backend.local.env"],
+                    file_paths["backend.local.example.env"],
+                )
+            ]
+            validator = EnvValidator()
+            validator.get_env_file_pairs = lambda: env_file_pairs
             warnings = validator.validate_all()
-            assert not any(
-                "EXTRA" in w and "not defined in backend.env" in w for w in warnings
-            )
+            assert len(warnings) == 0
 
     def test_warn_if_local_overrides_base(self):
         files = {
@@ -63,11 +66,16 @@ class TestEnvValidator:
         }
         with tempfile.TemporaryDirectory() as tmpdir:
             file_paths = self.setup_env(files, tmpdir)
-            validator = EnvValidator(
-                base_env_path=file_paths["backend.env"],
-                local_env_path=file_paths["backend.local.env"],
-                example_env_path=file_paths["backend.local.example.env"],
-            )
+            env_file_pairs = [
+                (
+                    "backend",
+                    file_paths["backend.env"],
+                    file_paths["backend.local.env"],
+                    file_paths["backend.local.example.env"],
+                )
+            ]
+            validator = EnvValidator()
+            validator.get_env_file_pairs = lambda: env_file_pairs
             warnings = validator.validate_all()
             assert any("BASE" in w and "overridden locally" in w for w in warnings)
 
@@ -79,11 +87,16 @@ class TestEnvValidator:
         }
         with tempfile.TemporaryDirectory() as tmpdir:
             file_paths = self.setup_env(files, tmpdir)
-            validator = EnvValidator(
-                base_env_path=file_paths["backend.env"],
-                local_env_path=file_paths["backend.local.env"],
-                example_env_path=file_paths["backend.local.example.env"],
-            )
+            env_file_pairs = [
+                (
+                    "backend",
+                    file_paths["backend.env"],
+                    file_paths["backend.local.env"],
+                    file_paths["backend.local.example.env"],
+                )
+            ]
+            validator = EnvValidator()
+            validator.get_env_file_pairs = lambda: env_file_pairs
             warnings = validator.validate_all()
             assert any(
                 "EXTRA" in w and "missing a required local-specific setting" in w

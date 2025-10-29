@@ -39,6 +39,8 @@ warning. This indicates that we are likely missing a required local-specific set
 
 # NB: This runs way too frequently (i.e. in tests). Need to figure out how to
 # Run only on interactive startup
+# Also rewrite so this only allows directives in the expected files
+# (i.e. local-required only in example files)
 
 
 class EnvValidator:
@@ -153,9 +155,6 @@ class EnvValidator:
         warnings = []
 
         for env_type, base_path, local_path, example_path in self.get_env_file_pairs():
-            if not example_path.exists():
-                continue
-
             base_vars = self._parse_env_file(base_path) if base_path.exists() else {}
             example_vars = self._parse_env_file(example_path)
 
@@ -163,22 +162,24 @@ class EnvValidator:
 
             for var_name in example_only:
                 # Only warn if the variable is present in local file
-                if local_path.exists():
-                    local_vars = self._parse_env_file(local_path)
-                    if var_name in local_vars:
-                        example_value = example_vars[var_name]["value"]
-                        local_value = local_vars[var_name]["value"]
-                        if strip_comment(local_value) == strip_comment(example_value):
-                            continue
-                        warnings.append(
-                            f"⚠️  {env_type.upper()}: Variable "
-                            f"'{var_name}' is set in {local_path.name} "
-                            f"but not defined in {base_path.name}. "
-                            f"This overrides a non-standard setting "
-                            f"from {example_path.name}. "
-                            f"Local value: '{local_value}', "
-                            f"Example value: '{example_value}'"
-                        )
+                local_vars = self._parse_env_file(local_path)
+                if var_name in local_vars:
+                    example_value = example_vars[var_name]["value"]
+                    local_value = local_vars[var_name]["value"]
+                    if strip_comment(local_value) == strip_comment(example_value):
+                        continue
+                    # Suppress warning if example file cannot have a reasonable default
+                    if example_vars[var_name].get("directive") == "local-required":
+                        continue
+                    warnings.append(
+                        f"⚠️  {env_type.upper()}: Variable "
+                        f"'{var_name}' is set in {local_path.name} "
+                        f"but not defined in {base_path.name}. "
+                        f"This overrides a non-standard setting "
+                        f"from {example_path.name}. "
+                        f"Local value: '{local_value}', "
+                        f"Example value: '{example_value}'"
+                    )
         return warnings
 
     def check_local_overrides(self) -> list[str]:
@@ -200,6 +201,7 @@ class EnvValidator:
             for var_name, local_info in local_vars.items():
                 local_value = local_info["value"]
                 suppress = local_info.get("directive") == "suppress-warning"
+
                 if var_name not in base_vars:
                     if suppress:
                         continue
@@ -216,9 +218,6 @@ class EnvValidator:
                     # Compare values ignoring anything after a "#" symbol
                     if strip_comment(base_value) == strip_comment(local_value):
                         continue  # No warning if values match (ignoring comments)
-                    # Suppress warning if base file has # local-required
-                    if base_vars[var_name].get("directive") == "local-required":
-                        continue
                     warnings.append(
                         f"⚠️  {env_type.upper()}: Variable "
                         f"'{var_name}' is overridden locally. "
