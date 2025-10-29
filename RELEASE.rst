@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.47.8
+Version 0.47.8 (Released October 29, 2025)
 --------------
 
 - upgrade course-search-utils (#2656)
