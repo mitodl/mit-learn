@@ -2,7 +2,14 @@
 
 import React, { FunctionComponent } from "react"
 import type { NavData } from "ol-components"
-import { styled, AppBar, NavDrawer, Toolbar } from "ol-components"
+import {
+  styled,
+  AppBar,
+  NavDrawer,
+  Toolbar,
+  HEADER_HEIGHT,
+  HEADER_HEIGHT_MD,
+} from "ol-components"
 import { ActionButtonLink } from "@mitodl/smoot-design"
 import {
   RiSearch2Line,
@@ -50,9 +57,9 @@ const Bar = styled(AppBar)(({ theme }) => ({
   ".MuiToolbar-root": {
     minHeight: "auto",
   },
-  height: theme.custom.dimensions.headerHeight,
-  [theme.breakpoints.down("sm")]: {
-    height: theme.custom.dimensions.headerHeightSm,
+  height: HEADER_HEIGHT,
+  [theme.breakpoints.down("md")]: {
+    height: HEADER_HEIGHT_MD,
     padding: "0",
   },
 }))
@@ -63,19 +70,19 @@ const FlexContainer = styled.div({
 })
 
 const DesktopOnly = styled(FlexContainer)(({ theme }) => ({
-  [theme.breakpoints.up("sm")]: {
+  [theme.breakpoints.up("md")]: {
     display: "flex",
   },
-  [theme.breakpoints.down("sm")]: {
+  [theme.breakpoints.down("md")]: {
     display: "none",
   },
 }))
 
 const MobileOnly = styled(FlexContainer)(({ theme }) => ({
-  [theme.breakpoints.down("sm")]: {
+  [theme.breakpoints.down("md")]: {
     display: "flex",
   },
-  [theme.breakpoints.up("sm")]: {
+  [theme.breakpoints.up("md")]: {
     display: "none",
   },
 }))
@@ -88,7 +95,7 @@ const StyledMITLogoLink = styled(MITLogoLink)(({ theme }) => ({
   img: {
     height: "24px",
     width: "auto",
-    [theme.breakpoints.down("sm")]: {
+    [theme.breakpoints.down("md")]: {
       height: "16px",
     },
   },
@@ -100,7 +107,7 @@ const Spacer = styled.div({
 
 const LeftSpacer = styled.div(({ theme }) => ({
   width: "24px",
-  [theme.breakpoints.down("sm")]: {
+  [theme.breakpoints.down("md")]: {
     width: "16px",
   },
 }))
@@ -114,7 +121,7 @@ const StyledSearchButton = styled(ActionButtonLink)(({ theme }) => ({
       opacity: 1,
     },
   },
-  [theme.breakpoints.down("sm")]: {
+  [theme.breakpoints.down("md")]: {
     padding: "0",
   },
   alignItems: "center",
@@ -128,7 +135,7 @@ const StyledSearchIcon = styled(RiSearch2Line)(({ theme }) => ({
   color: theme.custom.colors.white,
   opacity: 0.5,
   margin: "4px 0",
-  [theme.breakpoints.down("sm")]: {
+  [theme.breakpoints.down("md")]: {
     opacity: 1,
   },
 }))
@@ -275,6 +282,7 @@ const Header: FunctionComponent = () => {
   const [drawerOpen, toggleDrawer] = useToggle(false)
   const desktopTrigger = React.useRef<HTMLButtonElement>(null)
   const mobileTrigger = React.useRef<HTMLButtonElement>(null)
+  const { data: user } = useUserMe()
   const drawerToggleEvent = drawerOpen
     ? PostHogEvents.ClosedNavDrawer
     : PostHogEvents.OpenedNavDrawer
@@ -293,7 +301,9 @@ const Header: FunctionComponent = () => {
       <Bar position="fixed">
         <StyledToolbar variant="dense">
           <DesktopOnly>
-            <StyledMITLogoLink logo="learn" />
+            <StyledMITLogoLink
+              logo={user?.is_authenticated ? "learn_authenticated" : "learn"}
+            />
             <LeftSpacer />
             <MenuButton
               ref={desktopTrigger}
@@ -304,7 +314,9 @@ const Header: FunctionComponent = () => {
           <MobileOnly>
             <MenuButton ref={mobileTrigger} onClick={menuClick} />
             <LeftSpacer />
-            <StyledMITLogoLink logo="learn" />
+            <StyledMITLogoLink
+              logo={user?.is_authenticated ? "learn_authenticated" : "learn"}
+            />
           </MobileOnly>
           <Spacer />
           <UserView />

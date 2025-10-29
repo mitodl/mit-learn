@@ -558,9 +558,20 @@ const Certificate = ({
                 crossOrigin="anonymous"
               />
               <SignatoryName variant="h3">{signatory.name}</SignatoryName>
-              <Typography variant="body1">{signatory.title_1}</Typography>
-              <Typography variant="body1">{signatory.title_2}</Typography>
-              <Typography variant="body1">{signatory.organization}</Typography>
+              {signatory.title_1 && (
+                <Typography variant="body1">{signatory.title_1}</Typography>
+              )}
+              {signatory.title_2 && (
+                <Typography variant="body1">{signatory.title_2}</Typography>
+              )}
+              {signatory.title_3 && (
+                <Typography variant="body1">{signatory.title_3}</Typography>
+              )}
+              {signatory.organization && (
+                <Typography variant="body1">
+                  {signatory.organization}
+                </Typography>
+              )}
             </Signatory>
           ))}
         </Signatories>

@@ -233,10 +233,13 @@ def _transform_runs(resource_data: dict) -> list[dict]:
     duration = parse_resource_duration(resource_data.get("duration"))
     published_runs = []
     for run_data in runs_data:
+        run_id = run_data[0]
         start = parse_date(run_data[1])
         end = parse_date(run_data[2])
         enrollment_end = parse_date(run_data[3])
-        published = (not end and not enrollment_end) or (now <= (enrollment_end or end))
+        published = run_id and (
+            (not end and not enrollment_end) or (now <= (enrollment_end or end))
+        )
         if published:
             published_runs.append(
                 {
@@ -283,8 +286,8 @@ def transform_course(resource_data: dict) -> dict or None:
     Returns:
         dict: transformed course data if it has any viable runs
     """
-    runs = _transform_runs(resource_data)
-    if runs:
+    published_runs = _transform_runs(resource_data)
+    if published_runs:
         return {
             "readable_id": resource_data["uuid"],
             "offered_by": copy.deepcopy(OFFERED_BY),
@@ -303,7 +306,7 @@ def transform_course(resource_data: dict) -> dict or None:
             "delivery": transform_delivery(resource_data["learning_format"]),
             "published": True,
             "topics": parse_topics(resource_data),
-            "runs": runs,
+            "runs": published_runs,
             "format": [Format.asynchronous.name],
             "pace": [Pace.instructor_paced.name],
             "availability": Availability.dated.name,
@@ -321,8 +324,8 @@ def transform_program(resource_data: dict) -> dict or None:
     Returns:
         dict: transformed program data
     """
-    runs = _transform_runs(resource_data)
-    if runs:
+    published_runs = _transform_runs(resource_data)
+    if published_runs:
         return {
             "readable_id": resource_data["uuid"],
             "offered_by": copy.deepcopy(OFFERED_BY),
@@ -343,7 +346,7 @@ def transform_program(resource_data: dict) -> dict or None:
             "delivery": transform_delivery(resource_data["learning_format"]),
             "published": True,
             "topics": parse_topics(resource_data),
-            "runs": runs,
+            "runs": published_runs,
             "format": [Format.asynchronous.name],
             "pace": [Pace.instructor_paced.name],
             "availability": Availability.dated.name,

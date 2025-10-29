@@ -34,7 +34,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.45.8"
+VERSION = "0.47.7"
 
 log = logging.getLogger()
 
@@ -134,6 +134,7 @@ INSTALLED_APPS = (
     "testimonials",
     "data_fixtures",
     "vector_search",
+    "video_shorts",
     "mitol.scim.apps.ScimApp",
     "health_check",
     "health_check.cache",
@@ -199,6 +200,17 @@ MIDDLEWARE = (
     "oauth2_provider.middleware.OAuth2TokenMiddleware",
     "django_scim.middleware.SCIMAuthCheckMiddleware",
 )
+
+ZEAL_ENABLE = get_bool("ZEAL_ENABLE", False)  # noqa: FBT003
+
+# enable the zeal nplusone profiler only in debug mode or under pytest
+if ZEAL_ENABLE or ENVIRONMENT == "pytest":
+    INSTALLED_APPS += ("zeal",)
+    # this should be the first middleware so we catch any issues in our own middleware
+    MIDDLEWARE += ("zeal.middleware.zeal_middleware",)
+
+ZEAL_RAISE = False
+ZEAL_ALLOWLIST = []
 
 # CORS
 CORS_ALLOWED_ORIGINS = get_list_of_str("CORS_ALLOWED_ORIGINS", [])
@@ -483,6 +495,7 @@ LOGGING = {
         "opensearch": {"level": OS_LOG_LEVEL},
         "nplusone": {"handlers": ["console"], "level": "ERROR"},
         "boto3": {"handlers": ["console"], "level": "ERROR"},
+        "zeal": {"handlers": ["console"], "level": "ERROR"},
     },
     "root": {"handlers": ["console"], "level": LOG_LEVEL},
 }
@@ -789,7 +802,7 @@ QDRANT_SPARSE_MODEL = get_string(
 
 QDRANT_CHUNK_SIZE = get_int(
     name="QDRANT_CHUNK_SIZE",
-    default=100,
+    default=10,
 )
 
 QDRANT_ENCODER = get_string(
@@ -854,3 +867,8 @@ OPENTELEMETRY_ENDPOINT = get_string("OPENTELEMETRY_ENDPOINT", None)
 OPENTELEMETRY_TRACES_BATCH_SIZE = get_int("OPENTELEMETRY_TRACES_BATCH_SIZE", 512)
 OPENTELEMETRY_EXPORT_TIMEOUT_MS = get_int("OPENTELEMETRY_EXPORT_TIMEOUT_MS", 5000)
 CANVAS_TUTORBOT_FOLDER = get_string("CANVAS_TUTORBOT_FOLDER", "web_resources/ai/tutor/")
+
+
+# Video Shorts settings
+VIDEO_SHORTS_S3_PREFIX = get_string("VIDEO_SHORTS_S3_PREFIX", "shorts/")
+VIDEO_SHORTS_COUNT = get_int("VIDEO_SHORTS_COUNT", 12)

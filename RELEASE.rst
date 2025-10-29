@@ -1,6 +1,70 @@
 Release Notes
 =============
 
+Version 0.47.7 (Released October 28, 2025)
+--------------
+
+- remove org dashboard feature flag (#2654)
+- Avoid double slashes in paths (#2652)
+- use next_start_date when available in learning resource drawer (#2619)
+- Fix a BannerPage background issue (#2651)
+- Don't publish Professional Ed resources with blank run ids (#2637)
+
+Version 0.47.5 (Released October 28, 2025)
+--------------
+
+- make contract card titles link to org page (#2648)
+- Update search index after updating next_start_date (#2639)
+- Video shorts webhook and api (#2631)
+
+Version 0.47.4 (Released October 28, 2025)
+--------------
+
+- do not optimize in background images if optimize is off (#2644)
+- upgrade sharp (#2642)
+- dashboard home org cards (#2630)
+
+Version 0.47.1 (Released October 27, 2025)
+--------------
+
+- Fixes top margin at <md breakpoint (#2636)
+- Fix python unit test (#2629)
+- Program Summary (#2590)
+- add mitxonline networking directions (#2594)
+- Fixes flaky test by fixing resource type (#2628)
+- fix(deps): update django-health-check digest to 53f9bdc (#2606)
+- adding more embedding related tasks to embedding queue (#2622)
+- [pre-commit.ci] pre-commit autoupdate (#2613)
+- Hardcoded versions for apisix, keycloak, postgres (#2626)
+- Render signatory third titles (#2616)
+- Logo and button link to dashboard (#2620)
+- Layout fixes (#2623)
+- Add zeal to pytest (#2605)
+- fix program collections in org dashboards (#2625)
+- Remove usage of 'next' url cookie (#2621)
+- Disable all scheduled tasks with a setting (#2595)
+- caching result of dense_encoder method (#2610)
+
+Version 0.46.0 (Released October 22, 2025)
+--------------
+
+- bump course search utils (#2615)
+- use v2 enrollments, hide org enrollments in my learning (#2604)
+- Redirect to dashboard home after login, usually (#2600)
+- left align dashboard tab titles (#2612)
+- Padding to fix background position (#2603)
+- adding ecosystems subtopic (#2602)
+- chore(deps): update dependency ruff to v0.14.1 (#2607)
+- chore(deps): update yarn to v4.10.3 (#2609)
+- chore(deps): update node.js to v22.20.0 (#2608)
+- fix(deps): update dependency @faker-js/faker to v10 (#2470)
+- [pre-commit.ci] pre-commit autoupdate (#2315)
+- Organization landing route (#2588)
+- Video section text change (#2601)
+- fix(deps): update dependency django to v4.2.25 [security] (#2561)
+- MIT CLimate Portal ETL (#2589)
+- fix(deps): update dependency django-oauth-toolkit to v3 (#1816)
+
 Version 0.45.8 (Released October 16, 2025)
 --------------
 

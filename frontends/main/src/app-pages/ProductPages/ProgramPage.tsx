@@ -22,6 +22,8 @@ import ProductPageTemplate, {
 import { ProgramPageItem } from "@mitodl/mitxonline-api-axios/v2"
 import { ProgramSummary } from "./ProductSummary"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
+import { learningResourceQueries } from "api/hooks/learningResources"
+import { ResourceTypeEnum } from "api"
 
 type ProgramPageProps = {
   readableId: string
@@ -77,18 +79,26 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
   const programs = useQuery(
     programsQueries.programsList({ readable_id: readableId }),
   )
+  const programResources = useQuery(
+    learningResourceQueries.list({
+      readable_id: [readableId],
+      resource_type: [ResourceTypeEnum.Program],
+    }),
+  )
   const page = pages.data?.items[0]
-  const course = programs.data?.results?.[0]
+  const program = programs.data?.results?.[0]
+  const programResource = programResources.data?.results?.[0]
   const enabled = useFeatureFlagEnabled(FeatureFlags.ProductPageCourse)
   if (enabled === false) {
     return notFound()
   }
   if (!enabled) return
 
-  const doneLoading = pages.isSuccess && programs.isSuccess
+  const isLoading =
+    pages.isLoading || programs.isLoading || programResources.isLoading
 
-  if (!page || !course) {
-    if (doneLoading) {
+  if (!page || !program || !programResource) {
+    if (!isLoading) {
       return notFound()
     } else {
       return null
@@ -112,7 +122,9 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
         />
       }
       imageSrc={imageSrc}
-      sidebarSummary={<ProgramSummary />}
+      sidebarSummary={
+        <ProgramSummary program={program} programResource={programResource} />
+      }
       navLinks={navLinks}
     >
       <ProductNavbar navLinks={navLinks} productNoun="Program" />

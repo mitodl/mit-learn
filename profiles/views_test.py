@@ -237,6 +237,7 @@ def test_patch_profile_by_user(client, logged_in_profile):
     assert logged_in_profile.location == location_json
 
 
+@pytest.mark.skip_nplusone_check
 def test_patch_topic_interests(client, logged_in_profile):
     """Test that patching Profile.topic_interests works correctly"""
     topics = LearningResourceTopicFactory.create_batch(3)

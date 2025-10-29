@@ -62,6 +62,8 @@ MITOL_WEB_MEM_LIMIT
 If any resource limits are set too low, you may encounter OOMKilled errors in the logs of those services. The primary way this will manifest is that containers may unexpectedly die during operation resulting in 500 errors or unusual celery task execution.
 Given a container that is unexpectedly down, you can verify that it was OOMKilled by running `docker inspect <container_name> -f '{{json .State.OOMKilled}}'`, or by checking the Docker VM kernel message logs for relevant output.
 
+By default, many scheduled celery tasks run on a frequent basis, daily or even multiple times per day. This could potentially slow down development and testing. You can disable all scheduled celery tasks by adding `CELERY_BEAT_DISABLED=True` to your `backend.local.env` file.
+
 ### Loading Data
 
 The MIT Learn platform aggregates data from many sources. These data are populated by ETL (extract, transform, load) pipelines that run automatically on a regular schedule. Django [management commands](https://docs.djangoproject.com/en/4.2/howto/custom-management-commands/) are also available to force the pipelines to run—particularly useful for local development.
@@ -257,6 +259,45 @@ The keys and ID can be found in the Settings section of the project in PostHog t
 Personal API keys only need read permission to Query. When creating a personal API key, choose "Read" under Query for Scopes. The key needs no other permissions (unless you need them for other things). Additionally, if you select either option besides "All-access" under "Organization & project access", make sure you assign the correct project/org to the API key.
 
 Once these are set (and you've restarted the app), you should see events flowing into the PostHog dashboard.
+
+### Connecting with MITxOnline
+
+Both MITxOnline and MIT Learn repos have keycloak and apisix containers included in their stacks. In connecting the two projects, we want to use the same Keycloak+Apisix container for both projects. Here we assume that the Learn Keycloak+Apisix will be used. There are some caveats to this setup:
+
+> [!TIP]
+> You cannot login from the MITxOnline frontend; Logging in via the Learn frontend will authenticate you with the MITxOnline backend.
+
+Set up the [mitxonline](https://github.com/mitodl/mitxonline) as indicated there, **using the environment variables below**. ( _Note: A working OpenEdx installation is not necessary for integration with Learn._)
+
+```env
+# MITxOnline, .env
+CSRF_COOKIE_DOMAIN=.odl.local
+CORS_ALLOWED_ORIGINS=http://mitxonline.odl.local:8065, http://open.odl.local:8062
+CSRF_TRUSTED_ORIGINS=http://mitxonline.odl.local:8065, http://open.odl.local:8062
+
+# For mitol-django-apigateway
+MITOL_APIGATEWAY_DISABLE_MIDDLEWARE=False
+MITOL_APIGATEWAY_USERINFO_CREATE=True
+MITOL_APIGATEWAY_USERINFO_UPDATE=True
+
+# Keycloak settings, these should match mit-learn
+KEYCLOAK_BASE_URL=http://kc.ol.local:8066
+KEYCLOAK_CLIENT_ID=apisix
+KEYCLOAK_CLIENT_SECRET=HckCZXToXfaetbBx0Fo3xbjnC468oMi4 # pragma: allowlist-secret
+KEYCLOAK_DISCOVERY_URL=http://kc.ol.local:8066/realms/ol-local/.well-known/openid-configuration
+KEYCLOAK_REALM_NAME=ol-local
+```
+
+Then, in Learn, set these values:
+
+```env
+# MIT Learn, shared.local.env (ensure not overwritten in backend/frontend env)
+MITX_ONLINE_BASE_URL=http://api.open.odl.local:8065/mitxonline
+
+# MIT Learn, backend.local.env
+MITX_ONLINE_COURSES_API_URL=http://mitxonline.odl.local:8013/api/v2/courses/
+MITX_ONLINE_PROGRAMS_API_URL=http://mitxonline.odl.local:8013/api/v2/programs/
+```
 
 ## GitHub Pages Storybook
 

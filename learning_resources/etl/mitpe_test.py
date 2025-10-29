@@ -193,6 +193,22 @@ def mock_fetch_data(mocker):
     )
 
 
+@pytest.fixture
+def mitpe_offeror_and_topics(mocker):
+    """Create the MIT Professional Education offeror and 2 topics"""
+    offeror = LearningResourceOfferorFactory.create(code="mitpe")
+    LearningResourceTopicMappingFactory.create(
+        offeror=offeror,
+        topic=LearningResourceTopicFactory.create(name="Product Innovation"),
+        topic_name="Technology Innovation",
+    )
+    LearningResourceTopicMappingFactory.create(
+        offeror=offeror,
+        topic=LearningResourceTopicFactory.create(name="Data Science"),
+        topic_name="Data Science",
+    )
+
+
 @pytest.mark.parametrize("prof_ed_api_url", ["http://pro_edd_api.com", None])
 def test_extract(settings, mock_fetch_data, prof_ed_api_url):
     """Test extract function"""
@@ -213,19 +229,8 @@ def test_extract(settings, mock_fetch_data, prof_ed_api_url):
 
 
 @pytest.mark.django_db
-def test_transform(mock_fetch_data):
+def test_transform(mock_fetch_data, mitpe_offeror_and_topics):
     """Test transform function, and effectively most other functions"""
-    offeror = LearningResourceOfferorFactory.create(code="mitpe")
-    LearningResourceTopicMappingFactory.create(
-        offeror=offeror,
-        topic=LearningResourceTopicFactory.create(name="Product Innovation"),
-        topic_name="Technology Innovation",
-    )
-    LearningResourceTopicMappingFactory.create(
-        offeror=offeror,
-        topic=LearningResourceTopicFactory.create(name="Data Science"),
-        topic_name="Data Science",
-    )
     extracted = mitpe.extract()
     assert len(extracted) == 3
     courses, programs = mitpe.transform(extracted)
@@ -233,3 +238,13 @@ def test_transform(mock_fetch_data):
         sorted(courses, key=lambda course: course["readable_id"]), EXPECTED_COURSES
     )
     assert_json_equal(programs, EXPECTED_PROGRAMS)
+
+
+@pytest.mark.django_db
+def test_transform__course_no_run_ids(mock_fetch_data, mitpe_offeror_and_topics):
+    """Resources with no run IDs should not be published"""
+    extracted = mitpe.extract()
+    assert len(extracted) == 3
+    for resource in extracted:
+        resource["run__readable_id"] = ""
+    assert mitpe.transform(extracted) == ([], [])

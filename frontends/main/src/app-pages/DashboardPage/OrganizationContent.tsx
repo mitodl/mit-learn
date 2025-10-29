@@ -3,8 +3,6 @@
 import React, { useEffect } from "react"
 import DOMPurify from "isomorphic-dompurify"
 import Image from "next/image"
-import { useFeatureFlagEnabled } from "posthog-js/react"
-import { FeatureFlags } from "@/common/feature_flags"
 import { useQueries, useQuery } from "@tanstack/react-query"
 import {
   programsQueries,
@@ -19,6 +17,7 @@ import { PlainList, Skeleton, Stack, styled, Typography } from "ol-components"
 import {
   DashboardProgram,
   DashboardProgramCollection,
+  DashboardProgramCollectionProgram,
 } from "./CoursewareDisplay/types"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
 import {
@@ -129,25 +128,36 @@ const ProgramDescription = styled(Typography)({
   },
 })
 
+const ProgramCollectionsList = styled(PlainList)({
+  display: "flex",
+  flexDirection: "column",
+  gap: "40px",
+})
+
 // Custom hook to handle multiple program queries and check if any have courses
-const useProgramCollectionCourses = (programIds: number[], orgId: number) => {
+const useProgramCollectionCourses = (
+  programs: DashboardProgramCollectionProgram[],
+  orgId: number,
+) => {
   const programQueries = useQueries({
-    queries: programIds.map((programId) =>
-      programsQueries.programsList({ id: programId, org_id: orgId }),
-    ),
+    queries: programs
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+      .map((program) =>
+        programsQueries.programsList({ id: program.id, org_id: orgId }),
+      ),
   })
 
   const isLoading = programQueries.some((query) => query.isLoading)
 
   const programsWithCourses = programQueries
-    .map((query, index) => {
+    .map((query) => {
       if (!query.data?.results?.length) {
         return null
       }
       const program = query.data.results[0]
       const transformedProgram = transform.mitxonlineProgram(program)
       return {
-        programId: programIds[index],
+        programId: query.data.results[0].id,
         program: transformedProgram,
         hasCourses: program.courses && program.courses.length > 0,
       }
@@ -171,7 +181,7 @@ const OrgProgramCollectionDisplay: React.FC<{
 }> = ({ collection, contracts, enrollments, orgId }) => {
   const sanitizedDescription = DOMPurify.sanitize(collection.description ?? "")
   const { isLoading, programsWithCourses, hasAnyCourses } =
-    useProgramCollectionCourses(collection.programIds, orgId)
+    useProgramCollectionCourses(collection.programs, orgId)
   const firstCourseIds = programsWithCourses
     .map((p) => p?.program.courseIds[0])
     .filter((id): id is number => id !== undefined)
@@ -231,9 +241,9 @@ const OrgProgramCollectionDisplay: React.FC<{
       {header}
       <PlainList>
         {courses.isLoading &&
-          programsWithCourses.map((item) => (
+          programsWithCourses.map((item, index) => (
             <Skeleton
-              key={item?.programId}
+              key={`${collection.id}-${item?.programId}-${index}`}
               width="100%"
               height="65px"
               style={{ marginBottom: "16px" }}
@@ -348,9 +358,6 @@ type OrganizationContentInternalProps = {
 const OrganizationContentInternal: React.FC<
   OrganizationContentInternalProps
 > = ({ org }) => {
-  const isOrgDashboardEnabled = useFeatureFlagEnabled(
-    FeatureFlags.OrganizationDashboard,
-  )
   const orgId = org.id
   const contracts = useQuery(contractQueries.contractsList())
   const orgContracts = contracts.data?.filter(
@@ -366,8 +373,6 @@ const OrganizationContentInternal: React.FC<
   const programCollections = useQuery(
     programCollectionQueries.programCollectionsList({}),
   )
-
-  if (!isOrgDashboardEnabled) return null
 
   const transformedPrograms = programs.data?.results
     .filter((program) => program.collections.length === 0)
@@ -400,7 +405,7 @@ const OrganizationContentInternal: React.FC<
       {programCollections.isLoading ? (
         skeleton
       ) : (
-        <PlainList>
+        <ProgramCollectionsList>
           {programCollections.data?.results.map((collection) => {
             const transformedCollection =
               transform.mitxonlineProgramCollection(collection)
@@ -414,7 +419,7 @@ const OrganizationContentInternal: React.FC<
               />
             )
           })}
-        </PlainList>
+        </ProgramCollectionsList>
       )}
       {programs.data?.results.length === 0 && (
         <HeaderRoot>

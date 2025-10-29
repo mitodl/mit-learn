@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
+import { usePathname } from "next/navigation"
 import { SimpleMenu, styled, theme } from "ol-components"
 import type { MenuOverrideProps, SimpleMenuItem } from "ol-components"
 import { ActionButtonLink, ButtonLink } from "@mitodl/smoot-design"
@@ -35,7 +36,7 @@ const UserMenuContainer = styled.button(({ theme }) => ({
   "&:hover": {
     opacity: 1,
   },
-  [theme.breakpoints.down("sm")]: {
+  [theme.breakpoints.down("md")]: {
     border: "none",
     opacity: 1,
     gap: "2px",
@@ -48,7 +49,7 @@ const LoginButtonContainer = styled(FlexContainer)(({ theme }) => ({
   "&:hover": {
     textDecoration: "none",
   },
-  [theme.breakpoints.down("sm")]: {
+  [theme.breakpoints.down("md")]: {
     padding: "0",
     ".login-button-desktop": {
       display: "none",
@@ -57,7 +58,7 @@ const LoginButtonContainer = styled(FlexContainer)(({ theme }) => ({
       display: "flex",
     },
   },
-  [theme.breakpoints.up("sm")]: {
+  [theme.breakpoints.up("md")]: {
     ".login-button-desktop": {
       display: "flex",
     },
@@ -89,7 +90,7 @@ type UserMenuItem = SimpleMenuItem & {
 
 const UserNameContainer = styled.span(({ theme }) => ({
   color: theme.custom.colors.white,
-  [theme.breakpoints.down("sm")]: {
+  [theme.breakpoints.down("md")]: {
     display: "none",
   },
   ...theme.typography.body2,
@@ -108,11 +109,19 @@ const StyledMITLogoLink = styled(MITLogoLink)(({ theme }) => ({
     width: "64px",
     height: "32px",
     marginLeft: "16px",
-    [theme.breakpoints.down("sm")]: {
+    [theme.breakpoints.down("md")]: {
       width: "48px",
       height: "24px",
       marginLeft: "0",
     },
+  },
+}))
+
+const DashboardLink = styled(ButtonLink)(({ theme }) => ({
+  fontSize: theme.typography.body3.fontSize,
+  marginRight: "24px",
+  [theme.breakpoints.down("md")]: {
+    display: "none",
   },
 }))
 
@@ -123,6 +132,7 @@ type UserMenuProps = {
 
 const UserMenu: React.FC<UserMenuProps> = ({ variant }) => {
   const [visible, setVisible] = useState(false)
+  const pathname = usePathname()
   const loginUrl = urls.auth({
     next: {
       pathname: urls.DASHBOARD_HOME,
@@ -200,6 +210,11 @@ const UserMenu: React.FC<UserMenuProps> = ({ variant }) => {
             </UserMenuContainer>
           }
         />
+        {!pathname.startsWith("/dashboard") ? (
+          <DashboardLink variant="tertiary" href={"/dashboard"}>
+            Dashboard
+          </DashboardLink>
+        ) : null}
         <StyledMITLogoLink logo="mit_white" />
       </>
     )

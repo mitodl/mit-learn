@@ -6,15 +6,19 @@ import Link from "next/link"
 import React, { ReactElement } from "react"
 import { RiCloseLargeLine } from "@remixicon/react"
 import { ActionButton } from "@mitodl/smoot-design"
+import {
+  HEADER_HEIGHT,
+  HEADER_HEIGHT_MD,
+} from "../ThemeProvider/MITLearnGlobalStyles"
 
 const DrawerContent = styled.div(({ theme }) => ({
-  paddingTop: theme.custom.dimensions.headerHeight,
+  paddingTop: HEADER_HEIGHT,
   width: "366px",
   height: "100%",
   background: theme.custom.colors.white,
   borderRight: `1px solid ${theme.custom.colors.lightGray2}`,
-  [theme.breakpoints.down("sm")]: {
-    paddingTop: theme.custom.dimensions.headerHeightSm,
+  [theme.breakpoints.down("md")]: {
+    paddingTop: HEADER_HEIGHT_MD,
   },
 }))
 

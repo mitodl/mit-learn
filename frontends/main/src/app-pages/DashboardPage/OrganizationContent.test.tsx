@@ -3,7 +3,6 @@ import { renderWithProviders, screen, within, waitFor } from "@/test-utils"
 import OrganizationContent from "./OrganizationContent"
 import { setMockResponse } from "api/test-utils"
 import { urls, factories } from "api/mitxonline-test-utils"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import {
   organizationCoursesWithContracts,
   mitxonlineProgram,
@@ -23,14 +22,8 @@ import { faker } from "@faker-js/faker/locale/en"
 const makeCourseEnrollment = factories.enrollment.courseEnrollment
 const makeGrade = factories.enrollment.grade
 
-jest.mock("posthog-js/react")
-const mockedUseFeatureFlagEnabled = jest
-  .mocked(useFeatureFlagEnabled)
-  .mockImplementation(() => false)
-
 describe("OrganizationContent", () => {
   beforeEach(() => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(urls.enrollment.enrollmentsList(), [])
     setMockResponse.get(urls.enrollment.enrollmentsListV2(), [])
     setMockResponse.get(urls.programEnrollments.enrollmentsList(), [])
@@ -144,7 +137,18 @@ describe("OrganizationContent", () => {
       setupProgramsAndCourses()
 
     // Set up the collection to include both programs in a specific order
-    programCollection.programs = [programB.id, programA.id] // Note: B first, then A
+    programCollection.programs = [
+      {
+        id: programB.id,
+        title: programB.title,
+        order: 1,
+      },
+      {
+        id: programA.id,
+        title: programA.title,
+        order: 2,
+      },
+    ] // Note: B first, then A
     setMockResponse.get(urls.programCollections.programCollectionsList(), {
       results: [programCollection],
     })
@@ -200,7 +204,13 @@ describe("OrganizationContent", () => {
     const { orgX, programA, programCollection, coursesA } =
       setupProgramsAndCourses()
 
-    programCollection.programs = [programA.id]
+    programCollection.programs = [
+      {
+        id: programA.id,
+        title: programA.title,
+        order: 1,
+      },
+    ]
     setMockResponse.get(urls.programCollections.programCollectionsList(), {
       results: [programCollection],
     })
@@ -240,7 +250,18 @@ describe("OrganizationContent", () => {
       setupProgramsAndCourses()
 
     // Set up the collection to include both programs
-    programCollection.programs = [programA.id, programB.id]
+    programCollection.programs = [
+      {
+        id: programB.id,
+        title: programB.title,
+        order: 1,
+      },
+      {
+        id: programA.id,
+        title: programA.title,
+        order: 2,
+      },
+    ]
     setMockResponse.get(urls.programCollections.programCollectionsList(), {
       results: [programCollection],
     })
@@ -332,7 +353,18 @@ describe("OrganizationContent", () => {
     const programANoCourses = { ...programA, courses: [] }
 
     // Set up the collection to include both programs
-    programCollection.programs = [programANoCourses.id, programB.id]
+    programCollection.programs = [
+      {
+        id: programANoCourses.id,
+        title: programANoCourses.title,
+        order: 1,
+      },
+      {
+        id: programB.id,
+        title: programB.title,
+        order: 2,
+      },
+    ]
     setMockResponse.get(urls.programCollections.programCollectionsList(), {
       results: [programCollection],
     })

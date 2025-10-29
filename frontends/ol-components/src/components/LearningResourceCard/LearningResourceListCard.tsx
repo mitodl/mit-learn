@@ -75,6 +75,18 @@ const CertificateText = styled.div`
   display: flex;
 `
 
+const MobileOnly = styled.div(({ theme }) => ({
+  [theme.breakpoints.up("sm")]: {
+    display: "none",
+  },
+}))
+
+const DesktopOnly = styled.div(({ theme }) => ({
+  [theme.breakpoints.down("sm")]: {
+    display: "none",
+  },
+}))
+
 const CertificatePrice = styled.div`
   ${{ ...theme.typography.body3 }}
   ${theme.breakpoints.down("md")} {
@@ -121,7 +133,10 @@ const Info = ({ resource }: { resource: LearningResource }) => {
         <Certificate>
           <RiAwardFill />
           <CertificateText>
-            {resource.certification_type?.name || "Certificate"}
+            <MobileOnly>Certificate</MobileOnly>
+            <DesktopOnly>
+              {resource.certification_type?.name || "Certificate"}
+            </DesktopOnly>
             <CertificatePrice>
               {prices.certificate.display ? ": " : ""}{" "}
               {prices.certificate.display}
