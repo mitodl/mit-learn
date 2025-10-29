@@ -3279,7 +3279,7 @@ def test_get_similar_topics_qdrant_uses_cached_embedding(mocker):
     value_doc = {"title": "Test Title", "description": "Test Description"}
     num_topics = 3
 
-    mock_encoder = mocker.patch("vector_search.encoders.utils.dense_encoder")
+    mock_encoder = mocker.patch("learning_resources_search.api.dense_encoder")
     encoder_instance = mock_encoder.return_value
     encoder_instance.model_short_name.return_value = "test-model"
     encoder_instance.embed.return_value = [0.1, 0.2, 0.3]
