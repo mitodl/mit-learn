@@ -135,3 +135,17 @@ def refresh_index(index):
     """
     conn = get_conn()
     conn.indices.refresh(index)
+
+
+def get_vector_model_id():
+    conn = get_conn()
+    model_name = "huggingface/sentence-transformers/msmarco-distilbert-base-tas-b"
+    body = {"query": {"term": {"name.keyword": model_name}}}
+    models = conn.transport.perform_request(
+        "GET", "/_plugins/_ml/models/_search", body=body
+    )
+
+    if len(models.get("hits", {}).get("hits", [])) > 0:
+        return models["hits"]["hits"][0]["_source"]["model_id"]
+
+    return None

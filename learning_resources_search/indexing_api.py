@@ -8,6 +8,7 @@ from math import ceil
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from opensearch_py_ml.ml_commons import MLCommonClient
 from opensearchpy.exceptions import ConflictError, NotFoundError
 from opensearchpy.helpers import BulkIndexError, bulk
 
@@ -17,6 +18,7 @@ from learning_resources_search.connection import (
     get_conn,
     get_default_alias_name,
     get_reindexing_alias_name,
+    get_vector_model_id,
     make_backing_index_name,
     refresh_index,
 )
@@ -43,7 +45,6 @@ from main.utils import chunks
 
 log = logging.getLogger(__name__)
 User = get_user_model()
-from opensearch_py_ml.ml_commons import MLCommonClient
 
 
 def clear_featured_rank(rank, clear_all_greater_than):
@@ -636,7 +637,7 @@ def get_existing_reindexing_indexes(obj_types):
     return reindexing_indexes
 
 
-def update_index_settings():
+def update_local_index_settings_for_hybrid_search():
     settings_body = {
         "persistent": {
             "plugins": {
@@ -654,13 +655,12 @@ def update_index_settings():
 
 def get_ml_client():
     conn = get_conn()
-    ml_client = MLCommonClient(conn)
-    return ml_client
+    return MLCommonClient(conn)
 
 
 def register_model():
     ml_client = get_ml_client()
-    model_id = ml_client.register_pretrained_model(
+    ml_client.register_pretrained_model(
         model_name="huggingface/sentence-transformers/msmarco-distilbert-base-tas-b",
         model_version="1.0.3",
         model_format="TORCH_SCRIPT",
@@ -668,18 +668,19 @@ def register_model():
     )
 
 
-# In [11]: model_id
-# Out[49]: 'PQBFF5oBDk6_T5cL_Izk'
-
-
 def create_ingest_pipeline():
     conn = get_conn()
+    model_id = get_vector_model_id()
+    if not model_id:
+        log.error("Model not found. Cannot create ingest pipeline.")
+        return
+
     pipeline = {
         "description": "An NLP ingest pipeline",
         "processors": [
             {
                 "text_embedding": {
-                    "model_id": "PQBFF5oBDk6_T5cL_Izk",
+                    "model_id": model_id,
                     "field_map": {
                         "description": "description_embedding",
                         "title": "title_embedding",
@@ -690,25 +691,3 @@ def create_ingest_pipeline():
     }
 
     conn.ingest.put_pipeline("vector_ingest_pipeline", pipeline)
-
-
-def create_search_pipeline():
-    conn = get_conn()
-    pipeline = {
-        "description": "Post processor for hybrid search",
-        "phase_results_processors": [
-            {
-                "normalization-processor": {
-                    "normalization": {"technique": "min_max"},
-                    "combination": {
-                        "technique": "arithmetic_mean",
-                        "parameters": {"weights": [0.7, 0.3]},
-                    },
-                }
-            }
-        ],
-    }
-
-    conn.transport.perform_request(
-        "PUT", "/_search/pipeline/hybrid_search_pipeline", body=pipeline
-    )

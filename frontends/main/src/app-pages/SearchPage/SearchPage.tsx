@@ -115,9 +115,6 @@ const SearchPage: React.FC = () => {
     onFacetsChange,
   })
 
-  console.log(params)
-  console.log(searchParams)
-
   const page = +(searchParams.get("page") ?? "1")
 
   useEffect(() => {

@@ -4351,15 +4351,16 @@ paths:
         name: search_mode
         schema:
           enum:
+          - phrase
           - best_fields
           - most_fields
-          - phrase
+          - hybrid
           type: string
           minLength: 1
         description: "The open search search type for text queries             \n\n\
-          * `best_fields` - best_fields\n* `most_fields` - most_fields\n* `phrase`\
-          \ - phrase\n\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n\
-          * `phrase` - phrase"
+          * `phrase` - phrase\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n\
+          * `hybrid` - hybrid\n\n* `phrase` - phrase\n* `best_fields` - best_fields\n\
+          * `most_fields` - most_fields\n* `hybrid` - hybrid"
       - in: query
         name: slop
         schema:
@@ -4413,13 +4414,6 @@ paths:
             type: string
             minLength: 1
         description: The topic name. To see a list of options go to api/v1/topics/
-      - in: query
-        name: use_hybrid_search
-        schema:
-          type: boolean
-          nullable: true
-          default: false
-        description: If true, use hybrid search combining vector and keyword search
       - in: query
         name: yearly_decay_percent
         schema:
@@ -4864,15 +4858,16 @@ paths:
         name: search_mode
         schema:
           enum:
+          - phrase
           - best_fields
           - most_fields
-          - phrase
+          - hybrid
           type: string
           minLength: 1
         description: "The open search search type for text queries             \n\n\
-          * `best_fields` - best_fields\n* `most_fields` - most_fields\n* `phrase`\
-          \ - phrase\n\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n\
-          * `phrase` - phrase"
+          * `phrase` - phrase\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n\
+          * `hybrid` - hybrid\n\n* `phrase` - phrase\n* `best_fields` - best_fields\n\
+          * `most_fields` - most_fields\n* `hybrid` - hybrid"
       - in: query
         name: slop
         schema:
@@ -4926,13 +4921,6 @@ paths:
             type: string
             minLength: 1
         description: The topic name. To see a list of options go to api/v1/topics/
-      - in: query
-        name: use_hybrid_search
-        schema:
-          type: boolean
-          nullable: true
-          default: false
-        description: If true, use hybrid search combining vector and keyword search
       - in: query
         name: yearly_decay_percent
         schema:
@@ -5402,15 +5390,16 @@ paths:
         name: search_mode
         schema:
           enum:
+          - phrase
           - best_fields
           - most_fields
-          - phrase
+          - hybrid
           type: string
           minLength: 1
         description: "The open search search type for text queries             \n\n\
-          * `best_fields` - best_fields\n* `most_fields` - most_fields\n* `phrase`\
-          \ - phrase\n\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n\
-          * `phrase` - phrase"
+          * `phrase` - phrase\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n\
+          * `hybrid` - hybrid\n\n* `phrase` - phrase\n* `best_fields` - best_fields\n\
+          * `most_fields` - most_fields\n* `hybrid` - hybrid"
       - in: query
         name: slop
         schema:
@@ -5478,13 +5467,6 @@ paths:
             type: string
             minLength: 1
         description: The topic name. To see a list of options go to api/v1/topics/
-      - in: query
-        name: use_hybrid_search
-        schema:
-          type: boolean
-          nullable: true
-          default: false
-        description: If true, use hybrid search combining vector and keyword search
       - in: query
         name: yearly_decay_percent
         schema:
@@ -5931,15 +5913,16 @@ paths:
         name: search_mode
         schema:
           enum:
+          - phrase
           - best_fields
           - most_fields
-          - phrase
+          - hybrid
           type: string
           minLength: 1
         description: "The open search search type for text queries             \n\n\
-          * `best_fields` - best_fields\n* `most_fields` - most_fields\n* `phrase`\
-          \ - phrase\n\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n\
-          * `phrase` - phrase"
+          * `phrase` - phrase\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n\
+          * `hybrid` - hybrid\n\n* `phrase` - phrase\n* `best_fields` - best_fields\n\
+          * `most_fields` - most_fields\n* `hybrid` - hybrid"
       - in: query
         name: slop
         schema:
@@ -6007,13 +5990,6 @@ paths:
             type: string
             minLength: 1
         description: The topic name. To see a list of options go to api/v1/topics/
-      - in: query
-        name: use_hybrid_search
-        schema:
-          type: boolean
-          nullable: true
-          default: false
-        description: If true, use hybrid search combining vector and keyword search
       - in: query
         name: yearly_decay_percent
         schema:
@@ -13236,9 +13212,9 @@ components:
           allOf:
           - $ref: '#/components/schemas/SearchModeEnum'
           description: "The open search search type for text queries             \n\
-            \n* `best_fields` - best_fields\n* `most_fields` - most_fields\n* `phrase`\
-            \ - phrase\n\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n\
-            * `phrase` - phrase"
+            \n* `phrase` - phrase\n* `best_fields` - best_fields\n* `most_fields`\
+            \ - most_fields\n* `hybrid` - hybrid\n\n* `phrase` - phrase\n* `best_fields`\
+            \ - best_fields\n* `most_fields` - most_fields\n* `hybrid` - hybrid"
         slop:
           type: integer
           nullable: true
@@ -13269,11 +13245,6 @@ components:
           nullable: true
           description: Score weight for content file data.  1 is the default. 0 means
             content files are ignored
-        use_hybrid_search:
-          type: boolean
-          nullable: true
-          default: false
-          description: If true, use hybrid search combining vector and keyword search
         source_type:
           allOf:
           - $ref: '#/components/schemas/SourceTypeEnum'
@@ -14904,22 +14875,26 @@ components:
       - title
     SearchModeEnum:
       enum:
+      - phrase
       - best_fields
       - most_fields
-      - phrase
+      - hybrid
       type: string
       description: |-
+        * `phrase` - phrase
         * `best_fields` - best_fields
         * `most_fields` - most_fields
-        * `phrase` - phrase
+        * `hybrid` - hybrid
 
+        * `phrase` - phrase
         * `best_fields` - best_fields
         * `most_fields` - most_fields
-        * `phrase` - phrase
+        * `hybrid` - hybrid
       x-enum-descriptions:
+      - phrase
       - best_fields
       - most_fields
-      - phrase
+      - hybrid
     SortbyEnum:
       enum:
       - featured

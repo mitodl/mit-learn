@@ -25,6 +25,7 @@ BOTH_INDEXES = "all_indexes"
 COMBINED_INDEX = "combined_hybrid"
 
 LEARNING_RESOURCE = "learning_resource"
+HYBRID_SEARCH_MODE = "hybrid"
 
 
 class IndexestoUpdate(Enum):

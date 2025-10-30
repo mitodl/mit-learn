@@ -13,6 +13,7 @@ from opensearchpy.exceptions import NotFoundError
 from learning_resources.models import LearningResource
 from learning_resources_search.connection import (
     get_default_alias_name,
+    get_vector_model_id,
 )
 from learning_resources_search.constants import (
     COMBINED_INDEX,
@@ -20,6 +21,7 @@ from learning_resources_search.constants import (
     COURSE_QUERY_FIELDS,
     COURSE_TYPE,
     DEPARTMENT_QUERY_FIELDS,
+    HYBRID_SEARCH_MODE,
     LEARNING_RESOURCE,
     LEARNING_RESOURCE_QUERY_FIELDS,
     LEARNING_RESOURCE_SEARCH_SORTBY_OPTIONS,
@@ -67,7 +69,7 @@ def gen_content_file_id(content_file_id):
     return f"cf_{content_file_id}"
 
 
-def relevant_indexes(resource_types, aggregations, endpoint, use_hybrid_search=False):
+def relevant_indexes(resource_types, aggregations, endpoint, use_hybrid_search):
     """
     Return list of relevent index type for the query
 
@@ -147,7 +149,11 @@ def generate_sort_clause(search_params):
         return sort
 
 
-def wrap_text_clause(text_query, min_score=None, use_hybrid_search=False):
+def wrap_text_clause(
+    text_query,
+    use_hybrid_search,
+    min_score=None,
+):
     """
     Wrap the text subqueries in a bool query
     Shared by generate_content_file_text_clause and
@@ -213,11 +219,11 @@ def generate_content_file_text_clause(text):
     else:
         text_query = {}
 
-    return wrap_text_clause(text_query)
+    return wrap_text_clause(text_query, use_hybrid_search=False)
 
 
 def generate_learning_resources_text_clause(
-    text, search_mode, slop, content_file_score_weight, min_score, use_hybrid_search
+    text, search_mode, slop, content_file_score_weight, min_score
 ):
     """
     Return text clause for the query
@@ -228,16 +234,23 @@ def generate_learning_resources_text_clause(
         dict: dictionary with the opensearch text clause
     """
 
+    use_hybrid_search = search_mode == HYBRID_SEARCH_MODE
+
     query_type = (
         "query_string" if text.startswith('"') and text.endswith('"') else "multi_match"
     )
 
     extra_params = {}
 
-    if query_type == "multi_match" and search_mode:
-        extra_params["type"] = search_mode
+    if use_hybrid_search:
+        text_search_mode = settings.DEFAULT_SEARCH_MODE
+    else:
+        text_search_mode = search_mode
 
-        if search_mode == "phrase" and slop:
+    if query_type == "multi_match":
+        extra_params["type"] = text_search_mode
+
+        if text_search_mode == "phrase" and slop:
             extra_params["slop"] = slop
 
     if content_file_score_weight is not None:
@@ -341,7 +354,7 @@ def generate_learning_resources_text_clause(
     else:
         text_query = {}
 
-    return wrap_text_clause(text_query, min_score, use_hybrid_search)
+    return wrap_text_clause(text_query, use_hybrid_search, min_score)
 
 
 def generate_filter_clause(
@@ -591,7 +604,6 @@ def add_text_query_to_search(
             search_params.get("slop"),
             search_params.get("content_file_score_weight"),
             search_params.get("min_score"),
-            use_hybrid_search,
         )
 
     yearly_decay_percent = search_params.get("yearly_decay_percent")
@@ -641,11 +653,17 @@ def add_text_query_to_search(
         text_query = {"bool": {"must": [text_query], "filter": query_type_query}}
 
     if use_hybrid_search:
+        vector_model_id = get_vector_model_id()
+        if not vector_model_id:
+            log.error("Vector model not found. Cannot perform hybrid search.")
+            error_message = "Vector model not found."
+            raise ValueError(error_message)
+
         vector_query_description = {
             "neural": {
                 "description_embedding": {
                     "query_text": text,
-                    "model_id": "PQBFF5oBDk6_T5cL_Izk",
+                    "model_id": vector_model_id,
                     "min_score": 0.015,
                 },
             }
@@ -655,7 +673,7 @@ def add_text_query_to_search(
             "neural": {
                 "title_embedding": {
                     "query_text": text,
-                    "model_id": "PQBFF5oBDk6_T5cL_Izk",
+                    "model_id": vector_model_id,
                     "min_score": 0.015,
                 },
             }
@@ -679,7 +697,7 @@ def add_text_query_to_search(
     return search
 
 
-def construct_search(search_params):
+def construct_search(search_params):  # noqa: C901
     """
     Construct a learning resources search based on the query
 
@@ -698,7 +716,7 @@ def construct_search(search_params):
     ):
         search_params["resource_type"] = list(LEARNING_RESOURCE_TYPES)
 
-    use_hybrid_search = search_params.get("use_hybrid_search", False)
+    use_hybrid_search = search_params.get("search_mode") == HYBRID_SEARCH_MODE
 
     indexes = relevant_indexes(
         search_params.get("resource_type"),
@@ -710,7 +728,7 @@ def construct_search(search_params):
     search = Search(index=",".join(indexes))
 
     search = search.source(fields={"excludes": SOURCE_EXCLUDED_FIELDS})
-    if not search_params.get("use_hybrid_search"):
+    if not use_hybrid_search:
         search = search.params(search_type="dfs_query_then_fetch")
     if search_params.get("offset"):
         search = search.extra(from_=search_params.get("offset"))
@@ -767,12 +785,12 @@ def execute_learn_search(search_params):
     Returns:
         dict: The opensearch response dict
     """
-    print(search_params)
     if search_params.get("endpoint") != CONTENT_FILE_TYPE:
         if search_params.get("yearly_decay_percent") is None:
             search_params["yearly_decay_percent"] = (
                 settings.DEFAULT_SEARCH_STALENESS_PENALTY
             )
+
         if search_params.get("search_mode") is None:
             search_params["search_mode"] = settings.DEFAULT_SEARCH_MODE
         if search_params.get("slop") is None:
@@ -785,7 +803,7 @@ def execute_learn_search(search_params):
             )
     search = construct_search(search_params)
 
-    if search_params.get("use_hybrid_search"):
+    if search_params.get("search_mode") == HYBRID_SEARCH_MODE:
         search = search.extra(
             search_pipeline={
                 "description": "Post processor for hybrid search",
@@ -803,7 +821,6 @@ def execute_learn_search(search_params):
             }
         )
 
-    print(search.to_dict())
     return search.execute().to_dict()
 
 
@@ -964,7 +981,9 @@ def get_similar_topics(
         list of str:
             list of topic values
     """
-    indexes = relevant_indexes([COURSE_TYPE], [], endpoint=LEARNING_RESOURCE)
+    indexes = relevant_indexes(
+        [COURSE_TYPE], [], endpoint=LEARNING_RESOURCE, use_hybrid_search=False
+    )
     search = Search(index=",".join(indexes))
     search = search.filter("term", resource_type=COURSE_TYPE)
     search = search.query(
@@ -1111,7 +1130,9 @@ def get_similar_resources_opensearch(
         list of str:
             list of learning resources
     """
-    indexes = relevant_indexes(LEARNING_RESOURCE_TYPES, [], endpoint=LEARNING_RESOURCE)
+    indexes = relevant_indexes(
+        LEARNING_RESOURCE_TYPES, [], endpoint=LEARNING_RESOURCE, use_hybrid_search=False
+    )
     search = Search(index=",".join(indexes))
     if num_resources:
         # adding +1 to num_resources since we filter out existing resource.id
