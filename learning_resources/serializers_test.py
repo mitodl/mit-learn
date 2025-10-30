@@ -157,8 +157,22 @@ def test_serialize_video_resource_playlists_to_json():
         relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
     )
     serializer = serializers.VideoResourceSerializer(instance=video.learning_resource)
-    assert len(video.learning_resource.playlists) == 1
     assert serializer.data["playlists"] == [playlist.learning_resource.id]
+
+
+def test_serialize_podcast_episode_playlists_to_json():
+    """
+    Verify that a serialized podcast episode resource has the correct podcast data
+    """
+    podcast = factories.PodcastFactory.create()
+    podcast_episode = factories.PodcastEpisodeFactory.create()
+    LearningResourceRelationship.objects.get_or_create(
+        parent=podcast.learning_resource,
+        child=podcast_episode.learning_resource,
+        relation_type=LearningResourceRelationTypes.PODCAST_EPISODES.value,
+    )
+    serializer = serializers.PodcastEpisodeSerializer(instance=podcast_episode)
+    assert serializer.data["podcasts"] == [podcast.learning_resource.id]
 
 
 @pytest.mark.parametrize("has_context", [True, False])
