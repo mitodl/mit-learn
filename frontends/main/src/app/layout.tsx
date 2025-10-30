@@ -18,7 +18,7 @@ export const metadata = {
 }
 
 /**
- * Force all pages to render dynamically (at request-time) rather than statically
+ * Force all pages to render dynamically (at request-time) rather than
  * statically at build time. This simplifies the build, reduces build time, and
  * ensures fresh data on each request to the NextJS server.
  *
