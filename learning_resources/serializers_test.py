@@ -33,7 +33,11 @@ from learning_resources.factories import (
     LearningResourcePriceFactory,
     LearningResourceRunFactory,
 )
-from learning_resources.models import ContentFile, LearningResource
+from learning_resources.models import (
+    ContentFile,
+    LearningResource,
+    LearningResourceRelationship,
+)
 from main.test_utils import assert_json_equal, drf_datetime
 from main.utils import frontend_absolute_url
 
@@ -139,6 +143,22 @@ def test_serialize_podcast_episode_to_json():
             "transcript": podcast_episode.transcript,
         },
     )
+
+
+def test_serialize_video_resource_playlists_to_json():
+    """
+    Verify that a serialized video resource has the correct playlist data
+    """
+    playlist = factories.VideoPlaylistFactory.create()
+    video = factories.VideoFactory.create()
+    LearningResourceRelationship.objects.get_or_create(
+        parent=playlist.learning_resource,
+        child=video.learning_resource,
+        relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
+    )
+    serializer = serializers.VideoResourceSerializer(instance=video.learning_resource)
+    assert len(video.learning_resource.playlists) == 1
+    assert serializer.data["playlists"] == [playlist.learning_resource.id]
 
 
 @pytest.mark.parametrize("has_context", [True, False])
