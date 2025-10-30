@@ -10,14 +10,11 @@ invariant(BASE_URL, "NEXT_PUBLIC_ORIGIN must be defined")
 const PAGE_SIZE = 1_000
 
 /**
- * As of NextJS 15.5.3, sitemaps are ALWAYS generated via incremental
- * static regeneration (ISR), even with the force-dyanamic below.
- *
- * Setting revalidate to 0 forces regeneration on each request.
- * We handle caching via CDN.
+ * As of NextJS 15.5.3, sitemaps are ALWAYS generated at build time, even with
+ * the force-dynamic below (this may be a NextJS bug?). However, the
+ * force-dynamic does force re-generation when requests are made in production.
  */
 export const dynamic = "force-dynamic"
-export const revalidate = 0
 
 export async function generateSitemaps(): Promise<GenerateSitemapResult[]> {
   /**
