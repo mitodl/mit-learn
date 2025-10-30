@@ -23,18 +23,6 @@ export async function generateMetadata({
   })
 }
 
-/**
- * Fallback to dynamic rendering to load as much of the page as possible.
- *
- * We could alternatively wrap the carousels (which use useSearchParams) in a
- * suspense boundary. This ostensibly leads to a faster response, since the
- * server can render the rest of the homepage at build time.
- *
- * But... We ache the result on CDN anyway, so it's essentially pre-build for
- * most requests, anyway.
- */
-export const dynamic = "force-dynamic"
-
 const Page: React.FC<PageProps<"/">> = async () => {
   const { dehydratedState } = await prefetch([
     // Featured Courses carousel "All"
