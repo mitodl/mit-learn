@@ -212,14 +212,15 @@ def _get_percolated_rows(resources, subscription_type):
     Get percolated rows for a list of learning resources and subscription type
     """
     rows = []
+    all_users = set()
     # percolate each new learning resource to get matching queries
     for resource in resources:
         percolated = percolate_matches_for_document(resource.id).filter(
             source_type=subscription_type
         )
         if percolated.count() > 0:
-            # For each user, get all their matching percolate queries for this resource
             percolated_users = set(percolated.values_list("users", flat=True))
+            all_users.update(percolated_users)
             for user in percolated_users:
                 if not user:
                     continue
@@ -227,33 +228,31 @@ def _get_percolated_rows(resources, subscription_type):
                 user_queries = user_instance.percolate_queries.values_list(
                     "id", flat=True
                 )
-                # iterate over all matching queries for this user
-                user_percolated_queries = percolated.filter(id__in=user_queries)
-                for query in user_percolated_queries:
-                    search_url = _infer_percolate_group_url(query)
-                    req = PreparedRequest()
-                    req.prepare_url(search_url, {"resource": resource.id})
-                    resource_url = req.url
-                    source_channel = query.source_channel()
-                    rows.append(
-                        {
-                            "resource_url": resource_url,
-                            "resource_title": resource.title,
-                            "resource_image_url": resource.image.url
-                            if resource.image
-                            else frontend_absolute_url("/images/default_resource.jpg"),
-                            "resource_type": LearningResourceType[
-                                resource.resource_type
-                            ].value,
-                            "user_id": user,
-                            "source_label": query.source_label(),
-                            "source_channel_type": source_channel.channel_type
-                            if source_channel
-                            else "saved_search",
-                            "group": _infer_percolate_group(query),
-                            "search_url": search_url,
-                        }
-                    )
+                query = percolated.filter(id__in=user_queries).order_by("?").first()
+                search_url = _infer_percolate_group_url(query)
+                req = PreparedRequest()
+                req.prepare_url(search_url, {"resource": resource.id})
+                resource_url = req.url
+                source_channel = query.source_channel()
+                rows.append(
+                    {
+                        "resource_url": resource_url,
+                        "resource_title": resource.title,
+                        "resource_image_url": resource.image.url
+                        if resource.image
+                        else frontend_absolute_url("/images/default_resource.jpg"),
+                        "resource_type": LearningResourceType[
+                            resource.resource_type
+                        ].value,
+                        "user_id": user,
+                        "source_label": query.source_label(),
+                        "source_channel_type": source_channel.channel_type
+                        if source_channel
+                        else "saved_search",
+                        "group": _infer_percolate_group(query),
+                        "search_url": search_url,
+                    }
+                )
     return rows
 
 
