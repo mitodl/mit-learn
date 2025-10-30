@@ -68,9 +68,10 @@ const OrganizationHeader: React.FC<{ org?: OrganizationPage }> = ({ org }) => {
       </ImageContainer>
       <Stack gap="8px">
         <Typography variant="h3" component="h1">
-          Your {org?.name} Home
+          {org?.name}
         </Typography>
-        <Typography variant="body1">MIT courses for {org?.name}</Typography>
+        {/* For now we will use the first contract name until we refactor this to be based on contracts / offerings */}
+        <Typography variant="body1">{org?.contracts[0]?.name}</Typography>
       </Stack>
     </HeaderRoot>
   )
