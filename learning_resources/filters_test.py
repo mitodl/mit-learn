@@ -448,15 +448,18 @@ def test_learning_resource_filter_course_features(client):
     """Test that the resource_content_tag filter works"""
 
     resource_with_exams = LearningResourceFactory.create(
-        content_tags=LearningResourceContentTagFactory.create_batch(1, name="Exams")
+        content_tags=LearningResourceContentTagFactory.create_batch(1, name="Exams"),
+        resource_type=LearningResourceType.video.name,
     )
     resource_with_notes = LearningResourceFactory.create(
         content_tags=LearningResourceContentTagFactory.create_batch(
             1, name="Lecture Notes"
-        )
+        ),
+        resource_type=LearningResourceType.video.name,
     )
     LearningResourceFactory.create(
-        content_tags=LearningResourceContentTagFactory.create_batch(1, name="Other")
+        content_tags=LearningResourceContentTagFactory.create_batch(1, name="Other"),
+        resource_type=LearningResourceType.video.name,
     )
 
     results = client.get(f"{RESOURCE_API_URL}?course_feature=exams").json()["results"]
