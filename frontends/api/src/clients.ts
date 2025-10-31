@@ -21,6 +21,7 @@ import {
   ProfilesApi,
   TestimonialsApi,
   LearningResourcesSearchAdminParamsApi,
+  CkeditorApi,
 } from "./generated/v0/api"
 
 import axiosInstance from "./axios"
@@ -50,6 +51,7 @@ const learningResourcesSearchApi = new LearningResourcesSearchApi(
 const learningResourcesSearchAdminParamsApi =
   new LearningResourcesSearchAdminParamsApi(undefined, BASE_PATH, axiosInstance)
 
+const ckeditorApi = new CkeditorApi(undefined, BASE_PATH, axiosInstance)
 const featuredApi = new FeaturedApi(undefined, BASE_PATH, axiosInstance)
 
 const learningPathsApi = new LearningpathsApi(
@@ -113,4 +115,5 @@ export {
   featuredApi,
   testimonialsApi,
   learningResourcesSearchAdminParamsApi,
+  ckeditorApi,
 }
