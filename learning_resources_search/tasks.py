@@ -221,15 +221,20 @@ def _get_percolated_rows(resources, subscription_type):
         if percolated.count() > 0:
             percolated_users = set(percolated.values_list("users", flat=True))
             all_users.update(percolated_users)
-            query = percolated.first()
-            search_url = _infer_percolate_group_url(query)
-            req = PreparedRequest()
-            req.prepare_url(search_url, {"resource": resource.id})
-            resource_url = req.url
-            source_channel = query.source_channel()
-
-            rows.extend(
-                [
+            for user in percolated_users:
+                if not user:
+                    continue
+                user_instance = User.objects.get(id=user)
+                user_queries = user_instance.percolate_queries.values_list(
+                    "id", flat=True
+                )
+                query = percolated.filter(id__in=user_queries).order_by("?").first()
+                search_url = _infer_percolate_group_url(query)
+                req = PreparedRequest()
+                req.prepare_url(search_url, {"resource": resource.id})
+                resource_url = req.url
+                source_channel = query.source_channel()
+                rows.append(
                     {
                         "resource_url": resource_url,
                         "resource_title": resource.title,
@@ -247,10 +252,7 @@ def _get_percolated_rows(resources, subscription_type):
                         "group": _infer_percolate_group(query),
                         "search_url": search_url,
                     }
-                    for user in percolated_users
-                ]
-            )
-
+                )
     return rows
 
 
