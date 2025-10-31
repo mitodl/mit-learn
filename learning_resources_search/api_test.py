@@ -64,7 +64,21 @@ def os_topic(topic_name) -> Mock:
     ],
 )
 def test_relevant_indexes(endpoint, resourse_types, aggregations, result):
-    assert list(relevant_indexes(resourse_types, aggregations, endpoint)) == result
+    assert (
+        list(
+            relevant_indexes(
+                resourse_types, aggregations, endpoint, use_hybrid_search=False
+            )
+        )
+        == result
+    )
+    # always return the hybrid index when use_hybrid_search is True
+    if endpoint == LEARNING_RESOURCE:
+        assert list(
+            relevant_indexes(
+                resourse_types, aggregations, endpoint, use_hybrid_search=True
+            )
+        ) == ["testindex_combined_hybrid_default"]
 
 
 @pytest.mark.parametrize(
@@ -1864,45 +1878,6 @@ def test_execute_learn_search_for_learning_resource_query(opensearch):
         "sort": [{"readable_id": {"order": "desc"}}],
         "from": 1,
         "size": 1,
-        "suggest": {
-            "text": "math",
-            "title.trigram": {
-                "phrase": {
-                    "field": "title.trigram",
-                    "size": 5,
-                    "gram_size": 1,
-                    "confidence": 0.0001,
-                    "max_errors": 3,
-                    "collate": {
-                        "query": {
-                            "source": {
-                                "match_phrase": {"{{field_name}}": "{{suggestion}}"}
-                            }
-                        },
-                        "params": {"field_name": "title.trigram"},
-                        "prune": True,
-                    },
-                }
-            },
-            "description.trigram": {
-                "phrase": {
-                    "field": "description.trigram",
-                    "size": 5,
-                    "gram_size": 1,
-                    "confidence": 0.0001,
-                    "max_errors": 3,
-                    "collate": {
-                        "query": {
-                            "source": {
-                                "match_phrase": {"{{field_name}}": "{{suggestion}}"}
-                            }
-                        },
-                        "params": {"field_name": "description.trigram"},
-                        "prune": True,
-                    },
-                }
-            },
-        },
         "aggs": {
             "offered_by": {
                 "aggs": {
@@ -1965,6 +1940,8 @@ def test_execute_learn_search_for_learning_resource_query(opensearch):
                 "content",
                 "summary",
                 "flashcards",
+                "description_embedding",
+                "title_embedding",
             ]
         },
     }
@@ -2344,45 +2321,6 @@ def test_execute_learn_search_with_script_score(
         "sort": [{"readable_id": {"order": "desc"}}],
         "from": 1,
         "size": 1,
-        "suggest": {
-            "text": "math",
-            "title.trigram": {
-                "phrase": {
-                    "field": "title.trigram",
-                    "size": 5,
-                    "gram_size": 1,
-                    "confidence": 0.0001,
-                    "max_errors": 3,
-                    "collate": {
-                        "query": {
-                            "source": {
-                                "match_phrase": {"{{field_name}}": "{{suggestion}}"}
-                            }
-                        },
-                        "params": {"field_name": "title.trigram"},
-                        "prune": True,
-                    },
-                }
-            },
-            "description.trigram": {
-                "phrase": {
-                    "field": "description.trigram",
-                    "size": 5,
-                    "gram_size": 1,
-                    "confidence": 0.0001,
-                    "max_errors": 3,
-                    "collate": {
-                        "query": {
-                            "source": {
-                                "match_phrase": {"{{field_name}}": "{{suggestion}}"}
-                            }
-                        },
-                        "params": {"field_name": "description.trigram"},
-                        "prune": True,
-                    },
-                }
-            },
-        },
         "aggs": {
             "offered_by": {
                 "aggs": {
@@ -2445,6 +2383,8 @@ def test_execute_learn_search_with_script_score(
                 "content",
                 "summary",
                 "flashcards",
+                "description_embedding",
+                "title_embedding",
             ]
         },
     }
@@ -2775,45 +2715,6 @@ def test_execute_learn_search_with_min_score(mocker, settings, opensearch):
         "sort": [{"readable_id": {"order": "desc"}}],
         "from": 1,
         "size": 1,
-        "suggest": {
-            "text": "math",
-            "title.trigram": {
-                "phrase": {
-                    "field": "title.trigram",
-                    "size": 5,
-                    "gram_size": 1,
-                    "confidence": 0.0001,
-                    "max_errors": 3,
-                    "collate": {
-                        "query": {
-                            "source": {
-                                "match_phrase": {"{{field_name}}": "{{suggestion}}"}
-                            }
-                        },
-                        "params": {"field_name": "title.trigram"},
-                        "prune": True,
-                    },
-                }
-            },
-            "description.trigram": {
-                "phrase": {
-                    "field": "description.trigram",
-                    "size": 5,
-                    "gram_size": 1,
-                    "confidence": 0.0001,
-                    "max_errors": 3,
-                    "collate": {
-                        "query": {
-                            "source": {
-                                "match_phrase": {"{{field_name}}": "{{suggestion}}"}
-                            }
-                        },
-                        "params": {"field_name": "description.trigram"},
-                        "prune": True,
-                    },
-                }
-            },
-        },
         "aggs": {
             "offered_by": {
                 "aggs": {
@@ -2876,6 +2777,8 @@ def test_execute_learn_search_with_min_score(mocker, settings, opensearch):
                 "content",
                 "summary",
                 "flashcards",
+                "description_embedding",
+                "title_embedding",
             ]
         },
     }
@@ -3005,45 +2908,6 @@ def test_execute_learn_search_for_content_file_query(opensearch):
         },
         "from": 1,
         "size": 1,
-        "suggest": {
-            "text": "math",
-            "title.trigram": {
-                "phrase": {
-                    "field": "title.trigram",
-                    "size": 5,
-                    "gram_size": 1,
-                    "confidence": 0.0001,
-                    "max_errors": 3,
-                    "collate": {
-                        "query": {
-                            "source": {
-                                "match_phrase": {"{{field_name}}": "{{suggestion}}"}
-                            }
-                        },
-                        "params": {"field_name": "title.trigram"},
-                        "prune": True,
-                    },
-                }
-            },
-            "description.trigram": {
-                "phrase": {
-                    "field": "description.trigram",
-                    "size": 5,
-                    "gram_size": 1,
-                    "confidence": 0.0001,
-                    "max_errors": 3,
-                    "collate": {
-                        "query": {
-                            "source": {
-                                "match_phrase": {"{{field_name}}": "{{suggestion}}"}
-                            }
-                        },
-                        "params": {"field_name": "description.trigram"},
-                        "prune": True,
-                    },
-                }
-            },
-        },
         "aggs": {
             "offered_by": {
                 "aggs": {
@@ -3092,6 +2956,8 @@ def test_execute_learn_search_for_content_file_query(opensearch):
                 "content",
                 "summary",
                 "flashcards",
+                "description_embedding",
+                "title_embedding",
             ]
         },
     }

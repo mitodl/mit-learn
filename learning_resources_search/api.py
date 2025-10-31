@@ -247,7 +247,7 @@ def generate_learning_resources_text_clause(
     else:
         text_search_mode = search_mode
 
-    if query_type == "multi_match":
+    if query_type == "multi_match" and text_search_mode:
         extra_params["type"] = text_search_mode
 
         if text_search_mode == "phrase" and slop:
