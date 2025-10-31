@@ -59,10 +59,10 @@ interface TooltipContextValue extends UseFloatingReturn<ReferenceType> {
   open: boolean
   setOpen: (open: boolean) => void
   getReferenceProps: (
-    userProps?: React.HTMLProps<HTMLElement>
+    userProps?: React.HTMLProps<HTMLElement>,
   ) => Record<string, unknown>
   getFloatingProps: (
-    userProps?: React.HTMLProps<HTMLDivElement>
+    userProps?: React.HTMLProps<HTMLDivElement>,
   ) => Record<string, unknown>
 }
 
@@ -101,13 +101,13 @@ function useTooltip({
     mouseOnly: true,
     move: false,
     restMs: delay,
-    enabled: controlledOpen == null,
+    enabled: controlledOpen === null,
     delay: {
       close: closeDelay,
     },
   })
   const focus = useFocus(context, {
-    enabled: controlledOpen == null,
+    enabled: controlledOpen === null,
   })
   const dismiss = useDismiss(context)
   const role = useRole(context, { role: "tooltip" })
@@ -121,7 +121,7 @@ function useTooltip({
       ...interactions,
       ...data,
     }),
-    [open, setOpen, interactions, data]
+    [open, setOpen, interactions, data],
   )
 }
 
@@ -130,7 +130,7 @@ const TooltipContext = createContext<TooltipContextValue | null>(null)
 function useTooltipContext() {
   const context = useContext(TooltipContext)
 
-  if (context == null) {
+  if (context === null) {
     throw new Error("Tooltip components must be wrapped in <TooltipProvider />")
   }
 
@@ -184,7 +184,7 @@ export const TooltipTrigger = forwardRef<HTMLElement, TooltipTriggerProps>(
           ...props,
           ...(typeof children.props === "object" ? children.props : {}),
           ...dataAttributes,
-        })
+        }),
       )
     }
 
@@ -197,13 +197,13 @@ export const TooltipTrigger = forwardRef<HTMLElement, TooltipTriggerProps>(
         {children}
       </button>
     )
-  }
+  },
 )
 
 export const TooltipContent = forwardRef<HTMLDivElement, TooltipContentProps>(
   function TooltipContent(
     { style, children, portal = true, portalProps = {}, ...props },
-    propRef
+    propRef,
   ) {
     const context = useTooltipContext()
     const ref = useMergeRefs([context.refs.setFloating, propRef])
@@ -229,7 +229,7 @@ export const TooltipContent = forwardRef<HTMLDivElement, TooltipContentProps>(
     }
 
     return content
-  }
+  },
 )
 
 Tooltip.displayName = "Tooltip"

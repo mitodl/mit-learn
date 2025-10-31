@@ -62,7 +62,7 @@ export const BlockquoteButton = forwardRef<
       children,
       ...buttonProps
     },
-    ref
+    ref,
   ) => {
     const { editor } = useTiptapEditor(providedEditor)
     const {
@@ -85,7 +85,7 @@ export const BlockquoteButton = forwardRef<
         if (event.defaultPrevented) return
         handleToggle()
       },
-      [handleToggle, onClick]
+      [handleToggle, onClick],
     )
 
     if (!isVisible) {
@@ -97,7 +97,6 @@ export const BlockquoteButton = forwardRef<
         type="button"
         data-style="ghost"
         data-active-state={isActive ? "on" : "off"}
-        role="button"
         tabIndex={-1}
         disabled={!canToggle}
         data-disabled={!canToggle}
@@ -119,7 +118,7 @@ export const BlockquoteButton = forwardRef<
         )}
       </Button>
     )
-  }
+  },
 )
 
 BlockquoteButton.displayName = "BlockquoteButton"

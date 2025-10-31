@@ -70,7 +70,7 @@ export const ImageUploadButton = forwardRef<
       children,
       ...buttonProps
     },
-    ref
+    ref,
   ) => {
     const { editor } = useTiptapEditor(providedEditor)
     const {
@@ -93,7 +93,7 @@ export const ImageUploadButton = forwardRef<
         if (event.defaultPrevented) return
         handleImage()
       },
-      [handleImage, onClick]
+      [handleImage, onClick],
     )
 
     if (!isVisible) {
@@ -107,7 +107,6 @@ export const ImageUploadButton = forwardRef<
         type="button"
         data-style="ghost"
         data-active-state={isActive ? "on" : "off"}
-        role="button"
         tabIndex={-1}
         disabled={!canInsert}
         data-disabled={!canInsert}
@@ -127,7 +126,7 @@ export const ImageUploadButton = forwardRef<
         )}
       </Button>
     )
-  }
+  },
 )
 
 ImageUploadButton.displayName = "ImageUploadButton"

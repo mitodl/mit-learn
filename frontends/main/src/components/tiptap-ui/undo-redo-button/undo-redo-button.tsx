@@ -68,7 +68,7 @@ export const UndoRedoButton = forwardRef<
       children,
       ...buttonProps
     },
-    ref
+    ref,
   ) => {
     const { editor } = useTiptapEditor(providedEditor)
     const { isVisible, handleAction, label, canExecute, Icon, shortcutKeys } =
@@ -85,7 +85,7 @@ export const UndoRedoButton = forwardRef<
         if (event.defaultPrevented) return
         handleAction()
       },
-      [handleAction, onClick]
+      [handleAction, onClick],
     )
 
     if (!isVisible) {
@@ -98,7 +98,6 @@ export const UndoRedoButton = forwardRef<
         disabled={!canExecute}
         data-style="ghost"
         data-disabled={!canExecute}
-        role="button"
         tabIndex={-1}
         aria-label={label}
         tooltip={label}
@@ -120,7 +119,7 @@ export const UndoRedoButton = forwardRef<
         )}
       </Button>
     )
-  }
+  },
 )
 
 UndoRedoButton.displayName = "UndoRedoButton"

@@ -91,7 +91,7 @@ export const ColorHighlightButton = forwardRef<
       style,
       ...buttonProps
     },
-    ref
+    ref,
   ) => {
     const { editor } = useTiptapEditor(providedEditor)
     const {
@@ -116,7 +116,7 @@ export const ColorHighlightButton = forwardRef<
         if (event.defaultPrevented) return
         handleColorHighlight()
       },
-      [handleColorHighlight, onClick]
+      [handleColorHighlight, onClick],
     )
 
     const buttonStyle = useMemo(
@@ -125,7 +125,7 @@ export const ColorHighlightButton = forwardRef<
           ...style,
           "--highlight-color": highlightColor,
         }) as React.CSSProperties,
-      [highlightColor, style]
+      [highlightColor, style],
     )
 
     if (!isVisible) {
@@ -137,7 +137,6 @@ export const ColorHighlightButton = forwardRef<
         type="button"
         data-style="ghost"
         data-active-state={isActive ? "on" : "off"}
-        role="button"
         tabIndex={-1}
         disabled={!canColorHighlight}
         data-disabled={!canColorHighlight}
@@ -165,7 +164,7 @@ export const ColorHighlightButton = forwardRef<
         )}
       </Button>
     )
-  }
+  },
 )
 
 ColorHighlightButton.displayName = "ColorHighlightButton"

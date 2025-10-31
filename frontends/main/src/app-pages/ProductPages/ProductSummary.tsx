@@ -176,7 +176,6 @@ const LearnMoreDialog: React.FC<LearnMoreDialogProps> = ({
         rel="noopener noreferrer"
         color="red"
         href=""
-        role="button"
         onClick={(event) => {
           event.preventDefault()
           setOpen(true)

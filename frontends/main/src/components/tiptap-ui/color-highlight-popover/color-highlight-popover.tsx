@@ -72,7 +72,6 @@ export const ColorHighlightPopoverButton = forwardRef<
     className={className}
     data-style="ghost"
     data-appearance="default"
-    role="button"
     tabIndex={-1}
     aria-label="Highlight text"
     tooltip="Highlight"
@@ -101,7 +100,7 @@ export function ColorHighlightPopoverContent({
 
   const menuItems = useMemo(
     () => [...colors, { label: "Remove highlight", value: "none" }],
-    [colors]
+    [colors],
   )
 
   const { selectedIndex } = useMenuNavigation({
@@ -111,7 +110,7 @@ export function ColorHighlightPopoverContent({
     onSelect: (item) => {
       if (!containerRef.current) return false
       const highlightedElement = containerRef.current.querySelector(
-        '[data-highlighted="true"]'
+        '[data-highlighted="true"]',
       ) as HTMLElement
       if (highlightedElement) highlightedElement.click()
       if (item.value === "none") handleRemoveHighlight()

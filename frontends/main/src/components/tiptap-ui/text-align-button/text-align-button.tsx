@@ -76,7 +76,7 @@ export const TextAlignButton = forwardRef<
       children,
       ...buttonProps
     },
-    ref
+    ref,
   ) => {
     const { editor } = useTiptapEditor(providedEditor)
     const {
@@ -100,7 +100,7 @@ export const TextAlignButton = forwardRef<
         if (event.defaultPrevented) return
         handleTextAlign()
       },
-      [handleTextAlign, onClick]
+      [handleTextAlign, onClick],
     )
 
     if (!isVisible) {
@@ -116,7 +116,6 @@ export const TextAlignButton = forwardRef<
         data-style="ghost"
         data-active-state={isActive ? "on" : "off"}
         data-disabled={!canAlign}
-        role="button"
         tabIndex={-1}
         aria-label={label}
         aria-pressed={isActive}
@@ -139,7 +138,7 @@ export const TextAlignButton = forwardRef<
         )}
       </Button>
     )
-  }
+  },
 )
 
 TextAlignButton.displayName = "TextAlignButton"

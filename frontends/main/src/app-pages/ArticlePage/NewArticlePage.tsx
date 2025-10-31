@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useRef } from "react"
-import { Typography, theme, styled, LearningResourceCard } from "ol-components"
+import { theme, styled, LearningResourceCard } from "ol-components"
 import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor"
 import {
   EditorContext,

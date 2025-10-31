@@ -14,7 +14,10 @@ import { Button } from "@/components/tiptap-ui-primitive/button"
 import { Badge } from "@/components/tiptap-ui-primitive/badge"
 
 // --- Tiptap UI ---
-import type { ListType, UseListConfig } from "@/components/tiptap-ui/list-button"
+import type {
+  ListType,
+  UseListConfig,
+} from "@/components/tiptap-ui/list-button"
 import { LIST_SHORTCUT_KEYS, useList } from "@/components/tiptap-ui/list-button"
 
 export interface ListButtonProps
@@ -59,7 +62,7 @@ export const ListButton = forwardRef<HTMLButtonElement, ListButtonProps>(
       children,
       ...buttonProps
     },
-    ref
+    ref,
   ) => {
     const { editor } = useTiptapEditor(providedEditor)
     const {
@@ -83,7 +86,7 @@ export const ListButton = forwardRef<HTMLButtonElement, ListButtonProps>(
         if (event.defaultPrevented) return
         handleToggle()
       },
-      [handleToggle, onClick]
+      [handleToggle, onClick],
     )
 
     if (!isVisible) {
@@ -95,7 +98,6 @@ export const ListButton = forwardRef<HTMLButtonElement, ListButtonProps>(
         type="button"
         data-style="ghost"
         data-active-state={isActive ? "on" : "off"}
-        role="button"
         tabIndex={-1}
         disabled={!canToggle}
         data-disabled={!canToggle}
@@ -117,7 +119,7 @@ export const ListButton = forwardRef<HTMLButtonElement, ListButtonProps>(
         )}
       </Button>
     )
-  }
+  },
 )
 
 ListButton.displayName = "ListButton"

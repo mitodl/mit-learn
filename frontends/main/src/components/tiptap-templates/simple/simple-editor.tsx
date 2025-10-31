@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useRef, useState } from "react"
-import { EditorContent, EditorContext, useEditor } from "@tiptap/react"
+import { EditorContent } from "@tiptap/react"
 
 // // --- Tiptap Core Extensions ---
 // import { StarterKit } from "@tiptap/starter-kit"
@@ -271,8 +271,6 @@ export function SimpleEditor({
       setMobileView("main")
     }
   }, [isMobile, mobileView])
-
-  console.log("editor", editor)
 
   return (
     <div className={`simple-editor-wrapper ${className}`}>
