@@ -1,4 +1,5 @@
 import React from "react"
+import type { AriaAttributes } from "react"
 import styled from "@emotion/styled"
 import Skeleton from "@mui/material/Skeleton"
 import {
@@ -171,6 +172,7 @@ interface LearningResourceCardProps {
   inUserList?: boolean
   inLearningPath?: boolean
   onClick?: React.MouseEventHandler
+  headingLevel?: number
 }
 
 const FILLED_PROPS = { variant: "primary" } as const
@@ -190,7 +192,7 @@ const CardActionButton: React.FC<
   )
 }
 
-const StyledCard = styled(Card)<{ size: Size }>(({ size }) => [
+const StyledCard = styled(Card)<{ size: Size } & AriaAttributes>(({ size }) => [
   size === "medium" && {
     ".MitCard-info": {
       height: "18px",
@@ -210,6 +212,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
   inLearningPath,
   inUserList,
   onClick,
+  headingLevel = 6,
 }) => {
   if (isLoading) {
     const { width, height } = imgConfigs["column"]
@@ -228,7 +231,6 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
   if (!resource) {
     return null
   }
-
   const readableType = getReadableResourceType(resource.resource_type)
   return (
     <StyledCard
@@ -247,7 +249,12 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
       <Card.Info>
         <Info resource={resource} size={size} />
       </Card.Info>
-      <Card.Title href={href} lang={getResourceLanguage(resource)}>
+      <Card.Title
+        href={href}
+        lang={getResourceLanguage(resource)}
+        role="heading"
+        aria-level={headingLevel}
+      >
         {resource.title}
       </Card.Title>
       <Card.Actions>

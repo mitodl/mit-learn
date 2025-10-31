@@ -291,4 +291,41 @@ describe("ResourceCarousel", () => {
     await screen.findByText(resources.list.results[2].title)
     expect(screen.queryByText(resources.list.results[1].title)).toBeNull()
   })
+
+  it.each([
+    { titleComponent: "h1", expectedLevel: 2 },
+    { titleComponent: "h2", expectedLevel: 3 },
+    { titleComponent: "h3", expectedLevel: 4 },
+    { titleComponent: "h4", expectedLevel: 5 },
+    { titleComponent: "h5", expectedLevel: 6 },
+    { titleComponent: "h6", expectedLevel: 6 },
+  ] as const)(
+    "Resource cards have headingLevel set to next level down for screen reader navigation",
+    async ({ titleComponent, expectedLevel }) => {
+      const config: ResourceCarouselProps["config"] = [
+        {
+          label: "Resources",
+          data: {
+            type: "resources",
+            params: { resource_type: ["course"] },
+          },
+        },
+      ]
+      const { resources } = setupApis()
+      renderWithProviders(
+        <ResourceCarousel
+          titleComponent={titleComponent}
+          title="My Carousel"
+          config={config}
+        />,
+      )
+
+      const titleHeading = await screen.findByRole("heading", {
+        name: resources.list.results[0].title,
+      })
+      expect(titleHeading.getAttribute("aria-level")).toBe(
+        String(expectedLevel),
+      )
+    },
+  )
 })

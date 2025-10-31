@@ -335,7 +335,12 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
       <ListCard.Info>
         <Info resource={resource} />
       </ListCard.Info>
-      <ListCard.Title href={href} lang={getResourceLanguage(resource)}>
+      <ListCard.Title
+        href={href}
+        lang={getResourceLanguage(resource)}
+        role="heading"
+        aria-level={6}
+      >
         {resource.title}
       </ListCard.Title>
       <ListCard.Actions>

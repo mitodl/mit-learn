@@ -5,9 +5,9 @@ import React, {
   isValidElement,
   CSSProperties,
   useCallback,
-  AriaAttributes,
   ReactElement,
 } from "react"
+import type { AriaRole, AriaAttributes } from "react"
 import styled from "@emotion/styled"
 import { theme } from "../ThemeProvider/ThemeProvider"
 import { pxToRem } from "../ThemeProvider/typography"
@@ -218,6 +218,7 @@ type CardProps = {
   forwardClicksToLink?: boolean
   onClick?: React.MouseEventHandler<HTMLElement>
   as?: React.ElementType
+  role?: AriaRole
 } & AriaAttributes
 
 export type ImageProps = NextImageProps & {
@@ -231,7 +232,8 @@ type TitleProps = {
   lines?: number
   style?: CSSProperties
   lang?: string
-}
+  role?: AriaRole
+} & AriaAttributes
 
 type SlotProps = { children?: ReactNode; style?: CSSProperties }
 
@@ -270,12 +272,15 @@ const Card: Card = ({
   size,
   onClick,
   forwardClicksToLink = false,
+  role,
   ...others
 }) => {
   let content,
     image: ImageProps | null = null,
     info: SlotProps = {},
     title: TitleProps = {},
+    titleRole: TitleProps["role"],
+    titleAriaLevel: TitleProps["aria-level"],
     footer: SlotProps = {},
     actions: SlotProps = {}
 
@@ -298,8 +303,16 @@ const Card: Card = ({
     if (element.type === Content) content = element.props.children
     else if (element.type === Image) image = element.props as ImageProps
     else if (element.type === Info) info = element.props as SlotProps
-    else if (element.type === Title) title = element.props as TitleProps
-    else if (element.type === Footer) footer = element.props as SlotProps
+    else if (element.type === Title) {
+      const {
+        role,
+        "aria-level": ariaLevel,
+        ...rest
+      } = element.props as TitleProps
+      title = rest
+      titleRole = role
+      titleAriaLevel = ariaLevel
+    } else if (element.type === Footer) footer = element.props as SlotProps
     else if (element.type === Actions) actions = element.props as SlotProps
   })
 
@@ -315,6 +328,7 @@ const Card: Card = ({
         className={allClassNames}
         size={size}
         onClick={handleClick}
+        role={role}
       >
         {content}
       </Container>
@@ -327,6 +341,7 @@ const Card: Card = ({
       className={allClassNames}
       size={size}
       onClick={handleClick}
+      role={role}
     >
       {image && (
         // alt text will be checked on Card.Image
@@ -350,7 +365,16 @@ const Card: Card = ({
           className="MitCard-title"
           size={size}
           {...title}
-        />
+        >
+          {/*
+           * The card titles are links, but we also want them to be visible as headings for accessibility.
+           * Setting the role on the Title component would make it invisible as a link to screen readers,
+           * so we include a span to set the role on instead.
+           */}
+          <span role={titleRole} aria-level={titleAriaLevel}>
+            {title.children}
+          </span>
+        </Title>
       </Body>
       <Bottom>
         <Footer className="MitCard-footer" {...footer}>

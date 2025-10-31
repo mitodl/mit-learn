@@ -3,9 +3,9 @@ import React, {
   ReactNode,
   Children,
   isValidElement,
-  AriaAttributes,
   ReactElement,
 } from "react"
+import type { AriaRole, AriaAttributes } from "react"
 import styled from "@emotion/styled"
 import { RiDraggable } from "@remixicon/react"
 import { theme } from "../ThemeProvider/ThemeProvider"
@@ -90,19 +90,20 @@ export type TitleProps = {
   children?: ReactNode
   href?: string
   lang?: string
-}
+  role?: AriaRole
+} & AriaAttributes
+
 export const Title: React.FC<TitleProps> = styled(Linkable)`
   flex-grow: 1;
   color: ${theme.custom.colors.darkGray2};
   text-overflow: ellipsis;
   ${{ ...theme.typography.subtitle1 }}
   height: ${theme.typography.pxToRem(40)};
+  margin: 0;
   ${theme.breakpoints.down("md")} {
     ${{ ...theme.typography.subtitle3 }}
     height: ${theme.typography.pxToRem(32)};
   }
-
-  margin: 0;
 `
 
 export const Footer = styled.span`
@@ -209,8 +210,14 @@ const ListCard: Card = ({
   onClick,
   ...others
 }) => {
-  let content, imageProps, info, footer, actions
-  let title: TitleProps = {}
+  let content,
+    imageProps,
+    info,
+    footer,
+    actions,
+    title: TitleProps = {},
+    titleRole: TitleProps["role"],
+    titleAriaLevel: TitleProps["aria-level"]
   const handleHrefClick = useClickChildLink(onClick)
   const handleClick = forwardClicksToLink ? handleHrefClick : onClick
 
@@ -220,8 +227,16 @@ const ListCard: Card = ({
     if (element.type === Content) content = element.props.children
     else if (element.type === Image) imageProps = element.props as ImageProps
     else if (element.type === Info) info = element.props.children
-    else if (element.type === Title) title = element.props as TitleProps
-    else if (element.type === Footer) footer = element.props.children
+    else if (element.type === Title) {
+      const {
+        role,
+        "aria-level": ariaLevel,
+        ...rest
+      } = element.props as TitleProps
+      title = rest
+      titleRole = role
+      titleAriaLevel = ariaLevel
+    } else if (element.type === Footer) footer = element.props.children
     else if (element.type === Actions) actions = element.props.children
   })
 
@@ -249,10 +264,12 @@ const ListCard: Card = ({
       <Body>
         <Info>{info}</Info>
         {title && (
-          <Title data-card-link={!!title.href} href={title.href}>
-            <TruncateText lineClamp={2} lang={title.lang}>
-              {title.children}
-            </TruncateText>
+          <Title data-card-link={!!title.href} {...title}>
+            <span role={titleRole} aria-level={titleAriaLevel}>
+              <TruncateText lineClamp={2} lang={title.lang}>
+                {title.children}
+              </TruncateText>
+            </span>
           </Title>
         )}
         <Bottom>

@@ -340,6 +340,15 @@ describe("Home Page Carousel", () => {
 test("Headings", async () => {
   setupAPIs()
 
+  setMockResponse.get(
+    expect.stringContaining(urls.learningResources.list()),
+    [],
+  )
+  setMockResponse.get(
+    expect.stringContaining(urls.learningResources.featured()),
+    [],
+  )
+
   renderWithProviders(<HomePage heroImageIndex={1} />)
   await waitFor(() => {
     assertHeadings([

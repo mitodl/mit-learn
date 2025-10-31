@@ -107,4 +107,18 @@ describe("ListCard", () => {
     expect(divOnClick).toHaveBeenCalled()
     expect(window.location.hash).toBe("#two")
   })
+
+  test("Card title has heading role and aria-level set for screen reader navigation", async () => {
+    renderWithTheme(
+      <ListCard>
+        <ListCard.Title role="heading" aria-level={2}>
+          Title
+        </ListCard.Title>
+      </ListCard>,
+    )
+    const titleHeading = screen.getByRole("heading", {
+      name: "Title",
+    })
+    expect(titleHeading.getAttribute("aria-level")).toBe("2")
+  })
 })
