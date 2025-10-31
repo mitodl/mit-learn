@@ -93,6 +93,8 @@ const Page: React.FC<PageProps<"/c/[channelType]/[name]">> = async ({
   )
 
   const searchRequest = getSearchParams({
+    // @ts-expect-error TS2345 -- this will error until
+    // mitodl/mit-learn-api-axios is updated
     requestParams: validateRequestParams(search),
     constantSearchParams,
     facetNames,
