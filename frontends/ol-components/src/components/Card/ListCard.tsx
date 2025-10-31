@@ -99,11 +99,11 @@ export const Title: React.FC<TitleProps> = styled(Linkable)`
   text-overflow: ellipsis;
   ${{ ...theme.typography.subtitle1 }}
   height: ${theme.typography.pxToRem(40)};
+  margin: 0;
   ${theme.breakpoints.down("md")} {
     ${{ ...theme.typography.subtitle3 }}
     height: ${theme.typography.pxToRem(32)};
   }
-  margin: 0;
 `
 
 export const Footer = styled.span`
