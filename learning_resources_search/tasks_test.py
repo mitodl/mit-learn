@@ -858,7 +858,8 @@ def test_infer_percolate_group(mocked_api):
 
 def test_percolate_user_grouping(mocked_api, mocker):
     """
-    Test that the the email template groups can be inferred from queries
+    Test that each user receives an email with resources
+    they are supposed to recieve (based off of subscription)
     """
     topic_name = "Mechanical Engineering"
     topic = LearningResourceTopicFactory.create(name=topic_name)
@@ -936,6 +937,9 @@ def test_percolate_user_grouping(mocked_api, mocker):
     )
 
     def _matches_for_document(resource_id):
+        """
+        Mock percolation
+        """
         if resource_id == resource_a.id:
             return PercolateQuery.objects.filter(
                 id__in=[
