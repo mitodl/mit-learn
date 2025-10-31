@@ -926,11 +926,15 @@ def test_percolate_user_grouping(mocked_api, mocker):
     offerer_query.users.add(user_d)
 
     # save all the queries
-    department_query.save()
-    alternate_topic_query.save()
-    offerer_query.save()
-    topic_query.save()
-    alternate_department_query.save()
+    for query in [
+        department_query,
+        alternate_topic_query,
+        offerer_query,
+        topic_query,
+        alternate_department_query,
+    ]:
+        query.source_type = PercolateQuery.CHANNEL_SUBSCRIPTION_TYPE
+        query.save()
 
     percolate_matches_for_document_mock = mocker.patch(
         "learning_resources_search.tasks.percolate_matches_for_document",
