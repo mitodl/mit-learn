@@ -34,7 +34,9 @@ from learning_resources_search.api import (
     gen_content_file_id,
     percolate_matches_for_document,
 )
+from learning_resources_search.connection import get_vector_model_id
 from learning_resources_search.constants import (
+    COMBINED_INDEX,
     CONTENT_FILE_TYPE,
     COURSE_TYPE,
     LEARNING_PATH_TYPE,
@@ -288,7 +290,7 @@ def send_subscription_emails(self, subscription_type, period="daily"):
     retry_backoff=True,
     rate_limit="600/m",
 )
-def index_learning_resources(ids, resource_type, index_types):
+def index_learning_resources(ids, index_name, index_types):
     """
     Index courses
 
@@ -301,7 +303,7 @@ def index_learning_resources(ids, resource_type, index_types):
     """
     try:
         with wrap_retry_exception(*SEARCH_CONN_EXCEPTIONS):
-            api.index_learning_resources(ids, resource_type, index_types)
+            api.index_learning_resources(ids, index_name, index_types)
     except (RetryError, Ignore):
         raise
     except SystemExit as err:
@@ -541,7 +543,7 @@ def wrap_retry_exception(*exception_classes):
 
 
 @app.task(bind=True)
-def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
+def start_recreate_index(self, indexes, remove_existing_reindexing_tags):  # noqa: C901
     """
     Wipe and recreate index and mapping, and index all items.
     """
@@ -621,6 +623,28 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
                         chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
                     )
                 ]
+
+        if COMBINED_INDEX in indexes:
+            vector_model_id = get_vector_model_id()
+            if vector_model_id:
+                index_tasks = index_tasks + [
+                    index_learning_resources.si(
+                        ids,
+                        COMBINED_INDEX,
+                        index_types=IndexestoUpdate.reindexing_index.value,
+                    )
+                    for ids in chunks(
+                        LearningResource.objects.filter(published=True)
+                        .order_by("id")
+                        .values_list("id", flat=True),
+                        chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
+                    )
+                ]
+            else:
+                log.warning(
+                    "Skipping indexing hybrid index reindexing because no vector "
+                    "model is configured.",
+                )
 
         for resource_type in [
             PROGRAM_TYPE,

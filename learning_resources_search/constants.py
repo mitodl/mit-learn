@@ -22,8 +22,10 @@ PERCOLATE_INDEX_TYPE = "percolator"
 CURRENT_INDEX = "current_index"
 REINDEXING_INDEX = "reindexing_index"
 BOTH_INDEXES = "all_indexes"
+COMBINED_INDEX = "combined_hybrid"
 
 LEARNING_RESOURCE = "learning_resource"
+HYBRID_SEARCH_MODE = "hybrid"
 
 
 class IndexestoUpdate(Enum):
@@ -46,7 +48,8 @@ LEARNING_RESOURCE_TYPES = (
     ARTICLE_TYPE,
 )
 
-BASE_INDEXES = (PERCOLATE_INDEX_TYPE,)
+
+BASE_INDEXES = (PERCOLATE_INDEX_TYPE, COMBINED_INDEX)
 
 ALL_INDEX_TYPES = BASE_INDEXES + LEARNING_RESOURCE_TYPES
 
@@ -319,6 +322,30 @@ LEARNING_RESOURCE_MAP = {
     "max_weekly_hours": {"type": "integer"},
 }
 
+EMBEDDING_FIELDS = {
+    "title_embedding": {
+        "type": "knn_vector",
+        "dimension": 768,
+        "method": {
+            "engine": "lucene",
+            "space_type": "l2",
+            "name": "hnsw",
+            "parameters": {},
+        },
+    },
+    "description_embedding": {
+        "type": "knn_vector",
+        "dimension": 768,
+        "method": {
+            "engine": "lucene",
+            "space_type": "l2",
+            "name": "hnsw",
+            "parameters": {},
+        },
+    },
+}
+
+HYBRID_LEARNING_RESOURCE_MAP = LEARNING_RESOURCE_MAP | EMBEDDING_FIELDS
 
 CONTENT_FILE_MAP = {
     "id": {"type": "long"},
@@ -425,6 +452,7 @@ MAPPING = {
     LEARNING_PATH_TYPE: LEARNING_RESOURCE_MAP,
     VIDEO_TYPE: LEARNING_RESOURCE_MAP,
     VIDEO_PLAYLIST_TYPE: LEARNING_RESOURCE_MAP,
+    COMBINED_INDEX: HYBRID_LEARNING_RESOURCE_MAP,
     PERCOLATE_INDEX_TYPE: {
         **PERCOLATE_INDEX_MAP,
         **LEARNING_RESOURCE_MAP,
@@ -446,6 +474,8 @@ SOURCE_EXCLUDED_FIELDS = [
     "content",
     "summary",
     "flashcards",
+    "description_embedding",
+    "title_embedding",
 ]
 
 LEARNING_RESOURCE_SEARCH_SORTBY_OPTIONS = {
