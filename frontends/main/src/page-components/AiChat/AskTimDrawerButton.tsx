@@ -5,18 +5,25 @@ import AiRecommendationBotDrawer from "./AiRecommendationBotDrawer"
 import { RECOMMENDER_QUERY_PARAM } from "@/common/urls"
 
 const StyledButton = styled(LinkAdapter)(({ theme }) => ({
-  display: "flex",
-  flexDirection: "row",
-  gap: "8px",
-  padding: "4px 0",
-  color: theme.custom.colors.darkGray2,
-  svg: {
-    fill: theme.custom.colors.lightRed,
-    width: "20px",
-    height: "20px",
-  },
-  "&:hover": {
-    color: theme.custom.colors.red,
+  "&&&&": {
+    display: "flex",
+    flexDirection: "row",
+    gap: "8px",
+    padding: "4px 0",
+    color: theme.custom.colors.darkGray2,
+    svg: {
+      fill: theme.custom.colors.lightRed,
+      width: "20px",
+      height: "20px",
+    },
+    "&:hover": {
+      color: theme.custom.colors.red,
+    },
+    p: {
+      marginTop: 0,
+      lineHeight: 1.2,
+    },
+    textDecoration: "none",
   },
 }))
 
