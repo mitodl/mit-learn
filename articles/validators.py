@@ -16,6 +16,9 @@ article_html_config = {
         "ul",
         "li",
         # Links
+        # blocks
+        "iframe",
+        "div",
         "a",
         # Images
         "figure",
@@ -33,7 +36,10 @@ article_html_config = {
     "attributes": {
         "a": {"href", "hreflang"},
         "img": {"alt", "height", "src", "width", "srcset", "sizes"},
-        "figure": {"class"},
+        "figure": {"class", "width", "style"},
+        "div": {"class", "style", "data-oembed-url"},
+        "h3": {"class"},
+        "iframe": {"class", "style", "src", "width", "height", "frameborder", "allow", "allowfullscreen"},
         "oembed": {"url"},
     },
 }

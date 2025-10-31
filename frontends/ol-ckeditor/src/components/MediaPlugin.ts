@@ -133,6 +133,36 @@ export function createMediaFloatPlugin(
           })
       }
 
+      for (const attr of ["width", "height"] as const) {
+        editor.conversion.for("downcast").add((dispatcher) => {
+          dispatcher.on(
+            `attribute:${attr}`,
+            (evt, data, api) => {
+              let { item, attributeNewValue } = data
+              const { mapper, writer } = api
+
+              if (!item.is?.("element", "media")) return
+
+              const viewFigure = mapper.toViewElement(item)
+              if (!viewFigure) return
+
+              // Get the <div data-oembed-url="...">
+              const oembedDiv = viewFigure.getChild(0)
+
+              if (!oembedDiv) return
+              if (attr === "height") attributeNewValue = "auto" // we don't set height style
+              if (attributeNewValue) {
+                // apply style to inner div not figure
+                writer.setStyle(attr, attributeNewValue, oembedDiv)
+              } else {
+                writer.removeStyle(attr, oembedDiv)
+              }
+            },
+            { priority: "low" },
+          )
+        })
+      }
+
       // ✅ Register alignment commands
       const alignments: Alignment[] = ["left", "center", "right"]
       for (const align of alignments) {
@@ -154,6 +184,48 @@ export function createMediaFloatPlugin(
         })
       }
 
+      // debounce handler so we don't thrash the model while dragging
+      editor.editing.view.document.on("change", () => {
+        const domRoot = editor.editing.view.getDomRoot()
+        console.log("DOM Root:", domRoot)
+        if (!domRoot) return
+
+        const wrappers = domRoot.querySelectorAll(".ck-media__wrapper")
+
+        wrappers.forEach((wrapper: HTMLElement) => {
+          if ((wrapper as any)._resizeObserverAttached) return
+          ;(wrapper as any)._resizeObserverAttached = true
+          let lastWidth = ""
+          let lastHeight = ""
+
+          const observer = new ResizeObserver(() => {
+            //console.log("Setting up ResizeObserver for wrapper-=-=-=-=-=:", wrapper)
+            const width = wrapper.style.width
+            const height = wrapper.style.height
+
+            // ignore live drag movement; apply when values settle
+            if (width === lastWidth && height === lastHeight) return
+            lastWidth = width
+            lastHeight = height
+
+            const viewWrapper =
+              editor.editing.view.domConverter.mapDomToView(wrapper)
+            const figure = viewWrapper?.parent
+            console.log("Figure Element:", figure)
+            console.log(viewWrapper)
+            if (!figure?.hasClass("media")) return
+            const modelEl = editor.editing.mapper.toModelElement(figure)
+            if (!modelEl) return
+
+            editor.model.change((writer) => {
+              if (width) writer.setAttribute("width", width, modelEl)
+              if (height) writer.setAttribute("height", height, modelEl)
+            })
+          })
+
+          observer.observe(wrapper)
+        })
+      })
       editor.model.document.on("change:data", () => {
         const element = editor.model.document.selection.getSelectedElement()
         if (!element || element.name !== "media") return

@@ -5,6 +5,7 @@ import dynamic from "next/dynamic"
 import { type EditorConfig } from "ckeditor5"
 import type { Editor } from "@ckeditor/ckeditor5-core"
 import { Dialog, Typography, SearchInput, LoadingSpinner } from "ol-components"
+import { useCkeditorParams } from "api/hooks/ckeditor"
 import { useLearningResourcesSearch } from "api/hooks/learningResources"
 import type { Course } from "./types"
 
@@ -32,12 +33,15 @@ export const CKEditorClient: React.FC<CKEditorClientProps> = ({
   // --- Core editor and modal states
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [EditorModules, setEditorModules] = useState<any>(null)
+  console.log("EditorModules====================:", value)
   const [data, setData] = useState(value || "")
   const [open, setOpen] = useState(false)
+  const [isLoader, setIsLoader] = useState(false)
 
   const [query, setQuery] = useState("")
   const [debouncedQuery, setDebouncedQuery] = useState("")
 
+  const [token, setToken] = useState<string | null>(null)
   useEffect(() => {
     const timeout = setTimeout(() => setDebouncedQuery(query), 400)
     return () => clearTimeout(timeout)
@@ -69,97 +73,121 @@ export const CKEditorClient: React.FC<CKEditorClientProps> = ({
   }
 
   useEffect(() => {
+    setIsLoader(true)
     ;(async () => {
-      const CKEditorModules = await import("ckeditor5")
-      const {
-        ClassicEditor,
-        Essentials,
-        Paragraph,
-        Bold,
-        Italic,
-        Heading,
-        Link,
-        List,
-        BlockQuote,
-        Autoformat,
-        Image,
-        ImageToolbar,
-        ImageUpload,
-        EasyImage,
-        MediaEmbed,
-        CloudServices,
-        ImageResize,
-        ImageResizeEditing,
-        ImageResizeHandles,
-        ImageStyle,
-        ImageStyleEditing,
-        ImageStyleUI,
-        Widget,
-        Underline,
-        Strikethrough,
-        Alignment,
-        CodeBlock,
-        FontSize,
-        FontColor,
-        FontBackgroundColor,
-        Undo,
-        Table,
-        TableToolbar,
-      } = CKEditorModules
+      try {
+        // 👇 Test token first!
+        const token = await getCKEditorTokenFetchUrl()
 
-      const { createMediaFloatPlugin } = await import("./MediaPlugin")
-      const MediaFloatPlugin = createMediaFloatPlugin(CKEditorModules)
+        if (!token || typeof token !== "string")
+          throw new Error("Invalid token")
+        setToken(token)
 
-      const { createDefaultImageStylePlugin } = await import(
-        "./DefaultImageStylePlugin"
-      )
-      const DefaultImageStylePlugin =
-        createDefaultImageStylePlugin(CKEditorModules)
+        const CKEditorModules = await import("ckeditor5")
+        const {
+          ClassicEditor,
+          Essentials,
+          Paragraph,
+          Bold,
+          Italic,
+          Heading,
+          Link,
+          List,
+          BlockQuote,
+          Autoformat,
+          Image,
+          ImageToolbar,
+          ImageUpload,
+          EasyImage,
+          MediaEmbed,
+          CloudServices,
+          ImageResize,
+          ImageResizeEditing,
+          ImageResizeHandles,
+          ImageStyle,
+          ImageStyleEditing,
+          ImageStyleUI,
+          Widget,
+          Underline,
+          Strikethrough,
+          Alignment,
+          CodeBlock,
+          FontSize,
+          FontColor,
+          FontBackgroundColor,
+          Undo,
+          Table,
+          TableToolbar,
+        } = CKEditorModules
 
-      const { createInsertCoursePlugin } = await import("./InsertCoursePlugin")
-      const InsertCoursePlugin = createInsertCoursePlugin(CKEditorModules)
+        const { createMediaFloatPlugin } = await import("./MediaPlugin")
+        const MediaFloatPlugin = createMediaFloatPlugin(CKEditorModules)
 
-      setEditorModules({
-        ClassicEditor,
-        Essentials,
-        Paragraph,
-        Bold,
-        Italic,
-        Heading,
-        Link,
-        List,
-        BlockQuote,
-        Autoformat,
-        Underline,
-        Strikethrough,
-        Alignment,
-        CodeBlock,
-        FontSize,
-        FontColor,
-        FontBackgroundColor,
-        Undo,
-        Table,
-        TableToolbar,
-        Image,
-        ImageToolbar,
-        ImageUpload,
-        EasyImage,
-        CloudServices,
-        ImageResize,
-        ImageResizeEditing,
-        ImageResizeHandles,
-        ImageStyle,
-        ImageStyleEditing,
-        ImageStyleUI,
-        MediaEmbed,
-        Widget,
-        MediaFloatPlugin,
-        DefaultImageStylePlugin,
-        InsertCoursePlugin,
-        _CKEditorModules: CKEditorModules,
-      })
+        const { createDefaultImageStylePlugin } = await import(
+          "./DefaultImageStylePlugin"
+        )
+        const DefaultImageStylePlugin =
+          createDefaultImageStylePlugin(CKEditorModules)
+
+        const { createInsertCoursePlugin } = await import(
+          "./InsertCoursePlugin"
+        )
+        const InsertCoursePlugin = createInsertCoursePlugin(CKEditorModules)
+
+        setEditorModules({
+          ClassicEditor,
+          Essentials,
+          Paragraph,
+          Bold,
+          Italic,
+          Heading,
+          Link,
+          List,
+          BlockQuote,
+          Autoformat,
+          Underline,
+          Strikethrough,
+          Alignment,
+          CodeBlock,
+          FontSize,
+          FontColor,
+          FontBackgroundColor,
+          Undo,
+          Table,
+          TableToolbar,
+          Image,
+          ImageToolbar,
+          ImageUpload,
+          EasyImage,
+          CloudServices,
+          ImageResize,
+          ImageResizeEditing,
+          ImageResizeHandles,
+          ImageStyle,
+          ImageStyleEditing,
+          ImageStyleUI,
+          MediaEmbed,
+          Widget,
+          MediaFloatPlugin,
+          DefaultImageStylePlugin,
+          InsertCoursePlugin,
+          _CKEditorModules: CKEditorModules,
+        })
+      } catch (error) {
+        console.error("CKEditor token fetch failed:", error)
+        setIsLoader(false)
+      }
     })()
   }, [])
+  // Push initial value into editor when ready
+  // useEffect(() => {
+  //   if (EditorModules?._activeEditor && value) {
+  //     const editor = EditorModules._activeEditor
+  //     if (editor.getData() !== value) {
+  //       editor.setData(value)
+  //     }
+  //   }
+  // }, [EditorModules?._activeEditor])
 
   const editorConfig: EditorConfig = useMemo(() => {
     if (!EditorModules) return {}
@@ -267,7 +295,7 @@ export const CKEditorClient: React.FC<CKEditorClientProps> = ({
       },
 
       cloudServices: {
-        tokenUrl: getCKEditorTokenFetchUrl,
+        tokenUrl: async () => token,
         uploadUrl: uploadUrl,
       },
       mediaEmbed: {
@@ -281,17 +309,20 @@ export const CKEditorClient: React.FC<CKEditorClientProps> = ({
 
   return (
     <>
+      <LoadingSpinner color="inherit" loading={isLoader || !token} size={16} />
       <div className="ckeditor-container">
         <CKEditor
           editor={EditorModules.ClassicEditor}
           data={data}
           config={editorConfig}
-          onReady={(editor) =>
+          onReady={(editor) => {
+            console.log("CKEditor is ready to use!", editor)
+            setIsLoader(false)
             setEditorModules((prev: Editor) => ({
               ...prev,
               _activeEditor: editor,
             }))
-          }
+          }}
           onChange={(_, editor) => {
             const html = editor.getData()
             setData(html)
