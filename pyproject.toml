@@ -119,7 +119,7 @@ django-zeal = "^2.0.4"
 
 
 [tool.poetry.group.dev.dependencies]
-bpython = "^0.25"
+bpython = "^0.26"
 ddt = "^1.6.0"
 factory_boy = "^3.3.0"
 faker = "^37.0.0"
