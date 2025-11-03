@@ -59,6 +59,9 @@ class MultipleOptionsFilterBackend(DjangoFilterBackend):
     """
     Custom filter backend that handles multiple values for the same key
     in various formats
+     - MultipleChoiceFilter supports repeated values ("explode") or commas
+     - CharInFilter and NumberInFilter supports only repeated values ("explode")
+        - corresponding filter fields should use multi_or_filter to handle commas
     """
 
     def get_filterset_kwargs(self, request, queryset, view):  # noqa: ARG002
