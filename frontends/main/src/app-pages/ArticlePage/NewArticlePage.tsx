@@ -41,7 +41,13 @@ import { Markdown } from "@tiptap/markdown"
 const PageContainer = styled.div({
   color: theme.custom.colors.darkGray2,
   display: "flex",
-  marginTop: "72px",
+  // position: "fixed",
+  // top: "72px",
+  // left: 0,
+  // right: 0,
+  // bottom: "140px",
+  overscrollBehavior: "contain",
+  overflow: "hidden",
 })
 
 const EditorContainer = styled.div({
@@ -76,6 +82,7 @@ const MarkdownTextarea = styled.textarea({
 const StyledSimpleEditor = styled(SimpleEditor)({
   width: "60vw",
   height: "calc(100vh - 205px)",
+  overscrollBehavior: "contain",
 })
 
 const Card = styled.div({
@@ -325,6 +332,10 @@ const NewArticlePage: React.FC = () => {
     setTimeout(() => {
       isUpdatingFromMarkdown.current = false
     }, 50)
+  }
+
+  if (!editor) {
+    return <div>Loading...</div>
   }
 
   return (
