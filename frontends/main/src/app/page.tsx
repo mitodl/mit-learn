@@ -1,7 +1,7 @@
 import React from "react"
 import type { Metadata } from "next"
 import HomePage from "@/app-pages/HomePage/HomePage"
-import { getMetadataAsync } from "@/common/metadata"
+import { getMetadataAsync, safeGenerateMetadata } from "@/common/metadata"
 import { HydrationBoundary } from "@tanstack/react-query"
 import {
   learningResourceQueries,
@@ -17,9 +17,11 @@ import { prefetch } from "api/ssr/prefetch"
 export async function generateMetadata({
   searchParams,
 }: PageProps<"/">): Promise<Metadata> {
-  return await getMetadataAsync({
-    title: "Learn with MIT",
-    searchParams,
+  return safeGenerateMetadata(async () => {
+    return await getMetadataAsync({
+      title: "Learn with MIT",
+      searchParams,
+    })
   })
 }
 

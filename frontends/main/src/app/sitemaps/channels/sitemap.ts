@@ -1,8 +1,9 @@
 import type { MetadataRoute } from "next"
-import { channelsApi } from "api/clients"
 import invariant from "tiny-invariant"
 import type { GenerateSitemapResult } from "../types"
 import { dangerouslyDetectProductionBuildPhase } from "../util"
+import { getServerQueryClient } from "api/ssr/serverQueryClient"
+import { channelQueries } from "api/hooks/channels"
 
 const BASE_URL = process.env.NEXT_PUBLIC_ORIGIN
 invariant(BASE_URL, "NEXT_PUBLIC_ORIGIN must be defined")
@@ -22,7 +23,10 @@ export async function generateSitemaps(): Promise<GenerateSitemapResult[]> {
    * Early exit here to avoid the useless build-time API calls.
    */
   if (dangerouslyDetectProductionBuildPhase()) return []
-  const { count } = (await channelsApi.channelsList({ limit: PAGE_SIZE })).data
+  const queryClient = getServerQueryClient()
+  const { count } = await queryClient.fetchQuery(
+    channelQueries.list({ limit: PAGE_SIZE }),
+  )
 
   const pages = Math.ceil(count / PAGE_SIZE)
   return new Array(pages).fill(null).map((_, index) => ({
@@ -36,11 +40,13 @@ export default async function sitemap({
 }: {
   id: string
 }): Promise<MetadataRoute.Sitemap> {
-  const offset = +id * PAGE_SIZE
-  const { data } = await channelsApi.channelsList({
-    limit: PAGE_SIZE,
-    offset,
-  })
+  const queryClient = getServerQueryClient()
+  const data = await queryClient.fetchQuery(
+    channelQueries.list({
+      limit: PAGE_SIZE,
+      offset: +id * PAGE_SIZE,
+    }),
+  )
 
   return data.results.map((channel) => ({
     url: channel.channel_url,

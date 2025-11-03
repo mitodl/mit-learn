@@ -5,7 +5,7 @@ import {
   learningResourceQueries,
   offerorQueries,
 } from "api/hooks/learningResources"
-import { getMetadataAsync } from "@/common/metadata"
+import { getMetadataAsync, safeGenerateMetadata } from "@/common/metadata"
 import SearchPage from "@/app-pages/SearchPage/SearchPage"
 import { facetNames } from "@/app-pages/SearchPage/searchRequests"
 import getSearchParams from "@/page-components/SearchDisplay/getSearchParams"
@@ -14,9 +14,11 @@ import type { ResourceSearchRequest } from "@/page-components/SearchDisplay/vali
 import { LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LRSearchRequest } from "api"
 
 export async function generateMetadata({ searchParams }: PageProps<"/search">) {
-  return await getMetadataAsync({
-    title: "Search",
-    searchParams,
+  return safeGenerateMetadata(async () => {
+    return getMetadataAsync({
+      title: "Search",
+      searchParams,
+    })
   })
 }
 

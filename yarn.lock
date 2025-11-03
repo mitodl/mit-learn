@@ -1728,11 +1728,11 @@ __metadata:
   linkType: hard
 
 "@emnapi/runtime@npm:^1.5.0":
-  version: 1.6.0
-  resolution: "@emnapi/runtime@npm:1.6.0"
+  version: 1.7.0
+  resolution: "@emnapi/runtime@npm:1.7.0"
   dependencies:
     tslib: "npm:^2.4.0"
-  checksum: 10/88f685ecb23df070a61447bf61b12a113b7edecc248969e1dc18e4637ee8519389cde8b95c22b2144de41490b42aedc6a791fe1b00940a02fdeaadac1352bbf6
+  checksum: 10/4dc726eb42fe2c7777fd32090f3e5e006c630e1a732538139caa18daf586e883e81c562cd69b0622db16e76bb572a2dde30711494edcee4a34059b62f5f46267
   languageName: node
   linkType: hard
 
@@ -7633,6 +7633,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"async_hooks@npm:^1.0.0":
+  version: 1.0.0
+  resolution: "async_hooks@npm:1.0.0"
+  checksum: 10/d31a4cb971a980b095cde18879598d1b196b32cb38905d1c2ed0aca7ebc7e040344af52fe2dedba410a1eaf4bc12d63db797b91285048387cac78319a6366901
+  languageName: node
+  linkType: hard
+
 "asynckit@npm:^0.4.0":
   version: 0.4.0
   resolution: "asynckit@npm:0.4.0"
@@ -11265,9 +11272,9 @@ __metadata:
   linkType: hard
 
 "fuse.js@npm:^7.0.0":
-  version: 7.1.0
-  resolution: "fuse.js@npm:7.1.0"
-  checksum: 10/9f9105e54372897a46cb3e04074f0db5bd0a428320d4618276a57e6142d7502235a556f05cf87aa3c5d6d9c6fdfa06b901b78379c48aa0951672ccbc4a1bfe70
+  version: 7.0.0
+  resolution: "fuse.js@npm:7.0.0"
+  checksum: 10/d75d35f2d61afa85b8248f9cbfc7d4df29ae47ea574a15ad5c3c2a41930c5ed78668346295508b59ec4929fcb1a5cd6d9a8c649b5a3bc8b18e515f4e4cb9809d
   languageName: node
   linkType: hard
 
@@ -14077,6 +14084,7 @@ __metadata:
     "@types/react-slick": "npm:^0.23.13"
     "@types/slick-carousel": "npm:^1"
     api: "workspace:*"
+    async_hooks: "npm:^1.0.0"
     classnames: "npm:^2.5.1"
     eslint: "npm:8.57.1"
     eslint-config-next: "npm:^14.2.7"
