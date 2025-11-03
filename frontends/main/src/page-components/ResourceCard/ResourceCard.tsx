@@ -69,6 +69,17 @@ const useResourceCard = (resource?: LearningResource | null) => {
   }
 }
 
+type HeadingElement = "h1" | "h2" | "h3" | "h4" | "h5" | "h6"
+
+const subheadingMap: Record<HeadingElement, number> = {
+  h1: 2,
+  h2: 3,
+  h3: 4,
+  h4: 5,
+  h5: 6,
+  h6: 6,
+}
+
 type ResourceCardProps = Omit<
   LearningResourceCardProps,
   "href" | "onAddToLearningPathClick" | "onAddToUserListClick"
@@ -76,6 +87,7 @@ type ResourceCardProps = Omit<
   condensed?: boolean
   list?: boolean
   headingLevel?: number
+  parentHeadingEl?: HeadingElement
 }
 
 /**
@@ -89,6 +101,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
   resource,
   condensed,
   list,
+  parentHeadingEl,
   ...others
 }) => {
   const {
@@ -107,6 +120,8 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
       : list
         ? LearningResourceListCard
         : LearningResourceCard
+
+  const headingLevel = parentHeadingEl ? subheadingMap[parentHeadingEl] : 6
   return (
     <>
       <CardComponent
@@ -117,6 +132,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
         onAddToUserListClick={handleAddToUserListClick}
         inUserList={inUserList}
         inLearningPath={inLearningPath}
+        headingLevel={headingLevel}
         {...others}
       />
       <SignupPopover anchorEl={anchorEl} onClose={handleClosePopover} />

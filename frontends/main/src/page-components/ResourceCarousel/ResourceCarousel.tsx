@@ -176,7 +176,7 @@ type ResourceCarouselProps = {
   /**
    * Element type for the carousel title
    */
-  titleComponent?: React.ElementType
+  titleComponent?: "h1" | "h2" | "h3" | "h4" | "h5" | "h6"
   titleVariant?: TypographyProps["variant"]
   excludeResourceId?: number
 }
@@ -207,17 +207,6 @@ const getTabQuery = (tab: TabConfig): CarouselQuery => {
         tab.data.params.id,
       ) as CarouselQuery
   }
-}
-
-type HeadingElement = "h1" | "h2" | "h3" | "h4" | "h5" | "h6"
-
-const subheadingMap: Record<HeadingElement, number> = {
-  h1: 2,
-  h2: 3,
-  h3: 4,
-  h4: 5,
-  h5: 6,
-  h6: 6,
 }
 
 /**
@@ -314,7 +303,6 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
           }
         >
           {({ resources, childrenLoading, tabConfig }) => {
-            const headingLevel = subheadingMap[titleComponent as HeadingElement]
             return (
               <CarouselV2 arrowsContainer={ref}>
                 {isLoading || childrenLoading
@@ -323,7 +311,7 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
                         isLoading
                         key={index}
                         resource={null}
-                        headingLevel={headingLevel}
+                        parentHeadingEl={titleComponent}
                         {...tabConfig.cardProps}
                       />
                     ))
@@ -333,7 +321,7 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
                         <ResourceCard
                           key={resource.id}
                           resource={resource}
-                          headingLevel={headingLevel}
+                          parentHeadingEl={titleComponent}
                           {...tabConfig.cardProps}
                         />
                       ))}
