@@ -26,7 +26,7 @@ class Command(BaseCommand):
         )
 
         parser.add_argument(
-            "--combined",
+            "--combined_hybrid",
             dest=COMBINED_INDEX,
             action="store_true",
             help="Recreate combined index for hybrid search",
