@@ -11,6 +11,7 @@ class MainConfig(AppConfig):
 
     def ready(self):
         """Initialize the app"""
+        import main.schema  # noqa: F401
         from main import features
 
         features.configure()

@@ -37,11 +37,21 @@ def multi_or_filter(
     return queryset.filter(query_or_filters)
 
 
-class CharInFilter(BaseInFilter, CharFilter):
+class BaseInFilterExplode(BaseInFilter):
+    """BaseIn filter that provides better help text for OpenAPI docs."""
+
+    help_text: str = "Separate values as ?field=value1&field=value2..."
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("help_text", kwargs.get("label", self.help_text))
+        super().__init__(*args, **kwargs)
+
+
+class CharInFilter(BaseInFilterExplode, CharFilter):
     """Filter that allows for multiple character values"""
 
 
-class NumberInFilter(BaseInFilter, NumberFilter):
+class NumberInFilter(BaseInFilterExplode, NumberFilter):
     """Filter that allows for multiple numeric values"""
 
 
