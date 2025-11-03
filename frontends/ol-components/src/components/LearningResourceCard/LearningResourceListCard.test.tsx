@@ -162,12 +162,14 @@ describe("Learning Resource List Card", () => {
 
   test("Displays certificate badge", () => {
     const resource = factories.learningResources.resource({
+      resource_type: ResourceTypeEnum.Course,
       certification: true,
     })
 
     setup({ resource })
 
-    expect(screen.getAllByText("Certificate").length).toEqual(2)
+    screen.getByText("Certificate")
+    screen.getByText(resource.certification_type.name)
   })
 
   test("Displays certificate type", () => {

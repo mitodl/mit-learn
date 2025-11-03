@@ -279,32 +279,7 @@ const programPageItem: PartialFactory<ProgramPageItem> = (override) => {
           electives: [],
         },
       },
-      req_tree: [
-        {
-          data: {
-            node_type: "operator",
-            operator: "all_of",
-            operator_value: null,
-            program: faker.number.int(),
-            course: null,
-            title: "Required Courses",
-            elective_flag: false,
-          },
-          id: 1,
-        },
-        {
-          data: {
-            node_type: "operator",
-            operator: "min_number_of",
-            operator_value: "2",
-            program: faker.number.int(),
-            course: null,
-            title: "Elective Courses",
-            elective_flag: true,
-          },
-          id: 2,
-        },
-      ],
+      req_tree: [],
       page: {
         feature_image_src: faker.image.url({
           width: 1134,

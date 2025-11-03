@@ -1,6 +1,58 @@
 Release Notes
 =============
 
+Version 0.47.8 (Released October 29, 2025)
+--------------
+
+- upgrade course-search-utils (#2656)
+- Vector based topics tagging for videos (#2649)
+- Update dependency ruff to v0.14.2 (#2632)
+- Update Node.js to v22.21.0 (#2634)
+
+Version 0.47.7 (Released October 28, 2025)
+--------------
+
+- remove org dashboard feature flag (#2654)
+- Avoid double slashes in paths (#2652)
+- use next_start_date when available in learning resource drawer (#2619)
+- Fix a BannerPage background issue (#2651)
+- Don't publish Professional Ed resources with blank run ids (#2637)
+
+Version 0.47.5 (Released October 28, 2025)
+--------------
+
+- make contract card titles link to org page (#2648)
+- Update search index after updating next_start_date (#2639)
+- Video shorts webhook and api (#2631)
+
+Version 0.47.4 (Released October 28, 2025)
+--------------
+
+- do not optimize in background images if optimize is off (#2644)
+- upgrade sharp (#2642)
+- dashboard home org cards (#2630)
+
+Version 0.47.1 (Released October 27, 2025)
+--------------
+
+- Fixes top margin at <md breakpoint (#2636)
+- Fix python unit test (#2629)
+- Program Summary (#2590)
+- add mitxonline networking directions (#2594)
+- Fixes flaky test by fixing resource type (#2628)
+- fix(deps): update django-health-check digest to 53f9bdc (#2606)
+- adding more embedding related tasks to embedding queue (#2622)
+- [pre-commit.ci] pre-commit autoupdate (#2613)
+- Hardcoded versions for apisix, keycloak, postgres (#2626)
+- Render signatory third titles (#2616)
+- Logo and button link to dashboard (#2620)
+- Layout fixes (#2623)
+- Add zeal to pytest (#2605)
+- fix program collections in org dashboards (#2625)
+- Remove usage of 'next' url cookie (#2621)
+- Disable all scheduled tasks with a setting (#2595)
+- caching result of dense_encoder method (#2610)
+
 Version 0.46.0 (Released October 22, 2025)
 --------------
 

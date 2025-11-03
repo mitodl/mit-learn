@@ -21,24 +21,20 @@ import {
 } from "@/common/urls"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
-import { useFeatureFlagEnabled } from "posthog-js/react"
-import { OrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
+import { OrganizationPage, ContractPage } from "@mitodl/mitxonline-api-axios/v2"
 
 jest.mock("posthog-js/react")
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
 
 describe("DashboardLayout", () => {
-  beforeEach(() => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(false)
-  })
-
   type SetupOptions = {
     initialUrl?: string
     organizations?: OrganizationPage[]
+    contracts?: ContractPage[]
   }
   const setup = ({
     initialUrl = DASHBOARD_HOME,
     organizations = [],
+    contracts = [],
   }: SetupOptions = {}) => {
     const user = factories.user.user()
     const mitxOnlineUser = mitxOnlineFactories.user.user({
@@ -46,7 +42,8 @@ describe("DashboardLayout", () => {
     })
 
     setMockResponse.get(urls.userMe.get(), user)
-    setMockResponse.get(mitxOnlineUrls.userMe.get(), user)
+    setMockResponse.get(mitxOnlineUrls.userMe.get(), mitxOnlineUser)
+    setMockResponse.get(mitxOnlineUrls.contracts.contractsList(), contracts)
 
     renderWithProviders(
       <DashboardLayout>
@@ -65,19 +62,38 @@ describe("DashboardLayout", () => {
   })
 
   test("Renders the expected tab links and labels", async () => {
-    const { mitxOnlineUser } = setup()
+    const organizations = [
+      mitxOnlineFactories.organizations.organization({
+        slug: "org-test-org",
+        name: "Test Organization",
+      }),
+    ]
+    const contracts = [
+      mitxOnlineFactories.contracts.contract({
+        organization: organizations[0].id,
+        name: "Test Contract",
+      }),
+    ]
+    setup({ organizations, contracts })
     const expectedUrls = [
       DASHBOARD_HOME,
-      ...mitxOnlineUser.b2b_organizations.map((org) =>
-        organizationView(org.slug),
+      ...organizations.map((org) =>
+        organizationView(org.slug.replace("org-", "")),
       ),
       MY_LISTS,
       PROFILE,
       SETTINGS,
     ]
-    const expectedLabels = [
+    const expectedDesktopLabels = [
       "Home",
-      ...mitxOnlineUser.b2b_organizations.map((org) => org.name),
+      ...organizations.map((org) => `${org.name} - ${contracts[0].name}`),
+      "My Lists",
+      "Profile",
+      "Settings",
+    ]
+    const expectedMobileLabels = [
+      "Home",
+      ...organizations.map((org) => `${org.name} - ${contracts[0].name}`),
       "My Lists",
       "Profile",
       "Settings",
@@ -103,8 +119,10 @@ describe("DashboardLayout", () => {
     )
 
     // Check labels
-    expect(desktopTabs.map((el) => el.textContent)).toEqual(expectedLabels)
-    expect(mobileTabs.map((el) => el.textContent)).toEqual(expectedLabels)
+    expect(desktopTabs.map((el) => el.textContent)).toEqual(
+      expectedDesktopLabels,
+    )
+    expect(mobileTabs.map((el) => el.textContent)).toEqual(expectedMobileLabels)
   })
 
   test("Active tab is set via url", async () => {

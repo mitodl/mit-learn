@@ -1,6 +1,11 @@
 include:
   - docker-compose.opensearch.${OPENSEARCH_CLUSTER_TYPE:-single-node}.yml
 
+# Define the extra_hosts as a reusable anchor
+x-extra-hosts: &default-extra-hosts
+  extra_hosts:
+    - "mitxonline.odl.local:host-gateway"
+
 services:
   db:
     profiles:
@@ -118,6 +123,7 @@ services:
     profiles:
       - apisix
     image: apache/apisix:3.13.0-debian # versions above this drop the local port on redirects
+    <<: *default-extra-hosts
     environment:
       - CSRF_COOKIE_DOMAIN=${CSRF_COOKIE_DOMAIN:-.odl.local}
       - KEYCLOAK_REALM_NAME=${KEYCLOAK_REALM_NAME:-ol-local}
@@ -128,7 +134,7 @@ services:
       - APISIX_PORT=${APISIX_PORT:-8065}
       - APISIX_SESSION_SECRET_KEY=${APISIX_SESSION_SECRET_KEY:-something_at_least_16_characters}
       - APISIX_LOGOUT_URL=${APISIX_LOGOUT_URL:-http://open.odl.local:8065/}
-      - MITOL_API_DOMAIN=${MITOL_API_DOMAIN:-open.odl.local}
+      - MITOL_API_DOMAIN=${MITOL_API_DOMAIN:-api.open.odl.local}
       - MITX_ONLINE_UPSTREAM=${MITX_ONLINE_UPSTREAM:-mitxonline.odl.local:8013}
       - MITX_ONLINE_DOMAIN=${MITX_ONLINE_DOMAIN:-mitxonline.odl.local}
       - NGINX_PORT=${NGINX_PORT:-8062}

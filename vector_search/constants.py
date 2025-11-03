@@ -3,6 +3,7 @@ from qdrant_client import models
 
 RESOURCES_COLLECTION_NAME = f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources"
 CONTENT_FILES_COLLECTION_NAME = f"{settings.QDRANT_BASE_COLLECTION_NAME}.content_files"
+TOPICS_COLLECTION_NAME = f"{settings.QDRANT_BASE_COLLECTION_NAME}.topics"
 
 QDRANT_CONTENT_FILE_PARAM_MAP = {
     "key": "key",
@@ -43,6 +44,10 @@ QDRANT_RESOURCE_PARAM_MAP = {
 }
 
 
+QDRANT_TOPICS_PARAM_MAP = {
+    "name": "name",
+}
+
 QDRANT_LEARNING_RESOURCE_INDEXES = {
     "readable_id": models.PayloadSchemaType.KEYWORD,
     "resource_type": models.PayloadSchemaType.KEYWORD,
@@ -81,4 +86,8 @@ QDRANT_CONTENT_FILE_INDEXES = {
     "content_type": models.PayloadSchemaType.KEYWORD,
     "edx_block_id": models.PayloadSchemaType.KEYWORD,
     "url": models.PayloadSchemaType.KEYWORD,
+}
+
+QDRANT_TOPIC_INDEXES = {
+    "name": models.PayloadSchemaType.KEYWORD,
 }

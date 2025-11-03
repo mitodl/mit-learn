@@ -22,26 +22,12 @@ export async function generateMetadata({ searchParams }: PageProps<"/search">) {
   })
 }
 
-/**
- * The search page uses Next's `useSearchParams`. This requires either:
- *  1. wrap the <SearchPage /> in Suspense
- *  2. or force-dynamic.
- *
- * (1) caused a hydration error for authenticated users. We have not found
- * the root cause of the hydration error.
- *
- * (2) seems to work well.
- */
-export const dynamic = "force-dynamic"
-
 const Page: React.FC<PageProps<"/search">> = async ({ searchParams }) => {
   const search = (await searchParams) as ResourceSearchRequest & {
     page?: string
   }
 
   const params = getSearchParams({
-    // @ts-expect-error Local openapi client https://www.npmjs.com/package/@mitodl/open-api-axios
-    // out of sync while we adding an enum value.
     requestParams: validateRequestParams(search),
     constantSearchParams: {},
     facetNames,

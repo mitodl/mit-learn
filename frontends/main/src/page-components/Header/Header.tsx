@@ -2,7 +2,14 @@
 
 import React, { FunctionComponent } from "react"
 import type { NavData } from "ol-components"
-import { styled, AppBar, NavDrawer, Toolbar } from "ol-components"
+import {
+  styled,
+  AppBar,
+  NavDrawer,
+  Toolbar,
+  HEADER_HEIGHT,
+  HEADER_HEIGHT_MD,
+} from "ol-components"
 import { ActionButtonLink } from "@mitodl/smoot-design"
 import {
   RiSearch2Line,
@@ -50,9 +57,9 @@ const Bar = styled(AppBar)(({ theme }) => ({
   ".MuiToolbar-root": {
     minHeight: "auto",
   },
-  height: theme.custom.dimensions.headerHeight,
+  height: HEADER_HEIGHT,
   [theme.breakpoints.down("md")]: {
-    height: theme.custom.dimensions.headerHeightSm,
+    height: HEADER_HEIGHT_MD,
     padding: "0",
   },
 }))

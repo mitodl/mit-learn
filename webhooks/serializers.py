@@ -14,6 +14,16 @@ class ContentFileWebHookRequestSerializer(serializers.Serializer):
     course_id = serializers.CharField(required=False, allow_blank=True)
 
 
+class VideoShortWebhookRequestSerializer(serializers.Serializer):
+    """
+    Serializer for Video Short webhook requests.
+    """
+
+    video_id = serializers.CharField()
+    youtube_metadata = serializers.DictField()
+    source = serializers.CharField(required=False, allow_blank=True)
+
+
 class WebhookResponseSerializer(serializers.Serializer):
     """
     Serializer for webhook responses.

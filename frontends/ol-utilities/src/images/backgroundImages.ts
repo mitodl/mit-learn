@@ -1,6 +1,10 @@
 import { getImageProps } from "next/image"
 import type { ImageProps } from "next/image"
 
+const NEXT_PUBLIC_OPTIMIZE_IMAGES = Boolean(
+  (process.env.NEXT_PUBLIC_OPTIMIZE_IMAGES ?? "true") === "true",
+)
+
 /* Generates a CSS `image-set()` declaration for a statically imported image.
  * The Next.js server optimizes the image at resolutions requested, allowing the
  * browser to select the best-suited image size based on the device's pixel density.
@@ -14,6 +18,10 @@ export const backgroundSrcSetCSS = (image: ImageProps["src"]) => {
     quality: 100,
     src: image,
   })
+
+  if (!NEXT_PUBLIC_OPTIMIZE_IMAGES || !props.srcSet) {
+    return `url("${props.src}")`
+  }
 
   const imageSet = props.srcSet
     ?.split(", ")

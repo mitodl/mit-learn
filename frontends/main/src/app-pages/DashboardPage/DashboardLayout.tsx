@@ -19,6 +19,7 @@ import {
   TabList,
   Typography,
   styled,
+  HEADER_HEIGHT,
 } from "ol-components"
 import { TabButtonLink, TabButtonList } from "@mitodl/smoot-design"
 import Link from "next/link"
@@ -33,10 +34,11 @@ import {
   SETTINGS,
 } from "@/common/urls"
 import dynamic from "next/dynamic"
-import { useMitxOnlineUserMe, MitxOnlineUser } from "api/mitxonline-hooks/user"
+import { MitxOnlineUser, mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useUserMe } from "api/hooks/user"
-import { useFeatureFlagEnabled } from "posthog-js/react"
-import { FeatureFlags } from "@/common/feature_flags"
+import { contractQueries } from "api/mitxonline-hooks/contracts"
+import { useQuery } from "@tanstack/react-query"
+import { ContractPage } from "@mitodl/mitxonline-api-axios/v2"
 
 const LearningResourceDrawer = dynamic(
   () =>
@@ -99,16 +101,16 @@ const DashboardGridItem = styled.div({
   },
 })
 
-const ProfileSidebar = styled(Card)(({ theme }) => ({
+const ProfileSidebar = styled(Card)({
   position: "sticky",
-  top: `${theme.custom.dimensions.headerHeight + PADDING_TOP}px`,
+  top: `${HEADER_HEIGHT + PADDING_TOP}px`,
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-start",
   width: "300px",
   boxShadow: "-4px 4px 0px 0px #A31F34",
   transform: "translateX(4px)", // keep solid shadow from bleeding into page margins
-}))
+})
 
 const ProfilePhotoContainer = styled.div(({ theme }) => ({
   display: "flex",
@@ -216,7 +218,7 @@ const TabLabels = {
 
 const DesktopTabLabel: React.FC<{
   icon: React.ReactNode
-  text?: string
+  text?: string | React.ReactNode
 }> = ({ text, icon }) => {
   return (
     <TabContainer>
@@ -232,15 +234,42 @@ type TabData = {
   value: string
   href: string
   label: {
-    mobile: string
+    mobile: string | React.ReactNode
     desktop: React.ReactNode
   }
 }
 const getTabData = (
-  orgsEnabled: boolean = false,
   user?: MitxOnlineUser,
+  contracts?: ContractPage[],
 ): TabData[] => {
-  const orgs = orgsEnabled ? (user?.b2b_organizations ?? []) : []
+  const orgTabs =
+    user && contracts
+      ? user?.b2b_organizations.map((org) => {
+          const orgContracts = contracts?.filter(
+            (contract) => contract.organization === org.id,
+          )
+          const contract =
+            orgContracts && orgContracts.length > 0 ? orgContracts[0] : null
+          const label = (
+            <>
+              <Typography variant="subtitle2" component="span">
+                {org.name}
+              </Typography>
+              {` - ${contract?.name}`}
+            </>
+          )
+          return {
+            value: organizationView(org.slug.replace("org-", "")),
+            href: organizationView(org.slug.replace("org-", "")),
+            label: {
+              mobile: label,
+              desktop: (
+                <DesktopTabLabel icon={<RiBuilding2Line />} text={label} />
+              ),
+            },
+          }
+        })
+      : []
   return [
     {
       value: DASHBOARD_HOME,
@@ -250,14 +279,7 @@ const getTabData = (
         desktop: <DesktopTabLabel icon={<RiDashboardLine />} text="Home" />,
       },
     },
-    ...orgs.map((org) => ({
-      value: organizationView(org.slug.replace("org-", "")),
-      href: organizationView(org.slug.replace("org-", "")),
-      label: {
-        mobile: org.name,
-        desktop: <DesktopTabLabel icon={<RiBuilding2Line />} text={org.name} />,
-      },
-    })),
+    ...orgTabs,
     {
       value: MY_LISTS,
       href: MY_LISTS,
@@ -292,16 +314,21 @@ const DashboardPage: React.FC<{
 }> = ({ children }) => {
   const pathname = usePathname()
   const { isLoading: isLoadingUser, data: user } = useUserMe()
-  const orgsEnabled = useFeatureFlagEnabled(FeatureFlags.OrganizationDashboard)
-  const { isLoading: isLoadingMitxOnlineUser, data: mitxOnlineUser } =
-    useMitxOnlineUserMe({ enabled: !!orgsEnabled })
+  const { data: mitxOnlineUser, isLoading: isLoadingMitxOnlineUser } = useQuery(
+    {
+      ...mitxUserQueries.me(),
+    },
+  )
+  const { data: contracts, isLoading: isLoadingContracts } = useQuery(
+    contractQueries.contractsList(),
+  )
 
   const tabData = useMemo(
     () =>
-      isLoadingMitxOnlineUser
-        ? getTabData(orgsEnabled)
-        : getTabData(orgsEnabled, mitxOnlineUser),
-    [isLoadingMitxOnlineUser, orgsEnabled, mitxOnlineUser],
+      isLoadingMitxOnlineUser || isLoadingContracts
+        ? getTabData()
+        : getTabData(mitxOnlineUser, contracts),
+    [isLoadingMitxOnlineUser, isLoadingContracts, mitxOnlineUser, contracts],
   )
 
   const tabValue = useMemo(() => {
