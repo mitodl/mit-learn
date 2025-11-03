@@ -10,7 +10,6 @@ import styled from "@emotion/styled"
 import { RiDraggable } from "@remixicon/react"
 import { theme } from "../ThemeProvider/ThemeProvider"
 import { BaseContainer, useClickChildLink } from "./Card"
-import { TruncateText } from "../TruncateText/TruncateText"
 import {
   ListCard,
   Body as BaseBody,
@@ -18,6 +17,7 @@ import {
   Info as BaseInfo,
   Title as BaseTitle,
   Footer,
+  LinkableTitle,
 } from "./ListCard"
 import type { Card as BaseCard, TitleProps } from "./ListCard"
 
@@ -158,16 +158,7 @@ const ListCardCondensed: Card = ({
       )}
       <Body>
         <Info>{info}</Info>
-        <Title
-          data-card-link={!!title.href}
-          href={title.href}
-          role={title.role}
-          aria-level={title["aria-level"]}
-        >
-          <TruncateText lineClamp={4} lang={title.lang}>
-            {title.children}
-          </TruncateText>
-        </Title>
+        <LinkableTitle title={title} lineClamp={4} />
         <Bottom>
           <Footer>{footer}</Footer>
           {actions && <Actions data-card-actions>{actions}</Actions>}

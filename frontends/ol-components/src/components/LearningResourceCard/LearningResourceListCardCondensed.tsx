@@ -129,7 +129,12 @@ const LearningResourceListCardCondensed: React.FC<
       <ListCardCondensed.Info>
         <Info resource={resource} />
       </ListCardCondensed.Info>
-      <ListCardCondensed.Title href={href} lang={getResourceLanguage(resource)}>
+      <ListCardCondensed.Title
+        href={href}
+        lang={getResourceLanguage(resource)}
+        role="heading"
+        aria-level={6}
+      >
         {resource.title}
       </ListCardCondensed.Title>
       <ListCardCondensed.Actions>

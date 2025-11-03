@@ -209,14 +209,16 @@ const getTabQuery = (tab: TabConfig): CarouselQuery => {
   }
 }
 
-const headingElements: React.ElementType[] = [
-  "h1",
-  "h2",
-  "h3",
-  "h4",
-  "h5",
-  "h6",
-]
+type HeadingElement = "h1" | "h2" | "h3" | "h4" | "h5" | "h6"
+
+const subheadingMap: Record<HeadingElement, number> = {
+  h1: 2,
+  h2: 3,
+  h3: 4,
+  h4: 5,
+  h5: 6,
+  h6: 6,
+}
 
 /**
  * A tabbed carousel that fetches resources based on the configuration provided.
@@ -312,10 +314,7 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
           }
         >
           {({ resources, childrenLoading, tabConfig }) => {
-            const headingLevel = Math.min(
-              headingElements.indexOf(titleComponent) + 2,
-              6,
-            )
+            const headingLevel = subheadingMap[titleComponent as HeadingElement]
             return (
               <CarouselV2 arrowsContainer={ref}>
                 {isLoading || childrenLoading

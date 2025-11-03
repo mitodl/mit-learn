@@ -106,6 +106,26 @@ export const Title: React.FC<TitleProps> = styled(Linkable)`
   }
 `
 
+export const LinkableTitle = ({
+  title,
+  lineClamp = 2,
+}: {
+  title: TitleProps
+  lineClamp?: number
+}) => {
+  const { href, role, "aria-level": ariaLevel, lang, children, ...rest } = title
+
+  return (
+    <Title data-card-link={!!href} href={href} {...rest}>
+      <span role={role} aria-level={ariaLevel}>
+        <TruncateText lineClamp={lineClamp} lang={lang}>
+          {children}
+        </TruncateText>
+      </span>
+    </Title>
+  )
+}
+
 export const Footer = styled.span`
   display: block;
   ${{ ...theme.typography.body3 }}
@@ -215,9 +235,7 @@ const ListCard: Card = ({
     info,
     footer,
     actions,
-    title: TitleProps = {},
-    titleRole: TitleProps["role"],
-    titleAriaLevel: TitleProps["aria-level"]
+    title: TitleProps = {}
   const handleHrefClick = useClickChildLink(onClick)
   const handleClick = forwardClicksToLink ? handleHrefClick : onClick
 
@@ -227,16 +245,8 @@ const ListCard: Card = ({
     if (element.type === Content) content = element.props.children
     else if (element.type === Image) imageProps = element.props as ImageProps
     else if (element.type === Info) info = element.props.children
-    else if (element.type === Title) {
-      const {
-        role,
-        "aria-level": ariaLevel,
-        ...rest
-      } = element.props as TitleProps
-      title = rest
-      titleRole = role
-      titleAriaLevel = ariaLevel
-    } else if (element.type === Footer) footer = element.props.children
+    else if (element.type === Title) title = element.props as TitleProps
+    else if (element.type === Footer) footer = element.props.children
     else if (element.type === Actions) actions = element.props.children
   })
 
@@ -263,15 +273,7 @@ const ListCard: Card = ({
       )}
       <Body>
         <Info>{info}</Info>
-        {title && (
-          <Title data-card-link={!!title.href} {...title}>
-            <span role={titleRole} aria-level={titleAriaLevel}>
-              <TruncateText lineClamp={2} lang={title.lang}>
-                {title.children}
-              </TruncateText>
-            </span>
-          </Title>
-        )}
+        {title && <LinkableTitle title={title} />}
         <Bottom>
           <Footer>{footer}</Footer>
           {actions && <Actions data-card-actions>{actions}</Actions>}

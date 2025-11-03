@@ -135,6 +135,35 @@ const Title = styled(
   ]
 })
 
+const LinkableTitle = ({
+  title,
+  size,
+}: {
+  title: TitleProps
+  size: Size | undefined
+}) => {
+  const { role, "aria-level": ariaLevel, href, children, ...rest } = title
+
+  return (
+    <Title
+      data-card-link={!!href}
+      className="MitCard-title"
+      size={size}
+      href={href}
+      {...rest}
+    >
+      {/*
+       * The card titles are links, but we also want them to be visible as headings for accessibility.
+       * Setting the role on the Title component would make it invisible as a link to screen readers,
+       * so we include a span to set the role on instead.
+       */}
+      <span role={role} aria-level={ariaLevel}>
+        {children}
+      </span>
+    </Title>
+  )
+}
+
 const Footer = styled.span`
   display: block;
   height: ${pxToRem(16)};
@@ -279,8 +308,6 @@ const Card: Card = ({
     image: ImageProps | null = null,
     info: SlotProps = {},
     title: TitleProps = {},
-    titleRole: TitleProps["role"],
-    titleAriaLevel: TitleProps["aria-level"],
     footer: SlotProps = {},
     actions: SlotProps = {}
 
@@ -303,16 +330,8 @@ const Card: Card = ({
     if (element.type === Content) content = element.props.children
     else if (element.type === Image) image = element.props as ImageProps
     else if (element.type === Info) info = element.props as SlotProps
-    else if (element.type === Title) {
-      const {
-        role,
-        "aria-level": ariaLevel,
-        ...rest
-      } = element.props as TitleProps
-      title = rest
-      titleRole = role
-      titleAriaLevel = ariaLevel
-    } else if (element.type === Footer) footer = element.props as SlotProps
+    else if (element.type === Title) title = element.props as TitleProps
+    else if (element.type === Footer) footer = element.props as SlotProps
     else if (element.type === Actions) actions = element.props as SlotProps
   })
 
@@ -360,21 +379,7 @@ const Card: Card = ({
             {info.children}
           </Info>
         )}
-        <Title
-          data-card-link={!!title.href}
-          className="MitCard-title"
-          size={size}
-          {...title}
-        >
-          {/*
-           * The card titles are links, but we also want them to be visible as headings for accessibility.
-           * Setting the role on the Title component would make it invisible as a link to screen readers,
-           * so we include a span to set the role on instead.
-           */}
-          <span role={titleRole} aria-level={titleAriaLevel}>
-            {title.children}
-          </span>
-        </Title>
+        <LinkableTitle title={title} size={size} />
       </Body>
       <Bottom>
         <Footer className="MitCard-footer" {...footer}>
