@@ -264,6 +264,7 @@ interface LearningResourceListCardProps {
   inLearningPath?: boolean
   draggable?: boolean
   onClick?: React.MouseEventHandler
+  headingLevel?: number
 }
 
 type CardActionButtonProps = Pick<
@@ -304,6 +305,7 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
   inUserList,
   draggable,
   onClick,
+  headingLevel = 6,
 }) => {
   if (isLoading) {
     return (
@@ -339,7 +341,7 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
         href={href}
         lang={getResourceLanguage(resource)}
         role="heading"
-        aria-level={6}
+        aria-level={headingLevel}
       >
         {resource.title}
       </ListCard.Title>
