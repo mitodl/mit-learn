@@ -22,9 +22,9 @@ from learning_resources.models import LearningResource
 from learning_resources.views import FeaturedViewSet
 from learning_resources_search.api import gen_content_file_id
 from learning_resources_search.constants import (
+    COMBINED_INDEX,
     CONTENT_FILE_TYPE,
     COURSE_TYPE,
-    LEARNING_RESOURCE_TYPES,
     PROGRAM_TYPE,
     IndexestoUpdate,
 )
@@ -132,42 +132,52 @@ def test_system_exit_retry(mocker):
 
 
 @pytest.mark.parametrize(
-    "indexes",
-    [["course"], ["program"]],
+    ("indexes", "model_exists"),
+    [
+        (["course"], False),
+        (["program"], False),
+        (["combined_hybrid"], False),
+        (["combined_hybrid"], True),
+    ],
 )
-def test_start_recreate_index(mocker, mocked_celery, user, indexes):
+def test_start_recreate_index(mocker, mocked_celery, user, indexes, model_exists):  # noqa: PLR0915,C901
     """
     recreate_index should recreate the OpenSearch index and reindex all data with it
     """
     settings.OPENSEARCH_INDEXING_CHUNK_SIZE = 2
     settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE = 2
 
+    model_value = "test_vector_model_id" if model_exists else None
+    mocker.patch(
+        "learning_resources_search.tasks.get_vector_model_id", return_value=model_value
+    )
+
     mock_blocklist = mocker.patch(
         "learning_resources_search.tasks.load_course_blocklist", return_value=[]
     )
 
-    if COURSE_TYPE in indexes:
-        ocw_courses = sorted(
-            CourseFactory.create_batch(4, etl_source=ETLSource.ocw.value),
-            key=lambda course: course.learning_resource_id,
-        )
+    ocw_courses = sorted(
+        CourseFactory.create_batch(4, etl_source=ETLSource.ocw.value),
+        key=lambda course: course.learning_resource_id,
+    )
 
-        for course in ocw_courses:
-            ContentFileFactory.create_batch(
-                3, run=course.learning_resource.runs.first()
-            )
+    for course in ocw_courses:
+        ContentFileFactory.create_batch(3, run=course.learning_resource.runs.first())
 
-        oll_courses = CourseFactory.create_batch(2, etl_source=ETLSource.ocw.value)
+    oll_courses = CourseFactory.create_batch(2, etl_source=ETLSource.ocw.value)
 
-        courses = sorted(
-            list(oll_courses) + list(ocw_courses),
-            key=lambda course: course.learning_resource_id,
-        )
-    else:
-        programs = sorted(
-            ProgramFactory.create_batch(4),
-            key=lambda program: program.learning_resource_id,
-        )
+    courses = sorted(
+        list(oll_courses) + list(ocw_courses),
+        key=lambda course: course.learning_resource_id,
+    )
+
+    programs = sorted(
+        ProgramFactory.create_batch(
+            4,
+            courses=[],
+        ),
+        key=lambda program: program.learning_resource_id,
+    )
 
     index_learning_resources_mock = mocker.patch(
         "learning_resources_search.tasks.index_learning_resources", autospec=True
@@ -203,7 +213,7 @@ def test_start_recreate_index(mocker, mocked_celery, user, indexes):
         indexes, delete_reindexing_tags=False
     )
 
-    for doctype in LEARNING_RESOURCE_TYPES:
+    for doctype in [COURSE_TYPE, PROGRAM_TYPE, COMBINED_INDEX]:
         if doctype in indexes:
             finish_recreate_index_dict[doctype] = backing_index
             create_backing_index_mock.assert_any_call(doctype)
@@ -216,24 +226,37 @@ def test_start_recreate_index(mocker, mocked_celery, user, indexes):
     list(mocked_celery.group.call_args[0][0])
 
     if COURSE_TYPE in indexes:
-        mock_blocklist.assert_called_once()
         assert index_learning_resources_mock.si.call_count == 3
+
+    if PROGRAM_TYPE in indexes:
+        assert index_learning_resources_mock.si.call_count == 2
+
+    if COMBINED_INDEX in indexes and model_exists:
+        assert index_learning_resources_mock.si.call_count == 5
+
+    if COMBINED_INDEX in indexes and not model_exists:
+        assert index_learning_resources_mock.si.call_count == 0
+
+    if COURSE_TYPE in indexes or (COMBINED_INDEX in indexes and model_exists):
+        mock_blocklist.assert_called_once()
+        index_type = indexes[0]
         index_learning_resources_mock.si.assert_any_call(
             [courses[0].learning_resource_id, courses[1].learning_resource_id],
-            COURSE_TYPE,
+            index_type,
             index_types=IndexestoUpdate.reindexing_index.value,
         )
         index_learning_resources_mock.si.assert_any_call(
             [courses[2].learning_resource_id, courses[3].learning_resource_id],
-            COURSE_TYPE,
+            index_type,
             index_types=IndexestoUpdate.reindexing_index.value,
         )
         index_learning_resources_mock.si.assert_any_call(
             [courses[4].learning_resource_id, courses[5].learning_resource_id],
-            COURSE_TYPE,
+            index_type,
             index_types=IndexestoUpdate.reindexing_index.value,
         )
 
+    if COURSE_TYPE in indexes:
         for course in ocw_courses:
             content_file_ids = (
                 course.learning_resource.runs.first()
@@ -252,16 +275,16 @@ def test_start_recreate_index(mocker, mocked_celery, user, indexes):
                 index_types=IndexestoUpdate.reindexing_index.value,
             )
 
-    if PROGRAM_TYPE in indexes:
-        assert index_learning_resources_mock.si.call_count == 2
+    if PROGRAM_TYPE in indexes or (COMBINED_INDEX in indexes and model_exists):
+        index_type = indexes[0]
         index_learning_resources_mock.si.assert_any_call(
             [programs[0].learning_resource_id, programs[1].learning_resource_id],
-            PROGRAM_TYPE,
+            index_type,
             index_types=IndexestoUpdate.reindexing_index.value,
         )
         index_learning_resources_mock.si.assert_any_call(
             [programs[2].learning_resource_id, programs[3].learning_resource_id],
-            PROGRAM_TYPE,
+            index_type,
             index_types=IndexestoUpdate.reindexing_index.value,
         )
 

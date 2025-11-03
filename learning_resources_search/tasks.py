@@ -627,6 +627,8 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):  # noq
         if COMBINED_INDEX in indexes:
             vector_model_id = get_vector_model_id()
             if vector_model_id:
+                blocklisted_ids = load_course_blocklist()
+
                 index_tasks = index_tasks + [
                     index_learning_resources.si(
                         ids,
@@ -635,6 +637,7 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):  # noq
                     )
                     for ids in chunks(
                         LearningResource.objects.filter(published=True)
+                        .exclude(readable_id=blocklisted_ids)
                         .order_by("id")
                         .values_list("id", flat=True),
                         chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
