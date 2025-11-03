@@ -50,9 +50,21 @@ class BaseInFilterExplode(BaseInFilter):
 class CharInFilter(BaseInFilterExplode, CharFilter):
     """Filter that allows for multiple character values"""
 
+    def filter(self, qs, value):
+        """Apply multi-OR filter logic automatically"""
+        if value:
+            return multi_or_filter(qs, self.field_name, value)
+        return qs
+
 
 class NumberInFilter(BaseInFilterExplode, NumberFilter):
     """Filter that allows for multiple numeric values"""
+
+    def filter(self, qs, value):
+        """Apply multi-OR filter logic automatically"""
+        if value:
+            return multi_or_filter(qs, self.field_name, value)
+        return qs
 
 
 class MultipleOptionsFilterBackend(DjangoFilterBackend):
@@ -61,7 +73,6 @@ class MultipleOptionsFilterBackend(DjangoFilterBackend):
     in various formats
      - MultipleChoiceFilter supports repeated values ("explode") or commas
      - CharInFilter and NumberInFilter supports only repeated values ("explode")
-        - corresponding filter fields should use multi_or_filter to handle commas
     """
 
     def get_filterset_kwargs(self, request, queryset, view):  # noqa: ARG002
