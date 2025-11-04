@@ -9,7 +9,8 @@
     "api": "workspace:*",
     "ckeditor5": "^42.0.0",
     "next": "^15.5.2",
-    "ol-components": "0.0.0"
+    "ol-components": "0.0.0",
+    "swiper": "^12.0.3"
   },
   "peerDependencies": {
     "react": ">=18.0.0",

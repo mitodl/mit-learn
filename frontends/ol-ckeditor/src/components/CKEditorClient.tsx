@@ -33,7 +33,6 @@ export const CKEditorClient: React.FC<CKEditorClientProps> = ({
   // --- Core editor and modal states
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [EditorModules, setEditorModules] = useState<any>(null)
-  console.log("EditorModules====================:", value)
   const [data, setData] = useState(value || "")
   const [open, setOpen] = useState(false)
   const [isLoader, setIsLoader] = useState(false)
@@ -134,6 +133,12 @@ export const CKEditorClient: React.FC<CKEditorClientProps> = ({
         )
         const InsertCoursePlugin = createInsertCoursePlugin(CKEditorModules)
 
+        const { createInsertCourseCarouselPlugin } = await import(
+          "./InsertCourseCarouselPlugin"
+        )
+        const InsertCourseCarouselPlugin =
+          createInsertCourseCarouselPlugin(CKEditorModules)
+
         setEditorModules({
           ClassicEditor,
           Essentials,
@@ -171,6 +176,7 @@ export const CKEditorClient: React.FC<CKEditorClientProps> = ({
           MediaFloatPlugin,
           DefaultImageStylePlugin,
           InsertCoursePlugin,
+          InsertCourseCarouselPlugin,
           _CKEditorModules: CKEditorModules,
         })
       } catch (error) {
@@ -229,6 +235,7 @@ export const CKEditorClient: React.FC<CKEditorClientProps> = ({
         EditorModules.MediaFloatPlugin,
         EditorModules.DefaultImageStylePlugin,
         EditorModules.InsertCoursePlugin,
+        EditorModules.InsertCourseCarouselPlugin,
       ],
       toolbar: {
         items: [
@@ -264,6 +271,7 @@ export const CKEditorClient: React.FC<CKEditorClientProps> = ({
           "|",
           "insertCourse",
           "|",
+          "insertCourseCarousel",
         ],
       },
       alignment: {

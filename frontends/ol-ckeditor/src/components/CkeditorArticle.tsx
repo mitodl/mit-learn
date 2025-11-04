@@ -48,6 +48,7 @@ const CkeditorArticle = ({ articleId }: { articleId: number }) => {
     })
   }
   // if (isLoading) return <div className="loading">Loading...</div>
+  console.log("editorContent==================:", editorContent)
   return (
     <div className="article-wrapper">
       <h1 className="article-title">Create Article</h1>
