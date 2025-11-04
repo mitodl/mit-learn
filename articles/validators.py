@@ -39,7 +39,16 @@ article_html_config = {
         "figure": {"class", "width", "style"},
         "div": {"class", "style", "data-oembed-url"},
         "h3": {"class"},
-        "iframe": {"class", "style", "src", "width", "height", "frameborder", "allow", "allowfullscreen"},
+        "iframe": {
+            "class",
+            "style",
+            "src",
+            "width",
+            "height",
+            "frameborder",
+            "allow",
+            "allowfullscreen",
+        },
         "oembed": {"url"},
     },
 }
