@@ -202,7 +202,9 @@ def clear_and_create_index(*, index_name=None, skip_mapping=False, object_type=N
         embedding_mapping = EMBEDDING_FIELDS
         for field in embedding_mapping.values():
             field["dimension"] = embedding_dimension
-        index_create_data["mappings"] = LEARNING_RESOURCE_MAP | embedding_mapping
+        index_create_data["mappings"] = {
+            "properties": (LEARNING_RESOURCE_MAP | embedding_mapping)
+        }
     elif not skip_mapping:
         index_create_data["mappings"] = {"properties": MAPPING[object_type]}
 
