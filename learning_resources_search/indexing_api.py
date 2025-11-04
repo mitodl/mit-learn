@@ -19,6 +19,7 @@ from learning_resources_search.connection import (
     get_default_alias_name,
     get_reindexing_alias_name,
     get_vector_model_id,
+    get_vector_model_info,
     make_backing_index_name,
     refresh_index,
 )
@@ -27,6 +28,8 @@ from learning_resources_search.constants import (
     ALL_INDEX_TYPES,
     COMBINED_INDEX,
     COURSE_TYPE,
+    EMBEDDING_FIELDS,
+    LEARNING_RESOURCE_MAP,
     MAPPING,
     PERCOLATE_INDEX_TYPE,
     SYNONYMS,
@@ -189,10 +192,20 @@ def clear_and_create_index(*, index_name=None, skip_mapping=False, object_type=N
     }
 
     if object_type == COMBINED_INDEX:
+        model_info = get_vector_model_info()
+        if not model_info:
+            return
         index_create_data["settings"]["index.knn"] = True
         index_create_data["settings"]["default_pipeline"] = "vector_ingest_pipeline"
-    if not skip_mapping:
+
+        embedding_dimension = model_info["model_config"]["embedding_dimension"]
+        embedding_mapping = EMBEDDING_FIELDS
+        for field in embedding_mapping.values():
+            field["dimension"] = embedding_dimension
+        index_create_data["mappings"] = LEARNING_RESOURCE_MAP | embedding_mapping
+    elif not skip_mapping:
         index_create_data["mappings"] = {"properties": MAPPING[object_type]}
+
     # from https://www.elastic.co/guide/en/elasticsearch/guide/current/asciifolding-token-filter.html
     conn.indices.create(index_name, body=index_create_data)
 
@@ -638,6 +651,19 @@ def get_existing_reindexing_indexes(obj_types):
 
 
 def update_local_index_settings_for_hybrid_search():
+    """
+    Update local OpenSearch cluster settings for hybrid search.
+    On production only_run_on_ml_node should be set to false and
+    there should be dedicated ML nodes.
+    """
+    settings_body = {
+        "persistent": {
+            "archived.plugins.index_state_management.metadata_migration.status": None,
+            "archived.plugins.index_state_management.template_migration.control": None,
+        }
+    }
+    conn = get_conn()
+    conn.cluster.put_settings(body=settings_body)
     settings_body = {
         "persistent": {
             "plugins": {
@@ -648,27 +674,40 @@ def update_local_index_settings_for_hybrid_search():
             }
         }
     }
-
     conn = get_conn()
     conn.cluster.put_settings(body=settings_body)
 
 
 def get_ml_client():
+    """
+    Get an MLCommonClient for the OpenSearch
+    """
     conn = get_conn()
     return MLCommonClient(conn)
 
 
 def register_model():
+    """
+    Register the vector OpenSearch model if it does not already exist .
+    """
+    model_id = get_vector_model_id()
+    if model_id:
+        log.error("Model already registered.")
+        return
+
     ml_client = get_ml_client()
     ml_client.register_pretrained_model(
-        model_name="huggingface/sentence-transformers/msmarco-distilbert-base-tas-b",
-        model_version="1.0.3",
-        model_format="TORCH_SCRIPT",
+        model_name=settings.OPENSEARCH_VECTOR_MODEL_NAME,
+        model_version=settings.OPENSEARCH_VECTOR_MODEL_NAME_VERSION,
+        model_format=settings.OPENSEARCH_VECTOR_MODEL_FORMAT,
         deploy_model=True,
     )
 
 
 def create_ingest_pipeline():
+    """
+    Create an ingest pipeline for the combined_vector index for text embedding.
+    """
     conn = get_conn()
     model_id = get_vector_model_id()
     if not model_id:

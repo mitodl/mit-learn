@@ -563,6 +563,14 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):  # noq
             indexes, delete_reindexing_tags=remove_existing_reindexing_tags
         )
 
+        if COMBINED_INDEX in indexes:
+            vector_model_id = get_vector_model_id()
+            if not vector_model_id:
+                log.warning(
+                    "No vector model is configured. Skipping hybrid index reindexing.",
+                )
+                indexes.remove(COMBINED_INDEX)
+
         new_backing_indices = {
             obj_type: api.create_backing_index(obj_type) for obj_type in indexes
         }
@@ -625,29 +633,22 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):  # noq
                 ]
 
         if COMBINED_INDEX in indexes:
-            vector_model_id = get_vector_model_id()
-            if vector_model_id:
-                blocklisted_ids = load_course_blocklist()
+            blocklisted_ids = load_course_blocklist()
 
-                index_tasks = index_tasks + [
-                    index_learning_resources.si(
-                        ids,
-                        COMBINED_INDEX,
-                        index_types=IndexestoUpdate.reindexing_index.value,
-                    )
-                    for ids in chunks(
-                        LearningResource.objects.filter(published=True)
-                        .exclude(readable_id=blocklisted_ids)
-                        .order_by("id")
-                        .values_list("id", flat=True),
-                        chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
-                    )
-                ]
-            else:
-                log.warning(
-                    "Skipping indexing hybrid index reindexing because no vector "
-                    "model is configured.",
+            index_tasks = index_tasks + [
+                index_learning_resources.si(
+                    ids,
+                    COMBINED_INDEX,
+                    index_types=IndexestoUpdate.reindexing_index.value,
                 )
+                for ids in chunks(
+                    LearningResource.objects.filter(published=True)
+                    .exclude(readable_id=blocklisted_ids)
+                    .order_by("id")
+                    .values_list("id", flat=True),
+                    chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
+                )
+            ]
 
         for resource_type in [
             PROGRAM_TYPE,

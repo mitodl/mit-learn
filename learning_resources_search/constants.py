@@ -325,7 +325,6 @@ LEARNING_RESOURCE_MAP = {
 EMBEDDING_FIELDS = {
     "title_embedding": {
         "type": "knn_vector",
-        "dimension": 768,
         "method": {
             "engine": "lucene",
             "space_type": "l2",
@@ -335,7 +334,6 @@ EMBEDDING_FIELDS = {
     },
     "description_embedding": {
         "type": "knn_vector",
-        "dimension": 768,
         "method": {
             "engine": "lucene",
             "space_type": "l2",
@@ -345,7 +343,6 @@ EMBEDDING_FIELDS = {
     },
 }
 
-HYBRID_LEARNING_RESOURCE_MAP = LEARNING_RESOURCE_MAP | EMBEDDING_FIELDS
 
 CONTENT_FILE_MAP = {
     "id": {"type": "long"},
@@ -452,7 +449,6 @@ MAPPING = {
     LEARNING_PATH_TYPE: LEARNING_RESOURCE_MAP,
     VIDEO_TYPE: LEARNING_RESOURCE_MAP,
     VIDEO_PLAYLIST_TYPE: LEARNING_RESOURCE_MAP,
-    COMBINED_INDEX: HYBRID_LEARNING_RESOURCE_MAP,
     PERCOLATE_INDEX_TYPE: {
         **PERCOLATE_INDEX_MAP,
         **LEARNING_RESOURCE_MAP,

@@ -138,8 +138,11 @@ def refresh_index(index):
 
 
 def get_vector_model_id():
+    """
+    Get the model ID for the currently loaded vector model
+    """
     conn = get_conn()
-    model_name = "huggingface/sentence-transformers/msmarco-distilbert-base-tas-b"
+    model_name = settings.OPENSEARCH_VECTOR_MODEL_NAME
     body = {"query": {"term": {"name.keyword": model_name}}}
     models = conn.transport.perform_request(
         "GET", "/_plugins/_ml/models/_search", body=body
@@ -149,3 +152,16 @@ def get_vector_model_id():
         return models["hits"]["hits"][0]["_source"]["model_id"]
 
     return None
+
+
+def get_vector_model_info():
+    """
+    Get information about the currently loaded vector model
+    """
+
+    conn = get_conn()
+    model_id = get_vector_model_id()
+    if not model_id:
+        return None
+
+    return conn.transport.perform_request("GET", f"/_plugins/_ml/models/{model_id}")
