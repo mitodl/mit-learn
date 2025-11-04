@@ -2,6 +2,7 @@ import datetime
 import logging
 
 import celery
+import sentry_sdk
 from celery.exceptions import Ignore
 from django.conf import settings
 from django.db.models import Q
@@ -376,6 +377,9 @@ def remove_run_content_files(run_id):
 
 @app.task
 def embeddings_healthcheck():
+    """
+    Check for missing embeddings in Qdrant and log warnings to Sentry
+    """
     remaining_content_files = []
     remaining_resources = []
     content_file_point_ids = {}
@@ -417,21 +421,16 @@ def embeddings_healthcheck():
                 batch, collection_name=CONTENT_FILES_COLLECTION_NAME
             )
         )
-    """
+
     remaining_content_file_ids = [
         content_file_point_ids[p]["id"] for p in remaining_content_files
     ]
 
     remaining_resource_ids = [resource_point_ids[p]["id"] for p in remaining_resources]
-    """
+
     log.info("remaining content files - %d", len(remaining_content_files))
     log.info("remaining learning resources - %d", len(remaining_resources))
 
-    if len(remaining_resources) > 0:
-        log.info(
-            "percent complete (by resource) - %f",
-            ((total_resources - len(remaining_resources)) / total_resources) * 100,
-        )
     if len(remaining_content_files) > 0:
         log.info(
             "percent complete (by contentfile) - %f",
@@ -441,6 +440,40 @@ def embeddings_healthcheck():
             )
             * 100,
         )
+        with sentry_sdk.new_scope() as scope:
+            scope.set_context(
+                "missing_content_file_embeddings",
+                {
+                    "count": len(remaining_content_files),
+                    "ids": remaining_content_file_ids,
+                },
+            )
+            scope.set_tag("alert_type", "missing_content_file_embeddings")
+            scope.level = "warning"
+
+            sentry_sdk.capture_message(
+                f"Warning: {len(remaining_content_files)} missing contentfile"
+                "embeddings detected"
+            )
+    if len(remaining_resources) > 0:
+        log.info(
+            "percent complete (by resource) - %f",
+            ((total_resources - len(remaining_resources)) / total_resources) * 100,
+        )
+        with sentry_sdk.new_scope() as scope:
+            scope.set_context(
+                "missing_learning_resource_embeddings",
+                {
+                    "count": len(remaining_resource_ids),
+                    "ids": remaining_resource_ids,
+                },
+            )
+            scope.set_tag("alert_type", "missing_learning_resource_embeddings")
+            scope.level = "warning"
+            sentry_sdk.capture_message(
+                f"Warning: {len(remaining_resource_ids)} missing learning"
+                " resource embeddings detected"
+            )
 
 
 def sync_topics():
