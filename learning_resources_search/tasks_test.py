@@ -16,6 +16,7 @@ from learning_resources.factories import (
     LearningResourceDepartmentFactory,
     LearningResourceFactory,
     LearningResourceOfferorFactory,
+    LearningResourceTopicFactory,
     ProgramFactory,
 )
 from learning_resources.models import LearningResource
@@ -853,6 +854,137 @@ def test_infer_percolate_group(mocked_api):
     offerer_query.original_query["offered_by"] = [offerer.code]
     offerer_query.save()
     assert _infer_percolate_group(offerer_query) == offerer.name
+
+
+def test_percolate_user_grouping(mocked_api, mocker):
+    """
+    Test that each user receives an email with resources
+    they are supposed to recieve (based off of subscription)
+    """
+    topic_name = "Mechanical Engineering"
+    topic = LearningResourceTopicFactory.create(name=topic_name)
+    alternate_topic = LearningResourceTopicFactory.create(
+        name=f"{topic_name}_alternate"
+    )
+    offerer = LearningResourceOfferorFactory.create()
+    department = LearningResourceDepartmentFactory.create()
+    alternate_department = LearningResourceDepartmentFactory.create()
+
+    resource_a = LearningResourceFactory.create(
+        title="resource A",
+        topics=[topic, alternate_topic],
+        is_course=True,
+        offered_by=offerer,
+        departments=[department],
+    )
+
+    resource_b = LearningResourceFactory.create(
+        title="resource B",
+        topics=[alternate_topic],
+        is_course=True,
+    )
+    resource_c = LearningResourceFactory.create(
+        title="resource C",
+        departments=[alternate_department],
+        is_course=True,
+        topics=[],
+    )
+
+    user_a, user_b, user_c, user_d = UserFactory.create_batch(4)
+
+    topic_query = PercolateQueryFactory.create()
+    topic_query.original_query["topic"] = [topic_name]
+
+    alternate_topic_query = PercolateQueryFactory.create()
+    alternate_topic_query.original_query["topic"] = [f"{topic_name}_alternate"]
+
+    department_query = PercolateQueryFactory.create()
+    department_query.original_query["department"] = [department.department_id]
+
+    alternate_department_query = PercolateQueryFactory.create()
+    alternate_department_query.original_query["department"] = [
+        alternate_department.department_id
+    ]
+
+    offerer_query = PercolateQueryFactory.create()
+    offerer_query.source_type = PercolateQuery.CHANNEL_SUBSCRIPTION_TYPE
+    offerer_query.original_query["offered_by"] = [offerer.code]
+
+    # user_a should have 1 percolated doc
+    topic_query.users.add(user_a)
+
+    # user_b should have 3 percolated docs
+    topic_query.users.add(user_b)
+    alternate_topic_query.users.add(user_b)
+    alternate_department_query.users.add(user_b)
+
+    # user_c should have 2 percolated doc
+    department_query.users.add(user_c)
+    alternate_department_query.users.add(user_c)
+
+    # user_d should have 1 percolated doc
+    offerer_query.users.add(user_d)
+
+    # save all the queries
+    for query in [
+        department_query,
+        alternate_topic_query,
+        offerer_query,
+        topic_query,
+        alternate_department_query,
+    ]:
+        query.source_type = PercolateQuery.CHANNEL_SUBSCRIPTION_TYPE
+        query.save()
+
+    percolate_matches_for_document_mock = mocker.patch(
+        "learning_resources_search.tasks.percolate_matches_for_document",
+    )
+
+    def _matches_for_document(resource_id):
+        """
+        Mock percolation
+        """
+        if resource_id == resource_a.id:
+            return PercolateQuery.objects.filter(
+                id__in=[
+                    topic_query.id,
+                    alternate_topic_query.id,
+                    department_query.id,
+                    offerer_query.id,
+                ]
+            )
+        elif resource_id == resource_b.id:
+            return PercolateQuery.objects.filter(
+                id__in=[
+                    alternate_topic_query.id,
+                ]
+            )
+        elif resource_id == resource_c.id:
+            return PercolateQuery.objects.filter(
+                id__in=[
+                    alternate_department_query.id,
+                ]
+            )
+        else:
+            return PercolateQuery.objects.none()
+
+    percolate_matches_for_document_mock.side_effect = _matches_for_document
+
+    rows = _get_percolated_rows(
+        [resource_a, resource_b, resource_c], "channel_subscription_type"
+    )
+    grouped_by_user = _group_percolated_rows(rows)
+    resources_by_user = {}
+    # get the total number of resources for each user
+    for user in [user_a, user_b, user_c, user_d]:
+        resources_by_user[user.id] = sum(
+            [len(items) for items in grouped_by_user[user.id].values()]
+        )
+
+    assert resources_by_user[user_a.id] == 1
+    assert resources_by_user[user_b.id] == 3
+    assert resources_by_user[user_c.id] == 2
+    assert resources_by_user[user_d.id] == 1
 
 
 def test_email_grouping_function(mocked_api, mocker):
