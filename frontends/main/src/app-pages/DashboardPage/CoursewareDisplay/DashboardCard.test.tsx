@@ -176,17 +176,23 @@ describe.each([
 
   test.each([
     {
-      course: pastDashboardCourse(),
+      course: pastDashboardCourse({
+        enrollment: { status: EnrollmentStatus.Enrolled },
+      }),
       expected: { labelPrefix: "View" },
       case: "past",
     },
     {
-      course: currentDashboardCourse(),
+      course: currentDashboardCourse({
+        enrollment: { status: EnrollmentStatus.Enrolled },
+      }),
       expected: { labelPrefix: "Continue" },
       case: "current",
     },
     {
-      course: futureDashboardCourse(),
+      course: futureDashboardCourse({
+        enrollment: { status: EnrollmentStatus.Enrolled },
+      }),
       expected: { labelPrefix: "Continue" },
       label: "future",
     },
@@ -515,12 +521,12 @@ describe.each([
   )
 
   test.each([
-    { status: EnrollmentStatus.Completed },
-    { status: EnrollmentStatus.Enrolled },
-    { status: EnrollmentStatus.NotEnrolled },
+    { status: EnrollmentStatus.Completed, expectedText: "View Course" },
+    { status: EnrollmentStatus.Enrolled, expectedText: "Continue Course" },
+    { status: EnrollmentStatus.NotEnrolled, expectedText: "Start Course" },
   ])(
-    "CoursewareButton switches to Enroll functionality when enrollment status is not enrolled or undefined",
-    ({ status }) => {
+    "CoursewareButton shows correct text based on enrollment status ($status)",
+    ({ status, expectedText }) => {
       setupUserApis()
       const course = dashboardCourse()
       course.enrollment = {
@@ -534,15 +540,7 @@ describe.each([
       const card = getCard()
       const coursewareButton = within(card).getByTestId("courseware-button")
 
-      if (
-        status === EnrollmentStatus.NotEnrolled ||
-        status === undefined ||
-        !course.enrollment
-      ) {
-        expect(coursewareButton).toHaveTextContent("Start Course")
-      } else {
-        expect(coursewareButton).toHaveTextContent("Continue Course")
-      }
+      expect(coursewareButton).toHaveTextContent(expectedText)
     },
   )
 
