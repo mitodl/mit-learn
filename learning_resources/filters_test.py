@@ -423,11 +423,9 @@ def test_learning_resource_sortby_new(client):
 def test_learning_resource_filter_topics(mock_courses, client):
     """Test that the topic filter works"""
     assert (
-        list(
-            set(mock_courses.ocw_course.topics.all().values_list("name", flat=True))
-            & set(mock_courses.mitx_course.topics.all().values_list("name", flat=True))
-        )
-        == []
+        set(mock_courses.ocw_course.topics.all().values_list("name", flat=True))
+        & set(mock_courses.mitx_course.topics.all().values_list("name", flat=True))
+        == set()
     )
 
     results = client.get(
