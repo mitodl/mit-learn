@@ -3,7 +3,6 @@ import { renderWithProviders, screen, within, waitFor } from "@/test-utils"
 import OrganizationContent from "./OrganizationContent"
 import { setMockResponse } from "api/test-utils"
 import { urls, factories } from "api/mitxonline-test-utils"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import {
   organizationCoursesWithContracts,
   mitxonlineProgram,
@@ -23,14 +22,8 @@ import { faker } from "@faker-js/faker/locale/en"
 const makeCourseEnrollment = factories.enrollment.courseEnrollment
 const makeGrade = factories.enrollment.grade
 
-jest.mock("posthog-js/react")
-const mockedUseFeatureFlagEnabled = jest
-  .mocked(useFeatureFlagEnabled)
-  .mockImplementation(() => false)
-
 describe("OrganizationContent", () => {
   beforeEach(() => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(urls.enrollment.enrollmentsList(), [])
     setMockResponse.get(urls.enrollment.enrollmentsListV2(), [])
     setMockResponse.get(urls.programEnrollments.enrollmentsList(), [])
@@ -44,8 +37,9 @@ describe("OrganizationContent", () => {
     renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
 
     await screen.findByRole("heading", {
-      name: `Your ${orgX.name} Home`,
+      name: orgX.name,
     })
+    await screen.findByText(orgX.contracts[0].name)
 
     const programAHeader = await screen.findByText(programA.title)
     const programBHeader = await screen.findByText(programB.title)
@@ -307,8 +301,9 @@ describe("OrganizationContent", () => {
 
     // Wait for the header to appear
     await screen.findByRole("heading", {
-      name: `Your ${orgX.name} Home`,
+      name: orgX.name,
     })
+    await screen.findByText(orgX.contracts[0].name)
 
     // Since there are no programs or collections, no program/collection components should be rendered
     const programs = screen.queryAllByTestId("org-program-root")
@@ -338,8 +333,9 @@ describe("OrganizationContent", () => {
 
     // Wait for the header to appear
     await screen.findByRole("heading", {
-      name: `Your ${orgX.name} Home`,
+      name: orgX.name,
     })
+    await screen.findByText(orgX.contracts[0].name)
 
     // Should have no collections
     const collections = screen.queryAllByTestId("org-program-collection-root")

@@ -1,7 +1,7 @@
 import React from "react"
 import type { Metadata } from "next"
 import HomePage from "@/app-pages/HomePage/HomePage"
-import { getMetadataAsync } from "@/common/metadata"
+import { getMetadataAsync, safeGenerateMetadata } from "@/common/metadata"
 import { HydrationBoundary } from "@tanstack/react-query"
 import {
   learningResourceQueries,
@@ -17,23 +17,13 @@ import { prefetch } from "api/ssr/prefetch"
 export async function generateMetadata({
   searchParams,
 }: PageProps<"/">): Promise<Metadata> {
-  return await getMetadataAsync({
-    title: "Learn with MIT",
-    searchParams,
+  return safeGenerateMetadata(async () => {
+    return await getMetadataAsync({
+      title: "Learn with MIT",
+      searchParams,
+    })
   })
 }
-
-/**
- * Fallback to dynamic rendering to load as much of the page as possible.
- *
- * We could alternatively wrap the carousels (which use useSearchParams) in a
- * suspense boundary. This ostensibly leads to a faster response, since the
- * server can render the rest of the homepage at build time.
- *
- * But... We ache the result on CDN anyway, so it's essentially pre-build for
- * most requests, anyway.
- */
-export const dynamic = "force-dynamic"
 
 const Page: React.FC<PageProps<"/">> = async () => {
   const { dehydratedState } = await prefetch([

@@ -31,12 +31,18 @@ services:
     profiles:
       - frontend
     working_dir: /src
-    image: node:22.20
+    image: node:22.21
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
         yarn install --immutable
-        yarn watch
+        if [ "$${NODE_ENV}" = "production" ]; then
+          yarn build
+          echo "WARNING: Production preview will NOT re-render on file changes."
+          yarn preview
+        else
+          yarn watch
+        fi
     ports:
       - "8062:8062"
       - "6006:6006"

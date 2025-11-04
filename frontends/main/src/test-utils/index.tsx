@@ -5,7 +5,7 @@ import { ThemeProvider } from "ol-components"
 import { Provider as NiceModalProvider } from "@ebay/nice-modal-react"
 import type { QueryClient } from "@tanstack/react-query"
 
-import { makeQueryClient } from "@/app/getQueryClient"
+import { makeBrowserQueryClient } from "@/app/getQueryClient"
 import { render } from "@testing-library/react"
 import { factories, setMockResponse } from "api/test-utils"
 import type { User } from "api/hooks/user"
@@ -65,7 +65,7 @@ const renderWithProviders = (
   const allOpts = { ...defaultTestAppOptions, ...options }
   const { url } = allOpts
 
-  const queryClient = makeQueryClient()
+  const queryClient = makeBrowserQueryClient()
 
   if (allOpts.user) {
     const user = { ...defaultUser, ...allOpts.user }

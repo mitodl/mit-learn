@@ -7,7 +7,7 @@ from django.apps import apps
 from django.conf import settings as django_settings
 
 from learning_resources_search import tasks
-from learning_resources_search.api import get_similar_topics
+from learning_resources_search.api import get_similar_topics_qdrant
 from learning_resources_search.constants import (
     COURSE_TYPE,
     PERCOLATE_INDEX_TYPE,
@@ -125,11 +125,10 @@ class SearchIndexPlugin:
             "full_description": resource.full_description,
         }
 
-        topic_names = get_similar_topics(
+        topic_names = get_similar_topics_qdrant(
+            resource,
             text_doc,
             settings.OPEN_VIDEO_MAX_TOPICS,
-            settings.OPEN_VIDEO_MIN_TERM_FREQ,
-            settings.OPEN_VIDEO_MIN_DOC_FREQ,
         )
         return [{"name": topic_name} for topic_name in topic_names]
 

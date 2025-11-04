@@ -26,6 +26,7 @@ const makeProgram = factories.programs.program
 const makeProgramCollection = factories.programs.programCollection
 const makeCourseEnrollment = factories.enrollment.courseEnrollment
 const makeGrade = factories.enrollment.grade
+const makeContract = factories.contracts.contract
 
 const dashboardCourse: PartialFactory<DashboardCourse> = (...overrides) => {
   return mergeOverrides<DashboardCourse>(
@@ -127,6 +128,11 @@ const setupEnrollments = (includeExpired: boolean) => {
 const setupProgramsAndCourses = () => {
   const user = u.factories.user.user()
   const orgX = factories.organizations.organization({ name: "Org X" })
+  const contract = makeContract({
+    organization: orgX.id,
+    name: "Org X Contract",
+  })
+  orgX.contracts = [contract]
   const mitxOnlineUser = factories.user.user({ b2b_organizations: [orgX] })
   setMockResponse.get(u.urls.userMe.get(), user)
   setMockResponse.get(urls.userMe.get(), mitxOnlineUser)

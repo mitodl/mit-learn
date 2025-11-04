@@ -21,17 +21,11 @@ import {
 } from "@/common/urls"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import { OrganizationPage, ContractPage } from "@mitodl/mitxonline-api-axios/v2"
 
 jest.mock("posthog-js/react")
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
 
 describe("DashboardLayout", () => {
-  beforeEach(() => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(false)
-  })
-
   type SetupOptions = {
     initialUrl?: string
     organizations?: OrganizationPage[]
@@ -68,9 +62,6 @@ describe("DashboardLayout", () => {
   })
 
   test("Renders the expected tab links and labels", async () => {
-    // Enable organization dashboard feature flag for this test
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
-
     const organizations = [
       mitxOnlineFactories.organizations.organization({
         slug: "org-test-org",

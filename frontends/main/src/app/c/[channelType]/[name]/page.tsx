@@ -1,6 +1,6 @@
 import React from "react"
 import ChannelPage from "@/app-pages/ChannelPage/ChannelPage"
-import { channelsApi } from "api/clients"
+import { getServerQueryClient } from "api/ssr/serverQueryClient"
 import { ChannelTypeEnum, UnitChannel } from "api/v0"
 import {
   FeaturedListOfferedByEnum,
@@ -8,7 +8,7 @@ import {
   PaginatedLearningResourceOfferorDetailList,
   LearningResourceOfferorDetail,
 } from "api"
-import { getMetadataAsync } from "@/common/metadata"
+import { getMetadataAsync, safeGenerateMetadata } from "@/common/metadata"
 import { HydrationBoundary } from "@tanstack/react-query"
 import { prefetch } from "api/ssr/prefetch"
 import {
@@ -17,7 +17,6 @@ import {
 } from "api/hooks/learningResources"
 import { channelQueries } from "api/hooks/channels"
 import { testimonialsQueries } from "api/hooks/testimonials"
-import handleNotFound from "@/common/handleNotFound"
 import getSearchParams from "@/page-components/SearchDisplay/getSearchParams"
 import validateRequestParams from "@/page-components/SearchDisplay/validateRequestParams"
 import {
@@ -33,14 +32,18 @@ export async function generateMetadata({
 }: PageProps<"/c/[channelType]/[name]">) {
   const { channelType, name } = await params
 
-  const { data } = await handleNotFound(
-    channelsApi.channelsTypeRetrieve({ channel_type: channelType, name: name }),
-  )
+  return safeGenerateMetadata(async () => {
+    const queryClient = getServerQueryClient()
 
-  return getMetadataAsync({
-    searchParams,
-    title: data.title,
-    description: data.public_description,
+    const data = await queryClient.fetchQuery(
+      channelQueries.detailByType(channelType, name),
+    )
+
+    return getMetadataAsync({
+      searchParams,
+      title: data.title,
+      description: data.public_description,
+    })
   })
 }
 
@@ -93,8 +96,6 @@ const Page: React.FC<PageProps<"/c/[channelType]/[name]">> = async ({
   )
 
   const searchRequest = getSearchParams({
-    // @ts-expect-error Local openapi client https://www.npmjs.com/package/@mitodl/open-api-axios
-    // out of sync while we adding an enum value.
     requestParams: validateRequestParams(search),
     constantSearchParams,
     facetNames,
@@ -105,6 +106,7 @@ const Page: React.FC<PageProps<"/c/[channelType]/[name]">> = async ({
     [learningResourceQueries.search(searchRequest as LRSearchRequest)],
     queryClient,
   )
+
   return (
     <HydrationBoundary state={dehydratedState}>
       <ChannelPage />

@@ -128,19 +128,18 @@ def test_resource_similar_topics(mocker, settings):
     """The plugin function should return expected topics for a resource"""
     expected_topics = ["topic1", "topic2"]
     mock_similar_topics = mocker.patch(
-        "learning_resources_search.plugins.get_similar_topics",
+        "learning_resources_search.plugins.get_similar_topics_qdrant",
         return_value=expected_topics,
     )
     resource = LearningResourceFactory.create()
     topics = SearchIndexPlugin().resource_similar_topics(resource)
     assert topics == [{"name": topic} for topic in expected_topics]
     mock_similar_topics.assert_called_once_with(
+        resource,
         {
             "title": resource.title,
             "description": resource.description,
             "full_description": resource.full_description,
         },
         settings.OPEN_VIDEO_MAX_TOPICS,
-        settings.OPEN_VIDEO_MIN_TERM_FREQ,
-        settings.OPEN_VIDEO_MIN_DOC_FREQ,
     )

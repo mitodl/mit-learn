@@ -17,6 +17,16 @@ export const metadata = {
   metadataBase: NEXT_PUBLIC_ORIGIN ? new URL(NEXT_PUBLIC_ORIGIN) : null,
 }
 
+/**
+ * Force all pages to render dynamically (at request-time) rather than
+ * statically at build time. This simplifies the build, reduces build time, and
+ * ensures fresh data on each request to the NextJS server.
+ *
+ * It does increase server load, but this should not be significant since
+ * requests are cached on CDN.
+ */
+export const dynamic = "force-dynamic"
+
 export default function RootLayout({
   children,
 }: Readonly<{

@@ -3,8 +3,6 @@
 import React, { useEffect } from "react"
 import DOMPurify from "isomorphic-dompurify"
 import Image from "next/image"
-import { useFeatureFlagEnabled } from "posthog-js/react"
-import { FeatureFlags } from "@/common/feature_flags"
 import { useQueries, useQuery } from "@tanstack/react-query"
 import {
   programsQueries,
@@ -70,9 +68,10 @@ const OrganizationHeader: React.FC<{ org?: OrganizationPage }> = ({ org }) => {
       </ImageContainer>
       <Stack gap="8px">
         <Typography variant="h3" component="h1">
-          Your {org?.name} Home
+          {org?.name}
         </Typography>
-        <Typography variant="body1">MIT courses for {org?.name}</Typography>
+        {/* For now we will use the first contract name until we refactor this to be based on contracts / offerings */}
+        <Typography variant="body1">{org?.contracts[0]?.name}</Typography>
       </Stack>
     </HeaderRoot>
   )
@@ -360,9 +359,6 @@ type OrganizationContentInternalProps = {
 const OrganizationContentInternal: React.FC<
   OrganizationContentInternalProps
 > = ({ org }) => {
-  const isOrgDashboardEnabled = useFeatureFlagEnabled(
-    FeatureFlags.OrganizationDashboard,
-  )
   const orgId = org.id
   const contracts = useQuery(contractQueries.contractsList())
   const orgContracts = contracts.data?.filter(
@@ -378,8 +374,6 @@ const OrganizationContentInternal: React.FC<
   const programCollections = useQuery(
     programCollectionQueries.programCollectionsList({}),
   )
-
-  if (!isOrgDashboardEnabled) return null
 
   const transformedPrograms = programs.data?.results
     .filter((program) => program.collections.length === 0)

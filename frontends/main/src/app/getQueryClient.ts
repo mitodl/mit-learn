@@ -1,6 +1,7 @@
 // Based on https://tanstack.com/query/v5/docs/framework/react/guides/advanced-ssr
 
 import { QueryClient, isServer, focusManager } from "@tanstack/react-query"
+import { getServerQueryClient } from "api/ssr/serverQueryClient"
 
 type MaybeHasStatusAndDetail = {
   response?: {
@@ -15,7 +16,7 @@ const MAX_RETRIES = 3
 const THROW_ERROR_CODES = [400, 401, 403]
 const NO_RETRY_CODES = [400, 401, 403, 404, 405, 409, 422]
 
-const makeQueryClient = (): QueryClient => {
+const makeBrowserQueryClient = (): QueryClient => {
   return new QueryClient({
     defaultOptions: {
       queries: {
@@ -52,16 +53,6 @@ const makeQueryClient = (): QueryClient => {
           }
           return false
         },
-
-        /**
-         * By default, React Query gradually applies a backoff delay, though it is
-         * preferable that we do not significantly delay initial page renders on
-         * the server and instead allow the request to fail quickly so it can be
-         * subsequently fetched on the client. Note that we aim to prefetch any API
-         * content needed to render the page, so we don't generally expect the retry
-         * rules above to be in use on the server.
-         */
-        retryDelay: isServer ? 1000 : undefined,
       },
     },
   })
@@ -71,14 +62,15 @@ let browserQueryClient: QueryClient | undefined = undefined
 
 function getQueryClient() {
   if (isServer) {
-    // Server: always make a new query client
-    return makeQueryClient()
+    return getServerQueryClient()
   } else {
     // Browser: make a new query client if we don't already have one
     // This is very important, so we don't re-make a new client if React
     // suspends during the initial render. This may not be needed if we
     // have a suspense boundary BELOW the creation of the query client
-    if (!browserQueryClient) browserQueryClient = makeQueryClient()
+    if (!browserQueryClient) {
+      browserQueryClient = makeBrowserQueryClient()
+    }
     return browserQueryClient
   }
 }
@@ -135,5 +127,5 @@ focusManager.setEventListener((setFocused) => {
   }
 })
 
-export { makeQueryClient, getQueryClient }
+export { makeBrowserQueryClient, getQueryClient }
 export type { MaybeHasStatusAndDetail }

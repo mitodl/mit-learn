@@ -124,8 +124,6 @@ class VideoShortWebhookView(BaseWebhookView):
         """
         Get data from the serializer
         """
-        body = request.body
-        log.error("Webhook body: %s", body)
         serializer = VideoShortWebhookRequestSerializer(data=json.loads(request.body))
         serializer.is_valid(raise_exception=True)
         return serializer.validated_data

@@ -1,6 +1,23 @@
 Release Notes
 =============
 
+Version 0.47.8 (Released October 29, 2025)
+--------------
+
+- upgrade course-search-utils (#2656)
+- Vector based topics tagging for videos (#2649)
+- Update dependency ruff to v0.14.2 (#2632)
+- Update Node.js to v22.21.0 (#2634)
+
+Version 0.47.7 (Released October 28, 2025)
+--------------
+
+- remove org dashboard feature flag (#2654)
+- Avoid double slashes in paths (#2652)
+- use next_start_date when available in learning resource drawer (#2619)
+- Fix a BannerPage background issue (#2651)
+- Don't publish Professional Ed resources with blank run ids (#2637)
+
 Version 0.47.5 (Released October 28, 2025)
 --------------
 

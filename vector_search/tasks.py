@@ -38,6 +38,7 @@ from vector_search.constants import (
 )
 from vector_search.utils import (
     embed_learning_resources,
+    embed_topics,
     filter_existing_qdrant_points_by_ids,
     remove_qdrant_records,
     vector_point_id,
@@ -451,3 +452,10 @@ def embeddings_healthcheck():
         * 100,
     )
     """
+
+
+def sync_topics():
+    """
+    Sync topics to the Qdrant collection
+    """
+    embed_topics()
