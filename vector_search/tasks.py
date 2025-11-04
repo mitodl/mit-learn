@@ -380,6 +380,9 @@ def embeddings_healthcheck():
     remaining_resources = []
     content_file_point_ids = {}
     resource_point_ids = {}
+    total_resources = LearningResource.objects.filter(
+        Q(published=True) | Q(test_mode=True)
+    ).count()
     for lr in LearningResource.objects.filter(Q(published=True) | Q(test_mode=True)):
         run = (
             lr.best_run
@@ -421,37 +424,23 @@ def embeddings_healthcheck():
 
     remaining_resource_ids = [resource_point_ids[p]["id"] for p in remaining_resources]
     """
-
     log.info("remaining content files - %d", len(remaining_content_files))
     log.info("remaining learning resources - %d", len(remaining_resources))
 
-    """
-
-
-    log.info(
-        "remaining contentfiles - %d",
-        ContentFile.objects.filter(
-            run__learning_resource__readable_id__in=remaining
-        ).count(),
-    )
-    log.info(
-        "percent complete (by resource) - %f",
-        ((len(readable_ids) - len(remaining)) / len(readable_ids)) * 100,
-    )
-    log.info(
-        "percent complete (by contentfile) - %f",
-        (
-            (
-                ContentFile.objects.all().count()
-                - ContentFile.objects.filter(
-                    run__learning_resource__id__in=remaining
-                ).count()
-            )
-            / ContentFile.objects.all().count()
+    if len(remaining_resources) > 0:
+        log.info(
+            "percent complete (by resource) - %f",
+            ((total_resources - len(remaining_resources)) / total_resources) * 100,
         )
-        * 100,
-    )
-    """
+    if len(remaining_content_files) > 0:
+        log.info(
+            "percent complete (by contentfile) - %f",
+            (
+                (ContentFile.objects.all().count() - len(remaining_content_files))
+                / ContentFile.objects.all().count()
+            )
+            * 100,
+        )
 
 
 def sync_topics():
