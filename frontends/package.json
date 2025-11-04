@@ -8,7 +8,8 @@
     "ol-components",
     "ol-template",
     "ol-test-utilities",
-    "ol-utilities"
+    "ol-utilities",
+    "ol-ckeditor"
   ],
   "scripts": {
     "watch": "yarn workspace mit-learn watch",

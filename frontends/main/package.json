@@ -32,6 +32,7 @@
     "moment": "^2.30.1",
     "next": "^15.5.2",
     "next-nprogress-bar": "^2.4.2",
+    "ol-ckeditor": "0.0.0",
     "ol-components": "0.0.0",
     "ol-utilities": "0.0.0",
     "posthog-js": "^1.157.2",
