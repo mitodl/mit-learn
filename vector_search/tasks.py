@@ -446,7 +446,7 @@ def embeddings_healthcheck():
                     "run_ids": set(
                         ContentFile.objects.filter(
                             id__in=remaining_content_file_ids
-                        ).values_list("run__run_id", flat=True)
+                        ).values_list("run__run_id", flat=True)[:100]
                     ),
                 },
             )
