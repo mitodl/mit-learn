@@ -426,6 +426,14 @@ def embeddings_healthcheck():
     remaining_resource_ids = [
         resource_point_ids.get(p, {}).get("id") for p in remaining_resources
     ]
+    log.info(
+        "Embeddings healthcheck found %d missing content file embeddings",
+        len(remaining_content_files),
+    )
+    log.info(
+        "Embeddings healthcheck found %d missing resource embeddings",
+        len(remaining_resources),
+    )
     if len(remaining_content_files) > 0:
         with sentry_sdk.new_scope() as scope:
             scope.set_tag("healthcheck", "embeddings")
@@ -435,10 +443,15 @@ def embeddings_healthcheck():
                 {
                     "count": len(remaining_content_files),
                     "ids": remaining_content_file_ids,
+                    "run_ids": set(
+                        ContentFile.objects.filter(
+                            id__in=remaining_content_file_ids
+                        ).values_list("run__run_id", flat=True)
+                    ),
                 },
             )
             sentry_sdk.capture_message(
-                f"Warning: {len(remaining_content_files)} missing content file"
+                f"Warning: {len(remaining_content_files)} missing content file "
                 "embeddings detected"
             )
 
@@ -451,10 +464,15 @@ def embeddings_healthcheck():
                 {
                     "count": len(remaining_resource_ids),
                     "ids": remaining_resource_ids,
+                    "titles": list(
+                        LearningResource.objects.filter(
+                            id__in=remaining_resource_ids
+                        ).values_list("title", flat=True)
+                    ),
                 },
             )
             sentry_sdk.capture_message(
-                f"Warning: {len(remaining_resource_ids)} missing learning resource"
+                f"Warning: {len(remaining_resource_ids)} missing learning resource "
                 "embeddings detected"
             )
 
