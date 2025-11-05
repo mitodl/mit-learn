@@ -24,8 +24,10 @@ from vector_search.tasks import (
     embed_learning_resources_by_id,
     embed_new_content_files,
     embed_new_learning_resources,
+    embeddings_healthcheck,
     start_embed_resources,
 )
+from vector_search.utils import vector_point_id
 
 pytestmark = pytest.mark.django_db
 
@@ -388,3 +390,44 @@ def test_embed_new_content_files_without_runs(mocker, mocked_celery):
     embedded_ids = generate_embeddings_mock.si.mock_calls[0].args[0]
     for contentfile_id in content_files_without_run:
         assert contentfile_id in embedded_ids
+
+
+def test_embeddings_healthcheck_no_missing_embeddings(mocker):
+    """
+    Test embeddings_healthcheck when there are no missing embeddings
+    """
+    lr = LearningResourceFactory.create(published=True)
+    LearningResourceRunFactory.create(published=True, learning_resource=lr)
+    ContentFileFactory.create(run=lr.runs.first(), content="test", published=True)
+    mock_sentry = mocker.patch("vector_search.tasks.sentry_sdk", autospec=True)
+    mocker.patch(
+        "vector_search.tasks.filter_existing_qdrant_points_by_ids", return_value=[]
+    )
+
+    embeddings_healthcheck()
+    assert mock_sentry.capture_message.call_count == 0
+
+
+def test_embeddings_healthcheck_missing_both(mocker):
+    """
+    Test embeddings_healthcheck when there are missing content files and learning resources
+    """
+    lr = LearningResourceFactory.create(published=True)
+    LearningResourceRunFactory.create(published=True, learning_resource=lr)
+    cf = ContentFileFactory.create(run=lr.runs.first(), content="test", published=True)
+    mocker.patch(
+        "vector_search.tasks.filter_existing_qdrant_points_by_ids",
+        side_effect=[
+            [vector_point_id(lr.readable_id)],
+            [
+                vector_point_id(
+                    f"{cf.run.learning_resource.id}.{cf.run.run_id}.{cf.key}.0"
+                )
+            ],
+        ],
+    )
+    mock_sentry = mocker.patch("vector_search.tasks.sentry_sdk.capture_message")
+
+    embeddings_healthcheck()
+
+    assert mock_sentry.call_count == 2
