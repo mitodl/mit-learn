@@ -13,7 +13,14 @@ import { contractQueries } from "api/mitxonline-hooks/contracts"
 import * as transform from "./CoursewareDisplay/transform"
 import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
 import { DashboardCard } from "./CoursewareDisplay/DashboardCard"
-import { PlainList, Skeleton, Stack, styled, Typography } from "ol-components"
+import {
+  Link,
+  PlainList,
+  Skeleton,
+  Stack,
+  styled,
+  Typography,
+} from "ol-components"
 import {
   DashboardProgram,
   DashboardProgramCollection,
@@ -36,6 +43,7 @@ const HeaderRoot = styled.div({
   alignItems: "center",
   gap: "24px",
 })
+
 const ImageContainer = styled.div(({ theme }) => ({
   width: "120px",
   height: "118px",
@@ -50,6 +58,7 @@ const ImageContainer = styled.div(({ theme }) => ({
     height: "auto",
   },
 }))
+
 const OrganizationHeader: React.FC<{ org?: OrganizationPage }> = ({ org }) => {
   return (
     <HeaderRoot>
@@ -74,6 +83,47 @@ const OrganizationHeader: React.FC<{ org?: OrganizationPage }> = ({ org }) => {
         <Typography variant="body1">{org?.contracts[0]?.name}</Typography>
       </Stack>
     </HeaderRoot>
+  )
+}
+
+const WelcomeMessageExtra = styled(Typography)({
+  margin: 0,
+  p: {
+    margin: 0,
+  },
+})
+
+const WelcomeMessage: React.FC<{ org?: OrganizationPage }> = ({ org }) => {
+  const [showingMore, setShowingMore] = React.useState(false)
+  if (!org?.contracts || org.contracts.length === 0) {
+    return null
+  }
+  const contract = org.contracts[0]
+  const welcomeMessage = contract.welcome_message
+  const welcomeMessageExtra = DOMPurify.sanitize(contract.welcome_message_extra)
+  if (!welcomeMessage || !welcomeMessageExtra) {
+    return null
+  }
+  return (
+    <Stack gap="12px" paddingTop="40px" paddingBottom="24px">
+      <Stack direction="row" justifyContent="space-between" alignItems="center">
+        <Typography variant="body1">{welcomeMessage}</Typography>
+        <Link
+          scroll={false}
+          color="red"
+          size="small"
+          onClick={() => setShowingMore(!showingMore)}
+        >
+          {showingMore ? "Show less" : "Show more"}
+        </Link>
+      </Stack>
+      {showingMore && (
+        <WelcomeMessageExtra
+          variant="body1"
+          dangerouslySetInnerHTML={{ __html: welcomeMessageExtra }}
+        />
+      )}
+    </Stack>
   )
 }
 
@@ -388,48 +438,53 @@ const OrganizationContentInternal: React.FC<
   )
 
   return (
-    <OrganizationRoot>
-      <OrganizationHeader org={org} />
-      {programs.isLoading || !transformedPrograms
-        ? skeleton
-        : transformedPrograms.map((program) => (
-            <OrgProgramDisplay
-              key={program.key}
-              contracts={orgContracts}
-              program={program}
-              courseRunEnrollments={courseRunEnrollments.data}
-              programEnrollments={programEnrollments.data}
-              programLoading={programs.isLoading}
-              orgId={orgId}
-            />
-          ))}
-      {programCollections.isLoading ? (
-        skeleton
-      ) : (
-        <ProgramCollectionsList>
-          {programCollections.data?.results.map((collection) => {
-            const transformedCollection =
-              transform.mitxonlineProgramCollection(collection)
-            return (
-              <OrgProgramCollectionDisplay
-                key={collection.title}
-                collection={transformedCollection}
+    <>
+      <Stack>
+        <OrganizationHeader org={org} />
+        <WelcomeMessage org={org} />
+      </Stack>
+      <OrganizationRoot>
+        {programs.isLoading || !transformedPrograms
+          ? skeleton
+          : transformedPrograms.map((program) => (
+              <OrgProgramDisplay
+                key={program.key}
                 contracts={orgContracts}
-                enrollments={courseRunEnrollments.data}
+                program={program}
+                courseRunEnrollments={courseRunEnrollments.data}
+                programEnrollments={programEnrollments.data}
+                programLoading={programs.isLoading}
                 orgId={orgId}
               />
-            )
-          })}
-        </ProgramCollectionsList>
-      )}
-      {programs.data?.results.length === 0 && (
-        <HeaderRoot>
-          <Typography variant="h3" component="h1">
-            No programs found
-          </Typography>
-        </HeaderRoot>
-      )}
-    </OrganizationRoot>
+            ))}
+        {programCollections.isLoading ? (
+          skeleton
+        ) : (
+          <ProgramCollectionsList>
+            {programCollections.data?.results.map((collection) => {
+              const transformedCollection =
+                transform.mitxonlineProgramCollection(collection)
+              return (
+                <OrgProgramCollectionDisplay
+                  key={collection.title}
+                  collection={transformedCollection}
+                  contracts={orgContracts}
+                  enrollments={courseRunEnrollments.data}
+                  orgId={orgId}
+                />
+              )
+            })}
+          </ProgramCollectionsList>
+        )}
+        {programs.data?.results.length === 0 && (
+          <HeaderRoot>
+            <Typography variant="h3" component="h1">
+              No programs found
+            </Typography>
+          </HeaderRoot>
+        )}
+      </OrganizationRoot>
+    </>
   )
 }
 
