@@ -559,10 +559,6 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):  # noq
                 log.exception(error)
                 return error
 
-        api.delete_orphaned_indexes(
-            indexes, delete_reindexing_tags=remove_existing_reindexing_tags
-        )
-
         if COMBINED_INDEX in indexes:
             vector_model_id = get_vector_model_id()
             if not vector_model_id:
@@ -570,6 +566,12 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):  # noq
                     "No vector model is configured. Skipping hybrid index reindexing.",
                 )
                 indexes.remove(COMBINED_INDEX)
+                if len(indexes) == 0:
+                    return None
+
+        api.delete_orphaned_indexes(
+            indexes, delete_reindexing_tags=remove_existing_reindexing_tags
+        )
 
         new_backing_indices = {
             obj_type: api.create_backing_index(obj_type) for obj_type in indexes
