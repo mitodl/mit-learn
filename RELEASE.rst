@@ -1,6 +1,16 @@
 Release Notes
 =============
 
+Version 0.47.9 (Released November 05, 2025)
+--------------
+
+- don't use next_start_date for "anytime" courses & programs (#2670)
+- Shanbady/fix subscription groups (#2664)
+- Server side query retry and caching with request scoped QueryClient (#2596)
+- alter org page header based on new requirements (#2659)
+- Get rid of debug code (#2661)
+- Eliminate build-time API calls, default to dynamic rendering (#2660)
+
 Version 0.47.8 (Released October 29, 2025)
 --------------
 
