@@ -14945,7 +14945,7 @@ __metadata:
     next: "npm:^15.5.2"
     next-nprogress-bar: "npm:^2.4.2"
     next-router-mock: "npm:^1.0.2"
-    ol-ckeditor: "npm:0.0.0"
+    ol-ckeditor: "workspace:*"
     ol-components: "npm:0.0.0"
     ol-test-utilities: "npm:0.0.0"
     ol-utilities: "npm:0.0.0"
@@ -16651,12 +16651,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ol-ckeditor@npm:0.0.0, ol-ckeditor@workspace:frontends/ol-ckeditor":
+"ol-ckeditor@workspace:*, ol-ckeditor@workspace:frontends/ol-ckeditor":
   version: 0.0.0-use.local
   resolution: "ol-ckeditor@workspace:frontends/ol-ckeditor"
   dependencies:
     "@ckeditor/ckeditor5-react": "npm:^6.3.0"
     "@mitodl/smoot-design": "npm:^6.17.1"
+    "@tanstack/react-query": "npm:^5.66.0"
     api: "workspace:*"
     ckeditor5: "npm:^42.0.0"
     next: "npm:^15.5.2"

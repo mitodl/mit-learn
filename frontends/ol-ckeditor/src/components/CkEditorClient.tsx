@@ -5,7 +5,6 @@ import dynamic from "next/dynamic"
 import { type EditorConfig } from "ckeditor5"
 import type { Editor } from "@ckeditor/ckeditor5-core"
 import { LoadingSpinner } from "ol-components"
-import { useCkeditorToken } from "api/hooks/ckeditor"
 
 import "ckeditor5/ckeditor5.css"
 
@@ -28,9 +27,6 @@ export const CKEditorClient: React.FC<CKEditorClientProps> = ({
   const [data, setData] = useState(value || "")
   const [isLoader, setIsLoader] = useState(false)
 
-  const { data: ckeditorTokenData, isLoading: isCkeditorTokenLoading } =
-    useCkeditorToken(true)
-
   useEffect(() => {
     setIsLoader(true)
     ;(async () => {
@@ -50,9 +46,8 @@ export const CKEditorClient: React.FC<CKEditorClientProps> = ({
           Image,
           ImageToolbar,
           ImageUpload,
-          EasyImage,
           MediaEmbed,
-          CloudServices,
+          Base64UploadAdapter,
           ImageResize,
           ImageResizeEditing,
           ImageResizeHandles,
@@ -129,8 +124,7 @@ export const CKEditorClient: React.FC<CKEditorClientProps> = ({
           Image,
           ImageToolbar,
           ImageUpload,
-          EasyImage,
-          CloudServices,
+          Base64UploadAdapter,
           ImageResize,
           ImageResizeEditing,
           ImageResizeHandles,
@@ -182,7 +176,7 @@ export const CKEditorClient: React.FC<CKEditorClientProps> = ({
   }, [])
 
   const editorConfig: EditorConfig = useMemo(() => {
-    if (!EditorModules || isCkeditorTokenLoading) return {}
+    if (!EditorModules) return {}
 
     return {
       plugins: [
@@ -208,8 +202,7 @@ export const CKEditorClient: React.FC<CKEditorClientProps> = ({
         EditorModules.Image,
         EditorModules.ImageToolbar,
         EditorModules.ImageUpload,
-        EditorModules.EasyImage,
-        EditorModules.CloudServices,
+        EditorModules.Base64UploadAdapter,
         EditorModules.ImageResize,
         EditorModules.ImageResizeEditing,
         EditorModules.ImageResizeHandles,
@@ -335,24 +328,14 @@ export const CKEditorClient: React.FC<CKEditorClientProps> = ({
         ],
         resizeUnit: "%",
       },
-      cloudServices: {
-        tokenUrl: async () => ckeditorTokenData?.token,
-        uploadUrl: process.env.NEXT_PUBLIC_CKEDITOR_UPLOAD_URL || "",
-      },
       mediaEmbed: {
         previewsInData: true,
       },
     } as EditorConfig
-  }, [EditorModules, ckeditorTokenData, isCkeditorTokenLoading])
+  }, [EditorModules])
 
-  if (!EditorModules || !ckeditorTokenData?.token)
-    return (
-      <LoadingSpinner
-        color="inherit"
-        loading={isLoader || !ckeditorTokenData?.token}
-        size={16}
-      />
-    )
+  if (!EditorModules)
+    return <LoadingSpinner color="inherit" loading={isLoader} size={16} />
 
   return (
     <div>
