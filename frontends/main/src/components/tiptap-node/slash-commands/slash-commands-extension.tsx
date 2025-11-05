@@ -288,4 +288,3 @@ export const renderSlashCommands = () => {
     },
   }
 }
-
