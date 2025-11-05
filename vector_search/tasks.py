@@ -423,16 +423,13 @@ def embeddings_healthcheck():
     remaining_content_file_ids = [
         content_file_point_ids.get(p, {}).get("id") for p in remaining_content_files
     ]
-
     remaining_resource_ids = [
         resource_point_ids.get(p, {}).get("id") for p in remaining_resources
     ]
-
-    log.info("remaining content files - %d", len(remaining_content_files))
-    log.info("remaining learning resources - %d", len(remaining_resources))
-
     if len(remaining_content_files) > 0:
         with sentry_sdk.new_scope() as scope:
+            scope.set_tag("healthcheck", "embeddings")
+            scope.set_tag("alert_type", "missing_content_file_embeddings")
             scope.set_context(
                 "missing_content_file_embeddings",
                 {
@@ -440,15 +437,15 @@ def embeddings_healthcheck():
                     "ids": remaining_content_file_ids,
                 },
             )
-            scope.set_tag("alert_type", "missing_content_file_embeddings")
-            scope.level = "warning"
-
             sentry_sdk.capture_message(
-                f"Warning: {len(remaining_content_files)} missing contentfile"
+                f"Warning: {len(remaining_content_files)} missing content file"
                 "embeddings detected"
             )
+
     if len(remaining_resources) > 0:
         with sentry_sdk.new_scope() as scope:
+            scope.set_tag("healthcheck", "embeddings")
+            scope.set_tag("alert_type", "missing_learning_resource_embeddings")
             scope.set_context(
                 "missing_learning_resource_embeddings",
                 {
@@ -456,11 +453,9 @@ def embeddings_healthcheck():
                     "ids": remaining_resource_ids,
                 },
             )
-            scope.set_tag("alert_type", "missing_learning_resource_embeddings")
-            scope.level = "warning"
             sentry_sdk.capture_message(
-                f"Warning: {len(remaining_resource_ids)} missing learning"
-                " resource embeddings detected"
+                f"Warning: {len(remaining_resource_ids)} missing learning resource"
+                "embeddings detected"
             )
 
 
