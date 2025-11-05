@@ -1,5 +1,11 @@
 import React from "react"
-import { renderWithProviders, screen, within, waitFor } from "@/test-utils"
+import {
+  renderWithProviders,
+  screen,
+  within,
+  waitFor,
+  user,
+} from "@/test-utils"
 import OrganizationContent from "./OrganizationContent"
 import { setMockResponse } from "api/test-utils"
 import { urls, factories } from "api/mitxonline-test-utils"
@@ -154,14 +160,11 @@ describe("OrganizationContent", () => {
       results: [programCollection],
     })
 
-    // Mock individual program API calls for the collection
+    // Mock the new bulk programs API call with array of IDs
+    const programIds = [programB.id, programA.id] // B first, then A to match collection order
     setMockResponse.get(
-      expect.stringContaining(`/api/v2/programs/?id=${programA.id}`),
-      { results: [programA] },
-    )
-    setMockResponse.get(
-      expect.stringContaining(`/api/v2/programs/?id=${programB.id}`),
-      { results: [programB] },
+      expect.stringContaining(`/api/v2/programs/?id=${programIds.join("%2C")}`),
+      { results: [programB, programA] }, // Return in same order as requested
     )
 
     // Mock the bulk course API call with first course from each program
@@ -169,11 +172,13 @@ describe("OrganizationContent", () => {
     const firstCourseB = coursesB.find((c) => c.id === programB.courses[0])
     const firstCourseIds = [programB.courses[0], programA.courses[0]] // B first, then A to match collection order
 
+    // Mock the program collection courses query
     setMockResponse.get(
-      expect.stringContaining(
-        `/api/v2/courses/?id=${firstCourseIds.join("%2C")}`,
-      ),
-      { results: [firstCourseB, firstCourseA] }, // Response order should match request order
+      urls.courses.coursesList({
+        id: firstCourseIds,
+        org_id: orgX.id,
+      }),
+      { results: [firstCourseB, firstCourseA] },
     )
 
     renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
@@ -182,23 +187,24 @@ describe("OrganizationContent", () => {
       name: programCollection.title,
     })
     expect(collectionHeader).toBeInTheDocument()
+
     const collectionItems = await screen.findAllByTestId(
       "org-program-collection-root",
     )
     expect(collectionItems.length).toBe(1)
+
     const collection = within(collectionItems[0])
     expect(collection.getByText(programCollection.title)).toBeInTheDocument()
 
-    // Wait for program cards to be rendered
-    await waitFor(() => {
-      const programCards = collection.getAllByTestId("enrollment-card-desktop")
-      expect(programCards.length).toBe(2)
-    })
+    // Wait for and verify the actual course cards are displayed
+    const courseCards = await collection.findAllByTestId(
+      "enrollment-card-desktop",
+    )
+    expect(courseCards.length).toBe(2)
 
-    // Verify the order matches the programCollection.programs array [programB.id, programA.id]
-    const programCards = collection.getAllByTestId("enrollment-card-desktop")
-    expect(programCards[0]).toHaveTextContent(firstCourseB!.title)
-    expect(programCards[1]).toHaveTextContent(firstCourseA!.title)
+    // Verify the first course from each program is displayed in collection order
+    expect(courseCards[0]).toHaveTextContent(firstCourseB!.title)
+    expect(courseCards[1]).toHaveTextContent(firstCourseA!.title)
   })
 
   test("Program collection displays the first course from each program", async () => {
@@ -216,6 +222,7 @@ describe("OrganizationContent", () => {
       results: [programCollection],
     })
 
+    // Mock the new bulk programs API call with array of IDs
     setMockResponse.get(
       expect.stringContaining(`/api/v2/programs/?id=${programA.id}`),
       { results: [programA] },
@@ -225,29 +232,31 @@ describe("OrganizationContent", () => {
     const firstCourseId = programA.courses[0]
     const firstCourse = coursesA.find((c) => c.id === firstCourseId)
     setMockResponse.get(
-      expect.stringContaining(`/api/v2/courses/?id=${firstCourseId}`),
+      urls.courses.coursesList({
+        id: [firstCourseId],
+        org_id: orgX.id,
+      }),
       { results: [firstCourse] },
     )
 
     renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
 
     const collection = await screen.findByTestId("org-program-collection-root")
+    const collectionWrapper = within(collection)
 
-    // Wait for program cards to be rendered
-    const programCards = await waitFor(() => {
-      const programCards = within(collection).getAllByTestId(
-        "enrollment-card-desktop",
-      )
-      expect(programCards.length).toBeGreaterThan(0)
-      return programCards
-    })
+    expect(
+      collectionWrapper.getByRole("heading", { name: programCollection.title }),
+    ).toBeInTheDocument()
 
-    // Should display the first course by program.courseIds order
-    expect(programCards[0]).toHaveTextContent(firstCourse!.title)
+    // Wait for and verify the first course from the program is displayed
+    const courseCard = await collectionWrapper.findByTestId(
+      "enrollment-card-desktop",
+    )
+    expect(courseCard).toHaveTextContent(firstCourse!.title)
   })
 
   test("Does not render a program separately if it is part of a collection", async () => {
-    const { orgX, programA, programB, programCollection } =
+    const { orgX, programA, programB, programCollection, coursesA, coursesB } =
       setupProgramsAndCourses()
 
     // Set up the collection to include both programs
@@ -267,14 +276,23 @@ describe("OrganizationContent", () => {
       results: [programCollection],
     })
 
-    // Mock individual program API calls for the collection
+    // Mock the bulk programs API call for the collection
+    const programIds = [programB.id, programA.id]
     setMockResponse.get(
-      expect.stringContaining(`/api/v2/programs/?id=${programA.id}`),
-      { results: [programA] },
+      expect.stringContaining(`/api/v2/programs/?id=${programIds.join("%2C")}`),
+      { results: [programB, programA] },
     )
+
+    // Mock course API calls for program collection (first courses)
+    const firstCourseIds = [programB.courses[0], programA.courses[0]]
+    const firstCourseA = coursesA.find((c) => c.id === programA.courses[0])
+    const firstCourseB = coursesB.find((c) => c.id === programB.courses[0])
     setMockResponse.get(
-      expect.stringContaining(`/api/v2/programs/?id=${programB.id}`),
-      { results: [programB] },
+      urls.courses.coursesList({
+        id: firstCourseIds,
+        org_id: orgX.id,
+      }),
+      { results: [firstCourseB, firstCourseA] },
     )
 
     renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
@@ -372,14 +390,11 @@ describe("OrganizationContent", () => {
       results: [programCollection],
     })
 
-    // Mock individual program API calls for the collection
+    // Mock the bulk programs API call for the collection
+    const programIds = [programANoCourses.id, programB.id]
     setMockResponse.get(
-      expect.stringContaining(`/api/v2/programs/?id=${programANoCourses.id}`),
-      { results: [programANoCourses] },
-    )
-    setMockResponse.get(
-      expect.stringContaining(`/api/v2/programs/?id=${programB.id}`),
-      { results: [programB] },
+      expect.stringContaining(`/api/v2/programs/?id=${programIds.join("%2C")}`),
+      { results: [programANoCourses, programB] },
     )
 
     // Mock bulk course API call - only programB has courses, so only its first course should be included
@@ -387,7 +402,10 @@ describe("OrganizationContent", () => {
     const firstCourseB = coursesB.find((c) => c.id === firstCourseBId)
 
     setMockResponse.get(
-      expect.stringContaining(`/api/v2/courses/?id=${firstCourseBId}`),
+      urls.courses.coursesList({
+        id: [firstCourseBId], // Only programB's first course since programA has no courses
+        org_id: orgX.id,
+      }),
       { results: [firstCourseB] },
     )
 
@@ -403,12 +421,9 @@ describe("OrganizationContent", () => {
     // Should see the collection header
     expect(collection.getByText(programCollection.title)).toBeInTheDocument()
 
-    // Should see programB's course
-    await waitFor(() => {
-      expect(
-        collection.getAllByText(firstCourseB!.title).length,
-      ).toBeGreaterThan(0)
-    })
+    // Wait for and verify the course from programB is displayed
+    const courseCard = await collection.findByTestId("enrollment-card-desktop")
+    expect(courseCard).toHaveTextContent(firstCourseB!.title)
   })
 
   test("Shows the program certificate link button if the program has a certificate", async () => {
@@ -775,5 +790,137 @@ describe("OrganizationContent", () => {
     renderWithProviders(<OrganizationContent orgSlug="not-found" />)
 
     await screen.findByRole("heading", { name: "Organization not found" })
+  })
+
+  test("displays welcome message when contract has welcome_message and welcome_message_extra", async () => {
+    const { orgX } = setupProgramsAndCourses()
+
+    orgX.contracts[0].welcome_message = "Welcome to our program!"
+    orgX.contracts[0].welcome_message_extra =
+      "<p>This is additional information with <strong>HTML formatting</strong>.</p>"
+
+    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+
+    await screen.findByText("Welcome to our program!")
+
+    expect(screen.getByText("Show more")).toBeInTheDocument()
+
+    expect(screen.queryByText("This is additional information with")).toBeNull()
+  })
+
+  test("shows and hides extra welcome message content when clicking show more/less", async () => {
+    const { orgX } = setupProgramsAndCourses()
+
+    orgX.contracts[0].welcome_message = "Welcome message"
+    orgX.contracts[0].welcome_message_extra =
+      "<p>Extra content with <em>emphasis</em></p>"
+
+    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+
+    const showMoreLink = await screen.findByText("Show more")
+
+    await user.click(showMoreLink)
+
+    expect(screen.getByText("Extra content with")).toBeInTheDocument()
+    expect(screen.getByText("emphasis")).toBeInTheDocument()
+
+    expect(screen.getByText("Show less")).toBeInTheDocument()
+    expect(screen.queryByText("Show more")).toBeNull()
+
+    await user.click(screen.getByText("Show less"))
+
+    expect(screen.queryByText("Extra content with")).toBeNull()
+
+    expect(screen.getByText("Show more")).toBeInTheDocument()
+    expect(screen.queryByText("Show less")).toBeNull()
+  })
+
+  test("does not display welcome message when welcome_message is missing", async () => {
+    const { orgX } = setupProgramsAndCourses()
+
+    const contractWithoutWelcome = { ...orgX.contracts[0] }
+    delete (contractWithoutWelcome as Partial<typeof contractWithoutWelcome>)
+      .welcome_message
+    contractWithoutWelcome.welcome_message_extra = "<p>Extra content</p>"
+    orgX.contracts[0] = contractWithoutWelcome
+
+    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+
+    expect(screen.queryByText("Show more")).toBeNull()
+    expect(screen.queryByText("Extra content")).toBeNull()
+  })
+
+  test("does not display welcome message when welcome_message_extra is missing", async () => {
+    const { orgX } = setupProgramsAndCourses()
+
+    const contractWithoutExtra = { ...orgX.contracts[0] }
+    contractWithoutExtra.welcome_message = "Welcome message"
+    delete (contractWithoutExtra as Partial<typeof contractWithoutExtra>)
+      .welcome_message_extra
+    orgX.contracts[0] = contractWithoutExtra
+
+    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+
+    expect(screen.queryByText("Welcome message")).toBeNull()
+    expect(screen.queryByText("Show more")).toBeNull()
+  })
+
+  test("does not display welcome message when organization has no contracts", async () => {
+    const { orgX } = setupProgramsAndCourses()
+
+    orgX.contracts = []
+
+    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+
+    expect(screen.queryByText("Show more")).toBeNull()
+  })
+
+  test("sanitizes HTML content in welcome_message_extra", async () => {
+    const { orgX } = setupProgramsAndCourses()
+
+    orgX.contracts[0].welcome_message = "Welcome message"
+    orgX.contracts[0].welcome_message_extra =
+      '<p>Safe content</p><script>alert("xss")</script><img src="x" onerror="alert(1)">'
+
+    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+
+    const showMoreLink = await screen.findByText("Show more")
+    await user.click(showMoreLink)
+
+    expect(screen.getByText("Safe content")).toBeInTheDocument()
+
+    expect(document.querySelector("script")).toBeNull()
+  })
+
+  test("uses the first contract for welcome message when multiple contracts exist", async () => {
+    const { orgX } = setupProgramsAndCourses()
+
+    const secondContract = factories.contracts.contract({
+      organization: orgX.id,
+      name: "Second Contract",
+      welcome_message: "Second welcome message",
+      welcome_message_extra: "<p>Second extra content</p>",
+    })
+
+    orgX.contracts = [
+      {
+        ...orgX.contracts[0],
+        welcome_message: "First welcome message",
+        welcome_message_extra: "<p>First extra content</p>",
+      },
+      secondContract,
+    ]
+
+    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+
+    await screen.findByText("First welcome message")
+
+    expect(screen.queryByText("Second welcome message")).toBeNull()
+
+    const showMoreLink = screen.getByText("Show more")
+    await user.click(showMoreLink)
+
+    expect(screen.getByText("First extra content")).toBeInTheDocument()
+    expect(screen.queryByText("Second extra content")).toBeNull()
   })
 })

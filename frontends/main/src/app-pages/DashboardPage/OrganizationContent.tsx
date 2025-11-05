@@ -3,7 +3,7 @@
 import React, { useEffect } from "react"
 import DOMPurify from "isomorphic-dompurify"
 import Image from "next/image"
-import { useQueries, useQuery } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import {
   programsQueries,
   programCollectionQueries,
@@ -190,32 +190,30 @@ const useProgramCollectionCourses = (
   programs: DashboardProgramCollectionProgram[],
   orgId: number,
 ) => {
-  const programQueries = useQueries({
-    queries: programs
-      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-      .map((program) =>
-        programsQueries.programsList({ id: program.id, org_id: orgId }),
-      ),
+  const programIds = programs
+    .map((program) => program.id)
+    .filter((id) => id !== undefined)
+  const programsQuery = useQuery({
+    ...programsQueries.programsList({ id: programIds, org_id: orgId }),
+    enabled: programIds.length > 0,
   })
+  const isLoading = programsQuery.isLoading
 
-  const isLoading = programQueries.some((query) => query.isLoading)
-
-  const programsWithCourses = programQueries
-    .map((query) => {
-      if (!query.data?.results?.length) {
+  const programsWithCourses = programsQuery.data?.results
+    .map((program) => {
+      if (!program) {
         return null
       }
-      const program = query.data.results[0]
       const transformedProgram = transform.mitxonlineProgram(program)
       return {
-        programId: query.data.results[0].id,
+        programId: program.id,
         program: transformedProgram,
         hasCourses: program.courses && program.courses.length > 0,
       }
     })
     .filter(Boolean)
 
-  const hasAnyCourses = programsWithCourses.some((p) => p?.hasCourses)
+  const hasAnyCourses = programsWithCourses?.some((p) => p?.hasCourses)
 
   return {
     isLoading,
@@ -234,18 +232,21 @@ const OrgProgramCollectionDisplay: React.FC<{
   const { isLoading, programsWithCourses, hasAnyCourses } =
     useProgramCollectionCourses(collection.programs, orgId)
   const firstCourseIds = programsWithCourses
-    .map((p) => p?.program.courseIds[0])
+    ?.map((p) => p?.program.courseIds[0])
     .filter((id): id is number => id !== undefined)
   const courses = useQuery({
     ...coursesQueries.coursesList({
       id: firstCourseIds,
       org_id: orgId,
     }),
-    enabled: firstCourseIds.length > 0,
+    enabled: firstCourseIds !== undefined && firstCourseIds.length > 0,
   })
   const rawCourses =
     courses.data?.results.sort((a, b) => {
-      return firstCourseIds.indexOf(a.id) - firstCourseIds.indexOf(b.id)
+      return (
+        (firstCourseIds?.indexOf(a.id) ?? -1) -
+        (firstCourseIds?.indexOf(b.id) ?? -1)
+      )
     }) ?? []
   const transformedCourses = transform.organizationCoursesWithContracts({
     courses: rawCourses,
@@ -292,7 +293,7 @@ const OrgProgramCollectionDisplay: React.FC<{
       {header}
       <PlainList>
         {courses.isLoading &&
-          programsWithCourses.map((item, index) => (
+          programsWithCourses?.map((item, index) => (
             <Skeleton
               key={`${collection.id}-${item?.programId}-${index}`}
               width="100%"
