@@ -544,6 +544,27 @@ describe.each([
     },
   )
 
+  test("CoursewareButton shows 'View Course' when course has ended even if not completed", () => {
+    setupUserApis()
+    const course = dashboardCourse({
+      run: {
+        startDate: faker.date.past().toISOString(),
+        endDate: faker.date.past().toISOString(), // Course has ended
+      },
+      enrollment: {
+        status: EnrollmentStatus.Enrolled, // User is enrolled but not completed
+        mode: EnrollmentMode.Audit,
+      },
+    })
+    renderWithProviders(
+      <DashboardCard titleAction="marketing" dashboardResource={course} />,
+    )
+    const card = getCard()
+    const coursewareButton = within(card).getByTestId("courseware-button")
+
+    expect(coursewareButton).toHaveTextContent("View Course")
+  })
+
   const setupEnrollmentApis = (opts: {
     user: ReturnType<typeof mitxUser>
     course: ReturnType<typeof dashboardCourse>
