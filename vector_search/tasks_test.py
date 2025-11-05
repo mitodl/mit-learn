@@ -10,8 +10,10 @@ from learning_resources.etl.constants import (
 )
 from learning_resources.factories import (
     ContentFileFactory,
+    ContentSummarizerConfigurationFactory,
     CourseFactory,
     LearningResourceFactory,
+    LearningResourcePlatformFactory,
     LearningResourceRunFactory,
     ProgramFactory,
 )
@@ -431,3 +433,49 @@ def test_embeddings_healthcheck_missing_both(mocker):
     embeddings_healthcheck()
 
     assert mock_sentry.call_count == 2
+
+
+def test_embeddings_healthcheck_missing_summaries(mocker):
+    """
+    Test embeddings_healthcheck for missing contentfile summaries/flashcards
+    """
+    content_extension = [".srt"]
+    content_type = ["file"]
+    platform = LearningResourcePlatformFactory.create()
+    ContentSummarizerConfigurationFactory.create(
+        allowed_extensions=content_extension,
+        allowed_content_types=content_type,
+        is_active=True,
+        llm_model="test",
+        platform__code=platform.code,
+    )
+    resource = LearningResourceFactory.create(
+        published=True, require_summaries=True, platform=platform
+    )
+    resource.runs.all().delete()
+    learning_resource_run = LearningResourceRunFactory.create(
+        published=True,
+        learning_resource=resource,
+    )
+    learning_resource_run.learning_resource = resource
+    learning_resource_run.save()
+
+    ContentFileFactory.create(
+        published=True,
+        content="test",
+        file_extension=content_extension[0],
+        summary="",
+        content_type=content_type[0],
+        run=learning_resource_run,
+    )
+    mocker.patch(
+        "vector_search.tasks.filter_existing_qdrant_points_by_ids",
+    )
+    mock_sentry = mocker.patch("vector_search.tasks.sentry_sdk.capture_message")
+
+    embeddings_healthcheck()
+    assert mock_sentry.call_count == 1
+    assert (
+        mock_sentry.mock_calls[0].args[0]
+        == "Warning: 1 missing content file summaries detected"
+    )
