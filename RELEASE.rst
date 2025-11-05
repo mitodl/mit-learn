@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.47.9
+Version 0.47.9 (Released November 05, 2025)
 --------------
 
 - don't use next_start_date for "anytime" courses & programs (#2670)
