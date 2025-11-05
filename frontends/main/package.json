@@ -37,6 +37,7 @@
     "@tiptap/pm": "^3.10.1",
     "@tiptap/react": "^3.10.1",
     "@tiptap/starter-kit": "^3.10.1",
+    "@tiptap/suggestion": "^3.10.2",
     "api": "workspace:*",
     "classnames": "^2.5.1",
     "formik": "^2.4.6",

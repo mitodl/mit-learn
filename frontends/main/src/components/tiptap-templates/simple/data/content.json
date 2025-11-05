@@ -79,6 +79,18 @@
       "content": [
         {
           "type": "text",
+          "text": "Type / to open the commands menu."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "attrs": {
+        "textAlign": null
+      },
+      "content": [
+        {
+          "type": "text",
           "text": "Integrate it by following the "
         },
         {

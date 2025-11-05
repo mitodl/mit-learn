@@ -6843,6 +6843,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@tiptap/suggestion@npm:^3.10.2":
+  version: 3.10.2
+  resolution: "@tiptap/suggestion@npm:3.10.2"
+  peerDependencies:
+    "@tiptap/core": ^3.10.2
+    "@tiptap/pm": ^3.10.2
+  checksum: 10/807e1a2453e95de9d4676742d68ecd418262744dde5deecdffab5cb0c956eb5258ac41796bd72c168579e73951532dc550ee040096cbd1ace4d0bad0ceba614d
+  languageName: node
+  linkType: hard
+
 "@tootallnate/once@npm:2":
   version: 2.0.0
   resolution: "@tootallnate/once@npm:2.0.0"
@@ -15308,6 +15318,7 @@ __metadata:
     "@tiptap/pm": "npm:^3.10.1"
     "@tiptap/react": "npm:^3.10.1"
     "@tiptap/starter-kit": "npm:^3.10.1"
+    "@tiptap/suggestion": "npm:^3.10.2"
     "@types/jest": "npm:^29.5.12"
     "@types/lodash": "npm:^4.17.7"
     "@types/lodash.throttle": "npm:^4.1.9"
