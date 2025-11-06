@@ -108,7 +108,7 @@ const WelcomeMessage: React.FC<{ org?: OrganizationPage }> = ({ org }) => {
   return (
     <Stack gap="12px" paddingTop="40px" paddingBottom="24px">
       <Stack direction="row" justifyContent="space-between" alignItems="center">
-        <Typography variant="body1">{welcomeMessage}</Typography>
+        <Typography variant="h5">{welcomeMessage}</Typography>
         <Link
           scroll={false}
           color="red"
