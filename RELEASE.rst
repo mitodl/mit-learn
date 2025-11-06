@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+Version 0.47.10
+---------------
+
+- org contract welcome message display (#2677)
+- Add periodic topic collection sync task (#2673)
+- Resource card headings for screen reader navigation (#2658)
+- fix CTA text logic (#2675)
+- Fix OpenAPI Client Generation for multivalue query params (#2669)
+
 Version 0.47.9 (Released November 05, 2025)
 --------------
 
