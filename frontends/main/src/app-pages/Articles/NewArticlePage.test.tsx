@@ -4,6 +4,13 @@ import { waitFor, fireEvent } from "@testing-library/react"
 import { factories, urls } from "api/test-utils"
 import { NewArticlePage } from "./NewArticlePage"
 
+const pushMock = jest.fn()
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: pushMock,
+  }),
+}))
+
 class TestErrorBoundary extends React.Component<{ children: React.ReactNode }> {
   state = { hasError: false }
 
@@ -99,10 +106,9 @@ describe("NewArticlePage", () => {
     fireEvent.change(titleInput, { target: { value: "My Article" } })
 
     mockMutate.mockImplementation((data, opts) => {
-      opts.onSuccess({ id: 101 })
+      opts.onSuccess({ id: "101" })
     })
 
-    // Click save
     fireEvent.click(screen.getByText(/save article/i))
 
     expect(mockMutate).toHaveBeenCalledWith(
@@ -110,9 +116,7 @@ describe("NewArticlePage", () => {
       expect.any(Object),
     )
 
-    expect(
-      await screen.findByText(/Article saved successfully/i),
-    ).toBeInTheDocument()
+    expect(pushMock).toHaveBeenCalledWith("/articles/101", undefined)
   })
 
   test("shows error on failure", async () => {

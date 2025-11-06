@@ -14905,6 +14905,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "main@workspace:frontends/main"
   dependencies:
+    "@ckeditor/ckeditor5-react": "npm:^6.3.0"
     "@ebay/nice-modal-react": "npm:^1.2.13"
     "@emotion/cache": "npm:^11.13.1"
     "@emotion/styled": "npm:^11.11.0"
@@ -14929,6 +14930,7 @@ __metadata:
     "@types/slick-carousel": "npm:^1"
     api: "workspace:*"
     async_hooks: "npm:^1.0.0"
+    ckeditor5: "npm:^42.0.0"
     classnames: "npm:^2.5.1"
     eslint: "npm:8.57.1"
     eslint-config-next: "npm:^14.2.7"

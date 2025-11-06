@@ -334,6 +334,14 @@ export const CKEditorClient: React.FC<CKEditorClientProps> = ({
     } as EditorConfig
   }, [EditorModules])
 
+  useEffect(() => {
+    if (!data) {
+      setData(value)
+    }
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value])
+
   if (!EditorModules)
     return <LoadingSpinner color="inherit" loading={isLoader} size={16} />
 

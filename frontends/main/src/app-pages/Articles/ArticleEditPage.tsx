@@ -1,12 +1,13 @@
 "use client"
-import React from "react"
+import React, { useEffect } from "react"
 import { Permission } from "api/hooks/user"
 import { CKEditorClient } from "ol-ckeditor"
 import { useRouter } from "next-nprogress-bar"
-import { useArticleCreate } from "api/hooks/articles"
+import { useArticleDetail, useArticlePartialUpdate } from "api/hooks/articles"
 import { Button, Input, Alert } from "@mitodl/smoot-design"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
-import { Container, Typography, styled } from "ol-components"
+import { Container, Typography, styled, LoadingSpinner } from "ol-components"
+import { notFound } from "next/navigation"
 
 const SaveButton = styled.div({
   textAlign: "right",
@@ -23,26 +24,32 @@ const TitleInput = styled(Input)({
   margin: "10px 0",
 })
 
-const NewArticlePage: React.FC = () => {
+const ArticleEditPage = ({ articleId }: { articleId: string }) => {
   const router = useRouter()
+
+  const id = Number(articleId)
+  const { data: article, isLoading } = useArticleDetail(id)
 
   const [title, setTitle] = React.useState<string>("")
   const [editorContent, setEditorContent] = React.useState<string>("")
+  const [editorKey] = React.useState(0)
   const [alertText, setAlertText] = React.useState("")
   const [severity, setSeverity] = React.useState<"success" | "error">("success")
 
-  const { mutate: createArticle, isPending } = useArticleCreate()
+  const { mutate: updateArticle, isPending } = useArticlePartialUpdate()
 
   const handleSave = () => {
     setAlertText("")
 
     const payload = {
+      id: id,
       title: title.trim(),
       html: editorContent,
     }
 
-    createArticle(
+    updateArticle(
       payload as {
+        id: number
         html: string
         title: string
       },
@@ -56,6 +63,22 @@ const NewArticlePage: React.FC = () => {
         },
       },
     )
+  }
+
+  useEffect(() => {
+    if (article && !title && !editorContent) {
+      console.log("Article data:", article)
+      setTitle(article.title)
+      setEditorContent(article.html)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [article])
+
+  if (isLoading) {
+    return <LoadingSpinner color="inherit" loading={isLoading} size={32} />
+  }
+  if (!article) {
+    return notFound()
   }
 
   return (
@@ -78,6 +101,7 @@ const NewArticlePage: React.FC = () => {
           type="text"
           value={title}
           onChange={(e) => {
+            console.log("Title input changed:", e.target.value)
             setTitle(e.target.value)
             setAlertText("")
           }}
@@ -87,6 +111,7 @@ const NewArticlePage: React.FC = () => {
 
         <ClientContainer className="editor-box">
           <CKEditorClient
+            key={editorKey}
             value={editorContent}
             onChange={(content) => setEditorContent(content)}
           />
@@ -106,4 +131,4 @@ const NewArticlePage: React.FC = () => {
   )
 }
 
-export { NewArticlePage }
+export { ArticleEditPage }
