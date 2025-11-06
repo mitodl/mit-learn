@@ -239,4 +239,34 @@ describe("HomeContent", () => {
       }
     },
   )
+
+  test("Does not display enrollment error alert when query param is not present", async () => {
+    setupAPIs()
+    renderWithProviders(<HomeContent />)
+
+    await screen.findByRole("heading", {
+      name: "Your MIT Learning Journey",
+    })
+
+    expect(screen.queryByText("Enrollment Error")).not.toBeInTheDocument()
+  })
+
+  test("Displays enrollment error alert when query param is present", async () => {
+    setupAPIs()
+    renderWithProviders(<HomeContent />, {
+      url: "/dashboard?enrollment_error=1",
+    })
+
+    await screen.findByRole("heading", {
+      name: "Your MIT Learning Journey",
+    })
+
+    expect(screen.getByText("Enrollment Error")).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        /The Enrollment Code is incorrect or no longer available/,
+      ),
+    ).toBeInTheDocument()
+    expect(screen.getByText("Contact Support")).toBeInTheDocument()
+  })
 })

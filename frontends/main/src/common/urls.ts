@@ -60,7 +60,8 @@ export const DASHBOARD_VIEW = "/dashboard/[tab]"
 const dashboardView = (tab: string) => generatePath(DASHBOARD_VIEW, { tab })
 
 export const DASHBOARD_HOME = "/dashboard"
-export const DASHBOARD_HOME_ENROLLMENT_ERROR = "/dashboard?enrollment_error=1"
+export const ENROLLMENT_ERROR_QUERY_PARAM = "enrollment_error"
+export const DASHBOARD_HOME_ENROLLMENT_ERROR = `/dashboard?${ENROLLMENT_ERROR_QUERY_PARAM}=1`
 export const MY_LISTS = dashboardView("my-lists")
 export const PROFILE = dashboardView("profile")
 export const SETTINGS = dashboardView("settings")

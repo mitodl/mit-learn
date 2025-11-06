@@ -19,32 +19,52 @@ const InterstitialMessage = styled(Typography)(({ theme }) => ({
 
 const EnrollmentCodePage: React.FC<EnrollmentCodePage> = ({ code }) => {
   const mitxOnlineUser = useQuery(mitxUserQueries.me())
-  const userOrgs = structuredClone(mitxOnlineUser.data?.b2b_organizations || [])
+  const initialOrgsRef = React.useRef<number | null>(null)
+  const [hasEnrolled, setHasEnrolled] = React.useState(false)
+
+  // Capture initial organization count once
+  if (
+    initialOrgsRef.current === null &&
+    mitxOnlineUser.data?.b2b_organizations
+  ) {
+    initialOrgsRef.current = mitxOnlineUser.data.b2b_organizations.length
+  }
+
+  const router = useRouter()
+
   const enrollment = useB2BAttachMutation({
     enrollment_code: code,
   })
-  const router = useRouter()
 
   const { isLoading: userLoading, data: user } = useQuery({
     ...userQueries.me(),
     staleTime: 0,
   })
 
-  const enrollAsync = enrollment.mutateAsync
-
   React.useEffect(() => {
-    if (user?.is_authenticated) {
-      enrollAsync().then(() => {
-        if (
-          userOrgs.length === mitxOnlineUser.data?.b2b_organizations?.length
-        ) {
-          router.push(urls.DASHBOARD_HOME_ENROLLMENT_ERROR)
-        } else {
-          router.push(urls.DASHBOARD_HOME)
-        }
-      })
+    if (user?.is_authenticated && !hasEnrolled && !enrollment.isPending) {
+      setHasEnrolled(true)
+      enrollment.mutate()
     }
-  }, [user?.is_authenticated, enrollAsync, router])
+  }, [user?.is_authenticated, hasEnrolled, enrollment])
+
+  // Handle redirect after mutation succeeds and query is refetched
+  React.useEffect(() => {
+    if (enrollment.isSuccess && !enrollment.isPending) {
+      const currentOrgCount =
+        mitxOnlineUser.data?.b2b_organizations?.length ?? 0
+      if (initialOrgsRef.current === currentOrgCount) {
+        router.push(urls.DASHBOARD_HOME_ENROLLMENT_ERROR)
+      } else {
+        router.push(urls.DASHBOARD_HOME)
+      }
+    }
+  }, [
+    enrollment.isSuccess,
+    enrollment.isPending,
+    mitxOnlineUser.data?.b2b_organizations?.length,
+    router,
+  ])
 
   React.useEffect(() => {
     if (userLoading) {
