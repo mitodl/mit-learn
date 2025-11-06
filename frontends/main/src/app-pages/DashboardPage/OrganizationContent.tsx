@@ -3,7 +3,7 @@
 import React, { useEffect } from "react"
 import DOMPurify from "isomorphic-dompurify"
 import Image from "next/image"
-import { useQueries, useQuery } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import {
   programsQueries,
   programCollectionQueries,
@@ -13,7 +13,14 @@ import { contractQueries } from "api/mitxonline-hooks/contracts"
 import * as transform from "./CoursewareDisplay/transform"
 import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
 import { DashboardCard } from "./CoursewareDisplay/DashboardCard"
-import { PlainList, Skeleton, Stack, styled, Typography } from "ol-components"
+import {
+  Link,
+  PlainList,
+  Skeleton,
+  Stack,
+  styled,
+  Typography,
+} from "ol-components"
 import {
   DashboardProgram,
   DashboardProgramCollection,
@@ -36,6 +43,7 @@ const HeaderRoot = styled.div({
   alignItems: "center",
   gap: "24px",
 })
+
 const ImageContainer = styled.div(({ theme }) => ({
   width: "120px",
   height: "118px",
@@ -50,6 +58,7 @@ const ImageContainer = styled.div(({ theme }) => ({
     height: "auto",
   },
 }))
+
 const OrganizationHeader: React.FC<{ org?: OrganizationPage }> = ({ org }) => {
   return (
     <HeaderRoot>
@@ -74,6 +83,48 @@ const OrganizationHeader: React.FC<{ org?: OrganizationPage }> = ({ org }) => {
         <Typography variant="body1">{org?.contracts[0]?.name}</Typography>
       </Stack>
     </HeaderRoot>
+  )
+}
+
+const WelcomeMessageExtra = styled(Typography)({
+  margin: 0,
+  p: {
+    margin: 0,
+  },
+})
+
+const WelcomeMessage: React.FC<{ org?: OrganizationPage }> = ({ org }) => {
+  const empty = <Stack height="40px" />
+  const [showingMore, setShowingMore] = React.useState(false)
+  if (!org?.contracts?.length) {
+    return empty
+  }
+  const contract = org.contracts[0]
+  const welcomeMessage = contract.welcome_message
+  const welcomeMessageExtra = DOMPurify.sanitize(contract.welcome_message_extra)
+  if (!welcomeMessage || !welcomeMessageExtra) {
+    return empty
+  }
+  return (
+    <Stack gap="12px" paddingTop="40px" paddingBottom="24px">
+      <Stack direction="row" justifyContent="space-between" alignItems="center">
+        <Typography variant="body1">{welcomeMessage}</Typography>
+        <Link
+          scroll={false}
+          color="red"
+          size="small"
+          onClick={() => setShowingMore(!showingMore)}
+        >
+          {showingMore ? "Show less" : "Show more"}
+        </Link>
+      </Stack>
+      {showingMore && (
+        <WelcomeMessageExtra
+          variant="body1"
+          dangerouslySetInnerHTML={{ __html: welcomeMessageExtra }}
+        />
+      )}
+    </Stack>
   )
 }
 
@@ -140,32 +191,30 @@ const useProgramCollectionCourses = (
   programs: DashboardProgramCollectionProgram[],
   orgId: number,
 ) => {
-  const programQueries = useQueries({
-    queries: programs
-      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-      .map((program) =>
-        programsQueries.programsList({ id: program.id, org_id: orgId }),
-      ),
+  const programIds = programs
+    .map((program) => program.id)
+    .filter((id) => id !== undefined)
+  const programsQuery = useQuery({
+    ...programsQueries.programsList({ id: programIds, org_id: orgId }),
+    enabled: programIds.length > 0,
   })
+  const isLoading = programsQuery.isLoading
 
-  const isLoading = programQueries.some((query) => query.isLoading)
-
-  const programsWithCourses = programQueries
-    .map((query) => {
-      if (!query.data?.results?.length) {
+  const programsWithCourses = programsQuery.data?.results
+    .map((program) => {
+      if (!program) {
         return null
       }
-      const program = query.data.results[0]
       const transformedProgram = transform.mitxonlineProgram(program)
       return {
-        programId: query.data.results[0].id,
+        programId: program.id,
         program: transformedProgram,
         hasCourses: program.courses && program.courses.length > 0,
       }
     })
     .filter(Boolean)
 
-  const hasAnyCourses = programsWithCourses.some((p) => p?.hasCourses)
+  const hasAnyCourses = programsWithCourses?.some((p) => p?.hasCourses)
 
   return {
     isLoading,
@@ -184,18 +233,21 @@ const OrgProgramCollectionDisplay: React.FC<{
   const { isLoading, programsWithCourses, hasAnyCourses } =
     useProgramCollectionCourses(collection.programs, orgId)
   const firstCourseIds = programsWithCourses
-    .map((p) => p?.program.courseIds[0])
+    ?.map((p) => p?.program.courseIds[0])
     .filter((id): id is number => id !== undefined)
   const courses = useQuery({
     ...coursesQueries.coursesList({
       id: firstCourseIds,
       org_id: orgId,
     }),
-    enabled: firstCourseIds.length > 0,
+    enabled: firstCourseIds !== undefined && firstCourseIds.length > 0,
   })
   const rawCourses =
     courses.data?.results.sort((a, b) => {
-      return firstCourseIds.indexOf(a.id) - firstCourseIds.indexOf(b.id)
+      return (
+        (firstCourseIds?.indexOf(a.id) ?? -1) -
+        (firstCourseIds?.indexOf(b.id) ?? -1)
+      )
     }) ?? []
   const transformedCourses = transform.organizationCoursesWithContracts({
     courses: rawCourses,
@@ -242,7 +294,7 @@ const OrgProgramCollectionDisplay: React.FC<{
       {header}
       <PlainList>
         {courses.isLoading &&
-          programsWithCourses.map((item, index) => (
+          programsWithCourses?.map((item, index) => (
             <Skeleton
               key={`${collection.id}-${item?.programId}-${index}`}
               width="100%"
@@ -388,48 +440,53 @@ const OrganizationContentInternal: React.FC<
   )
 
   return (
-    <OrganizationRoot>
-      <OrganizationHeader org={org} />
-      {programs.isLoading || !transformedPrograms
-        ? skeleton
-        : transformedPrograms.map((program) => (
-            <OrgProgramDisplay
-              key={program.key}
-              contracts={orgContracts}
-              program={program}
-              courseRunEnrollments={courseRunEnrollments.data}
-              programEnrollments={programEnrollments.data}
-              programLoading={programs.isLoading}
-              orgId={orgId}
-            />
-          ))}
-      {programCollections.isLoading ? (
-        skeleton
-      ) : (
-        <ProgramCollectionsList>
-          {programCollections.data?.results.map((collection) => {
-            const transformedCollection =
-              transform.mitxonlineProgramCollection(collection)
-            return (
-              <OrgProgramCollectionDisplay
-                key={collection.title}
-                collection={transformedCollection}
+    <>
+      <Stack>
+        <OrganizationHeader org={org} />
+        <WelcomeMessage org={org} />
+      </Stack>
+      <OrganizationRoot>
+        {programs.isLoading || !transformedPrograms
+          ? skeleton
+          : transformedPrograms.map((program) => (
+              <OrgProgramDisplay
+                key={program.key}
                 contracts={orgContracts}
-                enrollments={courseRunEnrollments.data}
+                program={program}
+                courseRunEnrollments={courseRunEnrollments.data}
+                programEnrollments={programEnrollments.data}
+                programLoading={programs.isLoading}
                 orgId={orgId}
               />
-            )
-          })}
-        </ProgramCollectionsList>
-      )}
-      {programs.data?.results.length === 0 && (
-        <HeaderRoot>
-          <Typography variant="h3" component="h1">
-            No programs found
-          </Typography>
-        </HeaderRoot>
-      )}
-    </OrganizationRoot>
+            ))}
+        {programCollections.isLoading ? (
+          skeleton
+        ) : (
+          <ProgramCollectionsList>
+            {programCollections.data?.results.map((collection) => {
+              const transformedCollection =
+                transform.mitxonlineProgramCollection(collection)
+              return (
+                <OrgProgramCollectionDisplay
+                  key={collection.title}
+                  collection={transformedCollection}
+                  contracts={orgContracts}
+                  enrollments={courseRunEnrollments.data}
+                  orgId={orgId}
+                />
+              )
+            })}
+          </ProgramCollectionsList>
+        )}
+        {programs.data?.results.length === 0 && (
+          <HeaderRoot>
+            <Typography variant="h3" component="h1">
+              No programs found
+            </Typography>
+          </HeaderRoot>
+        )}
+      </OrganizationRoot>
+    </>
   )
 }
 
