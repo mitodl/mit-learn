@@ -5786,14 +5786,14 @@ tests = ["pytest (>=5.4.1)", "pytest-cov (>=2.8.1)", "pytest-mypy (>=0.8.0)", "p
 
 [[package]]
 name = "posthog"
-version = "5.4.0"
+version = "6.7.14"
 description = "Integrate PostHog into any python application."
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "posthog-5.4.0-py3-none-any.whl", hash = "sha256:284dfa302f64353484420b52d4ad81ff5c2c2d1d607c4e2db602ac72761831bd"},
-    {file = "posthog-5.4.0.tar.gz", hash = "sha256:701669261b8d07cdde0276e5bc096b87f9e200e3b9589c5ebff14df658c5893c"},
+    {file = "posthog-6.7.14-py3-none-any.whl", hash = "sha256:de387c9601c5fe54eedfff7c147b8daf8e6c6173aa73046283e42cdc3a78b34b"},
+    {file = "posthog-6.7.14.tar.gz", hash = "sha256:79d5d5704f53a8f2dcca1682f96b6214c9762a761f10def773e4ea388589bb2a"},
 ]
 
 [package.dependencies]
@@ -5802,6 +5802,7 @@ distro = ">=1.5.0"
 python-dateutil = ">=2.2"
 requests = ">=2.7,<3.0"
 six = ">=1.5"
+typing-extensions = ">=4.2.0"
 
 [package.extras]
 dev = ["django-stubs", "lxml", "mypy", "mypy-baseline", "packaging", "pre-commit", "pydantic", "ruff", "setuptools", "tomli", "tomli_w", "twine", "types-mock", "types-python-dateutil", "types-requests", "types-setuptools", "types-six", "wheel"]
@@ -9255,4 +9256,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.1"
 python-versions = "~3.12"
-content-hash = "ceab94db56105439c94cf4b8895b8c50d21deb17b0d59445e7cc813782f6a129"
+content-hash = "543bd628442b393ead13ae00f8f8065a35e9dbddd412227cc7282171b4f6e56a"
