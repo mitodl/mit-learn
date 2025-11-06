@@ -103,6 +103,7 @@ const LearningResourceListCardCondensed: React.FC<
   inLearningPath,
   inUserList,
   draggable,
+  headingLevel = 6,
 }) => {
   if (isLoading) {
     return (
@@ -129,7 +130,12 @@ const LearningResourceListCardCondensed: React.FC<
       <ListCardCondensed.Info>
         <Info resource={resource} />
       </ListCardCondensed.Info>
-      <ListCardCondensed.Title href={href} lang={getResourceLanguage(resource)}>
+      <ListCardCondensed.Title
+        href={href}
+        lang={getResourceLanguage(resource)}
+        role="heading"
+        aria-level={headingLevel}
+      >
         {resource.title}
       </ListCardCondensed.Title>
       <ListCardCondensed.Actions>
