@@ -7,4 +7,3 @@ export {
 } from "./slash-commands-extension"
 
 export { SlashCommandsList } from "./slash-commands-list"
-
