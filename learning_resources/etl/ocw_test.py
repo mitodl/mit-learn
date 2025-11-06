@@ -15,6 +15,7 @@ from learning_resources.constants import (
     Format,
     LearningResourceDelivery,
     Pace,
+    RunStatus,
 )
 from learning_resources.etl.constants import CourseNumberType, ETLSource
 from learning_resources.etl.ocw import (
@@ -22,6 +23,7 @@ from learning_resources.etl.ocw import (
     transform_content_files,
     transform_contentfile,
     transform_course,
+    transform_run,
 )
 from learning_resources.factories import (
     ContentFileFactory,
@@ -366,3 +368,93 @@ def test_parse_topics(mocker, has_learn_topics):
             {"name": "Political Science"},
             {"name": "Political Science"},
         ]
+
+
+@pytest.mark.parametrize(
+    ("course_description_html", "course_description", "expected_description"),
+    [
+        (
+            "<p>This is a course description</p>",
+            None,
+            "<p>This is a course description</p>",
+        ),
+        (None, "Fallback description text", "Fallback description text"),
+        (None, None, ""),
+        (
+            "<p>Primary description</p>",
+            "Fallback description",
+            "<p>Primary description</p>",
+        ),
+        ("", "Fallback description text", "Fallback description text"),
+        ("", "", ""),
+        ("<p>Valid HTML</p><script>alert('xss')</script>", None, "<p>Valid HTML</p>"),
+    ],
+)
+def test_transform_run_description_handling(
+    settings, course_description_html, course_description, expected_description
+):
+    """Test that transform_run correctly handles various description field scenarios"""
+    settings.OCW_BASE_URL = "http://test.edu/"
+
+    # Build minimal course_data with required fields
+    course_data = {
+        "run_id": "test-run-id",
+        "url": "http://test.edu/test-course",
+        "instructors": [],
+        "term": "Fall",
+        "year": 2024,
+        "level": ["Undergraduate"],  # Use enum value, not name
+        "image_src": None,
+        "course_image_metadata": {},
+        "course_title": "Test Course",
+        "slug": "test-course",
+        "last_modified": "2024-01-01T00:00:00Z",
+    }
+
+    # Add description fields based on test parameters
+    if course_description_html is not None:
+        course_data["course_description_html"] = course_description_html
+    if course_description is not None:
+        # Note: the key has a trailing space, which seems like a typo in the original code
+        course_data["course_description "] = course_description
+
+    result = transform_run(course_data)
+
+    # Verify the description was processed correctly
+    assert result["description"] == clean_data(expected_description)
+
+    # Verify other required fields are present
+    assert result["run_id"] == "test-run-id"
+    assert result["published"] is True
+    assert result["status"] == RunStatus.current.value
+    assert result["year"] == 2024
+    assert result["semester"] == "Fall"
+    assert result["level"] == ["undergraduate"]  # Output is lowercase enum name
+    assert result["availability"] == Availability.anytime.name
+    assert result["delivery"] is not None
+    assert result["format"] == [Format.asynchronous.name]
+    assert result["pace"] == [Pace.self_paced.name]
+
+
+def test_transform_run_missing_description_fields(settings):
+    """Test transform_run when description fields are missing entirely"""
+    settings.OCW_BASE_URL = "http://test.edu/"
+
+    course_data = {
+        "run_id": "test-run-id",
+        "url": "http://test.edu/test-course",
+        "instructors": [],
+        "term": None,
+        "year": None,
+        "level": [],
+        "image_src": None,
+        "course_image_metadata": {},
+        "course_title": "Test Course",
+        "slug": "test-course",
+        "last_modified": "2024Fcontent_ta-01-01T00:00:00Z",
+    }
+
+    result = transform_run(course_data)
+
+    # Should return empty string when description fields are missing or None
+    assert result["description"] == ""
