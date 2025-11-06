@@ -94,15 +94,16 @@ const WelcomeMessageExtra = styled(Typography)({
 })
 
 const WelcomeMessage: React.FC<{ org?: OrganizationPage }> = ({ org }) => {
+  const empty = <Stack height="40px" />
   const [showingMore, setShowingMore] = React.useState(false)
-  if (!org?.contracts || org.contracts.length === 0) {
-    return null
+  if (!org?.contracts?.length) {
+    return empty
   }
   const contract = org.contracts[0]
   const welcomeMessage = contract.welcome_message
   const welcomeMessageExtra = DOMPurify.sanitize(contract.welcome_message_extra)
   if (!welcomeMessage || !welcomeMessageExtra) {
-    return null
+    return empty
   }
   return (
     <Stack gap="12px" paddingTop="40px" paddingBottom="24px">
