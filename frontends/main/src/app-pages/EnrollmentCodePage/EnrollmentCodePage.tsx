@@ -6,6 +6,7 @@ import { useB2BAttachMutation } from "api/mitxonline-hooks/organizations"
 import { userQueries } from "api/hooks/user"
 import { useQuery } from "@tanstack/react-query"
 import { useRouter } from "next-nprogress-bar"
+import { mitxUserQueries } from "api/mitxonline-hooks/user"
 
 type EnrollmentCodePage = {
   code: string
@@ -17,6 +18,8 @@ const InterstitialMessage = styled(Typography)(({ theme }) => ({
 }))
 
 const EnrollmentCodePage: React.FC<EnrollmentCodePage> = ({ code }) => {
+  const mitxOnlineUser = useQuery(mitxUserQueries.me())
+  const userOrgs = structuredClone(mitxOnlineUser.data?.b2b_organizations || [])
   const enrollment = useB2BAttachMutation({
     enrollment_code: code,
   })
@@ -28,9 +31,18 @@ const EnrollmentCodePage: React.FC<EnrollmentCodePage> = ({ code }) => {
   })
 
   const enrollAsync = enrollment.mutateAsync
+
   React.useEffect(() => {
     if (user?.is_authenticated) {
-      enrollAsync().then(() => router.push(urls.DASHBOARD_HOME))
+      enrollAsync().then(() => {
+        if (
+          userOrgs.length === mitxOnlineUser.data?.b2b_organizations?.length
+        ) {
+          router.push(urls.DASHBOARD_HOME_ENROLLMENT_ERROR)
+        } else {
+          router.push(urls.DASHBOARD_HOME)
+        }
+      })
     }
   }, [user?.is_authenticated, enrollAsync, router])
 
