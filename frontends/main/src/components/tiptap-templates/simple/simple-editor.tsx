@@ -33,6 +33,7 @@ import "@/components/tiptap-node/list-node/list-node.scss"
 import "@/components/tiptap-node/image-node/image-node.scss"
 import "@/components/tiptap-node/heading-node/heading-node.scss"
 import "@/components/tiptap-node/paragraph-node/paragraph-node.scss"
+import "@/components/tiptap-node/description-node/description-node.scss"
 
 // --- Tiptap UI ---
 import { HeadingDropdownMenu } from "@/components/tiptap-ui/heading-dropdown-menu"
@@ -152,6 +153,18 @@ const MainToolbarContent = ({
           }}
         >
           + Resource Card
+        </Button>
+        <Button
+          size="small"
+          variant="secondary"
+          onClick={() => {
+            editor.commands.insertContent({
+              type: "resourceListCard",
+              attrs: { resourceId: "14731" },
+            })
+          }}
+        >
+          + Resource List Card
         </Button>
         <Button
           size="small"

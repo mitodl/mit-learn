@@ -49,8 +49,6 @@ const StyledCommandItem = styled.div<{ $isSelected: boolean }>(
 
 const CommandIcon = styled.div({
   fontSize: "18px",
-  // eslint-disable-next-line ol-kit/no-manual-font-weight
-  fontWeight: 600,
   color: "#666",
   minWidth: "24px",
   textAlign: "center",
@@ -63,8 +61,6 @@ const CommandContent = styled.div({
 
 const CommandTitle = styled.div({
   fontSize: "14px",
-  // eslint-disable-next-line ol-kit/no-manual-font-weight
-  fontWeight: 500,
   color: "#333",
 })
 

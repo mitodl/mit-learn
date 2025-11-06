@@ -6464,6 +6464,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@tiptap/core@npm:^3.10.2":
+  version: 3.10.2
+  resolution: "@tiptap/core@npm:3.10.2"
+  peerDependencies:
+    "@tiptap/pm": ^3.10.2
+  checksum: 10/5668efae7a8422ec27dfc31496ea3bb7494b6ffe040103b427408871298f782943f3480370c033ad570551520738829c979c969ed6ec51a70fd743365cfe0875
+  languageName: node
+  linkType: hard
+
 "@tiptap/extension-blockquote@npm:^3.10.1":
   version: 3.10.1
   resolution: "@tiptap/extension-blockquote@npm:3.10.1"
@@ -6528,6 +6537,15 @@ __metadata:
   peerDependencies:
     "@tiptap/core": ^3.10.1
   checksum: 10/5567ddcc2128f31b89cdcd11b1da3982146b50222fda3d011533254a7e4a123c93e94e845d4c2ab54e144566e5b55691684db04dc07947e354d2cb23d7f9c4f3
+  languageName: node
+  linkType: hard
+
+"@tiptap/extension-document@npm:^3.10.2":
+  version: 3.10.2
+  resolution: "@tiptap/extension-document@npm:3.10.2"
+  peerDependencies:
+    "@tiptap/core": ^3.10.2
+  checksum: 10/a4030a88e985d274a5d62e0df63fc5c1695a19b241501dc633277cf9a623c6b0f4e8f2e5927e55efa46c5889a8ac8cd19cdca5326ffc770823aa30cf62e3e3af
   languageName: node
   linkType: hard
 
@@ -15305,6 +15323,8 @@ __metadata:
     "@testing-library/jest-dom": "npm:^6.4.8"
     "@testing-library/react": "npm:^16.3.0"
     "@testing-library/user-event": "npm:^14.5.2"
+    "@tiptap/core": "npm:^3.10.2"
+    "@tiptap/extension-document": "npm:^3.10.2"
     "@tiptap/extension-highlight": "npm:^3.10.1"
     "@tiptap/extension-horizontal-rule": "npm:^3.10.1"
     "@tiptap/extension-image": "npm:^3.10.1"

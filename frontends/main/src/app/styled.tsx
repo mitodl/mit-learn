@@ -8,17 +8,25 @@ import { styled, HEADER_HEIGHT, HEADER_HEIGHT_MD } from "ol-components"
  * Solution for now is to "use client", though I would expect these to be prerendered
  */
 
-export const PageWrapper = styled.div(({ theme }) => ({
+export const PageWrapper = styled.div({
   display: "flex",
   flexDirection: "column",
-  height: `calc(100vh - ${HEADER_HEIGHT}px)`,
-  marginTop: HEADER_HEIGHT,
+  height: "100vh",
+  width: "100%",
+  overflow: "hidden",
+  position: "fixed",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+})
+
+export const PageWrapperInner = styled.main(({ theme }) => ({
+  flex: "1",
+  overflow: "auto",
+  minHeight: 0,
+  paddingTop: HEADER_HEIGHT,
   [theme.breakpoints.down("md")]: {
-    marginTop: HEADER_HEIGHT_MD,
-    height: `calc(100vh - ${HEADER_HEIGHT_MD}px)`,
+    paddingTop: HEADER_HEIGHT_MD,
   },
 }))
-
-export const PageWrapperInner = styled.main({
-  flex: "1",
-})

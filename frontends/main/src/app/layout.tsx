@@ -33,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" style={{ height: "100%", overflow: "hidden" }}>
       <head>
         {/*
           Font files for Adobe neue haas grotesk.
@@ -50,7 +50,7 @@ export default function RootLayout({
           content={process.env.NEXT_PUBLIC_VERSION || "unknown"}
         />
       </head>
-      <body>
+      <body style={{ height: "100%", overflow: "hidden", margin: 0 }}>
         <Providers>
           <MITLearnGlobalStyles />
           <PageWrapper>

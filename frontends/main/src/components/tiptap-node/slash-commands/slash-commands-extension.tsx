@@ -1,9 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import { Extension } from "@tiptap/core"
-import { ReactRenderer } from "@tiptap/react"
+import { ReactRenderer, Editor } from "@tiptap/react"
 import Suggestion, { SuggestionOptions } from "@tiptap/suggestion"
-import { Editor } from "@tiptap/react"
 import { SlashCommandsList } from "./slash-commands-list"
 
 export interface CommandItem {
@@ -48,6 +48,65 @@ export const SlashCommands = Extension.create({
 })
 
 export const getSlashCommands = (): CommandItem[] => [
+  {
+    title: "Resource Card",
+    description: "Insert a learning resource card",
+    command: ({ editor, range }) => {
+      editor.chain().focus().deleteRange(range).insertContent("<p></p>").run()
+
+      // Insert after a brief delay to ensure the deletion completes
+      setTimeout(() => {
+        editor
+          .chain()
+          .focus()
+          .insertContent({
+            type: "resourceCard",
+            attrs: { resourceId: "14731" },
+          })
+          .run()
+      }, 0)
+    },
+    aliases: ["resource", "card"],
+  },
+  {
+    title: "Resource List Card",
+    description: "Insert a learning resource list card",
+    command: ({ editor, range }) => {
+      editor.chain().focus().deleteRange(range).insertContent("<p></p>").run()
+
+      // Insert after a brief delay to ensure the deletion completes
+      setTimeout(() => {
+        editor
+          .chain()
+          .focus()
+          .insertContent({
+            type: "resourceCard",
+            attrs: { resourceId: "14731" },
+          })
+          .run()
+      }, 0)
+    },
+    aliases: ["resource", "card"],
+  },
+  {
+    title: "AskTIM Drawer Button",
+    description: "Insert AskTIM drawer button",
+    command: ({ editor, range }) => {
+      editor.chain().focus().deleteRange(range).insertContent("<p></p>").run()
+
+      // Insert after a brief delay to ensure the deletion completes
+      setTimeout(() => {
+        editor
+          .chain()
+          .focus()
+          .insertContent({
+            type: "askTimDrawerButton",
+          })
+          .run()
+      }, 0)
+    },
+    aliases: ["asktim", "ai", "tim"],
+  },
   {
     title: "Heading 1",
     description: "Large section heading",
@@ -117,24 +176,24 @@ export const getSlashCommands = (): CommandItem[] => [
     },
     aliases: ["todo", "checkbox"],
   },
-  {
-    title: "Blockquote",
-    description: "Capture a quote",
-    icon: '"',
-    command: ({ editor, range }) => {
-      editor.chain().focus().deleteRange(range).toggleBlockquote().run()
-    },
-    aliases: ["quote"],
-  },
-  {
-    title: "Code Block",
-    description: "Display code with syntax highlighting",
-    icon: "</>",
-    command: ({ editor, range }) => {
-      editor.chain().focus().deleteRange(range).toggleCodeBlock().run()
-    },
-    aliases: ["code", "codeblock"],
-  },
+  // {
+  //   title: "Blockquote",
+  //   description: "Capture a quote",
+  //   icon: '"',
+  //   command: ({ editor, range }) => {
+  //     editor.chain().focus().deleteRange(range).toggleBlockquote().run()
+  //   },
+  //   aliases: ["quote"],
+  // },
+  // {
+  //   title: "Code Block",
+  //   description: "Display code with syntax highlighting",
+  //   icon: "</>",
+  //   command: ({ editor, range }) => {
+  //     editor.chain().focus().deleteRange(range).toggleCodeBlock().run()
+  //   },
+  //   aliases: ["code", "codeblock"],
+  // },
   {
     title: "Horizontal Rule",
     description: "Insert a horizontal divider",
@@ -143,57 +202,6 @@ export const getSlashCommands = (): CommandItem[] => [
       editor.chain().focus().deleteRange(range).setHorizontalRule().run()
     },
     aliases: ["hr", "divider", "line"],
-  },
-  {
-    title: "Resource Card",
-    description: "Insert a learning resource card",
-    icon: "📚",
-    command: ({ editor, range }) => {
-      editor
-        .chain()
-        .focus()
-        .deleteRange(range)
-        .insertContent("<p></p>")
-        .run()
-
-      // Insert after a brief delay to ensure the deletion completes
-      setTimeout(() => {
-        editor
-          .chain()
-          .focus()
-          .insertContent({
-            type: "resourceCard",
-            attrs: { resourceId: "14731" },
-          })
-          .run()
-      }, 0)
-    },
-    aliases: ["resource", "card"],
-  },
-  {
-    title: "Ask TIM Button",
-    description: "Insert Ask TIM AI button",
-    icon: "🤖",
-    command: ({ editor, range }) => {
-      editor
-        .chain()
-        .focus()
-        .deleteRange(range)
-        .insertContent("<p></p>")
-        .run()
-
-      // Insert after a brief delay to ensure the deletion completes
-      setTimeout(() => {
-        editor
-          .chain()
-          .focus()
-          .insertContent({
-            type: "askTimDrawerButton",
-          })
-          .run()
-      }, 0)
-    },
-    aliases: ["asktim", "ai", "tim"],
   },
 ]
 
@@ -276,7 +284,14 @@ export const renderSlashCommands = () => {
         return true
       }
 
-      return component?.ref?.onKeyDown(props) || false
+      // Make TypeScript happy: check that onKeyDown exists and is a function before calling
+      if (
+        component?.ref &&
+        typeof (component.ref as any).onKeyDown === "function"
+      ) {
+        return (component.ref as any).onKeyDown(props)
+      }
+      return false
     },
 
     onExit() {
@@ -288,4 +303,3 @@ export const renderSlashCommands = () => {
     },
   }
 }
-

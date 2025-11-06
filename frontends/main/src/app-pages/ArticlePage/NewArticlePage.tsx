@@ -1,17 +1,9 @@
 "use client"
 
 import React, { useState, useRef } from "react"
-import { theme, styled, LearningResourceCard } from "ol-components"
+import { theme, styled } from "ol-components"
 import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor"
-import {
-  EditorContext,
-  useEditor,
-  ReactNodeViewRenderer,
-  Node,
-  mergeAttributes,
-  NodeViewWrapper,
-  type NodeViewProps,
-} from "@tiptap/react"
+import { EditorContext, useEditor } from "@tiptap/react"
 import { Superscript } from "@tiptap/extension-superscript"
 import { Subscript } from "@tiptap/extension-subscript"
 
@@ -20,9 +12,8 @@ import { StarterKit } from "@tiptap/starter-kit"
 import { Image } from "@tiptap/extension-image"
 import { TaskItem, TaskList } from "@tiptap/extension-list"
 import { TextAlign } from "@tiptap/extension-text-align"
-import { Typography as TipTapTypography } from "@tiptap/extension-typography"
 import { Highlight } from "@tiptap/extension-highlight"
-import { Selection } from "@tiptap/extensions"
+import { Placeholder, Selection } from "@tiptap/extensions"
 
 // --- Tiptap Node ---
 import { ImageUploadNode } from "@/components/tiptap-node/image-upload-node/image-upload-node-extension"
@@ -38,14 +29,17 @@ import content from "@/components/tiptap-templates/simple/data/content.json"
 // --- Lib ---
 import { handleImageUpload, MAX_FILE_SIZE } from "@/lib/tiptap-utils"
 
-import { useLearningResourcesDetail } from "api/hooks/learningResources"
-import AskTimDrawerButton from "@/page-components/AiChat/AskTimDrawerButton"
-
 import { Markdown } from "@tiptap/markdown"
+import Document from "@tiptap/extension-document"
+import { ResourceCardExtension } from "./ResourceCardExtension"
+import { ResourceListCardExtension } from "./ResourceListCardExtension"
+import { AskTimDrawerButtonExtension } from "./AskTimDrawerButtonExtension"
+import { Description } from "./DescriptionExtension"
 
 const PageContainer = styled.div({
   color: theme.custom.colors.darkGray2,
   display: "flex",
+  height: "100%",
   // position: "fixed",
   // top: "72px",
   // left: 0,
@@ -56,21 +50,25 @@ const PageContainer = styled.div({
 })
 
 const EditorContainer = styled.div({
-  flex: 6,
+  flex: 7,
+  overflow: "auto",
+  minHeight: 0,
 })
 
 const PreviewContainer = styled.div({
-  flex: 4,
+  flex: 3,
   backgroundColor: "white",
   padding: "16px",
   display: "flex",
   flexDirection: "column",
+  overflow: "hidden",
+  minHeight: 0,
 })
 
-const MarkdownTextarea = styled.textarea({
+const CodeTextarea = styled.textarea({
   flex: 1,
   fontFamily: "monospace",
-  fontSize: "14px",
+  fontSize: "12px",
   padding: "16px",
   border: `1px solid ${theme.custom.colors.lightGray2}`,
   borderRadius: "4px",
@@ -85,164 +83,51 @@ const MarkdownTextarea = styled.textarea({
 })
 
 const StyledSimpleEditor = styled(SimpleEditor)({
-  width: "60vw",
-  height: "calc(100vh - 205px)",
+  width: "70vw",
+  height: "100%",
   overscrollBehavior: "contain",
 })
 
-const Card = styled.div({
-  borderRadius: "8px",
-  border: `1px solid ${theme.custom.colors.lightGray2}`,
-  background: theme.custom.colors.white,
-  display: "block",
-  overflow: "hidden",
-  minWidth: "300px",
-  maxWidth: "300px",
-  padding: "16px",
-})
-
-const ResourceCardWrapper = (props: NodeViewProps) => {
-  const { node } = props
-
-  const { data: resource, isLoading } = useLearningResourcesDetail(
-    node.attrs.resourceId,
-  )
-  if (isLoading) {
-    return <Card>Loading...</Card>
-  }
-  if (!resource) {
-    return <Card>Resource not found</Card>
-  }
-
-  return (
-    <NodeViewWrapper>
-      <LearningResourceCard resource={resource} />
-    </NodeViewWrapper>
-  )
-}
-
-const ResourceCardExtension = Node.create({
-  name: "resourceCard",
-
-  group: "block",
-  atom: true,
-  selectable: true,
-
-  addAttributes() {
-    return {
-      resourceId: {
-        default: null,
-      },
-    }
-  },
-
-  parseHTML() {
-    return [{ tag: "resource-card" }]
-  },
-
-  renderHTML({ HTMLAttributes }) {
-    return ["resource-card", mergeAttributes(HTMLAttributes)]
-  },
-
-  markdownTokenizer: {
-    name: "resourceCard",
-    level: "block",
-
-    start: (src) => {
-      return src.indexOf("[[resource-card:")
-    },
-
-    tokenize: (src, _tokens, _lexer) => {
-      // Match [[resource:resourceId]]
-      const match = /^\[\[resource-card:(\d+)\]\]/.exec(src)
-
-      if (!match) {
-        return undefined
-      }
-
-      return {
-        type: "resourceCard",
-        raw: match[0],
-        resourceId: match[1],
-      }
-    },
-  },
-
-  parseMarkdown: (token, _helpers) => {
-    return {
-      type: "resourceCard",
-      attrs: {
-        resourceId: token.resourceId || null,
-      },
-    }
-  },
-
-  renderMarkdown: (node, _helpers) => {
-    const resourceId = node.attrs?.resourceId || ""
-    return `[[resource-card:${resourceId}]]\n\n`
-  },
-
-  addNodeView() {
-    return ReactNodeViewRenderer(ResourceCardWrapper)
-  },
-})
-
-const AskTimDrawerButtonWrapper = () => {
-  return (
-    <NodeViewWrapper>
-      <AskTimDrawerButton />
-    </NodeViewWrapper>
-  )
-}
-
-const AskTimDrawerButtonExtension = Node.create({
-  name: "askTimDrawerButton",
-  group: "block",
-  atom: true,
-  selectable: true,
-
-  markdownTokenizer: {
-    name: "askTimDrawerButton",
-    level: "block",
-
-    start: (src) => {
-      return src.indexOf("[[asktim]]")
-    },
-
-    tokenize: (src, _tokens, _lexer) => {
-      // Match [[asktim]]
-      const match = /^\[\[asktim\]\]/.exec(src)
-
-      if (!match) {
-        return undefined
-      }
-
-      return {
-        type: "askTimDrawerButton",
-        raw: match[0],
-      }
-    },
-  },
-
-  parseMarkdown: (_token, _helpers) => {
-    return {
-      type: "askTimDrawerButton",
-    }
-  },
-
-  renderMarkdown: (_node, _helpers) => {
-    return "[[asktim]]\n\n"
-  },
-
-  addNodeView() {
-    return ReactNodeViewRenderer(AskTimDrawerButtonWrapper)
-  },
+const CustomDocument = Document.extend({
+  content:
+    "heading description resourceListCard* (paragraph | taskList | bulletList | orderedList | codeBlock | horizontalRule | image | imageUpload | resourceCard | askTimDrawerButton)*",
 })
 
 const extensions = [
+  CustomDocument,
+  Description,
+  Placeholder.configure({
+    placeholder: ({ node }) => {
+      if (node.type.name === "heading") {
+        return "Add a title"
+      }
+      if (node.type.name === "description") {
+        return "Add a description"
+      }
+      if (node.type.name === "paragraph") {
+        return "Add a paragraph"
+      }
+      if (node.type.name === "resourceListCard") {
+        return "Add a learning resource list card"
+      }
+      if (node.type.name === "resourceCard") {
+        return "Add a learning resource card"
+      }
+      if (node.type.name === "askTimDrawerButton") {
+        return "Add an AI assistant button"
+      }
+
+      return ""
+    },
+  }),
   Markdown,
   StarterKit.configure({
+    document: false, // Disable default document to use our CustomDocument
     horizontalRule: false,
+    heading: {
+      levels: [1, 2, 3, 4, 5, 6],
+    },
+    blockquote: false, // Disable automatic blockquote creation
     link: {
       openOnClick: false,
       enableClickSelection: true,
@@ -254,7 +139,6 @@ const extensions = [
   TaskItem.configure({ nested: true }),
   Highlight.configure({ multicolor: true }),
   Image,
-  TipTapTypography,
   Superscript,
   Subscript,
   Selection,
@@ -266,6 +150,7 @@ const extensions = [
     onError: (error) => console.error("Upload failed:", error),
   }),
   ResourceCardExtension,
+  ResourceListCardExtension,
   AskTimDrawerButtonExtension,
   SlashCommands.configure({
     suggestion: {
@@ -277,7 +162,7 @@ const extensions = [
 
 interface ViewerProps {
   content: string
-  onChange: (markdown: string) => void
+  onChange: (json: string) => void
 }
 
 const Viewer: React.FC<ViewerProps> = ({ content, onChange }) => {
@@ -286,10 +171,10 @@ const Viewer: React.FC<ViewerProps> = ({ content, onChange }) => {
   }
 
   return (
-    <MarkdownTextarea
+    <CodeTextarea
       value={content}
       onChange={handleChange}
-      placeholder="Edit markdown here..."
+      placeholder="Edit JSON here..."
       spellCheck={false}
     />
   )
@@ -297,7 +182,7 @@ const Viewer: React.FC<ViewerProps> = ({ content, onChange }) => {
 
 const NewArticlePage: React.FC = () => {
   const [serializedContent, setSerializedContent] = useState("")
-  const isUpdatingFromMarkdown = useRef(false)
+  const isUpdatingFromJSON = useRef(false)
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -311,37 +196,38 @@ const NewArticlePage: React.FC = () => {
         class: "simple-editor",
       },
     },
+    // @ts-expect-error - Type conflict between @tiptap/starter-kit bundled @tiptap/core and main @tiptap/core
     extensions,
     content,
     onUpdate: ({ editor: currentEditor }) => {
-      // Only update markdown if we're not in the middle of updating from markdown
-      if (!isUpdatingFromMarkdown.current) {
-        setSerializedContent(currentEditor.getMarkdown())
+      // Only update JSON if we're not in the middle of updating from JSON
+      if (!isUpdatingFromJSON.current) {
+        const json = currentEditor.getJSON()
+        setSerializedContent(JSON.stringify(json, null, 2))
       }
     },
   })
 
-  const handleMarkdownChange = (markdown: string) => {
+  const handleJSONChange = (jsonString: string) => {
     if (!editor) return
 
     // Set flag to prevent the editor's onUpdate from firing back
-    isUpdatingFromMarkdown.current = true
+    isUpdatingFromJSON.current = true
 
-    setSerializedContent(markdown)
+    setSerializedContent(jsonString)
 
-    // Update the editor content from markdown
+    // Update the editor content from JSON
     try {
-      editor.commands.setContent(markdown, {
-        contentType: "markdown",
-      })
+      const json = JSON.parse(jsonString)
+      editor.commands.setContent(json)
     } catch (error) {
-      console.error("Error parsing markdown:", error)
+      console.error("Error parsing JSON:", error)
     }
 
     // Reset flag after update completes
     // Use setTimeout to ensure all updates are processed
     setTimeout(() => {
-      isUpdatingFromMarkdown.current = false
+      isUpdatingFromJSON.current = false
     }, 50)
   }
 
@@ -358,7 +244,7 @@ const NewArticlePage: React.FC = () => {
       </EditorContainer>
       <PreviewContainer>
         {editor && (
-          <Viewer content={serializedContent} onChange={handleMarkdownChange} />
+          <Viewer content={serializedContent} onChange={handleJSONChange} />
         )}
       </PreviewContainer>
     </PageContainer>

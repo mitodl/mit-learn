@@ -131,10 +131,12 @@ export function useLinkHandler(props: LinkHandlerProps) {
 
     let chain = editor.chain().focus()
 
-    chain = chain.extendMarkRange("link").setLink({ href: url })
+    chain = chain
+      .extendMarkRange("link")
+      .updateAttributes("link", { href: url })
 
     if (isEmpty) {
-      chain = chain.insertContent({ type: "text", text: url })
+      chain = chain.insertContent(url)
     }
 
     chain.run()
@@ -150,7 +152,7 @@ export function useLinkHandler(props: LinkHandlerProps) {
       .chain()
       .focus()
       .extendMarkRange("link")
-      .unsetLink()
+      .updateAttributes("link", { href: null })
       .setMeta("preventAutolink", true)
       .run()
     setUrl("")
@@ -165,7 +167,7 @@ export function useLinkHandler(props: LinkHandlerProps) {
         window.open(safeUrl, target, features)
       }
     },
-    [url]
+    [url],
   )
 
   return {
@@ -199,7 +201,7 @@ export function useLinkState(props: {
         shouldShowLinkButton({
           editor,
           hideWhenUnavailable,
-        })
+        }),
       )
     }
 

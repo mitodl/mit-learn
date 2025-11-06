@@ -1,0 +1,13 @@
+.tiptap.ProseMirror {
+  p[data-type="description"] {
+    font-size: 1.125rem;
+    line-height: 1.7;
+    margin-top: 1rem;
+    margin-bottom: 2rem;
+
+    &:empty::before {
+      color: #999;
+      font-style: italic;
+    }
+  }
+}
