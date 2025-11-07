@@ -12,17 +12,6 @@ jest.mock("next-nprogress-bar", () => ({
   }),
 }))
 
-// ✅ Mock only CKEditor (still fine)
-jest.mock("Article Edit Page", () => ({
-  CKEditorClient: ({ onChange }: { onChange: (content: string) => void }) => (
-    <textarea
-      data-testid="editor"
-      onChange={(e) => onChange(e.target.value)}
-      value="mock content"
-    />
-  ),
-}))
-
 describe("ArticleEditPage", () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -38,7 +27,7 @@ describe("ArticleEditPage", () => {
     const article = factories.articles.article({
       id: 42,
       title: "Existing Title",
-      json: "{id: 1, content: 'Existing content'}",
+      content: "{id: 1, content: 'Existing content'}",
     })
     setMockResponse.get(urls.articles.details(article.id), article)
 
@@ -59,7 +48,7 @@ describe("ArticleEditPage", () => {
     const article = factories.articles.article({
       id: 123,
       title: "Existing Title",
-      json: "{id: 1, content: 'Existing content'}",
+      content: "{id: 1, content: 'Existing content'}",
     })
     setMockResponse.get(urls.articles.details(article.id), article)
 
@@ -90,7 +79,7 @@ describe("ArticleEditPage", () => {
     const article = factories.articles.article({
       id: 7,
       title: "Old Title",
-      json: "{id: 1, content: 'Bad content'}",
+      content: "{id: 1, content: 'Bad content'}",
     })
     setMockResponse.get(urls.articles.details(article.id), article)
 

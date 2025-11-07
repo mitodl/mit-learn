@@ -63,8 +63,8 @@ const ArticleEditPage = ({ articleId }: { articleId: string }) => {
   useEffect(() => {
     if (article && !title) {
       setTitle(article.title)
-      setText(article.json ? JSON.stringify(article.json, null, 2) : "")
-      setJson(article.json)
+      setText(article.content ? JSON.stringify(article.content, null, 2) : "")
+      setJson(article.content)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [article])

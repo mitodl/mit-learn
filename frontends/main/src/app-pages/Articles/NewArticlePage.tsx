@@ -38,12 +38,12 @@ const NewArticlePage: React.FC = () => {
 
     const payload = {
       title: title.trim(),
-      json: json,
+      content: json,
     }
 
     createArticle(
       payload as {
-        json: string
+        content: string
         title: string
       },
       {

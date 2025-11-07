@@ -51,7 +51,7 @@ export const ArticleDetailPage = ({ articleId }: { articleId: number }) => {
           </ButtonLink>
         </EditButton>
       </WrapperContainer>
-      <PreTag>{JSON.stringify(data.json, null, 2)}</PreTag>
+      <PreTag>{JSON.stringify(data.content, null, 2)}</PreTag>
     </Page>
   )
 }

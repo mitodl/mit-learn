@@ -16,23 +16,6 @@ jest.mock("next/navigation", () => ({
   }),
 }))
 
-jest.mock("Article New Page", () => ({
-  CKEditorClient: ({ onChange }: { onChange: (content: string) => void }) => (
-    <textarea
-      data-testid="editor"
-      role="button"
-      tabIndex={0}
-      onClick={() => onChange("test content")}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          onChange("test content")
-        }
-      }}
-      aria-label="Editor mock"
-    />
-  ),
-}))
-
 describe("NewArticlePage", () => {
   test("throws ForbiddenError when user lacks ArticleEditor permission", async () => {
     const user = factories.user.user({
