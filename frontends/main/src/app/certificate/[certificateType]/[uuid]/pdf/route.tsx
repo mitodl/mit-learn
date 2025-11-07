@@ -29,8 +29,42 @@ import { redirect } from "next/navigation"
   - Browsers print at 96 dpi, PDFs default to 72 dpi
   - Scaling factor of 0.8 emulates browser print scaling and better reflect the screen design
 */
-const pxToPt = (px: number): number => {
+export const pxToPt = (px: number): number => {
   return px * (72 / 96) * 0.8
+}
+
+/**
+ * Calculate font size and top position for user name based on estimated text width
+ * to ensure long names fit on the certificate while maintaining baseline alignment
+ */
+export const getNameStyles = (
+  name: string,
+): { fontSize: number; top: number } => {
+  const baselineTop = pxToPt(206) // Original top position for full-size name
+  const baseFontSize = pxToPt(52) // h1 font size
+  const maxWidth = pxToPt(950) // Maximum available width
+
+  // For Neue Haas Grotesk at 52px, approximate average char width is ~60% of font size
+  const avgCharWidth = baseFontSize * 0.6
+
+  // Calculate estimated width at full size
+  const estimatedWidth = name.length * avgCharWidth
+
+  // Calculate scale factor needed to fit within maxWidth
+  let scaleFactor = 1.0
+  if (estimatedWidth > maxWidth) {
+    // Scale down proportionally to fit, with a minimum of 35%
+    scaleFactor = Math.max(0.35, maxWidth / estimatedWidth)
+  }
+  console.log("scaleFactor", scaleFactor)
+
+  const fontSize = baseFontSize * scaleFactor
+
+  // Keep the baseline in the same position
+  const fontSizeDiff = baseFontSize - fontSize
+  const top = baselineTop + fontSizeDiff
+
+  return { fontSize, top }
 }
 
 // https://use.typekit.net/lbk1xay.css
@@ -253,6 +287,40 @@ const CertificateDoc = ({
   startDate?: string | null
   endDate?: string | null
 }) => {
+  // Test names with various lengths - remove before production
+
+  // ~13 chars - full size
+  // userName = "Flip Waffles"
+
+  // ~23 chars - full size
+  // userName = "Wolfgang Amadeus Mozart"
+
+  // ~33 chars - scales proportionally
+  // userName = "Sir Bartholomew Fizzlewhisk III"
+
+  // ~43 chars - scales proportionally
+  userName = "Princess Genevieve Beauregard-Winterstone"
+
+  // ~47 chars - scales proportionally
+  // userName = "Dr. Maximilian Thunderbolt von Schnitzelhausen"
+
+  // ~52 chars - scales proportionally
+  // userName = "Captain Cornelius Pumpernickel-Whiskerdoodle Jones"
+
+  // ~57 chars - scales proportionally
+  // userName = "Lady Penelope Wigglesworth-Featherstone de la Fontaine"
+
+  // ~62 chars - scales proportionally
+  // userName = "Professor Archibald Bartholomew Higginbotham-Waffletop IV"
+
+  // ~72 chars - scales proportionally
+  // userName = "Sir Reginald Pumpernickel-Doodlewhisk-Wigglesworth von Thunderbolt"
+
+  // ~83 chars - scales proportionally
+  // userName = "Baroness Millicent Josephine Beauregard-Featherstone-Fizzlewhisk-Winterstone V"
+
+  // ~112 chars - scales to minimum 35%
+  // userName = "His Excellency Count Maximilian Cornelius Archibald Pumpernickel-Wigglesworth-Thunderbolt-Whiskerdoodle III"
   return (
     <Document
       title={`${title} Certificate issued by MIT Open Learning.pdf`}
@@ -309,8 +377,9 @@ const CertificateDoc = ({
               style={{
                 color: colors.red,
                 ...typography.h1,
+                fontSize: getNameStyles(userName).fontSize,
                 position: "absolute",
-                top: pxToPt(206),
+                top: getNameStyles(userName).top,
                 left: pxToPt(46),
               }}
             >
