@@ -11,8 +11,6 @@ import { UniqueEnforcer } from "enforce-unique"
 const enforcerId = new UniqueEnforcer()
 
 const legalAddress = (): LegalAddress => ({
-  first_name: faker.person.firstName(),
-  last_name: faker.person.lastName(),
   country: faker.location.countryCode(),
   state: faker.datatype.boolean() ? faker.location.state() : null,
 })

@@ -10,12 +10,11 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@ckeditor/ckeditor5-react": "^6.3.0",
     "@ebay/nice-modal-react": "^1.2.13",
     "@emotion/cache": "^11.13.1",
     "@emotion/styled": "^11.11.0",
     "@mitodl/course-search-utils": "^3.5.0",
-    "@mitodl/mitxonline-api-axios": "^2025.10.21",
+    "@mitodl/mitxonline-api-axios": "^2025.11.5",
     "@mitodl/smoot-design": "^6.17.1",
     "@next/bundle-analyzer": "^14.2.15",
     "@react-pdf/renderer": "^4.3.0",
@@ -24,7 +23,6 @@
     "@tanstack/react-query": "^5.66",
     "api": "workspace:*",
     "async_hooks": "^1.0.0",
-    "ckeditor5": "^42.0.0",
     "classnames": "^2.5.1",
     "formik": "^2.4.6",
     "iso-639-1": "^3.1.4",

@@ -170,8 +170,10 @@ const getCoursewareText = ({
   if (!enrollmentStatus || enrollmentStatus === EnrollmentStatus.NotEnrolled) {
     return `Start ${courseNoun}`
   }
-  if (!endDate) return `Continue ${courseNoun}`
-  if (isInPast(endDate)) {
+  if (
+    (endDate && isInPast(endDate)) ||
+    enrollmentStatus === EnrollmentStatus.Completed
+  ) {
     return `View ${courseNoun}`
   }
   return `Continue ${courseNoun}`

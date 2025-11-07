@@ -176,7 +176,7 @@ type ResourceCarouselProps = {
   /**
    * Element type for the carousel title
    */
-  titleComponent?: React.ElementType
+  titleComponent?: "h1" | "h2" | "h3" | "h4" | "h5" | "h6"
   titleVariant?: TypographyProps["variant"]
   excludeResourceId?: number
 }
@@ -302,28 +302,32 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
             >[]
           }
         >
-          {({ resources, childrenLoading, tabConfig }) => (
-            <CarouselV2 arrowsContainer={ref}>
-              {isLoading || childrenLoading
-                ? Array.from({ length: 6 }).map((_, index) => (
-                    <ResourceCard
-                      isLoading
-                      key={index}
-                      resource={null}
-                      {...tabConfig.cardProps}
-                    />
-                  ))
-                : resources
-                    .filter((resource) => resource.id !== excludeResourceId)
-                    .map((resource) => (
+          {({ resources, childrenLoading, tabConfig }) => {
+            return (
+              <CarouselV2 arrowsContainer={ref}>
+                {isLoading || childrenLoading
+                  ? Array.from({ length: 6 }).map((_, index) => (
                       <ResourceCard
-                        key={resource.id}
-                        resource={resource}
+                        isLoading
+                        key={index}
+                        resource={null}
+                        parentHeadingEl={titleComponent}
                         {...tabConfig.cardProps}
                       />
-                    ))}
-            </CarouselV2>
-          )}
+                    ))
+                  : resources
+                      .filter((resource) => resource.id !== excludeResourceId)
+                      .map((resource) => (
+                        <ResourceCard
+                          key={resource.id}
+                          resource={resource}
+                          parentHeadingEl={titleComponent}
+                          {...tabConfig.cardProps}
+                        />
+                      ))}
+              </CarouselV2>
+            )
+          }}
         </PanelChildren>
       </TabContext>
     </MobileOverflow>

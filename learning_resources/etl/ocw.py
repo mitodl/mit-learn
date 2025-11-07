@@ -308,8 +308,12 @@ def transform_run(course_data: dict) -> dict:
     return {
         "run_id": course_data["run_id"],
         "published": True,
-        "instructors": parse_instructors(course_data.get("instructors", [])),
-        "description": clean_data(course_data.get("course_description_html")),
+        "instructors": parse_instructors(course_data.get("instructors") or []),
+        "description": clean_data(
+            course_data.get("course_description_html")
+            or course_data.get("course_description ")
+            or ""
+        ),
         "year": year,
         "semester": semester,
         "status": RunStatus.current.value,
@@ -317,18 +321,20 @@ def transform_run(course_data: dict) -> dict:
             "url": urljoin(settings.OCW_BASE_URL, image_src) if image_src else None,
             "description": course_data.get("course_image_metadata", {}).get(
                 "description"
-            ),
+            )
+            or "",
             "alt": (
                 course_data.get("course_image_metadata", {})
                 .get("image_metadata", {})
                 .get("image-alt")
-            ),
+            )
+            or "",
         },
-        "level": transform_levels(course_data.get("level", [])),
+        "level": transform_levels(course_data.get("level") or []),
         "last_modified": course_data.get("last_modified"),
-        "title": course_data.get("course_title"),
-        "slug": course_data.get("slug"),
-        "url": course_data["url"],
+        "title": course_data.get("course_title") or "",
+        "slug": course_data.get("slug") or "",
+        "url": course_data["url"] or "",
         "availability": Availability.anytime.name,
         "delivery": parse_delivery(course_data),
         "format": [Format.asynchronous.name],

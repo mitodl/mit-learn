@@ -37,18 +37,42 @@ def multi_or_filter(
     return queryset.filter(query_or_filters)
 
 
-class CharInFilter(BaseInFilter, CharFilter):
+class BaseInFilterExplode(BaseInFilter):
+    """BaseIn filter that provides better help text for OpenAPI docs."""
+
+    help_text: str = "Separate values as ?field=value1&field=value2..."
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("help_text", kwargs.get("label", self.help_text))
+        super().__init__(*args, **kwargs)
+
+
+class CharInFilter(BaseInFilterExplode, CharFilter):
     """Filter that allows for multiple character values"""
 
+    def filter(self, qs, value):
+        """Apply multi-OR filter logic automatically"""
+        if value:
+            return multi_or_filter(qs, self.field_name, value)
+        return qs
 
-class NumberInFilter(BaseInFilter, NumberFilter):
+
+class NumberInFilter(BaseInFilterExplode, NumberFilter):
     """Filter that allows for multiple numeric values"""
+
+    def filter(self, qs, value):
+        """Apply multi-OR filter logic automatically"""
+        if value:
+            return multi_or_filter(qs, self.field_name, value)
+        return qs
 
 
 class MultipleOptionsFilterBackend(DjangoFilterBackend):
     """
     Custom filter backend that handles multiple values for the same key
     in various formats
+     - MultipleChoiceFilter supports repeated values ("explode") or commas
+     - CharInFilter and NumberInFilter supports only repeated values ("explode")
     """
 
     def get_filterset_kwargs(self, request, queryset, view):  # noqa: ARG002

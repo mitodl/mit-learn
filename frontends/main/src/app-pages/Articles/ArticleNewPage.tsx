@@ -6,6 +6,7 @@ import { useArticleCreate } from "api/hooks/articles"
 import { Button, Input, Alert } from "@mitodl/smoot-design"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
 import { Container, Typography, styled } from "ol-components"
+import { articlesView } from "@/common/urls"
 
 const SaveButton = styled.div({
   textAlign: "right",
@@ -22,14 +23,13 @@ const TitleInput = styled(Input)({
   margin: "10px 0",
 })
 
-const NewArticlePage: React.FC = () => {
+const ArticleNewPage: React.FC = () => {
   const router = useRouter()
 
   const [title, setTitle] = React.useState<string>("")
   const [text, setText] = useState("")
   const [json, setJson] = useState({})
   const [alertText, setAlertText] = React.useState("")
-  const [severity, setSeverity] = React.useState<"success" | "error">("success")
 
   const { mutate: createArticle, isPending } = useArticleCreate()
 
@@ -43,16 +43,16 @@ const NewArticlePage: React.FC = () => {
 
     createArticle(
       payload as {
-        content: string
+        content: object
         title: string
       },
       {
         onSuccess: (article) => {
-          router.push(`/articles/${article.id}`)
+          articlesView(article.id)
+          router.push(articlesView(article.id))
         },
-        onError: () => {
-          setAlertText("❌ Failed to save article")
-          setSeverity("error")
+        onError: (error) => {
+          setAlertText(`❌ ${error?.message}`)
         },
       },
     )
@@ -75,7 +75,7 @@ const NewArticlePage: React.FC = () => {
         {alertText && (
           <Alert
             key={alertText}
-            severity={severity}
+            severity="error"
             className="info-alert"
             closable
           >
@@ -119,4 +119,4 @@ const NewArticlePage: React.FC = () => {
   )
 }
 
-export { NewArticlePage }
+export { ArticleNewPage }

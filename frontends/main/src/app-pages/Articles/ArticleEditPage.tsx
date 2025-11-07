@@ -7,6 +7,7 @@ import { Button, Input, Alert } from "@mitodl/smoot-design"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
 import { Container, Typography, styled, LoadingSpinner } from "ol-components"
 import { notFound } from "next/navigation"
+import { articlesView } from "@/common/urls"
 
 const SaveButton = styled.div({
   textAlign: "right",
@@ -40,24 +41,17 @@ const ArticleEditPage = ({ articleId }: { articleId: string }) => {
     const payload = {
       id: id,
       title: title.trim(),
-      json: json,
+      content: json,
     }
 
-    updateArticle(
-      payload as {
-        id: number
-        json: string
-        title: string
+    updateArticle(payload, {
+      onSuccess: (article) => {
+        router.push(articlesView(article.id))
       },
-      {
-        onSuccess: (article) => {
-          router.push(`/articles/${article.id}`)
-        },
-        onError: () => {
-          setAlertText("❌ Failed to save article")
-        },
+      onError: (error) => {
+        setAlertText(`❌ ${error.message}`)
       },
-    )
+    })
   }
 
   useEffect(() => {

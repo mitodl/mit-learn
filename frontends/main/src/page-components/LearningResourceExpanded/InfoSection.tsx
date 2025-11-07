@@ -180,6 +180,7 @@ const totalRunsWithDates = (resource: LearningResource) => {
 
 const RunDates: React.FC<{ resource: LearningResource }> = ({ resource }) => {
   const [showingMore, setShowingMore] = useState(false)
+  const anytime = showStartAnytime(resource)
   let sortedDates = resource.runs
     ?.sort((a, b) => {
       if (a?.start_date && b?.start_date) {
@@ -187,14 +188,14 @@ const RunDates: React.FC<{ resource: LearningResource }> = ({ resource }) => {
       }
       return 0
     })
-    .map((run) => formatRunDate(run, showStartAnytime(resource)))
+    .map((run) => formatRunDate(run, anytime))
     .filter((date) => date !== null)
 
   const nextStartDate = resource.next_start_date
     ? formatDate(resource.next_start_date, "MMMM DD, YYYY")
     : null
 
-  if (sortedDates && nextStartDate) {
+  if (sortedDates && nextStartDate && !anytime) {
     // Replace the first date with next_start_date
     sortedDates = [nextStartDate, ...sortedDates.slice(1)]
   }

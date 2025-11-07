@@ -1,6 +1,7 @@
 import React from "react"
 import { screen, renderWithProviders, setMockResponse } from "@/test-utils"
 import { waitFor, fireEvent } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { factories, urls } from "api/test-utils"
 import { ArticleEditPage } from "./ArticleEditPage"
 
@@ -13,10 +14,6 @@ jest.mock("next-nprogress-bar", () => ({
 }))
 
 describe("ArticleEditPage", () => {
-  beforeEach(() => {
-    jest.clearAllMocks()
-  })
-
   test("renders editor when user has ArticleEditor permission", async () => {
     const user = factories.user.user({
       is_authenticated: true,
@@ -27,7 +24,7 @@ describe("ArticleEditPage", () => {
     const article = factories.articles.article({
       id: 42,
       title: "Existing Title",
-      content: "{id: 1, content: 'Existing content'}",
+      content: { id: 1, content: "Existing content" },
     })
     setMockResponse.get(urls.articles.details(article.id), article)
 
@@ -48,7 +45,7 @@ describe("ArticleEditPage", () => {
     const article = factories.articles.article({
       id: 123,
       title: "Existing Title",
-      content: "{id: 1, content: 'Existing content'}",
+      content: { id: 1, content: "Existing content" },
     })
     setMockResponse.get(urls.articles.details(article.id), article)
 
@@ -61,9 +58,10 @@ describe("ArticleEditPage", () => {
     const titleInput = await screen.findByPlaceholderText("Enter article title")
 
     fireEvent.change(titleInput, { target: { value: "Updated Title" } })
+
     await waitFor(() => expect(titleInput).toHaveValue("Updated Title"))
 
-    fireEvent.click(screen.getByText(/save article/i))
+    await userEvent.click(screen.getByText(/save article/i))
 
     // ✅ Wait for redirect after update success
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/articles/123"))
@@ -79,7 +77,7 @@ describe("ArticleEditPage", () => {
     const article = factories.articles.article({
       id: 7,
       title: "Old Title",
-      content: "{id: 1, content: 'Bad content'}",
+      content: { id: 1, content: "Bad content" },
     })
     setMockResponse.get(urls.articles.details(article.id), article)
 
@@ -95,10 +93,8 @@ describe("ArticleEditPage", () => {
     const titleInput = await screen.findByPlaceholderText("Enter article title")
     fireEvent.change(titleInput, { target: { value: "Bad Article" } })
 
-    fireEvent.click(screen.getByText(/save article/i))
+    await userEvent.click(screen.getByText(/save article/i))
 
-    expect(
-      await screen.findByText(/Failed to save article/i),
-    ).toBeInTheDocument()
+    expect(await screen.findByText(/Mock Error/i)).toBeInTheDocument()
   })
 })

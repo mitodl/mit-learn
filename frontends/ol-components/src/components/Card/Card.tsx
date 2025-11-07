@@ -5,9 +5,9 @@ import React, {
   isValidElement,
   CSSProperties,
   useCallback,
-  AriaAttributes,
   ReactElement,
 } from "react"
+import type { AriaRole, AriaAttributes } from "react"
 import styled from "@emotion/styled"
 import { theme } from "../ThemeProvider/ThemeProvider"
 import { pxToRem } from "../ThemeProvider/typography"
@@ -135,6 +135,35 @@ const Title = styled(
   ]
 })
 
+const LinkableTitle = ({
+  title,
+  size,
+}: {
+  title: TitleProps
+  size: Size | undefined
+}) => {
+  const { role, "aria-level": ariaLevel, href, children, ...rest } = title
+
+  return (
+    <Title
+      data-card-link={!!href}
+      className="MitCard-title"
+      size={size}
+      href={href}
+      {...rest}
+    >
+      {/*
+       * The card titles are links, but we also want them to be visible as headings for accessibility.
+       * Setting the role on the Title component would make it invisible as a link to screen readers,
+       * so we include a span to set the role on instead.
+       */}
+      <span role={role} aria-level={ariaLevel}>
+        {children}
+      </span>
+    </Title>
+  )
+}
+
 const Footer = styled.span`
   display: block;
   height: ${pxToRem(16)};
@@ -218,6 +247,7 @@ type CardProps = {
   forwardClicksToLink?: boolean
   onClick?: React.MouseEventHandler<HTMLElement>
   as?: React.ElementType
+  role?: AriaRole
 } & AriaAttributes
 
 export type ImageProps = NextImageProps & {
@@ -231,7 +261,8 @@ type TitleProps = {
   lines?: number
   style?: CSSProperties
   lang?: string
-}
+  role?: AriaRole
+} & AriaAttributes
 
 type SlotProps = { children?: ReactNode; style?: CSSProperties }
 
@@ -270,6 +301,7 @@ const Card: Card = ({
   size,
   onClick,
   forwardClicksToLink = false,
+  role,
   ...others
 }) => {
   let content,
@@ -315,6 +347,7 @@ const Card: Card = ({
         className={allClassNames}
         size={size}
         onClick={handleClick}
+        role={role}
       >
         {content}
       </Container>
@@ -327,6 +360,7 @@ const Card: Card = ({
       className={allClassNames}
       size={size}
       onClick={handleClick}
+      role={role}
     >
       {image && (
         // alt text will be checked on Card.Image
@@ -345,12 +379,7 @@ const Card: Card = ({
             {info.children}
           </Info>
         )}
-        <Title
-          data-card-link={!!title.href}
-          className="MitCard-title"
-          size={size}
-          {...title}
-        />
+        <LinkableTitle title={title} size={size} />
       </Body>
       <Bottom>
         <Footer className="MitCard-footer" {...footer}>

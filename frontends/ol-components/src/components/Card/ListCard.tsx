@@ -3,9 +3,9 @@ import React, {
   ReactNode,
   Children,
   isValidElement,
-  AriaAttributes,
   ReactElement,
 } from "react"
+import type { AriaRole, AriaAttributes } from "react"
 import styled from "@emotion/styled"
 import { RiDraggable } from "@remixicon/react"
 import { theme } from "../ThemeProvider/ThemeProvider"
@@ -90,20 +90,41 @@ export type TitleProps = {
   children?: ReactNode
   href?: string
   lang?: string
-}
+  role?: AriaRole
+} & AriaAttributes
+
 export const Title: React.FC<TitleProps> = styled(Linkable)`
   flex-grow: 1;
   color: ${theme.custom.colors.darkGray2};
   text-overflow: ellipsis;
   ${{ ...theme.typography.subtitle1 }}
   height: ${theme.typography.pxToRem(40)};
+  margin: 0;
   ${theme.breakpoints.down("md")} {
     ${{ ...theme.typography.subtitle3 }}
     height: ${theme.typography.pxToRem(32)};
   }
-
-  margin: 0;
 `
+
+export const LinkableTitle = ({
+  title,
+  lineClamp = 2,
+}: {
+  title: TitleProps
+  lineClamp?: number
+}) => {
+  const { href, role, "aria-level": ariaLevel, lang, children, ...rest } = title
+
+  return (
+    <Title data-card-link={!!href} href={href} {...rest}>
+      <span role={role} aria-level={ariaLevel}>
+        <TruncateText lineClamp={lineClamp} lang={lang}>
+          {children}
+        </TruncateText>
+      </span>
+    </Title>
+  )
+}
 
 export const Footer = styled.span`
   display: block;
@@ -209,8 +230,12 @@ const ListCard: Card = ({
   onClick,
   ...others
 }) => {
-  let content, imageProps, info, footer, actions
-  let title: TitleProps = {}
+  let content,
+    imageProps,
+    info,
+    footer,
+    actions,
+    title: TitleProps = {}
   const handleHrefClick = useClickChildLink(onClick)
   const handleClick = forwardClicksToLink ? handleHrefClick : onClick
 
@@ -248,13 +273,7 @@ const ListCard: Card = ({
       )}
       <Body>
         <Info>{info}</Info>
-        {title && (
-          <Title data-card-link={!!title.href} href={title.href}>
-            <TruncateText lineClamp={2} lang={title.lang}>
-              {title.children}
-            </TruncateText>
-          </Title>
-        )}
+        {title && <LinkableTitle title={title} />}
         <Bottom>
           <Footer>{footer}</Footer>
           {actions && <Actions data-card-actions>{actions}</Actions>}

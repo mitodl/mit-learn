@@ -78,18 +78,18 @@ class LearningResourceFilter(FilterSet):
     topic = CharInFilter(
         label="Topics covered by the resources. Load the '/api/v1/topics' endpoint "
         "for a list of topics",
-        method="filter_topic",
+        field_name="topics__name__iexact",
     )
 
     course_feature = CharInFilter(
         label="Content feature for the resources. Load the 'api/v1/course_features' "
         "endpoint for a list of course features",
-        method="filter_course_feature",
+        field_name="content_tags__name__iexact",
     )
 
     readable_id = CharInFilter(
         label="A unique text identifier for the resources",
-        method="filter_readable_id",
+        field_name="readable_id",
     )
 
     sortby = ChoiceFilter(
@@ -159,22 +159,10 @@ class LearningResourceFilter(FilterSet):
                 )
         return queryset.filter(query_or_filters)
 
-    def filter_readable_id(self, queryset, _, value):
-        """Readable id filter for leaarning resources"""
-        return multi_or_filter(queryset, "readable_id", value)
-
     def filter_level(self, queryset, _, value):
         """Level Filter for learning resources"""
         values = [[LevelType[val].name] for val in value]
         return multi_or_filter(queryset, "runs__level__contains", values)
-
-    def filter_topic(self, queryset, _, value):
-        """Topic Filter for learning resources"""
-        return multi_or_filter(queryset, "topics__name__iexact", value)
-
-    def filter_course_feature(self, queryset, _, value):
-        """Course Filter for learning resources"""
-        return multi_or_filter(queryset, "content_tags__name__iexact", value)
 
     def filter_sortby(self, queryset, _, value):
         """Sort the queryset in the order specified by the value"""
@@ -201,23 +189,23 @@ class ContentFileFilter(FilterSet):
 
     run_id = NumberInFilter(
         label="The id of the learning resource run the content file belongs to",
-        method="filter_run_id",
+        field_name="run_id",
     )
 
     resource_id = NumberInFilter(
         label="The id of the learning resource the content file belongs to",
-        method="filter_resource_id",
+        field_name="run__learning_resource__id",
     )
 
     content_feature_type = CharInFilter(
         label="Content feature type for the content file. Load the "
         "'api/v1/course_features' endpoint for a list of course features",
-        method="filter_content_feature_type",
+        field_name="content_tags__name__iexact",
     )
 
     edx_module_id = CharInFilter(
         label="The edx module id of the content file",
-        method="filter_edx_module_id",
+        field_name="edx_module_id__iexact",
     )
 
     offered_by = MultipleChoiceFilter(
@@ -236,30 +224,6 @@ class ContentFileFilter(FilterSet):
         choices=([(platform.name, platform.value) for platform in PlatformType]),
     )
 
-    def filter_run_id(self, queryset, _, value):
-        """Run ID Filter for contentfiles"""
-        return multi_or_filter(queryset, "run_id", value)
-
-    def filter_resource_id(self, queryset, _, value):
-        """Resource ID Filter for contentfiles"""
-        return multi_or_filter(queryset, "run__learning_resource__id", value)
-
-    def filter_run_readable_id(self, queryset, _, value):
-        """Run Readable ID Filter for contentfiles"""
-        return multi_or_filter(queryset, "run__run_id", value)
-
-    def filter_resource_readable_id(self, queryset, _, value):
-        """Resource Readable ID Filter for contentfiles"""
-        return multi_or_filter(queryset, "run__learning_resource__readable_id", value)
-
-    def filter_content_feature_type(self, queryset, _, value):
-        """Content feature type filter for contentfiles"""
-        return multi_or_filter(queryset, "content_tags__name__iexact", value)
-
-    def filter_edx_module_id(self, queryset, _, value):
-        """Edx module id Filter for contentfiles"""
-        return multi_or_filter(queryset, "edx_module_id__iexact", value)
-
     class Meta:
         model = ContentFile
         fields = []
@@ -270,25 +234,17 @@ class TopicFilter(FilterSet):
 
     name = CharInFilter(
         label="Topic name",
-        method="filter_name",
+        field_name="name__iexact",
     )
     parent_topic_id = NumberInFilter(
         label="Parent topic ID",
-        method="filter_parent_topic_id",
+        field_name="parent_id",
     )
     is_toplevel = BooleanFilter(
         label="Filter top-level topics",
         method="filter_toplevel",
     )
 
-    def filter_name(self, queryset, _, values):
-        """Filter by topic name"""
-        return multi_or_filter(queryset, "name__iexact", values)
-
     def filter_toplevel(self, queryset, _, value):
         """Filter by top-level (parent == null)"""
         return queryset.filter(parent__isnull=value)
-
-    def filter_parent_topic_id(self, queryset, _, values):
-        """Get direct children of a topic"""
-        return queryset.filter(parent_id__in=values)

@@ -6,8 +6,9 @@ import {
   TestingErrorBoundary,
 } from "@/test-utils"
 import { waitFor, fireEvent } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { factories, urls } from "api/test-utils"
-import { NewArticlePage } from "./NewArticlePage"
+import { ArticleNewPage } from "./ArticleNewPage"
 
 const pushMock = jest.fn()
 jest.mock("next/navigation", () => ({
@@ -16,7 +17,7 @@ jest.mock("next/navigation", () => ({
   }),
 }))
 
-describe("NewArticlePage", () => {
+describe("ArticleNewPage", () => {
   test("throws ForbiddenError when user lacks ArticleEditor permission", async () => {
     const user = factories.user.user({
       is_authenticated: true,
@@ -29,7 +30,7 @@ describe("NewArticlePage", () => {
 
     renderWithProviders(
       <TestingErrorBoundary onError={onError}>
-        <NewArticlePage />
+        <ArticleNewPage />
       </TestingErrorBoundary>,
     )
 
@@ -47,7 +48,7 @@ describe("NewArticlePage", () => {
     })
     setMockResponse.get(urls.userMe.get(), user)
 
-    renderWithProviders(<NewArticlePage />)
+    renderWithProviders(<ArticleNewPage />)
 
     expect(await screen.findByText("Write Article")).toBeInTheDocument()
     expect(screen.getByTestId("editor")).toBeInTheDocument()
@@ -64,7 +65,7 @@ describe("NewArticlePage", () => {
     const createdArticle = factories.articles.article({ id: 101 })
     setMockResponse.post(urls.articles.list(), createdArticle)
 
-    renderWithProviders(<NewArticlePage />)
+    renderWithProviders(<ArticleNewPage />)
 
     await screen.findByTestId("editor")
 
@@ -72,7 +73,7 @@ describe("NewArticlePage", () => {
     fireEvent.change(titleInput, { target: { value: "My Article" } })
     await waitFor(() => expect(titleInput).toHaveValue("My Article"))
 
-    fireEvent.click(screen.getByText(/save article/i))
+    await userEvent.click(screen.getByText(/save article/i))
 
     await waitFor(() =>
       expect(pushMock).toHaveBeenCalledWith("/articles/101", undefined),
@@ -93,18 +94,16 @@ describe("NewArticlePage", () => {
       { code: 500 },
     )
 
-    renderWithProviders(<NewArticlePage />)
+    renderWithProviders(<ArticleNewPage />)
 
     await screen.findByPlaceholderText("Enter article title")
 
     fireEvent.change(screen.getByPlaceholderText("Enter article title"), {
       target: { value: "My Article" },
     })
-    fireEvent.click(screen.getByTestId("editor"))
-    fireEvent.click(screen.getByText("Save Article"))
+    await userEvent.click(screen.getByTestId("editor"))
+    await userEvent.click(screen.getByText("Save Article"))
 
-    expect(
-      await screen.findByText(/Failed to save article/),
-    ).toBeInTheDocument()
+    expect(await screen.findByText(/Mock Error/)).toBeInTheDocument()
   })
 })
