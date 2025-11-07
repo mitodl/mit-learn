@@ -34,7 +34,7 @@ import {
   ResourceCategoryEnum,
   SearchModeEnumDescriptions,
 } from "api"
-import { useLearningResourcesSearch } from "api/hooks/learningResources"
+import { learningResourceQueries } from "api/hooks/learningResources"
 import { useAdminSearchParams } from "api/hooks/adminSearchParams"
 import {
   AvailableFacets,
@@ -57,6 +57,7 @@ import { ResourceCard } from "../ResourceCard/ResourceCard"
 import { useUserMe } from "api/hooks/user"
 import { usePostHog } from "posthog-js/react"
 import getSearchParams from "./getSearchParams"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
 
 const StyledResourceTabs = styled(ResourceCategoryTabs.TabList)`
   margin-top: 0;
@@ -569,10 +570,15 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     page,
   ])
 
-  const { data, isLoading, isFetching } = useLearningResourcesSearch(
-    allParams as LRSearchRequest,
-    { keepPreviousData: true },
-  )
+  const { data, isLoading, isFetching } = useQuery({
+    ...learningResourceQueries.search(allParams as LRSearchRequest),
+    placeholderData: keepPreviousData,
+    select: (data) => {
+      const metadata = data.metadata
+      // filter out facets we don't want
+      return { ...data, metadata }
+    },
+  })
 
   const { data: user } = useUserMe()
 
