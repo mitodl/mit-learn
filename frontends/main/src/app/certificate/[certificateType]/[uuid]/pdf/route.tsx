@@ -287,40 +287,6 @@ const CertificateDoc = ({
   startDate?: string | null
   endDate?: string | null
 }) => {
-  // Test names with various lengths - remove before production
-
-  // ~13 chars - full size
-  // userName = "Flip Waffles"
-
-  // ~23 chars - full size
-  // userName = "Wolfgang Amadeus Mozart"
-
-  // ~33 chars - scales proportionally
-  // userName = "Sir Bartholomew Fizzlewhisk III"
-
-  // ~43 chars - scales proportionally
-  userName = "Princess Genevieve Beauregard-Winterstone"
-
-  // ~47 chars - scales proportionally
-  // userName = "Dr. Maximilian Thunderbolt von Schnitzelhausen"
-
-  // ~52 chars - scales proportionally
-  // userName = "Captain Cornelius Pumpernickel-Whiskerdoodle Jones"
-
-  // ~57 chars - scales proportionally
-  // userName = "Lady Penelope Wigglesworth-Featherstone de la Fontaine"
-
-  // ~62 chars - scales proportionally
-  // userName = "Professor Archibald Bartholomew Higginbotham-Waffletop IV"
-
-  // ~72 chars - scales proportionally
-  // userName = "Sir Reginald Pumpernickel-Doodlewhisk-Wigglesworth von Thunderbolt"
-
-  // ~83 chars - scales proportionally
-  // userName = "Baroness Millicent Josephine Beauregard-Featherstone-Fizzlewhisk-Winterstone V"
-
-  // ~112 chars - scales to minimum 35%
-  // userName = "His Excellency Count Maximilian Cornelius Archibald Pumpernickel-Wigglesworth-Thunderbolt-Whiskerdoodle III"
   return (
     <Document
       title={`${title} Certificate issued by MIT Open Learning.pdf`}
