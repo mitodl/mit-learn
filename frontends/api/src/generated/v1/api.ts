@@ -7160,7 +7160,7 @@ export interface RichTextArticle {
    * @type {string}
    * @memberof RichTextArticle
    */
-  html: string
+  json: string
   /**
    *
    * @type {number}
@@ -7185,7 +7185,7 @@ export interface RichTextArticleRequest {
    * @type {string}
    * @memberof RichTextArticleRequest
    */
-  html: string
+  json: string
   /**
    *
    * @type {string}

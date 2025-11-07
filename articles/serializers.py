@@ -20,9 +20,9 @@ class RichTextArticleSerializer(serializers.ModelSerializer):
     Serializer for LearningResourceInstructor model
     """
 
-    html = SanitizedHtmlField()
+    json = serializers.JSONField()
     title = serializers.CharField(max_length=255)
 
     class Meta:
         model = models.Article
-        fields = ["html", "id", "title"]
+        fields = ["json", "id", "title"]

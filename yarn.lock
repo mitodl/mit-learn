@@ -14947,7 +14947,6 @@ __metadata:
     next: "npm:^15.5.2"
     next-nprogress-bar: "npm:^2.4.2"
     next-router-mock: "npm:^1.0.2"
-    ol-ckeditor: "workspace:*"
     ol-components: "npm:0.0.0"
     ol-test-utilities: "npm:0.0.0"
     ol-utilities: "npm:0.0.0"
@@ -16652,23 +16651,6 @@ __metadata:
   checksum: 10/8fd776aa495d113e217837f4adc1d53e63f656498237094d25f84c3e2c038b34b71d6fd85c4b60c7ae5f558790e5042426a400fae3eac35f297e11be12643a78
   languageName: node
   linkType: hard
-
-"ol-ckeditor@workspace:*, ol-ckeditor@workspace:frontends/ol-ckeditor":
-  version: 0.0.0-use.local
-  resolution: "ol-ckeditor@workspace:frontends/ol-ckeditor"
-  dependencies:
-    "@ckeditor/ckeditor5-react": "npm:^6.3.0"
-    "@mitodl/smoot-design": "npm:^6.17.1"
-    "@tanstack/react-query": "npm:^5.66.0"
-    api: "workspace:*"
-    ckeditor5: "npm:^42.0.0"
-    next: "npm:^15.5.2"
-    ol-components: "npm:0.0.0"
-  peerDependencies:
-    react: ">=18.0.0"
-    react-dom: ">=18.0.0"
-  languageName: unknown
-  linkType: soft
 
 "ol-components@npm:0.0.0, ol-components@workspace:frontends/ol-components":
   version: 0.0.0-use.local

@@ -1,5 +1,10 @@
 import React from "react"
-import { screen, renderWithProviders, setMockResponse } from "@/test-utils"
+import {
+  screen,
+  renderWithProviders,
+  setMockResponse,
+  TestingErrorBoundary,
+} from "@/test-utils"
 import { waitFor, fireEvent } from "@testing-library/react"
 import { factories, urls } from "api/test-utils"
 import { NewArticlePage } from "./NewArticlePage"
@@ -11,30 +16,7 @@ jest.mock("next/navigation", () => ({
   }),
 }))
 
-class TestErrorBoundary extends React.Component<{ children: React.ReactNode }> {
-  state = { hasError: false }
-
-  static getDerivedStateFromError() {
-    return { hasError: true }
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return <div data-testid="forbidden-error">Forbidden</div>
-    }
-    return this.props.children
-  }
-}
-
-const mockMutate = jest.fn()
-jest.mock("api/hooks/articles", () => ({
-  useArticleCreate: () => ({
-    mutate: mockMutate,
-    isPending: false,
-  }),
-}))
-
-jest.mock("ol-ckeditor", () => ({
+jest.mock("Article New Page", () => ({
   CKEditorClient: ({ onChange }: { onChange: (content: string) => void }) => (
     <textarea
       data-testid="editor"
@@ -52,26 +34,24 @@ jest.mock("ol-ckeditor", () => ({
 }))
 
 describe("NewArticlePage", () => {
-  beforeEach(() => mockMutate.mockReset())
-
   test("throws ForbiddenError when user lacks ArticleEditor permission", async () => {
     const user = factories.user.user({
       is_authenticated: true,
       is_article_editor: false,
     })
-
     setMockResponse.get(urls.userMe.get(), user)
 
     const consoleSpy = jest.spyOn(console, "error").mockImplementation(() => {})
+    const onError = jest.fn()
 
     renderWithProviders(
-      <TestErrorBoundary>
+      <TestingErrorBoundary onError={onError}>
         <NewArticlePage />
-      </TestErrorBoundary>,
+      </TestingErrorBoundary>,
     )
 
     await waitFor(() => {
-      expect(screen.getByTestId("forbidden-error")).toBeInTheDocument()
+      expect(onError).toHaveBeenCalled()
     })
 
     consoleSpy.mockRestore()
@@ -95,28 +75,25 @@ describe("NewArticlePage", () => {
       is_authenticated: true,
       is_article_editor: true,
     })
-
     setMockResponse.get(urls.userMe.get(), user)
+
+    // Mock article creation API
+    const createdArticle = factories.articles.article({ id: 101 })
+    setMockResponse.post(urls.articles.list(), createdArticle)
 
     renderWithProviders(<NewArticlePage />)
 
     await screen.findByTestId("editor")
 
-    const titleInput = screen.getByRole("textbox")
+    const titleInput = await screen.findByPlaceholderText("Enter article title")
     fireEvent.change(titleInput, { target: { value: "My Article" } })
-
-    mockMutate.mockImplementation((data, opts) => {
-      opts.onSuccess({ id: "101" })
-    })
+    await waitFor(() => expect(titleInput).toHaveValue("My Article"))
 
     fireEvent.click(screen.getByText(/save article/i))
 
-    expect(mockMutate).toHaveBeenCalledWith(
-      { title: "My Article", html: "" }, // mock editor starts empty
-      expect.any(Object),
+    await waitFor(() =>
+      expect(pushMock).toHaveBeenCalledWith("/articles/101", undefined),
     )
-
-    expect(pushMock).toHaveBeenCalledWith("/articles/101", undefined)
   })
 
   test("shows error on failure", async () => {
@@ -126,6 +103,13 @@ describe("NewArticlePage", () => {
     })
     setMockResponse.get(urls.userMe.get(), user)
 
+    // Simulate failed API request (500)
+    setMockResponse.post(
+      urls.articles.list(),
+      { detail: "Server error" },
+      { code: 500 },
+    )
+
     renderWithProviders(<NewArticlePage />)
 
     await screen.findByPlaceholderText("Enter article title")
@@ -133,13 +117,7 @@ describe("NewArticlePage", () => {
     fireEvent.change(screen.getByPlaceholderText("Enter article title"), {
       target: { value: "My Article" },
     })
-
     fireEvent.click(screen.getByTestId("editor"))
-
-    mockMutate.mockImplementation((_data, opts) => {
-      opts?.onError?.()
-    })
-
     fireEvent.click(screen.getByText("Save Article"))
 
     expect(

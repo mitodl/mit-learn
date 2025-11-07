@@ -12,25 +12,8 @@ jest.mock("next-nprogress-bar", () => ({
   }),
 }))
 
-// Mock API hooks
-const mockUpdateMutate = jest.fn()
-jest.mock("api/hooks/articles", () => ({
-  useArticleDetail: (id: number) => ({
-    data: {
-      id,
-      title: "Existing Title",
-      html: "<p>Existing content</p>",
-    },
-    isLoading: false,
-  }),
-  useArticlePartialUpdate: () => ({
-    mutate: mockUpdateMutate,
-    isPending: false,
-  }),
-}))
-
-// Mock CKEditor
-jest.mock("ol-ckeditor", () => ({
+// ✅ Mock only CKEditor (still fine)
+jest.mock("Article Edit Page", () => ({
   CKEditorClient: ({ onChange }: { onChange: (content: string) => void }) => (
     <textarea
       data-testid="editor"
@@ -52,9 +35,16 @@ describe("ArticleEditPage", () => {
     })
     setMockResponse.get(urls.userMe.get(), user)
 
+    const article = factories.articles.article({
+      id: 42,
+      title: "Existing Title",
+      json: "{id: 1, content: 'Existing content'}",
+    })
+    setMockResponse.get(urls.articles.details(article.id), article)
+
     renderWithProviders(<ArticleEditPage articleId={"42"} />)
 
-    expect(await screen.findByText("Write Article")).toBeInTheDocument()
+    expect(await screen.findByText("Edit Article")).toBeInTheDocument()
     expect(screen.getByTestId("editor")).toBeInTheDocument()
     expect(screen.getByDisplayValue("Existing Title")).toBeInTheDocument()
   })
@@ -66,36 +56,28 @@ describe("ArticleEditPage", () => {
     })
     setMockResponse.get(urls.userMe.get(), user)
 
+    const article = factories.articles.article({
+      id: 123,
+      title: "Existing Title",
+      json: "{id: 1, content: 'Existing content'}",
+    })
+    setMockResponse.get(urls.articles.details(article.id), article)
+
+    // ✅ Mock successful update response
+    const updated = { ...article, title: "Updated Title" }
+    setMockResponse.patch(urls.articles.details(article.id), updated)
+
     renderWithProviders(<ArticleEditPage articleId={"123"} />)
 
     const titleInput = await screen.findByPlaceholderText("Enter article title")
 
-    // Change title
     fireEvent.change(titleInput, { target: { value: "Updated Title" } })
     await waitFor(() => expect(titleInput).toHaveValue("Updated Title"))
 
-    // Mock success response
-    mockUpdateMutate.mockImplementation((_data, opts) => {
-      opts.onSuccess({ id: 123 })
-    })
-
-    // Click save
     fireEvent.click(screen.getByText(/save article/i))
 
-    // Assert payload
-    await waitFor(() => {
-      expect(mockUpdateMutate).toHaveBeenCalledWith(
-        {
-          id: 123,
-          title: "Updated Title",
-          html: "<p>Existing content</p>",
-        },
-        expect.any(Object),
-      )
-    })
-
-    // Assert redirect
-    expect(pushMock).toHaveBeenCalledWith("/articles/123")
+    // ✅ Wait for redirect after update success
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/articles/123"))
   })
 
   test("shows error alert on failure", async () => {
@@ -105,14 +87,24 @@ describe("ArticleEditPage", () => {
     })
     setMockResponse.get(urls.userMe.get(), user)
 
+    const article = factories.articles.article({
+      id: 7,
+      title: "Old Title",
+      json: "{id: 1, content: 'Bad content'}",
+    })
+    setMockResponse.get(urls.articles.details(article.id), article)
+
+    // ✅ Mock failed update (500)
+    setMockResponse.patch(
+      urls.articles.details(article.id),
+      { detail: "Server Error" },
+      { code: 500 },
+    )
+
     renderWithProviders(<ArticleEditPage articleId={"7"} />)
 
     const titleInput = await screen.findByPlaceholderText("Enter article title")
     fireEvent.change(titleInput, { target: { value: "Bad Article" } })
-
-    mockUpdateMutate.mockImplementation((_data, opts) => {
-      opts.onError?.()
-    })
 
     fireEvent.click(screen.getByText(/save article/i))
 

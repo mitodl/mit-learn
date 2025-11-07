@@ -2,16 +2,15 @@
 
 import React from "react"
 import { useArticleDetail } from "api/hooks/articles"
-import { Container, LoadingSpinner, styled } from "ol-components"
+import { Container, LoadingSpinner, styled, Typography } from "ol-components"
+import { ButtonLink } from "@mitodl/smoot-design"
 import { notFound } from "next/navigation"
-import Link from "next/link"
 
-import "ckeditor5/ckeditor5.css"
-
-const ArticleTitle = styled.h1({
-  fontSize: "24px",
-  marginBottom: "12px",
+const Page = styled(Container)({
+  marginTop: "40px",
+  marginBottom: "40px",
 })
+
 const EditButton = styled.div({
   textAlign: "right",
   margin: "10px",
@@ -21,19 +20,12 @@ const WrapperContainer = styled.div({
   paddingBottom: "10px",
 })
 
-const EditButtonLink = styled(Link)({
-  cursor: "pointer",
-  minWidth: "100px",
-  boxSizing: "border-box",
-  borderWidth: "1px",
-  padding: "11px 16px",
-  fontFamily: "neue-haas-grotesk-text, sans-serif",
-  fontStyle: "normal",
-  fontSize: "0.875rem",
-  lineHeight: "1.125rem",
-  textTransform: "none",
-  backgroundColor: "#750014",
-  color: "#FFFFFF",
+const PreTag = styled.pre({
+  background: "#f6f6f6",
+  padding: "16px",
+  borderRadius: "8px",
+  fontSize: "14px",
+  overflowX: "auto",
 })
 
 export const ArticleDetailPage = ({ articleId }: { articleId: number }) => {
@@ -47,24 +39,19 @@ export const ArticleDetailPage = ({ articleId }: { articleId: number }) => {
     return notFound()
   }
   return (
-    <Container>
+    <Page>
       <WrapperContainer>
-        <ArticleTitle className="article-title">{data?.title}</ArticleTitle>
+        <Typography variant="h3" component="h1">
+          {data?.title}
+        </Typography>
 
         <EditButton>
-          <EditButtonLink
-            href={`/articles/${data.id}/edit`}
-            className="btn btn-edit"
-            color="red"
-          >
+          <ButtonLink href={`/articles/${data.id}/edit`} variant="primary">
             Edit
-          </EditButtonLink>
+          </ButtonLink>
         </EditButton>
       </WrapperContainer>
-      <div
-        className="ck-content"
-        dangerouslySetInnerHTML={{ __html: data?.html }}
-      />
-    </Container>
+      <PreTag>{JSON.stringify(data.json, null, 2)}</PreTag>
+    </Page>
   )
 }

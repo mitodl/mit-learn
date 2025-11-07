@@ -1,7 +1,6 @@
 "use client"
-import React, { useEffect } from "react"
+import React, { useEffect, useState, ChangeEvent } from "react"
 import { Permission } from "api/hooks/user"
-import { CKEditorClient } from "ol-ckeditor"
 import { useRouter } from "next-nprogress-bar"
 import { useArticleDetail, useArticlePartialUpdate } from "api/hooks/articles"
 import { Button, Input, Alert } from "@mitodl/smoot-design"
@@ -30,27 +29,24 @@ const ArticleEditPage = ({ articleId }: { articleId: string }) => {
   const id = Number(articleId)
   const { data: article, isLoading } = useArticleDetail(id)
 
-  const [title, setTitle] = React.useState<string>("")
-  const [editorContent, setEditorContent] = React.useState<string>("")
-  const [editorKey] = React.useState(0)
-  const [alertText, setAlertText] = React.useState("")
-  const [severity, setSeverity] = React.useState<"success" | "error">("success")
+  const [title, setTitle] = useState<string>("")
+  const [text, setText] = useState("")
+  const [json, setJson] = useState({})
+  const [alertText, setAlertText] = useState("")
 
   const { mutate: updateArticle, isPending } = useArticlePartialUpdate()
 
   const handleSave = () => {
-    setAlertText("")
-
     const payload = {
       id: id,
       title: title.trim(),
-      html: editorContent,
+      json: json,
     }
 
     updateArticle(
       payload as {
         id: number
-        html: string
+        json: string
         title: string
       },
       {
@@ -59,17 +55,16 @@ const ArticleEditPage = ({ articleId }: { articleId: string }) => {
         },
         onError: () => {
           setAlertText("❌ Failed to save article")
-          setSeverity("error")
         },
       },
     )
   }
 
   useEffect(() => {
-    if (article && !title && !editorContent) {
-      console.log("Article data:", article)
+    if (article && !title) {
       setTitle(article.title)
-      setEditorContent(article.html)
+      setText(article.json ? JSON.stringify(article.json, null, 2) : "")
+      setJson(article.json)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [article])
@@ -81,14 +76,27 @@ const ArticleEditPage = ({ articleId }: { articleId: string }) => {
     return notFound()
   }
 
+  const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value
+    setText(value)
+
+    try {
+      const parsed = JSON.parse(value)
+      setJson(parsed)
+    } catch {
+      setJson({})
+    }
+  }
   return (
     <RestrictedRoute requires={Permission.ArticleEditor}>
       <Container className="article-wrapper">
-        <h1>Write Article</h1>
+        <Typography variant="h3" component="h1">
+          Edit Article
+        </Typography>
         {alertText && (
           <Alert
             key={alertText}
-            severity={severity}
+            severity="error"
             className="info-alert"
             closable
           >
@@ -110,10 +118,12 @@ const ArticleEditPage = ({ articleId }: { articleId: string }) => {
         />
 
         <ClientContainer className="editor-box">
-          <CKEditorClient
-            key={editorKey}
-            value={editorContent}
-            onChange={(content) => setEditorContent(content)}
+          <textarea
+            data-testid="editor"
+            value={text}
+            onChange={handleChange}
+            placeholder="Type or paste JSON here..."
+            style={{ width: "100%", height: 150 }}
           />
         </ClientContainer>
 

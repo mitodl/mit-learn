@@ -1,7 +1,6 @@
 "use client"
-import React from "react"
+import React, { useState, ChangeEvent } from "react"
 import { Permission } from "api/hooks/user"
-import { CKEditorClient } from "ol-ckeditor"
 import { useRouter } from "next-nprogress-bar"
 import { useArticleCreate } from "api/hooks/articles"
 import { Button, Input, Alert } from "@mitodl/smoot-design"
@@ -27,7 +26,8 @@ const NewArticlePage: React.FC = () => {
   const router = useRouter()
 
   const [title, setTitle] = React.useState<string>("")
-  const [editorContent, setEditorContent] = React.useState<string>("")
+  const [text, setText] = useState("")
+  const [json, setJson] = useState({})
   const [alertText, setAlertText] = React.useState("")
   const [severity, setSeverity] = React.useState<"success" | "error">("success")
 
@@ -38,12 +38,12 @@ const NewArticlePage: React.FC = () => {
 
     const payload = {
       title: title.trim(),
-      html: editorContent,
+      json: json,
     }
 
     createArticle(
       payload as {
-        html: string
+        json: string
         title: string
       },
       {
@@ -57,7 +57,17 @@ const NewArticlePage: React.FC = () => {
       },
     )
   }
+  const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value
+    setText(value)
 
+    try {
+      const parsed = JSON.parse(value)
+      setJson(parsed)
+    } catch {
+      setJson({})
+    }
+  }
   return (
     <RestrictedRoute requires={Permission.ArticleEditor}>
       <Container className="article-wrapper">
@@ -86,9 +96,12 @@ const NewArticlePage: React.FC = () => {
         />
 
         <ClientContainer className="editor-box">
-          <CKEditorClient
-            value={editorContent}
-            onChange={(content) => setEditorContent(content)}
+          <textarea
+            data-testid="editor"
+            value={text}
+            onChange={handleChange}
+            placeholder="Type or paste JSON here..."
+            style={{ width: "100%", height: 150 }}
           />
         </ClientContainer>
 
