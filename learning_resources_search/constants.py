@@ -194,6 +194,7 @@ LEARNING_RESOURCE_MAP = {
         "properties": {
             "code": {"type": "keyword"},
             "name": {"type": "keyword"},
+            "display_facet": {"type": "boolean"},
             "channel_url": {"type": "keyword"},
         },
     },
