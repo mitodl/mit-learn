@@ -516,7 +516,7 @@ interface SearchDisplayProps {
   toggleParamValue: UseResourceSearchParamsResult["toggleParamValue"]
   showProfessionalToggle?: boolean
   setSearchParams: UseResourceSearchParamsProps["setSearchParams"]
-  resultsHeadingEl: React.ElementType
+  resultsHeadingEl: "h1" | "h2" | "h3" | "h4" | "h5" | "h6"
   filterHeadingEl: React.ElementType
 }
 
@@ -914,7 +914,11 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                       .fill(null)
                       .map((a, index) => (
                         <li key={index}>
-                          <ResourceCard isLoading={isLoading} list />
+                          <ResourceCard
+                            isLoading={isLoading}
+                            parentHeadingEl={resultsHeadingEl}
+                            list
+                          />
                         </li>
                       ))}
                   </PlainList>
@@ -922,7 +926,11 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                   <PlainList itemSpacing={1.5}>
                     {data.results.map((resource) => (
                       <li key={resource.id}>
-                        <ResourceCard resource={resource} list />
+                        <ResourceCard
+                          resource={resource}
+                          parentHeadingEl={resultsHeadingEl}
+                          list
+                        />
                       </li>
                     ))}
                   </PlainList>

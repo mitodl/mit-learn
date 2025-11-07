@@ -226,6 +226,33 @@ describe("Learning resource info section start date", () => {
     await user.click(showMoreLink)
     expect(runDates.children.length).toBe(totalRuns + 1)
   })
+
+  test("Anytime courses with next_start_date should not replace first date in 'As taught in' section", () => {
+    const course = {
+      ...courses.free.anytime,
+      next_start_date: "2024-03-15T00:00:00Z",
+    }
+
+    renderWithTheme(<InfoSection resource={course} />)
+
+    const section = screen.getByTestId("drawer-info-items")
+
+    within(section).getByText("Starts:")
+    within(section).getByText("Anytime")
+
+    within(section).getByText("As taught in:")
+
+    expect(within(section).queryByText("March 15, 2024")).toBeNull()
+
+    const runDates = within(section).getByTestId("drawer-run-dates")
+    expect(runDates).toBeInTheDocument()
+
+    const firstRun = course.runs?.[0]
+    invariant(firstRun)
+    const firstRunDate = formatRunDate(firstRun, true)
+    invariant(firstRunDate)
+    expect(within(section).getByText(firstRunDate)).toBeInTheDocument()
+  })
 })
 
 describe("Learning resource info section format and location", () => {

@@ -338,8 +338,9 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: Content feature type for the content file. Load the 'api/v1/course_features'
+          endpoint for a list of course features
+        explode: true
         style: form
       - in: query
         name: edx_module_id
@@ -347,8 +348,8 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: The edx module id of the content file
+        explode: true
         style: form
       - in: path
         name: learning_resource_id
@@ -451,9 +452,9 @@ paths:
         schema:
           type: array
           items:
-            type: number
-        description: Multiple values may be separated by commas.
-        explode: false
+            type: integer
+        description: The id of the learning resource the content file belongs to
+        explode: true
         style: form
       - in: query
         name: run_id
@@ -461,8 +462,9 @@ paths:
           type: array
           items:
             type: number
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: The id of the learning resource run the content file belongs
+          to
+        explode: true
         style: form
       tags:
       - contentfiles
@@ -585,8 +587,9 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: Content feature for the resources. Load the 'api/v1/course_features'
+          endpoint for a list of course features
+        explode: true
         style: form
       - in: query
         name: delivery
@@ -837,8 +840,8 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: A unique text identifier for the resources
+        explode: true
         style: form
       - in: query
         name: resource_category
@@ -928,8 +931,9 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: Topics covered by the resources. Load the '/api/v1/topics' endpoint
+          for a list of topics
+        explode: true
         style: form
       tags:
       - courses
@@ -973,8 +977,9 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: Content feature type for the content file. Load the 'api/v1/course_features'
+          endpoint for a list of course features
+        explode: true
         style: form
       - in: query
         name: edx_module_id
@@ -982,8 +987,8 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: The edx module id of the content file
+        explode: true
         style: form
       - in: path
         name: learning_resource_id
@@ -1086,9 +1091,9 @@ paths:
         schema:
           type: array
           items:
-            type: number
-        description: Multiple values may be separated by commas.
-        explode: false
+            type: integer
+        description: The id of the learning resource the content file belongs to
+        explode: true
         style: form
       - in: query
         name: run_id
@@ -1096,8 +1101,9 @@ paths:
           type: array
           items:
             type: number
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: The id of the learning resource run the content file belongs
+          to
+        explode: true
         style: form
       tags:
       - courses
@@ -1219,8 +1225,9 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: Content feature for the resources. Load the 'api/v1/course_features'
+          endpoint for a list of course features
+        explode: true
         style: form
       - in: query
         name: delivery
@@ -1471,8 +1478,8 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: A unique text identifier for the resources
+        explode: true
         style: form
       - in: query
         name: resource_category
@@ -1562,8 +1569,9 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: Topics covered by the resources. Load the '/api/v1/topics' endpoint
+          for a list of topics
+        explode: true
         style: form
       tags:
       - featured
@@ -1631,8 +1639,9 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: Content feature for the resources. Load the 'api/v1/course_features'
+          endpoint for a list of course features
+        explode: true
         style: form
       - in: query
         name: delivery
@@ -1883,8 +1892,8 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: A unique text identifier for the resources
+        explode: true
         style: form
       - in: query
         name: resource_category
@@ -1974,8 +1983,9 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: Topics covered by the resources. Load the '/api/v1/topics' endpoint
+          for a list of topics
+        explode: true
         style: form
       tags:
       - learning_resource_display_info
@@ -2043,8 +2053,9 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: Content feature for the resources. Load the 'api/v1/course_features'
+          endpoint for a list of course features
+        explode: true
         style: form
       - in: query
         name: delivery
@@ -2295,8 +2306,8 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: A unique text identifier for the resources
+        explode: true
         style: form
       - in: query
         name: resource_category
@@ -2386,8 +2397,9 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: Topics covered by the resources. Load the '/api/v1/topics' endpoint
+          for a list of topics
+        explode: true
         style: form
       tags:
       - learning_resources
@@ -2462,8 +2474,9 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: Content feature for the resources. Load the 'api/v1/course_features'
+          endpoint for a list of course features
+        explode: true
         style: form
       - in: query
         name: delivery
@@ -2711,8 +2724,8 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: A unique text identifier for the resources
+        explode: true
         style: form
       - in: query
         name: resource_category
@@ -2802,8 +2815,9 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: Topics covered by the resources. Load the '/api/v1/topics' endpoint
+          for a list of topics
+        explode: true
         style: form
       tags:
       - learning_resources
@@ -2859,8 +2873,9 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: Content feature for the resources. Load the 'api/v1/course_features'
+          endpoint for a list of course features
+        explode: true
         style: form
       - in: query
         name: delivery
@@ -3108,8 +3123,8 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: A unique text identifier for the resources
+        explode: true
         style: form
       - in: query
         name: resource_category
@@ -3199,8 +3214,9 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: Topics covered by the resources. Load the '/api/v1/topics' endpoint
+          for a list of topics
+        explode: true
         style: form
       tags:
       - learning_resources
@@ -3225,8 +3241,9 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: Content feature type for the content file. Load the 'api/v1/course_features'
+          endpoint for a list of course features
+        explode: true
         style: form
       - in: query
         name: edx_module_id
@@ -3234,8 +3251,8 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: The edx module id of the content file
+        explode: true
         style: form
       - in: path
         name: learning_resource_id
@@ -3338,9 +3355,9 @@ paths:
         schema:
           type: array
           items:
-            type: number
-        description: Multiple values may be separated by commas.
-        explode: false
+            type: integer
+        description: The id of the learning resource the content file belongs to
+        explode: true
         style: form
       - in: query
         name: run_id
@@ -3348,8 +3365,9 @@ paths:
           type: array
           items:
             type: number
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: The id of the learning resource run the content file belongs
+          to
+        explode: true
         style: form
       tags:
       - learning_resources
@@ -3571,8 +3589,9 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: Content feature for the resources. Load the 'api/v1/course_features'
+          endpoint for a list of course features
+        explode: true
         style: form
       - in: query
         name: delivery
@@ -3823,8 +3842,8 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: A unique text identifier for the resources
+        explode: true
         style: form
       - in: query
         name: resource_category
@@ -3914,8 +3933,9 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: Topics covered by the resources. Load the '/api/v1/topics' endpoint
+          for a list of topics
+        explode: true
         style: form
       tags:
       - learning_resources
@@ -6052,8 +6072,9 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: Content feature for the resources. Load the 'api/v1/course_features'
+          endpoint for a list of course features
+        explode: true
         style: form
       - in: query
         name: delivery
@@ -6304,8 +6325,8 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: A unique text identifier for the resources
+        explode: true
         style: form
       - in: query
         name: resource_category
@@ -6395,8 +6416,9 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: Topics covered by the resources. Load the '/api/v1/topics' endpoint
+          for a list of topics
+        explode: true
         style: form
       tags:
       - learningpaths
@@ -6804,8 +6826,9 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: Content feature for the resources. Load the 'api/v1/course_features'
+          endpoint for a list of course features
+        explode: true
         style: form
       - in: query
         name: delivery
@@ -7056,8 +7079,8 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: A unique text identifier for the resources
+        explode: true
         style: form
       - in: query
         name: resource_category
@@ -7147,8 +7170,9 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: Topics covered by the resources. Load the '/api/v1/topics' endpoint
+          for a list of topics
+        explode: true
         style: form
       tags:
       - podcast_episodes
@@ -7216,8 +7240,9 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: Content feature for the resources. Load the 'api/v1/course_features'
+          endpoint for a list of course features
+        explode: true
         style: form
       - in: query
         name: delivery
@@ -7468,8 +7493,8 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: A unique text identifier for the resources
+        explode: true
         style: form
       - in: query
         name: resource_category
@@ -7559,8 +7584,9 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: Topics covered by the resources. Load the '/api/v1/topics' endpoint
+          for a list of topics
+        explode: true
         style: form
       tags:
       - podcasts
@@ -7715,8 +7741,9 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: Content feature for the resources. Load the 'api/v1/course_features'
+          endpoint for a list of course features
+        explode: true
         style: form
       - in: query
         name: delivery
@@ -7967,8 +7994,8 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: A unique text identifier for the resources
+        explode: true
         style: form
       - in: query
         name: resource_category
@@ -8058,8 +8085,9 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: Topics covered by the resources. Load the '/api/v1/topics' endpoint
+          for a list of topics
+        explode: true
         style: form
       tags:
       - programs
@@ -8162,8 +8190,8 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: Topic name
+        explode: true
         style: form
       - name: offset
         required: false
@@ -8177,8 +8205,8 @@ paths:
           type: array
           items:
             type: number
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: Parent topic ID
+        explode: true
         style: form
       tags:
       - topics
@@ -8533,8 +8561,9 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: Content feature for the resources. Load the 'api/v1/course_features'
+          endpoint for a list of course features
+        explode: true
         style: form
       - in: query
         name: delivery
@@ -8785,8 +8814,8 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: A unique text identifier for the resources
+        explode: true
         style: form
       - in: query
         name: resource_category
@@ -8876,8 +8905,9 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: Topics covered by the resources. Load the '/api/v1/topics' endpoint
+          for a list of topics
+        explode: true
         style: form
       tags:
       - video_playlists
@@ -9011,8 +9041,9 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: Content feature for the resources. Load the 'api/v1/course_features'
+          endpoint for a list of course features
+        explode: true
         style: form
       - in: query
         name: delivery
@@ -9263,8 +9294,8 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: A unique text identifier for the resources
+        explode: true
         style: form
       - in: query
         name: resource_category
@@ -9354,8 +9385,9 @@ paths:
           type: array
           items:
             type: string
-        description: Multiple values may be separated by commas.
-        explode: false
+        description: Topics covered by the resources. Load the '/api/v1/topics' endpoint
+          for a list of topics
+        explode: true
         style: form
       tags:
       - videos

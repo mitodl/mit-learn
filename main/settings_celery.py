@@ -180,6 +180,10 @@ CELERY_BEAT_SCHEDULE = (
                 60 * EMBEDDING_SCHEDULE_MINUTES,
             ),  # default is every 30 minutes
         },
+        "daily_topic_embeddings_sync": {
+            "task": "vector_search.tasks.sync_topics",
+            "schedule": crontab(minute=0, hour="6,18,23"),  # 2am 2pm and 7pm EST
+        },
         "weekly_check_missing_embeddings": {
             "task": "vector_search.tasks.embeddings_healthcheck",
             "schedule": crontab(

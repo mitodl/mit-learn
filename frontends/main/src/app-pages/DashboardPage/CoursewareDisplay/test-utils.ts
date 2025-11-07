@@ -159,11 +159,11 @@ const setupProgramsAndCourses = () => {
     results: [programCollection],
   })
   setMockResponse.get(
-    urls.programs.programsList({ id: programA.id, org_id: orgX.id }),
+    urls.programs.programsList({ id: [programA.id], org_id: orgX.id }),
     { results: [programA] },
   )
   setMockResponse.get(
-    urls.programs.programsList({ id: programB.id, org_id: orgX.id }),
+    urls.programs.programsList({ id: [programB.id], org_id: orgX.id }),
     { results: [programB] },
   )
   setMockResponse.get(
@@ -310,6 +310,8 @@ const createTestContracts = (
     organization: orgId,
     slug: faker.lorem.slug(),
     membership_type: faker.helpers.arrayElement(["managed", "unmanaged"]),
+    welcome_message: faker.lorem.sentence(),
+    welcome_message_extra: faker.lorem.sentence(),
   }))
 }
 
