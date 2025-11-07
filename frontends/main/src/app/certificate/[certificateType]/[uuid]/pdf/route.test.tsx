@@ -1,4 +1,4 @@
-import { pxToPt, getNameStyles } from "./route"
+import { pxToPt, getNameStyles } from "./utils"
 
 jest.mock("@react-pdf/renderer", () => ({
   Document: "Document",

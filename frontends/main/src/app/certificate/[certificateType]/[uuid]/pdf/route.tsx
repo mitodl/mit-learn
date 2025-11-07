@@ -24,48 +24,7 @@ import {
   pdf,
 } from "@react-pdf/renderer"
 import { redirect } from "next/navigation"
-
-/* Enables use of the CertificatePage pixel units styles
-  - Browsers print at 96 dpi, PDFs default to 72 dpi
-  - Scaling factor of 0.8 emulates browser print scaling and better reflect the screen design
-*/
-export const pxToPt = (px: number): number => {
-  return px * (72 / 96) * 0.8
-}
-
-/**
- * Calculate font size and top position for user name based on estimated text width
- * to ensure long names fit on the certificate while maintaining baseline alignment
- */
-export const getNameStyles = (
-  name: string,
-): { fontSize: number; top: number } => {
-  const baselineTop = pxToPt(206) // Original top position for full-size name
-  const baseFontSize = pxToPt(52) // h1 font size
-  const maxWidth = pxToPt(950) // Maximum available width
-
-  // For Neue Haas Grotesk at 52px, approximate average char width is ~60% of font size
-  const avgCharWidth = baseFontSize * 0.6
-
-  // Calculate estimated width at full size
-  const estimatedWidth = name.length * avgCharWidth
-
-  // Calculate scale factor needed to fit within maxWidth
-  let scaleFactor = 1.0
-  if (estimatedWidth > maxWidth) {
-    // Scale down proportionally to fit, with a minimum of 35%
-    scaleFactor = Math.max(0.35, maxWidth / estimatedWidth)
-  }
-  console.log("scaleFactor", scaleFactor)
-
-  const fontSize = baseFontSize * scaleFactor
-
-  // Keep the baseline in the same position
-  const fontSizeDiff = baseFontSize - fontSize
-  const top = baselineTop + fontSizeDiff
-
-  return { fontSize, top }
-}
+import { pxToPt, getNameStyles } from "./utils"
 
 // https://use.typekit.net/lbk1xay.css
 Font.register({
