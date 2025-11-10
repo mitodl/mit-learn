@@ -11626,6 +11626,8 @@ components:
           type: string
           readOnly: true
           nullable: true
+        display_facet:
+          type: boolean
       required:
       - channel_url
       - code
@@ -11682,6 +11684,8 @@ components:
           maxLength: 200
         value_prop:
           type: string
+        display_facet:
+          type: boolean
       required:
       - channel_url
       - code
@@ -11698,6 +11702,8 @@ components:
           type: string
           minLength: 1
           maxLength: 256
+        display_facet:
+          type: boolean
       required:
       - code
       - name

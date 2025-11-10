@@ -2911,6 +2911,12 @@ export interface LearningResourceOfferor {
    * @memberof LearningResourceOfferor
    */
   channel_url: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof LearningResourceOfferor
+   */
+  display_facet?: boolean
 }
 /**
  * Serializer for LearningResourceOfferor with all details
@@ -2990,6 +2996,12 @@ export interface LearningResourceOfferorDetail {
    * @memberof LearningResourceOfferorDetail
    */
   value_prop?: string
+  /**
+   *
+   * @type {boolean}
+   * @memberof LearningResourceOfferorDetail
+   */
+  display_facet?: boolean
 }
 /**
  * Serializer for LearningResourceOfferor with basic details
@@ -3009,6 +3021,12 @@ export interface LearningResourceOfferorRequest {
    * @memberof LearningResourceOfferorRequest
    */
   name: string
+  /**
+   *
+   * @type {boolean}
+   * @memberof LearningResourceOfferorRequest
+   */
+  display_facet?: boolean
 }
 /**
  * Serializer for LearningResourcePlatform
