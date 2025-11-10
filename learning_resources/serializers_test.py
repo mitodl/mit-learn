@@ -524,6 +524,7 @@ def test_content_file_serializer(settings, expected_types, has_channels):
             "offered_by": {
                 "name": content_file.run.learning_resource.offered_by.name,
                 "code": content_file.run.learning_resource.offered_by.code,
+                "display_facet": True,
                 "channel_url": frontend_absolute_url(
                     f"/c/unit/{Channel.objects.get(unit_detail__unit=content_file.run.learning_resource.offered_by).name}/"
                 )
