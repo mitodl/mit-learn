@@ -128,7 +128,7 @@ const nextConfig = {
         allowCollectingMemory: true,
       })
     }
-    
+
     // Custom resolver for TiptapEditor's @/ imports
     // Only applies special aliases when importing from within TiptapEditor directory
     // Tiptap's Simple Editor ejects files to the project, which we'd prefer not to edit
@@ -138,26 +138,26 @@ const nextConfig = {
       __dirname,
       "../ol-components/src/components/TiptapEditor",
     )
-    
+
     config.resolve.plugins = config.resolve.plugins || []
     config.resolve.plugins.push({
       apply(resolver) {
         const target = resolver.ensureHook("resolve")
-        
+
         resolver
           .getHook("described-resolve")
           .tapAsync("TiptapEditorAliasPlugin", (request, resolveContext, callback) => {
             const issuer = request.context?.issuer
-            
+
             // Only apply custom aliases if the request is coming from TiptapEditor
             if (!issuer || !issuer.includes("TiptapEditor")) {
               return callback()
             }
-            
+
             // Check if this is a @/components, @/lib, or @/hooks import
             const originalRequest = request.request
             let newRequestPath = null
-            
+
             if (originalRequest?.startsWith("@/components/")) {
               const importPath = originalRequest.substring("@/components/".length)
               newRequestPath = path.join(tiptapEditorPath, "components", importPath)
@@ -168,7 +168,7 @@ const nextConfig = {
               const importPath = originalRequest.substring("@/hooks/".length)
               newRequestPath = path.join(tiptapEditorPath, "hooks", importPath)
             }
-            
+
             if (newRequestPath) {
               const newRequest = {
                 ...request,
@@ -182,12 +182,12 @@ const nextConfig = {
                 callback,
               )
             }
-            
+
             callback()
           })
       },
     })
-    
+
     return config
   },
 }
