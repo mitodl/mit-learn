@@ -1,6 +1,6 @@
 import { forwardRef } from "react"
-import "@/components/tiptap-ui-primitive/separator/separator.scss"
-import { cn } from "@/lib/tiptap-utils"
+import "./separator.scss"
+import { cn } from "../../../lib/tiptap-utils"
 
 export type Orientation = "horizontal" | "vertical"
 

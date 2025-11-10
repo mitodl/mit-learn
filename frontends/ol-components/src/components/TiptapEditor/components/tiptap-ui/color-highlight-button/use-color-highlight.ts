@@ -5,18 +5,18 @@ import { type Editor } from "@tiptap/react"
 import { useHotkeys } from "react-hotkeys-hook"
 
 // --- Hooks ---
-import { useTiptapEditor } from "@/hooks/use-tiptap-editor"
-import { useIsMobile } from "@/hooks/use-mobile"
+import { useTiptapEditor } from "../../../hooks/use-tiptap-editor"
+import { useIsMobile } from "../../../hooks/use-mobile"
 
 // --- Lib ---
 import {
   isMarkInSchema,
   isNodeTypeSelected,
   isExtensionAvailable,
-} from "@/lib/tiptap-utils"
+} from "../../../lib/tiptap-utils"
 
 // --- Icons ---
-import { HighlighterIcon } from "@/components/tiptap-icons/highlighter-icon"
+import { HighlighterIcon } from "../../tiptap-icons/highlighter-icon"
 
 export const COLOR_HIGHLIGHT_SHORTCUT_KEY = "mod+shift+h"
 export const HIGHLIGHT_COLORS = [
@@ -147,7 +147,16 @@ export function canColorHighlight(
     if (!isExtensionAvailable(editor, ["nodeBackground"])) return false
 
     try {
-      return editor.can().toggleNodeBackgroundColor("test")
+      // Some editor instances may not have this command,
+      // so check for its existence before trying to call it.
+      const canCommands = editor.can?.()
+      if (
+        canCommands &&
+        typeof (canCommands as any).toggleNodeBackgroundColor === "function"
+      ) {
+        return (canCommands as any).toggleNodeBackgroundColor("test")
+      }
+      return false
     } catch {
       return false
     }
@@ -202,10 +211,17 @@ export function removeHighlight(
   if (mode === "mark") {
     return editor.chain().focus().unsetMark("highlight").run()
   } else {
-    return editor.chain().focus().unsetNodeBackgroundColor().run()
+    // The chained command `unsetNodeBackgroundColor` does not exist.
+    // We'll fallback to a helper if available, or do nothing (return false).
+    if (
+      typeof (editor as any).commands?.unsetNodeBackgroundColor === "function"
+    ) {
+      ;(editor as any).commands.unsetNodeBackgroundColor()
+      return true
+    }
+    return false
   }
 }
-
 /**
  * Determines if the highlight button should be shown
  */
@@ -294,7 +310,7 @@ export function useColorHighlight(config: UseColorHighlightConfig) {
       const success = editor
         .chain()
         .focus()
-        .toggleNodeBackgroundColor(highlightColor)
+        .setHighlight({ color: highlightColor })
         .run()
 
       if (success) {
