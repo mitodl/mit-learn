@@ -3264,7 +3264,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/mitxonline-api-axios@npm:^2025.10.21, @mitodl/mitxonline-api-axios@npm:^2025.11.5":
+"@mitodl/mitxonline-api-axios@npm:^2025.11.5":
   version: 2025.11.5
   resolution: "@mitodl/mitxonline-api-axios@npm:2025.11.5"
   dependencies:
@@ -5088,15 +5088,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@remixicon/react@npm:^4.7.0":
-  version: 4.7.0
-  resolution: "@remixicon/react@npm:4.7.0"
-  peerDependencies:
-    react: ">=18.2.0"
-  checksum: 10/9ecee093dd4aec3744bcc7562eddb987bf9c7c059787dfecfbcc25a64c2f4833dc815dff715aa2a7f75011d65f877b3751a401d19cf2d725b5bcc685587d37f4
-  languageName: node
-  linkType: hard
-
 "@rollup/plugin-commonjs@npm:28.0.1":
   version: 28.0.1
   resolution: "@rollup/plugin-commonjs@npm:28.0.1"
@@ -6529,7 +6520,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tiptap/extension-document@npm:^3.10.2, @tiptap/extension-document@npm:^3.10.5":
+"@tiptap/extension-document@npm:^3.10.5":
   version: 3.10.5
   resolution: "@tiptap/extension-document@npm:3.10.5"
   peerDependencies:
@@ -6585,7 +6576,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tiptap/extension-highlight@npm:^3.10.1, @tiptap/extension-highlight@npm:^3.10.5":
+"@tiptap/extension-highlight@npm:^3.10.5":
   version: 3.10.5
   resolution: "@tiptap/extension-highlight@npm:3.10.5"
   peerDependencies:
@@ -6594,7 +6585,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tiptap/extension-horizontal-rule@npm:^3.10.1, @tiptap/extension-horizontal-rule@npm:^3.10.5":
+"@tiptap/extension-horizontal-rule@npm:^3.10.5":
   version: 3.10.5
   resolution: "@tiptap/extension-horizontal-rule@npm:3.10.5"
   peerDependencies:
@@ -6604,7 +6595,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tiptap/extension-image@npm:^3.10.1, @tiptap/extension-image@npm:^3.10.5":
+"@tiptap/extension-image@npm:^3.10.5":
   version: 3.10.5
   resolution: "@tiptap/extension-image@npm:3.10.5"
   peerDependencies:
@@ -6652,7 +6643,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tiptap/extension-list@npm:^3.10.1, @tiptap/extension-list@npm:^3.10.5":
+"@tiptap/extension-list@npm:^3.10.5":
   version: 3.10.5
   resolution: "@tiptap/extension-list@npm:3.10.5"
   peerDependencies:
@@ -6689,7 +6680,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tiptap/extension-subscript@npm:^3.10.1, @tiptap/extension-subscript@npm:^3.10.5":
+"@tiptap/extension-subscript@npm:^3.10.5":
   version: 3.10.5
   resolution: "@tiptap/extension-subscript@npm:3.10.5"
   peerDependencies:
@@ -6699,7 +6690,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tiptap/extension-superscript@npm:^3.10.1, @tiptap/extension-superscript@npm:^3.10.5":
+"@tiptap/extension-superscript@npm:^3.10.5":
   version: 3.10.5
   resolution: "@tiptap/extension-superscript@npm:3.10.5"
   peerDependencies:
@@ -6709,7 +6700,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tiptap/extension-text-align@npm:^3.10.1, @tiptap/extension-text-align@npm:^3.10.5":
+"@tiptap/extension-text-align@npm:^3.10.5":
   version: 3.10.5
   resolution: "@tiptap/extension-text-align@npm:3.10.5"
   peerDependencies:
@@ -6727,7 +6718,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tiptap/extension-typography@npm:^3.10.1, @tiptap/extension-typography@npm:^3.10.5":
+"@tiptap/extension-typography@npm:^3.10.5":
   version: 3.10.5
   resolution: "@tiptap/extension-typography@npm:3.10.5"
   peerDependencies:
@@ -6745,7 +6736,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tiptap/extensions@npm:^3.10.1, @tiptap/extensions@npm:^3.10.5":
+"@tiptap/extensions@npm:^3.10.5":
   version: 3.10.5
   resolution: "@tiptap/extensions@npm:3.10.5"
   peerDependencies:
@@ -6755,19 +6746,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tiptap/markdown@npm:^3.10.1":
-  version: 3.10.5
-  resolution: "@tiptap/markdown@npm:3.10.5"
-  dependencies:
-    marked: "npm:^16.1.2"
-  peerDependencies:
-    "@tiptap/core": ^3.10.5
-    "@tiptap/pm": ^3.10.5
-  checksum: 10/db61194b89ede8843a884ffc73485ecc1f009c038333e31a92142fb36577b6665c5ee09f5a31f8d87f0b1f29d3f9f80c1ff7f0210b0e33f995d8f68d0fbc29d7
-  languageName: node
-  linkType: hard
-
-"@tiptap/pm@npm:^3.10.1, @tiptap/pm@npm:^3.10.5":
+"@tiptap/pm@npm:^3.10.5":
   version: 3.10.5
   resolution: "@tiptap/pm@npm:3.10.5"
   dependencies:
@@ -6793,7 +6772,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tiptap/react@npm:^3.10.1, @tiptap/react@npm:^3.10.5":
+"@tiptap/react@npm:^3.10.5":
   version: 3.10.5
   resolution: "@tiptap/react@npm:3.10.5"
   dependencies:
@@ -6818,7 +6797,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tiptap/starter-kit@npm:^3.10.1, @tiptap/starter-kit@npm:^3.10.5":
+"@tiptap/starter-kit@npm:^3.10.5":
   version: 3.10.5
   resolution: "@tiptap/starter-kit@npm:3.10.5"
   dependencies:
@@ -6847,16 +6826,6 @@ __metadata:
     "@tiptap/extensions": "npm:^3.10.5"
     "@tiptap/pm": "npm:^3.10.5"
   checksum: 10/3005464bc831cd7fb3cb083528c2000951625b0242467a6ed35c46736e5d359408859ef519cd30f3cae2bbca43c326576205a1b504fb0ebd47d53a31fd17a8d0
-  languageName: node
-  linkType: hard
-
-"@tiptap/suggestion@npm:^3.10.2":
-  version: 3.10.5
-  resolution: "@tiptap/suggestion@npm:3.10.5"
-  peerDependencies:
-    "@tiptap/core": ^3.10.5
-    "@tiptap/pm": ^3.10.5
-  checksum: 10/a8ca10a5c2fc757d8a97a7ad0fc96f8f0a197a16178f0a69fc9dc4423cb239dc85cf48141f0bccd5e116230e5d039959d536214e75b74c3506a2111330bd2ff5
   languageName: node
   linkType: hard
 
@@ -8794,6 +8763,13 @@ __metadata:
   version: 3.2.6
   resolution: "async@npm:3.2.6"
   checksum: 10/cb6e0561a3c01c4b56a799cc8bab6ea5fef45f069ab32500b6e19508db270ef2dffa55e5aed5865c5526e9907b1f8be61b27530823b411ffafb5e1538c86c368
+  languageName: node
+  linkType: hard
+
+"async_hooks@npm:^1.0.0":
+  version: 1.0.0
+  resolution: "async_hooks@npm:1.0.0"
+  checksum: 10/d31a4cb971a980b095cde18879598d1b196b32cb38905d1c2ed0aca7ebc7e040344af52fe2dedba410a1eaf4bc12d63db797b91285048387cac78319a6366901
   languageName: node
   linkType: hard
 
@@ -15312,44 +15288,26 @@ __metadata:
     "@emotion/cache": "npm:^11.13.1"
     "@emotion/styled": "npm:^11.11.0"
     "@faker-js/faker": "npm:^10.0.0"
-    "@floating-ui/react": "npm:^0.27.16"
     "@mitodl/course-search-utils": "npm:^3.5.0"
-    "@mitodl/mitxonline-api-axios": "npm:^2025.10.21"
+    "@mitodl/mitxonline-api-axios": "npm:^2025.11.5"
     "@mitodl/smoot-design": "npm:^6.17.1"
     "@next/bundle-analyzer": "npm:^14.2.15"
-    "@radix-ui/react-dropdown-menu": "npm:^2.1.16"
-    "@radix-ui/react-popover": "npm:^1.1.15"
     "@react-pdf/renderer": "npm:^4.3.0"
-    "@remixicon/react": "npm:^4.7.0"
+    "@remixicon/react": "npm:^4.2.0"
     "@sentry/nextjs": "npm:^10.0.0"
     "@tanstack/react-query": "npm:^5.66"
     "@testing-library/jest-dom": "npm:^6.4.8"
     "@testing-library/react": "npm:^16.3.0"
     "@testing-library/user-event": "npm:^14.5.2"
-    "@tiptap/extension-document": "npm:^3.10.2"
-    "@tiptap/extension-highlight": "npm:^3.10.1"
-    "@tiptap/extension-horizontal-rule": "npm:^3.10.1"
-    "@tiptap/extension-image": "npm:^3.10.1"
-    "@tiptap/extension-list": "npm:^3.10.1"
-    "@tiptap/extension-subscript": "npm:^3.10.1"
-    "@tiptap/extension-superscript": "npm:^3.10.1"
-    "@tiptap/extension-text-align": "npm:^3.10.1"
-    "@tiptap/extension-typography": "npm:^3.10.1"
-    "@tiptap/extensions": "npm:^3.10.1"
-    "@tiptap/markdown": "npm:^3.10.1"
-    "@tiptap/pm": "npm:^3.10.1"
-    "@tiptap/react": "npm:^3.10.1"
-    "@tiptap/starter-kit": "npm:^3.10.1"
-    "@tiptap/suggestion": "npm:^3.10.2"
     "@types/jest": "npm:^29.5.12"
     "@types/lodash": "npm:^4.17.7"
-    "@types/lodash.throttle": "npm:^4.1.9"
     "@types/node": "npm:^22.0.0"
     "@types/react": "npm:^19"
     "@types/react-dom": "npm:^19"
     "@types/react-slick": "npm:^0.23.13"
     "@types/slick-carousel": "npm:^1"
     api: "workspace:*"
+    async_hooks: "npm:^1.0.0"
     classnames: "npm:^2.5.1"
     eslint: "npm:8.57.1"
     eslint-config-next: "npm:^14.2.7"
@@ -15362,7 +15320,6 @@ __metadata:
     jest-next-dynamic-ts: "npm:^0.1.1"
     jsdom: "npm:^27"
     lodash: "npm:^4.17.21"
-    lodash.throttle: "npm:^4.1.1"
     moment: "npm:^2.30.1"
     next: "npm:^15.5.2"
     next-nprogress-bar: "npm:^2.4.2"
@@ -15373,9 +15330,7 @@ __metadata:
     posthog-js: "npm:^1.157.2"
     react: "npm:^19.0.0"
     react-dom: "npm:^19.0.0"
-    react-hotkeys-hook: "npm:^5.2.1"
     react-slick: "npm:^0.30.2"
-    sass: "npm:^1.93.3"
     sharp: "npm:0.34.4"
     slick-carousel: "npm:^1.8.1"
     tiny-invariant: "npm:^1.3.3"
@@ -15476,15 +15431,6 @@ __metadata:
   peerDependencies:
     react: ">= 0.14.0"
   checksum: 10/b1fbe4429b968aefe02d4549eebb8d7456ccd7a8417805bb7f4bde1b466bdd0c81df3b14c5a1d9dcc49c6451ae50cf23cd04228fb6a0e1f8579ad0b76adae044
-  languageName: node
-  linkType: hard
-
-"marked@npm:^16.1.2":
-  version: 16.4.2
-  resolution: "marked@npm:16.4.2"
-  bin:
-    marked: bin/marked.js
-  checksum: 10/6e40e40661dce97e271198daa2054fc31e6445892a735e416c248fba046bdfa4573cafa08dc254529f105e7178a34485eb7f82573979cfb377a4530f66e79187
   languageName: node
   linkType: hard
 
