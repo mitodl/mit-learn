@@ -583,13 +583,24 @@ describe("Search Page Tabs", () => {
 
 test("Facet 'Offered By' uses API response for names", async () => {
   const offerors = factories.learningResources.offerors({ count: 3 })
+
+  const resources = factories.learningResources.resources({
+    count: 3,
+  }).results
+
+  for (const [i, v] of resources.entries()) {
+    v.offered_by = offerors.results[i]
+    v.offered_by.display_facet = true
+  }
   setMockApiResponses({
     offerors,
     search: {
+      results: resources,
       metadata: {
         aggregations: {
           offered_by: offerors.results.map((o, i) => ({
             key: o.code,
+            display_facet: true,
             doc_count: 10 + i,
           })),
         },

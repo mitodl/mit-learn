@@ -573,19 +573,30 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     ...learningResourceQueries.search(allParams as LRSearchRequest),
     placeholderData: keepPreviousData,
     select: (data) => {
-      const metadata = data.metadata
+      // Handle missing data gracefully
+      if (!data.metadata.aggregations.offered_by || data.results.length === 0) {
+        return data
+      }
       const offerors = Object.fromEntries(
         data.results
           .map((item) => item.offered_by)
           .filter((value) => value && value.display_facet)
-          .map((value) => [value?.code, value]),
+          .map((value) => [value.code, value]),
       )
+
       // only show offerors with display_facet set
-      metadata.aggregations.offered_by =
-        metadata.aggregations.offered_by.filter(
-          (value) => value && value.key in offerors,
-        )
-      return { ...data, metadata }
+      return {
+        ...data,
+        metadata: {
+          ...data.metadata,
+          aggregations: {
+            ...data.metadata.aggregations,
+            offered_by: data.metadata.aggregations.offered_by.filter(
+              (value) => value && value.key in offerors,
+            ),
+          },
+        },
+      }
     },
   })
   const { data: user } = useUserMe()
