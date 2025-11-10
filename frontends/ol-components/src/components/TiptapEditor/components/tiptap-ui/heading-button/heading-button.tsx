@@ -4,14 +4,8 @@ import { forwardRef, useCallback } from "react"
 import { parseShortcutKeys } from "../../../lib/tiptap-utils"
 
 // --- Tiptap UI ---
-import type {
-  Level,
-  UseHeadingConfig,
-} from "./"
-import {
-  HEADING_SHORTCUT_KEYS,
-  useHeading,
-} from "./"
+import type { Level, UseHeadingConfig } from "./"
+import { HEADING_SHORTCUT_KEYS, useHeading } from "./"
 
 // --- UI Primitives ---
 import type { ButtonProps } from "../../tiptap-ui-primitive/button"

@@ -9,14 +9,8 @@ import { parseShortcutKeys } from "../../../lib/tiptap-utils"
 import { useTiptapEditor } from "../../../hooks/use-tiptap-editor"
 
 // --- Tiptap UI ---
-import type {
-  TextAlign,
-  UseTextAlignConfig,
-} from "./"
-import {
-  TEXT_ALIGN_SHORTCUT_KEYS,
-  useTextAlign,
-} from "./"
+import type { TextAlign, UseTextAlignConfig } from "./"
+import { TEXT_ALIGN_SHORTCUT_KEYS, useTextAlign } from "./"
 
 // --- UI Primitives ---
 import type { ButtonProps } from "../../tiptap-ui-primitive/button"

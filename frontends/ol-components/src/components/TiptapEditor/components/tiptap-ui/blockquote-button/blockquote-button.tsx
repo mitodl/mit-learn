@@ -2,10 +2,7 @@ import { forwardRef, useCallback } from "react"
 
 // --- Tiptap UI ---
 import type { UseBlockquoteConfig } from "./"
-import {
-  BLOCKQUOTE_SHORTCUT_KEY,
-  useBlockquote,
-} from "./"
+import { BLOCKQUOTE_SHORTCUT_KEY, useBlockquote } from "./"
 
 // --- Hooks ---
 import { useTiptapEditor } from "../../../hooks/use-tiptap-editor"

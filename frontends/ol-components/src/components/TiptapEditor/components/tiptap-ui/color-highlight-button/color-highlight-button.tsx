@@ -8,10 +8,7 @@ import { useTiptapEditor } from "../../../hooks/use-tiptap-editor"
 
 // --- Tiptap UI ---
 import type { UseColorHighlightConfig } from "./"
-import {
-  COLOR_HIGHLIGHT_SHORTCUT_KEY,
-  useColorHighlight,
-} from "./"
+import { COLOR_HIGHLIGHT_SHORTCUT_KEY, useColorHighlight } from "./"
 
 // --- UI Primitives ---
 import type { ButtonProps } from "../../tiptap-ui-primitive/button"

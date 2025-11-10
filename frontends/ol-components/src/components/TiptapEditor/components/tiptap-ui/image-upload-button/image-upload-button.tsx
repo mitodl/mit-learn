@@ -8,10 +8,7 @@ import { useTiptapEditor } from "../../../hooks/use-tiptap-editor"
 
 // --- Tiptap UI ---
 import type { UseImageUploadConfig } from "./"
-import {
-  IMAGE_UPLOAD_SHORTCUT_KEY,
-  useImageUpload,
-} from "./"
+import { IMAGE_UPLOAD_SHORTCUT_KEY, useImageUpload } from "./"
 
 // --- UI Primitives ---
 import type { ButtonProps } from "../../tiptap-ui-primitive/button"

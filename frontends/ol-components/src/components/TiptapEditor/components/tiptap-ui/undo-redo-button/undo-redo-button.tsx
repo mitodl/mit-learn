@@ -9,14 +9,8 @@ import { parseShortcutKeys } from "../../../lib/tiptap-utils"
 import { useTiptapEditor } from "../../../hooks/use-tiptap-editor"
 
 // --- Tiptap UI ---
-import type {
-  UndoRedoAction,
-  UseUndoRedoConfig,
-} from "./"
-import {
-  UNDO_REDO_SHORTCUT_KEYS,
-  useUndoRedo,
-} from "./"
+import type { UndoRedoAction, UseUndoRedoConfig } from "./"
+import { UNDO_REDO_SHORTCUT_KEYS, useUndoRedo } from "./"
 
 // --- UI Primitives ---
 import type { ButtonProps } from "../../tiptap-ui-primitive/button"

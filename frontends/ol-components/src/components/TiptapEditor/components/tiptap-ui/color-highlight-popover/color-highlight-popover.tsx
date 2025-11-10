@@ -19,11 +19,7 @@ import {
   PopoverContent,
 } from "../../tiptap-ui-primitive/popover"
 import { Separator } from "../../tiptap-ui-primitive/separator"
-import {
-  Card,
-  CardBody,
-  CardItemGroup,
-} from "../../tiptap-ui-primitive/card"
+import { Card, CardBody, CardItemGroup } from "../../tiptap-ui-primitive/card"
 
 // --- Tiptap UI ---
 import type {

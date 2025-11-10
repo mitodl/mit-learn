@@ -6,7 +6,10 @@ import { type Editor } from "@tiptap/react"
 import { useTiptapEditor } from "../../../hooks/use-tiptap-editor"
 
 // --- Lib ---
-import { isExtensionAvailable, isNodeTypeSelected } from "../../../lib/tiptap-utils"
+import {
+  isExtensionAvailable,
+  isNodeTypeSelected,
+} from "../../../lib/tiptap-utils"
 
 // --- Icons ---
 import { AlignCenterIcon } from "../../tiptap-icons/align-center-icon"

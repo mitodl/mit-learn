@@ -26,11 +26,7 @@ import {
   PopoverTrigger,
 } from "../../tiptap-ui-primitive/popover"
 import { Separator } from "../../tiptap-ui-primitive/separator"
-import {
-  Card,
-  CardBody,
-  CardItemGroup,
-} from "../../tiptap-ui-primitive/card"
+import { Card, CardBody, CardItemGroup } from "../../tiptap-ui-primitive/card"
 import { Input, InputGroup } from "../../tiptap-ui-primitive/input"
 
 export interface LinkMainProps {

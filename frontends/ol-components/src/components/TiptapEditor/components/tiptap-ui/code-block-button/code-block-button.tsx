@@ -8,10 +8,7 @@ import { parseShortcutKeys } from "../../../lib/tiptap-utils"
 
 // --- Tiptap UI ---
 import type { UseCodeBlockConfig } from "./"
-import {
-  CODE_BLOCK_SHORTCUT_KEY,
-  useCodeBlock,
-} from "./"
+import { CODE_BLOCK_SHORTCUT_KEY, useCodeBlock } from "./"
 
 // --- UI Primitives ---
 import type { ButtonProps } from "../../tiptap-ui-primitive/button"

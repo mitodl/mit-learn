@@ -12,10 +12,7 @@ import { Button } from "../../tiptap-ui-primitive/button"
 import { Badge } from "../../tiptap-ui-primitive/badge"
 
 // --- Tiptap UI ---
-import type {
-  ListType,
-  UseListConfig,
-} from "./"
+import type { ListType, UseListConfig } from "./"
 import { LIST_SHORTCUT_KEYS, useList } from "./"
 
 export interface ListButtonProps
