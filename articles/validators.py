@@ -32,10 +32,12 @@ article_html_config = {
     # - On all tags: https://docs.rs/ammonia/latest/ammonia/struct.Builder.html#method.generic_attributes
     "attributes": {
         "a": {"href", "hreflang"},
-        "img": {"alt", "height", "src", "width", "srcset", "sizes"},
-        "figure": {"class"},
+        "img": {"alt", "height", "src", "width", "srcset", "sizes", "style"},
+        "figure": {"class", "style"},
         "oembed": {"url"},
     },
+    # 👇 Allow data: URLs for src attributes
+    "url_schemes": {"data"},
 }
 
 

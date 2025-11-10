@@ -13010,8 +13010,8 @@ components:
       type: object
       description: Serializer for LearningResourceInstructor model
       properties:
-        html:
-          type: string
+        content:
+          default: {}
         title:
           type: string
           minLength: 1
@@ -14876,8 +14876,8 @@ components:
       type: object
       description: Serializer for LearningResourceInstructor model
       properties:
-        html:
-          type: string
+        content:
+          default: {}
         id:
           type: integer
           readOnly: true
@@ -14885,21 +14885,19 @@ components:
           type: string
           maxLength: 255
       required:
-      - html
       - id
       - title
     RichTextArticleRequest:
       type: object
       description: Serializer for LearningResourceInstructor model
       properties:
-        html:
-          type: string
+        content:
+          default: {}
         title:
           type: string
           minLength: 1
           maxLength: 255
       required:
-      - html
       - title
     SearchModeEnum:
       enum:
