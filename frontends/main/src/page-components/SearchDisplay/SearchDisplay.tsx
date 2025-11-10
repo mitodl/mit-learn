@@ -34,7 +34,8 @@ import {
   ResourceCategoryEnum,
   SearchModeEnumDescriptions,
 } from "api"
-import { useLearningResourcesSearch } from "api/hooks/learningResources"
+import { learningResourceQueries } from "api/hooks/learningResources"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { useAdminSearchParams } from "api/hooks/adminSearchParams"
 import {
   AvailableFacets,
@@ -568,12 +569,25 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     facetNames,
     page,
   ])
-
-  const { data, isLoading, isFetching } = useLearningResourcesSearch(
-    allParams as LRSearchRequest,
-    { keepPreviousData: true },
-  )
-
+  const { data, isLoading, isFetching } = useQuery({
+    ...learningResourceQueries.search(allParams as LRSearchRequest),
+    placeholderData: keepPreviousData,
+    select: (data) => {
+      const metadata = data.metadata
+      const offerors = Object.fromEntries(
+        data.results
+          .map((item) => item.offered_by)
+          .filter((value) => value && value.display_facet)
+          .map((value) => [value.code, value]),
+      )
+      // only show offerors with display_facet set
+      metadata.aggregations.offered_by =
+        metadata.aggregations.offered_by.filter(
+          (value) => value && value.key in offerors,
+        )
+      return { ...data, metadata }
+    },
+  })
   const { data: user } = useUserMe()
 
   const [mobileDrawerOpen, setMobileDrawerOpen] = React.useState(false)
