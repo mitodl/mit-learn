@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.47.11
+Version 0.47.11 (Released November 10, 2025)
 ---------------
 
 - set h5 on the welcome message (#2682)
