@@ -2,8 +2,10 @@
   - Browsers print at 96 dpi, PDFs default to 72 dpi
   - Scaling factor of 0.8 emulates browser print scaling and better reflect the screen design
 */
+const PRINT_SCALING_FACTOR = 0.8
+
 export const pxToPt = (px: number): number => {
-  return px * (72 / 96) * 0.8
+  return px * (72 / 96) * PRINT_SCALING_FACTOR
 }
 
 /**
