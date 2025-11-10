@@ -1,4 +1,4 @@
-import { forwardRef, useCallback } from "react"
+import React, { forwardRef, useCallback } from "react"
 
 // --- Tiptap UI ---
 import type { UseBlockquoteConfig } from "./"

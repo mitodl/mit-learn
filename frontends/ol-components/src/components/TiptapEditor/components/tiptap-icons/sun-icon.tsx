@@ -1,4 +1,4 @@
-import { memo } from "react"
+import React, { memo } from "react"
 
 type SvgProps = React.ComponentPropsWithoutRef<"svg">
 

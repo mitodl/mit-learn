@@ -1,4 +1,4 @@
-import { forwardRef, useMemo, useRef, useState } from "react"
+import React, { forwardRef, useMemo, useRef, useState } from "react"
 import { type Editor } from "@tiptap/react"
 
 // --- Hooks ---

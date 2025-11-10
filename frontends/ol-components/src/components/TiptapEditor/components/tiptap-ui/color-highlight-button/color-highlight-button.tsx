@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useMemo } from "react"
+import React, { forwardRef, useCallback, useMemo } from "react"
 
 // --- Lib ---
 import { parseShortcutKeys } from "../../../lib/tiptap-utils"

@@ -1,4 +1,4 @@
-import { forwardRef, useCallback } from "react"
+import React, { forwardRef, useCallback } from "react"
 
 // --- Hooks ---
 import { useTiptapEditor } from "../../../hooks/use-tiptap-editor"

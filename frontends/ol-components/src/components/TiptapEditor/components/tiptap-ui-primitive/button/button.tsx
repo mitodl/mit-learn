@@ -1,4 +1,4 @@
-import { forwardRef, Fragment, useMemo } from "react"
+import React, { forwardRef, Fragment, useMemo } from "react"
 
 // --- Tiptap UI Primitive ---
 import { Tooltip, TooltipContent, TooltipTrigger } from "../tooltip"

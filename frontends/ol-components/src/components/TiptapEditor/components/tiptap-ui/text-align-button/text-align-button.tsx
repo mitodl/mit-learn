@@ -1,6 +1,6 @@
 "use client"
 
-import { forwardRef, useCallback } from "react"
+import React, { forwardRef, useCallback } from "react"
 
 // --- Lib ---
 import { parseShortcutKeys } from "../../../lib/tiptap-utils"

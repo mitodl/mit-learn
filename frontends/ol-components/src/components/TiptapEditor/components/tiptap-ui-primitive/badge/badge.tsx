@@ -1,4 +1,4 @@
-import { forwardRef } from "react"
+import React, { forwardRef } from "react"
 import "./badge-colors.scss"
 import "./badge-group.scss"
 import "./badge.scss"
