@@ -739,7 +739,13 @@ def execute_learn_search(search_params):
                 settings.DEFAULT_SEARCH_MAX_INCOMPLETENESS_PENALTY
             )
     search = construct_search(search_params)
-    return search.execute().to_dict()
+    results = search.execute().to_dict()
+    if results.get("_shards", {}).get("failures"):
+        log.error(
+            "Search encountered shard failures: %s",
+            results.get("_shards").get("failures"),
+        )
+    return results
 
 
 def subscribe_user_to_search_query(
