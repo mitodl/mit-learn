@@ -7,7 +7,9 @@ const config: Config.InitialOptions = {
     ...baseConfig.setupFilesAfterEnv,
     "./test-utils/setupJest.tsx",
   ],
-  transformIgnorePatterns: ["node_modules/(?!@faker-js).+"],
+  transformIgnorePatterns: [
+    "node_modules/(?!(@faker-js|react-hotkeys-hook)).+",
+  ],
   moduleNameMapper: {
     ...baseConfig.moduleNameMapper,
     "^@/(.*)$": path.resolve(__dirname, "src/$1"),
