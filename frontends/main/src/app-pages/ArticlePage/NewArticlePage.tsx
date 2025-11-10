@@ -1,8 +1,7 @@
 "use client"
 
 import React from "react"
-import { theme, styled, HEADER_HEIGHT } from "ol-components"
-import { TiptapEditor } from "ol-components"
+import { TiptapEditor, theme, styled, HEADER_HEIGHT } from "ol-components"
 import { Permission } from "api/hooks/user"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
 
