@@ -1,0 +1,574 @@
+.ck-content .image {
+  display: inline-block;
+  margin: 1em 0;
+  max-width: 100%;
+}
+
+.ck-content .image.image-style-align-left {
+  float: left;
+  margin-right: 1.5em;
+  margin-top: 0.5em;
+}
+
+.ck-content .image.image-style-align-right {
+  float: right;
+  margin-left: 1.5em;
+  margin-top: 0.5em;
+}
+
+.ck-content .image.image-style-align-center {
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+}
+
+/* make sure the wrapper displays inline-block so text can wrap */
+.ck-content .ck-media__wrapper {
+  display: inline-block;
+  vertical-align: top;
+  margin: 0.5em;
+  resize: both; /* native resizing via browser */
+  overflow: auto;
+  min-width: 120px;
+  min-height: 90px;
+  box-sizing: border-box;
+  border: 1px dashed transparent; /* will be visible when selected */
+  position: relative;
+}
+
+/* show a visible outline when selected (for UX) */
+.ck-content .ck-media__wrapper.is-selected {
+  border-color: #4d90fe;
+  box-shadow: 0 0 0 1px rgb(77 144 254 / 15%);
+}
+
+/* convenience helper class to make the media fill content width */
+.ck-content .ck-media__wrapper.full-width {
+  width: 100% !important;
+  max-width: 100%;
+  display: block;
+}
+
+/* iframe styling */
+.ck-content .ck-media__wrapper iframe {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border: 0;
+}
+
+/* optional: show manual resize handle so users know they can drag */
+.ck-content .ck-media__wrapper::after {
+  content: "";
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  width: 12px;
+  height: 12px;
+  background: transparent;
+  border-right: 2px solid rgb(0 0 0 / 35%);
+  border-bottom: 2px solid rgb(0 0 0 / 35%);
+  pointer-events: none;
+}
+
+/* Allow floating video left/right */
+.ck-content .ck-media__wrapper.align-left {
+  float: left;
+  margin-right: 1em;
+  margin-bottom: 0.5em;
+  max-width: 50%;
+}
+
+.ck-content .ck-media__wrapper.align-right {
+  float: right;
+  margin-left: 1em;
+  margin-bottom: 0.5em;
+  max-width: 50%;
+}
+
+.ck-content .ck-media__wrapper.align-center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  float: none;
+}
+
+/* styles.css */
+
+.ck-content figure.media.align-left {
+  float: left;
+  margin-right: 1em;
+  margin-left: 0;
+}
+
+.ck-content figure.media.align-right {
+  float: right;
+  margin-left: 1em;
+  margin-right: 0;
+}
+
+.ck-content figure.media.align-center {
+  display: block;
+  margin: 0 auto;
+  float: none;
+}
+
+/* Clear floats to prevent layout issues below */
+
+/* Optional: responsive iframe scaling */
+
+.ck-content figure.media {
+  display: block;
+  max-width: 100% !important; /* allow full resizing */
+  width: auto;
+  position: relative;
+  overflow: visible;
+  z-index: 1;
+}
+
+.ck-content figure.media iframe {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+}
+
+.ck-content figure.image.align-left {
+  float: left;
+  margin-right: 1em;
+}
+
+.ck-content figure.image.align-right {
+  float: right;
+  margin-left: 1em;
+}
+
+.ck-content figure.image.align-center {
+  display: block;
+  margin: 0 auto;
+  float: none;
+}
+
+.ck-content .media {
+  position: relative;
+  display: block;
+  max-width: 100%;
+  clear: both;
+  margin: 1em 0;
+}
+
+.ck-content .media.align-left {
+  float: left;
+  margin-right: 1em;
+  clear: none;
+}
+
+.ck-content .media.align-right {
+  float: right;
+  margin-left: 1em;
+}
+
+.ck-content .media.align-center {
+  margin: 0 auto;
+  float: none;
+}
+
+/* ✅ Make inner iframe respect the figure width */
+.ck-content .media .ck-media__wrapper {
+  position: relative;
+  width: 100%;
+  height: 0;
+  padding-bottom: 5.25%; /* 16:9 aspect ratio */
+  overflow: hidden;
+}
+
+/* Ensure iframe stays contained and resizes correctly */
+.ck-content figure.media .ck-media__wrapper {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Fix cursor placement issue below oversized media */
+.ck-content figure.media::after {
+  content: "";
+  display: block;
+  clear: both;
+}
+
+.ck-content .media .ck-media__wrapper iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* ✅ Ensure caret positioning below media works */
+.ck-content::after {
+  content: "";
+  display: block;
+  clear: both;
+}
+
+.ck-content .align-center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+.ck-content .align-left {
+  float: left;
+  margin-right: 1rem;
+}
+
+.ck-content .align-right {
+  float: right;
+  margin-left: 1rem;
+}
+
+.ck-content .course-card {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: center;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 20px auto; /* ✅ centers the card horizontally */
+  background: #fafafa;
+  max-width: 100%;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 5%);
+}
+
+.ck-content .course-card img {
+  width: 50%;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  object-fit: cover;
+  padding-right: 10px;
+}
+
+.ck-content .course-card .course-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.ck-content .course-card .course-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 4px 0;
+  text-align: left; /* ✅ center text */
+}
+
+.ck-content .course-card .course-description {
+  font-size: 0.9rem;
+  color: #555;
+  text-align: left;
+}
+
+.course-list-container {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: background-color 0.2s;
+  outline: none;
+}
+
+.article-wrapper {
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 24px;
+  font-family: sans-serif;
+}
+
+.article-title {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.input-field {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 16px;
+  margin-bottom: 16px;
+  box-sizing: border-box;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.input-field:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 4px rgba(37, 99, 235, 0.4);
+  outline: none;
+}
+
+.editor-box {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 16px;
+  background: #fff;
+}
+
+.button-save {
+  background: #2563eb;
+  color: white;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.button-save:hover {
+  background: #1d4ed8;
+  box-shadow: 0 4px 8px rgb(0 0 0 / 1%);
+}
+
+.button-save:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.article-container {
+  max-width: 1200px;
+  margin: 40px auto;
+  padding: 24px;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #ddd;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+  font-family: system-ui, sans-serif;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.article-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.article-item {
+  padding: 14px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e6e6e6;
+}
+
+.article-item:last-child {
+  border-bottom: none;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #222;
+  text-decoration: none;
+}
+
+.title:hover {
+  text-decoration: underline;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn {
+  display: inline-block;
+  padding: 8px 14px;
+  font-size: 14px;
+  border-radius: 6px;
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+  transition: 0.2s ease-in-out;
+}
+
+.btn-primary {
+  background: #1a73e8;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: #155fc3;
+}
+
+.btn-edit {
+  background: #f2f5ff;
+  color: #1a73e8;
+  border: 1px solid #d1ddff;
+}
+
+.btn-edit:hover {
+  background: #e6edff;
+}
+
+.btn-delete {
+  background: #ffecec;
+  color: #d93025;
+  border: 1px solid #ffc4c4;
+}
+
+.btn-delete:hover {
+  background: #ffdada;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.loading,
+.empty {
+  text-align: center;
+  color: #666;
+  padding: 40px 0;
+}
+
+/* Container */
+.article-detail-container {
+  max-width: 1200px;
+  margin: 40px auto;
+  padding: 28px;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #ddd;
+  box-shadow: 0 3px 8px rgb(0 0 0 / 8%);
+  font-family: system-ui, sans-serif;
+}
+
+@media screen and (width <= 600px) {
+  figure.media[oembed],
+  figure.media iframe,
+  figure.media div,
+  figure.media video {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  figure.media {
+    display: block !important;
+    width: 100% !important;
+  }
+}
+
+.course-carousel {
+  display: flex;
+  gap: 12px;
+  padding: 10px;
+  border: 1px dashed #cfcfcf;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.carousel-course-card {
+  width: 300px;
+  flex: 0 0 auto;
+  text-align: center;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #e6e6e6;
+  background: #fafafa;
+}
+
+.carousel-course-card img {
+  width: 100px;
+  height: auto;
+  display: block;
+  margin: 0 auto 6px;
+  border-radius: 6px;
+}
+
+.carousel-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.carousel-desc {
+  font-size: 0.9rem;
+  color: #444;
+}
+
+.course-carousel-wrapper {
+  margin: 24px 0;
+}
+
+.course-card-wrapper {
+  background: #fff;
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  transition: transform 0.2s;
+}
+
+.course-card-wrapper:hover {
+  transform: translateY(-4px);
+}
+
+.carousel-slide-item {
+  width: 100%;
+}
+
+.carousel-course-card img {
+  width: 100%;
+  border-radius: 8px;
+  object-fit: cover;
+  margin-bottom: 8px;
+}
+
+.carousel-title {
+  font-weight: 600;
+  margin-top: 6px;
+  font-size: 14px;
+}
+
+.carousel-desc {
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+/* Swiper arrows fix */
+.swiper-button-prev,
+.swiper-button-next {
+  color: #1e88e5;
+}
+
+.swiper-pagination-bullet-active {
+  background: #1e88e5;
+}
