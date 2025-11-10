@@ -581,7 +581,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
         data.results
           .map((item) => item.offered_by)
           .filter((value) => value && value.display_facet)
-          .map((value) => [value.code, value]),
+          .map((value) => [value?.code, value]),
       )
 
       // only show offerors with display_facet set
