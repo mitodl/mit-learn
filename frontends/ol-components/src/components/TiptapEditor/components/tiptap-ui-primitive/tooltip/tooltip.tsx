@@ -59,10 +59,10 @@ interface TooltipContextValue extends UseFloatingReturn<ReferenceType> {
   open: boolean
   setOpen: (open: boolean) => void
   getReferenceProps: (
-    userProps?: React.HTMLProps<HTMLElement>
+    userProps?: React.HTMLProps<HTMLElement>,
   ) => Record<string, unknown>
   getFloatingProps: (
-    userProps?: React.HTMLProps<HTMLDivElement>
+    userProps?: React.HTMLProps<HTMLDivElement>,
   ) => Record<string, unknown>
 }
 
@@ -121,7 +121,7 @@ function useTooltip({
       ...interactions,
       ...data,
     }),
-    [open, setOpen, interactions, data]
+    [open, setOpen, interactions, data],
   )
 }
 
@@ -184,7 +184,7 @@ export const TooltipTrigger = forwardRef<HTMLElement, TooltipTriggerProps>(
           ...props,
           ...(typeof children.props === "object" ? children.props : {}),
           ...dataAttributes,
-        })
+        }),
       )
     }
 
@@ -197,13 +197,13 @@ export const TooltipTrigger = forwardRef<HTMLElement, TooltipTriggerProps>(
         {children}
       </button>
     )
-  }
+  },
 )
 
 export const TooltipContent = forwardRef<HTMLDivElement, TooltipContentProps>(
   function TooltipContent(
     { style, children, portal = true, portalProps = {}, ...props },
-    propRef
+    propRef,
   ) {
     const context = useTooltipContext()
     const ref = useMergeRefs([context.refs.setFloating, propRef])
@@ -229,7 +229,7 @@ export const TooltipContent = forwardRef<HTMLDivElement, TooltipContentProps>(
     }
 
     return content
-  }
+  },
 )
 
 Tooltip.displayName = "Tooltip"

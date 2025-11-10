@@ -50,11 +50,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       "aria-label": ariaLabel,
       ...props
     },
-    ref
+    ref,
   ) => {
     const shortcuts = useMemo<string[]>(
       () => parseShortcutKeys({ shortcutKeys }),
-      [shortcutKeys]
+      [shortcutKeys],
     )
 
     if (!tooltip || !showTooltip) {
@@ -86,7 +86,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         </TooltipContent>
       </Tooltip>
     )
-  }
+  },
 )
 
 Button.displayName = "Button"

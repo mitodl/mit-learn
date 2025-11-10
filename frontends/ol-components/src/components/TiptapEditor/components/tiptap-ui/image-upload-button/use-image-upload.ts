@@ -177,7 +177,7 @@ export function useImageUpload(config?: UseImageUploadConfig) {
       enabled: isVisible && canInsert,
       enableOnContentEditable: !isMobile,
       enableOnFormTags: true,
-    }
+    },
   )
 
   return {

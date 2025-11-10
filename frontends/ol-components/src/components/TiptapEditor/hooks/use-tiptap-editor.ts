@@ -21,7 +21,7 @@ export function useTiptapEditor(providedEditor?: Editor | null): {
   const { editor: coreEditor } = useCurrentEditor()
   const mainEditor = useMemo(
     () => providedEditor || coreEditor,
-    [providedEditor, coreEditor]
+    [providedEditor, coreEditor],
   )
 
   const editorState = useEditorState({

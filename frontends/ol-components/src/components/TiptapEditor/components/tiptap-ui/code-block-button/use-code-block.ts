@@ -45,7 +45,7 @@ export interface UseCodeBlockConfig {
  */
 export function canToggle(
   editor: Editor | null,
-  turnInto: boolean = true
+  turnInto: boolean = true,
 ): boolean {
   if (!editor || !editor.isEditable) return false
   if (

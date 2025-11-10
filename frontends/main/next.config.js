@@ -146,45 +146,58 @@ const nextConfig = {
 
         resolver
           .getHook("described-resolve")
-          .tapAsync("TiptapEditorAliasPlugin", (request, resolveContext, callback) => {
-            const issuer = request.context?.issuer
+          .tapAsync(
+            "TiptapEditorAliasPlugin",
+            (request, resolveContext, callback) => {
+              const issuer = request.context?.issuer
 
-            // Only apply custom aliases if the request is coming from TiptapEditor
-            if (!issuer || !issuer.includes("TiptapEditor")) {
-              return callback()
-            }
-
-            // Check if this is a @/components, @/lib, or @/hooks import
-            const originalRequest = request.request
-            let newRequestPath = null
-
-            if (originalRequest?.startsWith("@/components/")) {
-              const importPath = originalRequest.substring("@/components/".length)
-              newRequestPath = path.join(tiptapEditorPath, "components", importPath)
-            } else if (originalRequest?.startsWith("@/lib/")) {
-              const importPath = originalRequest.substring("@/lib/".length)
-              newRequestPath = path.join(tiptapEditorPath, "lib", importPath)
-            } else if (originalRequest?.startsWith("@/hooks/")) {
-              const importPath = originalRequest.substring("@/hooks/".length)
-              newRequestPath = path.join(tiptapEditorPath, "hooks", importPath)
-            }
-
-            if (newRequestPath) {
-              const newRequest = {
-                ...request,
-                request: newRequestPath,
+              // Only apply custom aliases if the request is coming from TiptapEditor
+              if (!issuer || !issuer.includes("TiptapEditor")) {
+                return callback()
               }
-              return resolver.doResolve(
-                target,
-                newRequest,
-                "aliased with TiptapEditor prefix",
-                resolveContext,
-                callback,
-              )
-            }
 
-            callback()
-          })
+              // Check if this is a @/components, @/lib, or @/hooks import
+              const originalRequest = request.request
+              let newRequestPath = null
+
+              if (originalRequest?.startsWith("@/components/")) {
+                const importPath = originalRequest.substring(
+                  "@/components/".length,
+                )
+                newRequestPath = path.join(
+                  tiptapEditorPath,
+                  "components",
+                  importPath,
+                )
+              } else if (originalRequest?.startsWith("@/lib/")) {
+                const importPath = originalRequest.substring("@/lib/".length)
+                newRequestPath = path.join(tiptapEditorPath, "lib", importPath)
+              } else if (originalRequest?.startsWith("@/hooks/")) {
+                const importPath = originalRequest.substring("@/hooks/".length)
+                newRequestPath = path.join(
+                  tiptapEditorPath,
+                  "hooks",
+                  importPath,
+                )
+              }
+
+              if (newRequestPath) {
+                const newRequest = {
+                  ...request,
+                  request: newRequestPath,
+                }
+                return resolver.doResolve(
+                  target,
+                  newRequest,
+                  "aliased with TiptapEditor prefix",
+                  resolveContext,
+                  callback,
+                )
+              }
+
+              callback()
+            },
+          )
       },
     })
 

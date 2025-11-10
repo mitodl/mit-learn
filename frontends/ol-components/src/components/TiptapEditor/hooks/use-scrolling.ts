@@ -11,7 +11,7 @@ interface UseScrollingOptions {
 
 export function useScrolling(
   target?: ScrollTarget,
-  options: UseScrollingOptions = {}
+  options: UseScrollingOptions = {},
 ): boolean {
   const { debounce = 150, fallbackToDocument = true } = options
   const [isScrolling, setIsScrolling] = useState(false)
@@ -34,13 +34,13 @@ export function useScrolling(
     const on = (
       el: EventTargetWithScroll,
       event: string,
-      handler: EventListener
+      handler: EventListener,
     ) => el.addEventListener(event, handler, true)
 
     const off = (
       el: EventTargetWithScroll,
       event: string,
-      handler: EventListener
+      handler: EventListener,
     ) => el.removeEventListener(event, handler)
 
     let timeout: ReturnType<typeof setTimeout>

@@ -63,7 +63,7 @@ export interface UploadOptions {
   upload: (
     file: File,
     onProgress: (event: { progress: number }) => void,
-    signal: AbortSignal
+    signal: AbortSignal,
   ) => Promise<string>
   /**
    * Callback triggered when a file is uploaded successfully
@@ -88,7 +88,7 @@ function useFileUpload(options: UploadOptions) {
   const uploadFile = async (file: File): Promise<string | null> => {
     if (file.size > options.maxSize) {
       const error = new Error(
-        `File size exceeds maximum allowed (${options.maxSize / 1024 / 1024}MB)`
+        `File size exceeds maximum allowed (${options.maxSize / 1024 / 1024}MB)`,
       )
       options.onError?.(error)
       return null
@@ -117,11 +117,11 @@ function useFileUpload(options: UploadOptions) {
         (event: { progress: number }) => {
           setFileItems((prev) =>
             prev.map((item) =>
-              item.id === fileId ? { ...item, progress: event.progress } : item
-            )
+              item.id === fileId ? { ...item, progress: event.progress } : item,
+            ),
           )
         },
-        abortController.signal
+        abortController.signal,
       )
 
       if (!url) throw new Error("Upload failed: No URL returned")
@@ -131,8 +131,8 @@ function useFileUpload(options: UploadOptions) {
           prev.map((item) =>
             item.id === fileId
               ? { ...item, status: "success", url, progress: 100 }
-              : item
-          )
+              : item,
+          ),
         )
         options.onSuccess?.(url)
         return url
@@ -145,11 +145,11 @@ function useFileUpload(options: UploadOptions) {
           prev.map((item) =>
             item.id === fileId
               ? { ...item, status: "error", progress: 0 }
-              : item
-          )
+              : item,
+          ),
         )
         options.onError?.(
-          error instanceof Error ? error : new Error("Upload failed")
+          error instanceof Error ? error : new Error("Upload failed"),
         )
       }
       return null
@@ -165,8 +165,8 @@ function useFileUpload(options: UploadOptions) {
     if (options.limit && files.length > options.limit) {
       options.onError?.(
         new Error(
-          `Maximum ${options.limit} file${options.limit === 1 ? "" : "s"} allowed`
-        )
+          `Maximum ${options.limit} file${options.limit === 1 ? "" : "s"} allowed`,
+        ),
       )
       return []
     }

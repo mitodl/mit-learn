@@ -89,7 +89,7 @@ export const ColorHighlightButton = forwardRef<
       style,
       ...buttonProps
     },
-    ref
+    ref,
   ) => {
     const { editor } = useTiptapEditor(providedEditor)
     const {
@@ -114,7 +114,7 @@ export const ColorHighlightButton = forwardRef<
         if (event.defaultPrevented) return
         handleColorHighlight()
       },
-      [handleColorHighlight, onClick]
+      [handleColorHighlight, onClick],
     )
 
     const buttonStyle = useMemo(
@@ -123,7 +123,7 @@ export const ColorHighlightButton = forwardRef<
           ...style,
           "--highlight-color": highlightColor,
         }) as React.CSSProperties,
-      [highlightColor, style]
+      [highlightColor, style],
     )
 
     if (!isVisible) {
@@ -163,7 +163,7 @@ export const ColorHighlightButton = forwardRef<
         )}
       </Button>
     )
-  }
+  },
 )
 
 ColorHighlightButton.displayName = "ColorHighlightButton"

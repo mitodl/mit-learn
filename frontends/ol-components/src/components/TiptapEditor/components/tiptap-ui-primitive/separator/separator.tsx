@@ -25,7 +25,7 @@ export const Separator = forwardRef<HTMLDivElement, SeparatorProps>(
         ref={ref}
       />
     )
-  }
+  },
 )
 
 Separator.displayName = "Separator"

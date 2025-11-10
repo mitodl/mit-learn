@@ -6,7 +6,7 @@ import type { NodeType } from "@tiptap/pm/model"
 export type UploadFunction = (
   file: File,
   onProgress?: (event: { progress: number }) => void,
-  abortSignal?: AbortSignal
+  abortSignal?: AbortSignal,
 ) => Promise<string>
 
 export interface ImageUploadNodeOptions {

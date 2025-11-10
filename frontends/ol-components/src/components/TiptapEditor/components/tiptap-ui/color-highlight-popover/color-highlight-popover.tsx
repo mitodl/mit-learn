@@ -99,7 +99,7 @@ export function ColorHighlightPopoverContent({
 
   const menuItems = useMemo(
     () => [...colors, { label: "Remove highlight", value: "none" }],
-    [colors]
+    [colors],
   )
 
   const { selectedIndex } = useMenuNavigation({
@@ -109,7 +109,7 @@ export function ColorHighlightPopoverContent({
     onSelect: (item) => {
       if (!containerRef.current) return false
       const highlightedElement = containerRef.current.querySelector(
-        '[data-highlighted="true"]'
+        '[data-highlighted="true"]',
       ) as HTMLElement
       if (highlightedElement) highlightedElement.click()
       if (item.value === "none") handleRemoveHighlight()

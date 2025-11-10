@@ -71,7 +71,7 @@ export function ListDropdownMenu({
       setIsOpen(open)
       onOpenChange?.(open)
     },
-    [onOpenChange]
+    [onOpenChange],
   )
 
   if (!isVisible || !editor || !editor.isEditable) {

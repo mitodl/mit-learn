@@ -61,7 +61,7 @@ export const HeadingButton = forwardRef<HTMLButtonElement, HeadingButtonProps>(
       children,
       ...buttonProps
     },
-    ref
+    ref,
   ) => {
     const { editor } = useTiptapEditor(providedEditor)
     const {
@@ -85,7 +85,7 @@ export const HeadingButton = forwardRef<HTMLButtonElement, HeadingButtonProps>(
         if (event.defaultPrevented) return
         handleToggle()
       },
-      [handleToggle, onClick]
+      [handleToggle, onClick],
     )
 
     if (!isVisible) {
@@ -119,7 +119,7 @@ export const HeadingButton = forwardRef<HTMLButtonElement, HeadingButtonProps>(
         )}
       </Button>
     )
-  }
+  },
 )
 
 HeadingButton.displayName = "HeadingButton"

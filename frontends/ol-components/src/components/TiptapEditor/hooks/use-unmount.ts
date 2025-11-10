@@ -14,7 +14,7 @@ export const useUnmount = (callback: (...args: Array<any>) => any) => {
     () => () => {
       ref.current()
     },
-    []
+    [],
   )
 }
 

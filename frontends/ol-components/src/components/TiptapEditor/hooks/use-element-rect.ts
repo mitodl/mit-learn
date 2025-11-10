@@ -100,7 +100,7 @@ export function useElementRect({
     },
     throttleMs,
     [enabled, getTargetElement],
-    { leading: true, trailing: true }
+    { leading: true, trailing: true },
   )
 
   useEffect(() => {
@@ -147,7 +147,7 @@ export function useElementRect({
  * Convenience hook for tracking document.body rect
  */
 export function useBodyRect(
-  options: Omit<ElementRectOptions, "element"> = {}
+  options: Omit<ElementRectOptions, "element"> = {},
 ): RectState {
   return useElementRect({
     ...options,
@@ -160,7 +160,7 @@ export function useBodyRect(
  */
 export function useRefRect<T extends Element>(
   ref: React.RefObject<T>,
-  options: Omit<ElementRectOptions, "element"> = {}
+  options: Omit<ElementRectOptions, "element"> = {},
 ): RectState {
   return useElementRect({ ...options, element: ref })
 }

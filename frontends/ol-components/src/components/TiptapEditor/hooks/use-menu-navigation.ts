@@ -60,7 +60,7 @@ export function useMenuNavigation<T>({
   autoSelectFirstItem = true,
 }: MenuNavigationOptions<T>) {
   const [selectedIndex, setSelectedIndex] = useState<number>(
-    autoSelectFirstItem ? 0 : -1
+    autoSelectFirstItem ? 0 : -1,
   )
 
   useEffect(() => {
@@ -165,7 +165,7 @@ export function useMenuNavigation<T>({
         targetElement?.removeEventListener(
           "keydown",
           handleKeyboardNavigation,
-          true
+          true,
         )
       }
     }

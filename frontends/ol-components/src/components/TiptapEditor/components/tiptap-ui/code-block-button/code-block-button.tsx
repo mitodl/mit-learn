@@ -60,7 +60,7 @@ export const CodeBlockButton = forwardRef<
       children,
       ...buttonProps
     },
-    ref
+    ref,
   ) => {
     const { editor } = useTiptapEditor(providedEditor)
     const {
@@ -83,7 +83,7 @@ export const CodeBlockButton = forwardRef<
         if (event.defaultPrevented) return
         handleToggle()
       },
-      [handleToggle, onClick]
+      [handleToggle, onClick],
     )
 
     if (!isVisible) {
@@ -117,7 +117,7 @@ export const CodeBlockButton = forwardRef<
         )}
       </Button>
     )
-  }
+  },
 )
 
 CodeBlockButton.displayName = "CodeBlockButton"

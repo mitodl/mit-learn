@@ -163,7 +163,7 @@ export function useLinkHandler(props: LinkHandlerProps) {
         window.open(safeUrl, target, features)
       }
     },
-    [url]
+    [url],
   )
 
   return {
@@ -197,7 +197,7 @@ export function useLinkState(props: {
         shouldShowLinkButton({
           editor,
           hideWhenUnavailable,
-        })
+        }),
       )
     }
 
