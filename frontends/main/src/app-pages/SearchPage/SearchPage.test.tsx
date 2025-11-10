@@ -638,9 +638,9 @@ test("Facet 'Offered By' only shows facets with 'display_facet' set to true", as
   for (const [i, v] of resources.entries()) {
     v.offered_by = offerors.results[i]
   }
-  resources[0].offered_by.display_facet = true
-  resources[1].offered_by.display_facet = false
-  resources[2].offered_by.display_facet = false
+  resources[0]?.offered_by.display_facet = true
+  resources[1]?.offered_by.display_facet = false
+  resources[2]?.offered_by.display_facet = false
 
   setMockApiResponses({
     offerors,
