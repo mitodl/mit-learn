@@ -592,38 +592,37 @@ def add_text_query_to_search(search, text, search_params, query_type_query):
 
     if yearly_decay_percent or max_incompleteness_penalty:
         script_query = {
-            "script_score": {
+            "function_score": {
                 "query": {"bool": {"must": [text_query], "filter": query_type_query}}
             }
         }
 
-        completeness_term = (
-            "(doc['completeness'].value * params.max_incompleteness_penalty + "
-            "(1-params.max_incompleteness_penalty))"
-        )
-
-        staleness_term = (
-            "(doc['resource_age_date'].size() == 0 ? 1 : "
-            "decayDateLinear(params.origin, params.scale, params.offset, params.decay, "
-            "doc['resource_age_date'].value))"
-        )
-
-        source = "_score"
+        source = []
         params = {}
 
         if max_incompleteness_penalty:
-            source = f"{source} * {completeness_term}"
+            completeness_term = (
+                "(doc['completeness'].value * params.max_incompleteness_penalty + "
+                "(1-params.max_incompleteness_penalty))"
+            )
+            source.append(completeness_term)
             params["max_incompleteness_penalty"] = max_incompleteness_penalty
 
         if yearly_decay_percent:
-            source = f"{source} * {staleness_term}"
+            staleness_term = (
+                "(doc['resource_age_date'].size() == 0 ? 1 : "
+                "decayDateLinear(params.origin, params.scale, params.offset, "
+                "params.decay, doc['resource_age_date'].value))"
+            )
+            source.append(staleness_term)
             params["decay"] = 1 - (yearly_decay_percent / 100)
             params["offset"] = "0"
             params["scale"] = "365d"
             params["origin"] = datetime.now(tz=UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
-        script_query["script_score"]["script"] = {
-            "source": source,
+        script_query["function_score"]["script_score"] = {}
+        script_query["function_score"]["script_score"]["script"] = {
+            "source": "*".join(source),
             "params": params,
         }
 
@@ -739,7 +738,13 @@ def execute_learn_search(search_params):
                 settings.DEFAULT_SEARCH_MAX_INCOMPLETENESS_PENALTY
             )
     search = construct_search(search_params)
-    return search.execute().to_dict()
+    results = search.execute().to_dict()
+    if results.get("_shards", {}).get("failures"):
+        log.error(
+            "Search encountered shard failures: %s",
+            results.get("_shards").get("failures"),
+        )
+    return results
 
 
 def subscribe_user_to_search_query(

@@ -741,6 +741,8 @@ def calculate_completeness(
         content_keys = CONTENT_TAG_CATEGORIES.values()
         content_tags_dict = dict(zip(content_keys, [0] * len(content_keys)))
         for content_file_tags in content_tags:
+            if content_file_tags is None:
+                continue
             for content_tag in content_file_tags:
                 category = CONTENT_TAG_CATEGORIES.get(content_tag)
                 if category:
@@ -799,7 +801,7 @@ def load_content_files(
         content_files_ids = []
         content_tags = []
         for content_file in content_files_data:
-            content_tags.append(content_file.get("content_tags", []))
+            content_tags.append(content_file.get("content_tags") or [])
             content_files_ids.append(load_content_file(course_run, content_file))
         for file in (
             ContentFile.objects.filter(run=course_run)

@@ -1881,6 +1881,72 @@ def test_calculate_completeness(mocker, is_scholar_course, tag_counts, expected_
     assert mock_index.call_count == (1 if resource.completeness != 1.0 else 0)
 
 
+def test_calculate_completeness_with_none_content_tags(mocker):
+    """Test that calculate_completeness handles None values in content_tags list"""
+    mock_index = mocker.patch("learning_resources.etl.loaders.update_index")
+    resource = LearningResourceFactory.create(
+        is_course=True,
+        etl_source=ETLSource.ocw.name,
+        platform=LearningResourcePlatformFactory.create(code=PlatformType.ocw.name),
+        offered_by=LearningResourceOfferorFactory.create(is_ocw=True),
+        completeness=0.0,
+    )
+    run = resource.runs.first()
+
+    # Create some content files with tags
+    content_tag = LearningResourceContentTagFactory.create(name="Lecture Videos")
+    ContentFileFactory.create_batch(12, run=run, content_tags=[content_tag])
+
+    # Test with content_tags list containing None values
+    content_tags_with_none = [["Lecture Videos"]] * 12 + [None, None]
+
+    # Should not raise an error and should calculate score based on non-None values
+    score = calculate_completeness(run, content_tags=content_tags_with_none)
+    assert score == 0.2  # 12 lecture videos / 24 = 0.5 * 0.4 = 0.2
+    assert mock_index.call_count == 1
+
+
+def test_load_content_files_with_none_content_tags(mocker):
+    """Test that load_content_files handles None content_tags in source data"""
+    course = LearningResourceFactory.create(is_course=True, create_runs=False)
+    course_run = LearningResourceRunFactory.create(
+        published=True, learning_resource=course
+    )
+
+    # Content data with some files having None content_tags
+    content_data = [
+        {"uid": "file1", "content_tags": ["Lecture Videos"]},
+        {"uid": "file2", "content_tags": None},  # None value
+        {"uid": "file3", "content_tags": ["Lecture Notes"]},
+        {"uid": "file4"},  # Missing content_tags key
+    ]
+
+    mock_load_content_file = mocker.patch(
+        "learning_resources.etl.loaders.load_content_file",
+        side_effect=lambda run, _data: ContentFileFactory.create(run=run).id,
+        autospec=True,
+    )
+    mocker.patch(
+        "learning_resources_search.plugins.tasks.index_run_content_files.si",
+    )
+    mock_calc_score = mocker.patch(
+        "learning_resources.etl.loaders.calculate_completeness"
+    )
+
+    # Should not raise an error
+    result = load_content_files(course_run, content_data, calc_completeness=True)
+
+    assert mock_load_content_file.call_count == len(content_data)
+    assert mock_calc_score.call_count == 1
+    assert len(result) == len(content_data)
+
+    # Verify content_tags passed to calculate_completeness doesn't contain None
+    call_args = mock_calc_score.call_args
+    content_tags_arg = call_args.kwargs.get("content_tags")
+    # All None values should have been converted to empty lists
+    assert all(tags == [] or isinstance(tags, list) for tags in content_tags_arg)
+
+
 def test_course_with_unpublished_force_ingest_is_test_mode():
     """
     Test that a course with force_ingest set to True
