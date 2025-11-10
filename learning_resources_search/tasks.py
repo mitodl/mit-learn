@@ -37,14 +37,9 @@ from learning_resources_search.api import (
 from learning_resources_search.constants import (
     CONTENT_FILE_TYPE,
     COURSE_TYPE,
-    LEARNING_PATH_TYPE,
+    LEARNING_RESOURCE_TYPES,
     PERCOLATE_INDEX_TYPE,
-    PODCAST_EPISODE_TYPE,
-    PODCAST_TYPE,
-    PROGRAM_TYPE,
     SEARCH_CONN_EXCEPTIONS,
-    VIDEO_PLAYLIST_TYPE,
-    VIDEO_TYPE,
     IndexestoUpdate,
 )
 from learning_resources_search.exceptions import ReindexError, RetryError
@@ -624,14 +619,7 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
                     )
                 ]
 
-        for resource_type in [
-            PROGRAM_TYPE,
-            PODCAST_TYPE,
-            PODCAST_EPISODE_TYPE,
-            LEARNING_PATH_TYPE,
-            VIDEO_TYPE,
-            VIDEO_PLAYLIST_TYPE,
-        ]:
+        for resource_type in set(LEARNING_RESOURCE_TYPES) - {COURSE_TYPE}:
             if resource_type in indexes:
                 index_tasks = index_tasks + [
                     index_learning_resources.si(
@@ -692,14 +680,7 @@ def start_update_index(self, indexes, etl_source):
         if PERCOLATE_INDEX_TYPE in indexes:
             index_tasks = index_tasks + get_update_percolator_tasks()
 
-        for resource_type in [
-            PROGRAM_TYPE,
-            PODCAST_TYPE,
-            PODCAST_EPISODE_TYPE,
-            LEARNING_PATH_TYPE,
-            VIDEO_TYPE,
-            VIDEO_PLAYLIST_TYPE,
-        ]:
+        for resource_type in set(LEARNING_RESOURCE_TYPES) - {COURSE_TYPE}:
             if resource_type in indexes:
                 index_tasks = index_tasks + get_update_learning_resource_tasks(
                     resource_type
