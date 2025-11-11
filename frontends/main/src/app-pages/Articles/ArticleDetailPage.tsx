@@ -2,7 +2,13 @@
 
 import React from "react"
 import { useArticleDetail } from "api/hooks/articles"
-import { Container, LoadingSpinner, styled, Typography } from "ol-components"
+import {
+  Container,
+  LoadingSpinner,
+  styled,
+  Typography,
+  TiptapEditor,
+} from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { notFound } from "next/navigation"
 import { Permission } from "api/hooks/user"
@@ -22,14 +28,6 @@ const ControlsContainer = styled.div({
 const WrapperContainer = styled.div({
   borderBottom: "1px solid rgb(222, 208, 208)",
   paddingBottom: "10px",
-})
-
-const PreTag = styled.pre({
-  background: "#f6f6f6",
-  padding: "16px",
-  borderRadius: "8px",
-  fontSize: "14px",
-  overflowX: "auto",
 })
 
 export const ArticleDetailPage = ({ articleId }: { articleId: number }) => {
@@ -58,7 +56,7 @@ export const ArticleDetailPage = ({ articleId }: { articleId: number }) => {
             </ButtonLink>
           </ControlsContainer>
         </WrapperContainer>
-        <PreTag>{JSON.stringify(data.content, null, 2)}</PreTag>
+        <TiptapEditor data-testid="editor" value={data.content} readOnly />
       </Page>
     </RestrictedRoute>
   )

@@ -2,7 +2,7 @@
 
 // Based on ./components/tiptap-templates/simple/simple-editor.tsx
 
-import React, { useRef } from "react"
+import React, { useRef, useEffect } from "react"
 import { EditorContent, EditorContext, useEditor } from "@tiptap/react"
 
 // --- Tiptap Core Extensions ---
@@ -105,12 +105,32 @@ const MainToolbarContent = () => {
   )
 }
 
-export default function SimpleEditor() {
+interface SimpleEditorProps {
+  value?: object
+  onChange?: (json: object) => void
+  readOnly?: boolean
+}
+export default function SimpleEditor({
+  value,
+  onChange,
+  readOnly,
+}: SimpleEditorProps) {
   const toolbarRef = useRef<HTMLDivElement>(null)
 
   const editor = useEditor({
     immediatelyRender: false,
     shouldRerenderOnTransaction: false,
+    content: value || {
+      type: "doc",
+      content: [{ type: "paragraph", content: [] }],
+    },
+    editable: !readOnly,
+    onUpdate: ({ editor }) => {
+      if (!readOnly) {
+        const json = editor.getJSON()
+        onChange?.(json)
+      }
+    },
     editorProps: {
       attributes: {
         autocomplete: "off",
@@ -145,23 +165,24 @@ export default function SimpleEditor() {
         onError: (error) => console.error("Upload failed:", error),
       }),
     ],
-    content: {
-      type: "doc",
-      content: [
-        {
-          type: "paragraph",
-          content: [],
-        },
-      ],
-    },
   })
+
+  // 👇 Important: update content when fetched JSON changes
+  useEffect(() => {
+    if (editor && value) {
+      editor.commands.setContent(value)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor])
 
   return (
     <div className="simple-editor-wrapper">
       <EditorContext.Provider value={{ editor }}>
-        <Toolbar ref={toolbarRef}>
-          <MainToolbarContent />
-        </Toolbar>
+        {!readOnly && (
+          <Toolbar ref={toolbarRef}>
+            <MainToolbarContent />
+          </Toolbar>
+        )}
 
         <EditorContent
           editor={editor}

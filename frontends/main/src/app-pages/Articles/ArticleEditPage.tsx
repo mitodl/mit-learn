@@ -1,11 +1,17 @@
 "use client"
-import React, { useEffect, useState, ChangeEvent } from "react"
+import React, { useEffect, useState } from "react"
 import { Permission } from "api/hooks/user"
 import { useRouter } from "next-nprogress-bar"
 import { useArticleDetail, useArticlePartialUpdate } from "api/hooks/articles"
 import { Button, Input, Alert } from "@mitodl/smoot-design"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
-import { Container, Typography, styled, LoadingSpinner } from "ol-components"
+import {
+  Container,
+  Typography,
+  styled,
+  LoadingSpinner,
+  TiptapEditor,
+} from "ol-components"
 import { notFound } from "next/navigation"
 import { articlesView } from "@/common/urls"
 
@@ -31,8 +37,11 @@ const ArticleEditPage = ({ articleId }: { articleId: string }) => {
   const { data: article, isLoading } = useArticleDetail(id)
 
   const [title, setTitle] = useState<string>("")
-  const [text, setText] = useState("")
-  const [json, setJson] = useState({})
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [json, setJson] = useState<Record<string, any>>({
+    type: "doc",
+    content: [{ type: "paragraph", content: [] }],
+  })
   const [alertText, setAlertText] = useState("")
 
   const { mutate: updateArticle, isPending } = useArticlePartialUpdate()
@@ -57,7 +66,6 @@ const ArticleEditPage = ({ articleId }: { articleId: string }) => {
   useEffect(() => {
     if (article && !title) {
       setTitle(article.title)
-      setText(article.content ? JSON.stringify(article.content, null, 2) : "")
       setJson(article.content)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -70,17 +78,10 @@ const ArticleEditPage = ({ articleId }: { articleId: string }) => {
     return notFound()
   }
 
-  const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value
-    setText(value)
-
-    try {
-      const parsed = JSON.parse(value)
-      setJson(parsed)
-    } catch {
-      setJson({})
-    }
+  const handleChange = (json: object) => {
+    setJson(json)
   }
+
   return (
     <RestrictedRoute requires={Permission.ArticleEditor}>
       <Container className="article-wrapper">
@@ -112,12 +113,10 @@ const ArticleEditPage = ({ articleId }: { articleId: string }) => {
         />
 
         <ClientContainer className="editor-box">
-          <textarea
+          <TiptapEditor
             data-testid="editor"
-            value={text}
+            value={json}
             onChange={handleChange}
-            placeholder="Type or paste JSON here..."
-            style={{ width: "100%", height: 150 }}
           />
         </ClientContainer>
 

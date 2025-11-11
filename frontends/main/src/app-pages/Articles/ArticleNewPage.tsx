@@ -1,11 +1,11 @@
 "use client"
-import React, { useState, ChangeEvent } from "react"
+import React, { useState } from "react"
 import { Permission } from "api/hooks/user"
 import { useRouter } from "next-nprogress-bar"
 import { useArticleCreate } from "api/hooks/articles"
 import { Button, Input, Alert } from "@mitodl/smoot-design"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
-import { Container, Typography, styled } from "ol-components"
+import { TiptapEditor, Container, Typography, styled } from "ol-components"
 import { articlesView } from "@/common/urls"
 
 const SaveButton = styled.div({
@@ -27,8 +27,11 @@ const ArticleNewPage: React.FC = () => {
   const router = useRouter()
 
   const [title, setTitle] = React.useState<string>("")
-  const [text, setText] = useState("")
-  const [json, setJson] = useState({})
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [json, setJson] = useState<Record<string, any>>({
+    type: "doc",
+    content: [{ type: "paragraph", content: [] }],
+  })
   const [alertText, setAlertText] = React.useState("")
 
   const { mutate: createArticle, isPending } = useArticleCreate()
@@ -57,17 +60,10 @@ const ArticleNewPage: React.FC = () => {
       },
     )
   }
-  const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value
-    setText(value)
-
-    try {
-      const parsed = JSON.parse(value)
-      setJson(parsed)
-    } catch {
-      setJson({})
-    }
+  const handleChange = (json: object) => {
+    setJson(json)
   }
+
   return (
     <RestrictedRoute requires={Permission.ArticleEditor}>
       <Container className="article-wrapper">
@@ -96,15 +92,12 @@ const ArticleNewPage: React.FC = () => {
         />
 
         <ClientContainer className="editor-box">
-          <textarea
+          <TiptapEditor
             data-testid="editor"
-            value={text}
+            value={json}
             onChange={handleChange}
-            placeholder="Type or paste JSON here..."
-            style={{ width: "100%", height: 150 }}
           />
         </ClientContainer>
-
         <SaveButton>
           <Button
             variant="primary"

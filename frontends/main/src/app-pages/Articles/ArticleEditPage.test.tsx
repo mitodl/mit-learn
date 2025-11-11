@@ -13,6 +13,33 @@ jest.mock("next-nprogress-bar", () => ({
   }),
 }))
 
+jest.mock("ol-components", () => {
+  // Reuse other exports from ol-components if needed
+  const actual = jest.requireActual("ol-components")
+  return {
+    ...actual,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    TiptapEditor: ({ value, onChange, "data-testid": testId }: any) => {
+      return (
+        <textarea
+          data-testid={testId || "editor"}
+          value={JSON.stringify(value, null, 2)}
+          onChange={(e) => {
+            try {
+              // Allow simulating JSON-like updates if needed
+              const parsed = JSON.parse(e.target.value)
+              onChange?.(parsed)
+            } catch {
+              // fallback to raw string for simple tests
+              onChange?.(e.target.value)
+            }
+          }}
+        />
+      )
+    },
+  }
+})
+
 describe("ArticleEditPage", () => {
   test("renders editor when user has ArticleEditor permission", async () => {
     const user = factories.user.user({
