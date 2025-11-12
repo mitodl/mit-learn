@@ -30,6 +30,13 @@ const TitleInput = styled(Input)({
   margin: "10px 0",
 })
 
+styled(TiptapEditor)({
+  ".simple-editor-wrapper": {
+    width: "auto",
+    height: "auto",
+  },
+})
+
 const ArticleEditPage = ({ articleId }: { articleId: string }) => {
   const router = useRouter()
 

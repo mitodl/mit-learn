@@ -8,13 +8,16 @@ import { EditorContent, EditorContext, useEditor } from "@tiptap/react"
 // --- Tiptap Core Extensions ---
 import { StarterKit } from "@tiptap/starter-kit"
 import { TaskItem, TaskList } from "@tiptap/extension-list"
+
 import { Image } from "@tiptap/extension-image"
 import { TextAlign } from "@tiptap/extension-text-align"
 import { Typography } from "@tiptap/extension-typography"
 import { Highlight } from "@tiptap/extension-highlight"
 import { Subscript } from "@tiptap/extension-subscript"
 import { Superscript } from "@tiptap/extension-superscript"
+
 import { ImageUploadButton } from "./components/tiptap-ui/image-upload-button"
+
 import { Selection } from "@tiptap/extensions"
 
 // --- UI Primitives ---
@@ -193,7 +196,7 @@ export default function SimpleEditor({
         <EditorContent
           editor={editor}
           role="presentation"
-          className="simple-editor-content"
+          className={`simple-editor-content ${!readOnly ? "simple-editor-content-background" : ""}`}
         />
       </EditorContext.Provider>
     </div>

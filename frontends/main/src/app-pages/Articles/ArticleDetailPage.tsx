@@ -30,6 +30,13 @@ const WrapperContainer = styled.div({
   paddingBottom: "10px",
 })
 
+styled(TiptapEditor)({
+  ".simple-editor-wrapper": {
+    width: "auto",
+    height: "auto",
+  },
+})
+
 export const ArticleDetailPage = ({ articleId }: { articleId: number }) => {
   const id = Number(articleId)
   const { data, isLoading } = useArticleDetail(id)

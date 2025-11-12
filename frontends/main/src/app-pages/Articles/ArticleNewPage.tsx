@@ -23,6 +23,13 @@ const TitleInput = styled(Input)({
   margin: "10px 0",
 })
 
+styled(TiptapEditor)({
+  ".simple-editor-wrapper": {
+    width: "auto",
+    height: "auto",
+  },
+})
+
 const ArticleNewPage: React.FC = () => {
   const router = useRouter()
 
