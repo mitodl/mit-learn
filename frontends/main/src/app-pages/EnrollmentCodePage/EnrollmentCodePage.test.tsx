@@ -67,29 +67,14 @@ describe("EnrollmentCodePage", () => {
     })
   })
 
-  test("Redirects to dashboard on successful attachment", async () => {
+  test("Redirects to dashboard on successful attachment (201 status)", async () => {
     setMockResponse.get(urls.userMe.get(), {
       [Permission.Authenticated]: true,
     })
 
-    const initialOrg = factories.organizations.organization({})
-    const newOrg = factories.organizations.organization({})
-    const initialMitxUser = factories.user.user({
-      b2b_organizations: [initialOrg],
-    })
-    const updatedMitxUser = factories.user.user({
-      b2b_organizations: [initialOrg, newOrg],
-    })
-
-    // First call returns initial user, subsequent calls return updated user
-    let callCount = 0
-    setMockResponse.get(b2bUrls.userMe.get(), () => {
-      callCount++
-      return callCount === 1 ? initialMitxUser : updatedMitxUser
-    })
-
     const attachUrl = b2bUrls.b2bAttach.b2bAttachView("test-code")
-    setMockResponse.post(attachUrl, updatedMitxUser)
+    // 201 status indicates successful attachment to new contract(s)
+    setMockResponse.post(attachUrl, {}, { code: 201 })
 
     renderWithProviders(<EnrollmentCodePage code="test-code" />, {
       url: commonUrls.B2B_ATTACH_VIEW,
@@ -104,22 +89,16 @@ describe("EnrollmentCodePage", () => {
     })
   })
 
-  test("Redirects to dashboard with error when b2b organizations don't change", async () => {
+  test("Redirects to dashboard when user already attached to all contracts (200 status)", async () => {
     setMockResponse.get(urls.userMe.get(), {
       [Permission.Authenticated]: true,
     })
 
-    const organization = factories.organizations.organization({})
-    const mitxUser = factories.user.user({
-      b2b_organizations: [organization],
-    })
+    const attachUrl = b2bUrls.b2bAttach.b2bAttachView("already-used-code")
+    // 200 status indicates user already attached to all contracts - still redirect to dashboard without error
+    setMockResponse.post(attachUrl, {}, { code: 200 })
 
-    setMockResponse.get(b2bUrls.userMe.get(), mitxUser)
-
-    const attachUrl = b2bUrls.b2bAttach.b2bAttachView("invalid-code")
-    setMockResponse.post(attachUrl, mitxUser)
-
-    renderWithProviders(<EnrollmentCodePage code="invalid-code" />, {
+    renderWithProviders(<EnrollmentCodePage code="already-used-code" />, {
       url: commonUrls.B2B_ATTACH_VIEW,
     })
 
@@ -127,24 +106,19 @@ describe("EnrollmentCodePage", () => {
       expect(makeRequest).toHaveBeenCalledWith("post", attachUrl, undefined)
     })
 
-    expect(mockPush).toHaveBeenCalledWith(
-      commonUrls.DASHBOARD_HOME_ENROLLMENT_ERROR,
-    )
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith(commonUrls.DASHBOARD_HOME)
+    })
   })
 
-  test("Redirects to dashboard with error when user has no organizations initially", async () => {
+  test("Redirects to dashboard with error for invalid code (404 status)", async () => {
     setMockResponse.get(urls.userMe.get(), {
       [Permission.Authenticated]: true,
     })
 
-    const mitxUser = factories.user.user({
-      b2b_organizations: [],
-    })
-
-    setMockResponse.get(b2bUrls.userMe.get(), mitxUser)
-
     const attachUrl = b2bUrls.b2bAttach.b2bAttachView("invalid-code")
-    setMockResponse.post(attachUrl, mitxUser)
+    // 404 status indicates invalid or expired enrollment code
+    setMockResponse.post(attachUrl, {}, { code: 404 })
 
     renderWithProviders(<EnrollmentCodePage code="invalid-code" />, {
       url: commonUrls.B2B_ATTACH_VIEW,
@@ -154,8 +128,10 @@ describe("EnrollmentCodePage", () => {
       expect(makeRequest).toHaveBeenCalledWith("post", attachUrl, undefined)
     })
 
-    expect(mockPush).toHaveBeenCalledWith(
-      commonUrls.DASHBOARD_HOME_ENROLLMENT_ERROR,
-    )
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith(
+        commonUrls.DASHBOARD_HOME_ENROLLMENT_ERROR,
+      )
+    })
   })
 })

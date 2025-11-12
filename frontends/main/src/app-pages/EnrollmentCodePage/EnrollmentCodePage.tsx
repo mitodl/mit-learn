@@ -6,7 +6,6 @@ import { useB2BAttachMutation } from "api/mitxonline-hooks/organizations"
 import { userQueries } from "api/hooks/user"
 import { useQuery } from "@tanstack/react-query"
 import { useRouter } from "next-nprogress-bar"
-import { mitxUserQueries } from "api/mitxonline-hooks/user"
 
 type EnrollmentCodePage = {
   code: string
@@ -18,18 +17,7 @@ const InterstitialMessage = styled(Typography)(({ theme }) => ({
 }))
 
 const EnrollmentCodePage: React.FC<EnrollmentCodePage> = ({ code }) => {
-  const mitxOnlineUser = useQuery(mitxUserQueries.me())
-  const initialOrgsRef = React.useRef<number | null>(null)
   const [hasEnrolled, setHasEnrolled] = React.useState(false)
-
-  // Capture initial organization count once
-  if (
-    initialOrgsRef.current === null &&
-    mitxOnlineUser.data?.b2b_organizations
-  ) {
-    initialOrgsRef.current = mitxOnlineUser.data.b2b_organizations.length
-  }
-
   const router = useRouter()
 
   const enrollment = useB2BAttachMutation({
@@ -48,23 +36,17 @@ const EnrollmentCodePage: React.FC<EnrollmentCodePage> = ({ code }) => {
     }
   }, [user?.is_authenticated, hasEnrolled, enrollment])
 
-  // Handle redirect after mutation succeeds and query is refetched
+  // Handle redirect based on response status code
+  // 201: Successfully attached to new contract(s) -> redirect to dashboard
+  // 200: Already attached to all contracts -> redirect to dashboard
+  // 404: Invalid or expired code -> show error
   React.useEffect(() => {
-    if (enrollment.isSuccess && !enrollment.isPending) {
-      const currentOrgCount =
-        mitxOnlineUser.data?.b2b_organizations?.length ?? 0
-      if (initialOrgsRef.current === currentOrgCount) {
-        router.push(urls.DASHBOARD_HOME_ENROLLMENT_ERROR)
-      } else {
-        router.push(urls.DASHBOARD_HOME)
-      }
+    if (enrollment.isSuccess) {
+      router.push(urls.DASHBOARD_HOME)
+    } else if (enrollment.isError) {
+      router.push(urls.DASHBOARD_HOME_ENROLLMENT_ERROR)
     }
-  }, [
-    enrollment.isSuccess,
-    enrollment.isPending,
-    mitxOnlineUser.data?.b2b_organizations?.length,
-    router,
-  ])
+  }, [enrollment.isSuccess, enrollment.isError, router])
 
   React.useEffect(() => {
     if (userLoading) {
