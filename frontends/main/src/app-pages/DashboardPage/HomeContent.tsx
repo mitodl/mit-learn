@@ -19,6 +19,7 @@ import { FeatureFlags } from "@/common/feature_flags"
 import { useUserMe } from "api/hooks/user"
 import { OrganizationCards } from "./CoursewareDisplay/OrganizationCards"
 import { useSearchParams } from "next/navigation"
+import { useRouter } from "next-nprogress-bar"
 
 const SubTitleText = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
@@ -73,6 +74,7 @@ const AlertBanner = styled(Alert)({
 
 const HomeContent: React.FC = () => {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const enrollmentError = searchParams.get(ENROLLMENT_ERROR_QUERY_PARAM)
   const { isLoading: isLoadingProfile, data: user } = useUserMe()
   const topics = user?.profile?.preference_search_filters.topic
@@ -81,6 +83,19 @@ const HomeContent: React.FC = () => {
     FeatureFlags.EnrollmentDashboard,
   )
   const supportEmail = process.env.NEXT_PUBLIC_MITOL_SUPPORT_EMAIL || ""
+
+  // Clear the enrollment error query param on mount so it doesn't persist on reload/back navigation
+  React.useEffect(() => {
+    if (enrollmentError) {
+      const newParams = new URLSearchParams(searchParams.toString())
+      newParams.delete(ENROLLMENT_ERROR_QUERY_PARAM)
+      const newUrl = newParams.toString()
+        ? `${window.location.pathname}?${newParams.toString()}`
+        : window.location.pathname
+      router.replace(newUrl)
+    }
+  }, [enrollmentError, searchParams, router])
+
   return (
     <>
       <HomeHeader>

@@ -18,8 +18,10 @@ import * as mitxonline from "api/mitxonline-test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import HomeContent from "./HomeContent"
 import invariant from "tiny-invariant"
+import * as NextProgressBar from "next-nprogress-bar"
 
 jest.mock("posthog-js/react")
+jest.mock("next-nprogress-bar")
 const mockedUseFeatureFlagEnabled = jest
   .mocked(useFeatureFlagEnabled)
   .mockImplementation(() => false)
@@ -251,8 +253,15 @@ describe("HomeContent", () => {
     expect(screen.queryByText("Enrollment Error")).not.toBeInTheDocument()
   })
 
-  test("Displays enrollment error alert when query param is present", async () => {
+  test("Displays enrollment error alert when query param is present and then clears it", async () => {
     setupAPIs()
+    const mockReplace = jest.fn()
+    jest.spyOn(NextProgressBar, "useRouter").mockReturnValue({
+      replace: mockReplace,
+    } as Partial<ReturnType<typeof NextProgressBar.useRouter>> as ReturnType<
+      typeof NextProgressBar.useRouter
+    >)
+
     renderWithProviders(<HomeContent />, {
       url: "/dashboard?enrollment_error=1",
     })
@@ -261,6 +270,7 @@ describe("HomeContent", () => {
       name: "Your MIT Learning Journey",
     })
 
+    // Verify the alert was shown
     expect(screen.getByText("Enrollment Error")).toBeInTheDocument()
     expect(
       screen.getByText(
@@ -268,5 +278,29 @@ describe("HomeContent", () => {
       ),
     ).toBeInTheDocument()
     expect(screen.getByText("Contact Support")).toBeInTheDocument()
+
+    // Verify the query param is cleared
+    expect(mockReplace).toHaveBeenCalledWith("/dashboard")
+  })
+
+  test("Does not clear query param when it is not present", async () => {
+    setupAPIs()
+    const mockReplace = jest.fn()
+    jest.spyOn(NextProgressBar, "useRouter").mockReturnValue({
+      replace: mockReplace,
+    } as Partial<ReturnType<typeof NextProgressBar.useRouter>> as ReturnType<
+      typeof NextProgressBar.useRouter
+    >)
+
+    renderWithProviders(<HomeContent />, {
+      url: "/dashboard",
+    })
+
+    await screen.findByRole("heading", {
+      name: "Your MIT Learning Journey",
+    })
+
+    // Verify router.replace was not called
+    expect(mockReplace).not.toHaveBeenCalled()
   })
 })
