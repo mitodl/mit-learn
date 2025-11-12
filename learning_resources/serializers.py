@@ -113,7 +113,7 @@ class LearningResourceOfferorSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.LearningResourceOfferor
-        fields = ("code", "name", "channel_url")
+        fields = ("code", "name", "channel_url", "display_facet")
 
 
 class LearningResourceOfferorDetailSerializer(LearningResourceOfferorSerializer):

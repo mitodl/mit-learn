@@ -173,6 +173,8 @@ class LearningResourceOfferor(TimestampedModel):
     more_information = models.URLField(blank=True)
     # This field name means "value proposition"
     value_prop = models.TextField(blank=True)
+    # whether or not to show this offeror as a facet in the UI
+    display_facet = models.BooleanField(default=True)
 
     @cached_property
     def channel_url(self):
