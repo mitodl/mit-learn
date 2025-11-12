@@ -583,15 +583,13 @@ describe("Search Page Tabs", () => {
 
 test("Facet 'Offered By' uses API response for names", async () => {
   const offerors = factories.learningResources.offerors({ count: 3 })
-
+  for (const offeror of offerors.results) {
+    offeror.display_facet = true
+  }
   const resources = factories.learningResources.resources({
     count: 3,
   }).results
 
-  for (const [i, v] of resources.entries()) {
-    v.offered_by = offerors.results[i]
-    v.offered_by.display_facet = true
-  }
   setMockApiResponses({
     offerors,
     search: {
@@ -635,15 +633,15 @@ test("Facet 'Offered By' only shows facets with 'display_facet' set to true", as
     count: 3,
   }).results
 
-  for (const [i, v] of resources.entries()) {
+  for (const [i, v] of offerors.results.entries()) {
     v.offered_by = offerors.results[i]
   }
-  resources[0]!.offered_by!.display_facet = true
-  resources[1]!.offered_by!.display_facet = false
-  resources[2]!.offered_by!.display_facet = false
+
+  offerors.results[0].display_facet = true
+  offerors.results[1]!.display_facet = false
+  offerors.results[2]!.display_facet = false
 
   setMockApiResponses({
-    offerors,
     search: {
       results: resources,
       metadata: {
@@ -656,6 +654,7 @@ test("Facet 'Offered By' only shows facets with 'display_facet' set to true", as
         suggestions: [],
       },
     },
+    offerors: offerors,
   })
   renderWithProviders(<SearchPage />)
   const showFacetButton = await screen.findByRole("button", {

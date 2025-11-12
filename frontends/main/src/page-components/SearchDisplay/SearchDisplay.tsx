@@ -581,7 +581,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     placeholderData: keepPreviousData,
     select: (data) => {
       // Handle missing data gracefully
-      if (data.results.length === 0) {
+      if (!data.metadata.aggregations.offered_by || data.results.length === 0) {
         return data
       }
 
