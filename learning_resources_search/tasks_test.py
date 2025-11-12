@@ -134,7 +134,7 @@ def test_system_exit_retry(mocker):
 
 @pytest.mark.parametrize(
     "indexes",
-    [["course"], ["program"]],
+    [["course"], ["program"], list(LEARNING_RESOURCE_TYPES)],
 )
 def test_start_recreate_index(mocker, mocked_celery, user, indexes):
     """
@@ -252,8 +252,7 @@ def test_start_recreate_index(mocker, mocked_celery, user, indexes):
                 course.learning_resource_id,
                 index_types=IndexestoUpdate.reindexing_index.value,
             )
-
-    if PROGRAM_TYPE in indexes:
+    if indexes == [PROGRAM_TYPE]:
         assert index_learning_resources_mock.si.call_count == 2
         index_learning_resources_mock.si.assert_any_call(
             [programs[0].learning_resource_id, programs[1].learning_resource_id],
@@ -462,6 +461,7 @@ def test_bulk_deindex_learning_resources(mocker, with_error):
     [
         (["program"], None),
         (["course, content_file"], None),
+        (list(LEARNING_RESOURCE_TYPES), None),
         (["course"], ETLSource.xpro.value),
         (["content_file"], ETLSource.xpro.value),
         (["content_file"], ETLSource.oll.value),
@@ -588,7 +588,7 @@ def test_start_update_index(mocker, mocked_celery, indexes, etl_source, settings
                 COURSE_TYPE,
             )
 
-    if PROGRAM_TYPE in indexes:
+    if indexes == [PROGRAM_TYPE]:
         assert index_learning_resources_mock.si.call_count == 2
         index_learning_resources_mock.si.assert_any_call(
             [programs[0].learning_resource_id, programs[1].learning_resource_id],
