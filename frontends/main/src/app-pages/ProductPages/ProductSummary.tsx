@@ -15,7 +15,7 @@ import {
   CourseRunV2,
   V2Program,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { getElectiveSubtree, getRequiredSubtree } from "./util"
+import { getSubtree } from "./util"
 import { LearningResource } from "api"
 
 const UnderlinedLink = styled(Link)({
@@ -433,8 +433,8 @@ const RequirementsRow: React.FC<ProgramInfoRowProps> = ({
   program,
   ...others
 }) => {
-  const requiredSubtree = getRequiredSubtree(program)
-  const electiveSubtree = getElectiveSubtree(program)
+  const requiredSubtree = getSubtree(program, "required")
+  const electiveSubtree = getSubtree(program, "elective")
   const requiredDisplay = requiredSubtree?.children?.length ? (
     <InfoRowInner>
       {`${requiredSubtree.children.length} Required ${pluralize(
