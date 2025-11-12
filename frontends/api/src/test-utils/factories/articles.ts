@@ -6,7 +6,10 @@ import type { RichTextArticle } from "../../generated/v1"
 const article: Factory<RichTextArticle> = (overrides = {}) => ({
   id: faker.number.int(),
   title: faker.lorem.sentence(),
-  html: faker.lorem.paragraph(),
+  content: {
+    text: faker.lorem.paragraph(),
+    author: faker.person.fullName(),
+  },
   ...overrides,
 })
 

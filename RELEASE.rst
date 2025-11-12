@@ -1,6 +1,16 @@
 Release Notes
 =============
 
+Version 0.47.12
+---------------
+
+- chore(deps): update dependency bpython to ^0.26 (#2668)
+- Initial Tiptap Editor (#2691)
+- fix search error with staleness and incompleteness (#2688)
+- log error if a shard has a failure (#2690)
+- feat: Implement the Article CRUD except listing (#2686)
+- embeddings healthcheck (#2676)
+
 Version 0.47.11 (Released November 10, 2025)
 ---------------
 

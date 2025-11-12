@@ -128,7 +128,7 @@ const nextConfig = {
         allowCollectingMemory: true,
       })
     }
-    // Important: return the modified config
+
     return config
   },
 }

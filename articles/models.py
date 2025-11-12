@@ -10,5 +10,5 @@ class Article(TimestampedModel):
     Stores rich-text content created by staff members.
     """
 
-    html = models.TextField()
+    content = models.JSONField(default={})
     title = models.CharField(max_length=255)

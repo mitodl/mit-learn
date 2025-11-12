@@ -2000,8 +2000,8 @@ def test_execute_learn_search_with_script_score(
 
     if yearly_decay_percent > 0 and max_incompleteness_penalty > 0:
         source = (
-            "_score * (doc['completeness'].value * params.max_incompleteness_penalty + "
-            "(1-params.max_incompleteness_penalty)) * (doc['resource_age_date'].size() == 0 ? "
+            "(doc['completeness'].value * params.max_incompleteness_penalty + "
+            "(1-params.max_incompleteness_penalty))*(doc['resource_age_date'].size() == 0 ? "
             "1 : decayDateLinear(params.origin, params.scale, params.offset, params.decay, "
             "doc['resource_age_date'].value))"
         )
@@ -2014,7 +2014,7 @@ def test_execute_learn_search_with_script_score(
         }
     elif yearly_decay_percent > 0:
         source = (
-            "_score * (doc['resource_age_date'].size() == 0 ? "
+            "(doc['resource_age_date'].size() == 0 ? "
             "1 : decayDateLinear(params.origin, params.scale, params.offset, params.decay, "
             "doc['resource_age_date'].value))"
         )
@@ -2027,7 +2027,7 @@ def test_execute_learn_search_with_script_score(
         }
     else:
         source = (
-            "_score * (doc['completeness'].value * params.max_incompleteness_penalty +"
+            "(doc['completeness'].value * params.max_incompleteness_penalty +"
             " (1-params.max_incompleteness_penalty))"
         )
         params = {"max_incompleteness_penalty": 0.25}
@@ -2047,7 +2047,17 @@ def test_execute_learn_search_with_script_score(
 
     query = {
         "query": {
-            "script_score": {
+            "function_score": {
+                "functions": [
+                    {
+                        "script_score": {
+                            "script": {
+                                "params": params,
+                                "source": source,
+                            },
+                        },
+                    },
+                ],
                 "query": {
                     "bool": {
                         "must": [
@@ -2300,10 +2310,6 @@ def test_execute_learn_search_with_script_score(
                         ],
                         "filter": [{"exists": {"field": "resource_type"}}],
                     }
-                },
-                "script": {
-                    "source": source,
-                    "params": params,
                 },
             }
         },

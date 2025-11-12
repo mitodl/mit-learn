@@ -2,10 +2,12 @@ import datetime
 import logging
 
 import celery
+import sentry_sdk
 from celery.exceptions import Ignore
 from django.conf import settings
 from django.db.models import Q
 
+from learning_resources.content_summarizer import ContentSummarizer
 from learning_resources.models import (
     ContentFile,
     Course,
@@ -32,10 +34,16 @@ from main.utils import (
     chunks,
     now_in_utc,
 )
+from vector_search.constants import (
+    CONTENT_FILES_COLLECTION_NAME,
+    RESOURCES_COLLECTION_NAME,
+)
 from vector_search.utils import (
     embed_learning_resources,
     embed_topics,
+    filter_existing_qdrant_points_by_ids,
     remove_qdrant_records,
+    vector_point_id,
 )
 
 log = logging.getLogger(__name__)
@@ -369,6 +377,139 @@ def remove_run_content_files(run_id):
 
 
 @app.task
+def embeddings_healthcheck():
+    """
+    Check for missing embeddings and summaries in Qdrant and log warnings to Sentry
+    """
+    remaining_content_files = []
+    remaining_resources = []
+    resource_point_ids = {}
+    all_resources = LearningResource.objects.filter(
+        Q(published=True) | Q(test_mode=True)
+    )
+
+    for lr in all_resources:
+        run = (
+            lr.best_run
+            if lr.best_run
+            else lr.runs.filter(published=True).order_by("-start_date").first()
+        )
+        point_id = vector_point_id(lr.readable_id)
+        resource_point_ids[point_id] = {"resource_id": lr.readable_id, "id": lr.id}
+        content_file_point_ids = {}
+        if run:
+            for cf in run.content_files.filter(published=True):
+                if cf and cf.content:
+                    point_id = vector_point_id(
+                        f"{lr.readable_id}.{run.run_id}.{cf.key}.0"
+                    )
+                    content_file_point_ids[point_id] = {"key": cf.key, "id": cf.id}
+            for batch in chunks(content_file_point_ids.keys(), chunk_size=200):
+                remaining_content_files.extend(
+                    filter_existing_qdrant_points_by_ids(
+                        batch, collection_name=CONTENT_FILES_COLLECTION_NAME
+                    )
+                )
+
+    for batch in chunks(
+        all_resources.values_list("readable_id", flat=True),
+        chunk_size=200,
+    ):
+        remaining_resources.extend(
+            filter_existing_qdrant_points_by_ids(
+                [vector_point_id(pid) for pid in batch],
+                collection_name=RESOURCES_COLLECTION_NAME,
+            )
+        )
+
+    remaining_content_file_ids = [
+        content_file_point_ids.get(p, {}).get("id") for p in remaining_content_files
+    ]
+    remaining_resource_ids = [
+        resource_point_ids.get(p, {}).get("id") for p in remaining_resources
+    ]
+    missing_summaries = _missing_summaries()
+    log.info(
+        "Embeddings healthcheck found %d missing content file embeddings",
+        len(remaining_content_files),
+    )
+    log.info(
+        "Embeddings healthcheck found %d missing resource embeddings",
+        len(remaining_resources),
+    )
+    log.info(
+        "Embeddings healthcheck found %d missing summaries and flashcards",
+        len(missing_summaries),
+    )
+
+    if len(remaining_content_files) > 0:
+        _sentry_healthcheck_log(
+            "embeddings",
+            "missing_content_file_embeddings",
+            {
+                "count": len(remaining_content_files),
+                "ids": remaining_content_file_ids,
+                "run_ids": set(
+                    ContentFile.objects.filter(
+                        id__in=remaining_content_file_ids
+                    ).values_list("run__run_id", flat=True)[:100]
+                ),
+            },
+            f"Warning: {len(remaining_content_files)} missing content file "
+            "embeddings detected",
+        )
+
+    if len(remaining_resources) > 0:
+        _sentry_healthcheck_log(
+            "embeddings",
+            "missing_learning_resource_embeddings",
+            {
+                "count": len(remaining_resource_ids),
+                "ids": remaining_resource_ids,
+                "titles": list(
+                    LearningResource.objects.filter(
+                        id__in=remaining_resource_ids
+                    ).values_list("title", flat=True)
+                ),
+            },
+            f"Warning: {len(remaining_resource_ids)} missing learning resource "
+            "embeddings detected",
+        )
+    if len(missing_summaries) > 0:
+        _sentry_healthcheck_log(
+            "embeddings",
+            "missing_content_file_summaries",
+            {
+                "count": len(missing_summaries),
+                "ids": missing_summaries,
+                "run_ids": set(
+                    ContentFile.objects.filter(id__in=missing_summaries).values_list(
+                        "run__run_id", flat=True
+                    )[:100]
+                ),
+            },
+            f"Warning: {len(missing_summaries)} missing content file summaries "
+            "detected",
+        )
+
+
+def _missing_summaries():
+    summarizer = ContentSummarizer()
+    return summarizer.get_unprocessed_content_file_ids(
+        LearningResource.objects.filter(require_summaries=True)
+        .filter(Q(published=True) | Q(test_mode=True))
+        .values_list("id", flat=True)
+    )
+
+
+def _sentry_healthcheck_log(healthcheck, alert_type, context, message):
+    with sentry_sdk.new_scope() as scope:
+        scope.set_tag("healthcheck", healthcheck)
+        scope.set_tag("alert_type", alert_type)
+        scope.set_context("missing_content_file_embeddings", context)
+        sentry_sdk.capture_message(message)
+
+
 def sync_topics():
     """
     Sync topics to the Qdrant collection

@@ -4772,10 +4772,10 @@ export interface PatchedLearningResourceRelationshipRequest {
 export interface PatchedRichTextArticleRequest {
   /**
    *
-   * @type {string}
+   * @type {any}
    * @memberof PatchedRichTextArticleRequest
    */
-  html?: string
+  content?: any
   /**
    *
    * @type {string}
@@ -7157,10 +7157,10 @@ export type ResourceTypeEnum =
 export interface RichTextArticle {
   /**
    *
-   * @type {string}
+   * @type {any}
    * @memberof RichTextArticle
    */
-  html: string
+  content?: any
   /**
    *
    * @type {number}
@@ -7182,10 +7182,10 @@ export interface RichTextArticle {
 export interface RichTextArticleRequest {
   /**
    *
-   * @type {string}
+   * @type {any}
    * @memberof RichTextArticleRequest
    */
-  html: string
+  content?: any
   /**
    *
    * @type {string}
