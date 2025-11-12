@@ -19,7 +19,7 @@ import {
   childCheckboxStyles,
   VisuallyHidden,
 } from "@mitodl/smoot-design"
-
+import { keyBy } from "lodash"
 import {
   RiCloseLine,
   RiArrowLeftLine,
@@ -28,13 +28,15 @@ import {
   RiArrowUpSLine,
   RiArrowDownSLine,
 } from "@remixicon/react"
-
+import {
+  useOfferorsList,
+  learningResourceQueries,
+} from "api/hooks/learningResources"
 import {
   LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LRSearchRequest,
   ResourceCategoryEnum,
   SearchModeEnumDescriptions,
 } from "api"
-import { learningResourceQueries } from "api/hooks/learningResources"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { useAdminSearchParams } from "api/hooks/adminSearchParams"
 import {
@@ -569,22 +571,25 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     facetNames,
     page,
   ])
+  const offerorsQuery = useOfferorsList()
+  const offerors = useMemo(() => {
+    return keyBy(offerorsQuery.data?.results ?? [], (o) => o.code)
+  }, [offerorsQuery.data?.results])
+
   const { data, isLoading, isFetching } = useQuery({
     ...learningResourceQueries.search(allParams as LRSearchRequest),
     placeholderData: keepPreviousData,
     select: (data) => {
       // Handle missing data gracefully
-      if (!data.metadata.aggregations.offered_by || data.results.length === 0) {
+      if (data.results.length === 0) {
         return data
       }
-      const offerors = Object.fromEntries(
-        data.results
-          .map((item) => item.offered_by)
-          .filter((value) => value && value.display_facet)
-          .map((value) => [value?.code, value]),
-      )
 
       // only show offerors with display_facet set
+      const displayOfferors = Object.values(offerors)
+        .filter((value) => value.code && value.display_facet)
+        .map((value) => value?.code)
+
       return {
         ...data,
         metadata: {
@@ -592,7 +597,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
           aggregations: {
             ...data.metadata.aggregations,
             offered_by: data.metadata.aggregations.offered_by.filter(
-              (value) => value && Object.keys(offerors).includes(value.key),
+              (value) => value && displayOfferors.includes(value.key),
             ),
           },
         },
