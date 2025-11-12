@@ -1,20 +1,91 @@
 // Based on https://tanstack.com/query/v5/docs/framework/react/guides/advanced-ssr
 
 import { QueryClient, isServer, focusManager } from "@tanstack/react-query"
-import { getServerQueryClient } from "api/ssr/serverQueryClient"
-
-type MaybeHasStatusAndDetail = {
-  response?: {
-    status?: number
-    data?: {
-      detail?: string
-    }
-  }
-}
+import type { AxiosError } from "axios"
+import { cache } from "react"
 
 const MAX_RETRIES = 3
 const THROW_ERROR_CODES = [400, 401, 403]
 const NO_RETRY_CODES = [400, 401, 403, 404, 405, 409, 422]
+
+/**
+ * Get or create a server-side QueryClient for consistent retry behavior.
+ * The server QueryClient should be used for all server-side API calls.
+ *
+ * Uses React's cache() to ensure the same QueryClient instance is reused
+ * throughout a single HTTP request, enabling:
+ *
+ * - Server API calls share the same QueryClient:
+ *   - Prefetch runs in page server components
+ *   - generateMetadata()
+ * - No duplicate API calls within the same request
+ * - Automatic cleanup when the request completes
+ * - Isolation between different HTTP requests
+ *
+ * The QueryClientProvider runs (during SSR) in a separate render pass as it's a
+ * client component and so the instance is not reused. On the server this does not
+ * make API calls and only sets up the hydration boundary and registers hooks in
+ * readiness for the dehydrated state to be sent to the client.
+ */
+const getServerQueryClient = cache(() => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        /**
+         * We create a new query client per request, but still need a staletime
+         * to avoid marking queries as stale during the server-side render pass.
+         * That can cause hydration errors if client renders differently when
+         * the requests are stale (e.g., dependence on isFetching)
+         *
+         * The exact value here isn't important, as long as it's bigger than
+         * request duration.
+         */
+        staleTime: 15 * 60 * 1000,
+
+        /**
+         * React Query's default retry logic is only active in the browser.
+         * Here we explicitly configure it to retry MAX_RETRIES times on
+         * the server, with an exclusion list of statuses that we expect not
+         * to succeed on retry.
+         *
+         * Includes status undefined as we want to retry on network errors
+         */
+        retry: (failureCount, error) => {
+          const axiosError = error as AxiosError
+          console.info("Retrying failed request", {
+            failureCount,
+            error: {
+              message: axiosError.message,
+              name: axiosError.name,
+              status: axiosError?.status,
+              code: axiosError.code,
+              method: axiosError.request?.method,
+              url: axiosError.request?.url,
+            },
+          })
+          const status = (error as AxiosError)?.response?.status
+          const isNetworkError = status === undefined || status === 0
+
+          if (isNetworkError || !NO_RETRY_CODES.includes(status)) {
+            return failureCount < MAX_RETRIES
+          }
+          return false
+        },
+
+        /**
+         * By default, React Query gradually applies a backoff delay, though it is
+         * preferable that we do not significantly delay initial page renders (or
+         * indeed pages that are Statically Rendered during the build process) and
+         * instead allow the request to fail quickly so it can be subsequently
+         * fetched on the client.
+         */
+        retryDelay: 1000,
+      },
+    },
+  })
+
+  return queryClient
+})
 
 const makeBrowserQueryClient = (): QueryClient => {
   return new QueryClient({
@@ -33,12 +104,12 @@ const makeBrowserQueryClient = (): QueryClient => {
          * be handled locally by components.
          */
         throwOnError: (error) => {
-          const status = (error as MaybeHasStatusAndDetail)?.response?.status
+          const status = (error as AxiosError)?.response?.status
           return THROW_ERROR_CODES.includes(status ?? 0)
         },
 
         retry: (failureCount, error) => {
-          const status = (error as MaybeHasStatusAndDetail)?.response?.status
+          const status = (error as AxiosError)?.response?.status
           const isNetworkError = status === undefined || status === 0
 
           /**
@@ -128,4 +199,3 @@ focusManager.setEventListener((setFocused) => {
 })
 
 export { makeBrowserQueryClient, getQueryClient }
-export type { MaybeHasStatusAndDetail }

@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next"
-import { getServerQueryClient } from "api/ssr/serverQueryClient"
+import { getQueryClient } from "@/app/getQueryClient"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import invariant from "tiny-invariant"
 import { GenerateSitemapResult } from "../types"
@@ -23,7 +23,7 @@ export async function generateSitemaps(): Promise<GenerateSitemapResult[]> {
    * Early exit here to avoid the useless build-time API calls.
    */
   if (dangerouslyDetectProductionBuildPhase()) return []
-  const queryClient = getServerQueryClient()
+  const queryClient = getQueryClient()
   const { count } = await queryClient.fetchQuery(
     learningResourceQueries.summaryList({
       limit: PAGE_SIZE,
@@ -44,7 +44,7 @@ export default async function sitemap({
 }: {
   id: string
 }): Promise<MetadataRoute.Sitemap> {
-  const queryClient = getServerQueryClient()
+  const queryClient = getQueryClient()
   const data = await queryClient.fetchQuery(
     learningResourceQueries.summaryList({
       limit: PAGE_SIZE,
