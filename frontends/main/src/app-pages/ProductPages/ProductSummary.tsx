@@ -15,10 +15,16 @@ import {
   CourseRunV2,
   V2Program,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { getSubtree } from "./util"
+import { getSubtree, HeadingIds } from "./util"
 import { LearningResource } from "api"
 
-const UnderlinedLink = styled(Link)({
+const ResponsiveLink = styled(Link)(({ theme }) => ({
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.body3,
+  },
+}))
+
+const UnderlinedLink = styled(ResponsiveLink)({
   textDecoration: "underline",
 })
 
@@ -53,9 +59,14 @@ const InfoRowInner: React.FC<{ children?: React.ReactNode }> = ({
   </Stack>
 )
 
-const InfoLabel = styled.span(({ theme }) => ({
-  fontWeight: theme.typography.fontWeightBold,
-}))
+const InfoLabel = styled.span<{ underline?: boolean }>(
+  ({ theme, underline }) => [
+    {
+      fontWeight: theme.typography.fontWeightBold,
+    },
+    underline && { textDecoration: "underline" },
+  ],
+)
 const InfoValue = styled.span({})
 const InfoLabelValue: React.FC<{ label: string; value: React.ReactNode }> = ({
   label,
@@ -435,6 +446,10 @@ const RequirementsRow: React.FC<ProgramInfoRowProps> = ({
 }) => {
   const requiredSubtree = getSubtree(program, "required")
   const electiveSubtree = getSubtree(program, "elective")
+  const totalRequired =
+    (requiredSubtree?.children?.length ?? 0) +
+    (electiveSubtree?.children?.length ?? 0)
+  if (totalRequired === 0) return null
   const requiredDisplay = requiredSubtree?.children?.length ? (
     <InfoRowInner>
       {`${requiredSubtree.children.length} Required ${pluralize(
@@ -463,10 +478,15 @@ const RequirementsRow: React.FC<ProgramInfoRowProps> = ({
   return (
     <InfoRow {...others}>
       <RiFileCopy2Line aria-hidden="true" />
-      <Stack gap="8px" flex={1}>
-        {requiredDisplay}
-        {electiveDisplay}
-      </Stack>
+
+      <InfoRowInner>
+        <ResponsiveLink color="black" href={`#${HeadingIds.Requirements}`}>
+          <InfoLabel underline>
+            {`${totalRequired} ${pluralize("Course", totalRequired)}`}
+          </InfoLabel>{" "}
+          <InfoValue>to complete program</InfoValue>
+        </ResponsiveLink>
+      </InfoRowInner>
     </InfoRow>
   )
 }
