@@ -633,10 +633,6 @@ test("Facet 'Offered By' only shows facets with 'display_facet' set to true", as
     count: 3,
   }).results
 
-  for (const [i, v] of offerors.results.entries()) {
-    v.offered_by = offerors.results[i]
-  }
-
   offerors.results[0].display_facet = true
   offerors.results[1]!.display_facet = false
   offerors.results[2]!.display_facet = false
