@@ -7,7 +7,7 @@ import {
   LoadingSpinner,
   styled,
   Typography,
-  TiptapEditor,
+  TiptapEditorContainer,
 } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { notFound } from "next/navigation"
@@ -28,13 +28,6 @@ const ControlsContainer = styled.div({
 const WrapperContainer = styled.div({
   borderBottom: "1px solid rgb(222, 208, 208)",
   paddingBottom: "10px",
-})
-
-styled(TiptapEditor)({
-  ".simple-editor-wrapper": {
-    width: "auto",
-    height: "auto",
-  },
 })
 
 export const ArticleDetailPage = ({ articleId }: { articleId: number }) => {
@@ -63,7 +56,11 @@ export const ArticleDetailPage = ({ articleId }: { articleId: number }) => {
             </ButtonLink>
           </ControlsContainer>
         </WrapperContainer>
-        <TiptapEditor data-testid="editor" value={data.content} readOnly />
+        <TiptapEditorContainer
+          data-testid="editor"
+          value={data.content}
+          readOnly
+        />
       </Page>
     </RestrictedRoute>
   )

@@ -3,9 +3,15 @@ import React, { useState } from "react"
 import { Permission } from "api/hooks/user"
 import { useRouter } from "next-nprogress-bar"
 import { useArticleCreate } from "api/hooks/articles"
-import { Button, Input, Alert } from "@mitodl/smoot-design"
+import { Button, Alert } from "@mitodl/smoot-design"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
-import { TiptapEditor, Container, Typography, styled } from "ol-components"
+import {
+  TiptapEditorContainer,
+  Container,
+  Typography,
+  styled,
+  JSONContent,
+} from "ol-components"
 import { articlesView } from "@/common/urls"
 
 const SaveButton = styled.div({
@@ -18,24 +24,11 @@ const ClientContainer = styled.div({
   margin: "10px 0",
 })
 
-const TitleInput = styled(Input)({
-  width: "100%",
-  margin: "10px 0",
-})
-
-styled(TiptapEditor)({
-  ".simple-editor-wrapper": {
-    width: "auto",
-    height: "auto",
-  },
-})
-
 const ArticleNewPage: React.FC = () => {
   const router = useRouter()
 
   const [title, setTitle] = React.useState<string>("")
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [json, setJson] = useState<Record<string, any>>({
+  const [json, setJson] = useState<JSONContent>({
     type: "doc",
     content: [{ type: "paragraph", content: [] }],
   })
@@ -73,7 +66,7 @@ const ArticleNewPage: React.FC = () => {
 
   return (
     <RestrictedRoute requires={Permission.ArticleEditor}>
-      <Container className="article-wrapper">
+      <Container>
         <h1>Write Article</h1>
         {alertText && (
           <Alert
@@ -87,21 +80,16 @@ const ArticleNewPage: React.FC = () => {
             </Typography>
           </Alert>
         )}
-        <TitleInput
-          type="text"
-          value={title}
-          onChange={(e) => {
-            setTitle(e.target.value)
-            setAlertText("")
-          }}
-          placeholder="Enter article title"
-          className="input-field"
-        />
 
-        <ClientContainer className="editor-box">
-          <TiptapEditor
+        <ClientContainer>
+          <TiptapEditorContainer
             data-testid="editor"
             value={json}
+            title={title}
+            setTitle={(e) => {
+              setTitle(e.target.value)
+              setAlertText("")
+            }}
             onChange={handleChange}
           />
         </ClientContainer>

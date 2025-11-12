@@ -2,35 +2,19 @@
 
 // Based on ./components/tiptap-templates/simple/simple-editor.tsx
 
-import React, { useRef, useEffect } from "react"
-import { EditorContent, EditorContext, useEditor } from "@tiptap/react"
-
-// --- Tiptap Core Extensions ---
-import { StarterKit } from "@tiptap/starter-kit"
-import { TaskItem, TaskList } from "@tiptap/extension-list"
-
-import { Image } from "@tiptap/extension-image"
-import { TextAlign } from "@tiptap/extension-text-align"
-import { Typography } from "@tiptap/extension-typography"
-import { Highlight } from "@tiptap/extension-highlight"
-import { Subscript } from "@tiptap/extension-subscript"
-import { Superscript } from "@tiptap/extension-superscript"
+import React from "react"
+import { EditorContent } from "@tiptap/react"
 
 import { ImageUploadButton } from "./components/tiptap-ui/image-upload-button"
-
-import { Selection } from "@tiptap/extensions"
 
 // --- UI Primitives ---
 import { Spacer } from "./components/tiptap-ui-primitive/spacer"
 import {
-  Toolbar,
   ToolbarGroup,
   ToolbarSeparator,
 } from "./components/tiptap-ui-primitive/toolbar"
 
 // --- Tiptap Node ---
-import { ImageUploadNode } from "./components/tiptap-node/image-upload-node/image-upload-node-extension"
-import { HorizontalRule } from "./components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension"
 import "./components/tiptap-node/blockquote-node/blockquote-node.scss"
 import "./components/tiptap-node/code-block-node/code-block-node.scss"
 import "./components/tiptap-node/horizontal-rule-node/horizontal-rule-node.scss"
@@ -50,15 +34,12 @@ import { MarkButton } from "./components/tiptap-ui/mark-button"
 import { TextAlignButton } from "./components/tiptap-ui/text-align-button"
 import { UndoRedoButton } from "./components/tiptap-ui/undo-redo-button"
 
-// --- Lib ---
-import { handleImageUpload, MAX_FILE_SIZE } from "./lib/tiptap-utils"
-
 // --- Styles ---
 import "./styles/_keyframe-animations.scss"
 import "./styles/_variables.scss"
 import "./components/tiptap-templates/simple/simple-editor.scss"
 
-const MainToolbarContent = () => {
+export const MainToolbarContent = () => {
   return (
     <>
       <Spacer />
@@ -117,88 +98,15 @@ interface SimpleEditorProps {
   value?: object
   onChange?: (json: object) => void
   readOnly?: boolean
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  editor?: any
 }
-export default function SimpleEditor({
-  value,
-  onChange,
-  readOnly,
-}: SimpleEditorProps) {
-  const toolbarRef = useRef<HTMLDivElement>(null)
-
-  const editor = useEditor({
-    immediatelyRender: false,
-    shouldRerenderOnTransaction: false,
-    content: value || {
-      type: "doc",
-      content: [{ type: "paragraph", content: [] }],
-    },
-    editable: !readOnly,
-    onUpdate: ({ editor }) => {
-      if (!readOnly) {
-        const json = editor.getJSON()
-        onChange?.(json)
-      }
-    },
-    editorProps: {
-      attributes: {
-        autocomplete: "off",
-        autocorrect: "off",
-        autocapitalize: "off",
-        "aria-label": "Main content area, start typing to enter text.",
-        class: "simple-editor",
-      },
-    },
-    extensions: [
-      StarterKit.configure({
-        horizontalRule: false,
-        link: {
-          openOnClick: false,
-          enableClickSelection: true,
-        },
-      }),
-      HorizontalRule,
-      TextAlign.configure({ types: ["heading", "paragraph"] }),
-      TaskList,
-      TaskItem.configure({ nested: true }),
-      Highlight.configure({ multicolor: true }),
-      Typography,
-      Superscript,
-      Subscript,
-      Selection,
-      Image,
-      ImageUploadNode.configure({
-        accept: "image/*",
-        maxSize: MAX_FILE_SIZE,
-        limit: 3,
-        upload: handleImageUpload,
-        onError: (error) => console.error("Upload failed:", error),
-      }),
-    ],
-  })
-
-  // 👇 Important: update content when fetched JSON changes
-  useEffect(() => {
-    if (editor && value) {
-      editor.commands.setContent(value)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editor])
-
+export default function SimpleEditor({ readOnly, editor }: SimpleEditorProps) {
   return (
-    <div className="simple-editor-wrapper">
-      <EditorContext.Provider value={{ editor }}>
-        {!readOnly && (
-          <Toolbar ref={toolbarRef}>
-            <MainToolbarContent />
-          </Toolbar>
-        )}
-
-        <EditorContent
-          editor={editor}
-          role="presentation"
-          className={`simple-editor-content ${!readOnly ? "simple-editor-content-background" : ""}`}
-        />
-      </EditorContext.Provider>
-    </div>
+    <EditorContent
+      editor={editor}
+      role="presentation"
+      className={`simple-editor-content ${!readOnly ? "simple-editor-content-background" : ""}`}
+    />
   )
 }

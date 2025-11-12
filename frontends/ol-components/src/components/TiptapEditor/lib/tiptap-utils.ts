@@ -379,7 +379,7 @@ export const handleImageUpload = async (
     onProgress?.({ progress })
   }
 
-  return "/images/tiptap-ui-placeholder-image.webp"
+  return "/mit-dome-2.jpg"
 }
 
 type ProtocolOptions = {
