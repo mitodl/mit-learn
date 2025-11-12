@@ -592,7 +592,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
           aggregations: {
             ...data.metadata.aggregations,
             offered_by: data.metadata.aggregations.offered_by.filter(
-              (value) => value && value.key in offerors,
+              (value) => value && Object.keys(offerors).includes(value.key),
             ),
           },
         },
