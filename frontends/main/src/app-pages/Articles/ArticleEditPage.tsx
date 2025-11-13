@@ -12,10 +12,19 @@ import {
   LoadingSpinner,
   TiptapEditorContainer,
   JSONContent,
+  HEADER_HEIGHT,
+  theme,
 } from "ol-components"
 
 import { notFound } from "next/navigation"
 import { articlesView } from "@/common/urls"
+
+const PageContainer = styled.div({
+  color: theme.custom.colors.darkGray2,
+  backgroundColor: theme.custom.colors.red,
+  display: "flex",
+  height: `calc(100vh - ${HEADER_HEIGHT}px - 132px)`,
+})
 
 const SaveButton = styled.div({
   textAlign: "right",
@@ -80,10 +89,7 @@ const ArticleEditPage = ({ articleId }: { articleId: string }) => {
 
   return (
     <RestrictedRoute requires={Permission.ArticleEditor}>
-      <Container>
-        <Typography variant="h3" component="h1">
-          Edit Article
-        </Typography>
+      <PageContainer>
         {alertText && (
           <Alert
             key={alertText}
@@ -119,7 +125,7 @@ const ArticleEditPage = ({ articleId }: { articleId: string }) => {
             {isPending ? "Saving..." : "Save Article"}
           </Button>
         </SaveButton>
-      </Container>
+      </PageContainer>
     </RestrictedRoute>
   )
 }
