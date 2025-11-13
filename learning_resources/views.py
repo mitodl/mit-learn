@@ -597,16 +597,8 @@ class LearningResourceListRelationshipViewSet(viewsets.GenericViewSet):
 
     permission_classes = (AnonymousAccessReadonlyPermission,)
     filter_backends = [MultipleOptionsFilterBackend]
+    queryset = LearningResourceRelationship.objects.select_related("parent", "child")
     http_method_names = ["patch"]
-
-    def get_queryset(self):
-        """Return queryset with properly prefetched child learning resources"""
-        return LearningResourceRelationship.objects.prefetch_related(
-            Prefetch(
-                "child",
-                queryset=LearningResource.objects.for_serialization(),
-            )
-        )
 
     def get_serializer_class(self):
         if self.action == "userlists":
@@ -971,25 +963,14 @@ class UserListItemViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
     Viewset for UserListRelationships
     """
 
-    queryset = UserListRelationship.objects.order_by("position")
+    queryset = UserListRelationship.objects.prefetch_related("child").order_by(
+        "position"
+    )
     serializer_class = UserListRelationshipSerializer
     pagination_class = DefaultPagination
     permission_classes = (HasUserListItemPermissions,)
     http_method_names = VALID_HTTP_METHODS
     parent_lookup_kwargs = {"userlist_id": "parent"}
-
-    def get_queryset(self):
-        """Return queryset with properly prefetched child learning resources"""
-        user = self.request.user if hasattr(self, "request") else None
-        # Start with the base queryset which gets filtered by NestedViewSetMixin
-        qs = super().get_queryset()
-        # Add prefetch for child learning resources
-        return qs.prefetch_related(
-            Prefetch(
-                "child",
-                queryset=LearningResource.objects.for_serialization(user=user),
-            )
-        )
 
     def create(self, request, *args, **kwargs):
         user_list_id = kwargs.get("userlist_id")
