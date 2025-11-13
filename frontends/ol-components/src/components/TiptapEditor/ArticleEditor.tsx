@@ -74,6 +74,11 @@ const StyledContainer = styled(Container)({
   marginTop: "60px",
 })
 
+const StyledAlert = styled(Alert)({
+  margin: "0 auto 20px",
+  maxWidth: "1000px",
+})
+
 interface ArticleEditorProps {
   value?: object
   onSave?: (article: RichTextArticle) => void
@@ -82,12 +87,7 @@ interface ArticleEditorProps {
   setTitle?: ChangeEventHandler<HTMLTextAreaElement | HTMLInputElement>
   article?: RichTextArticle
 }
-const ArticleEditor = ({
-  value,
-  onSave,
-  readOnly,
-  article,
-}: ArticleEditorProps) => {
+const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
   const [title, setTitle] = React.useState(article?.title || "")
   const {
     mutate: createArticle,
@@ -102,10 +102,12 @@ const ArticleEditor = ({
     error: updateError,
   } = useArticlePartialUpdate()
 
-  const [json, setJson] = useState<JSONContent>({
-    type: "doc",
-    content: article?.content || [{ type: "paragraph", content: [] }],
-  })
+  const [content, setContent] = useState<JSONContent>(
+    article?.content || {
+      type: "doc",
+      content: [{ type: "paragraph", content: [] }],
+    },
+  )
   const [touched, setTouched] = useState(false)
 
   const handleSave = () => {
@@ -114,7 +116,7 @@ const ArticleEditor = ({
         {
           id: article.id,
           title: title.trim(),
-          content: json,
+          content,
         },
         {
           onSuccess: onSave,
@@ -124,7 +126,7 @@ const ArticleEditor = ({
       createArticle(
         {
           title: title.trim(),
-          content: json,
+          content,
         },
         {
           onSuccess: onSave,
@@ -136,15 +138,12 @@ const ArticleEditor = ({
   const editor = useEditor({
     immediatelyRender: false,
     shouldRerenderOnTransaction: false,
-    content: value || {
-      type: "doc",
-      content: [{ type: "paragraph", content: [] }],
-    },
+    content,
     editable: !readOnly,
     onUpdate: ({ editor }) => {
       const json = editor.getJSON()
       setTouched(true)
-      setJson(json)
+      setContent(json)
     },
     editorProps: {
       attributes: {
@@ -183,12 +182,6 @@ const ArticleEditor = ({
     ],
   })
 
-  useEffect(() => {
-    if (editor && value) {
-      editor.commands.setContent(value)
-    }
-  }, [editor, value])
-
   if (!editor) return null
 
   const isPending = isCreating || isUpdating
@@ -213,11 +206,11 @@ const ArticleEditor = ({
         )}
         <StyledContainer>
           {isError && (
-            <Alert severity="error" closable>
+            <StyledAlert severity="error" closable>
               <Typography variant="body2" color="textPrimary">
                 {error?.message ?? "An error occurred while saving"}
               </Typography>
-            </Alert>
+            </StyledAlert>
           )}
           {!readOnly && (
             <TitleInput
