@@ -583,9 +583,17 @@ describe("Search Page Tabs", () => {
 
 test("Facet 'Offered By' uses API response for names", async () => {
   const offerors = factories.learningResources.offerors({ count: 3 })
+  for (const offeror of offerors.results) {
+    offeror.display_facet = true
+  }
+  const resources = factories.learningResources.resources({
+    count: 3,
+  }).results
+
   setMockApiResponses({
     offerors,
     search: {
+      results: resources,
       metadata: {
         aggregations: {
           offered_by: offerors.results.map((o, i) => ({
@@ -616,6 +624,53 @@ test("Facet 'Offered By' uses API response for names", async () => {
   expect(offeror0).toBeVisible()
   expect(offeror1).toBeVisible()
   expect(offeror2).toBeVisible()
+})
+
+test("Facet 'Offered By' only shows facets with 'display_facet' set to true", async () => {
+  const offerors = factories.learningResources.offerors({ count: 3 })
+
+  const resources = factories.learningResources.resources({
+    count: 3,
+  }).results
+
+  offerors.results[0].display_facet = true
+  offerors.results[1]!.display_facet = false
+  offerors.results[2]!.display_facet = false
+
+  setMockApiResponses({
+    search: {
+      results: resources,
+      metadata: {
+        aggregations: {
+          offered_by: offerors.results.map((o, i) => ({
+            key: o.code,
+            doc_count: 10 + i,
+          })),
+        },
+        suggestions: [],
+      },
+    },
+    offerors: offerors,
+  })
+  renderWithProviders(<SearchPage />)
+  const showFacetButton = await screen.findByRole("button", {
+    name: /Offered By/i,
+  })
+
+  await user.click(showFacetButton)
+
+  const offeror0 = await screen.findByRole("checkbox", {
+    name: `${offerors.results[0].name} 10`,
+  })
+  const offeror1 = screen.queryByRole("checkbox", {
+    name: `${offerors.results[1].name} 11`,
+  })
+  const offeror2 = screen.queryByRole("checkbox", {
+    name: `${offerors.results[2].name} 12`,
+  })
+  expect(offeror0).toBeVisible()
+  expect(offeror1).not.toBeInTheDocument()
+  expect(offeror2).not.toBeInTheDocument()
 })
 
 test("Set sort", async () => {

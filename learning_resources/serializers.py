@@ -113,7 +113,7 @@ class LearningResourceOfferorSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.LearningResourceOfferor
-        fields = ("code", "name", "channel_url")
+        fields = ("code", "name", "channel_url", "display_facet")
 
 
 class LearningResourceOfferorDetailSerializer(LearningResourceOfferorSerializer):
@@ -1097,11 +1097,7 @@ class VideoResourceSerializer(LearningResourceBaseSerializer):
 
     def get_playlists(self, instance) -> list[str]:
         """Get the playlist id(s) the video belongs to"""
-        return list(
-            instance.parents.filter(
-                relation_type=constants.LearningResourceRelationTypes.PLAYLIST_VIDEOS.value
-            ).values_list("parent__id", flat=True)
-        )
+        return [playlist.parent_id for playlist in instance.playlists]
 
 
 class VideoPlaylistResourceSerializer(LearningResourceBaseSerializer):

@@ -67,6 +67,11 @@ body,
   display: flex;
   flex-direction: column;
   flex: 1;
+  margin-top: 10px;
+}
+
+.simple-editor-content-background {
+  background-color: white;
 }
 
 .simple-editor-content .tiptap.ProseMirror.simple-editor {
