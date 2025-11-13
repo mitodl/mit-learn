@@ -40,13 +40,24 @@ import "./styles/_keyframe-animations.scss"
 import "./styles/_variables.scss"
 import "./components/tiptap-templates/simple/simple-editor.scss"
 
-const StyledEditorContent = styled(EditorContent)(({ theme }) => ({
-  maxWidth: "1000px",
-  minHeight: "calc(100vh - 350px)",
-  backgroundColor: theme.custom.colors.white,
-  borderRadius: "10px",
-  margin: "20px auto",
-}))
+const StyledEditorContent = styled(EditorContent)<{ readOnly: boolean }>(
+  ({ theme, readOnly }) => ({
+    maxWidth: "1000px",
+    minHeight: "calc(100vh - 350px)",
+    backgroundColor: theme.custom.colors.white,
+    borderRadius: "10px",
+    margin: "20px auto",
+    ...(readOnly
+      ? {
+          maxWidth: "100%",
+          backgroundColor: "transparent",
+          ".tiptap.ProseMirror.simple-editor": {
+            padding: "0",
+          },
+        }
+      : {}),
+  }),
+)
 
 export const MainToolbarContent = () => {
   return (
@@ -105,15 +116,21 @@ export const MainToolbarContent = () => {
 
 interface TiptapEditorProps {
   editor: Editor
+  readOnly?: boolean
   className?: string
 }
 
-export default function TiptapEditor({ editor, className }: TiptapEditorProps) {
+export default function TiptapEditor({
+  editor,
+  readOnly,
+  className,
+}: TiptapEditorProps) {
   return (
     <StyledEditorContent
       editor={editor}
       role="presentation"
       className={`simple-editor-content ${className}`}
+      readOnly={!!readOnly}
     />
   )
 }

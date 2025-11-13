@@ -20,10 +20,14 @@ const PageContainer = styled.div(({ theme }) => ({
 }))
 
 const ArticleEditPage = ({ articleId }: { articleId: string }) => {
-  const { data: article, isLoading } = useArticleDetail(Number(articleId))
+  const {
+    data: article,
+    isLoading,
+    isFetching,
+  } = useArticleDetail(Number(articleId))
   const router = useRouter()
 
-  if (isLoading) {
+  if (isLoading || isFetching) {
     return <LoadingSpinner color="inherit" loading={isLoading} size={32} />
   }
   if (!article) {

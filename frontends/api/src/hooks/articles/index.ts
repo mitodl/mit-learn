@@ -18,7 +18,7 @@ const useArticleList = (
 }
 
 /**
- * Query is diabled if id is undefined.
+ * Query is disabled if id is undefined.
  */
 const useArticleDetail = (id: number | undefined) => {
   return useQuery({

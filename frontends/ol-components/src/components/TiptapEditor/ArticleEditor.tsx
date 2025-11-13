@@ -21,6 +21,7 @@ import { Selection } from "@tiptap/extensions"
 
 // --- UI Primitives ---
 import { Toolbar } from "./components/tiptap-ui-primitive/toolbar"
+import { Spacer } from "./components/tiptap-ui-primitive/spacer"
 
 import TiptapEditor, { MainToolbarContent } from "./TiptapEditor"
 
@@ -46,14 +47,19 @@ import "./components/tiptap-templates/simple/simple-editor.scss"
 
 import { useArticleCreate, useArticlePartialUpdate } from "api/hooks/articles"
 import type { RichTextArticle } from "api/v1"
-import { Alert, Button, Input } from "@mitodl/smoot-design"
-import Typography from "@mui/material/Typography"
+import { Alert, Button, ButtonLink, Input } from "@mitodl/smoot-design"
+import Typography, { TypographyProps } from "@mui/material/Typography"
 import Container from "@mui/material/Container"
+import { useUserHasPermission, Permission } from "api/hooks/user"
 
 const ViewContainer = styled.div({
   width: "100vw",
   height: "calc(100vh - 204px)",
   overflow: "scroll",
+})
+
+const Title = styled(Typography)<TypographyProps>({
+  margin: "60px auto",
 })
 
 const TitleInput = styled(Input)({
@@ -101,6 +107,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
     isError: isUpdateError,
     error: updateError,
   } = useArticlePartialUpdate()
+  const isArticleEditor = useUserHasPermission(Permission.ArticleEditor)
 
   const [content, setContent] = useState<JSONContent>(
     article?.content || {
@@ -191,19 +198,32 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
   return (
     <ViewContainer data-testid="editor">
       <EditorContext.Provider value={{ editor }}>
-        {!readOnly && (
-          <StyledToolbar>
-            <MainToolbarContent />
-            <Button
-              variant="primary"
-              disabled={isPending || !title.trim() || !touched}
-              onClick={handleSave}
-              size="small"
-            >
-              {isPending ? "Saving..." : "Save"}
-            </Button>
-          </StyledToolbar>
-        )}
+        {isArticleEditor ? (
+          readOnly ? (
+            <StyledToolbar>
+              <Spacer />
+              <ButtonLink
+                variant="primary"
+                href={`/articles/${article?.id}/edit`}
+                size="small"
+              >
+                Edit
+              </ButtonLink>
+            </StyledToolbar>
+          ) : (
+            <StyledToolbar>
+              <MainToolbarContent />
+              <Button
+                variant="primary"
+                disabled={isPending || !title.trim() || !touched}
+                onClick={handleSave}
+                size="small"
+              >
+                {isPending ? "Saving..." : "Save"}
+              </Button>
+            </StyledToolbar>
+          )
+        ) : null}
         <StyledContainer>
           {isError && (
             <StyledAlert severity="error" closable>
@@ -212,7 +232,11 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
               </Typography>
             </StyledAlert>
           )}
-          {!readOnly && (
+          {readOnly ? (
+            <Title variant="h3" component="h1">
+              {article?.title}
+            </Title>
+          ) : (
             <TitleInput
               type="text"
               value={title}
@@ -224,8 +248,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
               className="input-field"
             />
           )}
-
-          <TiptapEditor editor={editor} />
+          <TiptapEditor editor={editor} readOnly={readOnly} />
         </StyledContainer>
       </EditorContext.Provider>
     </ViewContainer>
