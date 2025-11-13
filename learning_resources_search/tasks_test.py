@@ -1198,20 +1198,20 @@ def test_cache_clears_after_update_featured_rank(mocker, offeror_featured_lists)
     )
 
     mocker.patch("learning_resources_search.tasks.api.clear_featured_rank")
-    mocked_clear_search_cache = mocker.patch(
-        "learning_resources_search.tasks.clear_search_cache"
+    mocked_clear_views_cache = mocker.patch(
+        "learning_resources_search.tasks.clear_views_cache"
     )
     mocker.patch("learning_resources_search.tasks.api.update_document_with_partial")
 
     update_featured_rank()
-    assert mocked_clear_search_cache.call_count == 1
+    assert mocked_clear_views_cache.call_count == 1
 
 
 def test_cache_is_cleared_after_reindex(mocker):
     """Test that the search cache is cleared out after every reindex"""
 
-    mocked_clear_search_cache = mocker.patch(
-        "learning_resources_search.tasks.clear_search_cache"
+    mocked_clear_views_cache = mocker.patch(
+        "learning_resources_search.tasks.clear_views_cache"
     )
 
     backing_indices = {"course": "backing", "program": "backing"}
@@ -1219,7 +1219,7 @@ def test_cache_is_cleared_after_reindex(mocker):
     mocker.patch("learning_resources_search.indexing_api.switch_indices", autospec=True)
     mocker.patch("learning_resources_search.indexing_api.delete_orphaned_indexes")
     finish_recreate_index.delay(results, backing_indices)
-    assert mocked_clear_search_cache.call_count == 1
+    assert mocked_clear_views_cache.call_count == 1
 
 
 def test_cache_is_cleared_after_update_index(mocker, settings):
@@ -1232,8 +1232,8 @@ def test_cache_is_cleared_after_update_index(mocker, settings):
     mocker.patch(
         "learning_resources_search.tasks.get_update_courses_tasks", autospec=True
     )
-    mocked_clear_search_cache = mocker.patch(
-        "learning_resources_search.tasks.clear_search_cache"
+    mocked_clear_views_cache = mocker.patch(
+        "learning_resources_search.tasks.clear_views_cache"
     )
     mocker.patch(
         "learning_resources_search.tasks.load_course_blocklist", return_value=[]
@@ -1245,4 +1245,4 @@ def test_cache_is_cleared_after_update_index(mocker, settings):
 
     with pytest.raises(Ignore):
         start_update_index.run(["course"], None)
-    assert mocked_clear_search_cache.call_count == 1
+    assert mocked_clear_views_cache.call_count == 1

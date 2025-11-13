@@ -68,7 +68,7 @@ class LearningResourcesSearchView(ESView):
 
     @method_decorator(
         cache_page_for_anonymous_users(
-            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+            settings.REDIS_VIEW_CACHE_DURATION, cache="redis", key_prefix="search"
         )
     )
     @extend_schema(summary="Search")

@@ -56,7 +56,9 @@ class LearningResourcesVectorSearchView(QdrantView):
 
     @method_decorator(
         cache_page_for_anonymous_users(
-            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+            settings.REDIS_VIEW_CACHE_DURATION,
+            cache="redis",
+            key_prefix="vector_search",
         )
     )
     @extend_schema(summary="Vector Search")
@@ -114,7 +116,9 @@ class ContentFilesVectorSearchView(QdrantView):
 
     @method_decorator(
         cache_page_for_anonymous_users(
-            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+            settings.REDIS_VIEW_CACHE_DURATION,
+            cache="redis",
+            key_prefix="vector_search",
         )
     )
     @extend_schema(summary="Content File Vector Search")

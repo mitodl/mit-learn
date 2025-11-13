@@ -53,7 +53,7 @@ from learning_resources_search.serializers import (
 from main.celery import app
 from main.utils import (
     chunks,
-    clear_search_cache,
+    clear_views_cache,
     frontend_absolute_url,
     merge_strings,
     now_in_utc,
@@ -94,7 +94,7 @@ def update_featured_rank():
         featured_resources.values_list("position", flat=True).distinct().count(),
         clear_all_greater_than=True,
     )
-    clear_search_cache()
+    clear_views_cache()
 
 
 @app.task(**PARTIAL_UPDATE_TASK_SETTINGS)
@@ -652,7 +652,7 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
 
 @app.task(autoretry_for=(RetryError,), retry_backoff=True, rate_limit="600/m")
 def finish_update_index(results):  # noqa: ARG001
-    clear_search_cache()
+    clear_views_cache()
 
 
 @app.task(bind=True)
@@ -888,7 +888,7 @@ def finish_recreate_index(results, backing_indices):
         except RequestError as ex:
             raise RetryError(str(ex)) from ex
     log.info("recreate_index has finished successfully!")
-    clear_search_cache()
+    clear_views_cache()
 
 
 def _generate_subscription_digest_subject(
