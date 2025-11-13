@@ -1,108 +1,30 @@
 "use client"
-import React, { useState } from "react"
-import { Permission } from "api/hooks/user"
+
+import React from "react"
 import { useRouter } from "next-nprogress-bar"
-import { useArticleCreate } from "api/hooks/articles"
-import { Button, Alert } from "@mitodl/smoot-design"
+import { Permission } from "api/hooks/user"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
-import {
-  TiptapEditorContainer,
-  Container,
-  Typography,
-  styled,
-  JSONContent,
-} from "ol-components"
+import { ArticleEditor, styled, HEADER_HEIGHT } from "ol-components"
 import { articlesView } from "@/common/urls"
 
-const SaveButton = styled.div({
-  textAlign: "right",
-  margin: "10px",
-})
-
-const ClientContainer = styled.div({
-  width: "100%",
-  margin: "10px 0",
-})
+const PageContainer = styled.div(({ theme }) => ({
+  color: theme.custom.colors.darkGray2,
+  display: "flex",
+  height: `calc(100vh - ${HEADER_HEIGHT}px - 132px)`,
+}))
 
 const ArticleNewPage: React.FC = () => {
   const router = useRouter()
 
-  const [title, setTitle] = React.useState<string>("")
-  const [json, setJson] = useState<JSONContent>({
-    type: "doc",
-    content: [{ type: "paragraph", content: [] }],
-  })
-  const [alertText, setAlertText] = React.useState("")
-
-  const { mutate: createArticle, isPending } = useArticleCreate()
-
-  const handleSave = () => {
-    setAlertText("")
-
-    const payload = {
-      title: title.trim(),
-      content: json,
-    }
-
-    createArticle(
-      payload as {
-        content: object
-        title: string
-      },
-      {
-        onSuccess: (article) => {
-          articlesView(article.id)
-          router.push(articlesView(article.id))
-        },
-        onError: (error) => {
-          setAlertText(`❌ ${error?.message}`)
-        },
-      },
-    )
-  }
-  const handleChange = (json: object) => {
-    setJson(json)
-  }
-
   return (
     <RestrictedRoute requires={Permission.ArticleEditor}>
-      <Container>
-        <h1>Write Article</h1>
-        {alertText && (
-          <Alert
-            key={alertText}
-            severity="error"
-            className="info-alert"
-            closable
-          >
-            <Typography variant="body2" color="textPrimary">
-              {alertText}
-            </Typography>
-          </Alert>
-        )}
-
-        <ClientContainer>
-          <TiptapEditorContainer
-            data-testid="editor"
-            value={json}
-            title={title}
-            setTitle={(e) => {
-              setTitle(e.target.value)
-              setAlertText("")
-            }}
-            onChange={handleChange}
-          />
-        </ClientContainer>
-        <SaveButton>
-          <Button
-            variant="primary"
-            disabled={isPending || !title.trim()}
-            onClick={handleSave}
-          >
-            {isPending ? "Saving..." : "Save Article"}
-          </Button>
-        </SaveButton>
-      </Container>
+      <PageContainer>
+        <ArticleEditor
+          onSave={(article) => {
+            router.push(articlesView(article.id))
+          }}
+        />
+      </PageContainer>
     </RestrictedRoute>
   )
 }
