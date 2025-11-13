@@ -1,5 +1,5 @@
 "use client"
-import React, { useState } from "react"
+import React from "react"
 import { useRouter } from "next-nprogress-bar"
 import { Permission } from "api/hooks/user"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
@@ -16,15 +16,15 @@ const ArticleNewPage: React.FC = () => {
   const router = useRouter()
 
   return (
-    // <RestrictedRoute requires={Permission.ArticleEditor}>
-    <PageContainer>
-      <ArticleEditor
-        onSave={(article) => {
-          router.push(articlesView(article.id))
-        }}
-      />
-    </PageContainer>
-    // </RestrictedRoute>
+    <RestrictedRoute requires={Permission.ArticleEditor}>
+      <PageContainer>
+        <ArticleEditor
+          onSave={(article) => {
+            router.push(articlesView(article.id))
+          }}
+        />
+      </PageContainer>
+    </RestrictedRoute>
   )
 }
 

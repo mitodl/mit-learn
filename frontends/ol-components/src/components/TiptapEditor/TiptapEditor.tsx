@@ -42,9 +42,10 @@ import "./components/tiptap-templates/simple/simple-editor.scss"
 
 const StyledEditorContent = styled(EditorContent)(({ theme }) => ({
   maxWidth: "1000px",
+  minHeight: "calc(100vh - 350px)",
   backgroundColor: theme.custom.colors.white,
   borderRadius: "10px",
-  margin: "20px auto 120px",
+  margin: "20px auto",
 }))
 
 export const MainToolbarContent = () => {
