@@ -58,8 +58,8 @@ const useArticlePartialUpdate = () => {
           PatchedRichTextArticleRequest: data,
         })
         .then((response) => response.data),
-    onSuccess: (_data) => {
-      client.invalidateQueries({ queryKey: articleKeys.root })
+    onSuccess: (article: Article) => {
+      client.invalidateQueries({ queryKey: articleKeys.detail(article.id) })
     },
   })
 }
