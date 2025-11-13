@@ -7,7 +7,7 @@ import {
   LoadingSpinner,
   styled,
   Typography,
-  TiptapEditorContainer,
+  ArticleEditor,
 } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { notFound } from "next/navigation"
@@ -32,14 +32,14 @@ const WrapperContainer = styled.div({
 
 export const ArticleDetailPage = ({ articleId }: { articleId: number }) => {
   const id = Number(articleId)
-  const { data, isLoading } = useArticleDetail(id)
+  const { data: article, isLoading } = useArticleDetail(id)
 
   const editUrl = articlesEditView(id)
 
   if (isLoading) {
     return <LoadingSpinner color="inherit" loading={isLoading} size={32} />
   }
-  if (!data) {
+  if (!article) {
     return notFound()
   }
   return (
@@ -47,20 +47,15 @@ export const ArticleDetailPage = ({ articleId }: { articleId: number }) => {
       <Page>
         <WrapperContainer>
           <Typography variant="h3" component="h1">
-            {data?.title}
+            {article?.title}
           </Typography>
-
           <ControlsContainer>
             <ButtonLink href={editUrl} variant="primary">
               Edit
             </ButtonLink>
           </ControlsContainer>
         </WrapperContainer>
-        <TiptapEditorContainer
-          data-testid="editor"
-          value={data.content}
-          readOnly
-        />
+        <ArticleEditor article={article} readOnly />
       </Page>
     </RestrictedRoute>
   )

@@ -3,8 +3,9 @@
 // Based on ./components/tiptap-templates/simple/simple-editor.tsx
 
 import React from "react"
+import styled from "@emotion/styled"
 import { EditorContent } from "@tiptap/react"
-
+import type { Editor } from "@tiptap/core"
 import { ImageUploadButton } from "./components/tiptap-ui/image-upload-button"
 
 // --- UI Primitives ---
@@ -38,6 +39,13 @@ import { UndoRedoButton } from "./components/tiptap-ui/undo-redo-button"
 import "./styles/_keyframe-animations.scss"
 import "./styles/_variables.scss"
 import "./components/tiptap-templates/simple/simple-editor.scss"
+
+const StyledEditorContent = styled(EditorContent)(({ theme }) => ({
+  maxWidth: "1000px",
+  backgroundColor: theme.custom.colors.white,
+  borderRadius: "10px",
+  margin: "20px auto 120px",
+}))
 
 export const MainToolbarContent = () => {
   return (
@@ -94,19 +102,17 @@ export const MainToolbarContent = () => {
   )
 }
 
-interface SimpleEditorProps {
-  value?: object
-  onChange?: (json: object) => void
-  readOnly?: boolean
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  editor?: any
+interface TiptapEditorProps {
+  editor: Editor
+  className?: string
 }
-export default function SimpleEditor({ readOnly, editor }: SimpleEditorProps) {
+
+export default function TiptapEditor({ editor, className }: TiptapEditorProps) {
   return (
-    <EditorContent
+    <StyledEditorContent
       editor={editor}
       role="presentation"
-      className={`simple-editor-content ${!readOnly ? "simple-editor-content-background" : ""}`}
+      className={`simple-editor-content ${className}`}
     />
   )
 }

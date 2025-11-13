@@ -8,7 +8,6 @@ import { articlesView } from "@/common/urls"
 
 const PageContainer = styled.div(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
-  backgroundColor: theme.custom.colors.red,
   display: "flex",
   height: `calc(100vh - ${HEADER_HEIGHT}px - 132px)`,
 }))

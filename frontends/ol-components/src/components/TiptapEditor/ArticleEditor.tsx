@@ -2,7 +2,8 @@
 
 // Based on ./components/tiptap-templates/simple/simple-editor.tsx
 
-import React, { useRef, useEffect, ChangeEventHandler, useState } from "react"
+import React, { useEffect, ChangeEventHandler, useState } from "react"
+import styled from "@emotion/styled"
 import { EditorContext, JSONContent, useEditor } from "@tiptap/react"
 
 // --- Tiptap Core Extensions ---
@@ -15,8 +16,6 @@ import { Typography as TiptapTypography } from "@tiptap/extension-typography"
 import { Highlight } from "@tiptap/extension-highlight"
 import { Subscript } from "@tiptap/extension-subscript"
 import { Superscript } from "@tiptap/extension-superscript"
-
-import styled from "@emotion/styled"
 
 import { Selection } from "@tiptap/extensions"
 
@@ -45,15 +44,34 @@ import "./styles/_keyframe-animations.scss"
 import "./styles/_variables.scss"
 import "./components/tiptap-templates/simple/simple-editor.scss"
 
-import { useArticleCreate } from "api/hooks/articles"
+import { useArticleCreate, useArticlePartialUpdate } from "api/hooks/articles"
 import type { RichTextArticle } from "api/v1"
 import { Alert, Button, Input } from "@mitodl/smoot-design"
 import Typography from "@mui/material/Typography"
 import Container from "@mui/material/Container"
 
+const ViewContainer = styled.div({
+  width: "100vw",
+  height: "calc(100vh - 204px)",
+  overflow: "scroll",
+})
+
 const TitleInput = styled(Input)({
   width: "100%",
-  margin: "10px 0",
+  maxWidth: "1000px",
+  margin: "10px auto",
+  display: "block-flex",
+})
+
+const StyledToolbar = styled(Toolbar)({
+  "&&": {
+    position: "fixed",
+    top: "72px",
+  },
+})
+
+const StyledContainer = styled(Container)({
+  marginTop: "60px",
 })
 
 interface ArticleEditorProps {
@@ -71,8 +89,18 @@ const ArticleEditor = ({
   article,
 }: ArticleEditorProps) => {
   const [title, setTitle] = React.useState(article?.title || "")
-  const [alertText, setAlertText] = React.useState("test")
-  const { mutate: createArticle, isPending } = useArticleCreate()
+  const {
+    mutate: createArticle,
+    isPending: isCreating,
+    isError: isCreateError,
+    error: createError,
+  } = useArticleCreate()
+  const {
+    mutate: updateArticle,
+    isPending: isUpdating,
+    isError: isUpdateError,
+    error: updateError,
+  } = useArticlePartialUpdate()
 
   const [json, setJson] = useState<JSONContent>({
     type: "doc",
@@ -80,27 +108,26 @@ const ArticleEditor = ({
       ? JSON.parse(article.content)
       : [{ type: "paragraph", content: [] }],
   })
+  const [touched, setTouched] = useState(false)
 
   const handleSave = () => {
-    setAlertText("")
-
-    const payload = {
-      title: title.trim(),
-      content: json,
-    }
-
-    createArticle(
-      payload as {
-        content: object
-        title: string
-      },
-      {
-        onSuccess: onSave,
-        onError: (error) => {
-          setAlertText(error.message ?? "An error occurred")
+    if (article) {
+      updateArticle({
+        id: article.id,
+        title: title.trim(),
+        content: json,
+      })
+    } else {
+      createArticle(
+        {
+          title: title.trim(),
+          content: json,
         },
-      },
-    )
+        {
+          onSuccess: onSave,
+        },
+      )
+    }
   }
 
   const editor = useEditor({
@@ -113,6 +140,7 @@ const ArticleEditor = ({
     editable: !readOnly,
     onUpdate: ({ editor }) => {
       const json = editor.getJSON()
+      setTouched(true)
       setJson(json)
     },
     editorProps: {
@@ -158,24 +186,36 @@ const ArticleEditor = ({
     }
   }, [editor, value])
 
+  if (!editor) return null
+
+  const isPending = isCreating || isUpdating
+  const isError = isCreateError || isUpdateError
+  const error = createError || updateError
+
   return (
-    <div className="simple-editor-wrapper" data-testid="editor">
+    <ViewContainer data-testid="editor">
       <EditorContext.Provider value={{ editor }}>
         {!readOnly && (
-          <Toolbar ref={toolbarRef}>
+          <StyledToolbar>
             <MainToolbarContent />
-
             <Button
               variant="primary"
-              disabled={isPending || !title.trim()}
+              disabled={isPending || !title.trim() || !touched}
               onClick={handleSave}
               size="small"
             >
               {isPending ? "Saving..." : "Save"}
             </Button>
-          </Toolbar>
+          </StyledToolbar>
         )}
-        <Container>
+        <StyledContainer>
+          {isError && (
+            <Alert severity="error" closable>
+              <Typography variant="body2" color="textPrimary">
+                {error?.message ?? "An error occurred while saving"}
+              </Typography>
+            </Alert>
+          )}
           {!readOnly && (
             <TitleInput
               type="text"
@@ -186,23 +226,10 @@ const ArticleEditor = ({
             />
           )}
 
-          {alertText && (
-            <Alert
-              key={alertText}
-              severity="error"
-              className="info-alert"
-              closable
-            >
-              <Typography variant="body2" color="textPrimary">
-                {alertText}
-              </Typography>
-            </Alert>
-          )}
-
-          <TiptapEditor editor={editor} readOnly={readOnly} />
-        </Container>
+          <TiptapEditor editor={editor} />
+        </StyledContainer>
       </EditorContext.Provider>
-    </div>
+    </ViewContainer>
   )
 }
 
