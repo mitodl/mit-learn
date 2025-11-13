@@ -15,17 +15,10 @@ from learning_resources.models import (
 )
 from learning_resources.utils import load_course_blocklist
 from learning_resources_search.constants import (
-    ARTICLE_TYPE,
     CONTENT_FILE_TYPE,
     COURSE_TYPE,
-    LEARNING_PATH_TYPE,
     LEARNING_RESOURCE_TYPES,
-    PODCAST_EPISODE_TYPE,
-    PODCAST_TYPE,
-    PROGRAM_TYPE,
     SEARCH_CONN_EXCEPTIONS,
-    VIDEO_PLAYLIST_TYPE,
-    VIDEO_TYPE,
 )
 from learning_resources_search.exceptions import RetryError
 from learning_resources_search.tasks import wrap_retry_exception
@@ -173,15 +166,7 @@ def start_embed_resources(self, indexes, skip_content_files, overwrite):
                             chunk_size=settings.QDRANT_CHUNK_SIZE,
                         )
                     ]
-        for resource_type in [
-            PROGRAM_TYPE,
-            PODCAST_TYPE,
-            PODCAST_EPISODE_TYPE,
-            LEARNING_PATH_TYPE,
-            VIDEO_TYPE,
-            VIDEO_PLAYLIST_TYPE,
-            ARTICLE_TYPE,
-        ]:
+        for resource_type in set(LEARNING_RESOURCE_TYPES) - {COURSE_TYPE}:
             if resource_type in indexes:
                 for ids in chunks(
                     LearningResource.objects.filter(
