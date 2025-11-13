@@ -1,11 +1,17 @@
 "use client"
-import React, { useState, ChangeEvent } from "react"
+import React, { useState } from "react"
 import { Permission } from "api/hooks/user"
 import { useRouter } from "next-nprogress-bar"
 import { useArticleCreate } from "api/hooks/articles"
-import { Button, Input, Alert } from "@mitodl/smoot-design"
+import { Button, Alert } from "@mitodl/smoot-design"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
-import { Container, Typography, styled } from "ol-components"
+import {
+  TiptapEditorContainer,
+  Container,
+  Typography,
+  styled,
+  JSONContent,
+} from "ol-components"
 import { articlesView } from "@/common/urls"
 
 const SaveButton = styled.div({
@@ -18,17 +24,14 @@ const ClientContainer = styled.div({
   margin: "10px 0",
 })
 
-const TitleInput = styled(Input)({
-  width: "100%",
-  margin: "10px 0",
-})
-
 const ArticleNewPage: React.FC = () => {
   const router = useRouter()
 
   const [title, setTitle] = React.useState<string>("")
-  const [text, setText] = useState("")
-  const [json, setJson] = useState({})
+  const [json, setJson] = useState<JSONContent>({
+    type: "doc",
+    content: [{ type: "paragraph", content: [] }],
+  })
   const [alertText, setAlertText] = React.useState("")
 
   const { mutate: createArticle, isPending } = useArticleCreate()
@@ -57,20 +60,13 @@ const ArticleNewPage: React.FC = () => {
       },
     )
   }
-  const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value
-    setText(value)
-
-    try {
-      const parsed = JSON.parse(value)
-      setJson(parsed)
-    } catch {
-      setJson({})
-    }
+  const handleChange = (json: object) => {
+    setJson(json)
   }
+
   return (
     <RestrictedRoute requires={Permission.ArticleEditor}>
-      <Container className="article-wrapper">
+      <Container>
         <h1>Write Article</h1>
         {alertText && (
           <Alert
@@ -84,27 +80,19 @@ const ArticleNewPage: React.FC = () => {
             </Typography>
           </Alert>
         )}
-        <TitleInput
-          type="text"
-          value={title}
-          onChange={(e) => {
-            setTitle(e.target.value)
-            setAlertText("")
-          }}
-          placeholder="Enter article title"
-          className="input-field"
-        />
 
-        <ClientContainer className="editor-box">
-          <textarea
+        <ClientContainer>
+          <TiptapEditorContainer
             data-testid="editor"
-            value={text}
+            value={json}
+            title={title}
+            setTitle={(e) => {
+              setTitle(e.target.value)
+              setAlertText("")
+            }}
             onChange={handleChange}
-            placeholder="Type or paste JSON here..."
-            style={{ width: "100%", height: 150 }}
           />
         </ClientContainer>
-
         <SaveButton>
           <Button
             variant="primary"

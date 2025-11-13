@@ -24,7 +24,15 @@ describe("ArticleEditPage", () => {
     const article = factories.articles.article({
       id: 42,
       title: "Existing Title",
-      content: { id: 1, content: "Existing content" },
+      content: {
+        type: "doc",
+        content: [
+          {
+            type: "paragraph",
+            content: [{ type: "text", text: "Existing Title" }],
+          },
+        ],
+      },
     })
     setMockResponse.get(urls.articles.details(article.id), article)
 
@@ -45,7 +53,15 @@ describe("ArticleEditPage", () => {
     const article = factories.articles.article({
       id: 123,
       title: "Existing Title",
-      content: { id: 1, content: "Existing content" },
+      content: {
+        type: "doc",
+        content: [
+          {
+            type: "paragraph",
+            content: [{ type: "text", text: "Existing Title" }],
+          },
+        ],
+      },
     })
     setMockResponse.get(urls.articles.details(article.id), article)
 
@@ -77,7 +93,15 @@ describe("ArticleEditPage", () => {
     const article = factories.articles.article({
       id: 7,
       title: "Old Title",
-      content: { id: 1, content: "Bad content" },
+      content: {
+        type: "doc",
+        content: [
+          {
+            type: "paragraph",
+            content: [{ type: "text", text: "Existing Title" }],
+          },
+        ],
+      },
     })
     setMockResponse.get(urls.articles.details(article.id), article)
 
