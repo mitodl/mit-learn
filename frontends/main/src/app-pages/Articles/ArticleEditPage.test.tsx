@@ -2,14 +2,14 @@ import React from "react"
 import { screen, renderWithProviders, setMockResponse } from "@/test-utils"
 import { waitFor, fireEvent } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { factories, urls } from "api/test-utils"
+import { factories, urls, makeRequest } from "api/test-utils"
 import { ArticleEditPage } from "./ArticleEditPage"
 
-const pushMock = jest.fn()
+const mockPush = jest.fn()
 
 jest.mock("next-nprogress-bar", () => ({
   useRouter: () => ({
-    push: pushMock,
+    push: mockPush,
   }),
 }))
 
@@ -24,18 +24,26 @@ describe("ArticleEditPage", () => {
     const article = factories.articles.article({
       id: 42,
       title: "Existing Title",
-      content: { id: 1, content: "Existing content" },
+      content: {
+        type: "doc",
+        content: [
+          {
+            type: "paragraph",
+            content: [{ type: "text", text: "Existing Title" }],
+          },
+        ],
+      },
     })
     setMockResponse.get(urls.articles.details(article.id), article)
 
     renderWithProviders(<ArticleEditPage articleId={"42"} />)
 
-    expect(await screen.findByText("Edit Article")).toBeInTheDocument()
-    expect(screen.getByTestId("editor")).toBeInTheDocument()
+    await screen.findByTestId("editor")
+
     expect(screen.getByDisplayValue("Existing Title")).toBeInTheDocument()
   })
 
-  test("submits article successfully and redirects", async () => {
+  test("submits article successfully", async () => {
     const user = factories.user.user({
       is_authenticated: true,
       is_article_editor: true,
@@ -45,26 +53,42 @@ describe("ArticleEditPage", () => {
     const article = factories.articles.article({
       id: 123,
       title: "Existing Title",
-      content: { id: 1, content: "Existing content" },
+      content: {
+        type: "doc",
+        content: [
+          {
+            type: "paragraph",
+            content: [{ type: "text", text: "Existing Title" }],
+          },
+        ],
+      },
     })
     setMockResponse.get(urls.articles.details(article.id), article)
 
-    // ✅ Mock successful update response
     const updated = { ...article, title: "Updated Title" }
     setMockResponse.patch(urls.articles.details(article.id), updated)
 
     renderWithProviders(<ArticleEditPage articleId={"123"} />)
 
-    const titleInput = await screen.findByPlaceholderText("Enter article title")
+    await screen.findByTestId("editor")
+
+    const titleInput = await screen.findByPlaceholderText("Article title")
 
     fireEvent.change(titleInput, { target: { value: "Updated Title" } })
 
     await waitFor(() => expect(titleInput).toHaveValue("Updated Title"))
 
-    await userEvent.click(screen.getByText(/save article/i))
+    await userEvent.click(screen.getByRole("button", { name: "Save" }))
 
-    // ✅ Wait for redirect after update success
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/articles/123"))
+    await waitFor(() =>
+      expect(makeRequest).toHaveBeenCalledWith(
+        "patch",
+        urls.articles.details(article.id),
+        expect.objectContaining({ title: "Updated Title" }),
+      ),
+    )
+
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/articles/123"))
   })
 
   test("shows error alert on failure", async () => {
@@ -77,11 +101,18 @@ describe("ArticleEditPage", () => {
     const article = factories.articles.article({
       id: 7,
       title: "Old Title",
-      content: { id: 1, content: "Bad content" },
+      content: {
+        type: "doc",
+        content: [
+          {
+            type: "paragraph",
+            content: [{ type: "text", text: "Existing Title" }],
+          },
+        ],
+      },
     })
     setMockResponse.get(urls.articles.details(article.id), article)
 
-    // ✅ Mock failed update (500)
     setMockResponse.patch(
       urls.articles.details(article.id),
       { detail: "Server Error" },
@@ -90,10 +121,12 @@ describe("ArticleEditPage", () => {
 
     renderWithProviders(<ArticleEditPage articleId={"7"} />)
 
-    const titleInput = await screen.findByPlaceholderText("Enter article title")
+    await screen.findByTestId("editor")
+
+    const titleInput = await screen.findByPlaceholderText("Article title")
     fireEvent.change(titleInput, { target: { value: "Bad Article" } })
 
-    await userEvent.click(screen.getByText(/save article/i))
+    await userEvent.click(screen.getByRole("button", { name: "Save" }))
 
     expect(await screen.findByText(/Mock Error/i)).toBeInTheDocument()
   })

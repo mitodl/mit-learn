@@ -171,7 +171,7 @@ export * from "./components/ThemeProvider/MITLearnGlobalStyles"
 
 export { AppRouterCacheProvider as NextJsAppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter"
 
-export { default as TiptapEditor } from "./components/TiptapEditor/TiptapEditor"
+export * from "./components/TiptapEditor"
 
 // /**
 //  * @deprecated Please use component from @mitodl/smoot-design instead

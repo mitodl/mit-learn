@@ -15,17 +15,10 @@ from learning_resources.models import (
 )
 from learning_resources.utils import load_course_blocklist
 from learning_resources_search.constants import (
-    ARTICLE_TYPE,
     CONTENT_FILE_TYPE,
     COURSE_TYPE,
-    LEARNING_PATH_TYPE,
     LEARNING_RESOURCE_TYPES,
-    PODCAST_EPISODE_TYPE,
-    PODCAST_TYPE,
-    PROGRAM_TYPE,
     SEARCH_CONN_EXCEPTIONS,
-    VIDEO_PLAYLIST_TYPE,
-    VIDEO_TYPE,
 )
 from learning_resources_search.exceptions import RetryError
 from learning_resources_search.tasks import wrap_retry_exception
@@ -173,15 +166,7 @@ def start_embed_resources(self, indexes, skip_content_files, overwrite):
                             chunk_size=settings.QDRANT_CHUNK_SIZE,
                         )
                     ]
-        for resource_type in [
-            PROGRAM_TYPE,
-            PODCAST_TYPE,
-            PODCAST_EPISODE_TYPE,
-            LEARNING_PATH_TYPE,
-            VIDEO_TYPE,
-            VIDEO_PLAYLIST_TYPE,
-            ARTICLE_TYPE,
-        ]:
+        for resource_type in set(LEARNING_RESOURCE_TYPES) - {COURSE_TYPE}:
             if resource_type in indexes:
                 for ids in chunks(
                     LearningResource.objects.filter(
@@ -381,7 +366,8 @@ def embeddings_healthcheck():
     """
     Check for missing embeddings and summaries in Qdrant and log warnings to Sentry
     """
-    remaining_content_files = []
+
+    remaining_content_file_ids = []
     remaining_resources = []
     resource_point_ids = {}
     all_resources = LearningResource.objects.filter(
@@ -405,10 +391,14 @@ def embeddings_healthcheck():
                     )
                     content_file_point_ids[point_id] = {"key": cf.key, "id": cf.id}
             for batch in chunks(content_file_point_ids.keys(), chunk_size=200):
-                remaining_content_files.extend(
-                    filter_existing_qdrant_points_by_ids(
-                        batch, collection_name=CONTENT_FILES_COLLECTION_NAME
-                    )
+                remaining_content_files = filter_existing_qdrant_points_by_ids(
+                    batch, collection_name=CONTENT_FILES_COLLECTION_NAME
+                )
+                remaining_content_file_ids.extend(
+                    [
+                        content_file_point_ids.get(p, {}).get("id")
+                        for p in remaining_content_files
+                    ]
                 )
 
     for batch in chunks(
@@ -422,16 +412,13 @@ def embeddings_healthcheck():
             )
         )
 
-    remaining_content_file_ids = [
-        content_file_point_ids.get(p, {}).get("id") for p in remaining_content_files
-    ]
     remaining_resource_ids = [
         resource_point_ids.get(p, {}).get("id") for p in remaining_resources
     ]
     missing_summaries = _missing_summaries()
     log.info(
         "Embeddings healthcheck found %d missing content file embeddings",
-        len(remaining_content_files),
+        len(remaining_content_file_ids),
     )
     log.info(
         "Embeddings healthcheck found %d missing resource embeddings",
@@ -442,12 +429,12 @@ def embeddings_healthcheck():
         len(missing_summaries),
     )
 
-    if len(remaining_content_files) > 0:
+    if len(remaining_content_file_ids) > 0:
         _sentry_healthcheck_log(
             "embeddings",
             "missing_content_file_embeddings",
             {
-                "count": len(remaining_content_files),
+                "count": len(remaining_content_file_ids),
                 "ids": remaining_content_file_ids,
                 "run_ids": set(
                     ContentFile.objects.filter(
@@ -455,7 +442,7 @@ def embeddings_healthcheck():
                     ).values_list("run__run_id", flat=True)[:100]
                 ),
             },
-            f"Warning: {len(remaining_content_files)} missing content file "
+            f"Warning: {len(remaining_content_file_ids)} missing content file "
             "embeddings detected",
         )
 
