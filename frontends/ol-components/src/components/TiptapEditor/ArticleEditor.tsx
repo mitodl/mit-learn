@@ -2,7 +2,7 @@
 
 // Based on ./components/tiptap-templates/simple/simple-editor.tsx
 
-import React, { useEffect, ChangeEventHandler, useState } from "react"
+import React, { ChangeEventHandler, useState } from "react"
 import styled from "@emotion/styled"
 import { EditorContext, JSONContent, useEditor } from "@tiptap/react"
 
