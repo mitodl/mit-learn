@@ -104,19 +104,22 @@ const ArticleEditor = ({
 
   const [json, setJson] = useState<JSONContent>({
     type: "doc",
-    content: article?.content
-      ? JSON.parse(article.content)
-      : [{ type: "paragraph", content: [] }],
+    content: article?.content || [{ type: "paragraph", content: [] }],
   })
   const [touched, setTouched] = useState(false)
 
   const handleSave = () => {
     if (article) {
-      updateArticle({
-        id: article.id,
-        title: title.trim(),
-        content: json,
-      })
+      updateArticle(
+        {
+          id: article.id,
+          title: title.trim(),
+          content: json,
+        },
+        {
+          onSuccess: onSave,
+        },
+      )
     } else {
       createArticle(
         {
@@ -220,7 +223,10 @@ const ArticleEditor = ({
             <TitleInput
               type="text"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => {
+                setTitle(e.target.value)
+                setTouched(true)
+              }}
               placeholder="Article title"
               className="input-field"
             />

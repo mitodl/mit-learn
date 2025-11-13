@@ -1,5 +1,7 @@
 "use client"
 import React from "react"
+import { useRouter } from "next-nprogress-bar"
+import { notFound } from "next/navigation"
 import { Permission } from "api/hooks/user"
 import { useArticleDetail } from "api/hooks/articles"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
@@ -9,8 +11,7 @@ import {
   ArticleEditor,
   HEADER_HEIGHT,
 } from "ol-components"
-
-import { notFound } from "next/navigation"
+import { articlesView } from "@/common/urls"
 
 const PageContainer = styled.div(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
@@ -20,6 +21,7 @@ const PageContainer = styled.div(({ theme }) => ({
 
 const ArticleEditPage = ({ articleId }: { articleId: string }) => {
   const { data: article, isLoading } = useArticleDetail(Number(articleId))
+  const router = useRouter()
 
   if (isLoading) {
     return <LoadingSpinner color="inherit" loading={isLoading} size={32} />
@@ -31,7 +33,12 @@ const ArticleEditPage = ({ articleId }: { articleId: string }) => {
   return (
     <RestrictedRoute requires={Permission.ArticleEditor}>
       <PageContainer>
-        <ArticleEditor article={article} />
+        <ArticleEditor
+          article={article}
+          onSave={(article) => {
+            router.push(articlesView(article.id))
+          }}
+        />
       </PageContainer>
     </RestrictedRoute>
   )
