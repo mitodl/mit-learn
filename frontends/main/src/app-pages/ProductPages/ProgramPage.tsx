@@ -154,6 +154,7 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
     select: (data) => keyBy(data.results, "readable_id"),
   })
 
+  const requiredSubtree = getSubtree(program, "elective")
   const electiveSubtree = getSubtree(program, "elective")
   const electives =
     electiveSubtree && electiveSubtree?.children?.length
@@ -165,13 +166,13 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
 
   const subsections: RequirementSubsectionInfo[] = [
     {
-      title: "Required Courses",
+      title: requiredSubtree?.data.title ?? "Core Courses",
       titleId: HeadingIds.RequirementsRequired,
       resourceIds: readable.required,
       shouldShow: readable.required.length > 0,
     },
     {
-      title: "Elective Courses",
+      title: electiveSubtree?.data.title ?? "Elective Courses",
       note: electives
         ? `Complete ${electives.needed} out of ${electives.total}`
         : "",
