@@ -76,6 +76,7 @@ const HomeContent: React.FC = () => {
   const searchParams = useSearchParams()
   const router = useRouter()
   const enrollmentError = searchParams.get(ENROLLMENT_ERROR_QUERY_PARAM)
+  const [showEnrollmentError, setShowEnrollmentError] = React.useState(false)
   const { isLoading: isLoadingProfile, data: user } = useUserMe()
   const topics = user?.profile?.preference_search_filters.topic
   const certification = user?.profile?.preference_search_filters.certification
@@ -84,9 +85,10 @@ const HomeContent: React.FC = () => {
   )
   const supportEmail = process.env.NEXT_PUBLIC_MITOL_SUPPORT_EMAIL || ""
 
-  // Clear the enrollment error query param on mount so it doesn't persist on reload/back navigation
+  // Show error and clear the query param
   React.useEffect(() => {
     if (enrollmentError) {
+      setShowEnrollmentError(true)
       const newParams = new URLSearchParams(searchParams.toString())
       newParams.delete(ENROLLMENT_ERROR_QUERY_PARAM)
       const newUrl = newParams.toString()
@@ -111,7 +113,7 @@ const HomeContent: React.FC = () => {
           </ButtonLink>
         </HomeHeaderRight>
       </HomeHeader>
-      {enrollmentError && (
+      {showEnrollmentError && (
         <AlertBanner severity="error" closable={true}>
           <Typography variant="subtitle2" component="span">
             Enrollment Error
