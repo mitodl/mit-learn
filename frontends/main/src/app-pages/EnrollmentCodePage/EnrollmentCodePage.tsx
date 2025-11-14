@@ -17,7 +17,6 @@ const InterstitialMessage = styled(Typography)(({ theme }) => ({
 }))
 
 const EnrollmentCodePage: React.FC<EnrollmentCodePage> = ({ code }) => {
-  const [hasEnrolled, setHasEnrolled] = React.useState(false)
   const router = useRouter()
 
   const enrollment = useB2BAttachMutation({
@@ -30,11 +29,14 @@ const EnrollmentCodePage: React.FC<EnrollmentCodePage> = ({ code }) => {
   })
 
   React.useEffect(() => {
-    if (user?.is_authenticated && !hasEnrolled && !enrollment.isPending) {
-      setHasEnrolled(true)
+    if (
+      user?.is_authenticated &&
+      !enrollment.isPending &&
+      !enrollment.isSuccess
+    ) {
       enrollment.mutate()
     }
-  }, [user?.is_authenticated, hasEnrolled, enrollment])
+  }, [user?.is_authenticated, enrollment])
 
   // Handle redirect based on response status code
   // 201: Successfully attached to new contract(s) -> redirect to dashboard
