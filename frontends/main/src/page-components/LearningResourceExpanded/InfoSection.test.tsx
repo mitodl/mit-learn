@@ -115,10 +115,20 @@ describe("Learning resource info section start date", () => {
     within(section).getByText(runDate)
   })
 
-  test("Uses next_start_date when available", () => {
+  test("Uses best_run_id when available", () => {
+    const run = courses.free.dated.runs?.[0]
+    invariant(run)
     const course = {
       ...courses.free.dated,
-      next_start_date: "2024-03-15T00:00:00Z",
+      best_run_id: 1,
+      runs: [
+        {
+          ...run,
+          id: 1,
+          start_date: "2024-03-15",
+          enrollment_start: "2024-03-01",
+        },
+      ],
     }
     renderWithTheme(<InfoSection resource={course} />)
 
@@ -127,10 +137,10 @@ describe("Learning resource info section start date", () => {
     within(section).getByText("March 15, 2024")
   })
 
-  test("Falls back to run date when next_start_date is null", () => {
+  test("Falls back to run date when best_run_id is null", () => {
     const course = {
       ...courses.free.dated,
-      next_start_date: null,
+      best_run_id: null,
     }
     const run = course.runs?.[0]
     invariant(run)
@@ -142,6 +152,74 @@ describe("Learning resource info section start date", () => {
     within(section).getByText("Starts:")
     within(section).getByText(runDate)
     expect(within(section).queryByText("March 15, 2024")).toBeNull()
+  })
+
+  test("Uses enrollment_start when it is later than start_date", () => {
+    const run = courses.free.dated.runs?.[0]
+    invariant(run)
+    const course = {
+      ...courses.free.dated,
+      best_run_id: 1,
+      runs: [
+        {
+          ...run,
+          id: 1,
+          start_date: "2024-03-01",
+          enrollment_start: "2024-03-15",
+        },
+      ],
+    }
+    renderWithTheme(<InfoSection resource={course} />)
+
+    const section = screen.getByTestId("drawer-info-items")
+    within(section).getByText("Starts:")
+    within(section).getByText("March 15, 2024")
+  })
+
+  test("Falls back to run date when best_run_id does not match any run", () => {
+    const course = {
+      ...courses.free.dated,
+      best_run_id: 999,
+    }
+    const run = course.runs?.[0]
+    invariant(run)
+    const runDate = formatRunDate(run, false)
+    invariant(runDate)
+    renderWithTheme(<InfoSection resource={course} />)
+
+    const section = screen.getByTestId("drawer-info-items")
+    within(section).getByText("Starts:")
+    within(section).getByText(runDate)
+  })
+
+  test("Falls back to run date when best run has no dates", () => {
+    const run = courses.free.dated.runs?.[0]
+    invariant(run)
+    const course = {
+      ...courses.free.dated,
+      best_run_id: 1,
+      runs: [
+        {
+          ...run,
+          id: 1,
+          start_date: null,
+          enrollment_start: null,
+        },
+        {
+          ...run,
+          id: 2,
+          start_date: "2024-05-01",
+          enrollment_start: null,
+        },
+      ],
+    }
+    const runDate = formatRunDate(course.runs[1], false)
+    invariant(runDate)
+    renderWithTheme(<InfoSection resource={course} />)
+
+    const section = screen.getByTestId("drawer-info-items")
+    within(section).getByText("Starts:")
+    within(section).getByText(runDate)
   })
 
   test("As taught in date(s)", () => {
@@ -180,10 +258,21 @@ describe("Learning resource info section start date", () => {
     })
   })
 
-  test("Multiple run dates with next_start_date uses next_start_date as first date", () => {
+  test("Multiple run dates with best_run_id uses best_run_id as first date", () => {
+    const firstRun = courses.multipleRuns.sameData.runs?.[0]
+    invariant(firstRun)
     const course = {
       ...courses.multipleRuns.sameData,
-      next_start_date: "2024-01-15T00:00:00Z",
+      best_run_id: 1,
+      runs: [
+        {
+          ...firstRun,
+          id: 1,
+          start_date: "2024-01-15",
+          enrollment_start: "2024-01-01",
+        },
+        ...(courses.multipleRuns.sameData.runs?.slice(1) ?? []),
+      ],
     }
     const sortedDates = course.runs
       ?.sort((a, b) => {
@@ -195,7 +284,7 @@ describe("Learning resource info section start date", () => {
       .map((run) => formatRunDate(run, false))
       .filter((date) => date !== null)
 
-    // First date should be next_start_date, second should be original second date
+    // First date should be from best_run_id, second should be original second date
     const expectedDateText = `January 15, 2024${SEPARATOR}${sortedDates?.[1]}Show more`
     renderWithTheme(<InfoSection resource={course} />)
 
@@ -227,10 +316,20 @@ describe("Learning resource info section start date", () => {
     expect(runDates.children.length).toBe(totalRuns + 1)
   })
 
-  test("Anytime courses with next_start_date should not replace first date in 'As taught in' section", () => {
+  test("Anytime courses with best_run_id should not replace first date in 'As taught in' section", () => {
+    const firstRun = courses.free.anytime.runs?.[0]
+    invariant(firstRun)
     const course = {
       ...courses.free.anytime,
-      next_start_date: "2024-03-15T00:00:00Z",
+      best_run_id: 1,
+      runs: [
+        {
+          ...firstRun,
+          id: 1,
+          start_date: "2024-03-15",
+          enrollment_start: "2024-03-01",
+        },
+      ],
     }
 
     renderWithTheme(<InfoSection resource={course} />)
@@ -247,9 +346,7 @@ describe("Learning resource info section start date", () => {
     const runDates = within(section).getByTestId("drawer-run-dates")
     expect(runDates).toBeInTheDocument()
 
-    const firstRun = course.runs?.[0]
-    invariant(firstRun)
-    const firstRunDate = formatRunDate(firstRun, true)
+    const firstRunDate = formatRunDate(course.runs[0], true)
     invariant(firstRunDate)
     expect(within(section).getByText(firstRunDate)).toBeInTheDocument()
   })
