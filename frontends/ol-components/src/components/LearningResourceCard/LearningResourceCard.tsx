@@ -14,7 +14,7 @@ import {
   getReadableResourceType,
   DEFAULT_RESOURCE_IMG,
   getLearningResourcePrices,
-  getResourceDate,
+  getBestStartDate,
   showStartAnytime,
   getResourceLanguage,
 } from "ol-utilities"
@@ -143,7 +143,7 @@ const StartDate: React.FC<{ resource: LearningResource; size?: Size }> = ({
   size,
 }) => {
   const anytime = showStartAnytime(resource)
-  const startDate = getResourceDate(resource)
+  const startDate = getBestStartDate(resource)
   const format = size === "small" ? "MMM DD, YYYY" : "MMMM DD, YYYY"
   const formatted = anytime
     ? "Anytime"
