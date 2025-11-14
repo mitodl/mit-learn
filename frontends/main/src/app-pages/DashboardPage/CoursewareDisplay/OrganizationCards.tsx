@@ -8,6 +8,7 @@ import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { organizationView } from "@/common/urls"
 import { OrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
+import { RiArrowRightLine } from "@remixicon/react"
 
 const Wrapper = styled.div(({ theme }) => ({
   display: "flex",
@@ -88,6 +89,12 @@ const Title = styled.div(({ theme }) => ({
   },
 }))
 
+const CardButton = styled(ButtonLink)({
+  width: "124px",
+  minWidth: "124px",
+  flexShrink: 0,
+})
+
 interface OrganizationContractsProps {
   org: OrganizationPage
 }
@@ -103,9 +110,9 @@ const OrganizationContracts: React.FC<OrganizationContractsProps> = ({
           <TitleLink size="medium" color="black" href={href}>
             {contract.name}
           </TitleLink>
-          <ButtonLink size="small" href={href}>
+          <CardButton size="small" href={href} endIcon={<RiArrowRightLine />}>
             Continue
-          </ButtonLink>
+          </CardButton>
         </CardContent>
       )
     }) ?? null
