@@ -182,6 +182,7 @@ const totalRunsWithDates = (resource: LearningResource) => {
 const RunDates: React.FC<{ resource: LearningResource }> = ({ resource }) => {
   const [showingMore, setShowingMore] = useState(false)
   const anytime = showStartAnytime(resource)
+
   let sortedDates = resource.runs
     ?.sort((a, b) => {
       if (a?.start_date && b?.start_date) {
@@ -202,7 +203,7 @@ const RunDates: React.FC<{ resource: LearningResource }> = ({ resource }) => {
     sortedDates = [bestStartDate, ...sortedDates.slice(1)]
   }
   if (!sortedDates || sortedDates.length === 0) {
-    return null
+    return [bestStartDate]
   }
   const totalDates = sortedDates?.length || 0
   const showMore = totalDates > 2
