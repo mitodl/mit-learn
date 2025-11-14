@@ -241,9 +241,12 @@ def make_canvas_zip(
     files = files or []
     zip_path = tmp_path / "canvas_course.zip"
     with zipfile.ZipFile(zip_path, "w") as zf:
-        zf.writestr("course_settings/course_settings.xml", settings_xml)
-        zf.writestr("course_settings/module_meta.xml", module_xml)
-        zf.writestr("imsmanifest.xml", manifest_xml)
+        if settings_xml:
+            zf.writestr("course_settings/course_settings.xml", settings_xml)
+        if module_xml:
+            zf.writestr("course_settings/module_meta.xml", module_xml)
+        if manifest_xml:
+            zf.writestr("imsmanifest.xml", manifest_xml)
         for filename, content in files:
             zf.writestr(filename, content)
     return zip_path
@@ -1737,3 +1740,67 @@ def test_get_published_items_for_attachment_module(mocker, tmp_path):
     }
     published = get_published_items(zip_path, url_config)
     assert Path("web_resources/visible_attachment_module.txt").resolve() in published
+
+
+def test_ingestion_finishes_with_missing_xml_files(tmp_path, mocker):
+    """
+    Test that canvas course ingestion succeeds even if some config XML files are missing
+    """
+    mocker.patch(
+        "learning_resources.etl.canvas_utils.parse_context_xml",
+        return_value={"course_id": "123", "canvas_domain": "mit.edu"},
+    )
+    manifest_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
+      <resources>
+        <resource identifier="RES1" type="webcontent"  href="web_resources/file1.pdf">
+          <file href="web_resources/file1.pdf"/>
+        </resource>
+        <resource identifier="RES2" type="webcontent" href="web_resources/file2.html">
+          <file href="web_resources/file2.html"/>
+        </resource>
+        <resource identifier="RES3" type="webcontent" href="web_resources/html_page.html">
+          <file href="web_resources/html_page.html"/>
+        </resource>
+      </resources>
+    </manifest>
+    """
+    files_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+        <fileMeta xmlns="http://canvas.instructure.com/xsd/cccv1p0"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://canvas.instructure.com/xsd/cccv1p0 https://canvas.instructure.com/xsd/cccv1p0.xsd">
+        <files>
+        <file identifier="RES1">
+          <category>uncategorized</category>
+        </file>
+        <file identifier="RES2">
+          <category>uncategorized</category>
+        </file>
+        <file identifier="RES3">
+          <category>uncategorized</category>
+        </file>
+        </files>
+        </fileMeta>
+    """
+    zip_path = make_canvas_zip(
+        tmp_path,
+        manifest_xml=manifest_xml,
+        files=[
+            ("course_settings/files_meta.xml", files_xml),
+            ("web_resources/file1.pdf", "content of file1"),
+            ("web_resources/file2.html", "content of file2"),
+            ("web_resources/html_page.html", ""),
+        ],
+    )
+    mocker.patch(
+        "learning_resources.etl.utils.extract_text_metadata",
+        return_value={"content": "test"},
+    )
+    _, run = run_for_canvas_archive(zip_path, tmp_path, overwrite=True)
+    content_results = list(
+        transform_canvas_content_files(
+            Path(zip_path), run, url_config={}, overwrite=True
+        )
+    )
+    assert run is not None
+    assert len(content_results) > 0

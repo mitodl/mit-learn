@@ -85,7 +85,7 @@ def run_for_canvas_archive(course_archive_path, course_folder, overwrite):
     """
     checksum = calc_checksum(course_archive_path)
     course_info = parse_canvas_settings(course_archive_path)
-    course_title = course_info.get("title")
+    course_title = course_info.get("title", f"canvas course {course_folder}")
     url = canvas_course_url(course_archive_path)
     start_at = course_info.get("start_at")
     end_at = course_info.get("conclude_at")
