@@ -1,7 +1,7 @@
 import React from "react"
 import { renderWithProviders, setMockResponse, waitFor } from "@/test-utils"
 import { makeRequest, urls } from "api/test-utils"
-import { urls as b2bUrls } from "api/mitxonline-test-utils"
+import { urls as b2bUrls, factories } from "api/mitxonline-test-utils"
 import * as commonUrls from "@/common/urls"
 import { Permission } from "api/hooks/user"
 import EnrollmentCodePage from "./EnrollmentCodePage"
@@ -24,6 +24,9 @@ describe("EnrollmentCodePage", () => {
     setMockResponse.get(urls.userMe.get(), {
       [Permission.Authenticated]: false,
     })
+
+    const mitxUser = factories.user.user()
+    setMockResponse.get(b2bUrls.userMe.get(), mitxUser)
 
     setMockResponse.post(b2bUrls.b2bAttach.b2bAttachView("test-code"), [], {
       code: 403,
@@ -54,6 +57,9 @@ describe("EnrollmentCodePage", () => {
       [Permission.Authenticated]: true,
     })
 
+    const mitxUser = factories.user.user()
+    setMockResponse.get(b2bUrls.userMe.get(), mitxUser)
+
     setMockResponse.post(b2bUrls.b2bAttach.b2bAttachView("test-code"), [])
 
     renderWithProviders(<EnrollmentCodePage code="test-code" />, {
@@ -61,13 +67,14 @@ describe("EnrollmentCodePage", () => {
     })
   })
 
-  test("Redirects to dashboard on successful attachment", async () => {
+  test("Redirects to dashboard on successful attachment (201 status)", async () => {
     setMockResponse.get(urls.userMe.get(), {
       [Permission.Authenticated]: true,
     })
 
     const attachUrl = b2bUrls.b2bAttach.b2bAttachView("test-code")
-    setMockResponse.post(attachUrl, [])
+    // 201 status indicates successful attachment to new contract(s)
+    setMockResponse.post(attachUrl, {}, { code: 201 })
 
     renderWithProviders(<EnrollmentCodePage code="test-code" />, {
       url: commonUrls.B2B_ATTACH_VIEW,
@@ -77,6 +84,54 @@ describe("EnrollmentCodePage", () => {
       expect(makeRequest).toHaveBeenCalledWith("post", attachUrl, undefined)
     })
 
-    expect(mockPush).toHaveBeenCalledWith(commonUrls.DASHBOARD_HOME)
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith(commonUrls.DASHBOARD_HOME)
+    })
+  })
+
+  test("Redirects to dashboard when user already attached to all contracts (200 status)", async () => {
+    setMockResponse.get(urls.userMe.get(), {
+      [Permission.Authenticated]: true,
+    })
+
+    const attachUrl = b2bUrls.b2bAttach.b2bAttachView("already-used-code")
+    // 200 status indicates user already attached to all contracts - still redirect to dashboard without error
+    setMockResponse.post(attachUrl, {}, { code: 200 })
+
+    renderWithProviders(<EnrollmentCodePage code="already-used-code" />, {
+      url: commonUrls.B2B_ATTACH_VIEW,
+    })
+
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith("post", attachUrl, undefined)
+    })
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith(commonUrls.DASHBOARD_HOME)
+    })
+  })
+
+  test("Redirects to dashboard with error for invalid code (404 status)", async () => {
+    setMockResponse.get(urls.userMe.get(), {
+      [Permission.Authenticated]: true,
+    })
+
+    const attachUrl = b2bUrls.b2bAttach.b2bAttachView("invalid-code")
+    // 404 status indicates invalid or expired enrollment code
+    setMockResponse.post(attachUrl, {}, { code: 404 })
+
+    renderWithProviders(<EnrollmentCodePage code="invalid-code" />, {
+      url: commonUrls.B2B_ATTACH_VIEW,
+    })
+
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith("post", attachUrl, undefined)
+    })
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith(
+        commonUrls.DASHBOARD_HOME_ENROLLMENT_ERROR,
+      )
+    })
   })
 })

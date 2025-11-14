@@ -1,9 +1,9 @@
 "use client"
 import React, { Suspense } from "react"
-import { ButtonLink } from "@mitodl/smoot-design"
+import { Alert, ButtonLink } from "@mitodl/smoot-design"
 import { ResourceTypeEnum } from "api"
-import { styled, Typography } from "ol-components"
-import { PROFILE } from "@/common/urls"
+import { Link, styled, Typography } from "ol-components"
+import { PROFILE, ENROLLMENT_ERROR_QUERY_PARAM } from "@/common/urls"
 import {
   TopPicksCarouselConfig,
   TopicCarouselConfig,
@@ -18,6 +18,8 @@ import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useUserMe } from "api/hooks/user"
 import { OrganizationCards } from "./CoursewareDisplay/OrganizationCards"
+import { useSearchParams } from "next/navigation"
+import { useRouter } from "next-nprogress-bar"
 
 const SubTitleText = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
@@ -66,13 +68,36 @@ const TitleText = styled(Typography)(({ theme }) => ({
   },
 })) as typeof Typography
 
+const AlertBanner = styled(Alert)({
+  marginTop: "32px",
+})
+
 const HomeContent: React.FC = () => {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const enrollmentError = searchParams.get(ENROLLMENT_ERROR_QUERY_PARAM)
+  const [showEnrollmentError, setShowEnrollmentError] = React.useState(false)
   const { isLoading: isLoadingProfile, data: user } = useUserMe()
   const topics = user?.profile?.preference_search_filters.topic
   const certification = user?.profile?.preference_search_filters.certification
   const showEnrollments = useFeatureFlagEnabled(
     FeatureFlags.EnrollmentDashboard,
   )
+  const supportEmail = process.env.NEXT_PUBLIC_MITOL_SUPPORT_EMAIL || ""
+
+  // Show error and clear the query param
+  React.useEffect(() => {
+    if (enrollmentError) {
+      setShowEnrollmentError(true)
+      const newParams = new URLSearchParams(searchParams.toString())
+      newParams.delete(ENROLLMENT_ERROR_QUERY_PARAM)
+      const newUrl = newParams.toString()
+        ? `${window.location.pathname}?${newParams.toString()}`
+        : window.location.pathname
+      router.replace(newUrl)
+    }
+  }, [enrollmentError, searchParams, router])
+
   return (
     <>
       <HomeHeader>
@@ -88,6 +113,21 @@ const HomeContent: React.FC = () => {
           </ButtonLink>
         </HomeHeaderRight>
       </HomeHeader>
+      {showEnrollmentError && (
+        <AlertBanner severity="error" closable={true}>
+          <Typography variant="subtitle2" component="span">
+            Enrollment Error
+          </Typography>
+          <Typography variant="body2" component="span">
+            {" - "}
+            The Enrollment Code is incorrect or no longer available.{" "}
+            <Link color="red" href={`mailto:${supportEmail}`}>
+              Contact Support
+            </Link>{" "}
+            for assistance.
+          </Typography>
+        </AlertBanner>
+      )}
       <OrganizationCards />
       {showEnrollments ? <EnrollmentDisplay /> : null}
       <Suspense>
