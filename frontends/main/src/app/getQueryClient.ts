@@ -32,7 +32,7 @@ const getServerQueryClient = cache(() => {
     defaultOptions: {
       queries: {
         /**
-         * We create a new query client per request, but still need a staletime
+         * We create a new query client per request, but still need a staleTime
          * to avoid marking queries as stale during the server-side render pass.
          * That can cause hydration errors if client renders differently when
          * the requests are stale (e.g., dependence on isFetching)
