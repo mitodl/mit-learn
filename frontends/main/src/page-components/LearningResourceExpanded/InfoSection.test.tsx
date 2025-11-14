@@ -6,9 +6,28 @@ import { formatRunDate } from "ol-utilities"
 import invariant from "tiny-invariant"
 import user from "@testing-library/user-event"
 import { renderWithTheme } from "../../test-utils"
+import { factories } from "api/test-utils"
 
 // This is a pipe followed by a zero-width space
 const SEPARATOR = "|​"
+
+// Helper function to create a date N days from today
+const daysFromToday = (days: number): string => {
+  const date = new Date()
+  date.setDate(date.getDate() + days)
+  return date.toISOString()
+}
+
+// Helper to format date as "Month DD, YYYY"
+const formatTestDate = (isoDate: string): string => {
+  const date = new Date(isoDate)
+  const options: Intl.DateTimeFormatOptions = {
+    year: "numeric",
+    month: "long",
+    day: "2-digit",
+  }
+  return date.toLocaleDateString("en-US", options)
+}
 
 describe("Learning resource info section pricing", () => {
   test("Free course, no certificate", () => {
@@ -118,6 +137,8 @@ describe("Learning resource info section start date", () => {
   test("Uses best_run_id when available", () => {
     const run = courses.free.dated.runs?.[0]
     invariant(run)
+    const startDate = daysFromToday(30)
+    const enrollmentStart = daysFromToday(15)
     const course = {
       ...courses.free.dated,
       best_run_id: 1,
@@ -125,8 +146,8 @@ describe("Learning resource info section start date", () => {
         {
           ...run,
           id: 1,
-          start_date: "2024-03-15",
-          enrollment_start: "2024-03-01",
+          start_date: startDate,
+          enrollment_start: enrollmentStart,
         },
       ],
     }
@@ -134,29 +155,33 @@ describe("Learning resource info section start date", () => {
 
     const section = screen.getByTestId("drawer-info-items")
     within(section).getByText("Starts:")
-    within(section).getByText("March 15, 2024")
+    within(section).getByText(formatTestDate(startDate))
   })
 
-  test("Falls back to run date when best_run_id is null", () => {
+  test("Shows run date when best_run_id matches a run", () => {
+    const startDate = daysFromToday(45)
+    const run = factories.learningResources.run({
+      id: 1,
+      start_date: startDate,
+      enrollment_start: null,
+    })
     const course = {
       ...courses.free.dated,
-      best_run_id: null,
+      best_run_id: 1,
+      runs: [run],
     }
-    const run = course.runs?.[0]
-    invariant(run)
-    const runDate = formatRunDate(run, false)
-    invariant(runDate)
     renderWithTheme(<InfoSection resource={course} />)
 
     const section = screen.getByTestId("drawer-info-items")
     within(section).getByText("Starts:")
-    within(section).getByText(runDate)
-    expect(within(section).queryByText("March 15, 2024")).toBeNull()
+    within(section).getByText(formatTestDate(startDate))
   })
 
   test("Uses enrollment_start when it is later than start_date", () => {
     const run = courses.free.dated.runs?.[0]
     invariant(run)
+    const startDate = daysFromToday(30)
+    const enrollmentStart = daysFromToday(40) // Later than start_date
     const course = {
       ...courses.free.dated,
       best_run_id: 1,
@@ -164,8 +189,8 @@ describe("Learning resource info section start date", () => {
         {
           ...run,
           id: 1,
-          start_date: "2024-03-01",
-          enrollment_start: "2024-03-15",
+          start_date: startDate,
+          enrollment_start: enrollmentStart,
         },
       ],
     }
@@ -173,10 +198,10 @@ describe("Learning resource info section start date", () => {
 
     const section = screen.getByTestId("drawer-info-items")
     within(section).getByText("Starts:")
-    within(section).getByText("March 15, 2024")
+    within(section).getByText(formatTestDate(enrollmentStart))
   })
 
-  test("Falls back to run date when best_run_id does not match any run", () => {
+  test("Falls back to null when best_run_id does not match any run", () => {
     const course = {
       ...courses.free.dated,
       best_run_id: 999,
@@ -192,7 +217,54 @@ describe("Learning resource info section start date", () => {
     within(section).getByText(runDate)
   })
 
-  test("Falls back to run date when best run has no dates", () => {
+  test("Shows today's date when best run start date is in the past", () => {
+    const run = courses.free.dated.runs?.[0]
+    invariant(run)
+    const pastStartDate = daysFromToday(-30) // 30 days ago
+    const pastEnrollmentStart = daysFromToday(-45) // 45 days ago
+    const todayDate = new Date().toISOString()
+    const course = {
+      ...courses.free.dated,
+      best_run_id: 1,
+      runs: [
+        {
+          ...run,
+          id: 1,
+          start_date: pastStartDate,
+          enrollment_start: pastEnrollmentStart,
+        },
+      ],
+    }
+    renderWithTheme(<InfoSection resource={course} />)
+
+    const section = screen.getByTestId("drawer-info-items")
+    within(section).getByText("Starts:")
+    within(section).getByText(formatTestDate(todayDate))
+  })
+
+  test("Shows no start date when best_run_id is null", () => {
+    const run = courses.free.dated.runs?.[0]
+    invariant(run)
+    const course = {
+      ...courses.free.dated,
+      best_run_id: null,
+      runs: [
+        {
+          ...run,
+          id: 1,
+          start_date: null,
+          enrollment_start: null,
+        },
+      ],
+    }
+    renderWithTheme(<InfoSection resource={course} />)
+
+    const section = screen.getByTestId("drawer-info-items")
+    // Should not show a start date section at all when best run is null and no dates exist
+    expect(within(section).queryByText("Starts:")).toBeNull()
+  })
+
+  test("Shows no start date when best run has null dates", () => {
     const run = courses.free.dated.runs?.[0]
     invariant(run)
     const course = {
@@ -205,21 +277,13 @@ describe("Learning resource info section start date", () => {
           start_date: null,
           enrollment_start: null,
         },
-        {
-          ...run,
-          id: 2,
-          start_date: "2024-05-01",
-          enrollment_start: null,
-        },
       ],
     }
-    const runDate = formatRunDate(course.runs[1], false)
-    invariant(runDate)
     renderWithTheme(<InfoSection resource={course} />)
 
     const section = screen.getByTestId("drawer-info-items")
-    within(section).getByText("Starts:")
-    within(section).getByText(runDate)
+    // Should not show a start date section when best run has null dates
+    expect(within(section).queryByText("Starts:")).toBeNull()
   })
 
   test("As taught in date(s)", () => {
@@ -261,6 +325,8 @@ describe("Learning resource info section start date", () => {
   test("Multiple run dates with best_run_id uses best_run_id as first date", () => {
     const firstRun = courses.multipleRuns.sameData.runs?.[0]
     invariant(firstRun)
+    const bestRunStartDate = daysFromToday(50)
+    const bestRunEnrollmentStart = daysFromToday(35)
     const course = {
       ...courses.multipleRuns.sameData,
       best_run_id: 1,
@@ -268,8 +334,8 @@ describe("Learning resource info section start date", () => {
         {
           ...firstRun,
           id: 1,
-          start_date: "2024-01-15",
-          enrollment_start: "2024-01-01",
+          start_date: bestRunStartDate,
+          enrollment_start: bestRunEnrollmentStart,
         },
         ...(courses.multipleRuns.sameData.runs?.slice(1) ?? []),
       ],
@@ -285,7 +351,7 @@ describe("Learning resource info section start date", () => {
       .filter((date) => date !== null)
 
     // First date should be from best_run_id, second should be original second date
-    const expectedDateText = `January 15, 2024${SEPARATOR}${sortedDates?.[1]}Show more`
+    const expectedDateText = `${formatTestDate(bestRunStartDate)}${SEPARATOR}${sortedDates?.[1]}Show more`
     renderWithTheme(<InfoSection resource={course} />)
 
     const section = screen.getByTestId("drawer-info-items")
@@ -319,6 +385,8 @@ describe("Learning resource info section start date", () => {
   test("Anytime courses with best_run_id should not replace first date in 'As taught in' section", () => {
     const firstRun = courses.free.anytime.runs?.[0]
     invariant(firstRun)
+    const bestRunStartDate = daysFromToday(25)
+    const bestRunEnrollmentStart = daysFromToday(10)
     const course = {
       ...courses.free.anytime,
       best_run_id: 1,
@@ -326,8 +394,8 @@ describe("Learning resource info section start date", () => {
         {
           ...firstRun,
           id: 1,
-          start_date: "2024-03-15",
-          enrollment_start: "2024-03-01",
+          start_date: bestRunStartDate,
+          enrollment_start: bestRunEnrollmentStart,
         },
       ],
     }
@@ -341,7 +409,9 @@ describe("Learning resource info section start date", () => {
 
     within(section).getByText("As taught in:")
 
-    expect(within(section).queryByText("March 15, 2024")).toBeNull()
+    expect(
+      within(section).queryByText(formatTestDate(bestRunStartDate)),
+    ).toBeNull()
 
     const runDates = within(section).getByTestId("drawer-run-dates")
     expect(runDates).toBeInTheDocument()

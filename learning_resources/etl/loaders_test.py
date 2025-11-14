@@ -1,6 +1,6 @@
 """Tests for ETL loaders"""
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 from decimal import Decimal
 from pathlib import Path
 
@@ -497,7 +497,7 @@ def test_load_course(  # noqa: PLR0913, PLR0912, PLR0915
     result = load_course(props, blocklist, [], config=CourseLoaderConfig(prune=True))
     assert result.professional is True
 
-    if is_published and is_run_published and not blocklisted:
+    if is_published and is_run_published and not blocklisted and has_upcoming_run:
         assert result.next_start_date == start_date
     else:
         assert result.next_start_date is None
@@ -1840,28 +1840,30 @@ def test_load_run_dependent_values_resets_next_start_date():
 
 
 @pytest.mark.parametrize(
-    ("start_dt", "enrollnment_start", "expected_next"),
+    ("has_start_date", "has_enrollment_start", "expect_next_start_date"),
     [
-        ("2025-01-01T10:00:00Z", "2024-12-15T10:00:00Z", "2025-01-01T10:00:00Z"),
-        ("2025-01-01T10:00:00Z", None, "2025-01-01T10:00:00Z"),
-        (None, "2024-12-15T10:00:00Z", "2024-12-15T10:00:00Z"),
-        (None, None, None),
+        (True, True, True),
+        (True, False, True),
+        (False, True, False),  # next_run requires start_date > now
+        (False, False, False),
     ],
 )
 def test_load_run_dependent_values_next_start_date(
-    start_dt, enrollnment_start, expected_next
+    has_start_date, has_enrollment_start, expect_next_start_date
 ):
-    """Test that next_start_date is correctly set from the best_run"""
+    """Test that next_start_date is correctly set from the next_run (future runs only)"""
     course = LearningResourceFactory.create(is_course=True, published=True, runs=[])
 
-    # Create multiple runs with different start dates
+    now = now_in_utc()
+    future_start = now + timedelta(days=30)
+    future_enrollment_start = now + timedelta(days=15)
+
+    # Create a run with future dates
     LearningResourceRunFactory.create(
         learning_resource=course,
         published=True,
-        start_date=datetime.fromisoformat(start_dt) if start_dt else None,
-        enrollment_start=datetime.fromisoformat(enrollnment_start)
-        if enrollnment_start
-        else None,
+        start_date=future_start if has_start_date else None,
+        enrollment_start=future_enrollment_start if has_enrollment_start else None,
     )
 
     # Call load_run_dependent_values
@@ -1870,10 +1872,22 @@ def test_load_run_dependent_values_next_start_date(
     # Refresh course from database
     course.refresh_from_db()
 
-    # Verify that next_start_date matches the earliest run's start date
-    assert result.next_start_date == (
-        datetime.fromisoformat(expected_next) if expected_next else None
-    )
+    # Verify that next_start_date is set correctly
+    if expect_next_start_date:
+        # next_start_date should be the max of start_date and enrollment_start
+        expected_date = max(
+            filter(
+                None,
+                [
+                    future_start if has_start_date else None,
+                    future_enrollment_start if has_enrollment_start else None,
+                ],
+            )
+        )
+        assert result.next_start_date == expected_date
+    else:
+        # No future dates, so next_start_date should be None
+        assert result.next_start_date is None
 
 
 @pytest.mark.parametrize(

@@ -8,6 +8,24 @@ import { factories } from "api/test-utils"
 import { getByImageSrc } from "ol-test-utilities"
 import { renderWithTheme } from "../../test-utils"
 
+// Helper function to create a date N days from today
+const daysFromToday = (days: number): string => {
+  const date = new Date()
+  date.setDate(date.getDate() + days)
+  return date.toISOString()
+}
+
+// Helper to format date as "Month DD, YYYY"
+const formatTestDate = (isoDate: string): string => {
+  const date = new Date(isoDate)
+  const options: Intl.DateTimeFormatOptions = {
+    year: "numeric",
+    month: "long",
+    day: "2-digit",
+  }
+  return date.toLocaleDateString("en-US", options)
+}
+
 const setup = (props: LearningResourceListCardProps) => {
   return renderWithTheme(<LearningResourceListCard {...props} />)
 }
@@ -19,9 +37,10 @@ describe("Learning Resource List Card", () => {
   ])(
     "Renders resource type, title and start date as a labeled article",
     ({ resourceType, expectedLabel }) => {
+      const startDate = daysFromToday(30)
       const run = factories.learningResources.run({
         id: 1,
-        start_date: "2026-01-01",
+        start_date: startDate,
         enrollment_start: null,
       })
       const resource = factories.learningResources.resource({
@@ -39,7 +58,7 @@ describe("Learning Resource List Card", () => {
       within(card).getByText(expectedLabel)
       within(card).getByText(resource.title)
       within(card).getByText("Starts:")
-      within(card).getByText("January 01, 2026")
+      within(card).getByText(formatTestDate(startDate))
     },
   )
 
@@ -59,21 +78,76 @@ describe("Learning Resource List Card", () => {
     expect(title).toHaveAttribute("lang", "pt-pt")
   })
 
-  test("Displays run start date when best_run_id is null", () => {
+  test("Displays run start date", () => {
+    const startDate = daysFromToday(45)
+    const run = factories.learningResources.run({
+      id: 1,
+      start_date: startDate,
+    })
     const resource = factories.learningResources.resource({
       resource_type: ResourceTypeEnum.Course,
-      best_run_id: null,
-      runs: [
-        factories.learningResources.run({
-          start_date: "2026-01-01",
-        }),
-      ],
+      best_run_id: 1,
+      runs: [run],
     })
 
     setup({ resource })
 
     screen.getByText("Starts:")
-    screen.getByText("January 01, 2026")
+    screen.getByText(formatTestDate(startDate))
+  })
+
+  test("Shows today's date when best run start date is in the past", () => {
+    const pastStartDate = daysFromToday(-30) // 30 days ago
+    const todayDate = new Date().toISOString()
+    const run = factories.learningResources.run({
+      id: 1,
+      start_date: pastStartDate,
+      enrollment_start: null,
+    })
+    const resource = factories.learningResources.resource({
+      resource_type: ResourceTypeEnum.Course,
+      best_run_id: 1,
+      runs: [run],
+    })
+
+    setup({ resource })
+
+    screen.getByText("Starts:")
+    screen.getByText(formatTestDate(todayDate))
+  })
+
+  test("Shows no start date when best_run_id is null", () => {
+    const run = factories.learningResources.run({
+      id: 1,
+      start_date: null,
+      enrollment_start: null,
+    })
+    const resource = factories.learningResources.resource({
+      resource_type: ResourceTypeEnum.Course,
+      best_run_id: null,
+      runs: [run],
+    })
+
+    setup({ resource })
+
+    expect(screen.queryByText("Starts:")).toBeNull()
+  })
+
+  test("Shows no start date when best run has null dates", () => {
+    const run = factories.learningResources.run({
+      id: 1,
+      start_date: null,
+      enrollment_start: null,
+    })
+    const resource = factories.learningResources.resource({
+      resource_type: ResourceTypeEnum.Course,
+      best_run_id: 1,
+      runs: [run],
+    })
+
+    setup({ resource })
+
+    expect(screen.queryByText("Starts:")).toBeNull()
   })
 
   test.each([
