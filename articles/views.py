@@ -8,7 +8,7 @@ from rest_framework.permissions import IsAdminUser
 from articles.models import Article
 from articles.serializers import RichTextArticleSerializer
 from main.constants import VALID_HTTP_METHODS
-from main.utils import cache_page_for_all_users, clear_search_cache
+from main.utils import cache_page_for_all_users, clear_views_cache
 
 # Create your views here.
 
@@ -43,16 +43,16 @@ class ArticleViewSet(viewsets.ModelViewSet):
 
     @method_decorator(
         cache_page_for_all_users(
-            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+            settings.REDIS_VIEW_CACHE_DURATION, cache="redis", key_prefix="articles"
         )
     )
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
     def create(self, request, *args, **kwargs):
-        clear_search_cache()
+        clear_views_cache()
         return super().create(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
-        clear_search_cache()
+        clear_views_cache()
         return super().destroy(request, *args, **kwargs)

@@ -3,7 +3,7 @@
 from django.core.management import BaseCommand
 
 from data_fixtures.utils import upsert_offered_by_data
-from main.utils import clear_search_cache, now_in_utc
+from main.utils import clear_views_cache, now_in_utc
 
 
 class Command(BaseCommand):
@@ -21,4 +21,4 @@ class Command(BaseCommand):
         self.stdout.write(
             f"Update of {len(offerors)} offerors finished, took {total_seconds} seconds"
         )
-        clear_search_cache()
+        clear_views_cache()
