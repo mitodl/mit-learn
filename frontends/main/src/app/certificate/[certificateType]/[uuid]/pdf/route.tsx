@@ -4,7 +4,7 @@ import type { AxiosError } from "axios"
 import type { NextRequest } from "next/server"
 import * as Sentry from "@sentry/nextjs"
 import moment from "moment"
-import { getServerQueryClient } from "api/ssr/serverQueryClient"
+import { getQueryClient } from "@/app/getQueryClient"
 import { certificateQueries } from "api/mitxonline-hooks/certificates"
 import {
   V2CourseRunCertificate,
@@ -562,7 +562,7 @@ type RouteContext = {
 export async function GET(req: NextRequest, ctx: RouteContext) {
   const { certificateType, uuid } = await ctx.params
 
-  const queryClient = getServerQueryClient()
+  const queryClient = getQueryClient()
 
   let pdfDoc
 

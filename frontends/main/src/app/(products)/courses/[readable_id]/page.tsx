@@ -1,13 +1,12 @@
 import React from "react"
-import { HydrationBoundary } from "@tanstack/react-query"
+import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
 import { safeGenerateMetadata, standardizeMetadata } from "@/common/metadata"
-import { prefetch } from "api/ssr/prefetch"
 import CoursePage from "@/app-pages/ProductPages/CoursePage"
 import { notFound } from "next/navigation"
 import { pagesQueries } from "api/mitxonline-hooks/pages"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
-import { getServerQueryClient } from "api/ssr/serverQueryClient"
+import { getQueryClient } from "@/app/getQueryClient"
 
 export const generateMetadata = async (
   props: PageProps<"/courses/[readable_id]">,
@@ -15,7 +14,7 @@ export const generateMetadata = async (
   const params = await props.params
 
   return safeGenerateMetadata(async () => {
-    const queryClient = getServerQueryClient()
+    const queryClient = getQueryClient()
 
     const data = await queryClient.fetchQuery(
       pagesQueries.coursePages(decodeURIComponent(params.readable_id)),
@@ -44,12 +43,17 @@ const Page: React.FC<PageProps<"/courses/[readable_id]">> = async (props) => {
    * fetching via client, and calling notFound() if data missing.
    * This approach blocked by wagtail api requiring auth.
    */
-  const { dehydratedState } = await prefetch([
-    pagesQueries.coursePages(readableId),
-    coursesQueries.coursesList({ readable_id: readableId }),
+  const queryClient = getQueryClient()
+
+  await Promise.all([
+    queryClient.prefetchQuery(pagesQueries.coursePages(readableId)),
+    queryClient.prefetchQuery(
+      coursesQueries.coursesList({ readable_id: readableId }),
+    ),
   ])
+
   return (
-    <HydrationBoundary state={dehydratedState}>
+    <HydrationBoundary state={dehydrate(queryClient)}>
       <CoursePage readableId={readableId} />
     </HydrationBoundary>
   )

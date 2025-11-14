@@ -1,6 +1,5 @@
 import React from "react"
-import { HydrationBoundary } from "@tanstack/react-query"
-import { prefetch } from "api/ssr/prefetch"
+import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
 import {
   learningResourceQueries,
   offerorQueries,
@@ -12,6 +11,7 @@ import getSearchParams from "@/page-components/SearchDisplay/getSearchParams"
 import validateRequestParams from "@/page-components/SearchDisplay/validateRequestParams"
 import type { ResourceSearchRequest } from "@/page-components/SearchDisplay/validateRequestParams"
 import { LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LRSearchRequest } from "api"
+import { getQueryClient } from "@/app/getQueryClient"
 
 export async function generateMetadata({ searchParams }: PageProps<"/search">) {
   return safeGenerateMetadata(async () => {
@@ -34,13 +34,17 @@ const Page: React.FC<PageProps<"/search">> = async ({ searchParams }) => {
     page: Number(search.page ?? 1),
   })
 
-  const { dehydratedState } = await prefetch([
-    offerorQueries.list({}),
-    learningResourceQueries.search(params as LRSearchRequest),
+  const queryClient = getQueryClient()
+
+  await Promise.all([
+    queryClient.prefetchQuery(offerorQueries.list({})),
+    queryClient.prefetchQuery(
+      learningResourceQueries.search(params as LRSearchRequest),
+    ),
   ])
 
   return (
-    <HydrationBoundary state={dehydratedState}>
+    <HydrationBoundary state={dehydrate(queryClient)}>
       <SearchPage />
     </HydrationBoundary>
   )
