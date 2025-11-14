@@ -20,9 +20,15 @@ describe("Learning Resource Card", () => {
   ])(
     "Renders resource type, title and start date as a labeled article",
     ({ resourceType, expectedLabel }) => {
+      const run = factories.learningResources.run({
+        id: 1,
+        start_date: "2026-01-01",
+        enrollment_start: null,
+      })
       const resource = factories.learningResources.resource({
         resource_type: resourceType,
-        next_start_date: "2026-01-01",
+        best_run_id: 1,
+        runs: [run],
       })
 
       setup({ resource })
@@ -54,10 +60,10 @@ describe("Learning Resource Card", () => {
     expect(title.parentElement).toHaveAttribute("lang", "en-us")
   })
 
-  test("Displays run start date", () => {
+  test("Displays run start date when best_run_id is null", () => {
     const resource = factories.learningResources.resource({
       resource_type: ResourceTypeEnum.Course,
-      next_start_date: null,
+      best_run_id: null,
       runs: [
         factories.learningResources.run({
           start_date: "2026-01-01",

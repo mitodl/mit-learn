@@ -32,6 +32,7 @@ import {
   showStartAnytime,
   NoSSR,
   formatDate,
+  getBestStartDate,
 } from "ol-utilities"
 import { theme, Link } from "ol-components"
 import DifferingRunsTable from "./DifferingRunsTable"
@@ -191,13 +192,14 @@ const RunDates: React.FC<{ resource: LearningResource }> = ({ resource }) => {
     .map((run) => formatRunDate(run, anytime))
     .filter((date) => date !== null)
 
-  const nextStartDate = resource.next_start_date
-    ? formatDate(resource.next_start_date, "MMMM DD, YYYY")
-    : null
+  const bestStartDate = (() => {
+    const date = getBestStartDate(resource)
+    return date ? formatDate(date, "MMMM DD, YYYY") : null
+  })()
 
-  if (sortedDates && nextStartDate && !anytime) {
-    // Replace the first date with next_start_date
-    sortedDates = [nextStartDate, ...sortedDates.slice(1)]
+  if (sortedDates && bestStartDate && !anytime) {
+    // Replace the first date with best_start_date
+    sortedDates = [bestStartDate, ...sortedDates.slice(1)]
   }
   if (!sortedDates || sortedDates.length === 0) {
     return null
