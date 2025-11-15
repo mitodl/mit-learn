@@ -324,7 +324,7 @@ def test_learning_resource_serializer(  # noqa: PLR0913
         "ocw_topics": sorted(resource.ocw_topics),
         "runs": [
             serializers.LearningResourceRunSerializer(instance=run).data
-            for run in resource.runs.all()
+            for run in resource.published_runs
         ],
         detail_key: detail_serializer_cls(instance=getattr(resource, detail_key)).data,
         "views": resource.views.count(),
@@ -351,6 +351,7 @@ def test_learning_resource_serializer(  # noqa: PLR0913
         "max_weekly_hours": resource.max_weekly_hours,
         "min_weeks": resource.min_weeks,
         "max_weeks": resource.max_weeks,
+        "best_run_id": resource.best_run.id if resource.best_run else None,
     }
 
 
@@ -857,6 +858,11 @@ def test_instructors_display():
     load_instructors(
         run, [{"full_name": instructor.full_name} for instructor in instructors]
     )
+    # Clear cached properties so they pick up the new run with instructors
+    if hasattr(resource, "_published_runs"):
+        delattr(resource, "_published_runs")
+    if hasattr(resource, "published_runs"):
+        del resource.__dict__["published_runs"]
     serialized_resource = serializers.LearningResourceSerializer(resource).data
     metadata_serializer = serializers.LearningResourceMetadataDisplaySerializer(
         serialized_resource
