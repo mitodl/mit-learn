@@ -179,21 +179,21 @@ describe.each([
       course: pastDashboardCourse({
         enrollment: { status: EnrollmentStatus.Enrolled },
       }),
-      expected: { labelPrefix: "View" },
+      expected: { label: "View", usesCourseNoun: true },
       case: "past",
     },
     {
       course: currentDashboardCourse({
         enrollment: { status: EnrollmentStatus.Enrolled },
       }),
-      expected: { labelPrefix: "Continue" },
+      expected: { label: "Continue", usesCourseNoun: false },
       case: "current",
     },
     {
       course: futureDashboardCourse({
         enrollment: { status: EnrollmentStatus.Enrolled },
       }),
-      expected: { labelPrefix: "Continue" },
+      expected: { label: "Continue", usesCourseNoun: false },
       label: "future",
     },
   ])(
@@ -211,10 +211,10 @@ describe.each([
         !course.enrollment
       ) {
         expect(coursewareCTA).toHaveTextContent("Start Course")
+      } else if (expected.usesCourseNoun) {
+        expect(coursewareCTA).toHaveTextContent(`${expected.label} Course`)
       } else {
-        expect(coursewareCTA).toHaveTextContent(
-          `${expected.labelPrefix} Course`,
-        )
+        expect(coursewareCTA).toHaveTextContent(expected.label)
       }
 
       const courseNoun = faker.word.noun()
@@ -231,10 +231,13 @@ describe.each([
         !course.enrollment
       ) {
         expect(coursewareCTA).toHaveTextContent(`Start ${courseNoun}`)
-      } else {
+      } else if (expected.usesCourseNoun) {
         expect(coursewareCTA).toHaveTextContent(
-          `${expected.labelPrefix} ${courseNoun}`,
+          `${expected.label} ${courseNoun}`,
         )
+      } else {
+        // "Continue" doesn't use courseNoun
+        expect(coursewareCTA).toHaveTextContent(expected.label)
       }
     },
   )
@@ -522,7 +525,7 @@ describe.each([
 
   test.each([
     { status: EnrollmentStatus.Completed, expectedText: "View Course" },
-    { status: EnrollmentStatus.Enrolled, expectedText: "Continue Course" },
+    { status: EnrollmentStatus.Enrolled, expectedText: "Continue" },
     { status: EnrollmentStatus.NotEnrolled, expectedText: "Start Course" },
   ])(
     "CoursewareButton shows correct text based on enrollment status ($status)",

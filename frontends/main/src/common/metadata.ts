@@ -6,8 +6,8 @@ import type { AxiosError } from "axios"
 import type { Metadata } from "next"
 import * as Sentry from "@sentry/nextjs"
 import { learningResourceQueries } from "api/hooks/learningResources"
-import { getServerQueryClient } from "api/ssr/serverQueryClient"
 import { notFound } from "next/navigation"
+import { getQueryClient } from "@/app/getQueryClient"
 
 const DEFAULT_OG_IMAGE = "/images/learn-og-image.jpg"
 
@@ -71,7 +71,7 @@ export const getMetadataAsync = async ({
   const alts = alternates ?? {}
 
   if (learningResourceId) {
-    const queryClient = getServerQueryClient()
+    const queryClient = getQueryClient()
     const data = await queryClient.fetchQuery(
       learningResourceQueries.detail(learningResourceId),
     )

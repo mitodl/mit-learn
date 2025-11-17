@@ -64,8 +64,8 @@ def test_cache_is_cleared_after_task_run(mocker, mocked_celery):
     mocker.patch("learning_resources.tasks.ocw_courses_etl", autospec=True)
     mocker.patch("learning_resources.tasks.get_content_tasks", autospec=True)
     mocker.patch("learning_resources.tasks.pipelines")
-    mocked_clear_search_cache = mocker.patch(
-        "learning_resources.tasks.clear_search_cache"
+    mocked_clear_views_cache = mocker.patch(
+        "learning_resources.tasks.clear_views_cache"
     )
     tasks.get_mit_edx_data.delay()
     tasks.update_next_start_date_and_prices.delay()
@@ -84,7 +84,7 @@ def test_cache_is_cleared_after_task_run(mocker, mocked_celery):
 
     tasks.get_youtube_data.delay()
     tasks.get_youtube_transcripts.delay()
-    assert mocked_clear_search_cache.call_count == 11
+    assert mocked_clear_views_cache.call_count == 11
 
 
 def test_get_micromasters_data(mocker):

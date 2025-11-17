@@ -90,7 +90,7 @@ describe("Article CRUD", () => {
     const { id, ...patchData } = article
     expect(makeRequest).toHaveBeenCalledWith("patch", url, patchData)
     expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
-      queryKey: articleKeys.root,
+      queryKey: articleKeys.detail(article.id),
     })
   })
 

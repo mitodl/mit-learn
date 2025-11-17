@@ -10,10 +10,10 @@ import userEvent from "@testing-library/user-event"
 import { factories, urls } from "api/test-utils"
 import { ArticleNewPage } from "./ArticleNewPage"
 
-const pushMock = jest.fn()
+const mockPush = jest.fn()
 jest.mock("next/navigation", () => ({
   useRouter: () => ({
-    push: pushMock,
+    push: mockPush,
   }),
 }))
 
@@ -50,8 +50,7 @@ describe("ArticleNewPage", () => {
 
     renderWithProviders(<ArticleNewPage />)
 
-    expect(await screen.findByText("Write Article")).toBeInTheDocument()
-    expect(screen.getByTestId("editor")).toBeInTheDocument()
+    await screen.findByTestId("editor")
   })
 
   test("submits article successfully", async () => {
@@ -61,7 +60,6 @@ describe("ArticleNewPage", () => {
     })
     setMockResponse.get(urls.userMe.get(), user)
 
-    // Mock article creation API
     const createdArticle = factories.articles.article({ id: 101 })
     setMockResponse.post(urls.articles.list(), createdArticle)
 
@@ -69,14 +67,14 @@ describe("ArticleNewPage", () => {
 
     await screen.findByTestId("editor")
 
-    const titleInput = await screen.findByPlaceholderText("Enter article title")
+    const titleInput = await screen.findByPlaceholderText("Article title")
     fireEvent.change(titleInput, { target: { value: "My Article" } })
     await waitFor(() => expect(titleInput).toHaveValue("My Article"))
 
-    await userEvent.click(screen.getByText(/save article/i))
+    await userEvent.click(screen.getByRole("button", { name: "Save" }))
 
     await waitFor(() =>
-      expect(pushMock).toHaveBeenCalledWith("/articles/101", undefined),
+      expect(mockPush).toHaveBeenCalledWith("/articles/101", undefined),
     )
   })
 
@@ -87,7 +85,6 @@ describe("ArticleNewPage", () => {
     })
     setMockResponse.get(urls.userMe.get(), user)
 
-    // Simulate failed API request (500)
     setMockResponse.post(
       urls.articles.list(),
       { detail: "Server error" },
@@ -96,13 +93,15 @@ describe("ArticleNewPage", () => {
 
     renderWithProviders(<ArticleNewPage />)
 
-    await screen.findByPlaceholderText("Enter article title")
+    await screen.findByTestId("editor")
 
-    fireEvent.change(screen.getByPlaceholderText("Enter article title"), {
+    await screen.findByPlaceholderText("Article title")
+
+    fireEvent.change(screen.getByPlaceholderText("Article title"), {
       target: { value: "My Article" },
     })
     await userEvent.click(screen.getByTestId("editor"))
-    await userEvent.click(screen.getByText("Save Article"))
+    await userEvent.click(screen.getByRole("button", { name: "Save" }))
 
     expect(await screen.findByText(/Mock Error/)).toBeInTheDocument()
   })

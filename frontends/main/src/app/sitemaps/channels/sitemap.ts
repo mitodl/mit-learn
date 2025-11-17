@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next"
 import invariant from "tiny-invariant"
 import type { GenerateSitemapResult } from "../types"
 import { dangerouslyDetectProductionBuildPhase } from "../util"
-import { getServerQueryClient } from "api/ssr/serverQueryClient"
+import { getQueryClient } from "@/app/getQueryClient"
 import { channelQueries } from "api/hooks/channels"
 
 const BASE_URL = process.env.NEXT_PUBLIC_ORIGIN
@@ -23,7 +23,7 @@ export async function generateSitemaps(): Promise<GenerateSitemapResult[]> {
    * Early exit here to avoid the useless build-time API calls.
    */
   if (dangerouslyDetectProductionBuildPhase()) return []
-  const queryClient = getServerQueryClient()
+  const queryClient = getQueryClient()
   const { count } = await queryClient.fetchQuery(
     channelQueries.list({ limit: PAGE_SIZE }),
   )
@@ -40,7 +40,7 @@ export default async function sitemap({
 }: {
   id: string
 }): Promise<MetadataRoute.Sitemap> {
-  const queryClient = getServerQueryClient()
+  const queryClient = getQueryClient()
   const data = await queryClient.fetchQuery(
     channelQueries.list({
       limit: PAGE_SIZE,

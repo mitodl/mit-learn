@@ -1,13 +1,12 @@
 import React from "react"
 import { Metadata } from "next"
 import CertificatePage from "@/app-pages/CertificatePage/CertificatePage"
-import { prefetch } from "api/ssr/prefetch"
 import { certificateQueries } from "api/mitxonline-hooks/certificates"
-import { HydrationBoundary } from "@tanstack/react-query"
+import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
 import { isInEnum } from "@/common/utils"
 import { notFound } from "next/navigation"
 import { safeGenerateMetadata, standardizeMetadata } from "@/common/metadata"
-import { getServerQueryClient } from "api/ssr/serverQueryClient"
+import { getQueryClient } from "@/app/getQueryClient"
 
 const { NEXT_PUBLIC_ORIGIN } = process.env
 
@@ -24,7 +23,7 @@ export async function generateMetadata({
   return safeGenerateMetadata(async () => {
     let title, displayType, userName
 
-    const queryClient = getServerQueryClient()
+    const queryClient = getQueryClient()
 
     if (certificateType === CertificateType.Course) {
       const data = await queryClient.fetchQuery(
@@ -68,18 +67,24 @@ const Page: React.FC<
     notFound()
   }
 
-  const { dehydratedState } = await prefetch([
-    certificateType === CertificateType.Course
-      ? certificateQueries.courseCertificatesRetrieve({
-          cert_uuid: uuid,
-        })
-      : certificateQueries.programCertificatesRetrieve({
-          cert_uuid: uuid,
-        }),
-  ])
+  const queryClient = getQueryClient()
+
+  if (certificateType === CertificateType.Course) {
+    await queryClient.prefetchQuery(
+      certificateQueries.courseCertificatesRetrieve({
+        cert_uuid: uuid,
+      }),
+    )
+  } else {
+    await queryClient.prefetchQuery(
+      certificateQueries.programCertificatesRetrieve({
+        cert_uuid: uuid,
+      }),
+    )
+  }
 
   return (
-    <HydrationBoundary state={dehydratedState}>
+    <HydrationBoundary state={dehydrate(queryClient)}>
       <CertificatePage
         certificateType={certificateType}
         uuid={uuid}

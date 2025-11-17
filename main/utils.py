@@ -356,14 +356,14 @@ def clean_data(data: str) -> str:
     return ""
 
 
-def clear_search_cache():
+def clear_views_cache():
     cache = caches["redis"]
     cleared = 0
+
     if hasattr(cache, "keys"):
-        search_keys = cache.keys("views.decorators.cache.cache_page.search.*")
-        cleared += cache.delete_many(search_keys) or 0
-        search_keys = cache.keys("views.decorators.cache.cache_header.search.*")
-        cleared += cache.delete_many(search_keys) or 0
+        cache_keys = cache.keys("views.*")
+        cleared += cache.delete_many(cache_keys) or 0
+
     return cleared
 
 

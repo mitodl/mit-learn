@@ -18,7 +18,7 @@ const useArticleList = (
 }
 
 /**
- * Query is diabled if id is undefined.
+ * Query is disabled if id is undefined.
  */
 const useArticleDetail = (id: number | undefined) => {
   return useQuery({
@@ -58,8 +58,8 @@ const useArticlePartialUpdate = () => {
           PatchedRichTextArticleRequest: data,
         })
         .then((response) => response.data),
-    onSuccess: (_data) => {
-      client.invalidateQueries({ queryKey: articleKeys.root })
+    onSuccess: (article: Article) => {
+      client.invalidateQueries({ queryKey: articleKeys.detail(article.id) })
     },
   })
 }

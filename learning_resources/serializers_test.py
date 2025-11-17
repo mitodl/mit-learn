@@ -33,7 +33,11 @@ from learning_resources.factories import (
     LearningResourcePriceFactory,
     LearningResourceRunFactory,
 )
-from learning_resources.models import ContentFile, LearningResource
+from learning_resources.models import (
+    ContentFile,
+    LearningResource,
+    LearningResourceRelationship,
+)
 from main.test_utils import assert_json_equal, drf_datetime
 from main.utils import frontend_absolute_url
 
@@ -139,6 +143,36 @@ def test_serialize_podcast_episode_to_json():
             "transcript": podcast_episode.transcript,
         },
     )
+
+
+def test_serialize_video_resource_playlists_to_json():
+    """
+    Verify that a serialized video resource has the correct playlist data
+    """
+    playlist = factories.VideoPlaylistFactory.create()
+    video = factories.VideoFactory.create()
+    LearningResourceRelationship.objects.get_or_create(
+        parent=playlist.learning_resource,
+        child=video.learning_resource,
+        relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
+    )
+    serializer = serializers.VideoResourceSerializer(instance=video.learning_resource)
+    assert serializer.data["playlists"] == [playlist.learning_resource.id]
+
+
+def test_serialize_podcast_episode_playlists_to_json():
+    """
+    Verify that a serialized podcast episode resource has the correct podcast data
+    """
+    podcast = factories.PodcastFactory.create()
+    podcast_episode = factories.PodcastEpisodeFactory.create()
+    LearningResourceRelationship.objects.get_or_create(
+        parent=podcast.learning_resource,
+        child=podcast_episode.learning_resource,
+        relation_type=LearningResourceRelationTypes.PODCAST_EPISODES.value,
+    )
+    serializer = serializers.PodcastEpisodeSerializer(instance=podcast_episode)
+    assert serializer.data["podcasts"] == [podcast.learning_resource.id]
 
 
 @pytest.mark.parametrize("has_context", [True, False])
@@ -524,6 +558,7 @@ def test_content_file_serializer(settings, expected_types, has_channels):
             "offered_by": {
                 "name": content_file.run.learning_resource.offered_by.name,
                 "code": content_file.run.learning_resource.offered_by.code,
+                "display_facet": True,
                 "channel_url": frontend_absolute_url(
                     f"/c/unit/{Channel.objects.get(unit_detail__unit=content_file.run.learning_resource.offered_by).name}/"
                 )

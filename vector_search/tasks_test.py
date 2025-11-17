@@ -20,6 +20,7 @@ from learning_resources.factories import (
 from learning_resources.models import ContentFile, LearningResource
 from learning_resources_search.constants import (
     COURSE_TYPE,
+    LEARNING_RESOURCE_TYPES,
 )
 from main.utils import now_in_utc
 from vector_search.tasks import (
@@ -34,10 +35,7 @@ from vector_search.utils import vector_point_id
 pytestmark = pytest.mark.django_db
 
 
-@pytest.mark.parametrize(
-    "index",
-    ["course", "program"],
-)
+@pytest.mark.parametrize("index", list(LEARNING_RESOURCE_TYPES))
 def test_start_embed_resources(mocker, mocked_celery, index):
     """
     start_embed_resources should generate embeddings for each resource type
@@ -64,11 +62,11 @@ def test_start_embed_resources(mocker, mocked_celery, index):
         )
         resource_ids = [c.pk for c in courses]
     else:
-        programs = sorted(
-            ProgramFactory.create_batch(4),
-            key=lambda program: program.learning_resource_id,
+        resources = sorted(
+            LearningResourceFactory.create_batch(4, resource_type=index),
+            key=lambda resource: resource.id,
         )
-        resource_ids = [p.pk for p in programs]
+        resource_ids = [p.pk for p in resources]
 
     generate_embeddings_mock = mocker.patch(
         "vector_search.tasks.generate_embeddings", autospec=True

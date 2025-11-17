@@ -14,7 +14,7 @@ import { useQuery } from "@tanstack/react-query"
 import { userEnrollmentsToDashboardCourses } from "./transform"
 import { DashboardCard } from "./DashboardCard"
 import { DashboardCourse, EnrollmentStatus } from "./types"
-import { MaybeHasStatusAndDetail } from "@/app/getQueryClient"
+import type { AxiosError } from "axios"
 
 const Wrapper = styled.div(({ theme }) => ({
   marginTop: "32px",
@@ -183,7 +183,7 @@ const EnrollmentDisplay = () => {
     ...enrollmentQueries.courseRunEnrollmentsList(),
     select: userEnrollmentsToDashboardCourses,
     throwOnError: (error) => {
-      const err = error as MaybeHasStatusAndDetail
+      const err = error as AxiosError<{ detail?: string }>
       const status = err?.response?.status
       if (
         status === 403 &&

@@ -2,7 +2,7 @@
 
 from django.core.management.base import BaseCommand, CommandError
 
-from main.utils import clear_search_cache, now_in_utc
+from main.utils import clear_views_cache, now_in_utc
 from vector_search.tasks import sync_topics
 
 
@@ -20,7 +20,7 @@ class Command(BaseCommand):
         if error:
             msg = f"Geenerate embeddings errored: {error}"
             raise CommandError(msg)
-        clear_search_cache()
+        clear_views_cache()
         total_seconds = (now_in_utc() - start).total_seconds()
         self.stdout.write(
             f"Embeddings generated and stored, took {total_seconds} seconds"

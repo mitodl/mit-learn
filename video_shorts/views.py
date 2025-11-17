@@ -42,7 +42,7 @@ class VideoShortViewSet(viewsets.ReadOnlyModelViewSet):
 
     @method_decorator(
         cache_page_for_all_users(
-            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+            settings.REDIS_VIEW_CACHE_DURATION, cache="redis", key_prefix="video_shorts"
         )
     )
     def list(self, request, *args, **kwargs):

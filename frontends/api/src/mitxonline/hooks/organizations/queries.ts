@@ -32,7 +32,13 @@ const organizationQueries = {
 const useB2BAttachMutation = (opts: B2bApiB2bAttachCreateRequest) => {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: () => b2bApi.b2bAttachCreate(opts),
+    mutationFn: async () => {
+      const response = await b2bApi.b2bAttachCreate(opts)
+      // 200 (already attached) indicates user already attached to all contracts
+      // 201 (successfully attached) is success
+      // 404 (invalid or expired code) will be thrown as error by axios
+      return response
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["mitxonline"] })
     },

@@ -39,7 +39,7 @@ from learning_resources_search.constants import COURSE_TYPE
 from learning_resources_search.exceptions import RetryError
 from main.celery import app
 from main.constants import ISOFORMAT
-from main.utils import chunks, clear_search_cache
+from main.utils import chunks, clear_views_cache
 
 log = logging.getLogger(__name__)
 
@@ -82,7 +82,7 @@ def update_next_start_date_and_prices():
         load_run_dependent_values(resource)
         if resource.published:
             resource_upserted_actions(resource, percolate=False)
-    clear_search_cache()
+    clear_views_cache()
     return len(resources)
 
 
@@ -90,7 +90,7 @@ def update_next_start_date_and_prices():
 def get_micromasters_data():
     """Execute the MicroMasters ETL pipeline"""
     programs = pipelines.micromasters_etl()
-    clear_search_cache()
+    clear_views_cache()
     return len(programs)
 
 
@@ -112,7 +112,7 @@ def get_mit_edx_data(
     """
     courses = pipelines.mit_edx_courses_etl(api_course_datafile)
     programs = pipelines.mit_edx_programs_etl(api_program_datafile)
-    clear_search_cache()
+    clear_views_cache()
     return len(courses) + len(programs)
 
 
@@ -121,7 +121,7 @@ def get_mitxonline_data() -> int:
     """Execute the MITX Online ETL pipeline"""
     courses = pipelines.mitxonline_courses_etl()
     programs = pipelines.mitxonline_programs_etl()
-    clear_search_cache()
+    clear_views_cache()
     return len(courses) + len(programs)
 
 
@@ -135,7 +135,7 @@ def get_oll_data(sheets_id=None):
 
     """
     courses = pipelines.oll_etl(sheets_id)
-    clear_search_cache()
+    clear_views_cache()
     return len(courses)
 
 
@@ -158,7 +158,7 @@ def get_xpro_data():
     """Execute the xPro ETL pipeline"""
     courses = pipelines.xpro_courses_etl()
     programs = pipelines.xpro_programs_etl()
-    clear_search_cache()
+    clear_views_cache()
     return len(courses) + len(programs)
 
 
@@ -166,7 +166,7 @@ def get_xpro_data():
 def get_mit_climate_data():
     """Execute the MIT Climate ETL pipeline"""
     articles = pipelines.mit_climate_etl()
-    clear_search_cache()
+    clear_views_cache()
     return len(articles)
 
 
@@ -192,7 +192,7 @@ def get_content_files(
     sync_edx_course_files(
         etl_source, ids, keys, s3_prefix=s3_prefix, overwrite=overwrite
     )
-    clear_search_cache()
+    clear_views_cache()
 
 
 def get_content_tasks(  # noqa: PLR0913
@@ -321,7 +321,7 @@ def get_podcast_data():
             The number of results that were fetched
     """
     results = pipelines.podcast_etl()
-    clear_search_cache()
+    clear_views_cache()
     return len(list(results))
 
 
@@ -348,7 +348,7 @@ def get_ocw_courses(
         start_timestamp=utc_start_timestamp,
         skip_content_files=skip_content_files,
     )
-    clear_search_cache()
+    clear_views_cache()
 
 
 @app.task(bind=True, acks_late=True)
@@ -430,7 +430,7 @@ def get_youtube_data(*, channel_ids=None):
             The number of results that were fetched
     """
     results = pipelines.youtube_etl(channel_ids=channel_ids)
-    clear_search_cache()
+    clear_views_cache()
     return len(list(results))
 
 
@@ -458,7 +458,7 @@ def get_youtube_transcripts(
 
     log.info("Updating transcripts for %i videos", videos.count())
     youtube.get_youtube_transcripts(videos)
-    clear_search_cache()
+    clear_views_cache()
 
 
 @app.task
@@ -466,7 +466,7 @@ def get_learning_resource_views():
     """Load learning resource views from the PostHog ETL."""
 
     pipelines.posthog_etl()
-    clear_search_cache()
+    clear_views_cache()
 
 
 @app.task(acks_late=True)

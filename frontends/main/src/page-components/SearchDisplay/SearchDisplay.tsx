@@ -19,7 +19,7 @@ import {
   childCheckboxStyles,
   VisuallyHidden,
 } from "@mitodl/smoot-design"
-
+import { keyBy } from "lodash"
 import {
   RiCloseLine,
   RiArrowLeftLine,
@@ -28,13 +28,16 @@ import {
   RiArrowUpSLine,
   RiArrowDownSLine,
 } from "@remixicon/react"
-
+import {
+  useOfferorsList,
+  learningResourceQueries,
+} from "api/hooks/learningResources"
 import {
   LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LRSearchRequest,
   ResourceCategoryEnum,
   SearchModeEnumDescriptions,
 } from "api"
-import { useLearningResourcesSearch } from "api/hooks/learningResources"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { useAdminSearchParams } from "api/hooks/adminSearchParams"
 import {
   AvailableFacets,
@@ -568,12 +571,39 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     facetNames,
     page,
   ])
+  const offerorsQuery = useOfferorsList()
+  const offerors = useMemo(() => {
+    return keyBy(offerorsQuery.data?.results ?? [], (o) => o.code)
+  }, [offerorsQuery.data?.results])
 
-  const { data, isLoading, isFetching } = useLearningResourcesSearch(
-    allParams as LRSearchRequest,
-    { keepPreviousData: true },
-  )
+  const { data, isLoading, isFetching } = useQuery({
+    ...learningResourceQueries.search(allParams as LRSearchRequest),
+    placeholderData: keepPreviousData,
+    select: (data) => {
+      // Handle missing data gracefully
+      if (!data.metadata.aggregations.offered_by || data.results.length === 0) {
+        return data
+      }
 
+      // only show offerors with display_facet set
+      const displayOfferors = Object.values(offerors)
+        .filter((value) => value.code && value.display_facet)
+        .map((value) => value?.code)
+
+      return {
+        ...data,
+        metadata: {
+          ...data.metadata,
+          aggregations: {
+            ...data.metadata.aggregations,
+            offered_by: data.metadata.aggregations.offered_by.filter(
+              (value) => value && displayOfferors.includes(value.key),
+            ),
+          },
+        },
+      }
+    },
+  })
   const { data: user } = useUserMe()
 
   const [mobileDrawerOpen, setMobileDrawerOpen] = React.useState(false)

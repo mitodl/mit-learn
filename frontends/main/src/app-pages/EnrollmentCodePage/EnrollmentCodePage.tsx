@@ -17,22 +17,38 @@ const InterstitialMessage = styled(Typography)(({ theme }) => ({
 }))
 
 const EnrollmentCodePage: React.FC<EnrollmentCodePage> = ({ code }) => {
+  const router = useRouter()
+
   const enrollment = useB2BAttachMutation({
     enrollment_code: code,
   })
-  const router = useRouter()
 
   const { isLoading: userLoading, data: user } = useQuery({
     ...userQueries.me(),
     staleTime: 0,
   })
 
-  const enrollAsync = enrollment.mutateAsync
   React.useEffect(() => {
-    if (user?.is_authenticated) {
-      enrollAsync().then(() => router.push(urls.DASHBOARD_HOME))
+    if (
+      user?.is_authenticated &&
+      !enrollment.isPending &&
+      !enrollment.isSuccess
+    ) {
+      enrollment.mutate()
     }
-  }, [user?.is_authenticated, enrollAsync, router])
+  }, [user?.is_authenticated, enrollment])
+
+  // Handle redirect based on response status code
+  // 201: Successfully attached to new contract(s) -> redirect to dashboard
+  // 200: Already attached to all contracts -> redirect to dashboard
+  // 404: Invalid or expired code -> show error
+  React.useEffect(() => {
+    if (enrollment.isSuccess) {
+      router.push(urls.DASHBOARD_HOME)
+    } else if (enrollment.isError) {
+      router.push(urls.DASHBOARD_HOME_ENROLLMENT_ERROR)
+    }
+  }, [enrollment.isSuccess, enrollment.isError, router])
 
   React.useEffect(() => {
     if (userLoading) {

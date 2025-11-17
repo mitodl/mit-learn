@@ -3,7 +3,7 @@
 from django.core.management.base import BaseCommand, CommandError
 
 from learning_resources_search.constants import LEARNING_RESOURCE_TYPES
-from main.utils import clear_search_cache, now_in_utc
+from main.utils import clear_views_cache, now_in_utc
 from vector_search.tasks import embed_learning_resources_by_id, start_embed_resources
 from vector_search.utils import (
     create_qdrant_collections,
@@ -104,7 +104,7 @@ class Command(BaseCommand):
         if error:
             msg = f"Geenerate embeddings errored: {error}"
             raise CommandError(msg)
-        clear_search_cache()
+        clear_views_cache()
         total_seconds = (now_in_utc() - start).total_seconds()
         self.stdout.write(
             f"Embeddings generated and stored, took {total_seconds} seconds"

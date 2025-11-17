@@ -158,7 +158,8 @@ type CoursewareButtonProps = {
   courseNoun: string
   "data-testid"?: string
 }
-const getCoursewareText = ({
+
+const getCoursewareTextAndIcon = ({
   endDate,
   enrollmentStatus,
   courseNoun,
@@ -168,16 +169,17 @@ const getCoursewareText = ({
   courseNoun: string
 }) => {
   if (!enrollmentStatus || enrollmentStatus === EnrollmentStatus.NotEnrolled) {
-    return `Start ${courseNoun}`
+    return { text: `Start ${courseNoun}`, endIcon: null }
   }
   if (
     (endDate && isInPast(endDate)) ||
     enrollmentStatus === EnrollmentStatus.Completed
   ) {
-    return `View ${courseNoun}`
+    return { text: `View ${courseNoun}`, endIcon: null }
   }
-  return `Continue ${courseNoun}`
+  return { text: "Continue", endIcon: <RiArrowRightLine /> }
 }
+
 const CoursewareButton = styled(
   ({
     coursewareId,
@@ -189,7 +191,7 @@ const CoursewareButton = styled(
     courseNoun,
     ...others
   }: CoursewareButtonProps) => {
-    const coursewareText = getCoursewareText({
+    const coursewareText = getCoursewareTextAndIcon({
       endDate,
       courseNoun,
       enrollmentStatus,
@@ -222,7 +224,7 @@ const CoursewareButton = styled(
           }
           {...others}
         >
-          {coursewareText}
+          {coursewareText.text}
         </Button>
       )
     } else if (hasStarted && href /* Link to course */) {
@@ -230,12 +232,12 @@ const CoursewareButton = styled(
         <ButtonLink
           size="small"
           variant="primary"
-          endIcon={<RiArrowRightLine />}
+          endIcon={coursewareText.endIcon}
           href={href}
           className={className}
           {...others}
         >
-          {coursewareText}
+          {coursewareText.text}
         </ButtonLink>
       )
     }
@@ -249,11 +251,11 @@ const CoursewareButton = styled(
         className={className}
         {...others}
       >
-        {coursewareText}
+        {coursewareText.text}
       </Button>
     )
   },
-)({ width: "142px" })
+)({ width: "124px" })
 
 const formatUpgradeTime = (daysFloat: number) => {
   if (daysFloat < 0) return ""

@@ -6,7 +6,11 @@ import { NodeViewWrapper } from "@tiptap/react"
 import { Button } from "../../tiptap-ui-primitive/button"
 import { CloseIcon } from "../../tiptap-icons/close-icon"
 import "./image-upload-node.scss"
-import { focusNextNode, isValidPosition } from "../../../lib/tiptap-utils"
+import {
+  focusNextNode,
+  isValidPosition,
+  generateUUID,
+} from "../../../lib/tiptap-utils"
 
 export interface FileItem {
   /**
@@ -95,7 +99,7 @@ function useFileUpload(options: UploadOptions) {
     }
 
     const abortController = new AbortController()
-    const fileId = crypto.randomUUID()
+    const fileId = generateUUID()
 
     const newFileItem: FileItem = {
       id: fileId,
@@ -471,12 +475,16 @@ export const ImageUploadNode: React.FC<NodeViewProps> = (props) => {
           }
         })
 
-        props.editor
-          .chain()
-          .focus()
-          .deleteRange({ from: pos, to: pos + props.node.nodeSize })
-          .insertContentAt(pos, imageNodes)
-          .run()
+        const chain = props.editor.chain().focus()
+
+        // Remove the upload placeholder node
+        chain.deleteRange({ from: pos, to: pos + props.node.nodeSize })
+
+        // ✅ Insert each image node one by one
+        imageNodes.forEach((node, index) => {
+          chain.insertContentAt(pos + index, node)
+        })
+        chain.run()
 
         focusNextNode(props.editor)
       }

@@ -15,7 +15,7 @@ const processFeatureFlags = () => {
   for (const [key, value] of Object.entries(process.env)) {
     if (key.startsWith(`NEXT_PUBLIC_${featureFlagPrefix}`)) {
       bootstrapFeatureFlags[
-        key.replace(`NEXT_PUBLIC_${featureFlagPrefix}`, "")
+        key.replace(`NEXT_PUBLIC_${featureFlagPrefix}`, "").replaceAll("_", "-")
       ] = value === "True" ? true : JSON.stringify(value)
     }
   }

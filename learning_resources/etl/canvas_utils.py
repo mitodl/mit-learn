@@ -114,7 +114,10 @@ def parse_module_meta(course_archive_path: str) -> dict:
     """
     Parse module_meta.xml and return publish/active status of resources.
     """
+
     with zipfile.ZipFile(course_archive_path, "r") as course_archive:
+        if "course_settings/module_meta.xml" not in course_archive.namelist():
+            return {"active": [], "unpublished": []}
         module_xml = course_archive.read("course_settings/module_meta.xml")
         manifest_xml = course_archive.read("imsmanifest.xml")
     resource_map = extract_resources_by_identifierref(manifest_xml)
@@ -412,6 +415,8 @@ def parse_context_xml(course_archive_path: str) -> dict:
     Parse course_settings/context.xml and return context info
     """
     with zipfile.ZipFile(course_archive_path, "r") as course_archive:
+        if "course_settings/context.xml" not in course_archive.namelist():
+            return {}
         context = course_archive.read("course_settings/context.xml")
     root = ElementTree.fromstring(context)
     context_info = {}

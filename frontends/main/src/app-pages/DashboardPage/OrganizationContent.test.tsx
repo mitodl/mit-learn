@@ -530,9 +530,8 @@ describe("OrganizationContent", () => {
       // Check that the card displays information from the correct course run
       const coursewareButton = within(card).getByTestId("courseware-button")
 
-      // The courseware button shows different text based on course type and enrollment status
-      // For enrolled users in started courses, it shows "Continue Course" or "Continue Module"
-      expect(coursewareButton).toHaveTextContent(/Continue (Course|Module)/i)
+      // The courseware button shows "Continue" for enrolled users in started courses
+      expect(coursewareButton).toHaveTextContent("Continue")
 
       // Verify the courseware button has the correct href from the contract run
       // Only check href if the course has started and user is enrolled
