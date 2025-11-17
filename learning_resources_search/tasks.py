@@ -649,7 +649,6 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):  # noq
                 )
             ]
 
-
         for resource_type in set(LEARNING_RESOURCE_TYPES) - {COURSE_TYPE}:
             if resource_type in indexes:
                 index_tasks = index_tasks + [

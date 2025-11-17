@@ -26,8 +26,8 @@ from learning_resources_search.constants import (
     COMBINED_INDEX,
     CONTENT_FILE_TYPE,
     COURSE_TYPE,
-    PROGRAM_TYPE,
     LEARNING_RESOURCE_TYPES,
+    PROGRAM_TYPE,
     IndexestoUpdate,
 )
 from learning_resources_search.exceptions import ReindexError, RetryError
