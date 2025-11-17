@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.47.12
+Version 0.47.12 (Released November 17, 2025)
 ---------------
 
 - chore(deps): update dependency bpython to ^0.26 (#2668)
