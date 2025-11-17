@@ -7,6 +7,7 @@ import styled from "@emotion/styled"
 import { EditorContent } from "@tiptap/react"
 import type { Editor } from "@tiptap/core"
 import { ImageUploadButton } from "./components/tiptap-ui/image-upload-button"
+import { MediaEmbedButton } from "./components/tiptap-ui/media-embed/media-embed-button"
 
 // --- UI Primitives ---
 import { Spacer } from "./components/tiptap-ui-primitive/spacer"
@@ -59,7 +60,10 @@ const StyledEditorContent = styled(EditorContent)<{ readOnly: boolean }>(
   }),
 )
 
-export const MainToolbarContent = () => {
+interface TiptapEditorToolbarProps {
+  editor: Editor
+}
+export const MainToolbarContent = ({ editor }: TiptapEditorToolbarProps) => {
   return (
     <>
       <Spacer />
@@ -108,6 +112,9 @@ export const MainToolbarContent = () => {
 
       <ToolbarGroup>
         <ImageUploadButton text="Add" />
+      </ToolbarGroup>
+      <ToolbarGroup>
+        <MediaEmbedButton editor={editor} text="Embed" />
       </ToolbarGroup>
       <Spacer />
     </>
