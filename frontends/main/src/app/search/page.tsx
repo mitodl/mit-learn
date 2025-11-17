@@ -28,6 +28,7 @@ const Page: React.FC<PageProps<"/search">> = async ({ searchParams }) => {
   }
 
   const params = getSearchParams({
+    // @ts-expect-error -- this will error until mitodl/mit-learn-api-axios is updated
     requestParams: validateRequestParams(search),
     constantSearchParams: {},
     facetNames,
