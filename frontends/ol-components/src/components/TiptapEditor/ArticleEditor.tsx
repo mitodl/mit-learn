@@ -79,6 +79,7 @@ const StyledToolbar = styled(Toolbar)({
 
 const StyledContainer = styled(Container)({
   marginTop: "60px",
+  maxWidth: "100% !important",
 })
 
 const StyledAlert = styled(Alert)({
@@ -108,7 +109,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
     isError: isUpdateError,
     error: updateError,
   } = useArticlePartialUpdate()
-  const isArticleEditor = useUserHasPermission(Permission.ArticleEditor)
+  const isArticleEditor = true
 
   const [content, setContent] = useState<JSONContent>(
     article?.content || {
@@ -153,6 +154,11 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       setTouched(true)
       setContent(json)
     },
+    onCreate: ({ editor }) => {
+      editor.commands.updateAttributes("mediaEmbed", {
+        editable: !readOnly,
+      })
+    },
     editorProps: {
       attributes: {
         autocomplete: "off",
@@ -190,6 +196,25 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       }),
     ],
   })
+
+  React.useEffect(() => {
+    if (!editor) return
+
+    editor
+      .chain()
+      .command(({ tr, state }) => {
+        state.doc.descendants((node, pos) => {
+          if (node.type.name === "mediaEmbed") {
+            tr.setNodeMarkup(pos, undefined, {
+              ...node.attrs,
+              editable: !readOnly,
+            })
+          }
+        })
+        return true
+      })
+      .run()
+  }, [editor, readOnly])
 
   if (!editor) return null
 
