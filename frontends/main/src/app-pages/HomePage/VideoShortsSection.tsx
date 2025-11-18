@@ -2,7 +2,7 @@ import React, { useState } from "react"
 import Image from "next/image"
 import { Container, Typography, Card, styled } from "ol-components"
 import { CarouselV2 } from "ol-components/CarouselV2"
-import { useVideoShortsList, type VideoShort } from "api/hooks/videoShorts"
+import { useVideoShortsList } from "api/hooks/videoShorts"
 import VideoShortsModal from "./VideoShortsModal"
 
 const Section = styled.section(({ theme }) => ({
@@ -52,10 +52,12 @@ const CarouselSlide = styled.div<{ width: number; height: number }>(
 )
 
 const VideoShortsSection = () => {
-  const { data } = useVideoShortsList()
+  const { data, isLoading } = useVideoShortsList()
 
   const [showModal, setShowModal] = useState(false)
   const [videoIndex, setVideoIndex] = useState(0)
+
+  if (isLoading || !data?.length) return null
 
   return (
     <Section>
@@ -63,7 +65,7 @@ const VideoShortsSection = () => {
         {showModal ? (
           <VideoShortsModal
             startIndex={videoIndex}
-            videoData={data as VideoShort[]}
+            videoData={data}
             onClose={() => setShowModal(false)}
           />
         ) : null}
@@ -76,7 +78,7 @@ const VideoShortsSection = () => {
           </Typography>
         </Header>
         <StyledCarouselV2>
-          {data?.map((item: VideoShort, index: number) => (
+          {data?.map((video, index: number) => (
             <CarouselSlide width={235} height={235 / ASPECT_RATIO} key={index}>
               {/* 235 is our fixed width to ensure slides align with the container edge */}
               <Card
@@ -90,12 +92,11 @@ const VideoShortsSection = () => {
                     <Image
                       width={
                         (235 / ASPECT_RATIO) *
-                        (item.snippet.thumbnails.high.width /
-                          item.snippet.thumbnails.high.height)
+                        (video.thumbnail_width / video.thumbnail_height)
                       }
                       height={235 / ASPECT_RATIO}
-                      src={item.snippet.thumbnails.high.url}
-                      alt={item.snippet.title}
+                      src={video.thumbnail_url}
+                      alt={video.title}
                     />
                   </CardContent>
                 </Card.Content>

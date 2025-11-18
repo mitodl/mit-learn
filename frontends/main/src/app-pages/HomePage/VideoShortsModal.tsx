@@ -4,7 +4,7 @@ import { CarouselV2Vertical } from "ol-components/CarouselV2Vertical"
 import { RiCloseLine, RiVolumeMuteLine, RiVolumeUpLine } from "@remixicon/react"
 import { ActionButton } from "@mitodl/smoot-design"
 import { useWindowDimensions } from "ol-utilities"
-import type { VideoShort } from "api/hooks/videoShorts"
+import type { VideoShort } from "api/v0"
 
 const Overlay = styled.div(({ theme }) => ({
   position: "fixed",
@@ -219,7 +219,7 @@ const VideoShortsModal = ({
         initialSlide={startIndex}
         onSlidesInView={onSlidesInView}
       >
-        {videoData?.map((item: VideoShort, index: number) => (
+        {videoData?.map((video: VideoShort, index: number) => (
           <CarouselSlide
             key={index}
             width={(height - 60) * (9 / 16)}
@@ -236,8 +236,7 @@ const VideoShortsModal = ({
                   }
                 }}
                 onClick={handleVideoClick}
-                // TODO: Using a temporary bucket on GCP owned by jk
-                src={`https://storage.googleapis.com/mit-open-learning/${item.id.videoId}.mp4`}
+                src={video.video_url}
                 autoPlay
                 muted
                 playsInline
