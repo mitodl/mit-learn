@@ -5888,6 +5888,25 @@ files = [
 ]
 
 [[package]]
+name = "opt-einsum"
+version = "3.3.0"
+description = "Optimizing numpys einsum function"
+optional = false
+python-versions = ">=3.5"
+groups = ["main"]
+files = [
+    {file = "opt_einsum-3.3.0-py3-none-any.whl", hash = "sha256:2455e59e3947d3c275477df7f5205b30635e266fe6dc300e3d9f9646bfcea147"},
+    {file = "opt_einsum-3.3.0.tar.gz", hash = "sha256:59f6475f77bbc37dcf7cd748519c0ec60722e91e63ca114e68821c0c54a46549"},
+]
+
+[package.dependencies]
+numpy = ">=1.7"
+
+[package.extras]
+docs = ["numpydoc", "sphinx (==1.2.3)", "sphinx-rtd-theme", "sphinxcontrib-napoleon"]
+tests = ["pytest", "pytest-cov", "pytest-pep8"]
+
+[[package]]
 name = "orjson"
 version = "3.10.18"
 description = "Fast, correct Python JSON library supporting dataclasses, datetimes, and numpy"
@@ -5996,6 +6015,46 @@ files = [
     {file = "packaging-24.2-py3-none-any.whl", hash = "sha256:09abb1bccd265c01f4a3aa3f7a7db064b36514d2cba19a2f694fe6150451a759"},
     {file = "packaging-24.2.tar.gz", hash = "sha256:c228a6dc5e932d346bc5739379109d49e8853dd8223571c7c5b55260edc0b97f"},
 ]
+
+[[package]]
+name = "paddlepaddle"
+version = "3.2.0"
+description = "Parallel Distributed Deep Learning"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "paddlepaddle-3.2.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:cf97097b64aa2bf2264a8d53524f7d282761965099b71c823201b1039750d9be"},
+    {file = "paddlepaddle-3.2.0-cp310-cp310-manylinux1_x86_64.whl", hash = "sha256:dad93d9089b7ba1c8cd7f6cca65a87f1a8e951af7fb5459a457ab121f2b35e5d"},
+    {file = "paddlepaddle-3.2.0-cp310-cp310-manylinux2014_aarch64.whl", hash = "sha256:1059c0f32eeae7e678e98b4ceae4ec54ce20b019700a6f9cc0ea0f46609499b5"},
+    {file = "paddlepaddle-3.2.0-cp310-cp310-win_amd64.whl", hash = "sha256:e5fc01c196cffdd039694964e925b744dc315fbc36d214b066a867ba7f3d9da7"},
+    {file = "paddlepaddle-3.2.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:beb7ce56e201bc197e67ad77097bc4fc92df9b721c50c44506f03368d13f0046"},
+    {file = "paddlepaddle-3.2.0-cp311-cp311-manylinux1_x86_64.whl", hash = "sha256:83dd7f4a29bd20fa13fc1cb96a6febc175e9869f21e29681b0310c75748cc301"},
+    {file = "paddlepaddle-3.2.0-cp311-cp311-manylinux2014_aarch64.whl", hash = "sha256:cd126f0fbf19a78618bdacd1e923f2f89ea9841151dc79be52db845ec58669ad"},
+    {file = "paddlepaddle-3.2.0-cp311-cp311-win_amd64.whl", hash = "sha256:0d2f9e4c2249e5e60267e79f7dff81e14493bea5c145c66f2d836e9e319a62b5"},
+    {file = "paddlepaddle-3.2.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:ac334af72d1b0d49d4c933cfd4eb42d73ec2dc7a6aaf2248c628643d419b6da7"},
+    {file = "paddlepaddle-3.2.0-cp312-cp312-manylinux1_x86_64.whl", hash = "sha256:2c17f675a25ebd0675f703f7b82777ea92db0c360bd55a5c6b2dfaad7bc3f260"},
+    {file = "paddlepaddle-3.2.0-cp312-cp312-manylinux2014_aarch64.whl", hash = "sha256:4ce514114af7671875fc4927ea005afb9d5d0fd777aeb56a1078d22f7f4eb3fb"},
+    {file = "paddlepaddle-3.2.0-cp312-cp312-win_amd64.whl", hash = "sha256:918e69c98a1310db08610f28a2d0812ea779ec819053c44cc55ce7dc72ab6ee6"},
+    {file = "paddlepaddle-3.2.0-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:38184e1ea7fd7bf03883ea61f45619b9712d92c13ad1fa16934ea9e0d6d3e991"},
+    {file = "paddlepaddle-3.2.0-cp313-cp313-manylinux1_x86_64.whl", hash = "sha256:fa2aecd061424350f6770a83dda079691f7224635cff276eaef4e3e17440039d"},
+    {file = "paddlepaddle-3.2.0-cp313-cp313-manylinux2014_aarch64.whl", hash = "sha256:2aa0e502f6dd284eda21c287d326454dfa26acca88c23aa0ac581d1ef98318c5"},
+    {file = "paddlepaddle-3.2.0-cp313-cp313-win_amd64.whl", hash = "sha256:5f59640901b44c99f1b03ec89f1785a66b04867d16f6d764908534dc07149418"},
+    {file = "paddlepaddle-3.2.0-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:20d1872d36a3d8989e6b351b25f79142cbac449c1edd78dc90ce615f319728f7"},
+    {file = "paddlepaddle-3.2.0-cp39-cp39-manylinux1_x86_64.whl", hash = "sha256:58645c66f26aa364a1ca26ead3a1acdf5f80a78bdb2d82c3c616b06fe826383e"},
+    {file = "paddlepaddle-3.2.0-cp39-cp39-manylinux2014_aarch64.whl", hash = "sha256:739dc21174544bb8d7f3b751cd7ac30212993fbcfd6defcd3b60d39845a32282"},
+    {file = "paddlepaddle-3.2.0-cp39-cp39-win_amd64.whl", hash = "sha256:ee3970ebbdcd192616812df3c2bf925368430d8bab9e963516ef305b692e07aa"},
+]
+
+[package.dependencies]
+httpx = "*"
+networkx = "*"
+numpy = ">=1.21"
+opt-einsum = "3.3.0"
+Pillow = "*"
+protobuf = ">=3.20.2"
+safetensors = ">=0.6.0"
+typing-extensions = "*"
 
 [[package]]
 name = "pandas"
@@ -8241,6 +8300,45 @@ botocore = ">=1.37.4,<2.0a.0"
 crt = ["botocore[crt] (>=1.37.4,<2.0a.0)"]
 
 [[package]]
+name = "safetensors"
+version = "0.6.2"
+description = ""
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "safetensors-0.6.2-cp38-abi3-macosx_10_12_x86_64.whl", hash = "sha256:9c85ede8ec58f120bad982ec47746981e210492a6db876882aa021446af8ffba"},
+    {file = "safetensors-0.6.2-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:d6675cf4b39c98dbd7d940598028f3742e0375a6b4d4277e76beb0c35f4b843b"},
+    {file = "safetensors-0.6.2-cp38-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:1d2d2b3ce1e2509c68932ca03ab8f20570920cd9754b05063d4368ee52833ecd"},
+    {file = "safetensors-0.6.2-cp38-abi3-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:93de35a18f46b0f5a6a1f9e26d91b442094f2df02e9fd7acf224cfec4238821a"},
+    {file = "safetensors-0.6.2-cp38-abi3-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:89a89b505f335640f9120fac65ddeb83e40f1fd081cb8ed88b505bdccec8d0a1"},
+    {file = "safetensors-0.6.2-cp38-abi3-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:fc4d0d0b937e04bdf2ae6f70cd3ad51328635fe0e6214aa1fc811f3b576b3bda"},
+    {file = "safetensors-0.6.2-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:8045db2c872db8f4cbe3faa0495932d89c38c899c603f21e9b6486951a5ecb8f"},
+    {file = "safetensors-0.6.2-cp38-abi3-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:81e67e8bab9878bb568cffbc5f5e655adb38d2418351dc0859ccac158f753e19"},
+    {file = "safetensors-0.6.2-cp38-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:b0e4d029ab0a0e0e4fdf142b194514695b1d7d3735503ba700cf36d0fc7136ce"},
+    {file = "safetensors-0.6.2-cp38-abi3-musllinux_1_2_armv7l.whl", hash = "sha256:fa48268185c52bfe8771e46325a1e21d317207bcabcb72e65c6e28e9ffeb29c7"},
+    {file = "safetensors-0.6.2-cp38-abi3-musllinux_1_2_i686.whl", hash = "sha256:d83c20c12c2d2f465997c51b7ecb00e407e5f94d7dec3ea0cc11d86f60d3fde5"},
+    {file = "safetensors-0.6.2-cp38-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:d944cea65fad0ead848b6ec2c37cc0b197194bec228f8020054742190e9312ac"},
+    {file = "safetensors-0.6.2-cp38-abi3-win32.whl", hash = "sha256:cab75ca7c064d3911411461151cb69380c9225798a20e712b102edda2542ddb1"},
+    {file = "safetensors-0.6.2-cp38-abi3-win_amd64.whl", hash = "sha256:c7b214870df923cbc1593c3faee16bec59ea462758699bd3fee399d00aac072c"},
+    {file = "safetensors-0.6.2.tar.gz", hash = "sha256:43ff2aa0e6fa2dc3ea5524ac7ad93a9839256b8703761e76e2d0b2a3fa4f15d9"},
+]
+
+[package.extras]
+all = ["safetensors[jax]", "safetensors[numpy]", "safetensors[paddlepaddle]", "safetensors[pinned-tf]", "safetensors[quality]", "safetensors[testing]", "safetensors[torch]"]
+dev = ["safetensors[all]"]
+jax = ["flax (>=0.6.3)", "jax (>=0.3.25)", "jaxlib (>=0.3.25)", "safetensors[numpy]"]
+mlx = ["mlx (>=0.0.9)"]
+numpy = ["numpy (>=1.21.6)"]
+paddlepaddle = ["paddlepaddle (>=2.4.1)", "safetensors[numpy]"]
+pinned-tf = ["safetensors[numpy]", "tensorflow (==2.18.0)"]
+quality = ["ruff"]
+tensorflow = ["safetensors[numpy]", "tensorflow (>=2.11.0)"]
+testing = ["h5py (>=3.7.0)", "huggingface-hub (>=0.12.1)", "hypothesis (>=6.70.2)", "pytest (>=7.2.0)", "pytest-benchmark (>=4.0.0)", "safetensors[numpy]", "setuptools-rust (>=1.5.2)"]
+testingfree = ["huggingface-hub (>=0.12.1)", "hypothesis (>=6.70.2)", "pytest (>=7.2.0)", "pytest-benchmark (>=4.0.0)", "safetensors[numpy]", "setuptools-rust (>=1.5.2)"]
+torch = ["safetensors[numpy]", "torch (>=1.10)"]
+
+[[package]]
 name = "safety"
 version = "3.2.3"
 description = "Checks installed dependencies for known vulnerabilities and licenses."
@@ -9786,4 +9884,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.1"
 python-versions = "~3.12"
-content-hash = "a6a8fce5ca01b42adb4044c60ae3abdec210d439c8fbd573ba63b91b82927867"
+content-hash = "ad9c0ead085596935c1ee4c8498798f3fdfd07652b31e6a29d17cdda8fb5ef4a"
