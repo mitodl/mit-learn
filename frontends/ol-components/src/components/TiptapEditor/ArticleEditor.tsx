@@ -61,6 +61,7 @@ const ViewContainer = styled.div({
 
 const Title = styled(Typography)<TypographyProps>({
   margin: "60px auto",
+  maxWidth: "1000px",
 })
 
 const TitleInput = styled(Input)({
@@ -79,7 +80,6 @@ const StyledToolbar = styled(Toolbar)({
 
 const StyledContainer = styled(Container)({
   marginTop: "60px",
-  maxWidth: "100% !important",
 })
 
 const StyledAlert = styled(Alert)({
@@ -109,7 +109,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
     isError: isUpdateError,
     error: updateError,
   } = useArticlePartialUpdate()
-  const isArticleEditor = true
+  const isArticleEditor = useUserHasPermission(Permission.ArticleEditor)
 
   const [content, setContent] = useState<JSONContent>(
     article?.content || {

@@ -50,7 +50,7 @@ const StyledEditorContent = styled(EditorContent)<{ readOnly: boolean }>(
     margin: "20px auto",
     ...(readOnly
       ? {
-          maxWidth: "100%",
+          maxWidth: "1000px",
           backgroundColor: "transparent",
           ".tiptap.ProseMirror.simple-editor": {
             padding: "0",

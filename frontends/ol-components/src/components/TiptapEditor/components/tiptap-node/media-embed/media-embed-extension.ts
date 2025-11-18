@@ -25,6 +25,16 @@ export const MediaEmbed = Node.create({
       allowfullscreen: { default: "true" },
       float: { default: null }, // ← NEW ("left" | "right" | null)
       editable: { default: true },
+      layout: {
+        default: "default", // 👈 NEW!
+      },
+      caption: {
+        default: "",
+        parseHTML: (element) => element.getAttribute("data-caption") || "",
+        renderHTML: (attrs) => ({
+          "data-caption": attrs.caption,
+        }),
+      },
     }
   },
 
