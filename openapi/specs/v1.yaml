@@ -4371,15 +4371,16 @@ paths:
         name: search_mode
         schema:
           enum:
+          - phrase
           - best_fields
           - most_fields
-          - phrase
+          - hybrid
           type: string
           minLength: 1
         description: "The open search search type for text queries             \n\n\
-          * `best_fields` - best_fields\n* `most_fields` - most_fields\n* `phrase`\
-          \ - phrase\n\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n\
-          * `phrase` - phrase"
+          * `phrase` - phrase\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n\
+          * `hybrid` - hybrid\n\n* `phrase` - phrase\n* `best_fields` - best_fields\n\
+          * `most_fields` - most_fields\n* `hybrid` - hybrid"
       - in: query
         name: slop
         schema:
@@ -4877,15 +4878,16 @@ paths:
         name: search_mode
         schema:
           enum:
+          - phrase
           - best_fields
           - most_fields
-          - phrase
+          - hybrid
           type: string
           minLength: 1
         description: "The open search search type for text queries             \n\n\
-          * `best_fields` - best_fields\n* `most_fields` - most_fields\n* `phrase`\
-          \ - phrase\n\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n\
-          * `phrase` - phrase"
+          * `phrase` - phrase\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n\
+          * `hybrid` - hybrid\n\n* `phrase` - phrase\n* `best_fields` - best_fields\n\
+          * `most_fields` - most_fields\n* `hybrid` - hybrid"
       - in: query
         name: slop
         schema:
@@ -5408,15 +5410,16 @@ paths:
         name: search_mode
         schema:
           enum:
+          - phrase
           - best_fields
           - most_fields
-          - phrase
+          - hybrid
           type: string
           minLength: 1
         description: "The open search search type for text queries             \n\n\
-          * `best_fields` - best_fields\n* `most_fields` - most_fields\n* `phrase`\
-          \ - phrase\n\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n\
-          * `phrase` - phrase"
+          * `phrase` - phrase\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n\
+          * `hybrid` - hybrid\n\n* `phrase` - phrase\n* `best_fields` - best_fields\n\
+          * `most_fields` - most_fields\n* `hybrid` - hybrid"
       - in: query
         name: slop
         schema:
@@ -5930,15 +5933,16 @@ paths:
         name: search_mode
         schema:
           enum:
+          - phrase
           - best_fields
           - most_fields
-          - phrase
+          - hybrid
           type: string
           minLength: 1
         description: "The open search search type for text queries             \n\n\
-          * `best_fields` - best_fields\n* `most_fields` - most_fields\n* `phrase`\
-          \ - phrase\n\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n\
-          * `phrase` - phrase"
+          * `phrase` - phrase\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n\
+          * `hybrid` - hybrid\n\n* `phrase` - phrase\n* `best_fields` - best_fields\n\
+          * `most_fields` - most_fields\n* `hybrid` - hybrid"
       - in: query
         name: slop
         schema:
@@ -13246,9 +13250,9 @@ components:
           allOf:
           - $ref: '#/components/schemas/SearchModeEnum'
           description: "The open search search type for text queries             \n\
-            \n* `best_fields` - best_fields\n* `most_fields` - most_fields\n* `phrase`\
-            \ - phrase\n\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n\
-            * `phrase` - phrase"
+            \n* `phrase` - phrase\n* `best_fields` - best_fields\n* `most_fields`\
+            \ - most_fields\n* `hybrid` - hybrid\n\n* `phrase` - phrase\n* `best_fields`\
+            \ - best_fields\n* `most_fields` - most_fields\n* `hybrid` - hybrid"
         slop:
           type: integer
           nullable: true
@@ -14907,22 +14911,26 @@ components:
       - title
     SearchModeEnum:
       enum:
+      - phrase
       - best_fields
       - most_fields
-      - phrase
+      - hybrid
       type: string
       description: |-
+        * `phrase` - phrase
         * `best_fields` - best_fields
         * `most_fields` - most_fields
-        * `phrase` - phrase
+        * `hybrid` - hybrid
 
+        * `phrase` - phrase
         * `best_fields` - best_fields
         * `most_fields` - most_fields
-        * `phrase` - phrase
+        * `hybrid` - hybrid
       x-enum-descriptions:
+      - phrase
       - best_fields
       - most_fields
-      - phrase
+      - hybrid
     SortbyEnum:
       enum:
       - featured
