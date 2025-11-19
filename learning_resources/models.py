@@ -574,7 +574,7 @@ class LearningResource(TimestampedModel):
                 ),
             )
 
-        # If no current enrollable run found, find the next upcoming run
+        # If no enrollable runs found, find the next upcoming run
         upcoming_runs = [
             run
             for run in published_runs
@@ -583,7 +583,7 @@ class LearningResource(TimestampedModel):
         if upcoming_runs:
             return min(upcoming_runs, key=lambda r: r.start_date)
 
-        # If current_run is still null, return the run with the latest start date
+        # No enrollable/upcoming runs, return run with the latest start date
         runs_with_dates = [run for run in published_runs if run.start_date]
         if runs_with_dates:
             return max(runs_with_dates, key=lambda r: r.start_date)
