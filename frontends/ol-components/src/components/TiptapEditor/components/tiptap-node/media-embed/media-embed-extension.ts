@@ -43,18 +43,7 @@ export const MediaEmbed = Node.create({
   },
 
   renderHTML({ HTMLAttributes }) {
-    const { float, ...rest } = HTMLAttributes
-
-    return [
-      "div",
-      {
-        style: `
-        float: ${float || "none"};
-        margin: ${float ? "0 12px 12px 0" : "12px 0"};
-      `,
-      },
-      ["iframe", rest],
-    ]
+    return ["iframe", mergeAttributes(HTMLAttributes)]
   },
 
   addCommands() {
