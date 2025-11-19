@@ -98,6 +98,17 @@ const TitleLink = styled(Link)(({ theme }) => ({
   },
 }))
 
+const TitleText = styled.div<{ clickable?: boolean }>(
+  ({ theme, clickable }) => ({
+    ...theme.typography.subtitle1,
+    color: theme.custom.colors.black,
+    cursor: clickable ? "pointer" : "default",
+    [theme.breakpoints.down("md")]: {
+      maxWidth: "calc(100% - 16px)",
+    },
+  }),
+)
+
 const MenuButton = styled(ActionButton)<{
   status?: EnrollmentStatus
 }>(({ theme, status }) => [
@@ -282,6 +293,8 @@ const CoursewareButton = styled(
   },
 )({ width: "124px" })
 
+const ProgramButton = styled(Button)({ width: "124px" })
+
 const formatUpgradeTime = (daysFloat: number) => {
   if (daysFloat < 0) return ""
   const days = Math.floor(daysFloat)
@@ -396,6 +409,7 @@ type DashboardCardProps = {
   contextMenuItems?: SimpleMenuItem[]
   isLoading?: boolean
   buttonHref?: string | null
+  onCtaClick?: (resource: DashboardResource) => void
 }
 
 const DashboardCard: React.FC<DashboardCardProps> = ({
@@ -409,41 +423,64 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   isLoading = false,
   buttonHref,
   titleAction,
+  onCtaClick,
 }) => {
   const oneClickEnroll = useOneClickEnroll()
 
-  // Type-specific logic
-  if (isDashboardCourse(dashboardResource)) {
-    const course = dashboardResource
-    const { title, marketingUrl, enrollment, run } = course
+  // Extract all conditional logic upfront
+  const isCourse = isDashboardCourse(dashboardResource)
+  const isProgram = isDashboardProgram(dashboardResource)
+  const isProgramCollection = isDashboardProgramCollection(dashboardResource)
 
-    const coursewareUrl = run.coursewareUrl
-    const titleHref =
-      titleAction === "marketing"
-        ? marketingUrl
-        : (coursewareUrl ?? marketingUrl)
-    const hasEnrolled =
-      enrollment?.status && enrollment.status !== EnrollmentStatus.NotEnrolled
-    const titleClick: React.MouseEventHandler | undefined =
-      titleAction === "courseware" && coursewareUrl && !hasEnrolled
-        ? (e) => {
-            e.preventDefault()
-            if (!course.coursewareId) return
-            oneClickEnroll.mutate({
-              href: coursewareUrl,
-              coursewareId: course.coursewareId,
-            })
-          }
-        : undefined
+  // Early return for unsupported types
+  if (isProgramCollection) {
+    return <div>Program collection display not yet implemented</div>
+  }
+  if (!isCourse && !isProgram) {
+    return null
+  }
 
-    const titleSection = isLoading ? (
-      <>
-        <Skeleton variant="text" width="95%" height={16} />
-        <Skeleton variant="text" width={120} height={16} />
-        <Skeleton variant="text" width={120} height={16} />
-      </>
-    ) : (
-      <>
+  // Extract resource-specific data with proper type narrowing
+  const title = dashboardResource.title
+  const marketingUrl = isCourse ? dashboardResource.marketingUrl : undefined
+  const enrollment = isCourse ? dashboardResource.enrollment : undefined
+  const run = isCourse ? dashboardResource.run : undefined
+  const coursewareId = isCourse ? dashboardResource.coursewareId : null
+  const _resourceId = isProgram ? dashboardResource.id : undefined
+
+  // Title link logic
+  const coursewareUrl = run?.coursewareUrl
+  const titleHref = isCourse
+    ? titleAction === "marketing"
+      ? marketingUrl
+      : (coursewareUrl ?? marketingUrl)
+    : undefined // Programs don't have a title link yet
+
+  const hasEnrolled =
+    enrollment?.status && enrollment.status !== EnrollmentStatus.NotEnrolled
+
+  const titleClick: React.MouseEventHandler | undefined =
+    isCourse && titleAction === "courseware" && coursewareUrl && !hasEnrolled
+      ? (e) => {
+          e.preventDefault()
+          if (!coursewareId) return
+          oneClickEnroll.mutate({
+            href: coursewareUrl,
+            coursewareId: coursewareId,
+          })
+        }
+      : undefined
+
+  // Build sections
+  const titleSection = isLoading ? (
+    <>
+      <Skeleton variant="text" width="95%" height={16} />
+      <Skeleton variant="text" width={120} height={16} />
+      <Skeleton variant="text" width={120} height={16} />
+    </>
+  ) : (
+    <>
+      {titleHref ? (
         <TitleLink
           size="medium"
           color="black"
@@ -452,69 +489,93 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         >
           {title}
         </TitleLink>
-        {enrollment?.status === EnrollmentStatus.Completed &&
-        run.certificate?.link ? (
-          <SubtitleLink href={run.certificate.link}>
-            {<RiAwardLine size="16px" />}
-            View Certificate
-          </SubtitleLink>
-        ) : null}
-        {enrollment?.mode !== EnrollmentMode.Verified && offerUpgrade ? (
-          <UpgradeBanner
-            data-testid="upgrade-root"
-            canUpgrade={run.canUpgrade ?? false}
-            certificateUpgradeDeadline={run.certificateUpgradeDeadline}
-            certificateUpgradePrice={run.certificateUpgradePrice}
-          />
-        ) : null}
-      </>
-    )
-    const buttonSection = isLoading ? (
-      <Skeleton variant="rectangular" width={120} height={32} />
-    ) : (
-      <>
-        <EnrollmentStatusIndicator
-          status={enrollment?.status}
-          showNotComplete={showNotComplete}
+      ) : (
+        <TitleText>{title}</TitleText>
+      )}
+      {isCourse &&
+      enrollment?.status === EnrollmentStatus.Completed &&
+      run?.certificate?.link ? (
+        <SubtitleLink href={run.certificate.link}>
+          <RiAwardLine size="16px" />
+          View Certificate
+        </SubtitleLink>
+      ) : null}
+      {isCourse &&
+      enrollment?.mode !== EnrollmentMode.Verified &&
+      offerUpgrade ? (
+        <UpgradeBanner
+          data-testid="upgrade-root"
+          canUpgrade={run?.canUpgrade ?? false}
+          certificateUpgradeDeadline={run?.certificateUpgradeDeadline}
+          certificateUpgradePrice={run?.certificateUpgradePrice}
         />
-        <CoursewareButton
-          data-testid="courseware-button"
-          coursewareId={course.coursewareId}
-          startDate={run.startDate}
-          enrollmentStatus={enrollment?.status}
-          href={buttonHref ? buttonHref : run.coursewareUrl}
-          endDate={run.endDate}
-          courseNoun={courseNoun}
-        />
-      </>
-    )
-    const startDateSection = isLoading ? (
-      <Skeleton variant="text" width={100} height={24} />
-    ) : run.startDate ? (
-      <CourseStartCountdown startDate={run.startDate} />
-    ) : null
-    const menuItems = contextMenuItems.concat(
-      enrollment?.id ? getDefaultContextMenuItems(title, enrollment) : [],
-    )
-    const contextMenu = isLoading ? (
-      <Skeleton variant="rectangular" width={12} height={24} />
-    ) : (
-      <SimpleMenu
-        items={menuItems}
-        trigger={
-          <MenuButton
-            size="small"
-            variant="text"
-            aria-label="More options"
-            status={enrollment?.status}
-            hidden={menuItems.length === 0}
-          >
-            <RiMore2Line />
-          </MenuButton>
-        }
+      ) : null}
+    </>
+  )
+
+  const buttonSection = isLoading ? (
+    <Skeleton variant="rectangular" width={120} height={32} />
+  ) : isCourse ? (
+    <>
+      <EnrollmentStatusIndicator
+        status={enrollment?.status}
+        showNotComplete={showNotComplete}
       />
-    )
-    const desktopLayout = (
+      <CoursewareButton
+        data-testid="courseware-button"
+        coursewareId={coursewareId}
+        startDate={run?.startDate}
+        enrollmentStatus={enrollment?.status}
+        href={buttonHref ?? run?.coursewareUrl}
+        endDate={run?.endDate}
+        courseNoun={courseNoun}
+      />
+    </>
+  ) : isProgram ? (
+    <ProgramButton
+      size="small"
+      variant="primary"
+      onClick={onCtaClick ? () => onCtaClick(dashboardResource) : undefined}
+      disabled={!onCtaClick}
+    >
+      View Program
+    </ProgramButton>
+  ) : null
+
+  const startDateSection = isLoading ? (
+    <Skeleton variant="text" width={100} height={24} />
+  ) : isCourse && run?.startDate ? (
+    <CourseStartCountdown startDate={run.startDate} />
+  ) : null
+
+  const menuItems = contextMenuItems.concat(
+    isCourse && enrollment?.id
+      ? getDefaultContextMenuItems(title, enrollment)
+      : [],
+  )
+
+  const contextMenu = isLoading ? (
+    <Skeleton variant="rectangular" width={12} height={24} />
+  ) : (
+    <SimpleMenu
+      items={menuItems}
+      trigger={
+        <MenuButton
+          size="small"
+          variant="text"
+          aria-label="More options"
+          status={enrollment?.status}
+          hidden={menuItems.length === 0}
+        >
+          <RiMore2Line />
+        </MenuButton>
+      }
+    />
+  )
+
+  // Single return block with unified layout
+  return (
+    <>
       <CardRoot
         screenSize="desktop"
         data-testid="enrollment-card-desktop"
@@ -532,9 +593,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
           {startDateSection}
         </Stack>
       </CardRoot>
-    )
 
-    const mobileLayout = (
       <CardRoot
         screenSize="mobile"
         data-testid="enrollment-card-mobile"
@@ -565,27 +624,8 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
           </Stack>
         </Stack>
       </CardRoot>
-    )
-    return (
-      <>
-        {desktopLayout}
-        {mobileLayout}
-      </>
-    )
-  } else if (isDashboardProgram(dashboardResource)) {
-    const program = dashboardResource
-    // TODO: Implement program display logic
-    // This will show either:
-    // 1. First course from the program (with course title and courseware CTA)
-    // 2. Program title with a JavaScript handler CTA
-    return <div>Program display not yet implemented: {program.title}</div>
-  } else if (isDashboardProgramCollection(dashboardResource)) {
-    // TODO: Implement program collection display logic
-    return <div>Program collection display not yet implemented</div>
-  }
-
-  // Fallback for unknown types
-  return null
+    </>
+  )
 }
 
 export {
