@@ -11,9 +11,12 @@ import {
   theme,
 } from "ol-components"
 import { useQuery } from "@tanstack/react-query"
-import { userEnrollmentsToDashboardCourses } from "./transform"
+import {
+  programEnrollmentsToPrograms,
+  userEnrollmentsToDashboardCourses,
+} from "./transform"
 import { DashboardCard } from "./DashboardCard"
-import { DashboardCourse, EnrollmentStatus } from "./types"
+import { DashboardCourse, DashboardProgram, EnrollmentStatus } from "./types"
 import type { AxiosError } from "axios"
 
 const Wrapper = styled.div(({ theme }) => ({
@@ -120,14 +123,16 @@ const sortEnrollments = (resources: DashboardCourse[]) => {
 }
 
 interface EnrollmentExpandCollapseProps {
-  shownEnrollments: DashboardCourse[]
-  hiddenEnrollments: DashboardCourse[]
+  shownCourseRunEnrollments: DashboardCourse[]
+  hiddenCourseRunEnrollments: DashboardCourse[]
+  programEnrollments?: DashboardProgram[]
   isLoading?: boolean
 }
 
 const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
-  shownEnrollments,
-  hiddenEnrollments,
+  shownCourseRunEnrollments,
+  hiddenCourseRunEnrollments,
+  programEnrollments,
   isLoading,
 }) => {
   const [shown, setShown] = React.useState(false)
@@ -140,7 +145,7 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
   return (
     <>
       <EnrollmentsList itemSpacing={"16px"}>
-        {shownEnrollments.map((course) => (
+        {shownCourseRunEnrollments.map((course) => (
           <DashboardCardStyled
             titleAction="marketing"
             key={course.key}
@@ -150,12 +155,22 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
             isLoading={isLoading}
           />
         ))}
+        {programEnrollments?.map((program) => (
+          <DashboardCardStyled
+            titleAction="marketing"
+            key={program.key}
+            Component="li"
+            dashboardResource={program}
+            showNotComplete={false}
+            isLoading={isLoading}
+          />
+        ))}
       </EnrollmentsList>
-      {hiddenEnrollments.length === 0 ? null : (
+      {hiddenCourseRunEnrollments.length === 0 ? null : (
         <>
           <Collapse orientation="vertical" in={shown}>
             <HiddenEnrollmentsList itemSpacing={"16px"}>
-              {hiddenEnrollments.map((course) => (
+              {hiddenCourseRunEnrollments.map((course) => (
                 <DashboardCardStyled
                   titleAction="marketing"
                   key={course.key}
@@ -179,23 +194,33 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
 }
 
 const EnrollmentDisplay = () => {
-  const { data: enrolledCourses, isLoading } = useQuery({
-    ...enrollmentQueries.courseRunEnrollmentsList(),
-    select: userEnrollmentsToDashboardCourses,
-    throwOnError: (error) => {
-      const err = error as AxiosError<{ detail?: string }>
-      const status = err?.response?.status
-      if (
-        status === 403 &&
-        err.response?.data?.detail ===
-          "Authentication credentials were not provided."
-      ) {
-        // For now, we don't want to throw an error if the user is not authenticated.
-        return false
-      }
-      return true
-    },
-  })
+  const onError = (error: Error) => {
+    const err = error as AxiosError<{ detail?: string }>
+    const status = err?.response?.status
+    if (
+      status === 403 &&
+      err.response?.data?.detail ===
+        "Authentication credentials were not provided."
+    ) {
+      // For now, we don't want to throw an error if the user is not authenticated.
+      return false
+    }
+    return true
+  }
+
+  const { data: enrolledCourses, isLoading: courseEnrollmentsLoading } =
+    useQuery({
+      ...enrollmentQueries.courseRunEnrollmentsList(),
+      select: userEnrollmentsToDashboardCourses,
+      throwOnError: onError,
+    })
+
+  const { data: programEnrollments, isLoading: programEnrollmentsLoading } =
+    useQuery({
+      ...enrollmentQueries.programEnrollmentsList(),
+      select: programEnrollmentsToPrograms,
+      throwOnError: onError,
+    })
 
   const { completed, expired, started, notStarted } = sortEnrollments(
     enrolledCourses || [],
@@ -208,9 +233,10 @@ const EnrollmentDisplay = () => {
         My Learning
       </Title>
       <EnrollmentExpandCollapse
-        shownEnrollments={shownEnrollments}
-        hiddenEnrollments={expired}
-        isLoading={isLoading}
+        shownCourseRunEnrollments={shownEnrollments}
+        hiddenCourseRunEnrollments={expired}
+        programEnrollments={programEnrollments || []}
+        isLoading={courseEnrollmentsLoading || programEnrollmentsLoading}
       />
     </Wrapper>
   ) : null
