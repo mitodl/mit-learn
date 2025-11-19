@@ -1,0 +1,1203 @@
+0
+00:00:00,000 --> 00:00:02,009
+INSTRUCTOR: Hello, my name is Uma.
+
+1
+00:00:02,009 --> 00:00:04,910
+I'm a PhD candidate here at MIT, and I'll
+
+2
+00:00:04,910 --> 00:00:06,590
+be guiding you through this lecture
+
+3
+00:00:06,590 --> 00:00:10,290
+on multimodal, multitask machine learning in health care.
+
+4
+00:00:10,290 --> 00:00:12,260
+In this lecture, we'll explore how
+
+5
+00:00:12,260 --> 00:00:15,410
+combining different types of medical data, as you have seen
+
+6
+00:00:15,410 --> 00:00:17,570
+in previous lectures, such as images
+
+7
+00:00:17,570 --> 00:00:20,370
+and clinical notes, along with a new concept,
+
+8
+00:00:20,370 --> 00:00:24,110
+multitask learning, which makes multiple clinical predictions
+
+9
+00:00:24,110 --> 00:00:26,300
+simultaneously, can be integrated
+
+10
+00:00:26,300 --> 00:00:28,280
+to make better predictions.
+
+11
+00:00:28,280 --> 00:00:30,620
+To understand why multimodal, multitask
+
+12
+00:00:30,620 --> 00:00:32,659
+machine learning matters today, it's
+
+13
+00:00:32,659 --> 00:00:34,820
+useful to take a step back and look
+
+14
+00:00:34,820 --> 00:00:38,130
+at where we are with existing clinical support tools.
+
+15
+00:00:38,130 --> 00:00:40,100
+This chart that you see here lays out
+
+16
+00:00:40,100 --> 00:00:43,760
+several very well-known clinical models in terms of their two
+
+17
+00:00:43,760 --> 00:00:45,200
+key axes.
+
+18
+00:00:45,200 --> 00:00:48,440
+On the y-axis, we consider how general the data sources
+
+19
+00:00:48,440 --> 00:00:51,140
+are, from very simple demographic features
+
+20
+00:00:51,140 --> 00:00:53,480
+to rich high-dimensional modalities,
+
+21
+00:00:53,480 --> 00:00:57,290
+like images, language, and multisource data.
+
+22
+00:00:57,290 --> 00:00:59,610
+On the x-axis, we measure how general
+
+23
+00:00:59,610 --> 00:01:02,880
+the tasks are from a single clinical prediction
+
+24
+00:01:02,880 --> 00:01:06,000
+in a specific setting, to more ambitious models that
+
+25
+00:01:06,000 --> 00:01:08,910
+aim to make many predictions across multiple clinical
+
+26
+00:01:08,910 --> 00:01:09,870
+domains.
+
+27
+00:01:09,870 --> 00:01:12,330
+Every single reference here corresponds
+
+28
+00:01:12,330 --> 00:01:15,390
+to a landmark paper or system, and you'll
+
+29
+00:01:15,390 --> 00:01:18,060
+notice that most existing tools actually
+
+30
+00:01:18,060 --> 00:01:21,180
+cluster around the bottom left, which kind of correspond
+
+31
+00:01:21,180 --> 00:01:26,190
+to the single-task models that rely on very limited data types.
+
+32
+00:01:26,190 --> 00:01:28,240
+And even some of the more advanced models,
+
+33
+00:01:28,240 --> 00:01:32,820
+like those using general EHR data, image data, language data,
+
+34
+00:01:32,820 --> 00:01:35,520
+still actually operate within one clinical setting
+
+35
+00:01:35,520 --> 00:01:37,200
+or a problem class.
+
+36
+00:01:37,200 --> 00:01:40,500
+But more recent works, marked here in blue,
+
+37
+00:01:40,500 --> 00:01:43,630
+aims to actually push that boundary a little bit more,
+
+38
+00:01:43,630 --> 00:01:47,790
+which implies can we possibly learn across multiple data
+
+39
+00:01:47,790 --> 00:01:50,550
+sources and across multiple clinical tasks
+
+40
+00:01:50,550 --> 00:01:52,860
+at once and simultaneously.
+
+41
+00:01:52,860 --> 00:01:56,970
+In this module, we'll talk about how this paradigm shift, which
+
+42
+00:01:56,970 --> 00:01:59,760
+tours multimodal multitask machine learning,
+
+43
+00:01:59,760 --> 00:02:04,560
+can really help us build smarter models for healthcare decision
+
+44
+00:02:04,560 --> 00:02:05,520
+support.
+
+45
+00:02:05,520 --> 00:02:09,630
+To begin, let's take a look at how model selection is actually
+
+46
+00:02:09,630 --> 00:02:12,840
+traditionally done in health care machine learning.
+
+47
+00:02:12,840 --> 00:02:15,820
+Suppose we're trying to solve one clinical problem.
+
+48
+00:02:15,820 --> 00:02:18,540
+We would typically split the data set into training
+
+49
+00:02:18,540 --> 00:02:21,240
+and testing sets, run cross-validation
+
+50
+00:02:21,240 --> 00:02:24,000
+over several model types, and then select the model
+
+51
+00:02:24,000 --> 00:02:25,770
+with the best average performance
+
+52
+00:02:25,770 --> 00:02:27,610
+on that particular task.
+
+53
+00:02:27,610 --> 00:02:30,730
+And after verifying it performs well on a test set,
+
+54
+00:02:30,730 --> 00:02:32,440
+we'll deploy it in practice.
+
+55
+00:02:32,440 --> 00:02:35,340
+So this is a very solid and very widely adopted
+
+56
+00:02:35,340 --> 00:02:38,980
+approach, both in academia as well as in industry.
+
+57
+00:02:38,980 --> 00:02:40,630
+But here's a small catch.
+
+58
+00:02:40,630 --> 00:02:44,490
+It only treats each clinical task in isolation.
+
+59
+00:02:44,490 --> 00:02:47,160
+For instance, we might separately build models
+
+60
+00:02:47,160 --> 00:02:50,410
+for deterioration prediction, procedure scheduling,
+
+61
+00:02:50,410 --> 00:02:54,150
+surgical planning, or even domestic violence prevention.
+
+62
+00:02:54,150 --> 00:02:56,560
+And each of them gets its own model
+
+63
+00:02:56,560 --> 00:02:58,850
+being trained completely independently,
+
+64
+00:02:58,850 --> 00:03:02,330
+optimized independently, and being deployed independently.
+
+65
+00:03:02,330 --> 00:03:04,640
+But what are we really leaving on the table
+
+66
+00:03:04,640 --> 00:03:06,800
+with this in-silo approach?
+
+67
+00:03:06,800 --> 00:03:10,640
+In many cases, these tasks are not really truly independent,
+
+68
+00:03:10,640 --> 00:03:12,970
+but rather patterns that help predict
+
+69
+00:03:12,970 --> 00:03:17,120
+deterioration could potentially signal a longer length of stay.
+
+70
+00:03:17,120 --> 00:03:19,870
+So think about this patient's condition simply
+
+71
+00:03:19,870 --> 00:03:22,850
+not being very healthy and they deteriorated,
+
+72
+00:03:22,850 --> 00:03:26,720
+which will prolong the entire stay of their hospital
+
+73
+00:03:26,720 --> 00:03:27,340
+admission.
+
+74
+00:03:27,340 --> 00:03:30,760
+Information being very useful for procedure scheduling
+
+75
+00:03:30,760 --> 00:03:34,430
+might also overlap with insights from surgical planning.
+
+76
+00:03:34,430 --> 00:03:39,190
+So the question becomes, if I stick with the classical model
+
+77
+00:03:39,190 --> 00:03:41,990
+selection, one task, one model at a time,
+
+78
+00:03:41,990 --> 00:03:45,500
+what are some of the shared signals that we are discarding?
+
+79
+00:03:45,500 --> 00:03:49,210
+Can we potentially do better by learning across these tasks
+
+80
+00:03:49,210 --> 00:03:50,150
+jointly?
+
+81
+00:03:50,150 --> 00:03:53,840
+So let's try to dive into one very concrete example,
+
+82
+00:03:53,840 --> 00:03:54,820
+cardiology.
+
+83
+00:03:54,820 --> 00:03:57,550
+Traditionally, as we have said, AI models
+
+84
+00:03:57,550 --> 00:04:01,820
+are very much built to predict a single cardiac condition.
+
+85
+00:04:01,820 --> 00:04:03,760
+For instance, we might train a model
+
+86
+00:04:03,760 --> 00:04:05,710
+to predict ejection fraction based
+
+87
+00:04:05,710 --> 00:04:08,470
+on some EKG data or a separate model
+
+88
+00:04:08,470 --> 00:04:10,580
+to predict sudden cardiac death.
+
+89
+00:04:10,580 --> 00:04:13,280
+So these are very powerful tools in isolation.
+
+90
+00:04:13,280 --> 00:04:16,700
+And as we see in literature, as well as in practice,
+
+91
+00:04:16,700 --> 00:04:19,430
+a lot of their performances are very, very strong.
+
+92
+00:04:19,430 --> 00:04:21,620
+But they are missing something critical,
+
+93
+00:04:21,620 --> 00:04:26,260
+which are these clinical context doesn't always happen in silo.
+
+94
+00:04:26,260 --> 00:04:29,020
+They think about in terms of the patient
+
+95
+00:04:29,020 --> 00:04:32,180
+and how these risks actually interact with each other.
+
+96
+00:04:32,180 --> 00:04:35,060
+So instead of building a single model per outcome,
+
+97
+00:04:35,060 --> 00:04:38,440
+we actually aim to build models that can simultaneously
+
+98
+00:04:38,440 --> 00:04:41,420
+predict multiple cardiac endpoints
+
+99
+00:04:41,420 --> 00:04:45,160
+and in this case, a single model that jointly predicts ejection
+
+100
+00:04:45,160 --> 00:04:47,020
+fraction and sudden cardiac death
+
+101
+00:04:47,020 --> 00:04:49,820
+from the same time series and EKG data.
+
+102
+00:04:49,820 --> 00:04:51,230
+So why does this matter?
+
+103
+00:04:51,230 --> 00:04:53,390
+Because shared physiological signals,
+
+104
+00:04:53,390 --> 00:04:57,560
+like irregular rhythms, waveform patterns, or vital sign shift,
+
+105
+00:04:57,560 --> 00:05:00,750
+may be relevant across multiple conditions.
+
+106
+00:05:00,750 --> 00:05:03,480
+And by training on these tasks together,
+
+107
+00:05:03,480 --> 00:05:05,570
+the model can learn shared representations
+
+108
+00:05:05,570 --> 00:05:08,030
+and become more clinically insightful.
+
+109
+00:05:08,030 --> 00:05:11,970
+We also see a very similar opportunity in oncology,
+
+110
+00:05:11,970 --> 00:05:15,050
+where most existing AI models in cancer care
+
+111
+00:05:15,050 --> 00:05:17,880
+are really designed to predict a single endpoint.
+
+112
+00:05:17,880 --> 00:05:20,300
+For example, one model might classify
+
+113
+00:05:20,300 --> 00:05:23,250
+whether a tumor is malignant or benign,
+
+114
+00:05:23,250 --> 00:05:26,690
+while the other model estimates the stage of cancer
+
+115
+00:05:26,690 --> 00:05:28,880
+once it's been diagnosed.
+
+116
+00:05:28,880 --> 00:05:31,800
+And these models tend to work completely independently,
+
+117
+00:05:31,800 --> 00:05:34,880
+even though both predictions rely on overlapping patient
+
+118
+00:05:34,880 --> 00:05:39,800
+data, like genetics, pathology reports, or EHR information.
+
+119
+00:05:39,800 --> 00:05:42,450
+But again, from a clinical perspective,
+
+120
+00:05:42,450 --> 00:05:45,870
+these outcomes are very much deeply connected to each other.
+
+121
+00:05:45,870 --> 00:05:49,110
+You don't just want to know if someone has cancer.
+
+122
+00:05:49,110 --> 00:05:52,130
+You also want to know how far it has already progressed
+
+123
+00:05:52,130 --> 00:05:54,750
+and how aggressively it should be treated.
+
+124
+00:05:54,750 --> 00:05:58,710
+And that's why our goal is to move towards models that, again,
+
+125
+00:05:58,710 --> 00:06:00,950
+jointly predict multiple oncology
+
+126
+00:06:00,950 --> 00:06:03,620
+endpoints, like classification and staging,
+
+127
+00:06:03,620 --> 00:06:05,300
+at the exact same time.
+
+128
+00:06:05,300 --> 00:06:07,250
+And in this particular case, we'll
+
+129
+00:06:07,250 --> 00:06:09,830
+be using genetics and structure EHR data
+
+130
+00:06:09,830 --> 00:06:11,610
+to drive these predictions.
+
+131
+00:06:11,610 --> 00:06:13,580
+And the hope is that, again, some
+
+132
+00:06:13,580 --> 00:06:17,280
+shared biological signals, either genetic mutations,
+
+133
+00:06:17,280 --> 00:06:19,820
+biomarkers, treatment response patterns,
+
+134
+00:06:19,820 --> 00:06:22,250
+can potentially enrich both tasks
+
+135
+00:06:22,250 --> 00:06:23,910
+while being learned together.
+
+136
+00:06:23,910 --> 00:06:26,540
+And this type of multitask setup really
+
+137
+00:06:26,540 --> 00:06:29,300
+allows us to make diagnostic tools that
+
+138
+00:06:29,300 --> 00:06:33,260
+feel closer to how oncologists actually think.
+
+139
+00:06:33,260 --> 00:06:35,700
+So in both cardiology and oncology,
+
+140
+00:06:35,700 --> 00:06:39,720
+we saw that clinical tasks don't happen in isolation.
+
+141
+00:06:39,720 --> 00:06:41,250
+Conditions co-occur.
+
+142
+00:06:41,250 --> 00:06:43,230
+Diagnostics are interconnected.
+
+143
+00:06:43,230 --> 00:06:45,590
+And treatment decisions often depend
+
+144
+00:06:45,590 --> 00:06:49,470
+on multiple, simultaneous diagnostic predictions.
+
+145
+00:06:49,470 --> 00:06:52,140
+So a natural question becomes, how
+
+146
+00:06:52,140 --> 00:06:55,080
+can we potentially design models that actually learn
+
+147
+00:06:55,080 --> 00:06:56,920
+all of these outcomes together?
+
+148
+00:06:56,920 --> 00:07:00,520
+And instead of treating each one on its own problem,
+
+149
+00:07:00,520 --> 00:07:02,760
+the core idea is this, rather than
+
+150
+00:07:02,760 --> 00:07:04,900
+training a single model per outcome,
+
+151
+00:07:04,900 --> 00:07:08,430
+let's train a single model that can learn multiple clinically
+
+152
+00:07:08,430 --> 00:07:10,420
+relevant tasks at once.
+
+153
+00:07:10,420 --> 00:07:13,680
+And mathematically speaking, we are given an input x.
+
+154
+00:07:13,680 --> 00:07:17,460
+This is precisely the exact same as a single task problem
+
+155
+00:07:17,460 --> 00:07:19,960
+that we have seen up until this point.
+
+156
+00:07:19,960 --> 00:07:22,560
+But instead of building m--
+
+157
+00:07:22,560 --> 00:07:26,160
+think about this as m different types of endpoints, conditions
+
+158
+00:07:26,160 --> 00:07:27,340
+that we're considering.
+
+159
+00:07:27,340 --> 00:07:29,460
+Instead of building m separate models
+
+160
+00:07:29,460 --> 00:07:31,740
+to predict different types of outcome,
+
+161
+00:07:31,740 --> 00:07:36,960
+y1, y2 all the way to ym, let's try to learn a joint function
+
+162
+00:07:36,960 --> 00:07:40,260
+f that outputs all of them simultaneously.
+
+163
+00:07:40,260 --> 00:07:42,540
+The way which we can accomplish this
+
+164
+00:07:42,540 --> 00:07:44,640
+is through multitask learning, which
+
+165
+00:07:44,640 --> 00:07:48,430
+is a branch of technique from the computer science community,
+
+166
+00:07:48,430 --> 00:07:52,600
+recently explored across a lot of different areas.
+
+167
+00:07:52,600 --> 00:07:55,410
+And the core idea is the availability
+
+168
+00:07:55,410 --> 00:07:57,310
+of a shared learning component.
+
+169
+00:07:57,310 --> 00:08:00,160
+But what exactly is the intuition of this setup?
+
+170
+00:08:00,160 --> 00:08:03,720
+And why would it actually improve performance?
+
+171
+00:08:03,720 --> 00:08:05,700
+This particular slide that you see next
+
+172
+00:08:05,700 --> 00:08:09,000
+illustrates precisely the core intuition.
+
+173
+00:08:09,000 --> 00:08:11,400
+On the left, we have a standard approach
+
+174
+00:08:11,400 --> 00:08:13,830
+to separate models trained independently
+
+175
+00:08:13,830 --> 00:08:18,330
+to predict two outcomes A and B. Every single model you see
+
+176
+00:08:18,330 --> 00:08:20,790
+receives the same input embedding, which
+
+177
+00:08:20,790 --> 00:08:25,300
+is a fixed-length, numerical representation of the data,
+
+178
+00:08:25,300 --> 00:08:26,950
+in this case a patient.
+
+179
+00:08:26,950 --> 00:08:29,590
+But because there are no shared learning,
+
+180
+00:08:29,590 --> 00:08:32,169
+the two tasks cannot benefit from each other.
+
+181
+00:08:32,169 --> 00:08:35,640
+Maybe model A learns something useful about comorbidities
+
+182
+00:08:35,640 --> 00:08:38,409
+or lab values that could have helped model B,
+
+183
+00:08:38,409 --> 00:08:41,760
+but that information never gets transferred.
+
+184
+00:08:41,760 --> 00:08:45,220
+On the right, however, we have a shared learning network
+
+185
+00:08:45,220 --> 00:08:46,670
+for multitask learning.
+
+186
+00:08:46,670 --> 00:08:50,660
+And remember, this really is the key for multitask learning.
+
+187
+00:08:50,660 --> 00:08:54,430
+Now, the same input goes through this shared layers,
+
+188
+00:08:54,430 --> 00:08:57,460
+whose parameters are being jointly optimized and jointly
+
+189
+00:08:57,460 --> 00:08:59,090
+learned from both tasks.
+
+190
+00:08:59,090 --> 00:09:01,400
+And what happens here is very important.
+
+191
+00:09:01,400 --> 00:09:04,990
+The model begins to learn more generalizable patterns that are
+
+192
+00:09:04,990 --> 00:09:07,520
+useful across both outcomes.
+
+193
+00:09:07,520 --> 00:09:10,880
+And it can focus on commonalities, for example,
+
+194
+00:09:10,880 --> 00:09:13,790
+elevated inflammation or shared risk markers,
+
+195
+00:09:13,790 --> 00:09:15,740
+and refine them jointly together,
+
+196
+00:09:15,740 --> 00:09:18,910
+which is precisely what leads to these more accurate and stable
+
+197
+00:09:18,910 --> 00:09:20,050
+predictions.
+
+198
+00:09:20,050 --> 00:09:23,620
+And let's try and go one layer slightly deeper
+
+199
+00:09:23,620 --> 00:09:27,130
+into the training, as well as inference process.
+
+200
+00:09:27,130 --> 00:09:29,170
+In multitask learning, we're not just
+
+201
+00:09:29,170 --> 00:09:30,740
+sharing these model parameters.
+
+202
+00:09:30,740 --> 00:09:33,610
+We're actually augmenting the data implicitly
+
+203
+00:09:33,610 --> 00:09:38,060
+by exposing every single task to information from others.
+
+204
+00:09:38,060 --> 00:09:42,220
+During training, when we are computing the loss for task A,
+
+205
+00:09:42,220 --> 00:09:45,200
+that loss back propagates through the shared network,
+
+206
+00:09:45,200 --> 00:09:47,120
+updating the parameters.
+
+207
+00:09:47,120 --> 00:09:50,480
+But later, when we're trying to train task B,
+
+208
+00:09:50,480 --> 00:09:54,320
+it benefits from that trained, updated shared network,
+
+209
+00:09:54,320 --> 00:09:57,940
+meaning that task A's signal has now indirectly helped
+
+210
+00:09:57,940 --> 00:09:59,810
+with task B's learning.
+
+211
+00:09:59,810 --> 00:10:03,100
+So even though we don't directly feed task A's outcome
+
+212
+00:10:03,100 --> 00:10:07,240
+into task B's input, it is as if task B
+
+213
+00:10:07,240 --> 00:10:10,690
+has access to the hidden representation of information
+
+214
+00:10:10,690 --> 00:10:12,610
+regarding task A's outcome.
+
+215
+00:10:12,610 --> 00:10:15,400
+And you can think about this as a very subtle form
+
+216
+00:10:15,400 --> 00:10:17,990
+or implicit form of data augmentation,
+
+217
+00:10:17,990 --> 00:10:20,260
+where we are enriching every training
+
+218
+00:10:20,260 --> 00:10:24,670
+example by letting related outcomes inform one another.
+
+219
+00:10:24,670 --> 00:10:26,500
+And during inference, we don't need
+
+220
+00:10:26,500 --> 00:10:29,480
+both labels or both outcomes, really just the input.
+
+221
+00:10:29,480 --> 00:10:33,010
+But the model already carries these shared representation
+
+222
+00:10:33,010 --> 00:10:37,270
+during training, which can then lead to stronger generalization.
+
+223
+00:10:37,270 --> 00:10:39,920
+So when the tasks are related, multitask learning
+
+224
+00:10:39,920 --> 00:10:42,500
+creates a kind of implicit collaboration,
+
+225
+00:10:42,500 --> 00:10:45,870
+where each task becomes a teacher for the others.
+
+226
+00:10:45,870 --> 00:10:47,870
+And this is exactly what we mean when
+
+227
+00:10:47,870 --> 00:10:51,750
+we say multitask models are more than the sum of their parts.
+
+228
+00:10:51,750 --> 00:10:55,490
+Before we move on, let's clarify how multitask learning differs
+
+229
+00:10:55,490 --> 00:10:59,060
+from another very common strategy, transfer learning.
+
+230
+00:10:59,060 --> 00:11:01,770
+On the left, we see transfer learning in action.
+
+231
+00:11:01,770 --> 00:11:04,070
+And this is a sequential approach,
+
+232
+00:11:04,070 --> 00:11:07,790
+where first a model is trained on task A, typically
+
+233
+00:11:07,790 --> 00:11:09,960
+a large or general purpose task.
+
+234
+00:11:09,960 --> 00:11:13,610
+Then that trained model, or some part of it, is transferred
+
+235
+00:11:13,610 --> 00:11:16,580
+and fine tuned on task B. This works
+
+236
+00:11:16,580 --> 00:11:19,500
+very well when you don't have much data for the second task,
+
+237
+00:11:19,500 --> 00:11:21,380
+and the first task is similar enough
+
+238
+00:11:21,380 --> 00:11:23,600
+to provide a meaningful head start.
+
+239
+00:11:23,600 --> 00:11:27,060
+But notice that learning is one directional,
+
+240
+00:11:27,060 --> 00:11:31,110
+where task A informs task B, but not the other way around.
+
+241
+00:11:31,110 --> 00:11:35,730
+Now contrast with multitask learning, shown on the right.
+
+242
+00:11:35,730 --> 00:11:39,620
+Here you see multiple tasks, say tasks A, B, and C,
+
+243
+00:11:39,620 --> 00:11:43,160
+are being trained together simultaneously through a shared
+
+244
+00:11:43,160 --> 00:11:44,940
+learning representation.
+
+245
+00:11:44,940 --> 00:11:47,960
+And every single task both teaches as well as
+
+246
+00:11:47,960 --> 00:11:49,500
+learns from the others.
+
+247
+00:11:49,500 --> 00:11:52,250
+And these shared layers are being updated jointly
+
+248
+00:11:52,250 --> 00:11:57,170
+so that every gradient step is informed by multiple objectives.
+
+249
+00:11:57,170 --> 00:12:00,410
+And this two-way communication is what gives multitask learning
+
+250
+00:12:00,410 --> 00:12:02,810
+its power where especially in domains
+
+251
+00:12:02,810 --> 00:12:06,720
+like health, where outcomes are naturally interrelated.
+
+252
+00:12:06,720 --> 00:12:10,230
+So while both methods aim to reuse knowledge,
+
+253
+00:12:10,230 --> 00:12:13,880
+multitask learning is a more collaborative process, not just
+
+254
+00:12:13,880 --> 00:12:16,740
+a handoff from one task to another.
+
+255
+00:12:16,740 --> 00:12:20,580
+And that collaboration often leads to better generalization,
+
+256
+00:12:20,580 --> 00:12:23,840
+faster learning, and also deeper representation
+
+257
+00:12:23,840 --> 00:12:26,540
+of the original information.
+
+258
+00:12:26,540 --> 00:12:29,810
+So far, we've talked about why multitask learning is
+
+259
+00:12:29,810 --> 00:12:32,180
+powerful on its own, but in health care,
+
+260
+00:12:32,180 --> 00:12:34,820
+we often have another challenge, but also
+
+261
+00:12:34,820 --> 00:12:37,390
+from another angle, opportunity, which
+
+262
+00:12:37,390 --> 00:12:40,840
+is the presence of multiple data modalities.
+
+263
+00:12:40,840 --> 00:12:43,490
+So think about a typical hospital setting.
+
+264
+00:12:43,490 --> 00:12:48,520
+You have images like X-ray MRIs, tabular data, like demographics
+
+265
+00:12:48,520 --> 00:12:51,380
+and lab values, time series, like vitals,
+
+266
+00:12:51,380 --> 00:12:53,450
+as well as monitoring of your heart rate,
+
+267
+00:12:53,450 --> 00:12:57,250
+language data from clinical notes and EKG reports.
+
+268
+00:12:57,250 --> 00:12:59,470
+Each of these data types really carries
+
+269
+00:12:59,470 --> 00:13:01,970
+complementary information about the patient,
+
+270
+00:13:01,970 --> 00:13:05,780
+but integrating them into a single model is nontrivial.
+
+271
+00:13:05,780 --> 00:13:08,870
+And this brings us to the key idea of our framework.
+
+272
+00:13:08,870 --> 00:13:12,730
+So first we'll extract features from each modality using
+
+273
+00:13:12,730 --> 00:13:16,810
+finetuned models, like a CNN from images or transformers
+
+274
+00:13:16,810 --> 00:13:18,230
+for clinical notes.
+
+275
+00:13:18,230 --> 00:13:21,970
+Then we align these features into a shared-learning embedding
+
+276
+00:13:21,970 --> 00:13:24,280
+space, using contrastive learning,
+
+277
+00:13:24,280 --> 00:13:26,410
+to make sure that the representations
+
+278
+00:13:26,410 --> 00:13:29,770
+from different modalities are compatible.
+
+279
+00:13:29,770 --> 00:13:32,210
+Once we have that unified representation,
+
+280
+00:13:32,210 --> 00:13:34,870
+we pass it into a shared learning network,
+
+281
+00:13:34,870 --> 00:13:37,560
+often with task-specific branches
+
+282
+00:13:37,560 --> 00:13:40,800
+and shared attention blocks to really support
+
+283
+00:13:40,800 --> 00:13:42,400
+multitask prediction.
+
+284
+00:13:42,400 --> 00:13:45,420
+And finally, we produce a task-specific output,
+
+285
+00:13:45,420 --> 00:13:48,660
+like prediction of heart failure, which
+
+286
+00:13:48,660 --> 00:13:50,680
+is a binary classification problem;
+
+287
+00:13:50,680 --> 00:13:54,810
+chest pathology identification, a multiclass classification
+
+288
+00:13:54,810 --> 00:13:58,290
+problem; length of stay, a regression problem;
+
+289
+00:13:58,290 --> 00:14:02,220
+or patient subgroupings, an unsupervised cluster.
+
+290
+00:14:02,220 --> 00:14:04,980
+And a nice property of this framework
+
+291
+00:14:04,980 --> 00:14:07,740
+is that it's very modular, where if you
+
+292
+00:14:07,740 --> 00:14:10,650
+have a new modality of data or a new task
+
+293
+00:14:10,650 --> 00:14:12,780
+that you're interested in learning more about,
+
+294
+00:14:12,780 --> 00:14:16,620
+you can add them without redesigning the entire pipeline.
+
+295
+00:14:16,620 --> 00:14:18,720
+It is also scalable because everything
+
+296
+00:14:18,720 --> 00:14:20,430
+is trained end to end.
+
+297
+00:14:20,430 --> 00:14:24,130
+This is what makes it truly multimodal and multitask,
+
+298
+00:14:24,130 --> 00:14:26,160
+a single model that pulls insights
+
+299
+00:14:26,160 --> 00:14:30,000
+from a diverse clinical data modalities to try
+
+300
+00:14:30,000 --> 00:14:33,380
+and power through a wide range of medical predictions.

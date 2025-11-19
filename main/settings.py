@@ -822,6 +822,18 @@ OPENAI_API_KEY = get_string(
     name="OPENAI_API_KEY",
     default=None,
 )
+AI_TRANSLATION_MODEL = get_string(
+    name="AI_TRANSLATION_MODEL",
+    default="gpt-4o-mini",  # Fast and cost-effective for translation
+)
+AI_TRANSLATION_EFFORT = get_string(
+    name="AI_TRANSLATION_EFFORT",
+    default="minimal",
+)
+DEEPL_API_KEY = get_string(
+    name="DEEPL_API_KEY",
+    default=None,
+)
 
 CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = get_int(
     name="CONTENT_FILE_EMBEDDING_CHUNK_SIZE", default=512
