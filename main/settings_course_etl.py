@@ -68,14 +68,16 @@ CANVAS_COURSE_BUCKET_NAME = get_string("CANVAS_COURSE_BUCKET_NAME", None)
 CANVAS_COURSE_BUCKET_PREFIX = get_string(
     "CANVAS_COURSE_BUCKET_PREFIX", "canvas/course_content"
 )
-CANVAS_PDF_TRANSCRIPTION_MODEL = get_string(
-    name="CANVAS_PDF_TRANSCRIPTION_MODEL", default=None
+PDF_TRANSCRIPTION_MODEL = get_string(name="PDF_TRANSCRIPTION_MODEL", default=None)
+
+IMAGE_OCR_PROMPT = get_string(
+    "IMAGE_OCR_PROMPT",
+    "Transcribe all text in this image. Preserve formulas. "
+    "If there are non-text elements such as diagrams or pictures, "
+    "describe them in detail."
+    "Do not include anything but the result of the transcription in your response",
 )
-CANVAS_TRANSCRIPTION_PROMPT = get_string(
-    "CANVAS_TRANSCRIPTION_PROMPT",
-    """Transcribe the contents of this file into markdown.
-    Do not include anything but the markdown content in your response""",
-)
+
 # More MIT URLs
 SEE_API_URL = get_string("SEE_API_URL", None)
 SEE_API_ACCESS_TOKEN_URL = get_string("SEE_API_ACCESS_TOKEN_URL", None)
