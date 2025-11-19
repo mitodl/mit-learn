@@ -10,9 +10,11 @@ import {
   CourseWithCourseRunsSerializerV2,
   V2Program,
   V2ProgramCollection,
+  V2UserProgramEnrollmentDetail,
 } from "@mitodl/mitxonline-api-axios/v2"
 
 import { DashboardResourceType, EnrollmentStatus } from "./types"
+
 import type {
   DashboardContract,
   DashboardCourse,
@@ -245,6 +247,22 @@ const organizationCoursesWithContracts = (raw: {
   return transformedCourses
 }
 
+const programEnrollmentsToPrograms = (
+  data: V2UserProgramEnrollmentDetail[],
+): DashboardProgram[] => {
+  // Filter out program enrollments where any course enrollment is tied to a B2B contract
+  const nonB2BProgramEnrollments = data.filter((programEnrollment) => {
+    // Only include the program if NONE of its enrollments have a B2B contract
+    return !programEnrollment.enrollments.some(
+      (enrollment) => enrollment.b2b_contract_id !== null,
+    )
+  })
+
+  return nonB2BProgramEnrollments.map((programEnrollment) => {
+    return mitxonlineProgram(programEnrollment.program)
+  })
+}
+
 const mitxonlineProgram = (raw: V2Program): DashboardProgram => {
   return {
     id: raw.id,
@@ -297,6 +315,7 @@ export {
   enrollmentsToOrgDashboardEnrollments,
   organizationCoursesWithContracts,
   createOrgUnenrolledCourse,
+  programEnrollmentsToPrograms,
   mitxonlineProgram,
   mitxonlineProgramCollection,
   sortDashboardCourses,
