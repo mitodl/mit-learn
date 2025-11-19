@@ -24,6 +24,7 @@ import { ProgramSummary } from "./ProductSummary"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import { ResourceTypeEnum } from "api"
+import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 
 type ProgramPageProps = {
   readableId: string
@@ -89,10 +90,11 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
   const program = programs.data?.results?.[0]
   const programResource = programResources.data?.results?.[0]
   const enabled = useFeatureFlagEnabled(FeatureFlags.ProductPageCourse)
-  if (enabled === false) {
+  const flagsLoaded = useFeatureFlagsLoaded()
+  if (!flagsLoaded) return null
+  if (!enabled) {
     return notFound()
   }
-  if (!enabled) return
 
   const isLoading =
     pages.isLoading || programs.isLoading || programResources.isLoading
