@@ -28,7 +28,7 @@
     "ol-test-utilities": "0.0.0"
   },
   "dependencies": {
-    "@mitodl/mitxonline-api-axios": "^2025.11.5",
+    "@mitodl/mitxonline-api-axios": "github:gumaerc/mitxonline-api-axios#cb9fe1c249a64ecc00fb9e0df2791fb7ae97163d",
     "@tanstack/react-query": "^5.66.0",
     "axios": "^1.12.2",
     "tiny-invariant": "^1.3.3"

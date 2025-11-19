@@ -9,10 +9,16 @@ import {
   LoadingSpinner,
 } from "ol-components"
 import NextLink from "next/link"
-import { EnrollmentStatus, EnrollmentMode } from "./types"
+import {
+  EnrollmentStatus,
+  EnrollmentMode,
+  DashboardResourceType,
+} from "./types"
 import type {
   DashboardResource,
   DashboardCourse,
+  DashboardProgram,
+  DashboardProgramCollection,
   DashboardCourseEnrollment,
 } from "./types"
 import { ActionButton, Button, ButtonLink } from "@mitodl/smoot-design"
@@ -34,6 +40,25 @@ import NiceModal from "@ebay/nice-modal-react"
 import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
+
+// Type guard functions
+const isDashboardCourse = (
+  resource: DashboardResource,
+): resource is DashboardCourse => {
+  return resource.type === DashboardResourceType.Course
+}
+
+const isDashboardProgram = (
+  resource: DashboardResource,
+): resource is DashboardProgram => {
+  return resource.type === DashboardResourceType.Program
+}
+
+const isDashboardProgramCollection = (
+  resource: DashboardResource,
+): resource is DashboardProgramCollection => {
+  return resource.type === DashboardResourceType.ProgramCollection
+}
 
 const CardRoot = styled.div<{
   screenSize: "desktop" | "mobile"
@@ -385,163 +410,182 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   buttonHref,
   titleAction,
 }) => {
-  const course = dashboardResource as DashboardCourse
-  const { title, marketingUrl, enrollment, run } = course
   const oneClickEnroll = useOneClickEnroll()
 
-  const coursewareUrl = run.coursewareUrl
-  const titleHref =
-    titleAction === "marketing" ? marketingUrl : (coursewareUrl ?? marketingUrl)
-  const hasEnrolled =
-    enrollment?.status && enrollment.status !== EnrollmentStatus.NotEnrolled
-  const titleClick: React.MouseEventHandler | undefined =
-    titleAction === "courseware" && coursewareUrl && !hasEnrolled
-      ? (e) => {
-          e.preventDefault()
-          if (!course.coursewareId) return
-          oneClickEnroll.mutate({
-            href: coursewareUrl,
-            coursewareId: course.coursewareId,
-          })
-        }
-      : undefined
+  // Type-specific logic
+  if (isDashboardCourse(dashboardResource)) {
+    const course = dashboardResource
+    const { title, marketingUrl, enrollment, run } = course
 
-  const titleSection = isLoading ? (
-    <>
-      <Skeleton variant="text" width="95%" height={16} />
-      <Skeleton variant="text" width={120} height={16} />
-      <Skeleton variant="text" width={120} height={16} />
-    </>
-  ) : (
-    <>
-      <TitleLink
-        size="medium"
-        color="black"
-        href={titleHref}
-        onClick={titleClick}
-      >
-        {title}
-      </TitleLink>
-      {enrollment?.status === EnrollmentStatus.Completed &&
-      run.certificate?.link ? (
-        <SubtitleLink href={run.certificate.link}>
-          {<RiAwardLine size="16px" />}
-          View Certificate
-        </SubtitleLink>
-      ) : null}
-      {enrollment?.mode !== EnrollmentMode.Verified && offerUpgrade ? (
-        <UpgradeBanner
-          data-testid="upgrade-root"
-          canUpgrade={run.canUpgrade ?? false}
-          certificateUpgradeDeadline={run.certificateUpgradeDeadline}
-          certificateUpgradePrice={run.certificateUpgradePrice}
-        />
-      ) : null}
-    </>
-  )
-  const buttonSection = isLoading ? (
-    <Skeleton variant="rectangular" width={120} height={32} />
-  ) : (
-    <>
-      <EnrollmentStatusIndicator
-        status={enrollment?.status}
-        showNotComplete={showNotComplete}
-      />
-      <CoursewareButton
-        data-testid="courseware-button"
-        coursewareId={course.coursewareId}
-        startDate={run.startDate}
-        enrollmentStatus={enrollment?.status}
-        href={buttonHref ? buttonHref : run.coursewareUrl}
-        endDate={run.endDate}
-        courseNoun={courseNoun}
-      />
-    </>
-  )
-  const startDateSection = isLoading ? (
-    <Skeleton variant="text" width={100} height={24} />
-  ) : run.startDate ? (
-    <CourseStartCountdown startDate={run.startDate} />
-  ) : null
-  const menuItems = contextMenuItems.concat(
-    enrollment?.id ? getDefaultContextMenuItems(title, enrollment) : [],
-  )
-  const contextMenu = isLoading ? (
-    <Skeleton variant="rectangular" width={12} height={24} />
-  ) : (
-    <SimpleMenu
-      items={menuItems}
-      trigger={
-        <MenuButton
-          size="small"
-          variant="text"
-          aria-label="More options"
-          status={enrollment?.status}
-          hidden={menuItems.length === 0}
+    const coursewareUrl = run.coursewareUrl
+    const titleHref =
+      titleAction === "marketing"
+        ? marketingUrl
+        : (coursewareUrl ?? marketingUrl)
+    const hasEnrolled =
+      enrollment?.status && enrollment.status !== EnrollmentStatus.NotEnrolled
+    const titleClick: React.MouseEventHandler | undefined =
+      titleAction === "courseware" && coursewareUrl && !hasEnrolled
+        ? (e) => {
+            e.preventDefault()
+            if (!course.coursewareId) return
+            oneClickEnroll.mutate({
+              href: coursewareUrl,
+              coursewareId: course.coursewareId,
+            })
+          }
+        : undefined
+
+    const titleSection = isLoading ? (
+      <>
+        <Skeleton variant="text" width="95%" height={16} />
+        <Skeleton variant="text" width={120} height={16} />
+        <Skeleton variant="text" width={120} height={16} />
+      </>
+    ) : (
+      <>
+        <TitleLink
+          size="medium"
+          color="black"
+          href={titleHref}
+          onClick={titleClick}
         >
-          <RiMore2Line />
-        </MenuButton>
-      }
-    />
-  )
-  const desktopLayout = (
-    <CardRoot
-      screenSize="desktop"
-      data-testid="enrollment-card-desktop"
-      as={Component}
-      className={className}
-    >
-      <Stack justifyContent="start" alignItems="stretch" gap="8px" flex={1}>
-        {titleSection}
-      </Stack>
-      <Stack gap="8px">
-        <Stack direction="row" gap="8px" alignItems="center">
-          {buttonSection}
-          {contextMenu}
-        </Stack>
-        {startDateSection}
-      </Stack>
-    </CardRoot>
-  )
-
-  const mobileLayout = (
-    <CardRoot
-      screenSize="mobile"
-      data-testid="enrollment-card-mobile"
-      as={Component}
-      className={className}
-    >
-      <Stack
-        direction="row"
-        justifyContent="space-between"
-        alignItems="stretch"
-        flex={1}
-        width="100%"
+          {title}
+        </TitleLink>
+        {enrollment?.status === EnrollmentStatus.Completed &&
+        run.certificate?.link ? (
+          <SubtitleLink href={run.certificate.link}>
+            {<RiAwardLine size="16px" />}
+            View Certificate
+          </SubtitleLink>
+        ) : null}
+        {enrollment?.mode !== EnrollmentMode.Verified && offerUpgrade ? (
+          <UpgradeBanner
+            data-testid="upgrade-root"
+            canUpgrade={run.canUpgrade ?? false}
+            certificateUpgradeDeadline={run.certificateUpgradeDeadline}
+            certificateUpgradePrice={run.certificateUpgradePrice}
+          />
+        ) : null}
+      </>
+    )
+    const buttonSection = isLoading ? (
+      <Skeleton variant="rectangular" width={120} height={32} />
+    ) : (
+      <>
+        <EnrollmentStatusIndicator
+          status={enrollment?.status}
+          showNotComplete={showNotComplete}
+        />
+        <CoursewareButton
+          data-testid="courseware-button"
+          coursewareId={course.coursewareId}
+          startDate={run.startDate}
+          enrollmentStatus={enrollment?.status}
+          href={buttonHref ? buttonHref : run.coursewareUrl}
+          endDate={run.endDate}
+          courseNoun={courseNoun}
+        />
+      </>
+    )
+    const startDateSection = isLoading ? (
+      <Skeleton variant="text" width={100} height={24} />
+    ) : run.startDate ? (
+      <CourseStartCountdown startDate={run.startDate} />
+    ) : null
+    const menuItems = contextMenuItems.concat(
+      enrollment?.id ? getDefaultContextMenuItems(title, enrollment) : [],
+    )
+    const contextMenu = isLoading ? (
+      <Skeleton variant="rectangular" width={12} height={24} />
+    ) : (
+      <SimpleMenu
+        items={menuItems}
+        trigger={
+          <MenuButton
+            size="small"
+            variant="text"
+            aria-label="More options"
+            status={enrollment?.status}
+            hidden={menuItems.length === 0}
+          >
+            <RiMore2Line />
+          </MenuButton>
+        }
+      />
+    )
+    const desktopLayout = (
+      <CardRoot
+        screenSize="desktop"
+        data-testid="enrollment-card-desktop"
+        as={Component}
+        className={className}
       >
-        <Stack direction="column" gap="8px" flex={1}>
+        <Stack justifyContent="start" alignItems="stretch" gap="8px" flex={1}>
           {titleSection}
         </Stack>
-        {contextMenu}
-      </Stack>
-      <Stack
-        direction="row"
-        alignItems="center"
-        justifyContent="end"
-        width="100%"
-      >
-        {startDateSection}
-        <Stack direction="row" gap="8px" alignItems="center">
-          {buttonSection}
+        <Stack gap="8px">
+          <Stack direction="row" gap="8px" alignItems="center">
+            {buttonSection}
+            {contextMenu}
+          </Stack>
+          {startDateSection}
         </Stack>
-      </Stack>
-    </CardRoot>
-  )
-  return (
-    <>
-      {desktopLayout}
-      {mobileLayout}
-    </>
-  )
+      </CardRoot>
+    )
+
+    const mobileLayout = (
+      <CardRoot
+        screenSize="mobile"
+        data-testid="enrollment-card-mobile"
+        as={Component}
+        className={className}
+      >
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="stretch"
+          flex={1}
+          width="100%"
+        >
+          <Stack direction="column" gap="8px" flex={1}>
+            {titleSection}
+          </Stack>
+          {contextMenu}
+        </Stack>
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="end"
+          width="100%"
+        >
+          {startDateSection}
+          <Stack direction="row" gap="8px" alignItems="center">
+            {buttonSection}
+          </Stack>
+        </Stack>
+      </CardRoot>
+    )
+    return (
+      <>
+        {desktopLayout}
+        {mobileLayout}
+      </>
+    )
+  } else if (isDashboardProgram(dashboardResource)) {
+    const program = dashboardResource
+    // TODO: Implement program display logic
+    // This will show either:
+    // 1. First course from the program (with course title and courseware CTA)
+    // 2. Program title with a JavaScript handler CTA
+    return <div>Program display not yet implemented: {program.title}</div>
+  } else if (isDashboardProgramCollection(dashboardResource)) {
+    // TODO: Implement program collection display logic
+    return <div>Program collection display not yet implemented</div>
+  }
+
+  // Fallback for unknown types
+  return null
 }
 
 export {
