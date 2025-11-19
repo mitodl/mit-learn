@@ -44,6 +44,8 @@ const resourceThumbnailSrc = (
 const formatRunDate = (
   run: LearningResourceRun,
   asTaughtIn: boolean,
+  availability?: string | null,
+  bestRunId?: number | null,
 ): string | null => {
   if (asTaughtIn) {
     const semester = capitalize(run.semester ?? "")
@@ -57,6 +59,32 @@ const formatRunDate = (
       return formatDate(run.start_date, "MMMM, YYYY")
     }
   }
+
+  // For the best run in dated resources, use special logic
+  if (run.id === bestRunId && availability === "dated" && !asTaughtIn) {
+    if (!run.start_date && !run.enrollment_start) return null
+
+    // Get the max of start_date and enrollment_start
+    let bestStart: string
+    if (run.start_date && run.enrollment_start) {
+      bestStart =
+        Date.parse(run.start_date) > Date.parse(run.enrollment_start)
+          ? run.start_date
+          : run.enrollment_start
+    } else {
+      bestStart = (run.start_date || run.enrollment_start)!
+    }
+
+    // If the best start date is in the future, show it; otherwise show today
+    const now = new Date()
+    const bestStartDate = new Date(bestStart)
+    if (bestStartDate > now) {
+      return formatDate(bestStart, "MMMM DD, YYYY")
+    } else {
+      return formatDate(new Date().toISOString(), "MMMM DD, YYYY")
+    }
+  }
+
   if (run.start_date) {
     return formatDate(run.start_date, "MMMM DD, YYYY")
   }

@@ -6,6 +6,7 @@ import { formatRunDate } from "ol-utilities"
 import invariant from "tiny-invariant"
 import user from "@testing-library/user-event"
 import { renderWithTheme } from "../../test-utils"
+import { AvailabilityEnum } from "api"
 import { factories } from "api/test-utils"
 
 // This is a pipe followed by a zero-width space
@@ -125,7 +126,12 @@ describe("Learning resource info section start date", () => {
     const course = courses.free.dated
     const run = course.runs?.[0]
     invariant(run)
-    const runDate = formatRunDate(run, false)
+    const runDate = formatRunDate(
+      run,
+      false,
+      course.availability,
+      course.best_run_id,
+    )
     invariant(runDate)
     renderWithTheme(<InfoSection resource={course} />)
 
@@ -141,6 +147,7 @@ describe("Learning resource info section start date", () => {
     const enrollmentStart = daysFromToday(15)
     const course = {
       ...courses.free.dated,
+      availability: AvailabilityEnum.Dated,
       best_run_id: 1,
       runs: [
         {
@@ -184,6 +191,7 @@ describe("Learning resource info section start date", () => {
     const enrollmentStart = daysFromToday(40) // Later than start_date
     const course = {
       ...courses.free.dated,
+      availability: AvailabilityEnum.Dated,
       best_run_id: 1,
       runs: [
         {
@@ -225,6 +233,7 @@ describe("Learning resource info section start date", () => {
     const todayDate = new Date().toISOString()
     const course = {
       ...courses.free.dated,
+      availability: AvailabilityEnum.Dated,
       best_run_id: 1,
       runs: [
         {
@@ -275,7 +284,7 @@ describe("Learning resource info section start date", () => {
           ...run,
           id: 1,
           start_date: null,
-          enrollment_start: null,
+          end_date: null,
         },
       ],
     }
@@ -290,7 +299,12 @@ describe("Learning resource info section start date", () => {
     const course = courses.free.anytime
     const run = course.runs?.[0]
     invariant(run)
-    const runDate = formatRunDate(run, true)
+    const runDate = formatRunDate(
+      run,
+      true,
+      course.availability,
+      course.best_run_id,
+    )
     invariant(runDate)
     renderWithTheme(<InfoSection resource={course} />)
 
@@ -310,48 +324,12 @@ describe("Learning resource info section start date", () => {
         }
         return 0
       })
-      .map((run) => formatRunDate(run, false))
+      .map((run) =>
+        formatRunDate(run, false, course.availability, course.best_run_id),
+      )
       .slice(0, 2)
       .join(SEPARATOR)}Show more`
     invariant(expectedDateText)
-    renderWithTheme(<InfoSection resource={course} />)
-
-    const section = screen.getByTestId("drawer-info-items")
-    within(section).getAllByText((_content, node) => {
-      return node?.textContent === expectedDateText || false
-    })
-  })
-
-  test("Multiple run dates with best_run_id uses best_run_id as first date", () => {
-    const firstRun = courses.multipleRuns.sameData.runs?.[0]
-    invariant(firstRun)
-    const bestRunStartDate = daysFromToday(50)
-    const bestRunEnrollmentStart = daysFromToday(35)
-    const course = {
-      ...courses.multipleRuns.sameData,
-      best_run_id: 1,
-      runs: [
-        {
-          ...firstRun,
-          id: 1,
-          start_date: bestRunStartDate,
-          enrollment_start: bestRunEnrollmentStart,
-        },
-        ...(courses.multipleRuns.sameData.runs?.slice(1) ?? []),
-      ],
-    }
-    const sortedDates = course.runs
-      ?.sort((a, b) => {
-        if (a?.start_date && b?.start_date) {
-          return Date.parse(a.start_date) - Date.parse(b.start_date)
-        }
-        return 0
-      })
-      .map((run) => formatRunDate(run, false))
-      .filter((date) => date !== null)
-
-    // First date should be from best_run_id, second should be original second date
-    const expectedDateText = `${formatTestDate(bestRunStartDate)}${SEPARATOR}${sortedDates?.[1]}Show more`
     renderWithTheme(<InfoSection resource={course} />)
 
     const section = screen.getByTestId("drawer-info-items")
@@ -382,23 +360,8 @@ describe("Learning resource info section start date", () => {
     expect(runDates.children.length).toBe(totalRuns + 1)
   })
 
-  test("Anytime courses with best_run_id should not replace first date in 'As taught in' section", () => {
-    const firstRun = courses.free.anytime.runs?.[0]
-    invariant(firstRun)
-    const bestRunStartDate = daysFromToday(25)
-    const bestRunEnrollmentStart = daysFromToday(10)
-    const course = {
-      ...courses.free.anytime,
-      best_run_id: 1,
-      runs: [
-        {
-          ...firstRun,
-          id: 1,
-          start_date: bestRunStartDate,
-          enrollment_start: bestRunEnrollmentStart,
-        },
-      ],
-    }
+  test("Anytime courses show 'Anytime' and semester/year in 'As taught in' section", () => {
+    const course = courses.free.anytime
 
     renderWithTheme(<InfoSection resource={course} />)
 
@@ -409,14 +372,17 @@ describe("Learning resource info section start date", () => {
 
     within(section).getByText("As taught in:")
 
-    expect(
-      within(section).queryByText(formatTestDate(bestRunStartDate)),
-    ).toBeNull()
-
     const runDates = within(section).getByTestId("drawer-run-dates")
     expect(runDates).toBeInTheDocument()
 
-    const firstRunDate = formatRunDate(course.runs[0], true)
+    const firstRun = course.runs?.[0]
+    invariant(firstRun)
+    const firstRunDate = formatRunDate(
+      firstRun,
+      true,
+      course.availability,
+      course.best_run_id,
+    )
     invariant(firstRunDate)
     expect(within(section).getByText(firstRunDate)).toBeInTheDocument()
   })

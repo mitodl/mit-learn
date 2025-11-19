@@ -128,7 +128,9 @@ export const showStartAnytime = (resource: LearningResource) => {
  * Returns the max of start_date and enrollment_start from the best run.
  * Returns null if best_run_id is null, run not found, or both dates are null.
  */
-export const getBestStartDate = (resource: LearningResource): string | null => {
+export const getBestResourceStartDate = (
+  resource: LearningResource,
+): string | null => {
   const bestRun = resource.runs?.find((run) => run.id === resource.best_run_id)
   if (!bestRun) return null
 
