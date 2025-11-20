@@ -2,6 +2,8 @@ import { useCallback, useMemo } from "react"
 import type { Editor } from "@tiptap/react"
 import { useTiptapEditor } from "../../../hooks/use-tiptap-editor"
 import { convertToEmbedUrl } from "./lib"
+import NiceModal from "@ebay/nice-modal-react"
+import MediaUrlInputDialog from "./MediaUrlInputDialog"
 import { Icon } from "./Icon"
 
 export const MEDIA_EMBED_SHORTCUT_KEY = "Mod+Shift+E"
@@ -14,11 +16,16 @@ export function useMediaEmbed(editor?: Editor | null) {
 
   const label = "Embed Media"
 
-  const handleEmbed = useCallback(() => {
-    const url = prompt("Enter a media URL (YouTube, Vimeo, etc)")
-    if (!url) return
+  const handleEmbed = useCallback(async () => {
+    try {
+      const url: string = await NiceModal.show(MediaUrlInputDialog)
+      console.log("URL received from modal:", url)
+      if (!url) return
 
-    resolved?.commands.insertMedia(convertToEmbedUrl(url))
+      resolved?.commands.insertMedia(convertToEmbedUrl(url))
+    } catch {
+      // modal was closed / cancelled
+    }
   }, [resolved])
 
   return {

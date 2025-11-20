@@ -15,13 +15,25 @@ export function convertToEmbedUrl(url: string): string {
     return videoId ? `https://www.youtube.com/embed/${videoId}` : url
   }
 
-  // --- YOUTUBE SHORT ---
+  // --- YOUTUBE SHORTS ---
+  if (hostname === "youtube.com" && parsed.pathname.startsWith("/shorts/")) {
+    const id = parsed.pathname.split("/shorts/")[1]
+    return id ? `https://www.youtube.com/embed/${id}` : url
+  }
+
+  // --- YOUTUBE SHORT youtu.be/shorts/??? (rare but possible) ---
+  if (hostname === "youtu.be" && parsed.pathname.startsWith("/shorts/")) {
+    const id = parsed.pathname.split("/shorts/")[1]
+    return id ? `https://www.youtube.com/embed/${id}` : url
+  }
+
+  // --- YOUTUBE SHORT youtu.be/VIDEO_ID ---
   if (hostname === "youtu.be") {
     const id = parsed.pathname.slice(1)
     return id ? `https://www.youtube.com/embed/${id}` : url
   }
 
-  // --- YOUTUBE /embed or other formats keep as is ---
+  // --- YOUTUBE EMBED (leave as-is) ---
   if (hostname === "youtube.com" && parsed.pathname.startsWith("/embed/")) {
     return url
   }

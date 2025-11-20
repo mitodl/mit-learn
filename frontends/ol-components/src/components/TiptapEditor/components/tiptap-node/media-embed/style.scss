@@ -89,7 +89,7 @@
 .media-container {
   position: relative;
   width: 100%;
-  height: 100vh; // ✅ add height here
+  aspect-ratio: 16 / 9;
   overflow: hidden;
 }
 

@@ -48,6 +48,9 @@ const StyledEditorContent = styled(EditorContent)<{ readOnly: boolean }>(
     backgroundColor: theme.custom.colors.white,
     borderRadius: "10px",
     margin: "20px auto",
+    ".tiptap.ProseMirror.simple-editor": {
+      padding: "3rem 3rem 5vh",
+    },
     ...(readOnly
       ? {
           maxWidth: "1000px",
