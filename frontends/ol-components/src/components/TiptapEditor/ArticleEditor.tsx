@@ -27,6 +27,7 @@ import TiptapEditor, { MainToolbarContent } from "./TiptapEditor"
 
 // --- Tiptap Node ---
 import { ImageUploadNode } from "./components/tiptap-node/image-upload-node/image-upload-node-extension"
+import { LearningResourceNode } from "./components/tiptap-node/learning-resource-node/learning-resource-node"
 import { HorizontalRule } from "./components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension"
 
 import "./components/tiptap-node/blockquote-node/blockquote-node.scss"
@@ -60,6 +61,7 @@ const ViewContainer = styled.div({
 
 const Title = styled(Typography)<TypographyProps>({
   margin: "60px auto",
+  maxWidth: "1000px",
 })
 
 const TitleInput = styled(Input)({
@@ -170,6 +172,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
         },
       }),
       HorizontalRule,
+      LearningResourceNode,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       TaskList,
       TaskItem.configure({ nested: true }),
@@ -212,7 +215,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
             </StyledToolbar>
           ) : (
             <StyledToolbar>
-              <MainToolbarContent />
+              <MainToolbarContent editor={editor} />
               <Button
                 variant="primary"
                 disabled={isPending || !title.trim() || !touched}
