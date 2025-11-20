@@ -1,8 +1,6 @@
 import React, { forwardRef, useCallback } from "react"
 import { Button } from "../../tiptap-ui-primitive/button"
-import { Badge } from "../../tiptap-ui-primitive/badge"
-import { parseShortcutKeys } from "../../../lib/tiptap-utils"
-import { useMediaEmbed, MEDIA_EMBED_SHORTCUT_KEY } from "./useMediaEmbed"
+import { useMediaEmbed } from "./useMediaEmbed"
 import { useTiptapEditor } from "../../../hooks/use-tiptap-editor"
 
 export interface MediaEmbedButtonProps {
@@ -11,14 +9,6 @@ export interface MediaEmbedButtonProps {
   showShortcut?: boolean
   icon?: React.FC<React.SVGProps<SVGSVGElement>>
   onClick?: (e: React.MouseEvent) => void
-}
-
-function MediaShortcutBadge() {
-  return (
-    <Badge>
-      {parseShortcutKeys({ shortcutKeys: MEDIA_EMBED_SHORTCUT_KEY })}
-    </Badge>
-  )
 }
 
 export const MediaEmbedButton = forwardRef<
@@ -43,7 +33,6 @@ export const MediaEmbedButton = forwardRef<
       canInsert,
       label,
       Icon: DefaultIcon,
-      shortcutKeys,
       handleEmbed,
     } = useMediaEmbed(editor)
 
@@ -73,7 +62,6 @@ export const MediaEmbedButton = forwardRef<
       >
         <RenderIcon />
         {text && <span className="tiptap-button-text">{text}</span>}
-        {showShortcut && <MediaShortcutBadge />}
       </Button>
     )
   },

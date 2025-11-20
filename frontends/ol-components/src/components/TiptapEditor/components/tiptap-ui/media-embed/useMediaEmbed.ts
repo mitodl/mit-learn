@@ -6,8 +6,6 @@ import NiceModal from "@ebay/nice-modal-react"
 import MediaUrlInputDialog from "./MediaUrlInputDialog"
 import { Icon } from "./Icon"
 
-export const MEDIA_EMBED_SHORTCUT_KEY = "Mod+Shift+E"
-
 export function useMediaEmbed(editor?: Editor | null) {
   const resolved = useTiptapEditor(editor).editor
 
@@ -35,7 +33,6 @@ export function useMediaEmbed(editor?: Editor | null) {
     label,
     Icon,
     isActive: false,
-    shortcutKeys: MEDIA_EMBED_SHORTCUT_KEY,
     handleEmbed,
   }
 }
