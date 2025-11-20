@@ -5,6 +5,7 @@ import {
   Link,
   PlainList,
   PlainListProps,
+  Stack,
   Typography,
   TypographyProps,
   styled,
@@ -12,12 +13,25 @@ import {
 } from "ol-components"
 import { useQuery } from "@tanstack/react-query"
 import {
+  mitxonlineCourse,
+  mitxonlineProgram,
   programEnrollmentsToPrograms,
   userEnrollmentsToDashboardCourses,
 } from "./transform"
 import { DashboardCard } from "./DashboardCard"
-import { DashboardCourse, DashboardProgram, EnrollmentStatus } from "./types"
+import {
+  DashboardCourse,
+  DashboardCourseEnrollment,
+  DashboardProgram,
+  EnrollmentStatus,
+} from "./types"
 import type { AxiosError } from "axios"
+import { coursesQueries } from "api/mitxonline-hooks/courses"
+import { programsQueries } from "api/mitxonline-hooks/programs"
+import { Button } from "@mitodl/smoot-design"
+import { RiArrowLeftLine } from "@remixicon/react"
+import { useRouter } from "next-nprogress-bar"
+import { DASHBOARD_HOME } from "@/common/urls"
 
 const Wrapper = styled.div(({ theme }) => ({
   marginTop: "32px",
@@ -127,6 +141,7 @@ interface EnrollmentExpandCollapseProps {
   hiddenCourseRunEnrollments: DashboardCourse[]
   programEnrollments?: DashboardProgram[]
   isLoading?: boolean
+  onViewProgram?: (programId: number) => void
 }
 
 const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
@@ -134,6 +149,7 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
   hiddenCourseRunEnrollments,
   programEnrollments,
   isLoading,
+  onViewProgram,
 }) => {
   const [shown, setShown] = React.useState(false)
 
@@ -163,6 +179,9 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
             dashboardResource={program}
             showNotComplete={false}
             isLoading={isLoading}
+            buttonClick={
+              onViewProgram ? () => onViewProgram(program.id) : undefined
+            }
           />
         ))}
       </EnrollmentsList>
@@ -193,7 +212,128 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
   )
 }
 
-const EnrollmentDisplay = () => {
+interface ProgramEnrollmentDisplayProps {
+  programId: number
+}
+
+const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
+  programId,
+}) => {
+  const router = useRouter()
+  const { data: userCourses, isLoading: userEnrollmentsLoading } = useQuery({
+    ...enrollmentQueries.courseRunEnrollmentsList(),
+    select: userEnrollmentsToDashboardCourses,
+  })
+  const { data: rawProgram, isLoading: programLoading } = useQuery(
+    programsQueries.programDetail({ id: programId }),
+  )
+  const program = rawProgram ? mitxonlineProgram(rawProgram) : undefined
+  const { data: rawProgramCourses, isLoading: programCoursesLoading } =
+    useQuery(coursesQueries.coursesList({ id: program?.courseIds }))
+  const programCourses = rawProgramCourses?.results.map((course) => {
+    const enrollment = userCourses?.find((dashboardCourse) =>
+      course.courseruns.some(
+        (run) => run.courseware_id === dashboardCourse.coursewareId,
+      ),
+    )?.enrollment
+    return mitxonlineCourse(course, enrollment)
+  })
+  const rawProgramCourseEnrollments = userCourses?.filter((course) => {
+    return rawProgramCourses?.results.some((programCourse) =>
+      programCourse.courseruns.some(
+        (run) => run.courseware_id === course.coursewareId,
+      ),
+    )
+  })
+  const programCourseEnrollments = rawProgramCourseEnrollments
+    ?.map((course) => {
+      return course.enrollment ?? undefined
+    })
+    .filter(
+      (enrollment) => enrollment !== undefined,
+    ) as DashboardCourseEnrollment[]
+  const completedEnrollments = programCourseEnrollments?.filter(
+    (enrollment) => enrollment.status === EnrollmentStatus.Completed,
+  )
+  return (
+    <>
+      <Stack direction="column">
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          marginBottom="24px"
+        >
+          <Stack direction="column">
+            <Typography variant="h5" color={theme.custom.colors.silverGrayDark}>
+              MITx | {program?.programType}
+            </Typography>
+            <Typography variant="h3" paddingBottom="32px">
+              {program?.title}
+            </Typography>
+            <Typography variant="body2">
+              You have completed
+              <Typography component="span" variant="subtitle2">
+                {" "}
+                {completedEnrollments?.length} of {programCourses?.length}{" "}
+                courses{" "}
+              </Typography>
+              for this program.
+            </Typography>
+          </Stack>
+          <Stack direction="column">
+            <Button
+              variant="tertiary"
+              size="small"
+              startIcon={<RiArrowLeftLine />}
+              onClick={() => router.push(DASHBOARD_HOME)}
+            >
+              Back
+            </Button>
+          </Stack>
+        </Stack>
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          marginBottom="16px"
+        >
+          <Typography variant="subtitle2" color={theme.custom.colors.red}>
+            Core Courses
+          </Typography>
+          <Typography
+            variant="body2"
+            color={theme.custom.colors.silverGrayDark}
+          >
+            Completed {completedEnrollments?.length} of {programCourses?.length}
+          </Typography>
+        </Stack>
+        <EnrollmentsList itemSpacing={"16px"}>
+          {programCourses?.map((course) => (
+            <DashboardCardStyled
+              titleAction="marketing"
+              key={course.key}
+              Component="li"
+              dashboardResource={course}
+              showNotComplete={false}
+              isLoading={
+                userEnrollmentsLoading ||
+                programLoading ||
+                programCoursesLoading
+              }
+            />
+          ))}
+        </EnrollmentsList>
+      </Stack>
+    </>
+  )
+}
+
+interface AllEnrollmentsDisplayProps {
+  onViewProgram?: (programId: number) => void
+}
+
+const AllEnrollmentsDisplay: React.FC<AllEnrollmentsDisplayProps> = ({
+  onViewProgram,
+}) => {
   const onError = (error: Error) => {
     const err = error as AxiosError<{ detail?: string }>
     const status = err?.response?.status
@@ -237,9 +377,26 @@ const EnrollmentDisplay = () => {
         hiddenCourseRunEnrollments={expired}
         programEnrollments={programEnrollments || []}
         isLoading={courseEnrollmentsLoading || programEnrollmentsLoading}
+        onViewProgram={onViewProgram}
       />
     </Wrapper>
   ) : null
+}
+
+interface EnrollmentDisplayProps {
+  onViewProgram?: (programId: number) => void
+  programId?: number
+}
+
+const EnrollmentDisplay: React.FC<EnrollmentDisplayProps> = ({
+  onViewProgram,
+  programId,
+}) => {
+  if (programId) {
+    return <ProgramEnrollmentDisplay programId={programId} />
+  }
+
+  return <AllEnrollmentsDisplay onViewProgram={onViewProgram} />
 }
 
 export { EnrollmentDisplay }

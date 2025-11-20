@@ -100,8 +100,8 @@ const TitleLink = styled(Link)(({ theme }) => ({
 
 const TitleText = styled.div<{ clickable?: boolean }>(
   ({ theme, clickable }) => ({
-    ...theme.typography.subtitle1,
-    color: theme.custom.colors.black,
+    ...theme.typography.subtitle2,
+    color: theme.custom.colors.darkGray2,
     cursor: clickable ? "pointer" : "default",
     [theme.breakpoints.down("md")]: {
       maxWidth: "calc(100% - 16px)",
@@ -193,6 +193,7 @@ type CoursewareButtonProps = {
   className?: string
   courseNoun: string
   "data-testid"?: string
+  onClick?: React.MouseEventHandler<HTMLButtonElement>
 }
 
 const getCoursewareTextAndIcon = ({
@@ -225,6 +226,7 @@ const CoursewareButton = styled(
     href,
     className,
     courseNoun,
+    onClick,
     ...others
   }: CoursewareButtonProps) => {
     const coursewareText = getCoursewareTextAndIcon({
@@ -237,6 +239,20 @@ const CoursewareButton = styled(
       enrollmentStatus && enrollmentStatus !== EnrollmentStatus.NotEnrolled
 
     const oneClickEnroll = useOneClickEnroll()
+
+    if (onClick) {
+      return (
+        <Button
+          size="small"
+          variant="primary"
+          className={className}
+          onClick={onClick}
+          {...others}
+        >
+          {coursewareText.text}
+        </Button>
+      )
+    }
 
     if (!hasEnrolled /* enrollment flow */) {
       return (
@@ -292,8 +308,6 @@ const CoursewareButton = styled(
     )
   },
 )({ width: "124px" })
-
-const ProgramButton = styled(Button)({ width: "124px" })
 
 const formatUpgradeTime = (daysFloat: number) => {
   if (daysFloat < 0) return ""
@@ -409,7 +423,7 @@ type DashboardCardProps = {
   contextMenuItems?: SimpleMenuItem[]
   isLoading?: boolean
   buttonHref?: string | null
-  onCtaClick?: (resource: DashboardResource) => void
+  buttonClick?: React.MouseEventHandler<HTMLButtonElement>
 }
 
 const DashboardCard: React.FC<DashboardCardProps> = ({
@@ -423,7 +437,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   isLoading = false,
   buttonHref,
   titleAction,
-  onCtaClick,
+  buttonClick,
 }) => {
   const oneClickEnroll = useOneClickEnroll()
 
@@ -529,17 +543,11 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         href={buttonHref ?? run?.coursewareUrl}
         endDate={run?.endDate}
         courseNoun={courseNoun}
+        onClick={buttonClick}
       />
     </>
   ) : isProgram ? (
-    <ProgramButton
-      size="small"
-      variant="primary"
-      onClick={onCtaClick ? () => onCtaClick(dashboardResource) : undefined}
-      disabled={!onCtaClick}
-    >
-      View Program
-    </ProgramButton>
+    <CoursewareButton courseNoun="Program" onClick={buttonClick} />
   ) : null
 
   const startDateSection = isLoading ? (
