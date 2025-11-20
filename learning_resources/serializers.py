@@ -900,7 +900,9 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
         read_only=True,
     )
     resource_prices = LearningResourcePriceSerializer(read_only=True, many=True)
-    runs = LearningResourceRunSerializer(read_only=True, many=True, allow_null=True)
+    runs = LearningResourceRunSerializer(
+        source="published_runs", read_only=True, many=True, allow_null=True
+    )
     image = serializers.SerializerMethodField()
     learning_path_parents = MicroLearningPathRelationshipSerializer(
         many=True, read_only=True
@@ -915,12 +917,20 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
     format = serializers.ListField(child=FormatSerializer(), read_only=True)
     pace = serializers.ListField(child=PaceSerializer(), read_only=True)
     children = serializers.SerializerMethodField(allow_null=True)
+    best_run_id = serializers.SerializerMethodField(allow_null=True)
 
     @extend_schema_field(LearningResourceRelationshipChildField(allow_null=True))
     def get_children(self, instance):
         return LearningResourceRelationshipChildField(
             instance.children, many=True, read_only=True
         ).data
+
+    def get_best_run_id(self, instance) -> int | None:
+        """Return the best run id for the resource, if it has runs"""
+        best_run = instance.best_run
+        if best_run:
+            return best_run.id
+        return None
 
     def get_resource_category(self, instance) -> str:
         """Return the resource category of the resource"""
