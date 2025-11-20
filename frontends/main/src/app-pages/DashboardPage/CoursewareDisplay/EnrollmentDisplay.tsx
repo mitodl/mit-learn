@@ -75,6 +75,18 @@ const EnrollmentsList = styled(PlainList)<Pick<PlainListProps, "itemSpacing">>(
   }),
 )
 
+const StackedCardContainer = styled.div(({ theme }) => ({
+  border: `1px solid ${theme.custom.colors.lightGray2}`,
+  borderRadius: "8px",
+  boxShadow: "0px 1px 6px 0px rgba(3, 21, 45, 0.05)",
+  overflow: "hidden",
+  [theme.breakpoints.down("md")]: {
+    border: `1px solid ${theme.custom.colors.lightGray2}`,
+    borderRadius: "8px !important",
+    borderBottom: `1px solid ${theme.custom.colors.red}`,
+  },
+}))
+
 const HiddenEnrollmentsList = styled(EnrollmentsList)({
   marginTop: "16px",
   [theme.breakpoints.down("md")]: {
@@ -306,14 +318,14 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
             Completed {completedEnrollments?.length} of {programCourses?.length}
           </Typography>
         </Stack>
-        <EnrollmentsList itemSpacing={"16px"}>
+        <StackedCardContainer>
           {programCourses?.map((course) => (
             <DashboardCardStyled
               titleAction="marketing"
               key={course.key}
-              Component="li"
               dashboardResource={course}
               showNotComplete={false}
+              variant="stacked"
               isLoading={
                 userEnrollmentsLoading ||
                 programLoading ||
@@ -321,7 +333,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
               }
             />
           ))}
-        </EnrollmentsList>
+        </StackedCardContainer>
       </Stack>
     </>
   )

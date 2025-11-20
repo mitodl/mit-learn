@@ -62,7 +62,8 @@ const isDashboardProgramCollection = (
 
 const CardRoot = styled.div<{
   screenSize: "desktop" | "mobile"
-}>(({ theme, screenSize }) => [
+  variant?: "default" | "stacked"
+}>(({ theme, screenSize, variant = "default" }) => [
   {
     position: "relative",
     border: `1px solid ${theme.custom.colors.lightGray2}`,
@@ -71,11 +72,34 @@ const CardRoot = styled.div<{
     display: "flex",
     gap: "8px",
     alignItems: "center",
+  },
+  // Mobile styles for default variant
+  variant === "default" && {
     [theme.breakpoints.down("md")]: {
       border: "none",
       borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
       borderRadius: "0px",
       boxShadow: "none",
+      flexDirection: "column",
+      gap: "16px",
+    },
+  },
+  // Stacked variant styles
+  variant === "stacked" && {
+    border: "none",
+    borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
+    borderRadius: "0px !important",
+    boxShadow: "none",
+    "&:first-of-type": {
+      borderTopLeftRadius: "8px !important",
+      borderTopRightRadius: "8px !important",
+    },
+    "&:last-of-type": {
+      borderBottomLeftRadius: "8px !important",
+      borderBottomRightRadius: "8px !important",
+      borderBottom: "none",
+    },
+    [theme.breakpoints.down("md")]: {
       flexDirection: "column",
       gap: "16px",
     },
@@ -424,6 +448,7 @@ type DashboardCardProps = {
   isLoading?: boolean
   buttonHref?: string | null
   buttonClick?: React.MouseEventHandler<HTMLButtonElement>
+  variant?: "default" | "stacked"
 }
 
 const DashboardCard: React.FC<DashboardCardProps> = ({
@@ -438,6 +463,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   buttonHref,
   titleAction,
   buttonClick,
+  variant = "default",
 }) => {
   const oneClickEnroll = useOneClickEnroll()
 
@@ -589,6 +615,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         data-testid="enrollment-card-desktop"
         as={Component}
         className={className}
+        variant={variant}
       >
         <Stack justifyContent="start" alignItems="stretch" gap="8px" flex={1}>
           {titleSection}
@@ -607,6 +634,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         data-testid="enrollment-card-mobile"
         as={Component}
         className={className}
+        variant={variant}
       >
         <Stack
           direction="row"
