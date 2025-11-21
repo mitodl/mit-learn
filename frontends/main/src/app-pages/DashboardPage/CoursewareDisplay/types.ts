@@ -65,6 +65,14 @@ type DashboardCourseEnrollment = {
   }
 }
 
+type DashboardProgramEnrollment = {
+  status: EnrollmentStatus
+  certificate?: {
+    uuid: string
+    link: string
+  }
+}
+
 type DashboardProgram = {
   id: number
   key: string
@@ -74,6 +82,7 @@ type DashboardProgram = {
   courseIds: number[]
   collections: number[]
   description: string
+  enrollment?: DashboardProgramEnrollment
 }
 
 type DashboardProgramCollection = {
@@ -101,6 +110,7 @@ export type {
   DashboardContract,
   DashboardCourse,
   DashboardCourseEnrollment,
+  DashboardProgramEnrollment,
   DashboardProgram,
   DashboardProgramCollection,
   DashboardProgramCollectionProgram,

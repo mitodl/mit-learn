@@ -40,6 +40,7 @@ import NiceModal from "@ebay/nice-modal-react"
 import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
+import { programView } from "@/common/urls"
 
 // Type guard functions
 const isDashboardCourse = (
@@ -215,7 +216,8 @@ type CoursewareButtonProps = {
   enrollmentStatus?: EnrollmentStatus | null
   href?: string | null
   className?: string
-  courseNoun: string
+  noun: string
+  resourceType?: DashboardResourceType
   "data-testid"?: string
   onClick?: React.MouseEventHandler<HTMLButtonElement>
 }
@@ -223,20 +225,29 @@ type CoursewareButtonProps = {
 const getCoursewareTextAndIcon = ({
   endDate,
   enrollmentStatus,
-  courseNoun,
+  noun,
+  resourceType,
 }: {
   endDate?: string | null
   enrollmentStatus?: EnrollmentStatus | null
-  courseNoun: string
+  noun: string
+  resourceType?: DashboardResourceType
 }) => {
   if (!enrollmentStatus || enrollmentStatus === EnrollmentStatus.NotEnrolled) {
-    return { text: `Start ${courseNoun}`, endIcon: null }
+    return { text: `Start ${noun}`, endIcon: null }
   }
   if (
     (endDate && isInPast(endDate)) ||
     enrollmentStatus === EnrollmentStatus.Completed
   ) {
-    return { text: `View ${courseNoun}`, endIcon: null }
+    return { text: `View ${noun}`, endIcon: null }
+  }
+  // Programs show "View Program" when enrolled, courses show "Continue"
+  if (
+    resourceType === DashboardResourceType.Program &&
+    enrollmentStatus === EnrollmentStatus.Enrolled
+  ) {
+    return { text: `View ${noun}`, endIcon: null }
   }
   return { text: "Continue", endIcon: <RiArrowRightLine /> }
 }
@@ -249,14 +260,16 @@ const CoursewareButton = styled(
     enrollmentStatus,
     href,
     className,
-    courseNoun,
+    noun,
+    resourceType,
     onClick,
     ...others
   }: CoursewareButtonProps) => {
     const coursewareText = getCoursewareTextAndIcon({
       endDate,
-      courseNoun,
+      noun,
       enrollmentStatus,
+      resourceType,
     })
     const hasStarted = startDate && isInPast(startDate)
     const hasEnrolled =
@@ -303,7 +316,10 @@ const CoursewareButton = styled(
           {coursewareText.text}
         </Button>
       )
-    } else if (hasStarted && href /* Link to course */) {
+    } else if (
+      (hasStarted || !startDate) &&
+      href /* Link to course or program */
+    ) {
       return (
         <ButtonLink
           size="small"
@@ -317,7 +333,7 @@ const CoursewareButton = styled(
         </ButtonLink>
       )
     }
-    // Disabled
+    // Disabled (course not started yet)
     return (
       <Button
         size="small"
@@ -442,7 +458,7 @@ type DashboardCardProps = {
   dashboardResource: DashboardResource
   showNotComplete?: boolean
   className?: string
-  courseNoun?: string
+  noun?: string
   offerUpgrade?: boolean
   contextMenuItems?: SimpleMenuItem[]
   isLoading?: boolean
@@ -456,7 +472,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   showNotComplete = true,
   Component,
   className,
-  courseNoun = "Course",
+  noun = "Course",
   offerUpgrade = true,
   contextMenuItems = [],
   isLoading = false,
@@ -568,12 +584,18 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         enrollmentStatus={enrollment?.status}
         href={buttonHref ?? run?.coursewareUrl}
         endDate={run?.endDate}
-        courseNoun={courseNoun}
+        noun={noun}
+        resourceType={DashboardResourceType.Course}
         onClick={buttonClick}
       />
     </>
   ) : isProgram ? (
-    <CoursewareButton courseNoun="Program" onClick={buttonClick} />
+    <CoursewareButton
+      noun="Program"
+      resourceType={DashboardResourceType.Program}
+      enrollmentStatus={dashboardResource.enrollment?.status}
+      href={buttonHref ?? programView(dashboardResource.id)}
+    />
   ) : null
 
   const startDateSection = isLoading ? (

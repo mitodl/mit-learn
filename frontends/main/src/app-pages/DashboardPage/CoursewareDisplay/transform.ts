@@ -19,6 +19,7 @@ import type {
   DashboardContract,
   DashboardCourse,
   DashboardCourseEnrollment,
+  DashboardProgramEnrollment,
   DashboardProgram,
   DashboardProgramCollection,
 } from "./types"
@@ -97,6 +98,20 @@ const transformEnrollmentToDashboard = (
           "/certificate/course/$1/",
         ) ?? "",
     },
+  }
+}
+
+const transformProgramEnrollmentToDashboard = (
+  raw: V2UserProgramEnrollmentDetail,
+): DashboardProgramEnrollment => {
+  return {
+    status: EnrollmentStatus.Enrolled,
+    certificate: raw.certificate
+      ? {
+          uuid: raw.certificate.uuid,
+          link: `/certificate/program/${raw.certificate.uuid}/`,
+        }
+      : undefined,
   }
 }
 
@@ -259,7 +274,10 @@ const programEnrollmentsToPrograms = (
   })
 
   return nonB2BProgramEnrollments.map((programEnrollment) => {
-    return mitxonlineProgram(programEnrollment.program)
+    const program = mitxonlineProgram(programEnrollment.program)
+    program.enrollment =
+      transformProgramEnrollmentToDashboard(programEnrollment)
+    return program
   })
 }
 
@@ -311,6 +329,7 @@ export {
   mitxonlineCourse,
   userEnrollmentsToDashboardCourses,
   transformEnrollmentToDashboard,
+  transformProgramEnrollmentToDashboard,
   mitxonlineOrgContract,
   enrollmentsToOrgDashboardEnrollments,
   organizationCoursesWithContracts,
