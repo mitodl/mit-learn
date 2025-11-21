@@ -111,44 +111,46 @@ const HomeContent: React.FC = () => {
     }
   }, [enrollmentError, searchParams, router])
 
-  if (viewState.type === "program") {
-    return <EnrollmentDisplay programId={viewState.programId} />
-  }
-
   return (
     <>
-      <HomeHeader>
-        <HomeHeaderLeft>
-          <TitleText component="h1">Your MIT Learning Journey</TitleText>
-          <SubTitleText>
-            A customized course list based on your preferences.
-          </SubTitleText>
-        </HomeHeaderLeft>
-        <HomeHeaderRight>
-          <ButtonLink variant="tertiary" href={PROFILE}>
-            Edit Profile
-          </ButtonLink>
-        </HomeHeaderRight>
-      </HomeHeader>
-      {showEnrollmentError && (
-        <AlertBanner severity="error" closable={true}>
-          <Typography variant="subtitle2" component="span">
-            Enrollment Error
-          </Typography>
-          <Typography variant="body2" component="span">
-            {" - "}
-            The Enrollment Code is incorrect or no longer available.{" "}
-            <Link color="red" href={`mailto:${supportEmail}`}>
-              Contact Support
-            </Link>{" "}
-            for assistance.
-          </Typography>
-        </AlertBanner>
+      {viewState.type === "program" && showEnrollments ? (
+        <EnrollmentDisplay programId={viewState.programId} />
+      ) : (
+        <>
+          <HomeHeader>
+            <HomeHeaderLeft>
+              <TitleText component="h1">Your MIT Learning Journey</TitleText>
+              <SubTitleText>
+                A customized course list based on your preferences.
+              </SubTitleText>
+            </HomeHeaderLeft>
+            <HomeHeaderRight>
+              <ButtonLink variant="tertiary" href={PROFILE}>
+                Edit Profile
+              </ButtonLink>
+            </HomeHeaderRight>
+          </HomeHeader>
+          {showEnrollmentError && (
+            <AlertBanner severity="error" closable={true}>
+              <Typography variant="subtitle2" component="span">
+                Enrollment Error
+              </Typography>
+              <Typography variant="body2" component="span">
+                {" - "}
+                The Enrollment Code is incorrect or no longer available.{" "}
+                <Link color="red" href={`mailto:${supportEmail}`}>
+                  Contact Support
+                </Link>{" "}
+                for assistance.
+              </Typography>
+            </AlertBanner>
+          )}
+          <OrganizationCards />
+          {showEnrollments ? (
+            <EnrollmentDisplay onViewProgram={handleViewProgram} />
+          ) : null}
+        </>
       )}
-      <OrganizationCards />
-      {showEnrollments ? (
-        <EnrollmentDisplay onViewProgram={handleViewProgram} />
-      ) : null}
       <Suspense>
         <StyledResourceCarousel
           titleComponent="h2"
