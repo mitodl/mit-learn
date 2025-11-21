@@ -31,7 +31,7 @@ import { programsQueries } from "api/mitxonline-hooks/programs"
 import { Button } from "@mitodl/smoot-design"
 import { RiArrowLeftLine } from "@remixicon/react"
 import { useRouter } from "next-nprogress-bar"
-import { DASHBOARD_HOME } from "@/common/urls"
+import { DASHBOARD_HOME, programView } from "@/common/urls"
 
 const Wrapper = styled.div(({ theme }) => ({
   marginTop: "32px",
@@ -153,7 +153,6 @@ interface EnrollmentExpandCollapseProps {
   hiddenCourseRunEnrollments: DashboardCourse[]
   programEnrollments?: DashboardProgram[]
   isLoading?: boolean
-  onViewProgram?: (programId: number) => void
 }
 
 const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
@@ -161,13 +160,17 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
   hiddenCourseRunEnrollments,
   programEnrollments,
   isLoading,
-  onViewProgram,
 }) => {
   const [shown, setShown] = React.useState(false)
+  const router = useRouter()
 
   const handleToggle = (event: React.MouseEvent) => {
     event.preventDefault()
     setShown(!shown)
+  }
+
+  const handleViewProgram = (programId: number) => {
+    router.push(programView(programId))
   }
 
   return (
@@ -191,9 +194,7 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
             dashboardResource={program}
             showNotComplete={false}
             isLoading={isLoading}
-            buttonClick={
-              onViewProgram ? () => onViewProgram(program.id) : undefined
-            }
+            buttonClick={() => handleViewProgram(program.id)}
           />
         ))}
       </EnrollmentsList>
@@ -339,13 +340,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
   )
 }
 
-interface AllEnrollmentsDisplayProps {
-  onViewProgram?: (programId: number) => void
-}
-
-const AllEnrollmentsDisplay: React.FC<AllEnrollmentsDisplayProps> = ({
-  onViewProgram,
-}) => {
+const AllEnrollmentsDisplay: React.FC = () => {
   const onError = (error: Error) => {
     const err = error as AxiosError<{ detail?: string }>
     const status = err?.response?.status
@@ -389,26 +384,21 @@ const AllEnrollmentsDisplay: React.FC<AllEnrollmentsDisplayProps> = ({
         hiddenCourseRunEnrollments={expired}
         programEnrollments={programEnrollments || []}
         isLoading={courseEnrollmentsLoading || programEnrollmentsLoading}
-        onViewProgram={onViewProgram}
       />
     </Wrapper>
   ) : null
 }
 
 interface EnrollmentDisplayProps {
-  onViewProgram?: (programId: number) => void
   programId?: number
 }
 
-const EnrollmentDisplay: React.FC<EnrollmentDisplayProps> = ({
-  onViewProgram,
-  programId,
-}) => {
+const EnrollmentDisplay: React.FC<EnrollmentDisplayProps> = ({ programId }) => {
   if (programId) {
     return <ProgramEnrollmentDisplay programId={programId} />
   }
 
-  return <AllEnrollmentsDisplay onViewProgram={onViewProgram} />
+  return <AllEnrollmentsDisplay />
 }
 
 export { EnrollmentDisplay }
