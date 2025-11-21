@@ -18,6 +18,12 @@ import { useEffect, useState } from "react"
  *     loaded.
  * 2. Unlike posthog's `onFeatureFlags` callback, this hook enables you to
  *   distinguish between bootstrapped flags and flags loaded from PostHog server.
+ *
+ * IMPLEMENTATION:
+ * Posthog does not make detecting "flags have loaded from server" easy.
+ * This approach relies on the fact that bootstrapped flags are completely
+ * discarded after flags are loaded from server, so `useFlagEnabled` will
+ * return `undefined` for any flag that was only bootstrapped locally.
  */
 const useFeatureFlagsLoaded = () => {
   const posthog = usePostHog()
