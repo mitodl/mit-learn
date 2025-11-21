@@ -77,13 +77,6 @@ const HomeContent: React.FC = () => {
   const router = useRouter()
   const enrollmentError = searchParams.get(ENROLLMENT_ERROR_QUERY_PARAM)
   const [showEnrollmentError, setShowEnrollmentError] = React.useState(false)
-  const programIdParam = searchParams.get("program")
-  const viewState:
-    | { type: "dashboard" }
-    | { type: "program"; programId: number } =
-    programIdParam && !isNaN(parseInt(programIdParam))
-      ? { type: "program", programId: parseInt(programIdParam) }
-      : { type: "dashboard" }
   const { isLoading: isLoadingProfile, data: user } = useUserMe()
   const topics = user?.profile?.preference_search_filters.topic
   const certification = user?.profile?.preference_search_filters.certification
@@ -91,12 +84,6 @@ const HomeContent: React.FC = () => {
     FeatureFlags.EnrollmentDashboard,
   )
   const supportEmail = process.env.NEXT_PUBLIC_MITOL_SUPPORT_EMAIL || ""
-
-  const handleViewProgram = (programId: number) => {
-    const newParams = new URLSearchParams(searchParams.toString())
-    newParams.set("program", programId.toString())
-    router.push(`${window.location.pathname}?${newParams.toString()}`)
-  }
 
   // Show error and clear the query param
   React.useEffect(() => {
@@ -113,44 +100,36 @@ const HomeContent: React.FC = () => {
 
   return (
     <>
-      {viewState.type === "program" && showEnrollments ? (
-        <EnrollmentDisplay programId={viewState.programId} />
-      ) : (
-        <>
-          <HomeHeader>
-            <HomeHeaderLeft>
-              <TitleText component="h1">Your MIT Learning Journey</TitleText>
-              <SubTitleText>
-                A customized course list based on your preferences.
-              </SubTitleText>
-            </HomeHeaderLeft>
-            <HomeHeaderRight>
-              <ButtonLink variant="tertiary" href={PROFILE}>
-                Edit Profile
-              </ButtonLink>
-            </HomeHeaderRight>
-          </HomeHeader>
-          {showEnrollmentError && (
-            <AlertBanner severity="error" closable={true}>
-              <Typography variant="subtitle2" component="span">
-                Enrollment Error
-              </Typography>
-              <Typography variant="body2" component="span">
-                {" - "}
-                The Enrollment Code is incorrect or no longer available.{" "}
-                <Link color="red" href={`mailto:${supportEmail}`}>
-                  Contact Support
-                </Link>{" "}
-                for assistance.
-              </Typography>
-            </AlertBanner>
-          )}
-          <OrganizationCards />
-          {showEnrollments ? (
-            <EnrollmentDisplay onViewProgram={handleViewProgram} />
-          ) : null}
-        </>
+      <HomeHeader>
+        <HomeHeaderLeft>
+          <TitleText component="h1">Your MIT Learning Journey</TitleText>
+          <SubTitleText>
+            A customized course list based on your preferences.
+          </SubTitleText>
+        </HomeHeaderLeft>
+        <HomeHeaderRight>
+          <ButtonLink variant="tertiary" href={PROFILE}>
+            Edit Profile
+          </ButtonLink>
+        </HomeHeaderRight>
+      </HomeHeader>
+      {showEnrollmentError && (
+        <AlertBanner severity="error" closable={true}>
+          <Typography variant="subtitle2" component="span">
+            Enrollment Error
+          </Typography>
+          <Typography variant="body2" component="span">
+            {" - "}
+            The Enrollment Code is incorrect or no longer available.{" "}
+            <Link color="red" href={`mailto:${supportEmail}`}>
+              Contact Support
+            </Link>{" "}
+            for assistance.
+          </Typography>
+        </AlertBanner>
       )}
+      <OrganizationCards />
+      {showEnrollments ? <EnrollmentDisplay /> : null}
       <Suspense>
         <StyledResourceCarousel
           titleComponent="h2"
