@@ -28,10 +28,6 @@ import {
 import type { AxiosError } from "axios"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { programsQueries } from "api/mitxonline-hooks/programs"
-import { Button } from "@mitodl/smoot-design"
-import { RiArrowLeftLine } from "@remixicon/react"
-import { useRouter } from "next-nprogress-bar"
-import { DASHBOARD_HOME } from "@/common/urls"
 
 const Wrapper = styled.div(({ theme }) => ({
   marginTop: "32px",
@@ -226,7 +222,6 @@ interface ProgramEnrollmentDisplayProps {
 const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
   programId,
 }) => {
-  const router = useRouter()
   const { data: userCourses, isLoading: userEnrollmentsLoading } = useQuery({
     ...enrollmentQueries.courseRunEnrollmentsList(),
     select: userEnrollmentsToDashboardCourses,
@@ -265,38 +260,21 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
   return (
     <>
       <Stack direction="column">
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          marginBottom="24px"
-        >
-          <Stack direction="column">
-            <Typography variant="h5" color={theme.custom.colors.silverGrayDark}>
-              MITx | {program?.programType}
+        <Stack direction="column" marginBottom="24px">
+          <Typography variant="h5" color={theme.custom.colors.silverGrayDark}>
+            MITx | {program?.programType}
+          </Typography>
+          <Typography variant="h3" paddingBottom="32px">
+            {program?.title}
+          </Typography>
+          <Typography variant="body2">
+            You have completed
+            <Typography component="span" variant="subtitle2">
+              {" "}
+              {completedEnrollments?.length} of {programCourses?.length} courses{" "}
             </Typography>
-            <Typography variant="h3" paddingBottom="32px">
-              {program?.title}
-            </Typography>
-            <Typography variant="body2">
-              You have completed
-              <Typography component="span" variant="subtitle2">
-                {" "}
-                {completedEnrollments?.length} of {programCourses?.length}{" "}
-                courses{" "}
-              </Typography>
-              for this program.
-            </Typography>
-          </Stack>
-          <Stack direction="column">
-            <Button
-              variant="tertiary"
-              size="small"
-              startIcon={<RiArrowLeftLine />}
-              onClick={() => router.push(DASHBOARD_HOME)}
-            >
-              Back
-            </Button>
-          </Stack>
+            for this program.
+          </Typography>
         </Stack>
         <Stack
           direction="row"
