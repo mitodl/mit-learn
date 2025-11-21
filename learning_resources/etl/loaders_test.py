@@ -382,7 +382,7 @@ def test_load_program_bad_platform(mocker):
 @pytest.mark.parametrize("delivery", [LearningResourceDelivery.hybrid.name, None])
 @pytest.mark.parametrize("has_upcoming_run", [True, False])
 @pytest.mark.parametrize("has_departments", [True, False])
-def test_load_course(  # noqa: PLR0913,PLR0912,PLR0915, C901
+def test_load_course(  # noqa: PLR0913, PLR0912, PLR0915
     mock_upsert_tasks,
     course_exists,
     is_published,
@@ -497,11 +497,10 @@ def test_load_course(  # noqa: PLR0913,PLR0912,PLR0915, C901
     result = load_course(props, blocklist, [], config=CourseLoaderConfig(prune=True))
     assert result.professional is True
 
-    if is_published and is_run_published and not blocklisted:
-        if has_upcoming_run:
-            assert result.next_start_date == start_date
-        else:
-            assert result.next_start_date.date() == now.date()
+    if is_published and is_run_published and not blocklisted and has_upcoming_run:
+        assert result.next_start_date == start_date
+    else:
+        assert result.next_start_date is None
     assert result.prices == (
         [Decimal("0.00"), Decimal("49.00")]
         if is_run_published and result.certification
@@ -1748,15 +1747,17 @@ def test_load_run_dependent_values(certification):
     course = LearningResourceFactory.create(
         is_course=True, certification=certification, runs=[]
     )
+    assert course.runs.count() == 0
     closest_date = now_in_utc() + timedelta(days=1)
     furthest_date = now_in_utc() + timedelta(days=2)
-    run = LearningResourceRunFactory.create(
+    best_run = LearningResourceRunFactory.create(
         learning_resource=course,
         published=True,
         availability=Availability.dated.name,
         prices=[Decimal("0.00"), Decimal("20.00")],
         resource_prices=LearningResourcePriceFactory.create_batch(2),
         start_date=closest_date,
+        enrollment_start=None,
         location="Portland, ME",
         duration="3 - 4 weeks",
         min_weeks=3,
@@ -1772,6 +1773,7 @@ def test_load_run_dependent_values(certification):
         prices=[Decimal("0.00"), Decimal("50.00")],
         resource_prices=LearningResourcePriceFactory.create_batch(2),
         start_date=furthest_date,
+        enrollment_start=None,
         location="Portland, OR",
         duration="7 - 9 weeks",
         min_weeks=7,
@@ -1781,15 +1783,23 @@ def test_load_run_dependent_values(certification):
         max_weekly_hours=19,
     )
     result = load_run_dependent_values(course)
-    assert result.next_start_date == course.next_start_date == closest_date
-    assert result.prices == course.prices == ([] if not certification else run.prices)
+    course.refresh_from_db()
+    assert (
+        result.prices == course.prices == ([] if not certification else best_run.prices)
+    )
+    assert (
+        result.next_start_date
+        == course.next_start_date
+        == best_run.start_date
+        == closest_date
+    )
     assert (
         list(result.resource_prices)
         == list(course.resource_prices.all())
-        == ([] if not certification else list(run.resource_prices.all()))
+        == ([] if not certification else list(best_run.resource_prices.all()))
     )
     assert result.availability == course.availability == Availability.dated.name
-    assert result.location == course.location == run.location
+    assert result.location == course.location == best_run.location
     for key in [
         "duration",
         "time_commitment",
@@ -1798,7 +1808,7 @@ def test_load_run_dependent_values(certification):
         "min_weekly_hours",
         "max_weekly_hours",
     ]:
-        assert getattr(result, key) == getattr(course, key) == getattr(run, key)
+        assert getattr(result, key) == getattr(course, key) == getattr(best_run, key)
 
 
 def test_load_run_dependent_values_resets_next_start_date():
@@ -1827,6 +1837,57 @@ def test_load_run_dependent_values_resets_next_start_date():
     # Verify that next_start_date was reset to None
     assert result.next_start_date is None
     assert course.next_start_date is None
+
+
+@pytest.mark.parametrize(
+    ("has_start_date", "has_enrollment_start", "expect_next_start_date"),
+    [
+        (True, True, True),
+        (True, False, True),
+        (False, True, False),  # next_run requires start_date > now
+        (False, False, False),
+    ],
+)
+def test_load_run_dependent_values_next_start_date(
+    has_start_date, has_enrollment_start, expect_next_start_date
+):
+    """Test that next_start_date is correctly set from the next_run (future runs only)"""
+    course = LearningResourceFactory.create(is_course=True, published=True, runs=[])
+
+    now = now_in_utc()
+    future_start = now + timedelta(days=30)
+    future_enrollment_start = now + timedelta(days=15)
+
+    # Create a run with future dates
+    LearningResourceRunFactory.create(
+        learning_resource=course,
+        published=True,
+        start_date=future_start if has_start_date else None,
+        enrollment_start=future_enrollment_start if has_enrollment_start else None,
+    )
+
+    # Call load_run_dependent_values
+    result = load_run_dependent_values(course)
+
+    # Refresh course from database
+    course.refresh_from_db()
+
+    # Verify that next_start_date is set correctly
+    if expect_next_start_date:
+        # next_start_date should be the max of start_date and enrollment_start
+        expected_date = max(
+            filter(
+                None,
+                [
+                    future_start if has_start_date else None,
+                    future_enrollment_start if has_enrollment_start else None,
+                ],
+            )
+        )
+        assert result.next_start_date == expected_date
+    else:
+        # No future dates, so next_start_date should be None
+        assert result.next_start_date is None
 
 
 @pytest.mark.parametrize(
