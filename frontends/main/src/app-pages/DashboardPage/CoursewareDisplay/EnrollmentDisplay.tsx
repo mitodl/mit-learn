@@ -31,7 +31,7 @@ import { programsQueries } from "api/mitxonline-hooks/programs"
 import { Button } from "@mitodl/smoot-design"
 import { RiArrowLeftLine } from "@remixicon/react"
 import { useRouter } from "next-nprogress-bar"
-import { DASHBOARD_HOME, programView } from "@/common/urls"
+import { DASHBOARD_HOME } from "@/common/urls"
 
 const Wrapper = styled.div(({ theme }) => ({
   marginTop: "32px",
@@ -162,15 +162,10 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
   isLoading,
 }) => {
   const [shown, setShown] = React.useState(false)
-  const router = useRouter()
 
   const handleToggle = (event: React.MouseEvent) => {
     event.preventDefault()
     setShown(!shown)
-  }
-
-  const handleViewProgram = (programId: number) => {
-    router.push(programView(programId))
   }
 
   return (
@@ -194,7 +189,6 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
             dashboardResource={program}
             showNotComplete={false}
             isLoading={isLoading}
-            buttonClick={() => handleViewProgram(program.id)}
           />
         ))}
       </EnrollmentsList>
