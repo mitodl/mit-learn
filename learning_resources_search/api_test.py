@@ -1946,8 +1946,7 @@ def test_execute_learn_search_for_learning_resource_query(opensearch):
                 "content",
                 "summary",
                 "flashcards",
-                "description_embedding",
-                "title_embedding",
+                "vector_embedding",
             ]
         },
     }
@@ -2395,8 +2394,7 @@ def test_execute_learn_search_with_script_score(
                 "content",
                 "summary",
                 "flashcards",
-                "description_embedding",
-                "title_embedding",
+                "vector_embedding",
             ]
         },
     }
@@ -2417,10 +2415,8 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
 
     settings.DEFAULT_SEARCH_MODE = "best_fields"
 
-    mocker.patch(
-        "learning_resources_search.api.get_vector_model_id",
-        return_value="vector_model_id",
-    )
+    mock_encoder = mocker.patch("learning_resources_search.api.dense_encoder")()
+    mock_encoder.embed_query.return_value = [0.1, 0.2, 0.3]
 
     search_params = {
         "aggregations": ["offered_by"],
@@ -2727,24 +2723,7 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
                             "filter": {"exists": {"field": "resource_type"}},
                         }
                     },
-                    {
-                        "neural": {
-                            "description_embedding": {
-                                "query_text": "math",
-                                "model_id": "vector_model_id",
-                                "min_score": 0.015,
-                            }
-                        }
-                    },
-                    {
-                        "neural": {
-                            "title_embedding": {
-                                "query_text": "math",
-                                "model_id": "vector_model_id",
-                                "min_score": 0.015,
-                            }
-                        }
-                    },
+                    {"knn": {"vector_embedding": {"vector": [0.1, 0.2, 0.3], "k": 5}}},
                 ],
             }
         },
@@ -2805,7 +2784,7 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
                         "normalization": {"technique": "min_max"},
                         "combination": {
                             "technique": "arithmetic_mean",
-                            "parameters": {"weights": [0.6, 0.2, 0.2]},
+                            "parameters": {"weights": [0.8, 0.2]},
                         },
                     }
                 }
@@ -2824,8 +2803,7 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
                 "content",
                 "summary",
                 "flashcards",
-                "description_embedding",
-                "title_embedding",
+                "vector_embedding",
             ]
         },
     }
@@ -3217,8 +3195,7 @@ def test_execute_learn_search_with_min_score(mocker, settings, opensearch):
                 "content",
                 "summary",
                 "flashcards",
-                "description_embedding",
-                "title_embedding",
+                "vector_embedding",
             ]
         },
     }
@@ -3396,8 +3373,7 @@ def test_execute_learn_search_for_content_file_query(opensearch):
                 "content",
                 "summary",
                 "flashcards",
-                "description_embedding",
-                "title_embedding",
+                "vector_embedding",
             ]
         },
     }
