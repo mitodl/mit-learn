@@ -27,6 +27,7 @@ import TiptapEditor, { MainToolbarContent } from "./TiptapEditor"
 
 // --- Tiptap Node ---
 import { ImageUploadNode } from "./components/tiptap-node/image-upload-node/image-upload-node-extension"
+import { MediaEmbed } from "./components/tiptap-node/media-embed/media-embed-extension"
 import { HorizontalRule } from "./components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension"
 
 import "./components/tiptap-node/blockquote-node/blockquote-node.scss"
@@ -60,6 +61,7 @@ const ViewContainer = styled.div({
 
 const Title = styled(Typography)<TypographyProps>({
   margin: "60px auto",
+  maxWidth: "1000px",
 })
 
 const TitleInput = styled(Input)({
@@ -152,6 +154,11 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       setTouched(true)
       setContent(json)
     },
+    onCreate: ({ editor }) => {
+      editor.commands.updateAttributes("mediaEmbed", {
+        editable: !readOnly,
+      })
+    },
     editorProps: {
       attributes: {
         autocomplete: "off",
@@ -179,6 +186,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       Subscript,
       Selection,
       Image,
+      MediaEmbed,
       ImageUploadNode.configure({
         accept: "image/*",
         maxSize: MAX_FILE_SIZE,
@@ -188,6 +196,25 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       }),
     ],
   })
+
+  React.useEffect(() => {
+    if (!editor) return
+
+    editor
+      .chain()
+      .command(({ tr, state }) => {
+        state.doc.descendants((node, pos) => {
+          if (node.type.name === "mediaEmbed") {
+            tr.setNodeMarkup(pos, undefined, {
+              ...node.attrs,
+              editable: !readOnly,
+            })
+          }
+        })
+        return true
+      })
+      .run()
+  }, [editor, readOnly])
 
   if (!editor) return null
 
@@ -212,7 +239,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
             </StyledToolbar>
           ) : (
             <StyledToolbar>
-              <MainToolbarContent />
+              <MainToolbarContent editor={editor} />
               <Button
                 variant="primary"
                 disabled={isPending || !title.trim() || !touched}
