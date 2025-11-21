@@ -23,6 +23,14 @@ const useFeatureFlagsLoaded = () => {
   const posthog = usePostHog()
   const [hasBootstrapped, setHasBootstrapped] = useState(false)
   useEffect(() => {
+    /**
+     * NOTE: this does not indicate flags have loaded from server, so they might
+     * be incomplete. It does at least indicate that localstorage/bootstrapped
+     * flags are ready
+     *
+     * If this event listener is added after posthog has fully loaded flags,
+     * the callback is still fired.
+     */
     return posthog.onFeatureFlags(() => {
       setHasBootstrapped(true)
     })
