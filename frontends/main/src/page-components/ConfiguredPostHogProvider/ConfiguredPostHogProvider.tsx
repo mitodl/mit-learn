@@ -2,19 +2,11 @@ import React, { useEffect } from "react"
 import posthog from "posthog-js"
 import { PostHogProvider, usePostHog } from "posthog-js/react"
 import { useUserMe } from "api/hooks/user"
+import { INTERNAL_BOOTSTRAPPING_FLAG } from "@/common/feature_flags"
 
 const POSTHOG_API_KEY = process.env.NEXT_PUBLIC_POSTHOG_API_KEY
 const POSTHOG_API_HOST = process.env.NEXT_PUBLIC_POSTHOG_API_HOST
 const FEATURE_FLAGS = process.env.FEATURE_FLAGS
-
-if (POSTHOG_API_KEY) {
-  posthog.init(POSTHOG_API_KEY, {
-    api_host: POSTHOG_API_HOST,
-    bootstrap: {
-      featureFlags: FEATURE_FLAGS ? JSON.parse(FEATURE_FLAGS) : null,
-    },
-  })
-}
 
 const PosthogIdentifier = () => {
   const { data: user } = useUserMe()
@@ -45,6 +37,22 @@ const PosthogIdentifier = () => {
 const ConfiguredPostHogProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
+  useEffect(() => {
+    if (POSTHOG_API_KEY) {
+      posthog.init(POSTHOG_API_KEY, {
+        api_host: POSTHOG_API_HOST,
+        bootstrap: {
+          featureFlags: FEATURE_FLAGS
+            ? {
+                ...JSON.parse(FEATURE_FLAGS),
+                [INTERNAL_BOOTSTRAPPING_FLAG]: true,
+              }
+            : null,
+        },
+      })
+    }
+  }, [])
+
   if (!POSTHOG_API_KEY) {
     return children
   }
