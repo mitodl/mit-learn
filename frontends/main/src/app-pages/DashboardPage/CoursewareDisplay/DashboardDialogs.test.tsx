@@ -40,6 +40,10 @@ describe("DashboardDialogs", () => {
       mitxonline.urls.enrollment.enrollmentsListV2(),
       enrollments,
     )
+    setMockResponse.get(
+      mitxonline.urls.programEnrollments.enrollmentsListV2(),
+      [],
+    )
 
     return { enrollments, completed, expired, started, notStarted }
   }
