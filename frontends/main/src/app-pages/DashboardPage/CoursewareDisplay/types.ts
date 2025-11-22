@@ -73,6 +73,25 @@ type DashboardProgramEnrollment = {
   }
 }
 
+type DashboardProgramRequirementNodeType = "course" | "program" | "operator"
+
+type DashboardProgramRequirementData = {
+  nodeType: DashboardProgramRequirementNodeType
+  course?: number | null
+  program?: number | null
+  requiredProgram?: number | null
+  title?: string | null
+  operator?: string | null
+  operatorValue?: string | null
+  electiveFlag?: boolean | null
+}
+
+type DashboardProgramRequirement = {
+  id?: number | null
+  data: DashboardProgramRequirementData
+  children?: DashboardProgramRequirement[]
+}
+
 type DashboardProgram = {
   id: number
   key: string
@@ -83,6 +102,7 @@ type DashboardProgram = {
   collections: number[]
   description: string
   enrollment?: DashboardProgramEnrollment
+  reqTree: DashboardProgramRequirement[]
 }
 
 type DashboardProgramCollection = {
@@ -112,6 +132,9 @@ export type {
   DashboardCourseEnrollment,
   DashboardProgramEnrollment,
   DashboardProgram,
+  DashboardProgramRequirement,
+  DashboardProgramRequirementData,
+  DashboardProgramRequirementNodeType,
   DashboardProgramCollection,
   DashboardProgramCollectionProgram,
 }
