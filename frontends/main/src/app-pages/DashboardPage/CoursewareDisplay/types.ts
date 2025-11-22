@@ -35,6 +35,7 @@ type DashboardContract = {
 type DashboardCourse = {
   key: string
   coursewareId: string | null
+  readableId: string | null
   title: string
   type: typeof DashboardResourceType.Course
   run: {
@@ -65,6 +66,33 @@ type DashboardCourseEnrollment = {
   }
 }
 
+type DashboardProgramEnrollment = {
+  status: EnrollmentStatus
+  certificate?: {
+    uuid: string
+    link: string
+  }
+}
+
+type DashboardProgramRequirementNodeType = "course" | "program" | "operator"
+
+type DashboardProgramRequirementData = {
+  nodeType: DashboardProgramRequirementNodeType
+  course?: number | null
+  program?: number | null
+  requiredProgram?: number | null
+  title?: string | null
+  operator?: string | null
+  operatorValue?: string | null
+  electiveFlag?: boolean | null
+}
+
+type DashboardProgramRequirement = {
+  id?: number | null
+  data: DashboardProgramRequirementData
+  children?: DashboardProgramRequirement[]
+}
+
 type DashboardProgram = {
   id: number
   key: string
@@ -74,6 +102,8 @@ type DashboardProgram = {
   courseIds: number[]
   collections: number[]
   description: string
+  enrollment?: DashboardProgramEnrollment
+  reqTree: DashboardProgramRequirement[]
 }
 
 type DashboardProgramCollection = {
@@ -101,7 +131,11 @@ export type {
   DashboardContract,
   DashboardCourse,
   DashboardCourseEnrollment,
+  DashboardProgramEnrollment,
   DashboardProgram,
+  DashboardProgramRequirement,
+  DashboardProgramRequirementData,
+  DashboardProgramRequirementNodeType,
   DashboardProgramCollection,
   DashboardProgramCollectionProgram,
 }

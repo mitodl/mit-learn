@@ -14,6 +14,7 @@ import {
   mitxonlineProgram,
   sortDashboardCourses,
 } from "./CoursewareDisplay/transform"
+import type { CertificatePageModel } from "@mitodl/mitxonline-api-axios/v2"
 import {
   createCoursesWithContractRuns,
   createEnrollmentsForContractRuns,
@@ -33,6 +34,7 @@ describe("OrganizationContent", () => {
     setMockResponse.get(urls.enrollment.enrollmentsList(), [])
     setMockResponse.get(urls.enrollment.enrollmentsListV2(), [])
     setMockResponse.get(urls.programEnrollments.enrollmentsList(), [])
+    setMockResponse.get(urls.programEnrollments.enrollmentsListV2(), [])
     setMockResponse.get(urls.contracts.contractsList(), [])
   })
 
@@ -435,19 +437,35 @@ describe("OrganizationContent", () => {
       program_type: "Program", // Set specific program type
       certificate: {
         uuid: "cert-123",
-        url: "/certificates/program/1",
+        url: "/certificate/program/cert-123",
       },
     }
-    const programEnrollment = factories.enrollment.programEnrollment({
-      program: { id: programWithCertificate.id },
+    const programEnrollment = factories.enrollment.programEnrollmentV2({
+      program: programWithCertificate,
       certificate: {
-        link: programWithCertificate.certificate.url,
+        uuid: programWithCertificate.certificate.uuid,
+        user: {
+          id: 1,
+          username: "testuser",
+          name: "Test User",
+          created_on: new Date().toISOString(),
+          updated_on: new Date().toISOString(),
+        },
+        is_revoked: false,
+        certificate_page: {
+          id: 1,
+        } as Partial<CertificatePageModel> as CertificatePageModel,
+        program: programWithCertificate,
+        certificate_page_revision: 1,
       },
     })
     setMockResponse.get(urls.programs.programsList({ org_id: orgX.id }), {
       results: [programWithCertificate],
     })
     setMockResponse.get(urls.programEnrollments.enrollmentsList(), [
+      programEnrollment,
+    ])
+    setMockResponse.get(urls.programEnrollments.enrollmentsListV2(), [
       programEnrollment,
     ])
 

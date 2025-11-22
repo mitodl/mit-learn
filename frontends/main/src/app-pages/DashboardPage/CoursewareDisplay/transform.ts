@@ -10,14 +10,19 @@ import {
   CourseWithCourseRunsSerializerV2,
   V2Program,
   V2ProgramCollection,
+  V2ProgramRequirement,
+  V2UserProgramEnrollmentDetail,
 } from "@mitodl/mitxonline-api-axios/v2"
 
 import { DashboardResourceType, EnrollmentStatus } from "./types"
+
 import type {
   DashboardContract,
   DashboardCourse,
   DashboardCourseEnrollment,
+  DashboardProgramEnrollment,
   DashboardProgram,
+  DashboardProgramRequirement,
   DashboardProgramCollection,
 } from "./types"
 import { groupBy } from "lodash"
@@ -52,6 +57,7 @@ const mitxonlineCourse = (
       runId: run?.id,
     }),
     coursewareId: run?.courseware_id ?? null,
+    readableId: raw.readable_id ?? null,
     type: DashboardResourceType.Course,
     title: raw.title,
     marketingUrl: raw.page?.page_url,
@@ -98,6 +104,20 @@ const transformEnrollmentToDashboard = (
   }
 }
 
+const transformProgramEnrollmentToDashboard = (
+  raw: V2UserProgramEnrollmentDetail,
+): DashboardProgramEnrollment => {
+  return {
+    status: EnrollmentStatus.Enrolled,
+    certificate: raw.certificate
+      ? {
+          uuid: raw.certificate.uuid,
+          link: `/certificate/program/${raw.certificate.uuid}/`,
+        }
+      : undefined,
+  }
+}
+
 const filterEnrollmentsByOrganization = (
   enrollments: CourseRunEnrollmentRequestV2[],
   organizationId: number,
@@ -123,6 +143,7 @@ const userEnrollmentsToDashboardCourses = (
         runId: run.id,
       }),
       coursewareId: run?.courseware_id ?? null,
+      readableId: course.readable_id ?? null,
       type: DashboardResourceType.Course,
       title: course.title,
       marketingUrl: course.page?.page_url,
@@ -174,6 +195,7 @@ const createOrgUnenrolledCourse = (
       runId: run?.id,
     }),
     coursewareId: run?.courseware_id ?? null,
+    readableId: course.readable_id ?? null,
     type: DashboardResourceType.Course,
     title: course.title,
     marketingUrl: course.page?.page_url,
@@ -245,6 +267,45 @@ const organizationCoursesWithContracts = (raw: {
   return transformedCourses
 }
 
+const programEnrollmentsToPrograms = (
+  data: V2UserProgramEnrollmentDetail[],
+): DashboardProgram[] => {
+  // Filter out program enrollments where any course enrollment is tied to a B2B contract
+  const nonB2BProgramEnrollments = data.filter((programEnrollment) => {
+    // Only include the program if NONE of its enrollments have a B2B contract
+    return !programEnrollment.enrollments.some(
+      (enrollment) => enrollment.b2b_contract_id !== null,
+    )
+  })
+
+  return nonB2BProgramEnrollments.map((programEnrollment) => {
+    const program = mitxonlineProgram(programEnrollment.program)
+    program.enrollment =
+      transformProgramEnrollmentToDashboard(programEnrollment)
+    return program
+  })
+}
+
+const transformProgramRequirement = (
+  raw: V2ProgramRequirement,
+): DashboardProgramRequirement => {
+  return {
+    id: raw.id,
+    data: {
+      nodeType: raw.data
+        .node_type as DashboardProgramRequirement["data"]["nodeType"],
+      course: raw.data.course,
+      program: raw.data.program,
+      requiredProgram: raw.data.required_program,
+      title: raw.data.title,
+      operator: raw.data.operator,
+      operatorValue: raw.data.operator_value,
+      electiveFlag: raw.data.elective_flag,
+    },
+    children: raw.children?.map(transformProgramRequirement),
+  }
+}
+
 const mitxonlineProgram = (raw: V2Program): DashboardProgram => {
   return {
     id: raw.id,
@@ -259,6 +320,7 @@ const mitxonlineProgram = (raw: V2Program): DashboardProgram => {
     courseIds: raw.courses,
     collections: raw.collections,
     description: raw.page.description,
+    reqTree: raw.req_tree.map(transformProgramRequirement),
   }
 }
 
@@ -293,10 +355,13 @@ export {
   mitxonlineCourse,
   userEnrollmentsToDashboardCourses,
   transformEnrollmentToDashboard,
+  transformProgramEnrollmentToDashboard,
+  transformProgramRequirement,
   mitxonlineOrgContract,
   enrollmentsToOrgDashboardEnrollments,
   organizationCoursesWithContracts,
   createOrgUnenrolledCourse,
+  programEnrollmentsToPrograms,
   mitxonlineProgram,
   mitxonlineProgramCollection,
   sortDashboardCourses,

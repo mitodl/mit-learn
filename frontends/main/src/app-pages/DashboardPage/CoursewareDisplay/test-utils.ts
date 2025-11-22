@@ -33,6 +33,7 @@ const dashboardCourse: PartialFactory<DashboardCourse> = (...overrides) => {
     {
       key: faker.string.uuid(),
       coursewareId: faker.string.uuid(),
+      readableId: `course-v1:${faker.string.alphanumeric(5)}+${faker.string.alphanumeric(5)}`,
       type: DashboardResourceType.Course,
       title: faker.commerce.productName(),
       marketingUrl: faker.internet.url(),
@@ -268,6 +269,10 @@ function setupOrgDashboardMocks(
   // Empty defaults
   setMockResponse.get(mitxonline.urls.enrollment.enrollmentsList(), [])
   setMockResponse.get(mitxonline.urls.programEnrollments.enrollmentsList(), [])
+  setMockResponse.get(
+    mitxonline.urls.programEnrollments.enrollmentsListV2(),
+    [],
+  )
   setMockResponse.get(mitxonline.urls.contracts.contractsList(), contracts)
   setMockResponse.get(
     mitxonline.urls.programCollections.programCollectionsList(),
@@ -312,6 +317,7 @@ const createTestContracts = (
     membership_type: faker.helpers.arrayElement(["managed", "unmanaged"]),
     welcome_message: faker.lorem.sentence(),
     welcome_message_extra: faker.lorem.sentence(),
+    programs: [],
   }))
 }
 

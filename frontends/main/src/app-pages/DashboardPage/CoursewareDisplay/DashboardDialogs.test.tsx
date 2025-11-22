@@ -40,6 +40,10 @@ describe("DashboardDialogs", () => {
       mitxonline.urls.enrollment.enrollmentsListV2(),
       enrollments,
     )
+    setMockResponse.get(
+      mitxonline.urls.programEnrollments.enrollmentsListV2(),
+      [],
+    )
 
     return { enrollments, completed, expired, started, notStarted }
   }
@@ -199,7 +203,10 @@ describe("JustInTimeDialog", () => {
 
     // Setup course for enrollment
     const course = dashboardCourse({
-      enrollment: { status: EnrollmentStatus.NotEnrolled },
+      enrollment: {
+        status: EnrollmentStatus.NotEnrolled,
+        b2b_contract_id: faker.number.int(),
+      },
       marketingUrl: "https://example.com/course",
     })
 
