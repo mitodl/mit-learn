@@ -33,6 +33,7 @@ const dashboardCourse: PartialFactory<DashboardCourse> = (...overrides) => {
     {
       key: faker.string.uuid(),
       coursewareId: faker.string.uuid(),
+      readableId: `course-v1:${faker.string.alphanumeric(5)}+${faker.string.alphanumeric(5)}`,
       type: DashboardResourceType.Course,
       title: faker.commerce.productName(),
       marketingUrl: faker.internet.url(),
@@ -316,6 +317,7 @@ const createTestContracts = (
     membership_type: faker.helpers.arrayElement(["managed", "unmanaged"]),
     welcome_message: faker.lorem.sentence(),
     welcome_message_extra: faker.lorem.sentence(),
+    programs: [],
   }))
 }
 

@@ -137,12 +137,22 @@ describe.each([
 
   test.each([
     {
-      course: pastDashboardCourse(),
+      course: pastDashboardCourse({
+        enrollment: {
+          status: EnrollmentStatus.Enrolled,
+          mode: EnrollmentMode.Audit,
+        },
+      }),
       expected: { enabled: true },
       case: "past",
     },
     {
-      course: currentDashboardCourse(),
+      course: currentDashboardCourse({
+        enrollment: {
+          status: EnrollmentStatus.Enrolled,
+          mode: EnrollmentMode.Audit,
+        },
+      }),
       expected: { enabled: true },
       case: "current",
     },
@@ -606,7 +616,10 @@ describe.each([
     async ({ trigger }) => {
       const userData = mitxUser()
       const course = dashboardCourse({
-        enrollment: { status: EnrollmentStatus.NotEnrolled },
+        enrollment: {
+          status: EnrollmentStatus.NotEnrolled,
+          b2b_contract_id: faker.number.int(),
+        },
       })
       const { enrollmentUrl } = setupEnrollmentApis({ user: userData, course })
       renderWithProviders(
@@ -635,7 +648,10 @@ describe.each([
     "Enrollment for complete profile bypasses just-in-time dialog",
     async ({ trigger, userData }) => {
       const course = dashboardCourse({
-        enrollment: { status: EnrollmentStatus.NotEnrolled },
+        enrollment: {
+          status: EnrollmentStatus.NotEnrolled,
+          b2b_contract_id: faker.number.int(),
+        },
       })
       setupEnrollmentApis({ user: userData, course })
       renderWithProviders(
