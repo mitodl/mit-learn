@@ -41,6 +41,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
       expect(transformed[0]).toEqual({
         key: `mitxonline-course-${apiData.run.course.id}-${apiData.run.id}`,
         coursewareId: apiData.run.courseware_id ?? null,
+        readableId: apiData.run.course.readable_id ?? null,
         type: DashboardResourceType.Course,
         title: apiData.run.title,
         marketingUrl: apiData.run.course.page?.page_url,
