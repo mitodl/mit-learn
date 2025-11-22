@@ -21,8 +21,8 @@ import {
 import { DashboardCard } from "./DashboardCard"
 import {
   DashboardCourse,
-  DashboardCourseEnrollment,
   DashboardProgram,
+  DashboardProgramRequirement,
   EnrollmentStatus,
 } from "./types"
 import type { AxiosError } from "axios"
@@ -215,6 +215,39 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
   )
 }
 
+const extractCoursesFromNode = (
+  node: DashboardProgramRequirement,
+): number[] => {
+  const courses: number[] = []
+
+  if (node.data.nodeType === "course" && node.data.course) {
+    courses.push(node.data.course)
+  }
+
+  if (node.children) {
+    node.children.forEach((child) => {
+      courses.push(...extractCoursesFromNode(child))
+    })
+  }
+
+  return courses
+}
+
+const getRequirementSectionTitle = (
+  node: DashboardProgramRequirement,
+): string => {
+  if (node.data.title) {
+    return node.data.title
+  }
+  if (node.data.electiveFlag) {
+    if (node.data.operator === "min_number_of" && node.data.operatorValue) {
+      return `Electives (Complete ${node.data.operatorValue})`
+    }
+    return "Elective Courses"
+  }
+  return "Core Courses"
+}
+
 interface ProgramEnrollmentDisplayProps {
   programId: number
 }
@@ -232,31 +265,39 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
   const program = rawProgram ? mitxonlineProgram(rawProgram) : undefined
   const { data: rawProgramCourses, isLoading: programCoursesLoading } =
     useQuery(coursesQueries.coursesList({ id: program?.courseIds }))
-  const programCourses = rawProgramCourses?.results.map((course) => {
-    const enrollment = userCourses?.find((dashboardCourse) =>
-      course.courseruns.some(
-        (run) => run.courseware_id === dashboardCourse.coursewareId,
-      ),
-    )?.enrollment
-    return mitxonlineCourse(course, enrollment)
-  })
-  const rawProgramCourseEnrollments = userCourses?.filter((course) => {
-    return rawProgramCourses?.results.some((programCourse) =>
-      programCourse.courseruns.some(
-        (run) => run.courseware_id === course.coursewareId,
-      ),
-    )
-  })
-  const programCourseEnrollments = rawProgramCourseEnrollments
-    ?.map((course) => {
-      return course.enrollment ?? undefined
-    })
-    .filter(
-      (enrollment) => enrollment !== undefined,
-    ) as DashboardCourseEnrollment[]
-  const completedEnrollments = programCourseEnrollments?.filter(
-    (enrollment) => enrollment.status === EnrollmentStatus.Completed,
+
+  // Build sections from requirement tree
+  const requirementSections =
+    program?.reqTree
+      .filter((node) => node.data.nodeType === "operator")
+      .map((node) => {
+        const courseIds = extractCoursesFromNode(node)
+        const sectionCourses = rawProgramCourses?.results
+          .filter((course) => courseIds.includes(course.id))
+          .map((course) => {
+            const enrollment = userCourses?.find((dashboardCourse) =>
+              course.courseruns.some(
+                (run) => run.courseware_id === dashboardCourse.coursewareId,
+              ),
+            )?.enrollment
+            return mitxonlineCourse(course, enrollment)
+          })
+
+        return {
+          title: getRequirementSectionTitle(node),
+          courses: sectionCourses || [],
+          node,
+        }
+      })
+      .filter((section) => section.courses.length > 0) || []
+
+  const allProgramCourses = requirementSections.flatMap(
+    (section) => section.courses,
   )
+  const completedCount = allProgramCourses.filter(
+    (course) => course.enrollment?.status === EnrollmentStatus.Completed,
+  ).length
+  const totalCount = allProgramCourses.length
   return (
     <>
       <Stack direction="column">
@@ -271,42 +312,54 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
             You have completed
             <Typography component="span" variant="subtitle2">
               {" "}
-              {completedEnrollments?.length} of {programCourses?.length} courses{" "}
+              {completedCount} of {totalCount} courses{" "}
             </Typography>
             for this program.
           </Typography>
         </Stack>
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          marginBottom="16px"
-        >
-          <Typography variant="subtitle2" color={theme.custom.colors.red}>
-            Core Courses
-          </Typography>
-          <Typography
-            variant="body2"
-            color={theme.custom.colors.silverGrayDark}
-          >
-            Completed {completedEnrollments?.length} of {programCourses?.length}
-          </Typography>
-        </Stack>
-        <StackedCardContainer>
-          {programCourses?.map((course) => (
-            <DashboardCardStyled
-              titleAction="marketing"
-              key={course.key}
-              dashboardResource={course}
-              showNotComplete={false}
-              variant="stacked"
-              isLoading={
-                userEnrollmentsLoading ||
-                programLoading ||
-                programCoursesLoading
-              }
-            />
-          ))}
-        </StackedCardContainer>
+        {requirementSections.map((section, index) => {
+          const sectionCompletedCount = section.courses.filter(
+            (course) =>
+              course.enrollment?.status === EnrollmentStatus.Completed,
+          ).length
+
+          return (
+            <React.Fragment key={index}>
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                marginBottom="16px"
+                marginTop={index > 0 ? "32px" : "0"}
+              >
+                <Typography variant="subtitle2" color={theme.custom.colors.red}>
+                  {section.title}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color={theme.custom.colors.silverGrayDark}
+                >
+                  Completed {sectionCompletedCount} of {section.courses.length}
+                </Typography>
+              </Stack>
+              <StackedCardContainer>
+                {section.courses.map((course) => (
+                  <DashboardCardStyled
+                    titleAction="marketing"
+                    key={course.key}
+                    dashboardResource={course}
+                    showNotComplete={false}
+                    variant="stacked"
+                    isLoading={
+                      userEnrollmentsLoading ||
+                      programLoading ||
+                      programCoursesLoading
+                    }
+                  />
+                ))}
+              </StackedCardContainer>
+            </React.Fragment>
+          )
+        })}
       </Stack>
     </>
   )
