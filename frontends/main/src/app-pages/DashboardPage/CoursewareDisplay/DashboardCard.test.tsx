@@ -221,7 +221,7 @@ describe.each([
       view.rerender(
         <DashboardCard
           titleAction="marketing"
-          courseNoun={courseNoun}
+          noun={courseNoun}
           dashboardResource={course}
         />,
       )
@@ -236,7 +236,7 @@ describe.each([
           `${expected.label} ${courseNoun}`,
         )
       } else {
-        // "Continue" doesn't use courseNoun
+        // "Continue" doesn't use noun
         expect(coursewareCTA).toHaveTextContent(expected.label)
       }
     },
