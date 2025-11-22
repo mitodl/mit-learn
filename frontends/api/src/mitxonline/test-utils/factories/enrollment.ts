@@ -6,6 +6,8 @@ import type {
   CourseRunEnrollmentRequestV2,
   CourseRunGrade,
   UserProgramEnrollmentDetail,
+  V2UserProgramEnrollmentDetail,
+  CertificatePageModel,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { UniqueEnforcer } from "enforce-unique"
 import { factories } from ".."
@@ -193,9 +195,45 @@ const programEnrollment: PartialFactory<UserProgramEnrollmentDetail> = (
   return mergeOverrides<UserProgramEnrollmentDetail>(defaults, overrides)
 }
 
+const programEnrollmentV2: PartialFactory<V2UserProgramEnrollmentDetail> = (
+  overrides = {},
+): V2UserProgramEnrollmentDetail => {
+  const program = factories.programs.program()
+  const hasCertificate = faker.datatype.boolean()
+  const defaults: V2UserProgramEnrollmentDetail = {
+    certificate: hasCertificate
+      ? {
+          uuid: faker.string.uuid(),
+          user: {
+            id: faker.number.int(),
+            username: faker.internet.username(),
+            name: faker.person.fullName(),
+            created_on: faker.date.past().toISOString(),
+            updated_on: faker.date.recent().toISOString(),
+          },
+          is_revoked: false,
+          certificate_page: {
+            id: faker.number.int(),
+          } as Partial<CertificatePageModel> as CertificatePageModel,
+          program: program,
+          certificate_page_revision: faker.number.int({ min: 1, max: 10 }),
+        }
+      : null,
+    program: program,
+    enrollments: [courseEnrollment()],
+  }
+  return mergeOverrides<V2UserProgramEnrollmentDetail>(defaults, overrides)
+}
+
 // Not paginated
 const courseEnrollments = (count: number): CourseRunEnrollmentRequestV2[] => {
   return new Array(count).fill(null).map(() => courseEnrollment())
 }
 
-export { courseEnrollment, courseEnrollments, grade, programEnrollment }
+export {
+  courseEnrollment,
+  courseEnrollments,
+  grade,
+  programEnrollment,
+  programEnrollmentV2,
+}
