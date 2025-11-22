@@ -267,11 +267,17 @@ const programPageItem: PartialFactory<ProgramPageItem> = (override) => {
         courses: {
           required: Array.from(
             { length: faker.number.int({ min: 2, max: 4 }) },
-            () => faker.number.int({ min: 1, max: 20 }),
+            () => ({
+              id: faker.number.int({ min: 1, max: 20 }),
+              readable_id: `course-v1:${faker.lorem.slug()}`,
+            }),
           ),
           electives: Array.from(
             { length: faker.number.int({ min: 2, max: 5 }) },
-            () => faker.number.int({ min: 21, max: 50 }),
+            () => ({
+              id: faker.number.int({ min: 21, max: 50 }),
+              readable_id: `course-v1:${faker.lorem.slug()}`,
+            }),
           ),
         },
         programs: {

@@ -40,12 +40,32 @@ const program: PartialFactory<V2Program> = (overrides = {}) => {
     req_tree: [],
     requirements: {
       courses: {
-        required: [faker.number.int()],
-        electives: [faker.number.int()],
+        required: [
+          {
+            id: faker.number.int(),
+            readable_id: `course-v1:${faker.lorem.slug()}`,
+          },
+        ],
+        electives: [
+          {
+            id: faker.number.int(),
+            readable_id: `course-v1:${faker.lorem.slug()}`,
+          },
+        ],
       },
       programs: {
-        required: [faker.number.int()],
-        electives: [faker.number.int()],
+        required: [
+          {
+            id: faker.number.int(),
+            readable_id: `program-v1:${faker.lorem.slug()}`,
+          },
+        ],
+        electives: [
+          {
+            id: faker.number.int(),
+            readable_id: `program-v1:${faker.lorem.slug()}`,
+          },
+        ],
       },
     },
     certificate_type: faker.lorem.word(),

@@ -15,6 +15,7 @@ const contract = (overrides: Partial<ContractPage> = {}): ContractPage => ({
   membership_type: faker.helpers.arrayElement(["managed", "unmanaged"]),
   welcome_message: faker.lorem.sentence(),
   welcome_message_extra: `<p>${faker.lorem.paragraph()}</p>`,
+  programs: [],
   ...overrides,
 })
 
