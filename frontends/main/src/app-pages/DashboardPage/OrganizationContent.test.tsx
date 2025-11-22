@@ -33,6 +33,7 @@ describe("OrganizationContent", () => {
     setMockResponse.get(urls.enrollment.enrollmentsList(), [])
     setMockResponse.get(urls.enrollment.enrollmentsListV2(), [])
     setMockResponse.get(urls.programEnrollments.enrollmentsList(), [])
+    setMockResponse.get(urls.programEnrollments.enrollmentsListV2(), [])
     setMockResponse.get(urls.contracts.contractsList(), [])
   })
 
@@ -448,6 +449,9 @@ describe("OrganizationContent", () => {
       results: [programWithCertificate],
     })
     setMockResponse.get(urls.programEnrollments.enrollmentsList(), [
+      programEnrollment,
+    ])
+    setMockResponse.get(urls.programEnrollments.enrollmentsListV2(), [
       programEnrollment,
     ])
 
