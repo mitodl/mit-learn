@@ -32,6 +32,7 @@ const dashboardCourse: PartialFactory<DashboardCourse> = (...overrides) => {
     {
       key: faker.string.uuid(),
       coursewareId: faker.string.uuid(),
+      readableId: `course-v1:${faker.string.alphanumeric(5)}+${faker.string.alphanumeric(5)}`,
       type: DashboardResourceType.Course,
       title: faker.commerce.productName(),
       marketingUrl: faker.internet.url(),

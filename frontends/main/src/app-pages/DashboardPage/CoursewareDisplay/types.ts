@@ -35,6 +35,7 @@ type DashboardContract = {
 type DashboardCourse = {
   key: string
   coursewareId: string | null
+  readableId: string | null
   title: string
   type: typeof DashboardResourceType.Course
   run: {

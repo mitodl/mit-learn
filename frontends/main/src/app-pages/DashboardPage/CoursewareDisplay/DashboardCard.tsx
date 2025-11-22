@@ -9,6 +9,8 @@ import {
   LoadingSpinner,
 } from "ol-components"
 import NextLink from "next/link"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { FeatureFlags } from "@/common/feature_flags"
 import {
   EnrollmentStatus,
   EnrollmentMode,
@@ -211,6 +213,7 @@ const useOneClickEnroll = () => {
 
 type CoursewareButtonProps = {
   coursewareId?: string | null
+  readableId?: string | null
   startDate?: string | null
   endDate?: string | null
   enrollmentStatus?: EnrollmentStatus | null
@@ -218,6 +221,7 @@ type CoursewareButtonProps = {
   className?: string
   noun: string
   resourceType?: DashboardResourceType
+  b2bContractId?: number | null
   "data-testid"?: string
   onClick?: React.MouseEventHandler<HTMLButtonElement>
 }
@@ -255,6 +259,7 @@ const getCoursewareTextAndIcon = ({
 const CoursewareButton = styled(
   ({
     coursewareId,
+    readableId,
     startDate,
     endDate,
     enrollmentStatus,
@@ -262,6 +267,7 @@ const CoursewareButton = styled(
     className,
     noun,
     resourceType,
+    b2bContractId,
     onClick,
     ...others
   }: CoursewareButtonProps) => {
@@ -276,6 +282,9 @@ const CoursewareButton = styled(
       enrollmentStatus && enrollmentStatus !== EnrollmentStatus.NotEnrolled
 
     const oneClickEnroll = useOneClickEnroll()
+    const isProductPageCourseEnabled = useFeatureFlagEnabled(
+      FeatureFlags.ProductPageCourse,
+    )
 
     if (onClick) {
       return (
@@ -292,29 +301,80 @@ const CoursewareButton = styled(
     }
 
     if (!hasEnrolled /* enrollment flow */) {
+      // For B2B courses, use one-click enrollment
+      if (b2bContractId) {
+        return (
+          <Button
+            size="small"
+            variant="primary"
+            className={className}
+            disabled={oneClickEnroll.isPending || !coursewareId}
+            onClick={() => {
+              if (!href || !coursewareId) return
+              oneClickEnroll.mutate({ href, coursewareId })
+            }}
+            endIcon={
+              oneClickEnroll.isPending ? (
+                <LoadingSpinner
+                  color="inherit"
+                  loading={oneClickEnroll.isPending}
+                  size={16}
+                />
+              ) : undefined
+            }
+            {...others}
+          >
+            {coursewareText.text}
+          </Button>
+        )
+      }
+
+      // For non-B2B courses, redirect to course page or MITx Online product page
+      const enrollmentRedirectUrl = (() => {
+        if (!readableId) {
+          console.error("Cannot create enrollment URL: readableId is missing")
+          return null
+        }
+        if (isProductPageCourseEnabled) {
+          // Redirect to MIT Learn course page
+          return `/courses/${readableId}/`
+        } else {
+          // Redirect to MITx Online product page
+          const mitxOnlineDomain = process.env.NEXT_PUBLIC_MITX_ONLINE_DOMAIN
+          if (!mitxOnlineDomain) {
+            console.error(
+              "Cannot create enrollment URL: NEXT_PUBLIC_MITX_ONLINE_DOMAIN environment variable is not set",
+            )
+            return null
+          }
+          return `https://${mitxOnlineDomain}/courses/${readableId}/`
+        }
+      })()
+
+      if (!enrollmentRedirectUrl) {
+        return (
+          <Button
+            size="small"
+            variant="primary"
+            className={className}
+            disabled
+            {...others}
+          >
+            {coursewareText.text}
+          </Button>
+        )
+      }
+
       return (
-        <Button
+        <ButtonLink
           size="small"
           variant="primary"
           className={className}
-          disabled={oneClickEnroll.isPending || !coursewareId}
-          onClick={() => {
-            if (!href || !coursewareId) return
-            oneClickEnroll.mutate({ href, coursewareId })
-          }}
-          endIcon={
-            oneClickEnroll.isPending ? (
-              <LoadingSpinner
-                color="inherit"
-                loading={oneClickEnroll.isPending}
-                size={16}
-              />
-            ) : undefined
-          }
+          href={enrollmentRedirectUrl}
           {...others}
         >
           {coursewareText.text}
-        </Button>
+        </ButtonLink>
       )
     } else if (
       (hasStarted || !startDate) &&
@@ -502,6 +562,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   const enrollment = isCourse ? dashboardResource.enrollment : undefined
   const run = isCourse ? dashboardResource.run : undefined
   const coursewareId = isCourse ? dashboardResource.coursewareId : null
+  const readableId = isCourse ? dashboardResource.readableId : null
   const _resourceId = isProgram ? dashboardResource.id : undefined
 
   // Title link logic
@@ -580,12 +641,14 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       <CoursewareButton
         data-testid="courseware-button"
         coursewareId={coursewareId}
+        readableId={readableId}
         startDate={run?.startDate}
         enrollmentStatus={enrollment?.status}
         href={buttonHref ?? run?.coursewareUrl}
         endDate={run?.endDate}
         noun={noun}
         resourceType={DashboardResourceType.Course}
+        b2bContractId={enrollment?.b2b_contract_id}
         onClick={buttonClick}
       />
     </>
