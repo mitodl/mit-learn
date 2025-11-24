@@ -68,11 +68,9 @@ CANVAS_COURSE_BUCKET_NAME = get_string("CANVAS_COURSE_BUCKET_NAME", None)
 CANVAS_COURSE_BUCKET_PREFIX = get_string(
     "CANVAS_COURSE_BUCKET_PREFIX", "canvas/course_content"
 )
-CANVAS_PDF_TRANSCRIPTION_MODEL = get_string(
-    name="CANVAS_PDF_TRANSCRIPTION_MODEL", default=None
-)
-CANVAS_TRANSCRIPTION_PROMPT = get_string(
-    "CANVAS_TRANSCRIPTION_PROMPT",
+OCR_MODEL = get_string(name="OCR_MODEL", default=None)
+OCR_PROMPT = get_string(
+    "OCR_PROMPT",
     """Transcribe the contents of this file into markdown.
     Do not include anything but the markdown content in your response""",
 )
