@@ -7,7 +7,6 @@ import type {
   CourseRunGrade,
   UserProgramEnrollmentDetail,
   V2UserProgramEnrollmentDetail,
-  CertificatePageModel,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { UniqueEnforcer } from "enforce-unique"
 import { factories } from ".."
@@ -204,19 +203,7 @@ const programEnrollmentV2: PartialFactory<V2UserProgramEnrollmentDetail> = (
     certificate: hasCertificate
       ? {
           uuid: faker.string.uuid(),
-          user: {
-            id: faker.number.int(),
-            username: faker.internet.username(),
-            name: faker.person.fullName(),
-            created_on: faker.date.past().toISOString(),
-            updated_on: faker.date.recent().toISOString(),
-          },
-          is_revoked: false,
-          certificate_page: {
-            id: faker.number.int(),
-          } as Partial<CertificatePageModel> as CertificatePageModel,
-          program: program,
-          certificate_page_revision: faker.number.int({ min: 1, max: 10 }),
+          link: `/certificate/program/${faker.string.uuid()}/`,
         }
       : null,
     program: program,
