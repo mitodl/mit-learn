@@ -57,6 +57,12 @@ const getNavLinks = (page: ProgramPageItem): HeadingData[] => {
       content: page.about,
     },
     {
+      id: HeadingIds.Requirements,
+      label: "Courses",
+      variant: "secondary",
+      content: true,
+    },
+    {
       id: HeadingIds.What,
       label: "What you'll learn",
       variant: "secondary",
@@ -151,10 +157,11 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
       resource_type: [ResourceTypeEnum.Course],
       limit: readableIds.length,
     }),
+    enabled: readableIds.length > 0,
     select: (data) => keyBy(data.results, "readable_id"),
   })
 
-  const requiredSubtree = getSubtree(program, "elective")
+  const requiredSubtree = getSubtree(program, "required")
   const electiveSubtree = getSubtree(program, "elective")
   const electives =
     electiveSubtree && electiveSubtree?.children?.length
@@ -206,7 +213,7 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
       <Stack gap={{ xs: "32px", sm: "56px" }}>
         {subsections.map(({ title, note, titleId, resourceIds }) => (
           <div key={titleId}>
-            <ReqSubsectionTitle component="h4" id={titleId}>
+            <ReqSubsectionTitle component="h3" id={titleId}>
               {title}
               {note ? ": " : ""}
               {note ? <ReqTitleNote>{note}</ReqTitleNote> : null}

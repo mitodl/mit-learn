@@ -319,7 +319,7 @@ describe("ProgramSummary", () => {
 })
 
 describe("Program RequirementsRow", () => {
-  test("Renders requirements if present", () => {
+  test("Renders requirement count with required + elective courses", () => {
     const requirements = new RequirementTreeBuilder()
     const required = requirements.addOperator({ operator: "all_of" })
     required.addCourse()
@@ -361,11 +361,10 @@ describe("Program RequirementsRow", () => {
     const reqRow = within(summary).getByTestId(TestIds.RequirementsRow)
 
     // The text is split more nicely on screen, but via html tags not spaces
-    expect(reqRow).toHaveTextContent("3 Required CoursesComplete All")
-    expect(reqRow).toHaveTextContent("4 Elective CoursesComplete 2 of 4")
+    expect(reqRow).toHaveTextContent("7 Courses to complete program")
   })
 
-  test("Does not show electives if there are none", () => {
+  test("Renders requirement count correctly if no electives", () => {
     const requirements = new RequirementTreeBuilder()
     const required = requirements.addOperator({ operator: "all_of" })
     required.addCourse()
@@ -394,8 +393,7 @@ describe("Program RequirementsRow", () => {
     const summary = screen.getByRole("region", { name: "Program summary" })
     const reqRow = within(summary).getByTestId(TestIds.RequirementsRow)
 
-    expect(reqRow).toHaveTextContent("3 Required CoursesComplete All")
-    expect(reqRow).not.toHaveTextContent("Elective")
+    expect(reqRow).toHaveTextContent("3 Courses to complete program")
   })
 })
 
