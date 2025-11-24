@@ -71,8 +71,10 @@ CANVAS_COURSE_BUCKET_PREFIX = get_string(
 OCR_MODEL = get_string(name="OCR_MODEL", default=None)
 OCR_PROMPT = get_string(
     "OCR_PROMPT",
-    """Transcribe the contents of this file into markdown.
-    Do not include anything but the markdown content in your response""",
+    "Transcribe all text in this image. Preserve formulas. "
+    "If there are non-text elements such as diagrams or pictures, "
+    "describe them in detail."
+    "Do not include anything but the result of the transcription in your response",
 )
 # More MIT URLs
 SEE_API_URL = get_string("SEE_API_URL", None)
