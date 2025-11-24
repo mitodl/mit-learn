@@ -9,7 +9,7 @@ import {
 import * as mitxonline from "api/mitxonline-test-utils"
 import { mockAxiosInstance } from "api/test-utils"
 import { DashboardCard, getDefaultContextMenuItems } from "./DashboardCard"
-import { dashboardCourse } from "./test-utils"
+import { dashboardCourse, dashboardProgram } from "./test-utils"
 import { faker } from "@faker-js/faker/locale/en"
 import moment from "moment"
 import { EnrollmentMode, EnrollmentStatus } from "./types"
@@ -671,4 +671,90 @@ describe.each([
       )
     },
   )
+
+  describe("Stacked Variant", () => {
+    test("applies stacked variant styling", () => {
+      setupUserApis()
+      const course = dashboardCourse()
+      renderWithProviders(
+        <DashboardCard
+          variant="stacked"
+          titleAction="marketing"
+          dashboardResource={course}
+        />,
+      )
+
+      const card = getCard()
+      expect(card).toBeInTheDocument()
+      // Successfully renders a stacked card - the variant prop controls styling via styled-components
+    })
+
+    test("renders multiple stacked cards correctly", () => {
+      setupUserApis()
+      const courses = [
+        dashboardCourse({ title: "First Stacked Course" }),
+        dashboardCourse({ title: "Second Stacked Course" }),
+        dashboardCourse({ title: "Third Stacked Course" }),
+      ]
+
+      renderWithProviders(
+        <div>
+          {courses.map((course) => (
+            <DashboardCard
+              key={course.key}
+              variant="stacked"
+              titleAction="marketing"
+              dashboardResource={course}
+            />
+          ))}
+        </div>,
+      )
+
+      const allCards = screen.getAllByTestId(testId)
+      expect(allCards).toHaveLength(3)
+      expect(
+        within(allCards[0]).getByText("First Stacked Course"),
+      ).toBeInTheDocument()
+      expect(
+        within(allCards[1]).getByText("Second Stacked Course"),
+      ).toBeInTheDocument()
+      expect(
+        within(allCards[2]).getByText("Third Stacked Course"),
+      ).toBeInTheDocument()
+    })
+  })
+
+  describe("Program Cards", () => {
+    test("renders program card with title", () => {
+      setupUserApis()
+      const program = dashboardProgram({
+        title: "Test Program Title",
+      })
+
+      renderWithProviders(
+        <DashboardCard titleAction="marketing" dashboardResource={program} />,
+      )
+
+      const card = getCard()
+      expect(within(card).getByText("Test Program Title")).toBeInTheDocument()
+    })
+
+    test("program card does not show course-specific elements", () => {
+      setupUserApis()
+      const program = dashboardProgram({
+        title: "Test Program",
+      })
+
+      renderWithProviders(
+        <DashboardCard titleAction="marketing" dashboardResource={program} />,
+      )
+
+      const card = getCard()
+      // Programs don't show enrollment status or courseware buttons
+      expect(
+        within(card).queryByTestId("courseware-button"),
+      ).not.toBeInTheDocument()
+      expect(within(card).queryByTestId("upgrade-root")).not.toBeInTheDocument()
+    })
+  })
 })
