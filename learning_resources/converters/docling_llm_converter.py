@@ -1,11 +1,13 @@
 import base64
 import logging
+import uuid
 from io import BytesIO
 from pathlib import Path
 
+import litellm
 from django.conf import settings
 from docling.backend.docling_parse_v4_backend import DoclingParseV4DocumentBackend
-from docling.datamodel.base_models import InputFormat
+from docling.datamodel.base_models import DocumentStream, InputFormat
 from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling_core.types.doc import (
@@ -23,7 +25,7 @@ from PIL import Image
 log = logging.getLogger(__name__)
 
 
-def _page_item_to_pil(page, item, expand_px: int = 4) -> Image.Image | None:
+def _page_item_to_pil(page, item, expand_px: int = 10) -> Image.Image | None:
     """
     Given a Docling document and an item (e.g. FormulaItem), return a PIL Image
     cropped to that item's bbox on the corresponding page image.
@@ -93,7 +95,12 @@ def _page_item_to_pil(page, item, expand_px: int = 4) -> Image.Image | None:
 
 
 class DoclingLLMConverter:
-    def __init__(self, document_path: Path, *args, **kwargs):  # noqa: ARG002
+    debug_mode = False
+
+    def __init__(self, document_path: Path, debug_mode, *args, **kwargs):  # noqa: ARG002
+        if debug_mode:
+            litellm._turn_on_debug()  # noqa: SLF001
+        self.debug_mode = debug_mode
         self.document_path = document_path
         self.pipeline_options = self.get_pipeline_options()
         self.converter = DocumentConverter(
@@ -108,12 +115,18 @@ class DoclingLLMConverter:
     def get_pipeline_options(self):
         pipeline_options = PdfPipelineOptions()
         pipeline_options.images_scale = 2
-        pipeline_options.generate_page_images = True
-        pipeline_options.generate_picture_images = True
-        pipeline_options.generate_table_images = True
+
+        pipeline_options.do_picture_description = False
+        pipeline_options.do_code_enrichment = False
+        pipeline_options.do_picture_classification = False
         pipeline_options.do_ocr = False
         pipeline_options.do_formula_enrichment = False
         pipeline_options.do_table_structure = False
+
+        pipeline_options.generate_page_images = True
+        pipeline_options.generate_picture_images = True
+        pipeline_options.generate_table_images = True
+
         return pipeline_options
 
     def items_by_page(self, doc: DoclingDocument):
@@ -161,6 +174,20 @@ class DoclingLLMConverter:
         )
         return response.json()["choices"][0]["message"]["content"]
 
+    def save_debug_image(self, pil_image):
+        debug_dir = Path("ocr_debug") / self.document_path.stem
+        debug_dir.mkdir(parents=True, exist_ok=True)
+        file_path = debug_dir / f"{self.document_path.name}-{uuid.uuid4()}.png"
+        pil_image.save(file_path)
+        return str(file_path)
+
+    def save_debug_markdown(self, markdown_content):
+        debug_dir = Path("ocr_debug") / self.document_path.stem
+        debug_dir.mkdir(parents=True, exist_ok=True)
+        file_path = debug_dir / f"{self.document_path.name}.md"
+        file_path.write_text(markdown_content)
+        return str(file_path)
+
     def transcribe_images(self, doc, page, items):
         replacements = []
         messages_list = []
@@ -170,6 +197,8 @@ class DoclingLLMConverter:
                 buffer = BytesIO()
                 pil_image = _page_item_to_pil(page, item)
                 pil_image.save(buffer, format="JPEG", optimize=True)
+                if self.debug_mode:
+                    self.save_debug_image(pil_image)
                 image_b64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
                 image_uri = f"data:image/jpeg;base64,{image_b64}"
                 messages_list.append(
@@ -199,6 +228,12 @@ class DoclingLLMConverter:
             item = processed_items[i]
             extracted_text = response.choices[0].message.content
             prov = item.prov[0] if isinstance(item.prov, list) and item.prov else None
+            """
+            preserve any captions the item has
+            (sometimes these are visible on the page in place of headers)
+            """
+            if hasattr(item, "caption_text"):
+                extracted_text = "\n".join([item.caption_text(doc), extracted_text])
             text_element = doc.add_text(
                 label=DocItemLabel.TEXT,
                 text=extracted_text,
@@ -208,7 +243,9 @@ class DoclingLLMConverter:
         return replacements
 
     def convert_to_markdown(self):
-        conversion_result = self.converter.convert(self.document_path)
+        file_buffer = BytesIO(self.document_path.open("rb").read())
+        stream = DocumentStream(name=self.document_path.name, stream=file_buffer)
+        conversion_result = self.converter.convert(stream)
         document = conversion_result.document
 
         for page, items in self.items_by_page(document):
@@ -219,6 +256,15 @@ class DoclingLLMConverter:
             else:
                 transcribed = self.ocr_page_image(page)
                 self.add_page_text(document, page, transcribed)
-        return document.export_to_markdown(
+        # ref https://github.com/docling-project/docling/issues/2494#issuecomment-3418781668
+        markdown_document = DoclingDocument(name="markdown")
+        markdown_document.add_title(text="")
+        for ref in document.body.children:
+            node = ref.resolve(document)
+            markdown_document.add_node_items([node], doc=document)
+        markdown_content = markdown_document.export_to_markdown(
             image_mode="placeholder", include_annotations=True
         )
+        if self.debug_mode:
+            self.save_debug_markdown(markdown_content)
+        return markdown_content
