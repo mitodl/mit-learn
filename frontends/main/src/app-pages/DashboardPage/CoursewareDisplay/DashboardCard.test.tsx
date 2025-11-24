@@ -615,10 +615,14 @@ describe.each([
     "Enrollment for complete profile bypasses just-in-time dialog",
     async ({ trigger }) => {
       const userData = mitxUser()
+      const b2bContractId = faker.number.int()
       const course = dashboardCourse({
         enrollment: {
           status: EnrollmentStatus.NotEnrolled,
-          b2b_contract_id: faker.number.int(),
+          b2b_contract_id: b2bContractId,
+        },
+        run: {
+          b2bContractId: b2bContractId,
         },
       })
       const { enrollmentUrl } = setupEnrollmentApis({ user: userData, course })
@@ -647,10 +651,14 @@ describe.each([
   )(
     "Enrollment for complete profile bypasses just-in-time dialog",
     async ({ trigger, userData }) => {
+      const b2bContractId = faker.number.int()
       const course = dashboardCourse({
         enrollment: {
           status: EnrollmentStatus.NotEnrolled,
-          b2b_contract_id: faker.number.int(),
+          b2b_contract_id: b2bContractId,
+        },
+        run: {
+          b2bContractId: b2bContractId,
         },
       })
       setupEnrollmentApis({ user: userData, course })

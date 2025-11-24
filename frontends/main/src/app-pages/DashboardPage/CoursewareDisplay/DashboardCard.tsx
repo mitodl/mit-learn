@@ -9,8 +9,6 @@ import {
   LoadingSpinner,
 } from "ol-components"
 import NextLink from "next/link"
-import { useFeatureFlagEnabled } from "posthog-js/react"
-import { FeatureFlags } from "@/common/feature_flags"
 import {
   EnrollmentStatus,
   EnrollmentMode,
@@ -282,9 +280,6 @@ const CoursewareButton = styled(
       enrollmentStatus && enrollmentStatus !== EnrollmentStatus.NotEnrolled
 
     const oneClickEnroll = useOneClickEnroll()
-    const isProductPageCourseEnabled = useFeatureFlagEnabled(
-      FeatureFlags.ProductPageCourse,
-    )
 
     if (resourceType === DashboardResourceType.Program) {
       return (
@@ -343,52 +338,19 @@ const CoursewareButton = styled(
         )
       }
 
-      // For non-B2B courses, redirect to course page or MITx Online product page
-      const enrollmentRedirectUrl = (() => {
-        if (!readableId) {
-          console.error("Cannot create enrollment URL: readableId is missing")
-          return null
-        }
-        if (isProductPageCourseEnabled) {
-          // Redirect to MIT Learn course page
-          return `/courses/${readableId}/`
-        } else {
-          // Redirect to MITx Online product page
-          const mitxOnlineDomain = process.env.NEXT_PUBLIC_MITX_ONLINE_DOMAIN
-          if (!mitxOnlineDomain) {
-            console.error(
-              "Cannot create enrollment URL: NEXT_PUBLIC_MITX_ONLINE_DOMAIN environment variable is not set",
-            )
-            return null
-          }
-          return `https://${mitxOnlineDomain}/courses/${readableId}/`
-        }
-      })()
-
-      if (!enrollmentRedirectUrl) {
-        return (
-          <Button
-            size="small"
-            variant="primary"
-            className={className}
-            disabled
-            {...others}
-          >
-            {coursewareText.text}
-          </Button>
-        )
-      }
-
+      // For non-B2B courses, show alert
       return (
-        <ButtonLink
+        <Button
           size="small"
           variant="primary"
           className={className}
-          href={enrollmentRedirectUrl}
+          onClick={() =>
+            alert("Non-B2B course enrollment is not yet implemented.")
+          }
           {...others}
         >
           {coursewareText.text}
-        </ButtonLink>
+        </Button>
       )
     } else if (
       (hasStarted || !startDate) &&
@@ -577,7 +539,6 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   const run = isCourse ? dashboardResource.run : undefined
   const coursewareId = isCourse ? dashboardResource.coursewareId : null
   const readableId = isCourse ? dashboardResource.readableId : null
-  const _resourceId = isProgram ? dashboardResource.id : undefined
 
   // Title link logic
   const coursewareUrl = run?.coursewareUrl
@@ -590,15 +551,26 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   const hasEnrolled =
     enrollment?.status && enrollment.status !== EnrollmentStatus.NotEnrolled
 
+  const b2bContractId = enrollment?.b2b_contract_id ?? run?.b2bContractId
+
   const titleClick: React.MouseEventHandler | undefined =
-    isCourse && titleAction === "courseware" && coursewareUrl && !hasEnrolled
+    isCourse && !hasEnrolled
       ? (e) => {
           e.preventDefault()
-          if (!coursewareId) return
-          oneClickEnroll.mutate({
-            href: coursewareUrl,
-            coursewareId: coursewareId,
-          })
+          // B2B courses use one-click enrollment
+          if (b2bContractId) {
+            if (!coursewareId) return
+            const href =
+              titleAction === "courseware" ? coursewareUrl : coursewareUrl
+            if (!href) return
+            oneClickEnroll.mutate({
+              href: href,
+              coursewareId: coursewareId,
+            })
+          } else {
+            // Non-B2B courses will show a dialog in the future
+            alert("Non-B2B course enrollment is not yet implemented.")
+          }
         }
       : undefined
 
@@ -662,7 +634,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         endDate={run?.endDate}
         noun={noun}
         resourceType={DashboardResourceType.Course}
-        b2bContractId={enrollment?.b2b_contract_id}
+        b2bContractId={b2bContractId}
         onClick={buttonClick}
       />
     </>

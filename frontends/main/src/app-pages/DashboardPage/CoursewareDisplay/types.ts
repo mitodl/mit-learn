@@ -45,6 +45,7 @@ type DashboardCourse = {
     certificateUpgradePrice?: string | null
     coursewareUrl?: string | null
     canUpgrade: boolean | undefined
+    b2bContractId?: number | null
     certificate?: {
       uuid: string
       link: string
