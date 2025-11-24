@@ -29,6 +29,15 @@ from defusedxml import ElementTree
 from django.conf import settings
 from django.utils.dateparse import parse_duration
 from django.utils.text import slugify
+from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
+from docling.datamodel.base_models import InputFormat
+from docling.datamodel.pipeline_options import (
+    PdfPipelineOptions,
+    PictureDescriptionApiOptions,
+    TableFormerMode,
+)
+from docling.datamodel.pipeline_options_vlm_model import ResponseFormat
+from docling.document_converter import DocumentConverter, PdfFormatOption
 from litellm import completion
 from PIL import Image
 from pycountry import currencies
@@ -64,6 +73,7 @@ from learning_resources.models import (
     TutorProblemFile,
 )
 
+logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
 
 
@@ -534,13 +544,14 @@ def get_video_metadata(olx_path: str, run: LearningResourceRun) -> dict:
     return video_transcript_mapping
 
 
-def process_olx_path(
+def process_olx_path(  # noqa: PLR0913
     olx_path: str,
     run: LearningResourceRun,
     *,
     overwrite,
     valid_file_types=VALID_TEXT_FILE_TYPES,
     is_tutor_problem_file_import=False,
+    use_ocr=False,
 ) -> Generator[dict, None, None]:
     video_srt_metadata = get_video_metadata(olx_path, run)
     for document, metadata in documents_from_olx(
@@ -569,11 +580,7 @@ def process_olx_path(
                     "content": "",
                     "content_title": "",
                 }
-            elif (
-                file_extension == ".pdf"
-                and is_tutor_problem_file_import
-                and settings.CANVAS_PDF_TRANSCRIPTION_MODEL
-            ):
+            elif file_extension == ".pdf" and use_ocr and settings.OCR_MODEL_NAME:
                 markdown_content = _pdf_to_markdown(Path(olx_path) / Path(source_path))
                 content_dict = {
                     "content": markdown_content,
@@ -1068,41 +1075,29 @@ def parse_resource_commitment(commitment_str: str) -> CommitmentConfig:
     return CommitmentConfig(commitment=commitment_str or "")
 
 
+'''
+def _pdf_to_markdown(pdf_path):
+    """
+    Convert a PDF file to markdown using an llm
+    """
+    converter = HybridPDFConverter(
+        model=settings.PDF_TRANSCRIPTION_MODEL,
+        api_base=getattr(settings, "LITELLM_API_BASE", None),
+        custom_llm_provider=getattr(settings, "LITELLM_CUSTOM_PROVIDER", None),
+        use_layout_mode=False,
+        debug_images=getattr(settings, "PDF_BATCH_DEBUG_IMAGES", False),
+    )
+    return converter.convert_to_markdown(pdf_path)
+'''
+
+
 def _pdf_to_markdown(pdf_path):
     """
     Convert a PDF file to markdown using an llm
     """
     markdown = ""
-    for im in pdf_to_base64_images(pdf_path):
-        response = completion(
-            api_base=settings.LITELLM_API_BASE,
-            custom_llm_provider=settings.LITELLM_CUSTOM_PROVIDER,
-            model=settings.CANVAS_PDF_TRANSCRIPTION_MODEL,
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": settings.CANVAS_TRANSCRIPTION_PROMPT,
-                        },
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/jpeg;base64,{im}",
-                            },
-                        },
-                    ],
-                }
-            ],
-        )
-        markdown_snippet = (
-            response.json()["choices"][0]["message"]["content"]
-            .removeprefix("```markdown\n")
-            .removesuffix("\n```")
-        )
-
-        markdown += markdown_snippet
+    for base64_image in pdf_to_base64_images(pdf_path):
+        markdown += llm_ocr_image(base64_image)
     return markdown
 
 
@@ -1139,3 +1134,85 @@ def pdf_to_base64_images(pdf_path, fmt="JPEG", max_size=2000, quality=85):
         img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
         yield img_str
     pdf.close()
+
+
+def llm_ocr_image(image_b64):
+    response = completion(
+        custom_llm_provider=settings.LITELLM_CUSTOM_PROVIDER,
+        api_base=settings.OCR_MODEL_URL,
+        model=settings.OCR_MODEL_NAME,
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": settings.IMAGE_OCR_PROMPT,
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{image_b64}",
+                        },
+                    },
+                ],
+            }
+        ],
+    )
+    return response.json()["choices"][0]["message"]["content"]
+
+
+def docling_options():
+    api_base = settings.LITELLM_API_BASE or "https://api.openai.com/v1"
+    api_key = settings.OPENAI_API_KEY
+
+    return PictureDescriptionApiOptions(
+        enable_remote_services=True,
+        url=f"{api_base}/chat/completions",
+        params={
+            "model": settings.OCR_MODEL_NAME,
+        },
+        response_format=ResponseFormat.MARKDOWN,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        prompt="Describe the image in three sentences. Be concise and accurate.",
+        timeout=90,
+        concurrency=2,
+    )
+
+
+def docling_ocr(
+    pdf_path: Path,
+):
+    pipeline_options = PdfPipelineOptions(
+        do_ocr=False,  # Skip if text-based PDF
+        do_table_structure=False,  # Skip if no tables
+        generate_page_images=False,
+        enable_remote_services=True,
+        generate_table_images=True,
+        do_formula_enrichment=True,
+        do_code_enrichment=False,
+        images_scale=1,
+        generate_picture_images=False,
+        confidence_threshold=0.5,
+    )
+    # 2. Use FAST mode for tables
+    pipeline_options.table_structure_options.mode = TableFormerMode.FAST
+    pipeline_options.table_structure_options.do_cell_matching = False
+    pipeline_options.picture_description_options = docling_options()
+
+    doc_converter = DocumentConverter(
+        format_options={
+            InputFormat.PDF: PdfFormatOption(
+                backend=PyPdfiumDocumentBackend,
+                pipeline_options=pipeline_options,
+            )
+        },
+    )
+    result = doc_converter.convert(pdf_path)
+
+    return result.document.export_to_markdown(
+        image_mode="placeholder", include_annotations=True
+    )
