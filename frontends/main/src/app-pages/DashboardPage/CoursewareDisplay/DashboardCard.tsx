@@ -286,6 +286,20 @@ const CoursewareButton = styled(
       FeatureFlags.ProductPageCourse,
     )
 
+    if (resourceType === DashboardResourceType.Program) {
+      return (
+        <ButtonLink
+          size="small"
+          variant="primary"
+          className={className}
+          href={href ?? undefined}
+          {...others}
+        >
+          {coursewareText.text}
+        </ButtonLink>
+      )
+    }
+
     if (onClick) {
       return (
         <Button

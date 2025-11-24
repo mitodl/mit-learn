@@ -5,7 +5,7 @@ import {
   EnrollmentMode,
   EnrollmentStatus,
 } from "./types"
-import type { DashboardCourse } from "./types"
+import type { DashboardCourse, DashboardProgram } from "./types"
 import * as u from "api/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { urls, factories } from "api/mitxonline-test-utils"
@@ -49,6 +49,27 @@ const dashboardCourse: PartialFactory<DashboardCourse> = (...overrides) => {
         status: faker.helpers.arrayElement(Object.values(EnrollmentStatus)),
         mode: faker.helpers.arrayElement(Object.values(EnrollmentMode)),
       },
+    },
+    ...overrides,
+  )
+}
+
+const dashboardProgram: PartialFactory<DashboardProgram> = (...overrides) => {
+  return mergeOverrides<DashboardProgram>(
+    {
+      id: faker.number.int(),
+      key: faker.string.uuid(),
+      type: DashboardResourceType.Program,
+      title: faker.commerce.productName(),
+      programType: faker.helpers.arrayElement([
+        "MicroMasters",
+        "Professional Certificate",
+        "XSeries",
+      ]),
+      courseIds: Array.from({ length: 3 }, () => faker.number.int()),
+      collections: [],
+      description: faker.lorem.paragraph(),
+      reqTree: [],
     },
     ...overrides,
   )
@@ -347,6 +368,7 @@ const createCoursesWithContractRuns = (contracts: ContractPage[]) => {
 
 export {
   dashboardCourse,
+  dashboardProgram,
   setupEnrollments,
   setupProgramsAndCourses,
   setupOrgAndUser,

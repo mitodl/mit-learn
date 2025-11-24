@@ -1,8 +1,9 @@
 "use client"
 
 import React from "react"
-import { PlainList, Stack, Typography } from "ol-components"
+import { PlainList, Skeleton, Stack, Typography } from "ol-components"
 import { ResourceCard } from "@/page-components/ResourceCard/ResourceCard"
+
 import { pagesQueries } from "api/mitxonline-hooks/pages"
 import { useQuery } from "@tanstack/react-query"
 import { styled } from "@mitodl/smoot-design"
@@ -272,7 +273,7 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
     if (!isLoading) {
       return notFound()
     } else {
-      return null
+      return <Skeleton width="100%" height="100px" />
     }
   }
 
