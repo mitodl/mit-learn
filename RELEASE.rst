@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.47.13
+Version 0.47.13 (Released November 24, 2025)
 ---------------
 
 - making sure ingestion succeeds even without xml (#2704)
