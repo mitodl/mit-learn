@@ -1,0 +1,154 @@
+.image-upload-node {
+  position: relative;
+  margin: 2rem auto;
+  text-align: center;
+  width: 100%;
+
+  img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    border-radius: 6px;
+    display: block;
+  }
+  /* Layout sizes */
+  &.layout-default {
+    width: 100%;
+  }
+
+  &.layout-wide {
+    width: 90vw;
+    position: relative;
+    left: 50%;
+    right: 50%;
+    margin-left: calc(-45vw);
+    margin-right: calc(-45vw);
+  }
+
+  &.layout-full {
+    width: 100vw;
+    position: relative;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
+  }
+
+  .image-upload-content img {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+  }
+
+  /* Toolbar */
+  .image-toolbar {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    right: 0;
+    z-index: 10;
+
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+
+    padding: 6px 8px;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 6px;
+
+    button {
+      background: white;
+      border: none;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+
+      &.active {
+        font-weight: bold;
+        background: #e8e8e8;
+      }
+    }
+  }
+
+  /* Caption */
+  .caption-input {
+    margin-top: 10px;
+    width: 100%;
+    border: none;
+    outline: none;
+    text-align: center;
+    background: transparent;
+    font-size: 14px;
+    padding: 4px 0;
+
+    &:focus {
+      border-bottom-color: #999;
+    }
+  }
+}
+
+/* Toolbar styling (optional) */
+.media-layout-toolbar {
+  display: flex;
+  background: rgba(0, 0, 0, 0.85);
+  padding: 6px 10px;
+  border-radius: 8px;
+  gap: 8px;
+  width: 220px;
+  margin-bottom: 10px;
+  margin: 0px auto;
+  margin-bottom: 10px;
+}
+
+.media-layout-toolbar button {
+  width: 40px;
+  height: 28px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  filter: brightness(0.9);
+  color: white;
+  cursor: pointer;
+}
+
+.media-layout-toolbar .alt-text-button {
+  color: white;
+  font-size: 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 4px;
+  padding: 2px 6px;
+  width: 100px;
+}
+
+.media-layout-toolbar button.active {
+  background: #9be19b;
+  color: black;
+}
+
+.svg-icon {
+  fill: white;
+}
+
+.media-layout-toolbar {
+  position: sticky;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2000; /* make it VERY high */
+}
+
+.media-layout-toolbar::after {
+  content: "";
+  position: absolute;
+  top: 100%; /* position just below toolbar */
+  left: 50%;
+  transform: translateX(-50%);
+
+  /* ↓ Triangle arrow */
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid rgba(0, 0, 0, 0.85); /* same color as toolbar */
+}

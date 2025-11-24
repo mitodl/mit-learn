@@ -463,14 +463,16 @@ export const ImageUploadNode: React.FC<NodeViewProps> = (props) => {
       if (isValidPosition(pos)) {
         const imageNodes = urls.map((url, index) => {
           const filename =
-            files[index]?.name.replace(/\.[^/.]+$/, "") || "unknown"
+            files[index]?.name.replace(/\.[^/.]+$/, "") || "Image"
+
           return {
-            type: extension.options.type,
+            type: "imageWithCaption",
             attrs: {
-              ...extension.options,
               src: url,
               alt: filename,
               title: filename,
+              caption: "",
+              layout: "default",
             },
           }
         })
