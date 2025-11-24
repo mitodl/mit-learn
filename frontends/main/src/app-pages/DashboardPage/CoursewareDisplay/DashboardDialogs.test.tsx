@@ -202,10 +202,14 @@ describe("JustInTimeDialog", () => {
     setMockResponse.get(mitxonline.urls.countries.list(), countries)
 
     // Setup course for enrollment
+    const b2bContractId = faker.number.int()
     const course = dashboardCourse({
       enrollment: {
         status: EnrollmentStatus.NotEnrolled,
-        b2b_contract_id: faker.number.int(),
+        b2b_contract_id: b2bContractId,
+      },
+      run: {
+        b2bContractId: b2bContractId,
       },
       marketingUrl: "https://example.com/course",
     })

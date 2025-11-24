@@ -206,6 +206,7 @@ const createOrgUnenrolledCourse = (
       certificateUpgradePrice: run?.products[0]?.price,
       coursewareUrl: run?.courseware_url,
       canUpgrade: !!run?.is_upgradable,
+      b2bContractId: run?.b2b_contract ?? null,
     },
   }
 }

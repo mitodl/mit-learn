@@ -43,6 +43,7 @@ const dashboardCourse: PartialFactory<DashboardCourse> = (...overrides) => {
         certificateUpgradePrice: faker.commerce.price(),
         canUpgrade: true,
         coursewareUrl: faker.internet.url(),
+        b2bContractId: null,
       },
       enrollment: {
         id: faker.number.int(),
