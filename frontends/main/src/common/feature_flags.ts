@@ -11,3 +11,12 @@ export enum FeatureFlags {
   VideoShorts = "video-shorts",
   ProductPageCourse = "product-page-course",
 }
+
+/**
+ * A special flag that indicates feature flags are in their bootstrapped state,
+ * not yet loaded from PostHog server.
+ *
+ * DO NOT add this flag to PostHog!
+ */
+export const INTERNAL_BOOTSTRAPPING_FLAG =
+  "__flags_are_bootstrapped_do_not_add_this_to_posthog__"

@@ -2,7 +2,7 @@
 
 from django.core.management.base import BaseCommand, CommandError
 
-from learning_resources_search.constants import ALL_INDEX_TYPES, COMBINED_INDEX
+from learning_resources_search.constants import ALL_INDEX_TYPES, HYBRID_COMBINED_INDEX
 from learning_resources_search.indexing_api import get_existing_reindexing_indexes
 from learning_resources_search.tasks import start_recreate_index
 from main.utils import now_in_utc
@@ -27,13 +27,13 @@ class Command(BaseCommand):
 
         parser.add_argument(
             "--combined_hybrid",
-            dest=COMBINED_INDEX,
+            dest=HYBRID_COMBINED_INDEX,
             action="store_true",
             help="Recreate combined index for hybrid search",
         )
 
         for object_type in sorted(ALL_INDEX_TYPES):
-            if object_type != COMBINED_INDEX:
+            if object_type != HYBRID_COMBINED_INDEX:
                 parser.add_argument(
                     f"--{object_type}s",
                     dest=object_type,

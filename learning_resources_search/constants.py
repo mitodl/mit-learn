@@ -22,8 +22,7 @@ PERCOLATE_INDEX_TYPE = "percolator"
 CURRENT_INDEX = "current_index"
 REINDEXING_INDEX = "reindexing_index"
 BOTH_INDEXES = "all_indexes"
-COMBINED_INDEX = "combined_hybrid"
-
+HYBRID_COMBINED_INDEX = "combined_hybrid"
 LEARNING_RESOURCE = "learning_resource"
 HYBRID_SEARCH_MODE = "hybrid"
 
@@ -49,7 +48,7 @@ LEARNING_RESOURCE_TYPES = (
 )
 
 
-BASE_INDEXES = (PERCOLATE_INDEX_TYPE, COMBINED_INDEX)
+BASE_INDEXES = (PERCOLATE_INDEX_TYPE, HYBRID_COMBINED_INDEX)
 
 ALL_INDEX_TYPES = BASE_INDEXES + LEARNING_RESOURCE_TYPES
 
@@ -300,6 +299,7 @@ LEARNING_RESOURCE_MAP = {
             "location": {"type": "keyword"},
         },
     },
+    "best_run_id": {"type": "long"},
     "next_start_date": {"type": "date"},
     "resource_age_date": {"type": "date"},
     "featured_rank": {"type": "float"},
@@ -322,26 +322,7 @@ LEARNING_RESOURCE_MAP = {
     "max_weekly_hours": {"type": "integer"},
 }
 
-EMBEDDING_FIELDS = {
-    "title_embedding": {
-        "type": "knn_vector",
-        "method": {
-            "engine": "lucene",
-            "space_type": "l2",
-            "name": "hnsw",
-            "parameters": {},
-        },
-    },
-    "description_embedding": {
-        "type": "knn_vector",
-        "method": {
-            "engine": "lucene",
-            "space_type": "l2",
-            "name": "hnsw",
-            "parameters": {},
-        },
-    },
-}
+EMBEDDING_FIELDS = {"vector_embedding": {"type": "knn_vector"}}
 
 
 CONTENT_FILE_MAP = {
@@ -470,8 +451,7 @@ SOURCE_EXCLUDED_FIELDS = [
     "content",
     "summary",
     "flashcards",
-    "description_embedding",
-    "title_embedding",
+    "vector_embedding",
 ]
 
 LEARNING_RESOURCE_SEARCH_SORTBY_OPTIONS = {

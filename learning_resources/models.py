@@ -367,6 +367,7 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
                 queryset=LearningResourceRun.objects.filter(published=True)
                 .order_by("start_date", "enrollment_start", "id")
                 .for_serialization(),
+                to_attr="_published_runs",
             ),
             Prefetch(
                 "parents",
@@ -537,36 +538,68 @@ class LearningResource(TimestampedModel):
     @cached_property
     def best_run(self) -> Optional["LearningResourceRun"]:
         """Returns the most current/upcoming enrollable run for the learning resource"""
-        published_runs = self.runs.filter(published=True)
+        if hasattr(self, "_published_runs"):
+            published_runs = self._published_runs
+        else:
+            published_runs = list(self.runs.filter(published=True))
+
+        if not published_runs:
+            return None
+
         now = now_in_utc()
+
         # Find the most recent run with a currently active enrollment period
-        best_lr_run = (
-            published_runs.filter(
-                (
-                    Q(enrollment_start__lte=now)
-                    | (Q(enrollment_start__isnull=True) & Q(start_date__lte=now))
-                )
-                & (
-                    Q(enrollment_end__gt=now)
-                    | (Q(enrollment_end__isnull=True) & Q(end_date__gt=now))
+        enrollable_runs = [
+            run
+            for run in published_runs
+            if (
+                (run.enrollment_start and run.enrollment_start <= now)
+                or (
+                    not run.enrollment_start
+                    and run.start_date
+                    and run.start_date <= now
                 )
             )
-            .order_by("start_date", "end_date")
-            .first()
+            and (
+                (run.enrollment_end and run.enrollment_end > now)
+                or (not run.enrollment_end and run.end_date and run.end_date > now)
+            )
+        ]
+        if enrollable_runs:
+            return min(
+                enrollable_runs,
+                key=lambda r: (
+                    r.start_date or timezone.now(),
+                    r.end_date or timezone.now(),
+                ),
+            )
+
+        # If no enrollable runs found, find the next upcoming run
+        upcoming_runs = [
+            run
+            for run in published_runs
+            if run.start_date and run.start_date >= timezone.now()
+        ]
+        if upcoming_runs:
+            return min(upcoming_runs, key=lambda r: r.start_date)
+
+        # No enrollable/upcoming runs, return run with the latest start date
+        runs_with_dates = [run for run in published_runs if run.start_date]
+        if runs_with_dates:
+            return max(runs_with_dates, key=lambda r: r.start_date)
+
+        return published_runs[0] if published_runs else None
+
+    @cached_property
+    def published_runs(self) -> list["LearningResourceRun"]:
+        """Return a list of published runs for the resource"""
+        if hasattr(self, "_published_runs"):
+            return self._published_runs
+        return list(
+            self.runs.filter(published=True)
+            .order_by("start_date", "enrollment_start", "id")
+            .for_serialization()
         )
-        if not best_lr_run:
-            # If no current enrollable run found, find the next upcoming run
-            best_lr_run = (
-                self.runs.filter(Q(published=True) & Q(start_date__gte=timezone.now()))
-                .order_by("start_date")
-                .first()
-            )
-        if not best_lr_run:
-            # If current_run is still null, return the run with the latest start date
-            best_lr_run = (
-                self.runs.filter(Q(published=True)).order_by("-start_date").first()
-            )
-        return best_lr_run
 
     @cached_property
     def views_count(self) -> int:

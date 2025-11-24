@@ -924,6 +924,8 @@ def remove_points_matching_params(
 def retrieve_points_matching_params(
     params,
     collection_name=RESOURCES_COLLECTION_NAME,
+    *,
+    with_vectors=False,
 ):
     """
     Retrieve points from Qdrant matching params and yield them one by one.
@@ -942,6 +944,7 @@ def retrieve_points_matching_params(
             collection_name=collection_name,
             scroll_filter=search_filter,
             offset=next_page_offset,
+            with_vectors=with_vectors,
         )
         points, next_page_offset = results
 

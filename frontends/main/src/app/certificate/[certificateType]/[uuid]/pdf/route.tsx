@@ -24,14 +24,7 @@ import {
   pdf,
 } from "@react-pdf/renderer"
 import { redirect } from "next/navigation"
-
-/* Enables use of the CertificatePage pixel units styles
-  - Browsers print at 96 dpi, PDFs default to 72 dpi
-  - Scaling factor of 0.8 emulates browser print scaling and better reflect the screen design
-*/
-const pxToPt = (px: number): number => {
-  return px * (72 / 96) * 0.8
-}
+import { pxToPt, getNameStyles } from "./utils"
 
 // https://use.typekit.net/lbk1xay.css
 Font.register({
@@ -309,8 +302,9 @@ const CertificateDoc = ({
               style={{
                 color: colors.red,
                 ...typography.h1,
+                fontSize: getNameStyles(userName).fontSize,
                 position: "absolute",
-                top: pxToPt(206),
+                top: getNameStyles(userName).top,
                 left: pxToPt(46),
               }}
             >

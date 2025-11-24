@@ -157,6 +157,8 @@ response_test_raw_data_1 = {
                     "resource_type": "course",
                     "platform": {"name": "globalalumni"},
                     "is_learning_material": False,
+                    "next_start_date": "2023-09-26T06:00:00Z",
+                    "best_run_id": 633,
                 },
             }
         ],
@@ -302,6 +304,8 @@ response_test_response_1 = {
             "resource_type": "course",
             "platform": {"name": "globalalumni"},
             "is_learning_material": False,
+            "next_start_date": "2023-09-26T06:00:00Z",
+            "best_run_id": 633,
         }
     ],
     "metadata": {
@@ -377,6 +381,8 @@ response_test_raw_data_2 = {
                     "course_feature": [],
                     "is_learning_material": True,
                     "user_list_parents": [],
+                    "next_start_date": None,
+                    "best_run_id": None,
                 },
             }
         ],
@@ -551,6 +557,8 @@ response_test_response_2 = {
             "course_feature": [],
             "is_learning_material": True,
             "user_list_parents": [],
+            "next_start_date": None,
+            "best_run_id": None,
         }
     ],
     "metadata": {

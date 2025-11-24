@@ -412,7 +412,7 @@ def test_embeddings_healthcheck_missing_both(mocker):
     """
     Test embeddings_healthcheck when there are missing content files and learning resources
     """
-    lr = LearningResourceFactory.create(published=True)
+    lr = LearningResourceFactory.create(published=True, create_runs=False)
     LearningResourceRunFactory.create(published=True, learning_resource=lr)
     cf = ContentFileFactory.create(run=lr.runs.first(), content="test", published=True)
     mocker.patch(

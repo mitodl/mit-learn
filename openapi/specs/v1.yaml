@@ -9757,6 +9757,11 @@ components:
           - $ref: '#/components/schemas/LearningResourceRelationshipChildField'
           nullable: true
           readOnly: true
+        best_run_id:
+          type: integer
+          nullable: true
+          description: Return the best run id for the resource, if it has runs
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/ArticleResourceResourceTypeEnum'
@@ -9853,6 +9858,7 @@ components:
           type: boolean
           readOnly: true
       required:
+      - best_run_id
       - certification
       - certification_type
       - children
@@ -10435,6 +10441,11 @@ components:
           - $ref: '#/components/schemas/LearningResourceRelationshipChildField'
           nullable: true
           readOnly: true
+        best_run_id:
+          type: integer
+          nullable: true
+          description: Return the best run id for the resource, if it has runs
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/CourseResourceResourceTypeEnum'
@@ -10535,6 +10546,7 @@ components:
           type: boolean
           readOnly: true
       required:
+      - best_run_id
       - certification
       - certification_type
       - children
@@ -11007,6 +11019,11 @@ components:
           - $ref: '#/components/schemas/LearningResourceRelationshipChildField'
           nullable: true
           readOnly: true
+        best_run_id:
+          type: integer
+          nullable: true
+          description: Return the best run id for the resource, if it has runs
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/LearningPathResourceResourceTypeEnum'
@@ -11105,6 +11122,7 @@ components:
         require_summaries:
           type: boolean
       required:
+      - best_run_id
       - certification
       - certification_type
       - children
@@ -13629,6 +13647,11 @@ components:
           - $ref: '#/components/schemas/LearningResourceRelationshipChildField'
           nullable: true
           readOnly: true
+        best_run_id:
+          type: integer
+          nullable: true
+          description: Return the best run id for the resource, if it has runs
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/PodcastEpisodeResourceResourceTypeEnum'
@@ -13729,6 +13752,7 @@ components:
           type: boolean
           readOnly: true
       required:
+      - best_run_id
       - certification
       - certification_type
       - children
@@ -14041,6 +14065,11 @@ components:
           - $ref: '#/components/schemas/LearningResourceRelationshipChildField'
           nullable: true
           readOnly: true
+        best_run_id:
+          type: integer
+          nullable: true
+          description: Return the best run id for the resource, if it has runs
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/PodcastResourceResourceTypeEnum'
@@ -14141,6 +14170,7 @@ components:
           type: boolean
           readOnly: true
       required:
+      - best_run_id
       - certification
       - certification_type
       - children
@@ -14591,6 +14621,11 @@ components:
           - $ref: '#/components/schemas/LearningResourceRelationshipChildField'
           nullable: true
           readOnly: true
+        best_run_id:
+          type: integer
+          nullable: true
+          description: Return the best run id for the resource, if it has runs
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/ProgramResourceResourceTypeEnum'
@@ -14691,6 +14726,7 @@ components:
           type: boolean
           readOnly: true
       required:
+      - best_run_id
       - certification
       - certification_type
       - children
@@ -15350,6 +15386,11 @@ components:
           - $ref: '#/components/schemas/LearningResourceRelationshipChildField'
           nullable: true
           readOnly: true
+        best_run_id:
+          type: integer
+          nullable: true
+          description: Return the best run id for the resource, if it has runs
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/VideoPlaylistResourceResourceTypeEnum'
@@ -15450,6 +15491,7 @@ components:
           type: boolean
           readOnly: true
       required:
+      - best_run_id
       - certification
       - certification_type
       - children
@@ -15748,6 +15790,11 @@ components:
           - $ref: '#/components/schemas/LearningResourceRelationshipChildField'
           nullable: true
           readOnly: true
+        best_run_id:
+          type: integer
+          nullable: true
+          description: Return the best run id for the resource, if it has runs
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/VideoResourceResourceTypeEnum'
@@ -15854,6 +15901,7 @@ components:
           type: boolean
           readOnly: true
       required:
+      - best_run_id
       - certification
       - certification_type
       - children
