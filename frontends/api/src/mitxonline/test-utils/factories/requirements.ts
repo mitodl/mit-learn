@@ -88,6 +88,7 @@ class RequirementTreeBuilder implements V2ProgramRequirement {
   addOperator(opts: {
     operator: "min_number_of" | "all_of"
     operator_value?: string
+    title?: string
   }) {
     invariant(opts.operator, "operator is required")
     if (opts.operator === "min_number_of") {
@@ -104,7 +105,7 @@ class RequirementTreeBuilder implements V2ProgramRequirement {
       course: null,
       required_program: null,
       program: this.#root.data.program,
-      title: null,
+      title: opts.title ?? faker.lorem.words(3),
       elective_flag: opts.operator === "min_number_of" ? true : false,
     }
     const operatorNode = new RequirementTreeBuilder({ data })
