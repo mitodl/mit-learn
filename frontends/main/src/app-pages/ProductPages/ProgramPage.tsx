@@ -187,7 +187,7 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
       resourceIds: readable.elective,
       shouldShow: !!(readable.elective.length > 0 && electives),
     },
-  ]
+  ].filter((subsec) => subsec.shouldShow)
 
   return (
     <Stack

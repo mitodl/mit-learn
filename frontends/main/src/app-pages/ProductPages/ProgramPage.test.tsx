@@ -21,11 +21,31 @@ import { ResourceTypeEnum } from "api"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { RequirementTreeBuilder } from "../../../../api/src/mitxonline/test-utils/factories/requirements"
 import { faker } from "@faker-js/faker/locale/en"
+import type { ResourceCardProps } from "@/page-components/ResourceCard/ResourceCard"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
 jest.mock("@/common/useFeatureFlagsLoaded")
 const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
+
+jest.mock("@/page-components/ResourceCard/ResourceCard", () => {
+  return {
+    // Resource card is tested thoroughly elsewhere; lets mock it to make tests faster/easier to write
+    ResourceCard: (props: ResourceCardProps) => {
+      let testId: string = "resource-card"
+      if (props.list) {
+        testId = "resource-list-card"
+      }
+      return (
+        <div data-testid={testId} data-resource-id={props.resource?.id}>
+          {props.isLoading
+            ? "Loading..."
+            : `resource-${props.resource?.id ?? "None"}`}
+        </div>
+      )
+    },
+  }
+})
 
 const makeProgram = factories.programs.program
 const makePage = factories.pages.programPageItem
@@ -243,6 +263,110 @@ describe("ProgramPage", () => {
       name: "About this Program",
     })
     expectRawContent(section, page.about)
+  })
+
+  test.each([
+    { required: 3, electives: 2, showRequired: true, showElectives: true },
+    { required: 3, electives: 0, showRequired: true, showElectives: false },
+    // the next cases don't really make sense... All programs should have required courses
+    { required: 0, electives: 2, showRequired: false, showElectives: true },
+    { required: 0, electives: 0, showRequired: false, showElectives: false },
+  ])(
+    "Renders required course and elective subsections appropriately (Required: $required, Electives: $electives)",
+    async ({ required, electives, showRequired, showElectives }) => {
+      const titles = {
+        required: faker.lorem.words(3),
+        elective: faker.lorem.words(3),
+      }
+      const program = makeProgram({
+        ...makeReqs({
+          required: { count: required, title: titles.required },
+          electives: {
+            count: electives,
+            outOf: 2 * electives,
+            title: titles.elective,
+          },
+        }),
+      })
+      const page = makePage({ program_details: program })
+      setupApis({ program, page })
+      renderWithProviders(<ProgramPage readableId={program.readable_id} />)
+      const section = await screen.findByRole("region", { name: "Courses" })
+      const requiredHeading = within(section).queryByRole("heading", {
+        name: `${titles.required}`,
+      })
+      const electiveHeading = within(section).queryByRole("heading", {
+        name: `${titles.elective}: Complete ${electives} out of ${2 * electives}`,
+      })
+
+      expect(!!requiredHeading).toBe(showRequired)
+      expect(!!electiveHeading).toBe(showElectives)
+    },
+  )
+
+  test("Renders requirements section correctly", async () => {
+    const numReq = faker.number.int({ min: 2, max: 5 })
+    const numElective = faker.number.int({ min: 2, max: 3 })
+    const numOutOf = faker.number.int({
+      min: numElective,
+      max: numElective + 3,
+    })
+    const titles = {
+      required: faker.lorem.words(3),
+      elective: faker.lorem.words(3),
+    }
+    const program = makeProgram({
+      ...makeReqs({
+        required: { count: numReq, title: titles.required },
+        electives: {
+          count: numElective,
+          outOf: numOutOf,
+          title: titles.elective,
+        },
+      }),
+    })
+    const page = makePage({ program_details: program })
+    setupApis({ program, page })
+    renderWithProviders(<ProgramPage readableId={program.readable_id} />)
+
+    const section = await screen.findByRole("region", {
+      name: "Courses",
+    })
+    within(section).getByRole("heading", { name: `${titles.required}` })
+    within(section).getByRole("heading", {
+      name: `${titles.elective}: Complete ${numElective} out of ${numOutOf}`,
+    })
+    const [reqList, electiveList] = within(section).getAllByRole("list")
+    await waitFor(() => {
+      expect(within(reqList).queryByText("Loading")).toBe(null)
+    })
+    await waitFor(() => {
+      expect(within(reqList).queryByText("Loading")).toBe(null)
+    })
+    await waitFor(() => {
+      expect(within(electiveList).queryByText("Loading")).toBe(null)
+    })
+
+    within(reqList)
+      .getAllByRole("listitem")
+      .forEach((item, i) => {
+        const resourceId = program.requirements.courses?.required?.[i].id
+        invariant(resourceId)
+        const card = within(item).getByTestId("resource-card") // desktop
+        const listCard = within(item).getByTestId("resource-list-card") //mobile
+        expect(card.dataset.resourceId).toEqual(String(resourceId))
+        expect(listCard.dataset.resourceId).toEqual(String(resourceId))
+      })
+    within(electiveList)
+      .getAllByRole("listitem")
+      .forEach((item, i) => {
+        const resourceId = program.requirements.courses?.electives?.[i].id
+        invariant(resourceId)
+        const card = within(item).getByTestId("resource-card") // desktop
+        const listCard = within(item).getByTestId("resource-list-card") //mobile
+        expect(card.dataset.resourceId).toEqual(String(resourceId))
+        expect(listCard.dataset.resourceId).toEqual(String(resourceId))
+      })
   })
 
   // Dialog tested in InstructorsSection.test.tsx
