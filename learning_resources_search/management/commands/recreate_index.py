@@ -2,7 +2,7 @@
 
 from django.core.management.base import BaseCommand, CommandError
 
-from learning_resources_search.constants import ALL_INDEX_TYPES
+from learning_resources_search.constants import ALL_INDEX_TYPES, HYBRID_COMBINED_INDEX
 from learning_resources_search.indexing_api import get_existing_reindexing_indexes
 from learning_resources_search.tasks import start_recreate_index
 from main.utils import now_in_utc
@@ -25,13 +25,21 @@ class Command(BaseCommand):
             "--all", dest="all", action="store_true", help="Recreate all indexes"
         )
 
+        parser.add_argument(
+            "--combined_hybrid",
+            dest=HYBRID_COMBINED_INDEX,
+            action="store_true",
+            help="Recreate combined index for hybrid search",
+        )
+
         for object_type in sorted(ALL_INDEX_TYPES):
-            parser.add_argument(
-                f"--{object_type}s",
-                dest=object_type,
-                action="store_true",
-                help=f"Recreate the {object_type} index",
-            )
+            if object_type != HYBRID_COMBINED_INDEX:
+                parser.add_argument(
+                    f"--{object_type}s",
+                    dest=object_type,
+                    action="store_true",
+                    help=f"Recreate the {object_type} index",
+                )
         super().add_arguments(parser)
 
     def handle(self, *args, **options):  # noqa: ARG002
@@ -41,7 +49,10 @@ class Command(BaseCommand):
             indexes_to_update = list(ALL_INDEX_TYPES)
         else:
             indexes_to_update = list(
-                filter(lambda object_type: options[object_type], ALL_INDEX_TYPES)
+                filter(
+                    lambda object_type: options[object_type],
+                    ALL_INDEX_TYPES,
+                )
             )
             if not indexes_to_update:
                 self.stdout.write("Must select at least one index to update")

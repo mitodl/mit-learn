@@ -28,6 +28,7 @@ import TiptapEditor, { MainToolbarContent } from "./TiptapEditor"
 // --- Tiptap Node ---
 import { ImageUploadNode } from "./components/tiptap-node/image-upload-node/image-upload-node-extension"
 import { LearningResourceNode } from "./components/tiptap-node/learning-resource-node/learning-resource-node"
+import { MediaEmbed } from "./components/tiptap-node/media-embed/media-embed-extension"
 import { HorizontalRule } from "./components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension"
 
 import "./components/tiptap-node/blockquote-node/blockquote-node.scss"
@@ -154,6 +155,11 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       setTouched(true)
       setContent(json)
     },
+    onCreate: ({ editor }) => {
+      editor.commands.updateAttributes("mediaEmbed", {
+        editable: !readOnly,
+      })
+    },
     editorProps: {
       attributes: {
         autocomplete: "off",
@@ -182,6 +188,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       Subscript,
       Selection,
       Image,
+      MediaEmbed,
       ImageUploadNode.configure({
         accept: "image/*",
         maxSize: MAX_FILE_SIZE,
@@ -191,6 +198,25 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       }),
     ],
   })
+
+  React.useEffect(() => {
+    if (!editor) return
+
+    editor
+      .chain()
+      .command(({ tr, state }) => {
+        state.doc.descendants((node, pos) => {
+          if (node.type.name === "mediaEmbed") {
+            tr.setNodeMarkup(pos, undefined, {
+              ...node.attrs,
+              editable: !readOnly,
+            })
+          }
+        })
+        return true
+      })
+      .run()
+  }, [editor, readOnly])
 
   if (!editor) return null
 

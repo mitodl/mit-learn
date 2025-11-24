@@ -37,6 +37,7 @@ from learning_resources_search.api import (
 from learning_resources_search.constants import (
     CONTENT_FILE_TYPE,
     COURSE_TYPE,
+    HYBRID_COMBINED_INDEX,
     LEARNING_RESOURCE_TYPES,
     PERCOLATE_INDEX_TYPE,
     SEARCH_CONN_EXCEPTIONS,
@@ -285,20 +286,20 @@ def send_subscription_emails(self, subscription_type, period="daily"):
     retry_backoff=True,
     rate_limit="600/m",
 )
-def index_learning_resources(ids, resource_type, index_types):
+def index_learning_resources(ids, index_name, index_types):
     """
     Index courses
 
     Args:
         ids(list of int): List of course id's
+        index_name (string): resource_type value or HYBRID_COMBINED_INDEX
         index_types (string): one of the values IndexestoUpdate. Whether the default
             index, the reindexing index or both need to be updated
-        resource_type (string): resource_type value for the learning resource objects
 
     """
     try:
         with wrap_retry_exception(*SEARCH_CONN_EXCEPTIONS):
-            api.index_learning_resources(ids, resource_type, index_types)
+            api.index_learning_resources(ids, index_name, index_types)
     except (RetryError, Ignore):
         raise
     except SystemExit as err:
@@ -618,6 +619,24 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
                         chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
                     )
                 ]
+
+        if HYBRID_COMBINED_INDEX in indexes:
+            blocklisted_ids = load_course_blocklist()
+
+            index_tasks = index_tasks + [
+                index_learning_resources.si(
+                    ids,
+                    HYBRID_COMBINED_INDEX,
+                    index_types=IndexestoUpdate.reindexing_index.value,
+                )
+                for ids in chunks(
+                    LearningResource.objects.filter(published=True)
+                    .exclude(readable_id=blocklisted_ids)
+                    .order_by("id")
+                    .values_list("id", flat=True),
+                    chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
+                )
+            ]
 
         for resource_type in set(LEARNING_RESOURCE_TYPES) - {COURSE_TYPE}:
             if resource_type in indexes:

@@ -7,6 +7,7 @@ import styled from "@emotion/styled"
 import { EditorContent } from "@tiptap/react"
 import type { Editor } from "@tiptap/core"
 import { ImageUploadButton } from "./components/tiptap-ui/image-upload-button"
+import { MediaEmbedButton } from "./components/tiptap-ui/media-embed/media-embed-button"
 
 // --- UI Primitives ---
 import { Spacer } from "./components/tiptap-ui-primitive/spacer"
@@ -48,6 +49,9 @@ const StyledEditorContent = styled(EditorContent)<{ readOnly: boolean }>(
     backgroundColor: theme.custom.colors.white,
     borderRadius: "10px",
     margin: "20px auto",
+    ".tiptap.ProseMirror.simple-editor": {
+      padding: "3rem 3rem 5vh",
+    },
     ...(readOnly
       ? {
           maxWidth: "1000px",
@@ -63,7 +67,6 @@ const StyledEditorContent = styled(EditorContent)<{ readOnly: boolean }>(
 interface TiptapEditorToolbarProps {
   editor: Editor
 }
-
 export const MainToolbarContent = ({ editor }: TiptapEditorToolbarProps) => {
   return (
     <>
@@ -116,6 +119,7 @@ export const MainToolbarContent = ({ editor }: TiptapEditorToolbarProps) => {
       </ToolbarGroup>
       <ToolbarGroup>
         <LearningResourceEmbedButton editor={editor} text="Course" />
+        <MediaEmbedButton editor={editor} text="Embed" />
       </ToolbarGroup>
       <Spacer />
     </>
