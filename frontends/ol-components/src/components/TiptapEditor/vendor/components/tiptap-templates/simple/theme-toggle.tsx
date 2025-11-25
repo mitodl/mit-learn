@@ -20,6 +20,7 @@ export function ThemeToggle() {
       !!document.querySelector('meta[name="color-scheme"][content="dark"]') ||
       window.matchMedia("(prefers-color-scheme: dark)").matches
     setIsDarkMode(initialDarkMode)
+    // TEST
   }, [])
 
   useEffect(() => {
