@@ -14,7 +14,6 @@ import {
   mitxonlineProgram,
   sortDashboardCourses,
 } from "./CoursewareDisplay/transform"
-import type { CertificatePageModel } from "@mitodl/mitxonline-api-axios/v2"
 import {
   createCoursesWithContractRuns,
   createEnrollmentsForContractRuns,
@@ -444,19 +443,7 @@ describe("OrganizationContent", () => {
       program: programWithCertificate,
       certificate: {
         uuid: programWithCertificate.certificate.uuid,
-        user: {
-          id: 1,
-          username: "testuser",
-          name: "Test User",
-          created_on: new Date().toISOString(),
-          updated_on: new Date().toISOString(),
-        },
-        is_revoked: false,
-        certificate_page: {
-          id: 1,
-        } as Partial<CertificatePageModel> as CertificatePageModel,
-        program: programWithCertificate,
-        certificate_page_revision: 1,
+        link: programWithCertificate.certificate.url,
       },
     })
     setMockResponse.get(urls.programs.programsList({ org_id: orgX.id }), {
