@@ -19,15 +19,11 @@ import {
   userEnrollmentsToDashboardCourses,
 } from "./transform"
 import { DashboardCard } from "./DashboardCard"
-import {
-  DashboardCourse,
-  DashboardProgram,
-  DashboardProgramRequirement,
-  EnrollmentStatus,
-} from "./types"
+import { DashboardCourse, DashboardProgram, EnrollmentStatus } from "./types"
 import type { AxiosError } from "axios"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { programsQueries } from "api/mitxonline-hooks/programs"
+import { V2ProgramRequirement } from "@mitodl/mitxonline-api-axios/v2"
 
 const Wrapper = styled.div(({ theme }) => ({
   marginTop: "32px",
@@ -215,12 +211,10 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
   )
 }
 
-const extractCoursesFromNode = (
-  node: DashboardProgramRequirement,
-): number[] => {
+const extractCoursesFromNode = (node: V2ProgramRequirement): number[] => {
   const courses: number[] = []
 
-  if (node.data.nodeType === "course" && node.data.course) {
+  if (node.data.node_type === "course" && node.data.course) {
     courses.push(node.data.course)
   }
 
@@ -233,15 +227,13 @@ const extractCoursesFromNode = (
   return courses
 }
 
-const getRequirementSectionTitle = (
-  node: DashboardProgramRequirement,
-): string => {
+const getRequirementSectionTitle = (node: V2ProgramRequirement): string => {
   if (node.data.title) {
     return node.data.title
   }
-  if (node.data.electiveFlag) {
-    if (node.data.operator === "min_number_of" && node.data.operatorValue) {
-      return `Electives (Complete ${node.data.operatorValue})`
+  if (node.data.elective_flag) {
+    if (node.data.operator === "min_number_of" && node.data.operator_value) {
+      return `Electives (Complete ${node.data.operator_value})`
     }
     return "Elective Courses"
   }
@@ -263,16 +255,21 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
     programsQueries.programDetail({ id: programId }),
   )
   const program = rawProgram ? mitxonlineProgram(rawProgram) : undefined
+
+  // Only fetch courses if we have a program with course IDs
   const { data: rawProgramCourses, isLoading: programCoursesLoading } =
-    useQuery(coursesQueries.coursesList({ id: program?.courseIds }))
+    useQuery({
+      ...coursesQueries.coursesList({ id: program?.courseIds || [] }),
+      enabled: !!program && program.courseIds.length > 0,
+    })
 
   // Build sections from requirement tree
   const requirementSections =
     program?.reqTree
-      .filter((node) => node.data.nodeType === "operator")
+      .filter((node) => node.data.node_type === "operator")
       .map((node) => {
         const courseIds = extractCoursesFromNode(node)
-        const sectionCourses = rawProgramCourses?.results
+        const sectionCourses = (rawProgramCourses?.results || [])
           .filter((course) => courseIds.includes(course.id))
           .map((course) => {
             const enrollment = userCourses?.find((dashboardCourse) =>
@@ -285,7 +282,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
 
         return {
           title: getRequirementSectionTitle(node),
-          courses: sectionCourses || [],
+          courses: sectionCourses,
           node,
         }
       })
