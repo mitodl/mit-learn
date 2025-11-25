@@ -137,19 +137,19 @@ type RequirementsSectionProps = {
 const RequirementsSection: React.FC<RequirementsSectionProps> = ({
   program,
 }) => {
-  // @ts-expect-error local api change
-  const requirements: {
-    courses?: {
-      required?: { id: number; readable_id: string }[]
-      electives?: { id: number; readable_id: string }[]
-    }
-  } = program.requirements
+  const requirements = program.requirements
 
   const readable = {
-    required: requirements.courses?.required?.map((c) => c.readable_id) ?? [],
-    elective: requirements.courses?.electives?.map((c) => c.readable_id) ?? [],
+    required:
+      requirements.courses?.required
+        ?.map((c) => c.readable_id)
+        .filter((id) => id !== undefined) ?? [],
+    elective:
+      requirements.courses?.electives
+        ?.map((c) => c.readable_id)
+        .filter((id) => id !== undefined) ?? [],
   }
-  const readableIds = [...readable.required, ...readable.elective]
+  const readableIds = [...(readable.required ?? []), ...readable.elective]
   const resources = useQuery({
     ...learningResourceQueries.list({
       readable_id: readableIds,
