@@ -337,8 +337,16 @@ describe("Program RequirementsRow", () => {
     const program = factories.programs.program({
       requirements: {
         courses: {
-          required: required.children?.map((n) => n.id) ?? [],
-          electives: electives.children?.map((n) => n.id) ?? [],
+          required:
+            required.children?.map((n) => ({
+              id: n.id,
+              readable_id: `readale-${n.id}`,
+            })) ?? [],
+          electives:
+            electives.children?.map((n) => ({
+              id: n.id,
+              readable_id: `readale-${n.id}`,
+            })) ?? [],
         },
         programs: { required: [], electives: [] },
       },
@@ -367,7 +375,11 @@ describe("Program RequirementsRow", () => {
     const program = factories.programs.program({
       requirements: {
         courses: {
-          required: required.children?.map((n) => n.id) ?? [],
+          required:
+            required.children?.map((n) => ({
+              id: n.id,
+              readable_id: `readale-${n.id}`,
+            })) ?? [],
           electives: [],
         },
         programs: { required: [], electives: [] },

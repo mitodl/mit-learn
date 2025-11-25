@@ -11,6 +11,7 @@ import type {
   ProgramPageItem,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { UniqueEnforcer } from "enforce-unique"
+import { program } from "./programs"
 
 const makeHTMLParagraph = (num: number) => {
   return Array.from(
@@ -254,82 +255,7 @@ const programPageItem: PartialFactory<ProgramPageItem> = (override) => {
         }),
       ),
     },
-    program_details: {
-      title: faker.lorem.words(3),
-      readable_id: `program-v1:${faker.lorem.slug()}`,
-      id: faker.number.int({ min: 1, max: 100 }),
-      courses: Array.from(
-        { length: faker.number.int({ min: 3, max: 8 }) },
-        () => faker.number.int({ min: 1, max: 50 }),
-      ),
-      collections: [],
-      requirements: {
-        courses: {
-          required: Array.from(
-            { length: faker.number.int({ min: 2, max: 4 }) },
-            () => faker.number.int({ min: 1, max: 20 }),
-          ),
-          electives: Array.from(
-            { length: faker.number.int({ min: 2, max: 5 }) },
-            () => faker.number.int({ min: 21, max: 50 }),
-          ),
-        },
-        programs: {
-          required: [],
-          electives: [],
-        },
-      },
-      req_tree: [],
-      page: {
-        feature_image_src: faker.image.url({
-          width: 1134,
-          height: 675,
-        }),
-        page_url: `/programs/${faker.lorem.slug()}/`,
-        financial_assistance_form_url: faker.internet.url(),
-        description: makeHTMLParagraph(1),
-        live: true,
-        length: `${faker.number.int({ min: 1, max: 4 })} terms (${faker.number.int({ min: 6, max: 24 })} months)`,
-        effort: `${faker.number.int({ min: 5, max: 20 })} hours per week`,
-        price: `$${faker.number.int({ min: 250, max: 1000 })} - $${faker.number.int({ min: 1000, max: 5000 })} per course`,
-      },
-      program_type: faker.helpers.arrayElement([
-        "MicroMasters®",
-        "Professional Certificate",
-        "XSeries",
-      ]),
-      certificate_type: faker.helpers.arrayElement([
-        "MicroMasters Credential",
-        "Professional Certificate",
-        "XSeries Certificate",
-      ]),
-      departments: [
-        {
-          name: faker.company.name(),
-        },
-      ],
-      live: true,
-      topics: Array.from(
-        { length: faker.number.int({ min: 3, max: 7 }) },
-        () => ({
-          name: faker.lorem.word(),
-        }),
-      ),
-      availability: faker.helpers.arrayElement(["anytime", "dated"]),
-      start_date: faker.date.future().toISOString(),
-      end_date: null,
-      enrollment_start: null,
-      enrollment_end: null,
-      required_prerequisites: faker.datatype.boolean(),
-      duration: `${faker.number.int({ min: 1, max: 4 })} terms (${faker.number.int({ min: 6, max: 24 })} months)`,
-      min_weeks: faker.number.int({ min: 24, max: 48 }),
-      max_weeks: faker.number.int({ min: 48, max: 96 }),
-      min_price: faker.number.int({ min: 1000, max: 2500 }),
-      max_price: faker.number.int({ min: 2500, max: 10000 }),
-      time_commitment: `${faker.number.int({ min: 5, max: 20 })} hours per week`,
-      min_weekly_hours: `${faker.number.int({ min: 5, max: 10 })}`,
-      max_weekly_hours: `${faker.number.int({ min: 11, max: 20 })}`,
-    },
+    program_details: program(override?.program_details ?? {}),
   }
   return mergeOverrides<ProgramPageItem>(defaults, override)
 }

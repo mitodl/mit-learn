@@ -14,7 +14,7 @@
     "@emotion/cache": "^11.13.1",
     "@emotion/styled": "^11.11.0",
     "@mitodl/course-search-utils": "^3.5.0",
-    "@mitodl/mitxonline-api-axios": "^2025.11.5",
+    "@mitodl/mitxonline-api-axios": "^2025.11.24",
     "@mitodl/smoot-design": "^6.19.0",
     "@next/bundle-analyzer": "^14.2.15",
     "@react-pdf/renderer": "^4.3.0",
