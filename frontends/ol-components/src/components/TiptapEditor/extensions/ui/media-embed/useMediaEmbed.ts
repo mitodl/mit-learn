@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from "react"
 import type { Editor } from "@tiptap/react"
-import { useTiptapEditor } from "../../../hooks/use-tiptap-editor"
+import { useTiptapEditor } from "../../../vendor/hooks/use-tiptap-editor"
 import { convertToEmbedUrl } from "./lib"
 import NiceModal from "@ebay/nice-modal-react"
 import MediaUrlInputDialog from "./MediaUrlInputDialog"
