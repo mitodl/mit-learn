@@ -542,16 +542,19 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
 
   // Title link logic
   const coursewareUrl = run?.coursewareUrl
-  const titleHref = isCourse
-    ? titleAction === "marketing"
-      ? marketingUrl
-      : (coursewareUrl ?? marketingUrl)
-    : undefined // Programs don't have a title link yet
-
   const hasEnrolled =
     enrollment?.status && enrollment.status !== EnrollmentStatus.NotEnrolled
 
   const b2bContractId = enrollment?.b2b_contract_id ?? run?.b2bContractId
+
+  // Title link logic - only set href for enrolled courses or B2B courses
+  const titleHref = isCourse
+    ? hasEnrolled || b2bContractId
+      ? titleAction === "marketing"
+        ? marketingUrl
+        : (coursewareUrl ?? marketingUrl)
+      : undefined
+    : undefined // Programs don't have a title link yet
 
   const titleClick: React.MouseEventHandler | undefined =
     isCourse && !hasEnrolled
@@ -592,6 +595,10 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         >
           {title}
         </TitleLink>
+      ) : titleClick ? (
+        <TitleText clickable onClick={titleClick}>
+          {title}
+        </TitleText>
       ) : (
         <TitleText>{title}</TitleText>
       )}
