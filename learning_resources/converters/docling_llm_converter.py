@@ -6,7 +6,7 @@ from pathlib import Path
 
 import litellm
 from django.conf import settings
-from docling.backend.docling_parse_v4_backend import DoclingParseV4DocumentBackend
+from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
 from docling.datamodel.base_models import DocumentStream, InputFormat
 from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling.document_converter import DocumentConverter, PdfFormatOption
@@ -106,7 +106,7 @@ class DoclingLLMConverter:
         self.converter = DocumentConverter(
             format_options={
                 InputFormat.PDF: PdfFormatOption(
-                    backend=DoclingParseV4DocumentBackend,
+                    backend=PyPdfiumDocumentBackend,
                     pipeline_options=self.pipeline_options,
                 ),
             }
@@ -188,8 +188,7 @@ class DoclingLLMConverter:
         file_path.write_text(markdown_content)
         return str(file_path)
 
-    def transcribe_images(self, doc, page, items):
-        replacements = []
+    def llm_messages(self, page, items):
         messages_list = []
         processed_items = []
         for item in items:
@@ -216,13 +215,16 @@ class DoclingLLMConverter:
                     ]
                 )
                 processed_items.append(item)
+        return processed_items, messages_list
 
+    def batch_transcribe(self, doc, processed_items, messages_list):
         responses = batch_completion(
             custom_llm_provider=settings.LITELLM_CUSTOM_PROVIDER,
             api_base=settings.LITELLM_API_BASE,
             model=settings.OCR_MODEL,
             messages=messages_list,
         )
+        replacements = []
         for i in range(len(responses)):
             response = responses[i]
             item = processed_items[i]
@@ -247,15 +249,20 @@ class DoclingLLMConverter:
         stream = DocumentStream(name=self.document_path.name, stream=file_buffer)
         conversion_result = self.converter.convert(stream)
         document = conversion_result.document
-
+        all_processed = []
+        all_messages = []
         for page, items in self.items_by_page(document):
             if len(items) > 0:
-                replacements = self.transcribe_images(document, page, items)
-                for old_item, new_item in replacements:
-                    document.replace_item(new_item=new_item, old_item=old_item)
+                processed_items, messages_list = self.llm_messages(page, items)
+                all_messages.extend(messages_list)
+                all_processed.extend(processed_items)
             else:
                 transcribed = self.ocr_page_image(page)
                 self.add_page_text(document, page, transcribed)
+
+        replacements = self.batch_transcribe(document, all_processed, all_messages)
+        for old_item, new_item in replacements:
+            document.replace_item(new_item=new_item, old_item=old_item)
         # ref https://github.com/docling-project/docling/issues/2494#issuecomment-3418781668
         markdown_document = DoclingDocument(name="markdown")
         markdown_document.add_title(text="")
