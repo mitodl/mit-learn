@@ -10,7 +10,6 @@ import {
   CourseWithCourseRunsSerializerV2,
   V2Program,
   V2ProgramCollection,
-  V2ProgramRequirement,
   V2UserProgramEnrollmentDetail,
 } from "@mitodl/mitxonline-api-axios/v2"
 
@@ -22,7 +21,6 @@ import type {
   DashboardCourseEnrollment,
   DashboardProgramEnrollment,
   DashboardProgram,
-  DashboardProgramRequirement,
   DashboardProgramCollection,
 } from "./types"
 import { groupBy } from "lodash"
@@ -287,26 +285,6 @@ const programEnrollmentsToPrograms = (
   })
 }
 
-const transformProgramRequirement = (
-  raw: V2ProgramRequirement,
-): DashboardProgramRequirement => {
-  return {
-    id: raw.id,
-    data: {
-      nodeType: raw.data
-        .node_type as DashboardProgramRequirement["data"]["nodeType"],
-      course: raw.data.course,
-      program: raw.data.program,
-      requiredProgram: raw.data.required_program,
-      title: raw.data.title,
-      operator: raw.data.operator,
-      operatorValue: raw.data.operator_value,
-      electiveFlag: raw.data.elective_flag,
-    },
-    children: raw.children?.map(transformProgramRequirement),
-  }
-}
-
 const mitxonlineProgram = (raw: V2Program): DashboardProgram => {
   return {
     id: raw.id,
@@ -321,7 +299,7 @@ const mitxonlineProgram = (raw: V2Program): DashboardProgram => {
     courseIds: raw.courses,
     collections: raw.collections,
     description: raw.page.description,
-    reqTree: raw.req_tree.map(transformProgramRequirement),
+    reqTree: raw.req_tree,
   }
 }
 
@@ -357,7 +335,6 @@ export {
   userEnrollmentsToDashboardCourses,
   transformEnrollmentToDashboard,
   transformProgramEnrollmentToDashboard,
-  transformProgramRequirement,
   mitxonlineOrgContract,
   enrollmentsToOrgDashboardEnrollments,
   organizationCoursesWithContracts,

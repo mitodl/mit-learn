@@ -725,27 +725,27 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
       expect(result.reqTree[0]).toEqual({
         id: 1,
         data: {
-          nodeType: "operator",
+          node_type: "operator",
           operator: "all_of",
-          operatorValue: "0",
-          electiveFlag: false,
+          operator_value: "0",
+          elective_flag: false,
           title: "Required Courses",
           course: null,
           program: null,
-          requiredProgram: null,
+          required_program: null,
         },
         children: [
           {
             id: 2,
             data: {
-              nodeType: "course",
+              node_type: "course",
               course: 123,
               operator: null,
-              operatorValue: "0",
-              electiveFlag: false,
+              operator_value: "0",
+              elective_flag: false,
               title: null,
               program: null,
-              requiredProgram: null,
+              required_program: null,
             },
             children: [],
           },
@@ -813,7 +813,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
 
       expect(result.reqTree[0].children).toHaveLength(1)
       expect(result.reqTree[0].children?.[0].children).toHaveLength(1)
-      expect(result.reqTree[0].children?.[0].data.electiveFlag).toBe(true)
+      expect(result.reqTree[0].children?.[0].data.elective_flag).toBe(true)
     })
   })
 
