@@ -83,13 +83,15 @@ const makeReqs = ({
     },
   }
 
-  const requiredNode = reqTree.addOperator({
-    operator: "all_of",
-    title: required.title,
-  })
-  requirements.courses?.required?.forEach((req) => {
-    requiredNode.addCourse({ course: req.id })
-  })
+  if (required.count) {
+    const requiredNode = reqTree.addOperator({
+      operator: "all_of",
+      title: required.title,
+    })
+    requirements.courses?.required?.forEach((req) => {
+      requiredNode.addCourse({ course: req.id })
+    })
+  }
 
   if (electives.count) {
     const electivesNode = reqTree.addOperator({
@@ -102,7 +104,7 @@ const makeReqs = ({
     })
   }
 
-  return { requirements, req_tree: [reqTree.serialize()] }
+  return { requirements, req_tree: reqTree.serialize() }
 }
 
 const expectRawContent = (el: HTMLElement, htmlString: string) => {

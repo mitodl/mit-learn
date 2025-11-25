@@ -10,7 +10,7 @@ import { programsQueries } from "api/mitxonline-hooks/programs"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { notFound } from "next/navigation"
-import { getSubtree, HeadingIds } from "./util"
+import { HeadingIds, parseReqTree } from "./util"
 import InstructorsSection from "./InstructorsSection"
 import RawHTML, { UnstyledRawHTML } from "./RawHTML"
 import AboutSection from "./AboutSection"
@@ -120,7 +120,6 @@ type RequirementSubsectionInfo = {
   note?: string
   titleId: string
   resourceIds: string[]
-  shouldShow: boolean
 }
 const ReqSubsectionTitle = styled(Typography)(({ theme }) => ({
   ...theme.typography.h5,
@@ -161,33 +160,30 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
     select: (data) => keyBy(data.results, "readable_id"),
   })
 
-  const requiredSubtree = getSubtree(program, "required")
-  const electiveSubtree = getSubtree(program, "elective")
-  const electives =
-    electiveSubtree && electiveSubtree?.children?.length
-      ? {
-          total: electiveSubtree.children?.length,
-          needed: electiveSubtree.data.operator_value,
-        }
-      : null
+  /**
+   * req_tree allows for multiple elective sections, however
+   * the V2Program.requirements schema, from which we get course readable IDs,
+   * only supports at most one elective section and one required section.
+   */
+  const parsedReqs = parseReqTree(program.req_tree)
+  const required = parsedReqs.find((req) => !req.elective)
+  const electives = parsedReqs.find((req) => req.elective)
 
   const subsections: RequirementSubsectionInfo[] = [
-    {
-      title: requiredSubtree?.data.title ?? "Core Courses",
+    required && {
+      title: required.title,
       titleId: HeadingIds.RequirementsRequired,
       resourceIds: readable.required,
-      shouldShow: readable.required.length > 0,
     },
-    {
-      title: electiveSubtree?.data.title ?? "Elective Courses",
+    electives && {
+      title: electives.title,
       note: electives
-        ? `Complete ${electives.needed} out of ${electives.total}`
+        ? `Complete ${electives.requiredCourseCount} out of ${electives.courseIds.length}`
         : "",
       titleId: HeadingIds.RequirementsElectives,
       resourceIds: readable.elective,
-      shouldShow: !!(readable.elective.length > 0 && electives),
     },
-  ].filter((subsec) => subsec.shouldShow)
+  ].filter((subsec) => subsec !== undefined)
 
   return (
     <Stack

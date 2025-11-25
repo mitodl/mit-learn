@@ -15,7 +15,7 @@ import {
   CourseRunV2,
   V2Program,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { getSubtree, HeadingIds } from "./util"
+import { HeadingIds, parseReqTree } from "./util"
 import { LearningResource } from "api"
 
 const ResponsiveLink = styled(Link)(({ theme }) => ({
@@ -444,36 +444,12 @@ const RequirementsRow: React.FC<ProgramInfoRowProps> = ({
   program,
   ...others
 }) => {
-  const requiredSubtree = getSubtree(program, "required")
-  const electiveSubtree = getSubtree(program, "elective")
-  const totalRequired =
-    (requiredSubtree?.children?.length ?? 0) +
-    (electiveSubtree?.children?.length ?? 0)
+  const parsedReqs = parseReqTree(program.req_tree)
+  const totalRequired = parsedReqs.reduce(
+    (sum, req) => sum + req.requiredCourseCount,
+    0,
+  )
   if (totalRequired === 0) return null
-  const requiredDisplay = requiredSubtree?.children?.length ? (
-    <InfoRowInner>
-      {`${requiredSubtree.children.length} Required ${pluralize(
-        "Course",
-        requiredSubtree.children.length,
-      )}`}
-      <span>Complete All</span>
-    </InfoRowInner>
-  ) : null
-
-  const electiveDisplay = electiveSubtree?.children?.length ? (
-    <InfoRowInner>
-      {`${electiveSubtree.children.length} Elective ${pluralize(
-        "Course",
-        electiveSubtree.children.length,
-      )}`}
-      <span>
-        Complete {electiveSubtree.data.operator_value} of{" "}
-        {electiveSubtree.children.length}
-      </span>
-    </InfoRowInner>
-  ) : null
-
-  if (!requiredDisplay && !electiveDisplay) return null
 
   return (
     <InfoRow {...others}>

@@ -1,7 +1,4 @@
-import type {
-  V2Program,
-  V2ProgramRequirement,
-} from "@mitodl/mitxonline-api-axios/v2"
+import type { V2Program } from "@mitodl/mitxonline-api-axios/v2"
 import { V2ProgramRequirementDataNodeTypeEnum } from "@mitodl/mitxonline-api-axios/v2"
 
 enum HeadingIds {
@@ -15,19 +12,62 @@ enum HeadingIds {
   RequirementsElectives = "elective-courses",
 }
 
-const getSubtree = (program: V2Program, type: "required" | "elective") => {
-  const find = (
-    nodes: V2ProgramRequirement[],
-  ): V2ProgramRequirement | undefined =>
-    nodes?.find(
-      (child) =>
-        child.data.node_type ===
-          V2ProgramRequirementDataNodeTypeEnum.Operator &&
-        (type === "elective"
-          ? child.data.elective_flag
-          : !child.data.elective_flag),
-    )
-  return find(program.req_tree) ?? find(program.req_tree[0]?.children || [])
+type RequirementData = {
+  elective: boolean
+  title: string
+  courseIds: number[]
+  requiredCourseCount: number
 }
 
-export { HeadingIds, getSubtree }
+const parseReqTree = (reqTree: V2Program["req_tree"]): RequirementData[] => {
+  if (
+    !reqTree.every(
+      (node) =>
+        node.data.node_type === V2ProgramRequirementDataNodeTypeEnum.Operator,
+    )
+  ) {
+    console.error(
+      "UI Display expects program requirements root to only have operator children",
+    )
+  }
+
+  return reqTree
+    .filter(
+      (node) =>
+        node.data.node_type === V2ProgramRequirementDataNodeTypeEnum.Operator,
+    )
+    .map((node) => {
+      const elective = node.data.elective_flag ?? false
+      const title =
+        node.data.title || (elective ? "Elective Courses" : "Core Courses")
+
+      const children = node.children ?? []
+      if (
+        !children.every(
+          (c) =>
+            c.data.node_type === V2ProgramRequirementDataNodeTypeEnum.Course,
+        )
+      ) {
+        console.error(
+          "UI Display expects program requirements operator nodes to only have course children",
+        )
+      }
+
+      const courseIds =
+        node.children
+          ?.map((child) => child.data.course)
+          .filter((id) => typeof id === "number") || []
+      const requiredCourseCount =
+        elective && node.data.operator === "min_number_of"
+          ? Number(node.data.operator_value) || courseIds.length
+          : courseIds.length
+      return {
+        elective,
+        title,
+        courseIds,
+        requiredCourseCount,
+      }
+    })
+}
+
+export { HeadingIds, parseReqTree }

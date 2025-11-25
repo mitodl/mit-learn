@@ -350,7 +350,7 @@ describe("Program RequirementsRow", () => {
         },
         programs: { required: [], electives: [] },
       },
-      req_tree: [requirements.serialize()],
+      req_tree: requirements.serialize(),
     })
 
     renderWithProviders(
@@ -361,7 +361,7 @@ describe("Program RequirementsRow", () => {
     const reqRow = within(summary).getByTestId(TestIds.RequirementsRow)
 
     // The text is split more nicely on screen, but via html tags not spaces
-    expect(reqRow).toHaveTextContent("7 Courses to complete program")
+    expect(reqRow).toHaveTextContent("5 Courses to complete program")
   })
 
   test("Renders requirement count correctly if no electives", () => {
@@ -383,7 +383,7 @@ describe("Program RequirementsRow", () => {
         },
         programs: { required: [], electives: [] },
       },
-      req_tree: [requirements.serialize()],
+      req_tree: requirements.serialize(),
     })
 
     renderWithProviders(

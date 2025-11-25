@@ -130,10 +130,17 @@ class RequirementTreeBuilder implements V2ProgramRequirement {
     return programNode
   }
 
-  serialize(): V2ProgramRequirement {
+  #serialize(): V2ProgramRequirement {
     const node = { id: this.id, data: this.data }
-    const children = this.children?.map((child) => child.serialize())
+    const children = this.children?.map((child) => child.#serialize())
     return children ? { ...node, children } : node
+  }
+  serialize(): V2ProgramRequirement[] {
+    invariant(
+      this.#root === this,
+      "serialize can only be called on the root node",
+    )
+    return this.#serialize().children ?? []
   }
 }
 
