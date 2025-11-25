@@ -166,16 +166,19 @@ def add_climate_topic_mapping(apps, schema_editor):
     LearningResourceTopic = apps.get_model(
         "learning_resources", "LearningResourceTopic"
     )
-    climate_offeror = LearningResourceOfferor.objects.get(code=OfferedBy.climate.name)
-    for climate_topic_name, mapping in MIT_CLIMATE_TOPIC_MAP.items():
-        topic_name = mapping["topic"]
-        subtopic_name = mapping["subtopic"].split(":")[-1].strip()
-        for topic in LearningResourceTopic.objects.filter(
-            name__in=[topic_name, subtopic_name]
-        ):
-            LearningResourceTopicMapping.objects.get_or_create(
-                offeror=climate_offeror, topic_name=climate_topic_name, topic=topic
-            )
+    if LearningResourceOfferor.objects.filter(code=OfferedBy.climate.name).exists():
+        climate_offeror = LearningResourceOfferor.objects.get(
+            code=OfferedBy.climate.name
+        )
+        for climate_topic_name, mapping in MIT_CLIMATE_TOPIC_MAP.items():
+            topic_name = mapping["topic"]
+            subtopic_name = mapping["subtopic"].split(":")[-1].strip()
+            for topic in LearningResourceTopic.objects.filter(
+                name__in=[topic_name, subtopic_name]
+            ):
+                LearningResourceTopicMapping.objects.get_or_create(
+                    offeror=climate_offeror, topic_name=climate_topic_name, topic=topic
+                )
 
 
 class Migration(migrations.Migration):
