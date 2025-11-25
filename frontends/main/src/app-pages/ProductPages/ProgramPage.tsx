@@ -202,7 +202,7 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
         </Typography>
         <Typography variant="body1" component="p">
           {electives
-            ? `To complete this program, you must take ${readable.required.length} required courses and ${electives.needed} elective courses.`
+            ? `To complete this program, you must take ${readable.required.length} required courses and ${electives.requiredCourseCount} elective courses.`
             : `To complete this program, you must take ${readable.required.length} required courses.`}
         </Typography>
       </div>
