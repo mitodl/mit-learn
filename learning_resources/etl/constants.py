@@ -85,7 +85,7 @@ MIT_CLIMATE_TOPIC_MAP = {
         "topic": "Climate Science",
         "subtopic": "Science & Math: Earth Science",
     },
-    "Weather and Natural Disasters": {
+    "Weather & Natural Disasters": {
         "topic": "Adaptation and Resilience",
         "subtopic": "Science & Math: Earth Science",
     },
@@ -116,15 +116,15 @@ MIT_CLIMATE_TOPIC_MAP = {
     "Oceans": {"topic": "Ecosystems", "subtopic": "Science & Math: Earth Science"},
     "Forests": {"topic": "Ecosystems", "subtopic": "Science & Math: Earth Science"},
     "Biodiversity": {"topic": "Ecosystems", "subtopic": "Science & Math: Biology"},
-    "Arctic and Antarctic": {
+    "Arctic & Antarctic": {
         "topic": "Ecosystems",
         "subtopic": "Science & Math: Earth Science",
     },
-    "Food, Water and Agriculture": {
+    "Food, Water & Agriculture": {
         "topic": "Adaptation and Resilience",
         "subtopic": "Science & Math: Earth Science",
     },
-    "Humanities and Social Science": {
+    "Humanities & Social Science": {
         "topic": "Adaptation and Resilience",
         "subtopic": "Social Sciences",
     },
@@ -132,11 +132,11 @@ MIT_CLIMATE_TOPIC_MAP = {
         "topic": "Adaptation and Resilience",
         "subtopic": "Social Sciences",
     },
-    "Health and Medicine": {
+    "Health & Medicine": {
         "topic": "Adaptation and Resilience",
         "subtopic": "Health & Medicine: Public Health",
     },
-    "Cities and Planning": {
+    "Cities & Planning": {
         "topic": "Built Environment",
         "subtopic": "Social Sciences: Urban Studies",
     },
@@ -144,18 +144,18 @@ MIT_CLIMATE_TOPIC_MAP = {
         "topic": "Built Environment",
         "subtopic": "Art, Design & Architecture: Architecture",
     },
-    "Industry and Manufacturing": {
+    "Industry & Manufacturing": {
         "topic": "Sustainable Business",
         "subtopic": "Engineering: Manufacturing",
     },
     "Energy": {"topic": "Energy", "subtopic": "Engineering"},
     "Renewable Energy": {"topic": "Energy", "subtopic": "Engineering"},
     "Fossil Fuels": {"topic": "Energy", "subtopic": "Engineering"},
-    "Nuclear and Fusion Energy": {
+    "Nuclear & Fusion Energy": {
         "topic": "Energy",
         "subtopic": "Engineering: Nuclear Engineering",
     },
-    "Batteries, Storage and Transmission": {
+    "Batteries, Storage & Transmission": {
         "topic": "Energy",
         "subtopic": "Engineering",
     },
@@ -176,11 +176,11 @@ MIT_CLIMATE_TOPIC_MAP = {
         "topic": "Climate and Energy Policy",
         "subtopic": "Engineering: Environmental Engineering",
     },
-    "Government and Politics": {
+    "Government & Politics": {
         "topic": "Climate and Energy Policy",
         "subtopic": "Policy and Administration",
     },
-    "Advocacy and Activism": {
+    "Advocacy & Activism": {
         "topic": "Climate and Energy Policy",
         "subtopic": "Policy and Administration",
     },
@@ -194,7 +194,7 @@ MIT_CLIMATE_TOPIC_MAP = {
     },
     "Carbon Capture": {"topic": "Energy", "subtopic": "Engineering"},
     "Geoengineering": {"topic": "Adaptation and Resilience", "subtopic": "Engineering"},
-    "Finance and Economics": {
+    "Finance & Economics": {
         "topic": "Climate and Energy Policy",
         "subtopic": "Social Sciences: Economics",
     },
@@ -207,7 +207,7 @@ MIT_CLIMATE_TOPIC_MAP = {
         "subtopic": "Education & Teaching",
     },
     "Adaptation": {"topic": "Adaptation and Resilience", "subtopic": "Social Sciences"},
-    "Communication and Arts": {
+    "Communication & Arts": {
         "topic": "Adaptation and Resilience",
         "subtopic": "Humanities",
     },
@@ -215,6 +215,7 @@ MIT_CLIMATE_TOPIC_MAP = {
         "topic": "Climate Science",
         "subtopic": "Engineering: Environmental Engineering",
     },
+    "Alternative Fuels": {"topic": "Energy", "subtopic": "Chemical Engineering"},
 }
 
 
