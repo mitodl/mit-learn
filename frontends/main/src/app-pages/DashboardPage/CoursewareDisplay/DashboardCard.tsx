@@ -562,12 +562,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
           e.preventDefault()
           // B2B courses use one-click enrollment
           if (b2bContractId) {
-            if (!coursewareId) return
-            const href =
-              titleAction === "courseware" ? coursewareUrl : coursewareUrl
-            if (!href) return
+            if (!coursewareId || !coursewareUrl) return
             oneClickEnroll.mutate({
-              href: href,
+              href: coursewareUrl,
               coursewareId: coursewareId,
             })
           } else {
