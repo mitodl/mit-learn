@@ -18,7 +18,7 @@ from learning_resources.tasks import ingest_canvas_course
 from learning_resources.utils import (
     resource_delete_actions,
 )
-from main.utils import clear_search_cache
+from main.utils import clear_views_cache
 from video_shorts.api import upsert_video_short
 from webhooks.decorators import require_signature
 from webhooks.serializers import (
@@ -133,7 +133,7 @@ class VideoShortWebhookView(BaseWebhookView):
             data = self.get_data(request)
             youtube_data = data.get("youtube_metadata")
             upsert_video_short(youtube_data)
-            clear_search_cache()
+            clear_views_cache()
             return self.success()
         except json.JSONDecodeError:
             return HttpResponseBadRequest("Invalid JSON format")

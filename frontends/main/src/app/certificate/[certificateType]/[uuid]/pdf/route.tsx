@@ -4,7 +4,7 @@ import type { AxiosError } from "axios"
 import type { NextRequest } from "next/server"
 import * as Sentry from "@sentry/nextjs"
 import moment from "moment"
-import { getServerQueryClient } from "api/ssr/serverQueryClient"
+import { getQueryClient } from "@/app/getQueryClient"
 import { certificateQueries } from "api/mitxonline-hooks/certificates"
 import {
   V2CourseRunCertificate,
@@ -24,14 +24,7 @@ import {
   pdf,
 } from "@react-pdf/renderer"
 import { redirect } from "next/navigation"
-
-/* Enables use of the CertificatePage pixel units styles
-  - Browsers print at 96 dpi, PDFs default to 72 dpi
-  - Scaling factor of 0.8 emulates browser print scaling and better reflect the screen design
-*/
-const pxToPt = (px: number): number => {
-  return px * (72 / 96) * 0.8
-}
+import { pxToPt, getNameStyles } from "./utils"
 
 // https://use.typekit.net/lbk1xay.css
 Font.register({
@@ -309,8 +302,9 @@ const CertificateDoc = ({
               style={{
                 color: colors.red,
                 ...typography.h1,
+                fontSize: getNameStyles(userName).fontSize,
                 position: "absolute",
-                top: pxToPt(206),
+                top: getNameStyles(userName).top,
                 left: pxToPt(46),
               }}
             >
@@ -562,7 +556,7 @@ type RouteContext = {
 export async function GET(req: NextRequest, ctx: RouteContext) {
   const { certificateType, uuid } = await ctx.params
 
-  const queryClient = getServerQueryClient()
+  const queryClient = getQueryClient()
 
   let pdfDoc
 

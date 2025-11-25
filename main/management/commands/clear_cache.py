@@ -2,7 +2,7 @@
 
 from django.core.management.base import BaseCommand
 
-from main.utils import clear_search_cache
+from main.utils import clear_views_cache
 
 
 class Command(BaseCommand):
@@ -11,5 +11,5 @@ class Command(BaseCommand):
     help = "Command to clear the cache"
 
     def handle(self, *args, **options):  # noqa: ARG002
-        cache_items = clear_search_cache()
+        cache_items = clear_views_cache()
         self.stdout.write(f"cleared {cache_items} items from cache")

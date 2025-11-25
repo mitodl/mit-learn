@@ -194,7 +194,9 @@ class BaseLearningResourceViewSet(viewsets.ReadOnlyModelViewSet):
 
     @method_decorator(
         cache_page_for_anonymous_users(
-            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+            settings.REDIS_VIEW_CACHE_DURATION,
+            cache="redis",
+            key_prefix="learning_resources",
         )
     )
     def list(self, request, *args, **kwargs):
@@ -235,7 +237,7 @@ class LearningResourceViewSet(
     )
     @method_decorator(
         cache_page_for_all_users(
-            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+            settings.REDIS_VIEW_CACHE_DURATION, cache="redis", key_prefix="similar"
         )
     )
     def similar(self, request, *_, **kwargs):
@@ -276,7 +278,9 @@ class LearningResourceViewSet(
     )
     @method_decorator(
         cache_page_for_all_users(
-            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+            settings.REDIS_VIEW_CACHE_DURATION,
+            cache="redis",
+            key_prefix="vector_similar",
         )
     )
     def vector_similar(self, request, *_, **kwargs):
@@ -733,7 +737,9 @@ class LearningResourceListRelationshipViewSet(viewsets.GenericViewSet):
 
     @method_decorator(
         cache_page_for_anonymous_users(
-            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+            settings.REDIS_VIEW_CACHE_DURATION,
+            cache="redis",
+            key_prefix="learning_resource_relationships",
         )
     )
     def list(self, request, *args, **kwargs):
@@ -766,7 +772,9 @@ class LearningPathItemsViewSet(ResourceListItemsViewSet, viewsets.ModelViewSet):
 
     @method_decorator(
         cache_page_for_anonymous_users(
-            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+            settings.REDIS_VIEW_CACHE_DURATION,
+            cache="redis",
+            key_prefix="learning_path_items",
         )
     )
     def list(self, request, *args, **kwargs):
@@ -813,7 +821,7 @@ class TopicViewSet(viewsets.ReadOnlyModelViewSet):
 
     @method_decorator(
         cache_page_for_all_users(
-            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+            settings.REDIS_VIEW_CACHE_DURATION, cache="redis", key_prefix="topics"
         )
     )
     def list(self, request, *args, **kwargs):
@@ -1114,7 +1122,7 @@ class ContentTagViewSet(viewsets.ReadOnlyModelViewSet):
 
     @method_decorator(
         cache_page_for_all_users(
-            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+            settings.REDIS_VIEW_CACHE_DURATION, cache="redis", key_prefix="content_tags"
         )
     )
     def list(self, *args, **kwargs):
@@ -1141,7 +1149,7 @@ class DepartmentViewSet(viewsets.ReadOnlyModelViewSet):
 
     @method_decorator(
         cache_page_for_all_users(
-            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+            settings.REDIS_VIEW_CACHE_DURATION, cache="redis", key_prefix="departments"
         )
     )
     def list(self, *args, **kwargs):
@@ -1164,7 +1172,7 @@ class SchoolViewSet(viewsets.ReadOnlyModelViewSet):
 
     @method_decorator(
         cache_page_for_all_users(
-            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+            settings.REDIS_VIEW_CACHE_DURATION, cache="redis", key_prefix="schools"
         )
     )
     def list(self, *args, **kwargs):
@@ -1187,7 +1195,7 @@ class PlatformViewSet(viewsets.ReadOnlyModelViewSet):
 
     @method_decorator(
         cache_page_for_all_users(
-            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+            settings.REDIS_VIEW_CACHE_DURATION, cache="redis", key_prefix="platforms"
         )
     )
     def list(self, *args, **kwargs):
@@ -1211,7 +1219,7 @@ class OfferedByViewSet(viewsets.ReadOnlyModelViewSet):
 
     @method_decorator(
         cache_page_for_anonymous_users(
-            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+            settings.REDIS_VIEW_CACHE_DURATION, cache="redis", key_prefix="offerors"
         )
     )
     def list(self, request, *args, **kwargs):
@@ -1315,7 +1323,9 @@ class FeaturedViewSet(
 
     @method_decorator(
         cache_page_for_anonymous_users(
-            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+            settings.REDIS_VIEW_CACHE_DURATION,
+            cache="redis",
+            key_prefix="featured_resources",
         )
     )
     @extend_schema(
@@ -1355,7 +1365,9 @@ class LearningResourceDisplayInfoViewSet(BaseLearningResourceViewSet):
 
     @method_decorator(
         cache_page_for_anonymous_users(
-            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+            settings.REDIS_VIEW_CACHE_DURATION,
+            cache="redis",
+            key_prefix="learning_resource_display_info",
         )
     )
     def list(self, *_args, **_kwargs):

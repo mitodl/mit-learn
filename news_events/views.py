@@ -59,7 +59,7 @@ class FeedItemViewSet(viewsets.ReadOnlyModelViewSet):
 
     @method_decorator(
         cache_page_for_all_users(
-            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+            settings.REDIS_VIEW_CACHE_DURATION, cache="redis", key_prefix="news_events"
         )
     )
     def list(self, request, *args, **kwargs):
@@ -89,7 +89,7 @@ class FeedSourceViewSet(viewsets.ReadOnlyModelViewSet):
 
     @method_decorator(
         cache_page_for_all_users(
-            settings.SEARCH_PAGE_CACHE_DURATION, cache="redis", key_prefix="search"
+            settings.REDIS_VIEW_CACHE_DURATION, cache="redis", key_prefix="news_events"
         )
     )
     def list(self, request, *args, **kwargs):

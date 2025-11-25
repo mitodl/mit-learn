@@ -34,7 +34,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.47.11"
+VERSION = "0.47.13"
 
 log = logging.getLogger()
 
@@ -670,7 +670,7 @@ MIDDLEWARE_FEATURE_FLAG_COOKIE_NAME = get_string(
 MIDDLEWARE_FEATURE_FLAG_COOKIE_MAX_AGE_SECONDS = get_int(
     "MIDDLEWARE_FEATURE_FLAG_COOKIE_MAX_AGE_SECONDS", 60 * 60
 )
-SEARCH_PAGE_CACHE_DURATION = get_int("SEARCH_PAGE_CACHE_DURATION", 60 * 60 * 24)
+REDIS_VIEW_CACHE_DURATION = get_int("REDIS_VIEW_CACHE_DURATION", 60 * 60 * 24)
 if MIDDLEWARE_FEATURE_FLAG_QS_PREFIX:
     MIDDLEWARE = (
         *MIDDLEWARE,

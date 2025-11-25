@@ -25,6 +25,7 @@ from learning_resources_search.api import gen_content_file_id
 from learning_resources_search.constants import (
     CONTENT_FILE_TYPE,
     COURSE_TYPE,
+    HYBRID_COMBINED_INDEX,
     LEARNING_RESOURCE_TYPES,
     PROGRAM_TYPE,
     IndexestoUpdate,
@@ -134,9 +135,13 @@ def test_system_exit_retry(mocker):
 
 @pytest.mark.parametrize(
     "indexes",
-    [["course"], ["program"], list(LEARNING_RESOURCE_TYPES)],
+    [
+        ["course"],
+        ["program"],
+        ["combined_hybrid"],
+    ],
 )
-def test_start_recreate_index(mocker, mocked_celery, user, indexes):
+def test_start_recreate_index(mocker, mocked_celery, user, indexes):  # noqa: C901
     """
     recreate_index should recreate the OpenSearch index and reindex all data with it
     """
@@ -147,28 +152,28 @@ def test_start_recreate_index(mocker, mocked_celery, user, indexes):
         "learning_resources_search.tasks.load_course_blocklist", return_value=[]
     )
 
-    if COURSE_TYPE in indexes:
-        ocw_courses = sorted(
-            CourseFactory.create_batch(4, etl_source=ETLSource.ocw.value),
-            key=lambda course: course.learning_resource_id,
-        )
+    ocw_courses = sorted(
+        CourseFactory.create_batch(4, etl_source=ETLSource.ocw.value),
+        key=lambda course: course.learning_resource_id,
+    )
 
-        for course in ocw_courses:
-            ContentFileFactory.create_batch(
-                3, run=course.learning_resource.runs.first()
-            )
+    for course in ocw_courses:
+        ContentFileFactory.create_batch(3, run=course.learning_resource.runs.first())
 
-        oll_courses = CourseFactory.create_batch(2, etl_source=ETLSource.ocw.value)
+    oll_courses = CourseFactory.create_batch(2, etl_source=ETLSource.ocw.value)
 
-        courses = sorted(
-            list(oll_courses) + list(ocw_courses),
-            key=lambda course: course.learning_resource_id,
-        )
-    else:
-        programs = sorted(
-            ProgramFactory.create_batch(4),
-            key=lambda program: program.learning_resource_id,
-        )
+    courses = sorted(
+        list(oll_courses) + list(ocw_courses),
+        key=lambda course: course.learning_resource_id,
+    )
+
+    programs = sorted(
+        ProgramFactory.create_batch(
+            4,
+            courses=[],
+        ),
+        key=lambda program: program.learning_resource_id,
+    )
 
     index_learning_resources_mock = mocker.patch(
         "learning_resources_search.tasks.index_learning_resources", autospec=True
@@ -195,21 +200,22 @@ def test_start_recreate_index(mocker, mocked_celery, user, indexes):
         "learning_resources_search.tasks.finish_recreate_index", autospec=True
     )
 
+    finish_recreate_index_dict = {}
+
     with pytest.raises(mocked_celery.replace_exception_class):
         start_recreate_index.delay(indexes, remove_existing_reindexing_tags=False)
 
-    finish_recreate_index_dict = {}
-
-    delete_orphaned_indexes_mock.assert_called_once_with(
-        indexes, delete_reindexing_tags=False
-    )
-
-    for doctype in LEARNING_RESOURCE_TYPES:
+    for doctype in [COURSE_TYPE, PROGRAM_TYPE, HYBRID_COMBINED_INDEX]:
         if doctype in indexes:
             finish_recreate_index_dict[doctype] = backing_index
             create_backing_index_mock.assert_any_call(doctype)
 
     finish_recreate_index_mock.s.assert_called_once_with(finish_recreate_index_dict)
+
+    delete_orphaned_indexes_mock.assert_called_once_with(
+        indexes, delete_reindexing_tags=False
+    )
+
     assert mocked_celery.group.call_count == 1
 
     # Celery's 'group' function takes a generator as an argument. In order to make assertions about the items
@@ -217,24 +223,34 @@ def test_start_recreate_index(mocker, mocked_celery, user, indexes):
     list(mocked_celery.group.call_args[0][0])
 
     if COURSE_TYPE in indexes:
-        mock_blocklist.assert_called_once()
         assert index_learning_resources_mock.si.call_count == 3
+
+    if PROGRAM_TYPE in indexes:
+        assert index_learning_resources_mock.si.call_count == 2
+
+    if HYBRID_COMBINED_INDEX in indexes:
+        assert index_learning_resources_mock.si.call_count == 5
+
+    if COURSE_TYPE in indexes or HYBRID_COMBINED_INDEX in indexes:
+        mock_blocklist.assert_called_once()
+        index_type = indexes[0]
         index_learning_resources_mock.si.assert_any_call(
             [courses[0].learning_resource_id, courses[1].learning_resource_id],
-            COURSE_TYPE,
+            index_type,
             index_types=IndexestoUpdate.reindexing_index.value,
         )
         index_learning_resources_mock.si.assert_any_call(
             [courses[2].learning_resource_id, courses[3].learning_resource_id],
-            COURSE_TYPE,
+            index_type,
             index_types=IndexestoUpdate.reindexing_index.value,
         )
         index_learning_resources_mock.si.assert_any_call(
             [courses[4].learning_resource_id, courses[5].learning_resource_id],
-            COURSE_TYPE,
+            index_type,
             index_types=IndexestoUpdate.reindexing_index.value,
         )
 
+    if COURSE_TYPE in indexes:
         for course in ocw_courses:
             content_file_ids = (
                 course.learning_resource.runs.first()
@@ -252,19 +268,19 @@ def test_start_recreate_index(mocker, mocked_celery, user, indexes):
                 course.learning_resource_id,
                 index_types=IndexestoUpdate.reindexing_index.value,
             )
-    if indexes == [PROGRAM_TYPE]:
-        assert index_learning_resources_mock.si.call_count == 2
+
+    if PROGRAM_TYPE in indexes or HYBRID_COMBINED_INDEX in indexes:
+        index_type = indexes[0]
         index_learning_resources_mock.si.assert_any_call(
             [programs[0].learning_resource_id, programs[1].learning_resource_id],
-            PROGRAM_TYPE,
+            index_type,
             index_types=IndexestoUpdate.reindexing_index.value,
         )
         index_learning_resources_mock.si.assert_any_call(
             [programs[2].learning_resource_id, programs[3].learning_resource_id],
-            PROGRAM_TYPE,
+            index_type,
             index_types=IndexestoUpdate.reindexing_index.value,
         )
-
     assert mocked_celery.replace.call_count == 1
     assert mocked_celery.replace.call_args[0][1] == mocked_celery.chain.return_value
 
@@ -1198,20 +1214,20 @@ def test_cache_clears_after_update_featured_rank(mocker, offeror_featured_lists)
     )
 
     mocker.patch("learning_resources_search.tasks.api.clear_featured_rank")
-    mocked_clear_search_cache = mocker.patch(
-        "learning_resources_search.tasks.clear_search_cache"
+    mocked_clear_views_cache = mocker.patch(
+        "learning_resources_search.tasks.clear_views_cache"
     )
     mocker.patch("learning_resources_search.tasks.api.update_document_with_partial")
 
     update_featured_rank()
-    assert mocked_clear_search_cache.call_count == 1
+    assert mocked_clear_views_cache.call_count == 1
 
 
 def test_cache_is_cleared_after_reindex(mocker):
     """Test that the search cache is cleared out after every reindex"""
 
-    mocked_clear_search_cache = mocker.patch(
-        "learning_resources_search.tasks.clear_search_cache"
+    mocked_clear_views_cache = mocker.patch(
+        "learning_resources_search.tasks.clear_views_cache"
     )
 
     backing_indices = {"course": "backing", "program": "backing"}
@@ -1219,7 +1235,7 @@ def test_cache_is_cleared_after_reindex(mocker):
     mocker.patch("learning_resources_search.indexing_api.switch_indices", autospec=True)
     mocker.patch("learning_resources_search.indexing_api.delete_orphaned_indexes")
     finish_recreate_index.delay(results, backing_indices)
-    assert mocked_clear_search_cache.call_count == 1
+    assert mocked_clear_views_cache.call_count == 1
 
 
 def test_cache_is_cleared_after_update_index(mocker, settings):
@@ -1232,8 +1248,8 @@ def test_cache_is_cleared_after_update_index(mocker, settings):
     mocker.patch(
         "learning_resources_search.tasks.get_update_courses_tasks", autospec=True
     )
-    mocked_clear_search_cache = mocker.patch(
-        "learning_resources_search.tasks.clear_search_cache"
+    mocked_clear_views_cache = mocker.patch(
+        "learning_resources_search.tasks.clear_views_cache"
     )
     mocker.patch(
         "learning_resources_search.tasks.load_course_blocklist", return_value=[]
@@ -1245,4 +1261,4 @@ def test_cache_is_cleared_after_update_index(mocker, settings):
 
     with pytest.raises(Ignore):
         start_update_index.run(["course"], None)
-    assert mocked_clear_search_cache.call_count == 1
+    assert mocked_clear_views_cache.call_count == 1

@@ -3,7 +3,7 @@
 from django.conf import settings
 from django.core.management import BaseCommand
 
-from main.utils import clear_search_cache
+from main.utils import clear_views_cache
 from video_shorts.api import walk_video_shorts_from_s3
 from video_shorts.models import VideoShort
 
@@ -49,7 +49,7 @@ class Command(BaseCommand):
             self.stdout.write(
                 f"Upserted: {video_short.title} ({video_short.youtube_id})"
             )
-        clear_search_cache()
+        clear_views_cache()
         self.stdout.write(
             self.style.SUCCESS(f"Complete: {upserted_count} video short(s) upserted")
         )

@@ -24,6 +24,9 @@ from learning_resources_search.constants import (
     ALIAS_ALL_INDICES,
     ALL_INDEX_TYPES,
     COURSE_TYPE,
+    EMBEDDING_FIELDS,
+    HYBRID_COMBINED_INDEX,
+    LEARNING_RESOURCE_MAP,
     MAPPING,
     PERCOLATE_INDEX_TYPE,
     SYNONYMS,
@@ -39,6 +42,7 @@ from learning_resources_search.serializers import (
     serialize_content_file_for_bulk_deletion,
 )
 from main.utils import chunks
+from vector_search.utils import dense_encoder, retrieve_points_matching_params
 
 log = logging.getLogger(__name__)
 User = get_user_model()
@@ -184,9 +188,17 @@ def clear_and_create_index(*, index_name=None, skip_mapping=False, object_type=N
             },
         }
     }
-    if not skip_mapping:
+
+    if object_type == HYBRID_COMBINED_INDEX:
+        vector_map = EMBEDDING_FIELDS
+        vector_map["vector_embedding"]["dimension"] = dense_encoder().dim()
+        index_create_data["mappings"] = {
+            "properties": (LEARNING_RESOURCE_MAP | vector_map)
+        }
+        index_create_data["settings"]["index.knn"] = True
+    elif not skip_mapping:
         index_create_data["mappings"] = {"properties": MAPPING[object_type]}
-    # from https://www.elastic.co/guide/en/elasticsearch/guide/current/asciifolding-token-filter.html
+
     conn.indices.create(index_name, body=index_create_data)
 
 
@@ -306,35 +318,67 @@ def index_items(documents, object_type, index_types, **kwargs):
                     raise ReindexError(msg)
 
 
-def index_learning_resources(ids, resource_type, index_types):
+def index_learning_resources(ids, base_index_name, index_types):
     """
     Index a list of learning resources by id
 
     Args:
         ids(list of int): List of learning resource id's
-        resource_type: The resource type of the resources
+        base_index_name: The resource type of the resources or HYBRID_COMBINED_INDEX
         index_types (string): one of the values IndexestoUpdate. Whether the default
             index, the reindexing index or both need to be updated
 
     """
-    index_items(serialize_bulk_learning_resources(ids), resource_type, index_types)
+    if base_index_name == HYBRID_COMBINED_INDEX:
+        index_items(
+            serialize_bulk_learning_resources_with_embeddings(ids),
+            HYBRID_COMBINED_INDEX,
+            index_types,
+        )
+    else:
+        index_items(
+            serialize_bulk_learning_resources(ids), base_index_name, index_types
+        )
 
 
-def deindex_learning_resources(ids, resource_type):
+def serialize_bulk_learning_resources_with_embeddings(ids):
+    """
+    Serialize learning resources including vector embeddings for bulk indexing
+
+    Args:
+        ids(list of int): List of learning resource id's
+    """
+    serialized_resources = serialize_bulk_learning_resources(ids)
+    for resource in serialized_resources:
+        vector_result = list(
+            retrieve_points_matching_params(
+                {"readable_id": resource["readable_id"]}, with_vectors=True
+            )
+        )
+
+        if len(vector_result) > 0:
+            resource["vector_embedding"] = vector_result[0].vector.get(
+                dense_encoder().model_short_name()
+            )
+
+        yield resource
+
+
+def deindex_learning_resources(ids, base_index_name):
     """
     Deindex a list of learning resources by id
 
     Args:
         ids(list of int): List of learning resource ids
-        resource_type: resource type
+        base_index_name: The name of the index to deindex from
     """
     deindex_items(
         serialize_bulk_learning_resources_for_deletion(ids),
-        resource_type,
+        base_index_name,
         index_types=IndexestoUpdate.all_indexes.value,
     )
 
-    if resource_type == COURSE_TYPE:
+    if base_index_name == COURSE_TYPE:
         for run_id in LearningResourceRun.objects.filter(
             learning_resource_id__in=ids
         ).values_list("id", flat=True):

@@ -1,6 +1,5 @@
 import React from "react"
 import ChannelPage from "@/app-pages/ChannelPage/ChannelPage"
-import { getServerQueryClient } from "api/ssr/serverQueryClient"
 import { ChannelTypeEnum, UnitChannel } from "api/v0"
 import {
   FeaturedListOfferedByEnum,
@@ -9,8 +8,7 @@ import {
   LearningResourceOfferorDetail,
 } from "api"
 import { getMetadataAsync, safeGenerateMetadata } from "@/common/metadata"
-import { HydrationBoundary } from "@tanstack/react-query"
-import { prefetch } from "api/ssr/prefetch"
+import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
 import {
   learningResourceQueries,
   offerorQueries,
@@ -25,6 +23,7 @@ import {
 } from "@/app-pages/ChannelPage/searchRequests"
 import { isInEnum } from "@/common/utils"
 import { notFound } from "next/navigation"
+import { getQueryClient } from "@/app/getQueryClient"
 
 export async function generateMetadata({
   searchParams,
@@ -33,7 +32,7 @@ export async function generateMetadata({
   const { channelType, name } = await params
 
   return safeGenerateMetadata(async () => {
-    const queryClient = getServerQueryClient()
+    const queryClient = getQueryClient()
 
     const data = await queryClient.fetchQuery(
       channelQueries.detailByType(channelType, name),
@@ -58,16 +57,20 @@ const Page: React.FC<PageProps<"/c/[channelType]/[name]">> = async ({
 
   const search = await searchParams
 
-  const { queryClient } = await prefetch([
-    offerorQueries.list({}),
+  const queryClient = getQueryClient()
+
+  await Promise.all([
+    queryClient.prefetchQuery(offerorQueries.list({})),
     channelType === ChannelTypeEnum.Unit &&
-      learningResourceQueries.featured({
-        limit: 12,
-        offered_by: [name as FeaturedListOfferedByEnum],
-      }),
+      queryClient.prefetchQuery(
+        learningResourceQueries.featured({
+          limit: 12,
+          offered_by: [name as FeaturedListOfferedByEnum],
+        }),
+      ),
     channelType === ChannelTypeEnum.Unit &&
-      testimonialsQueries.list({ offerors: [name] }),
-    channelQueries.detailByType(channelType, name),
+      queryClient.prefetchQuery(testimonialsQueries.list({ offerors: [name] })),
+    queryClient.prefetchQuery(channelQueries.detailByType(channelType, name)),
   ])
 
   const channel = queryClient.getQueryData<UnitChannel>(
@@ -96,19 +99,19 @@ const Page: React.FC<PageProps<"/c/[channelType]/[name]">> = async ({
   )
 
   const searchRequest = getSearchParams({
+    // @ts-expect-error -- this will error until mitodl/mit-learn-api-axios is updated
     requestParams: validateRequestParams(search),
     constantSearchParams,
     facetNames,
     page: Number(search.page ?? 1),
   })
 
-  const { dehydratedState } = await prefetch(
-    [learningResourceQueries.search(searchRequest as LRSearchRequest)],
-    queryClient,
+  await queryClient.prefetchQuery(
+    learningResourceQueries.search(searchRequest as LRSearchRequest),
   )
 
   return (
-    <HydrationBoundary state={dehydratedState}>
+    <HydrationBoundary state={dehydrate(queryClient)}>
       <ChannelPage />
     </HydrationBoundary>
   )

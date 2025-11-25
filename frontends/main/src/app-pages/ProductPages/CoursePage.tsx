@@ -22,6 +22,7 @@ import ProductPageTemplate, {
 } from "./ProductPageTemplate"
 import { CoursePageItem } from "@mitodl/mitxonline-api-axios/v2"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
+import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 
 type CoursePageProps = {
   readableId: string
@@ -76,10 +77,11 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
   const page = pages.data?.items[0]
   const course = courses.data?.results?.[0]
   const enabled = useFeatureFlagEnabled(FeatureFlags.ProductPageCourse)
-  if (enabled === false) {
-    return notFound()
+  const flagsLoaded = useFeatureFlagsLoaded()
+
+  if (!enabled) {
+    return flagsLoaded ? notFound() : null
   }
-  if (!enabled) return
 
   const doneLoading = pages.isSuccess && courses.isSuccess
 
