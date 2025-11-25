@@ -80,10 +80,13 @@ describe.each([
     })
   })
 
-  test("It shows course title and links to marketingUrl if titleAction is marketing", async () => {
+  test("It shows course title and links to marketingUrl if titleAction is marketing and enrolled", async () => {
     setupUserApis()
     const course = dashboardCourse({
       marketingUrl: "?some-marketing-url",
+      enrollment: {
+        status: EnrollmentStatus.Enrolled,
+      },
     })
     renderWithProviders(
       <DashboardCard titleAction="marketing" dashboardResource={course} />,
@@ -97,15 +100,95 @@ describe.each([
     expect(courseLink).toHaveAttribute("href", course.marketingUrl)
   })
 
-  test("It shows course title and links to courseware if titleAction is courseware", async () => {
+  test("It shows course title as clickable text (not link) if titleAction is marketing and not enrolled (non-B2B)", async () => {
     setupUserApis()
-    const course = dashboardCourse()
+    const course = dashboardCourse({
+      marketingUrl: "?some-marketing-url",
+      enrollment: {
+        status: EnrollmentStatus.NotEnrolled,
+      },
+      run: {
+        b2bContractId: null,
+      },
+    })
+    renderWithProviders(
+      <DashboardCard titleAction="marketing" dashboardResource={course} />,
+    )
+
+    const card = getCard()
+
+    // Should not be a link
+    expect(
+      within(card).queryByRole("link", { name: course.title }),
+    ).not.toBeInTheDocument()
+    // Should be clickable text
+    const titleText = within(card).getByText(course.title)
+    expect(titleText).toBeInTheDocument()
+  })
+
+  test("It shows course title and links to courseware if titleAction is courseware and enrolled", async () => {
+    setupUserApis()
+    const course = dashboardCourse({
+      enrollment: {
+        status: EnrollmentStatus.Enrolled,
+      },
+    })
     renderWithProviders(
       <DashboardCard titleAction="courseware" dashboardResource={course} />,
     )
 
     const card = getCard()
 
+    const courseLink = within(card).getByRole("link", {
+      name: course.title,
+    })
+    expect(courseLink).toHaveAttribute("href", course.run.coursewareUrl)
+  })
+
+  test("It shows course title as clickable text (not link) if titleAction is courseware and not enrolled (non-B2B)", async () => {
+    setupUserApis()
+    const course = dashboardCourse({
+      enrollment: {
+        status: EnrollmentStatus.NotEnrolled,
+      },
+      run: {
+        b2bContractId: null,
+      },
+    })
+    renderWithProviders(
+      <DashboardCard titleAction="courseware" dashboardResource={course} />,
+    )
+
+    const card = getCard()
+
+    // Should not be a link
+    expect(
+      within(card).queryByRole("link", { name: course.title }),
+    ).not.toBeInTheDocument()
+    // Should be clickable text
+    const titleText = within(card).getByText(course.title)
+    expect(titleText).toBeInTheDocument()
+  })
+
+  test("It shows course title as link if not enrolled but has B2B contract", async () => {
+    setupUserApis()
+    const b2bContractId = faker.number.int()
+    const course = dashboardCourse({
+      enrollment: {
+        status: EnrollmentStatus.NotEnrolled,
+        b2b_contract_id: b2bContractId,
+      },
+      run: {
+        b2bContractId: b2bContractId,
+      },
+    })
+    renderWithProviders(
+      <DashboardCard titleAction="courseware" dashboardResource={course} />,
+    )
+
+    const card = getCard()
+
+    // Should be a link for B2B courses
     const courseLink = within(card).getByRole("link", {
       name: course.title,
     })
