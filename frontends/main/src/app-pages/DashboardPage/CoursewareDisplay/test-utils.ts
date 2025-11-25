@@ -15,7 +15,6 @@ import {
   ContractPage,
   CourseRunEnrollmentRequestV2,
   CourseWithCourseRunsSerializerV2,
-  IntegrationTypeEnum,
   OrganizationPage,
   User,
   V2Program,
@@ -298,22 +297,8 @@ function setupOrgDashboardMocks(
 const createTestContracts = (
   orgId: number,
   count: number = 1,
-): ContractPage[] => {
-  return Array.from({ length: count }, () => ({
-    id: faker.number.int(),
-    active: true,
-    contract_end: faker.date.future().toISOString(),
-    contract_start: faker.date.past().toISOString(),
-    description: faker.lorem.sentence(),
-    integration_type: IntegrationTypeEnum.NonSso,
-    name: faker.company.name(),
-    organization: orgId,
-    slug: faker.lorem.slug(),
-    membership_type: faker.helpers.arrayElement(["managed", "unmanaged"]),
-    welcome_message: faker.lorem.sentence(),
-    welcome_message_extra: faker.lorem.sentence(),
-  }))
-}
+): ContractPage[] =>
+  Array.from({ length: count }, () => makeContract({ organization: orgId }))
 
 /**
  * Test utility to create courses with contract-scoped course runs
