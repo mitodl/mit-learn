@@ -326,40 +326,18 @@ describe("EnrollmentDisplay", () => {
       const mitxOnlineUser = mitxonline.factories.user.user()
       setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
 
+      const reqTree =
+        new mitxonline.factories.requirements.RequirementTreeBuilder()
+      const coreCourses = reqTree.addOperator({
+        operator: "all_of",
+        title: "Core Courses",
+      })
+      coreCourses.addCourse({ course: 1 })
+
       const program = mitxonline.factories.programs.program({
         id: 456,
         courses: [1], // Only course 1 is in the requirements
-        req_tree: [
-          {
-            id: 1,
-            data: {
-              node_type: "operator",
-              operator: "all_of",
-              operator_value: "0",
-              elective_flag: false,
-              title: "Core Courses",
-              course: null,
-              program: null,
-              required_program: null,
-            },
-            children: [
-              {
-                id: 2,
-                data: {
-                  node_type: "course",
-                  course: 1,
-                  operator: null,
-                  operator_value: "0",
-                  elective_flag: false,
-                  title: null,
-                  program: null,
-                  required_program: null,
-                },
-                children: [],
-              },
-            ],
-          },
-        ],
+        req_tree: reqTree.children?.map((child) => child.serialize()) || [],
       })
       const courses = {
         count: 1,
@@ -409,40 +387,18 @@ describe("EnrollmentDisplay", () => {
       const mitxOnlineUser = mitxonline.factories.user.user()
       setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
 
+      const reqTree =
+        new mitxonline.factories.requirements.RequirementTreeBuilder()
+      const requirements = reqTree.addOperator({
+        operator: "all_of",
+        title: "Requirements",
+      })
+      requirements.addCourse({ course: 1 })
+
       const program = mitxonline.factories.programs.program({
         id: 789,
         courses: [1],
-        req_tree: [
-          {
-            id: 1,
-            data: {
-              node_type: "operator",
-              operator: "all_of",
-              operator_value: "0",
-              elective_flag: false,
-              title: "Requirements",
-              course: null,
-              program: null,
-              required_program: null,
-            },
-            children: [
-              {
-                id: 2,
-                data: {
-                  node_type: "course",
-                  course: 1,
-                  operator: null,
-                  operator_value: "0",
-                  elective_flag: false,
-                  title: null,
-                  program: null,
-                  required_program: null,
-                },
-                children: [],
-              },
-            ],
-          },
-        ],
+        req_tree: reqTree.children?.map((child) => child.serialize()) || [],
       })
 
       const courses = {
@@ -503,54 +459,20 @@ describe("EnrollmentDisplay", () => {
       const mitxOnlineUser = mitxonline.factories.user.user()
       setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
 
+      const reqTree =
+        new mitxonline.factories.requirements.RequirementTreeBuilder()
+      const electives = reqTree.addOperator({
+        operator: "min_number_of",
+        operator_value: "1",
+        title: "Electives",
+      })
+      electives.addCourse({ course: 1 })
+      electives.addCourse({ course: 2 })
+
       const program = mitxonline.factories.programs.program({
         id: 999,
         courses: [1, 2],
-        req_tree: [
-          {
-            id: 1,
-            data: {
-              node_type: "operator",
-              operator: "min_number_of",
-              operator_value: "1",
-              elective_flag: true,
-              title: "Electives",
-              course: null,
-              program: null,
-              required_program: null,
-            },
-            children: [
-              {
-                id: 2,
-                data: {
-                  node_type: "course",
-                  course: 1,
-                  operator: null,
-                  operator_value: "0",
-                  elective_flag: false,
-                  title: null,
-                  program: null,
-                  required_program: null,
-                },
-                children: [],
-              },
-              {
-                id: 3,
-                data: {
-                  node_type: "course",
-                  course: 2,
-                  operator: null,
-                  operator_value: "0",
-                  elective_flag: false,
-                  title: null,
-                  program: null,
-                  required_program: null,
-                },
-                children: [],
-              },
-            ],
-          },
-        ],
+        req_tree: reqTree.children?.map((child) => child.serialize()) || [],
       })
 
       const courses = {

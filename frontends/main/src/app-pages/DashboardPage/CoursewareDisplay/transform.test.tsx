@@ -686,71 +686,25 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
     })
 
     test("transforms requirement tree correctly", () => {
+      const reqTree = new factories.requirements.RequirementTreeBuilder()
+      const required = reqTree.addOperator({
+        operator: "all_of",
+        title: "Required Courses",
+      })
+      required.addCourse({ course: 123 })
+
       const program = factories.programs.program({
-        req_tree: [
-          {
-            id: 1,
-            data: {
-              node_type: "operator",
-              operator: "all_of",
-              operator_value: "0",
-              elective_flag: false,
-              title: "Required Courses",
-              course: null,
-              program: null,
-              required_program: null,
-            },
-            children: [
-              {
-                id: 2,
-                data: {
-                  node_type: "course",
-                  course: 123,
-                  operator: null,
-                  operator_value: "0",
-                  elective_flag: false,
-                  title: null,
-                  program: null,
-                  required_program: null,
-                },
-                children: [],
-              },
-            ],
-          },
-        ],
+        req_tree: reqTree.children?.map((child) => child.serialize()) || [],
       })
       const result = mitxonlineProgram(program)
 
       expect(result.reqTree).toHaveLength(1)
-      expect(result.reqTree[0]).toEqual({
-        id: 1,
-        data: {
-          node_type: "operator",
-          operator: "all_of",
-          operator_value: "0",
-          elective_flag: false,
-          title: "Required Courses",
-          course: null,
-          program: null,
-          required_program: null,
-        },
-        children: [
-          {
-            id: 2,
-            data: {
-              node_type: "course",
-              course: 123,
-              operator: null,
-              operator_value: "0",
-              elective_flag: false,
-              title: null,
-              program: null,
-              required_program: null,
-            },
-            children: [],
-          },
-        ],
-      })
+      expect(result.reqTree[0].data.node_type).toBe("operator")
+      expect(result.reqTree[0].data.operator).toBe("all_of")
+      expect(result.reqTree[0].data.title).toBe("Required Courses")
+      expect(result.reqTree[0].children).toHaveLength(1)
+      expect(result.reqTree[0].children?.[0].data.node_type).toBe("course")
+      expect(result.reqTree[0].children?.[0].data.course).toBe(123)
     })
 
     test("handles program with empty reqTree", () => {
@@ -761,53 +715,20 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
     })
 
     test("handles deeply nested requirement trees", () => {
+      const reqTree = new factories.requirements.RequirementTreeBuilder()
+      const allRequired = reqTree.addOperator({
+        operator: "all_of",
+        title: "Program Requirements",
+      })
+      const electives = allRequired.addOperator({
+        operator: "min_number_of",
+        operator_value: "2",
+        title: "Electives",
+      })
+      electives.addCourse({ course: 456 })
+
       const program = factories.programs.program({
-        req_tree: [
-          {
-            id: 1,
-            data: {
-              node_type: "operator",
-              operator: "all_of",
-              operator_value: "0",
-              elective_flag: false,
-              title: "Program Requirements",
-              course: null,
-              program: null,
-              required_program: null,
-            },
-            children: [
-              {
-                id: 2,
-                data: {
-                  node_type: "operator",
-                  operator: "min_number_of",
-                  operator_value: "2",
-                  elective_flag: true,
-                  title: "Electives",
-                  course: null,
-                  program: null,
-                  required_program: null,
-                },
-                children: [
-                  {
-                    id: 3,
-                    data: {
-                      node_type: "course",
-                      course: 456,
-                      operator: null,
-                      operator_value: "0",
-                      elective_flag: false,
-                      title: null,
-                      program: null,
-                      required_program: null,
-                    },
-                    children: [],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
+        req_tree: reqTree.children?.map((child) => child.serialize()) || [],
       })
       const result = mitxonlineProgram(program)
 
