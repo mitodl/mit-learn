@@ -26,3 +26,13 @@ class RichTextArticleSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Article
         fields = ["content", "id", "title"]
+
+class ArticleImageUploadSerializer(serializers.Serializer):
+    image_file = serializers.ImageField(required=True)
+
+    def create(self, validated_data):
+        user = self.context.get("request").user
+        return models.ArticleImageUpload.objects.create(
+            user=user,
+            image_file=validated_data["image_file"],
+        )

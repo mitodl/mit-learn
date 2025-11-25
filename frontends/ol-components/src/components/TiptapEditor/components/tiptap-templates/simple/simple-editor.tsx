@@ -71,7 +71,10 @@ import { useCursorVisibility } from "../../../hooks/use-cursor-visibility"
 import { ThemeToggle } from "./theme-toggle"
 
 // --- Lib ---
-import { handleImageUpload, MAX_FILE_SIZE } from "../../../lib/tiptap-utils"
+import {
+  handleImageUploadDefault,
+  MAX_FILE_SIZE,
+} from "../../../lib/tiptap-utils"
 
 // --- Styles ---
 import "./simple-editor.scss"
@@ -226,7 +229,7 @@ export function SimpleEditor() {
         accept: "image/*",
         maxSize: MAX_FILE_SIZE,
         limit: 3,
-        upload: handleImageUpload,
+        upload: handleImageUploadDefault,
         onError: (error) => console.error("Upload failed:", error),
       }),
     ],
