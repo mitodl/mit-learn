@@ -294,7 +294,18 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
   const completedCount = allProgramCourses.filter(
     (course) => course.enrollment?.status === EnrollmentStatus.Completed,
   ).length
-  const totalCount = allProgramCourses.length
+
+  // Calculate total required courses, respecting operator_value if operator is specified
+  const totalCount = requirementSections.reduce((sum, section) => {
+    if (
+      section.node.data.operator === "min_number_of" &&
+      section.node.data.operator_value
+    ) {
+      return sum + parseInt(section.node.data.operator_value, 10)
+    }
+    return sum + section.courses.length
+  }, 0)
+
   return (
     <>
       <Stack direction="column">
@@ -320,6 +331,12 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
               course.enrollment?.status === EnrollmentStatus.Completed,
           ).length
 
+          const sectionRequiredCount =
+            section.node.data.operator === "min_number_of" &&
+            section.node.data.operator_value
+              ? parseInt(section.node.data.operator_value, 10)
+              : section.courses.length
+
           return (
             <React.Fragment key={index}>
               <Stack
@@ -335,7 +352,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                   variant="body2"
                   color={theme.custom.colors.silverGrayDark}
                 >
-                  Completed {sectionCompletedCount} of {section.courses.length}
+                  Completed {sectionCompletedCount} of {sectionRequiredCount}
                 </Typography>
               </Stack>
               <StackedCardContainer>

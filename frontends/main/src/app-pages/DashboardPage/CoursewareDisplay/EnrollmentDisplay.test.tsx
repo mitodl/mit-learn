@@ -498,5 +498,104 @@ describe("EnrollmentDisplay", () => {
       const titles = screen.getAllByText("Test Course")
       expect(titles.length).toBeGreaterThanOrEqual(1)
     })
+
+    test("Displays correct completion count for sections with min_number_of operator", async () => {
+      const mitxOnlineUser = mitxonline.factories.user.user()
+      setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+      const program = mitxonline.factories.programs.program({
+        id: 999,
+        courses: [1, 2],
+        req_tree: [
+          {
+            id: 1,
+            data: {
+              node_type: "operator",
+              operator: "min_number_of",
+              operator_value: "1",
+              elective_flag: true,
+              title: "Electives",
+              course: null,
+              program: null,
+              required_program: null,
+            },
+            children: [
+              {
+                id: 2,
+                data: {
+                  node_type: "course",
+                  course: 1,
+                  operator: null,
+                  operator_value: "0",
+                  elective_flag: false,
+                  title: null,
+                  program: null,
+                  required_program: null,
+                },
+                children: [],
+              },
+              {
+                id: 3,
+                data: {
+                  node_type: "course",
+                  course: 2,
+                  operator: null,
+                  operator_value: "0",
+                  elective_flag: false,
+                  title: null,
+                  program: null,
+                  required_program: null,
+                },
+                children: [],
+              },
+            ],
+          },
+        ],
+      })
+
+      const courses = {
+        count: 2,
+        next: null,
+        previous: null,
+        results: [
+          mitxonline.factories.courses.course({
+            id: 1,
+            title: "Elective Course 1",
+            page: {
+              page_url: "/courses/elective-1/",
+            },
+            courseruns: [mitxonline.factories.courses.courseRun()],
+          }),
+          mitxonline.factories.courses.course({
+            id: 2,
+            title: "Elective Course 2",
+            page: {
+              page_url: "/courses/elective-2/",
+            },
+            courseruns: [mitxonline.factories.courses.courseRun()],
+          }),
+        ],
+      }
+
+      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+      setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV2(), [])
+      setMockResponse.get(
+        mitxonline.urls.programEnrollments.enrollmentsListV2(),
+        [],
+      )
+      setMockResponse.get(mitxonline.urls.programs.programDetail(999), program)
+      setMockResponse.get(
+        mitxonline.urls.courses.coursesList({ id: program.courses }),
+        courses,
+      )
+
+      renderWithProviders(<EnrollmentDisplay programId={999} />)
+
+      // Should show "0 of 1" not "0 of 2" since operator_value is "1"
+      await screen.findByText(/Completed 0 of 1/)
+
+      // Total for program should also be 1
+      await screen.findByText(/0 of 1 courses/)
+    })
   })
 })
