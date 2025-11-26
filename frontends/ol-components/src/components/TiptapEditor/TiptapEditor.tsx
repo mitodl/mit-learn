@@ -38,8 +38,8 @@ import { TextAlignButton } from "./vendor/components/tiptap-ui/text-align-button
 import { UndoRedoButton } from "./vendor/components/tiptap-ui/undo-redo-button"
 
 // --- Styles ---
-import "./styles/_keyframe-animations.scss"
-import "./styles/_variables.scss"
+import "./vendor/styles/_keyframe-animations.scss"
+import "./vendor/styles/_variables.scss"
 import "./vendor/components/tiptap-templates/simple/simple-editor.scss"
 
 const StyledEditorContent = styled(EditorContent)<{ readOnly: boolean }>(

@@ -42,8 +42,8 @@ import "./vendor/components/tiptap-node/paragraph-node/paragraph-node.scss"
 import { handleImageUpload, MAX_FILE_SIZE } from "./vendor/lib/tiptap-utils"
 
 // --- Styles ---
-import "./styles/_keyframe-animations.scss"
-import "./styles/_variables.scss"
+import "./vendor/styles/_keyframe-animations.scss"
+import "./vendor/styles/_variables.scss"
 import "./vendor/components/tiptap-templates/simple/simple-editor.scss"
 
 import { useArticleCreate, useArticlePartialUpdate } from "api/hooks/articles"
