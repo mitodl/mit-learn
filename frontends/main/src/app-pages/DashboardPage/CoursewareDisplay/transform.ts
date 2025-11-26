@@ -268,16 +268,18 @@ const organizationCoursesWithContracts = (raw: {
 
 const programEnrollmentsToPrograms = (
   data: V2UserProgramEnrollmentDetail[],
+  contracts?: ContractPage[],
 ): DashboardProgram[] => {
-  // Filter out program enrollments where any course enrollment is tied to a B2B contract
-  const nonB2BProgramEnrollments = data.filter((programEnrollment) => {
-    // Only include the program if NONE of its enrollments have a B2B contract
-    return !programEnrollment.enrollments.some(
-      (enrollment) => enrollment.b2b_contract_id !== null,
-    )
-  })
+  const filteredProgramEnrollments = contracts
+    ? data.filter((programEnrollment) => {
+        // Only include the program if it is NOT listed in any of the contracts' programs
+        return !contracts.some((contract) =>
+          contract.programs.includes(programEnrollment.program.id),
+        )
+      })
+    : data
 
-  return nonB2BProgramEnrollments.map((programEnrollment) => {
+  return filteredProgramEnrollments.map((programEnrollment) => {
     const program = mitxonlineProgram(programEnrollment.program)
     program.enrollment =
       transformProgramEnrollmentToDashboard(programEnrollment)

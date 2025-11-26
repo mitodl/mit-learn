@@ -1,6 +1,7 @@
 import { factories, factories as mitx } from "api/mitxonline-test-utils"
 import { DashboardResourceType, EnrollmentStatus } from "./types"
 import type { DashboardResource } from "./types"
+import type { ContractPage } from "@mitodl/mitxonline-api-axios/v2"
 
 import {
   organizationCoursesWithContracts,
@@ -739,13 +740,13 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
   })
 
   describe("programEnrollmentsToPrograms", () => {
-    test("filters out B2B program enrollments", () => {
+    test("includes all programs when no contracts provided", () => {
       const programEnrollments = [
         factories.enrollment.programEnrollmentV2({
           enrollments: [
             {
               ...factories.enrollment.courseEnrollment(),
-              b2b_contract_id: 123, // B2B enrollment
+              b2b_contract_id: 123,
               b2b_organization_id: 456,
             },
           ],
@@ -754,7 +755,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
           enrollments: [
             {
               ...factories.enrollment.courseEnrollment(),
-              b2b_contract_id: null, // Non-B2B enrollment
+              b2b_contract_id: null,
               b2b_organization_id: null,
             },
           ],
@@ -763,8 +764,39 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
 
       const result = programEnrollmentsToPrograms(programEnrollments)
 
-      expect(result).toHaveLength(1)
+      expect(result).toHaveLength(2)
       expect(result[0].type).toBe(DashboardResourceType.Program)
+      expect(result[1].type).toBe(DashboardResourceType.Program)
+    })
+
+    test("filters out programs listed in contracts", () => {
+      const program1 = factories.programs.program()
+      const program2 = factories.programs.program()
+      const program3 = factories.programs.program()
+
+      const programEnrollments = [
+        factories.enrollment.programEnrollmentV2({
+          program: program1,
+        }),
+        factories.enrollment.programEnrollmentV2({
+          program: program2,
+        }),
+        factories.enrollment.programEnrollmentV2({
+          program: program3,
+        }),
+      ]
+
+      const contracts: ContractPage[] = [
+        {
+          ...factories.contracts.contract(),
+          programs: [program1.id, program3.id], // Programs 1 and 3 are in contracts
+        },
+      ]
+
+      const result = programEnrollmentsToPrograms(programEnrollments, contracts)
+
+      expect(result).toHaveLength(1)
+      expect(result[0].id).toBe(program2.id)
     })
 
     test("includes program enrollment data", () => {
@@ -814,17 +846,17 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
       expect(result[0].type).toBe(DashboardResourceType.Program)
     })
 
-    test("filters out programs where ANY enrollment is B2B", () => {
+    test("includes programs even if some enrollments are B2B", () => {
       const programEnrollment = factories.enrollment.programEnrollmentV2({
         enrollments: [
           {
             ...factories.enrollment.courseEnrollment(),
-            b2b_contract_id: null, // Non-B2B
+            b2b_contract_id: null,
             b2b_organization_id: null,
           },
           {
             ...factories.enrollment.courseEnrollment(),
-            b2b_contract_id: 123, // B2B
+            b2b_contract_id: 123,
             b2b_organization_id: 456,
           },
         ],
@@ -832,7 +864,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
 
       const result = programEnrollmentsToPrograms([programEnrollment])
 
-      expect(result).toHaveLength(0)
+      expect(result).toHaveLength(1)
     })
 
     test("handles empty program enrollments array", () => {

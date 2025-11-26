@@ -24,6 +24,7 @@ import type { AxiosError } from "axios"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { programsQueries } from "api/mitxonline-hooks/programs"
 import { V2ProgramRequirement } from "@mitodl/mitxonline-api-axios/v2"
+import { contractQueries } from "api/mitxonline-hooks/contracts"
 
 const Wrapper = styled.div(({ theme }) => ({
   marginTop: "32px",
@@ -400,13 +401,17 @@ const AllEnrollmentsDisplay: React.FC = () => {
       select: userEnrollmentsToDashboardCourses,
       throwOnError: onError,
     })
-
+  const { data: contracts, isLoading: contractsLoading } = useQuery(
+    contractQueries.contractsList(),
+  )
   const { data: programEnrollments, isLoading: programEnrollmentsLoading } =
     useQuery({
       ...enrollmentQueries.programEnrollmentsList(),
-      select: programEnrollmentsToPrograms,
       throwOnError: onError,
     })
+  const filteredProgramEnrollments = programEnrollments
+    ? programEnrollmentsToPrograms(programEnrollments, contracts)
+    : []
 
   const { completed, expired, started, notStarted } = sortEnrollments(
     enrolledCourses || [],
@@ -421,8 +426,12 @@ const AllEnrollmentsDisplay: React.FC = () => {
       <EnrollmentExpandCollapse
         shownCourseRunEnrollments={shownEnrollments}
         hiddenCourseRunEnrollments={expired}
-        programEnrollments={programEnrollments || []}
-        isLoading={courseEnrollmentsLoading || programEnrollmentsLoading}
+        programEnrollments={filteredProgramEnrollments || []}
+        isLoading={
+          courseEnrollmentsLoading ||
+          programEnrollmentsLoading ||
+          contractsLoading
+        }
       />
     </Wrapper>
   ) : null
