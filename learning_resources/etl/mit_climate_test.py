@@ -20,6 +20,7 @@ def sample_article_data():
     }
 
 
+@pytest.mark.django_db
 def test_transform_article(sample_article_data, settings):
     """
     Test transforming a single article
@@ -38,6 +39,7 @@ def test_transform_article(sample_article_data, settings):
     assert result["created_on"] == datetime(2023, 10, 1, 16, 0, tzinfo=ZoneInfo("UTC"))
 
 
+@pytest.mark.django_db
 @patch("learning_resources.etl.mit_climate.retrieve_feed")
 @patch("learning_resources.etl.mit_climate.settings")
 def test_extract_articles(mock_settings, mock_retrieve_feed, sample_article_data):
