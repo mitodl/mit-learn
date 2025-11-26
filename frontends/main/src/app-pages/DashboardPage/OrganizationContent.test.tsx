@@ -33,6 +33,7 @@ describe("OrganizationContent", () => {
     setMockResponse.get(urls.enrollment.enrollmentsList(), [])
     setMockResponse.get(urls.enrollment.enrollmentsListV2(), [])
     setMockResponse.get(urls.programEnrollments.enrollmentsList(), [])
+    setMockResponse.get(urls.programEnrollments.enrollmentsListV2(), [])
     setMockResponse.get(urls.contracts.contractsList(), [])
   })
 
@@ -435,12 +436,13 @@ describe("OrganizationContent", () => {
       program_type: "Program", // Set specific program type
       certificate: {
         uuid: "cert-123",
-        url: "/certificates/program/1",
+        url: "/certificate/program/cert-123",
       },
     }
-    const programEnrollment = factories.enrollment.programEnrollment({
-      program: { id: programWithCertificate.id },
+    const programEnrollment = factories.enrollment.programEnrollmentV2({
+      program: programWithCertificate,
       certificate: {
+        uuid: programWithCertificate.certificate.uuid,
         link: programWithCertificate.certificate.url,
       },
     })
@@ -448,6 +450,9 @@ describe("OrganizationContent", () => {
       results: [programWithCertificate],
     })
     setMockResponse.get(urls.programEnrollments.enrollmentsList(), [
+      programEnrollment,
+    ])
+    setMockResponse.get(urls.programEnrollments.enrollmentsListV2(), [
       programEnrollment,
     ])
 

@@ -40,6 +40,11 @@ describe("DashboardDialogs", () => {
       mitxonline.urls.enrollment.enrollmentsListV2(),
       enrollments,
     )
+    setMockResponse.get(
+      mitxonline.urls.programEnrollments.enrollmentsListV2(),
+      [],
+    )
+    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
 
     return { enrollments, completed, expired, started, notStarted }
   }
@@ -198,8 +203,15 @@ describe("JustInTimeDialog", () => {
     setMockResponse.get(mitxonline.urls.countries.list(), countries)
 
     // Setup course for enrollment
+    const b2bContractId = faker.number.int()
     const course = dashboardCourse({
-      enrollment: { status: EnrollmentStatus.NotEnrolled },
+      enrollment: {
+        status: EnrollmentStatus.NotEnrolled,
+        b2b_contract_id: b2bContractId,
+      },
+      run: {
+        b2bContractId: b2bContractId,
+      },
       marketingUrl: "https://example.com/course",
     })
 

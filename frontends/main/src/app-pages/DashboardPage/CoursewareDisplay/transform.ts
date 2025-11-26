@@ -10,13 +10,16 @@ import {
   CourseWithCourseRunsSerializerV2,
   V2Program,
   V2ProgramCollection,
+  V2UserProgramEnrollmentDetail,
 } from "@mitodl/mitxonline-api-axios/v2"
 
 import { DashboardResourceType, EnrollmentStatus } from "./types"
+
 import type {
   DashboardContract,
   DashboardCourse,
   DashboardCourseEnrollment,
+  DashboardProgramEnrollment,
   DashboardProgram,
   DashboardProgramCollection,
 } from "./types"
@@ -52,6 +55,7 @@ const mitxonlineCourse = (
       runId: run?.id,
     }),
     coursewareId: run?.courseware_id ?? null,
+    readableId: raw.readable_id ?? null,
     type: DashboardResourceType.Course,
     title: raw.title,
     marketingUrl: raw.page?.page_url,
@@ -98,6 +102,20 @@ const transformEnrollmentToDashboard = (
   }
 }
 
+const transformProgramEnrollmentToDashboard = (
+  raw: V2UserProgramEnrollmentDetail,
+): DashboardProgramEnrollment => {
+  return {
+    status: EnrollmentStatus.Enrolled,
+    certificate: raw.certificate
+      ? {
+          uuid: raw.certificate.uuid,
+          link: `/certificate/program/${raw.certificate.uuid}/`,
+        }
+      : undefined,
+  }
+}
+
 const filterEnrollmentsByOrganization = (
   enrollments: CourseRunEnrollmentRequestV2[],
   organizationId: number,
@@ -123,6 +141,7 @@ const userEnrollmentsToDashboardCourses = (
         runId: run.id,
       }),
       coursewareId: run?.courseware_id ?? null,
+      readableId: course.readable_id ?? null,
       type: DashboardResourceType.Course,
       title: course.title,
       marketingUrl: course.page?.page_url,
@@ -174,6 +193,7 @@ const createOrgUnenrolledCourse = (
       runId: run?.id,
     }),
     coursewareId: run?.courseware_id ?? null,
+    readableId: course.readable_id ?? null,
     type: DashboardResourceType.Course,
     title: course.title,
     marketingUrl: course.page?.page_url,
@@ -184,6 +204,7 @@ const createOrgUnenrolledCourse = (
       certificateUpgradePrice: run?.products[0]?.price,
       coursewareUrl: run?.courseware_url,
       canUpgrade: !!run?.is_upgradable,
+      b2bContractId: run?.b2b_contract ?? null,
     },
   }
 }
@@ -245,6 +266,27 @@ const organizationCoursesWithContracts = (raw: {
   return transformedCourses
 }
 
+const programEnrollmentsToPrograms = (
+  data: V2UserProgramEnrollmentDetail[],
+  contracts?: ContractPage[],
+): DashboardProgram[] => {
+  const filteredProgramEnrollments = contracts
+    ? data.filter((programEnrollment) => {
+        // Only include the program if it is NOT listed in any of the contracts' programs
+        return !contracts.some((contract) =>
+          contract.programs.includes(programEnrollment.program.id),
+        )
+      })
+    : data
+
+  return filteredProgramEnrollments.map((programEnrollment) => {
+    const program = mitxonlineProgram(programEnrollment.program)
+    program.enrollment =
+      transformProgramEnrollmentToDashboard(programEnrollment)
+    return program
+  })
+}
+
 const mitxonlineProgram = (raw: V2Program): DashboardProgram => {
   return {
     id: raw.id,
@@ -259,6 +301,7 @@ const mitxonlineProgram = (raw: V2Program): DashboardProgram => {
     courseIds: raw.courses,
     collections: raw.collections,
     description: raw.page.description,
+    reqTree: raw.req_tree,
   }
 }
 
@@ -293,10 +336,12 @@ export {
   mitxonlineCourse,
   userEnrollmentsToDashboardCourses,
   transformEnrollmentToDashboard,
+  transformProgramEnrollmentToDashboard,
   mitxonlineOrgContract,
   enrollmentsToOrgDashboardEnrollments,
   organizationCoursesWithContracts,
   createOrgUnenrolledCourse,
+  programEnrollmentsToPrograms,
   mitxonlineProgram,
   mitxonlineProgramCollection,
   sortDashboardCourses,

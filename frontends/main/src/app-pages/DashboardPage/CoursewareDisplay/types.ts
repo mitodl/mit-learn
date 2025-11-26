@@ -1,3 +1,5 @@
+import { V2ProgramRequirement } from "@mitodl/mitxonline-api-axios/v2"
+
 const DashboardResourceType = {
   Contract: "contract",
   Course: "course",
@@ -35,6 +37,7 @@ type DashboardContract = {
 type DashboardCourse = {
   key: string
   coursewareId: string | null
+  readableId: string | null
   title: string
   type: typeof DashboardResourceType.Course
   run: {
@@ -44,6 +47,7 @@ type DashboardCourse = {
     certificateUpgradePrice?: string | null
     coursewareUrl?: string | null
     canUpgrade: boolean | undefined
+    b2bContractId?: number | null
     certificate?: {
       uuid: string
       link: string
@@ -65,6 +69,14 @@ type DashboardCourseEnrollment = {
   }
 }
 
+type DashboardProgramEnrollment = {
+  status: EnrollmentStatus
+  certificate?: {
+    uuid: string
+    link: string
+  }
+}
+
 type DashboardProgram = {
   id: number
   key: string
@@ -74,6 +86,8 @@ type DashboardProgram = {
   courseIds: number[]
   collections: number[]
   description: string
+  enrollment?: DashboardProgramEnrollment
+  reqTree: V2ProgramRequirement[]
 }
 
 type DashboardProgramCollection = {
@@ -101,6 +115,7 @@ export type {
   DashboardContract,
   DashboardCourse,
   DashboardCourseEnrollment,
+  DashboardProgramEnrollment,
   DashboardProgram,
   DashboardProgramCollection,
   DashboardProgramCollectionProgram,
