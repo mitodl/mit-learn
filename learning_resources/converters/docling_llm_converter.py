@@ -27,7 +27,7 @@ from pypdf import PdfReader
 
 log = logging.getLogger(__name__)
 
-PDF_BATCH_SIZE = 10
+PDF_BATCH_SIZE = 5
 
 
 def _image_optimize(pil_image):
@@ -304,18 +304,15 @@ class DoclingLLMConverter:
         for ref in document.body.children:
             node = ref.resolve(document)
             markdown_document.add_node_items([node], doc=document)
-        markdown_content = markdown_document.export_to_markdown(
+        return markdown_document.export_to_markdown(
             image_mode="placeholder", include_annotations=True
         )
-        if self.debug_mode:
-            self.save_debug_markdown(markdown_content)
-        return markdown_content
 
     def convert_to_markdown(self):
         reader = PdfReader(self.document_path)
         total_pages = len(reader.pages)
 
-        markdown = ""
+        final_markdown = ""
         for i in range(1, total_pages + 1, PDF_BATCH_SIZE):
             file_buffer = BytesIO(self.document_path.open("rb").read())
             stream = DocumentStream(name=self.document_path.name, stream=file_buffer)
@@ -323,5 +320,7 @@ class DoclingLLMConverter:
                 stream, page_range=[i, i + PDF_BATCH_SIZE]
             )
             document = conversion_result.document
-            markdown += self._document_chunk_to_markdown(document)
-        return markdown
+            final_markdown += self._document_chunk_to_markdown(document)
+        if self.debug_mode:
+            self.save_debug_markdown(final_markdown)
+        return final_markdown
