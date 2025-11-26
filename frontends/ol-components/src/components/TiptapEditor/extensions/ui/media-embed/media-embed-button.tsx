@@ -1,7 +1,7 @@
 import React, { forwardRef, useCallback } from "react"
-import { Button } from "../../tiptap-ui-primitive/button"
+import { Button } from "../../../vendor/components/tiptap-ui-primitive/button"
 import { useMediaEmbed } from "./useMediaEmbed"
-import { useTiptapEditor } from "../../../hooks/use-tiptap-editor"
+import { useTiptapEditor } from "../../../vendor/hooks/use-tiptap-editor"
 
 export interface MediaEmbedButtonProps {
   editor?: any
