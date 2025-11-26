@@ -4,7 +4,9 @@ import uuid
 from io import BytesIO
 from pathlib import Path
 
+import cv2
 import litellm
+import numpy as np
 from django.conf import settings
 from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
 from docling.datamodel.base_models import DocumentStream, InputFormat
@@ -21,8 +23,38 @@ from docling_core.types.doc import (
 )
 from litellm import batch_completion, completion
 from PIL import Image
+from pypdf import PdfReader
 
 log = logging.getLogger(__name__)
+
+PDF_BATCH_SIZE = 10
+
+
+def _image_optimize(pil_image):
+    np_image = np.array(pil_image.convert("RGB"))
+    unique_colors = len(np.unique(np_image.reshape(-1, 3), axis=0))
+    COLOR_THRESHOLD = 200
+    if unique_colors > COLOR_THRESHOLD:
+        ## COLOR-SENSITIVE OPTIMIZATION (Charts, Complex Tables)
+        processed_image_cv = cv2.cvtColor(np_image, cv2.COLOR_RGB2GRAY)
+        # Mild Denoising
+        processed_image_cv = cv2.GaussianBlur(processed_image_cv, (3, 3), 0)
+        optimized_pil = Image.fromarray(processed_image_cv)
+
+    else:
+        ## OPTIMIZATION for Text, Formulas, Handwriting ---
+        gray_image = cv2.cvtColor(np_image, cv2.COLOR_RGB2GRAY)
+        # light median Blur to remove small specks (pepper noise)
+        denoised_image = cv2.medianBlur(gray_image, 3)
+
+        # Binarization
+        _, processed_image_cv = cv2.threshold(
+            denoised_image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
+        )
+
+        # d. Convert back to PIL
+        optimized_pil = Image.fromarray(processed_image_cv)
+    return optimized_pil
 
 
 def _page_item_to_pil(page, item, expand_px: int = 10) -> Image.Image | None:
@@ -88,7 +120,8 @@ def _page_item_to_pil(page, item, expand_px: int = 10) -> Image.Image | None:
         )
         return None
     try:
-        return page_pil.crop((left, top, right, bottom))
+        page_pil = page_pil.crop((left, top, right, bottom))
+        return _image_optimize(page_pil)
     except Exception:
         log.exception("Failed to crop page image for item")
         return None
@@ -115,7 +148,7 @@ class DoclingLLMConverter:
     def get_pipeline_options(self):
         pipeline_options = PdfPipelineOptions()
         pipeline_options.images_scale = 2
-
+        pipeline_options.enable_remote_services = True
         pipeline_options.do_picture_description = False
         pipeline_options.do_code_enrichment = False
         pipeline_options.do_picture_classification = False
@@ -157,12 +190,19 @@ class DoclingLLMConverter:
         )
 
     def ocr_page_image(self, page):
+        buffer = BytesIO()
+        pil_image = _image_optimize(page.image.pil_image)
+        pil_image.save(buffer, format="JPEG", optimize=True)
+        if self.debug_mode:
+            self.save_debug_image(pil_image)
+        image_b64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
+        image_uri = f"data:image/jpeg;base64,{image_b64}"
         messages = [
             {
                 "role": "user",
                 "content": [
                     {"type": "text", "text": settings.OCR_PROMPT},
-                    {"type": "image_url", "image_url": {"url": str(page.image.uri)}},
+                    {"type": "image_url", "image_url": {"url": image_uri}},
                 ],
             }
         ]
@@ -244,11 +284,7 @@ class DoclingLLMConverter:
             replacements.append((item, text_element))
         return replacements
 
-    def convert_to_markdown(self):
-        file_buffer = BytesIO(self.document_path.open("rb").read())
-        stream = DocumentStream(name=self.document_path.name, stream=file_buffer)
-        conversion_result = self.converter.convert(stream)
-        document = conversion_result.document
+    def _document_chunk_to_markdown(self, document):
         all_processed = []
         all_messages = []
         for page, items in self.items_by_page(document):
@@ -265,7 +301,6 @@ class DoclingLLMConverter:
             document.replace_item(new_item=new_item, old_item=old_item)
         # ref https://github.com/docling-project/docling/issues/2494#issuecomment-3418781668
         markdown_document = DoclingDocument(name="markdown")
-        markdown_document.add_title(text="")
         for ref in document.body.children:
             node = ref.resolve(document)
             markdown_document.add_node_items([node], doc=document)
@@ -275,3 +310,18 @@ class DoclingLLMConverter:
         if self.debug_mode:
             self.save_debug_markdown(markdown_content)
         return markdown_content
+
+    def convert_to_markdown(self):
+        reader = PdfReader(self.document_path)
+        total_pages = len(reader.pages)
+
+        markdown = ""
+        for i in range(1, total_pages + 1, PDF_BATCH_SIZE):
+            file_buffer = BytesIO(self.document_path.open("rb").read())
+            stream = DocumentStream(name=self.document_path.name, stream=file_buffer)
+            conversion_result = self.converter.convert(
+                stream, page_range=[i, i + PDF_BATCH_SIZE]
+            )
+            document = conversion_result.document
+            markdown += self._document_chunk_to_markdown(document)
+        return markdown
