@@ -33,6 +33,7 @@ describe("EnrollmentDisplay", () => {
       mitxonline.urls.programEnrollments.enrollmentsListV2(),
       [],
     )
+    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
 
     return { enrollments, completed, expired, started, notStarted }
   }
@@ -140,6 +141,7 @@ describe("EnrollmentDisplay", () => {
       mitxonline.urls.programEnrollments.enrollmentsListV2(),
       [programEnrollment],
     )
+    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
 
     renderWithProviders(<EnrollmentDisplay />)
 
@@ -187,6 +189,7 @@ describe("EnrollmentDisplay", () => {
       mitxonline.urls.programEnrollments.enrollmentsListV2(),
       [programEnrollment],
     )
+    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
 
     renderWithProviders(<EnrollmentDisplay />)
 
@@ -212,6 +215,7 @@ describe("EnrollmentDisplay", () => {
       mitxonline.urls.programEnrollments.enrollmentsListV2(),
       [],
     )
+    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
 
     renderWithProviders(<EnrollmentDisplay />)
 
@@ -277,6 +281,11 @@ describe("EnrollmentDisplay", () => {
       mitxonline.urls.programEnrollments.enrollmentsListV2(),
       [b2bProgramEnrollment, nonB2BProgramEnrollment],
     )
+    // Mock contracts to filter out the B2B program
+    const contract = mitxonline.factories.contracts.contract({
+      programs: [b2bProgramEnrollment.program.id],
+    })
+    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [contract])
 
     renderWithProviders(<EnrollmentDisplay />)
 
