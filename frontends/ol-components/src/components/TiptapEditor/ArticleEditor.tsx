@@ -26,8 +26,8 @@ import { Spacer } from "./vendor/components/tiptap-ui-primitive/spacer"
 import TiptapEditor, { MainToolbarContent } from "./TiptapEditor"
 
 // --- Tiptap Node ---
-import { ImageUploadNode } from "./vendor/components/tiptap-node/image-upload-node/image-upload-node-extension"
-import { MediaEmbed } from "./vendor/components/tiptap-node/media-embed/media-embed-extension"
+import { ImageUploadNode } from "./extensions/node/image-upload-node/image-upload-node-extension"
+import { MediaEmbed } from "./extensions/node/media-embed/media-embed-extension"
 import { HorizontalRule } from "./vendor/components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension"
 
 import "./vendor/components/tiptap-node/blockquote-node/blockquote-node.scss"
