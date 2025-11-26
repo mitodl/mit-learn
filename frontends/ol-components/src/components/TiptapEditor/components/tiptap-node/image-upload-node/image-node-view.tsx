@@ -65,9 +65,8 @@ const StyledNodeViewWrapper = styled(NodeViewWrapper)<{
   }
 
   .media-layout-toolbar {
-    display: ${({ hovering }) => (hovering ? "flex" : "none")};
     position: absolute;
-    top: -50px;
+    top: -43px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 2000;
@@ -148,7 +147,7 @@ export function ImageUploadNodeComponent({
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
     >
-      {true && (
+      {isEditable && hovering && (
         <div className="media-layout-toolbar">
           <button
             className={layout === "default" ? "active" : ""}
