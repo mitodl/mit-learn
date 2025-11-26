@@ -28,9 +28,14 @@ if [ "$1" = "--install" ]; then
 
     # Configure git to include the tracked .gitconfig file
     # This makes hooks work automatically for everyone without manual installation
-    git config --local include.path ../.gitconfig
+    if ! git config --local include.path ../.gitconfig 2>/dev/null; then
+        echo "Warning: Could not configure git hooks (not in a git repository?)"
+        echo "  Hooks are available at: $TRACKED_HOOKS_DIR"
+        echo "  Run this script again after initializing git to enable protection."
+        exit 0  # Don't fail - this might be CI/CD or non-git environment
+    fi
 
-    echo "✓ Git hooks configured successfully!"
+    echo "Git hooks configured successfully!"
     echo "  Git will now use hooks from: $TRACKED_HOOKS_DIR"
     echo "  Configuration is tracked in: $GITCONFIG_FILE"
     echo "  The TiptapEditor vendor directory is now protected from modifications."
@@ -45,7 +50,7 @@ changed_files=$(git diff --cached --name-only --diff-filter=ACM)
 protected_changes=$(echo "$changed_files" | grep "^${PROTECTED_DIR}/" || true)
 
 if [ -n "$protected_changes" ]; then
-    echo "❌ Error: Attempted to modify protected library code in ${PROTECTED_DIR}/"
+    echo "Error: Attempted to modify protected library code in ${PROTECTED_DIR}/"
     echo ""
     echo "The following files are protected and cannot be modified:"
     echo "$protected_changes" | sed 's/^/  - /'

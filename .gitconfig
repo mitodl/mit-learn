@@ -1,0 +1,7 @@
+# Git configuration for this repository
+# This file sets core.hooksPath to use tracked hooks
+# Include this in your .git/config with: git config include.path ../.gitconfig
+
+[core]
+	hooksPath = scripts/git-hooks/hooks
+
