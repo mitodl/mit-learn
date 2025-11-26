@@ -20,6 +20,7 @@ def sample_article_data():
     }
 
 
+@pytest.mark.django_db
 def test_transform_article(sample_article_data, settings):
     """
     Test transforming a single article
