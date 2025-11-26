@@ -56,7 +56,9 @@ if [ -n "$protected_changes" ]; then
     echo "$protected_changes" | sed 's/^/  - /'
     echo ""
     echo "This directory contains ejected library code that should not be changed."
-    echo "If you need to make changes, please update the source library instead."
+    echo ""
+    echo "To unstage these files, run:"
+    echo "$protected_changes" | sed 's/^/  git reset HEAD /'
     exit 1
 fi
 
