@@ -1,25 +1,19 @@
 #!/usr/bin/env bash
 # Protection check for TiptapEditor vendor directory
-# Native git hook (no pre-commit framework dependency)
-# Auto-configures core.hooksPath if not already set
+# Runs before pre-commit framework hooks
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$HERE/../../.." && pwd)"
 PROTECTION_SCRIPT="$REPO_ROOT/scripts/git-hooks/prevent-tiptap-changes.sh"
 
-# Auto-configure core.hooksPath if not set (makes it work automatically for everyone)
-if [ -d "$REPO_ROOT/.git" ]; then
-    CURRENT_HOOKS_PATH=$(git config --get core.hooksPath 2>/dev/null || echo "")
-    EXPECTED_HOOKS_PATH="$REPO_ROOT/scripts/git-hooks/hooks"
-
-    if [ "$CURRENT_HOOKS_PATH" != "$EXPECTED_HOOKS_PATH" ]; then
-        git config core.hooksPath "$EXPECTED_HOOKS_PATH" 2>/dev/null || true
-    fi
+# Run our protection check first
+if [ -f "$PROTECTION_SCRIPT" ] && [ -x "$PROTECTION_SCRIPT" ]; then
+	"$PROTECTION_SCRIPT" || exit $?
 fi
 
-if [ -f "$PROTECTION_SCRIPT" ] && [ -x "$PROTECTION_SCRIPT" ]; then
-    "$PROTECTION_SCRIPT" || exit $?
+# Then run pre-commit framework if available
+if command -v pre-commit >/dev/null 2>&1; then
+	exec pre-commit run --hook-stage pre-commit "$@"
 fi
 
 exit 0
-

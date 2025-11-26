@@ -4,4 +4,3 @@
 
 [core]
 	hooksPath = scripts/git-hooks/hooks
-
