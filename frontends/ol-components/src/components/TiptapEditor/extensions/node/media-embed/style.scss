@@ -56,14 +56,18 @@
 /* Toolbar styling (optional) */
 .media-layout-toolbar {
   display: flex;
-  background: rgba(0, 0, 0, 0.85);
+  background: rgb(0 0 0 / 85%);
   padding: 6px 10px;
   border-radius: 8px;
   gap: 8px;
   width: 150px;
+  margin: 0 auto;
   margin-bottom: 10px;
-  margin: 0px auto;
-  margin-bottom: 10px;
+  position: sticky;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2000; /* make it VERY high */
 }
 
 .media-layout-toolbar button {
@@ -100,20 +104,13 @@
   border-radius: 6px;
   position: relative;
 }
+
 .iframe-shield {
   position: absolute;
   inset: 0;
-  z-index: 5; // Above iframe, below toolbar
+  z-index: 1000; /* lower than toolbar */
   background: transparent;
   pointer-events: auto;
-}
-
-.media-layout-toolbar {
-  position: sticky;
-  top: -40px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 2000; /* make it VERY high */
 }
 
 .media-layout-toolbar::after {
@@ -128,10 +125,5 @@
   height: 0;
   border-left: 8px solid transparent;
   border-right: 8px solid transparent;
-  border-top: 8px solid rgba(0, 0, 0, 0.85); /* same color as toolbar */
-}
-
-.iframe-shield {
-  position: absolute;
-  z-index: 1000; /* lower than toolbar */
+  border-top: 8px solid rgb(0 0 0 / 85%); /* same color as toolbar */
 }

@@ -14,10 +14,7 @@ module.exports = {
     "mit-learn",
     "github-pages",
     "storybook-static",
-    "**/TiptapEditor/components/**/*.tsx",
-    "**/TiptapEditor/components/**/*.ts",
-    "**/TiptapEditor/hooks/**/*.ts",
-    "**/TiptapEditor/lib/**/*.ts",
+    "**/TiptapEditor/vendor/**",
   ],
   settings: {
     "import/resolver": {

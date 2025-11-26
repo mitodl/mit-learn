@@ -8,7 +8,7 @@ const MediaUrlInputDialog = NiceModal.create(() => {
   const [url, setUrl] = useState("")
   const [error, setError] = useState<string | null>(null)
 
-  const handleSubmit = (e?: any) => {
+  const handleSubmit = (e?: React.FormEvent<HTMLFormElement>) => {
     e?.preventDefault()
 
     if (!url.trim()) {
@@ -41,7 +41,7 @@ const MediaUrlInputDialog = NiceModal.create(() => {
         value={url}
         error={!!error}
         errorText={error ?? ""}
-        onChange={(e: any) => {
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
           setError(null)
           setUrl(e.target.value)
         }}

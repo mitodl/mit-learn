@@ -6,8 +6,7 @@ rules:
     - message: "Expected class selector to be kebab-case"
 ignoreFiles:
   - "**/*.vendor.css"
-  - "**/TiptapEditor/components/**/*.scss"
-  - "**/TiptapEditor/styles/**/*.scss"
+  - "**/TiptapEditor/vendor/**/*.scss"
 overrides:
   - files:
       - "**/*.scss"
