@@ -282,6 +282,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
           })
 
         return {
+          key: node.id,
           title: getRequirementSectionTitle(node),
           courses: sectionCourses,
           node,
@@ -314,7 +315,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
           <Typography variant="h5" color={theme.custom.colors.silverGrayDark}>
             MITx | {program?.programType}
           </Typography>
-          <Typography variant="h3" paddingBottom="32px">
+          <Typography component="h1" variant="h3" paddingBottom="32px">
             {program?.title}
           </Typography>
           <Typography variant="body2">
@@ -339,14 +340,18 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
               : section.courses.length
 
           return (
-            <React.Fragment key={index}>
+            <React.Fragment key={section.key}>
               <Stack
                 direction="row"
                 justifyContent="space-between"
                 marginBottom="16px"
                 marginTop={index > 0 ? "32px" : "0"}
               >
-                <Typography variant="subtitle2" color={theme.custom.colors.red}>
+                <Typography
+                  component="h1"
+                  variant="subtitle2"
+                  color={theme.custom.colors.red}
+                >
                   {section.title}
                 </Typography>
                 <Typography
