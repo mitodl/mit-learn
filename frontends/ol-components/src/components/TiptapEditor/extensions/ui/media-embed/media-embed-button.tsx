@@ -1,10 +1,11 @@
 import React, { forwardRef, useCallback } from "react"
+import { Editor } from "@tiptap/react"
 import { Button } from "../../../vendor/components/tiptap-ui-primitive/button"
 import { useMediaEmbed } from "./useMediaEmbed"
 import { useTiptapEditor } from "../../../vendor/hooks/use-tiptap-editor"
 
 export interface MediaEmbedButtonProps {
-  editor?: any
+  editor?: Editor
   text?: string
   showShortcut?: boolean
   icon?: React.FC<React.SVGProps<SVGSVGElement>>

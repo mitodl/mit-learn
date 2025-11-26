@@ -6471,6 +6471,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@tiptap/core@npm:^3.11.0":
+  version: 3.11.0
+  resolution: "@tiptap/core@npm:3.11.0"
+  peerDependencies:
+    "@tiptap/pm": ^3.11.0
+  checksum: 10/e9f23828147dd5167d56a139b9902a2f75d0c0b62723fb19bde58826ca407c656892a3e252d77d4632d34522ffa3adfe2be8e5e77b080758fce4abd770ef0d2c
+  languageName: node
+  linkType: hard
+
 "@tiptap/extension-blockquote@npm:^3.10.5":
   version: 3.10.5
   resolution: "@tiptap/extension-blockquote@npm:3.10.5"
@@ -17076,6 +17085,7 @@ __metadata:
     "@dnd-kit/core": "npm:^6.0.8"
     "@dnd-kit/sortable": "npm:^10.0.0"
     "@dnd-kit/utilities": "npm:^3.2.1"
+    "@ebay/nice-modal-react": "npm:^1.2.13"
     "@emotion/react": "npm:^11.11.1"
     "@emotion/styled": "npm:^11.11.0"
     "@faker-js/faker": "npm:^10.0.0"
@@ -17104,6 +17114,7 @@ __metadata:
     "@testing-library/dom": "npm:^10.4.0"
     "@testing-library/react": "npm:^16.3.0"
     "@testing-library/user-event": "npm:^14.5.2"
+    "@tiptap/core": "npm:^3.11.0"
     "@tiptap/extension-highlight": "npm:^3.10.5"
     "@tiptap/extension-horizontal-rule": "npm:^3.10.5"
     "@tiptap/extension-image": "npm:^3.10.5"

@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react"
+import { useCallback } from "react"
 import type { Editor } from "@tiptap/react"
 import { useTiptapEditor } from "../../../vendor/hooks/use-tiptap-editor"
 import { convertToEmbedUrl } from "./lib"
