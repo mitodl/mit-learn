@@ -1,9 +1,17 @@
 import React from "react"
 import { NodeViewWrapper } from "@tiptap/react"
-import { LearningResourceListCard } from "ol-components"
+import { LearningResourceListCard, styled } from "ol-components"
 import { useLearningResourcesDetail } from "api/hooks/learningResources"
 
-import "./style.scss"
+const StyledLearningResourceListCard = styled(LearningResourceListCard)({
+  "&& a": {
+    color: "inherit",
+    textDecoration: "none",
+  },
+  "&& a span": {
+    textDecoration: "none",
+  },
+})
 
 export const LearningResourceNodeView = ({ node }: any) => {
   const resourceId = node.attrs.resourceId
@@ -13,7 +21,7 @@ export const LearningResourceNodeView = ({ node }: any) => {
 
   return (
     <NodeViewWrapper className="learning-resource-node">
-      <LearningResourceListCard
+      <StyledLearningResourceListCard
         resource={data}
         href={href}
         isLoading={isLoading}

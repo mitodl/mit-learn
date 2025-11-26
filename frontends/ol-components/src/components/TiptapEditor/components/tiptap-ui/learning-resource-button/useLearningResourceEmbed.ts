@@ -16,10 +16,9 @@ export function useLearningResourceEmbed(editor?: Editor | null) {
 
   const handleEmbed = useCallback(async () => {
     const url: string = await NiceModal.show(CourseUrlInputDialog)
-    console.log("URL received from modal:", url)
     if (!url) return
 
-    // Extract `resource=XYZ`
+    // Extract `resource=123`
     const match = url.match(/resource=(\d+)/)
     if (!match) {
       alert("Invalid URL. Must contain ?resource=ID")
@@ -36,7 +35,7 @@ export function useLearningResourceEmbed(editor?: Editor | null) {
     isVisible,
     canInsert,
     label,
-    Icon, // SVG icon (same as your media embed pattern)
+    Icon,
     isActive: false,
     shortcutKeys: LEARNING_RESOURCE_SHORTCUT_KEY,
     handleEmbed,
