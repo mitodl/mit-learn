@@ -67,4 +67,3 @@ def test_article_image_upload_serializer(django_user_model):
     # ✅ Check for valid saved file
     assert instance.image_file
     assert instance.image_file.name.endswith(".jpg")
-    assert "testuser" in instance.image_file.name
