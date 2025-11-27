@@ -1,14 +1,22 @@
 from django.conf import settings
 from django.utils.decorators import method_decorator
-from drf_spectacular.utils import extend_schema, extend_schema_view
-from rest_framework import viewsets
+from drf_spectacular.utils import (
+    OpenApiResponse,
+    extend_schema,
+    extend_schema_view,
+)
+from rest_framework import status, viewsets
 from rest_framework.pagination import LimitOffsetPagination
-from rest_framework.permissions import IsAdminUser
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from articles.models import Article
 from articles.serializers import RichTextArticleSerializer
 from main.constants import VALID_HTTP_METHODS
 from main.utils import cache_page_for_all_users, clear_views_cache
+
+from .serializers import ArticleImageUploadSerializer
 
 # Create your views here.
 
@@ -56,3 +64,54 @@ class ArticleViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         clear_views_cache()
         return super().destroy(request, *args, **kwargs)
+
+
+@extend_schema_view(
+    post=extend_schema(
+        # request: multipart/form-data with a binary file field
+        request={
+            "multipart/form-data": ArticleImageUploadSerializer,
+        },
+        # response: 201 with JSON containing the URL
+        responses={
+            201: OpenApiResponse(
+                description="Successful Upload",
+                response=(
+                    {"type": "object", "properties": {"url": {"type": "string"}}}
+                ),
+            ),
+            400: OpenApiResponse(description="Bad request"),
+            401: OpenApiResponse(description="Authentication required"),
+        },
+        description="Upload an image (multipart/form-data) and return the storage URL.",
+        operation_id="media_upload",
+        tags=["media"],
+    )
+)
+class MediaUploadView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = ArticleImageUploadSerializer(
+            data=request.data, context={"request": request}
+        )
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        obj = serializer.save()
+
+        file_url = None
+        if obj.image_file:
+            try:
+                file_url = obj.image_file.url
+            except (AttributeError, ValueError, OSError):
+                file_url = None
+
+        if not file_url:
+            # Defensive: if save didn't attach image_file for any reason
+            return Response(
+                {"error": "Upload failed"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        if settings.DEBUG:
+            file_url = request.build_absolute_uri(file_url)
+        return Response({"url": file_url}, status=status.HTTP_201_CREATED)
