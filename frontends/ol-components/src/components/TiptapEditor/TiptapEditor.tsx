@@ -6,6 +6,7 @@ import React from "react"
 import styled from "@emotion/styled"
 import { EditorContent } from "@tiptap/react"
 import type { Editor } from "@tiptap/core"
+
 import { ImageUploadButton } from "./components/tiptap-ui/image-upload-button"
 import { MediaEmbedButton } from "./components/tiptap-ui/media-embed/media-embed-button"
 
@@ -36,11 +37,20 @@ import { MarkButton } from "./components/tiptap-ui/mark-button"
 import { TextAlignButton } from "./components/tiptap-ui/text-align-button"
 import { UndoRedoButton } from "./components/tiptap-ui/undo-redo-button"
 import { LearningResourceEmbedButton } from "./extensions/ui/learning-resource-button/learning-resource-button"
+import { InsertDividerButton } from "./extensions/ui/insert-divider-button/insert-divider-button"
+
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "./components/tiptap-ui-primitive/dropdown-menu"
 
 // --- Styles ---
 import "./styles/_keyframe-animations.scss"
 import "./styles/_variables.scss"
 import "./components/tiptap-templates/simple/simple-editor.scss"
+import { Button } from "./components/tiptap-ui-primitive/button"
 
 const StyledEditorContent = styled(EditorContent)<{ readOnly: boolean }>(
   ({ theme, readOnly }) => ({
@@ -64,8 +74,43 @@ const StyledEditorContent = styled(EditorContent)<{ readOnly: boolean }>(
   }),
 )
 
+const StyledDropdownMenuWrapper = styled(DropdownMenuContent)`
+  &.tiptap-dropdown-menu {
+    background-color: #e1e3ed;
+    border-radius: 8px;
+    padding: 4px;
+  }
+`
+
 interface TiptapEditorToolbarProps {
   editor: Editor
+}
+
+interface InsertDropdownMenuProps {
+  editor: Editor
+}
+export function InsertDropdownMenu({ editor }: InsertDropdownMenuProps) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button>Insert ▼</Button>
+      </DropdownMenuTrigger>
+
+      <StyledDropdownMenuWrapper side="bottom" align="start">
+        <DropdownMenuItem asChild>
+          <MediaEmbedButton editor={editor} text="Embed" />
+        </DropdownMenuItem>
+
+        <DropdownMenuItem asChild>
+          <LearningResourceEmbedButton editor={editor} text="Course" />
+        </DropdownMenuItem>
+
+        <DropdownMenuItem asChild>
+          <InsertDividerButton editor={editor} text="Divider" />
+        </DropdownMenuItem>
+      </StyledDropdownMenuWrapper>
+    </DropdownMenu>
+  )
 }
 export const MainToolbarContent = ({ editor }: TiptapEditorToolbarProps) => {
   return (
@@ -118,8 +163,7 @@ export const MainToolbarContent = ({ editor }: TiptapEditorToolbarProps) => {
         <ImageUploadButton text="Add" />
       </ToolbarGroup>
       <ToolbarGroup>
-        <LearningResourceEmbedButton editor={editor} text="Course" />
-        <MediaEmbedButton editor={editor} text="Embed" />
+        <InsertDropdownMenu editor={editor} />
       </ToolbarGroup>
       <Spacer />
     </>

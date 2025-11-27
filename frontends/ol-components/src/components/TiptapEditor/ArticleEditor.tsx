@@ -28,6 +28,7 @@ import TiptapEditor, { MainToolbarContent } from "./TiptapEditor"
 // --- Tiptap Node ---
 import { ImageUploadNode } from "./components/tiptap-node/image-upload-node/image-upload-node-extension"
 import { LearningResourceNode } from "./extensions/node/learning-resource-node/learning-resource-node"
+import { DividerNode } from "./extensions/node/divider-node-extension/divider-node-extension"
 import { MediaEmbed } from "./components/tiptap-node/media-embed/media-embed-extension"
 import { HorizontalRule } from "./components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension"
 
@@ -189,6 +190,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       Selection,
       Image,
       MediaEmbed,
+      DividerNode,
       ImageUploadNode.configure({
         accept: "image/*",
         maxSize: MAX_FILE_SIZE,
