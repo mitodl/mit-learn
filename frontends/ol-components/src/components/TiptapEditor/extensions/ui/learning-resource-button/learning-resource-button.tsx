@@ -1,6 +1,7 @@
 import React, { forwardRef, useCallback } from "react"
-import { Button } from "../../tiptap-ui-primitive/button"
-import { Badge } from "../../tiptap-ui-primitive/badge"
+import type { Editor } from "@tiptap/core"
+import { Button } from "../../../components/tiptap-ui-primitive/button"
+import { Badge } from "../../../components/tiptap-ui-primitive/badge"
 import { parseShortcutKeys } from "../../../lib/tiptap-utils"
 import {
   useLearningResourceEmbed,
@@ -9,7 +10,7 @@ import {
 import { useTiptapEditor } from "../../../hooks/use-tiptap-editor"
 
 export interface LearningResourceEmbedButtonProps {
-  editor?: any
+  editor?: Editor
   text?: string
   showShortcut?: boolean
   icon?: React.FC<React.SVGProps<SVGSVGElement>>
@@ -46,7 +47,6 @@ export const LearningResourceEmbedButton = forwardRef<
       canInsert,
       label,
       Icon: DefaultIcon,
-      shortcutKeys,
       handleEmbed,
     } = useLearningResourceEmbed(editor)
 

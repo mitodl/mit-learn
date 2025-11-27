@@ -27,7 +27,7 @@ import TiptapEditor, { MainToolbarContent } from "./TiptapEditor"
 
 // --- Tiptap Node ---
 import { ImageUploadNode } from "./components/tiptap-node/image-upload-node/image-upload-node-extension"
-import { LearningResourceNode } from "./components/tiptap-node/learning-resource-node/learning-resource-node"
+import { LearningResourceNode } from "./extensions/node/learning-resource-node/learning-resource-node"
 import { MediaEmbed } from "./components/tiptap-node/media-embed/media-embed-extension"
 import { HorizontalRule } from "./components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension"
 
