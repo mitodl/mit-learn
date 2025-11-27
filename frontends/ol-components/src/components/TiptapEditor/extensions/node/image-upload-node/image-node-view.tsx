@@ -1,14 +1,11 @@
 import React, { useState } from "react"
 import { NodeViewWrapper } from "@tiptap/react"
+import type { ReactNodeViewProps } from "@tiptap/react"
+
 import styled from "@emotion/styled"
 import NiceModal from "@ebay/nice-modal-react"
 import ImageAltTextInput from "./ImageAltTextInput"
-import { DefaultWidth, WideWidth, FullWidth } from "../media-embed/Icons"
-
-interface MediaEmbedNodeProps {
-  node: any
-  updateAttributes: (attrs: Record<string, any>) => void
-}
+import { DefaultWidth, WideWidth, FullWidth } from "./Icons"
 
 const StyledNodeViewWrapper = styled(NodeViewWrapper)<{
   layout: string
@@ -121,7 +118,7 @@ const StyledNodeViewWrapper = styled(NodeViewWrapper)<{
 export function ImageUploadNodeComponent({
   node,
   updateAttributes,
-}: MediaEmbedNodeProps) {
+}: ReactNodeViewProps) {
   const { layout, caption, src, alt } = node.attrs
   const [hovering, setHovering] = useState(false)
 
@@ -132,8 +129,8 @@ export function ImageUploadNodeComponent({
       const result = await NiceModal.show(ImageAltTextInput, {
         initialAlt: alt ?? "",
       })
-      if (result) updateAttributes({ alt: result })
-    } catch (e) {
+      if (result) updateAttributes({ alt: result as unknown as string })
+    } catch {
       await NiceModal.hide(ImageAltTextInput)
     }
   }

@@ -13,7 +13,7 @@ const ImageAltTextInput = NiceModal.create(
     const [altText, setAltText] = useState(initialAlt)
     const [error, setError] = useState<string | null>(null)
 
-    const handleSubmit = (e?: any) => {
+    const handleSubmit = (e?: React.FormEvent) => {
       e?.preventDefault()
 
       if (!altText.trim()) {
@@ -46,7 +46,7 @@ const ImageAltTextInput = NiceModal.create(
           value={altText}
           error={!!error}
           errorText={error ?? ""}
-          onChange={(e: any) => {
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
             setError(null)
             setAltText(e.target.value)
           }}

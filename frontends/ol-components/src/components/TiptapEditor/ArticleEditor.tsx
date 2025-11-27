@@ -28,7 +28,7 @@ import TiptapEditor, { MainToolbarContent } from "./TiptapEditor"
 // --- Tiptap Node ---
 import { ImageUploadNode } from "./components/tiptap-node/image-upload-node/image-upload-node-extension"
 import { MediaEmbed } from "./components/tiptap-node/media-embed/media-embed-extension"
-import { ImageWithCaption } from "./components/tiptap-node/image-upload-node/image-with-caption"
+import { ImageWithCaption } from "./extensions/node/image-upload-node/image-with-caption"
 import { HorizontalRule } from "./components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension"
 
 import "./components/tiptap-node/blockquote-node/blockquote-node.scss"
