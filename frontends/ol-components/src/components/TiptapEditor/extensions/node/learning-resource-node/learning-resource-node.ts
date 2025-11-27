@@ -10,7 +10,7 @@ declare module "@tiptap/core" {
   }
 }
 export interface LearningResourceOptions {
-  HTMLAttributes: Record<string, any>
+  HTMLAttributes: Record<string, string | number | null | undefined>
 }
 
 export const LearningResourceNode = Node.create<LearningResourceOptions>({

@@ -2,6 +2,7 @@ import React from "react"
 import { NodeViewWrapper } from "@tiptap/react"
 import { LearningResourceListCard, styled } from "ol-components"
 import { useLearningResourcesDetail } from "api/hooks/learningResources"
+import type { ReactNodeViewProps } from "@tiptap/react"
 
 const StyledLearningResourceListCard = styled(LearningResourceListCard)({
   "&& a": {
@@ -13,7 +14,7 @@ const StyledLearningResourceListCard = styled(LearningResourceListCard)({
   },
 })
 
-export const LearningResourceNodeView = ({ node }: any) => {
+export const LearningResourceNodeView = ({ node }: ReactNodeViewProps) => {
   const resourceId = node.attrs.resourceId
   const href = node.attrs.href
 
