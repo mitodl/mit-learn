@@ -1,27 +1,23 @@
 from django.conf import settings
-from rest_framework.views import APIView
 from django.utils.decorators import method_decorator
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework import status
 from drf_spectacular.utils import (
-    extend_schema_view,
-    extend_schema,
     OpenApiResponse,
+    extend_schema,
+    extend_schema_view,
 )
-from rest_framework import viewsets
+from rest_framework import status, viewsets
 from rest_framework.pagination import LimitOffsetPagination
-from rest_framework.permissions import IsAdminUser
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from articles.models import Article
 from articles.serializers import RichTextArticleSerializer
 from main.constants import VALID_HTTP_METHODS
-
 from main.utils import cache_page_for_all_users, clear_views_cache
-from django.utils.decorators import method_decorator
-
 
 from .serializers import ArticleImageUploadSerializer
+
 # Create your views here.
 
 
@@ -80,7 +76,9 @@ class ArticleViewSet(viewsets.ModelViewSet):
         responses={
             201: OpenApiResponse(
                 description="Successful Upload",
-                response=({'type': 'object', 'properties': {'url': {'type': 'string'}}}),
+                response=(
+                    {"type": "object", "properties": {"url": {"type": "string"}}}
+                ),
             ),
             400: OpenApiResponse(description="Bad request"),
             401: OpenApiResponse(description="Authentication required"),
@@ -94,7 +92,9 @@ class MediaUploadView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        serializer = ArticleImageUploadSerializer(data=request.data, context={"request": request})
+        serializer = ArticleImageUploadSerializer(
+            data=request.data, context={"request": request}
+        )
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -109,7 +109,9 @@ class MediaUploadView(APIView):
 
         if not file_url:
             # Defensive: if save didn't attach image_file for any reason
-            return Response({"error": "Upload failed"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"error": "Upload failed"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
         if settings.DEBUG:
             file_url = request.build_absolute_uri(file_url)
         return Response({"url": file_url}, status=status.HTTP_201_CREATED)
