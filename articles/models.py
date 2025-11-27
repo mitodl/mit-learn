@@ -4,7 +4,7 @@ from django.db import models
 from django.conf import settings
 
 from profiles.utils import (
-    profile_image_upload_uri
+    article_image_upload_uri
 )
 from main.models import TimestampedModel
 
@@ -21,7 +21,7 @@ class ArticleImageUpload(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     image_file = models.ImageField(
         null=True,
-        upload_to=profile_image_upload_uri,
+        upload_to=article_image_upload_uri,
         max_length=2083,
         editable=False
     )

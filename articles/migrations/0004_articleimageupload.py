@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
             name='ArticleImageUpload',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('image_file', models.ImageField(editable=False, max_length=2083, null=True, upload_to=profiles.utils.profile_image_upload_uri)),
+                ('image_file', models.ImageField(editable=False, max_length=2083, null=True, upload_to=profiles.utils.article_image_upload_uri)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
             ],

@@ -114,6 +114,11 @@ def profile_image_upload_uri(instance, filename):
     """
     return generate_filepath(filename, instance.user.username, "", "profile")
 
+def article_image_upload_uri(instance, filename):
+    """
+    upload_to handler for ArticleImageUpload.image_file
+    """
+    return generate_filepath(filename, "",  "", "article")
 
 def profile_image_upload_uri_small(instance, filename):
     """
