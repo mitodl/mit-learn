@@ -31,6 +31,9 @@ PDF_BATCH_SIZE = 5
 
 
 def _image_optimize(pil_image):
+    """
+    Optimize an image for OCR by reducing filesize and denoising
+    """
     np_image = np.array(pil_image.convert("RGB"))
     unique_colors = len(np.unique(np_image.reshape(-1, 3), axis=0))
     COLOR_THRESHOLD = 200
@@ -229,6 +232,9 @@ class DoclingLLMConverter:
         return str(file_path)
 
     def llm_messages(self, page, items):
+        """
+        Retrieve ocr messages to be sent to LLM provider
+        """
         messages_list = []
         processed_items = []
         for item in items:
