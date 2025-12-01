@@ -552,6 +552,8 @@ describe("OrganizationContent", () => {
   })
 
   test("shows correct run dates from contract-scoped runs", async () => {
+    jest.useFakeTimers({ legacyFakeTimers: false })
+    jest.setSystemTime(new Date("2025-11-01T12:00:00Z"))
     const { orgX, user, mitxOnlineUser } = setupOrgAndUser()
     const contracts = createTestContracts(orgX.id, 1)
 
@@ -598,9 +600,12 @@ describe("OrganizationContent", () => {
       // Since we set a specific future date, it should show the countdown
       expect(card).toHaveTextContent(/Starts in \d+ days?/i)
     })
+    jest.useRealTimers()
   })
 
   test("ignores non-contract runs when displaying course information", async () => {
+    jest.useFakeTimers({ legacyFakeTimers: false })
+    jest.setSystemTime(new Date("2025-11-01T12:00:00Z"))
     const { orgX, user, mitxOnlineUser } = setupOrgAndUser()
     const contracts = createTestContracts(orgX.id, 1)
 
@@ -659,6 +664,7 @@ describe("OrganizationContent", () => {
       // The actual format is "Starts in X days"
       expect(card).toHaveTextContent(/Starts in \d+ days?/i)
     })
+    jest.useRealTimers()
   })
 
   test("displays correct pricing from contract-scoped runs", async () => {

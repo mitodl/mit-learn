@@ -7,6 +7,7 @@ from articles.validators import clean_html
 
 User = get_user_model()
 
+
 @extend_schema_field(str)
 class SanitizedHtmlField(serializers.Field):
     @staticmethod
@@ -21,6 +22,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["id", "username", "email", "first_name", "last_name"]
+
 
 class RichTextArticleSerializer(serializers.ModelSerializer):
     """
