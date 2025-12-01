@@ -24,6 +24,7 @@ import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { programsQueries } from "api/mitxonline-hooks/programs"
 import { V2ProgramRequirement } from "@mitodl/mitxonline-api-axios/v2"
 import { contractQueries } from "api/mitxonline-hooks/contracts"
+import NotFoundPage from "@/app-pages/ErrorPage/NotFoundPage"
 
 const Wrapper = styled.div(({ theme }) => ({
   marginTop: "32px",
@@ -256,12 +257,23 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
   )
   const program = rawProgram ? mitxonlineProgram(rawProgram) : undefined
 
+  const { data: programEnrollments } = useQuery(
+    enrollmentQueries.programEnrollmentsList(),
+  )
+  const enrolledInProgram = programEnrollments?.some((enrollment) => {
+    return enrollment.program.id === program?.id
+  })
+
   // Only fetch courses if we have a program with course IDs
   const { data: rawProgramCourses, isLoading: programCoursesLoading } =
     useQuery({
       ...coursesQueries.coursesList({ id: program?.courseIds || [] }),
-      enabled: !!program && program.courseIds.length > 0,
+      enabled: !!program && program.courseIds.length > 0 && enrolledInProgram,
     })
+
+  if (!enrolledInProgram) {
+    return <NotFoundPage />
+  }
 
   // Build sections from requirement tree
   const requirementSections =

@@ -313,7 +313,11 @@ describe("EnrollmentDisplay", () => {
       setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV2(), [])
       setMockResponse.get(
         mitxonline.urls.programEnrollments.enrollmentsListV2(),
-        [],
+        [
+          mitxonline.factories.enrollment.programEnrollmentV2({
+            program: program,
+          }),
+        ],
       )
       setMockResponse.get(mitxonline.urls.programs.programDetail(123), program)
       setMockResponse.get(
@@ -365,7 +369,11 @@ describe("EnrollmentDisplay", () => {
       setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV2(), [])
       setMockResponse.get(
         mitxonline.urls.programEnrollments.enrollmentsListV2(),
-        [],
+        [
+          mitxonline.factories.enrollment.programEnrollmentV2({
+            program: program,
+          }),
+        ],
       )
       setMockResponse.get(mitxonline.urls.programs.programDetail(456), program)
       setMockResponse.get(
@@ -430,7 +438,11 @@ describe("EnrollmentDisplay", () => {
       setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV2(), [])
       setMockResponse.get(
         mitxonline.urls.programEnrollments.enrollmentsListV2(),
-        [],
+        [
+          mitxonline.factories.enrollment.programEnrollmentV2({
+            program: program,
+          }),
+        ],
       )
       setMockResponse.get(mitxonline.urls.programs.programDetail(789), program)
       setMockResponse.get(
@@ -512,7 +524,11 @@ describe("EnrollmentDisplay", () => {
       setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV2(), [])
       setMockResponse.get(
         mitxonline.urls.programEnrollments.enrollmentsListV2(),
-        [],
+        [
+          mitxonline.factories.enrollment.programEnrollmentV2({
+            program: program,
+          }),
+        ],
       )
       setMockResponse.get(mitxonline.urls.programs.programDetail(999), program)
       setMockResponse.get(
@@ -527,6 +543,42 @@ describe("EnrollmentDisplay", () => {
 
       // Total for program should also be 1
       await screen.findByText(/0 of 1 courses/)
+    })
+
+    test("Returns 404 page when user is not enrolled in the program", async () => {
+      const mitxOnlineUser = mitxonline.factories.user.user()
+      setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+      const reqTree =
+        new mitxonline.factories.requirements.RequirementTreeBuilder()
+      const requirements = reqTree.addOperator({
+        operator: "all_of",
+        title: "Requirements",
+      })
+      requirements.addCourse({ course: 1 })
+
+      const program = mitxonline.factories.programs.program({
+        id: 888,
+        courses: [1],
+        req_tree: reqTree.serialize(),
+      })
+
+      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+      setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV2(), [])
+      // User is not enrolled in any programs
+      setMockResponse.get(
+        mitxonline.urls.programEnrollments.enrollmentsListV2(),
+        [],
+      )
+      setMockResponse.get(mitxonline.urls.programs.programDetail(888), program)
+
+      renderWithProviders(<EnrollmentDisplay programId={888} />)
+
+      // Should show 404 page instead of program content
+      await screen.findByText(
+        "Looks like we couldn't find what you were looking for!",
+      )
+      expect(screen.queryByText("Requirements")).not.toBeInTheDocument()
     })
   })
 })
