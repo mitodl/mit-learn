@@ -9,7 +9,7 @@ import {
 import * as mitxonline from "api/mitxonline-test-utils"
 import { mockAxiosInstance } from "api/test-utils"
 import { DashboardCard, getDefaultContextMenuItems } from "./DashboardCard"
-import { dashboardCourse } from "./test-utils"
+import { dashboardCourse, dashboardProgram } from "./test-utils"
 import { faker } from "@faker-js/faker/locale/en"
 import moment from "moment"
 import { EnrollmentMode, EnrollmentStatus } from "./types"
@@ -80,10 +80,13 @@ describe.each([
     })
   })
 
-  test("It shows course title and links to marketingUrl if titleAction is marketing", async () => {
+  test("It shows course title and links to marketingUrl if titleAction is marketing and enrolled", async () => {
     setupUserApis()
     const course = dashboardCourse({
       marketingUrl: "?some-marketing-url",
+      enrollment: {
+        status: EnrollmentStatus.Enrolled,
+      },
     })
     renderWithProviders(
       <DashboardCard titleAction="marketing" dashboardResource={course} />,
@@ -97,15 +100,95 @@ describe.each([
     expect(courseLink).toHaveAttribute("href", course.marketingUrl)
   })
 
-  test("It shows course title and links to courseware if titleAction is courseware", async () => {
+  test("It shows course title as clickable text (not link) if titleAction is marketing and not enrolled (non-B2B)", async () => {
     setupUserApis()
-    const course = dashboardCourse()
+    const course = dashboardCourse({
+      marketingUrl: "?some-marketing-url",
+      enrollment: {
+        status: EnrollmentStatus.NotEnrolled,
+      },
+      run: {
+        b2bContractId: null,
+      },
+    })
+    renderWithProviders(
+      <DashboardCard titleAction="marketing" dashboardResource={course} />,
+    )
+
+    const card = getCard()
+
+    // Should not be a link
+    expect(
+      within(card).queryByRole("link", { name: course.title }),
+    ).not.toBeInTheDocument()
+    // Should be clickable text
+    const titleText = within(card).getByText(course.title)
+    expect(titleText).toBeInTheDocument()
+  })
+
+  test("It shows course title and links to courseware if titleAction is courseware and enrolled", async () => {
+    setupUserApis()
+    const course = dashboardCourse({
+      enrollment: {
+        status: EnrollmentStatus.Enrolled,
+      },
+    })
     renderWithProviders(
       <DashboardCard titleAction="courseware" dashboardResource={course} />,
     )
 
     const card = getCard()
 
+    const courseLink = within(card).getByRole("link", {
+      name: course.title,
+    })
+    expect(courseLink).toHaveAttribute("href", course.run.coursewareUrl)
+  })
+
+  test("It shows course title as clickable text (not link) if titleAction is courseware and not enrolled (non-B2B)", async () => {
+    setupUserApis()
+    const course = dashboardCourse({
+      enrollment: {
+        status: EnrollmentStatus.NotEnrolled,
+      },
+      run: {
+        b2bContractId: null,
+      },
+    })
+    renderWithProviders(
+      <DashboardCard titleAction="courseware" dashboardResource={course} />,
+    )
+
+    const card = getCard()
+
+    // Should not be a link
+    expect(
+      within(card).queryByRole("link", { name: course.title }),
+    ).not.toBeInTheDocument()
+    // Should be clickable text
+    const titleText = within(card).getByText(course.title)
+    expect(titleText).toBeInTheDocument()
+  })
+
+  test("It shows course title as link if not enrolled but has B2B contract", async () => {
+    setupUserApis()
+    const b2bContractId = faker.number.int()
+    const course = dashboardCourse({
+      enrollment: {
+        status: EnrollmentStatus.NotEnrolled,
+        b2b_contract_id: b2bContractId,
+      },
+      run: {
+        b2bContractId: b2bContractId,
+      },
+    })
+    renderWithProviders(
+      <DashboardCard titleAction="courseware" dashboardResource={course} />,
+    )
+
+    const card = getCard()
+
+    // Should be a link for B2B courses
     const courseLink = within(card).getByRole("link", {
       name: course.title,
     })
@@ -137,12 +220,22 @@ describe.each([
 
   test.each([
     {
-      course: pastDashboardCourse(),
+      course: pastDashboardCourse({
+        enrollment: {
+          status: EnrollmentStatus.Enrolled,
+          mode: EnrollmentMode.Audit,
+        },
+      }),
       expected: { enabled: true },
       case: "past",
     },
     {
-      course: currentDashboardCourse(),
+      course: currentDashboardCourse({
+        enrollment: {
+          status: EnrollmentStatus.Enrolled,
+          mode: EnrollmentMode.Audit,
+        },
+      }),
       expected: { enabled: true },
       case: "current",
     },
@@ -221,7 +314,7 @@ describe.each([
       view.rerender(
         <DashboardCard
           titleAction="marketing"
-          courseNoun={courseNoun}
+          noun={courseNoun}
           dashboardResource={course}
         />,
       )
@@ -236,7 +329,7 @@ describe.each([
           `${expected.label} ${courseNoun}`,
         )
       } else {
-        // "Continue" doesn't use courseNoun
+        // "Continue" doesn't use noun
         expect(coursewareCTA).toHaveTextContent(expected.label)
       }
     },
@@ -605,8 +698,15 @@ describe.each([
     "Enrollment for complete profile bypasses just-in-time dialog",
     async ({ trigger }) => {
       const userData = mitxUser()
+      const b2bContractId = faker.number.int()
       const course = dashboardCourse({
-        enrollment: { status: EnrollmentStatus.NotEnrolled },
+        enrollment: {
+          status: EnrollmentStatus.NotEnrolled,
+          b2b_contract_id: b2bContractId,
+        },
+        run: {
+          b2bContractId: b2bContractId,
+        },
       })
       const { enrollmentUrl } = setupEnrollmentApis({ user: userData, course })
       renderWithProviders(
@@ -634,8 +734,15 @@ describe.each([
   )(
     "Enrollment for complete profile bypasses just-in-time dialog",
     async ({ trigger, userData }) => {
+      const b2bContractId = faker.number.int()
       const course = dashboardCourse({
-        enrollment: { status: EnrollmentStatus.NotEnrolled },
+        enrollment: {
+          status: EnrollmentStatus.NotEnrolled,
+          b2b_contract_id: b2bContractId,
+        },
+        run: {
+          b2bContractId: b2bContractId,
+        },
       })
       setupEnrollmentApis({ user: userData, course })
       renderWithProviders(
@@ -655,4 +762,90 @@ describe.each([
       )
     },
   )
+
+  describe("Stacked Variant", () => {
+    test("applies stacked variant styling", () => {
+      setupUserApis()
+      const course = dashboardCourse()
+      renderWithProviders(
+        <DashboardCard
+          variant="stacked"
+          titleAction="marketing"
+          dashboardResource={course}
+        />,
+      )
+
+      const card = getCard()
+      expect(card).toBeInTheDocument()
+      // Successfully renders a stacked card - the variant prop controls styling via styled-components
+    })
+
+    test("renders multiple stacked cards correctly", () => {
+      setupUserApis()
+      const courses = [
+        dashboardCourse({ title: "First Stacked Course" }),
+        dashboardCourse({ title: "Second Stacked Course" }),
+        dashboardCourse({ title: "Third Stacked Course" }),
+      ]
+
+      renderWithProviders(
+        <div>
+          {courses.map((course) => (
+            <DashboardCard
+              key={course.key}
+              variant="stacked"
+              titleAction="marketing"
+              dashboardResource={course}
+            />
+          ))}
+        </div>,
+      )
+
+      const allCards = screen.getAllByTestId(testId)
+      expect(allCards).toHaveLength(3)
+      expect(
+        within(allCards[0]).getByText("First Stacked Course"),
+      ).toBeInTheDocument()
+      expect(
+        within(allCards[1]).getByText("Second Stacked Course"),
+      ).toBeInTheDocument()
+      expect(
+        within(allCards[2]).getByText("Third Stacked Course"),
+      ).toBeInTheDocument()
+    })
+  })
+
+  describe("Program Cards", () => {
+    test("renders program card with title", () => {
+      setupUserApis()
+      const program = dashboardProgram({
+        title: "Test Program Title",
+      })
+
+      renderWithProviders(
+        <DashboardCard titleAction="marketing" dashboardResource={program} />,
+      )
+
+      const card = getCard()
+      expect(within(card).getByText("Test Program Title")).toBeInTheDocument()
+    })
+
+    test("program card does not show course-specific elements", () => {
+      setupUserApis()
+      const program = dashboardProgram({
+        title: "Test Program",
+      })
+
+      renderWithProviders(
+        <DashboardCard titleAction="marketing" dashboardResource={program} />,
+      )
+
+      const card = getCard()
+      // Programs don't show enrollment status or courseware buttons
+      expect(
+        within(card).queryByTestId("courseware-button"),
+      ).not.toBeInTheDocument()
+      expect(within(card).queryByTestId("upgrade-root")).not.toBeInTheDocument()
+    })
+  })
 })

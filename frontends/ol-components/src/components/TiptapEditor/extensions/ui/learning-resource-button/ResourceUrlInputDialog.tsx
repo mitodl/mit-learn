@@ -3,12 +3,12 @@ import NiceModal, { muiDialogV5 } from "@ebay/nice-modal-react"
 import { TextField, Alert } from "@mitodl/smoot-design"
 import { FormDialog } from "ol-components"
 
-const MediaUrlInputDialog = NiceModal.create(() => {
+const CourseUrlInputDialog = NiceModal.create(() => {
   const modal = NiceModal.useModal()
   const [url, setUrl] = useState("")
   const [error, setError] = useState<string | null>(null)
 
-  const handleSubmit = (e?: any) => {
+  const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault()
 
     if (!url.trim()) {
@@ -27,7 +27,7 @@ const MediaUrlInputDialog = NiceModal.create(() => {
   return (
     <FormDialog
       {...muiDialogV5(modal)}
-      title="Embed Media"
+      title="Course Media"
       confirmText="Insert"
       onSubmit={handleSubmit}
       onReset={handleReset}
@@ -35,13 +35,13 @@ const MediaUrlInputDialog = NiceModal.create(() => {
       fullWidth
     >
       <TextField
-        name="mediaUrl"
-        label="Media URL"
-        placeholder="https://youtube.com/..."
+        name="courseUrl"
+        label="Course URL"
+        placeholder="learn.mit.edu/search?resource=297..."
         value={url}
         error={!!error}
         errorText={error ?? ""}
-        onChange={(e: any) => {
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
           setError(null)
           setUrl(e.target.value)
         }}
@@ -53,4 +53,4 @@ const MediaUrlInputDialog = NiceModal.create(() => {
   )
 })
 
-export default MediaUrlInputDialog
+export default CourseUrlInputDialog

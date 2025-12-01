@@ -1,5 +1,4 @@
-import { mergeAttributes, Node } from "@tiptap/react"
-import { ReactNodeViewRenderer } from "@tiptap/react"
+import { mergeAttributes, Node, ReactNodeViewRenderer } from "@tiptap/react"
 import { ImageUploadNode as ImageUploadNodeComponent } from "./image-upload-node"
 import type { NodeType } from "@tiptap/pm/model"
 

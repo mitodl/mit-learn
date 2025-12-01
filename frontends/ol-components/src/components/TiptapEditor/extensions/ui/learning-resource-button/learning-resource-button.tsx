@@ -1,19 +1,33 @@
 import React, { forwardRef, useCallback } from "react"
-import { Button } from "../../tiptap-ui-primitive/button"
-import { useMediaEmbed } from "./useMediaEmbed"
-import { useTiptapEditor } from "../../../hooks/use-tiptap-editor"
+import type { Editor } from "@tiptap/core"
+import { Button } from "../../../vendor/components/tiptap-ui-primitive/button"
+import { Badge } from "../../../vendor/components/tiptap-ui-primitive/badge"
+import { parseShortcutKeys } from "../../../vendor/lib/tiptap-utils"
+import {
+  useLearningResourceEmbed,
+  LEARNING_RESOURCE_SHORTCUT_KEY,
+} from "./useLearningResourceEmbed"
+import { useTiptapEditor } from "../../../vendor/hooks/use-tiptap-editor"
 
-export interface MediaEmbedButtonProps {
-  editor?: any
+export interface LearningResourceEmbedButtonProps {
+  editor?: Editor
   text?: string
   showShortcut?: boolean
   icon?: React.FC<React.SVGProps<SVGSVGElement>>
   onClick?: (e: React.MouseEvent) => void
 }
 
-export const MediaEmbedButton = forwardRef<
+function LearningResourceShortcutBadge() {
+  return (
+    <Badge>
+      {parseShortcutKeys({ shortcutKeys: LEARNING_RESOURCE_SHORTCUT_KEY })}
+    </Badge>
+  )
+}
+
+export const LearningResourceEmbedButton = forwardRef<
   HTMLButtonElement,
-  MediaEmbedButtonProps
+  LearningResourceEmbedButtonProps
 >(
   (
     {
@@ -34,7 +48,7 @@ export const MediaEmbedButton = forwardRef<
       label,
       Icon: DefaultIcon,
       handleEmbed,
-    } = useMediaEmbed(editor)
+    } = useLearningResourceEmbed(editor)
 
     const handleClick = useCallback(
       (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -62,9 +76,10 @@ export const MediaEmbedButton = forwardRef<
       >
         <RenderIcon />
         {text && <span className="tiptap-button-text">{text}</span>}
+        {showShortcut && <LearningResourceShortcutBadge />}
       </Button>
     )
   },
 )
 
-MediaEmbedButton.displayName = "MediaEmbedButton"
+LearningResourceEmbedButton.displayName = "LearningResourceEmbedButton"

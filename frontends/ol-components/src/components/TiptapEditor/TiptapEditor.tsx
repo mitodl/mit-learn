@@ -1,45 +1,47 @@
 "use client"
 
-// Based on ./components/tiptap-templates/simple/simple-editor.tsx
+// Based on the TipTap base Simple Editor file, https://tiptap.dev/docs/ui-components/templates/simple-editor.
+// https://github.com/ueberdosis/tiptap-ui-components/blob/799929bea4804c73767562b69f8acc2acdb8ac86/apps/web/src/components/tiptap-templates/simple/simple-editor.tsx
 
 import React from "react"
 import styled from "@emotion/styled"
 import { EditorContent } from "@tiptap/react"
 import type { Editor } from "@tiptap/core"
-import { ImageUploadButton } from "./components/tiptap-ui/image-upload-button"
-import { MediaEmbedButton } from "./components/tiptap-ui/media-embed/media-embed-button"
+import { ImageUploadButton } from "./vendor/components/tiptap-ui/image-upload-button"
+import { MediaEmbedButton } from "./extensions/ui/media-embed/media-embed-button"
 
 // --- UI Primitives ---
-import { Spacer } from "./components/tiptap-ui-primitive/spacer"
+import { Spacer } from "./vendor/components/tiptap-ui-primitive/spacer"
 import {
   ToolbarGroup,
   ToolbarSeparator,
-} from "./components/tiptap-ui-primitive/toolbar"
+} from "./vendor/components/tiptap-ui-primitive/toolbar"
 
 // --- Tiptap Node ---
-import "./components/tiptap-node/blockquote-node/blockquote-node.scss"
-import "./components/tiptap-node/code-block-node/code-block-node.scss"
-import "./components/tiptap-node/horizontal-rule-node/horizontal-rule-node.scss"
-import "./components/tiptap-node/list-node/list-node.scss"
-import "./components/tiptap-node/image-node/image-node.scss"
-import "./components/tiptap-node/heading-node/heading-node.scss"
-import "./components/tiptap-node/paragraph-node/paragraph-node.scss"
+import "./vendor/components/tiptap-node/blockquote-node/blockquote-node.scss"
+import "./vendor/components/tiptap-node/code-block-node/code-block-node.scss"
+import "./vendor/components/tiptap-node/horizontal-rule-node/horizontal-rule-node.scss"
+import "./vendor/components/tiptap-node/list-node/list-node.scss"
+import "./vendor/components/tiptap-node/image-node/image-node.scss"
+import "./vendor/components/tiptap-node/heading-node/heading-node.scss"
+import "./vendor/components/tiptap-node/paragraph-node/paragraph-node.scss"
 
 // --- Tiptap UI ---
-import { HeadingDropdownMenu } from "./components/tiptap-ui/heading-dropdown-menu"
-import { ListDropdownMenu } from "./components/tiptap-ui/list-dropdown-menu"
-import { BlockquoteButton } from "./components/tiptap-ui/blockquote-button"
-import { CodeBlockButton } from "./components/tiptap-ui/code-block-button"
-import { ColorHighlightPopover } from "./components/tiptap-ui/color-highlight-popover"
-import { LinkPopover } from "./components/tiptap-ui/link-popover"
-import { MarkButton } from "./components/tiptap-ui/mark-button"
-import { TextAlignButton } from "./components/tiptap-ui/text-align-button"
-import { UndoRedoButton } from "./components/tiptap-ui/undo-redo-button"
+import { HeadingDropdownMenu } from "./vendor/components/tiptap-ui/heading-dropdown-menu"
+import { ListDropdownMenu } from "./vendor/components/tiptap-ui/list-dropdown-menu"
+import { BlockquoteButton } from "./vendor/components/tiptap-ui/blockquote-button"
+import { CodeBlockButton } from "./vendor/components/tiptap-ui/code-block-button"
+import { ColorHighlightPopover } from "./vendor/components/tiptap-ui/color-highlight-popover"
+import { LinkPopover } from "./vendor/components/tiptap-ui/link-popover"
+import { MarkButton } from "./vendor/components/tiptap-ui/mark-button"
+import { TextAlignButton } from "./vendor/components/tiptap-ui/text-align-button"
+import { UndoRedoButton } from "./vendor/components/tiptap-ui/undo-redo-button"
+import { LearningResourceEmbedButton } from "./extensions/ui/learning-resource-button/learning-resource-button"
 
 // --- Styles ---
-import "./styles/_keyframe-animations.scss"
-import "./styles/_variables.scss"
-import "./components/tiptap-templates/simple/simple-editor.scss"
+import "./vendor/styles/_keyframe-animations.scss"
+import "./vendor/styles/_variables.scss"
+import "./vendor/components/tiptap-templates/simple/simple-editor.scss"
 
 const StyledEditorContent = styled(EditorContent)<{ readOnly: boolean }>(
   ({ theme, readOnly }) => ({
@@ -117,6 +119,7 @@ export const MainToolbarContent = ({ editor }: TiptapEditorToolbarProps) => {
         <ImageUploadButton text="Add" />
       </ToolbarGroup>
       <ToolbarGroup>
+        <LearningResourceEmbedButton editor={editor} text="Course" />
         <MediaEmbedButton editor={editor} text="Embed" />
       </ToolbarGroup>
       <Spacer />

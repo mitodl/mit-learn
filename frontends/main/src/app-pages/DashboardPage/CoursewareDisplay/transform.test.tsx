@@ -1,6 +1,7 @@
 import { factories, factories as mitx } from "api/mitxonline-test-utils"
 import { DashboardResourceType, EnrollmentStatus } from "./types"
 import type { DashboardResource } from "./types"
+import type { ContractPage } from "@mitodl/mitxonline-api-axios/v2"
 
 import {
   organizationCoursesWithContracts,
@@ -10,6 +11,7 @@ import {
   createOrgUnenrolledCourse,
   transformEnrollmentToDashboard,
   filterEnrollmentsByOrganization,
+  programEnrollmentsToPrograms,
 } from "./transform"
 import {
   createCoursesWithContractRuns,
@@ -41,6 +43,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
       expect(transformed[0]).toEqual({
         key: `mitxonline-course-${apiData.run.course.id}-${apiData.run.id}`,
         coursewareId: apiData.run.courseware_id ?? null,
+        readableId: apiData.run.course.readable_id ?? null,
         type: DashboardResourceType.Course,
         title: apiData.run.title,
         marketingUrl: apiData.run.course.page?.page_url,
@@ -662,6 +665,229 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
 
       expect(filtered).toHaveLength(1)
       expect(filtered[0].b2b_organization_id).toBe(123)
+    })
+  })
+
+  describe("mitxonlineProgram", () => {
+    test("transforms V2Program to DashboardProgram correctly", () => {
+      const program = factories.programs.program()
+      const result = mitxonlineProgram(program)
+
+      expect(result).toEqual({
+        id: program.id,
+        key: `mitxonline-program-${program.id}`,
+        type: DashboardResourceType.Program,
+        title: program.title,
+        programType: program.program_type,
+        courseIds: program.courses,
+        collections: program.collections,
+        description: program.page.description,
+        reqTree: expect.any(Array),
+      })
+    })
+
+    test("transforms requirement tree correctly", () => {
+      const reqTree = new factories.requirements.RequirementTreeBuilder()
+      const required = reqTree.addOperator({
+        operator: "all_of",
+        title: "Required Courses",
+      })
+      required.addCourse({ course: 123 })
+
+      const program = factories.programs.program({
+        req_tree: reqTree.serialize(),
+      })
+      const result = mitxonlineProgram(program)
+
+      expect(result.reqTree).toHaveLength(1)
+      expect(result.reqTree[0].data.node_type).toBe("operator")
+      expect(result.reqTree[0].data.operator).toBe("all_of")
+      expect(result.reqTree[0].data.title).toBe("Required Courses")
+      expect(result.reqTree[0].children).toHaveLength(1)
+      expect(result.reqTree[0].children?.[0].data.node_type).toBe("course")
+      expect(result.reqTree[0].children?.[0].data.course).toBe(123)
+    })
+
+    test("handles program with empty reqTree", () => {
+      const program = factories.programs.program({ req_tree: [] })
+      const result = mitxonlineProgram(program)
+
+      expect(result.reqTree).toEqual([])
+    })
+
+    test("handles deeply nested requirement trees", () => {
+      const reqTree = new factories.requirements.RequirementTreeBuilder()
+      const allRequired = reqTree.addOperator({
+        operator: "all_of",
+        title: "Program Requirements",
+      })
+      const electives = allRequired.addOperator({
+        operator: "min_number_of",
+        operator_value: "2",
+        title: "Electives",
+      })
+      electives.addCourse({ course: 456 })
+
+      const program = factories.programs.program({
+        req_tree: reqTree.serialize(),
+      })
+      const result = mitxonlineProgram(program)
+
+      expect(result.reqTree[0].children).toHaveLength(1)
+      expect(result.reqTree[0].children?.[0].children).toHaveLength(1)
+      expect(result.reqTree[0].children?.[0].data.elective_flag).toBe(true)
+    })
+  })
+
+  describe("programEnrollmentsToPrograms", () => {
+    test("includes all programs when no contracts provided", () => {
+      const programEnrollments = [
+        factories.enrollment.programEnrollmentV2({
+          enrollments: [
+            {
+              ...factories.enrollment.courseEnrollment(),
+              b2b_contract_id: 123,
+              b2b_organization_id: 456,
+            },
+          ],
+        }),
+        factories.enrollment.programEnrollmentV2({
+          enrollments: [
+            {
+              ...factories.enrollment.courseEnrollment(),
+              b2b_contract_id: null,
+              b2b_organization_id: null,
+            },
+          ],
+        }),
+      ]
+
+      const result = programEnrollmentsToPrograms(programEnrollments)
+
+      expect(result).toHaveLength(2)
+      expect(result[0].type).toBe(DashboardResourceType.Program)
+      expect(result[1].type).toBe(DashboardResourceType.Program)
+    })
+
+    test("filters out programs listed in contracts", () => {
+      const program1 = factories.programs.program()
+      const program2 = factories.programs.program()
+      const program3 = factories.programs.program()
+
+      const programEnrollments = [
+        factories.enrollment.programEnrollmentV2({
+          program: program1,
+        }),
+        factories.enrollment.programEnrollmentV2({
+          program: program2,
+        }),
+        factories.enrollment.programEnrollmentV2({
+          program: program3,
+        }),
+      ]
+
+      const contracts: ContractPage[] = [
+        {
+          ...factories.contracts.contract(),
+          programs: [program1.id, program3.id], // Programs 1 and 3 are in contracts
+        },
+      ]
+
+      const result = programEnrollmentsToPrograms(programEnrollments, contracts)
+
+      expect(result).toHaveLength(1)
+      expect(result[0].id).toBe(program2.id)
+    })
+
+    test("includes program enrollment data", () => {
+      const programEnrollment = factories.enrollment.programEnrollmentV2({
+        certificate: {
+          uuid: "test-cert-uuid",
+        },
+        enrollments: [
+          {
+            ...factories.enrollment.courseEnrollment(),
+            b2b_contract_id: null,
+            b2b_organization_id: null,
+          },
+        ],
+      })
+
+      const result = programEnrollmentsToPrograms([programEnrollment])
+
+      expect(result[0].enrollment).toEqual({
+        status: EnrollmentStatus.Enrolled,
+        certificate: {
+          uuid: "test-cert-uuid",
+          link: "/certificate/program/test-cert-uuid/",
+        },
+      })
+    })
+
+    test("handles programs with multiple enrollments", () => {
+      const programEnrollment = factories.enrollment.programEnrollmentV2({
+        enrollments: [
+          {
+            ...factories.enrollment.courseEnrollment(),
+            b2b_contract_id: null,
+            b2b_organization_id: null,
+          },
+          {
+            ...factories.enrollment.courseEnrollment(),
+            b2b_contract_id: null,
+            b2b_organization_id: null,
+          },
+        ],
+      })
+
+      const result = programEnrollmentsToPrograms([programEnrollment])
+
+      expect(result).toHaveLength(1)
+      expect(result[0].type).toBe(DashboardResourceType.Program)
+    })
+
+    test("includes programs even if some enrollments are B2B", () => {
+      const programEnrollment = factories.enrollment.programEnrollmentV2({
+        enrollments: [
+          {
+            ...factories.enrollment.courseEnrollment(),
+            b2b_contract_id: null,
+            b2b_organization_id: null,
+          },
+          {
+            ...factories.enrollment.courseEnrollment(),
+            b2b_contract_id: 123,
+            b2b_organization_id: 456,
+          },
+        ],
+      })
+
+      const result = programEnrollmentsToPrograms([programEnrollment])
+
+      expect(result).toHaveLength(1)
+    })
+
+    test("handles empty program enrollments array", () => {
+      const result = programEnrollmentsToPrograms([])
+
+      expect(result).toEqual([])
+    })
+
+    test("handles program enrollment without certificate", () => {
+      const programEnrollment = factories.enrollment.programEnrollmentV2({
+        certificate: null,
+        enrollments: [
+          {
+            ...factories.enrollment.courseEnrollment(),
+            b2b_contract_id: null,
+            b2b_organization_id: null,
+          },
+        ],
+      })
+
+      const result = programEnrollmentsToPrograms([programEnrollment])
+
+      expect(result[0].enrollment?.certificate).toBeUndefined()
     })
   })
 })

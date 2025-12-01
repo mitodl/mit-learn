@@ -88,6 +88,7 @@ class RequirementTreeBuilder implements V2ProgramRequirement {
   addOperator(opts: {
     operator: "min_number_of" | "all_of"
     operator_value?: string
+    title?: string
   }) {
     invariant(opts.operator, "operator is required")
     if (opts.operator === "min_number_of") {
@@ -104,7 +105,7 @@ class RequirementTreeBuilder implements V2ProgramRequirement {
       course: null,
       required_program: null,
       program: this.#root.data.program,
-      title: null,
+      title: opts.title ?? faker.lorem.words(3),
       elective_flag: opts.operator === "min_number_of" ? true : false,
     }
     const operatorNode = new RequirementTreeBuilder({ data })
@@ -129,10 +130,17 @@ class RequirementTreeBuilder implements V2ProgramRequirement {
     return programNode
   }
 
-  serialize(): V2ProgramRequirement {
+  #serialize(): V2ProgramRequirement {
     const node = { id: this.id, data: this.data }
-    const children = this.children?.map((child) => child.serialize())
+    const children = this.children?.map((child) => child.#serialize())
     return children ? { ...node, children } : node
+  }
+  serialize(): V2ProgramRequirement[] {
+    invariant(
+      this.#root === this,
+      "serialize can only be called on the root node",
+    )
+    return this.#serialize().children ?? []
   }
 }
 

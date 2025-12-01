@@ -1,6 +1,21 @@
 Release Notes
 =============
 
+Version 0.47.14 (Released December 01, 2025)
+---------------
+
+- use qdrant vectors for hybrid search (#2718)
+- update posthog, add useFeatureFlagsLoaded (#2720)
+- setting create_runs=False in factory init (#2719)
+- feat: Add Custom Media Embed Plugin for Tiptap Editor (#2711)
+- chore(deps): update yarn to v4.11.0 (#2709)
+- chore(deps): update dependency ruff to v0.14.5 (#2705)
+- [pre-commit.ci] pre-commit autoupdate (#2641)
+- Add best_run_id to REST/search API results (#2696)
+- Require a non-yanked version of configargparse (#2714)
+- add task decorator back to command (#2712)
+- Scale certificate name to fit within available space (#2687)
+
 Version 0.47.13 (Released November 24, 2025)
 ---------------
 

@@ -126,6 +126,10 @@ describe("HomeContent", () => {
 
     setMockResponse.get(urls.userLists.membershipList(), [])
     setMockResponse.get(urls.learningPaths.membershipList(), [])
+    setMockResponse.get(
+      mitxonline.urls.programEnrollments.enrollmentsListV2(),
+      [],
+    )
     return { resources }
   }
 
