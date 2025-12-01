@@ -35,6 +35,7 @@ import { LinkPopover } from "./components/tiptap-ui/link-popover"
 import { MarkButton } from "./components/tiptap-ui/mark-button"
 import { TextAlignButton } from "./components/tiptap-ui/text-align-button"
 import { UndoRedoButton } from "./components/tiptap-ui/undo-redo-button"
+import { LearningResourceEmbedButton } from "./extensions/ui/learning-resource-button/learning-resource-button"
 
 // --- Styles ---
 import "./styles/_keyframe-animations.scss"
@@ -117,6 +118,7 @@ export const MainToolbarContent = ({ editor }: TiptapEditorToolbarProps) => {
         <ImageUploadButton text="Add" />
       </ToolbarGroup>
       <ToolbarGroup>
+        <LearningResourceEmbedButton editor={editor} text="Course" />
         <MediaEmbedButton editor={editor} text="Embed" />
       </ToolbarGroup>
       <Spacer />
