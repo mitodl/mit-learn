@@ -43,27 +43,30 @@ import "./vendor/styles/_keyframe-animations.scss"
 import "./vendor/styles/_variables.scss"
 import "./vendor/components/tiptap-templates/simple/simple-editor.scss"
 
-const StyledEditorContent = styled(EditorContent)<{ readOnly: boolean }>(
-  ({ theme, readOnly }) => ({
-    maxWidth: "1000px",
-    minHeight: "calc(100vh - 350px)",
-    backgroundColor: theme.custom.colors.white,
-    borderRadius: "10px",
-    margin: "20px auto",
-    ".tiptap.ProseMirror.simple-editor": {
-      padding: "3rem 3rem 5vh",
-    },
-    ...(readOnly
-      ? {
-          maxWidth: "1000px",
-          backgroundColor: "transparent",
-          ".tiptap.ProseMirror.simple-editor": {
-            padding: "0",
-          },
-        }
-      : {}),
-  }),
-)
+const StyledEditorContent = styled(EditorContent, {
+  shouldForwardProp: (prop) => prop !== "fullWidth",
+})<{
+  readOnly: boolean
+  fullWidth: boolean
+}>(({ theme, readOnly, fullWidth }) => ({
+  maxWidth: fullWidth ? "100%" : "1000px",
+  minHeight: "calc(100vh - 350px)",
+  backgroundColor: theme.custom.colors.white,
+  borderRadius: "10px",
+  margin: "20px auto",
+  ".tiptap.ProseMirror.simple-editor": {
+    padding: fullWidth ? "0" : "3rem 3rem 5vh",
+  },
+  ...(readOnly
+    ? {
+        maxWidth: "1000px",
+        backgroundColor: "transparent",
+        ".tiptap.ProseMirror.simple-editor": {
+          padding: "0",
+        },
+      }
+    : {}),
+}))
 
 interface TiptapEditorToolbarProps {
   editor: Editor
@@ -130,20 +133,23 @@ export const MainToolbarContent = ({ editor }: TiptapEditorToolbarProps) => {
 interface TiptapEditorProps {
   editor: Editor
   readOnly?: boolean
+  fullWidth?: boolean
   className?: string
 }
 
 export default function TiptapEditor({
   editor,
   readOnly,
+  fullWidth = false,
   className,
 }: TiptapEditorProps) {
   return (
     <StyledEditorContent
       editor={editor}
       role="presentation"
-      className={`simple-editor-content ${className}`}
+      fullWidth={fullWidth}
       readOnly={!!readOnly}
+      className={`simple-editor-content ${className}`}
     />
   )
 }

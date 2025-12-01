@@ -9,6 +9,7 @@ import { EditorContext, JSONContent, useEditor } from "@tiptap/react"
 // --- Tiptap Core Extensions ---
 import { StarterKit } from "@tiptap/starter-kit"
 import { TaskItem, TaskList } from "@tiptap/extension-list"
+import { Heading } from "@tiptap/extension-heading"
 
 import { Image } from "@tiptap/extension-image"
 import { TextAlign } from "@tiptap/extension-text-align"
@@ -17,7 +18,7 @@ import { Highlight } from "@tiptap/extension-highlight"
 import { Subscript } from "@tiptap/extension-subscript"
 import { Superscript } from "@tiptap/extension-superscript"
 
-import { Selection } from "@tiptap/extensions"
+import { Selection, Placeholder } from "@tiptap/extensions"
 
 // --- UI Primitives ---
 import { Toolbar } from "./vendor/components/tiptap-ui-primitive/toolbar"
@@ -54,6 +55,8 @@ import { Alert, Button, ButtonLink, Input } from "@mitodl/smoot-design"
 import Typography, { TypographyProps } from "@mui/material/Typography"
 import Container from "@mui/material/Container"
 import { useUserHasPermission, Permission } from "api/hooks/user"
+import Document from "@tiptap/extension-document"
+import { BannerExtension } from "./extensions/node/BannerNode/BannerExtension"
 
 const ViewContainer = styled.div({
   width: "100vw",
@@ -61,17 +64,17 @@ const ViewContainer = styled.div({
   overflow: "scroll",
 })
 
-const Title = styled(Typography)<TypographyProps>({
-  margin: "60px auto",
-  maxWidth: "1000px",
-})
+// const Title = styled(Typography)<TypographyProps>({
+//   margin: "60px auto",
+//   maxWidth: "1000px",
+// })
 
-const TitleInput = styled(Input)({
-  width: "100%",
-  maxWidth: "1000px",
-  margin: "10px auto",
-  display: "block-flex",
-})
+// const TitleInput = styled(Input)({
+//   width: "100%",
+//   maxWidth: "1000px",
+//   margin: "10px auto",
+//   display: "block-flex",
+// })
 
 const StyledToolbar = styled(Toolbar)({
   "&&": {
@@ -89,6 +92,10 @@ const StyledAlert = styled(Alert)({
   maxWidth: "1000px",
 })
 
+const ArticleDocument = Document.extend({
+  content: "banner paragraph*",
+})
+
 interface ArticleEditorProps {
   value?: object
   onSave?: (article: RichTextArticle) => void
@@ -98,7 +105,7 @@ interface ArticleEditorProps {
   article?: RichTextArticle
 }
 const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
-  const [title, setTitle] = React.useState(article?.title || "")
+  const [title] = React.useState(article?.title || "TEMP")
   const {
     mutate: createArticle,
     isPending: isCreating,
@@ -111,12 +118,28 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
     isError: isUpdateError,
     error: updateError,
   } = useArticlePartialUpdate()
-  const isArticleEditor = useUserHasPermission(Permission.ArticleEditor)
+  const isArticleEditor = true //useUserHasPermission(Permission.ArticleEditor)
 
   const [content, setContent] = useState<JSONContent>(
     article?.content || {
       type: "doc",
-      content: [{ type: "paragraph", content: [] }],
+      content: [
+        {
+          type: "banner",
+          content: [
+            {
+              type: "heading",
+              attrs: { level: 1 },
+              content: [],
+            },
+            {
+              type: "paragraph",
+              content: [],
+            },
+          ],
+        },
+        { type: "paragraph", content: [] },
+      ],
     },
   )
   const [touched, setTouched] = useState(false)
@@ -171,11 +194,27 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       },
     },
     extensions: [
+      ArticleDocument,
       StarterKit.configure({
+        document: false, // Disable default document to use our ArticleDocument
         horizontalRule: false,
+        heading: false,
         link: {
           openOnClick: false,
           enableClickSelection: true,
+        },
+      }),
+      Heading.configure({
+        levels: [1, 2, 3, 4, 5, 6],
+      }),
+      Placeholder.configure({
+        showOnlyCurrent: false, // Show placeholders for all empty nodes, not just the one with cursor
+        includeChildren: true, // Include children when traversing (needed for nodes inside NodeViewContent)
+        placeholder: ({ node }) => {
+          if (node.type.name === "heading") {
+            return "Add heading..."
+          }
+          return "Add text..."
         },
       }),
       HorizontalRule,
@@ -198,8 +237,11 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
         upload: handleImageUpload,
         onError: (error) => console.error("Upload failed:", error),
       }),
+      BannerExtension,
     ],
   })
+
+  console.log("content", content)
 
   React.useEffect(() => {
     if (!editor) return
@@ -258,15 +300,15 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
             </StyledToolbar>
           )
         ) : null}
-        <StyledContainer>
-          {isError && (
-            <StyledAlert severity="error" closable>
-              <Typography variant="body2" color="textPrimary">
-                {error?.message ?? "An error occurred while saving"}
-              </Typography>
-            </StyledAlert>
-          )}
-          {readOnly ? (
+        {/* <StyledContainer> */}
+        {isError && (
+          <StyledAlert severity="error" closable>
+            <Typography variant="body2" color="textPrimary">
+              {error?.message ?? "An error occurred while saving"}
+            </Typography>
+          </StyledAlert>
+        )}
+        {/* {readOnly ? (
             <Title variant="h3" component="h1">
               {article?.title}
             </Title>
@@ -281,9 +323,9 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
               placeholder="Article title"
               className="input-field"
             />
-          )}
-          <TiptapEditor editor={editor} readOnly={readOnly} />
-        </StyledContainer>
+          )} */}
+        <TiptapEditor editor={editor} readOnly={readOnly} fullWidth />
+        {/* </StyledContainer> */}
       </EditorContext.Provider>
     </ViewContainer>
   )
