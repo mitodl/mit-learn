@@ -20,7 +20,6 @@ import {
 } from "./transform"
 import { DashboardCard } from "./DashboardCard"
 import { DashboardCourse, DashboardProgram, EnrollmentStatus } from "./types"
-import type { AxiosError } from "axios"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { programsQueries } from "api/mitxonline-hooks/programs"
 import { V2ProgramRequirement } from "@mitodl/mitxonline-api-axios/v2"
@@ -386,25 +385,10 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
 }
 
 const AllEnrollmentsDisplay: React.FC = () => {
-  const onError = (error: Error) => {
-    const err = error as AxiosError<{ detail?: string }>
-    const status = err?.response?.status
-    if (
-      status === 403 &&
-      err.response?.data?.detail ===
-        "Authentication credentials were not provided."
-    ) {
-      // For now, we don't want to throw an error if the user is not authenticated.
-      return false
-    }
-    return true
-  }
-
   const { data: enrolledCourses, isLoading: courseEnrollmentsLoading } =
     useQuery({
       ...enrollmentQueries.courseRunEnrollmentsList(),
       select: userEnrollmentsToDashboardCourses,
-      throwOnError: onError,
     })
   const { data: contracts, isLoading: contractsLoading } = useQuery(
     contractQueries.contractsList(),
@@ -412,7 +396,6 @@ const AllEnrollmentsDisplay: React.FC = () => {
   const { data: programEnrollments, isLoading: programEnrollmentsLoading } =
     useQuery({
       ...enrollmentQueries.programEnrollmentsList(),
-      throwOnError: onError,
     })
   const filteredProgramEnrollments = programEnrollments
     ? programEnrollmentsToPrograms(programEnrollments, contracts)
