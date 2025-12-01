@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.47.14
+Version 0.47.14 (Released December 01, 2025)
 ---------------
 
 - use qdrant vectors for hybrid search (#2718)
