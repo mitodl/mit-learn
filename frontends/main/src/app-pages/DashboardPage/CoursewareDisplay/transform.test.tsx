@@ -695,7 +695,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
       required.addCourse({ course: 123 })
 
       const program = factories.programs.program({
-        req_tree: reqTree.children?.map((child) => child.serialize()) || [],
+        req_tree: reqTree.serialize(),
       })
       const result = mitxonlineProgram(program)
 
@@ -729,7 +729,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
       electives.addCourse({ course: 456 })
 
       const program = factories.programs.program({
-        req_tree: reqTree.children?.map((child) => child.serialize()) || [],
+        req_tree: reqTree.serialize(),
       })
       const result = mitxonlineProgram(program)
 

@@ -346,7 +346,7 @@ describe("EnrollmentDisplay", () => {
       const program = mitxonline.factories.programs.program({
         id: 456,
         courses: [1], // Only course 1 is in the requirements
-        req_tree: reqTree.children?.map((child) => child.serialize()) || [],
+        req_tree: reqTree.serialize(),
       })
       const courses = {
         count: 1,
@@ -407,7 +407,7 @@ describe("EnrollmentDisplay", () => {
       const program = mitxonline.factories.programs.program({
         id: 789,
         courses: [1],
-        req_tree: reqTree.children?.map((child) => child.serialize()) || [],
+        req_tree: reqTree.serialize(),
       })
 
       const courses = {
@@ -481,7 +481,7 @@ describe("EnrollmentDisplay", () => {
       const program = mitxonline.factories.programs.program({
         id: 999,
         courses: [1, 2],
-        req_tree: reqTree.children?.map((child) => child.serialize()) || [],
+        req_tree: reqTree.serialize(),
       })
 
       const courses = {
