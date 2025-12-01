@@ -4808,16 +4808,16 @@ export interface PatchedLearningResourceRelationshipRequest {
 export interface PatchedRichTextArticleRequest {
   /**
    *
-   * @type {any}
-   * @memberof PatchedRichTextArticleRequest
-   */
-  content?: any
-  /**
-   *
    * @type {string}
    * @memberof PatchedRichTextArticleRequest
    */
   title?: string
+  /**
+   *
+   * @type {any}
+   * @memberof PatchedRichTextArticleRequest
+   */
+  content?: any
 }
 /**
  * Serializer for UserListRelationship model
@@ -7211,12 +7211,6 @@ export type ResourceTypeEnum =
 export interface RichTextArticle {
   /**
    *
-   * @type {any}
-   * @memberof RichTextArticle
-   */
-  content?: any
-  /**
-   *
    * @type {number}
    * @memberof RichTextArticle
    */
@@ -7227,6 +7221,30 @@ export interface RichTextArticle {
    * @memberof RichTextArticle
    */
   title: string
+  /**
+   *
+   * @type {any}
+   * @memberof RichTextArticle
+   */
+  content?: any
+  /**
+   *
+   * @type {User}
+   * @memberof RichTextArticle
+   */
+  user: User
+  /**
+   *
+   * @type {string}
+   * @memberof RichTextArticle
+   */
+  created_on: string
+  /**
+   *
+   * @type {string}
+   * @memberof RichTextArticle
+   */
+  updated_on: string
 }
 /**
  * Serializer for LearningResourceInstructor model
@@ -7236,16 +7254,16 @@ export interface RichTextArticle {
 export interface RichTextArticleRequest {
   /**
    *
-   * @type {any}
-   * @memberof RichTextArticleRequest
-   */
-  content?: any
-  /**
-   *
    * @type {string}
    * @memberof RichTextArticleRequest
    */
   title: string
+  /**
+   *
+   * @type {any}
+   * @memberof RichTextArticleRequest
+   */
+  content?: any
 }
 /**
  * * `phrase` - phrase * `best_fields` - best_fields * `most_fields` - most_fields * `hybrid` - hybrid  * `phrase` - phrase * `best_fields` - best_fields * `most_fields` - most_fields * `hybrid` - hybrid
@@ -7471,6 +7489,43 @@ export type SourceTypeEnum =
   (typeof SourceTypeEnum)[keyof typeof SourceTypeEnum]
 
 /**
+ *
+ * @export
+ * @interface User
+ */
+export interface User {
+  /**
+   *
+   * @type {number}
+   * @memberof User
+   */
+  id: number
+  /**
+   * Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.
+   * @type {string}
+   * @memberof User
+   */
+  username: string
+  /**
+   *
+   * @type {string}
+   * @memberof User
+   */
+  email?: string
+  /**
+   *
+   * @type {string}
+   * @memberof User
+   */
+  first_name?: string
+  /**
+   *
+   * @type {string}
+   * @memberof User
+   */
+  last_name?: string
+}
+/**
  * Simplified serializer for UserList model.
  * @export
  * @interface UserList
@@ -7620,6 +7675,37 @@ export interface UserListRequest {
   privacy_level?: PrivacyLevelEnum
 }
 
+/**
+ *
+ * @export
+ * @interface UserRequest
+ */
+export interface UserRequest {
+  /**
+   * Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.
+   * @type {string}
+   * @memberof UserRequest
+   */
+  username: string
+  /**
+   *
+   * @type {string}
+   * @memberof UserRequest
+   */
+  email?: string
+  /**
+   *
+   * @type {string}
+   * @memberof UserRequest
+   */
+  first_name?: string
+  /**
+   *
+   * @type {string}
+   * @memberof UserRequest
+   */
+  last_name?: string
+}
 /**
  * Serializer for the Video model
  * @export

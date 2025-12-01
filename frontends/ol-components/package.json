@@ -29,6 +29,8 @@
     "@radix-ui/react-popover": "^1.1.15",
     "@remixicon/react": "^4.2.0",
     "@testing-library/dom": "^10.4.0",
+    "@tiptap/core": "^3.10.5",
+    "@tiptap/extension-document": "^3.10.5",
     "@tiptap/extension-highlight": "^3.10.5",
     "@tiptap/extension-horizontal-rule": "^3.10.5",
     "@tiptap/extension-image": "^3.10.5",

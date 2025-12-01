@@ -1,9 +1,11 @@
 from drf_spectacular.utils import extend_schema_field
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from articles import models
 from articles.validators import clean_html
 
+User = get_user_model()
 
 @extend_schema_field(str)
 class SanitizedHtmlField(serializers.Field):
@@ -15,14 +17,22 @@ class SanitizedHtmlField(serializers.Field):
         return clean_html(data)
 
 
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["id", "username", "email", "first_name", "last_name"]
+
 class RichTextArticleSerializer(serializers.ModelSerializer):
     """
     Serializer for LearningResourceInstructor model
     """
 
+    created_on = serializers.DateTimeField(read_only=True, required=False)
+    updated_on = serializers.DateTimeField(read_only=True, required=False)
     content = serializers.JSONField(default={})
     title = serializers.CharField(max_length=255)
+    user = UserSerializer(read_only=True)
 
     class Meta:
         model = models.Article
-        fields = ["content", "id", "title"]
+        fields = ["id", "title", "content", "user", "created_on", "updated_on"]

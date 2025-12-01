@@ -9,6 +9,7 @@ import type { Editor } from "@tiptap/core"
 
 import { ImageUploadButton } from "./components/tiptap-ui/image-upload-button"
 import { MediaEmbedButton } from "./components/tiptap-ui/media-embed/media-embed-button"
+import { InsertBylineButton } from "./extensions/ui/byline/insert-byline-button"
 
 // --- UI Primitives ---
 import { Spacer } from "./components/tiptap-ui-primitive/spacer"
@@ -86,10 +87,7 @@ interface TiptapEditorToolbarProps {
   editor: Editor
 }
 
-interface InsertDropdownMenuProps {
-  editor: Editor
-}
-export function InsertDropdownMenu({ editor }: InsertDropdownMenuProps) {
+export function InsertDropdownMenu({ editor }: TiptapEditorToolbarProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -107,6 +105,14 @@ export function InsertDropdownMenu({ editor }: InsertDropdownMenuProps) {
 
         <DropdownMenuItem asChild>
           <InsertDividerButton editor={editor} text="Divider" />
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <InsertBylineButton
+            editor={editor}
+            authorName=""
+            publishedDate=""
+            avatarUrl=""
+          />
         </DropdownMenuItem>
       </StyledDropdownMenuWrapper>
     </DropdownMenu>

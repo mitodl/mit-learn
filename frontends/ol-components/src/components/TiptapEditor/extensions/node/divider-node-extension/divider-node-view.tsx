@@ -21,10 +21,10 @@ const StyledNodeViewWrapper = styled(NodeViewWrapper)`
   }
 
   .tiptap-divider-line::after {
-    content: ". . ."; /* <=== THE DOTS */
+    content: ". . .";
     font-size: 50px;
-    color: rgba(0, 0, 0, 0.6);
-    letter-spacing: 6px; /* spacing between dots */
+    color: rgb(0 0 0 / 60%);
+    letter-spacing: 6px;
   }
 `
 
