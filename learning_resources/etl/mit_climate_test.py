@@ -4,7 +4,13 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
+from learning_resources.constants import OfferedBy
 from learning_resources.etl.mit_climate import extract_articles, transform_article
+from learning_resources.factories import (
+    LearningResourceOfferorFactory,
+    LearningResourceTopicFactory,
+    LearningResourceTopicMappingFactory,
+)
 
 
 @pytest.fixture
@@ -12,6 +18,7 @@ def sample_article_data():
     return {
         "title": "Sample Article",
         "uuid": "12345",
+        "topics": "Technology &amp; Education|topic 2| Science &amp; Climate ",
         "url": "/sample-article",
         "summary": "This is a summary.",
         "footnotes": "These are footnotes.",
@@ -25,9 +32,22 @@ def test_transform_article(sample_article_data, settings):
     """
     Test transforming a single article
     """
+    offeror = LearningResourceOfferorFactory.create(code=OfferedBy.climate.name)
+    LearningResourceTopicMappingFactory.create(
+        offeror=offeror,
+        topic=LearningResourceTopicFactory.create(name="STEM"),
+        topic_name="Technology & Education",
+    )
+    LearningResourceTopicMappingFactory.create(
+        offeror=offeror,
+        topic=LearningResourceTopicFactory.create(name="Climatology"),
+        topic_name="Science & Climate",
+    )
 
     result = transform_article(sample_article_data)
-
+    mapped_topics = [topic["name"] for topic in result["topics"]]
+    assert "STEM" in mapped_topics
+    assert "Climatology" in mapped_topics
     assert result["title"] == "Sample Article"
     assert result["readable_id"] == "12345"
     assert result["url"] == f"{settings.MIT_CLIMATE_BASE_URL}/sample-article"

@@ -2,7 +2,6 @@
 
 import html
 import logging
-import urllib
 from datetime import UTC
 from zoneinfo import ZoneInfo
 
@@ -34,7 +33,7 @@ def transform_article(article_data: dict):
     )
     article_topics = article_data.get("topics", "").split("|")
     topics = transform_topics(
-        [{"name": urllib.parse.unquote(topic_name)} for topic_name in article_topics],
+        [{"name": html.unescape(topic_name.strip())} for topic_name in article_topics],
         offeror_code=OfferedBy.climate.name,
     )
     created_on = (
