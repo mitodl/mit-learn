@@ -104,7 +104,7 @@ social-auth-app-django = "^5.2.0"
 social-auth-core = {extras = ["openidconnect"], version = "^4.4.2"}
 static3 = "^0.7.0"
 tika = "^3.0.0"
-tiktoken = "^0.11.0"
+tiktoken = "^0.12.0"
 tldextract = "^5.0.0"
 toolz = "^1.0.0"
 ulid-py = "^1.0.0"
