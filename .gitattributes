@@ -7,5 +7,3 @@ frontends/api/src/mitxonline/generated/* merge=binary linguist-generated=true
 frontends/api/src/mitxonline/generated/**/* merge=binary linguist-generated=true
 # Do not mark as generated; we want to see diffs in PRs
 openapi/specs/* merge=binary
-# Ensure git hooks are executable
-scripts/git-hooks/hooks/* eol=lf
