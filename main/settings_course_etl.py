@@ -71,12 +71,13 @@ CANVAS_COURSE_BUCKET_PREFIX = get_string(
 OCR_MODEL = get_string(name="OCR_MODEL", default=None)
 OCR_PROMPT = get_string(
     "OCR_PROMPT",
-    "Transcribe all text in this image. Preserve formulas. "
+    "Transcribe all text in this image to markdown. Preserve formulas."
     "If there are non-text elements such as diagrams or pictures, "
     "describe them in detail."
-    "Do not include anything but the result of the transcription in your response",
+    "Do not include anything but the resulting markdown in your response",
 )
 OCR_PDF_MAX_PAGE_THRESHOLD = get_int(name="OCR_PDF_MAX_PAGE_THRESHOLD", default=15)
+OCR_DEBUG_DIRECTORY = get_string(name="OCR_DEBUG_DIRECTORY", default='"ocr_debug"')
 # More MIT URLs
 SEE_API_URL = get_string("SEE_API_URL", None)
 SEE_API_ACCESS_TOKEN_URL = get_string("SEE_API_ACCESS_TOKEN_URL", None)
