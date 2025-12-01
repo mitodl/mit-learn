@@ -217,16 +217,19 @@ class DoclingLLMConverter:
         )
         return response.json()["choices"][0]["message"]["content"]
 
-    def save_debug_image(self, pil_image):
-        debug_dir = Path("ocr_debug") / self.document_path.stem
+    def _debug_dir(self):
+        debug_dir = Path(settings.OCR_DEBUG_DIRECTORY) / self.document_path.stem
         debug_dir.mkdir(parents=True, exist_ok=True)
+        return debug_dir
+
+    def save_debug_image(self, pil_image):
+        debug_dir = self._debug_dir()
         file_path = debug_dir / f"{self.document_path.name}-{uuid.uuid4()}.png"
         pil_image.save(file_path)
         return str(file_path)
 
     def save_debug_markdown(self, markdown_content):
-        debug_dir = Path("ocr_debug") / self.document_path.stem
-        debug_dir.mkdir(parents=True, exist_ok=True)
+        debug_dir = self._debug_dir()
         file_path = debug_dir / f"{self.document_path.name}.md"
         file_path.write_text(markdown_content)
         return str(file_path)
