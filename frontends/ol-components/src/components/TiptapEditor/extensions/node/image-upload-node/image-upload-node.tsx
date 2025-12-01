@@ -1,16 +1,18 @@
 "use client"
 
+// TODO: image-upload-node is library code with small custom changes - refactor or extend
+
 import React, { useRef, useState } from "react"
 import type { NodeViewProps } from "@tiptap/react"
 import { NodeViewWrapper } from "@tiptap/react"
-import { Button } from "../../tiptap-ui-primitive/button"
-import { CloseIcon } from "../../tiptap-icons/close-icon"
+import { Button } from "../../../vendor/components/tiptap-ui-primitive/button"
+import { CloseIcon } from "../../../vendor/components/tiptap-icons/close-icon"
 import "./image-upload-node.scss"
 import {
   focusNextNode,
   isValidPosition,
-  generateUUID,
-} from "../../../lib/tiptap-utils"
+} from "../../../vendor/lib/tiptap-utils"
+import { generateUUID } from "../../utils"
 
 export interface FileItem {
   /**
@@ -99,6 +101,7 @@ function useFileUpload(options: UploadOptions) {
     }
 
     const abortController = new AbortController()
+    // TODO: L103 Custom code
     const fileId = generateUUID()
 
     const newFileItem: FileItem = {
@@ -477,6 +480,7 @@ export const ImageUploadNode: React.FC<NodeViewProps> = (props) => {
           }
         })
 
+        // TODO: L478-488 is custom code. The rest is Simple Template library emitted
         const chain = props.editor.chain().focus()
 
         // Remove the upload placeholder node

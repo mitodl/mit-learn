@@ -20,33 +20,33 @@ import { Superscript } from "@tiptap/extension-superscript"
 import { Selection } from "@tiptap/extensions"
 
 // --- UI Primitives ---
-import { Toolbar } from "./components/tiptap-ui-primitive/toolbar"
-import { Spacer } from "./components/tiptap-ui-primitive/spacer"
+import { Toolbar } from "./vendor/components/tiptap-ui-primitive/toolbar"
+import { Spacer } from "./vendor/components/tiptap-ui-primitive/spacer"
 
 import TiptapEditor, { MainToolbarContent } from "./TiptapEditor"
 
 // --- Tiptap Node ---
-import { ImageUploadNode } from "./components/tiptap-node/image-upload-node/image-upload-node-extension"
+import { ImageUploadNode } from "./extensions/node/image-upload-node/image-upload-node-extension"
 import { LearningResourceNode } from "./extensions/node/learning-resource-node/learning-resource-node"
-import { MediaEmbed } from "./components/tiptap-node/media-embed/media-embed-extension"
+import { MediaEmbed } from "./extensions/node/media-embed/media-embed-extension"
+import { HorizontalRule } from "./vendor/components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension"
 import { ImageWithCaption } from "./extensions/node/image-upload-node/image-with-caption"
-import { HorizontalRule } from "./components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension"
 
-import "./components/tiptap-node/blockquote-node/blockquote-node.scss"
-import "./components/tiptap-node/code-block-node/code-block-node.scss"
-import "./components/tiptap-node/horizontal-rule-node/horizontal-rule-node.scss"
-import "./components/tiptap-node/list-node/list-node.scss"
-import "./components/tiptap-node/image-node/image-node.scss"
-import "./components/tiptap-node/heading-node/heading-node.scss"
-import "./components/tiptap-node/paragraph-node/paragraph-node.scss"
+import "./vendor/components/tiptap-node/blockquote-node/blockquote-node.scss"
+import "./vendor/components/tiptap-node/code-block-node/code-block-node.scss"
+import "./vendor/components/tiptap-node/horizontal-rule-node/horizontal-rule-node.scss"
+import "./vendor/components/tiptap-node/list-node/list-node.scss"
+import "./vendor/components/tiptap-node/image-node/image-node.scss"
+import "./vendor/components/tiptap-node/heading-node/heading-node.scss"
+import "./vendor/components/tiptap-node/paragraph-node/paragraph-node.scss"
 
 // --- Lib ---
-import { handleImageUpload, MAX_FILE_SIZE } from "./lib/tiptap-utils"
+import { handleImageUpload, MAX_FILE_SIZE } from "./vendor/lib/tiptap-utils"
 
 // --- Styles ---
-import "./styles/_keyframe-animations.scss"
-import "./styles/_variables.scss"
-import "./components/tiptap-templates/simple/simple-editor.scss"
+import "./vendor/styles/_keyframe-animations.scss"
+import "./vendor/styles/_variables.scss"
+import "./vendor/components/tiptap-templates/simple/simple-editor.scss"
 
 import { useArticleCreate, useArticlePartialUpdate } from "api/hooks/articles"
 import type { RichTextArticle } from "api/v1"

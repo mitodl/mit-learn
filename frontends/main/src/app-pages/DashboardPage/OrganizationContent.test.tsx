@@ -552,12 +552,17 @@ describe("OrganizationContent", () => {
   })
 
   test("shows correct run dates from contract-scoped runs", async () => {
+    // Mock current time to ensure deterministic test behavior
+    jest.useFakeTimers()
+    jest.setSystemTime(new Date("2024-01-01T00:00:00Z"))
+
     const { orgX, user, mitxOnlineUser } = setupOrgAndUser()
     const contracts = createTestContracts(orgX.id, 1)
 
     // Create courses with specific, predictable dates for the contract runs
-    const specificStartDate = "2025-12-01T00:00:00Z"
-    const specificEndDate = "2026-01-15T00:00:00Z"
+    // Use a date that's guaranteed to be in the future relative to mocked time
+    const specificStartDate = "2024-12-01T00:00:00Z"
+    const specificEndDate = "2025-01-15T00:00:00Z"
 
     const courses = createCoursesWithContractRuns(contracts).map((course) => ({
       ...course,
@@ -598,9 +603,15 @@ describe("OrganizationContent", () => {
       // Since we set a specific future date, it should show the countdown
       expect(card).toHaveTextContent(/Starts in \d+ days?/i)
     })
+
+    jest.useRealTimers()
   })
 
   test("ignores non-contract runs when displaying course information", async () => {
+    // Mock current time to ensure deterministic test behavior
+    jest.useFakeTimers()
+    jest.setSystemTime(new Date("2024-01-01T00:00:00Z"))
+
     const { orgX, user, mitxOnlineUser } = setupOrgAndUser()
     const contracts = createTestContracts(orgX.id, 1)
 
@@ -620,7 +631,7 @@ describe("OrganizationContent", () => {
           ...run,
           title: `CORRECT RUN - ${run.title}`,
           courseware_url: "https://correct-run.example.com",
-          start_date: "2025-12-01T00:00:00Z", // Future date
+          start_date: "2024-12-01T00:00:00Z", // Future date relative to mocked time
         }
       }),
     }))
@@ -659,6 +670,8 @@ describe("OrganizationContent", () => {
       // The actual format is "Starts in X days"
       expect(card).toHaveTextContent(/Starts in \d+ days?/i)
     })
+
+    jest.useRealTimers()
   })
 
   test("displays correct pricing from contract-scoped runs", async () => {

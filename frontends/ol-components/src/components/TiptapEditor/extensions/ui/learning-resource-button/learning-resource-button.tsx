@@ -1,13 +1,13 @@
 import React, { forwardRef, useCallback } from "react"
 import type { Editor } from "@tiptap/core"
-import { Button } from "../../../components/tiptap-ui-primitive/button"
-import { Badge } from "../../../components/tiptap-ui-primitive/badge"
-import { parseShortcutKeys } from "../../../lib/tiptap-utils"
+import { Button } from "../../../vendor/components/tiptap-ui-primitive/button"
+import { Badge } from "../../../vendor/components/tiptap-ui-primitive/badge"
+import { parseShortcutKeys } from "../../../vendor/lib/tiptap-utils"
 import {
   useLearningResourceEmbed,
   LEARNING_RESOURCE_SHORTCUT_KEY,
 } from "./useLearningResourceEmbed"
-import { useTiptapEditor } from "../../../hooks/use-tiptap-editor"
+import { useTiptapEditor } from "../../../vendor/hooks/use-tiptap-editor"
 
 export interface LearningResourceEmbedButtonProps {
   editor?: Editor

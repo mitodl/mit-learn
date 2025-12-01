@@ -1,12 +1,12 @@
-import React, { useRef, useState, useEffect } from "react"
-import { NodeViewWrapper } from "@tiptap/react"
+import React, { useRef, useState } from "react"
+import { NodeViewProps, NodeViewWrapper } from "@tiptap/react"
 import { FullWidth, WideWidth, DefaultWidth } from "./Icons"
 
 import "./style.scss"
 
 interface MediaEmbedNodeProps {
-  node: any
-  updateAttributes: (attrs: Record<string, any>) => void
+  node: NodeViewProps["node"]
+  updateAttributes: (attrs: Record<string, string>) => void
 }
 
 export const MediaEmbedNodeView = ({
@@ -90,6 +90,7 @@ export const MediaEmbedNodeView = ({
           style={{ display: "block", borderRadius: "6px" }}
           frameBorder={node.attrs.frameborder}
           allowFullScreen={node.attrs.allowfullscreen === "true"}
+          title={node.attrs.caption}
         />
       </div>
       <div className="media-caption">
