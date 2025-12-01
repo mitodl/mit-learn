@@ -576,7 +576,7 @@ def process_olx_path(  # noqa: PLR0913
                 and use_ocr
                 and settings.OCR_MODEL
                 and (
-                    len(PdfReader(str(Path(olx_path) / Path(source_path))).pages)
+                    len(PdfReader(Path(olx_path) / Path(source_path)).pages)
                     <= settings.OCR_PDF_MAX_PAGE_THRESHOLD
                     or is_tutor_problem_file_import
                 )
