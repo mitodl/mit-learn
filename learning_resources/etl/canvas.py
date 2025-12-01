@@ -158,7 +158,12 @@ def transform_canvas_content_files(
                 else:
                     log.debug("skipping unpublished file %s", member.filename)
 
-            for content_data in process_olx_path(olx_path, run, overwrite=overwrite):
+            for content_data in process_olx_path(
+                olx_path,
+                run,
+                overwrite=overwrite,
+                use_ocr=True,
+            ):
                 url_path = content_data["source_path"].lstrip(
                     content_data["source_path"].split("/")[0]
                 )
@@ -209,6 +214,7 @@ def transform_canvas_problem_files(
             overwrite=overwrite,
             valid_file_types=VALID_TUTOR_PROBLEM_FILE_TYPES,
             is_tutor_problem_file_import=True,
+            use_ocr=True,
         ):
             keys_to_keep = [
                 "run",
