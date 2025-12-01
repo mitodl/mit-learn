@@ -308,79 +308,76 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
   }, 0)
 
   return (
-    <>
-      <Stack direction="column">
-        <Stack direction="column" marginBottom="24px">
-          <Typography variant="h5" color={theme.custom.colors.silverGrayDark}>
-            MITx | {program?.programType}
+    <Stack direction="column">
+      <Stack direction="column" marginBottom="24px">
+        <Typography variant="h5" color={theme.custom.colors.silverGrayDark}>
+          MITx | {program?.programType}
+        </Typography>
+        <Typography component="h1" variant="h3" paddingBottom="32px">
+          {program?.title}
+        </Typography>
+        <Typography variant="body2">
+          You have completed
+          <Typography component="span" variant="subtitle2">
+            {" "}
+            {completedCount} of {totalCount} courses{" "}
           </Typography>
-          <Typography component="h1" variant="h3" paddingBottom="32px">
-            {program?.title}
-          </Typography>
-          <Typography variant="body2">
-            You have completed
-            <Typography component="span" variant="subtitle2">
-              {" "}
-              {completedCount} of {totalCount} courses{" "}
-            </Typography>
-            for this program.
-          </Typography>
-        </Stack>
-        {requirementSections.map((section, index) => {
-          const sectionCompletedCount = section.courses.filter(
-            (course) =>
-              course.enrollment?.status === EnrollmentStatus.Completed,
-          ).length
-
-          const sectionRequiredCount =
-            section.node.data.operator === "min_number_of" &&
-            section.node.data.operator_value
-              ? parseInt(section.node.data.operator_value, 10)
-              : section.courses.length
-
-          return (
-            <React.Fragment key={section.key}>
-              <Stack
-                direction="row"
-                justifyContent="space-between"
-                marginBottom="16px"
-                marginTop={index > 0 ? "32px" : "0"}
-              >
-                <Typography
-                  component="h1"
-                  variant="subtitle2"
-                  color={theme.custom.colors.red}
-                >
-                  {section.title}
-                </Typography>
-                <Typography
-                  variant="body2"
-                  color={theme.custom.colors.silverGrayDark}
-                >
-                  Completed {sectionCompletedCount} of {sectionRequiredCount}
-                </Typography>
-              </Stack>
-              <StackedCardContainer>
-                {section.courses.map((course) => (
-                  <DashboardCardStyled
-                    titleAction="marketing"
-                    key={course.key}
-                    dashboardResource={course}
-                    showNotComplete={false}
-                    variant="stacked"
-                    isLoading={
-                      userEnrollmentsLoading ||
-                      programLoading ||
-                      programCoursesLoading
-                    }
-                  />
-                ))}
-              </StackedCardContainer>
-            </React.Fragment>
-          )
-        })}
+          for this program.
+        </Typography>
       </Stack>
-    </>
+      {requirementSections.map((section, index) => {
+        const sectionCompletedCount = section.courses.filter(
+          (course) => course.enrollment?.status === EnrollmentStatus.Completed,
+        ).length
+
+        const sectionRequiredCount =
+          section.node.data.operator === "min_number_of" &&
+          section.node.data.operator_value
+            ? parseInt(section.node.data.operator_value, 10)
+            : section.courses.length
+
+        return (
+          <React.Fragment key={section.key}>
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              marginBottom="16px"
+              marginTop={index > 0 ? "32px" : "0"}
+            >
+              <Typography
+                component="h1"
+                variant="subtitle2"
+                color={theme.custom.colors.red}
+              >
+                {section.title}
+              </Typography>
+              <Typography
+                variant="body2"
+                color={theme.custom.colors.silverGrayDark}
+              >
+                Completed {sectionCompletedCount} of {sectionRequiredCount}
+              </Typography>
+            </Stack>
+            <StackedCardContainer>
+              {section.courses.map((course) => (
+                <DashboardCardStyled
+                  titleAction="marketing"
+                  key={course.key}
+                  dashboardResource={course}
+                  showNotComplete={false}
+                  variant="stacked"
+                  isLoading={
+                    userEnrollmentsLoading ||
+                    programLoading ||
+                    programCoursesLoading
+                  }
+                />
+              ))}
+            </StackedCardContainer>
+          </React.Fragment>
+        )
+      })}
+    </Stack>
   )
 }
 
@@ -394,9 +391,7 @@ const AllEnrollmentsDisplay: React.FC = () => {
     contractQueries.contractsList(),
   )
   const { data: programEnrollments, isLoading: programEnrollmentsLoading } =
-    useQuery({
-      ...enrollmentQueries.programEnrollmentsList(),
-    })
+    useQuery(enrollmentQueries.programEnrollmentsList())
   const filteredProgramEnrollments = programEnrollments
     ? programEnrollmentsToPrograms(programEnrollments, contracts)
     : []
