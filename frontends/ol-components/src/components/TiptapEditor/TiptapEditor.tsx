@@ -49,20 +49,24 @@ const StyledEditorContent = styled(EditorContent, {
   readOnly: boolean
   fullWidth: boolean
 }>(({ theme, readOnly, fullWidth }) => ({
-  maxWidth: fullWidth ? "100%" : "1000px",
+  maxWidth: "890px",
   minHeight: "calc(100vh - 350px)",
   backgroundColor: theme.custom.colors.white,
   borderRadius: "10px",
-  margin: "20px auto",
+  margin: "0 auto",
+
   ".tiptap.ProseMirror.simple-editor": {
-    padding: fullWidth ? "0" : "3rem 3rem 5vh",
+    padding: fullWidth ? "0 24px" : "3rem 3rem 5vh",
   },
   ...(readOnly
     ? {
-        maxWidth: "1000px",
+        maxWidth: "890px",
         backgroundColor: "transparent",
         ".tiptap.ProseMirror.simple-editor": {
-          padding: "0",
+          padding: "0 24px",
+          [theme.breakpoints.down("sm")]: {
+            padding: "0 16px",
+          },
         },
       }
     : {}),

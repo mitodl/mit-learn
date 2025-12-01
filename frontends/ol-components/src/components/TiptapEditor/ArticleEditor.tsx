@@ -78,8 +78,7 @@ const ViewContainer = styled.div({
 
 const StyledToolbar = styled(Toolbar)({
   "&&": {
-    position: "fixed",
-    top: "72px",
+    top: "0",
   },
 })
 
@@ -272,7 +271,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
   const error = createError || updateError
 
   return (
-    <ViewContainer data-testid="editor">
+    <ViewContainer>
       <EditorContext.Provider value={{ editor }}>
         {isArticleEditor ? (
           readOnly ? (

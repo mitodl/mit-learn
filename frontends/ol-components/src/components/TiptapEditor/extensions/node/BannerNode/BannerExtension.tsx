@@ -6,41 +6,35 @@ import {
   NodeViewWrapper,
   NodeViewContent,
 } from "@tiptap/react"
-import { Plugin, PluginKey } from "@tiptap/pm/state"
-import { Heading } from "@tiptap/extension-heading"
-import { isNodeEmpty } from "@tiptap/core"
 import { BannerBackground } from "../../../../Banner/Banner"
 import Container from "@mui/material/Container"
 import styled from "@emotion/styled"
 import "./BannerExtension.scss"
 import { pxToRem } from "../../../../ThemeProvider/typography"
 
-// Export the Heading extension for use in banner nodes
-// This ensures headings within banners use @tiptap/extension-heading
-export { Heading as BannerHeading }
-
-declare module "@tiptap/core" {
-  interface Commands<ReturnType> {
-    banner: {
-      insertBanner: () => ReturnType
-    }
-  }
-}
-
-const InnerContainer = styled.div({
-  // Container for banner content
+const FullWidthContainer = styled.div({
+  position: "relative",
+  left: "50%",
+  right: "50%",
+  marginLeft: "-50vw",
+  marginRight: "-50vw",
+  width: "100vw",
 })
 
-const HeaderContainer = styled.div(({ theme }) => ({
+const InnerContainer = styled(Container)({
+  maxWidth: "890px",
+  "@media (min-width: 1320px)": {
+    maxWidth: "890px",
+  },
+})
+
+const StyledNodeViewContent = styled(NodeViewContent)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   "&& h1": {
     ...theme.typography.h1,
   },
   "&&&& p": {
-    // fontFamily: "neue-haas-grotesk-text, sans-serif",
-    // fontWeight: fontWeights.text.bold,
-    // fontStyle: "normal",
     fontSize: pxToRem(20),
     lineHeight: pxToRem(32),
     position: "relative",
@@ -55,15 +49,13 @@ const HeaderContainer = styled.div(({ theme }) => ({
 const BannerWrapper = () => {
   return (
     <NodeViewWrapper as="div">
-      <BannerBackground>
-        <Container>
+      <FullWidthContainer>
+        <BannerBackground>
           <InnerContainer>
-            <HeaderContainer>
-              <NodeViewContent className="banner-content-editable" />
-            </HeaderContainer>
+            <StyledNodeViewContent className="banner-content-editable" />
           </InnerContainer>
-        </Container>
-      </BannerBackground>
+        </BannerBackground>
+      </FullWidthContainer>
     </NodeViewWrapper>
   )
 }
