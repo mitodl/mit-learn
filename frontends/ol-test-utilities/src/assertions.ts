@@ -13,12 +13,23 @@ type HeadingSpec = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   name: any
 }
-export const assertHeadings = (expected: HeadingSpec[]) => {
+export const assertHeadings = (
+  expected: HeadingSpec[],
+  opts?: {
+    // inclusive
+    maxLevel: number
+  },
+) => {
   const headings = screen.getAllByRole("heading")
-  const actual = headings.map((heading) => {
-    const level = parseInt(heading.tagName[1], 10)
-    const name = computeAccessibleName(heading)
-    return { level, name }
-  })
+  const actual = headings
+    .map((heading) => {
+      const level = parseInt(
+        heading.getAttribute("aria-level") ?? heading.tagName[1],
+        10,
+      )
+      const name = computeAccessibleName(heading)
+      return { level, name }
+    })
+    .filter(({ level }) => (opts?.maxLevel ? level <= opts.maxLevel : true))
   expect(actual).toEqual(expected)
 }

@@ -27,8 +27,10 @@ import TiptapEditor, { MainToolbarContent } from "./TiptapEditor"
 
 // --- Tiptap Node ---
 import { ImageUploadNode } from "./extensions/node/image-upload-node/image-upload-node-extension"
+import { LearningResourceNode } from "./extensions/node/learning-resource-node/learning-resource-node"
 import { MediaEmbed } from "./extensions/node/media-embed/media-embed-extension"
 import { HorizontalRule } from "./vendor/components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension"
+import { ImageWithCaption } from "./extensions/node/image-upload-node/image-with-caption"
 
 import "./vendor/components/tiptap-node/blockquote-node/blockquote-node.scss"
 import "./vendor/components/tiptap-node/code-block-node/code-block-node.scss"
@@ -177,6 +179,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
         },
       }),
       HorizontalRule,
+      LearningResourceNode,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       TaskList,
       TaskItem.configure({ nested: true }),
@@ -187,6 +190,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       Selection,
       Image,
       MediaEmbed,
+      ImageWithCaption,
       ImageUploadNode.configure({
         accept: "image/*",
         maxSize: MAX_FILE_SIZE,
@@ -204,7 +208,10 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       .chain()
       .command(({ tr, state }) => {
         state.doc.descendants((node, pos) => {
-          if (node.type.name === "mediaEmbed") {
+          if (
+            node.type.name === "mediaEmbed" ||
+            node.type.name === "imageWithCaption"
+          ) {
             tr.setNodeMarkup(pos, undefined, {
               ...node.attrs,
               editable: !readOnly,
