@@ -15,7 +15,7 @@ def add_theater_subtopic(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("learning_resources", "0101_add_climate_topic_mapping"),
+        ("data_fixtures", "0021_add_climate_topic_mapping"),
     ]
 
     operations = [migrations.RunPython(add_theater_subtopic, migrations.RunPython.noop)]

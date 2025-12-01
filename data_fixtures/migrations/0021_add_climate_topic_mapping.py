@@ -183,7 +183,7 @@ def add_climate_topic_mapping(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("learning_resources", "0100_learningresourceofferor_display_facet"),
+        ("data_fixtures", "0020_add_climate_ecosystems_topic"),
     ]
 
     operations = [

@@ -19,7 +19,7 @@ def add_natural_climate_subtopic(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("learning_resources", "0102_add_theater_topic"),
+        ("data_fixtures", "0022_add_theater_topic"),
     ]
 
     operations = [
