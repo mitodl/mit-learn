@@ -76,6 +76,7 @@ OCR_PROMPT = get_string(
     "describe them in detail."
     "Do not include anything but the result of the transcription in your response",
 )
+OCR_PDF_MAX_PAGE_THRESHOLD = get_int(name="OCR_PDF_MAX_PAGE_THRESHOLD", default=15)
 # More MIT URLs
 SEE_API_URL = get_string("SEE_API_URL", None)
 SEE_API_ACCESS_TOKEN_URL = get_string("SEE_API_ACCESS_TOKEN_URL", None)
