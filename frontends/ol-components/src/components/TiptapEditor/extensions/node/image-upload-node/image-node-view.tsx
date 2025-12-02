@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React from "react"
 import { NodeViewWrapper } from "@tiptap/react"
 import type { ReactNodeViewProps } from "@tiptap/react"
 
@@ -7,120 +7,152 @@ import NiceModal from "@ebay/nice-modal-react"
 import ImageAltTextInput from "./ImageAltTextInput"
 import { DefaultWidth, WideWidth, FullWidth } from "./Icons"
 
-const StyledNodeViewWrapper = styled(NodeViewWrapper)<{
-  layout: string
-  hovering: boolean
-}>`
-  position: relative;
-  margin: 2rem auto;
-  text-align: center;
-  width: 100%;
+const ARTICLE_MAX_WIDTH = 890
+const CONTAINER_PADDING = 24
 
-  img {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 16/9;
-    border-radius: 6px;
-    display: block;
-  }
+const StyledNodeViewWrapper = styled(NodeViewWrapper)({
+  position: "relative",
+  margin: "2rem auto",
+  textAlign: "center",
+  width: "100%",
 
-  &.layout-default {
-    width: 100%;
-  }
+  img: {
+    width: "100%",
+    height: "auto",
+    aspectRatio: "16/9",
+    borderRadius: "6px",
+    display: "block",
+  },
 
-  &.layout-wide {
-    width: 90vw;
-    position: relative;
-    left: 50%;
-    right: 50%;
-    margin-left: -45vw;
-    margin-right: -45vw;
-  }
+  "&.layout-default img": {
+    width: "100%",
+  },
 
-  &.layout-full {
-    width: 100vw;
-    position: relative;
-    left: 50%;
-    right: 50%;
-    margin-left: -50vw;
-    margin-right: -50vw;
-  }
+  [`@media (min-width: ${ARTICLE_MAX_WIDTH + CONTAINER_PADDING * 2}px)`]: {
+    "&.layout-wide img": {
+      width: "90vw",
+      maxWidth: "90vw",
+      position: "relative",
+      left: "50%",
+      right: "50%",
+      marginLeft: "-45vw",
+      marginRight: "-45vw",
+    },
+  },
 
-  .caption-input {
-    margin-top: 10px;
-    width: 100%;
-    border: none;
-    outline: none;
-    text-align: center;
-    background: transparent;
-    font-size: 14px;
-    padding: 4px 0;
+  "&.layout-full img": {
+    width: "100vw",
+    maxWidth: "100vw",
+    position: "relative",
+    left: "50%",
+    right: "50%",
+    marginLeft: "-50vw",
+    marginRight: "-50vw",
+  },
 
-    &:focus {
-      border-bottom-color: #999;
-    }
-  }
+  ".caption-input": {
+    marginTop: "10px",
+    width: "100%",
+    border: "none",
+    outline: "none",
+    textAlign: "center",
+    background: "transparent",
+    fontSize: "14px",
+    padding: "4px 0",
 
-  .media-layout-toolbar {
-    position: absolute;
-    top: -43px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 2000;
-    background-color: rgb(0 0 0 / 85%);
-    padding: 6px 10px;
-    border-radius: 8px;
-    gap: 8px;
-    width: 220px;
-    justify-content: center;
+    "&:focus": {
+      borderBottomColor: "#999",
+    },
+  },
 
-    &::after {
-      content: "";
-      position: absolute;
-      top: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 0;
-      height: 0;
-      border-left: 8px solid transparent;
-      border-right: 8px solid transparent;
-      border-top: 8px solid rgb(0 0 0 / 85%);
-    }
+  ".media-layout-toolbar": {
+    display: "none",
+    position: "absolute",
+    top: "-34px",
+    left: "50%",
+    transform: "translateX(-50%)",
+    zIndex: "2000",
+    backgroundColor: "rgb(0 0 0 / 85%)",
+    padding: "6px 10px",
+    borderRadius: "8px",
+    gap: "8px",
+    width: "250px",
+    justifyContent: "center",
 
-    button {
-      width: 40px;
-      height: 28px;
-      border-radius: 4px;
-      border: none;
-      background: transparent;
-      filter: brightness(0.9);
-      color: white;
-      cursor: pointer;
+    "&::after": {
+      content: '""',
+      position: "absolute",
+      top: "100%",
+      left: "50%",
+      transform: "translateX(-50%)",
+      width: 0,
+      height: 0,
+      borderLeft: "8px solid transparent",
+      borderRight: "8px solid transparent",
+      borderTop: "8px solid rgb(0 0 0 / 85%)",
+    },
 
-      &.active {
-        background: #9be19b;
-        color: black;
-        font-weight: bold;
-      }
-    }
+    button: {
+      width: "40px",
+      height: "28px",
+      borderRadius: "4px",
+      border: "none",
+      background: "transparent",
+      filter: "brightness(0.9)",
+      color: "white",
+      cursor: "pointer",
 
-    .alt-text-button {
-      color: white;
-      font-size: 12px;
-      border-left: 1px solid rgb(255 255 255 / 50%);
-      border-radius: 4px;
-      padding: 2px 6px;
-      width: 100px;
-    }
-  }
-`
+      "&.active": {
+        background: "#9be19b",
+        color: "black",
+        fontWeight: "bold",
+      },
+    },
+
+    ".alt-text-button": {
+      color: "white",
+      fontSize: "12px",
+      borderRadius: "4px",
+      padding: "2px 6px",
+      width: "100px",
+    },
+  },
+
+  "&:hover": {
+    ".media-layout-toolbar": {
+      display: "flex",
+    },
+  },
+})
+
+enum Layout {
+  default = "default",
+  wide = "wide",
+  full = "full",
+}
+
+const Image = styled.img<{ layout: Layout }>(({ layout }) => ({
+  "&&": {
+    borderRadius: layout === Layout.full ? 0 : "8px",
+  },
+}))
+
+const Caption = styled.p(({ theme }) => ({
+  "&&&&": {
+    ...theme.typography.body2,
+    color: theme.custom.colors.silverGrayDark,
+    padding: "16px 0",
+    borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
+    textAlign: "left",
+    marginTop: 0,
+  },
+}))
 
 export function ImageUploadNodeComponent({
   node,
   updateAttributes,
 }: ReactNodeViewProps) {
   const { layout, caption, src, alt } = node.attrs
-  const [hovering, setHovering] = useState(false)
 
   const isEditable = node.attrs.editable
 
@@ -137,14 +169,10 @@ export function ImageUploadNodeComponent({
 
   return (
     <StyledNodeViewWrapper
-      layout={layout}
-      hovering={hovering}
       className={`layout-${layout}`}
       data-type="image-upload"
-      onMouseEnter={() => setHovering(true)}
-      onMouseLeave={() => setHovering(false)}
     >
-      {isEditable && hovering && (
+      {isEditable && (
         <div className="media-layout-toolbar">
           <button
             className={layout === "default" ? "active" : ""}
@@ -177,11 +205,7 @@ export function ImageUploadNodeComponent({
         </div>
       )}
 
-      <img
-        src={src}
-        alt={alt || caption || "Image"}
-        className="image-content"
-      />
+      <Image src={src} alt={alt || caption || "Image"} layout={layout} />
 
       {isEditable ? (
         <input
@@ -192,7 +216,7 @@ export function ImageUploadNodeComponent({
           onChange={(e) => updateAttributes({ caption: e.target.value })}
         />
       ) : (
-        caption && <p>{caption}</p>
+        caption && <Caption>{caption}</Caption>
       )}
     </StyledNodeViewWrapper>
   )

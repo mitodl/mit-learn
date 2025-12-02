@@ -129,7 +129,7 @@ export const ArticleDetailPage = ({ articleId }: { articleId: number }) => {
             alt: "IMG_20251013_090417075",
             title: "IMG_20251013_090417075",
             editable: true,
-            caption: "",
+            caption: "Photo courtesy of Alan Al Yussef.",
             layout: "full",
           },
         },
